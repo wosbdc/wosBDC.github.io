@@ -1,3 +1,6 @@
+## [1.27.6] - 2026-07-20
+- Removed the redundant "Sign Out" button from the Account Hub since it's already accessible in the sidebar menu.
+
 ## [1.27.5] - 2026-07-20
 - Wrapped the "Linked Alt Accounts" list inside a collapsible accordion so they don't take up too much vertical space on the Account Hub.
 

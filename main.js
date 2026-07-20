@@ -3213,16 +3213,9 @@ const views = {
         </div>
             ${staffProfileHtml}
             ${linkedHtml}
-        
-        <button id="logoutBtn" style="background:transparent; border:1px solid var(--danger); color:var(--danger); padding:8px 16px; border-radius:8px; cursor:pointer; font-weight:bold;">Sign Out</button>
       </div>
     `;
     
-    document.getElementById('logoutBtn').addEventListener('click', async () => {
-      await logoutUser();
-      window.showToast("Signed out successfully.", "success");
-      views.home();
-    });
     
     if (accLevel) {
         document.getElementById('openStaffProfileBtn').addEventListener('click', () => {
