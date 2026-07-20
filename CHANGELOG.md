@@ -1,3 +1,6 @@
+## [1.27.5] - 2026-07-20
+- Wrapped the "Linked Alt Accounts" list inside a collapsible accordion so they don't take up too much vertical space on the Account Hub.
+
 ## [1.27.4] - 2026-07-20
 - Converted the inline Staff Profile editor in the Account Hub into a button that opens a beautiful modal popup overlay.
 

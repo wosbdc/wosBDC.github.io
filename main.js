@@ -2915,11 +2915,24 @@ const views = {
     let linkedHtml = '';
     let links = currentUser.linkedGameIds || [];
       
-    linkedHtml += `<div style="text-align:left; border-top:1px solid var(--border); padding-top:20px; margin-top:20px;">
-         <h3 style="margin-top:0; color:var(--text-main); font-size:18px; font-weight:bold;">🔗 Linked Alt Accounts <span style="font-size:14px; color:var(--text-muted); font-weight:normal;">(${links.length})</span></h3>`;
+    linkedHtml += `
+      <div style="text-align:left; border-top:1px solid var(--border); padding-top:20px; margin-top:20px;">
+         <details style="background:rgba(255,255,255,0.02); border-radius:12px; border:1px solid var(--border); padding:10px; cursor:pointer;" class="alt-accounts-details">
+             <summary style="font-weight:bold; font-size:18px; color:var(--text-main); outline:none; display:flex; align-items:center; justify-content:space-between;">
+                 <div style="display:flex; align-items:center; gap:8px;">
+                     🔗 Linked Alt Accounts <span style="font-size:14px; color:var(--text-muted); font-weight:normal;">(${links.length})</span>
+                 </div>
+                 <span class="alt-accounts-arrow" style="font-size:14px; transition:transform 0.3s ease;">▼</span>
+             </summary>
+             
+             <style>
+                 .alt-accounts-details[open] .alt-accounts-arrow {
+                     transform: rotate(180deg);
+                 }
+             </style>`;
          
     if (links.length > 0) {
-        linkedHtml += `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:16px; margin-bottom:15px;">`;
+        linkedHtml += `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:16px; margin-top:15px; margin-bottom:15px; cursor:default;">`;
         links.forEach(gid => {
               let altName = idToNameMap[gid] || `Game ID: ${gid}`;
               let flVal = 'N/A';
@@ -3017,6 +3030,8 @@ const views = {
           });
           linkedHtml += `</div>`;
       }
+      
+      linkedHtml += `</details></div>`;
       
       let datalistHtml = `<datalist id="rosterAltDatalist">`;
       for (const [id, name] of Object.entries(idToNameMap)) {
