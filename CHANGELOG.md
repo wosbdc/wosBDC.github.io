@@ -1,3 +1,6 @@
+## [1.27.28] - 2026-07-20
+- Completely removed legacy OTP admin authentication flow from both frontend UI and backend services, fully relying on Google Authentication to enforce security.
+
 ## [1.27.27] - 2026-07-20
 - Improved UI layout: Moved the "Stop Spoofing" and "Switch User" control buttons out of the fixed top-right corner popup and tucked them away neatly at the bottom of the Sidebar Menu.
 

@@ -2,7 +2,7 @@ import './style.css'
 import { initPresence, listenToAuth, loginUser, logoutUser, registerUser, uploadAvatar, deleteAvatar, db, auth, requestPushPermission, listenForForegroundMessages, linkAltAccount, unlinkAltAccount, loginWithGoogle, resetPassword } from './src/firebase.js'
 import { ref, onValue, get, set, remove } from 'firebase/database'
 
-const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbzXg0vlYq34tQ7tCWl9pZg5K01pFKgD-PykksptHYBH2zaILJ2vdfmh46jJa-v6Kw/exec';
+const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbzd-c2Jbwc3XZDBf7jHrCr-taBfpMdrn_4FFSxrPSVXB9F9gM-2eGNcj05qNQ5v8Io/exec';
 const VERIFY_PROXY_URL = 'https://wos-vercel-proxy.vercel.app/api/verify'; // Dedicated proxy for Century Games ID verification (bypasses Google quota limits)
 
 // Get a fresh Firebase ID token for the current user (replaces hardcoded APP_SECRET)
@@ -357,7 +357,7 @@ window.isAdminUser = (user) => {
   return window.getAdminLevel(user) !== false;
 };
 
-window.isOTPUnlocked = async () => {
+window.isGoogleAuthVerified = async () => {
     if (!currentUser || !auth || !auth.currentUser) return false;
     try {
         // We must check the token claims to see how they signed in for THIS specific session
@@ -942,7 +942,7 @@ window.searchPlayerFull = async (name) => {
         }
     }
     
-    const isUnlocked = await window.isOTPUnlocked();
+    const isUnlocked = await window.isGoogleAuthVerified();
     let html = window.generatePlayerProfileHtml(name, pRow, headers, colIsUpcoming, rosterMap[name], null, dynamicSD, showdownActive, bearBoth, bear1, bear2, bearAllTime, btDonationsAllTime, btDonationsCurrent, otherLbs, isUnlocked, altAccounts);
     
     resDiv.innerHTML = html;
@@ -1035,9 +1035,9 @@ listenToAuth((user) => {
 window.adminSpoofPlayer = async (spoofId) => {
     if (!realUser || !window.isAdminUser(realUser)) return;
     
-    const isUnlocked = await window.isOTPUnlocked();
+    const isUnlocked = await window.isGoogleAuthVerified();
     if (!isUnlocked) {
-        window.showToast("Security unlock required to use the master key.", "error");
+        window.showToast("Security unlock required to use the master key. Please log in with Google.", "error");
         views.admin(); // Kick to admin screen for auth verification
         return;
     }
@@ -2089,23 +2089,7 @@ const views = {
       return;
     }
     
-    // --- 2FA OTP LOCK SCREEN ---
-    const isUnlocked = await window.isOTPUnlocked();
-    if (!isUnlocked) {
-      app.innerHTML = `
-        <div id="adminHubView" style="padding:20px; max-width:400px; margin:40px auto; background:var(--card-bg); border-radius:12px; border:1px solid var(--border); text-align:center;">
-          <h1 style="color:var(--text-main); margin-bottom:10px; font-size:24px;">🔒 Security Check</h1>
-          <p style="color:var(--text-muted); font-size:14px; margin-bottom:25px; line-height:1.5;">To access the Admin Panel, you must be signed in using a <b>Google Account</b> for enhanced security.</p>
-          <div style="background:rgba(231, 76, 60, 0.1); border:1px solid rgba(231, 76, 60, 0.3); border-radius:8px; padding:15px; margin-bottom:20px;">
-            <p style="color:var(--danger); font-size:13px; margin:0;">It looks like you signed in using Email & Password. Please log out and sign back in using the <b>"Sign in with Google"</b> button on the main page.</p>
-          </div>
-          <button onclick="window.location.reload()" class="btn" style="width:100%;">Go Back</button>
-        </div>
-      `;
-      return;
-    }
-    // --- END OTP LOCK SCREEN ---
-    
+
     const isR5 = window.getAdminLevel(currentUser) === 'R5';
     
     try {
@@ -2790,7 +2774,7 @@ const views = {
       views.home();
       return;
     }
-    const isUnlocked = await window.isOTPUnlocked();
+    const isUnlocked = await window.isGoogleAuthVerified();
     if (!isUnlocked) {
         views.admin();
         return;
@@ -2992,7 +2976,7 @@ const views = {
       views.home();
       return;
     }
-    const isUnlocked = await window.isOTPUnlocked();
+    const isUnlocked = await window.isGoogleAuthVerified();
     if (!isUnlocked) {
         views.admin();
         return;
