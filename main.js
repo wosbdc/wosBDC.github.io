@@ -1183,26 +1183,62 @@ if(showPasswordBtn) showPasswordBtn.addEventListener('click', (e) => {
 });
 
 const authForgotPwBtn = document.getElementById('authForgotPwBtn');
+const forgotPasswordModal = document.getElementById('forgotPasswordModal');
+const forgotPasswordModalOverlay = document.getElementById('forgotPasswordModalOverlay');
+const closeForgotPwBtn = document.getElementById('closeForgotPwBtn');
+const forgotPwSubmitBtn = document.getElementById('forgotPwSubmitBtn');
+const forgotPwEmail = document.getElementById('forgotPwEmail');
+const forgotPwErrorMsg = document.getElementById('forgotPwErrorMsg');
+
 if (authForgotPwBtn) {
   authForgotPwBtn.addEventListener('click', (e) => {
     e.preventDefault();
-    const email = authEmail.value.trim();
+    forgotPwErrorMsg.style.display = 'none';
+    forgotPwEmail.value = authEmail.value; // pre-fill if they started typing
+    forgotPasswordModal.style.display = 'block';
+    forgotPasswordModalOverlay.style.display = 'block';
+  });
+}
+
+function closeForgotModal() {
+  if (forgotPasswordModal) forgotPasswordModal.style.display = 'none';
+  if (forgotPasswordModalOverlay) forgotPasswordModalOverlay.style.display = 'none';
+}
+
+if (closeForgotPwBtn) closeForgotPwBtn.addEventListener('click', closeForgotModal);
+if (forgotPasswordModalOverlay) forgotPasswordModalOverlay.addEventListener('click', closeForgotModal);
+
+if (forgotPwSubmitBtn) {
+  forgotPwSubmitBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    const email = forgotPwEmail.value.trim();
     if (!email) {
-      authErrorMsg.textContent = 'Please enter your email address first.';
-      authErrorMsg.style.color = 'var(--danger)';
-      authErrorMsg.style.display = 'block';
+      forgotPwErrorMsg.textContent = 'Please enter your email address.';
+      forgotPwErrorMsg.style.color = 'var(--danger)';
+      forgotPwErrorMsg.style.display = 'block';
       return;
     }
+    
+    forgotPwSubmitBtn.textContent = 'Sending...';
+    forgotPwSubmitBtn.disabled = true;
+    
     resetPassword(email)
       .then(() => {
-        authErrorMsg.textContent = 'Password reset email sent! Check your inbox.';
-        authErrorMsg.style.color = 'var(--success)';
-        authErrorMsg.style.display = 'block';
+        forgotPwErrorMsg.textContent = 'Password reset email sent! Check your inbox.';
+        forgotPwErrorMsg.style.color = 'var(--success)';
+        forgotPwErrorMsg.style.display = 'block';
+        forgotPwSubmitBtn.textContent = 'Send Reset Link';
+        forgotPwSubmitBtn.disabled = false;
+        setTimeout(() => {
+            closeForgotModal();
+        }, 2000);
       })
       .catch((error) => {
-        authErrorMsg.textContent = error.message;
-        authErrorMsg.style.color = 'var(--danger)';
-        authErrorMsg.style.display = 'block';
+        forgotPwErrorMsg.textContent = error.message;
+        forgotPwErrorMsg.style.color = 'var(--danger)';
+        forgotPwErrorMsg.style.display = 'block';
+        forgotPwSubmitBtn.textContent = 'Send Reset Link';
+        forgotPwSubmitBtn.disabled = false;
       });
   });
 }

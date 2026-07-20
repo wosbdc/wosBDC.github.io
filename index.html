@@ -252,6 +252,22 @@
       </div>
     </div>
     
+    <!-- Forgot Password Modal -->
+    <div id="forgotPasswordModalOverlay" class="sidebar-overlay"></div>
+    <div id="forgotPasswordModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:var(--card-bg); padding:30px; border-radius:12px; border:1px solid var(--border); box-shadow:0 10px 25px rgba(0,0,0,0.5); z-index:1002; width:90%; max-width:400px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+        <h2 style="margin:0; color:var(--text-main);">Reset Password</h2>
+        <button id="closeForgotPwBtn" class="close-btn">&times;</button>
+      </div>
+      <p style="font-size:13px; color:var(--text-muted); margin-bottom:20px;">Enter the email associated with your account and we'll send you a link to reset your password.</p>
+      
+      <div id="forgotPwErrorMsg" style="font-size:13px; margin-bottom:15px; display:none;"></div>
+      
+      <input type="email" id="forgotPwEmail" placeholder="Your Email Address" style="width:100%; padding:10px; margin-bottom:20px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
+      
+      <button id="forgotPwSubmitBtn" style="width:100%; padding:12px; background:var(--accent); color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer; transition:opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Send Reset Link</button>
+    </div>
+    
 <!-- Alt Perks Modal -->
     <div id="altPerksModalOverlay" class="sidebar-overlay"></div>
     <div id="altPerksModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:var(--card-bg); padding:30px; border-radius:12px; border:1px solid var(--border); box-shadow:0 10px 25px rgba(0,0,0,0.5); z-index:1001; width:90%; max-width:400px;">

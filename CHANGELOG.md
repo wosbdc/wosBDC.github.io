@@ -1,3 +1,6 @@
+## [1.27.11] - 2026-07-20
+- Built a dedicated "Reset Password" modal overlay that cleanly separates the password reset flow from the main login screen, reducing confusion.
+
 ## [1.27.10] - 2026-07-20
 - Fixed the "Forgot Password" button failing to send reset emails due to legacy Firebase v8 syntax being used in a Firebase v9 modular environment.
 
