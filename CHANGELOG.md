@@ -1,3 +1,6 @@
+## [1.27.23] - 2026-07-20
+- Fixed an issue where success alerts (toasts) from Admin actions would get stuck on screen permanently instead of automatically dismissing.
+
 ## [1.27.22] - 2026-07-20
 - Converted the "Linked Alt Accounts" section in the Player Database Editor to use a sleek, collapsible dropdown menu matching the Account Hub layout.
 

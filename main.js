@@ -571,7 +571,7 @@ window._executeLogBearTrapWinner = async (name, trap) => {
                 score: res.newTotal,
                 timestamp: Date.now()
             });
-            window.showToast(`🏆 Successfully crowned ${name} as Champion! (New Total: ${res.newTotal})`, "success", true);
+            window.showToast(`🏆 Successfully crowned ${name} as Champion! (New Total: ${res.newTotal})`, "success");
             window.searchPlayerFull(name); // Refresh UI
         } else {
             window.showToast(`Error: ${res ? res.message : 'Unknown backend error'}`, "error");
@@ -631,7 +631,7 @@ window._executeLogBearTrapWinner = async (name, trap) => {
                 globalData.chiefsList = globalData.chiefsList.filter(row => row[0] !== name);
             }
             
-            window.showToast(`?? Successfully deleted ${name}.`, "success", true);
+            window.showToast(`?? Successfully deleted ${name}.`, "success");
             if (document.querySelector('.admin-tab-content')) views.admin();
         } else {
             window.showToast(`Error: ${res ? res.message : 'Unknown backend error'}`, "error");
@@ -653,7 +653,7 @@ window.promptLogBearTrapWinner = async (name) => {
 window.toggleRosterFilter = async () => {
     try {
         await set(ref(db, 'config/rosterRegisteredOnly'), !globalRosterRegisteredOnly);
-        window.showToast('Global Roster Filter toggled!', 'success', true);
+        window.showToast(, \success\);
         if (document.querySelector('.admin-tab-content')) views.admin();
     } catch(e) {
         window.showToast(e.message, "error");
@@ -666,7 +666,7 @@ window.toggleMaintenance = async () => {
     try {
       await set(ref(db, 'config/maintenanceMode'), false);
       await set(ref(db, 'config/maintenanceEndTime'), null);
-      window.showToast('Maintenance mode is now OFF', 'success', true);
+      window.showToast(, \success\);
       if (app.querySelector('#adminHubView')) views.admin();
     } catch (err) {
       window.showToast(err.message, "error");
@@ -966,7 +966,7 @@ window.savePlayerFull = async (name) => {
     const token = await getAuthToken();
     const res = await fetch(`${API_BASE_URL}?api=updateFull&name=${encodeURIComponent(name)}&ptStatus=${encodeURIComponent(ptStatus)}&acStatus=${encodeURIComponent(acStatus)}&btAdd=${encodeURIComponent(btAdd)}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(token)}`).then(r => r.json());
     if (res.success) {
-      window.showToast("Player updated successfully!", "success", true);
+      window.showToast("Player updated successfully!", "success");
       let successMsg = `<div style="color:var(--success); font-weight:bold; margin-bottom:5px;">✅ ${res.message}</div>`;
       if (res.btRes && res.btRes.success) {
         successMsg += `<div style="font-size:13px; color:var(--text-muted);">New Bear Total: ${res.btRes.newTotal}</div>`;
@@ -2607,7 +2607,7 @@ const views = {
           const res = await fetch(`${API_BASE_URL}?api=resetFrost&token=${encodeURIComponent(adminToken)}`).then(r => r.json());
           
           if (res.success) {
-            window.showToast("✅ Reset successful!", "success", true);
+            window.showToast("✅ Reset successful!", "success");
           } else {
             window.showToast("Reset failed.", "error");
             window.loadFrostClanData(); // Reload from server
@@ -3395,7 +3395,7 @@ const views = {
                     location: loc,
                     bio: bio
                 });
-                window.showToast("Staff Profile saved successfully!", "success", true);
+                window.showToast("Staff Profile saved successfully!", "success");
                 btn.textContent = 'Save Profile';
                 btn.disabled = false;
                 setTimeout(() => {
@@ -4609,7 +4609,7 @@ const views = {
                    if (res.status === 'duplicate_skipped') {
                        window.showToast("You are already enrolled!", "success");
                    } else {
-                       window.showToast("Successfully Enrolled in Auto Redeem!", "success", true);
+                       window.showToast("Successfully Enrolled in Auto Redeem!", "success");
                    }
                    optInBtn.textContent = 'Enrolled o.';
                    optInBtn.style.background = 'var(--bg-card)';
@@ -5741,7 +5741,7 @@ window.promptEditEvents = (name, missedEventsStr) => {
       }
     }
     
-    window.showToast("Updates complete!", "success", true);
+    window.showToast("Updates complete!", "success");
     window.sheetCache = {}; 
     window.liveData['LeaderBoards'] = null; window.livePromises['LeaderBoards'] = null;
     window.liveData['activity '] = null; window.livePromises['activity '] = null;
@@ -5764,7 +5764,7 @@ window.promptBearTrap = async (name) => {
     const donToken2 = await getAuthToken();
     const res = await fetch(`${API_BASE_URL}?api=addDonation&name=${encodeURIComponent(name)}&amount=${encodeURIComponent(amt)}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(donToken2)}`).then(r => r.json());
     if (res.success) {
-      window.showToast("Successfully added! New Total: " + res.newTotal, "success", true);
+      window.showToast("Successfully added! New Total: " + res.newTotal, "success");
       window.sheetCache = {}; 
       window.liveData['LeaderBoards'] = null; window.livePromises['LeaderBoards'] = null;
       window.liveData['activity '] = null; window.livePromises['activity '] = null;
@@ -5852,7 +5852,7 @@ window.openAltPerksModal = (gameId, altName) => {
                 if (res.status === 'duplicate_skipped') {
                     window.showToast("This Alt is already enrolled!", "success");
                 } else {
-                    window.showToast("Successfully Enrolled Alt Account!", "success", true);
+                    window.showToast("Successfully Enrolled Alt Account!", "success");
                 }
                 document.getElementById('altPerksModal').style.display = 'none';
                 document.getElementById('altPerksModalOverlay').style.display = 'none';
