@@ -1,3 +1,6 @@
+## [1.27.19] - 2026-07-20
+- Fixed a bug where a Spoofed Session would incorrectly display the Admin's Alt Accounts instead of the spoofed player's Alt Accounts.
+
 ## [1.27.18] - 2026-07-20
 - Streamlined the Admin Master Key workflow: it is now directly integrated into the "Player Database Editor". You can now open a player's profile and click "Spoof Session (Master Key)" from their Admin Actions dropdown to instantly log in as them.
 - Added a floating "Stop Spoofing" button that appears on the screen when a spoof session is active.

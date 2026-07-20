@@ -1044,11 +1044,29 @@ window.adminSpoofPlayer = async (spoofId) => {
     
     if (!spoofId) return;
     
+    // Fetch the spoofed user's actual linked accounts
+    let spoofedLinks = [];
+    try {
+        const usersSnap = await get(ref(db, 'users'));
+        if (usersSnap.exists()) {
+            const users = usersSnap.val();
+            for (const u of Object.values(users)) {
+                if (Number(u.gameId) === Number(spoofId)) {
+                    spoofedLinks = u.linkedGameIds || [];
+                    break;
+                }
+            }
+        }
+    } catch (e) {
+        console.warn("Failed to fetch spoofed alt accounts:", e);
+    }
+    
     window._spoofedUser = true;
     currentUser = {
         ...realUser,
         gameId: spoofId,
-        email: "spoofed@admin.com"
+        email: "spoofed@admin.com",
+        linkedGameIds: spoofedLinks // Overwrite the admin's linked accounts with the spoofed user's
     };
     
     if (window.showToast) window.showToast(`Now spoofing Game ID: ${spoofId}`, "success");
