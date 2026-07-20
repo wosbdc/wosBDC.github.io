@@ -1779,8 +1779,8 @@ const views = {
       const color = isR5 ? 'fbbf24' : '94a3b8';
       const title = isR5 ? 'R5 Leader' : 'R4 Officer';
       
-      const avatarSrc = window.avatarMap && window.avatarMap[gid] 
-          ? window.avatarMap[gid] 
+      const avatarSrc = avatarMap && avatarMap[gid] 
+          ? avatarMap[gid] 
           : `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=${color}&color=fff&size=128`;
           
       const profile = window.staffProfilesMap && window.staffProfilesMap[gid] ? window.staffProfilesMap[gid] : null;
@@ -5479,7 +5479,7 @@ window.generatePlayerProfileHtml = (chiefName, p, headers, colIsUpcoming, roster
                 <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                     <div style="display:flex; gap:16px;">
                         <div style="width:70px; height:70px; border-radius:50%; border:2px solid #06b6d4; box-shadow:0 0 15px rgba(6,182,212,0.5); overflow:hidden; background:var(--bg-secondary); position:relative;">
-                            <img id="altAvatarImg-${gid}" src="${window.avatarMap ? window.avatarMap[gid] || `images/${altName}.png` : `images/${altName}.png`}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <img id="altAvatarImg-${gid}" src="${avatarMap ? avatarMap[gid] || `images/${altName}.png` : `images/${altName}.png`}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
                             <div id="altAvatarFallback-${gid}" style="display:none; align-items:center; justify-content:center; width:100%; height:100%; font-size:24px; font-weight:bold; color:#fff;">${altName.charAt(0).toUpperCase()}</div>
                         </div>
                         <div style="display:flex; flex-direction:column; justify-content:center;">

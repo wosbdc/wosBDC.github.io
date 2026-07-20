@@ -1,3 +1,6 @@
+## [1.27.9] - 2026-07-20
+- Fixed a bug where Staff Cards and Alt Accounts were not rendering uploaded profile pictures due to a broken global variable reference.
+
 ## [1.27.8] - 2026-07-20
 - Cleaned up the Account Hub UI by moving the account Email directly into the Premium ID Card stats panel.
 
