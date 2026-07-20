@@ -1,3 +1,6 @@
+## [1.27.27] - 2026-07-20
+- Improved UI layout: Moved the "Stop Spoofing" and "Switch User" control buttons out of the fixed top-right corner popup and tucked them away neatly at the bottom of the Sidebar Menu.
+
 ## [1.27.26] - 2026-07-20
 - Completely replaced the buggy native `<datalist>` autocomplete in the Multi-BT Donations menu with a sleek, custom Javascript dropdown to fix Safari display bugs.
 
