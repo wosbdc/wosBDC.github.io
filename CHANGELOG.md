@@ -1,3 +1,6 @@
+## [1.27.20] - 2026-07-20
+- Added a "Switch User" button below the floating "Stop Spoofing" button to allow for quick and seamless transitions between spoofed accounts.
+
 ## [1.27.19] - 2026-07-20
 - Fixed a bug where a Spoofed Session would incorrectly display the Admin's Alt Accounts instead of the spoofed player's Alt Accounts.
 

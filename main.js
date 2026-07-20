@@ -1072,8 +1072,8 @@ window.adminSpoofPlayer = async (spoofId) => {
     if (window.showToast) window.showToast(`Now spoofing Game ID: ${spoofId}`, "success");
     
     // Show the floating clear button
-    const clearBtn = document.getElementById('floatingClearSpoofBtn');
-    if (clearBtn) clearBtn.style.display = 'block';
+    const clearBtn = document.getElementById('floatingSpoofControls');
+    if (clearBtn) clearBtn.style.display = 'flex';
     
     // Trigger a fake auth update to redraw the UI
     listenToAuth.fakeUpdate ? listenToAuth.fakeUpdate(currentUser) : null;
@@ -1097,7 +1097,7 @@ window.clearSpoof = () => {
     
     if (window.showToast) window.showToast("Master key deactivated. Returned to normal.", "success");
     
-    const clearBtn = document.getElementById('floatingClearSpoofBtn');
+    const clearBtn = document.getElementById('floatingSpoofControls');
     if (clearBtn) clearBtn.style.display = 'none';
     
     // Brute force redraw
@@ -1112,6 +1112,14 @@ window.clearSpoof = () => {
     // Trigger fake auth update to restore real state
     listenToAuth.fakeUpdate ? listenToAuth.fakeUpdate(currentUser) : null;
     if (app.querySelector('#accountHubView')) views.account();
+};
+
+window.switchSpoofUser = () => {
+    window.clearSpoof();
+    setTimeout(() => {
+        if (views.admin) views.admin();
+        if (views.playerEditor) views.playerEditor();
+    }, 100);
 };
 
 const openAuthModal = () => {

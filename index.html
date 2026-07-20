@@ -14,9 +14,14 @@
   </head>
   <body class="dark-mode">
 
-    <button id="floatingClearSpoofBtn" onclick="window.clearSpoof && window.clearSpoof()" style="display:none; position:fixed; top:70px; right:20px; z-index:9999; background:var(--danger); color:#fff; border:2px solid #fff; padding:10px 20px; border-radius:30px; font-weight:bold; font-size:14px; box-shadow:0 10px 20px rgba(239,68,68,0.5); cursor:pointer; animation: pulse 2s infinite;">
-        🛑 Stop Spoofing
-    </button>
+    <div id="floatingSpoofControls" style="display:none; position:fixed; top:70px; right:20px; z-index:9999; flex-direction:column; gap:8px;">
+        <button onclick="window.clearSpoof && window.clearSpoof()" style="background:var(--danger); color:#fff; border:2px solid #fff; padding:10px 20px; border-radius:30px; font-weight:bold; font-size:14px; box-shadow:0 10px 20px rgba(239,68,68,0.5); cursor:pointer; animation: pulse 2s infinite;">
+            🛑 Stop Spoofing
+        </button>
+        <button onclick="window.switchSpoofUser && window.switchSpoofUser()" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--accent); padding:8px 16px; border-radius:30px; font-weight:bold; font-size:12px; box-shadow:0 4px 10px rgba(0,0,0,0.5); cursor:pointer; transition:0.2s;" onmouseover="this.style.background='var(--bg-main)'" onmouseout="this.style.background='var(--card-bg)'">
+            🔄 Switch User
+        </button>
+    </div>
     <style>
         @keyframes pulse {
             0% { box-shadow: 0 0 0 0 rgba(239,68,68, 0.7); }
