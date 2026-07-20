@@ -1,3 +1,6 @@
+## [1.27.21] - 2026-07-20
+- Moved the "Theme Engine" and "Push Notifications" sections out of the sidebar and into dedicated popup modals to save vertical space and prevent sidebar scrolling issues.
+
 ## [1.27.20] - 2026-07-20
 - Added a "Switch User" button below the floating "Stop Spoofing" button to allow for quick and seamless transitions between spoofed accounts.
 

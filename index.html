@@ -163,37 +163,14 @@
         </div>
       </div>
       
-      <div class="sidebar-section" style="margin-bottom:20px; background:var(--bg-main); padding:15px; border-radius:8px; border:1px solid var(--border);">
-        <h3 style="margin-top:0; margin-bottom:10px; font-size:16px; color:var(--text-main); border-bottom:1px solid var(--border); padding-bottom:5px;">Notifications</h3>
-        <div style="display:flex; align-items:center; justify-content:space-between;">
-          <span style="font-size:14px; color:var(--text-main); font-weight:bold;">Push Alerts</span>
-          <button id="enablePushBtn" style="padding:6px 12px; background:var(--accent); color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:12px; transition:0.2s;">
-            Enable 🔔
-          </button>
-        </div>
-        <div id="pushStatus" style="font-size:11px; color:var(--success); margin-top:8px; display:none;">Subscribed to alerts!</div>
+      <div class="sidebar-section" style="margin-bottom:20px; background:var(--bg-main); padding:15px; border-radius:8px; border:1px solid var(--border); display:flex; flex-direction:column; gap:10px;">
+        <button onclick="document.getElementById('notificationsModal').style.display='block'; document.getElementById('notificationsModalOverlay').style.display='block'; document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('open');" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--border); padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; display:flex; align-items:center; justify-content:center; gap:8px; transition:0.2s;" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--card-bg)'">
+          🔔 Push Notifications
+        </button>
+        <button onclick="document.getElementById('themeModal').style.display='block'; document.getElementById('themeModalOverlay').style.display='block'; document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('open');" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--border); padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; display:flex; align-items:center; justify-content:center; gap:8px; transition:0.2s;" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--card-bg)'">
+          🎨 Theme Engine
+        </button>
       </div>
-
-      <div class="sidebar-section" style="background:var(--bg-main); padding:15px; border-radius:8px; border:1px solid var(--border);">
-        <h3 style="margin-top:0; margin-bottom:10px; font-size:16px; color:var(--text-main); border-bottom:1px solid var(--border); padding-bottom:5px;">Theme Engine</h3>
-        <div class="theme-grid">
-          <div class="theme-card" data-theme="light">
-            <div class="theme-swatch" style="background: #ffffff; border:1px solid #ccc;"></div>
-            <span class="theme-label">Light</span>
-          </div>
-          <div class="theme-card" data-theme="midnight">
-            <div class="theme-swatch" style="background: #0f172a;"></div>
-            <span class="theme-label">Midnight</span>
-          </div>
-
-          <div class="theme-card" data-theme="ombre">
-            <div class="theme-swatch" style="background: linear-gradient(135deg, #ec4899, #22d3ee);"></div>
-            <span class="theme-label">Diva</span>
-          </div>
-
-        </div>
-      </div>
-
 
       </div>
 
@@ -209,6 +186,46 @@
         <h2 style="color:var(--danger); margin-top:0; margin-bottom:15px;">Database Connection Error</h2>
         <p id="errorMsgText" style="color:var(--text-main); font-size:16px; margin-bottom:25px; line-height:1.5;">We encountered an issue while connecting to the backend Google Apps Script database.</p>
         <button onclick="window.location.reload()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; font-weight:bold; font-size:16px; cursor:pointer; transition:0.2s;">Retry Connection</button>
+      </div>
+    </div>
+    
+    <!-- Notifications Modal -->
+    <div id="notificationsModalOverlay" class="sidebar-overlay" onclick="document.getElementById('notificationsModal').style.display='none'; this.style.display='none';"></div>
+    <div id="notificationsModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:var(--card-bg); padding:30px; border-radius:12px; border:1px solid var(--accent); box-shadow:0 10px 25px rgba(0,0,0,0.5); z-index:1001; width:90%; max-width:400px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:10px;">
+        <h2 style="margin:0; color:var(--text-main);">🔔 Push Notifications</h2>
+        <button onclick="document.getElementById('notificationsModal').style.display='none'; document.getElementById('notificationsModalOverlay').style.display='none';" class="close-btn">&times;</button>
+      </div>
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:15px;">
+        <span style="font-size:16px; color:var(--text-main); font-weight:bold;">Push Alerts</span>
+        <button id="enablePushBtn" style="padding:8px 16px; background:var(--accent); color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:14px; transition:0.2s;">
+          Enable 🔔
+        </button>
+      </div>
+      <div id="pushStatus" style="font-size:13px; color:var(--success); display:none; text-align:center; padding:10px; background:rgba(46,204,113,0.1); border-radius:6px;">✅ Subscribed to alerts!</div>
+      <p style="font-size:12px; color:var(--text-muted); margin-top:20px; line-height:1.5;">Enable push notifications to receive real-time alerts when important events occur or when leadership needs your attention.</p>
+    </div>
+
+    <!-- Theme Modal -->
+    <div id="themeModalOverlay" class="sidebar-overlay" onclick="document.getElementById('themeModal').style.display='none'; this.style.display='none';"></div>
+    <div id="themeModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:var(--card-bg); padding:30px; border-radius:12px; border:1px solid var(--accent); box-shadow:0 10px 25px rgba(0,0,0,0.5); z-index:1001; width:90%; max-width:500px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:10px;">
+        <h2 style="margin:0; color:var(--text-main);">🎨 Theme Engine</h2>
+        <button onclick="document.getElementById('themeModal').style.display='none'; document.getElementById('themeModalOverlay').style.display='none';" class="close-btn">&times;</button>
+      </div>
+      <div class="theme-grid">
+          <div class="theme-card" data-theme="light">
+            <div class="theme-swatch" style="background: #ffffff; border:1px solid #ccc;"></div>
+            <span class="theme-label">Light</span>
+          </div>
+          <div class="theme-card" data-theme="midnight">
+            <div class="theme-swatch" style="background: #0f172a;"></div>
+            <span class="theme-label">Midnight</span>
+          </div>
+          <div class="theme-card" data-theme="ombre">
+            <div class="theme-swatch" style="background: linear-gradient(135deg, #ec4899, #22d3ee);"></div>
+            <span class="theme-label">Diva</span>
+          </div>
       </div>
     </div>
     
