@@ -1,3 +1,6 @@
+## [1.27.13] - 2026-07-20
+- Fixed a bug where clicking the main Account Hub avatar failed to open the file upload dialog due to an improper template literal reference.
+
 ## [1.27.12] - 2026-07-20
 - Fixed an issue where the new Reset Password modal was overlapping the Sign In modal. The Sign In modal is now correctly hidden when resetting your password.
 
