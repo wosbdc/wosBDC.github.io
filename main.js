@@ -1786,13 +1786,14 @@ const views = {
       const profile = window.staffProfilesMap && window.staffProfilesMap[gid] ? window.staffProfilesMap[gid] : null;
       let deptText = profile && profile.department ? profile.department : title;
       let tzHtml = profile && profile.timezone ? `<div class="staff-details-row"><span>Timezone:</span><span style="color:var(--text-main); font-weight:bold;">${window.escapeHTML(profile.timezone)}</span></div>` : '';
+      let locHtml = profile && profile.location ? `<div class="staff-details-row"><span>Location:</span><span style="color:var(--text-main); font-weight:bold;">${window.escapeHTML(profile.location)}</span></div>` : '';
       let bioHtml = profile && profile.bio ? `<div class="staff-bio">"${window.escapeHTML(profile.bio)}"</div>` : '';
       
       const cardHtml = `
           <div class="staff-card rank-${level.toLowerCase()}" onclick="this.classList.toggle('flipped')">
             <img src="${avatarSrc}" alt="${level}" class="staff-avatar">
             <div class="staff-name">${name}</div>
-            <div class="staff-role">${window.escapeHTML(deptText)}</div>
+            <div class="staff-role" style="white-space: pre-wrap;">${window.escapeHTML(deptText)}</div>
             ${bioHtml}
             
             <div class="staff-details">
@@ -1800,6 +1801,7 @@ const views = {
                 <span>In-Game ID:</span>
                 <span style="color:var(--text-main); font-weight:bold;">${gid} <button class="copy-id-btn" onclick="event.stopPropagation(); navigator.clipboard.writeText('${gid}'); window.showToast('Copied ID!', 'success')">Copy</button></span>
               </div>
+              ${locHtml}
               ${tzHtml}
             </div>
           </div>
@@ -3109,11 +3111,15 @@ const views = {
               <div style="display:flex; flex-direction:column; gap:12px; background:var(--card-bg); padding:15px; border-radius:8px; border:1px solid var(--border);">
                   <div>
                       <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px;">Department / Specialty</label>
-                      <input type="text" id="staffDeptInput" placeholder="e.g. Event Coordinator" value="${window.escapeHTML(p.department || '')}" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:14px; box-sizing:border-box;">
+                      <textarea id="staffDeptInput" placeholder="e.g. Event Coordinator, Bear Trap Manager" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:14px; box-sizing:border-box; resize:vertical; min-height:45px;">${window.escapeHTML(p.department || '')}</textarea>
                   </div>
                   <div>
                       <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px;">Timezone</label>
                       <input type="text" id="staffTzInput" placeholder="e.g. EST" value="${window.escapeHTML(p.timezone || '')}" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:14px; box-sizing:border-box;">
+                  </div>
+                  <div>
+                      <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px;">Location</label>
+                      <input type="text" id="staffLocInput" placeholder="e.g. Texas, USA" value="${window.escapeHTML(p.location || '')}" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:14px; box-sizing:border-box;">
                   </div>
                   <div>
                       <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px;">Bio / Tagline</label>
@@ -3196,6 +3202,7 @@ const views = {
         document.getElementById('saveStaffProfileBtn').addEventListener('click', async () => {
             const dept = document.getElementById('staffDeptInput').value.trim();
             const tz = document.getElementById('staffTzInput').value.trim();
+            const loc = document.getElementById('staffLocInput').value.trim();
             const bio = document.getElementById('staffBioInput').value.trim();
             const btn = document.getElementById('saveStaffProfileBtn');
             btn.textContent = 'Saving...';
@@ -3204,6 +3211,7 @@ const views = {
                 await set(ref(db, `staffProfiles/${currentUser.gameId}`), {
                     department: dept,
                     timezone: tz,
+                    location: loc,
                     bio: bio
                 });
                 window.showToast("Staff Profile saved successfully!", "success", true);

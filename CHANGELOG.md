@@ -1,3 +1,7 @@
+## [1.27.3] - 2026-07-20
+- Converted the "Department" input on the Staff Profile to a textarea to support multiple lines for users who manage multiple events.
+- Added a "Location" field to the Staff Profile editor and displayed it on the Staff Cards.
+
 ## [1.27.2] - 2026-07-20
 - Fixed a bug in the Firebase Database rules that was blocking master accounts from editing their profile pictures or alt account profile pictures if they had fewer than 5 alt accounts linked. 
 
