@@ -1,3 +1,6 @@
+## [1.27.2] - 2026-07-20
+- Fixed a bug in the Firebase Database rules that was blocking master accounts from editing their profile pictures or alt account profile pictures if they had fewer than 5 alt accounts linked. 
+
 ## [1.27.1] - 2026-07-20
 - Fixed a syntax error that was causing the site build to fail on Vercel (which prevented the version badge and changelog from updating).
 
