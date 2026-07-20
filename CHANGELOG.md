@@ -1,3 +1,6 @@
+## [1.27.25] - 2026-07-20
+- Fixed an issue where the autocomplete datalist for the Multi-BT / Player Name search bars was rendering visibly on some browsers (like Safari) by explicitly setting `display: none;`.
+
 ## [1.27.24] - 2026-07-20
 - Hotfix: Fixed a Javascript syntax parsing error that caused the automated GitHub Actions deployment pipeline to fail.
 

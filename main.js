@@ -2791,7 +2791,7 @@ const views = {
         </div>
 
       </div>
-      <datalist id="chiefList"></datalist>
+      <datalist id="chiefList" style="display:none;"></datalist>
     `;
     
     // Populate datalist from roster
@@ -3188,7 +3188,7 @@ const views = {
       
       linkedHtml += `</details></div>`;
       
-      let datalistHtml = `<datalist id="rosterAltDatalist">`;
+      let datalistHtml = `<datalist id="rosterAltDatalist" style="display:none;">`;
       for (const [id, name] of Object.entries(idToNameMap)) {
           if (id !== currentUser.gameId && !links.includes(id)) {
               datalistHtml += `<option value="${id}">${name}</option>`;
