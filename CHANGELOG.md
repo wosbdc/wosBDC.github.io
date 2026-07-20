@@ -1,3 +1,6 @@
+## [1.27.24] - 2026-07-20
+- Hotfix: Fixed a Javascript syntax parsing error that caused the automated GitHub Actions deployment pipeline to fail.
+
 ## [1.27.23] - 2026-07-20
 - Fixed an issue where success alerts (toasts) from Admin actions would get stuck on screen permanently instead of automatically dismissing.
 

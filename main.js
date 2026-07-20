@@ -653,7 +653,7 @@ window.promptLogBearTrapWinner = async (name) => {
 window.toggleRosterFilter = async () => {
     try {
         await set(ref(db, 'config/rosterRegisteredOnly'), !globalRosterRegisteredOnly);
-        window.showToast(, \success\);
+        window.showToast('Global Roster Filter toggled!', 'success');
         if (document.querySelector('.admin-tab-content')) views.admin();
     } catch(e) {
         window.showToast(e.message, "error");
@@ -666,7 +666,7 @@ window.toggleMaintenance = async () => {
     try {
       await set(ref(db, 'config/maintenanceMode'), false);
       await set(ref(db, 'config/maintenanceEndTime'), null);
-      window.showToast(, \success\);
+      window.showToast('Maintenance mode is now OFF', 'success');
       if (app.querySelector('#adminHubView')) views.admin();
     } catch (err) {
       window.showToast(err.message, "error");
