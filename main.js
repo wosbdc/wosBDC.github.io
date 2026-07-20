@@ -1195,6 +1195,7 @@ if (authForgotPwBtn) {
     e.preventDefault();
     forgotPwErrorMsg.style.display = 'none';
     forgotPwEmail.value = authEmail.value; // pre-fill if they started typing
+    document.getElementById('authModal').style.display = 'none';
     forgotPasswordModal.style.display = 'block';
     forgotPasswordModalOverlay.style.display = 'block';
   });

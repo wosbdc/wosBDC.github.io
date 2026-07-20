@@ -1,3 +1,6 @@
+## [1.27.12] - 2026-07-20
+- Fixed an issue where the new Reset Password modal was overlapping the Sign In modal. The Sign In modal is now correctly hidden when resetting your password.
+
 ## [1.27.11] - 2026-07-20
 - Built a dedicated "Reset Password" modal overlay that cleanly separates the password reset flow from the main login screen, reducing confusion.
 
