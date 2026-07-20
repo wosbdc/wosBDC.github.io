@@ -1,5 +1,5 @@
 import './style.css'
-import { initPresence, listenToAuth, loginUser, logoutUser, registerUser, uploadAvatar, deleteAvatar, db, auth, requestPushPermission, listenForForegroundMessages, linkAltAccount, unlinkAltAccount, loginWithGoogle } from './src/firebase.js'
+import { initPresence, listenToAuth, loginUser, logoutUser, registerUser, uploadAvatar, deleteAvatar, db, auth, requestPushPermission, listenForForegroundMessages, linkAltAccount, unlinkAltAccount, loginWithGoogle, resetPassword } from './src/firebase.js'
 import { ref, onValue, get, set, remove } from 'firebase/database'
 
 const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbxJ7MsO2-ltwkWsEQBJL1srJ1NoH_r1H0G3aEQXRcwBZ7aF1sG1coqG_nfBBckFdDk/exec';
@@ -1193,7 +1193,7 @@ if (authForgotPwBtn) {
       authErrorMsg.style.display = 'block';
       return;
     }
-    firebase.auth().sendPasswordResetEmail(email)
+    resetPassword(email)
       .then(() => {
         authErrorMsg.textContent = 'Password reset email sent! Check your inbox.';
         authErrorMsg.style.color = 'var(--success)';

@@ -1,3 +1,6 @@
+## [1.27.10] - 2026-07-20
+- Fixed the "Forgot Password" button failing to send reset emails due to legacy Firebase v8 syntax being used in a Firebase v9 modular environment.
+
 ## [1.27.9] - 2026-07-20
 - Fixed a bug where Staff Cards and Alt Accounts were not rendering uploaded profile pictures due to a broken global variable reference.
 
