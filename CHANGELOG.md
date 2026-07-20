@@ -1,3 +1,6 @@
+## [1.27.22] - 2026-07-20
+- Converted the "Linked Alt Accounts" section in the Player Database Editor to use a sleek, collapsible dropdown menu matching the Account Hub layout.
+
 ## [1.27.21] - 2026-07-20
 - Moved the "Theme Engine" and "Push Notifications" sections out of the sidebar and into dedicated popup modals to save vertical space and prevent sidebar scrolling issues.
 

@@ -5574,8 +5574,15 @@ window.generatePlayerProfileHtml = (chiefName, p, headers, colIsUpcoming, roster
 
     if (isAdmin && altAccounts && altAccounts.length > 0) {
         html += `<div style="text-align:left; border-top:1px solid var(--border); padding-top:20px; margin-top:20px;">
-        <h3 style="margin-top:0; color:#ffffff; font-size:24px; font-weight:bold; font-family:sans-serif;">Linked Alt Accounts <span style="font-size:16px; color:var(--text-muted); font-weight:normal;">(${altAccounts.length})</span></h3>
-        <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap:20px; margin-top:20px;">`;
+         <details style="background:rgba(255,255,255,0.02); border-radius:12px; border:1px solid var(--border); padding:10px; cursor:pointer;" class="alt-accounts-details">
+             <summary style="font-weight:bold; font-size:18px; color:var(--text-main); outline:none; display:flex; align-items:center; justify-content:space-between;">
+                 <div style="display:flex; align-items:center; gap:8px;">
+                     🔗 Linked Alt Accounts <span style="font-size:14px; color:var(--text-muted); font-weight:normal;">(${altAccounts.length})</span>
+                 </div>
+                 <span class="alt-accounts-arrow" style="font-size:14px; transition:transform 0.3s ease;">▼</span>
+             </summary>
+             <style>.alt-accounts-details[open] .alt-accounts-arrow { transform: rotate(180deg); }</style>
+             <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap:20px; margin-top:20px; cursor:default;">`;
         
         altAccounts.forEach(gid => {
             let altName = idToNameMap[gid] || `Game ID: ${gid}`;
@@ -5654,7 +5661,7 @@ window.generatePlayerProfileHtml = (chiefName, p, headers, colIsUpcoming, roster
             `;
         });
         
-        html += `</div></div>`;
+        html += `</div></details></div>`;
     }
 
     html += '</div>';
