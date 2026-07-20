@@ -3447,7 +3447,7 @@ const views = {
                      if (imgEl.nextElementSibling) imgEl.nextElementSibling.style.display = 'none';
                    }
                    
-                   if (window.showToast) window.showToast('Profile picture updated successfully!', 'success', true);
+                   if (window.showToast) window.showToast('Profile picture updated successfully!', 'success');
                    
                    // Refresh mapping so UI updates immediately globally
                    if (idToNameMap[currentUser.gameId]) {

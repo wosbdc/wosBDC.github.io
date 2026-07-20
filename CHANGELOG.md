@@ -1,3 +1,6 @@
+## [1.27.14] - 2026-07-20
+- Fixed a bug where the "Profile picture updated successfully!" notification would get permanently stuck on the screen.
+
 ## [1.27.13] - 2026-07-20
 - Fixed a bug where clicking the main Account Hub avatar failed to open the file upload dialog due to an improper template literal reference.
 
