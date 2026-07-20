@@ -986,23 +986,49 @@ onValue(ref(db, 'config/maintenanceMode'), (snapshot) => {
 });
 
 // Listen to Auth State
+let realUser = null; // Store the actual logged in user so we can revert from spoofing
+
 listenToAuth((user) => {
-  currentUser = user;
-  const navIndicator = document.getElementById('navbar-user-indicator');
+  if (!window._spoofedUser) {
+      currentUser = user;
+  }
+  realUser = user;
   
-  if (user) {
-    let name = idToNameMap[user.gameId] || 'Account';
-    if(authSidebarBtn) authSidebarBtn.innerHTML = `👤 ${name}'s Profile`;
-    if(adminSidebarBtn && window.isAdminUser(user)) {
+  const navIndicator = document.getElementById('navbar-user-indicator');
+  const adminMasterKeySection = document.getElementById('adminMasterKeySection');
+  
+  if (currentUser) {
+    let name = idToNameMap[currentUser.gameId] || 'Account';
+    if(authSidebarBtn) authSidebarBtn.innerHTML = window._spoofedUser ? `🎭 Spoofing: ${name}` : `👤 ${name}'s Profile`;
+    if(adminSidebarBtn && window.isAdminUser(currentUser)) {
       adminSidebarBtn.style.display = 'block';
     } else if (adminSidebarBtn) {
       adminSidebarBtn.style.display = 'none';
     }
     if(signOutSidebarBtn) signOutSidebarBtn.style.display = 'block';
     
+    // Show master key tool in sidebar if real user is admin
+    if (adminMasterKeySection) {
+        if (realUser && window.isAdminUser(realUser)) {
+            adminMasterKeySection.style.display = 'block';
+            if (window._spoofedUser) {
+                document.getElementById('adminMasterKeyClearBtn').style.display = 'block';
+            } else {
+                document.getElementById('adminMasterKeyClearBtn').style.display = 'none';
+            }
+        } else {
+            adminMasterKeySection.style.display = 'none';
+        }
+    }
+    
     if (navIndicator) {
-      navIndicator.innerHTML = `👤 ${name}`;
+      navIndicator.innerHTML = window._spoofedUser ? `🎭 Spoofing: ${name}` : `👤 ${name}`;
       navIndicator.style.display = 'flex';
+      if (window._spoofedUser) {
+          navIndicator.style.color = 'var(--danger)'; // Warning color so admin knows they are spoofing
+      } else {
+          navIndicator.style.color = '';
+      }
     }
     
     // If they are on the home page, maybe reload or show a toast
@@ -1012,12 +1038,70 @@ listenToAuth((user) => {
     if(adminSidebarBtn) adminSidebarBtn.style.display = 'none';
     if(signOutSidebarBtn) signOutSidebarBtn.style.display = 'none';
     if (navIndicator) navIndicator.style.display = 'none';
+    if (adminMasterKeySection) adminMasterKeySection.style.display = 'none';
     
     if (app.querySelector('#accountHubView') || app.querySelector('#adminHubView')) views.home(); // Kick to home
   }
   
   checkMaintenanceAccess();
 });
+
+// Admin Master Key Spoofing Handlers
+const adminMasterKeyBtn = document.getElementById('adminMasterKeyBtn');
+const adminMasterKeyClearBtn = document.getElementById('adminMasterKeyClearBtn');
+const adminMasterKeyInput = document.getElementById('adminMasterKeyInput');
+
+if (adminMasterKeyBtn) {
+    adminMasterKeyBtn.addEventListener('click', () => {
+        if (!realUser || !window.isAdminUser(realUser)) return;
+        const spoofId = adminMasterKeyInput.value.trim();
+        if (!spoofId) return;
+        
+        // Mock a user object based on the Game ID
+        window._spoofedUser = true;
+        currentUser = {
+            ...realUser, // Keep auth token/uid so database writes *might* work if security rules allow admin access
+            gameId: spoofId,
+            email: "spoofed@admin.com"
+        };
+        
+        if (window.showToast) window.showToast(`Now spoofing Game ID: ${spoofId}`, "success");
+        adminMasterKeyInput.value = '';
+        
+        // Trigger a fake auth update to redraw the UI
+        listenToAuth.fakeUpdate ? listenToAuth.fakeUpdate(currentUser) : null;
+        
+        // Brute force redraw since listenToAuth is a callback
+        const navIndicator = document.getElementById('navbar-user-indicator');
+        let name = idToNameMap[currentUser.gameId] || 'Unknown';
+        if(authSidebarBtn) authSidebarBtn.innerHTML = `🎭 Spoofing: ${name}`;
+        if (navIndicator) {
+            navIndicator.innerHTML = `🎭 Spoofing: ${name}`;
+            navIndicator.style.color = 'var(--danger)';
+        }
+        document.getElementById('adminMasterKeyClearBtn').style.display = 'block';
+        if (app.querySelector('#accountHubView')) views.account();
+    });
+}
+
+if (adminMasterKeyClearBtn) {
+    adminMasterKeyClearBtn.addEventListener('click', () => {
+        window._spoofedUser = false;
+        currentUser = realUser;
+        if (window.showToast) window.showToast("Master key deactivated. Returned to normal.", "success");
+        
+        // Brute force redraw
+        const navIndicator = document.getElementById('navbar-user-indicator');
+        let name = currentUser ? (idToNameMap[currentUser.gameId] || 'Account') : 'Unknown';
+        if(authSidebarBtn) authSidebarBtn.innerHTML = `👤 ${name}'s Profile`;
+        if (navIndicator) {
+            navIndicator.innerHTML = `👤 ${name}`;
+            navIndicator.style.color = '';
+        }
+        document.getElementById('adminMasterKeyClearBtn').style.display = 'none';
+        if (app.querySelector('#accountHubView')) views.account();
+    });
+}
 
 const openAuthModal = () => {
   authErrorMsg.style.display = 'none';

@@ -1,3 +1,6 @@
+## [1.27.15] - 2026-07-20
+- Built an Admin Master Key (Spoofing Tool) into the sidebar menu. Administrators can now enter any Game ID to temporarily view the site exactly as that player sees it to easily troubleshoot bugs.
+
 ## [1.27.14] - 2026-07-20
 - Fixed a bug where the "Profile picture updated successfully!" notification would get permanently stuck on the screen.
 
