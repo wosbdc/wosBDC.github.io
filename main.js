@@ -3104,28 +3104,39 @@ const views = {
       if (accLevel) { // Only show to admins
           let p = window.staffProfilesMap && window.staffProfilesMap[currentUser.gameId] ? window.staffProfilesMap[currentUser.gameId] : {department:'', timezone:'', bio:''};
           staffProfileHtml = `
-          <div style="text-align:left; border-top:1px solid var(--border); padding-top:20px; margin-top:20px; margin-bottom:20px;">
-              <h3 style="margin-top:0; color:var(--text-main); font-size:18px; font-weight:bold;">🛡️ Staff Profile</h3>
-              <p style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">This information will be displayed publicly on the Staff page.</p>
-              
-              <div style="display:flex; flex-direction:column; gap:12px; background:var(--card-bg); padding:15px; border-radius:8px; border:1px solid var(--border);">
-                  <div>
-                      <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px;">Department / Specialty</label>
-                      <textarea id="staffDeptInput" placeholder="e.g. Event Coordinator, Bear Trap Manager" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:14px; box-sizing:border-box; resize:vertical; min-height:45px;">${window.escapeHTML(p.department || '')}</textarea>
+          <div style="margin-bottom:20px;">
+              <button id="openStaffProfileBtn" style="background:linear-gradient(90deg, var(--accent), #0284c7); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:15px; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 15px rgba(6,182,212,0.3); transition:transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(6,182,212,0.5)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(6,182,212,0.3)'">
+                  🛡️ Edit Staff Profile
+              </button>
+          </div>
+          
+          <div id="staffProfileModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.9); backdrop-filter:blur(10px); z-index:99999; align-items:center; justify-content:center;">
+              <div class="modal-content card" style="width:90%; max-width:500px; background:var(--bg-main); border:1px solid rgba(56,189,248,0.3); padding:25px; border-radius:12px; box-shadow:0 10px 40px rgba(0,0,0,0.5); text-align:left;">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                      <h3 style="margin:0; color:var(--text-main); font-size:20px; font-weight:bold;">🛡️ Staff Profile</h3>
+                      <button id="closeStaffProfileBtn" style="background:none; border:none; color:var(--text-muted); font-size:28px; cursor:pointer; line-height:1; transition:color 0.2s;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-muted)'">&times;</button>
                   </div>
-                  <div>
-                      <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px;">Timezone</label>
-                      <input type="text" id="staffTzInput" placeholder="e.g. EST" value="${window.escapeHTML(p.timezone || '')}" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:14px; box-sizing:border-box;">
+                  <p style="font-size:13px; color:var(--text-muted); margin-bottom:20px;">This information will be displayed publicly on the Staff page.</p>
+                  
+                  <div style="display:flex; flex-direction:column; gap:15px;">
+                      <div>
+                          <label style="display:block; font-size:13px; font-weight:bold; color:var(--text-main); margin-bottom:6px;">Department / Specialty</label>
+                          <textarea id="staffDeptInput" placeholder="e.g. Event Coordinator, Bear Trap Manager" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-secondary); color:var(--text-main); font-size:14px; box-sizing:border-box; resize:vertical; min-height:50px;">${window.escapeHTML(p.department || '')}</textarea>
+                      </div>
+                      <div>
+                          <label style="display:block; font-size:13px; font-weight:bold; color:var(--text-main); margin-bottom:6px;">Timezone</label>
+                          <input type="text" id="staffTzInput" placeholder="e.g. EST" value="${window.escapeHTML(p.timezone || '')}" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-secondary); color:var(--text-main); font-size:14px; box-sizing:border-box;">
+                      </div>
+                      <div>
+                          <label style="display:block; font-size:13px; font-weight:bold; color:var(--text-main); margin-bottom:6px;">Location</label>
+                          <input type="text" id="staffLocInput" placeholder="e.g. Texas, USA" value="${window.escapeHTML(p.location || '')}" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-secondary); color:var(--text-main); font-size:14px; box-sizing:border-box;">
+                      </div>
+                      <div>
+                          <label style="display:block; font-size:13px; font-weight:bold; color:var(--text-main); margin-bottom:6px;">Bio / Tagline</label>
+                          <textarea id="staffBioInput" placeholder="A short fun quote..." style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-secondary); color:var(--text-main); font-size:14px; box-sizing:border-box; resize:vertical; min-height:80px;">${window.escapeHTML(p.bio || '')}</textarea>
+                      </div>
+                      <button id="saveStaffProfileBtn" style="background:var(--accent); color:#fff; border:none; padding:12px; border-radius:6px; cursor:pointer; font-weight:bold; margin-top:10px; font-size:15px; transition:0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Save Profile</button>
                   </div>
-                  <div>
-                      <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px;">Location</label>
-                      <input type="text" id="staffLocInput" placeholder="e.g. Texas, USA" value="${window.escapeHTML(p.location || '')}" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:14px; box-sizing:border-box;">
-                  </div>
-                  <div>
-                      <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px;">Bio / Tagline</label>
-                      <textarea id="staffBioInput" placeholder="A short fun quote..." style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:14px; box-sizing:border-box; resize:vertical; min-height:60px;">${window.escapeHTML(p.bio || '')}</textarea>
-                  </div>
-                  <button id="saveStaffProfileBtn" style="background:var(--accent); color:#fff; border:none; padding:10px; border-radius:6px; cursor:pointer; font-weight:bold; margin-top:5px; transition:0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">Save Staff Profile</button>
               </div>
           </div>
           `;
@@ -3198,7 +3209,14 @@ const views = {
       views.home();
     });
     
-    if (document.getElementById('saveStaffProfileBtn')) {
+    if (accLevel) {
+        document.getElementById('openStaffProfileBtn').addEventListener('click', () => {
+            document.getElementById('staffProfileModal').style.display = 'flex';
+        });
+        document.getElementById('closeStaffProfileBtn').addEventListener('click', () => {
+            document.getElementById('staffProfileModal').style.display = 'none';
+        });
+        
         document.getElementById('saveStaffProfileBtn').addEventListener('click', async () => {
             const dept = document.getElementById('staffDeptInput').value.trim();
             const tz = document.getElementById('staffTzInput').value.trim();
@@ -3215,12 +3233,17 @@ const views = {
                     bio: bio
                 });
                 window.showToast("Staff Profile saved successfully!", "success", true);
+                btn.textContent = 'Save Profile';
+                btn.disabled = false;
+                setTimeout(() => {
+                    document.getElementById('staffProfileModal').style.display = 'none';
+                }, 500);
             } catch (err) {
-                window.showToast("Error saving profile.", "error");
                 console.error(err);
+                window.showToast("Failed to save profile.", "error");
+                btn.textContent = 'Save Profile';
+                btn.disabled = false;
             }
-            btn.textContent = 'Save Staff Profile';
-            btn.disabled = false;
         });
     }
     

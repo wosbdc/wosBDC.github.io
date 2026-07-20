@@ -1,3 +1,6 @@
+## [1.27.4] - 2026-07-20
+- Converted the inline Staff Profile editor in the Account Hub into a button that opens a beautiful modal popup overlay.
+
 ## [1.27.3] - 2026-07-20
 - Converted the "Department" input on the Staff Profile to a textarea to support multiple lines for users who manage multiple events.
 - Added a "Location" field to the Staff Profile editor and displayed it on the Staff Cards.
