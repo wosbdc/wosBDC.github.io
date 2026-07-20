@@ -1046,16 +1046,85 @@ listenToAuth((user) => {
   checkMaintenanceAccess();
 });
 
-// Admin Master Key Spoofing Handlers
 const adminMasterKeyBtn = document.getElementById('adminMasterKeyBtn');
 const adminMasterKeyClearBtn = document.getElementById('adminMasterKeyClearBtn');
 const adminMasterKeyInput = document.getElementById('adminMasterKeyInput');
+const adminMasterKeyDropdown = document.getElementById('adminMasterKeyDropdown');
+
+if (adminMasterKeyInput && adminMasterKeyDropdown) {
+    const filterAndShowMasterKeyDropdown = () => {
+        const query = adminMasterKeyInput.value.toLowerCase().trim();
+        if (!query) {
+            adminMasterKeyDropdown.style.display = 'none';
+            return;
+        }
+        
+        let dropdownItems = [];
+        for (const [gid, name] of Object.entries(window.idToNameMap || {})) {
+            dropdownItems.push({ name: name, gid: gid });
+        }
+        
+        const matches = dropdownItems.filter(item => item.name.toLowerCase().includes(query) || item.gid.includes(query)).slice(0, 50);
+        
+        if (matches.length === 0) {
+            adminMasterKeyDropdown.innerHTML = `<div style="padding:12px; color:var(--text-muted); text-align:center; font-size:14px;">No matches found.</div>`;
+        } else {
+            adminMasterKeyDropdown.innerHTML = matches.map(item => `
+                <div class="mk-dropdown-item" data-value="${item.gid}" style="padding:12px 15px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.05); color:var(--text-main); font-weight:bold; font-size:14px; display:flex; justify-content:space-between; align-items:center; transition:0.2s;">
+                    <span>${window.escapeHTML(item.name)}</span>
+                    <span style="font-size:11px; color:var(--text-muted); font-family:monospace;">${item.gid}</span>
+                </div>
+            `).join('');
+            
+            adminMasterKeyDropdown.querySelectorAll('.mk-dropdown-item').forEach(el => {
+                el.addEventListener('mouseover', () => el.style.background = 'var(--bg-main)');
+                el.addEventListener('mouseout', () => el.style.background = 'transparent');
+                el.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    adminMasterKeyInput.value = el.getAttribute('data-value');
+                    adminMasterKeyDropdown.style.display = 'none';
+                    if (adminMasterKeyBtn) adminMasterKeyBtn.click();
+                });
+            });
+        }
+        adminMasterKeyDropdown.style.display = 'flex';
+    };
+    
+    adminMasterKeyInput.addEventListener('input', filterAndShowMasterKeyDropdown);
+    adminMasterKeyInput.addEventListener('focus', filterAndShowMasterKeyDropdown);
+    adminMasterKeyInput.addEventListener('blur', () => { setTimeout(() => adminMasterKeyDropdown.style.display = 'none', 150); });
+    adminMasterKeyInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        adminMasterKeyDropdown.style.display = 'none';
+        if (adminMasterKeyBtn) adminMasterKeyBtn.click();
+      }
+    });
+}
 
 if (adminMasterKeyBtn) {
-    adminMasterKeyBtn.addEventListener('click', () => {
+    adminMasterKeyBtn.addEventListener('click', async () => {
         if (!realUser || !window.isAdminUser(realUser)) return;
-        const spoofId = adminMasterKeyInput.value.trim();
+        
+        const isUnlocked = await window.isOTPUnlocked();
+        if (!isUnlocked) {
+            window.showToast("Security unlock required to use the master key.", "error");
+            views.admin(); // Kick to admin screen for auth verification
+            return;
+        }
+        
+        let spoofId = adminMasterKeyInput.value.trim();
         if (!spoofId) return;
+        
+        // If they typed a name instead of a Game ID, try to resolve it
+        if (!/^\d+$/.test(spoofId)) {
+            const foundId = Object.keys(window.idToNameMap || {}).find(key => window.idToNameMap[key].toLowerCase() === spoofId.toLowerCase());
+            if (foundId) {
+                spoofId = foundId;
+            } else {
+                window.showToast("Could not find Game ID for that name.", "error");
+                return;
+            }
+        }
         
         // Mock a user object based on the Game ID
         window._spoofedUser = true;

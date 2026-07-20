@@ -1,3 +1,7 @@
+## [1.27.16] - 2026-07-20
+- Hardened the Master Key feature by requiring the Google Sign-In OTP verification before allowing spoofing.
+- The Master Key input now supports autocompleting by Chief Name or Game ID, identical to the standard player search bar.
+
 ## [1.27.15] - 2026-07-20
 - Built an Admin Master Key (Spoofing Tool) into the sidebar menu. Administrators can now enter any Game ID to temporarily view the site exactly as that player sees it to easily troubleshoot bugs.
 
