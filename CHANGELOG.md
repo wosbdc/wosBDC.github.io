@@ -1,3 +1,6 @@
+## [1.27.8] - 2026-07-20
+- Cleaned up the Account Hub UI by moving the account Email directly into the Premium ID Card stats panel.
+
 ## [1.27.7] - 2026-07-20
 - Updated Staff Cards to display "R4 Officer" / "R5 Leader" on the front, and beautifully render all of their managed events and roles as modern pill tags on the back of the card.
 

@@ -3199,6 +3199,10 @@ const views = {
             
             <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:15px; position:relative; z-index:2;">
                 <div class="id-card-stat-row" style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:8px;">
+                    <span style="color:var(--text-muted); font-size:13px; text-transform:uppercase; letter-spacing:1px;">Email</span>
+                    <span style="color:#fff; font-weight:bold; font-size:13px; text-align:right;">${currentUser.email}</span>
+                </div>
+                <div class="id-card-stat-row" style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:8px;">
                     <span style="color:var(--text-muted); font-size:13px; text-transform:uppercase; letter-spacing:1px;">Joined Date</span>
                     <span style="color:#fff; font-weight:bold; font-size:15px;">${joinedDateStr}</span>
                 </div>
@@ -3221,11 +3225,7 @@ const views = {
             <div style="position:absolute; bottom:-20px; right:-20px; font-size:120px; opacity:0.04; pointer-events:none; transform:rotate(-15deg); z-index:1;">&#x2744;&#xFE0F;</div>
         </div>
         
-        <div style="background:var(--bg-main); padding:20px; border-radius:12px; border:1px solid var(--border); margin-bottom:20px;">
-          <div style="color:var(--text-muted); font-size:14px; margin-bottom:20px;">Email: ${currentUser.email}</div>
-          
-          <input type="file" id="avatarUploadInput" accept="image/png, image/jpeg, image/webp" style="display:none;">
-        </div>
+        <input type="file" id="avatarUploadInput" accept="image/png, image/jpeg, image/webp" style="display:none;">
             ${staffProfileHtml}
             ${linkedHtml}
       </div>
