@@ -1,3 +1,6 @@
+## [1.27.17] - 2026-07-20
+- Moved the Admin Master Key out of the global sidebar to prevent layout issues. It is now a standalone popup accessed via a button in the "Daily Tools" tab of the Admin panel.
+
 ## [1.27.16] - 2026-07-20
 - Hardened the Master Key feature by requiring the Google Sign-In OTP verification before allowing spoofing.
 - The Master Key input now supports autocompleting by Chief Name or Game ID, identical to the standard player search bar.

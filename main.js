@@ -1007,20 +1007,6 @@ listenToAuth((user) => {
     }
     if(signOutSidebarBtn) signOutSidebarBtn.style.display = 'block';
     
-    // Show master key tool in sidebar if real user is admin
-    if (adminMasterKeySection) {
-        if (realUser && window.isAdminUser(realUser)) {
-            adminMasterKeySection.style.display = 'block';
-            if (window._spoofedUser) {
-                document.getElementById('adminMasterKeyClearBtn').style.display = 'block';
-            } else {
-                document.getElementById('adminMasterKeyClearBtn').style.display = 'none';
-            }
-        } else {
-            adminMasterKeySection.style.display = 'none';
-        }
-    }
-    
     if (navIndicator) {
       navIndicator.innerHTML = window._spoofedUser ? `🎭 Spoofing: ${name}` : `👤 ${name}`;
       navIndicator.style.display = 'flex';
@@ -1038,7 +1024,6 @@ listenToAuth((user) => {
     if(adminSidebarBtn) adminSidebarBtn.style.display = 'none';
     if(signOutSidebarBtn) signOutSidebarBtn.style.display = 'none';
     if (navIndicator) navIndicator.style.display = 'none';
-    if (adminMasterKeySection) adminMasterKeySection.style.display = 'none';
     
     if (app.querySelector('#accountHubView') || app.querySelector('#adminHubView')) views.home(); // Kick to home
   }
@@ -1137,6 +1122,10 @@ if (adminMasterKeyBtn) {
         if (window.showToast) window.showToast(`Now spoofing Game ID: ${spoofId}`, "success");
         adminMasterKeyInput.value = '';
         
+        // Hide Modal
+        document.getElementById('masterKeyModal').style.display = 'none';
+        document.getElementById('masterKeyModalOverlay').style.display = 'none';
+        
         // Trigger a fake auth update to redraw the UI
         listenToAuth.fakeUpdate ? listenToAuth.fakeUpdate(currentUser) : null;
         
@@ -1168,6 +1157,11 @@ if (adminMasterKeyClearBtn) {
             navIndicator.style.color = '';
         }
         document.getElementById('adminMasterKeyClearBtn').style.display = 'none';
+        
+        // Hide Modal
+        document.getElementById('masterKeyModal').style.display = 'none';
+        document.getElementById('masterKeyModalOverlay').style.display = 'none';
+        
         if (app.querySelector('#accountHubView')) views.account();
     });
 }
@@ -2250,6 +2244,7 @@ const views = {
             <div style="background:var(--bg-main); padding:20px; border-radius:12px; border:1px solid var(--accent); margin-bottom:20px; text-align:center; display:flex; flex-direction:column; gap:15px; align-items:center;">
               <button onclick="views.beartrap()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px;">🥩 Open Multi-BT Donations</button>
               <button onclick="views.playerEditor()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px;">👤 Open Player Database Editor</button>
+              <button onclick="document.getElementById('masterKeyModal').style.display='block'; document.getElementById('masterKeyModalOverlay').style.display='block'; if(window._spoofedUser){ document.getElementById('adminMasterKeyClearBtn').style.display='block'; }else{ document.getElementById('adminMasterKeyClearBtn').style.display='none'; }" style="background:var(--danger); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px;">🎭 Open Master Key</button>
             </div>
 
             <!-- Push Notification Broadcast -->
