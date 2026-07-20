@@ -1,3 +1,7 @@
+## [1.27.18] - 2026-07-20
+- Streamlined the Admin Master Key workflow: it is now directly integrated into the "Player Database Editor". You can now open a player's profile and click "Spoof Session (Master Key)" from their Admin Actions dropdown to instantly log in as them.
+- Added a floating "Stop Spoofing" button that appears on the screen when a spoof session is active.
+
 ## [1.27.17] - 2026-07-20
 - Moved the Admin Master Key out of the global sidebar to prevent layout issues. It is now a standalone popup accessed via a button in the "Daily Tools" tab of the Admin panel.
 

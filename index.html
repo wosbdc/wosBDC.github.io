@@ -13,6 +13,18 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
   </head>
   <body class="dark-mode">
+
+    <button id="floatingClearSpoofBtn" onclick="window.clearSpoof && window.clearSpoof()" style="display:none; position:fixed; top:70px; right:20px; z-index:9999; background:var(--danger); color:#fff; border:2px solid #fff; padding:10px 20px; border-radius:30px; font-weight:bold; font-size:14px; box-shadow:0 10px 20px rgba(239,68,68,0.5); cursor:pointer; animation: pulse 2s infinite;">
+        🛑 Stop Spoofing
+    </button>
+    <style>
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(239,68,68, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(239,68,68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239,68,68, 0); }
+        }
+    </style>
+
     <nav class="navbar">
       <div class="nav-inner">
         <div class="nav-brand" style="line-height:1.1; text-align:center;">

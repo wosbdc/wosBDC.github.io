@@ -1031,140 +1031,70 @@ listenToAuth((user) => {
   checkMaintenanceAccess();
 });
 
-const adminMasterKeyBtn = document.getElementById('adminMasterKeyBtn');
-const adminMasterKeyClearBtn = document.getElementById('adminMasterKeyClearBtn');
-const adminMasterKeyInput = document.getElementById('adminMasterKeyInput');
-const adminMasterKeyDropdown = document.getElementById('adminMasterKeyDropdown');
-
-if (adminMasterKeyInput && adminMasterKeyDropdown) {
-    const filterAndShowMasterKeyDropdown = () => {
-        const query = adminMasterKeyInput.value.toLowerCase().trim();
-        if (!query) {
-            adminMasterKeyDropdown.style.display = 'none';
-            return;
-        }
-        
-        let dropdownItems = [];
-        for (const [gid, name] of Object.entries(window.idToNameMap || {})) {
-            dropdownItems.push({ name: name, gid: gid });
-        }
-        
-        const matches = dropdownItems.filter(item => item.name.toLowerCase().includes(query) || item.gid.includes(query)).slice(0, 50);
-        
-        if (matches.length === 0) {
-            adminMasterKeyDropdown.innerHTML = `<div style="padding:12px; color:var(--text-muted); text-align:center; font-size:14px;">No matches found.</div>`;
-        } else {
-            adminMasterKeyDropdown.innerHTML = matches.map(item => `
-                <div class="mk-dropdown-item" data-value="${item.gid}" style="padding:12px 15px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.05); color:var(--text-main); font-weight:bold; font-size:14px; display:flex; justify-content:space-between; align-items:center; transition:0.2s;">
-                    <span>${window.escapeHTML(item.name)}</span>
-                    <span style="font-size:11px; color:var(--text-muted); font-family:monospace;">${item.gid}</span>
-                </div>
-            `).join('');
-            
-            adminMasterKeyDropdown.querySelectorAll('.mk-dropdown-item').forEach(el => {
-                el.addEventListener('mouseover', () => el.style.background = 'var(--bg-main)');
-                el.addEventListener('mouseout', () => el.style.background = 'transparent');
-                el.addEventListener('mousedown', (e) => {
-                    e.preventDefault();
-                    adminMasterKeyInput.value = el.getAttribute('data-value');
-                    adminMasterKeyDropdown.style.display = 'none';
-                    if (adminMasterKeyBtn) adminMasterKeyBtn.click();
-                });
-            });
-        }
-        adminMasterKeyDropdown.style.display = 'flex';
+// Master Key Spoofing Methods
+window.adminSpoofPlayer = async (spoofId) => {
+    if (!realUser || !window.isAdminUser(realUser)) return;
+    
+    const isUnlocked = await window.isOTPUnlocked();
+    if (!isUnlocked) {
+        window.showToast("Security unlock required to use the master key.", "error");
+        views.admin(); // Kick to admin screen for auth verification
+        return;
+    }
+    
+    if (!spoofId) return;
+    
+    window._spoofedUser = true;
+    currentUser = {
+        ...realUser,
+        gameId: spoofId,
+        email: "spoofed@admin.com"
     };
     
-    adminMasterKeyInput.addEventListener('input', filterAndShowMasterKeyDropdown);
-    adminMasterKeyInput.addEventListener('focus', filterAndShowMasterKeyDropdown);
-    adminMasterKeyInput.addEventListener('blur', () => { setTimeout(() => adminMasterKeyDropdown.style.display = 'none', 150); });
-    adminMasterKeyInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        adminMasterKeyDropdown.style.display = 'none';
-        if (adminMasterKeyBtn) adminMasterKeyBtn.click();
-      }
-    });
-}
+    if (window.showToast) window.showToast(`Now spoofing Game ID: ${spoofId}`, "success");
+    
+    // Show the floating clear button
+    const clearBtn = document.getElementById('floatingClearSpoofBtn');
+    if (clearBtn) clearBtn.style.display = 'block';
+    
+    // Trigger a fake auth update to redraw the UI
+    listenToAuth.fakeUpdate ? listenToAuth.fakeUpdate(currentUser) : null;
+    
+    // Brute force redraw
+    const navIndicator = document.getElementById('navbar-user-indicator');
+    let name = idToNameMap[currentUser.gameId] || 'Unknown';
+    if(authSidebarBtn) authSidebarBtn.innerHTML = `🎭 Spoofing: ${name}`;
+    if (navIndicator) {
+        navIndicator.innerHTML = `🎭 Spoofing: ${name}`;
+        navIndicator.style.color = 'var(--danger)';
+    }
+    
+    if (app.querySelector('#accountHubView')) views.account();
+};
 
-if (adminMasterKeyBtn) {
-    adminMasterKeyBtn.addEventListener('click', async () => {
-        if (!realUser || !window.isAdminUser(realUser)) return;
-        
-        const isUnlocked = await window.isOTPUnlocked();
-        if (!isUnlocked) {
-            window.showToast("Security unlock required to use the master key.", "error");
-            views.admin(); // Kick to admin screen for auth verification
-            return;
-        }
-        
-        let spoofId = adminMasterKeyInput.value.trim();
-        if (!spoofId) return;
-        
-        // If they typed a name instead of a Game ID, try to resolve it
-        if (!/^\d+$/.test(spoofId)) {
-            const foundId = Object.keys(window.idToNameMap || {}).find(key => window.idToNameMap[key].toLowerCase() === spoofId.toLowerCase());
-            if (foundId) {
-                spoofId = foundId;
-            } else {
-                window.showToast("Could not find Game ID for that name.", "error");
-                return;
-            }
-        }
-        
-        // Mock a user object based on the Game ID
-        window._spoofedUser = true;
-        currentUser = {
-            ...realUser, // Keep auth token/uid so database writes *might* work if security rules allow admin access
-            gameId: spoofId,
-            email: "spoofed@admin.com"
-        };
-        
-        if (window.showToast) window.showToast(`Now spoofing Game ID: ${spoofId}`, "success");
-        adminMasterKeyInput.value = '';
-        
-        // Hide Modal
-        document.getElementById('masterKeyModal').style.display = 'none';
-        document.getElementById('masterKeyModalOverlay').style.display = 'none';
-        
-        // Trigger a fake auth update to redraw the UI
-        listenToAuth.fakeUpdate ? listenToAuth.fakeUpdate(currentUser) : null;
-        
-        // Brute force redraw since listenToAuth is a callback
-        const navIndicator = document.getElementById('navbar-user-indicator');
-        let name = idToNameMap[currentUser.gameId] || 'Unknown';
-        if(authSidebarBtn) authSidebarBtn.innerHTML = `🎭 Spoofing: ${name}`;
-        if (navIndicator) {
-            navIndicator.innerHTML = `🎭 Spoofing: ${name}`;
-            navIndicator.style.color = 'var(--danger)';
-        }
-        document.getElementById('adminMasterKeyClearBtn').style.display = 'block';
-        if (app.querySelector('#accountHubView')) views.account();
-    });
-}
-
-if (adminMasterKeyClearBtn) {
-    adminMasterKeyClearBtn.addEventListener('click', () => {
-        window._spoofedUser = false;
-        currentUser = realUser;
-        if (window.showToast) window.showToast("Master key deactivated. Returned to normal.", "success");
-        
-        // Brute force redraw
-        const navIndicator = document.getElementById('navbar-user-indicator');
-        let name = currentUser ? (idToNameMap[currentUser.gameId] || 'Account') : 'Unknown';
-        if(authSidebarBtn) authSidebarBtn.innerHTML = `👤 ${name}'s Profile`;
-        if (navIndicator) {
-            navIndicator.innerHTML = `👤 ${name}`;
-            navIndicator.style.color = '';
-        }
-        document.getElementById('adminMasterKeyClearBtn').style.display = 'none';
-        
-        // Hide Modal
-        document.getElementById('masterKeyModal').style.display = 'none';
-        document.getElementById('masterKeyModalOverlay').style.display = 'none';
-        
-        if (app.querySelector('#accountHubView')) views.account();
-    });
-}
+window.clearSpoof = () => {
+    if (!window._spoofedUser) return;
+    window._spoofedUser = false;
+    currentUser = realUser;
+    
+    if (window.showToast) window.showToast("Master key deactivated. Returned to normal.", "success");
+    
+    const clearBtn = document.getElementById('floatingClearSpoofBtn');
+    if (clearBtn) clearBtn.style.display = 'none';
+    
+    // Brute force redraw
+    const navIndicator = document.getElementById('navbar-user-indicator');
+    let name = currentUser ? (idToNameMap[currentUser.gameId] || 'Account') : 'Unknown';
+    if(authSidebarBtn) authSidebarBtn.innerHTML = `👤 ${name}'s Profile`;
+    if (navIndicator) {
+        navIndicator.innerHTML = `👤 ${name}`;
+        navIndicator.style.color = '';
+    }
+    
+    // Trigger fake auth update to restore real state
+    listenToAuth.fakeUpdate ? listenToAuth.fakeUpdate(currentUser) : null;
+    if (app.querySelector('#accountHubView')) views.account();
+};
 
 const openAuthModal = () => {
   authErrorMsg.style.display = 'none';
@@ -2244,7 +2174,6 @@ const views = {
             <div style="background:var(--bg-main); padding:20px; border-radius:12px; border:1px solid var(--accent); margin-bottom:20px; text-align:center; display:flex; flex-direction:column; gap:15px; align-items:center;">
               <button onclick="views.beartrap()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px;">🥩 Open Multi-BT Donations</button>
               <button onclick="views.playerEditor()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px;">👤 Open Player Database Editor</button>
-              <button onclick="document.getElementById('masterKeyModal').style.display='block'; document.getElementById('masterKeyModalOverlay').style.display='block'; if(window._spoofedUser){ document.getElementById('adminMasterKeyClearBtn').style.display='block'; }else{ document.getElementById('adminMasterKeyClearBtn').style.display='none'; }" style="background:var(--danger); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px;">🎭 Open Master Key</button>
             </div>
 
             <!-- Push Notification Broadcast -->
@@ -5595,6 +5524,8 @@ window.generatePlayerProfileHtml = (chiefName, p, headers, colIsUpcoming, roster
           <button onclick="window.promptBearTrap('${chiefName.replace(/'/g, "\\'")}')" style="background:rgba(46,204,113,0.1); color:var(--success); border:1px solid rgba(46,204,113,0.3); padding:8px 12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:12px; text-align:left; transition: 0.2s;" onmouseover="this.style.background='rgba(46,204,113,0.2)'" onmouseout="this.style.background='rgba(46,204,113,0.1)'">🥩 + Bear Donation</button>
           <button onclick="window.promptEditEvents('${chiefName.replace(/'/g, "\\'")}', decodeURIComponent('${missedJson}'))" style="background:rgba(52,152,219,0.1); color:var(--accent); border:1px solid rgba(52,152,219,0.3); padding:8px 12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:12px; text-align:left; transition: 0.2s;" onmouseover="this.style.background='rgba(52,152,219,0.2)'" onmouseout="this.style.background='rgba(52,152,219,0.1)'">📝 Edit Events</button>
           <button onclick="window.adminLinkAltAccountPromptByChief('${chiefName.replace(/'/g, "\\'")}')" style="background:rgba(52,152,219,0.1); color:var(--accent); border:1px solid rgba(52,152,219,0.3); padding:8px 12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:12px; text-align:left; transition: 0.2s; margin-top:5px;" onmouseover="this.style.background='rgba(52,152,219,0.2)'" onmouseout="this.style.background='rgba(52,152,219,0.1)'">➕ Add Alt Account</button>
+          <div style="height:1px; background:var(--border); margin:5px 0;"></div>
+          ${playerGameId ? `<button onclick="window.adminSpoofPlayer('${playerGameId}')" style="background:rgba(236,72,153,0.1); color:var(--danger); border:1px solid rgba(236,72,153,0.3); padding:8px 12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:12px; text-align:left; transition: 0.2s;" onmouseover="this.style.background='rgba(236,72,153,0.2)'" onmouseout="this.style.background='rgba(236,72,153,0.1)'">🎭 Spoof Session (Master Key)</button>` : ''}
           <div style="height:1px; background:var(--border); margin:5px 0;"></div>
           <button onclick="window.adminDeletePlayer('${chiefName.replace(/'/g, "\\'")}')" style="background:rgba(239,68,68,0.1); color:var(--danger); border:1px solid rgba(239,68,68,0.3); padding:8px 12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:12px; text-align:left; transition: 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.2)'" onmouseout="this.style.background='rgba(239,68,68,0.1)'">🗑️ Delete Player</button>
         </div>
