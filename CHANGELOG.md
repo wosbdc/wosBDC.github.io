@@ -1,3 +1,6 @@
+## [1.27.7] - 2026-07-20
+- Updated Staff Cards to display "R4 Officer" / "R5 Leader" on the front, and beautifully render all of their managed events and roles as modern pill tags on the back of the card.
+
 ## [1.27.6] - 2026-07-20
 - Removed the redundant "Sign Out" button from the Account Hub since it's already accessible in the sidebar menu.
 

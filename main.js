@@ -1784,16 +1784,30 @@ const views = {
           : `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=${color}&color=fff&size=128`;
           
       const profile = window.staffProfilesMap && window.staffProfilesMap[gid] ? window.staffProfilesMap[gid] : null;
-      let deptText = profile && profile.department ? profile.department : title;
       let tzHtml = profile && profile.timezone ? `<div class="staff-details-row"><span>Timezone:</span><span style="color:var(--text-main); font-weight:bold;">${window.escapeHTML(profile.timezone)}</span></div>` : '';
       let locHtml = profile && profile.location ? `<div class="staff-details-row"><span>Location:</span><span style="color:var(--text-main); font-weight:bold;">${window.escapeHTML(profile.location)}</span></div>` : '';
       let bioHtml = profile && profile.bio ? `<div class="staff-bio">"${window.escapeHTML(profile.bio)}"</div>` : '';
+      
+      let deptHtml = '';
+      if (profile && profile.department) {
+          const deptArray = profile.department.split(/\n|,/).map(d => d.trim()).filter(d => d.length > 0);
+          if (deptArray.length > 0) {
+              const tagsHtml = deptArray.map(d => `<span style="display:inline-block; background:rgba(6,182,212,0.15); color:var(--accent); border:1px solid rgba(6,182,212,0.3); padding:4px 10px; border-radius:12px; font-size:11px; font-weight:bold;">${window.escapeHTML(d)}</span>`).join('');
+              deptHtml = `
+              <div style="margin-top:12px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.05); text-align:left;">
+                  <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">Managed Events & Roles</div>
+                  <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                      ${tagsHtml}
+                  </div>
+              </div>`;
+          }
+      }
       
       const cardHtml = `
           <div class="staff-card rank-${level.toLowerCase()}" onclick="this.classList.toggle('flipped')">
             <img src="${avatarSrc}" alt="${level}" class="staff-avatar">
             <div class="staff-name">${name}</div>
-            <div class="staff-role" style="white-space: pre-wrap;">${window.escapeHTML(deptText)}</div>
+            <div class="staff-role" style="font-weight:bold; letter-spacing:0.5px; color:var(--accent);">${title}</div>
             ${bioHtml}
             
             <div class="staff-details">
@@ -1803,6 +1817,7 @@ const views = {
               </div>
               ${locHtml}
               ${tzHtml}
+              ${deptHtml}
             </div>
           </div>
       `;
