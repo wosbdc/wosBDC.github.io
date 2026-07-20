@@ -1,3 +1,6 @@
+## [1.27.26] - 2026-07-20
+- Completely replaced the buggy native `<datalist>` autocomplete in the Multi-BT Donations menu with a sleek, custom Javascript dropdown to fix Safari display bugs.
+
 ## [1.27.25] - 2026-07-20
 - Fixed an issue where the autocomplete datalist for the Multi-BT / Player Name search bars was rendering visibly on some browsers (like Safari) by explicitly setting `display: none;`.
 

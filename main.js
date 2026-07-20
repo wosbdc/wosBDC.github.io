@@ -1888,6 +1888,69 @@ const style = document.createElement('style');
 style.textContent = `@keyframes spin { 100% { transform: rotate(360deg); } }`;
 document.head.appendChild(style);
 
+window.bindCustomAutocomplete = (inputEl) => {
+    if (inputEl.parentElement.classList.contains('autocomplete-wrapper')) return;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'autocomplete-wrapper';
+    wrapper.style.position = 'relative';
+    wrapper.style.flex = inputEl.style.flex;
+    wrapper.style.width = inputEl.style.width || '100%';
+
+    inputEl.parentNode.insertBefore(wrapper, inputEl);
+    wrapper.appendChild(inputEl);
+    inputEl.style.flex = 'none';
+    inputEl.style.width = '100%';
+    inputEl.style.boxSizing = 'border-box';
+    inputEl.removeAttribute('list');
+
+    const dropdown = document.createElement('div');
+    dropdown.style.cssText = 'display:none; position:absolute; top:calc(100% - 4px); left:0; width:100%; max-height:200px; overflow-y:auto; background:var(--card-bg); border:1px solid var(--border); border-radius:0 0 8px 8px; z-index:1000; box-shadow:0 10px 30px rgba(0,0,0,0.6); flex-direction:column; padding-top:4px;';
+    wrapper.appendChild(dropdown);
+
+    const filterAndShow = () => {
+        const query = inputEl.value.toLowerCase().trim();
+        if (!query) { dropdown.style.display = 'none'; return; }
+        
+        let players = Object.values(idToNameMap);
+        const rosterData = window.liveData ? window.liveData["Chief's List"] : null;
+        if (rosterData && rosterData.length > 1) {
+            players = [];
+            for(let i=1; i<rosterData.length; i++) {
+                if (rosterData[i][0]) players.push(rosterData[i][0].toString().trim());
+            }
+        }
+        
+        const matches = [...new Set(players)].filter(p => p.toLowerCase().includes(query)).sort((a,b) => a.localeCompare(b)).slice(0, 50);
+        
+        if (matches.length === 0) {
+            dropdown.innerHTML = `<div style="padding:10px; color:var(--text-muted); text-align:center; font-size:13px;">No matches</div>`;
+        } else {
+            dropdown.innerHTML = matches.map(p => `
+                <div class="ac-item" data-val="${window.escapeHTML(p)}" style="padding:10px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.05); color:var(--text-main); font-weight:bold; font-size:14px; transition:0.2s;">
+                    ${window.escapeHTML(p)}
+                </div>
+            `).join('');
+            
+            dropdown.querySelectorAll('.ac-item').forEach(item => {
+                item.addEventListener('mouseover', () => item.style.background = 'var(--bg-main)');
+                item.addEventListener('mouseout', () => item.style.background = 'transparent');
+                item.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    inputEl.value = item.getAttribute('data-val');
+                    dropdown.style.display = 'none';
+                    inputEl.dispatchEvent(new Event('input'));
+                });
+            });
+        }
+        dropdown.style.display = 'flex';
+    };
+
+    inputEl.addEventListener('input', filterAndShow);
+    inputEl.addEventListener('focus', filterAndShow);
+    inputEl.addEventListener('blur', () => { setTimeout(() => dropdown.style.display='none', 150); });
+};
+
 // View renderers
 const views = {
   staff: async () => {
@@ -2758,7 +2821,7 @@ const views = {
             <button onclick="document.getElementById('btLookupModal').style.display='none'" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:20px;">&times;</button>
           </div>
           <div style="display:flex; gap:10px;">
-            <input type="text" id="beartrapLookup" list="chiefList" placeholder="Player Name..." style="flex:1; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);">
+            <input type="text" id="beartrapLookup" placeholder="Player Name..." style="flex:1; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);">
             <button onclick="window.doBeartrapLookup()" style="background:var(--accent); color:#fff; border:none; padding:0 20px; border-radius:6px; cursor:pointer; font-weight:bold;">Check</button>
           </div>
           <div id="beartrapLookupResult" style="margin-top:10px; font-weight:bold; text-align:center;"></div>
@@ -2768,7 +2831,7 @@ const views = {
           <h3 style="margin-top:0; color:var(--text-main); font-size:16px;">📝 Add Donations</h3>
           <div id="beartrapEntries">
             <div class="beartrap-row" style="display:flex; gap:10px; margin-bottom:10px;">
-              <input type="text" class="bt-name" list="chiefList" placeholder="Player Name..." style="flex:2; min-width:0; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);">
+              <input type="text" class="bt-name" placeholder="Player Name..." style="flex:2; min-width:0; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);">
               <input type="number" class="bt-amount" placeholder="Amount..." style="flex:1; min-width:0; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);">
               <button onclick="this.parentElement.remove()" style="background:var(--danger); color:#fff; border:none; width:40px; flex-shrink:0; border-radius:6px; cursor:pointer; font-weight:bold;">X</button>
             </div>
@@ -2791,32 +2854,15 @@ const views = {
         </div>
 
       </div>
-      <datalist id="chiefList" style="display:none;"></datalist>
+      </div>
     `;
     
-    // Populate datalist from roster
-    const dl = document.getElementById('chiefList');
-    if (dl && rosterRawData && rosterRawData.length > 0) {
-      const players = [];
-      for (let i = 1; i < rosterRawData.length; i++) {
-        if (rosterRawData[i][0] && rosterRawData[i][0].toString().trim() !== "") {
-          players.push(rosterRawData[i][0].toString().trim());
-        }
-      }
-      players.sort((a, b) => a.localeCompare(b));
-      players.forEach(name => {
-        const opt = document.createElement('option');
-        opt.value = name;
-        dl.appendChild(opt);
-      });
-    } else if (dl) {
-      // Fallback to idToNameMap if sheet fetch failed
-      Object.values(idToNameMap).forEach(name => {
-        const opt = document.createElement('option');
-        opt.value = name;
-        dl.appendChild(opt);
-      });
-    }
+    // Bind autocomplete to initial inputs
+    const lookupInput = document.getElementById('beartrapLookup');
+    if (lookupInput) window.bindCustomAutocomplete(lookupInput);
+    
+    const initialRows = document.querySelectorAll('.bt-name');
+    initialRows.forEach(input => window.bindCustomAutocomplete(input));
 
     // Attach global functions to window so inline onclick can see them
     window.addBeartrapRow = () => {
@@ -2825,12 +2871,14 @@ const views = {
       div.className = 'beartrap-row';
       div.style.cssText = 'display:flex; gap:10px; margin-bottom:10px;';
       div.innerHTML = `
-        <input type="text" class="bt-name" list="chiefList" placeholder="Player Name..." style="flex:2; min-width:0; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);">
+        <input type="text" class="bt-name" placeholder="Player Name..." style="flex:2; min-width:0; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);">
         <input type="number" class="bt-amount" placeholder="Amount..." style="flex:1; min-width:0; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);">
-        <button onclick="this.parentElement.remove()" style="background:var(--danger); color:#fff; border:none; width:40px; flex-shrink:0; border-radius:6px; cursor:pointer; font-weight:bold;">X</button>
+        <button onclick="this.parentElement.parentElement.remove()" style="background:var(--danger); color:#fff; border:none; width:40px; flex-shrink:0; border-radius:6px; cursor:pointer; font-weight:bold;">X</button>
       `;
       cont.appendChild(div);
-      div.querySelector('.bt-name').focus();
+      const newNameInput = div.querySelector('.bt-name');
+      window.bindCustomAutocomplete(newNameInput);
+      newNameInput.focus();
     };
 
     window.doBeartrapLookup = async () => {
