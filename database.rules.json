@@ -4,6 +4,14 @@
       ".read": true,
       ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() == 318843189 || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())"
     },
+    "showdown_meta": {
+      ".read": true,
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() == 318843189 || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())"
+    },
+    "roster_live": {
+      ".read": true,
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() == 318843189 || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())"
+    },
     "users": {
       ".read": true,
       "$uid": {
