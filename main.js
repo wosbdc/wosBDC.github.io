@@ -4856,17 +4856,13 @@ const views = {
         let champScore = null;
         let bannerTitle = "👑 Reigning Champion";
         let scoreLabel = "Total Wins";
-         if (trapNum && board.rows.length > 0) {
-            let firstRow = board.rows[0];
-            let rawScore = firstRow[2] !== undefined ? firstRow[2].toString().replace(/,/g, "") : "0";
-            let topScore = parseInt(rawScore) || 0;
-            
-            if (topScore === 0) {
+         if (trapNum && btWinners[trapNum]) {
+            if (isBearTrapActive) {
                champName = "Pending...";
                champScore = "-";
             } else {
-               champName = firstRow[1] ? firstRow[1].toString() : "Pending...";
-               champScore = firstRow[2] !== undefined ? firstRow[2] : "-";
+               champName = btWinners[trapNum].name;
+               champScore = btWinners[trapNum].score;
             }
          } else if (isAllTime && board.rows.length > 0) {
            let firstRow = board.rows[0];
