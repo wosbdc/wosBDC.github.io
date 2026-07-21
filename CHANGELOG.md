@@ -1,3 +1,7 @@
+### v1.27.54
+- Prepend a '+' sign to positive "Left +/-" amounts on Event Goals cards so that it explicitly shows the amount needed. (Negative amounts automatically show the '-' sign).
+- Fixed a `doGet Crash: Argument too large: key` bug in Google Apps Script by safely truncating the Firebase Token string before using it as a CacheService key.
+
 ### v1.27.53
 - Added conditional red/green color coding to the "Daily Amount" metric on the Event Goals charts. The Daily Amount text will now automatically turn green if the Daily Goal was met or exceeded, and red if it fell short.
 
