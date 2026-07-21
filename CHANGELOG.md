@@ -1,3 +1,6 @@
+### v1.27.58
+- The Event Goals chart now triggers the "Pending" display when `Left +/-` is exactly equal to the `Daily Goal`, completely masking the default spreadsheet output (`+3,333,333.333`) on days that have not started.
+
 ### v1.27.57
 - Upgraded the "Pending" state logic to also trigger when the parsed `Daily Amount` is `0` (which handles cases where a spreadsheet formula outputs a zero instead of a blank cell).
 
