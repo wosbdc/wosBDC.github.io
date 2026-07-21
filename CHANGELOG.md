@@ -1,3 +1,7 @@
+## [1.29.17] - 2026-07-21
+### Changed
+- **Showdown MVP Full Banner Layout**: Reverted the inline header banner for Alliance Progress and replaced it with a dedicated, full-width block directly below the title, allowing it to span the entire card smoothly across all screen sizes without competing with the card title.
+
 ## [1.29.16] - 2026-07-21
 ### Fixed
 - **Responsive Showdown MVP Banner**: Adjusted the layout of the Alliance Progress card header so the MVP banner is properly centered and wraps onto a new line on smaller screens, resolving overlap issues caused by rigid table widths.

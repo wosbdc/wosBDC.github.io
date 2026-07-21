@@ -4906,27 +4906,25 @@ const views = {
            const avatarSrc = (champId && avatarMap[champId]) ? avatarMap[champId] : `images/${champName}.png`;
            
            titleRightHtml = `
-             <div style="display:flex; align-items:center; gap:12px; background:linear-gradient(135deg, rgba(255,215,0,0.15) 0%, rgba(255,215,0,0.05) 100%); padding:8px 18px 8px 10px; border:1px solid rgba(255,215,0,0.4); border-radius:30px; box-shadow:0 2px 10px rgba(255,215,0,0.1);">
-               <div style="width:42px; height:42px; border-radius:50%; border:2px solid #FFD700; overflow:hidden; flex-shrink:0; box-shadow:0 0 8px rgba(255,215,0,0.5);">
-                 <img src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='images/default.png';">
-               </div>
-               <div style="display:flex; flex-direction:column; align-items:flex-start; line-height:1.2;">
-                 <div style="color:#FFD700; font-size:11px; font-weight:bold; text-transform:uppercase; letter-spacing:1px; margin-bottom:2px;">👑 Showdown MVP</div>
-                 <div style="color:var(--text-main); font-size:16px; font-weight:bold; letter-spacing:0.5px;">${escapeHTML(champName)}</div>
-               </div>
-               <div style="text-align:right; margin-left:10px; border-left:1px solid rgba(255,215,0,0.2); padding-left:12px;">
-                 <div style="color:var(--text-muted); font-size:10px; text-transform:uppercase;">Total Horns</div>
-                 <div style="color:#FFD700; font-size:18px; font-weight:bold;">${maxHorns}</div>
-               </div>
-             </div>
-           `;
+              <div style="background: linear-gradient(135deg, rgba(255,215,0,0.1) 0%, rgba(255,215,0,0.02) 100%); border: 1px solid rgba(255,215,0,0.3); border-radius: 12px; padding: 15px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; box-shadow: 0 4px 15px rgba(255,215,0,0.05);">
+                <div style="width: 50px; height: 50px; border-radius: 50%; border: 2px solid #FFD700; overflow: hidden; flex-shrink: 0; box-shadow: 0 0 10px rgba(255,215,0,0.2);">
+                  <img src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='images/default.png';">
+                </div>
+                <div style="flex: 1; text-align: left;">
+                  <div style="color: #FFD700; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">👑 Showdown MVP</div>
+                  <div style="color: var(--text-main); font-size: 18px; font-weight: bold;">${escapeHTML(champName)}</div>
+                </div>
+                <div style="text-align: right;">
+                  <div style="color: var(--text-muted); font-size: 11px; text-transform: uppercase;">Total Horns</div>
+                  <div style="color: #FFD700; font-size: 20px; font-weight: bold;">${maxHorns}</div>
+                </div>
+              </div>
+            `;
        }
        
        // 2. Alliance Progress
        let allianceCard = `<div class="card" style="overflow-x:auto;">
-         <div class="card-title" style="display:flex; justify-content:center; align-items:center; flex-wrap:wrap; gap:20px; text-align:center;">
-           <span>⚔️ Alliance Progress</span>
-           ${titleRightHtml}
+          <div class="card-title">⚔️ Alliance Progress</div>${titleRightHtml}
          </div>
          <table style="min-width:600px;"><thead><tr>
           <th>Alliance's Showdown</th><th>Total</th><th>Day 1</th><th>Day 2</th><th>Day 3</th><th>Day 4</th><th>Day 5</th><th>Day 6</th>
