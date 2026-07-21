@@ -1,3 +1,6 @@
+## [1.27.41] - 2026-07-20
+- Modified the mobile navigation "hamburger" menu to span the entire height of the screen, completely obscuring the page content underneath for a cleaner look.
+
 ## [1.27.40] - 2026-07-20
 - Completely reverted all search bars on the site (including the Chief's List) to exactly how they behaved prior to the Apple bug discovery. The full-screen search popup has been removed.
 - Restructured the entire Chief's List view for mobile users: The view now opens as a full-screen, native-app-style page that hides the bottom navigation bar and features a dedicated Back button to return Home.
