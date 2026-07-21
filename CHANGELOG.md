@@ -1,3 +1,7 @@
+## [1.29.10] - 2026-07-21
+### Added
+- **Showdown MVP Banner**: Added a premium gold-gradient banner at the top of the Showdown Analytics page, featuring the avatar, name, and total horn count of the overall Showdown winner.
+
 ## [1.29.9] - 2026-07-21
 ### Added
 - **Overall Showdown Winner**: Automatically tallies horns earned by daily winners throughout the Showdown event and dynamically highlights the overall winner (and their total horn count) in the Total column of the Winners row.
