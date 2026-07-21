@@ -3066,7 +3066,19 @@ const views = {
     try {
        const sdRes = await window.fetchMergedShowdown();
        const sdLiveData = sdRes.sdLiveData || {};
-       let allPlayers = Object.keys(sdLiveData);
+       
+       let allPlayers = [];
+       try {
+          const rosterRawData = await fetchSheet("Chief's List");
+          if (rosterRawData && rosterRawData.length > 0) {
+             for (let i = 1; i < rosterRawData.length; i++) {
+                if (rosterRawData[i][0]) allPlayers.push(rosterRawData[i][0].toString().trim());
+             }
+          }
+       } catch(e) { console.error("Error fetching roster", e); }
+       
+       if (allPlayers.length === 0) allPlayers = Object.keys(sdLiveData);
+       allPlayers = [...new Set(allPlayers)];
        
        let html = `<div class="card" style="position:relative;">
          <button onclick="views.admin()" style="position:absolute; top:15px; left:15px; background:none; border:none; color:var(--text-muted); font-size:24px; cursor:pointer; padding:0; line-height:1;">&times;</button>
