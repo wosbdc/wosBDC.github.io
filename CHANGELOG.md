@@ -1,3 +1,7 @@
+## [1.29.12] - 2026-07-21
+### Added
+- **Automated Showdown MVP Banners**: Showdown Leaderboards (both current and All-Time) now automatically generate and display a rich Reigning Champion banner at the top for the #1 ranked player in that board.
+
 ## [1.29.11] - 2026-07-21
 ### Changed
 - **Showdown MVP Banner Compacted**: Removed the full-width MVP banner and integrated a mini-banner (avatar, name, and horns) directly into the Total cell of the Winners row to save screen space while keeping the premium look.

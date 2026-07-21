@@ -4584,13 +4584,19 @@ const views = {
         // Champion Banner Logic
         let trapNum = null;
         let isAllTime = false;
-        if (board.title.toLowerCase().includes('bear trap 1')) trapNum = '1';
-        else if (board.title.toLowerCase().includes('bear trap 2')) trapNum = '2';
-        else if (board.title.toLowerCase().includes('all-time bear trap')) isAllTime = true;
+        let titleLower = board.title.toLowerCase();
+        
+        if (titleLower.includes('bear trap 1')) trapNum = '1';
+        else if (titleLower.includes('bear trap 2')) trapNum = '2';
+        else if (titleLower.includes('all-time bear trap')) isAllTime = true;
+        
+        let isShowdown = titleLower.includes('showdown') && !titleLower.includes('all-time');
+        let isAllTimeShowdown = titleLower.includes('all-time showdown');
         
         let champName = null;
         let champScore = null;
         let bannerTitle = "👑 Reigning Champion";
+        let scoreLabel = "Total Wins";
         
         if (trapNum && btWinners[trapNum]) {
            champName = btWinners[trapNum].name;
@@ -4600,6 +4606,18 @@ const views = {
            champName = firstRow[1] ? firstRow[1].toString() : null;
            champScore = firstRow[2] !== undefined ? firstRow[2] : null;
            bannerTitle = "👑 All-Time Champion";
+        } else if (isShowdown && board.rows.length > 0) {
+           let firstRow = board.rows[0];
+           champName = firstRow[1] ? firstRow[1].toString() : null;
+           champScore = firstRow[2] !== undefined ? firstRow[2] : null;
+           bannerTitle = "👑 Showdown MVP";
+           scoreLabel = "Total Score";
+        } else if (isAllTimeShowdown && board.rows.length > 0) {
+           let firstRow = board.rows[0];
+           champName = firstRow[1] ? firstRow[1].toString() : null;
+           champScore = firstRow[2] !== undefined ? firstRow[2] : null;
+           bannerTitle = "👑 All-Time MVP";
+           scoreLabel = "Total Score";
         }
         
         if (champName) {
@@ -4623,7 +4641,7 @@ const views = {
                  <div style="color: var(--text-main); font-size: 18px; font-weight: bold;">${champName}</div>
                </div>
                <div style="text-align: right;">
-                 <div style="color: var(--text-muted); font-size: 11px;">Total Wins</div>
+                 <div style="color: var(--text-muted); font-size: 11px;">${scoreLabel}</div>
                  <div style="color: var(--accent); font-size: 20px; font-weight: bold;">${champScore}</div>
                </div>
              </div>
