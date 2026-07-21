@@ -3096,7 +3096,7 @@ const views = {
          </div>
        </div>`;
        
-       mainContent.innerHTML = html;
+       app.innerHTML = html;
        
        window._currentSdLiveData = sdLiveData;
        
@@ -3149,7 +3149,7 @@ const views = {
        };
        
     } catch(e) {
-       mainContent.innerHTML = '<div class="card"><div class="loading" style="color:var(--danger);">Error loading Data Entry UI</div></div>';
+       app.innerHTML = '<div class="card"><div class="loading" style="color:var(--danger);">Error loading Data Entry UI</div></div>';
        console.error(e);
     }
   },
@@ -3223,7 +3223,7 @@ const views = {
          <button onclick="window.saveShowdownMeta()" style="background:var(--success); color:#fff; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; width:100%;">💾 Save Event Settings</button>
        </div>`;
        
-       mainContent.innerHTML = html;
+       app.innerHTML = html;
        
        window.saveShowdownMeta = async () => {
           const btn = event.target;
