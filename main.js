@@ -4211,6 +4211,13 @@ const views = {
                 }
                 let dailyAmt = !isNaN(numDailyAmt) && dailyAmtRaw !== "" ? numDailyAmt.toLocaleString() : dailyAmtRaw;
 
+                if (dailyAmtRaw === "" || dailyAmtRaw === undefined || dailyAmtRaw === null) {
+                    left = 'Pending';
+                    leftStyle = 'color:var(--text-muted); font-style:italic;';
+                    dailyAmt = 'Pending';
+                    dailyAmtStyle = 'color:var(--text-muted); font-style:italic;';
+                }
+
                 html += `
                 <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; padding: 15px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);">
                   <div style="font-weight: bold; color: var(--text-main); font-size: 1.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px dashed var(--border);">${eventDay}</div>
@@ -4419,6 +4426,13 @@ const views = {
               }
               let formattedGoal = typeof goal === 'number' ? formatNumber(goal) : goal;
               let formattedDailyAmt = !isNaN(numDailyAmt) && dailyAmt !== "" ? numDailyAmt.toLocaleString() : dailyAmt;
+
+              if (dailyAmt === "" || dailyAmt === undefined || dailyAmt === null) {
+                  formattedLeft = 'Pending';
+                  leftStyle = 'color:var(--text-muted); font-style:italic;';
+                  formattedDailyAmt = 'Pending';
+                  dailyAmtStyle = 'color:var(--text-muted); font-style:italic;';
+              }
               
               goalsCard += `
                 <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; padding: 15px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);">

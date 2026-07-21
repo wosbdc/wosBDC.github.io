@@ -1,3 +1,6 @@
+### v1.27.56
+- Added a "Pending" state to Event Goals cards. If an event day has not occurred yet (i.e. the daily amount is blank), the dashboard will display "Pending" instead of showing a confusing red deficit based on a blank amount.
+
 ### v1.27.55
 - Swapped the positive and negative sign logic for "Left +/-" amounts on Event Goals cards based on user feedback. A deficit (red) will now show a `-` sign (e.g., `-11,474,249`), while a surplus (green) will show a `+` sign.
 
