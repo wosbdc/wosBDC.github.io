@@ -4203,7 +4203,12 @@ const views = {
                 }
                 
                 let dailyGoal = !isNaN(numDailyGoal) && dailyGoalRaw !== "" ? numDailyGoal.toLocaleString() : dailyGoalRaw;
-                let left = !isNaN(numLeft) && leftRaw !== "" ? (numLeft > 0 ? '+' : '') + numLeft.toLocaleString() : leftRaw;
+                let left = leftRaw;
+                if (!isNaN(numLeft) && leftRaw !== "") {
+                    if (numLeft > 0) left = '-' + numLeft.toLocaleString();
+                    else if (numLeft < 0) left = '+' + Math.abs(numLeft).toLocaleString();
+                    else left = '0';
+                }
                 let dailyAmt = !isNaN(numDailyAmt) && dailyAmtRaw !== "" ? numDailyAmt.toLocaleString() : dailyAmtRaw;
 
                 html += `
@@ -4406,7 +4411,12 @@ const views = {
               }
               
               let formattedDailyGoal = !isNaN(numDailyGoal) && dailyGoal !== "" ? numDailyGoal.toLocaleString() : dailyGoal;
-              let formattedLeft = !isNaN(numLeft) && left !== "" ? (numLeft > 0 ? '+' : '') + numLeft.toLocaleString() : left;
+              let formattedLeft = left;
+              if (!isNaN(numLeft) && left !== "") {
+                  if (numLeft > 0) formattedLeft = '-' + numLeft.toLocaleString();
+                  else if (numLeft < 0) formattedLeft = '+' + Math.abs(numLeft).toLocaleString();
+                  else formattedLeft = '0';
+              }
               let formattedGoal = typeof goal === 'number' ? formatNumber(goal) : goal;
               let formattedDailyAmt = !isNaN(numDailyAmt) && dailyAmt !== "" ? numDailyAmt.toLocaleString() : dailyAmt;
               

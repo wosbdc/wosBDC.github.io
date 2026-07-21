@@ -1,3 +1,6 @@
+### v1.27.55
+- Swapped the positive and negative sign logic for "Left +/-" amounts on Event Goals cards based on user feedback. A deficit (red) will now show a `-` sign (e.g., `-11,474,249`), while a surplus (green) will show a `+` sign.
+
 ### v1.27.54
 - Prepend a '+' sign to positive "Left +/-" amounts on Event Goals cards so that it explicitly shows the amount needed. (Negative amounts automatically show the '-' sign).
 - Fixed a `doGet Crash: Argument too large: key` bug in Google Apps Script by safely truncating the Firebase Token string before using it as a CacheService key.
