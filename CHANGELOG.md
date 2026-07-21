@@ -1,3 +1,7 @@
+## [1.29.14] - 2026-07-21
+### Changed
+- **Showdown MVP Header Banner**: Moved the Showdown MVP banner from the Winners row into the header of the Alliance Progress card itself, presenting a neat, inline badge next to the title.
+
 ## [1.29.13] - 2026-07-21
 ### Fixed
 - **Mini-Banner Alignment**: Fixed the alignment of the compact Showdown MVP banner inside the Winners row to be left-aligned, properly balancing it with the rest of the column data.

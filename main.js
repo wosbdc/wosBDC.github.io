@@ -4882,8 +4882,52 @@ const views = {
        
 
        
+       // MVP Calculation
+       let playerHorns = {};
+       for(let i=1; i<=6; i++) {
+           let p = topPlayers['d'+i];
+           if (p.name && p.score > 0) {
+               playerHorns[p.name] = (playerHorns[p.name] || 0) + staticHorns['d'+i];
+           }
+       }
+       let maxHorns = 0;
+       for (const horns of Object.values(playerHorns)) if (horns > maxHorns) maxHorns = horns;
+       let overallWinners = Object.keys(playerHorns).filter(name => playerHorns[name] === maxHorns);
+       
+       let titleRightHtml = "";
+       if (maxHorns > 0 && overallWinners.length > 0) {
+           let champName = overallWinners[0];
+           let champId = null;
+           for (const [gid, name] of Object.entries(idToNameMap)) {
+               if (name.toLowerCase() === champName.toLowerCase()) {
+                   champId = gid; break;
+               }
+           }
+           const avatarSrc = (champId && avatarMap[champId]) ? avatarMap[champId] : `images/${champName}.png`;
+           
+           titleRightHtml = `
+             <div style="display:flex; align-items:center; gap:8px; background:linear-gradient(135deg, rgba(255,215,0,0.15) 0%, rgba(255,215,0,0.05) 100%); padding:4px 12px 4px 6px; border:1px solid rgba(255,215,0,0.4); border-radius:20px; box-shadow:0 2px 10px rgba(255,215,0,0.1);">
+               <div style="width:28px; height:28px; border-radius:50%; border:2px solid #FFD700; overflow:hidden; flex-shrink:0; box-shadow:0 0 5px rgba(255,215,0,0.5);">
+                 <img src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='images/default.png';">
+               </div>
+               <div style="display:flex; flex-direction:column; align-items:flex-start; line-height:1.1;">
+                 <div style="display:flex; align-items:center; gap:4px;">
+                   <span style="font-size:10px;">👑</span>
+                   <span style="color:var(--text-main); font-size:12px; font-weight:bold;">${escapeHTML(champName)}</span>
+                 </div>
+                 <span style="color:#FFD700; font-size:10px; font-weight:bold; text-transform:uppercase;">${maxHorns} Horns</span>
+               </div>
+             </div>
+           `;
+       }
+       
        // 2. Alliance Progress
-       let allianceCard = `<div class="card" style="overflow-x:auto;"><div class="card-title">⚔️ Alliance Progress</div><table style="min-width:600px;"><thead><tr>
+       let allianceCard = `<div class="card" style="overflow-x:auto;">
+         <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
+           <span>⚔️ Alliance Progress</span>
+           ${titleRightHtml}
+         </div>
+         <table style="min-width:600px;"><thead><tr>
           <th>Alliance's Showdown</th><th>Total</th><th>Day 1</th><th>Day 2</th><th>Day 3</th><th>Day 4</th><th>Day 5</th><th>Day 6</th>
        </tr></thead><tbody>`;
        
@@ -4921,41 +4965,7 @@ const views = {
        allianceCard += `</tr>`;
        
        // Winners
-       let playerHorns = {};
-       for(let i=1; i<=6; i++) {
-           let p = topPlayers['d'+i];
-           if (p.name && p.score > 0) {
-               playerHorns[p.name] = (playerHorns[p.name] || 0) + staticHorns['d'+i];
-           }
-       }
-       let maxHorns = 0;
-       for (const horns of Object.values(playerHorns)) if (horns > maxHorns) maxHorns = horns;
-       let overallWinners = Object.keys(playerHorns).filter(name => playerHorns[name] === maxHorns);
-       let winnerTotalText = "";
-       if (maxHorns > 0 && overallWinners.length > 0) {
-           let champName = overallWinners[0];
-           let champId = null;
-           for (const [gid, name] of Object.entries(idToNameMap)) {
-               if (name.toLowerCase() === champName.toLowerCase()) {
-                   champId = gid; break;
-               }
-           }
-           const avatarSrc = (champId && avatarMap[champId]) ? avatarMap[champId] : `images/${champName}.png`;
-           
-           winnerTotalText = `
-             <div style="display:flex; align-items:center; justify-content:flex-start; gap:8px;">
-               <div style="width:32px; height:32px; border-radius:50%; border:2px solid #FFD700; overflow:hidden; flex-shrink:0; box-shadow:0 0 5px rgba(255,215,0,0.5);">
-                 <img src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='images/default.png';">
-               </div>
-               <div style="display:flex; flex-direction:column; align-items:flex-start; line-height:1.2;">
-                 <span style="color:var(--text-main); font-size:13px; font-weight:bold;">${escapeHTML(champName)}</span>
-                 <span style="color:#FFD700; font-size:11px; font-weight:bold; text-transform:uppercase;">${maxHorns} Horns</span>
-               </div>
-             </div>
-           `;
-       }
-       
-       allianceCard += `<tr><td style="font-weight:bold;">Winners</td><td style="font-weight:bold;">${winnerTotalText}</td>`;
+       allianceCard += `<tr><td style="font-weight:bold;">Winners</td><td></td>`;
        for(let i=1; i<=6; i++) {
            let w = topPlayers['d'+i].name || '';
            let eScore = enemyAlliance.scores['d'+i] || 0;
