@@ -4943,7 +4943,7 @@ const views = {
            const avatarSrc = (champId && avatarMap[champId]) ? avatarMap[champId] : `images/${champName}.png`;
            
            winnerTotalText = `
-             <div style="display:flex; align-items:center; justify-content:center; gap:8px;">
+             <div style="display:flex; align-items:center; justify-content:flex-start; gap:8px;">
                <div style="width:32px; height:32px; border-radius:50%; border:2px solid #FFD700; overflow:hidden; flex-shrink:0; box-shadow:0 0 5px rgba(255,215,0,0.5);">
                  <img src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='images/default.png';">
                </div>
@@ -4955,7 +4955,7 @@ const views = {
            `;
        }
        
-       allianceCard += `<tr><td style="font-weight:bold;">Winners</td><td style="font-weight:bold; text-align:center;">${winnerTotalText}</td>`;
+       allianceCard += `<tr><td style="font-weight:bold;">Winners</td><td style="font-weight:bold;">${winnerTotalText}</td>`;
        for(let i=1; i<=6; i++) {
            let w = topPlayers['d'+i].name || '';
            let eScore = enemyAlliance.scores['d'+i] || 0;

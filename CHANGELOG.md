@@ -1,3 +1,7 @@
+## [1.29.13] - 2026-07-21
+### Fixed
+- **Mini-Banner Alignment**: Fixed the alignment of the compact Showdown MVP banner inside the Winners row to be left-aligned, properly balancing it with the rest of the column data.
+
 ## [1.29.12] - 2026-07-21
 ### Added
 - **Automated Showdown MVP Banners**: Showdown Leaderboards (both current and All-Time) now automatically generate and display a rich Reigning Champion banner at the top for the #1 ranked player in that board.
