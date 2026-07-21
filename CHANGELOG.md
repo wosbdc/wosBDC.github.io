@@ -1,5 +1,5 @@
 ## [1.27.30] - 2026-07-20
-- Fixed the Dev Mode "Track Deployment" status tracker to poll the correct GitHub repository (`wosbdc/wosBDC.github.io`).
+- Fixed the Dev Mode "Track Deployment" status tracker to poll the correct GitHub repository.
 
 ## [1.27.29] - 2026-07-20
 - Fixed an iOS/Safari bug where the custom player search dropdown would not close when tapping outside the box or opening the sidebar.

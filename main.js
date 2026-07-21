@@ -1878,7 +1878,7 @@ const checkDeploymentStatus = async () => {
 // Auto start polling if dev mode is enabled on load
 if (localStorage.getItem('devMode') === 'true') {
     checkDeploymentStatus();
-    devModePollingInterval = setInterval(checkDeploymentStatus, 10000);
+    devModePollingInterval = setInterval(checkDeploymentStatus, 60000);
 } else {
     checkDeploymentStatus();
 }
@@ -2722,7 +2722,7 @@ const views = {
           if (enabled) {
             checkDeploymentStatus();
             if (devModePollingInterval) clearInterval(devModePollingInterval);
-            devModePollingInterval = setInterval(checkDeploymentStatus, 10000);
+            devModePollingInterval = setInterval(checkDeploymentStatus, 60000);
           } else {
             if (devModePollingInterval) clearInterval(devModePollingInterval);
             const banner = document.getElementById('devDeployBanner');
