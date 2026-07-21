@@ -1758,10 +1758,34 @@ const fetchSheet = async (sheetName) => {
   
   window.livePromises[sheetName] = new Promise((resolve, reject) => {
     const sheetRef = ref(db, `sheets/${sheetName}`);
-    window.liveListeners[sheetName] = onValue(sheetRef, (snapshot) => {
-      const data = snapshot.val();
-      const isUpdate = window.liveData[sheetName] !== undefined;
+    window.liveListeners[sheetName] = onValue(sheetRef, async (snapshot) => {
+      let data = snapshot.val();
       
+      if (!data) {
+        console.warn(`Firebase data missing for ${sheetName}, falling back to GAS...`);
+        try {
+          const fallbackToken = await getAuthToken();
+          const res = await fetch(`${API_BASE_URL}?api=${encodeURIComponent(sheetName)}${fallbackToken ? '&token=' + encodeURIComponent(fallbackToken) : ''}`);
+          const text = await res.text();
+          try {
+            const json = JSON.parse(text);
+            if (!json.error && json.data) {
+              data = json.data;
+            }
+          } catch(e) {
+             console.error("GAS fallback invalid JSON:", text);
+          }
+        } catch(e) {
+          console.error("GAS fallback network error:", e);
+        }
+      }
+
+      if (!data) {
+         if (!window.liveData[sheetName]) reject(new Error("No data available for " + sheetName));
+         return;
+      }
+
+      const isUpdate = window.liveData[sheetName] !== undefined;
       window.liveData[sheetName] = data;
       
       if (!isUpdate) {
@@ -1772,26 +1796,9 @@ const fetchSheet = async (sheetName) => {
           window.activeViewFunc();
         }
       }
-    }, async (error) => {
-      console.warn(`Cache miss for ${sheetName}, falling back to GAS`);
-      try {
-        const fallbackToken = await getAuthToken();
-        const res = await fetch(`${API_BASE_URL}?api=${encodeURIComponent(sheetName)}${fallbackToken ? '&token=' + encodeURIComponent(fallbackToken) : ''}`);
-        const text = await res.text();
-        let json;
-        try {
-          json = JSON.parse(text);
-        } catch (e) {
-          if (text.trim().startsWith('<')) {
-             throw new Error("Database API is currently unavailable.", { cause: e });
-          }
-          throw new Error("Invalid JSON response.", { cause: e });
-        }
-        if (json.error) throw new Error(json.error);
-        if (!window.liveData[sheetName]) resolve(json.data);
-      } catch (err) {
-        if (!window.liveData[sheetName]) reject(err);
-      }
+    }, (error) => {
+      console.error(`Firebase error for ${sheetName}:`, error);
+      if (!window.liveData[sheetName]) reject(error);
     });
   });
   

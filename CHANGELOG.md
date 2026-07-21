@@ -1,3 +1,6 @@
+## [1.27.46] - 2026-07-20
+- Fixed a major data-fetching bug causing the Showdown page to crash. When data wasn't fully synced to the new Firebase real-time database, the app failed to correctly fallback to the Google Apps Script live backend. The data loader now properly detects empty Firebase nodes and seamlessly falls back to the live spreadsheet data.
+
 ## [1.27.45] - 2026-07-20
 - Fixed an issue where the navigation bar would remain hidden after returning to the Admin Menu from the Player Database Editor.
 
