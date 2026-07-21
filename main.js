@@ -4145,53 +4145,88 @@ const views = {
              </div>
            `;
         }
-        html += `<div style="overflow-x: auto; width: 100%;"><table style="min-width: max-content;"><thead><tr>`;
-        board.headers.forEach(h => html += `<th>${h}</th>`);
-        html += `</tr></thead><tbody>`;
-        
-        board.rows.forEach(row => {
-          html += `<tr>`;
-          row.forEach((cell, idx) => {
-            if (typeof cell === 'number') {
-              if (idx === 0 && !board.title.includes('Event Goals')) {
-                 if (cell === 1) cell = '🥇 1';
-                 else if (cell === 2) cell = '🥈 2';
-                 else if (cell === 3) cell = '🥉 3';
-                 else cell = cell.toLocaleString();
-              } else {
-                 cell = cell.toLocaleString();
-              }
-            }
-            // Ensure strings that look like numbers are also formatted, but carefully
-            else if (typeof cell === 'string' && !isNaN(cell) && cell.trim() !== "" && idx > 0) {
-              cell = Number(cell).toLocaleString();
-            }
+        if (board.title.includes('Event Goals')) {
+            html += `<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 15px;">`;
+            board.rows.forEach(row => {
+                let eventDay = formatCell(row[0] !== undefined ? row[0] : '');
+                let dailyGoal = row[1];
+                let left = row[2];
+                let goal = formatCell(row[3] !== undefined ? row[3] : '');
+                let dailyAmt = row[4];
+                
+                // Format numbers carefully
+                if (typeof dailyGoal === 'number') dailyGoal = dailyGoal.toLocaleString();
+                else if (typeof dailyGoal === 'string' && !isNaN(dailyGoal) && dailyGoal.trim() !== "") dailyGoal = Number(dailyGoal).toLocaleString();
+                
+                let numLeft = typeof left === 'number' ? left : Number(left.toString().replace(/,/g, ''));
+                let leftStyle = '';
+                if (!isNaN(numLeft)) {
+                   leftStyle = numLeft <= 0 ? 'color:var(--success); font-weight:bold;' : 'color:var(--danger);';
+                }
+                if (typeof left === 'number') left = left.toLocaleString();
+                else if (typeof left === 'string' && !isNaN(left) && left.trim() !== "") left = Number(left).toLocaleString();
+                
+                if (typeof dailyAmt === 'number') dailyAmt = dailyAmt.toLocaleString();
+                else if (typeof dailyAmt === 'string' && !isNaN(dailyAmt) && dailyAmt.trim() !== "") dailyAmt = Number(dailyAmt).toLocaleString();
+
+                html += `
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; padding: 15px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);">
+                  <div style="font-weight: bold; color: var(--text-main); font-size: 1.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px dashed var(--border);">${eventDay}</div>
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="color: var(--text-muted); font-size: 0.9em;">Daily Goal</span>
+                    <span>${dailyGoal}</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="color: var(--text-muted); font-size: 0.9em;">Left +/-</span>
+                    <span style="${leftStyle}">${left}</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="color: var(--text-muted); font-size: 0.9em;">Goal</span>
+                    <span>${goal}</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-muted); font-size: 0.9em;">Daily Amount</span>
+                    <span style="font-weight: bold; color: var(--accent);">${dailyAmt}</span>
+                  </div>
+                </div>`;
+            });
+            html += `</div></div>`;
+        } else {
+            html += `<div style="overflow-x: auto; width: 100%;"><table style="min-width: max-content;"><thead><tr>`;
+            board.headers.forEach(h => html += `<th>${h}</th>`);
+            html += `</tr></thead><tbody>`;
             
-            let formattedCell = formatCell(cell);
-            
-            let styleStr = idx === 0 ? 'font-weight:bold; color:var(--text-muted);' : '';
-            if (board.title.includes('Event Goals')) {
-               if (idx === 0) styleStr = 'font-weight:bold; color:var(--text-main);';
-               if (idx === 2) {
-                  let numVal = typeof cell === 'number' ? cell : Number(cell.toString().replace(/,/g, ''));
-                  if (!isNaN(numVal)) {
-                     styleStr = numVal <= 0 ? 'color:var(--success); font-weight:bold;' : 'color:var(--danger);';
+            board.rows.forEach(row => {
+              html += `<tr>`;
+              row.forEach((cell, idx) => {
+                if (typeof cell === 'number') {
+                  if (idx === 0) {
+                     if (cell === 1) cell = '🥇 1';
+                     else if (cell === 2) cell = '🥈 2';
+                     else if (cell === 3) cell = '🥉 3';
+                     else cell = cell.toLocaleString();
+                  } else {
+                     cell = cell.toLocaleString();
                   }
-               }
-               if (idx === 4) styleStr = 'font-weight:bold; color:var(--accent);';
-            }
-            
-            html += `<td style="${styleStr}">${formattedCell}</td>`;
-          });
-          html += `</tr>`;
-        });
+                }
+                // Ensure strings that look like numbers are also formatted, but carefully
+                else if (typeof cell === 'string' && !isNaN(cell) && cell.trim() !== "" && idx > 0) {
+                  cell = Number(cell).toLocaleString();
+                }
+                
+                let formattedCell = formatCell(cell);
+                html += `<td ${idx === 0 ? 'style="font-weight:bold; color:var(--text-muted);"' : ''}>${formattedCell}</td>`;
+              });
+              html += `</tr>`;
+            });
         
         if (((board.title.toLowerCase().includes('bear') || board.title.toLowerCase().includes('bt')) && board.title.toLowerCase().includes('donation'))) {
            // We'll append the widget placeholder specifically under the Bear Donations board
            html += `<div id="bearTrapActivityWidget-${board.title.replace(/\s+/g, '')}" class="bear-trap-activity-widget" style="margin-top: 15px;"></div>`;
         }
         
-        html += `</tbody></table></div></div>`;
+            html += `</tbody></table></div></div>`;
+        }
       });
       
       html += `</div>`;
@@ -4304,19 +4339,9 @@ const views = {
               <div style="width:100%; height:12px; background:rgba(0,0,0,0.3); border-radius:6px; overflow:hidden; border:1px solid var(--border);">
                 <div style="width:${allTimeProgress}%; height:100%; background:linear-gradient(90deg, #8b5cf6, #d946ef); border-radius:6px; transition:width 1.5s cubic-bezier(0.4, 0, 0.2, 1); box-shadow:0 0 10px #d946ef;"></div>
               </div>
-            </div>
+            </div>`;
             
-            <table>
-              <thead>
-                <tr>
-                  <th>Event Day</th>
-                  <th>Daily Goal</th>
-                  <th>Left +/-</th>
-                  <th>Goal</th>
-                  <th>Daily Amount</th>
-                </tr>
-              </thead>
-              <tbody>`;
+            goalsCard += `<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 15px;">`;
           
           for (let i = 1; i <= 6; i++) {
             if (r + i < data.length) {
@@ -4329,17 +4354,39 @@ const views = {
               let goal = dRow[startCol + 4] || "";
               let dailyAmt = dRow[startCol + 5] || "";
               
+              let formattedDailyGoal = typeof dailyGoal === 'number' ? formatNumber(dailyGoal) : dailyGoal;
+              let formattedLeft = typeof left === 'number' ? formatNumber(left) : left;
+              let formattedGoal = typeof goal === 'number' ? formatNumber(goal) : goal;
+              let formattedDailyAmt = typeof dailyAmt === 'number' ? formatNumber(dailyAmt) : dailyAmt;
+              
+              let leftStyle = '';
+              if (typeof left === 'number') {
+                 leftStyle = left <= 0 ? 'color:var(--success); font-weight:bold;' : 'color:var(--danger);';
+              }
+              
               goalsCard += `
-                <tr>
-                  <td style="font-weight:bold; color:var(--text-main);">${eventDay}</td>
-                  <td>${typeof dailyGoal === 'number' ? formatNumber(dailyGoal) : dailyGoal}</td>
-                  <td style="${typeof left === 'number' && left <= 0 ? 'color:var(--success)' : (typeof left === 'number' && left > 0 ? 'color:var(--danger)' : '')}">${typeof left === 'number' ? formatNumber(left) : left}</td>
-                  <td>${typeof goal === 'number' ? formatNumber(goal) : goal}</td>
-                  <td style="font-weight:bold; color:var(--accent);">${typeof dailyAmt === 'number' ? formatNumber(dailyAmt) : dailyAmt}</td>
-                </tr>`;
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; padding: 15px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);">
+                  <div style="font-weight: bold; color: var(--text-main); font-size: 1.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px dashed var(--border);">${eventDay}</div>
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="color: var(--text-muted); font-size: 0.9em;">Daily Goal</span>
+                    <span>${formattedDailyGoal}</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="color: var(--text-muted); font-size: 0.9em;">Left +/-</span>
+                    <span style="${leftStyle}">${formattedLeft}</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="color: var(--text-muted); font-size: 0.9em;">Goal</span>
+                    <span>${formattedGoal}</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-muted); font-size: 0.9em;">Daily Amount</span>
+                    <span style="font-weight: bold; color: var(--accent);">${formattedDailyAmt}</span>
+                  </div>
+                </div>`;
             }
           }
-          goalsCard += `</tbody></table></div>`;
+          goalsCard += `</div></div>`;
         }
         
         // 2. Find Alliance's Horns/Scores
