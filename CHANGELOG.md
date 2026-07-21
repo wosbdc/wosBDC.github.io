@@ -1,3 +1,6 @@
+## [1.27.45] - 2026-07-20
+- Fixed an issue where the navigation bar would remain hidden after returning to the Admin Menu from the Player Database Editor.
+
 ## [1.27.44] - 2026-07-20
 - Removed the invisible physical "shield" overlay used for the autocomplete dropdown and replaced it with a modern lightweight document listener. This fixes a bug where tapping a button (like the "Check" lookup button) while the dropdown was open would require a double-tap because the first tap was being absorbed by the invisible shield.
 - Made the Admin Menu tab navigation bar horizontally scrollable on mobile devices to prevent the tabs from overflowing off the edge of small screens.

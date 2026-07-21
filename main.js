@@ -2181,6 +2181,10 @@ const views = {
     `;
   },
   admin: async () => {
+    // Ensure navbar is always visible when returning to the admin menu
+    const navbar = document.querySelector('.navbar');
+    if (navbar) navbar.style.display = 'block';
+
     window.refreshAdminUsers = async () => {
         if (window.showToast) window.showToast("Refreshing user database...", "info");
         const icon = document.getElementById('adminRefreshIcon');
