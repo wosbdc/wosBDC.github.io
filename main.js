@@ -795,13 +795,41 @@ window.searchPlayerFull = async (name) => {
   }
   
   try {
-    const [data, rosterRawData, lbRawData, sdHistoryRawData, sdCurrentRawData] = await Promise.all([
+    let sdLiveSnapshotPromise = window.fetchMergedShowdown();
+    const [data, rosterRawData, lbRawData, sdHistoryRawData, sdMergedDataRes] = await Promise.all([
             fetchSheet("activity "),
             fetchSheet("Chief's List"),
             fetchSheet("LeaderBoards"),
             fetchSheet("Showdown History"),
-            fetchSheet("Showdown")
+            sdLiveSnapshotPromise
           ]);
+    const sdCurrentRawData = sdMergedDataRes.mergedData;
+    const sdLiveData = sdMergedDataRes.sdLiveData || {};
+
+    let currentDay = 0;
+    Object.values(sdLiveData).forEach(p => {
+       if ((p.d6||0) > 0 && currentDay < 6) currentDay = 6;
+       else if ((p.d5||0) > 0 && currentDay < 5) currentDay = 5;
+       else if ((p.d4||0) > 0 && currentDay < 4) currentDay = 4;
+       else if ((p.d3||0) > 0 && currentDay < 3) currentDay = 3;
+       else if ((p.d2||0) > 0 && currentDay < 2) currentDay = 2;
+       else if ((p.d1||0) > 0 && currentDay < 1) currentDay = 1;
+    });
+    if (data && data.length > 1) {
+        for (let r = 1; r < data.length; r++) {
+           let pName = data[r][0];
+           if (!pName) continue;
+           let safeName = pName.toString().trim();
+           let missedCount = 0;
+           if (currentDay > 0) {
+              let p = sdLiveData[safeName] || {};
+              for (let i = 1; i <= currentDay; i++) {
+                 if (!(p['d'+i] > 0)) missedCount++;
+              }
+           }
+           data[r][1] = missedCount;
+        }
+    }
         
         let usersSnap = null;
         try { usersSnap = await get(ref(db, 'users')); } catch(e) { console.warn("Could not fetch users:", e); }
@@ -1750,6 +1778,84 @@ window.liveListeners = {};
 window.livePromises = {};
 window.activeViewFunc = null;
 
+window.mergeShowdownData = (data, sdLiveData) => {
+   if (!sdLiveData || !data) return data;
+   
+   let totals = { d1: 0, d2: 0, d3: 0, d4: 0, d5: 0, d6: 0 };
+   Object.values(sdLiveData).forEach(p => {
+      totals.d1 += (p.d1 || 0);
+      totals.d2 += (p.d2 || 0);
+      totals.d3 += (p.d3 || 0);
+      totals.d4 += (p.d4 || 0);
+      totals.d5 += (p.d5 || 0);
+      totals.d6 += (p.d6 || 0);
+   });
+   
+   for (let r = 0; r < data.length; r++) {
+       let row = data[r];
+       if (row.some(c => typeof c === 'string' && c.toLowerCase().includes("alliance's"))) {
+           let startCol = row.findIndex(c => typeof c === 'string' && c.toLowerCase().includes("alliance's"));
+           if (r + 2 < data.length) {
+               let ourRow = data[r+2];
+               ourRow[startCol + 2] = totals.d1;
+               ourRow[startCol + 3] = totals.d2;
+               ourRow[startCol + 4] = totals.d3;
+               ourRow[startCol + 5] = totals.d4;
+               ourRow[startCol + 6] = totals.d5;
+               ourRow[startCol + 7] = totals.d6;
+               ourRow[startCol + 8] = totals.d1 + totals.d2 + totals.d3 + totals.d4 + totals.d5 + totals.d6;
+           }
+       }
+       if (row.some(c => typeof c === 'string' && c.toLowerCase().includes("ranking"))) {
+           let startCol = row.findIndex(c => typeof c === 'string' && c.toLowerCase().includes("ranking"));
+           let nameCol = startCol + 1;
+           let pr = r + 1;
+           
+           let newRows = [];
+           let playerList = Object.entries(sdLiveData).map(([name, scores]) => {
+               let total = (scores.d1||0) + (scores.d2||0) + (scores.d3||0) + (scores.d4||0) + (scores.d5||0) + (scores.d6||0);
+               return { name, scores, total };
+           }).sort((a,b) => b.total - a.total);
+           
+           playerList.forEach((p, idx) => {
+               let newRow = new Array(Math.max(row.length, startCol + 9)).fill("");
+               newRow[startCol] = idx + 1;
+               newRow[nameCol] = p.name;
+               newRow[startCol + 2] = p.scores.d1 || 0;
+               newRow[startCol + 3] = p.scores.d2 || 0;
+               newRow[startCol + 4] = p.scores.d3 || 0;
+               newRow[startCol + 5] = p.scores.d4 || 0;
+               newRow[startCol + 6] = p.scores.d5 || 0;
+               newRow[startCol + 7] = p.scores.d6 || 0;
+               newRow[startCol + 8] = p.total;
+               newRows.push(newRow);
+           });
+           
+           let endR = pr;
+           while (endR < data.length && !data[endR].every(c => c === "") && !data[endR].some(c => typeof c === 'string' && c.includes("Showdown Update"))) {
+               endR++;
+           }
+           
+           data.splice(pr, endR - pr, ...newRows);
+           break;
+       }
+   }
+   return data;
+};
+
+window.fetchMergedShowdown = async () => {
+   let baseData = await fetchSheet("Showdown");
+   let sdLiveData = {};
+   try {
+       let snap = await get(ref(db, 'showdown_live'));
+       if (snap.exists()) sdLiveData = snap.val();
+   } catch(e) {}
+   
+   let baseDataCopy = JSON.parse(JSON.stringify(baseData)); 
+   let mergedData = window.mergeShowdownData(baseDataCopy, sdLiveData);
+   return { mergedData, sdLiveData };
+};
+
 const fetchSheet = async (sheetName) => {
 
 
@@ -2392,6 +2498,7 @@ const views = {
             <div style="background:var(--bg-main); padding:20px; border-radius:12px; border:1px solid var(--accent); margin-bottom:20px; text-align:center; display:flex; flex-direction:column; gap:15px; align-items:center;">
               <button onclick="views.beartrap()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px;">🥩 Open Multi-BT Donations</button>
               <button onclick="views.playerEditor()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px;">👤 Open Player Database Editor</button>
+              <button onclick="views.showdownDataEntry()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px;">⚔️ Showdown Data Entry</button>
             </div>
 
             <!-- Push Notification Broadcast -->
@@ -2911,6 +3018,108 @@ const views = {
       
     } catch(err) {
       renderError(err.message);
+    }
+  },
+  
+  showdownDataEntry: async () => {
+    const mainContent = document.getElementById('mainContent');
+    if (!mainContent) return;
+    
+    const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+    if (!isManager) {
+       if(window.showToast) window.showToast("Only R4/R5 managers can edit Showdown data", "error");
+       return;
+    }
+    
+    renderLoading("Loading Showdown Editor");
+    try {
+       const sdRes = await window.fetchMergedShowdown();
+       const sdLiveData = sdRes.sdLiveData || {};
+       let allPlayers = Object.keys(sdLiveData);
+       
+       let html = `<div class="card" style="position:relative;">
+         <button onclick="views.admin()" style="position:absolute; top:15px; left:15px; background:none; border:none; color:var(--text-muted); font-size:24px; cursor:pointer; padding:0; line-height:1;">&times;</button>
+         <div class="card-title" style="margin-top:20px; text-align:center;">⚔️ Showdown Data Entry</div>
+         
+         <div style="background:rgba(255,255,255,0.02); padding:15px; border-radius:8px; border:1px solid var(--border); margin-bottom:20px;">
+           <label style="display:block; margin-bottom:5px; font-weight:bold; color:var(--text-main);">Select Player</label>
+           <select id="sdPlayerSelect" style="width:100%; padding:12px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:16px; margin-bottom:15px;" onchange="window.onSdPlayerSelect()">
+             <option value="">-- Choose a Player --</option>`;
+             
+       allPlayers.sort((a,b) => a.localeCompare(b)).forEach(p => {
+          html += `<option value="${escapeHTML(p)}">${escapeHTML(p)}</option>`;
+       });
+             
+       html += `</select>
+           
+           <div id="sdEntryFields" style="display:none; flex-direction:column; gap:10px;">
+             ${[1,2,3,4,5,6].map(d => `
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <span style="width:50px; font-weight:bold; color:var(--text-muted);">Day ${d}</span>
+                  <input type="number" id="sd_d${d}" placeholder="Score" style="flex:1; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main);">
+                </div>
+             `).join('')}
+             
+             <button onclick="window.saveShowdownEntry()" style="background:var(--success); color:white; border:none; padding:12px; border-radius:6px; font-weight:bold; font-size:16px; margin-top:10px; cursor:pointer;">💾 Save Scores</button>
+           </div>
+         </div>
+       </div>`;
+       
+       mainContent.innerHTML = html;
+       
+       window._currentSdLiveData = sdLiveData;
+       
+       window.onSdPlayerSelect = () => {
+          const sel = document.getElementById('sdPlayerSelect').value;
+          const fields = document.getElementById('sdEntryFields');
+          if (!sel) {
+             fields.style.display = 'none';
+             return;
+          }
+          fields.style.display = 'flex';
+          const pData = window._currentSdLiveData[sel] || {};
+          for (let i = 1; i <= 6; i++) {
+             document.getElementById('sd_d'+i).value = pData['d'+i] || '';
+          }
+       };
+       
+       window.saveShowdownEntry = async () => {
+          const sel = document.getElementById('sdPlayerSelect').value;
+          if (!sel) return;
+          
+          let btn = event.target;
+          let origText = btn.innerHTML;
+          btn.innerHTML = 'Saving...';
+          btn.disabled = true;
+          
+          let updates = {};
+          for (let i = 1; i <= 6; i++) {
+             let val = parseInt(document.getElementById('sd_d'+i).value);
+             updates['d'+i] = isNaN(val) ? 0 : val;
+          }
+          
+          try {
+             const { ref, set } = window.firebase.database;
+             await set(ref(db, \`showdown_live/\${sel}\`), updates);
+             window._currentSdLiveData[sel] = updates;
+             if (window.showToast) window.showToast(\`Saved scores for \${sel}\`, "success");
+             
+             // Sync the cached data to reflect this so navigation uses updated scores
+             if (window.liveData['Showdown']) {
+                window.liveData['Showdown'] = window.mergeShowdownData(window.liveData['Showdown'], window._currentSdLiveData);
+             }
+          } catch(e) {
+             console.error(e);
+             if (window.showToast) window.showToast("Failed to save", "error");
+          }
+          
+          btn.innerHTML = origText;
+          btn.disabled = false;
+       };
+       
+    } catch(e) {
+       mainContent.innerHTML = '<div class="card"><div class="loading" style="color:var(--danger);">Error loading Data Entry UI</div></div>';
+       console.error(e);
     }
   },
   
@@ -4048,7 +4257,7 @@ const views = {
 
       // Fetch Showdown Event Goals
       try {
-        const sdData = await fetchSheet("Showdown");
+        const sdData = (await window.fetchMergedShowdown()).mergedData;
         let sdHeaders = ["Event Day", "Daily Goal", "Left +/-", "Goal", "Daily Amount"];
         let sdRows = [];
         let totalAllianceScore = 0;
@@ -4338,7 +4547,7 @@ const views = {
   showdown: async () => {
     renderLoading("Loading Showdown Data");
     try {
-      const data = await fetchSheet("Showdown");
+      const data = (await window.fetchMergedShowdown()).mergedData;
       let html = `<div style="display:flex; flex-direction:column; gap:20px;">`;
       
       let goalsCard = '';
@@ -4570,13 +4779,41 @@ const views = {
   roster: async () => {
     renderLoading("Loading Player Lookup");
     try {
-      const [data, rosterRawData, lbRawData, sdHistoryRawData, sdCurrentRawData] = await Promise.all([
+      let sdLiveSnapshotPromise = window.fetchMergedShowdown();
+      const [data, rosterRawData, lbRawData, sdHistoryRawData, sdMergedDataRes] = await Promise.all([
             fetchSheet("activity "),
             fetchSheet("Chief's List"),
             fetchSheet("LeaderBoards"),
             fetchSheet("Showdown History"),
-            fetchSheet("Showdown")
+            sdLiveSnapshotPromise
           ]);
+      const sdCurrentRawData = sdMergedDataRes.mergedData;
+      const sdLiveData = sdMergedDataRes.sdLiveData || {};
+
+      let currentDay = 0;
+      Object.values(sdLiveData).forEach(p => {
+         if ((p.d6||0) > 0 && currentDay < 6) currentDay = 6;
+         else if ((p.d5||0) > 0 && currentDay < 5) currentDay = 5;
+         else if ((p.d4||0) > 0 && currentDay < 4) currentDay = 4;
+         else if ((p.d3||0) > 0 && currentDay < 3) currentDay = 3;
+         else if ((p.d2||0) > 0 && currentDay < 2) currentDay = 2;
+         else if ((p.d1||0) > 0 && currentDay < 1) currentDay = 1;
+      });
+      if (data && data.length > 1) {
+          for (let r = 1; r < data.length; r++) {
+             let pName = data[r][0];
+             if (!pName) continue;
+             let safeName = pName.toString().trim();
+             let missedCount = 0;
+             if (currentDay > 0) {
+                let p = sdLiveData[safeName] || {};
+                for (let i = 1; i <= currentDay; i++) {
+                   if (!(p['d'+i] > 0)) missedCount++;
+                }
+             }
+             data[r][1] = missedCount;
+          }
+      }
         
         let usersSnap = null;
         try { usersSnap = await get(ref(db, 'users')); } catch(e) { console.warn("Could not fetch users:", e); }
