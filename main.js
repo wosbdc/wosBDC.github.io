@@ -629,6 +629,18 @@ onValue(ref(db, 'config/maintenanceEndTime'), (snapshot) => {
   if (maintenanceMode) startMaintenanceCountdown();
 });
 
+window.resetBearTrapWinners = async () => {
+    if (!confirm("Are you sure you want to reset both Bear Trap winners to 'Pending...'?")) return;
+    try {
+        await set(ref(db, 'config/bearTrapWinners/1'), {name: "Pending...", score: "-", timestamp: Date.now()});
+        await set(ref(db, 'config/bearTrapWinners/2'), {name: "Pending...", score: "-", timestamp: Date.now()});
+        window.showToast("Bear Trap Winners Reset to Pending!", "success");
+        setTimeout(() => window.location.reload(), 1500);
+    } catch(e) {
+        window.showToast("Error resetting: " + e.message, "danger");
+    }
+};
+
 window._executeLogBearTrapWinner = async (name, trap) => {
     window.showToast("Crowning Winner...", "accent");
     try {
@@ -2792,7 +2804,7 @@ const views = {
           <!-- Tab 1: Daily Tools -->
           <div id="tab-tools" class="admin-tab-content" style="display:block;">
             <div style="background:var(--bg-main); padding:20px; border-radius:12px; border:1px solid var(--accent); margin-bottom:20px; text-align:center; display:flex; flex-direction:column; gap:15px; align-items:center;">
-              <button onclick="views.beartrap()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px;">🥩 Open Multi-BT Donations</button>
+              <button onclick="views.beartrap()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px;">🐻 Bear Trap</button>
               <button onclick="views.playerEditor()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px;">👤 Open Player Database Editor</button>
               <button onclick="views.showdownAdmin()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px;">⚔️ ShowDown</button>
             </div>
@@ -3605,6 +3617,11 @@ const views = {
             <button id="submitBeartrapBtn" onclick="window.submitBeartrapDonations()" style="background:var(--success); border:none; color:#fff; padding:10px; border-radius:6px; cursor:pointer; font-weight:bold; flex:2;">Submit All</button>
           </div>
           <div id="beartrapStatus" style="margin-top:15px; text-align:center; font-size:14px;"></div>
+        </div>
+        
+        <div style="background:var(--bg-main); padding:15px; border-radius:12px; border:1px solid var(--danger); margin-bottom:20px;">
+           <h3 style="margin-top:0; color:var(--danger); font-size:16px;">⚠️ Danger Zone</h3>
+           <button onclick="window.resetBearTrapWinners()" style="background:var(--danger); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%;">🔄 Reset Bear Trap Winners to "Pending..."</button>
         </div>
         
         <div style="background:var(--bg-main); padding:15px; border-radius:12px; border:1px solid var(--border);">
