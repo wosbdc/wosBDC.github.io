@@ -1855,10 +1855,10 @@ const checkDeploymentStatus = async () => {
         if (isDevMode && lastDeployStatus === 'in_progress') {
             window.location.reload(true);
         } else if (isDevMode && devDeployBanner) {
-            devDeployBanner.style.display = 'block';
+            devDeployBanner.style.display = 'flex';
             devDeployBanner.style.backgroundColor = '#10b981';
             devDeployBanner.style.color = '#fff';
-            devDeployBanner.innerHTML = '🟢 Live and up to date.';
+            devDeployBanner.innerHTML = '<span>🟢 Live and up to date.</span><button onclick="window.location.reload(true)" style="background:rgba(255,255,255,0.2); border:none; padding:4px 8px; border-radius:4px; color:#fff; cursor:pointer; font-size:12px; font-weight:bold;">Force Refresh</button>';
             lastDeployStatus = 'completed';
         }
       } else if (status === 'completed' && conclusion === 'failure') {

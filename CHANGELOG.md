@@ -1,3 +1,10 @@
+## [1.27.32] - 2026-07-20
+- Added a manual 'Check for Updates' refresh button to the Dev Mode tracking banner.
+
+## [1.27.31] - 2026-07-20
+- Increased the Dev Mode GitHub deployment tracker polling interval to 60 seconds to prevent API rate limiting.
+- Fixed a bug where custom player autocomplete dropdowns would stay open and overlap the mobile menu or settings sidebar on iOS devices.
+
 ## [1.27.30] - 2026-07-20
 - Fixed the Dev Mode "Track Deployment" status tracker to poll the correct GitHub repository.
 
