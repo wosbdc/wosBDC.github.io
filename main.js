@@ -2061,33 +2061,23 @@ window.bindCustomAutocomplete = (inputEl) => {
     });
 };
 
-// Global invisible shield to catch iOS stray taps
-const getAutocompleteShield = () => {
-    let shield = document.getElementById('autocomplete-shield');
-    if (!shield) {
-        shield = document.createElement('div');
-        shield.id = 'autocomplete-shield';
-        shield.style.cssText = 'display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:999; background:transparent;';
-        
-        // When the shield is tapped, force close all dropdowns and blur active inputs
-        ['mousedown', 'touchstart'].forEach(evt => {
-            shield.addEventListener(evt, (e) => {
-                e.preventDefault(); // Prevent double firing
-                e.stopPropagation();
-                
-                document.querySelectorAll('.custom-autocomplete-dropdown').forEach(dropdown => {
-                    dropdown.style.display = 'none';
-                });
-                shield.style.display = 'none';
-                
-                if (document.activeElement && document.activeElement.tagName === 'INPUT') {
-                    document.activeElement.blur();
-                }
+// Global lightweight listener to close dropdowns when clicking outside
+if (!window._autocompleteListenerAdded) {
+    document.addEventListener('pointerdown', (e) => {
+        // If clicking outside an autocomplete wrapper, close all dropdowns
+        if (!e.target.closest('.autocomplete-wrapper')) {
+            document.querySelectorAll('.custom-autocomplete-dropdown').forEach(dropdown => {
+                dropdown.style.display = 'none';
             });
-        });
-        document.body.appendChild(shield);
-    }
-    return shield;
+            // Don't forcefully blur, just let native behavior handle focus
+        }
+    });
+    window._autocompleteListenerAdded = true;
+}
+
+const getAutocompleteShield = () => {
+    // We no longer return a physical shield div. Return a dummy object to prevent errors if existing code calls style.display on it
+    return { style: {} };
 };
 
 // View renderers
@@ -2372,13 +2362,18 @@ const views = {
           </div>
           
           <!-- Tab Navigation -->
-          <div style="display:flex; gap:10px; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:10px;">
-            <button class="admin-tab-btn active" data-tab="tab-tools" style="background:none; border:none; color:var(--accent); font-weight:bold; font-size:16px; cursor:pointer; padding:5px 10px; border-bottom:2px solid var(--accent);">🛠️ Daily Tools</button>
-            ${currentUser && currentUser.gameId.toString() === '318843189' ? `<button class="admin-tab-btn" data-tab="tab-frost" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:16px; cursor:pointer; padding:5px 10px; border-bottom:2px solid transparent;">❄️ Frost Clan</button>` : ''}
-            ${isR5 ? `<button class="admin-tab-btn" data-tab="tab-users" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:16px; cursor:pointer; padding:5px 10px; border-bottom:2px solid transparent;">👥 Users</button>
-            <button class="admin-tab-btn" data-tab="tab-settings" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:16px; cursor:pointer; padding:5px 10px; border-bottom:2px solid transparent;">⚙️ Settings</button>` : ''}
-            <button class="admin-tab-btn" data-tab="tab-logs" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:16px; cursor:pointer; padding:5px 10px; border-bottom:2px solid transparent;">📋 Logs</button>
-            ${isR5 ? `<button class="admin-tab-btn" data-tab="tab-system" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:16px; cursor:pointer; padding:5px 10px; border-bottom:2px solid transparent;">⚡ System</button>` : ''}
+          <div style="display:flex; gap:10px; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:10px; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; white-space:nowrap;">
+            <style>
+              .admin-tab-btn { flex-shrink: 0; }
+              /* Hide scrollbar for Chrome, Safari and Opera */
+              div::-webkit-scrollbar { display: none; }
+            </style>
+            <button class="admin-tab-btn active" data-tab="tab-tools" style="background:none; border:none; color:var(--accent); font-weight:bold; font-size:16px; cursor:pointer; padding:5px 10px; border-bottom:2px solid var(--accent); flex-shrink:0;">🛠️ Daily Tools</button>
+            ${currentUser && currentUser.gameId.toString() === '318843189' ? `<button class="admin-tab-btn" data-tab="tab-frost" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:16px; cursor:pointer; padding:5px 10px; border-bottom:2px solid transparent; flex-shrink:0;">❄️ Frost Clan</button>` : ''}
+            ${isR5 ? `<button class="admin-tab-btn" data-tab="tab-users" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:16px; cursor:pointer; padding:5px 10px; border-bottom:2px solid transparent; flex-shrink:0;">👥 Users</button>
+            <button class="admin-tab-btn" data-tab="tab-settings" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:16px; cursor:pointer; padding:5px 10px; border-bottom:2px solid transparent; flex-shrink:0;">⚙️ Settings</button>` : ''}
+            <button class="admin-tab-btn" data-tab="tab-logs" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:16px; cursor:pointer; padding:5px 10px; border-bottom:2px solid transparent; flex-shrink:0;">📋 Logs</button>
+            ${isR5 ? `<button class="admin-tab-btn" data-tab="tab-system" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:16px; cursor:pointer; padding:5px 10px; border-bottom:2px solid transparent; flex-shrink:0;">⚡ System</button>` : ''}
           </div>
           
           <!-- Tab 1: Daily Tools -->
