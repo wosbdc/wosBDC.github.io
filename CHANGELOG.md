@@ -1,3 +1,7 @@
+## [1.29.19] - 2026-07-21
+### Added
+- **Automated Bear Trap Champion Banners**: Automated the Reigning Champion banners for the Bear Trap leaderboards. The app now parses the Google Sheets data in real-time to crown whoever is in 1st place. If the spreadsheet is cleared for a new event (top score is 0), the champion banner will automatically revert to showing "Pending..." with a blank score, removing the need for manual configuration.
+
 ## [1.29.18] - 2026-07-21
 ### Fixed
 - **Alliance Progress Card Layout Bug**: Fixed a layout bug in the Alliance Progress card introduced in v1.29.17 where a rogue closing `</div>` prematurely closed the card container, causing the progress table to render outside of the card's bounds.

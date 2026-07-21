@@ -4453,16 +4453,7 @@ const views = {
         }
       }
 
-      // Fetch champions config once
-      let btWinners = {};
-      try {
-         const snap = await get(ref(db, 'config/bearTrapWinners'));
-         if (snap.exists()) {
-            btWinners = snap.val();
-         }
-      } catch (e) {
-         console.warn("Could not fetch bt winners", e);
-      }
+      // (Legacy btWinners fetch removed - Bear Trap banners are now automated)
 
       // Fetch Showdown Event Goals
       let finalGoalsCard = "";
@@ -4597,11 +4588,19 @@ const views = {
         let champScore = null;
         let bannerTitle = "👑 Reigning Champion";
         let scoreLabel = "Total Wins";
-        
-        if (trapNum && btWinners[trapNum]) {
-           champName = btWinners[trapNum].name;
-           champScore = btWinners[trapNum].score;
-        } else if (isAllTime && board.rows.length > 0) {
+         if (trapNum && board.rows.length > 0) {
+            let firstRow = board.rows[0];
+            let rawScore = firstRow[2] !== undefined ? firstRow[2].toString().replace(/,/g, "") : "0";
+            let topScore = parseInt(rawScore) || 0;
+            
+            if (topScore === 0) {
+               champName = "Pending...";
+               champScore = "-";
+            } else {
+               champName = firstRow[1] ? firstRow[1].toString() : "Pending...";
+               champScore = firstRow[2] !== undefined ? firstRow[2] : "-";
+            }
+         } else if (isAllTime && board.rows.length > 0) {
            let firstRow = board.rows[0];
            champName = firstRow[1] ? firstRow[1].toString() : null;
            champScore = firstRow[2] !== undefined ? firstRow[2] : null;
@@ -6722,4 +6721,8 @@ window.openAltPerksModal = (gameId, altName) => {
         }
     });
 };
+
+
+
+
 
