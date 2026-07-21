@@ -2349,9 +2349,9 @@ const views = {
           
           try {
              const { ref, set } = window.firebase.database;
-             await set(ref(db, \`showdown_live/\${sel}\`), updates);
+             await set(ref(db, `showdown_live/${sel}`), updates);
              window._currentSdLiveData[sel] = updates;
-             if (window.showToast) window.showToast(\`Saved scores for \${sel}\`, "success");
+             if (window.showToast) window.showToast(`Saved scores for ${sel}`, "success");
              
              // Sync the cached data to reflect this so navigation uses updated scores
              if (window.liveData['Showdown']) {
