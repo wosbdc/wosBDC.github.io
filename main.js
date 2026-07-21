@@ -3156,6 +3156,7 @@ const views = {
                 <div style="display:flex; align-items:center; gap:10px;">
                   <span style="width:50px; font-weight:bold; color:var(--text-muted);">Day ${d}</span>
                   <input type="number" id="sd_d${d}" placeholder="Score" style="flex:1; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main);">
+                  <button id="sd_d${d}_lock" onclick="window.toggleSdLock(${d})" style="display:none; background:transparent; border:none; cursor:pointer; font-size:18px;" title="Unlock to edit">🔒</button>
                 </div>
              `).join('')}
              
@@ -3168,6 +3169,20 @@ const views = {
        
        window._currentSdLiveData = sdLiveData;
        
+       window.toggleSdLock = (d) => {
+           let input = document.getElementById('sd_d'+d);
+           let lockBtn = document.getElementById('sd_d'+d+'_lock');
+           if (input.disabled) {
+               input.disabled = false;
+               input.style.opacity = '1';
+               lockBtn.innerHTML = '🔓';
+           } else {
+               input.disabled = true;
+               input.style.opacity = '0.5';
+               lockBtn.innerHTML = '🔒';
+           }
+       };
+       
        window.onSdPlayerSelect = () => {
           const sel = document.getElementById('sdPlayerSelect').value;
           const fields = document.getElementById('sdEntryFields');
@@ -3178,7 +3193,22 @@ const views = {
           fields.style.display = 'flex';
           const pData = window._currentSdLiveData[sel] || {};
           for (let i = 1; i <= 6; i++) {
-             document.getElementById('sd_d'+i).value = pData['d'+i] || '';
+             let val = pData['d'+i];
+             let input = document.getElementById('sd_d'+i);
+             let lockBtn = document.getElementById('sd_d'+i+'_lock');
+             
+             input.value = val !== undefined ? val : '';
+             
+             if (val !== undefined && val !== null && val !== '') {
+                 input.disabled = true;
+                 input.style.opacity = '0.5';
+                 lockBtn.style.display = 'block';
+                 lockBtn.innerHTML = '🔒';
+             } else {
+                 input.disabled = false;
+                 input.style.opacity = '1';
+                 lockBtn.style.display = 'none';
+             }
           }
        };
        

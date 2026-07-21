@@ -246,6 +246,14 @@
 
 # WOS Community Portal - Changelog
 
+## [1.29.3] - 2026-07-21
+### Added
+- Added a "lock" feature to the Showdown Data Entry page to prevent accidental overwriting of existing scores.
+
+### Fixed
+- Fixed invalid `window.firebaseDb` references that crashed the Showdown pages.
+- Added missing Firebase Security rules for `showdown_meta` and `roster_live` to fix "Permission denied" errors.
+
 ## v1.26.0 - 2026-07-19
 - **Admin Panel Security Overhaul**: Removed the buggy OTP email system that was exhausting Google Apps Script quotas. The Admin Panel is now exclusively locked behind **Google Sign-In**. This leverages Google's built-in 2FA, brute-force protection, and session management. If an Admin signs in with an Email and Password, they will be politely asked to log out and use the "Sign in with Google" button to access the panel.
 
