@@ -1,3 +1,7 @@
+## [1.29.11] - 2026-07-21
+### Changed
+- **Showdown MVP Banner Compacted**: Removed the full-width MVP banner and integrated a mini-banner (avatar, name, and horns) directly into the Total cell of the Winners row to save screen space while keeping the premium look.
+
 ## [1.29.10] - 2026-07-21
 ### Added
 - **Showdown MVP Banner**: Added a premium gold-gradient banner at the top of the Showdown Analytics page, featuring the avatar, name, and total horn count of the overall Showdown winner.
