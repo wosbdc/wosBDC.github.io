@@ -1,3 +1,6 @@
+## [1.27.43] - 2026-07-20
+- Fixed an issue on mobile devices where tapping on a name in the dropdown search results wouldn't register the selection. Switched from 'mousedown' to 'pointerdown' to ensure touch events are reliably captured before the search bar loses focus.
+
 ## [1.27.42] - 2026-07-20
 - Fixed the "Player Not Found" error when using the Quick Lookup tool on the Multi-BT Donations page by updating the Google Apps Script backend to correctly identify the Bear Trap Donations tab.
 - Fixed a bug where search bars with high z-indexes (like the Player Database Editor) were rendering on top of the mobile navigation menu.

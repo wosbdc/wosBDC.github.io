@@ -2038,7 +2038,7 @@ window.bindCustomAutocomplete = (inputEl) => {
             dropdown.querySelectorAll('.ac-item').forEach(item => {
                 item.addEventListener('mouseover', () => item.style.background = 'var(--bg-main)');
                 item.addEventListener('mouseout', () => item.style.background = 'transparent');
-                item.addEventListener('mousedown', (e) => {
+                item.addEventListener('pointerdown', (e) => {
                     e.preventDefault();
                     inputEl.value = item.getAttribute('data-val');
                     dropdown.style.display = 'none';
@@ -4638,7 +4638,7 @@ const views = {
                 dropdown.querySelectorAll('.custom-dropdown-item').forEach(el => {
                     el.addEventListener('mouseover', () => el.style.background = 'var(--bg-main)');
                     el.addEventListener('mouseout', () => el.style.background = 'transparent');
-                    el.addEventListener('mousedown', (e) => {
+                    el.addEventListener('pointerdown', (e) => {
                         e.preventDefault(); // prevent blur
                         select.value = el.getAttribute('data-value');
                         dropdown.style.display = 'none';
