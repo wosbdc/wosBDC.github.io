@@ -3053,8 +3053,8 @@ const views = {
   },
   
   showdownDataEntry: async () => {
-    const mainContent = document.getElementById('mainContent');
-    if (!mainContent) return;
+    const app = document.getElementById('app');
+    if (!app) return;
     
     const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
     if (!isManager) {
@@ -3155,8 +3155,8 @@ const views = {
   },
   
   showdownEventSettings: async () => {
-    const mainContent = document.getElementById('mainContent');
-    if (!mainContent) return;
+    const app = document.getElementById('app');
+    if (!app) return;
     
     const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
     if (!isManager) {
