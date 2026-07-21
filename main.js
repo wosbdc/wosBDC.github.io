@@ -3122,6 +3122,11 @@ const views = {
     }
     
     renderLoading("Loading Showdown Admin...");
+    
+    if (document.querySelector('.navbar')) {
+        document.querySelector('.navbar').style.display = 'none';
+    }
+    
     try {
        const [sdRes, metaSnap, rosterRawData] = await Promise.all([
           window.fetchMergedShowdown(),
@@ -3155,7 +3160,7 @@ const views = {
        const staticHorns = { d1: 1, d2: 2, d3: 2, d4: 2, d5: 2, d6: 4 };
        
        let html = `<div style="display:flex; flex-direction:column; gap:20px; max-width:800px; margin:0 auto; padding-bottom:40px; animation: fadeIn 0.3s ease; position:relative;">
-         <button onclick="views.admin()" style="position:absolute; top:0px; right:0px; background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); padding:5px 12px; border-radius:6px; cursor:pointer; z-index:10;">&times; Close</button>
+         <button onclick="if(document.querySelector('.navbar')) document.querySelector('.navbar').style.display='flex'; views.admin()" style="position:absolute; top:0px; right:0px; background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); padding:5px 12px; border-radius:6px; cursor:pointer; z-index:10;">&times; Close</button>
          
          <div class="card" style="margin-top:40px;">
            <div class="card-title" style="text-align:center;">⚔️ Showdown Data Entry</div>
@@ -4482,50 +4487,88 @@ const views = {
          }
          
          let totalAllianceScore = ourScores.d1 + ourScores.d2 + ourScores.d3 + ourScores.d4 + ourScores.d5 + ourScores.d6;
-         
-         let sdHeaders = ["Event Day", "Daily Goal", "Left +/-", "Left to 20M", "Daily Amount"];
-         let sdRows = [];
+         ourScores.total = totalAllianceScore;
          
          const dailyGoal = 3333333;
+         
+         let goalsCard = `<div class="card" style="margin-bottom:20px; animation:fadeIn 0.3s ease;"><div class="card-title">🎯 Event Goals</div>`;
+         goalsCard += `<div style="margin-bottom:20px;">
+             <div style="font-weight:bold; color:var(--text-main); margin-bottom:5px;">The 20M Challenge</div>
+             <div style="background:var(--border); height:12px; border-radius:6px; overflow:hidden;">
+               <div style="background:var(--accent); height:100%; width:${Math.min(100, (ourScores.total / 20000000) * 100)}%;"></div>
+             </div>
+             <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-muted); margin-top:5px;">
+               <span>${ourScores.total.toLocaleString()}</span>
+               <span>20,000,000</span>
+             </div>
+           </div>`;
+           
+         goalsCard += `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px;">`;
+         
          let cumulativeScore = 0;
-         
          for (let i = 1; i <= 6; i++) {
-             let dg = dailyGoal;
-             let dailyAmtNum = ourScores['d'+i] || 0;
-             cumulativeScore += dailyAmtNum;
-             let g = 20000000 - cumulativeScore;
-             
-             let dailyAmt = ourScores['d'+i];
-             let leftVal = dg - dailyAmt;
-             
-             let leftStr = leftVal > 0 ? `-${leftVal.toLocaleString()}` : `+${Math.abs(leftVal).toLocaleString()}`;
-             
-             sdRows.push([
-                 `Event Day ${i}`,
-                 dg.toLocaleString(),
-                 leftStr,
-                 g.toLocaleString(),
-                 dailyAmt.toLocaleString()
-             ]);
+            let dg = dailyGoal;
+            let dailyAmtNum = ourScores['d'+i] || 0;
+            cumulativeScore += dailyAmtNum;
+            let g = 20000000 - cumulativeScore;
+            
+            let dailyAmt = ourScores['d'+i];
+            let leftVal = dg - dailyAmt;
+            
+            let isPending = dailyAmt === 0 && (i > 1 && ourScores['d'+(i-1)] === 0);
+            let leftStr = "";
+            let leftStyle = "";
+            let dailyAmtStyle = "";
+            
+            if (isPending) {
+                leftStr = `<span style="background:var(--border); padding:2px 8px; border-radius:12px; font-size:0.85em; color:var(--text-muted);">Pending</span>`;
+                dailyAmtStyle = "color:var(--text-muted); font-style:italic;";
+                dailyAmt = "Pending";
+            } else {
+                if (leftVal > 0) {
+                    leftStr = `-${leftVal.toLocaleString()}`;
+                    leftStyle = "color: #ef4444; font-weight: bold;";
+                    dailyAmtStyle = "color: #ef4444; font-weight: bold;";
+                } else {
+                    leftStr = `+${Math.abs(leftVal).toLocaleString()}`;
+                    leftStyle = "color: #10b981; font-weight: bold;";
+                    dailyAmtStyle = "color: #10b981; font-weight: bold;";
+                }
+                dailyAmt = dailyAmt.toLocaleString();
+            }
+            
+            let gStr = g > 0 ? g.toLocaleString() : (isPending ? "Pending" : "0");
+            let dgStr = dg > 0 ? dg.toLocaleString() : (isPending ? "Pending" : "0");
+            
+            goalsCard += `<div style="background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+               <div style="font-weight: bold; color: var(--text-main); font-size: 1.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px dashed var(--border);">Event Day ${i}</div>
+               <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                 <span style="color: var(--text-muted); font-size: 0.9em;">Daily Goal</span>
+                 <span>${dgStr}</span>
+               </div>
+               <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                 <span style="color: var(--text-muted); font-size: 0.9em;">Left +/-</span>
+                 <span style="${leftStyle}">${leftStr}</span>
+               </div>
+               <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                 <span style="color: var(--text-muted); font-size: 0.9em;">Left to 20M</span>
+                 <span>${gStr}</span>
+               </div>
+               <div style="display: flex; justify-content: space-between;">
+                 <span style="color: var(--text-muted); font-size: 0.9em;">Daily Amount</span>
+                 <span style="${dailyAmtStyle}">${dailyAmt}</span>
+               </div>
+             </div>`;
+         }
+         goalsCard += `</div></div>`;
+         
+         if (!filterString || filterString.toLowerCase() === 'showdown') {
+            html += goalsCard;
          }
          
-         if (sdRows.length > 0) {
-            let title = "Event Goals (Showdown)";
-            if (!filterString || title.toLowerCase().includes(filterString.toLowerCase())) {
-              let showdownIndex = boards.findIndex(b => b.title.toLowerCase().includes('all-time showdown'));
-              let insertIndex = showdownIndex !== -1 ? showdownIndex + 1 : boards.length;
-              boards.splice(insertIndex, 0, {
-                 title: "🎯 " + title,
-                 headers: sdHeaders,
-                 rows: sdRows,
-                 totalScore: totalAllianceScore
-              });
-            }
-         }
       } catch (e) {
         console.warn("Could not fetch showdown event goals for leaderboards view", e);
       }
-
 
       html += `<div style="display:flex; flex-wrap:wrap; gap:20px;">`;
       
@@ -4817,77 +4860,7 @@ const views = {
        const hornsTotal = 13;
        const dailyGoal = 3333333;
        
-       // 1. Event Goals (Mobile Cards)
-       let goalsCard = `<div class="card"><div class="card-title">🎯 Event Goals</div>`;
-       goalsCard += `<div style="margin-bottom:20px;">
-           <div style="font-weight:bold; color:var(--text-main); margin-bottom:5px;">The 20M Challenge</div>
-           <div style="background:var(--border); height:12px; border-radius:6px; overflow:hidden;">
-             <div style="background:var(--accent); height:100%; width:${Math.min(100, (ourScores.total / 20000000) * 100)}%;"></div>
-           </div>
-           <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-muted); margin-top:5px;">
-             <span>${ourScores.total.toLocaleString()}</span>
-             <span>20,000,000</span>
-           </div>
-         </div>`;
-         
-       goalsCard += `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px;">`;
-       
-       let cumulativeScore = 0;
-       for (let i = 1; i <= 6; i++) {
-          let dg = dailyGoal;
-          let dailyAmtNum = ourScores['d'+i] || 0;
-          cumulativeScore += dailyAmtNum;
-          let g = 20000000 - cumulativeScore;
-          
-          let dailyAmt = ourScores['d'+i];
-          let leftVal = dg - dailyAmt;
-          
-          let isPending = dailyAmt === 0 && (i > 1 && ourScores['d'+(i-1)] === 0);
-          let leftStr = "";
-          let leftStyle = "";
-          let dailyAmtStyle = "";
-          
-          if (isPending) {
-              leftStr = `<span style="background:var(--border); padding:2px 8px; border-radius:12px; font-size:0.85em; color:var(--text-muted);">Pending</span>`;
-              dailyAmtStyle = "color:var(--text-muted); font-style:italic;";
-              dailyAmt = "Pending";
-          } else {
-              if (leftVal > 0) {
-                  leftStr = `-${leftVal.toLocaleString()}`;
-                  leftStyle = "color: #ef4444; font-weight: bold;";
-                  dailyAmtStyle = "color: #ef4444; font-weight: bold;";
-              } else {
-                  leftStr = `+${Math.abs(leftVal).toLocaleString()}`;
-                  leftStyle = "color: #10b981; font-weight: bold;";
-                  dailyAmtStyle = "color: #10b981; font-weight: bold;";
-              }
-              dailyAmt = dailyAmt.toLocaleString();
-          }
-          
-          let gStr = g > 0 ? g.toLocaleString() : (isPending ? "Pending" : "0");
-          let dgStr = dg > 0 ? dg.toLocaleString() : (isPending ? "Pending" : "0");
-          
-          goalsCard += `<div style="background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-             <div style="font-weight: bold; color: var(--text-main); font-size: 1.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px dashed var(--border);">Event Day ${i}</div>
-             <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-               <span style="color: var(--text-muted); font-size: 0.9em;">Daily Goal</span>
-               <span>${dgStr}</span>
-             </div>
-             <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-               <span style="color: var(--text-muted); font-size: 0.9em;">Left +/-</span>
-               <span style="${leftStyle}">${leftStr}</span>
-             </div>
-             <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-               <span style="color: var(--text-muted); font-size: 0.9em;">Left to 20M</span>
-               <span>${gStr}</span>
-             </div>
-             <div style="display: flex; justify-content: space-between;">
-               <span style="color: var(--text-muted); font-size: 0.9em;">Daily Amount</span>
-               <span style="${dailyAmtStyle}">${dailyAmt}</span>
-             </div>
-           </div>`;
-       }
-       goalsCard += `</div></div>`;
+
        
        // 2. Alliance Progress
        let allianceCard = `<div class="card" style="overflow-x:auto;"><div class="card-title">⚔️ Alliance Progress</div><table style="min-width:600px;"><thead><tr>
@@ -4969,7 +4942,7 @@ const views = {
        });
        playersCard += `</tbody></table></div>`;
        
-       html += allianceCard + playersCard + goalsCard + `</div>`;
+       html += allianceCard + playersCard + `</div>`;
        app.innerHTML = html;
        
     } catch(e) { renderError(e.message); }

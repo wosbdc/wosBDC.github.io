@@ -1,3 +1,8 @@
+## [1.29.7] - 2026-07-21
+### Changed
+- **Event Goals UI Moved**: Migrated the rich "Event Goals" mobile cards from the standalone Showdown Analytics page into the Leaderboards Showdown tab, completely replacing the standard table format.
+- **Admin UI Polish**: Hid the top navigation bar when viewing the Showdown Admin tool to maximize vertical screen space on mobile devices; it restores automatically when closing the admin page.
+
 ## [1.29.6] - 2026-07-21
 ### Changed
 - **Showdown Admin Unified**: Merged the "Showdown Data Entry" and "Showdown Event Settings" admin tools into a single, unified "ShowDown" view to streamline event management from one centralized page.
