@@ -1,3 +1,7 @@
+## [1.27.40] - 2026-07-20
+- Completely reverted all search bars on the site (including the Chief's List) to exactly how they behaved prior to the Apple bug discovery. The full-screen search popup has been removed.
+- Restructured the entire Chief's List view for mobile users: The view now opens as a full-screen, native-app-style page that hides the bottom navigation bar and features a dedicated Back button to return Home.
+
 ## [1.27.39] - 2026-07-20
 - Reverted the full-screen "Search Player" popup inside the Admin Menus (like Multi-BT Donations) to restore rapid data-entry workflow.
 - Restored the "Invisible Shield" method to those admin dropdowns to ensure they still close properly on Apple devices.

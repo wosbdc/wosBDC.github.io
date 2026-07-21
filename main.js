@@ -3749,6 +3749,10 @@ const views = {
   },
 
   home: async () => {
+    // Restore navbar if it was hidden by full screen views
+    const navbar = document.querySelector('.navbar');
+    if (navbar) navbar.style.display = 'flex';
+
     renderLoading('Loading Home & News');
     try {
       const data = await fetchSheet('News');
@@ -4549,8 +4553,16 @@ const views = {
             });
         }
         
-        let html = `<div class="card" style="margin-bottom:20px; text-align:center;">
-                      <div class="card-title" style="margin-bottom:15px; font-size:24px;">🕵️‍♂️ Player Lookup</div>
+        let html = `
+                    <div id="rosterMobileHeader" style="display:none; align-items:center; padding:15px; background:var(--card-bg); border-bottom:1px solid var(--border); margin:-20px -20px 20px -20px; position:sticky; top:0; z-index:1000;">
+                        <button onclick="views.home();" style="background:transparent; border:none; color:var(--text-main); font-size:24px; cursor:pointer; margin-right:15px; display:flex; align-items:center; padding:0;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                        </button>
+                        <div style="font-size:20px; font-weight:bold; color:var(--text-main);">Chief's List</div>
+                    </div>
+                    
+                    <div class="card" style="margin-bottom:20px; text-align:center;">
+                      <div class="card-title" id="rosterDesktopTitle" style="margin-bottom:15px; font-size:24px;">🕵️‍♂️ Player Lookup</div>
 
                       <div style="display:flex; justify-content:center; align-items:center;">
                         <div style="position:relative; width:100%; max-width:400px; display:flex; align-items:center;">
@@ -4569,23 +4581,17 @@ const views = {
                     
         app.innerHTML = html;
         
+        // Full screen UX for mobile
+        if (window.innerWidth <= 768) {
+            document.getElementById('rosterMobileHeader').style.display = 'flex';
+            document.getElementById('rosterDesktopTitle').style.display = 'none';
+            const navbar = document.querySelector('.navbar');
+            if (navbar) navbar.style.display = 'none';
+        }
+        
         const select = document.getElementById('playerLookupSelect');
         const container = document.getElementById('playerProfileContainer');
         const regToggle = document.getElementById('registeredOnlyToggle');
-        
-        // Mobile popup integration for Chief's List search
-        if (window.innerWidth <= 768) {
-            initMobileSearchModal();
-            select.setAttribute('readonly', 'readonly');
-            select.style.cursor = 'pointer';
-            const triggerMobileModal = (e) => {
-                e.preventDefault();
-                select.blur();
-                if (window.openMobileSearch) window.openMobileSearch(select);
-            };
-            select.addEventListener('focus', triggerMobileModal);
-            select.addEventListener('click', triggerMobileModal);
-        }
         
         const dropdown = document.getElementById('playerLookupCustomDropdown');
         let dropdownItems = [];
@@ -5536,6 +5542,10 @@ allLinks.forEach(link => {
     
     // Auto-close the hamburger menu if it's open
     if (mobileMenu) mobileMenu.classList.remove('open');
+    
+    // Always restore navbar visibility when navigating between views
+    const navbar = document.querySelector('.navbar');
+    if (navbar) navbar.style.display = 'flex';
     
     const target = targetEl.getAttribute('data-target');
     const filter = targetEl.getAttribute('data-filter');
