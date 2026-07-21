@@ -4465,6 +4465,7 @@ const views = {
       }
 
       // Fetch Showdown Event Goals
+      let finalGoalsCard = "";
       try {
    
          
@@ -4563,7 +4564,7 @@ const views = {
          goalsCard += `</div></div>`;
          
          if (!filterString || filterString.toLowerCase() === 'showdown') {
-            html += goalsCard;
+            finalGoalsCard = goalsCard;
          }
          
       } catch (e) {
@@ -4749,6 +4750,7 @@ const views = {
       });
       
       html += `</div>`;
+      html += finalGoalsCard;
       app.innerHTML = html;
       
       // Initialize Firebase Listeners for any Bear Trap widgets rendered

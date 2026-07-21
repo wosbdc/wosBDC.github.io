@@ -1,3 +1,7 @@
+## [1.29.8] - 2026-07-21
+### Changed
+- **Event Goals Position Re-ordered**: Moved the Event Goals cards in the Leaderboards Showdown tab to display *underneath* the leaderboard tables per user request.
+
 ## [1.29.7] - 2026-07-21
 ### Changed
 - **Event Goals UI Moved**: Migrated the rich "Event Goals" mobile cards from the standalone Showdown Analytics page into the Leaderboards Showdown tab, completely replacing the standard table format.
