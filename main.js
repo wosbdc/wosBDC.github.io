@@ -4924,7 +4924,7 @@ const views = {
        
        // 2. Alliance Progress
        let allianceCard = `<div class="card" style="overflow-x:auto;">
-         <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
+         <div class="card-title" style="display:flex; justify-content:center; align-items:center; flex-wrap:wrap; gap:20px; text-align:center;">
            <span>⚔️ Alliance Progress</span>
            ${titleRightHtml}
          </div>

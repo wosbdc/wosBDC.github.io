@@ -1,3 +1,7 @@
+## [1.29.16] - 2026-07-21
+### Fixed
+- **Responsive Showdown MVP Banner**: Adjusted the layout of the Alliance Progress card header so the MVP banner is properly centered and wraps onto a new line on smaller screens, resolving overlap issues caused by rigid table widths.
+
 ## [1.29.15] - 2026-07-21
 ### Changed
 - **Showdown MVP Header Banner Tweaks**: Enlarged the inline Showdown MVP banner in the Alliance Progress header and restored the "👑 SHOWDOWN MVP" label and separated "Total Horns" count, making it significantly more prominent and premium while still saving space compared to the full-width banner.
