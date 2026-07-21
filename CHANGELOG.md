@@ -1,3 +1,6 @@
+## [1.27.38] - 2026-07-20
+- Fixed a silent bug where the mobile "Search Player" popup would fail to initialize if you loaded straight into the Chief's List without opening any other menus first.
+
 ## [1.27.37] - 2026-07-20
 - Fixed a bug where the new mobile "Search Player" popup was accidentally hijacking search bars on Desktop Chrome browsers with touchscreens.
 - Applied the new mobile "Search Player" popup explicitly to the main Chief's List view search bar as well.

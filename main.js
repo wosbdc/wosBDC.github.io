@@ -4594,13 +4594,14 @@ const views = {
         const regToggle = document.getElementById('registeredOnlyToggle');
         
         // Mobile popup integration for Chief's List search
-        if (window.innerWidth <= 768 && window.openMobileSearch) {
+        if (window.innerWidth <= 768) {
+            initMobileSearchModal();
             select.setAttribute('readonly', 'readonly');
             select.style.cursor = 'pointer';
             const triggerMobileModal = (e) => {
                 e.preventDefault();
                 select.blur();
-                window.openMobileSearch(select);
+                if (window.openMobileSearch) window.openMobileSearch(select);
             };
             select.addEventListener('focus', triggerMobileModal);
             select.addEventListener('click', triggerMobileModal);
