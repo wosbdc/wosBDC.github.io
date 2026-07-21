@@ -1,3 +1,6 @@
+## [1.27.29] - 2026-07-20
+- Fixed an iOS/Safari bug where the custom player search dropdown would not close when tapping outside the box or opening the sidebar.
+
 ## [1.27.28] - 2026-07-20
 - Completely removed legacy OTP admin authentication flow from both frontend UI and backend services, fully relying on Google Authentication to enforce security.
 

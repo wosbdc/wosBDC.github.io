@@ -1905,6 +1905,7 @@ window.bindCustomAutocomplete = (inputEl) => {
     inputEl.removeAttribute('list');
 
     const dropdown = document.createElement('div');
+    dropdown.className = 'custom-autocomplete-dropdown';
     dropdown.style.cssText = 'display:none; position:absolute; top:calc(100% - 4px); left:0; width:100%; max-height:200px; overflow-y:auto; background:var(--card-bg); border:1px solid var(--border); border-radius:0 0 8px 8px; z-index:1000; box-shadow:0 10px 30px rgba(0,0,0,0.6); flex-direction:column; padding-top:4px;';
     wrapper.appendChild(dropdown);
 
@@ -1950,6 +1951,18 @@ window.bindCustomAutocomplete = (inputEl) => {
     inputEl.addEventListener('focus', filterAndShow);
     inputEl.addEventListener('blur', () => { setTimeout(() => dropdown.style.display='none', 150); });
 };
+
+// Global click listener to close autocomplete dropdowns when clicking outside (especially for iOS/Safari)
+['mousedown', 'touchstart'].forEach(evt => {
+    document.addEventListener(evt, (e) => {
+        const isInsideWrapper = e.target.closest('.autocomplete-wrapper');
+        if (!isInsideWrapper) {
+            document.querySelectorAll('.custom-autocomplete-dropdown').forEach(dropdown => {
+                dropdown.style.display = 'none';
+            });
+        }
+    });
+});
 
 // View renderers
 const views = {
