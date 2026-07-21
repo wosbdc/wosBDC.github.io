@@ -1,3 +1,6 @@
+### v1.27.57
+- Upgraded the "Pending" state logic to also trigger when the parsed `Daily Amount` is `0` (which handles cases where a spreadsheet formula outputs a zero instead of a blank cell).
+
 ### v1.27.56
 - Added a "Pending" state to Event Goals cards. If an event day has not occurred yet (i.e. the daily amount is blank), the dashboard will display "Pending" instead of showing a confusing red deficit based on a blank amount.
 

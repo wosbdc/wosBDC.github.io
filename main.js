@@ -4211,7 +4211,7 @@ const views = {
                 }
                 let dailyAmt = !isNaN(numDailyAmt) && dailyAmtRaw !== "" ? numDailyAmt.toLocaleString() : dailyAmtRaw;
 
-                if (dailyAmtRaw === "" || dailyAmtRaw === undefined || dailyAmtRaw === null) {
+                if (dailyAmtRaw === "" || dailyAmtRaw === undefined || dailyAmtRaw === null || numDailyAmt === 0) {
                     left = 'Pending';
                     leftStyle = 'color:var(--text-muted); font-style:italic;';
                     dailyAmt = 'Pending';
@@ -4427,7 +4427,7 @@ const views = {
               let formattedGoal = typeof goal === 'number' ? formatNumber(goal) : goal;
               let formattedDailyAmt = !isNaN(numDailyAmt) && dailyAmt !== "" ? numDailyAmt.toLocaleString() : dailyAmt;
 
-              if (dailyAmt === "" || dailyAmt === undefined || dailyAmt === null) {
+              if (dailyAmt === "" || dailyAmt === undefined || dailyAmt === null || numDailyAmt === 0) {
                   formattedLeft = 'Pending';
                   leftStyle = 'color:var(--text-muted); font-style:italic;';
                   formattedDailyAmt = 'Pending';
