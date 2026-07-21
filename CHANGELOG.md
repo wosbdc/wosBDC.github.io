@@ -1,3 +1,6 @@
+## [1.27.33] - 2026-07-20
+- Added a "Check for Updates" refresh button directly to the Changelog window.
+
 ## [1.27.32] - 2026-07-20
 - Added a manual 'Check for Updates' refresh button to the Dev Mode tracking banner.
 
