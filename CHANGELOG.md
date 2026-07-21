@@ -1,3 +1,8 @@
+## [1.27.50] - 2026-07-20
+- Rebuilt Event Goals rendering logic from a static 5-column table into a responsive Mobile-First CSS Grid layout.
+- Eliminated all horizontal scrollbars for Event Goals on small screens.
+- Updated manual_sync.cjs and Google Apps Script to securely support emergency Firebase bypassing.
+
 ## [1.27.47] - 2026-07-20
 - Added the Showdown Event Goals chart to the Leaderboards view, positioning it directly underneath the other two Showdown leaderboards for a balanced layout. Also fixed a bug on the Showdown page where admin notes were accidentally rendered inside the player rankings table.
 
