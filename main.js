@@ -1889,10 +1889,117 @@ if (settingsBtnEl) settingsBtnEl.addEventListener('click', checkDeploymentStatus
 
 // Add spinning animation for the loader
 const style = document.createElement('style');
-style.textContent = `@keyframes spin { 100% { transform: rotate(360deg); } }`;
+style.textContent = `@keyframes spin { 100% { transform: rotate(360deg); } } @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }`;
 document.head.appendChild(style);
 
+// Global mobile search modal
+let mobileSearchModalInited = false;
+let currentMobileSearchTarget = null;
+
+const initMobileSearchModal = () => {
+    if (mobileSearchModalInited) return;
+    mobileSearchModalInited = true;
+    
+    const modal = document.createElement('div');
+    modal.id = 'mobileSearchModal';
+    modal.style.cssText = 'display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:var(--bg-main); z-index:99999; flex-direction:column; animation:slideInRight 0.2s ease;';
+    
+    const header = document.createElement('div');
+    header.style.cssText = 'display:flex; align-items:center; padding:15px; background:var(--card-bg); border-bottom:1px solid var(--border);';
+    
+    const backBtn = document.createElement('button');
+    backBtn.innerHTML = '←';
+    backBtn.style.cssText = 'background:none; border:none; color:var(--text-main); font-size:24px; padding-right:15px; cursor:pointer; font-weight:bold;';
+    
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.id = 'mobileSearchInput';
+    input.placeholder = 'Search Player...';
+    input.style.cssText = 'flex:1; padding:12px; background:var(--bg-main); border:1px solid var(--accent); color:var(--text-main); border-radius:8px; font-size:16px; outline:none; box-shadow:0 0 0 2px rgba(99,102,241,0.2);';
+    
+    header.appendChild(backBtn);
+    header.appendChild(input);
+    modal.appendChild(header);
+    
+    const resultsContainer = document.createElement('div');
+    resultsContainer.id = 'mobileSearchResults';
+    resultsContainer.style.cssText = 'flex:1; overflow-y:auto; padding:0;';
+    modal.appendChild(resultsContainer);
+    
+    document.body.appendChild(modal);
+    
+    const closeMobileSearch = () => {
+        modal.style.display = 'none';
+        input.value = '';
+        input.blur();
+        currentMobileSearchTarget = null;
+    };
+    
+    backBtn.addEventListener('click', closeMobileSearch);
+    
+    const renderResults = () => {
+        const query = input.value.toLowerCase().trim();
+        let players = Object.values(idToNameMap);
+        const rosterData = window.liveData ? window.liveData["Chief's List"] : null;
+        if (rosterData && rosterData.length > 1) {
+            players = [];
+            for(let i=1; i<rosterData.length; i++) {
+                if (rosterData[i][0]) players.push(rosterData[i][0].toString().trim());
+            }
+        }
+        
+        let matches = [...new Set(players)].sort((a,b) => a.localeCompare(b));
+        if (query) {
+            matches = matches.filter(p => p.toLowerCase().includes(query));
+        }
+        matches = matches.slice(0, 100);
+        
+        if (matches.length === 0) {
+            resultsContainer.innerHTML = `<div style="padding:20px; color:var(--text-muted); text-align:center; font-size:16px;">No players found.</div>`;
+        } else {
+            resultsContainer.innerHTML = matches.map(p => `
+                <div class="mobile-ac-item" data-val="${window.escapeHTML(p)}" style="padding:18px 20px; border-bottom:1px solid var(--border); color:var(--text-main); font-weight:bold; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:space-between;">
+                    ${window.escapeHTML(p)}
+                    <span style="color:var(--text-muted); font-size:12px;">Select</span>
+                </div>
+            `).join('');
+            
+            resultsContainer.querySelectorAll('.mobile-ac-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    if (currentMobileSearchTarget) {
+                        currentMobileSearchTarget.value = item.getAttribute('data-val');
+                        currentMobileSearchTarget.dispatchEvent(new Event('input'));
+                    }
+                    closeMobileSearch();
+                });
+            });
+        }
+    };
+    
+    input.addEventListener('input', renderResults);
+    
+    window.openMobileSearch = (targetInput) => {
+        currentMobileSearchTarget = targetInput;
+        modal.style.display = 'flex';
+        input.value = targetInput.value;
+        renderResults();
+        setTimeout(() => input.focus(), 100);
+    };
+};
+
 window.bindCustomAutocomplete = (inputEl) => {
+    initMobileSearchModal();
+    
+    // On mobile screens, hijack the focus event to open the full-screen modal
+    inputEl.addEventListener('focus', (e) => {
+        if (window.innerWidth <= 768) {
+            e.preventDefault();
+            inputEl.blur(); // Remove focus from the original input
+            window.openMobileSearch(inputEl);
+            return;
+        }
+    });
+
     if (inputEl.parentElement.classList.contains('autocomplete-wrapper')) return;
 
     const wrapper = document.createElement('div');
@@ -1914,6 +2021,8 @@ window.bindCustomAutocomplete = (inputEl) => {
     wrapper.appendChild(dropdown);
 
     const filterAndShow = () => {
+        if (window.innerWidth <= 768) return; // Handled by mobile modal
+        
         const query = inputEl.value.toLowerCase().trim();
         if (!query) { dropdown.style.display = 'none'; return; }
         
@@ -1956,6 +2065,7 @@ window.bindCustomAutocomplete = (inputEl) => {
     inputEl.addEventListener('input', filterAndShow);
     inputEl.addEventListener('focus', filterAndShow);
     inputEl.addEventListener('blur', () => { 
+        if (window.innerWidth <= 768) return;
         setTimeout(() => {
             dropdown.style.display='none';
             if (document.getElementById('autocomplete-shield')) document.getElementById('autocomplete-shield').style.display = 'none';

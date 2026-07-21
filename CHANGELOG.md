@@ -1,3 +1,6 @@
+## [1.27.36] - 2026-07-20
+- Completely redesigned the Player Search experience for mobile devices. Tapping a player search bar on smaller screens now opens a dedicated, full-screen "Search Player" popup with a back button, permanently resolving the stubborn Apple iOS keyboard and dropdown bugs.
+
 ## [1.27.35] - 2026-07-20
 - Reverted the scroll-hide method and implemented an invisible touch shield for Apple iOS devices. Now, tapping anywhere on the screen while a dropdown is open will intercept the tap and instantly close the dropdown.
 
