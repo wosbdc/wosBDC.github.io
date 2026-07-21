@@ -3264,19 +3264,34 @@ const views = {
     
     renderLoading("Loading Event Settings...");
     try {
- 
+       const [metaSnap, sdRes] = await Promise.all([
+          get(ref(db, 'showdown_meta')),
+          window.fetchMergedShowdown()
+       ]);
        
-       const snap = await get(ref(db, 'showdown_meta'));
-       let meta = snap.val() || {};
-       if (!meta.eventGoals) meta.eventGoals = {};
+       let meta = metaSnap.val() || {};
        if (!meta.enemyAlliance) meta.enemyAlliance = { name: "", scores: {} };
-       if (!meta.horns) meta.horns = {};
-       if (!meta.winners) meta.winners = {};
        
-       let html = `<div class="card" style="position:relative; max-width:600px; margin:0 auto; animation: fadeIn 0.3s ease;">
+       let sdLiveData = sdRes.sdLiveData || window._currentSdLiveData || {};
+       let allianceTotals = {d1:0, d2:0, d3:0, d4:0, d5:0, d6:0};
+       let winners = {d1:{name:'', score:0}, d2:{name:'', score:0}, d3:{name:'', score:0}, d4:{name:'', score:0}, d5:{name:'', score:0}, d6:{name:'', score:0}};
+       
+       Object.entries(sdLiveData).forEach(([playerName, scores]) => {
+          for (let i = 1; i <= 6; i++) {
+              let score = scores['d'+i] || 0;
+              allianceTotals['d'+i] += score;
+              if (score > winners['d'+i].score) {
+                  winners['d'+i] = { name: playerName, score: score };
+              }
+          }
+       });
+       
+       const staticHorns = { d1: 1, d2: 2, d3: 2, d4: 2, d5: 2, d6: 4 };
+       
+       let html = `<div class="card" style="position:relative; max-width:700px; margin:0 auto; animation: fadeIn 0.3s ease;">
          <button onclick="views.admin()" style="position:absolute; top:20px; right:20px; background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); padding:5px 12px; border-radius:6px; cursor:pointer;">&times; Close</button>
          <h2 style="color:var(--accent); margin-top:0;">⚙️ Showdown Settings</h2>
-         <p style="color:var(--text-muted); font-size:14px;">Update the Event Goals, Enemy Alliance, Horns, and Daily Winners for the Alliance Showdown.</p>
+         <p style="color:var(--text-muted); font-size:14px;">Event goals are set to <b>3,333,333</b> daily (20M total). Horns, Winners, and Alliance Totals are automatically calculated.</p>
          
          <div style="margin-bottom:20px;">
            <label style="font-weight:bold; color:var(--text-main); display:block; margin-bottom:5px;">Enemy Alliance Name</label>
@@ -3284,33 +3299,30 @@ const views = {
          </div>
 
          <div style="background:var(--bg-main); padding:15px; border-radius:8px; border:1px solid var(--border); margin-bottom:20px; overflow-x:auto;">
-           <table style="width:100%; border-collapse:collapse; text-align:left; min-width:500px;">
+           <table style="width:100%; border-collapse:collapse; text-align:left; min-width:600px;">
              <thead>
                <tr style="border-bottom:1px solid var(--border);">
                  <th style="padding:8px 5px; color:var(--text-muted);">Day</th>
-                 <th style="padding:8px 5px; color:var(--text-muted);">Daily Goal</th>
-                 <th style="padding:8px 5px; color:var(--text-muted);">Total Goal</th>
+                 <th style="padding:8px 5px; color:var(--text-muted);">Alliance Total</th>
                  <th style="padding:8px 5px; color:var(--text-muted);">Enemy Score</th>
+                 <th style="padding:8px 5px; color:var(--text-muted);">Winner (Top Player)</th>
                  <th style="padding:8px 5px; color:var(--text-muted);">Horns</th>
-                 <th style="padding:8px 5px; color:var(--text-muted);">Winner</th>
                </tr>
              </thead>
              <tbody>`;
              
        for (let i = 1; i <= 6; i++) {
-         let dg = meta.eventGoals['d'+i] ? meta.eventGoals['d'+i].dailyGoal : 0;
-         let g = meta.eventGoals['d'+i] ? meta.eventGoals['d'+i].goal : 0;
          let es = meta.enemyAlliance.scores['d'+i] || 0;
-         let h = meta.horns['d'+i] || 0;
-         let w = meta.winners['d'+i] || '';
+         let h = staticHorns['d'+i];
+         let wName = winners['d'+i].name || '-';
+         let at = allianceTotals['d'+i];
          
          html += `<tr>
            <td style="padding:8px 5px; font-weight:bold; color:var(--text-main);">Day ${i}</td>
-           <td style="padding:8px 5px;"><input type="number" id="meta_dg_${i}" value="${dg}" style="width:80px; padding:5px; border-radius:4px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);"></td>
-           <td style="padding:8px 5px;"><input type="number" id="meta_g_${i}" value="${g}" style="width:80px; padding:5px; border-radius:4px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);"></td>
-           <td style="padding:8px 5px;"><input type="number" id="meta_es_${i}" value="${es}" style="width:80px; padding:5px; border-radius:4px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);"></td>
-           <td style="padding:8px 5px;"><input type="number" id="meta_h_${i}" value="${h}" style="width:50px; padding:5px; border-radius:4px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);"></td>
-           <td style="padding:8px 5px;"><input type="text" id="meta_w_${i}" value="${w}" style="width:60px; padding:5px; border-radius:4px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);"></td>
+           <td style="padding:8px 5px; color:var(--accent); font-weight:bold;">${at > 0 ? at.toLocaleString() : '-'}</td>
+           <td style="padding:8px 5px;"><input type="number" id="meta_es_${i}" value="${es}" style="width:100px; padding:5px; border-radius:4px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);"></td>
+           <td style="padding:8px 5px; color:var(--success);">${escapeHTML(wName)}</td>
+           <td style="padding:8px 5px; color:var(--text-muted);">${h}</td>
          </tr>`;
        }
        
@@ -3318,7 +3330,7 @@ const views = {
            </table>
          </div>
          
-         <button onclick="window.saveShowdownMeta()" style="background:var(--success); color:#fff; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; width:100%;">💾 Save Event Settings</button>
+         <button onclick="window.saveShowdownMeta()" style="background:var(--success); color:#fff; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; width:100%;">💾 Save Enemy Scores</button>
        </div>`;
        
        app.innerHTML = html;
@@ -3329,19 +3341,13 @@ const views = {
           btn.innerHTML = "Saving...";
           btn.disabled = true;
           
-          let newMeta = { eventGoals: {}, enemyAlliance: { name: document.getElementById('metaEnemyName').value, scores: {} }, horns: {}, winners: {} };
+          let newMeta = { enemyAlliance: { name: document.getElementById('metaEnemyName').value, scores: {} } };
+          
           for (let i = 1; i <= 6; i++) {
-             newMeta.eventGoals['d'+i] = {
-               dailyGoal: Number(document.getElementById('meta_dg_'+i).value) || 0,
-               goal: Number(document.getElementById('meta_g_'+i).value) || 0
-             };
              newMeta.enemyAlliance.scores['d'+i] = Number(document.getElementById('meta_es_'+i).value) || 0;
-             newMeta.horns['d'+i] = Number(document.getElementById('meta_h_'+i).value) || 0;
-             newMeta.winners['d'+i] = document.getElementById('meta_w_'+i).value || '';
           }
           
           try {
-             
              await set(ref(db, 'showdown_meta'), newMeta);
              if(window.showToast) window.showToast("Event Settings saved successfully!", "success");
              views.admin();
@@ -4489,8 +4495,6 @@ const views = {
          ]);
          
          const liveData = liveSnap.val() || {};
-         const metaData = metaSnap.val() || {};
-         const eventGoals = metaData.eventGoals || {};
          
          let ourScores = { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 };
          for (const [pName, scores] of Object.entries(liveData)) {
@@ -4507,23 +4511,23 @@ const views = {
          let sdHeaders = ["Event Day", "Daily Goal", "Left +/-", "Goal", "Daily Amount"];
          let sdRows = [];
          
+         const dailyGoal = 3333333;
+         
          for (let i = 1; i <= 6; i++) {
-             if (eventGoals['d'+i] && (eventGoals['d'+i].dailyGoal > 0 || eventGoals['d'+i].goal > 0)) {
-                 let dg = eventGoals['d'+i].dailyGoal;
-                 let g = eventGoals['d'+i].goal;
-                 let dailyAmt = ourScores['d'+i];
-                 let leftVal = dg - dailyAmt;
-                 
-                 let leftStr = leftVal > 0 ? `-${leftVal}` : `+${Math.abs(leftVal)}`;
-                 
-                 sdRows.push([
-                     `Event Day ${i}`,
-                     dg.toString(),
-                     leftStr,
-                     g.toString(),
-                     dailyAmt.toString()
-                 ]);
-             }
+             let dg = dailyGoal;
+             let g = dailyGoal * i;
+             let dailyAmt = ourScores['d'+i];
+             let leftVal = dg - dailyAmt;
+             
+             let leftStr = leftVal > 0 ? `-${leftVal.toLocaleString()}` : `+${Math.abs(leftVal).toLocaleString()}`;
+             
+             sdRows.push([
+                 `Event Day ${i}`,
+                 dg.toLocaleString(),
+                 leftStr,
+                 g.toLocaleString(),
+                 dailyAmt.toLocaleString()
+             ]);
          }
          
          if (sdRows.length > 0) {
@@ -4792,16 +4796,15 @@ const views = {
        
        const liveData = liveSnap.val() || {};
        const metaData = metaSnap.val() || {};
-       const eventGoals = metaData.eventGoals || {};
        const enemyAlliance = metaData.enemyAlliance || { name: 'Enemy Alliance', scores: {} };
-       const horns = metaData.horns || {};
-       const winners = metaData.winners || {};
        
        let html = `<div style="display:flex; flex-direction:column; gap:20px;">`;
        
        // Calculate Our Scores
        let ourScores = { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 };
        let players = [];
+       let topPlayers = { d1:{name:'', score:0}, d2:{name:'', score:0}, d3:{name:'', score:0}, d4:{name:'', score:0}, d5:{name:'', score:0}, d6:{name:'', score:0} };
+       
        for (const [pName, scores] of Object.entries(liveData)) {
           let pd1 = scores.d1 || 0;
           let pd2 = scores.d2 || 0;
@@ -4818,12 +4821,22 @@ const views = {
           ourScores.d5 += pd5;
           ourScores.d6 += pd6;
           
+          if (pd1 > topPlayers.d1.score) topPlayers.d1 = { name: pName, score: pd1 };
+          if (pd2 > topPlayers.d2.score) topPlayers.d2 = { name: pName, score: pd2 };
+          if (pd3 > topPlayers.d3.score) topPlayers.d3 = { name: pName, score: pd3 };
+          if (pd4 > topPlayers.d4.score) topPlayers.d4 = { name: pName, score: pd4 };
+          if (pd5 > topPlayers.d5.score) topPlayers.d5 = { name: pName, score: pd5 };
+          if (pd6 > topPlayers.d6.score) topPlayers.d6 = { name: pName, score: pd6 };
+          
           players.push({ name: pName, d1: pd1, d2: pd2, d3: pd3, d4: pd4, d5: pd5, d6: pd6, total: pTotal });
        }
        
        ourScores.total = ourScores.d1 + ourScores.d2 + ourScores.d3 + ourScores.d4 + ourScores.d5 + ourScores.d6;
        let enemyTotal = (enemyAlliance.scores.d1||0) + (enemyAlliance.scores.d2||0) + (enemyAlliance.scores.d3||0) + (enemyAlliance.scores.d4||0) + (enemyAlliance.scores.d5||0) + (enemyAlliance.scores.d6||0);
-       let hornsTotal = (horns.d1||0) + (horns.d2||0) + (horns.d3||0) + (horns.d4||0) + (horns.d5||0) + (horns.d6||0);
+       
+       const staticHorns = { d1: 1, d2: 2, d3: 2, d4: 2, d5: 2, d6: 4 };
+       const hornsTotal = 13;
+       const dailyGoal = 3333333;
        
        // 1. Event Goals (Mobile Cards)
        let goalsCard = `<div class="card"><div class="card-title">🎯 Event Goals</div>`;
@@ -4841,12 +4854,12 @@ const views = {
        goalsCard += `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px;">`;
        
        for (let i = 1; i <= 6; i++) {
-          let dg = eventGoals['d'+i] ? eventGoals['d'+i].dailyGoal : 0;
-          let g = eventGoals['d'+i] ? eventGoals['d'+i].goal : 0;
+          let dg = dailyGoal;
+          let g = dailyGoal * i;
           let dailyAmt = ourScores['d'+i];
           let leftVal = dg - dailyAmt;
           
-          let isPending = dg === 0 || dg === null;
+          let isPending = dailyAmt === 0 && (i > 1 && ourScores['d'+(i-1)] === 0);
           let leftStr = "";
           let leftStyle = "";
           let dailyAmtStyle = "";
@@ -4927,14 +4940,14 @@ const views = {
        allianceCard += `</tr>`;
        
        // Horns
-       allianceCard += `<tr><td style="font-weight:bold;">Alliance's Horns</td><td>${hornsTotal > 0 ? hornsTotal.toLocaleString() : ''}</td>`;
-       for(let i=1; i<=6; i++) allianceCard += `<td>${horns['d'+i] > 0 ? horns['d'+i].toLocaleString() : ''}</td>`;
+       allianceCard += `<tr><td style="font-weight:bold;">Alliance's Horns</td><td>${hornsTotal}</td>`;
+       for(let i=1; i<=6; i++) allianceCard += `<td>${staticHorns['d'+i]}</td>`;
        allianceCard += `</tr>`;
        
        // Winners
        allianceCard += `<tr><td style="font-weight:bold;">Winners</td><td></td>`;
        for(let i=1; i<=6; i++) {
-           let w = winners['d'+i] || '';
+           let w = topPlayers['d'+i].name || '';
            let eScore = enemyAlliance.scores['d'+i] || 0;
            let oScore = ourScores['d'+i] || 0;
            let style = "font-weight:bold;";
@@ -4942,7 +4955,7 @@ const views = {
               if (oScore > eScore) style += " background:rgba(16,185,129,0.15); color:#10b981;";
               else if (oScore < eScore) style += " background:rgba(239,68,68,0.15); color:#ef4444;";
            }
-           allianceCard += `<td style="${style}">${w}</td>`;
+           allianceCard += `<td style="${style}">${escapeHTML(w)}</td>`;
        }
        allianceCard += `</tr></tbody></table></div>`;
        

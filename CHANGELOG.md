@@ -1,3 +1,9 @@
+## [1.29.4] - 2026-07-21
+### Changed
+- **Showdown Settings Redesign**: Hardcoded the static event goals (3.3M/day, 20M total) and daily horns, removing unnecessary inputs from the Settings page.
+- **Dynamic Alliance Total**: Showdown Settings and Analytics Dashboard now calculate the Alliance's total daily amount dynamically directly from player scores.
+- **Dynamic Winners**: The daily "Winner" is now auto-assigned to the top-scoring player in the alliance for that day, eliminating the need to type it in manually.
+
 ## [1.29.0] - 2026-07-21
 ### Changed
 - Migrated Chief's List from Google Sheets to Firebase `roster_live` node for real-time syncing and massive speed improvements.
