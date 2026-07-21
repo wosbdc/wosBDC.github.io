@@ -810,7 +810,7 @@ window.adminFetchAltFurnace = async (gid, spanId) => {
     
     try {
       const db = window.firebaseDb;
-      const { ref, get } = window.firebase.database;
+      
 
       const [data, rosterRawData, lbRawData, sdHistoryRawData, sdLiveSnap] = await Promise.all([
               fetchSheet("activity "),
@@ -3130,7 +3130,7 @@ const views = {
           }
           
           try {
-             const { ref, set } = window.firebase.database;
+             
              await set(ref(db, `showdown_live/${sel}`), updates);
              window._currentSdLiveData[sel] = updates;
              if (window.showToast) window.showToast(`Saved scores for ${sel}`, "success");
@@ -3167,7 +3167,7 @@ const views = {
     renderLoading("Loading Event Settings...");
     try {
        const db = window.firebaseDb;
-       const { ref, get } = window.firebase.database;
+       
        const snap = await get(ref(db, 'showdown_meta'));
        let meta = snap.val() || {};
        if (!meta.eventGoals) meta.eventGoals = {};
@@ -3243,7 +3243,7 @@ const views = {
           }
           
           try {
-             const { set } = window.firebase.database;
+             
              await set(ref(db, 'showdown_meta'), newMeta);
              if(window.showToast) window.showToast("Event Settings saved successfully!", "success");
              views.admin();
@@ -4396,7 +4396,7 @@ const views = {
       // Fetch Showdown Event Goals
       try {
          const db = window.firebaseDb;
-         const { ref, get } = window.firebase.database;
+         
          
          const [liveSnap, metaSnap] = await Promise.all([
             get(ref(db, 'showdown_live')),
@@ -4698,7 +4698,7 @@ const views = {
     renderLoading("Loading Showdown Data");
     try {
        const db = window.firebaseDb;
-       const { ref, get } = window.firebase.database;
+       
        
        const [liveSnap, metaSnap] = await Promise.all([
           get(ref(db, 'showdown_live')),
@@ -4897,7 +4897,7 @@ const views = {
     renderLoading("Loading Player Lookup");
     try {
       const db = window.firebaseDb;
-      const { ref, get } = window.firebase.database;
+      
       
       const [data, rosterRawData, lbRawData, sdHistoryRawData, sdLiveSnap] = await Promise.all([
             fetchSheet("activity "),
