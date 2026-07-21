@@ -1969,6 +1969,7 @@ const initMobileSearchModal = () => {
                     if (currentMobileSearchTarget) {
                         currentMobileSearchTarget.value = item.getAttribute('data-val');
                         currentMobileSearchTarget.dispatchEvent(new Event('input'));
+                        currentMobileSearchTarget.dispatchEvent(new Event('change'));
                     }
                     closeMobileSearch();
                 });
@@ -1991,14 +1992,21 @@ window.bindCustomAutocomplete = (inputEl) => {
     initMobileSearchModal();
     
     // On mobile screens, hijack the focus event to open the full-screen modal
-    inputEl.addEventListener('focus', (e) => {
+    if (window.innerWidth <= 768) {
+        inputEl.setAttribute('readonly', 'readonly');
+        inputEl.style.cursor = 'pointer';
+    }
+    
+    const triggerMobileModal = (e) => {
         if (window.innerWidth <= 768) {
             e.preventDefault();
             inputEl.blur(); // Remove focus from the original input
             window.openMobileSearch(inputEl);
-            return;
         }
-    });
+    };
+    
+    inputEl.addEventListener('focus', triggerMobileModal);
+    inputEl.addEventListener('click', triggerMobileModal);
 
     if (inputEl.parentElement.classList.contains('autocomplete-wrapper')) return;
 
@@ -4584,6 +4592,19 @@ const views = {
         const select = document.getElementById('playerLookupSelect');
         const container = document.getElementById('playerProfileContainer');
         const regToggle = document.getElementById('registeredOnlyToggle');
+        
+        // Mobile popup integration for Chief's List search
+        if (window.innerWidth <= 768 && window.openMobileSearch) {
+            select.setAttribute('readonly', 'readonly');
+            select.style.cursor = 'pointer';
+            const triggerMobileModal = (e) => {
+                e.preventDefault();
+                select.blur();
+                window.openMobileSearch(select);
+            };
+            select.addEventListener('focus', triggerMobileModal);
+            select.addEventListener('click', triggerMobileModal);
+        }
         
         const dropdown = document.getElementById('playerLookupCustomDropdown');
         let dropdownItems = [];

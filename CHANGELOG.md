@@ -1,3 +1,7 @@
+## [1.27.37] - 2026-07-20
+- Fixed a bug where the new mobile "Search Player" popup was accidentally hijacking search bars on Desktop Chrome browsers with touchscreens.
+- Applied the new mobile "Search Player" popup explicitly to the main Chief's List view search bar as well.
+
 ## [1.27.36] - 2026-07-20
 - Completely redesigned the Player Search experience for mobile devices. Tapping a player search bar on smaller screens now opens a dedicated, full-screen "Search Player" popup with a back button, permanently resolving the stubborn Apple iOS keyboard and dropdown bugs.
 
