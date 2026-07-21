@@ -1,3 +1,8 @@
+## [1.27.42] - 2026-07-20
+- Fixed the "Player Not Found" error when using the Quick Lookup tool on the Multi-BT Donations page by updating the Google Apps Script backend to correctly identify the Bear Trap Donations tab.
+- Fixed a bug where search bars with high z-indexes (like the Player Database Editor) were rendering on top of the mobile navigation menu.
+- Hidden the mobile navigation bar when using the Player Database Editor to provide a cleaner, full-screen editing experience.
+
 ## [1.27.41] - 2026-07-20
 - Modified the mobile navigation "hamburger" menu to span the entire height of the screen, completely obscuring the page content underneath for a cleaner look.
 

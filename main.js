@@ -2,7 +2,7 @@ import './style.css'
 import { initPresence, listenToAuth, loginUser, logoutUser, registerUser, uploadAvatar, deleteAvatar, db, auth, requestPushPermission, listenForForegroundMessages, linkAltAccount, unlinkAltAccount, loginWithGoogle, resetPassword } from './src/firebase.js'
 import { ref, onValue, get, set, remove } from 'firebase/database'
 
-const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbzd-c2Jbwc3XZDBf7jHrCr-taBfpMdrn_4FFSxrPSVXB9F9gM-2eGNcj05qNQ5v8Io/exec';
+const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbxPlNaLMDn4LX7ZpbOc8O2VzQr055fnynJnyDinedM7stFe_PMdZWkpf8BMTrysH4U/exec';
 const VERIFY_PROXY_URL = 'https://wos-vercel-proxy.vercel.app/api/verify'; // Dedicated proxy for Century Games ID verification (bypasses Google quota limits)
 
 // Get a fresh Firebase ID token for the current user (replaces hardcoded APP_SECRET)
@@ -3184,6 +3184,12 @@ const views = {
         </div>
       </div>
     `;
+    
+    // Hide navbar on mobile for a clean, full-screen editor experience
+    if (window.innerWidth <= 768) {
+        const navbar = document.querySelector('.navbar');
+        if (navbar) navbar.style.display = 'none';
+    }
     
     // Bind logic for custom autocomplete
     const searchInput = document.getElementById('uniSearchInput');
