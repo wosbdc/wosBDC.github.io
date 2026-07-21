@@ -4183,25 +4183,28 @@ const views = {
             html += `<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 15px;">`;
             board.rows.forEach(row => {
                 let eventDay = formatCell(row[0] !== undefined ? row[0] : '');
-                let dailyGoal = row[1];
-                let left = row[2];
+                let dailyGoalRaw = row[1];
+                let leftRaw = row[2];
                 let goal = formatCell(row[3] !== undefined ? row[3] : '');
-                let dailyAmt = row[4];
+                let dailyAmtRaw = row[4];
                 
-                // Format numbers carefully
-                if (typeof dailyGoal === 'number') dailyGoal = dailyGoal.toLocaleString();
-                else if (typeof dailyGoal === 'string' && !isNaN(dailyGoal) && dailyGoal.trim() !== "") dailyGoal = Number(dailyGoal).toLocaleString();
+                let numDailyGoal = typeof dailyGoalRaw === 'number' ? dailyGoalRaw : Number(dailyGoalRaw.toString().replace(/,/g, ''));
+                let numDailyAmt = typeof dailyAmtRaw === 'number' ? dailyAmtRaw : Number(dailyAmtRaw.toString().replace(/,/g, ''));
+                let numLeft = typeof leftRaw === 'number' ? leftRaw : Number(leftRaw.toString().replace(/,/g, ''));
                 
-                let numLeft = typeof left === 'number' ? left : Number(left.toString().replace(/,/g, ''));
                 let leftStyle = '';
                 if (!isNaN(numLeft)) {
                    leftStyle = numLeft <= 0 ? 'color:var(--success); font-weight:bold;' : 'color:var(--danger);';
                 }
-                if (typeof left === 'number') left = left.toLocaleString();
-                else if (typeof left === 'string' && !isNaN(left) && left.trim() !== "") left = Number(left).toLocaleString();
                 
-                if (typeof dailyAmt === 'number') dailyAmt = dailyAmt.toLocaleString();
-                else if (typeof dailyAmt === 'string' && !isNaN(dailyAmt) && dailyAmt.trim() !== "") dailyAmt = Number(dailyAmt).toLocaleString();
+                let dailyAmtStyle = 'font-weight: bold; color: var(--accent);';
+                if (!isNaN(numDailyAmt) && !isNaN(numDailyGoal) && dailyAmtRaw !== "" && dailyGoalRaw !== "") {
+                   dailyAmtStyle = numDailyAmt >= numDailyGoal ? 'font-weight: bold; color: var(--success);' : 'font-weight: bold; color: var(--danger);';
+                }
+                
+                let dailyGoal = !isNaN(numDailyGoal) && dailyGoalRaw !== "" ? numDailyGoal.toLocaleString() : dailyGoalRaw;
+                let left = !isNaN(numLeft) && leftRaw !== "" ? numLeft.toLocaleString() : leftRaw;
+                let dailyAmt = !isNaN(numDailyAmt) && dailyAmtRaw !== "" ? numDailyAmt.toLocaleString() : dailyAmtRaw;
 
                 html += `
                 <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; padding: 15px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);">
@@ -4220,7 +4223,7 @@ const views = {
                   </div>
                   <div style="display: flex; justify-content: space-between;">
                     <span style="color: var(--text-muted); font-size: 0.9em;">Daily Amount</span>
-                    <span style="font-weight: bold; color: var(--accent);">${dailyAmt}</span>
+                    <span style="${dailyAmtStyle}">${dailyAmt}</span>
                   </div>
                 </div>`;
             });
@@ -4388,15 +4391,24 @@ const views = {
               let goal = dRow[startCol + 4] || "";
               let dailyAmt = dRow[startCol + 5] || "";
               
-              let formattedDailyGoal = typeof dailyGoal === 'number' ? formatNumber(dailyGoal) : dailyGoal;
-              let formattedLeft = typeof left === 'number' ? formatNumber(left) : left;
-              let formattedGoal = typeof goal === 'number' ? formatNumber(goal) : goal;
-              let formattedDailyAmt = typeof dailyAmt === 'number' ? formatNumber(dailyAmt) : dailyAmt;
+              let numDailyGoal = typeof dailyGoal === 'number' ? dailyGoal : Number(dailyGoal.toString().replace(/,/g, ''));
+              let numDailyAmt = typeof dailyAmt === 'number' ? dailyAmt : Number(dailyAmt.toString().replace(/,/g, ''));
+              let numLeft = typeof left === 'number' ? left : Number(left.toString().replace(/,/g, ''));
               
               let leftStyle = '';
-              if (typeof left === 'number') {
-                 leftStyle = left <= 0 ? 'color:var(--success); font-weight:bold;' : 'color:var(--danger);';
+              if (!isNaN(numLeft)) {
+                 leftStyle = numLeft <= 0 ? 'color:var(--success); font-weight:bold;' : 'color:var(--danger);';
               }
+              
+              let dailyAmtStyle = 'font-weight: bold; color: var(--accent);';
+              if (!isNaN(numDailyAmt) && !isNaN(numDailyGoal) && dailyAmt !== "" && dailyGoal !== "") {
+                 dailyAmtStyle = numDailyAmt >= numDailyGoal ? 'font-weight: bold; color: var(--success);' : 'font-weight: bold; color: var(--danger);';
+              }
+              
+              let formattedDailyGoal = !isNaN(numDailyGoal) && dailyGoal !== "" ? numDailyGoal.toLocaleString() : dailyGoal;
+              let formattedLeft = !isNaN(numLeft) && left !== "" ? numLeft.toLocaleString() : left;
+              let formattedGoal = typeof goal === 'number' ? formatNumber(goal) : goal;
+              let formattedDailyAmt = !isNaN(numDailyAmt) && dailyAmt !== "" ? numDailyAmt.toLocaleString() : dailyAmt;
               
               goalsCard += `
                 <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; padding: 15px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);">
@@ -4415,7 +4427,7 @@ const views = {
                   </div>
                   <div style="display: flex; justify-content: space-between;">
                     <span style="color: var(--text-muted); font-size: 0.9em;">Daily Amount</span>
-                    <span style="font-weight: bold; color: var(--accent);">${formattedDailyAmt}</span>
+                    <span style="${dailyAmtStyle}">${formattedDailyAmt}</span>
                   </div>
                 </div>`;
             }

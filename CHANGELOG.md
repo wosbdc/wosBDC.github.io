@@ -1,3 +1,6 @@
+### v1.27.53
+- Added conditional red/green color coding to the "Daily Amount" metric on the Event Goals charts. The Daily Amount text will now automatically turn green if the Daily Goal was met or exceeded, and red if it fell short.
+
 ### v1.27.52
 - Added "The 20M Challenge" progress bar to the Event Goals chart in the Leaderboards view (was previously only visible in the Showdown view).
 
