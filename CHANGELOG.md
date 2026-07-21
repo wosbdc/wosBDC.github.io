@@ -1,3 +1,10 @@
+## [v1.28.0] - 2026-07-21
+### Added
+- Showdown Event Settings admin tool under Daily Tools tab to manage Event Goals, Enemy Alliance Name, Horns, and Winners directly in Firebase.
+### Changed
+- Rewrote Showdown dashboard logic to natively fetch from Firebase showdown_live and showdown_meta objects instead of parsing Google Sheets data.
+- Rewrote Roster and Leaderboard search logic to parse All-Time Showdown scores and Missed Days directly from Firebase.
+
 ### v1.27.58
 - The Event Goals chart now triggers the "Pending" display when `Left +/-` is exactly equal to the `Daily Goal`, completely masking the default spreadsheet output (`+3,333,333.333`) on days that have not started.
 
