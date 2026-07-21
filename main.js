@@ -877,7 +877,7 @@ window.adminFetchAltFurnace = async (gid, spanId) => {
     }
     
     try {
-      const db = window.firebaseDb;
+
       
 
       const [data, rosterRawData, lbRawData, sdHistoryRawData, sdLiveSnap] = await Promise.all([
@@ -3234,7 +3234,7 @@ const views = {
     
     renderLoading("Loading Event Settings...");
     try {
-       const db = window.firebaseDb;
+ 
        
        const snap = await get(ref(db, 'showdown_meta'));
        let meta = snap.val() || {};
@@ -4450,7 +4450,7 @@ const views = {
 
       // Fetch Showdown Event Goals
       try {
-         const db = window.firebaseDb;
+   
          
          
          const [liveSnap, metaSnap] = await Promise.all([
@@ -4752,7 +4752,7 @@ const views = {
   showdown: async () => {
     renderLoading("Loading Showdown Data");
     try {
-       const db = window.firebaseDb;
+ 
        
        
        const [liveSnap, metaSnap] = await Promise.all([
@@ -4951,7 +4951,7 @@ const views = {
   roster: async () => {
     renderLoading("Loading Player Lookup");
     try {
-      const db = window.firebaseDb;
+
       
       
       const [data, rosterRawData, lbRawData, sdHistoryRawData, sdLiveSnap] = await Promise.all([
