@@ -1,3 +1,6 @@
+## [1.27.34] - 2026-07-20
+- Fixed an Apple iOS bug where custom search bars would stay active by instantly dismissing them any time the page or a modal is scrolled/swiped.
+
 ## [1.27.33] - 2026-07-20
 - Added a "Check for Updates" refresh button directly to the Changelog window.
 

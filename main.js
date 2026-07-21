@@ -1968,6 +1968,28 @@ window.bindCustomAutocomplete = (inputEl) => {
     });
 });
 
+// Force close autocomplete dropdowns when scrolling or swiping (iOS fix)
+const forceCloseDropdowns = (e) => {
+    // Don't close if they are scrolling inside the dropdown itself
+    if (e.target && (e.target.classList?.contains('custom-autocomplete-dropdown') || e.target.closest?.('.custom-autocomplete-dropdown'))) return;
+    
+    let didClose = false;
+    document.querySelectorAll('.custom-autocomplete-dropdown').forEach(dropdown => {
+        if (dropdown.style.display !== 'none') {
+            dropdown.style.display = 'none';
+            didClose = true;
+        }
+    });
+    
+    // Also blur the input so the keyboard goes away on mobile
+    if (didClose && document.activeElement && document.activeElement.tagName === 'INPUT') {
+        document.activeElement.blur();
+    }
+};
+
+document.addEventListener('scroll', forceCloseDropdowns, true); // true = capture phase to catch internal div scrolls
+document.addEventListener('touchmove', forceCloseDropdowns, {passive: true});
+
 // View renderers
 const views = {
   staff: async () => {
