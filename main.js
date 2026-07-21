@@ -4090,7 +4090,12 @@ const views = {
       html += `<div style="display:flex; flex-wrap:wrap; gap:20px;">`;
       
       boards.forEach(board => {
-        html += `<div class="card" style="flex: 1; min-width: 320px;"><div class="card-title">🏆 ${board.title}</div>`;
+        let cardStyle = `flex: 1; min-width: 320px;`;
+        if (board.title.includes('Event Goals')) {
+           cardStyle = `flex: 1 1 100%;`;
+        }
+        
+        html += `<div class="card" style="${cardStyle}"><div class="card-title">${board.title}</div>`;
         
         // Champion Banner Logic
         let trapNum = null;
@@ -4148,10 +4153,11 @@ const views = {
           html += `<tr>`;
           row.forEach((cell, idx) => {
             if (typeof cell === 'number') {
-              if (idx === 0) {
+              if (idx === 0 && !board.title.includes('Event Goals')) {
                  if (cell === 1) cell = '🥇 1';
                  else if (cell === 2) cell = '🥈 2';
                  else if (cell === 3) cell = '🥉 3';
+                 else cell = cell.toLocaleString();
               } else {
                  cell = cell.toLocaleString();
               }
@@ -4163,7 +4169,19 @@ const views = {
             
             let formattedCell = formatCell(cell);
             
-            html += `<td ${idx === 0 ? 'style="font-weight:bold; color:var(--text-muted);"' : ''}>${formattedCell}</td>`;
+            let styleStr = idx === 0 ? 'font-weight:bold; color:var(--text-muted);' : '';
+            if (board.title.includes('Event Goals')) {
+               if (idx === 0) styleStr = 'font-weight:bold; color:var(--text-main);';
+               if (idx === 2) {
+                  let numVal = typeof cell === 'number' ? cell : Number(cell.toString().replace(/,/g, ''));
+                  if (!isNaN(numVal)) {
+                     styleStr = numVal <= 0 ? 'color:var(--success); font-weight:bold;' : 'color:var(--danger);';
+                  }
+               }
+               if (idx === 4) styleStr = 'font-weight:bold; color:var(--accent);';
+            }
+            
+            html += `<td style="${styleStr}">${formattedCell}</td>`;
           });
           html += `</tr>`;
         });
