@@ -4906,16 +4906,17 @@ const views = {
            const avatarSrc = (champId && avatarMap[champId]) ? avatarMap[champId] : `images/${champName}.png`;
            
            titleRightHtml = `
-             <div style="display:flex; align-items:center; gap:8px; background:linear-gradient(135deg, rgba(255,215,0,0.15) 0%, rgba(255,215,0,0.05) 100%); padding:4px 12px 4px 6px; border:1px solid rgba(255,215,0,0.4); border-radius:20px; box-shadow:0 2px 10px rgba(255,215,0,0.1);">
-               <div style="width:28px; height:28px; border-radius:50%; border:2px solid #FFD700; overflow:hidden; flex-shrink:0; box-shadow:0 0 5px rgba(255,215,0,0.5);">
+             <div style="display:flex; align-items:center; gap:12px; background:linear-gradient(135deg, rgba(255,215,0,0.15) 0%, rgba(255,215,0,0.05) 100%); padding:8px 18px 8px 10px; border:1px solid rgba(255,215,0,0.4); border-radius:30px; box-shadow:0 2px 10px rgba(255,215,0,0.1);">
+               <div style="width:42px; height:42px; border-radius:50%; border:2px solid #FFD700; overflow:hidden; flex-shrink:0; box-shadow:0 0 8px rgba(255,215,0,0.5);">
                  <img src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='images/default.png';">
                </div>
-               <div style="display:flex; flex-direction:column; align-items:flex-start; line-height:1.1;">
-                 <div style="display:flex; align-items:center; gap:4px;">
-                   <span style="font-size:10px;">👑</span>
-                   <span style="color:var(--text-main); font-size:12px; font-weight:bold;">${escapeHTML(champName)}</span>
-                 </div>
-                 <span style="color:#FFD700; font-size:10px; font-weight:bold; text-transform:uppercase;">${maxHorns} Horns</span>
+               <div style="display:flex; flex-direction:column; align-items:flex-start; line-height:1.2;">
+                 <div style="color:#FFD700; font-size:11px; font-weight:bold; text-transform:uppercase; letter-spacing:1px; margin-bottom:2px;">👑 Showdown MVP</div>
+                 <div style="color:var(--text-main); font-size:16px; font-weight:bold; letter-spacing:0.5px;">${escapeHTML(champName)}</div>
+               </div>
+               <div style="text-align:right; margin-left:10px; border-left:1px solid rgba(255,215,0,0.2); padding-left:12px;">
+                 <div style="color:var(--text-muted); font-size:10px; text-transform:uppercase;">Total Horns</div>
+                 <div style="color:#FFD700; font-size:18px; font-weight:bold;">${maxHorns}</div>
                </div>
              </div>
            `;

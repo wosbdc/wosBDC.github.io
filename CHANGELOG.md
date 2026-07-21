@@ -1,3 +1,7 @@
+## [1.29.15] - 2026-07-21
+### Changed
+- **Showdown MVP Header Banner Tweaks**: Enlarged the inline Showdown MVP banner in the Alliance Progress header and restored the "👑 SHOWDOWN MVP" label and separated "Total Horns" count, making it significantly more prominent and premium while still saving space compared to the full-width banner.
+
 ## [1.29.14] - 2026-07-21
 ### Changed
 - **Showdown MVP Header Banner**: Moved the Showdown MVP banner from the Winners row into the header of the Alliance Progress card itself, presenting a neat, inline badge next to the title.
