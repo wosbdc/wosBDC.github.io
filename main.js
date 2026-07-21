@@ -1828,7 +1828,7 @@ let lastDeployStatus = null;
 const checkDeploymentStatus = async () => {
   const statusEl = document.getElementById('github-deploy-status');
   try {
-    const res = await fetch('https://api.github.com/repos/BrianDivaCox/wosBDC/actions/runs?branch=main&per_page=1');
+    const res = await fetch('https://api.github.com/repos/wosbdc/wosBDC.github.io/actions/runs?branch=main&per_page=1');
     const data = await res.json();
     if (data && data.workflow_runs && data.workflow_runs.length > 0) {
       const latestRun = data.workflow_runs[0];
