@@ -3605,7 +3605,7 @@ const views = {
     }
     
     await refreshIdToNameMap();
-    let datalistHtml = '<datalist id="beartrapRosterDatalist">';
+    let datalistHtml = '<datalist id="beartrapRosterDatalist" style="display:none;">';
     for (const [id, name] of Object.entries(idToNameMap)) {
         datalistHtml += '<option value="' + id + '">' + name + '</option>';
         datalistHtml += '<option value="' + name + '">' + name + '</option>';
