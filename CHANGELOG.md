@@ -1,3 +1,7 @@
+## [1.29.6] - 2026-07-21
+### Changed
+- **Showdown Admin Unified**: Merged the "Showdown Data Entry" and "Showdown Event Settings" admin tools into a single, unified "ShowDown" view to streamline event management from one centralized page.
+
 ## [1.29.5] - 2026-07-21
 ### Changed
 - **Showdown Goals**: Renamed the "Goal" column to "Left to 20M" in both the Analytics Dashboard and Home leaderboards to accurately reflect a countdown logic showing how many points the Alliance needs to reach the 20,000,000 total event goal based on cumulative scores.

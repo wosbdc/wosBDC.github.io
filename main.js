@@ -2590,8 +2590,7 @@ const views = {
             <div style="background:var(--bg-main); padding:20px; border-radius:12px; border:1px solid var(--accent); margin-bottom:20px; text-align:center; display:flex; flex-direction:column; gap:15px; align-items:center;">
               <button onclick="views.beartrap()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px;">🥩 Open Multi-BT Donations</button>
               <button onclick="views.playerEditor()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px;">👤 Open Player Database Editor</button>
-              <button onclick="views.showdownDataEntry()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px;">⚔️ Showdown Data Entry</button>
-              <button onclick="views.showdownEventSettings()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px;">⚙️ Showdown Event Settings</button>
+              <button onclick="views.showdownAdmin()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px;">⚔️ ShowDown</button>
             </div>
 
             <!-- Push Notification Broadcast -->
@@ -3112,7 +3111,7 @@ const views = {
     }
   },
   
-  showdownDataEntry: async () => {
+  showdownAdmin: async () => {
     const app = document.getElementById('app');
     if (!app) return;
     
@@ -3122,46 +3121,111 @@ const views = {
        return;
     }
     
-    renderLoading("Loading Showdown Editor");
+    renderLoading("Loading Showdown Admin...");
     try {
-       const sdRes = await window.fetchMergedShowdown();
+       const [sdRes, metaSnap, rosterRawData] = await Promise.all([
+          window.fetchMergedShowdown(),
+          get(ref(db, 'showdown_meta')),
+          window.fetchRoster().catch(() => ({}))
+       ]);
+       
+       let meta = metaSnap.val() || {};
+       if (!meta.enemyAlliance) meta.enemyAlliance = { name: "", scores: {} };
+       
        const sdLiveData = sdRes.sdLiveData || {};
        
        let allPlayers = [];
-       try {
-          const rosterRawData = await window.fetchRoster();
-          if (rosterRawData) { Object.values(rosterRawData).forEach(p => { if (p.name) allPlayers.push(p.name); }); }
-       } catch(e) { console.error("Error fetching roster", e); }
-       
+       if (rosterRawData) { Object.values(rosterRawData).forEach(p => { if (p.name) allPlayers.push(p.name); }); }
        if (allPlayers.length === 0) allPlayers = Object.keys(sdLiveData);
        allPlayers = [...new Set(allPlayers)];
        
-       let html = `<div class="card" style="position:relative;">
-         <button onclick="views.admin()" style="position:absolute; top:15px; left:15px; background:none; border:none; color:var(--text-muted); font-size:24px; cursor:pointer; padding:0; line-height:1;">&times;</button>
-         <div class="card-title" style="margin-top:20px; text-align:center;">⚔️ Showdown Data Entry</div>
+       let allianceTotals = {d1:0, d2:0, d3:0, d4:0, d5:0, d6:0};
+       let winners = {d1:{name:'', score:0}, d2:{name:'', score:0}, d3:{name:'', score:0}, d4:{name:'', score:0}, d5:{name:'', score:0}, d6:{name:'', score:0}};
+       
+       Object.entries(sdLiveData).forEach(([playerName, scores]) => {
+          for (let i = 1; i <= 6; i++) {
+              let score = scores['d'+i] || 0;
+              allianceTotals['d'+i] += score;
+              if (score > winners['d'+i].score) {
+                  winners['d'+i] = { name: playerName, score: score };
+              }
+          }
+       });
+       
+       const staticHorns = { d1: 1, d2: 2, d3: 2, d4: 2, d5: 2, d6: 4 };
+       
+       let html = `<div style="display:flex; flex-direction:column; gap:20px; max-width:800px; margin:0 auto; padding-bottom:40px; animation: fadeIn 0.3s ease; position:relative;">
+         <button onclick="views.admin()" style="position:absolute; top:0px; right:0px; background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); padding:5px 12px; border-radius:6px; cursor:pointer; z-index:10;">&times; Close</button>
          
-         <div style="background:rgba(255,255,255,0.02); padding:15px; border-radius:8px; border:1px solid var(--border); margin-bottom:20px;">
-           <label style="display:block; margin-bottom:5px; font-weight:bold; color:var(--text-main);">Select Player</label>
-           <select id="sdPlayerSelect" style="width:100%; padding:12px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:16px; margin-bottom:15px;" onchange="window.onSdPlayerSelect()">
-             <option value="">-- Choose a Player --</option>`;
-             
+         <div class="card" style="margin-top:40px;">
+           <div class="card-title" style="text-align:center;">⚔️ Showdown Data Entry</div>
+           <div style="background:rgba(255,255,255,0.02); padding:15px; border-radius:8px; border:1px solid var(--border); margin-bottom:10px;">
+             <label style="display:block; margin-bottom:5px; font-weight:bold; color:var(--text-main);">Select Player</label>
+             <select id="sdPlayerSelect" style="width:100%; padding:12px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:16px; margin-bottom:15px;" onchange="window.onSdPlayerSelect()">
+               <option value="">-- Choose a Player --</option>`;
+               
        allPlayers.sort((a,b) => a.localeCompare(b)).forEach(p => {
           html += `<option value="${escapeHTML(p)}">${escapeHTML(p)}</option>`;
        });
-             
+               
        html += `</select>
-           
-           <div id="sdEntryFields" style="display:none; flex-direction:column; gap:10px;">
-             ${[1,2,3,4,5,6].map(d => `
-                <div style="display:flex; align-items:center; gap:10px;">
-                  <span style="width:50px; font-weight:bold; color:var(--text-muted);">Day ${d}</span>
-                  <input type="number" id="sd_d${d}" placeholder="Score" style="flex:1; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main);">
-                  <button id="sd_d${d}_lock" onclick="window.toggleSdLock(${d})" style="display:none; background:transparent; border:none; cursor:pointer; font-size:18px;" title="Unlock to edit">🔒</button>
-                </div>
-             `).join('')}
              
-             <button onclick="window.saveShowdownEntry()" style="background:var(--success); color:white; border:none; padding:12px; border-radius:6px; font-weight:bold; font-size:16px; margin-top:10px; cursor:pointer;">💾 Save Scores</button>
+             <div id="sdEntryFields" style="display:none; flex-direction:column; gap:10px;">
+               ${[1,2,3,4,5,6].map(d => `
+                  <div style="display:flex; align-items:center; gap:10px;">
+                    <span style="width:50px; font-weight:bold; color:var(--text-muted);">Day ${d}</span>
+                    <input type="number" id="sd_d${d}" placeholder="Score" style="flex:1; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main);">
+                    <button id="sd_d${d}_lock" onclick="window.toggleSdLock(${d})" style="display:none; background:transparent; border:none; cursor:pointer; font-size:18px;" title="Unlock to edit">🔒</button>
+                  </div>
+               `).join('')}
+               
+               <button onclick="window.saveShowdownEntry()" style="background:var(--success); color:white; border:none; padding:12px; border-radius:6px; font-weight:bold; font-size:16px; margin-top:10px; cursor:pointer;">💾 Save Scores</button>
+             </div>
            </div>
+         </div>
+         
+         <div class="card">
+           <h2 style="color:var(--accent); margin-top:0;">⚙️ Enemy Alliance Settings</h2>
+           <p style="color:var(--text-muted); font-size:14px;">Event goals are set to <b>3,333,333</b> daily (20M total). Horns, Winners, and Alliance Totals are automatically calculated.</p>
+           
+           <div style="margin-bottom:20px;">
+             <label style="font-weight:bold; color:var(--text-main); display:block; margin-bottom:5px;">Enemy Alliance Name</label>
+             <input type="text" id="metaEnemyName" value="${meta.enemyAlliance.name || ''}" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
+           </div>
+           
+           <div style="background:var(--bg-main); padding:15px; border-radius:8px; border:1px solid var(--border); margin-bottom:20px; overflow-x:auto;">
+             <table style="width:100%; border-collapse:collapse; text-align:left; min-width:600px;">
+               <thead>
+                 <tr style="border-bottom:1px solid var(--border);">
+                   <th style="padding:8px 5px; color:var(--text-muted);">Day</th>
+                   <th style="padding:8px 5px; color:var(--text-muted);">Alliance Total</th>
+                   <th style="padding:8px 5px; color:var(--text-muted);">Enemy Score</th>
+                   <th style="padding:8px 5px; color:var(--text-muted);">Winner (Top Player)</th>
+                   <th style="padding:8px 5px; color:var(--text-muted);">Horns</th>
+                 </tr>
+               </thead>
+               <tbody>`;
+               
+       for (let i = 1; i <= 6; i++) {
+         let es = meta.enemyAlliance.scores['d'+i] || 0;
+         let h = staticHorns['d'+i];
+         let wName = winners['d'+i].name || '-';
+         let at = allianceTotals['d'+i];
+         
+         html += `<tr>
+           <td style="padding:8px 5px; font-weight:bold; color:var(--text-main);">Day ${i}</td>
+           <td style="padding:8px 5px; color:var(--accent); font-weight:bold;">${at > 0 ? at.toLocaleString() : '-'}</td>
+           <td style="padding:8px 5px;"><input type="number" id="meta_es_${i}" value="${es}" style="width:100px; padding:5px; border-radius:4px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);"></td>
+           <td style="padding:8px 5px; color:var(--success);">${escapeHTML(wName)}</td>
+           <td style="padding:8px 5px; color:var(--text-muted);">${h}</td>
+         </tr>`;
+       }
+       
+       html += `</tbody>
+             </table>
+           </div>
+           
+           <button onclick="window.saveShowdownMeta()" style="background:var(--success); color:#fff; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; width:100%;">💾 Save Enemy Scores</button>
          </div>
        </div>`;
        
@@ -3246,95 +3310,6 @@ const views = {
           btn.disabled = false;
        };
        
-    } catch(e) {
-       app.innerHTML = '<div class="card"><div class="loading" style="color:var(--danger);">Error loading Data Entry UI</div></div>';
-       console.error(e);
-    }
-  },
-  
-  showdownEventSettings: async () => {
-    const app = document.getElementById('app');
-    if (!app) return;
-    
-    const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
-    if (!isManager) {
-       if(window.showToast) window.showToast("Only R4/R5 managers can edit Showdown data", "error");
-       return;
-    }
-    
-    renderLoading("Loading Event Settings...");
-    try {
-       const [metaSnap, sdRes] = await Promise.all([
-          get(ref(db, 'showdown_meta')),
-          window.fetchMergedShowdown()
-       ]);
-       
-       let meta = metaSnap.val() || {};
-       if (!meta.enemyAlliance) meta.enemyAlliance = { name: "", scores: {} };
-       
-       let sdLiveData = sdRes.sdLiveData || window._currentSdLiveData || {};
-       let allianceTotals = {d1:0, d2:0, d3:0, d4:0, d5:0, d6:0};
-       let winners = {d1:{name:'', score:0}, d2:{name:'', score:0}, d3:{name:'', score:0}, d4:{name:'', score:0}, d5:{name:'', score:0}, d6:{name:'', score:0}};
-       
-       Object.entries(sdLiveData).forEach(([playerName, scores]) => {
-          for (let i = 1; i <= 6; i++) {
-              let score = scores['d'+i] || 0;
-              allianceTotals['d'+i] += score;
-              if (score > winners['d'+i].score) {
-                  winners['d'+i] = { name: playerName, score: score };
-              }
-          }
-       });
-       
-       const staticHorns = { d1: 1, d2: 2, d3: 2, d4: 2, d5: 2, d6: 4 };
-       
-       let html = `<div class="card" style="position:relative; max-width:700px; margin:0 auto; animation: fadeIn 0.3s ease;">
-         <button onclick="views.admin()" style="position:absolute; top:20px; right:20px; background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); padding:5px 12px; border-radius:6px; cursor:pointer;">&times; Close</button>
-         <h2 style="color:var(--accent); margin-top:0;">⚙️ Showdown Settings</h2>
-         <p style="color:var(--text-muted); font-size:14px;">Event goals are set to <b>3,333,333</b> daily (20M total). Horns, Winners, and Alliance Totals are automatically calculated.</p>
-         
-         <div style="margin-bottom:20px;">
-           <label style="font-weight:bold; color:var(--text-main); display:block; margin-bottom:5px;">Enemy Alliance Name</label>
-           <input type="text" id="metaEnemyName" value="${meta.enemyAlliance.name || ''}" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
-         </div>
-
-         <div style="background:var(--bg-main); padding:15px; border-radius:8px; border:1px solid var(--border); margin-bottom:20px; overflow-x:auto;">
-           <table style="width:100%; border-collapse:collapse; text-align:left; min-width:600px;">
-             <thead>
-               <tr style="border-bottom:1px solid var(--border);">
-                 <th style="padding:8px 5px; color:var(--text-muted);">Day</th>
-                 <th style="padding:8px 5px; color:var(--text-muted);">Alliance Total</th>
-                 <th style="padding:8px 5px; color:var(--text-muted);">Enemy Score</th>
-                 <th style="padding:8px 5px; color:var(--text-muted);">Winner (Top Player)</th>
-                 <th style="padding:8px 5px; color:var(--text-muted);">Horns</th>
-               </tr>
-             </thead>
-             <tbody>`;
-             
-       for (let i = 1; i <= 6; i++) {
-         let es = meta.enemyAlliance.scores['d'+i] || 0;
-         let h = staticHorns['d'+i];
-         let wName = winners['d'+i].name || '-';
-         let at = allianceTotals['d'+i];
-         
-         html += `<tr>
-           <td style="padding:8px 5px; font-weight:bold; color:var(--text-main);">Day ${i}</td>
-           <td style="padding:8px 5px; color:var(--accent); font-weight:bold;">${at > 0 ? at.toLocaleString() : '-'}</td>
-           <td style="padding:8px 5px;"><input type="number" id="meta_es_${i}" value="${es}" style="width:100px; padding:5px; border-radius:4px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);"></td>
-           <td style="padding:8px 5px; color:var(--success);">${escapeHTML(wName)}</td>
-           <td style="padding:8px 5px; color:var(--text-muted);">${h}</td>
-         </tr>`;
-       }
-       
-       html += `</tbody>
-           </table>
-         </div>
-         
-         <button onclick="window.saveShowdownMeta()" style="background:var(--success); color:#fff; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; width:100%;">💾 Save Enemy Scores</button>
-       </div>`;
-       
-       app.innerHTML = html;
-       
        window.saveShowdownMeta = async () => {
           const btn = event.target;
           const oldText = btn.innerHTML;
@@ -3350,18 +3325,18 @@ const views = {
           try {
              await set(ref(db, 'showdown_meta'), newMeta);
              if(window.showToast) window.showToast("Event Settings saved successfully!", "success");
-             views.admin();
           } catch(e) {
              console.error(e);
              if(window.showToast) window.showToast("Error saving data", "error");
-             btn.innerHTML = oldText;
-             btn.disabled = false;
           }
+          
+          btn.innerHTML = oldText;
+          btn.disabled = false;
        };
        
-    } catch(err) {
-       console.error(err);
-       renderError(err.message);
+    } catch(e) {
+       app.innerHTML = '<div class="card"><div class="loading" style="color:var(--danger);">Error loading Data Entry UI</div></div>';
+       console.error(e);
     }
   },
   
