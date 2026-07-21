@@ -1,9 +1,9 @@
 const FIREBASE_URL = "https://wos-dashboard-38d4c-default-rtdb.firebaseio.com";
 const FIREBASE_SECRET = "n5fTnxcK5J5ddNsT77AhZIoQGTogW3ROpk4k03Sv";
-const API_BASE_URL = "https://script.google.com/macros/s/AKfycbza_zOSCCX244uFfPtE8DWlKHtlCv8193dXZ5nhUsHwM4-1b5AGbFwxiHJxMvXZA_I/exec";
+const API_BASE_URL = "https://script.google.com/macros/s/AKfycbxPlNaLMDn4LX7ZpbOc8O2VzQr055fnynJnyDinedM7stFe_PMdZWkpf8BMTrysH4U/exec";
 async function syncSheet(sheetName) {
     console.log(`Fetching ${sheetName} from Google Sheets API...`);
-    const res = await fetch(`${API_BASE_URL}?api=${encodeURIComponent(sheetName)}`);
+    const res = await fetch(`${API_BASE_URL}?api=${encodeURIComponent(sheetName)}&sync_secret=EMERGENCY_SYNC_9921_BDC`);
     const json = await res.json();
     if (json.success && json.data) {
         console.log(`Successfully fetched ${sheetName}. Pushing to Firebase...`);
