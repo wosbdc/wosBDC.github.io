@@ -1,3 +1,7 @@
+## [1.29.18] - 2026-07-21
+### Fixed
+- **Alliance Progress Card Layout Bug**: Fixed a layout bug in the Alliance Progress card introduced in v1.29.17 where a rogue closing `</div>` prematurely closed the card container, causing the progress table to render outside of the card's bounds.
+
 ## [1.29.17] - 2026-07-21
 ### Changed
 - **Showdown MVP Full Banner Layout**: Reverted the inline header banner for Alliance Progress and replaced it with a dedicated, full-width block directly below the title, allowing it to span the entire card smoothly across all screen sizes without competing with the card title.

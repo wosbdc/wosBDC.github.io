@@ -4925,8 +4925,7 @@ const views = {
        // 2. Alliance Progress
        let allianceCard = `<div class="card" style="overflow-x:auto;">
           <div class="card-title">⚔️ Alliance Progress</div>${titleRightHtml}
-         </div>
-         <table style="min-width:600px;"><thead><tr>
+          <table style="min-width:600px;"><thead><tr>
           <th>Alliance's Showdown</th><th>Total</th><th>Day 1</th><th>Day 2</th><th>Day 3</th><th>Day 4</th><th>Day 5</th><th>Day 6</th>
        </tr></thead><tbody>`;
        
@@ -6723,3 +6722,4 @@ window.openAltPerksModal = (gameId, altName) => {
         }
     });
 };
+
