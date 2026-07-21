@@ -1991,23 +1991,6 @@ const initMobileSearchModal = () => {
 window.bindCustomAutocomplete = (inputEl) => {
     initMobileSearchModal();
     
-    // On mobile screens, hijack the focus event to open the full-screen modal
-    if (window.innerWidth <= 768) {
-        inputEl.setAttribute('readonly', 'readonly');
-        inputEl.style.cursor = 'pointer';
-    }
-    
-    const triggerMobileModal = (e) => {
-        if (window.innerWidth <= 768) {
-            e.preventDefault();
-            inputEl.blur(); // Remove focus from the original input
-            window.openMobileSearch(inputEl);
-        }
-    };
-    
-    inputEl.addEventListener('focus', triggerMobileModal);
-    inputEl.addEventListener('click', triggerMobileModal);
-
     if (inputEl.parentElement.classList.contains('autocomplete-wrapper')) return;
 
     const wrapper = document.createElement('div');
@@ -2029,8 +2012,6 @@ window.bindCustomAutocomplete = (inputEl) => {
     wrapper.appendChild(dropdown);
 
     const filterAndShow = () => {
-        if (window.innerWidth <= 768) return; // Handled by mobile modal
-        
         const query = inputEl.value.toLowerCase().trim();
         if (!query) { dropdown.style.display = 'none'; return; }
         
@@ -2073,7 +2054,6 @@ window.bindCustomAutocomplete = (inputEl) => {
     inputEl.addEventListener('input', filterAndShow);
     inputEl.addEventListener('focus', filterAndShow);
     inputEl.addEventListener('blur', () => { 
-        if (window.innerWidth <= 768) return;
         setTimeout(() => {
             dropdown.style.display='none';
             if (document.getElementById('autocomplete-shield')) document.getElementById('autocomplete-shield').style.display = 'none';

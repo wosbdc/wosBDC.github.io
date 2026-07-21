@@ -1,3 +1,8 @@
+## [1.27.39] - 2026-07-20
+- Reverted the full-screen "Search Player" popup inside the Admin Menus (like Multi-BT Donations) to restore rapid data-entry workflow.
+- Restored the "Invisible Shield" method to those admin dropdowns to ensure they still close properly on Apple devices.
+- Kept the full-screen "Search Player" popup exclusively for the main Chief's List page on mobile devices.
+
 ## [1.27.38] - 2026-07-20
 - Fixed a silent bug where the mobile "Search Player" popup would fail to initialize if you loaded straight into the Chief's List without opening any other menus first.
 
