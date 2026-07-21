@@ -1,3 +1,6 @@
+### v1.27.52
+- Added "The 20M Challenge" progress bar to the Event Goals chart in the Leaderboards view (was previously only visible in the Showdown view).
+
 ### v1.27.51
 - Implemented Google Apps Script `CacheService` to aggressively cache Firebase authentication token validations and admin privilege checks.
 - Prevented "Service invoked too many times" quota errors during heavy bulk actions (like batch Bear Trap donation submissions) by reducing concurrent `UrlFetchApp` calls by over 95%.

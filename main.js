@@ -4051,9 +4051,22 @@ const views = {
         const sdData = await fetchSheet("Showdown");
         let sdHeaders = ["Event Day", "Daily Goal", "Left +/-", "Goal", "Daily Amount"];
         let sdRows = [];
+        let totalAllianceScore = 0;
+        
         for (let r = 0; r < sdData.length; r++) {
-          if (sdData[r].some(c => typeof c === 'string' && c.toLowerCase().includes('allience showdown'))) {
-            let startCol = sdData[r].findIndex(c => typeof c === 'string' && c.toLowerCase().includes('allience showdown'));
+          let row = sdData[r];
+          if (row.some(c => typeof c === 'string' && c.toLowerCase().includes("alliance's"))) {
+            let startCol = row.findIndex(c => typeof c === 'string' && c.toLowerCase().includes("alliance's"));
+            if (r + 2 < sdData.length) {
+              let ourRow = sdData[r+2];
+              let val = ourRow[startCol + 8];
+              if (val !== undefined && val !== null) {
+                 totalAllianceScore = Number(val.toString().replace(/,/g, '')) || 0;
+              }
+            }
+          }
+          if (row.some(c => typeof c === 'string' && c.toLowerCase().includes('allience showdown'))) {
+            let startCol = row.findIndex(c => typeof c === 'string' && c.toLowerCase().includes('allience showdown'));
             for (let i = 1; i <= 6; i++) {
               if (r + i < sdData.length) {
                 let dRow = sdData[r + i];
@@ -4068,7 +4081,6 @@ const views = {
                 ]);
               }
             }
-            break;
           }
         }
         if (sdRows.length > 0) {
@@ -4079,7 +4091,8 @@ const views = {
              boards.splice(insertIndex, 0, {
                 title: "🎯 " + title,
                 headers: sdHeaders,
-                rows: sdRows
+                rows: sdRows,
+                totalScore: totalAllianceScore
              });
            }
         }
@@ -4146,6 +4159,27 @@ const views = {
            `;
         }
         if (board.title.includes('Event Goals')) {
+            let allTimeGoal = 20000000;
+            let totalScore = board.totalScore || 0;
+            let allTimeProgress = Math.min(100, (totalScore / allTimeGoal) * 100);
+            
+            const formatNumber = (num) => {
+              if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+              if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+              return num.toLocaleString();
+            };
+            
+            html += `
+            <div style="margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px dashed var(--border);">
+              <div style="display:flex; justify-content:space-between; font-size:16px; font-weight:bold; margin-bottom:8px;">
+                <span style="color:var(--text-main);">🌟 The 20M Challenge</span>
+                <span style="color:var(--text-muted);">${formatNumber(totalScore)} / <span style="color:var(--accent);">${formatNumber(allTimeGoal)}</span></span>
+              </div>
+              <div style="width:100%; height:12px; background:rgba(0,0,0,0.3); border-radius:6px; overflow:hidden; border:1px solid var(--border);">
+                <div style="width:${allTimeProgress}%; height:100%; background:linear-gradient(90deg, #8b5cf6, #d946ef); border-radius:6px; transition:width 1.5s cubic-bezier(0.4, 0, 0.2, 1); box-shadow:0 0 10px #d946ef;"></div>
+              </div>
+            </div>`;
+            
             html += `<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 15px;">`;
             board.rows.forEach(row => {
                 let eventDay = formatCell(row[0] !== undefined ? row[0] : '');
