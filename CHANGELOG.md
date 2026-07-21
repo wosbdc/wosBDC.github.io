@@ -1,3 +1,13 @@
+## [1.29.20] - 2026-07-21
+### Added
+- **Bear Trap Auto-Reset**: Connected Bear Trap Champion banners to the real-time event schedule. Champion banners will now automatically display "Pending..." with a blank score for exactly 30 minutes after a Bear Trap event is scheduled to start, overriding the all-time manual Firebase winner temporarily.
+
+### Changed
+- **Bear Trap Winner Source**: Reverted the Bear Trap Champion banners to pull from the manual `config/bearTrapWinners` JSON structure (instead of dynamically crowning whoever currently has the most all-time wins on the leaderboard spreadsheet).
+
+### Fixed
+- **Player Database Editor**: Fixed the broken Player Database Editor in the Admin Menu by restoring the `window.searchPlayerFull` function which was accidentally removed in a previous update.
+
 ## [1.29.19] - 2026-07-21
 ### Added
 - **Automated Bear Trap Champion Banners**: Automated the Reigning Champion banners for the Bear Trap leaderboards. The app now parses the Google Sheets data in real-time to crown whoever is in 1st place. If the spreadsheet is cleared for a new event (top score is 0), the champion banner will automatically revert to showing "Pending..." with a blank score, removing the need for manual configuration.

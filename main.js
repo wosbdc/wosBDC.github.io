@@ -1076,6 +1076,210 @@ window.adminFetchAltFurnace = async (gid, spanId) => {
   }
 };
 
+window.searchPlayerFull = async (name) => {
+  if (name) name = name.replace(/^✅\s*/, '');
+  window.activeViewFunc = () => window.searchPlayerFull(name);
+  const resDiv = document.getElementById('uniEditorRes');
+  if (!name || !name.trim()) {
+    resDiv.style.display = 'none';
+    return;
+  }
+  
+  resDiv.style.display = 'block';
+  if (!window.liveData || !window.liveData["activity "]) {
+    resDiv.innerHTML = '<div style="text-align:center; padding:20px;"><span style="color:var(--text-muted)">Querying master database...</span></div>';
+  }
+  
+  try {
+    let sdLiveSnapshotPromise = window.fetchMergedShowdown();
+    const [data, rosterRawData, lbRawData, sdHistoryRawData, sdMergedDataRes] = await Promise.all([
+            fetchSheet("activity "),
+            fetchSheet("Chief's List"),
+            fetchSheet("LeaderBoards"),
+            fetchSheet("Showdown History"),
+            sdLiveSnapshotPromise
+          ]);
+    const sdCurrentRawData = sdMergedDataRes.mergedData;
+    const sdLiveData = sdMergedDataRes.sdLiveData || {};
+
+    let currentDay = 0;
+    Object.values(sdLiveData).forEach(p => {
+       if ((p.d6||0) > 0 && currentDay < 6) currentDay = 6;
+       else if ((p.d5||0) > 0 && currentDay < 5) currentDay = 5;
+       else if ((p.d4||0) > 0 && currentDay < 4) currentDay = 4;
+       else if ((p.d3||0) > 0 && currentDay < 3) currentDay = 3;
+       else if ((p.d2||0) > 0 && currentDay < 2) currentDay = 2;
+       else if ((p.d1||0) > 0 && currentDay < 1) currentDay = 1;
+    });
+    if (data && data.length > 1) {
+        for (let r = 1; r < data.length; r++) {
+           let pName = data[r][0];
+           if (!pName) continue;
+           let safeName = pName.toString().trim();
+           let missedCount = 0;
+           if (currentDay > 0) {
+              let p = sdLiveData[safeName] || {};
+              for (let i = 1; i <= currentDay; i++) {
+                 if (!(p['d'+i] > 0)) missedCount++;
+              }
+           }
+           data[r][1] = missedCount;
+        }
+    }
+        
+        let usersSnap = null;
+        try { usersSnap = await get(ref(db, 'users')); } catch(e) { console.warn("Could not fetch users:", e); }
+    
+    // Parse Maps
+    const rosterMap = {};
+    if (rosterRawData && rosterRawData.length > 0) {
+      for (let i = 1; i < rosterRawData.length; i++) {
+        let chief = rosterRawData[i][0];
+        if (chief) rosterMap[chief.toString().trim()] = { furnaceLevel: rosterRawData[i][2], giftCodes: rosterRawData[i][3], timeActive: rosterRawData[i][5] };
+      }
+    }
+    
+
+
+    let btDonationsAllTime = null, btDonationsCurrent = null, bear1 = null, bear2 = null, bearBoth = null, bearAllTime = null;
+    let otherLbs = [];
+    
+    if (lbRawData) {
+      for (let r = 0; r < lbRawData.length; r++) {
+        for (let c = 0; c < lbRawData[r].length; c++) {
+          let cell = lbRawData[r][c];
+          if (typeof cell === 'string' && (cell.toLowerCase().includes('leaderboard') || (cell.toLowerCase().includes('all-time') && (cell.toLowerCase().includes('bear') || cell.toLowerCase().includes('bt')) && cell.toLowerCase().includes('donation')))) {
+            let title = cell.replace(/leaderboard/i, '').trim();
+            let emoji = "🏆";
+            if (title.toLowerCase().includes("bear")) emoji = "🐻";
+            else if (title.toLowerCase().includes("showdown")) emoji = "⚔️";
+            
+            let scoreCol = c + 2;
+            if (r + 1 < lbRawData.length) {
+              let hc = c;
+              while (hc < lbRawData[r+1].length && lbRawData[r+1][hc] !== "") { scoreCol = hc; hc++; }
+            }
+            
+            let dr = r + 2;
+            while (dr < lbRawData.length && lbRawData[dr][c] !== "") {
+              let pRank = lbRawData[dr][c];
+              let pName = lbRawData[dr][c + 1];
+              let pScore = lbRawData[dr][scoreCol];
+              
+              if (pName && pScore && pName.toString().trim() === name) {
+                if (typeof pScore === 'number') pScore = pScore.toLocaleString();
+                else if (typeof pScore === 'string' && !isNaN(pScore) && pScore.trim() !== "") pScore = Number(pScore).toLocaleString();
+                
+                let t = title.toLowerCase();
+                if (t.includes('all-time showdown')) { /* noop */ }
+                else if (t.includes('all-time bear trap')) bearAllTime = {rank: pRank, score: pScore};
+                else if (t.includes('bear trap 1')) bear1 = {rank: pRank, score: pScore};
+                else if (t.includes('bear trap 2')) bear2 = {rank: pRank, score: pScore};
+                else if (t.includes('both bear trap')) bearBoth = {rank: pRank, score: pScore};
+                else if ((t.includes('all-time') && (t.includes('bear') || t.includes('bt')) && t.includes('donation'))) btDonationsAllTime = {rank: pRank, score: pScore};
+                else if (((t.includes('bear') || t.includes('bt')) && t.includes('donation'))) btDonationsCurrent = {rank: pRank, score: pScore};
+                else otherLbs.push({ title, score: pScore, rank: pRank, emoji });
+              }
+              dr++;
+            }
+          }
+        }
+      }
+    }
+    
+    const allTimeShowdownMap = {};
+    const processShowdownTable = (tableData) => {
+      if (!tableData) return;
+      for (let r = 0; r < tableData.length; r++) {
+        let row = tableData[r];
+        if (row.some(c => typeof c === 'string' && c.toLowerCase().trim() === 'ranking')) {
+          let nameCol = row.findIndex(c => typeof c === 'string' && (c.toLowerCase().includes('name') || c.toLowerCase().includes('member') || c.toLowerCase().includes('player')));
+          let totalCol = row.findIndex(c => typeof c === 'string' && (c.toLowerCase().includes('total')));
+          if (nameCol !== -1 && totalCol !== -1) {
+            let dr = r + 1;
+            while (dr < tableData.length && tableData[dr][nameCol] && (tableData[dr][nameCol].toString().toLowerCase().includes('horns') || tableData[dr][nameCol].toString().toLowerCase().includes('winners'))) dr++;
+            while (dr < tableData.length && tableData[dr][nameCol] !== undefined && tableData[dr][nameCol] !== "") {
+              let pName = tableData[dr][nameCol];
+              let pScore = tableData[dr][totalCol];
+              if (pName && (typeof pScore === 'number' || (typeof pScore === 'string' && !isNaN(pScore)))) {
+                let safeName = pName.toString().trim();
+                if (!allTimeShowdownMap[safeName]) allTimeShowdownMap[safeName] = 0;
+                allTimeShowdownMap[safeName] += Number(pScore);
+              }
+              dr++;
+            }
+          }
+        }
+      }
+    };
+    processShowdownTable(sdHistoryRawData);
+    processShowdownTable(sdCurrentRawData);
+    
+    let dynamicSD = null;
+    const sortedShowdownPlayers = Object.entries(allTimeShowdownMap).map(([n, s]) => ({ name: n, score: s })).sort((a, b) => b.score - a.score);
+    sortedShowdownPlayers.forEach((p, index) => {
+      if (p.name === name) dynamicSD = { score: p.score, rank: index + 1 };
+    });
+    
+    const headers = data[0];
+    let showdownActive = false;
+    let colIsUpcoming = {};
+    for (let c = 1; c < headers.length; c++) {
+       let hasAnyTrue = false;
+       for (let r = 1; r < data.length; r++) {
+          let v = data[r][c];
+          if (c === 1 && data[r]) {
+             let missed = data[r][1];
+             if (missed !== undefined && missed !== null && missed.toString().trim() !== "" && missed !== 0 && missed !== "0") showdownActive = true;
+          }
+          if (v === true || (typeof v === 'string' && (v.toLowerCase().trim() === 'true' || v.toLowerCase().trim() === 'yes'))) hasAnyTrue = true;
+       }
+       colIsUpcoming[c] = !hasAnyTrue;
+    }
+    
+    // Find player row in Activity
+    let pRow = null;
+    for (let i = 1; i < data.length; i++) {
+       if (data[i][0] && data[i][0].toString().trim() === name) { pRow = data[i]; break; }
+    }
+    
+    if (!pRow) throw new Error("Player not found in Activity sheet.");
+    
+    // Generate HTML
+    let altAccounts = [];
+    const viewedGameId = nameToIdMap[name];
+    const ROOT_ADMIN_GAME_ID = 318843189;
+    const viewerIsR5 = window.getAdminLevel(currentUser) === 'R5';
+    const viewedIsRootAdmin = viewedGameId && Number(viewedGameId) === ROOT_ADMIN_GAME_ID;
+
+    // Only show alt accounts if:
+    //   - The viewer is R5 (root admin), OR
+    //   - The player being viewed is NOT the root admin
+    const showAlts = viewerIsR5 || !viewedIsRootAdmin;
+
+    if (showAlts && usersSnap && usersSnap.exists()) {
+        const users = usersSnap.val();
+        if (viewedGameId) {
+            for (const u of Object.values(users)) {
+                if (Number(u.gameId) === Number(viewedGameId)) {
+                    if (u.linkedGameIds && Array.isArray(u.linkedGameIds)) {
+                        altAccounts = [...new Set([...altAccounts, ...u.linkedGameIds])];
+                    }
+                }
+            }
+        }
+    }
+    
+    const isUnlocked = await window.isGoogleAuthVerified();
+    let html = window.generatePlayerProfileHtml(name, pRow, headers, colIsUpcoming, rosterMap[name], null, dynamicSD, showdownActive, bearBoth, bear1, bear2, bearAllTime, btDonationsAllTime, btDonationsCurrent, otherLbs, isUnlocked, altAccounts);
+    
+    resDiv.innerHTML = html;
+    
+  } catch (err) {
+    resDiv.innerHTML = `<span style="color:var(--danger)">Error: ${err.message}</span>`;
+  }
+};
+
 window.savePlayerFull = async (name) => {
   const ptStatus = document.getElementById('uniPtSelect').value;
   const acStatus = document.getElementById('uniAcSelect').value;
@@ -4402,6 +4606,44 @@ const views = {
     renderLoading("Loading Leaderboards");
     try {
       const data = await fetchSheet("LeaderBoards");
+      let scheduleData = [];
+      try { scheduleData = await fetchSheet("WhiteOut Survival"); } catch(e) {}
+      
+      let isBearTrapActive = false;
+      if (scheduleData && Array.isArray(scheduleData) && scheduleData.length > 0) {
+        let now = new Date();
+        for (let i = 1; i < Math.min(34, scheduleData.length); i++) {
+          let eventName = scheduleData[i][5];
+          if (!eventName || !String(eventName).includes('Bear Trap')) continue;
+          
+          let dateStr = String(scheduleData[i][6] || '').trim();
+          let utcStr = String(scheduleData[i][7] || '').trim();
+          
+          let eventDate = null;
+          const mdMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})$/);
+          if (mdMatch) {
+             eventDate = new Date(now.getFullYear(), parseInt(mdMatch[1]) - 1, parseInt(mdMatch[2]));
+          } else {
+             continue; // Skip if date format is unexpected
+          }
+          
+          let exactEventDate = new Date(eventDate);
+          const hmMatch = utcStr.match(/^(\d{1,2}):(\d{2})$/);
+          if (hmMatch) {
+             exactEventDate.setUTCHours(parseInt(hmMatch[1]), parseInt(hmMatch[2]), 0, 0);
+          } else {
+             // Default to 16:00 UTC if no time specified, as per typical schedule
+             exactEventDate.setUTCHours(16, 0, 0, 0);
+          }
+          
+          // Check if now is within 30 minutes of the event start time
+          let diffMs = now - exactEventDate;
+          if (diffMs >= 0 && diffMs <= 30 * 60 * 1000) {
+             isBearTrapActive = true;
+             break;
+          }
+        }
+      }
       let html = ``;
       
       let boards = [];
@@ -4453,7 +4695,16 @@ const views = {
         }
       }
 
-      // (Legacy btWinners fetch removed - Bear Trap banners are now automated)
+      // Fetch champions config once
+      let btWinners = {};
+      try {
+         const snap = await get(ref(db, 'config/bearTrapWinners'));
+         if (snap.exists()) {
+            btWinners = snap.val();
+         }
+      } catch (e) {
+         console.warn("Could not fetch bt winners", e);
+      }
 
       // Fetch Showdown Event Goals
       let finalGoalsCard = "";
