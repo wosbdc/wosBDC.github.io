@@ -1,3 +1,7 @@
+## [1.29.9] - 2026-07-21
+### Added
+- **Overall Showdown Winner**: Automatically tallies horns earned by daily winners throughout the Showdown event and dynamically highlights the overall winner (and their total horn count) in the Total column of the Winners row.
+
 ## [1.29.8] - 2026-07-21
 ### Changed
 - **Event Goals Position Re-ordered**: Moved the Event Goals cards in the Leaderboards Showdown tab to display *underneath* the leaderboard tables per user request.

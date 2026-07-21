@@ -4903,7 +4903,19 @@ const views = {
        allianceCard += `</tr>`;
        
        // Winners
-       allianceCard += `<tr><td style="font-weight:bold;">Winners</td><td></td>`;
+       let playerHorns = {};
+       for(let i=1; i<=6; i++) {
+           let p = topPlayers['d'+i];
+           if (p.name && p.score > 0) {
+               playerHorns[p.name] = (playerHorns[p.name] || 0) + staticHorns['d'+i];
+           }
+       }
+       let maxHorns = 0;
+       for (const horns of Object.values(playerHorns)) if (horns > maxHorns) maxHorns = horns;
+       let overallWinners = Object.keys(playerHorns).filter(name => playerHorns[name] === maxHorns);
+       let winnerTotalText = maxHorns > 0 ? `<span style="color:var(--accent); font-size:13px;">${escapeHTML(overallWinners.join(', '))} (${maxHorns})</span>` : "";
+       
+       allianceCard += `<tr><td style="font-weight:bold;">Winners</td><td style="font-weight:bold; text-align:center;">${winnerTotalText}</td>`;
        for(let i=1; i<=6; i++) {
            let w = topPlayers['d'+i].name || '';
            let eScore = enemyAlliance.scores['d'+i] || 0;
