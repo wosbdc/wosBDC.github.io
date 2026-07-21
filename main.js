@@ -3604,7 +3604,15 @@ const views = {
       console.error("Failed to load roster for datalist", e);
     }
     
-    app.innerHTML = `
+    await refreshIdToNameMap();
+    let datalistHtml = '<datalist id="beartrapRosterDatalist">';
+    for (const [id, name] of Object.entries(idToNameMap)) {
+        datalistHtml += '<option value="' + id + '">' + name + '</option>';
+        datalistHtml += '<option value="' + name + '">' + name + '</option>';
+    }
+    datalistHtml += '</datalist>';
+    
+    app.innerHTML = datalistHtml + `
       <div class="card" style="max-width:800px; margin:0 auto; animation: fadeIn 0.3s ease; position:relative;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid var(--border); padding-bottom:10px;">
           <h2 style="color:var(--accent); margin:0; display:flex; align-items:center; gap:10px;">
@@ -3622,7 +3630,7 @@ const views = {
             <button onclick="document.getElementById('btLookupModal').style.display='none'" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:20px;">&times;</button>
           </div>
           <div style="display:flex; gap:10px;">
-            <input type="text" id="beartrapLookup" placeholder="Player Name..." style="flex:1; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);">
+            <input type="text" id="beartrapLookup" list="beartrapRosterDatalist" placeholder="Player Name or ID..." style="flex:1; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);">
             <button onclick="window.doBeartrapLookup()" style="background:var(--accent); color:#fff; border:none; padding:0 20px; border-radius:6px; cursor:pointer; font-weight:bold;">Check</button>
           </div>
           <div id="beartrapLookupResult" style="margin-top:10px; font-weight:bold; text-align:center;"></div>
@@ -3634,7 +3642,7 @@ const views = {
             <button onclick="document.getElementById('btCrownModal').style.display='none'" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:20px;">&times;</button>
           </div>
           <div style="display:flex; flex-direction:column; gap:10px;">
-            <input type="text" id="beartrapCrownName" placeholder="Player Name..." style="padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);">
+            <input type="text" id="beartrapCrownName" list="beartrapRosterDatalist" placeholder="Player Name or ID..." style="padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);">
             <select id="beartrapCrownTrap" style="padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);">
               <option value="1">Bear Trap 1</option>
               <option value="2">Bear Trap 2</option>
@@ -3647,7 +3655,7 @@ const views = {
           <h3 style="margin-top:0; color:var(--text-main); font-size:16px;">📝 Add Donations</h3>
           <div id="beartrapEntries">
             <div class="beartrap-row" style="display:flex; gap:10px; margin-bottom:10px;">
-              <input type="text" class="bt-name" placeholder="Player Name..." style="flex:2; min-width:0; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);">
+              <input type="text" class="bt-name" list="beartrapRosterDatalist" placeholder="Player Name or ID..." style="flex:2; min-width:0; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);">
               <input type="number" class="bt-amount" placeholder="Amount..." style="flex:1; min-width:0; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);">
               <button onclick="this.parentElement.remove()" style="background:var(--danger); color:#fff; border:none; width:40px; flex-shrink:0; border-radius:6px; cursor:pointer; font-weight:bold;">X</button>
             </div>
@@ -3692,7 +3700,7 @@ const views = {
       div.className = 'beartrap-row';
       div.style.cssText = 'display:flex; gap:10px; margin-bottom:10px;';
       div.innerHTML = `
-        <input type="text" class="bt-name" placeholder="Player Name..." style="flex:2; min-width:0; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);">
+        <input type="text" class="bt-name" list="beartrapRosterDatalist" placeholder="Player Name or ID..." style="flex:2; min-width:0; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);">
         <input type="number" class="bt-amount" placeholder="Amount..." style="flex:1; min-width:0; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);">
         <button onclick="this.parentElement.parentElement.remove()" style="background:var(--danger); color:#fff; border:none; width:40px; flex-shrink:0; border-radius:6px; cursor:pointer; font-weight:bold;">X</button>
       `;
