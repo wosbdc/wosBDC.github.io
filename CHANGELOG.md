@@ -1,3 +1,9 @@
+## [1.29.0] - 2026-07-21
+### Changed
+- Migrated Chief's List from Google Sheets to Firebase `roster_live` node for real-time syncing and massive speed improvements.
+- Refactored Roster, Player Editor, Showdown Editor, and Analytics to parse Firebase JSON structure.
+- Updated admin deletion tool to simultaneously remove players from Firebase roster_live.
+
 ## [v1.28.0] - 2026-07-21
 ### Added
 - Showdown Event Settings admin tool under Daily Tools tab to manage Event Goals, Enemy Alliance Name, Horns, and Winners directly in Firebase.

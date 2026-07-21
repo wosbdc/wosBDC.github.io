@@ -2,6 +2,76 @@ import './style.css'
 import { initPresence, listenToAuth, loginUser, logoutUser, registerUser, uploadAvatar, deleteAvatar, db, auth, requestPushPermission, listenForForegroundMessages, linkAltAccount, unlinkAltAccount, loginWithGoogle, resetPassword } from './src/firebase.js'
 import { ref, onValue, get, set, remove } from 'firebase/database'
 
+
+window.adminDeletePlayer = async (name) => {
+    let confirmDelete = await window.customConfirm('⚠️ WARNING ⚠️\n\nAre you sure you want to COMPLETELY DELETE ' + name + '?\n\nThis will remove them from the Chief\'s List, Giftcode Bot, wipe their ghost rows, AND permanently delete their Firebase roster entry.\n\nThis action cannot be undone.');
+    if (!confirmDelete) return;
+    
+    let resDiv = document.getElementById('uniEditorRes');
+    if (!resDiv) {
+        if (window.showToast) window.showToast('Deleting player ' + name + '...', 'info');
+    } else {
+        resDiv.innerHTML = '<span style="color:var(--text-muted)">Deleting player from master sheets...</span>';
+    }
+    
+    try {
+        const token = await window.getAuthToken();
+        const adminName = window.currentUser ? (window.idToNameMap[window.currentUser.gameId] || 'Admin') : 'Admin';
+        
+        try {
+            await remove(ref(db, 'roster_live/' + name.trim()));
+            console.log('Deleted from Firebase roster_live');
+        } catch(e) { console.warn('Could not delete from Firebase', e); }
+        
+        const res = await fetch(`${API_BASE_URL}?api=deletePlayer&name=${encodeURIComponent(name)}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(token)}`).then(r => r.json());
+        
+        if (res.success) {
+            if (window.showToast) window.showToast('Player permanently deleted!', 'success');
+            if (resDiv) resDiv.innerHTML = '<span style="color:var(--success); font-weight:bold;">✅ Player deleted successfully.</span>';
+            window.rosterCache = null;
+            await window.fetchRoster();
+        } else {
+            if (resDiv) resDiv.innerHTML = '<span style="color:var(--danger)">Error: ' + res.message + '</span>';
+            if (window.showToast) window.showToast('Error: ' + res.message, 'error');
+        }
+    } catch(err) {
+        if (resDiv) resDiv.innerHTML = '<span style="color:var(--danger)">Network Error: ' + err.message + '</span>';
+        if (window.showToast) window.showToast('Network error while deleting', 'error');
+    }
+};
+
+window.fetchRoster = async () => {
+   if (window.rosterCache) return window.rosterCache;
+   try {
+       const snap = await get(ref(db, 'roster_live'));
+       if (snap.exists()) {
+           window.rosterCache = snap.val();
+           return window.rosterCache;
+       }
+   } catch(e) { console.warn('Firebase read error:', e); }
+   
+   const rosterRaw = await fetchSheet("Chief's List");
+   let newRoster = {};
+   if (rosterRaw && rosterRaw.length > 1) {
+       for (let i = 1; i < rosterRaw.length; i++) {
+           const name = rosterRaw[i][0] ? rosterRaw[i][0].toString().trim() : '';
+           if (!name) continue;
+           newRoster[name] = {
+               name: name,
+               gameId: rosterRaw[i][1] ? rosterRaw[i][1].toString().trim() : '',
+               furnaceLevel: rosterRaw[i][2] || '',
+               giftCodes: rosterRaw[i][3] || '',
+               joinedDate: rosterRaw[i][4] || '',
+               timeActive: rosterRaw[i][5] || ''
+           };
+       }
+       try { await set(ref(db, 'roster_live'), newRoster); } catch(e) { console.warn('Could not seed Firebase', e); }
+   }
+   window.rosterCache = newRoster;
+   return newRoster;
+};
+
+
 const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbxPlNaLMDn4LX7ZpbOc8O2VzQr055fnynJnyDinedM7stFe_PMdZWkpf8BMTrysH4U/exec';
 const VERIFY_PROXY_URL = 'https://wos-vercel-proxy.vercel.app/api/verify'; // Dedicated proxy for Century Games ID verification (bypasses Google quota limits)
 
@@ -191,19 +261,17 @@ export let enrolledGameIds = new Set();
 export const refreshIdToNameMap = async () => {
     try {
         const [rosterRawData, giftcodebotData] = await Promise.all([
-            fetchSheet("Chief's List").catch(() => null),
+            window.fetchRoster().catch(() => null),
             fetchSheet("giftcodebot").catch(() => null)
         ]);
         
-        if (rosterRawData && rosterRawData.length > 0) {
-            for (let i = 1; i < rosterRawData.length; i++) {
-                let name = rosterRawData[i][0];
-                let id = rosterRawData[i][1];
-                if (name && id) {
-                    idToNameMap[id] = name.toString().trim();
-                      nameToIdMap[name.toString().trim()] = id.toString().trim();
-                  }
-            }
+        if (rosterRawData) {
+            Object.values(rosterRawData).forEach(p => {
+                if (p.name && p.gameId) {
+                    idToNameMap[p.gameId.toString().trim()] = p.name.toString().trim();
+                    nameToIdMap[p.name.toString().trim()] = p.gameId.toString().trim();
+                }
+            });
         }
         
         if (giftcodebotData && giftcodebotData.length > 1) {
@@ -814,7 +882,7 @@ window.adminFetchAltFurnace = async (gid, spanId) => {
 
       const [data, rosterRawData, lbRawData, sdHistoryRawData, sdLiveSnap] = await Promise.all([
               fetchSheet("activity "),
-              fetchSheet("Chief's List"),
+              window.fetchRoster(),
               fetchSheet("LeaderBoards"),
               fetchSheet("Showdown History"),
               get(ref(db, 'showdown_live'))
@@ -851,13 +919,7 @@ window.adminFetchAltFurnace = async (gid, spanId) => {
           try { usersSnap = await get(ref(db, 'users')); } catch(e) { console.warn("Could not fetch users:", e); }
       
       // Parse Maps
-      const rosterMap = {};
-      if (rosterRawData && rosterRawData.length > 0) {
-        for (let i = 1; i < rosterRawData.length; i++) {
-          let chief = rosterRawData[i][0];
-          if (chief) rosterMap[chief.toString().trim()] = { furnaceLevel: rosterRawData[i][2], giftCodes: rosterRawData[i][3], timeActive: rosterRawData[i][5] };
-        }
-      }
+      const rosterMap = rosterRawData || {};
       
   
   
@@ -2371,7 +2433,7 @@ const views = {
     try {
       const [usersSnap, rosterRawData] = await Promise.all([
         get(ref(db, 'users')),
-        fetchSheet("Chief's List")
+        window.fetchRoster()
       ]);
       const users = usersSnap.val() || {};
       
@@ -2597,20 +2659,18 @@ const views = {
         const hasAlts = (u.linkedGameIds && Array.isArray(u.linkedGameIds) && u.linkedGameIds.length > 0);
         
         let rosterInfoHtml = '';
-        if (rosterRawData && rosterRawData.length > 1) {
-             for (let i = 1; i < rosterRawData.length; i++) {
-                 if (rosterRawData[i][0] && rosterRawData[i][0].toString().trim().toLowerCase() === cName.toLowerCase()) {
-                     let flVal = rosterRawData[i][2];
-                     let gcVal = rosterRawData[i][3];
-                     let taVal = rosterRawData[i][5];
-                     let isEnrolled = (gcVal === true || gcVal === 'TRUE' || (typeof gcVal === 'string' && gcVal.toLowerCase().trim() === 'true'));
-                     
-                     if (flVal) rosterInfoHtml += `<span style="background:rgba(255,255,255,0.1); border:1px solid var(--border); color:var(--text-main); padding:2px 6px; border-radius:10px; font-size:10px; margin-left:5px; display:inline-flex; align-items:center;">${window.getFurnaceIconHtml(flVal)}</span>`;
-                     if (isEnrolled) rosterInfoHtml += `<span style="background:rgba(16,185,129,0.1); color:var(--success); border:1px solid var(--success); padding:2px 6px; border-radius:10px; font-size:10px; margin-left:5px;">&#x2705; Enrolled</span>`;
-                     if (taVal) rosterInfoHtml += `<span style="background:rgba(255,255,255,0.1); border:1px solid var(--border); color:var(--text-main); padding:2px 6px; border-radius:10px; font-size:10px; margin-left:5px;">⏱️ ${taVal}</span>`;
-                     break;
-                 }
-             }
+        if (rosterRawData) {
+            const p = Object.values(rosterRawData).find(rp => rp.name && rp.name.toLowerCase() === cName.toLowerCase());
+            if (p) {
+                let flVal = p.furnaceLevel;
+                let gcVal = p.giftCodes;
+                let taVal = p.timeActive;
+                let isEnrolled = (gcVal === true || gcVal === 'TRUE' || (typeof gcVal === 'string' && gcVal.toLowerCase().trim() === 'true'));
+                
+                if (flVal) rosterInfoHtml += `<span style="background:rgba(255,255,255,0.1); border:1px solid var(--border); color:var(--text-main); padding:2px 6px; border-radius:10px; font-size:10px; margin-left:5px; display:inline-flex; align-items:center;">${window.getFurnaceIconHtml(flVal)}</span>`;
+                if (isEnrolled) rosterInfoHtml += `<span style="background:rgba(16,185,129,0.1); color:var(--success); border:1px solid var(--success); padding:2px 6px; border-radius:10px; font-size:10px; margin-left:5px;">&#x2705; Enrolled</span>`;
+                if (taVal) rosterInfoHtml += `<span style="background:rgba(255,255,255,0.1); border:1px solid var(--border); color:var(--text-main); padding:2px 6px; border-radius:10px; font-size:10px; margin-left:5px;">⏱️ ${taVal}</span>`;
+            }
         }
         
         html += `
@@ -3069,12 +3129,8 @@ const views = {
        
        let allPlayers = [];
        try {
-          const rosterRawData = await fetchSheet("Chief's List");
-          if (rosterRawData && rosterRawData.length > 0) {
-             for (let i = 1; i < rosterRawData.length; i++) {
-                if (rosterRawData[i][0]) allPlayers.push(rosterRawData[i][0].toString().trim());
-             }
-          }
+          const rosterRawData = await window.fetchRoster();
+          if (rosterRawData) { Object.values(rosterRawData).forEach(p => { if (p.name) allPlayers.push(p.name); }); }
        } catch(e) { console.error("Error fetching roster", e); }
        
        if (allPlayers.length === 0) allPlayers = Object.keys(sdLiveData);
@@ -3287,7 +3343,7 @@ const views = {
     // Fetch roster so datalist has everyone, not just registered users
     let rosterRawData = null;
     try {
-      rosterRawData = await fetchSheet("Chief's List");
+      rosterRawData = await window.fetchRoster();
     } catch (e) {
       console.error("Failed to load roster for datalist", e);
     }
@@ -3490,7 +3546,7 @@ const views = {
     let usersSnap = null;
     try {
       const results = await Promise.all([
-        fetchSheet("Chief's List"),
+        window.fetchRoster(),
         get(ref(db, 'users'))
       ]);
       rosterRawData = results[0];
@@ -3506,14 +3562,7 @@ const views = {
     });
     
     const players = [];
-    if (rosterRawData && rosterRawData.length > 0) {
-      for (let i = 1; i < rosterRawData.length; i++) {
-        let name = rosterRawData[i][0];
-        if (name && name.toString().trim() !== "") {
-          players.push(name.toString().trim());
-        }
-      }
-    }
+    if (rosterRawData) { Object.values(rosterRawData).forEach(p => { if (p.name) players.push(p.name); }); }
     
     await refreshIdToNameMap();
     players.sort((a, b) => a.localeCompare(b));
@@ -3784,24 +3833,18 @@ const views = {
       }
       
 
-      const rosterRawData = window.liveData["Chief's List"];
-      if (rosterRawData && rosterRawData.length > 0) {
-          for (let i = 1; i < rosterRawData.length; i++) {
-              if (rosterRawData[i][0] && rosterRawData[i][0].toString().trim().toLowerCase() === currentChiefName.toLowerCase()) {
-                  if (rosterRawData[i][2]) {
-                      furnaceLevelStr = rosterRawData[i][2].toString();
-                  }
-                  if (rosterRawData[i][4]) {
-                       try {
-                          const d = new Date(rosterRawData[i][4]);
-                          if (!isNaN(d)) joinedDateStr = d.toLocaleDateString();
-                       } catch(e){}
-                  }
-                  if (rosterRawData[i][5]) {
-                      timeActiveStr = window.formatTimeActiveShort(rosterRawData[i][5].toString());
-                  }
-                  break;
+      const rosterRawData = await window.fetchRoster();
+      if (rosterRawData) {
+          const p = Object.values(rosterRawData).find(rp => rp.name && rp.name.toLowerCase() === currentChiefName.toLowerCase());
+          if (p) {
+              if (p.furnaceLevel) furnaceLevelStr = p.furnaceLevel.toString();
+              if (p.joinedDate) {
+                  try {
+                      const d = new Date(p.joinedDate);
+                      if (!isNaN(d)) joinedDateStr = d.toLocaleDateString();
+                  } catch(e){}
               }
+              if (p.timeActive) timeActiveStr = window.formatTimeActiveShort(p.timeActive.toString());
           }
       }
 
@@ -4913,7 +4956,7 @@ const views = {
       
       const [data, rosterRawData, lbRawData, sdHistoryRawData, sdLiveSnap] = await Promise.all([
             fetchSheet("activity "),
-            fetchSheet("Chief's List"),
+            window.fetchRoster(),
             fetchSheet("LeaderBoards"),
             fetchSheet("Showdown History"),
             get(ref(db, 'showdown_live'))
@@ -4951,21 +4994,7 @@ const views = {
       
       if (!data || data.length < 2) throw new Error("No data found.");
       
-      // Parse roster data into a lookup map (Col A -> { giftCodes: Col C, timeActive: Col E })
-      const rosterMap = {};
-      if (rosterRawData && rosterRawData.length > 0) {
-        for (let i = 1; i < rosterRawData.length; i++) {
-          let name = rosterRawData[i][0];
-          if (name) {
-            rosterMap[name.toString().trim()] = {
-              furnaceLevel: rosterRawData[i][2], // Col C
-              giftCodes: rosterRawData[i][3], // Col D
-              joinedDate: rosterRawData[i][4], // Col E
-              timeActive: rosterRawData[i][5] // Col F
-            };
-          }
-        }
-      }
+      const rosterMap = rosterRawData || {};
       await refreshIdToNameMap();
       
       // Parse Leaderboards data into a lookup map (Name -> [{title, score, emoji}])
@@ -5845,32 +5874,30 @@ const views = {
   analytics: async () => {
     renderLoading("Loading Analytics");
     try {
-      const rosterRawData = await fetchSheet("Chief's List");
+      const rosterRawData = await window.fetchRoster();
       
-      if (!rosterRawData || rosterRawData.length < 2) throw new Error("No data found.");
+      if (!rosterRawData) throw new Error("No data found.");
       
       let giftCodesYes = 0;
       let giftCodesNo = 0;
       
       // Parse roster data to count gift code redemptions
-      // Column C (index 2) holds the Gift Codes boolean
-      for (let i = 1; i < rosterRawData.length; i++) {
-        let name = rosterRawData[i][0];
-        if (name && name.toString().trim() !== "") {
-          let gcVal = rosterRawData[i][3];
-          if (gcVal !== undefined && gcVal !== null && gcVal !== "") {
-            let strVal = gcVal.toString().toLowerCase().trim();
-            if (gcVal === true || strVal === "true" || strVal === "✓" || strVal === "yes") {
-              giftCodesYes++;
-            } else if (gcVal === false || strVal === "false" || strVal === "✗" || strVal === "no") {
-              giftCodesNo++;
+      if (rosterRawData) {
+        Object.values(rosterRawData).forEach(p => {
+          if (p.name) {
+            let gcVal = p.giftCodes;
+            if (gcVal !== undefined && gcVal !== null && gcVal !== "") {
+              let strVal = gcVal.toString().toLowerCase().trim();
+              if (gcVal === true || strVal === "true" || strVal === "✓" || strVal === "yes") {
+                giftCodesYes++;
+              } else {
+                giftCodesNo++;
+              }
             } else {
-              giftCodesNo++; // Treat any weird string as not signed up
+              giftCodesNo++;
             }
-          } else {
-            giftCodesNo++; // Treat missing as not signed up
           }
-        }
+        });
       }
       
       let html = `
