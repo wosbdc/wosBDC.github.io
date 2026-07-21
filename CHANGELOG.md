@@ -1,3 +1,7 @@
+## [1.29.5] - 2026-07-21
+### Changed
+- **Showdown Goals**: Renamed the "Goal" column to "Left to 20M" in both the Analytics Dashboard and Home leaderboards to accurately reflect a countdown logic showing how many points the Alliance needs to reach the 20,000,000 total event goal based on cumulative scores.
+
 ## [1.29.4] - 2026-07-21
 ### Changed
 - **Showdown Settings Redesign**: Hardcoded the static event goals (3.3M/day, 20M total) and daily horns, removing unnecessary inputs from the Settings page.

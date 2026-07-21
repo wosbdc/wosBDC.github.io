@@ -4508,14 +4508,18 @@ const views = {
          
          let totalAllianceScore = ourScores.d1 + ourScores.d2 + ourScores.d3 + ourScores.d4 + ourScores.d5 + ourScores.d6;
          
-         let sdHeaders = ["Event Day", "Daily Goal", "Left +/-", "Goal", "Daily Amount"];
+         let sdHeaders = ["Event Day", "Daily Goal", "Left +/-", "Left to 20M", "Daily Amount"];
          let sdRows = [];
          
          const dailyGoal = 3333333;
+         let cumulativeScore = 0;
          
          for (let i = 1; i <= 6; i++) {
              let dg = dailyGoal;
-             let g = dailyGoal * i;
+             let dailyAmtNum = ourScores['d'+i] || 0;
+             cumulativeScore += dailyAmtNum;
+             let g = 20000000 - cumulativeScore;
+             
              let dailyAmt = ourScores['d'+i];
              let leftVal = dg - dailyAmt;
              
@@ -4853,9 +4857,13 @@ const views = {
          
        goalsCard += `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px;">`;
        
+       let cumulativeScore = 0;
        for (let i = 1; i <= 6; i++) {
           let dg = dailyGoal;
-          let g = dailyGoal * i;
+          let dailyAmtNum = ourScores['d'+i] || 0;
+          cumulativeScore += dailyAmtNum;
+          let g = 20000000 - cumulativeScore;
+          
           let dailyAmt = ourScores['d'+i];
           let leftVal = dg - dailyAmt;
           
@@ -4895,7 +4903,7 @@ const views = {
                <span style="${leftStyle}">${leftStr}</span>
              </div>
              <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-               <span style="color: var(--text-muted); font-size: 0.9em;">Goal</span>
+               <span style="color: var(--text-muted); font-size: 0.9em;">Left to 20M</span>
                <span>${gStr}</span>
              </div>
              <div style="display: flex; justify-content: space-between;">
