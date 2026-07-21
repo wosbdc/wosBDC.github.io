@@ -59,6 +59,8 @@ const settingsSidebar = document.getElementById('settingsSidebar');
 const sidebarOverlay = document.getElementById('sidebarOverlay');
 
 const openSidebar = () => {
+  // Force close any open autocomplete dropdowns to fix Apple/Safari bug
+  document.querySelectorAll('.custom-autocomplete-dropdown').forEach(d => d.style.display = 'none');
   if(settingsSidebar) settingsSidebar.classList.add('open');
   if(sidebarOverlay) sidebarOverlay.classList.add('active');
 };
@@ -84,6 +86,8 @@ const mobileMenu = document.getElementById('mobileMenu');
 
 if(mobileMenuBtn) {
   mobileMenuBtn.addEventListener('click', () => {
+    // Force close any open autocomplete dropdowns
+    document.querySelectorAll('.custom-autocomplete-dropdown').forEach(d => d.style.display = 'none');
     if(mobileMenu) mobileMenu.classList.toggle('open');
   });
 }
