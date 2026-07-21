@@ -1,3 +1,6 @@
+## [1.27.47] - 2026-07-20
+- Added the Showdown Event Goals chart to the Leaderboards view, positioning it directly underneath the other two Showdown leaderboards for a balanced layout. Also fixed a bug on the Showdown page where admin notes were accidentally rendered inside the player rankings table.
+
 ## [1.27.46] - 2026-07-20
 - Fixed a major data-fetching bug causing the Showdown page to crash. When data wasn't fully synced to the new Firebase real-time database, the app failed to correctly fallback to the Google Apps Script live backend. The data loader now properly detects empty Firebase nodes and seamlessly falls back to the live spreadsheet data.
 

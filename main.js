@@ -4046,6 +4046,47 @@ const views = {
          console.warn("Could not fetch bt winners", e);
       }
 
+      // Fetch Showdown Event Goals
+      try {
+        const sdData = await fetchSheet("Showdown");
+        let sdHeaders = ["Event Day", "Daily Goal", "Left +/-", "Goal", "Daily Amount"];
+        let sdRows = [];
+        for (let r = 0; r < sdData.length; r++) {
+          if (sdData[r].some(c => typeof c === 'string' && c.toLowerCase().includes('allience showdown'))) {
+            let startCol = sdData[r].findIndex(c => typeof c === 'string' && c.toLowerCase().includes('allience showdown'));
+            for (let i = 1; i <= 6; i++) {
+              if (r + i < sdData.length) {
+                let dRow = sdData[r + i];
+                let eventDay = dRow[startCol] || "";
+                if (!eventDay) break;
+                sdRows.push([
+                  eventDay,
+                  dRow[startCol + 2] || "",
+                  dRow[startCol + 3] || "",
+                  dRow[startCol + 4] || "",
+                  dRow[startCol + 5] || ""
+                ]);
+              }
+            }
+            break;
+          }
+        }
+        if (sdRows.length > 0) {
+           let title = "Event Goals (Showdown)";
+           if (!filterString || title.toLowerCase().includes(filterString.toLowerCase())) {
+             let showdownIndex = boards.findIndex(b => b.title.toLowerCase().includes('all-time showdown'));
+             let insertIndex = showdownIndex !== -1 ? showdownIndex + 1 : boards.length;
+             boards.splice(insertIndex, 0, {
+                title: "🎯 " + title,
+                headers: sdHeaders,
+                rows: sdRows
+             });
+           }
+        }
+      } catch (e) {
+        console.warn("Could not fetch showdown event goals for leaderboards view", e);
+      }
+
       html += `<div style="display:flex; flex-wrap:wrap; gap:20px;">`;
       
       boards.forEach(board => {
@@ -4234,8 +4275,8 @@ const views = {
           let allTimeGoal = 20000000;
           let allTimeProgress = Math.min(100, (totalAllianceScore / allTimeGoal) * 100);
           
-          goalsCard += `<div class="card" style="margin-bottom:20px; box-shadow:0 10px 15px -3px rgba(0,0,0,0.1);">
-            <h3 style="margin-top:0; color:var(--text-main); font-size:20px; margin-bottom:20px;">🏆 Alliance Showdown Progress</h3>
+          goalsCard += `<div class="card" style="margin-bottom:20px; box-shadow:0 10px 15px -3px rgba(0,0,0,0.1); overflow-x:auto;">
+            <div class="card-title">🎯 Event Goals</div>
             
             <div style="margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px dashed var(--border);">
               <div style="display:flex; justify-content:space-between; font-size:16px; font-weight:bold; margin-bottom:8px;">
@@ -4247,7 +4288,17 @@ const views = {
               </div>
             </div>
             
-            <div style="display:flex; flex-direction:column; gap:16px;">`;
+            <table>
+              <thead>
+                <tr>
+                  <th>Event Day</th>
+                  <th>Daily Goal</th>
+                  <th>Left +/-</th>
+                  <th>Goal</th>
+                  <th>Daily Amount</th>
+                </tr>
+              </thead>
+              <tbody>`;
           
           for (let i = 1; i <= 6; i++) {
             if (r + i < data.length) {
@@ -4255,24 +4306,22 @@ const views = {
               let eventDay = dRow[startCol] || "";
               if (!eventDay) break;
               
-              let goal = Number(dRow[startCol + 2]) || 0; // Index 8 (Daily Goal)
-              let dailyAmt = Number(dRow[startCol + 5]) || 0; // Index 11 (Daily Amount)
-              
-              let progress = goal > 0 ? Math.min(100, (dailyAmt / goal) * 100) : 0;
+              let dailyGoal = dRow[startCol + 2] || "";
+              let left = dRow[startCol + 3] || "";
+              let goal = dRow[startCol + 4] || "";
+              let dailyAmt = dRow[startCol + 5] || "";
               
               goalsCard += `
-                <div>
-                  <div style="display:flex; justify-content:space-between; font-size:13px; font-weight:bold; margin-bottom:6px;">
-                    <span style="color:var(--text-main);">${eventDay}</span>
-                    <span style="color:var(--text-muted);">${formatNumber(dailyAmt)} / <span style="color:var(--accent);">${formatNumber(goal)}</span></span>
-                  </div>
-                  <div style="width:100%; height:8px; background:rgba(0,0,0,0.2); border-radius:4px; overflow:hidden; border:1px solid var(--border);">
-                    <div style="width:${progress}%; height:100%; background:var(--accent); border-radius:4px; transition:width 1.5s cubic-bezier(0.4, 0, 0.2, 1); box-shadow:0 0 10px var(--accent);"></div>
-                  </div>
-                </div>`;
+                <tr>
+                  <td style="font-weight:bold; color:var(--text-main);">${eventDay}</td>
+                  <td>${typeof dailyGoal === 'number' ? formatNumber(dailyGoal) : dailyGoal}</td>
+                  <td style="${typeof left === 'number' && left <= 0 ? 'color:var(--success)' : (typeof left === 'number' && left > 0 ? 'color:var(--danger)' : '')}">${typeof left === 'number' ? formatNumber(left) : left}</td>
+                  <td>${typeof goal === 'number' ? formatNumber(goal) : goal}</td>
+                  <td style="font-weight:bold; color:var(--accent);">${typeof dailyAmt === 'number' ? formatNumber(dailyAmt) : dailyAmt}</td>
+                </tr>`;
             }
           }
-          goalsCard += `</div></div>`;
+          goalsCard += `</tbody></table></div>`;
         }
         
         // 2. Find Alliance's Horns/Scores
@@ -4308,7 +4357,6 @@ const views = {
                   let ourRow = r + 2 < data.length ? data[r+2] : null;
                   
                   if (enemyRow && ourRow) {
-                    // Extract raw numeric values (remove commas if they exist, though they are usually pure numbers from API)
                     let eScore = Number(enemyRow[c].toString().replace(/,/g, '')) || 0;
                     let oScore = Number(ourRow[c].toString().replace(/,/g, '')) || 0;
                     
@@ -4347,8 +4395,8 @@ const views = {
             let pRow = data[pr];
             let member = pRow[startCol + 1];
             
-            // Stop parsing if we hit an empty row or the discord templates
-            if (pRow.every(cell => cell === "") || (typeof member === 'string' && member.includes("Showdown Update"))) {
+            // Stop parsing if we hit an empty row or the discord templates ANYWHERE in the row
+            if (pRow.every(cell => cell === "") || pRow.some(cell => typeof cell === 'string' && cell.includes("Showdown Update"))) {
               break;
             }
             
@@ -4376,7 +4424,7 @@ const views = {
       if (!goalsCard && !allianceCard && !playersCard) {
         html += `<div class="card"><div class="loading" style="color:var(--danger);">Could not parse Showdown layout. Check Spreadsheet formatting.</div></div>`;
       } else {
-        html += goalsCard + allianceCard + playersCard;
+        html += allianceCard + playersCard + goalsCard;
       }
       
       html += `</div>`;
