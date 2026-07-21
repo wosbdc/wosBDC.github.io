@@ -780,174 +780,144 @@ window.adminFetchAltFurnace = async (gid, spanId) => {
     } catch(e) {}
 };
 
-  window.doPlayerLookup = async (playerName) => {
-    let name = playerName ? playerName : document.getElementById('rosterPlayerSelect').value;
-    if (!name) return;
-    
-    // Check if the input is actually a game ID
-    if (!isNaN(name) && name.length >= 7) {
-       await refreshIdToNameMap();
-       let foundName = idToNameMap[name];
-       if (foundName) name = foundName;
-       else if(window.showToast) {
-          window.showToast("Could not resolve ID to player name", "error");
-          return;
-       }
-    }
-    
-    const resDiv = document.getElementById('rosterLookupResult');
-    if (!resDiv) {
-      if (document.getElementById('playerLookupCustomDropdown')) {
-        document.getElementById('playerLookupCustomDropdown').style.display = 'none';
-      }
-      return;
-    }
-    
-    resDiv.style.display = 'block';
-    if (!window.liveData || !window.liveData["activity "]) {
-      resDiv.innerHTML = '<div style="text-align:center; padding:20px;"><span style="color:var(--text-muted)">Querying master database...</span></div>';
-    }
-    
-    try {
-      const db = window.firebaseDb;
-      const { ref, get } = window.firebase.database;
+window.searchPlayerFull = async (name) => {
+  if (name) name = name.replace(/^✅\s*/, '');
+  window.activeViewFunc = () => window.searchPlayerFull(name);
+  const resDiv = document.getElementById('uniEditorRes');
+  if (!name || !name.trim()) {
+    resDiv.style.display = 'none';
+    return;
+  }
+  
+  resDiv.style.display = 'block';
+  if (!window.liveData || !window.liveData["activity "]) {
+    resDiv.innerHTML = '<div style="text-align:center; padding:20px;"><span style="color:var(--text-muted)">Querying master database...</span></div>';
+  }
+  
+  try {
+    let sdLiveSnapshotPromise = window.fetchMergedShowdown();
+    const [data, rosterRawData, lbRawData, sdHistoryRawData, sdMergedDataRes] = await Promise.all([
+            fetchSheet("activity "),
+            fetchSheet("Chief's List"),
+            fetchSheet("LeaderBoards"),
+            fetchSheet("Showdown History"),
+            sdLiveSnapshotPromise
+          ]);
+    const sdCurrentRawData = sdMergedDataRes.mergedData;
+    const sdLiveData = sdMergedDataRes.sdLiveData || {};
 
-      const [data, rosterRawData, lbRawData, sdHistoryRawData, sdLiveSnap] = await Promise.all([
-              fetchSheet("activity "),
-              fetchSheet("Chief's List"),
-              fetchSheet("LeaderBoards"),
-              fetchSheet("Showdown History"),
-              get(ref(db, 'showdown_live'))
-            ]);
-      
-      const sdLiveData = sdLiveSnap.val() || {};
-  
-      let currentDay = 0;
-      Object.values(sdLiveData).forEach(p => {
-         if ((p.d6||0) > 0 && currentDay < 6) currentDay = 6;
-         else if ((p.d5||0) > 0 && currentDay < 5) currentDay = 5;
-         else if ((p.d4||0) > 0 && currentDay < 4) currentDay = 4;
-         else if ((p.d3||0) > 0 && currentDay < 3) currentDay = 3;
-         else if ((p.d2||0) > 0 && currentDay < 2) currentDay = 2;
-         else if ((p.d1||0) > 0 && currentDay < 1) currentDay = 1;
-      });
-      if (data && data.length > 1) {
-          for (let r = 1; r < data.length; r++) {
-             let pName = data[r][0];
-             if (!pName) continue;
-             let safeName = pName.toString().trim();
-             let missedCount = 0;
-             if (currentDay > 0) {
-                let p = sdLiveData[safeName] || {};
-                for (let i = 1; i <= currentDay; i++) {
-                   if (!(p['d'+i] > 0)) missedCount++;
-                }
-             }
-             data[r][1] = missedCount;
-          }
-      }
-          
-          let usersSnap = null;
-          try { usersSnap = await get(ref(db, 'users')); } catch(e) { console.warn("Could not fetch users:", e); }
-      
-      // Parse Maps
-      const rosterMap = {};
-      if (rosterRawData && rosterRawData.length > 0) {
-        for (let i = 1; i < rosterRawData.length; i++) {
-          let chief = rosterRawData[i][0];
-          if (chief) rosterMap[chief.toString().trim()] = { furnaceLevel: rosterRawData[i][2], giftCodes: rosterRawData[i][3], timeActive: rosterRawData[i][5] };
+    let currentDay = 0;
+    Object.values(sdLiveData).forEach(p => {
+       if ((p.d6||0) > 0 && currentDay < 6) currentDay = 6;
+       else if ((p.d5||0) > 0 && currentDay < 5) currentDay = 5;
+       else if ((p.d4||0) > 0 && currentDay < 4) currentDay = 4;
+       else if ((p.d3||0) > 0 && currentDay < 3) currentDay = 3;
+       else if ((p.d2||0) > 0 && currentDay < 2) currentDay = 2;
+       else if ((p.d1||0) > 0 && currentDay < 1) currentDay = 1;
+    });
+    if (data && data.length > 1) {
+        for (let r = 1; r < data.length; r++) {
+           let pName = data[r][0];
+           if (!pName) continue;
+           let safeName = pName.toString().trim();
+           let missedCount = 0;
+           if (currentDay > 0) {
+              let p = sdLiveData[safeName] || {};
+              for (let i = 1; i <= currentDay; i++) {
+                 if (!(p['d'+i] > 0)) missedCount++;
+              }
+           }
+           data[r][1] = missedCount;
         }
+    }
+        
+        let usersSnap = null;
+        try { usersSnap = await get(ref(db, 'users')); } catch(e) { console.warn("Could not fetch users:", e); }
+    
+    // Parse Maps
+    const rosterMap = {};
+    if (rosterRawData && rosterRawData.length > 0) {
+      for (let i = 1; i < rosterRawData.length; i++) {
+        let chief = rosterRawData[i][0];
+        if (chief) rosterMap[chief.toString().trim()] = { furnaceLevel: rosterRawData[i][2], giftCodes: rosterRawData[i][3], timeActive: rosterRawData[i][5] };
       }
-      
-  
-  
-      let btDonationsAllTime = null, btDonationsCurrent = null, bear1 = null, bear2 = null, bearBoth = null, bearAllTime = null;
-      let otherLbs = [];
-      
-      if (lbRawData) {
-        for (let r = 0; r < lbRawData.length; r++) {
-          for (let c = 0; c < lbRawData[r].length; c++) {
-            let cell = lbRawData[r][c];
-            if (typeof cell === 'string' && cell.toLowerCase().includes('leaderboard')) {
-              let title = cell.replace(/leaderboard/i, '').trim();
+    }
+    
+
+
+    let btDonationsAllTime = null, btDonationsCurrent = null, bear1 = null, bear2 = null, bearBoth = null, bearAllTime = null;
+    let otherLbs = [];
+    
+    if (lbRawData) {
+      for (let r = 0; r < lbRawData.length; r++) {
+        for (let c = 0; c < lbRawData[r].length; c++) {
+          let cell = lbRawData[r][c];
+          if (typeof cell === 'string' && (cell.toLowerCase().includes('leaderboard') || (cell.toLowerCase().includes('all-time') && (cell.toLowerCase().includes('bear') || cell.toLowerCase().includes('bt')) && cell.toLowerCase().includes('donation')))) {
+            let title = cell.replace(/leaderboard/i, '').trim();
+            let emoji = "🏆";
+            if (title.toLowerCase().includes("bear")) emoji = "🐻";
+            else if (title.toLowerCase().includes("showdown")) emoji = "⚔️";
+            
+            let scoreCol = c + 2;
+            if (r + 1 < lbRawData.length) {
+              let hc = c;
+              while (hc < lbRawData[r+1].length && lbRawData[r+1][hc] !== "") { scoreCol = hc; hc++; }
+            }
+            
+            let dr = r + 2;
+            while (dr < lbRawData.length && lbRawData[dr][c] !== "") {
+              let pRank = lbRawData[dr][c];
+              let pName = lbRawData[dr][c + 1];
+              let pScore = lbRawData[dr][scoreCol];
               
-              let scoreCol = c + 1;
-              for (let i = c + 1; i <= c + 10; i++) {
-                if (!lbRawData[r+1] || !lbRawData[r+1][i]) break;
-                scoreCol = i;
+              if (pName && pScore && pName.toString().trim() === name) {
+                if (typeof pScore === 'number') pScore = pScore.toLocaleString();
+                else if (typeof pScore === 'string' && !isNaN(pScore) && pScore.trim() !== "") pScore = Number(pScore).toLocaleString();
+                
+                let t = title.toLowerCase();
+                if (t.includes('all-time showdown')) { /* noop */ }
+                else if (t.includes('all-time bear trap')) bearAllTime = {rank: pRank, score: pScore};
+                else if (t.includes('bear trap 1')) bear1 = {rank: pRank, score: pScore};
+                else if (t.includes('bear trap 2')) bear2 = {rank: pRank, score: pScore};
+                else if (t.includes('both bear trap')) bearBoth = {rank: pRank, score: pScore};
+                else if ((t.includes('all-time') && (t.includes('bear') || t.includes('bt')) && t.includes('donation'))) btDonationsAllTime = {rank: pRank, score: pScore};
+                else if (((t.includes('bear') || t.includes('bt')) && t.includes('donation'))) btDonationsCurrent = {rank: pRank, score: pScore};
+                else otherLbs.push({ title, score: pScore, rank: pRank, emoji });
               }
-              
-              let hr = r + 2;
-              while (hr < lbRawData.length && lbRawData[hr][c] && lbRawData[hr][c].toString().trim() !== "") {
-                let pName = lbRawData[hr][c+1];
-                let score = lbRawData[hr][scoreCol];
-                if (pName && pName.toString().trim() === name && score !== undefined && score !== "") {
-                  let rank = lbRawData[hr][c] || hr - (r + 1);
-                  if (typeof rank === 'number') {
-                     if (rank === 1) rank = '🥇 1st';
-                     else if (rank === 2) rank = '🥈 2nd';
-                     else if (rank === 3) rank = '🥉 3rd';
-                     else rank += 'th';
-                  }
-                  
-                  let isAllTime = title.toLowerCase().includes("all-time") || title.toLowerCase().includes("all time");
-                  let isBear = title.toLowerCase().includes("bear") || title.toLowerCase().includes("bt");
-                  
-                  let formattedScore = score;
-                  if (typeof score === 'number') {
-                    if (score >= 1000000) formattedScore = (score / 1000000).toFixed(1) + 'M';
-                    else formattedScore = score.toLocaleString();
-                  }
-                  
-                  if (isBear && isAllTime && title.toLowerCase().includes("donation")) btDonationsAllTime = { score: formattedScore, rank };
-                  else if (isBear && title.toLowerCase().includes("donation")) btDonationsCurrent = { score: formattedScore, rank };
-                  else if (isBear && isAllTime) bearAllTime = { score: formattedScore, rank };
-                  else if (isBear && title.toLowerCase().includes("1")) bear1 = { score: formattedScore, rank };
-                  else if (isBear && title.toLowerCase().includes("2")) bear2 = { score: formattedScore, rank };
-                  else if (isBear && title.toLowerCase().includes("both")) bearBoth = { score: formattedScore, rank };
-                  else otherLbs.push({ title, score: formattedScore, rank });
-                }
-                hr++;
-              }
+              dr++;
             }
           }
         }
       }
-      
-      const allTimeShowdownMap = {};
-      const processShowdownTable = (tableData) => {
-        if (!tableData) return;
-        for (let r = 0; r < tableData.length; r++) {
-          let row = tableData[r];
-          if (row.some(c => typeof c === 'string' && c.toLowerCase().trim() === 'ranking')) {
-            let nameCol = row.findIndex(c => typeof c === 'string' && (c.toLowerCase().includes('name') || c.toLowerCase().includes('member') || c.toLowerCase().includes('player')));
-            let totalCol = row.findIndex(c => typeof c === 'string' && (c.toLowerCase().includes('total')));
-            if (nameCol !== -1 && totalCol !== -1) {
-              let dr = r + 1;
-              while (dr < tableData.length && tableData[dr][nameCol] && (tableData[dr][nameCol].toString().toLowerCase().includes('horns') || tableData[dr][nameCol].toString().toLowerCase().includes('winners'))) dr++;
-              while (dr < tableData.length && tableData[dr][nameCol] !== undefined && tableData[dr][nameCol] !== "") {
-                let pName = tableData[dr][nameCol];
-                let pScore = tableData[dr][totalCol];
-                if (pName && (typeof pScore === 'number' || (typeof pScore === 'string' && !isNaN(pScore)))) {
-                  let safeName = pName.toString().trim();
-                  if (!allTimeShowdownMap[safeName]) allTimeShowdownMap[safeName] = 0;
-                  allTimeShowdownMap[safeName] += Number(pScore);
-                }
-                dr++;
+    }
+    
+    const allTimeShowdownMap = {};
+    const processShowdownTable = (tableData) => {
+      if (!tableData) return;
+      for (let r = 0; r < tableData.length; r++) {
+        let row = tableData[r];
+        if (row.some(c => typeof c === 'string' && c.toLowerCase().trim() === 'ranking')) {
+          let nameCol = row.findIndex(c => typeof c === 'string' && (c.toLowerCase().includes('name') || c.toLowerCase().includes('member') || c.toLowerCase().includes('player')));
+          let totalCol = row.findIndex(c => typeof c === 'string' && (c.toLowerCase().includes('total')));
+          if (nameCol !== -1 && totalCol !== -1) {
+            let dr = r + 1;
+            while (dr < tableData.length && tableData[dr][nameCol] && (tableData[dr][nameCol].toString().toLowerCase().includes('horns') || tableData[dr][nameCol].toString().toLowerCase().includes('winners'))) dr++;
+            while (dr < tableData.length && tableData[dr][nameCol] !== undefined && tableData[dr][nameCol] !== "") {
+              let pName = tableData[dr][nameCol];
+              let pScore = tableData[dr][totalCol];
+              if (pName && (typeof pScore === 'number' || (typeof pScore === 'string' && !isNaN(pScore)))) {
+                let safeName = pName.toString().trim();
+                if (!allTimeShowdownMap[safeName]) allTimeShowdownMap[safeName] = 0;
+                allTimeShowdownMap[safeName] += Number(pScore);
               }
+              dr++;
             }
           }
         }
-      };
-      processShowdownTable(sdHistoryRawData);
-      
-      for (const [pName, scores] of Object.entries(sdLiveData)) {
-          let safeName = pName.toString().trim();
-          let pScore = (scores.d1||0) + (scores.d2||0) + (scores.d3||0) + (scores.d4||0) + (scores.d5||0) + (scores.d6||0);
-          if (!allTimeShowdownMap[safeName]) allTimeShowdownMap[safeName] = 0;
-          allTimeShowdownMap[safeName] += pScore;
       }
-
+    };
+    processShowdownTable(sdHistoryRawData);
+    processShowdownTable(sdCurrentRawData);
     
     let dynamicSD = null;
     const sortedShowdownPlayers = Object.entries(allTimeShowdownMap).map(([n, s]) => ({ name: n, score: s })).sort((a, b) => b.score - a.score);
@@ -2529,7 +2499,6 @@ const views = {
               <button onclick="views.beartrap()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px;">🥩 Open Multi-BT Donations</button>
               <button onclick="views.playerEditor()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px;">👤 Open Player Database Editor</button>
               <button onclick="views.showdownDataEntry()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px;">⚔️ Showdown Data Entry</button>
-              <button onclick="views.showdownEventSettings()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px;">⚙️ Showdown Event Settings</button>
             </div>
 
             <!-- Push Notification Broadcast -->
@@ -3131,9 +3100,9 @@ const views = {
           
           try {
              const { ref, set } = window.firebase.database;
-             await set(ref(db, `showdown_live/${sel}`), updates);
+             await set(ref(db, \`showdown_live/\${sel}\`), updates);
              window._currentSdLiveData[sel] = updates;
-             if (window.showToast) window.showToast(`Saved scores for ${sel}`, "success");
+             if (window.showToast) window.showToast(\`Saved scores for \${sel}\`, "success");
              
              // Sync the cached data to reflect this so navigation uses updated scores
              if (window.liveData['Showdown']) {
@@ -3151,113 +3120,6 @@ const views = {
     } catch(e) {
        mainContent.innerHTML = '<div class="card"><div class="loading" style="color:var(--danger);">Error loading Data Entry UI</div></div>';
        console.error(e);
-    }
-  },
-  
-  showdownEventSettings: async () => {
-    const mainContent = document.getElementById('mainContent');
-    if (!mainContent) return;
-    
-    const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
-    if (!isManager) {
-       if(window.showToast) window.showToast("Only R4/R5 managers can edit Showdown data", "error");
-       return;
-    }
-    
-    renderLoading("Loading Event Settings...");
-    try {
-       const db = window.firebaseDb;
-       const { ref, get } = window.firebase.database;
-       const snap = await get(ref(db, 'showdown_meta'));
-       let meta = snap.val() || {};
-       if (!meta.eventGoals) meta.eventGoals = {};
-       if (!meta.enemyAlliance) meta.enemyAlliance = { name: "", scores: {} };
-       if (!meta.horns) meta.horns = {};
-       if (!meta.winners) meta.winners = {};
-       
-       let html = `<div class="card" style="position:relative; max-width:600px; margin:0 auto; animation: fadeIn 0.3s ease;">
-         <button onclick="views.admin()" style="position:absolute; top:20px; right:20px; background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); padding:5px 12px; border-radius:6px; cursor:pointer;">&times; Close</button>
-         <h2 style="color:var(--accent); margin-top:0;">⚙️ Showdown Settings</h2>
-         <p style="color:var(--text-muted); font-size:14px;">Update the Event Goals, Enemy Alliance, Horns, and Daily Winners for the Alliance Showdown.</p>
-         
-         <div style="margin-bottom:20px;">
-           <label style="font-weight:bold; color:var(--text-main); display:block; margin-bottom:5px;">Enemy Alliance Name</label>
-           <input type="text" id="metaEnemyName" value="${meta.enemyAlliance.name || ''}" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
-         </div>
-
-         <div style="background:var(--bg-main); padding:15px; border-radius:8px; border:1px solid var(--border); margin-bottom:20px; overflow-x:auto;">
-           <table style="width:100%; border-collapse:collapse; text-align:left; min-width:500px;">
-             <thead>
-               <tr style="border-bottom:1px solid var(--border);">
-                 <th style="padding:8px 5px; color:var(--text-muted);">Day</th>
-                 <th style="padding:8px 5px; color:var(--text-muted);">Daily Goal</th>
-                 <th style="padding:8px 5px; color:var(--text-muted);">Total Goal</th>
-                 <th style="padding:8px 5px; color:var(--text-muted);">Enemy Score</th>
-                 <th style="padding:8px 5px; color:var(--text-muted);">Horns</th>
-                 <th style="padding:8px 5px; color:var(--text-muted);">Winner</th>
-               </tr>
-             </thead>
-             <tbody>`;
-             
-       for (let i = 1; i <= 6; i++) {
-         let dg = meta.eventGoals['d'+i] ? meta.eventGoals['d'+i].dailyGoal : 0;
-         let g = meta.eventGoals['d'+i] ? meta.eventGoals['d'+i].goal : 0;
-         let es = meta.enemyAlliance.scores['d'+i] || 0;
-         let h = meta.horns['d'+i] || 0;
-         let w = meta.winners['d'+i] || '';
-         
-         html += `<tr>
-           <td style="padding:8px 5px; font-weight:bold; color:var(--text-main);">Day ${i}</td>
-           <td style="padding:8px 5px;"><input type="number" id="meta_dg_${i}" value="${dg}" style="width:80px; padding:5px; border-radius:4px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);"></td>
-           <td style="padding:8px 5px;"><input type="number" id="meta_g_${i}" value="${g}" style="width:80px; padding:5px; border-radius:4px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);"></td>
-           <td style="padding:8px 5px;"><input type="number" id="meta_es_${i}" value="${es}" style="width:80px; padding:5px; border-radius:4px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);"></td>
-           <td style="padding:8px 5px;"><input type="number" id="meta_h_${i}" value="${h}" style="width:50px; padding:5px; border-radius:4px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);"></td>
-           <td style="padding:8px 5px;"><input type="text" id="meta_w_${i}" value="${w}" style="width:60px; padding:5px; border-radius:4px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);"></td>
-         </tr>`;
-       }
-       
-       html += `</tbody>
-           </table>
-         </div>
-         
-         <button onclick="window.saveShowdownMeta()" style="background:var(--success); color:#fff; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; width:100%;">💾 Save Event Settings</button>
-       </div>`;
-       
-       mainContent.innerHTML = html;
-       
-       window.saveShowdownMeta = async () => {
-          const btn = event.target;
-          const oldText = btn.innerHTML;
-          btn.innerHTML = "Saving...";
-          btn.disabled = true;
-          
-          let newMeta = { eventGoals: {}, enemyAlliance: { name: document.getElementById('metaEnemyName').value, scores: {} }, horns: {}, winners: {} };
-          for (let i = 1; i <= 6; i++) {
-             newMeta.eventGoals['d'+i] = {
-               dailyGoal: Number(document.getElementById('meta_dg_'+i).value) || 0,
-               goal: Number(document.getElementById('meta_g_'+i).value) || 0
-             };
-             newMeta.enemyAlliance.scores['d'+i] = Number(document.getElementById('meta_es_'+i).value) || 0;
-             newMeta.horns['d'+i] = Number(document.getElementById('meta_h_'+i).value) || 0;
-             newMeta.winners['d'+i] = document.getElementById('meta_w_'+i).value || '';
-          }
-          
-          try {
-             const { set } = window.firebase.database;
-             await set(ref(db, 'showdown_meta'), newMeta);
-             if(window.showToast) window.showToast("Event Settings saved successfully!", "success");
-             views.admin();
-          } catch(e) {
-             console.error(e);
-             if(window.showToast) window.showToast("Error saving data", "error");
-             btn.innerHTML = oldText;
-             btn.disabled = false;
-          }
-       };
-       
-    } catch(err) {
-       console.error(err);
-       renderError(err.message);
     }
   },
   
@@ -4395,69 +4257,57 @@ const views = {
 
       // Fetch Showdown Event Goals
       try {
-         const db = window.firebaseDb;
-         const { ref, get } = window.firebase.database;
-         
-         const [liveSnap, metaSnap] = await Promise.all([
-            get(ref(db, 'showdown_live')),
-            get(ref(db, 'showdown_meta'))
-         ]);
-         
-         const liveData = liveSnap.val() || {};
-         const metaData = metaSnap.val() || {};
-         const eventGoals = metaData.eventGoals || {};
-         
-         let ourScores = { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 };
-         for (const [pName, scores] of Object.entries(liveData)) {
-            ourScores.d1 += scores.d1 || 0;
-            ourScores.d2 += scores.d2 || 0;
-            ourScores.d3 += scores.d3 || 0;
-            ourScores.d4 += scores.d4 || 0;
-            ourScores.d5 += scores.d5 || 0;
-            ourScores.d6 += scores.d6 || 0;
-         }
-         
-         let totalAllianceScore = ourScores.d1 + ourScores.d2 + ourScores.d3 + ourScores.d4 + ourScores.d5 + ourScores.d6;
-         
-         let sdHeaders = ["Event Day", "Daily Goal", "Left +/-", "Goal", "Daily Amount"];
-         let sdRows = [];
-         
-         for (let i = 1; i <= 6; i++) {
-             if (eventGoals['d'+i] && (eventGoals['d'+i].dailyGoal > 0 || eventGoals['d'+i].goal > 0)) {
-                 let dg = eventGoals['d'+i].dailyGoal;
-                 let g = eventGoals['d'+i].goal;
-                 let dailyAmt = ourScores['d'+i];
-                 let leftVal = dg - dailyAmt;
-                 
-                 let leftStr = leftVal > 0 ? `-${leftVal}` : `+${Math.abs(leftVal)}`;
-                 
-                 sdRows.push([
-                     `Event Day ${i}`,
-                     dg.toString(),
-                     leftStr,
-                     g.toString(),
-                     dailyAmt.toString()
-                 ]);
-             }
-         }
-         
-         if (sdRows.length > 0) {
-            let title = "Event Goals (Showdown)";
-            if (!filterString || title.toLowerCase().includes(filterString.toLowerCase())) {
-              let showdownIndex = boards.findIndex(b => b.title.toLowerCase().includes('all-time showdown'));
-              let insertIndex = showdownIndex !== -1 ? showdownIndex + 1 : boards.length;
-              boards.splice(insertIndex, 0, {
-                 title: "🎯 " + title,
-                 headers: sdHeaders,
-                 rows: sdRows,
-                 totalScore: totalAllianceScore
-              });
+        const sdData = (await window.fetchMergedShowdown()).mergedData;
+        let sdHeaders = ["Event Day", "Daily Goal", "Left +/-", "Goal", "Daily Amount"];
+        let sdRows = [];
+        let totalAllianceScore = 0;
+        
+        for (let r = 0; r < sdData.length; r++) {
+          let row = sdData[r];
+          if (row.some(c => typeof c === 'string' && c.toLowerCase().includes("alliance's"))) {
+            let startCol = row.findIndex(c => typeof c === 'string' && c.toLowerCase().includes("alliance's"));
+            if (r + 2 < sdData.length) {
+              let ourRow = sdData[r+2];
+              let val = ourRow[startCol + 8];
+              if (val !== undefined && val !== null) {
+                 totalAllianceScore = Number(val.toString().replace(/,/g, '')) || 0;
+              }
             }
-         }
+          }
+          if (row.some(c => typeof c === 'string' && c.toLowerCase().includes('allience showdown'))) {
+            let startCol = row.findIndex(c => typeof c === 'string' && c.toLowerCase().includes('allience showdown'));
+            for (let i = 1; i <= 6; i++) {
+              if (r + i < sdData.length) {
+                let dRow = sdData[r + i];
+                let eventDay = dRow[startCol] || "";
+                if (!eventDay) break;
+                sdRows.push([
+                  eventDay,
+                  dRow[startCol + 2] || "",
+                  dRow[startCol + 3] || "",
+                  dRow[startCol + 4] || "",
+                  dRow[startCol + 5] || ""
+                ]);
+              }
+            }
+          }
+        }
+        if (sdRows.length > 0) {
+           let title = "Event Goals (Showdown)";
+           if (!filterString || title.toLowerCase().includes(filterString.toLowerCase())) {
+             let showdownIndex = boards.findIndex(b => b.title.toLowerCase().includes('all-time showdown'));
+             let insertIndex = showdownIndex !== -1 ? showdownIndex + 1 : boards.length;
+             boards.splice(insertIndex, 0, {
+                title: "🎯 " + title,
+                headers: sdHeaders,
+                rows: sdRows,
+                totalScore: totalAllianceScore
+             });
+           }
+        }
       } catch (e) {
         console.warn("Could not fetch showdown event goals for leaderboards view", e);
       }
-
 
       html += `<div style="display:flex; flex-wrap:wrap; gap:20px;">`;
       
@@ -4697,217 +4547,248 @@ const views = {
   showdown: async () => {
     renderLoading("Loading Showdown Data");
     try {
-       const db = window.firebaseDb;
-       const { ref, get } = window.firebase.database;
-       
-       const [liveSnap, metaSnap] = await Promise.all([
-          get(ref(db, 'showdown_live')),
-          get(ref(db, 'showdown_meta'))
-       ]);
-       
-       const liveData = liveSnap.val() || {};
-       const metaData = metaSnap.val() || {};
-       const eventGoals = metaData.eventGoals || {};
-       const enemyAlliance = metaData.enemyAlliance || { name: 'Enemy Alliance', scores: {} };
-       const horns = metaData.horns || {};
-       const winners = metaData.winners || {};
-       
-       let html = `<div style="display:flex; flex-direction:column; gap:20px;">`;
-       
-       // Calculate Our Scores
-       let ourScores = { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 };
-       let players = [];
-       for (const [pName, scores] of Object.entries(liveData)) {
-          let pd1 = scores.d1 || 0;
-          let pd2 = scores.d2 || 0;
-          let pd3 = scores.d3 || 0;
-          let pd4 = scores.d4 || 0;
-          let pd5 = scores.d5 || 0;
-          let pd6 = scores.d6 || 0;
-          let pTotal = pd1 + pd2 + pd3 + pd4 + pd5 + pd6;
-          
-          ourScores.d1 += pd1;
-          ourScores.d2 += pd2;
-          ourScores.d3 += pd3;
-          ourScores.d4 += pd4;
-          ourScores.d5 += pd5;
-          ourScores.d6 += pd6;
-          
-          players.push({ name: pName, d1: pd1, d2: pd2, d3: pd3, d4: pd4, d5: pd5, d6: pd6, total: pTotal });
-       }
-       
-       ourScores.total = ourScores.d1 + ourScores.d2 + ourScores.d3 + ourScores.d4 + ourScores.d5 + ourScores.d6;
-       let enemyTotal = (enemyAlliance.scores.d1||0) + (enemyAlliance.scores.d2||0) + (enemyAlliance.scores.d3||0) + (enemyAlliance.scores.d4||0) + (enemyAlliance.scores.d5||0) + (enemyAlliance.scores.d6||0);
-       let hornsTotal = (horns.d1||0) + (horns.d2||0) + (horns.d3||0) + (horns.d4||0) + (horns.d5||0) + (horns.d6||0);
-       
-       // 1. Event Goals (Mobile Cards)
-       let goalsCard = `<div class="card"><div class="card-title">🎯 Event Goals</div>`;
-       goalsCard += `<div style="margin-bottom:20px;">
-           <div style="font-weight:bold; color:var(--text-main); margin-bottom:5px;">The 20M Challenge</div>
-           <div style="background:var(--border); height:12px; border-radius:6px; overflow:hidden;">
-             <div style="background:var(--accent); height:100%; width:${Math.min(100, (ourScores.total / 20000000) * 100)}%;"></div>
-           </div>
-           <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-muted); margin-top:5px;">
-             <span>${ourScores.total.toLocaleString()}</span>
-             <span>20,000,000</span>
-           </div>
-         </div>`;
-         
-       goalsCard += `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px;">`;
-       
-       for (let i = 1; i <= 6; i++) {
-          let dg = eventGoals['d'+i] ? eventGoals['d'+i].dailyGoal : 0;
-          let g = eventGoals['d'+i] ? eventGoals['d'+i].goal : 0;
-          let dailyAmt = ourScores['d'+i];
-          let leftVal = dg - dailyAmt;
-          
-          let isPending = dg === 0 || dg === null;
-          let leftStr = "";
-          let leftStyle = "";
-          let dailyAmtStyle = "";
-          
-          if (isPending) {
-              leftStr = `<span style="background:var(--border); padding:2px 8px; border-radius:12px; font-size:0.85em; color:var(--text-muted);">Pending</span>`;
-              dailyAmtStyle = "color:var(--text-muted); font-style:italic;";
-              dailyAmt = "Pending";
-          } else {
-              if (leftVal > 0) {
-                  leftStr = `-${leftVal.toLocaleString()}`;
-                  leftStyle = "color: #ef4444; font-weight: bold;";
-                  dailyAmtStyle = "color: #ef4444; font-weight: bold;";
-              } else {
-                  leftStr = `+${Math.abs(leftVal).toLocaleString()}`;
-                  leftStyle = "color: #10b981; font-weight: bold;";
-                  dailyAmtStyle = "color: #10b981; font-weight: bold;";
-              }
-              dailyAmt = dailyAmt.toLocaleString();
+      const data = (await window.fetchMergedShowdown()).mergedData;
+      let html = `<div style="display:flex; flex-direction:column; gap:20px;">`;
+      
+      let goalsCard = '';
+      let allianceCard = '';
+      let playersCard = '';
+      
+      let totalAllianceScore = 0;
+      for (let r = 0; r < data.length; r++) {
+        let row = data[r];
+        if (row.some(c => typeof c === 'string' && c.toLowerCase().includes("alliance's"))) {
+          let startCol = row.findIndex(c => typeof c === 'string' && c.toLowerCase().includes("alliance's"));
+          if (r + 2 < data.length) {
+            let ourRow = data[r+2];
+            let val = ourRow[startCol + 8];
+            if (val !== undefined && val !== null) {
+               totalAllianceScore = Number(val.toString().replace(/,/g, '')) || 0;
+            }
           }
+          break;
+        }
+      }
+      
+      const formatNumber = (num) => {
+        if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+        if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+        return num.toLocaleString();
+      };
+      
+      for (let r = 0; r < data.length; r++) {
+        let row = data[r];
+        
+        // 1. Find Alliance Showdown block (Daily Goals)
+        if (row.some(c => typeof c === 'string' && c.toLowerCase().includes('allience showdown'))) {
+          let startCol = row.findIndex(c => typeof c === 'string' && c.toLowerCase().includes('allience showdown'));
           
-          let gStr = g > 0 ? g.toLocaleString() : (isPending ? "Pending" : "0");
-          let dgStr = dg > 0 ? dg.toLocaleString() : (isPending ? "Pending" : "0");
+          let allTimeGoal = 20000000;
+          let allTimeProgress = Math.min(100, (totalAllianceScore / allTimeGoal) * 100);
           
-          goalsCard += `<div style="background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-             <div style="font-weight: bold; color: var(--text-main); font-size: 1.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px dashed var(--border);">Event Day ${i}</div>
-             <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-               <span style="color: var(--text-muted); font-size: 0.9em;">Daily Goal</span>
-               <span>${dgStr}</span>
-             </div>
-             <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-               <span style="color: var(--text-muted); font-size: 0.9em;">Left +/-</span>
-               <span style="${leftStyle}">${leftStr}</span>
-             </div>
-             <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-               <span style="color: var(--text-muted); font-size: 0.9em;">Goal</span>
-               <span>${gStr}</span>
-             </div>
-             <div style="display: flex; justify-content: space-between;">
-               <span style="color: var(--text-muted); font-size: 0.9em;">Daily Amount</span>
-               <span style="${dailyAmtStyle}">${dailyAmt}</span>
-             </div>
-           </div>`;
-       }
-       goalsCard += `</div></div>`;
-       
-       // 2. Alliance Progress
-       let allianceCard = `<div class="card" style="overflow-x:auto;"><div class="card-title">⚔️ Alliance Progress</div><table style="min-width:600px;"><thead><tr>
-          <th>Alliance's Showdown</th><th>Total</th><th>Day 1</th><th>Day 2</th><th>Day 3</th><th>Day 4</th><th>Day 5</th><th>Day 6</th>
-       </tr></thead><tbody>`;
-       
-       // Enemy Row
-       allianceCard += `<tr><td style="font-weight:bold;">${enemyAlliance.name || 'Enemy Alliance'}</td><td style="font-weight:bold;">${enemyTotal.toLocaleString()}</td>`;
-       for(let i=1; i<=6; i++) {
-           let eScore = enemyAlliance.scores['d'+i] || 0;
-           let oScore = ourScores['d'+i] || 0;
-           let style = "";
-           if (eScore > 0 || oScore > 0) {
-              if (oScore > eScore) style = "background:rgba(16,185,129,0.15);";
-              else if (oScore < eScore) style = "background:rgba(239,68,68,0.15);";
-           }
-           allianceCard += `<td style="${style}">${eScore > 0 ? eScore.toLocaleString() : ''}</td>`;
-       }
-       allianceCard += `</tr>`;
-       
-       // Our Row
-       allianceCard += `<tr><td style="font-weight:bold;">Our Alliance</td><td style="font-weight:bold;">${ourScores.total.toLocaleString()}</td>`;
-       for(let i=1; i<=6; i++) {
-           let eScore = enemyAlliance.scores['d'+i] || 0;
-           let oScore = ourScores['d'+i] || 0;
-           let style = "font-weight:bold;";
-           if (eScore > 0 || oScore > 0) {
-              if (oScore > eScore) style += " background:rgba(16,185,129,0.15); color:#10b981;";
-              else if (oScore < eScore) style += " background:rgba(239,68,68,0.15); color:#ef4444;";
-           }
-           allianceCard += `<td style="${style}">${oScore > 0 ? oScore.toLocaleString() : ''}</td>`;
-       }
-       allianceCard += `</tr>`;
-       
-       // Horns
-       allianceCard += `<tr><td style="font-weight:bold;">Alliance's Horns</td><td>${hornsTotal > 0 ? hornsTotal.toLocaleString() : ''}</td>`;
-       for(let i=1; i<=6; i++) allianceCard += `<td>${horns['d'+i] > 0 ? horns['d'+i].toLocaleString() : ''}</td>`;
-       allianceCard += `</tr>`;
-       
-       // Winners
-       allianceCard += `<tr><td style="font-weight:bold;">Winners</td><td></td>`;
-       for(let i=1; i<=6; i++) {
-           let w = winners['d'+i] || '';
-           let eScore = enemyAlliance.scores['d'+i] || 0;
-           let oScore = ourScores['d'+i] || 0;
-           let style = "font-weight:bold;";
-           if (eScore > 0 || oScore > 0) {
-              if (oScore > eScore) style += " background:rgba(16,185,129,0.15); color:#10b981;";
-              else if (oScore < eScore) style += " background:rgba(239,68,68,0.15); color:#ef4444;";
-           }
-           allianceCard += `<td style="${style}">${w}</td>`;
-       }
-       allianceCard += `</tr></tbody></table></div>`;
-       
-       // 3. Player Rankings
-       players.sort((a, b) => b.total - a.total);
-       
-       let playersCard = `<div class="card" style="overflow-x:auto;"><div class="card-title">🏆 Player Rankings</div><table style="min-width:700px;"><thead><tr>
-          <th>Ranking</th><th>Name</th><th>Total Score</th><th>Day 1</th><th>Day 2</th><th>Day 3</th><th>Day 4</th><th>Day 5</th><th>Day 6</th>
-       </tr></thead><tbody>`;
-       
-       players.forEach((p, index) => {
-           let rank = index + 1;
-           if (rank === 1) rank = '🥇 1';
-           else if (rank === 2) rank = '🥈 2';
-           else if (rank === 3) rank = '🥉 3';
-           
-           playersCard += `<tr>
-              <td style="font-weight:bold; color:var(--text-muted);">${rank}</td>
-              <td style="font-weight:bold; color:var(--text-muted);">${formatCell(p.name)}</td>
-              <td style="font-weight:bold;">${p.total > 0 ? p.total.toLocaleString() : ''}</td>
-              <td>${p.d1 > 0 ? p.d1.toLocaleString() : ''}</td>
-              <td>${p.d2 > 0 ? p.d2.toLocaleString() : ''}</td>
-              <td>${p.d3 > 0 ? p.d3.toLocaleString() : ''}</td>
-              <td>${p.d4 > 0 ? p.d4.toLocaleString() : ''}</td>
-              <td>${p.d5 > 0 ? p.d5.toLocaleString() : ''}</td>
-              <td>${p.d6 > 0 ? p.d6.toLocaleString() : ''}</td>
-           </tr>`;
-       });
-       playersCard += `</tbody></table></div>`;
-       
-       html += allianceCard + playersCard + goalsCard + `</div>`;
-       app.innerHTML = html;
-       
+          goalsCard += `<div class="card" style="margin-bottom:20px; box-shadow:0 10px 15px -3px rgba(0,0,0,0.1); overflow-x:auto;">
+            <div class="card-title">🎯 Event Goals</div>
+            
+            <div style="margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px dashed var(--border);">
+              <div style="display:flex; justify-content:space-between; font-size:16px; font-weight:bold; margin-bottom:8px;">
+                <span style="color:var(--text-main);">🌟 The 20M Challenge</span>
+                <span style="color:var(--text-muted);">${formatNumber(totalAllianceScore)} / <span style="color:var(--accent);">${formatNumber(allTimeGoal)}</span></span>
+              </div>
+              <div style="width:100%; height:12px; background:rgba(0,0,0,0.3); border-radius:6px; overflow:hidden; border:1px solid var(--border);">
+                <div style="width:${allTimeProgress}%; height:100%; background:linear-gradient(90deg, #8b5cf6, #d946ef); border-radius:6px; transition:width 1.5s cubic-bezier(0.4, 0, 0.2, 1); box-shadow:0 0 10px #d946ef;"></div>
+              </div>
+            </div>`;
+            
+            goalsCard += `<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 15px;">`;
+          
+          for (let i = 1; i <= 6; i++) {
+            if (r + i < data.length) {
+              let dRow = data[r + i];
+              let eventDay = dRow[startCol] || "";
+              if (!eventDay) break;
+              
+              let dailyGoal = dRow[startCol + 2] || "";
+              let left = dRow[startCol + 3] || "";
+              let goal = dRow[startCol + 4] || "";
+              let dailyAmt = dRow[startCol + 5] || "";
+              
+              let numDailyGoal = typeof dailyGoal === 'number' ? dailyGoal : Number(dailyGoal.toString().replace(/,/g, ''));
+              let numDailyAmt = typeof dailyAmt === 'number' ? dailyAmt : Number(dailyAmt.toString().replace(/,/g, ''));
+              let numLeft = typeof left === 'number' ? left : Number(left.toString().replace(/,/g, ''));
+              
+              let leftStyle = '';
+              if (!isNaN(numLeft)) {
+                 leftStyle = numLeft <= 0 ? 'color:var(--success); font-weight:bold;' : 'color:var(--danger);';
+              }
+              
+              let dailyAmtStyle = 'font-weight: bold; color: var(--accent);';
+              if (!isNaN(numDailyAmt) && !isNaN(numDailyGoal) && dailyAmt !== "" && dailyGoal !== "") {
+                 dailyAmtStyle = numDailyAmt >= numDailyGoal ? 'font-weight: bold; color: var(--success);' : 'font-weight: bold; color: var(--danger);';
+              }
+              
+              let formattedDailyGoal = !isNaN(numDailyGoal) && dailyGoal !== "" ? numDailyGoal.toLocaleString() : dailyGoal;
+              let formattedLeft = left;
+              if (!isNaN(numLeft) && left !== "") {
+                  if (numLeft > 0) formattedLeft = '-' + numLeft.toLocaleString();
+                  else if (numLeft < 0) formattedLeft = '+' + Math.abs(numLeft).toLocaleString();
+                  else formattedLeft = '0';
+              }
+              let formattedGoal = typeof goal === 'number' ? formatNumber(goal) : goal;
+              let formattedDailyAmt = !isNaN(numDailyAmt) && dailyAmt !== "" ? numDailyAmt.toLocaleString() : dailyAmt;
+
+              if (dailyAmt === "" || dailyAmt === undefined || dailyAmt === null || numDailyAmt === 0 || Math.abs(numLeft - numDailyGoal) < 0.01) {
+                  formattedLeft = 'Pending';
+                  leftStyle = 'color:var(--text-muted); font-style:italic;';
+                  formattedDailyAmt = 'Pending';
+                  dailyAmtStyle = 'color:var(--text-muted); font-style:italic;';
+              }
+              
+              goalsCard += `
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; padding: 15px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);">
+                  <div style="font-weight: bold; color: var(--text-main); font-size: 1.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px dashed var(--border);">${eventDay}</div>
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="color: var(--text-muted); font-size: 0.9em;">Daily Goal</span>
+                    <span>${formattedDailyGoal}</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="color: var(--text-muted); font-size: 0.9em;">Left +/-</span>
+                    <span style="${leftStyle}">${formattedLeft}</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="color: var(--text-muted); font-size: 0.9em;">Goal</span>
+                    <span>${formattedGoal}</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-muted); font-size: 0.9em;">Daily Amount</span>
+                    <span style="${dailyAmtStyle}">${formattedDailyAmt}</span>
+                  </div>
+                </div>`;
+            }
+          }
+          goalsCard += `</div></div>`;
+        }
+        
+        // 2. Find Alliance's Horns/Scores
+        if (row.some(c => typeof c === 'string' && c.toLowerCase().includes("alliance's"))) {
+          let startCol = row.findIndex(c => typeof c === 'string' && c.toLowerCase().includes("alliance's"));
+          allianceCard += `<div class="card" style="overflow-x:auto;"><div class="card-title">🛡️ Alliance Progress</div><table><thead><tr>`;
+          
+          for (let c = startCol; c <= startCol + 8; c++) {
+            allianceCard += `<th>${row[c] || ""}</th>`;
+          }
+          allianceCard += `</tr></thead><tbody>`;
+          
+          // Grab the next 4 rows: Enemy, Our Alliance, Horns, Winners
+          for (let i = 1; i <= 4; i++) {
+            if (r + i < data.length) {
+              let aRow = data[r + i];
+              allianceCard += `<tr>`;
+              for (let c = startCol; c <= startCol + 8; c++) {
+                let val = aRow[c];
+                
+                // If it's the first row (Enemy) and the name is missing, provide a placeholder
+                if (i === 1 && c === startCol && (!val || val.toString().trim() === "")) {
+                  val = "Enemy Alliance";
+                }
+                
+                if (typeof val === 'number') val = val.toLocaleString();
+                
+                let styleStr = c === startCol ? "font-weight:bold;" : "";
+                
+                // Win/Loss Calculation for Days 1-6 and Total (Cols startCol+3 to startCol+8)
+                if (c >= startCol + 3 && c <= startCol + 8) {
+                  let enemyRow = r + 1 < data.length ? data[r+1] : null;
+                  let ourRow = r + 2 < data.length ? data[r+2] : null;
+                  
+                  if (enemyRow && ourRow) {
+                    let eScore = Number(enemyRow[c].toString().replace(/,/g, '')) || 0;
+                    let oScore = Number(ourRow[c].toString().replace(/,/g, '')) || 0;
+                    
+                    if (eScore > 0 || oScore > 0) {
+                      if (oScore > eScore) {
+                        styleStr += " background:rgba(16,185,129,0.15);"; // Green tint
+                        if (i === 2 || i === 4) styleStr += " color:#10b981; font-weight:bold;"; // Highlight Our Score and Winners
+                      } else if (oScore < eScore) {
+                        styleStr += " background:rgba(239,68,68,0.15);"; // Red tint
+                        if (i === 2 || i === 4) styleStr += " color:#ef4444; font-weight:bold;"; // Highlight Our Score and Winners
+                      }
+                    }
+                  }
+                }
+                
+                allianceCard += `<td style="${styleStr}">${val !== undefined && val !== "" ? val : ""}</td>`;
+              }
+              allianceCard += `</tr>`;
+            }
+          }
+          allianceCard += `</tbody></table></div>`;
+        }
+        
+        // 3. Find Player Ranking
+        if (row.some(c => typeof c === 'string' && c.toLowerCase().includes("ranking"))) {
+          let startCol = row.findIndex(c => typeof c === 'string' && c.toLowerCase().includes("ranking"));
+          playersCard += `<div class="card" style="overflow-x:auto;"><div class="card-title">🏆 Player Rankings</div><table><thead><tr>`;
+          
+          for (let c = startCol; c <= startCol + 8; c++) {
+            playersCard += `<th>${row[c] || ""}</th>`;
+          }
+          playersCard += `</tr></thead><tbody>`;
+          
+          let pr = r + 1;
+          while (pr < data.length) {
+            let pRow = data[pr];
+            let member = pRow[startCol + 1];
+            
+            // Stop parsing if we hit an empty row or the discord templates ANYWHERE in the row
+            if (pRow.every(cell => cell === "") || pRow.some(cell => typeof cell === 'string' && cell.includes("Showdown Update"))) {
+              break;
+            }
+            
+            playersCard += `<tr>`;
+            for (let c = startCol; c <= startCol + 8; c++) {
+              let val = pRow[c];
+              
+              if (c === startCol && typeof val === 'number') {
+                if (val === 1) val = '🥇 1';
+                else if (val === 2) val = '🥈 2';
+                else if (val === 3) val = '🥉 3';
+              } else if (typeof val === 'number') {
+                val = val.toLocaleString();
+              }
+              
+              playersCard += `<td ${c===startCol || c===startCol+1 ? 'style="font-weight:bold; color:var(--text-muted);"' : ''}>${formatCell(val)}</td>`;
+            }
+            playersCard += `</tr>`;
+            pr++;
+          }
+          playersCard += `</tbody></table></div>`;
+        }
+      }
+      
+      if (!goalsCard && !allianceCard && !playersCard) {
+        html += `<div class="card"><div class="loading" style="color:var(--danger);">Could not parse Showdown layout. Check Spreadsheet formatting.</div></div>`;
+      } else {
+        html += allianceCard + playersCard + goalsCard;
+      }
+      
+      html += `</div>`;
+      app.innerHTML = html;
     } catch(e) { renderError(e.message); }
   },
+  
   roster: async () => {
     renderLoading("Loading Player Lookup");
     try {
-      const db = window.firebaseDb;
-      const { ref, get } = window.firebase.database;
-      
-      const [data, rosterRawData, lbRawData, sdHistoryRawData, sdLiveSnap] = await Promise.all([
+      let sdLiveSnapshotPromise = window.fetchMergedShowdown();
+      const [data, rosterRawData, lbRawData, sdHistoryRawData, sdMergedDataRes] = await Promise.all([
             fetchSheet("activity "),
             fetchSheet("Chief's List"),
             fetchSheet("LeaderBoards"),
             fetchSheet("Showdown History"),
-            get(ref(db, 'showdown_live'))
+            sdLiveSnapshotPromise
           ]);
-      
-      const sdLiveData = sdLiveSnap.val() || {};
+      const sdCurrentRawData = sdMergedDataRes.mergedData;
+      const sdLiveData = sdMergedDataRes.sdLiveData || {};
 
       let currentDay = 0;
       Object.values(sdLiveData).forEach(p => {
@@ -4969,37 +4850,35 @@ const views = {
               else if (title.toLowerCase().includes("showdown")) emoji = "⚔️";
               
               // Find the primary score column by scanning the headers (the last column of the table)
-              let scoreCol = c + 1;
-              for (let i = c + 1; i <= c + 10; i++) {
-                if (!lbRawData[r+1] || !lbRawData[r+1][i]) break;
-                scoreCol = i;
+              let scoreCol = c + 2; // Default fallback
+              if (r + 1 < lbRawData.length) {
+                let hc = c;
+                while (hc < lbRawData[r+1].length && lbRawData[r+1][hc] !== "") {
+                  scoreCol = hc;
+                  hc++;
+                }
               }
               
-              // Process the rows below the header
-              let hr = r + 2;
-              while (hr < lbRawData.length && lbRawData[hr][c] && lbRawData[hr][c].toString().trim() !== "") {
-                let pName = lbRawData[hr][c+1]; // Name is typically one column over from Rank
-                let score = lbRawData[hr][scoreCol];
-                if (pName && score !== undefined && score !== "") {
+              let dr = r + 2;
+              while (dr < lbRawData.length && lbRawData[dr][c] !== "") {
+                let pRank = lbRawData[dr][c];     // Column 1 is Rank
+                let pName = lbRawData[dr][c + 1]; // Column 2 is Name
+                let pScore = lbRawData[dr][scoreCol]; // The intelligently detected score column
+                
+                if (pName && pScore) {
                   let safeName = pName.toString().trim();
+                  
+                  // Format score if it's a number
+                  if (typeof pScore === 'number') {
+                     pScore = pScore.toLocaleString();
+                  } else if (typeof pScore === 'string' && !isNaN(pScore) && pScore.trim() !== "") {
+                     pScore = Number(pScore).toLocaleString();
+                  }
+                  
                   if (!lbMap[safeName]) lbMap[safeName] = [];
-                  let rank = lbRawData[hr][c] || hr - (r + 1);
-                  if (typeof rank === 'number') {
-                     if (rank === 1) rank = '🥇 1st';
-                     else if (rank === 2) rank = '🥈 2nd';
-                     else if (rank === 3) rank = '🥉 3rd';
-                     else rank += 'th';
-                  }
-                  
-                  let formattedScore = score;
-                  if (typeof score === 'number') {
-                    if (score >= 1000000) formattedScore = (score / 1000000).toFixed(1) + 'M';
-                    else formattedScore = score.toLocaleString();
-                  }
-                  
-                  lbMap[safeName].push({ title, score: formattedScore, rank, emoji });
+                  lbMap[safeName].push({ title, score: pScore, rank: pRank, emoji });
                 }
-                hr++;
+                dr++;
               }
             }
           }
@@ -5043,14 +4922,7 @@ const views = {
       };
       
       processShowdownTable(sdHistoryRawData);
-      
-      for (const [pName, scores] of Object.entries(sdLiveData)) {
-          let safeName = pName.toString().trim();
-          let pScore = (scores.d1||0) + (scores.d2||0) + (scores.d3||0) + (scores.d4||0) + (scores.d5||0) + (scores.d6||0);
-          if (!allTimeShowdownMap[safeName]) allTimeShowdownMap[safeName] = 0;
-          allTimeShowdownMap[safeName] += pScore;
-      }
-
+      processShowdownTable(sdCurrentRawData);
       
       // Calculate All-Time Showdown Rankings
       const allTimeRankingsMap = {};
