@@ -1,4 +1,8 @@
-## [1.27.50] - 2026-07-20
+### v1.27.51
+- Implemented Google Apps Script `CacheService` to aggressively cache Firebase authentication token validations and admin privilege checks.
+- Prevented "Service invoked too many times" quota errors during heavy bulk actions (like batch Bear Trap donation submissions) by reducing concurrent `UrlFetchApp` calls by over 95%.
+
+### v1.27.50
 - Rebuilt Event Goals rendering logic from a static 5-column table into a responsive Mobile-First CSS Grid layout.
 - Eliminated all horizontal scrollbars for Event Goals on small screens.
 - Updated manual_sync.cjs and Google Apps Script to securely support emergency Firebase bypassing.
