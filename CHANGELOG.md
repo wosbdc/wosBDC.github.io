@@ -1,3 +1,6 @@
+## [1.27.35] - 2026-07-20
+- Reverted the scroll-hide method and implemented an invisible touch shield for Apple iOS devices. Now, tapping anywhere on the screen while a dropdown is open will intercept the tap and instantly close the dropdown.
+
 ## [1.27.34] - 2026-07-20
 - Fixed an Apple iOS bug where custom search bars would stay active by instantly dismissing them any time the page or a modal is scrolled/swiped.
 

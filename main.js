@@ -1944,51 +1944,53 @@ window.bindCustomAutocomplete = (inputEl) => {
                     e.preventDefault();
                     inputEl.value = item.getAttribute('data-val');
                     dropdown.style.display = 'none';
+                    if (document.getElementById('autocomplete-shield')) document.getElementById('autocomplete-shield').style.display = 'none';
                     inputEl.dispatchEvent(new Event('input'));
                 });
             });
         }
         dropdown.style.display = 'flex';
+        getAutocompleteShield().style.display = 'block';
     };
 
     inputEl.addEventListener('input', filterAndShow);
     inputEl.addEventListener('focus', filterAndShow);
-    inputEl.addEventListener('blur', () => { setTimeout(() => dropdown.style.display='none', 150); });
+    inputEl.addEventListener('blur', () => { 
+        setTimeout(() => {
+            dropdown.style.display='none';
+            if (document.getElementById('autocomplete-shield')) document.getElementById('autocomplete-shield').style.display = 'none';
+        }, 150); 
+    });
 };
 
-// Global click listener to close autocomplete dropdowns when clicking outside (especially for iOS/Safari)
-['mousedown', 'touchstart'].forEach(evt => {
-    document.addEventListener(evt, (e) => {
-        const isInsideWrapper = e.target.closest('.autocomplete-wrapper');
-        if (!isInsideWrapper) {
-            document.querySelectorAll('.custom-autocomplete-dropdown').forEach(dropdown => {
-                dropdown.style.display = 'none';
+// Global invisible shield to catch iOS stray taps
+const getAutocompleteShield = () => {
+    let shield = document.getElementById('autocomplete-shield');
+    if (!shield) {
+        shield = document.createElement('div');
+        shield.id = 'autocomplete-shield';
+        shield.style.cssText = 'display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:999; background:transparent;';
+        
+        // When the shield is tapped, force close all dropdowns and blur active inputs
+        ['mousedown', 'touchstart'].forEach(evt => {
+            shield.addEventListener(evt, (e) => {
+                e.preventDefault(); // Prevent double firing
+                e.stopPropagation();
+                
+                document.querySelectorAll('.custom-autocomplete-dropdown').forEach(dropdown => {
+                    dropdown.style.display = 'none';
+                });
+                shield.style.display = 'none';
+                
+                if (document.activeElement && document.activeElement.tagName === 'INPUT') {
+                    document.activeElement.blur();
+                }
             });
-        }
-    });
-});
-
-// Force close autocomplete dropdowns when scrolling or swiping (iOS fix)
-const forceCloseDropdowns = (e) => {
-    // Don't close if they are scrolling inside the dropdown itself
-    if (e.target && (e.target.classList?.contains('custom-autocomplete-dropdown') || e.target.closest?.('.custom-autocomplete-dropdown'))) return;
-    
-    let didClose = false;
-    document.querySelectorAll('.custom-autocomplete-dropdown').forEach(dropdown => {
-        if (dropdown.style.display !== 'none') {
-            dropdown.style.display = 'none';
-            didClose = true;
-        }
-    });
-    
-    // Also blur the input so the keyboard goes away on mobile
-    if (didClose && document.activeElement && document.activeElement.tagName === 'INPUT') {
-        document.activeElement.blur();
+        });
+        document.body.appendChild(shield);
     }
+    return shield;
 };
-
-document.addEventListener('scroll', forceCloseDropdowns, true); // true = capture phase to catch internal div scrolls
-document.addEventListener('touchmove', forceCloseDropdowns, {passive: true});
 
 // View renderers
 const views = {
