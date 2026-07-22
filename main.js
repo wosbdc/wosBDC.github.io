@@ -2560,7 +2560,9 @@ window.archiveCurrentShowdownToFirebase = async () => {
         
         const updatedHistory = [...currentHistory, ...newBlock];
         await set(ref(db, 'showdown_history'), updatedHistory);
-        if (window.showToast) window.showToast("Successfully archived current Showdown event into Firebase History!", "success");
+        await set(ref(db, 'showdown_live'), null);
+        await set(ref(db, 'showdown_meta/enemyAlliance'), { name: "Enemy Alliance", scores: {} });
+        if (window.showToast) window.showToast("Successfully archived current Showdown event into Firebase History & reset live event!", "success");
     } catch(err) {
         if (window.showToast) window.showToast("Error archiving event: " + err.message, "error");
     }
@@ -5077,8 +5079,33 @@ html += `</select>
              rawHistory = rawHistory.data;
          }
          const historyRows = rawHistory ? (Array.isArray(rawHistory) ? rawHistory : Object.values(rawHistory)) : [];
-         if (historyRows.length > 0) {
+         if (historyRows.length > 0 || (players && players.length > 0)) {
              let allTimePlayers = calculateAllTimeShowdown(historyRows);
+             
+             // Merge current live event scores with history for real-time all-time standings
+             if (players && players.length > 0) {
+                 let allTimeMap = {};
+                 allTimePlayers.forEach(p => {
+                     allTimeMap[p.name.toLowerCase()] = { name: p.name, horns: p.horns, wins: p.wins, total: p.total };
+                 });
+                 
+                 players.forEach(lp => {
+                     if (lp.horns > 0 || lp.total > 0) {
+                         let key = lp.name.toLowerCase();
+                         if (!allTimeMap[key]) {
+                             allTimeMap[key] = { name: lp.name, horns: 0, wins: 0, total: 0 };
+                         }
+                         allTimeMap[key].horns += lp.horns;
+                         allTimeMap[key].wins += lp.wins;
+                         allTimeMap[key].total += lp.total;
+                     }
+                 });
+                 
+                 allTimePlayers = Object.values(allTimeMap).sort((a, b) => {
+                     if (b.horns !== a.horns) return b.horns - a.horns;
+                     return b.total - a.total;
+                 });
+             }
              
              let allTimeMvpHtml = "";
              if (allTimePlayers.length > 0 && allTimePlayers[0].horns > 0) {

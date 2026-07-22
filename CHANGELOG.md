@@ -1,3 +1,8 @@
+## [1.29.54] - 2026-07-22
+### Added
+- **Real-Time Live & All-Time Showdown Integration**: Combined live event scores from `showdown_live` into the **All-Time - Showdown Leaderboard** so active event scores reflect on all-time standings in real time.
+- **Zero Double-Credit Archiving Protection**: Updated `window.archiveCurrentShowdownToFirebase()` to automatically clear `showdown_live` when archiving to `showdown_history`, ensuring past events are never double-counted.
+
 ## [1.29.53] - 2026-07-22
 ### Fixed
 - **All-Time Showdown Leaderboard Data Unwrapping**: Updated `calculateAllTimeShowdown()` and `views.leaderboards` to automatically unwrap the `.data` property when `sdHistoryData` is formatted as `{ success: true, data: [...] }`. Restored the **All-Time - Showdown Leaderboard** card alongside the **Current - Showdown Leaderboard** card.
