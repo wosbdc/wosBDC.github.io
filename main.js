@@ -4849,7 +4849,7 @@ const views = {
                 dailyAmt = dailyAmt.toLocaleString();
             }
             
-            let gStr = g > 0 ? g.toLocaleString() : (isPending ? "Pending" : `<span style="color:var(--success); font-weight:bold;">🌟 Goal Met!</span>`);
+            let gStr = g > 0 ? g.toLocaleString() : (isPending ? "Pending" : `<span style="color:#eab308; font-weight:bold;">🌟 Goal Met!</span>`);
             let dgStr = dg > 0 ? dg.toLocaleString() : (isPending ? "Pending" : "0");
             
             goalsCard += `<div style="background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
