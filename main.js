@@ -484,6 +484,78 @@ window.toggleChampionshipStatus = async (gameId, forceStatus = null) => {
     }
 };
 
+// Fetch Leaderboards Data natively from Firebase Realtime Database with automated Google Sheets seeding
+window.fetchLeaderboardsData = async () => {
+    if (window.leaderboardsCache) return window.leaderboardsCache;
+
+    try {
+        const snap = await get(ref(db, 'leaderboards'));
+        if (snap.exists() && snap.val() && Array.isArray(snap.val()) && snap.val().length > 0) {
+            window.leaderboardsCache = snap.val();
+            return window.leaderboardsCache;
+        }
+    } catch(e) {
+        console.warn("Firebase leaderboards read error:", e);
+    }
+
+    let parsedBoards = [];
+    try {
+        const rawSheet = await fetchSheet("LeaderBoards");
+        if (rawSheet && Array.isArray(rawSheet) && rawSheet.length > 0) {
+            for (let r = 0; r < rawSheet.length; r++) {
+                for (let c = 0; c < rawSheet[r].length; c++) {
+                    let cell = rawSheet[r][c];
+                    if (typeof cell === 'string' && (cell.toLowerCase().includes('leaderboard') || (cell.toLowerCase().includes('all-time') && (cell.toLowerCase().includes('bear') || cell.toLowerCase().includes('bt')) && cell.toLowerCase().includes('donation')))) {
+                        let title = cell;
+                        let headers = [];
+                        let hc = c;
+                        
+                        // Read headers on the next row
+                        if (r + 1 < rawSheet.length) {
+                            while (hc < rawSheet[r+1].length && rawSheet[r+1][hc] !== "") {
+                                headers.push(rawSheet[r+1][hc]);
+                                hc++;
+                            }
+                        }
+                        
+                        // Read data rows starting from 2 rows down
+                        let rows = [];
+                        let dr = r + 2;
+                        while (dr < rawSheet.length && rawSheet[dr][c] !== "") {
+                            let rowData = [];
+                            let hasPlayerData = false;
+                            
+                            for (let i = 0; i < headers.length; i++) {
+                                let cellVal = rawSheet[dr][c + i];
+                                rowData.push(cellVal);
+                                if (i > 0 && cellVal !== "") {
+                                    hasPlayerData = true;
+                                }
+                            }
+                            
+                            if (hasPlayerData) {
+                                rows.push(rowData);
+                            }
+                            dr++;
+                        }
+                        
+                        if (headers.length > 0) {
+                            parsedBoards.push({ title, headers, rows });
+                        }
+                    }
+                }
+            }
+
+            try { await set(ref(db, 'leaderboards'), parsedBoards); } catch(e) {}
+        }
+    } catch(e) {
+        console.error("Leaderboards sheet fetch error:", e);
+    }
+
+    window.leaderboardsCache = parsedBoards;
+    return parsedBoards;
+};
+
 
 // Listen to Avatars globally
 onValue(ref(db, 'avatars'), (snap) => {
@@ -1348,7 +1420,7 @@ window.adminFetchAltFurnace = async (gid, spanId) => {
       const [data, rosterRawData, lbRawData, sdHistoryRawData, sdLiveSnap] = await Promise.all([
               window.fetchActivityData(),
               window.fetchRoster(),
-              fetchSheet("LeaderBoards"),
+              window.fetchLeaderboardsData(),
               fetchSheet("Showdown History"),
               get(ref(db, 'showdown_live'))
             ]);
@@ -1560,7 +1632,7 @@ window.searchPlayerFull = async (name) => {
     const [data, rosterRawData, lbRawData, sdHistoryRawData, sdMergedDataRes] = await Promise.all([
             window.fetchActivityData(),
             window.fetchRoster(),
-            fetchSheet("LeaderBoards"),
+            window.fetchLeaderboardsData(),
             fetchSheet("Showdown History"),
             sdLiveSnapshotPromise
           ]);
@@ -5996,7 +6068,7 @@ html += `</select>
   leaderboards: async (filterString) => {
     renderLoading("Loading Leaderboards");
     try {
-      const data = await fetchSheet("LeaderBoards");
+      const allBoards = await window.fetchLeaderboardsData();
       let scheduleData = [];
       try { scheduleData = await fetchSheet("WhiteOut Survival"); } catch(e) {}
       
@@ -6038,52 +6110,12 @@ html += `</select>
       let html = ``;
       
       let boards = [];
-      for (let r = 0; r < data.length; r++) {
-        for (let c = 0; c < data[r].length; c++) {
-          let cell = data[r][c];
-          if (typeof cell === 'string' && (cell.toLowerCase().includes('leaderboard') || (cell.toLowerCase().includes('all-time') && (cell.toLowerCase().includes('bear') || cell.toLowerCase().includes('bt')) && cell.toLowerCase().includes('donation')))) {
-            let title = cell;
-            let headers = [];
-            let hc = c;
-            
-            // Read headers on the next row
-            if (r + 1 < data.length) {
-              while (hc < data[r+1].length && data[r+1][hc] !== "") {
-                headers.push(data[r+1][hc]);
-                hc++;
-              }
-            }
-            
-            // Read data rows starting from 2 rows down
-            let rows = [];
-            let dr = r + 2;
-            while (dr < data.length && data[dr][c] !== "") {
-              let rowData = [];
-              let hasPlayerData = false;
-              
-              for (let i = 0; i < headers.length; i++) {
-                let cellVal = data[dr][c + i];
-                rowData.push(cellVal);
-                // Check if any column OTHER than Rank has actual data
-                if (i > 0 && cellVal !== "") {
-                  hasPlayerData = true;
-                }
-              }
-              
-              if (hasPlayerData) {
-                rows.push(rowData);
-              }
-              dr++;
-            }
-            
-            if (headers.length > 0) {
-              // Only add if it matches the filter, or if no filter is active
-              if (!filterString || title.toLowerCase().includes(filterString.toLowerCase())) {
-                boards.push({ title, headers, rows });
-              }
-            }
-          }
-        }
+      if (allBoards && Array.isArray(allBoards)) {
+         if (!filterString) {
+             boards = JSON.parse(JSON.stringify(allBoards));
+         } else {
+             boards = JSON.parse(JSON.stringify(allBoards.filter(b => b.title && b.title.toLowerCase().includes(filterString.toLowerCase()))));
+         }
       }
 
       // Fetch champions config & Bear Trap Firebase nodes
@@ -6900,7 +6932,7 @@ html += `</select>
       const [data, rosterRawData, lbRawData, sdHistoryRawData, sdLiveSnap] = await Promise.all([
             window.fetchActivityData(),
             window.fetchRoster(),
-            fetchSheet("LeaderBoards"),
+            window.fetchLeaderboardsData(),
             fetchSheet("Showdown History"),
             get(ref(db, 'showdown_live'))
           ]);
