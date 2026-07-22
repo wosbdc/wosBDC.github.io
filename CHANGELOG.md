@@ -1,3 +1,11 @@
+## [1.29.70] - 2026-07-22
+### Added
+- **Phase 6: Frost Clan & Activity Tracking Migration (`activity_live`)**: Created `window.fetchActivityData()` to query player event activity natively from Firebase Realtime Database (`activity_live` node) with automatic Google Sheets seeding fallback.
+
+## [1.29.69] - 2026-07-22
+### Added
+- **Phase 5: Gift Code Bot Firebase Migration (`giftcode_bot`)**: Migrated player gift code auto-redemption enrollment tracking natively into Firebase Realtime Database (`giftcode_bot/${gameId}`), enabling real-time enrollment checks and 1-click opt-ins with automated sheet seeding.
+
 ## [1.29.68] - 2026-07-22
 ### Fixed
 - **Player Card Event Tag Formatting**: Formatted all event rank tags (e.g. `⚔️ Showdown: #1 (4,881,161)`) to include `#Rank` and `(Score)` parens, matching the exact format of `🏅 All-Time Showdown` and `🐻 Bear Trap Wins`.

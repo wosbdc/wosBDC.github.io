@@ -294,6 +294,103 @@ export const refreshIdToNameMap = async () => {
     } catch(e) { console.error("Error refreshing ID map:", e); }
 };
 
+// Fetch all Gift Code enrollments natively from Firebase Realtime Database
+window.fetchGiftcodeEnrollments = async () => {
+    if (window.giftcodeCache) return window.giftcodeCache;
+    try {
+        const snap = await get(ref(db, 'giftcode_bot'));
+        if (snap.exists()) {
+            window.giftcodeCache = snap.val();
+            return window.giftcodeCache;
+        }
+    } catch(e) { console.warn('Firebase giftcode_bot read error:', e); }
+
+    // Seed from Google Sheets if Firebase node is empty
+    let seededData = {};
+    try {
+        const gcb = await fetchSheet("giftcodebot");
+        if (gcb && gcb.length > 1) {
+            for (let i = 1; i < gcb.length; i++) {
+                let name = gcb[i][1];
+                let id = gcb[i][2] ? gcb[i][2].toString().trim() : '';
+                if (id) {
+                    seededData[id] = {
+                        gameId: id,
+                        name: name || '',
+                        enrolled: true,
+                        status: 'Active',
+                        timestamp: Date.now()
+                    };
+                }
+            }
+            try { await set(ref(db, 'giftcode_bot'), seededData); } catch(e) {}
+        }
+    } catch(e) {}
+    
+    window.giftcodeCache = seededData;
+    return seededData;
+};
+
+// Check if a player is enrolled in Gift Code Bot
+window.isGiftcodeEnrolled = async (gameId) => {
+    if (!gameId) return false;
+    const gIdStr = gameId.toString().trim();
+    const allEnrollments = await window.fetchGiftcodeEnrollments();
+    if (allEnrollments && allEnrollments[gIdStr] && allEnrollments[gIdStr].enrolled) {
+        return true;
+    }
+    return window.enrolledGameIds.has(gIdStr);
+};
+
+// Enroll a player natively into Firebase Realtime Database
+window.enrollGiftcodeBot = async (gameId, chiefName) => {
+    if (!gameId) return false;
+    const gIdStr = gameId.toString().trim();
+    const record = {
+        gameId: gIdStr,
+        name: chiefName || '',
+        enrolled: true,
+        status: 'Active',
+        timestamp: Date.now()
+    };
+    
+    try {
+        await set(ref(db, `giftcode_bot/${gIdStr}`), record);
+        if (window.giftcodeCache) {
+            window.giftcodeCache[gIdStr] = record;
+        }
+        window.enrolledGameIds.add(gIdStr);
+        return true;
+    } catch(e) {
+        console.warn("Failed to write giftcode_bot in Firebase", e);
+        return false;
+    }
+};
+
+// Fetch Frost Clan & Activity data natively from Firebase Realtime Database
+window.fetchActivityData = async () => {
+    if (window.activityCache) return window.activityCache;
+    try {
+        const snap = await get(ref(db, 'activity_live'));
+        if (snap.exists()) {
+            window.activityCache = snap.val();
+            return window.activityCache;
+        }
+    } catch(e) { console.warn('Firebase activity_live read error:', e); }
+
+    let seededData = [];
+    try {
+        const raw = await fetchSheet("activity ");
+        if (raw && raw.length > 0) {
+            seededData = raw;
+            try { await set(ref(db, 'activity_live'), seededData); } catch(e) {}
+        }
+    } catch(e) {}
+
+    window.activityCache = seededData;
+    return seededData;
+};
+
 
 // Listen to Avatars globally
 onValue(ref(db, 'avatars'), (snap) => {
@@ -958,7 +1055,7 @@ window.adminFetchAltFurnace = async (gid, spanId) => {
       
 
       const [data, rosterRawData, lbRawData, sdHistoryRawData, sdLiveSnap] = await Promise.all([
-              fetchSheet("activity "),
+              window.fetchActivityData(),
               window.fetchRoster(),
               fetchSheet("LeaderBoards"),
               fetchSheet("Showdown History"),
@@ -1170,7 +1267,7 @@ window.searchPlayerFull = async (name) => {
   try {
     let sdLiveSnapshotPromise = window.fetchMergedShowdown();
     const [data, rosterRawData, lbRawData, sdHistoryRawData, sdMergedDataRes] = await Promise.all([
-            fetchSheet("activity "),
+            window.fetchActivityData(),
             window.fetchRoster(),
             fetchSheet("LeaderBoards"),
             fetchSheet("Showdown History"),
@@ -1846,8 +1943,9 @@ if(authSubmitBtn) authSubmitBtn.addEventListener('click', async () => {
       
       await registerUser(email, password, gameId, chiefName);
       
-      // Auto-post to giftcodebot Google Sheet via backend API
+      // Auto-enroll in Firebase giftcode_bot & ping backend API
       try {
+          await window.enrollGiftcodeBot(gameId, chiefName);
           const regToken = await getAuthToken();
           const url = `${API_BASE_URL}?api=registerNewPlayer&gameId=${encodeURIComponent(gameId)}&name=${encodeURIComponent(chiefName)}&dateStarted=${encodeURIComponent(dateStarted)}&level=${encodeURIComponent(furnaceLevel)}${regToken ? '&token=' + encodeURIComponent(regToken) : ''}`;
           fetch(url, { mode: 'no-cors' }).catch(e => console.warn("Failed to ping GAS for registration", e));
@@ -6034,7 +6132,7 @@ html += `</select>
       
       
       const [data, rosterRawData, lbRawData, sdHistoryRawData, sdLiveSnap] = await Promise.all([
-            fetchSheet("activity "),
+            window.fetchActivityData(),
             window.fetchRoster(),
             fetchSheet("LeaderBoards"),
             fetchSheet("Showdown History"),
@@ -6418,18 +6516,9 @@ html += `</select>
       } else {
         const chiefName = currentUser.name || idToNameMap[currentUser.gameId] || "Unknown Chief";
         
-        let isMainEnrolled = false;
-        const gcb = window.liveData['giftcodebot'];
-        if (gcb && gcb.length > 1) {
-            for (let i = 1; i < gcb.length; i++) {
-                if (gcb[i] && gcb[i][2] && gcb[i][2].toString().trim() === currentUser.gameId.toString().trim()) {
-                    isMainEnrolled = true;
-                    break;
-                }
-            }
-        }
+        let isMainEnrolled = await window.isGiftcodeEnrolled(currentUser.gameId);
         
-        if (isMainEnrolled || enrolledGameIds.has(currentUser.gameId.toString())) {
+        if (isMainEnrolled) {
             contentHtml = `
               <div style="text-align:center; padding:40px 20px;">
                 <h3 style="color:var(--success); margin-bottom:10px;">Already Enrolled!</h3>
@@ -6472,22 +6561,17 @@ html += `</select>
            optInBtn.textContent = 'Linking...';
            const chiefName = currentUser.name || idToNameMap[currentUser.gameId] || "Unknown Chief";
            try {
+               await window.enrollGiftcodeBot(currentUser.gameId, chiefName);
+               
                const optInToken = await getAuthToken();
                const url = `${API_BASE_URL}?api=registerNewPlayer&gameId=${encodeURIComponent(currentUser.gameId)}&name=${encodeURIComponent(chiefName)}&token=${encodeURIComponent(optInToken)}`;
-               const res = await fetch(url).then(r => r.json());
+               fetch(url, { mode: 'no-cors' }).catch(e => null);
                
-               if (res && res.success) {
-                   if (res.status === 'duplicate_skipped') {
-                       window.showToast("You are already enrolled!", "success");
-                   } else {
-                       window.showToast("Successfully Enrolled in Auto Redeem!", "success");
-                   }
-                   optInBtn.textContent = 'Enrolled o.';
-                   optInBtn.style.background = 'var(--bg-card)';
-                   optInBtn.style.border = '1px solid var(--success)';
-               } else {
-                   throw new Error("Failed to link account");
-               }
+               window.showToast("Successfully Enrolled in Auto Redeem!", "success");
+               optInBtn.textContent = 'Active ✅';
+               optInBtn.style.background = 'transparent';
+               optInBtn.style.color = 'var(--success)';
+               optInBtn.style.border = '1px solid var(--success)';
            } catch(e) {
                console.error(e);
                window.showToast("Error linking account. Try again later.", "error");
