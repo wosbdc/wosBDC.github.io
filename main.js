@@ -4863,7 +4863,7 @@ const views = {
              `;
          }
 
-         liveShowdownHtml = `<div class="card" style="flex: 1 1 45%; min-width: 320px; overflow-x:auto;"><div class="card-title">Current - Showdown Leaderboard</div>
+         liveShowdownHtml = `<div class="card" style="flex: 1 1 0px; min-width: 300px; overflow-x:auto;"><div class="card-title">Current - Showdown Leaderboard</div>
          ${mvpBannerHtml}
          <table style="min-width:500px; text-align:left;"><thead><tr>
             <th>RANK</th><th>NAME</th><th>TOTAL HORNS</th><th>DAY WINS</th><th>TOTAL</th>
@@ -4981,7 +4981,7 @@ const views = {
       boards.forEach(board => {
         if (board.title.trim() === 'Showdown Leaderboard') return;
         
-        let cardStyle = `flex: 1; min-width: 320px;`;
+        let cardStyle = `flex: 1 1 0px; min-width: 300px;`;
         if (board.title.includes('Event Goals')) {
            cardStyle = `flex: 1 1 100%;`;
         }
