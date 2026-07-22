@@ -4842,14 +4842,14 @@ const views = {
                     leftStyle = "color: #ef4444; font-weight: bold;";
                     dailyAmtStyle = "color: #ef4444; font-weight: bold;";
                 } else {
-                    leftStr = `<span style="color:var(--success); font-weight:bold;">🌟 Goal Met! (+${Math.abs(leftVal).toLocaleString()})</span>`;
+                    leftStr = `+${Math.abs(leftVal).toLocaleString()}`;
                     leftStyle = "color: #10b981; font-weight: bold;";
                     dailyAmtStyle = "color: #10b981; font-weight: bold;";
                 }
                 dailyAmt = dailyAmt.toLocaleString();
             }
             
-            let gStr = g > 0 ? g.toLocaleString() : (isPending ? "Pending" : "0");
+            let gStr = g > 0 ? g.toLocaleString() : (isPending ? "Pending" : `<span style="color:var(--success); font-weight:bold;">🌟 Goal Met!</span>`);
             let dgStr = dg > 0 ? dg.toLocaleString() : (isPending ? "Pending" : "0");
             
             goalsCard += `<div style="background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
