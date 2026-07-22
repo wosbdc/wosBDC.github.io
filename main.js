@@ -2525,6 +2525,95 @@ const getAutocompleteShield = () => {
     return { style: {} };
 };
 
+function calculateAllTimeShowdown(historyData) {
+    if (!historyData || !Array.isArray(historyData)) return [];
+    
+    let allTimeStats = {};
+    const staticHorns = { d1: 1, d2: 2, d3: 2, d4: 2, d5: 2, d6: 4 };
+    
+    let currentEventPlayers = [];
+    let inPlayerBlock = false;
+    
+    function processEvent(players) {
+        if (!players || players.length === 0) return;
+        let topPlayers = { d1:{score:0}, d2:{score:0}, d3:{score:0}, d4:{score:0}, d5:{score:0}, d6:{score:0} };
+        
+        players.forEach(p => {
+            if (p.d1 > topPlayers.d1.score) topPlayers.d1 = { name: p.name, score: p.d1 };
+            if (p.d2 > topPlayers.d2.score) topPlayers.d2 = { name: p.name, score: p.d2 };
+            if (p.d3 > topPlayers.d3.score) topPlayers.d3 = { name: p.name, score: p.d3 };
+            if (p.d4 > topPlayers.d4.score) topPlayers.d4 = { name: p.name, score: p.d4 };
+            if (p.d5 > topPlayers.d5.score) topPlayers.d5 = { name: p.name, score: p.d5 };
+            if (p.d6 > topPlayers.d6.score) topPlayers.d6 = { name: p.name, score: p.d6 };
+        });
+        
+        players.forEach(p => {
+            const key = p.name.toLowerCase();
+            if (!allTimeStats[key]) {
+                allTimeStats[key] = { name: p.name, horns: 0, wins: 0, total: 0 };
+            }
+            allTimeStats[key].total += p.total;
+            
+            for (let i = 1; i <= 6; i++) {
+                let dVal = p['d'+i] || 0;
+                let topScore = topPlayers['d'+i].score;
+                if (dVal > 0 && dVal === topScore) {
+                    allTimeStats[key].horns += staticHorns['d'+i];
+                    allTimeStats[key].wins += 1;
+                }
+            }
+        });
+    }
+    
+    for (let i = 0; i < historyData.length; i++) {
+        let row = historyData[i];
+        if (!row || !Array.isArray(row)) continue;
+        
+        let col1 = String(row[1] || '').trim();
+        let col2 = String(row[2] || '').trim();
+        
+        if (col1.toLowerCase() === 'ranking' && col2.toLowerCase() === 'member') {
+            if (inPlayerBlock && currentEventPlayers.length > 0) {
+                processEvent(currentEventPlayers);
+            }
+            inPlayerBlock = true;
+            currentEventPlayers = [];
+            continue;
+        }
+        
+        if (inPlayerBlock) {
+            if (!col2 || col1.toLowerCase() === 'date:' || col1.toLowerCase() === 'alliance' || col1.toLowerCase() === 'winners') {
+                processEvent(currentEventPlayers);
+                inPlayerBlock = false;
+                currentEventPlayers = [];
+                continue;
+            }
+            
+            let name = col2;
+            let d1 = typeof row[3] === 'number' ? row[3] : (parseInt(String(row[3] || '').replace(/,/g, '')) || 0);
+            let d2 = typeof row[4] === 'number' ? row[4] : (parseInt(String(row[4] || '').replace(/,/g, '')) || 0);
+            let d3 = typeof row[5] === 'number' ? row[5] : (parseInt(String(row[5] || '').replace(/,/g, '')) || 0);
+            let d4 = typeof row[6] === 'number' ? row[6] : (parseInt(String(row[6] || '').replace(/,/g, '')) || 0);
+            let d5 = typeof row[7] === 'number' ? row[7] : (parseInt(String(row[7] || '').replace(/,/g, '')) || 0);
+            let d6 = typeof row[8] === 'number' ? row[8] : (parseInt(String(row[8] || '').replace(/,/g, '')) || 0);
+            let total = typeof row[9] === 'number' ? row[9] : (parseInt(String(row[9] || '').replace(/,/g, '')) || 0);
+            
+            currentEventPlayers.push({ name, d1, d2, d3, d4, d5, d6, total });
+        }
+    }
+    
+    if (inPlayerBlock && currentEventPlayers.length > 0) {
+        processEvent(currentEventPlayers);
+    }
+    
+    let sorted = Object.values(allTimeStats).sort((a, b) => {
+        if (b.horns !== a.horns) return b.horns - a.horns;
+        return b.total - a.total;
+    });
+    
+    return sorted;
+}
+
 // View renderers
 const views = {
   staff: async () => {
@@ -4667,95 +4756,6 @@ const views = {
   },
   
 
-
-function calculateAllTimeShowdown(historyData) {
-    if (!historyData || !Array.isArray(historyData)) return [];
-    
-    let allTimeStats = {};
-    const staticHorns = { d1: 1, d2: 2, d3: 2, d4: 2, d5: 2, d6: 4 };
-    
-    let currentEventPlayers = [];
-    let inPlayerBlock = false;
-    
-    function processEvent(players) {
-        if (!players || players.length === 0) return;
-        let topPlayers = { d1:{score:0}, d2:{score:0}, d3:{score:0}, d4:{score:0}, d5:{score:0}, d6:{score:0} };
-        
-        players.forEach(p => {
-            if (p.d1 > topPlayers.d1.score) topPlayers.d1 = { name: p.name, score: p.d1 };
-            if (p.d2 > topPlayers.d2.score) topPlayers.d2 = { name: p.name, score: p.d2 };
-            if (p.d3 > topPlayers.d3.score) topPlayers.d3 = { name: p.name, score: p.d3 };
-            if (p.d4 > topPlayers.d4.score) topPlayers.d4 = { name: p.name, score: p.d4 };
-            if (p.d5 > topPlayers.d5.score) topPlayers.d5 = { name: p.name, score: p.d5 };
-            if (p.d6 > topPlayers.d6.score) topPlayers.d6 = { name: p.name, score: p.d6 };
-        });
-        
-        players.forEach(p => {
-            const key = p.name.toLowerCase();
-            if (!allTimeStats[key]) {
-                allTimeStats[key] = { name: p.name, horns: 0, wins: 0, total: 0 };
-            }
-            allTimeStats[key].total += p.total;
-            
-            for (let i = 1; i <= 6; i++) {
-                let dVal = p['d'+i] || 0;
-                let topScore = topPlayers['d'+i].score;
-                if (dVal > 0 && dVal === topScore) {
-                    allTimeStats[key].horns += staticHorns['d'+i];
-                    allTimeStats[key].wins += 1;
-                }
-            }
-        });
-    }
-    
-    for (let i = 0; i < historyData.length; i++) {
-        let row = historyData[i];
-        if (!row || !Array.isArray(row)) continue;
-        
-        let col1 = String(row[1] || '').trim();
-        let col2 = String(row[2] || '').trim();
-        
-        if (col1.toLowerCase() === 'ranking' && col2.toLowerCase() === 'member') {
-            if (inPlayerBlock && currentEventPlayers.length > 0) {
-                processEvent(currentEventPlayers);
-            }
-            inPlayerBlock = true;
-            currentEventPlayers = [];
-            continue;
-        }
-        
-        if (inPlayerBlock) {
-            if (!col2 || col1.toLowerCase() === 'date:' || col1.toLowerCase() === 'alliance' || col1.toLowerCase() === 'winners') {
-                processEvent(currentEventPlayers);
-                inPlayerBlock = false;
-                currentEventPlayers = [];
-                continue;
-            }
-            
-            let name = col2;
-            let d1 = typeof row[3] === 'number' ? row[3] : (parseInt(String(row[3] || '').replace(/,/g, '')) || 0);
-            let d2 = typeof row[4] === 'number' ? row[4] : (parseInt(String(row[4] || '').replace(/,/g, '')) || 0);
-            let d3 = typeof row[5] === 'number' ? row[5] : (parseInt(String(row[5] || '').replace(/,/g, '')) || 0);
-            let d4 = typeof row[6] === 'number' ? row[6] : (parseInt(String(row[6] || '').replace(/,/g, '')) || 0);
-            let d5 = typeof row[7] === 'number' ? row[7] : (parseInt(String(row[7] || '').replace(/,/g, '')) || 0);
-            let d6 = typeof row[8] === 'number' ? row[8] : (parseInt(String(row[8] || '').replace(/,/g, '')) || 0);
-            let total = typeof row[9] === 'number' ? row[9] : (parseInt(String(row[9] || '').replace(/,/g, '')) || 0);
-            
-            currentEventPlayers.push({ name, d1, d2, d3, d4, d5, d6, total });
-        }
-    }
-    
-    if (inPlayerBlock && currentEventPlayers.length > 0) {
-        processEvent(currentEventPlayers);
-    }
-    
-    let sorted = Object.values(allTimeStats).sort((a, b) => {
-        if (b.horns !== a.horns) return b.horns - a.horns;
-        return b.total - a.total;
-    });
-    
-    return sorted;
-}
 
   leaderboards: async (filterString) => {
     renderLoading("Loading Leaderboards");
