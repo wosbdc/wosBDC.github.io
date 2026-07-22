@@ -1,3 +1,7 @@
+## [1.29.52] - 2026-07-22
+### Fixed
+- **Showdown Data Entry Lock Button Visibility**: Added `lockBtn.style.display = 'inline-block'` to `window.onSdPlayerSelect()`. Previously when selecting a player with existing scores, the input locked properly but the lock button remained `display: none`, hiding the `🔒 Locked` / `✏️ Edit` button and preventing score editing.
+
 ## [1.29.51] - 2026-07-22
 ### Fixed
 - **Showdown Leaderboard Rendering ReferenceError**: Fixed `Uncaught ReferenceError: sdHistoryData is not defined` in `views.leaderboards` by explicitly declaring `let sdHistoryData = null;` before fetching database history. This completely restores the **Current - Showdown Leaderboard**, **All-Time - Showdown Leaderboard**, and **Event Goals** cards on the `Leaderboards -> Showdown` page.

@@ -3676,7 +3676,11 @@ html += `</select>
              if (val !== undefined && val !== null && val !== '') {
                  input.disabled = true;
                  input.style.opacity = '0.5';
-                 lockBtn.innerHTML = '🔒';
+                 lockBtn.style.display = 'inline-block';
+                 lockBtn.innerHTML = '🔒 Locked';
+                 lockBtn.style.background = 'rgba(239,68,68,0.15)';
+                 lockBtn.style.borderColor = 'rgba(239,68,68,0.3)';
+                 lockBtn.style.color = '#ef4444';
              } else {
                  input.disabled = false;
                  input.style.opacity = '1';
