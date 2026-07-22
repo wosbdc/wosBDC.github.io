@@ -4954,13 +4954,16 @@ html += `</select>
       let sdHistoryData = null;
       if (filterString && filterString.toLowerCase() === 'showdown') {
          try {
+            sdHistoryData = await fetchSheet("Showdown History");
             const histSnap = await get(ref(db, 'showdown_history'));
             if (histSnap.exists() && histSnap.val()) {
-               sdHistoryData = histSnap.val();
-            } else {
-               sdHistoryData = await fetchSheet("Showdown History");
-               if (sdHistoryData && Array.isArray(sdHistoryData) && sdHistoryData.length > 0) {
-                  await set(ref(db, 'showdown_history'), sdHistoryData);
+               const extraHistory = histSnap.val();
+               let baseRows = sdHistoryData ? (sdHistoryData.data || sdHistoryData) : [];
+               let extraRows = extraHistory ? (extraHistory.data || extraHistory) : [];
+               if (Array.isArray(baseRows) && Array.isArray(extraRows) && extraRows.length > 0) {
+                  sdHistoryData = [...baseRows, ...extraRows];
+               } else if (extraRows.length > 0) {
+                  sdHistoryData = extraRows;
                }
             }
          } catch(e) { console.warn("Showdown history fetch error", e); }

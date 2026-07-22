@@ -1,3 +1,7 @@
+## [1.29.55] - 2026-07-22
+### Fixed
+- **All-Time Showdown Master History Data Source**: Updated `views.leaderboards` to always fetch the full master **Showdown History** sheet (`fetchSheet("Showdown History")`) containing all historical events, and append any newly archived Firebase events on top. Restored the complete 41-player all-time history standings.
+
 ## [1.29.54] - 2026-07-22
 ### Added
 - **Real-Time Live & All-Time Showdown Integration**: Combined live event scores from `showdown_live` into the **All-Time - Showdown Leaderboard** so active event scores reflect on all-time standings in real time.
