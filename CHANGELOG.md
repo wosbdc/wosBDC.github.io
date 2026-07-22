@@ -1,3 +1,7 @@
+## [1.29.47] - 2026-07-22
+### Fixed
+- **Centered Warning Modal Alignment**: Guaranteed that both Archive to History and Reset Event confirm modals pop up in the center of the screen with identical custom styling.
+
 ## [1.29.46] - 2026-07-22
 ### Added
 - **Showdown Archive Warning Modal**: Added explicit confirmation warning instructing admins not to archive until the Showdown event is 100% finished after Day 6.
