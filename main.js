@@ -2583,7 +2583,9 @@ const getAutocompleteShield = () => {
 };
 
 function calculateAllTimeShowdown(historyData) {
-    if (!historyData || !Array.isArray(historyData)) return [];
+    if (!historyData) return [];
+    const rows = Array.isArray(historyData) ? historyData : Object.values(historyData);
+    if (!rows || rows.length === 0) return [];
     
     let allTimeStats = {};
     const staticHorns = { d1: 1, d2: 2, d3: 2, d4: 2, d5: 2, d6: 4 };
@@ -2622,9 +2624,11 @@ function calculateAllTimeShowdown(historyData) {
         });
     }
     
-    for (let i = 0; i < historyData.length; i++) {
-        let row = historyData[i];
-        if (!row || !Array.isArray(row)) continue;
+    for (let i = 0; i < rows.length; i++) {
+        let row = rows[i];
+        if (!row) continue;
+        if (!Array.isArray(row) && typeof row === 'object') row = Object.values(row);
+        if (!Array.isArray(row)) continue;
         
         let col1 = String(row[1] || '').trim();
         let col2 = String(row[2] || '').trim();
@@ -5051,8 +5055,9 @@ const views = {
          });
          liveShowdownHtml += `</tbody></table></div></div>`;
          
-         if (sdHistoryData && sdHistoryData.length > 0) {
-             let allTimePlayers = calculateAllTimeShowdown(sdHistoryData);
+         const historyRows = sdHistoryData ? (Array.isArray(sdHistoryData) ? sdHistoryData : Object.values(sdHistoryData)) : [];
+         if (historyRows.length > 0) {
+             let allTimePlayers = calculateAllTimeShowdown(historyRows);
              
              let allTimeMvpHtml = "";
              if (allTimePlayers.length > 0 && allTimePlayers[0].horns > 0) {
