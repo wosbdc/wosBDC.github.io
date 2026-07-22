@@ -653,12 +653,40 @@ window.doBeartrapCrown = async () => {
     window._executeLogBearTrapWinner(finalName, trap);
 };
 
+window.logAdminAction = async (actionType, details, targetPlayer = '') => {
+    try {
+        const adminName = (currentUser && currentUser.gameId && idToNameMap[currentUser.gameId]) 
+            ? idToNameMap[currentUser.gameId] 
+            : (currentUser && currentUser.email ? currentUser.email : "Admin");
+        const adminEmail = currentUser ? (currentUser.email || "") : "";
+        const logId = Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+        
+        const now = new Date();
+        const logItem = {
+            id: logId,
+            admin: adminName,
+            email: adminEmail,
+            action: actionType,
+            details: details,
+            target: targetPlayer,
+            timestamp: Date.now(),
+            dateStr: now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            timeStr: now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+        };
+        
+        await set(ref(db, `admin_logs/${logId}`), logItem);
+    } catch (e) {
+        console.warn("Failed to write admin log to Firebase", e);
+    }
+};
+
 window.resetBearTrapWinners = async () => {
     const confirmed = await window.customConfirm("Are you sure you want to reset both Bear Trap winners to 'Pending...'?");
     if (!confirmed) return;
     try {
         await set(ref(db, 'config/bearTrapWinners/1'), {name: "Pending...", score: "-", timestamp: Date.now()});
         await set(ref(db, 'config/bearTrapWinners/2'), {name: "Pending...", score: "-", timestamp: Date.now()});
+        window.logAdminAction("Bear Trap Reset", "Reset both Bear Trap 1 and Bear Trap 2 champions to Pending");
         window.showToast("Bear Trap Winners Reset to Pending!", "success");
         setTimeout(() => window.location.reload(), 1500);
     } catch(e) {
@@ -690,6 +718,7 @@ window._executeLogBearTrapWinner = async (name, trap) => {
             else if (String(trap) === '2') winData.bt2 = (winData.bt2 || 0) + 1;
             winData.total = (winData.bt1 || 0) + (winData.bt2 || 0);
             await set(winRef, winData);
+            window.logAdminAction("Bear Trap Champion Crowned", `Crowned ${name} as Bear Trap ${trap} Winner (New Total: ${res.newTotal})`, name);
 
             window.showToast(`🏆 Successfully crowned ${name} as Champion! (New Total: ${res.newTotal})`, "success");
             window.searchPlayerFull(name); // Refresh UI
@@ -2573,6 +2602,7 @@ window.archiveCurrentShowdownToFirebase = async () => {
         await set(ref(db, 'showdown_history'), updatedHistory);
         await set(ref(db, 'showdown_live'), null);
         await set(ref(db, 'showdown_meta/enemyAlliance'), { name: "Enemy Alliance", scores: {} });
+        window.logAdminAction("Showdown Event Archived", `Archived current Showdown scores (${pList.length} players) to Firebase History and reset live event`);
         if (window.showToast) window.showToast("Successfully archived current Showdown event into Firebase History & reset live event!", "success");
     } catch(err) {
         if (window.showToast) window.showToast("Error archiving event: " + err.message, "error");
@@ -2585,6 +2615,7 @@ window.resetCurrentShowdown = async () => {
     try {
         await set(ref(db, 'showdown_live'), null);
         await set(ref(db, 'showdown_meta/enemyAlliance'), { name: "Enemy Alliance", scores: {} });
+        window.logAdminAction("Showdown Live Reset", "Reset current live Showdown scores and enemy alliance data");
         if (window.showToast) window.showToast("Showdown live data has been reset!", "success");
         if (typeof views !== 'undefined' && views.showdownAdmin) views.showdownAdmin();
     } catch(err) {
@@ -2917,57 +2948,83 @@ const views = {
         }
       });
 
-      // Global function to manually fetch the freshest Admin Log from Sheets API
+      // Global function to fetch real-time Admin Logs from Firebase Realtime Database
       window.fetchAdminLog = async () => {
         const tb = document.getElementById('adminLogsTableBody');
         if (!tb) return;
-        tb.innerHTML = `<tr><td colspan="5" style="padding:15px; text-align:center; color:var(--text-muted);">Fetching directly from Google Sheets...</td></tr>`;
+        tb.innerHTML = `<tr><td colspan="5" style="padding:15px; text-align:center; color:var(--text-muted);">Loading Firebase Admin Logs...</td></tr>`;
         try {
-          const logToken = await getAuthToken();
-          const res = await fetch(API_BASE_URL + '?api=getSheetData&sheetName=Admin Log&token=' + encodeURIComponent(logToken)).then(r => r.json());
-          if (res.success && res.data) {
-            const logsData = res.data;
-            let tbodyHtml = '';
-            let uniqueAdmins = new Set();
-            if (logsData && logsData.length > 1) {
-               for (let i = logsData.length - 1; i >= 1; i--) {
-                  let row = logsData[i];
-                  if (row && row[0]) {
-                     let d = new Date(row[0]);
-                     let dStr = d.toLocaleString([], {month:'numeric', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit'});
-                     let adminName = row[1] || '';
-                     if (adminName) uniqueAdmins.add(adminName);
-                     let playerName = row[2] || '';
-                     let amount = row[3] || '';
-                     let newTotal = row[4] !== undefined ? row[4] : '';
-                       tbodyHtml += `
-                         <tr class="admin-log-row" data-admin="${adminName.toLowerCase()}" data-timestamp="${d.getTime()}" style="border-bottom:1px solid var(--border);">
-                           <td style="padding:10px; font-size:13px; color:var(--text-muted);">${dStr}</td>
-                           <td style="padding:10px; font-weight:bold; color:var(--accent);">${adminName}</td>
-                           <td style="padding:10px; font-weight:bold; color:var(--text-main);">${playerName}</td>
-                           <td style="padding:10px; color:var(--text-main);">${amount}</td>
-                           <td style="padding:10px; font-weight:bold; color:var(--success);">${newTotal}</td>
-                         </tr>
-                       `;
+          const logSnap = await get(ref(db, 'admin_logs'));
+          let fbLogs = logSnap.val() || {};
+          let logItems = Object.values(fbLogs);
+
+          // Seed legacy logs from Google Sheets if Firebase log node is empty
+          if (logItems.length === 0) {
+             try {
+               const logToken = await getAuthToken();
+               const res = await fetch(API_BASE_URL + '?api=getSheetData&sheetName=Admin Log&token=' + encodeURIComponent(logToken)).then(r => r.json());
+               if (res && res.success && res.data && res.data.length > 1) {
+                  for (let i = 1; i < res.data.length; i++) {
+                     let row = res.data[i];
+                     if (row && row[0]) {
+                        let d = new Date(row[0]);
+                        let logId = 'legacy_' + i;
+                        let item = {
+                           id: logId,
+                           admin: row[1] || 'Admin',
+                           email: '',
+                           action: 'Donation Added',
+                           target: row[2] || '',
+                           details: `Added ${row[3] || ''} donation points (New Total: ${row[4] !== undefined ? row[4] : ''})`,
+                           timestamp: isNaN(d.getTime()) ? Date.now() : d.getTime(),
+                           dateStr: isNaN(d.getTime()) ? 'Legacy' : d.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}),
+                           timeStr: isNaN(d.getTime()) ? '' : d.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'})
+                        };
+                        logItems.push(item);
+                        set(ref(db, `admin_logs/${logId}`), item).catch(() => null);
+                     }
                   }
                }
-            }
-            if (tbodyHtml === '') tbodyHtml = `<tr><td colspan="5" style="padding:15px; text-align:center; color:var(--text-muted);">No logs found.</td></tr>`;
-            tb.innerHTML = tbodyHtml;
-            
-            const adminSelect = document.getElementById('adminLogFilter');
-            if (adminSelect) {
-               const currentSelection = adminSelect.value;
-               let selectHtml = '<option value="">All Admins</option>';
-               Array.from(uniqueAdmins).sort().forEach(admin => {
-                  selectHtml += `<option value="${admin.toLowerCase()}">${admin}</option>`;
-               });
-               adminSelect.innerHTML = selectHtml;
-               adminSelect.value = currentSelection;
-            }
+             } catch(e) {}
+          }
+
+          logItems.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+          let tbodyHtml = '';
+          let uniqueAdmins = new Set();
+          
+          logItems.forEach(log => {
+             let adminName = log.admin || 'Admin';
+             uniqueAdmins.add(adminName);
+             let dateDisplay = log.dateStr ? `${log.dateStr} ${log.timeStr || ''}` : new Date(log.timestamp).toLocaleString();
+             let actionBadge = `<span style="background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.3); color:#60a5fa; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:bold;">${log.action || 'Admin Action'}</span>`;
+             
+             tbodyHtml += `
+               <tr class="admin-log-row" data-admin="${adminName.toLowerCase()}" data-timestamp="${log.timestamp || 0}" style="border-bottom:1px solid var(--border);">
+                 <td style="padding:10px; font-size:12px; color:var(--text-muted); white-space:nowrap;">${dateDisplay}</td>
+                 <td style="padding:10px; font-weight:bold; color:var(--accent);">${adminName}</td>
+                 <td style="padding:10px;">${actionBadge}</td>
+                 <td style="padding:10px; font-weight:bold; color:var(--text-main);">${log.target || '-'}</td>
+                 <td style="padding:10px; font-size:13px; color:var(--text-main);">${log.details || '-'}</td>
+               </tr>
+             `;
+          });
+
+          if (tbodyHtml === '') tbodyHtml = `<tr><td colspan="5" style="padding:15px; text-align:center; color:var(--text-muted);">No admin logs recorded yet.</td></tr>`;
+          tb.innerHTML = tbodyHtml;
+          
+          const adminSelect = document.getElementById('adminLogFilter');
+          if (adminSelect) {
+             const currentSelection = adminSelect.value;
+             let selectHtml = '<option value="">All Admins</option>';
+             Array.from(uniqueAdmins).sort().forEach(admin => {
+                selectHtml += `<option value="${admin.toLowerCase()}">${admin}</option>`;
+             });
+             adminSelect.innerHTML = selectHtml;
+             adminSelect.value = currentSelection;
           }
         } catch(err) {
-          tb.innerHTML = `<tr><td colspan="5" style="padding:15px; text-align:center; color:var(--danger);">Error fetching logs. Check console.</td></tr>`;
+          tb.innerHTML = `<tr><td colspan="5" style="padding:15px; text-align:center; color:var(--danger);">Error loading Firebase logs: ${err.message}</td></tr>`;
         }
       };
       
@@ -3218,9 +3275,9 @@ const views = {
                     <tr style="border-bottom:2px solid var(--border); color:var(--text-muted);">
                       <th style="padding:10px;">Date & Time</th>
                       <th style="padding:10px;">Admin</th>
-                      <th style="padding:10px;">Player</th>
-                      <th style="padding:10px;">Action / Amount</th>
-                      <th style="padding:10px;">New Total</th>
+                      <th style="padding:10px;">Action Category</th>
+                      <th style="padding:10px;">Target Player</th>
+                      <th style="padding:10px;">Action Details</th>
                     </tr>
                   </thead>
                   <tbody id="adminLogsTableBody">
@@ -3723,9 +3780,9 @@ html += `</select>
           }
           
           try {
-             
              await set(ref(db, `showdown_live/${sel}`), updates);
              window._currentSdLiveData[sel] = updates;
+             window.logAdminAction("Showdown Score Update", `Saved daily Showdown scores for player ${sel}`, sel);
              if (window.showToast) window.showToast(`Saved scores for ${sel}`, "success");
              
              // Sync the cached data to reflect this so navigation uses updated scores
@@ -3755,6 +3812,7 @@ html += `</select>
           
           try {
              await set(ref(db, 'showdown_meta'), newMeta);
+             window.logAdminAction("Enemy Alliance Update", `Updated Enemy Alliance name to '${newMeta.enemyAlliance.name || 'Enemy Alliance'}' and daily enemy scores`, newMeta.enemyAlliance.name);
              if(window.showToast) window.showToast("Event Settings saved successfully!", "success");
           } catch(e) {
              console.error(e);
@@ -3990,6 +4048,7 @@ html += `</select>
       
       resultsHTML += "</div>";
       statusDiv.innerHTML = resultsHTML;
+      window.logAdminAction("Bear Trap Donations Added", `Added multi-donation batch for ${entries.length} player(s)`, entries.map(e => e.name).join(', '));
       
       // Reset form
       const cont = document.getElementById('beartrapEntries');
@@ -7375,6 +7434,7 @@ window.promptBearTrap = async (name) => {
     donData.allTime = (donData.allTime || 0) + addAmt;
     donData.lastUpdated = Date.now();
     await set(donRef, donData);
+    window.logAdminAction("Single Bear Trap Donation Added", `Added +${addAmt.toLocaleString()} Bear Trap donation points to ${name}`, name);
 
     const donToken2 = await getAuthToken();
     const res = await fetch(`${API_BASE_URL}?api=addDonation&name=${encodeURIComponent(name)}&amount=${encodeURIComponent(amt)}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(donToken2)}`).then(r => r.json()).catch(() => ({ success: true, newTotal: donData.current }));

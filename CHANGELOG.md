@@ -1,3 +1,8 @@
+## [1.29.59] - 2026-07-22
+### Added
+- **Firebase Realtime Database Admin Action Logging System**: Integrated `window.logAdminAction()` across all admin functions (Bear Trap crowning, winner resets, multi-donations, single donations, Showdown score updates, Enemy Alliance settings, event archiving, and live resets).
+- **Real-Time Admin Logs UI**: Upgraded `window.fetchAdminLog()` and the Admin Logs tab in `views.admin()` to read and display logs natively from Firebase Realtime Database node `admin_logs` in real time with category badges and instant search/filters.
+
 ## [1.29.58] - 2026-07-22
 ### Fixed
 - **Bear Trap 1 & 2 Champion Banner Display**: Updated champion banner logic in `views.leaderboards` so that explicit crowned winners (from `config/bearTrapWinners`) and Rank #1 players (from `beartrap_wins`) are correctly displayed on Bear Trap 1 & 2 cards.
