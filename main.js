@@ -408,7 +408,7 @@ window.adminLinkAltAccountPromptByChief = async (chiefName) => {
             if (document.getElementById('adminHubView')) window.views.admin();
             window.searchPlayerFull(chiefName);
         } else {
-            alert(json.message || "Failed to link alt account.");
+            window.customAlert(json.message || "Failed to link alt account.");
         }
     } catch(e) {
         window.showToast(e.message, "error");
@@ -654,7 +654,8 @@ window.doBeartrapCrown = async () => {
 };
 
 window.resetBearTrapWinners = async () => {
-    if (!confirm("Are you sure you want to reset both Bear Trap winners to 'Pending...'?")) return;
+    const confirmed = await window.customConfirm("Are you sure you want to reset both Bear Trap winners to 'Pending...'?");
+    if (!confirmed) return;
     try {
         await set(ref(db, 'config/bearTrapWinners/1'), {name: "Pending...", score: "-", timestamp: Date.now()});
         await set(ref(db, 'config/bearTrapWinners/2'), {name: "Pending...", score: "-", timestamp: Date.now()});
@@ -3370,7 +3371,8 @@ const views = {
       };
       
       window.resetFrostClan = async function() {
-        if (!confirm("Are you sure you want to uncheck all Shields and Rebirth Tomes for Frost Clan?")) return;
+        const confirmed = await window.customConfirm("Are you sure you want to uncheck all Shields and Rebirth Tomes for Frost Clan?");
+        if (!confirmed) return;
         
         window.frostState.alts.forEach((alt, idx) => {
           alt.shields = false;

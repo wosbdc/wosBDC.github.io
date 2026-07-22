@@ -1,3 +1,7 @@
+## [1.29.48] - 2026-07-22
+### Changed
+- **Global Modal Consistency**: Replaced all remaining native browser popups (`confirm` / `alert`) across Bear Trap reset, Frost Clan reset, and Alt Account linking with centered `window.customConfirm` and `window.customAlert` glassmorphic modals.
+
 ## [1.29.47] - 2026-07-22
 ### Fixed
 - **Centered Warning Modal Alignment**: Guaranteed that both Archive to History and Reset Event confirm modals pop up in the center of the screen with identical custom styling.
