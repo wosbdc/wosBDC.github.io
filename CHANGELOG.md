@@ -1,3 +1,7 @@
+## [1.29.63] - 2026-07-22
+### Changed
+- **Player Database Editor Firebase Integration**: Updated `window.searchPlayerFull()` to query player roster profiles natively from Firebase Realtime Database (`roster_live`), eliminating latency when looking up, inspecting, editing, or deleting player accounts.
+
 ## [1.29.62] - 2026-07-22
 ### Added
 - **Home Page Onboarding Hero Banner**: Added a high-visibility, glassmorphism hero announcement card to `views.home()` for guest visitors, prompting alliance members to claim their pre-loaded roster profile or sign in.

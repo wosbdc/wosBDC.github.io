@@ -1171,7 +1171,7 @@ window.searchPlayerFull = async (name) => {
     let sdLiveSnapshotPromise = window.fetchMergedShowdown();
     const [data, rosterRawData, lbRawData, sdHistoryRawData, sdMergedDataRes] = await Promise.all([
             fetchSheet("activity "),
-            fetchSheet("Chief's List"),
+            window.fetchRoster(),
             fetchSheet("LeaderBoards"),
             fetchSheet("Showdown History"),
             sdLiveSnapshotPromise
@@ -1208,13 +1208,7 @@ window.searchPlayerFull = async (name) => {
         try { usersSnap = await get(ref(db, 'users')); } catch(e) { console.warn("Could not fetch users:", e); }
     
     // Parse Maps
-    const rosterMap = {};
-    if (rosterRawData && rosterRawData.length > 0) {
-      for (let i = 1; i < rosterRawData.length; i++) {
-        let chief = rosterRawData[i][0];
-        if (chief) rosterMap[chief.toString().trim()] = { furnaceLevel: rosterRawData[i][2], giftCodes: rosterRawData[i][3], timeActive: rosterRawData[i][5] };
-      }
-    }
+    const rosterMap = rosterRawData || {};
     
 
 
