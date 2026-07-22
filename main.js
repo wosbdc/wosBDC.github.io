@@ -4802,7 +4802,10 @@ const views = {
          
          let goalsCard = `<div class="card" style="margin-bottom:20px; animation:fadeIn 0.3s ease;"><div class="card-title">🎯 Event Goals</div>`;
          goalsCard += `<div style="margin-bottom:20px;">
-             <div style="font-weight:bold; color:var(--text-main); margin-bottom:5px;">The 20M Challenge</div>
+             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+               <div style="font-weight:bold; color:var(--text-main);">The 20M Challenge</div>
+               ${ourScores.total >= 20000000 ? `<div style="color:var(--success); font-size:12px; font-weight:bold; background:rgba(46,204,113,0.1); padding:2px 8px; border-radius:12px; border:1px solid rgba(46,204,113,0.3); animation:pulse 2s infinite;">🎉 Goal Reached!</div>` : ''}
+             </div>
              <div style="background:var(--border); height:12px; border-radius:6px; overflow:hidden;">
                <div style="background:var(--accent); height:100%; width:${Math.min(100, (ourScores.total / 20000000) * 100)}%;"></div>
              </div>
@@ -4839,7 +4842,7 @@ const views = {
                     leftStyle = "color: #ef4444; font-weight: bold;";
                     dailyAmtStyle = "color: #ef4444; font-weight: bold;";
                 } else {
-                    leftStr = `+${Math.abs(leftVal).toLocaleString()}`;
+                    leftStr = `<span style="color:var(--success); font-weight:bold;">🌟 Goal Met! (+${Math.abs(leftVal).toLocaleString()})</span>`;
                     leftStyle = "color: #10b981; font-weight: bold;";
                     dailyAmtStyle = "color: #10b981; font-weight: bold;";
                 }
@@ -4850,7 +4853,10 @@ const views = {
             let dgStr = dg > 0 ? dg.toLocaleString() : (isPending ? "Pending" : "0");
             
             goalsCard += `<div style="background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-               <div style="font-weight: bold; color: var(--text-main); font-size: 1.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px dashed var(--border);">Event Day ${i}</div>
+               <div style="font-weight: bold; color: var(--text-main); font-size: 1.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px dashed var(--border); display:flex; justify-content:space-between; align-items:center;">
+                 <span>Event Day ${i}</span>
+                 ${leftVal <= 0 && !isPending ? `<span style="color:var(--success); font-size:10px; background:rgba(46,204,113,0.1); padding:2px 6px; border-radius:10px; border:1px solid rgba(46,204,113,0.3);">✅ Completed</span>` : ''}
+               </div>
                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                  <span style="color: var(--text-muted); font-size: 0.9em;">Daily Goal</span>
                  <span>${dgStr}</span>
@@ -4972,8 +4978,11 @@ const views = {
             
             html += `
             <div style="margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px dashed var(--border);">
-              <div style="display:flex; justify-content:space-between; font-size:16px; font-weight:bold; margin-bottom:8px;">
-                <span style="color:var(--text-main);">🌟 The 20M Challenge</span>
+              <div style="display:flex; justify-content:space-between; font-size:16px; font-weight:bold; margin-bottom:8px; align-items:center;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <span style="color:var(--text-main);">🌟 The 20M Challenge</span>
+                  ${totalScore >= allTimeGoal ? `<span style="color:var(--success); font-size:12px; font-weight:bold; background:rgba(46,204,113,0.1); padding:2px 8px; border-radius:12px; border:1px solid rgba(46,204,113,0.3); animation:pulse 2s infinite;">🎉 Goal Reached!</span>` : ''}
+                </div>
                 <span style="color:var(--text-muted);">${formatNumber(totalScore)} / <span style="color:var(--accent);">${formatNumber(allTimeGoal)}</span></span>
               </div>
               <div style="width:100%; height:12px; background:rgba(0,0,0,0.3); border-radius:6px; overflow:hidden; border:1px solid var(--border);">
