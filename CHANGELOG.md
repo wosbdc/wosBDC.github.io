@@ -1,3 +1,10 @@
+## [1.29.73] - 2026-07-22
+### Added
+- **Multi-Menu Logs & Activity History Dashboard**: Upgraded Admin Hub ➔ 📋 Logs Tab into a 3-subtab multi-menu dashboard featuring:
+  1. `📋 Admin Action Logs`: Real-time admin operations & audit logs.
+  2. `📊 Member Activity Checklist`: Live roster event participation matrix (`🔥 Perfect Attendance`, `🏆 Championship`, `⚔️ Mercenary`, `🐻‍❄️ Polar Terrors`, `🗳️ Voter`).
+  3. `📜 Activity History Archives`: Archived event participation & historical activity logs.
+
 ## [1.29.72] - 2026-07-22
 ### Changed
 - **Championship Signup Button Styling**: Formatted Championship signup buttons to display a bold, vibrant solid green `✅ YES` pill badge when signed up, and a distinct red `❌ NO` pill badge when missing.

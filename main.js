@@ -3393,6 +3393,153 @@ const views = {
       
       // Initial fetch
       window.fetchAdminLog();
+
+      // Multi-menu Sub-Tab switching for Logs
+      window.switchLogsSubtab = (subtabId) => {
+        document.querySelectorAll('.logs-subtab-btn').forEach(btn => {
+            if (btn.getAttribute('data-subtab') === subtabId) {
+                btn.style.background = 'var(--accent)';
+                btn.style.color = 'white';
+                btn.style.border = 'none';
+            } else {
+                btn.style.background = 'var(--bg-card)';
+                btn.style.color = 'var(--text-main)';
+                btn.style.border = '1px solid var(--border)';
+            }
+        });
+        document.querySelectorAll('.logs-subtab-content').forEach(c => c.style.display = 'none');
+        const target = document.getElementById(subtabId);
+        if (target) target.style.display = 'block';
+
+        if (subtabId === 'subtab-activity-matrix' && !window._activityMatrixLoaded) {
+            window.loadActivityMatrix();
+        } else if (subtabId === 'subtab-activity-history' && !window._activityHistoryLoaded) {
+            window.loadActivityHistory();
+        }
+      };
+
+      // Load Activity Matrix Sub-Tab
+      window.loadActivityMatrix = async () => {
+        const tbody = document.getElementById('activityMatrixTableBody');
+        if (!tbody) return;
+        tbody.innerHTML = `<tr><td colspan="6" style="padding:20px; text-align:center; color:var(--text-muted);">Loading live Activity Matrix...</td></tr>`;
+        
+        try {
+          const [actData, rosterData] = await Promise.all([
+            window.fetchActivityData(),
+            window.fetchRoster().catch(() => ({}))
+          ]);
+
+          window._rawActivityMatrix = actData || [];
+          let playersList = [];
+
+          if (Array.isArray(actData) && actData.length > 1) {
+             for (let i = 1; i < actData.length; i++) {
+                let row = actData[i];
+                if (row && row[0]) {
+                   let pName = row[0].toString().trim();
+                   let perfAtt = row[1] && row[1].toString().toLowerCase().includes('yes');
+                   let champ = row[2] && row[2].toString().toLowerCase().includes('yes');
+                   let merc = row[3] && row[3].toString().toLowerCase().includes('yes');
+                   let polar = row[4] && row[4].toString().toLowerCase().includes('yes');
+                   let voter = row[5] && row[5].toString().toLowerCase().includes('yes');
+                   playersList.push({ name: pName, perfAtt, champ, merc, polar, voter });
+                }
+             }
+          }
+
+          if (playersList.length === 0 && rosterData) {
+             Object.values(rosterData).forEach(p => {
+                if (p.name) {
+                   playersList.push({ name: p.name, perfAtt: false, champ: false, merc: false, polar: false, voter: false });
+                }
+             });
+          }
+
+          playersList.sort((a,b) => a.name.localeCompare(b.name));
+          window._activityMatrixList = playersList;
+          window._activityMatrixLoaded = true;
+          window.renderActivityMatrixTable(playersList);
+        } catch(e) {
+          console.error(e);
+          tbody.innerHTML = `<tr><td colspan="6" style="padding:20px; text-align:center; color:var(--danger);">Error loading Activity Matrix</td></tr>`;
+        }
+      };
+
+      window.renderActivityMatrixTable = (list) => {
+        const tbody = document.getElementById('activityMatrixTableBody');
+        if (!tbody) return;
+        if (!list || list.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" style="padding:20px; text-align:center; color:var(--text-muted);">No activity data found.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = list.map(p => `
+          <tr class="activity-matrix-row" data-name="${escapeHTML(p.name.toLowerCase())}" style="border-bottom:1px solid var(--border);">
+            <td style="padding:10px; font-weight:bold; color:var(--text-main);">${escapeHTML(p.name)}</td>
+            <td style="padding:10px;">${p.perfAtt ? '<span style="color:#f97316; font-weight:bold;">🔥 Perfect</span>' : '<span style="color:var(--text-muted);">-</span>'}</td>
+            <td style="padding:10px;">${p.champ ? '<span style="color:#fbbf24; font-weight:bold;">🏆 Championship</span>' : '<span style="color:var(--text-muted);">-</span>'}</td>
+            <td style="padding:10px;">${p.merc ? '<span style="color:#ef4444; font-weight:bold;">⚔️ Mercenary</span>' : '<span style="color:var(--text-muted);">-</span>'}</td>
+            <td style="padding:10px;">${p.polar ? '<span style="color:#38bdf8; font-weight:bold;">🐻‍❄️ Polar Terrors</span>' : '<span style="color:var(--text-muted);">-</span>'}</td>
+            <td style="padding:10px;">${p.voter ? '<span style="color:#a855f7; font-weight:bold;">🗳️ Voter</span>' : '<span style="color:var(--text-muted);">-</span>'}</td>
+          </tr>
+        `).join('');
+      };
+
+      window.filterActivityMatrix = () => {
+        const q = (document.getElementById('activityMatrixSearch')?.value || '').toLowerCase().trim();
+        document.querySelectorAll('.activity-matrix-row').forEach(row => {
+            const name = row.getAttribute('data-name');
+            row.style.display = (!q || name.includes(q)) ? '' : 'none';
+        });
+      };
+
+      // Load Activity History Archives Sub-Tab
+      window.loadActivityHistory = async () => {
+        const tbody = document.getElementById('activityHistoryTableBody');
+        if (!tbody) return;
+        tbody.innerHTML = `<tr><td colspan="4" style="padding:20px; text-align:center; color:var(--text-muted);">Loading Activity History...</td></tr>`;
+
+        try {
+          const logSnap = await get(ref(db, 'admin_logs'));
+          let logs = logSnap.exists() ? Object.values(logSnap.val() || {}) : [];
+          
+          // Filter logs to event activity actions
+          let activityLogs = logs.filter(l => {
+              let cat = (l.category || l.action || '').toLowerCase();
+              return cat.includes('event') || cat.includes('attendance') || cat.includes('championship') || cat.includes('beartrap') || cat.includes('showdown');
+          });
+
+          activityLogs.sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
+          window._activityHistoryList = activityLogs;
+          window._activityHistoryLoaded = true;
+
+          if (activityLogs.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" style="padding:20px; text-align:center; color:var(--text-muted);">No historical activity logs archived yet.</td></tr>`;
+            return;
+          }
+
+          tbody.innerHTML = activityLogs.map(l => `
+            <tr class="activity-history-row" data-text="${escapeHTML(((l.category||'') + ' ' + (l.targetPlayer||'') + ' ' + (l.details||'')).toLowerCase())}" style="border-bottom:1px solid var(--border);">
+              <td style="padding:10px; font-weight:bold; color:var(--accent);">${escapeHTML(l.category || l.action || 'Event Log')}</td>
+              <td style="padding:10px; font-weight:bold; color:var(--text-main);">${escapeHTML(l.targetPlayer || 'All Members')}</td>
+              <td style="padding:10px; color:var(--text-main);">${escapeHTML(l.details || '-')}</td>
+              <td style="padding:10px; color:var(--text-muted); font-size:12px;">${l.timestamp ? new Date(l.timestamp).toLocaleString() : '-'}</td>
+            </tr>
+          `).join('');
+        } catch(e) {
+          console.error(e);
+          tbody.innerHTML = `<tr><td colspan="4" style="padding:20px; text-align:center; color:var(--danger);">Error loading activity history archives</td></tr>`;
+        }
+      };
+
+      window.filterActivityHistory = () => {
+        const q = (document.getElementById('activityHistorySearch')?.value || '').toLowerCase().trim();
+        document.querySelectorAll('.activity-history-row').forEach(row => {
+            const text = row.getAttribute('data-text');
+            row.style.display = (!q || text.includes(q)) ? '' : 'none';
+        });
+      };
       
       let html = `
         <div class="card" style="max-width:800px; margin:0 auto; animation: fadeIn 0.3s ease;">
@@ -3617,37 +3764,112 @@ const views = {
           </div>` : ''}
 
           <div id="tab-logs" class="admin-tab-content" style="display:none;">
-            <div style="background:var(--bg-main); padding:15px; border-radius:12px; border:1px solid var(--border); display:flex; flex-direction:column; gap:15px;">
-              <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h3 style="margin:0; color:var(--text-main);">&#128203; Admin Activity Logs</h3><button onclick="window.fetchAdminLog()" style="background:var(--accent); color:white; border:none; border-radius:6px; padding:6px 12px; cursor:pointer; font-weight:bold; font-size:12px;">&#128259; Refresh</button>
-                <div style="display:flex; gap:10px;">
-                  <select id="adminLogDateFilter" onchange="window.filterAdminLogs()" style="padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);">
-                    <option value="all">All Time</option>
-                    <option value="today">Today</option>
-                    <option value="yesterday">Yesterday</option>
-                    <option value="7days">Last 7 Days</option>
-                  </select>
-                  <select id="adminLogFilter" onchange="window.filterAdminLogs()" style="padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);">
-                    <option value="">All Admins</option>
-                  </select>
-                  <input type="text" id="adminLogSearch" placeholder="Search logs..." onkeyup="window.filterAdminLogs()" style="padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); width:200px;">
+            <!-- Multi-Menu Sub-Navigation Bar -->
+            <div style="display:flex; gap:10px; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:12px; flex-wrap:wrap; align-items:center;">
+              <button class="logs-subtab-btn active" data-subtab="subtab-admin-logs" onclick="window.switchLogsSubtab('subtab-admin-logs')" style="background:var(--accent); color:white; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:14px;">
+                📋 Admin Action Logs
+              </button>
+              <button class="logs-subtab-btn" data-subtab="subtab-activity-matrix" onclick="window.switchLogsSubtab('subtab-activity-matrix')" style="background:var(--bg-card); color:var(--text-main); border:1px solid var(--border); padding:8px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:14px;">
+                📊 Member Activity Checklist
+              </button>
+              <button class="logs-subtab-btn" data-subtab="subtab-activity-history" onclick="window.switchLogsSubtab('subtab-activity-history')" style="background:var(--bg-card); color:var(--text-main); border:1px solid var(--border); padding:8px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:14px;">
+                📜 Activity History Archives
+              </button>
+            </div>
+
+            <!-- Sub-Tab 1: Admin Action Logs -->
+            <div id="subtab-admin-logs" class="logs-subtab-content" style="display:block;">
+              <div style="background:var(--bg-main); padding:15px; border-radius:12px; border:1px solid var(--border); display:flex; flex-direction:column; gap:15px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                  <h3 style="margin:0; color:var(--text-main);">&#128203; Admin Action Audit Logs</h3>
+                  <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <button onclick="window.fetchAdminLog()" style="background:var(--accent); color:white; border:none; border-radius:6px; padding:8px 12px; cursor:pointer; font-weight:bold; font-size:12px;">&#128259; Refresh</button>
+                    <select id="adminLogDateFilter" onchange="window.filterAdminLogs()" style="padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);">
+                      <option value="all">All Time</option>
+                      <option value="today">Today</option>
+                      <option value="yesterday">Yesterday</option>
+                      <option value="7days">Last 7 Days</option>
+                    </select>
+                    <select id="adminLogFilter" onchange="window.filterAdminLogs()" style="padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);">
+                      <option value="">All Admins</option>
+                    </select>
+                    <input type="text" id="adminLogSearch" placeholder="Search logs..." onkeyup="window.filterAdminLogs()" style="padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); width:180px;">
+                  </div>
+                </div>
+                <div style="overflow-x:auto;">
+                  <table style="width:100%; border-collapse:collapse; text-align:left;">
+                    <thead>
+                      <tr style="border-bottom:2px solid var(--border); color:var(--text-muted); font-size:12px; text-transform:uppercase;">
+                        <th style="padding:10px;">Date & Time</th>
+                        <th style="padding:10px;">Admin</th>
+                        <th style="padding:10px;">Action Category</th>
+                        <th style="padding:10px;">Target Player</th>
+                        <th style="padding:10px;">Action Details</th>
+                      </tr>
+                    </thead>
+                    <tbody id="adminLogsTableBody">
+                      <tr><td colspan="5" style="padding:15px; text-align:center; color:var(--text-muted);">Loading logs from Firebase...</td></tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
-              <div style="overflow-x:auto;">
-                <table style="width:100%; border-collapse:collapse; text-align:left;">
-                  <thead>
-                    <tr style="border-bottom:2px solid var(--border); color:var(--text-muted);">
-                      <th style="padding:10px;">Date & Time</th>
-                      <th style="padding:10px;">Admin</th>
-                      <th style="padding:10px;">Action Category</th>
-                      <th style="padding:10px;">Target Player</th>
-                      <th style="padding:10px;">Action Details</th>
-                    </tr>
-                  </thead>
-                  <tbody id="adminLogsTableBody">
-                    <tr><td colspan="5" style="padding:15px; text-align:center; color:var(--text-muted);">Loading logs from Firebase...</td></tr>
-                  </tbody>
-                </table>
+            </div>
+
+            <!-- Sub-Tab 2: Member Activity Checklist Matrix -->
+            <div id="subtab-activity-matrix" class="logs-subtab-content" style="display:none;">
+              <div style="background:var(--bg-main); padding:15px; border-radius:12px; border:1px solid var(--border); display:flex; flex-direction:column; gap:15px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                  <div>
+                    <h3 style="margin:0; color:var(--text-main);">📊 Roster Event Activity Matrix</h3>
+                    <p style="margin:4px 0 0 0; color:var(--text-muted); font-size:12px;">Live participation checklist across all alliance events & attendance.</p>
+                  </div>
+                  <input type="text" id="activityMatrixSearch" placeholder="🔍 Search chief name..." onkeyup="window.filterActivityMatrix()" style="padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); width:220px;">
+                </div>
+                <div style="overflow-x:auto;">
+                  <table style="width:100%; border-collapse:collapse; text-align:left; font-size:13px;">
+                    <thead>
+                      <tr style="border-bottom:2px solid var(--border); color:var(--text-muted); font-size:11px; text-transform:uppercase;">
+                        <th style="padding:10px;">Chief Name</th>
+                        <th style="padding:10px;">Perfect Attendance</th>
+                        <th style="padding:10px;">Championship</th>
+                        <th style="padding:10px;">Mercenary</th>
+                        <th style="padding:10px;">Polar Terrors</th>
+                        <th style="padding:10px;">Voter</th>
+                      </tr>
+                    </thead>
+                    <tbody id="activityMatrixTableBody">
+                      <tr><td colspan="6" style="padding:20px; text-align:center; color:var(--text-muted);">Click tab to load activity matrix...</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- Sub-Tab 3: Activity History Archives -->
+            <div id="subtab-activity-history" class="logs-subtab-content" style="display:none;">
+              <div style="background:var(--bg-main); padding:15px; border-radius:12px; border:1px solid var(--border); display:flex; flex-direction:column; gap:15px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                  <div>
+                    <h3 style="margin:0; color:var(--text-main);">📜 Event Activity History Archives</h3>
+                    <p style="margin:4px 0 0 0; color:var(--text-muted); font-size:12px;">Historical event attendance logs & archived activity entries.</p>
+                  </div>
+                  <input type="text" id="activityHistorySearch" placeholder="🔍 Search history..." onkeyup="window.filterActivityHistory()" style="padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); width:220px;">
+                </div>
+                <div style="overflow-x:auto;">
+                  <table style="width:100%; border-collapse:collapse; text-align:left; font-size:13px;">
+                    <thead>
+                      <tr style="border-bottom:2px solid var(--border); color:var(--text-muted); font-size:11px; text-transform:uppercase;">
+                        <th style="padding:10px;">Event Category</th>
+                        <th style="padding:10px;">Target Chief</th>
+                        <th style="padding:10px;">Participation Status</th>
+                        <th style="padding:10px;">Recorded Timestamp</th>
+                      </tr>
+                    </thead>
+                    <tbody id="activityHistoryTableBody">
+                      <tr><td colspan="4" style="padding:20px; text-align:center; color:var(--text-muted);">Click tab to load history archives...</td></tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
