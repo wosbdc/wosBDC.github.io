@@ -3615,10 +3615,11 @@ const views = {
     app.innerHTML = datalistHtml + `
       <div class="card" style="max-width:800px; margin:0 auto; animation: fadeIn 0.3s ease; position:relative;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid var(--border); padding-bottom:10px;">
-          <h2 style="color:var(--accent); margin:0; display:flex; align-items:center; gap:10px;">
+          <h2 style="color:var(--accent); margin:0; display:flex; align-items:center; flex-wrap:wrap; gap:10px;">
             🐻 Multi-BT Donations
             <button onclick="document.getElementById('btLookupModal').style.display='block'" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--accent); padding:4px 8px; border-radius:6px; cursor:pointer; font-size:12px; margin-left:10px;">🔍 Lookup</button>
             <button onclick="document.getElementById('btCrownModal').style.display='block'" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--success); padding:4px 8px; border-radius:6px; cursor:pointer; font-size:12px; margin-left:10px;">👑 Crown Winner</button>
+            <button onclick="window.resetBearTrapWinners()" style="background:var(--danger); color:#fff; border:none; padding:4px 8px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; margin-left:10px;">🔄 Reset BT Winners</button>
           </h2>
           <button onclick="views.admin()" style="background:var(--bg-main); color:var(--text-main); border:1px solid var(--border); padding:5px 12px; border-radius:6px; cursor:pointer;">Back to Admin</button>
         </div>
@@ -3667,10 +3668,7 @@ const views = {
           <div id="beartrapStatus" style="margin-top:15px; text-align:center; font-size:14px;"></div>
         </div>
         
-        <div style="background:var(--bg-main); padding:15px; border-radius:12px; border:1px solid var(--danger); margin-bottom:20px;">
-           <h3 style="margin-top:0; color:var(--danger); font-size:16px;">⚠️ Danger Zone</h3>
-           <button onclick="window.resetBearTrapWinners()" style="background:var(--danger); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%;">🔄 Reset Bear Trap Winners to "Pending..."</button>
-        </div>
+
         
         <div style="background:var(--bg-main); padding:15px; border-radius:12px; border:1px solid var(--border);">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
