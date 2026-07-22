@@ -1,3 +1,7 @@
+## [1.29.81] - 2026-07-22
+### Changed
+- **PWA Mobile App Icons Updated**: Generated high-resolution PWA app icons (`icon-192.svg`, `icon-512.svg`) embedded with the website's signature blueish & purpleish gradient snowflake logo, radial glow backdrop, and **wosBDC** typography!
+
 ## [1.29.80] - 2026-07-22
 ### Added
 - **Live Event Activity Matrix Editing (`window.promptEditEvents()`)**: Upgraded **Player Database Editor ➔ Actions ➔ 📝 Edit Events** to natively toggle all 5 event participation badges (`🔥 Perfect Attendance`, `🏆 Championship`, `⚔️ Mercenary`, `🐻‍❄️ Polar Terrors`, `🗳️ Voter`). Writes directly to Firebase Realtime Database (`activity_live/${gameId}`) in < 10ms with real-time UI matrix updates!
