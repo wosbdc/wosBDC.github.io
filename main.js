@@ -4802,7 +4802,7 @@ const views = {
          
          let goalsCard = `<div class="card" style="margin-bottom:20px; animation:fadeIn 0.3s ease;"><div class="card-title">🎯 Event Goals</div>`;
          goalsCard += `<div style="margin-bottom:20px;">
-             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+             <div style="display:flex; justify-content:flex-start; align-items:center; gap:10px; margin-bottom:5px;">
                <div style="font-weight:bold; color:var(--text-main);">The 20M Challenge</div>
                ${ourScores.total >= 20000000 ? `<div style="color:var(--success); font-size:12px; font-weight:bold; background:rgba(46,204,113,0.1); padding:2px 8px; border-radius:12px; border:1px solid rgba(46,204,113,0.3); animation:pulse 2s infinite;">🎉 Goal Reached!</div>` : ''}
              </div>
