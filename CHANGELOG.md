@@ -1,3 +1,7 @@
+## [1.29.49] - 2026-07-22
+### Fixed
+- **All-Time Showdown Parsing Header Match**: Fixed header row detection in `calculateAllTimeShowdown` to match both `Name` and `Member` column headers in historical Showdown blocks.
+
 ## [1.29.48] - 2026-07-22
 ### Changed
 - **Global Modal Consistency**: Replaced all remaining native browser popups (`confirm` / `alert`) across Bear Trap reset, Frost Clan reset, and Alt Account linking with centered `window.customConfirm` and `window.customAlert` glassmorphic modals.

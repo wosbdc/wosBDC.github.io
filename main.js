@@ -2635,7 +2635,7 @@ function calculateAllTimeShowdown(historyData) {
         let col1 = String(row[1] || '').trim();
         let col2 = String(row[2] || '').trim();
         
-        if (col1.toLowerCase() === 'ranking' && col2.toLowerCase() === 'member') {
+        if (col1.toLowerCase() === 'ranking' && (col2.toLowerCase() === 'member' || col2.toLowerCase() === 'name')) {
             if (inPlayerBlock && currentEventPlayers.length > 0) {
                 processEvent(currentEventPlayers);
             }
