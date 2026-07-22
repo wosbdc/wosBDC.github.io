@@ -2772,16 +2772,31 @@ window.loadUserPersonalLog = async (chiefName) => {
                 }
             } catch(e) {}
         }
+
+        // Filter ONLY for today's entries
+        const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
         
-        userLogs.sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
+        const todaysLogs = userLogs.filter(log => {
+            if (log.timestamp) {
+                return log.timestamp >= todayStart;
+            }
+            if (log.dateStr) {
+                const d = new Date(log.dateStr);
+                return !isNaN(d.getTime()) && d.toDateString() === now.toDateString();
+            }
+            return false;
+        });
         
-        if (userLogs.length === 0) {
-            cont.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:20px; background:rgba(255,255,255,0.02); border-radius:10px;">No recent administrative activity logged for your account.</div>`;
+        todaysLogs.sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
+        
+        if (todaysLogs.length === 0) {
+            cont.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:15px; background:rgba(255,255,255,0.02); border-radius:10px; font-size:13px;">No administrative activity logged for your account today.</div>`;
             return;
         }
         
-        let html = `<div style="display:flex; flex-direction:column; gap:10px;">`;
-        userLogs.slice(0, 10).forEach(log => {
+        let html = `<div style="display:flex; flex-direction:column; gap:8px; max-height:240px; overflow-y:auto; padding-right:4px;">`;
+        todaysLogs.forEach(log => {
             let icon = "📋";
             let actLower = (log.action || '').toLowerCase();
             if (actLower.includes('donation')) icon = "🥩";
@@ -2789,16 +2804,16 @@ window.loadUserPersonalLog = async (chiefName) => {
             else if (actLower.includes('showdown') || actLower.includes('score')) icon = "🎯";
             else if (actLower.includes('role') || actLower.includes('staff')) icon = "🛡️";
             
-            let dateDisp = log.dateStr ? `${log.dateStr} ${log.timeStr || ''}` : new Date(log.timestamp).toLocaleString();
+            let timeDisp = log.timeStr || (log.timestamp ? new Date(log.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : 'Today');
             
             html += `
-              <div style="display:flex; align-items:center; gap:12px; padding:12px; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:10px;">
-                <div style="width:36px; height:36px; border-radius:50%; background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.3); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;">${icon}</div>
+              <div style="display:flex; align-items:center; gap:10px; padding:8px 12px; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:8px;">
+                <div style="width:30px; height:30px; border-radius:50%; background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.3); display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0;">${icon}</div>
                 <div style="flex:1; min-width:0;">
-                  <div style="font-weight:bold; color:var(--text-main); font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHTML(log.action || 'Activity Recorded')}</div>
-                  <div style="color:var(--text-muted); font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHTML(log.details || '')} (by <span style="color:var(--accent); font-weight:bold;">${escapeHTML(log.admin || 'Admin')}</span>)</div>
+                  <div style="font-weight:bold; color:var(--text-main); font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHTML(log.action || 'Activity Recorded')}</div>
+                  <div style="color:var(--text-muted); font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHTML(log.details || '')} (by <span style="color:var(--accent); font-weight:bold;">${escapeHTML(log.admin || 'Admin')}</span>)</div>
                 </div>
-                <div style="font-size:11px; color:var(--text-muted); text-align:right; flex-shrink:0; white-space:nowrap;">${dateDisp}</div>
+                <div style="font-size:11px; color:var(--text-muted); text-align:right; flex-shrink:0; white-space:nowrap;">${timeDisp}</div>
               </div>
             `;
         });
@@ -4582,11 +4597,11 @@ html += `</select>
             <!-- Personal Activity Log Card -->
             <div class="card" style="margin-top:20px; text-align:left;">
               <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
-                <span>📜 My Personal Activity Log</span>
+                <span>📅 Today's Personal Activity Log</span>
                 <span style="font-size:12px; color:var(--text-muted); font-weight:normal;">Filtered for ${escapeHTML(currentChiefName)}</span>
               </div>
-              <div id="userPersonalLogContainer" style="margin-top:15px;">
-                <div style="text-align:center; color:var(--text-muted); padding:15px;">Loading activity history...</div>
+              <div id="userPersonalLogContainer" style="margin-top:12px;">
+                <div style="text-align:center; color:var(--text-muted); padding:15px; font-size:13px;">Loading today's activity...</div>
               </div>
             </div>
       </div>

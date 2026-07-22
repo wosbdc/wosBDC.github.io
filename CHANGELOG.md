@@ -1,3 +1,7 @@
+## [1.29.61] - 2026-07-22
+### Changed
+- **Personal Activity Log (Today Only & Compact UI)**: Updated `window.loadUserPersonalLog()` in Account Hub (`views.account`) to filter for **Today's log entries ONLY**, styled with a compact 240px container height and custom scrollbar for seamless mobile viewing.
+
 ## [1.29.60] - 2026-07-22
 ### Added
 - **Personal Activity Log in Account Hub**: Integrated a "My Personal Activity Log" timeline widget into every player's Account Hub (`views.account`), showing real-time timestamps, action icons, admin names, and details for their account.
