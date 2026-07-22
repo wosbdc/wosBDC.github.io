@@ -4863,7 +4863,7 @@ const views = {
              `;
          }
 
-         liveShowdownHtml = `<div class="card" style="width:100%; margin-bottom:20px; overflow-x:auto;"><div class="card-title">Showdown Leaderboard</div>
+         liveShowdownHtml = `<div class="card" style="width:100%; margin-bottom:20px; overflow-x:auto;"><div class="card-title">Current - Showdown Leaderboard</div>
          ${mvpBannerHtml}
          <table style="min-width:500px; text-align:left;"><thead><tr>
             <th>RANK</th><th>NAME</th><th>TOTAL HORNS</th><th>DAY WINS</th><th>TOTAL</th>
@@ -4873,7 +4873,7 @@ const views = {
              let rank = index + 1;
              
              liveShowdownHtml += `<tr>
-                <td style="font-weight:bold; color:var(--accent);">${rank}</td>
+                <td style="font-weight:bold; color:var(--text-muted);">${rank}</td>
                 <td>${formatCell(p.name)}</td>
                 <td>${p.horns}</td>
                 <td>${p.wins}</td>
