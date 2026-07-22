@@ -4834,11 +4834,11 @@ const views = {
              return b.total - a.total;
          });
          
-         liveShowdownHtml = `<div class="card" style="width:100%; margin-bottom:20px; overflow-x:auto;"><div class="card-title">🏆 Current Event Showdown</div><table style="min-width:500px; text-align:center;"><thead><tr>
+         liveShowdownHtml = `<div class="card" style="width:100%; margin-bottom:20px; overflow-x:auto;"><div class="card-title">Showdown Leaderboard</div><table style="min-width:500px; text-align:center;"><thead><tr>
             <th style="text-align:left;">Rank</th><th style="text-align:left;">Name</th><th>Total Horns</th><th>Days Won</th><th>Total Points</th>
          </tr></thead><tbody>`;
          
-         players.forEach((p, index) => {
+         players.slice(0, 4).forEach((p, index) => {
              let rank = index + 1;
              if (rank === 1) rank = '🥇 1';
              else if (rank === 2) rank = '🥈 2';
@@ -4951,6 +4951,8 @@ const views = {
       }
       
       boards.forEach(board => {
+        if (board.title.trim() === 'Showdown Leaderboard') return;
+        
         let cardStyle = `flex: 1; min-width: 320px;`;
         if (board.title.includes('Event Goals')) {
            cardStyle = `flex: 1 1 100%;`;
