@@ -3572,14 +3572,14 @@ const views = {
           html += `<option value="${escapeHTML(p)}">${escapeHTML(p)}</option>`;
        });
                
-       html += `</select>
+html += `</select>
              
              <div id="sdEntryFields" style="display:none; flex-direction:column; gap:10px;">
                ${[1,2,3,4,5,6].map(d => `
                   <div style="display:flex; align-items:center; gap:10px;">
                     <span style="width:50px; font-weight:bold; color:var(--text-muted);">Day ${d}</span>
                     <input type="number" id="sd_d${d}" placeholder="Score" style="flex:1; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main);">
-                    <button id="sd_d${d}_lock" onclick="window.toggleSdLock(${d})" style="display:none; background:transparent; border:none; cursor:pointer; font-size:18px;" title="Unlock to edit">🔒</button>
+                    <button id="sd_d${d}_lock" onclick="window.toggleSdLock(${d})" style="display:none; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); color:#ef4444; padding:6px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; min-width:80px;" title="Click to unlock & edit">🔒 Locked</button>
                   </div>
                `).join('')}
                
@@ -3643,11 +3643,17 @@ const views = {
            if (input.disabled) {
                input.disabled = false;
                input.style.opacity = '1';
-               lockBtn.innerHTML = '🔓';
+               lockBtn.innerHTML = '✏️ Edit';
+               lockBtn.style.background = 'rgba(16,185,129,0.15)';
+               lockBtn.style.borderColor = 'rgba(16,185,129,0.3)';
+               lockBtn.style.color = '#10b981';
            } else {
                input.disabled = true;
                input.style.opacity = '0.5';
-               lockBtn.innerHTML = '🔒';
+               lockBtn.innerHTML = '🔒 Locked';
+               lockBtn.style.background = 'rgba(239,68,68,0.15)';
+               lockBtn.style.borderColor = 'rgba(239,68,68,0.3)';
+               lockBtn.style.color = '#ef4444';
            }
        };
        
@@ -3670,7 +3676,6 @@ const views = {
              if (val !== undefined && val !== null && val !== '') {
                  input.disabled = true;
                  input.style.opacity = '0.5';
-                 lockBtn.style.display = 'block';
                  lockBtn.innerHTML = '🔒';
              } else {
                  input.disabled = false;

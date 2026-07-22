@@ -1,3 +1,7 @@
+## [1.29.50] - 2026-07-22
+### Changed
+- **Showdown Data Entry Locked Pill UI**: Upgraded Day 1-6 score inputs in Showdown Admin from a plain lock emoji to clear, interactive `🔒 Locked` (red pill) and `✏️ Edit` (green pill) badges.
+
 ## [1.29.49] - 2026-07-22
 ### Fixed
 - **All-Time Showdown Parsing Header Match**: Fixed header row detection in `calculateAllTimeShowdown` to match both `Name` and `Member` column headers in historical Showdown blocks.
