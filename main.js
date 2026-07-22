@@ -556,6 +556,75 @@ window.fetchLeaderboardsData = async () => {
     return parsedBoards;
 };
 
+// Register Service Worker for Mobile PWA
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log('PWA Service Worker registered:', reg.scope))
+      .catch(err => console.warn('PWA Service Worker registration failed:', err));
+  });
+}
+
+// PWA Install Prompt Handler & UI Banner
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  window.showPWAInstallBanner();
+});
+
+window.showPWAInstallBanner = () => {
+  if (document.getElementById('pwaInstallBanner')) return;
+  if (sessionStorage.getItem('pwaBannerDismissed')) return;
+
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+  const bannerHtml = `
+    <div id="pwaInstallBanner" style="position:fixed; bottom:20px; left:50%; transform:translateX(-50%); width:90%; max-width:440px; background:var(--card-bg); border:1px solid var(--accent); border-radius:16px; padding:16px 20px; box-shadow:0 12px 40px rgba(0,0,0,0.8); z-index:99999; display:flex; align-items:center; justify-content:space-between; gap:12px; animation:slideUp 0.3s ease;">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <div style="width:44px; height:44px; background:var(--accent); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:24px;">📱</div>
+        <div>
+          <div style="font-weight:bold; color:var(--text-main); font-size:14px;">Install WOS 1515 App</div>
+          <div style="font-size:11px; color:var(--text-muted);">Add to Home Screen for fast 1-tap access!</div>
+        </div>
+      </div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        ${isIOS ? `
+          <button onclick="window.showIOSPWAInstructions()" style="background:var(--accent); color:white; border:none; padding:8px 14px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer;">How to Add</button>
+        ` : `
+          <button onclick="window.triggerPWAInstall()" style="background:var(--accent); color:white; border:none; padding:8px 14px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer;">Install</button>
+        `}
+        <button onclick="document.getElementById('pwaInstallBanner').remove(); sessionStorage.setItem('pwaBannerDismissed', 'true');" style="background:transparent; border:none; color:var(--text-muted); font-size:18px; cursor:pointer; padding:0 4px;">✕</button>
+      </div>
+    </div>
+  `;
+
+  document.body.insertAdjacentHTML('beforeend', bannerHtml);
+};
+
+window.triggerPWAInstall = async () => {
+  if (!deferredInstallPrompt) {
+    if (window.showToast) window.showToast("Tap browser menu ➔ 'Add to Home Screen' to install!", "info");
+    return;
+  }
+  deferredInstallPrompt.prompt();
+  const { outcome } = await deferredInstallPrompt.userChoice;
+  if (outcome === 'accepted') {
+    if (window.showToast) window.showToast("App installed successfully!", "success");
+    const banner = document.getElementById('pwaInstallBanner');
+    if (banner) banner.remove();
+  }
+  deferredInstallPrompt = null;
+};
+
+window.showIOSPWAInstructions = () => {
+  if (window.customAlert) {
+    window.customAlert("📱 To install on iOS:\n\n1. Tap the Share button at the bottom of Safari.\n2. Scroll down and tap 'Add to Home Screen'.\n3. Tap 'Add' in the top right!");
+  } else {
+    alert("📱 To install on iOS:\n\n1. Tap the Share button at the bottom of Safari.\n2. Scroll down and tap 'Add to Home Screen'.\n3. Tap 'Add' in the top right!");
+  }
+};
+
 
 // Listen to Avatars globally
 onValue(ref(db, 'avatars'), (snap) => {

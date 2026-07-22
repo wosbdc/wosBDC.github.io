@@ -1,0 +1,30 @@
+{
+  "short_name": "WOS 1515",
+  "name": "WhiteOut Survival State 1515 BDC Hub",
+  "description": "Official Whiteout Survival State 1515 Alliance Dashboard & Tracker",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-192.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192 180x180 128x128",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.svg",
+      "type": "image/svg+xml",
+      "sizes": "512x512 384x384 256x256",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "./",
+  "background_color": "#0f172a",
+  "theme_color": "#3b82f6",
+  "display": "standalone",
+  "orientation": "any"
+}

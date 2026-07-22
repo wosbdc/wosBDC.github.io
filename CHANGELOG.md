@@ -1,3 +1,7 @@
+## [1.29.78] - 2026-07-22
+### Added
+- **Mobile Progressive Web App (PWA) Support**: Configured `manifest.json`, Service Worker (`sw.js`), high-res SVG app icons (`icon-192.svg`, `icon-512.svg`), Apple mobile web app meta tags, and an in-app **"📱 Install WOS 1515 App"** banner for 1-tap Home Screen installation on iOS & Android!
+
 ## [1.29.77] - 2026-07-22
 ### Added
 - **Phase 8: Master Leaderboards Matrix Firebase Migration (`leaderboards`)**: Created `window.fetchLeaderboardsData()` reading all leaderboard cards natively from Firebase Realtime Database (`leaderboards`). Automatically seeds from `LeaderBoards` Google Sheet if empty, completing 100% full decoupling from Google Sheets!

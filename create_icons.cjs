@@ -1,0 +1,23 @@
+const fs = require('fs');
+
+const svgContent = `<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="110" fill="url(#bgGrad)"/>
+  <rect x="16" y="16" width="480" height="480" rx="94" fill="none" stroke="url(#accentGrad)" stroke-width="12" opacity="0.6"/>
+  <circle cx="256" cy="256" r="180" fill="url(#accentGrad)" opacity="0.2"/>
+  <text x="256" y="310" font-size="200" text-anchor="middle" font-family="system-ui, sans-serif" fill="#ffffff">❄️</text>
+  <text x="256" y="440" font-size="38" font-weight="bold" text-anchor="middle" font-family="system-ui, sans-serif" fill="#38bdf8" letter-spacing="4">BDC 1515</text>
+</svg>`;
+
+fs.writeFileSync('public/icon-512.svg', svgContent);
+fs.writeFileSync('public/icon-192.svg', svgContent);
+console.log("PWA Icons created successfully!");
