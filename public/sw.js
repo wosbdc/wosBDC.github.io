@@ -1,21 +1,22 @@
-const CACHE_NAME = 'wos-1515-pwa-v1.29.78';
+const CACHE_NAME = 'wos-bdc-pwa-v1.29.82';
 const ASSETS_TO_CACHE = [
-  './',
-  './index.html',
   './manifest.json',
-  './favicon.svg'
+  './favicon.svg',
+  './icon-192.svg',
+  './icon-512.svg'
 ];
 
-// Install Event - Cache essential static assets
+// Install Event - Skip waiting immediately on update
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(ASSETS_TO_CACHE);
-    }).then(() => self.skipWaiting())
+    })
   );
 });
 
-// Activate Event - Clean up old caches
+// Activate Event - Clean up ALL old caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -30,29 +31,37 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch Event - Stale-while-revalidate strategy for assets, network first for API
+// Fetch Event - Network-First for HTML/main app files so version updates appear instantly!
 self.addEventListener('fetch', (event) => {
-  // Skip non-GET requests or Firebase/API calls from service worker caching
   if (event.request.method !== 'GET') return;
   const url = event.request.url;
-  
+
   if (url.includes('firebaseio.com') || url.includes('script.google.com') || url.includes('googleapis.com')) {
-    return; // Pass through directly
+    return;
   }
 
+  // Network First for HTML and navigation
+  if (event.request.mode === 'navigate' || url.endsWith('.html') || url.endsWith('/')) {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse.clone()));
+          return networkResponse;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // Cache-First with Network Fallback for static assets
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      const fetchPromise = fetch(event.request).then((networkResponse) => {
+      return cachedResponse || fetch(event.request).then((networkResponse) => {
         if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
-          const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse.clone()));
         }
         return networkResponse;
-      }).catch(() => cachedResponse);
-
-      return cachedResponse || fetchPromise;
+      });
     })
   );
 });

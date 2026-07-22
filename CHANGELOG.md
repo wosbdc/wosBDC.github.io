@@ -1,3 +1,7 @@
+## [1.29.82] - 2026-07-22
+### Fixed
+- **Network-First Service Worker Strategy (`sw.js`)**: Updated PWA Service Worker cache to `wos-bdc-pwa-v1.29.82` with a Network-First strategy for HTML navigation and automatic cache purging. Users will now instantly see the latest site version (`v1.29.82`) without being stuck on older cached builds!
+
 ## [1.29.81] - 2026-07-22
 ### Changed
 - **PWA Mobile App Icons Updated**: Generated high-resolution PWA app icons (`icon-192.svg`, `icon-512.svg`) embedded with the website's signature blueish & purpleish gradient snowflake logo, radial glow backdrop, and **wosBDC** typography!
