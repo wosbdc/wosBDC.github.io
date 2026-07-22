@@ -1,3 +1,7 @@
+## [1.29.66] - 2026-07-22
+### Added
+- **2-Tier Database-First Game ID Verification**: Updated registration Game ID verification to check our alliance database first (`idToNameMap` and `roster_live`), instantly verifying existing members without relying on or hitting rate limits on external Century Games servers.
+
 ## [1.29.65] - 2026-07-22
 ### Fixed
 - **Onboarding Modal Triggering**: Fixed the `Claim / Create Account` button on the Home Page Onboarding Banner to directly open `window.openRegisterModal()`, pre-configuring the modal with the "Create Account / Claim Profile" title and character lookup inputs.

@@ -1668,6 +1668,37 @@ if (authVerifyGameIdBtn && authChiefConfirm) {
     clearTimeout(wosLookupTimeout);
     wosLookupTimeout = setTimeout(async () => {
       const lookupId = ++currentWosLookupId;
+      
+      // 1. Check local alliance database first!
+      try {
+         await refreshIdToNameMap();
+         let rosterData = await window.fetchRoster();
+         
+         let matchedName = window.idToNameMap[val] || null;
+         let matchedFurnace = "";
+         
+         if (rosterData) {
+            const foundEntry = Object.values(rosterData).find(p => p.gameId && p.gameId.toString().trim() === val.toString().trim());
+            if (foundEntry) {
+                matchedName = foundEntry.name;
+                matchedFurnace = foundEntry.furnaceLevel || "";
+            }
+         }
+         
+         if (matchedName) {
+             if (lookupId !== currentWosLookupId) return;
+             authChiefConfirm.innerHTML = `Is your Chief Name: <strong style="color:var(--success)">${window.escapeHTML(matchedName)}</strong>? <span style="font-size:11px; color:#10b981; display:block; margin-top:4px;">✅ Verified from Alliance Database!</span>`;
+             verifiedChiefName = matchedName;
+             verifiedFurnaceLevel = matchedFurnace;
+             authVerifyGameIdBtn.disabled = false;
+             authVerifyGameIdBtn.textContent = 'Verify';
+             return;
+         }
+      } catch(e) {
+         console.warn("Database lookup fallback error:", e);
+      }
+      
+      // 2. If not found in local database, query official Century Games servers
       try {
         const response = await fetch(`${VERIFY_PROXY_URL}?id=${encodeURIComponent(val)}`);
         const data = await response.json();
@@ -1675,12 +1706,12 @@ if (authVerifyGameIdBtn && authChiefConfirm) {
         if (lookupId !== currentWosLookupId) return; // Ignore stale responses
         
         if (data.success && data.nickname) {
-          authChiefConfirm.innerHTML = `Is your Chief Name: <strong style="color:var(--success)">${window.escapeHTML(data.nickname)}</strong>?`;
+          authChiefConfirm.innerHTML = `Is your Chief Name: <strong style="color:var(--success)">${window.escapeHTML(data.nickname)}</strong>? <span style="font-size:11px; color:#60a5fa; display:block; margin-top:4px;">🌐 Verified from Game Servers!</span>`;
           verifiedChiefName = data.nickname;
           verifiedFurnaceLevel = data.stove_lv || "";
         } else {
           authChiefConfirm.innerHTML = `
-            <span style="color:var(--danger)">API Limit Reached or ID Not Found.</span>
+            <span style="color:var(--danger)">ID Not Found on Game Servers.</span>
             <div style="margin-top:10px; text-align:left;">
                 <input type="text" id="manualChiefName" placeholder="Enter Chief Name manually" style="width:100%; padding:10px; border-radius:6px; margin-bottom:10px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
                 <input type="number" id="manualFurnaceLevel" placeholder="Enter Furnace Level (optional)" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
