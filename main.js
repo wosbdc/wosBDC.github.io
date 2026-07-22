@@ -4325,8 +4325,8 @@ html += `</select>
                           <td style="padding:12px 16px; color:var(--text-muted); font-family:monospace;">${gIdStr}</td>
                           <td style="padding:12px 16px; color:var(--text-main);">${p.furnaceLevel || '-'}</td>
                           <td style="padding:12px 16px; text-align:center;">
-                            <button onclick="window.onChampToggle('${gIdStr}')" style="background:${isSignedUp ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)'}; color:${isSignedUp ? '#10b981' : '#ef4444'}; border:1px solid ${isSignedUp ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.4)'}; padding:6px 16px; border-radius:20px; font-weight:bold; cursor:pointer; font-size:13px; transition:0.2s;">
-                              ${isSignedUp ? '✅ Signed Up' : '❌ Action Required'}
+                            <button onclick="window.onChampToggle('${gIdStr}')" style="background:${isSignedUp ? '#10b981' : 'rgba(239,68,68,0.15)'}; color:${isSignedUp ? '#ffffff' : '#ef4444'}; border:${isSignedUp ? 'none' : '1px solid rgba(239,68,68,0.4)'}; padding:6px 18px; border-radius:20px; font-weight:bold; cursor:pointer; font-size:13px; transition:0.2s; box-shadow:${isSignedUp ? '0 2px 8px rgba(16,185,129,0.35)' : 'none'};">
+                              ${isSignedUp ? '✅ YES' : '❌ NO'}
                             </button>
                           </td>
                         </tr>

@@ -1,3 +1,7 @@
+## [1.29.72] - 2026-07-22
+### Changed
+- **Championship Signup Button Styling**: Formatted Championship signup buttons to display a bold, vibrant solid green `✅ YES` pill badge when signed up, and a distinct red `❌ NO` pill badge when missing.
+
 ## [1.29.71] - 2026-07-22
 ### Added
 - **Phase 7: Alliance Championship Admin Tool (`views.championshipAdmin`)**: Built a dedicated Alliance Championship Signup Tracker inside Admin Hub ➔ Quick Admin Tools, featuring real-time Firebase status toggling (`championship/${gameId}`), live KPI counters (Total, YES, NO, Response Rate %), search filtering, and 1-click clipboard copy of missing signup member names.
