@@ -4827,7 +4827,7 @@ const views = {
             let dailyAmt = ourScores['d'+i];
             let leftVal = dg - dailyAmt;
             
-            let isPending = dailyAmt === 0 && (i > 1 && ourScores['d'+(i-1)] === 0);
+            let isPending = dailyAmt === 0 || !dailyAmt;
             let leftStr = "";
             let leftStyle = "";
             let dailyAmtStyle = "";
