@@ -2564,6 +2564,19 @@ window.archiveCurrentShowdownToFirebase = async () => {
     }
 };
 
+window.resetCurrentShowdown = async () => {
+    const confirmed = await window.customConfirm("Are you sure you want to RESET the current live Showdown scores? Make sure you have archived it first!");
+    if (!confirmed) return;
+    try {
+        await set(ref(db, 'showdown_live'), null);
+        await set(ref(db, 'showdown_meta/enemyAlliance'), { name: "Enemy Alliance", scores: {} });
+        if (window.showToast) window.showToast("Showdown live data has been reset!", "success");
+        if (typeof views !== 'undefined' && views.showdownAdmin) views.showdownAdmin();
+    } catch(err) {
+        if (window.showToast) window.showToast("Error resetting: " + err.message, "error");
+    }
+};
+
 const getAutocompleteShield = () => {
     // We no longer return a physical shield div. Return a dummy object to prevent errors if existing code calls style.display on it
     return { style: {} };
@@ -2964,6 +2977,7 @@ const views = {
               <button onclick="views.beartrap()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px;">🐻 Bear Trap</button>
               <button onclick="views.playerEditor()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px;">👤 Open Player Database Editor</button>
               <button onclick="views.showdownAdmin()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px;">⚔️ ShowDown</button>
+              <button onclick="window.archiveCurrentShowdownToFirebase()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px;">📁 Archive Showdown to History</button>
             </div>
 
             <!-- Push Notification Broadcast -->
@@ -3536,7 +3550,13 @@ const views = {
          <button onclick="if(document.querySelector('.navbar')) document.querySelector('.navbar').style.display='flex'; views.admin()" style="position:absolute; top:0px; right:0px; background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); padding:5px 12px; border-radius:6px; cursor:pointer; z-index:10;">&times; Close</button>
          
          <div class="card" style="margin-top:40px;">
-           <div class="card-title" style="text-align:center;">⚔️ Showdown Data Entry</div>
+           <div class="card-title" style="text-align:center; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+              <span>⚔️ Showdown Data Entry</span>
+              <div style="display:flex; gap:8px;">
+                <button onclick="window.archiveCurrentShowdownToFirebase()" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--success); padding:4px 8px; border-radius:6px; cursor:pointer; font-size:12px;">📁 Archive to History</button>
+                <button onclick="window.resetCurrentShowdown()" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--danger); padding:4px 8px; border-radius:6px; cursor:pointer; font-size:12px;">🔄 Reset Event</button>
+              </div>
+           </div>
            <div style="background:rgba(255,255,255,0.02); padding:15px; border-radius:8px; border:1px solid var(--border); margin-bottom:10px;">
              <label style="display:block; margin-bottom:5px; font-weight:bold; color:var(--text-main);">Select Player</label>
              <select id="sdPlayerSelect" style="width:100%; padding:12px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:16px; margin-bottom:15px;" onchange="window.onSdPlayerSelect()">
