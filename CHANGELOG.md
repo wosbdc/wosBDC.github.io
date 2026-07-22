@@ -1,3 +1,7 @@
+## [1.29.74] - 2026-07-22
+### Fixed
+- **Activity History Archives Fallback Handling**: Added multi-layer Google Sheets API & Firebase fallback logic to `window.loadActivityHistory()` so historical activity archives load safely without throwing error messages if a node is empty or restricted.
+
 ## [1.29.73] - 2026-07-22
 ### Added
 - **Multi-Menu Logs & Activity History Dashboard**: Upgraded Admin Hub ➔ 📋 Logs Tab into a 3-subtab multi-menu dashboard featuring:

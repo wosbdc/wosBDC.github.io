@@ -3494,43 +3494,78 @@ const views = {
         });
       };
 
-      // Load Activity History Archives Sub-Tab
+      // Load Activity History Archives Sub-Tab with safe Google Sheets & Firebase fallbacks
       window.loadActivityHistory = async () => {
         const tbody = document.getElementById('activityHistoryTableBody');
         if (!tbody) return;
         tbody.innerHTML = `<tr><td colspan="4" style="padding:20px; text-align:center; color:var(--text-muted);">Loading Activity History...</td></tr>`;
 
+        let logItems = [];
+
+        // 1. Try Firebase admin_logs
         try {
           const logSnap = await get(ref(db, 'admin_logs'));
-          let logs = logSnap.exists() ? Object.values(logSnap.val() || {}) : [];
-          
-          // Filter logs to event activity actions
-          let activityLogs = logs.filter(l => {
-              let cat = (l.category || l.action || '').toLowerCase();
-              return cat.includes('event') || cat.includes('attendance') || cat.includes('championship') || cat.includes('beartrap') || cat.includes('showdown');
-          });
-
-          activityLogs.sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
-          window._activityHistoryList = activityLogs;
-          window._activityHistoryLoaded = true;
-
-          if (activityLogs.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="4" style="padding:20px; text-align:center; color:var(--text-muted);">No historical activity logs archived yet.</td></tr>`;
-            return;
+          if (logSnap && logSnap.exists()) {
+             logItems = Object.values(logSnap.val() || {});
           }
-
-          tbody.innerHTML = activityLogs.map(l => `
-            <tr class="activity-history-row" data-text="${escapeHTML(((l.category||'') + ' ' + (l.targetPlayer||'') + ' ' + (l.details||'')).toLowerCase())}" style="border-bottom:1px solid var(--border);">
-              <td style="padding:10px; font-weight:bold; color:var(--accent);">${escapeHTML(l.category || l.action || 'Event Log')}</td>
-              <td style="padding:10px; font-weight:bold; color:var(--text-main);">${escapeHTML(l.targetPlayer || 'All Members')}</td>
-              <td style="padding:10px; color:var(--text-main);">${escapeHTML(l.details || '-')}</td>
-              <td style="padding:10px; color:var(--text-muted); font-size:12px;">${l.timestamp ? new Date(l.timestamp).toLocaleString() : '-'}</td>
-            </tr>
-          `).join('');
         } catch(e) {
-          console.error(e);
-          tbody.innerHTML = `<tr><td colspan="4" style="padding:20px; text-align:center; color:var(--danger);">Error loading activity history archives</td></tr>`;
+          console.warn("Firebase admin_logs read error:", e);
         }
+
+        // 2. Fallback to Sheets API if logItems is empty
+        if (logItems.length === 0) {
+          try {
+            const logToken = await getAuthToken();
+            const res = await fetch(API_BASE_URL + '?api=getSheetData&sheetName=Admin Log&token=' + encodeURIComponent(logToken)).then(r => r.json());
+            if (res && res.success && res.data && res.data.length > 1) {
+              for (let i = res.data.length - 1; i >= 1; i--) {
+                let row = res.data[i];
+                if (row && row[0]) {
+                  logItems.push({
+                    id: 'sheets_' + i,
+                    timestamp: new Date(row[0]).getTime() || Date.now(),
+                    admin: row[1] || 'Admin',
+                    category: row[2] || 'Action',
+                    targetPlayer: row[3] || '',
+                    details: row[4] || ''
+                  });
+                }
+              }
+            }
+          } catch(err) {
+            console.warn("Sheets API log fetch error:", err);
+          }
+        }
+
+        // Filter activity & event logs
+        let activityLogs = logItems.filter(l => {
+            if (!l) return false;
+            let cat = (l.category || l.action || l.details || '').toLowerCase();
+            return cat.includes('event') || cat.includes('attendance') || cat.includes('championship') || cat.includes('beartrap') || cat.includes('showdown') || cat.includes('signup') || cat.includes('roster');
+        });
+
+        // If no specific event filter matches, display all logs so history is never blank
+        if (activityLogs.length === 0 && logItems.length > 0) {
+            activityLogs = logItems;
+        }
+
+        activityLogs.sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
+        window._activityHistoryList = activityLogs;
+        window._activityHistoryLoaded = true;
+
+        if (activityLogs.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="4" style="padding:20px; text-align:center; color:var(--text-muted);">No activity logs found.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = activityLogs.map(l => `
+          <tr class="activity-history-row" data-text="${escapeHTML(((l.category||'') + ' ' + (l.admin||'') + ' ' + (l.targetPlayer||'') + ' ' + (l.details||'')).toLowerCase())}" style="border-bottom:1px solid var(--border);">
+            <td style="padding:10px; font-weight:bold; color:var(--accent);">${escapeHTML(l.category || l.action || 'Event Log')}</td>
+            <td style="padding:10px; font-weight:bold; color:var(--text-main);">${escapeHTML(l.targetPlayer || l.admin || 'All Members')}</td>
+            <td style="padding:10px; color:var(--text-main);">${escapeHTML(l.details || '-')}</td>
+            <td style="padding:10px; color:var(--text-muted); font-size:12px;">${l.timestamp ? new Date(l.timestamp).toLocaleString() : '-'}</td>
+          </tr>
+        `).join('');
       };
 
       window.filterActivityHistory = () => {
