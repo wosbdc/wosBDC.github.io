@@ -3690,6 +3690,9 @@ const views = {
     const lookupInput = document.getElementById('beartrapLookup');
     if (lookupInput) window.bindCustomAutocomplete(lookupInput);
     
+    const crownInput = document.getElementById('beartrapCrownName');
+    if (crownInput) window.bindCustomAutocomplete(crownInput);
+    
     const initialRows = document.querySelectorAll('.bt-name');
     initialRows.forEach(input => window.bindCustomAutocomplete(input));
 
