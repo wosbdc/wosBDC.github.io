@@ -6885,29 +6885,8 @@ html += `</select>
           if (historyRows.length > 0 || (players && players.length > 0)) {
               let allTimePlayers = calculateAllTimeShowdown(historyRows);
               
-              if (players && players.length > 0) {
-                  let allTimeMap = {};
-                  allTimePlayers.forEach(p => {
-                      allTimeMap[p.name.toLowerCase()] = { name: p.name, horns: p.horns, wins: p.wins, total: p.total };
-                  });
-                  
-                  players.forEach(lp => {
-                      if (lp.horns > 0 || lp.total > 0) {
-                          let key = lp.name.toLowerCase();
-                          if (!allTimeMap[key]) {
-                              allTimeMap[key] = { name: lp.name, horns: 0, wins: 0, total: 0 };
-                          }
-                          allTimeMap[key].horns += lp.horns;
-                          allTimeMap[key].wins += lp.wins;
-                          allTimeMap[key].total += lp.total;
-                      }
-                  });
-                  
-                  allTimePlayers = Object.values(allTimeMap).sort((a, b) => {
-                      if (b.horns !== a.horns) return b.horns - a.horns;
-                      return b.total - a.total;
-                  });
-              }
+              // Do not combine live active scores with all-time history.
+              // allTimePlayers remains strictly the archived history until manually archived.
               
               let allTimeMvpHtml = "";
               if (allTimePlayers.length > 0 && allTimePlayers[0].horns > 0) {
@@ -7283,13 +7262,12 @@ html += `</select>
               });
               html += `</tr>`;
             });
-        
+            html += `</tbody></table>`;
         if (((board.title.toLowerCase().includes('bear') || board.title.toLowerCase().includes('bt')) && board.title.toLowerCase().includes('donation'))) {
            // We'll append the widget placeholder specifically under the Bear Donations board
            html += `<div id="bearTrapActivityWidget-${board.title.replace(/\s+/g, '')}" class="bear-trap-activity-widget" style="margin-top: 15px;"></div>`;
         }
-        
-            html += `</tbody></table></div></div>`;
+            html += `</div></div>`;
         }
       });
       

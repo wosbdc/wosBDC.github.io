@@ -1,3 +1,8 @@
+## [1.29.91] - 2026-07-22
+### Fixed
+- **Visual Overlap & DOM HTML Bug**: Fixed a critical HTML parsing bug where the Bear Trap Activity Widget was injected incorrectly inside a `<tbody>` tag, causing the browser to forcibly close containers and visually overlap/merge cards together.
+- **All-Time vs Current Showdown Math**: Removed logic that was incorrectly combining live current active event scores with historical All-Time Showdown scores before the event was over. All-Time Showdown is now strictly based on historical archived data.
+
 ## [1.29.90] - 2026-07-22
 ### Changed
 - **Event Goals Positioned at Bottom**: Moved **🎯 Event Goals** card (`finalGoalsCard`) to render below all leaderboard cards (at the bottom of the page). Leaderboards (Current Showdown & All-Time Showdown) now sit prominently on top.
