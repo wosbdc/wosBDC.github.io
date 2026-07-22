@@ -1,3 +1,7 @@
+## [1.29.68] - 2026-07-22
+### Fixed
+- **Player Card Event Tag Formatting**: Formatted all event rank tags (e.g. `⚔️ Showdown: #1 (4,881,161)`) to include `#Rank` and `(Score)` parens, matching the exact format of `🏅 All-Time Showdown` and `🐻 Bear Trap Wins`.
+
 ## [1.29.67] - 2026-07-22
 ### Changed
 - **Onboarding Banner Copy Upgrade**: Updated the Home Page Onboarding Hero Banner copy to *"Already an alliance member? Link your email to claim your profile! Instantly track your live Bear Trap donations, Showdown rankings, alliance event scores, and personal activity logs—all in real time!"* with a vibrant "✨ Essential Alliance Member Portal" badge.

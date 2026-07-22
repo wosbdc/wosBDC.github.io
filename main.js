@@ -7348,7 +7348,11 @@ window.generatePlayerProfileHtml = (chiefName, p, headers, colIsUpcoming, roster
     }
     
     otherLbs.forEach(lb => {
-      headerBadgesHtml += '<span style="background:color-mix(in srgb, var(--accent) 15%, transparent); border:1px solid var(--accent); color:var(--text-main); padding:4px 8px; border-radius:12px; font-size:11px; font-weight:bold;">' + lb.emoji + ' ' + lb.title + ': <span style="color:var(--text-main);">' + lb.score + '</span></span>';
+      let scoreFormatted = lb.score;
+      if (lb.rank) {
+          scoreFormatted = '#' + lb.rank + ' (' + lb.score + ')';
+      }
+      headerBadgesHtml += '<span style="background:color-mix(in srgb, var(--accent) 15%, transparent); border:1px solid var(--accent); color:var(--text-main); padding:4px 8px; border-radius:12px; font-size:11px; font-weight:bold;">' + lb.emoji + ' ' + lb.title + ': <span style="color:var(--text-main);">' + scoreFormatted + '</span></span>';
     });
     
     headerBadgesHtml += '</div>';
