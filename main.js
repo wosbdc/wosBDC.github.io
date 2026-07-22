@@ -5299,28 +5299,10 @@ const views = {
        allianceCard += `</tr></tbody></table></div>`;
        
        // 3. Player Rankings
-       // Calculate Horns and Wins for each player
-       players.forEach(p => {
-           p.horns = 0;
-           p.wins = 0;
-           for (let i = 1; i <= 6; i++) {
-               let dVal = p['d'+i] || 0;
-               let topPlayerScore = topPlayers['d'+i].score;
-               if (dVal > 0 && dVal === topPlayerScore) {
-                   p.horns += staticHorns['d'+i];
-                   p.wins += 1;
-               }
-           }
-       });
-
-       // Sort by Horns first, then Total Score
-       players.sort((a, b) => {
-           if (b.horns !== a.horns) return b.horns - a.horns;
-           return b.total - a.total;
-       });
+       players.sort((a, b) => b.total - a.total);
        
-       let playersCard = `<div class="card" style="overflow-x:auto;"><div class="card-title">🏆 Player Rankings</div><table style="min-width:500px; text-align:center;"><thead><tr>
-          <th style="text-align:left;">Rank</th><th style="text-align:left;">Name</th><th>Total Horns</th><th>Days Won</th><th>Total Points</th>
+       let playersCard = `<div class="card" style="overflow-x:auto;"><div class="card-title">🏆 Player Rankings</div><table style="min-width:700px;"><thead><tr>
+          <th>Ranking</th><th>Name</th><th>Total Score</th><th>Day 1</th><th>Day 2</th><th>Day 3</th><th>Day 4</th><th>Day 5</th><th>Day 6</th>
        </tr></thead><tbody>`;
        
        players.forEach((p, index) => {
@@ -5330,11 +5312,15 @@ const views = {
            else if (rank === 3) rank = '🥉 3';
            
            playersCard += `<tr>
-              <td style="font-weight:bold; color:var(--text-muted); text-align:left;">${rank}</td>
-              <td style="font-weight:bold; color:var(--text-muted); text-align:left;">${formatCell(p.name)}</td>
-              <td style="font-weight:bold; color:#FFD700; font-size:1.1em;">${p.horns > 0 ? p.horns + ' 📯' : '<span style="color:var(--text-muted); font-size:0.9em; font-weight:normal;">-</span>'}</td>
-              <td style="font-weight:bold; color:var(--text-main);">${p.wins > 0 ? p.wins : '<span style="color:var(--text-muted); font-weight:normal;">-</span>'}</td>
-              <td style="font-weight:bold; color:var(--text-muted);">${p.total > 0 ? p.total.toLocaleString() : '<span style="color:var(--text-muted); font-weight:normal;">-</span>'}</td>
+              <td style="font-weight:bold; color:var(--text-muted);">${rank}</td>
+              <td style="font-weight:bold; color:var(--text-muted);">${formatCell(p.name)}</td>
+              <td style="font-weight:bold;">${p.total > 0 ? p.total.toLocaleString() : ''}</td>
+              <td>${p.d1 > 0 ? p.d1.toLocaleString() : ''}</td>
+              <td>${p.d2 > 0 ? p.d2.toLocaleString() : ''}</td>
+              <td>${p.d3 > 0 ? p.d3.toLocaleString() : ''}</td>
+              <td>${p.d4 > 0 ? p.d4.toLocaleString() : ''}</td>
+              <td>${p.d5 > 0 ? p.d5.toLocaleString() : ''}</td>
+              <td>${p.d6 > 0 ? p.d6.toLocaleString() : ''}</td>
            </tr>`;
        });
        playersCard += `</tbody></table></div>`;
