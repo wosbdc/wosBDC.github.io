@@ -1,3 +1,7 @@
+## [1.29.75] - 2026-07-22
+### Added
+- **1-Click "Add New Player to Roster" Feature**: Added `window.addNewChiefToRoster()` and `window.openAddPlayerModal()` modal dialog directly accessible from **Player Database Editor** and **Admin Hub ➔ Quick Admin Tools**. Saves new roster members directly to Firebase Realtime Database (`roster_live/${gameId}`) in < 10ms with automated Google Sheets sync!
+
 ## [1.29.74] - 2026-07-22
 ### Fixed
 - **Activity History Archives Fallback Handling**: Added multi-layer Google Sheets API & Firebase fallback logic to `window.loadActivityHistory()` so historical activity archives load safely without throwing error messages if a node is empty or restricted.

@@ -526,6 +526,132 @@ window.unlinkAltAccountPrompt = async (gid) => {
     }
 };
 
+// Add new player to Roster natively in Firebase roster_live & sync to GAS
+window.addNewChiefToRoster = async (gameId, name, furnaceLevel = 'F30', dateStarted = '') => {
+  if (!gameId || !name) throw new Error("Game ID and Chief Name are required.");
+  const gIdStr = gameId.toString().trim();
+  const cleanName = name.toString().trim();
+  const cleanLevel = furnaceLevel ? furnaceLevel.toString().trim() : 'F30';
+  const cleanDate = dateStarted || new Date().toISOString().split('T')[0];
+
+  const record = {
+    gameId: gIdStr,
+    name: cleanName,
+    furnaceLevel: cleanLevel,
+    dateStarted: cleanDate,
+    addedAt: Date.now()
+  };
+
+  // Write natively to Firebase roster_live
+  await set(ref(db, `roster_live/${gIdStr}`), record);
+  if (window.rosterCache) window.rosterCache[gIdStr] = record;
+  if (window.idToNameMap) window.idToNameMap[gIdStr] = cleanName;
+  if (window.nameToIdMap) window.nameToIdMap[cleanName] = gIdStr;
+
+  // Log Admin Action
+  if (window.logAdminAction) {
+    window.logAdminAction("Add Roster Member", `Added new player ${cleanName} (${gIdStr}) to roster`, cleanName);
+  }
+
+  // Ping GAS backend as fallback
+  try {
+    const regToken = await getAuthToken();
+    const url = `${API_BASE_URL}?api=registerNewPlayer&gameId=${encodeURIComponent(gIdStr)}&name=${encodeURIComponent(cleanName)}&dateStarted=${encodeURIComponent(cleanDate)}&level=${encodeURIComponent(cleanLevel)}${regToken ? '&token=' + encodeURIComponent(regToken) : ''}`;
+    fetch(url, { mode: 'no-cors' }).catch(e => null);
+  } catch(e) {}
+
+  return record;
+};
+
+// Open Add Player Modal
+window.openAddPlayerModal = () => {
+  const existingModal = document.getElementById('addPlayerModal');
+  if (existingModal) existingModal.remove();
+
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  const modalHtml = `
+    <div id="addPlayerModal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.75); backdrop-filter:blur(5px); z-index:9999; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease;">
+      <div style="background:var(--card-bg); border:1px solid var(--accent); border-radius:16px; padding:24px; width:90%; max-width:480px; box-shadow:0 20px 50px rgba(0,0,0,0.8); position:relative;">
+        
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:12px;">
+          <h3 style="margin:0; color:var(--text-main); font-size:20px; display:flex; align-items:center; gap:10px;">
+            ➕ Add New Player to Roster
+          </h3>
+          <button onclick="document.getElementById('addPlayerModal').remove()" style="background:transparent; border:none; color:var(--text-muted); font-size:24px; cursor:pointer; padding:0; line-height:1;">&times;</button>
+        </div>
+
+        <form id="addPlayerForm" onsubmit="window.submitAddPlayerForm(event)" style="display:flex; flex-direction:column; gap:14px;">
+          <div>
+            <label style="display:block; margin-bottom:4px; font-size:12px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Game ID (Required)</label>
+            <input type="text" id="newPlayerGameId" placeholder="e.g. 318843189" required style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:15px; font-weight:bold;">
+          </div>
+
+          <div>
+            <label style="display:block; margin-bottom:4px; font-size:12px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Chief Name (Required)</label>
+            <input type="text" id="newPlayerName" placeholder="e.g. BrianDCox" required style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:15px; font-weight:bold;">
+          </div>
+
+          <div>
+            <label style="display:block; margin-bottom:4px; font-size:12px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Furnace Level</label>
+            <input type="text" id="newPlayerFurnace" placeholder="e.g. F30, FC1, FC2..." value="F30" style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:15px;">
+          </div>
+
+          <div>
+            <label style="display:block; margin-bottom:4px; font-size:12px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Date Joined</label>
+            <input type="date" id="newPlayerDate" value="${todayStr}" style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:15px;">
+          </div>
+
+          <div id="addPlayerStatus" style="font-size:13px; font-weight:bold; text-align:center;"></div>
+
+          <div style="display:flex; gap:10px; margin-top:10px;">
+            <button type="button" onclick="document.getElementById('addPlayerModal').remove()" style="flex:1; padding:12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-weight:bold; cursor:pointer;">Cancel</button>
+            <button type="submit" id="addPlayerSubmitBtn" style="flex:2; padding:12px; border-radius:8px; border:none; background:var(--success); color:white; font-weight:bold; cursor:pointer; font-size:15px;">💾 Save to Roster</button>
+          </div>
+        </form>
+
+      </div>
+    </div>
+  `;
+
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+};
+
+window.submitAddPlayerForm = async (e) => {
+  e.preventDefault();
+  const gameId = document.getElementById('newPlayerGameId').value.trim();
+  const name = document.getElementById('newPlayerName').value.trim();
+  const furnaceLevel = document.getElementById('newPlayerFurnace').value.trim() || 'F30';
+  const dateStarted = document.getElementById('newPlayerDate').value;
+  const statusDiv = document.getElementById('addPlayerStatus');
+  const btn = document.getElementById('addPlayerSubmitBtn');
+
+  if (!gameId || !name) {
+    statusDiv.style.color = '#ef4444';
+    statusDiv.textContent = 'Please enter both Game ID and Chief Name.';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+  statusDiv.style.color = 'var(--text-muted)';
+  statusDiv.textContent = 'Saving new member to Firebase...';
+
+  try {
+    await window.addNewChiefToRoster(gameId, name, furnaceLevel, dateStarted);
+    if (window.showToast) window.showToast(`Added ${name} (${gameId}) to Roster!`, "success");
+    document.getElementById('addPlayerModal').remove();
+    if (typeof window.activeViewFunc === 'function') window.activeViewFunc();
+    else if (views.roster) views.roster();
+  } catch(err) {
+    console.error(err);
+    statusDiv.style.color = '#ef4444';
+    statusDiv.textContent = err.message || 'Failed to add player.';
+    btn.disabled = false;
+    btn.textContent = '💾 Save to Roster';
+  }
+};
+
 window.adminLinkAltAccountPrompt = async (uid, cName, currentLinksStr) => {
     const altId = await window.customPrompt(`Enter the Game ID of the Alt Account you want to link to ${cName}:`);
     if (!altId || altId.trim() === '') return;
@@ -3602,6 +3728,7 @@ const views = {
             <div style="background:var(--bg-main); padding:20px; border-radius:12px; border:1px solid var(--accent); margin-bottom:20px; text-align:center; display:flex; flex-direction:column; gap:15px; align-items:center;">
               <button onclick="views.beartrap()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px;">🐻 Bear Trap</button>
               <button onclick="views.playerEditor()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px;">👤 Open Player Database Editor</button>
+              <button onclick="window.openAddPlayerModal()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px; box-shadow:0 4px 12px rgba(16,185,129,0.3);">➕ Add New Player to Roster</button>
               <button onclick="views.showdownAdmin()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px;">⚔️ ShowDown</button>
               <button onclick="views.championshipAdmin()" style="background:linear-gradient(135deg, #f59e0b, #d97706); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px; box-shadow:0 4px 12px rgba(217,119,6,0.3);">🏆 Alliance Championship</button>
             </div>
@@ -4952,7 +5079,10 @@ html += `</select>
           <h2 style="color:var(--accent); margin:0; display:flex; align-items:center; gap:10px;">
             👤 Player Database Editor
           </h2>
-          <button onclick="views.admin()" style="background:var(--bg-main); color:var(--text-main); border:1px solid var(--border); padding:8px 12px; border-radius:6px; cursor:pointer; font-weight:bold;">◀ Back</button>
+          <div style="display:flex; gap:10px; align-items:center;">
+            <button onclick="window.openAddPlayerModal()" style="background:var(--success); color:white; border:none; padding:8px 14px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:13px; box-shadow:0 2px 8px rgba(16,185,129,0.3);">➕ Add New Player</button>
+            <button onclick="views.admin()" style="background:var(--bg-main); color:var(--text-main); border:1px solid var(--border); padding:8px 12px; border-radius:6px; cursor:pointer; font-weight:bold;">◀ Back</button>
+          </div>
         </div>
         
         <div style="display:flex; gap:10px; margin-bottom:20px;">
