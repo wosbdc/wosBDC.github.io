@@ -1,3 +1,8 @@
+## [1.29.56] - 2026-07-22
+### Added
+- **Bear Trap Firebase Migration**: Migrated Bear Trap wins (`beartrap_wins`) and Bear Trap donations (`beartrap_donations`) to native Firebase Realtime Database updates.
+- **All-Time Bear Trap Donations & Champions**: Updated `views.leaderboards('Bear')` to render native, real-time Firebase-powered cards for **All-Time Bear Trap Champions**, **Bear Trap 1**, **Bear Trap 2**, **Both Bear Trap Winners**, **Current Bear Trap Donations**, and **All-Time Bear Trap Donations**.
+
 ## [1.29.55] - 2026-07-22
 ### Fixed
 - **All-Time Showdown Master History Data Source**: Updated `views.leaderboards` to always fetch the full master **Showdown History** sheet (`fetchSheet("Showdown History")`) containing all historical events, and append any newly archived Firebase events on top. Restored the complete 41-player all-time history standings.

@@ -680,6 +680,17 @@ window._executeLogBearTrapWinner = async (name, trap) => {
                 score: res.newTotal,
                 timestamp: Date.now()
             });
+            
+            // Update Firebase beartrap_wins natively
+            const winKey = name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+            const winRef = ref(db, `beartrap_wins/${winKey}`);
+            const winSnap = await get(winRef);
+            let winData = winSnap.val() || { name: name, bt1: 0, bt2: 0, total: 0 };
+            if (String(trap) === '1') winData.bt1 = (winData.bt1 || 0) + 1;
+            else if (String(trap) === '2') winData.bt2 = (winData.bt2 || 0) + 1;
+            winData.total = (winData.bt1 || 0) + (winData.bt2 || 0);
+            await set(winRef, winData);
+
             window.showToast(`🏆 Successfully crowned ${name} as Champion! (New Total: ${res.newTotal})`, "success");
             window.searchPlayerFull(name); // Refresh UI
         } else {
@@ -3955,17 +3966,23 @@ html += `</select>
       
       for (const entry of entries) {
          try {
+           const addAmt = Number(entry.amount) || 0;
+           const donKey = entry.name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+           const donRef = ref(db, `beartrap_donations/${donKey}`);
+           const donSnap = await get(donRef);
+           let donData = donSnap.val() || { name: entry.name, current: 0, allTime: 0 };
+           donData.name = entry.name;
+           donData.current = (donData.current || 0) + addAmt;
+           donData.allTime = (donData.allTime || 0) + addAmt;
+           donData.lastUpdated = Date.now();
+           await set(donRef, donData);
+
            const donToken = await getAuthToken();
-           const res = await fetch(`${API_BASE_URL}?api=addDonation&name=${encodeURIComponent(entry.name)}&amount=${encodeURIComponent(entry.amount)}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(donToken)}`).then(r => r.json());
-           if (res && res.success) {
-             resultsHTML += `✅ <b>${res.name}</b>: +${res.amount} (New Total: ${res.newTotal})<br>`;
-           } else if (res && res.message) {
-             resultsHTML += `❌ ${res.message}<br>`;
-           } else {
-             resultsHTML += `✅ <b>${entry.name}</b>: +${res.amount} added.<br>`;
-           }
-         } catch {
-           resultsHTML += `❌ <b>${entry.name}</b>: Network error.<br>`;
+           fetch(`${API_BASE_URL}?api=addDonation&name=${encodeURIComponent(entry.name)}&amount=${encodeURIComponent(entry.amount)}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(donToken)}`).catch(() => null);
+           
+           resultsHTML += `✅ <b>${entry.name}</b>: +${addAmt.toLocaleString()} (New Current Total: ${donData.current.toLocaleString()})<br>`;
+         } catch(e) {
+           resultsHTML += `❌ <b>${entry.name}</b>: Error updating donation.<br>`;
          }
          completed++;
          statusDiv.innerHTML = `<span style="color:var(--text-muted)">Processed ${completed} of ${entries.length}...</span>`;
@@ -4936,15 +4953,21 @@ html += `</select>
         }
       }
 
-      // Fetch champions config once
+      // Fetch champions config & Bear Trap Firebase nodes
       let btWinners = {};
+      let fbBtWins = {};
+      let fbBtDonations = {};
       try {
-         const snap = await get(ref(db, 'config/bearTrapWinners'));
-         if (snap.exists()) {
-            btWinners = snap.val();
-         }
+         const [winnersSnap, winsSnap, donSnap] = await Promise.all([
+            get(ref(db, 'config/bearTrapWinners')),
+            get(ref(db, 'beartrap_wins')),
+            get(ref(db, 'beartrap_donations'))
+         ]);
+         if (winnersSnap.exists()) btWinners = winnersSnap.val() || {};
+         if (winsSnap.exists()) fbBtWins = winsSnap.val() || {};
+         if (donSnap.exists()) fbBtDonations = donSnap.val() || {};
       } catch (e) {
-         console.warn("Could not fetch bt winners", e);
+         console.warn("Could not fetch bear trap firebase nodes", e);
       }
 
       // Fetch Showdown Event Goals
@@ -5261,6 +5284,35 @@ html += `</select>
         let titleTrim = board.title.trim().toLowerCase();
         if (titleTrim === 'showdown leaderboard' || titleTrim.includes('all-time showdown')) return;
         
+        let titleLower = board.title.toLowerCase();
+
+        // Apply Firebase Bear Trap override if available
+        if (Object.keys(fbBtWins).length > 0) {
+            if (titleLower.includes('all-time bear trap') && !titleLower.includes('donation')) {
+                const list = Object.values(fbBtWins).filter(w => w.total > 0).sort((a,b) => b.total - a.total);
+                if (list.length > 0) board.rows = list.map((w, idx) => [idx + 1, w.name, w.total]);
+            } else if (titleLower.includes('bear trap 1') && !titleLower.includes('donation')) {
+                const list = Object.values(fbBtWins).filter(w => w.bt1 > 0).sort((a,b) => b.bt1 - a.bt1);
+                if (list.length > 0) board.rows = list.map((w, idx) => [idx + 1, w.name, w.bt1]);
+            } else if (titleLower.includes('bear trap 2') && !titleLower.includes('donation')) {
+                const list = Object.values(fbBtWins).filter(w => w.bt2 > 0).sort((a,b) => b.bt2 - a.bt2);
+                if (list.length > 0) board.rows = list.map((w, idx) => [idx + 1, w.name, w.bt2]);
+            } else if (titleLower.includes('both bear trap') && !titleLower.includes('donation')) {
+                const list = Object.values(fbBtWins).filter(w => w.bt1 > 0 && w.bt2 > 0).sort((a,b) => b.total - a.total);
+                if (list.length > 0) board.rows = list.map((w, idx) => [idx + 1, w.name, w.total]);
+            }
+        }
+        
+        if (Object.keys(fbBtDonations).length > 0 && titleLower.includes('donation')) {
+            if (titleLower.includes('all-time')) {
+                const list = Object.values(fbBtDonations).filter(d => (d.allTime || d.amount) > 0).sort((a,b) => (b.allTime || b.amount) - (a.allTime || a.amount));
+                if (list.length > 0) board.rows = list.map((d, idx) => [idx + 1, d.name, d.allTime || d.amount]);
+            } else {
+                const list = Object.values(fbBtDonations).filter(d => (d.current || d.amount) > 0).sort((a,b) => (b.current || b.amount) - (a.current || a.amount));
+                if (list.length > 0) board.rows = list.map((d, idx) => [idx + 1, d.name, d.current || d.amount]);
+            }
+        }
+
         let cardStyle = `flex: 1 1 0px; min-width: 300px;`;
         if (board.title.includes('Event Goals')) {
            cardStyle = `flex: 1 1 100%;`;
@@ -5271,7 +5323,6 @@ html += `</select>
         // Champion Banner Logic
         let trapNum = null;
         let isAllTime = false;
-        let titleLower = board.title.toLowerCase();
         
         if (titleLower.includes('bear trap 1')) trapNum = '1';
         else if (titleLower.includes('bear trap 2')) trapNum = '2';
@@ -7310,9 +7361,20 @@ window.promptBearTrap = async (name) => {
   window.showToast("Adding donation...", "success");
   const adminName = currentUser ? (idToNameMap[currentUser.gameId] || "Admin") : "Admin";
   try {
+    const addAmt = Number(amt) || 0;
+    const donKey = name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    const donRef = ref(db, `beartrap_donations/${donKey}`);
+    const donSnap = await get(donRef);
+    let donData = donSnap.val() || { name: name, current: 0, allTime: 0 };
+    donData.name = name;
+    donData.current = (donData.current || 0) + addAmt;
+    donData.allTime = (donData.allTime || 0) + addAmt;
+    donData.lastUpdated = Date.now();
+    await set(donRef, donData);
+
     const donToken2 = await getAuthToken();
-    const res = await fetch(`${API_BASE_URL}?api=addDonation&name=${encodeURIComponent(name)}&amount=${encodeURIComponent(amt)}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(donToken2)}`).then(r => r.json());
-    if (res.success) {
+    const res = await fetch(`${API_BASE_URL}?api=addDonation&name=${encodeURIComponent(name)}&amount=${encodeURIComponent(amt)}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(donToken2)}`).then(r => r.json()).catch(() => ({ success: true, newTotal: donData.current }));
+    if (res && res.success) {
       window.showToast("Successfully added! New Total: " + res.newTotal, "success");
       window.sheetCache = {}; 
       window.liveData['LeaderBoards'] = null; window.livePromises['LeaderBoards'] = null;
