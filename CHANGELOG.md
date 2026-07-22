@@ -1,3 +1,7 @@
+## [1.29.46] - 2026-07-22
+### Added
+- **Showdown Archive Warning Modal**: Added explicit confirmation warning instructing admins not to archive until the Showdown event is 100% finished after Day 6.
+
 ## [1.29.45] - 2026-07-22
 ### Added
 - **Firebase Showdown History Node**: Migrated all historical Showdown records natively into Firebase (`showdown_history`), completely disconnecting Google Sheets for Showdown.

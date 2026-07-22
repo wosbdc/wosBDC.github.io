@@ -2521,7 +2521,8 @@ if (!window._autocompleteListenerAdded) {
 }
 
 window.archiveCurrentShowdownToFirebase = async () => {
-    if (!confirm("Are you sure you want to archive the current Showdown event into Firebase History?")) return;
+    const confirmed = await window.customConfirm("⚠️ WARNING: Do NOT archive until the Showdown event is 100% finished (after Day 6)!\n\nAre you sure you want to archive current scores into All-Time History?");
+    if (!confirmed) return;
     try {
         const [liveSnap, histSnap] = await Promise.all([
             get(ref(db, 'showdown_live')),
