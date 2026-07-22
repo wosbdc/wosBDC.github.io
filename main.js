@@ -7050,10 +7050,6 @@ html += `</select>
         console.warn("Could not fetch showdown event goals for leaderboards view", e);
       }
 
-      if (finalGoalsCard) {
-          html += finalGoalsCard;
-      }
-
       html += `<div style="display:flex; flex-wrap:wrap; gap:20px;">`;
       
       if (!filterString || filterString.toLowerCase() === 'showdown') {
@@ -7298,6 +7294,9 @@ html += `</select>
       });
       
       html += `</div>`;
+      if (finalGoalsCard) {
+          html += finalGoalsCard;
+      }
       app.innerHTML = html;
       
       // Initialize Firebase Listeners for any Bear Trap widgets rendered

@@ -1,3 +1,7 @@
+## [1.29.90] - 2026-07-22
+### Changed
+- **Event Goals Positioned at Bottom**: Moved **🎯 Event Goals** card (`finalGoalsCard`) to render below all leaderboard cards (at the bottom of the page). Leaderboards (Current Showdown & All-Time Showdown) now sit prominently on top.
+
 ## [1.29.89] - 2026-07-22
 ### Fixed
 - **Showdown Leaderboards & Event Goals Layout Separation**: Fixed layout clash in `views.home()`. Cleanly separated **🎯 Event Goals** (rendered at the top as a full-width card) from **Current Showdown Leaderboard** and **All-Time Showdown Leaderboard** (rendered side-by-side below). Prevented duplicate static sheet tables from rendering over live Firebase components.
