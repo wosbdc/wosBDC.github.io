@@ -3619,7 +3619,7 @@ const views = {
             🐻 Multi-BT Donations
             <button onclick="document.getElementById('btLookupModal').style.display='block'" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--accent); padding:4px 8px; border-radius:6px; cursor:pointer; font-size:12px; margin-left:10px;">🔍 Lookup</button>
             <button onclick="document.getElementById('btCrownModal').style.display='block'" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--success); padding:4px 8px; border-radius:6px; cursor:pointer; font-size:12px; margin-left:10px;">👑 Crown Winner</button>
-            <button onclick="window.resetBearTrapWinners()" style="background:var(--danger); color:#fff; border:none; padding:4px 8px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; margin-left:10px;">🔄 Reset BT Winners</button>
+            <button onclick="window.resetBearTrapWinners()" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--danger); padding:4px 8px; border-radius:6px; cursor:pointer; font-size:12px; margin-left:10px;">🔄 Reset BT Winners</button>
           </h2>
           <button onclick="views.admin()" style="background:var(--bg-main); color:var(--text-main); border:1px solid var(--border); padding:5px 12px; border-radius:6px; cursor:pointer;">Back to Admin</button>
         </div>
