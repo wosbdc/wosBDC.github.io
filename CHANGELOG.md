@@ -1,3 +1,7 @@
+## [1.29.53] - 2026-07-22
+### Fixed
+- **All-Time Showdown Leaderboard Data Unwrapping**: Updated `calculateAllTimeShowdown()` and `views.leaderboards` to automatically unwrap the `.data` property when `sdHistoryData` is formatted as `{ success: true, data: [...] }`. Restored the **All-Time - Showdown Leaderboard** card alongside the **Current - Showdown Leaderboard** card.
+
 ## [1.29.52] - 2026-07-22
 ### Fixed
 - **Showdown Data Entry Lock Button Visibility**: Added `lockBtn.style.display = 'inline-block'` to `window.onSdPlayerSelect()`. Previously when selecting a player with existing scores, the input locked properly but the lock button remained `display: none`, hiding the `🔒 Locked` / `✏️ Edit` button and preventing score editing.

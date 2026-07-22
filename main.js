@@ -2586,8 +2586,13 @@ const getAutocompleteShield = () => {
 
 function calculateAllTimeShowdown(historyData) {
     if (!historyData) return [];
-    const rows = Array.isArray(historyData) ? historyData : Object.values(historyData);
-    if (!rows || rows.length === 0) return [];
+    let rows = historyData;
+    if (typeof historyData === 'object' && historyData.data) {
+        rows = historyData.data;
+    } else if (!Array.isArray(historyData) && typeof historyData === 'object') {
+        rows = Object.values(historyData);
+    }
+    if (!rows || !Array.isArray(rows) || rows.length === 0) return [];
     
     let allTimeStats = {};
     const staticHorns = { d1: 1, d2: 2, d3: 2, d4: 2, d5: 2, d6: 4 };
@@ -5067,7 +5072,11 @@ html += `</select>
          });
          liveShowdownHtml += `</tbody></table></div></div>`;
          
-         const historyRows = sdHistoryData ? (Array.isArray(sdHistoryData) ? sdHistoryData : Object.values(sdHistoryData)) : [];
+         let rawHistory = sdHistoryData;
+         if (rawHistory && typeof rawHistory === 'object' && rawHistory.data) {
+             rawHistory = rawHistory.data;
+         }
+         const historyRows = rawHistory ? (Array.isArray(rawHistory) ? rawHistory : Object.values(rawHistory)) : [];
          if (historyRows.length > 0) {
              let allTimePlayers = calculateAllTimeShowdown(historyRows);
              
