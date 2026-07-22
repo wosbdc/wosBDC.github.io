@@ -1,3 +1,7 @@
+## [1.29.83] - 2026-07-22
+### Changed
+- **Alliance Championship Tracker Table Redesign (`views.championshipAdmin()`)**: Simplified the Alliance Championship roster table to display **Chief Name** and **Signup Status** (`✅ YES` / `❌ NO`), removing Game ID and Furnace Level columns for a cleaner, high-density layout.
+
 ## [1.29.82] - 2026-07-22
 ### Fixed
 - **Network-First Service Worker Strategy (`sw.js`)**: Updated PWA Service Worker cache to `wos-bdc-pwa-v1.29.82` with a Network-First strategy for HTML navigation and automatic cache purging. Users will now instantly see the latest site version (`v1.29.82`) without being stuck on older cached builds!

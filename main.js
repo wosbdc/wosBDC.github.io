@@ -4894,7 +4894,7 @@ html += `</select>
 
             <!-- Search & Filter Controls -->
             <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:16px; display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:space-between;">
-              <input type="text" id="champSearchInput" placeholder="🔍 Filter player name or ID..." style="flex:1; min-width:200px; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:14px;" onkeyup="window.filterChampTable()">
+              <input type="text" id="champSearchInput" placeholder="🔍 Filter player name..." style="flex:1; min-width:200px; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:14px;" onkeyup="window.filterChampTable()">
               
               <div style="display:flex; gap:6px;">
                 <button class="champ-filter-btn active" data-filter="all" onclick="window.setChampFilter('all')" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--accent); color:white; font-weight:bold; cursor:pointer; font-size:13px;">All (${totalCount})</button>
@@ -4908,10 +4908,8 @@ html += `</select>
               <table style="width:100%; border-collapse:collapse; text-align:left; font-size:14px;">
                 <thead>
                   <tr style="background:var(--bg-main); border-bottom:1px solid var(--border); color:var(--text-muted); font-size:12px; text-transform:uppercase;">
-                    <th style="padding:12px 16px;">Chief Name</th>
-                    <th style="padding:12px 16px;">Game ID</th>
-                    <th style="padding:12px 16px;">Furnace</th>
-                    <th style="padding:12px 16px; text-align:center;">Signup Status</th>
+                    <th style="padding:12px 20px;">Chief Name</th>
+                    <th style="padding:12px 20px; text-align:right;">Signup Status</th>
                   </tr>
                 </thead>
                 <tbody id="champTableBody">
@@ -4921,11 +4919,9 @@ html += `</select>
                       let isSignedUp = record && record.signedUp;
                       return `
                         <tr class="champ-row" data-name="${escapeHTML((p.name || '').toLowerCase())}" data-gid="${gIdStr}" data-signed="${isSignedUp ? 'yes' : 'no'}" style="border-bottom:1px solid var(--border);">
-                          <td style="padding:12px 16px; font-weight:bold; color:var(--text-main);">${escapeHTML(p.name)}</td>
-                          <td style="padding:12px 16px; color:var(--text-muted); font-family:monospace;">${gIdStr}</td>
-                          <td style="padding:12px 16px; color:var(--text-main);">${p.furnaceLevel || '-'}</td>
-                          <td style="padding:12px 16px; text-align:center;">
-                            <button onclick="window.onChampToggle('${gIdStr}')" style="background:${isSignedUp ? '#10b981' : 'rgba(239,68,68,0.15)'}; color:${isSignedUp ? '#ffffff' : '#ef4444'}; border:${isSignedUp ? 'none' : '1px solid rgba(239,68,68,0.4)'}; padding:6px 18px; border-radius:20px; font-weight:bold; cursor:pointer; font-size:13px; transition:0.2s; box-shadow:${isSignedUp ? '0 2px 8px rgba(16,185,129,0.35)' : 'none'};">
+                          <td style="padding:14px 20px; font-weight:bold; color:var(--text-main); font-size:15px;">${escapeHTML(p.name)}</td>
+                          <td style="padding:14px 20px; text-align:right;">
+                            <button onclick="window.onChampToggle('${gIdStr}')" style="background:${isSignedUp ? '#10b981' : 'rgba(239,68,68,0.15)'}; color:${isSignedUp ? '#ffffff' : '#ef4444'}; border:${isSignedUp ? 'none' : '1px solid rgba(239,68,68,0.4)'}; padding:6px 20px; border-radius:20px; font-weight:bold; cursor:pointer; font-size:13px; transition:0.2s; box-shadow:${isSignedUp ? '0 2px 8px rgba(16,185,129,0.35)' : 'none'};">
                               ${isSignedUp ? '✅ YES' : '❌ NO'}
                             </button>
                           </td>
