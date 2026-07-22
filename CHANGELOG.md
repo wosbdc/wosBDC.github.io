@@ -1,3 +1,7 @@
+## [1.29.67] - 2026-07-22
+### Changed
+- **Onboarding Banner Copy Upgrade**: Updated the Home Page Onboarding Hero Banner copy to *"Already an alliance member? Link your email to claim your profile! Instantly track your live Bear Trap donations, Showdown rankings, alliance event scores, and personal activity logs—all in real time!"* with a vibrant "✨ Essential Alliance Member Portal" badge.
+
 ## [1.29.66] - 2026-07-22
 ### Added
 - **2-Tier Database-First Game ID Verification**: Updated registration Game ID verification to check our alliance database first (`idToNameMap` and `roster_live`), instantly verifying existing members without relying on or hitting rate limits on external Century Games servers.

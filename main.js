@@ -5037,14 +5037,14 @@ html += `</select>
       let onboardingBannerHtml = '';
       if (!currentUser) {
         onboardingBannerHtml = `
-          <div style="background: linear-gradient(135deg, rgba(59,130,246,0.15), rgba(147,51,234,0.15)); border: 1px solid rgba(59,130,246,0.3); border-radius: 16px; padding: 20px 25px; margin-bottom: 25px; display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; text-align: left; box-shadow: 0 8px 32px rgba(0,0,0,0.2);">
+          <div style="background: linear-gradient(135deg, rgba(59,130,246,0.18), rgba(147,51,234,0.18)); border: 1px solid rgba(59,130,246,0.35); border-radius: 16px; padding: 22px 26px; margin-bottom: 25px; display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; text-align: left; box-shadow: 0 8px 32px rgba(0,0,0,0.25);">
             <div style="flex: 1; min-width: 280px;">
               <div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(59,130,246,0.2); color: #60a5fa; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-bottom: 8px;">
-                ✨ Alliance Member Onboarding
+                ✨ Essential Alliance Member Portal
               </div>
-              <h2 style="margin: 0 0 6px 0; color: var(--text-main); font-size: 20px;">Claim Your Chief Profile & Unlock Personal Stats!</h2>
-              <p style="margin: 0; color: var(--text-muted); font-size: 13px; line-height: 1.5;">
-                Already on the alliance roster? Link your email to track your daily Bear Trap donations, Showdown progress, and personal activity logs.
+              <h2 style="margin: 0 0 6px 0; color: var(--text-main); font-size: 21px;">🔥 Claim Your Chief Profile & Unlock Your Live Stats!</h2>
+              <p style="margin: 0; color: var(--text-muted); font-size: 13.5px; line-height: 1.55;">
+                Already an alliance member? Link your email to claim your profile! Instantly track your live Bear Trap donations, Showdown rankings, alliance event scores, and personal activity logs—all in real time!
               </p>
             </div>
 
