@@ -4834,22 +4834,50 @@ const views = {
              return b.total - a.total;
          });
          
-         liveShowdownHtml = `<div class="card" style="width:100%; margin-bottom:20px; overflow-x:auto;"><div class="card-title">Showdown Leaderboard</div><table style="min-width:500px; text-align:center;"><thead><tr>
-            <th style="text-align:left;">Rank</th><th style="text-align:left;">Name</th><th>Total Horns</th><th>Days Won</th><th>Total Points</th>
+         let mvpBannerHtml = "";
+         if (players.length > 0 && players[0].horns > 0) {
+             let champName = players[0].name;
+             let maxHorns = players[0].horns;
+             let champId = null;
+             for (const [gid, name] of Object.entries(idToNameMap)) {
+                 if (name.toLowerCase() === champName.toLowerCase()) {
+                     champId = gid; break;
+                 }
+             }
+             const avatarSrc = (champId && avatarMap[champId]) ? avatarMap[champId] : `images/${champName}.png`;
+             
+             mvpBannerHtml = `
+               <div style="background: linear-gradient(135deg, rgba(255,215,0,0.1) 0%, rgba(255,215,0,0.02) 100%); border: 1px solid rgba(255,215,0,0.3); border-radius: 12px; padding: 15px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; box-shadow: 0 4px 15px rgba(255,215,0,0.05);">
+                 <div style="width: 50px; height: 50px; border-radius: 50%; border: 2px solid #FFD700; overflow: hidden; flex-shrink: 0; box-shadow: 0 0 10px rgba(255,215,0,0.2);">
+                   <img src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='images/default.png';">
+                 </div>
+                 <div style="flex: 1; text-align: left;">
+                   <div style="color: #FFD700; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">👑 Showdown MVP</div>
+                   <div style="color: var(--text-main); font-size: 18px; font-weight: bold;">${escapeHTML(champName)}</div>
+                 </div>
+                 <div style="text-align: right;">
+                   <div style="color: var(--text-muted); font-size: 11px;">Total Score</div>
+                   <div style="color: var(--accent); font-size: 20px; font-weight: bold;">${maxHorns}</div>
+                 </div>
+               </div>
+             `;
+         }
+
+         liveShowdownHtml = `<div class="card" style="width:100%; margin-bottom:20px; overflow-x:auto;"><div class="card-title">Showdown Leaderboard</div>
+         ${mvpBannerHtml}
+         <table style="min-width:500px; text-align:left;"><thead><tr>
+            <th>RANK</th><th>NAME</th><th>TOTAL HORNS</th><th>DAY WINS</th><th>TOTAL</th>
          </tr></thead><tbody>`;
          
          players.slice(0, 4).forEach((p, index) => {
              let rank = index + 1;
-             if (rank === 1) rank = '🥇 1';
-             else if (rank === 2) rank = '🥈 2';
-             else if (rank === 3) rank = '🥉 3';
              
              liveShowdownHtml += `<tr>
-                <td style="font-weight:bold; color:var(--text-muted); text-align:left;">${rank}</td>
-                <td style="font-weight:bold; color:var(--text-muted); text-align:left;">${formatCell(p.name)}</td>
-                <td style="font-weight:bold; color:#FFD700; font-size:1.1em;">${p.horns > 0 ? p.horns + ' 📯' : '<span style="color:var(--text-muted); font-size:0.9em; font-weight:normal;">-</span>'}</td>
-                <td style="font-weight:bold; color:var(--text-main);">${p.wins > 0 ? p.wins : '<span style="color:var(--text-muted); font-weight:normal;">-</span>'}</td>
-                <td style="font-weight:bold; color:var(--text-muted);">${p.total > 0 ? p.total.toLocaleString() : '<span style="color:var(--text-muted); font-weight:normal;">-</span>'}</td>
+                <td style="font-weight:bold; color:var(--accent);">${rank}</td>
+                <td>${formatCell(p.name)}</td>
+                <td>${p.horns}</td>
+                <td>${p.wins}</td>
+                <td>${p.total > 0 ? p.total.toLocaleString() : '0'}</td>
              </tr>`;
          });
          liveShowdownHtml += `</tbody></table></div>`;
