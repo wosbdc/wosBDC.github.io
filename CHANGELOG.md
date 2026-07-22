@@ -1,3 +1,7 @@
+## [1.29.76] - 2026-07-22
+### Added
+- **Game ID Verification Button in Add Player Modal**: Added `window.verifyAddPlayerGameId()` with a `🔍 Verify ID` button inside the Add Player modal. Typing a Game ID auto-verifies and auto-fills Chief Name & Furnace Level from local alliance database and Whiteout Survival game servers!
+
 ## [1.29.75] - 2026-07-22
 ### Added
 - **1-Click "Add New Player to Roster" Feature**: Added `window.addNewChiefToRoster()` and `window.openAddPlayerModal()` modal dialog directly accessible from **Player Database Editor** and **Admin Hub ➔ Quick Admin Tools**. Saves new roster members directly to Firebase Realtime Database (`roster_live/${gameId}`) in < 10ms with automated Google Sheets sync!

@@ -584,7 +584,10 @@ window.openAddPlayerModal = () => {
         <form id="addPlayerForm" onsubmit="window.submitAddPlayerForm(event)" style="display:flex; flex-direction:column; gap:14px;">
           <div>
             <label style="display:block; margin-bottom:4px; font-size:12px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Game ID (Required)</label>
-            <input type="text" id="newPlayerGameId" placeholder="e.g. 318843189" required style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:15px; font-weight:bold;">
+            <div style="display:flex; gap:8px;">
+              <input type="text" id="newPlayerGameId" placeholder="e.g. 318843189" required style="flex:1; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:15px; font-weight:bold;">
+              <button type="button" id="verifyAddPlayerBtn" onclick="window.verifyAddPlayerGameId()" style="background:var(--accent); color:white; border:none; padding:10px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; flex-shrink:0;">🔍 Verify ID</button>
+            </div>
           </div>
 
           <div>
@@ -615,6 +618,75 @@ window.openAddPlayerModal = () => {
   `;
 
   document.body.insertAdjacentHTML('beforeend', modalHtml);
+};
+
+// Verify Game ID & Auto-Fill Chief Name
+window.verifyAddPlayerGameId = async () => {
+  const gidInput = document.getElementById('newPlayerGameId');
+  const nameInput = document.getElementById('newPlayerName');
+  const furnaceInput = document.getElementById('newPlayerFurnace');
+  const statusDiv = document.getElementById('addPlayerStatus');
+  const btn = document.getElementById('verifyAddPlayerBtn');
+
+  if (!gidInput || !gidInput.value.trim()) {
+    statusDiv.style.color = '#ef4444';
+    statusDiv.textContent = 'Please enter a Game ID to verify.';
+    return;
+  }
+
+  const val = gidInput.value.trim();
+  btn.disabled = true;
+  btn.textContent = '...';
+  statusDiv.style.color = 'var(--text-muted)';
+  statusDiv.textContent = 'Verifying Game ID...';
+
+  // 1. Check local alliance db first
+  try {
+     await refreshIdToNameMap();
+     let rosterData = await window.fetchRoster();
+     let matchedName = window.idToNameMap[val] || null;
+     let matchedFurnace = "";
+
+     if (rosterData) {
+        const foundEntry = Object.values(rosterData).find(p => p.gameId && p.gameId.toString().trim() === val.toString().trim());
+        if (foundEntry) {
+            matchedName = foundEntry.name;
+            matchedFurnace = foundEntry.furnaceLevel || "";
+        }
+     }
+
+     if (matchedName) {
+         nameInput.value = matchedName;
+         if (matchedFurnace) furnaceInput.value = matchedFurnace;
+         statusDiv.style.color = '#10b981';
+         statusDiv.innerHTML = `✅ Found in Alliance Database: <strong>${escapeHTML(matchedName)}</strong>`;
+         btn.disabled = false;
+         btn.textContent = '🔍 Verify ID';
+         return;
+     }
+  } catch(e) {}
+
+  // 2. Query official Century Games server
+  try {
+    const response = await fetch(`${VERIFY_PROXY_URL}?id=${encodeURIComponent(val)}`);
+    const data = await response.json();
+
+    if (data.success && data.nickname) {
+       nameInput.value = data.nickname;
+       if (data.stove_lv) furnaceInput.value = `FC${data.stove_lv}` || `F${data.stove_lv}`;
+       statusDiv.style.color = '#10b981';
+       statusDiv.innerHTML = `🌐 Verified from Game Servers: <strong>${escapeHTML(data.nickname)}</strong>`;
+    } else {
+       statusDiv.style.color = '#ef4444';
+       statusDiv.textContent = 'ID Not Found on Game Servers. You may enter details manually.';
+    }
+  } catch(err) {
+    statusDiv.style.color = '#ef4444';
+    statusDiv.textContent = 'Game server verification offline. You may enter details manually.';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🔍 Verify ID';
+  }
 };
 
 window.submitAddPlayerForm = async (e) => {
