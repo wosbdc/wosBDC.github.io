@@ -1,3 +1,7 @@
+## [1.29.71] - 2026-07-22
+### Added
+- **Phase 7: Alliance Championship Admin Tool (`views.championshipAdmin`)**: Built a dedicated Alliance Championship Signup Tracker inside Admin Hub ➔ Quick Admin Tools, featuring real-time Firebase status toggling (`championship/${gameId}`), live KPI counters (Total, YES, NO, Response Rate %), search filtering, and 1-click clipboard copy of missing signup member names.
+
 ## [1.29.70] - 2026-07-22
 ### Added
 - **Phase 6: Frost Clan & Activity Tracking Migration (`activity_live`)**: Created `window.fetchActivityData()` to query player event activity natively from Firebase Realtime Database (`activity_live` node) with automatic Google Sheets seeding fallback.

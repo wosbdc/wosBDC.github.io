@@ -391,6 +391,99 @@ window.fetchActivityData = async () => {
     return seededData;
 };
 
+// Fetch Championship Data natively from Firebase Realtime Database
+window.fetchChampionshipData = async () => {
+    if (window.championshipCache) return window.championshipCache;
+    try {
+        const snap = await get(ref(db, 'championship'));
+        if (snap.exists()) {
+            window.championshipCache = snap.val();
+            return window.championshipCache;
+        }
+    } catch(e) { console.warn("Firebase championship read error:", e); }
+
+    let seeded = {};
+    try {
+        const [rawSheet, rosterData] = await Promise.all([
+            fetchSheet("Alliance Championship ").catch(() => null),
+            window.fetchRoster().catch(() => null)
+        ]);
+
+        if (rosterData) {
+            Object.values(rosterData).forEach(p => {
+                if (p.gameId) {
+                    seeded[p.gameId.toString().trim()] = {
+                        gameId: p.gameId.toString().trim(),
+                        name: p.name || '',
+                        signedUp: false,
+                        lastUpdated: Date.now()
+                    };
+                }
+            });
+        }
+
+        if (rawSheet && rawSheet.length > 1) {
+            for (let i = 1; i < rawSheet.length; i++) {
+                let pName = rawSheet[i][0] ? rawSheet[i][0].toString().trim() : '';
+                let statusVal = rawSheet[i][1] ? rawSheet[i][1].toString().toLowerCase().trim() : '';
+                let isSignedUp = (statusVal === 'yes' || statusVal === 'true' || statusVal === '✅' || statusVal === '1');
+                
+                let foundGid = window.nameToIdMap ? window.nameToIdMap[pName] : null;
+                if (foundGid) {
+                    if (!seeded[foundGid]) {
+                        seeded[foundGid] = { gameId: foundGid, name: pName, signedUp: isSignedUp, lastUpdated: Date.now() };
+                    } else {
+                        seeded[foundGid].signedUp = isSignedUp;
+                    }
+                }
+            }
+        }
+
+        try { await set(ref(db, 'championship'), seeded); } catch(e) {}
+    } catch(e) {}
+
+    window.championshipCache = seeded;
+    return seeded;
+};
+
+// Toggle Championship signup status natively in Firebase
+window.toggleChampionshipStatus = async (gameId, forceStatus = null) => {
+    if (!gameId) return;
+    const gIdStr = gameId.toString().trim();
+    const data = await window.fetchChampionshipData();
+    const existing = data[gIdStr] || { gameId: gIdStr, name: (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief', signedUp: false };
+    
+    const newSignedUpStatus = (forceStatus !== null) ? forceStatus : !existing.signedUp;
+    existing.signedUp = newSignedUpStatus;
+    existing.lastUpdated = Date.now();
+    existing.updatedBy = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name || "Admin") : "Admin";
+
+    try {
+        await set(ref(db, `championship/${gIdStr}`), existing);
+        if (window.championshipCache) {
+            window.championshipCache[gIdStr] = existing;
+        }
+        
+        // Log Admin Action
+        if (window.logAdminAction) {
+            window.logAdminAction("Championship Signup Toggle", `Toggled ${existing.name} (${gIdStr}) to ${newSignedUpStatus ? 'YES (✅)' : 'NO (❌)'}`);
+        }
+        
+        // Also ping GAS backend as fallback
+        try {
+            const evToken = await getAuthToken();
+            const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || "Admin") : "Admin";
+            const url = `${API_BASE_URL}?api=updateEvent&name=${encodeURIComponent(existing.name)}&eventName=${encodeURIComponent("Alliance Championship ")}&status=${encodeURIComponent(newSignedUpStatus ? 'yes' : 'no')}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(evToken)}`;
+            fetch(url, { mode: 'no-cors' }).catch(e => null);
+        } catch(e) {}
+
+        return true;
+    } catch(e) {
+        console.error("Failed to toggle championship status:", e);
+        return false;
+    }
+};
+
 
 // Listen to Avatars globally
 onValue(ref(db, 'avatars'), (snap) => {
@@ -3328,6 +3421,7 @@ const views = {
               <button onclick="views.beartrap()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px;">🐻 Bear Trap</button>
               <button onclick="views.playerEditor()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px;">👤 Open Player Database Editor</button>
               <button onclick="views.showdownAdmin()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px;">⚔️ ShowDown</button>
+              <button onclick="views.championshipAdmin()" style="background:linear-gradient(135deg, #f59e0b, #d97706); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px; box-shadow:0 4px 12px rgba(217,119,6,0.3);">🏆 Alliance Championship</button>
             </div>
 
             <!-- Push Notification Broadcast -->
@@ -4098,7 +4192,220 @@ html += `</select>
        console.error(e);
     }
   },
-  
+
+  championshipAdmin: async () => {
+    const app = document.getElementById('app');
+    if (!app) return;
+
+    const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+    if (!isManager) {
+       if(window.showToast) window.showToast("Only R4/R5 managers can edit Championship data", "error");
+       return;
+    }
+
+    renderLoading("Loading Alliance Championship Tracker...");
+
+    if (document.querySelector('.navbar')) {
+        document.querySelector('.navbar').style.display = 'none';
+    }
+
+    try {
+        const [championshipData, rosterData] = await Promise.all([
+            window.fetchChampionshipData(),
+            window.fetchRoster().catch(() => ({}))
+        ]);
+
+        let rosterList = [];
+        if (rosterData) {
+            Object.values(rosterData).forEach(p => {
+                if (p.name && p.gameId) rosterList.push(p);
+            });
+        }
+
+        // Sort roster by name
+        rosterList.sort((a,b) => (a.name || '').localeCompare(b.name || ''));
+
+        // Calculate statistics
+        let totalCount = rosterList.length;
+        let yesCount = 0;
+        let noCount = 0;
+        let missingNames = [];
+
+        rosterList.forEach(p => {
+            let gIdStr = p.gameId.toString().trim();
+            let record = championshipData[gIdStr];
+            let isSignedUp = record && record.signedUp;
+            if (isSignedUp) {
+                yesCount++;
+            } else {
+                noCount++;
+                missingNames.push(p.name);
+            }
+        });
+
+        let percentSignedUp = totalCount > 0 ? Math.round((yesCount / totalCount) * 100) : 0;
+
+        let html = `
+          <div style="display:flex; flex-direction:column; gap:20px; max-width:900px; margin:0 auto; padding-bottom:40px; animation: fadeIn 0.3s ease; position:relative;">
+            
+            <button onclick="if(document.querySelector('.navbar')) document.querySelector('.navbar').style.display='flex'; views.admin()" style="position:absolute; top:0px; right:0px; background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); padding:6px 14px; border-radius:8px; cursor:pointer; z-index:10; font-weight:bold;">&times; Close</button>
+            
+            <div style="border-bottom: 2px solid var(--accent); padding-bottom: 12px; margin-bottom: 10px;">
+              <h2 style="margin:0; color:var(--text-main); font-size:24px; display:flex; align-items:center; gap:10px;">
+                🏆 Alliance Championship Signup Tracker
+              </h2>
+              <p style="margin:5px 0 0 0; color:var(--text-muted); font-size:13px;">Real-time tracking of member event signups & missing roster responses.</p>
+            </div>
+
+            <!-- Summary KPI Cards -->
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:15px;">
+              <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:16px; text-align:center;">
+                <div style="font-size:12px; color:var(--text-muted); text-transform:uppercase; font-weight:bold;">Total Roster</div>
+                <div style="font-size:28px; font-weight:bold; color:var(--text-main); margin-top:4px;">${totalCount}</div>
+              </div>
+              <div style="background:var(--card-bg); border:1px solid rgba(16,185,129,0.3); border-radius:12px; padding:16px; text-align:center;">
+                <div style="font-size:12px; color:#10b981; text-transform:uppercase; font-weight:bold;">✅ Signed Up (YES)</div>
+                <div style="font-size:28px; font-weight:bold; color:#10b981; margin-top:4px;">${yesCount}</div>
+              </div>
+              <div style="background:var(--card-bg); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:16px; text-align:center;">
+                <div style="font-size:12px; color:#ef4444; text-transform:uppercase; font-weight:bold;">❌ Action Required (NO)</div>
+                <div style="font-size:28px; font-weight:bold; color:#ef4444; margin-top:4px;">${noCount}</div>
+              </div>
+              <div style="background:var(--card-bg); border:1px solid rgba(59,130,246,0.3); border-radius:12px; padding:16px; text-align:center;">
+                <div style="font-size:12px; color:#60a5fa; text-transform:uppercase; font-weight:bold;">Response Rate</div>
+                <div style="font-size:28px; font-weight:bold; color:#60a5fa; margin-top:4px;">${percentSignedUp}%</div>
+              </div>
+            </div>
+
+            <!-- Missing Members Quick-Copy Banner -->
+            <div style="background:linear-gradient(135deg, rgba(239,68,68,0.12), rgba(245,158,11,0.12)); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:20px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:10px;">
+                <h3 style="margin:0; color:#ef4444; font-size:16px; display:flex; align-items:center; gap:8px;">
+                  ⚠️ Members Pending / Missing Signup (${missingNames.length})
+                </h3>
+                <button onclick="window.copyMissingChampionshipList()" style="background:#ef4444; color:white; border:none; padding:8px 16px; border-radius:6px; font-weight:bold; cursor:pointer; font-size:12px; box-shadow:0 2px 8px rgba(239,68,68,0.3);">
+                  📋 Copy Missing List for Chat
+                </button>
+              </div>
+              <div id="missingListText" style="background:var(--bg-main); border:1px solid var(--border); border-radius:8px; padding:12px; font-size:13px; color:var(--text-main); max-height:120px; overflow-y:auto; line-height:1.5;">
+                ${missingNames.length > 0 ? missingNames.join(', ') : '<span style="color:var(--success);">🎉 All members have signed up!</span>'}
+              </div>
+            </div>
+
+            <!-- Search & Filter Controls -->
+            <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:16px; display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:space-between;">
+              <input type="text" id="champSearchInput" placeholder="🔍 Filter player name or ID..." style="flex:1; min-width:200px; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:14px;" onkeyup="window.filterChampTable()">
+              
+              <div style="display:flex; gap:6px;">
+                <button class="champ-filter-btn active" data-filter="all" onclick="window.setChampFilter('all')" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--accent); color:white; font-weight:bold; cursor:pointer; font-size:13px;">All (${totalCount})</button>
+                <button class="champ-filter-btn" data-filter="yes" onclick="window.setChampFilter('yes')" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-weight:bold; cursor:pointer; font-size:13px;">Signed Up (${yesCount})</button>
+                <button class="champ-filter-btn" data-filter="no" onclick="window.setChampFilter('no')" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-weight:bold; cursor:pointer; font-size:13px;">Missing (${noCount})</button>
+              </div>
+            </div>
+
+            <!-- Roster Table -->
+            <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; overflow:hidden;">
+              <table style="width:100%; border-collapse:collapse; text-align:left; font-size:14px;">
+                <thead>
+                  <tr style="background:var(--bg-main); border-bottom:1px solid var(--border); color:var(--text-muted); font-size:12px; text-transform:uppercase;">
+                    <th style="padding:12px 16px;">Chief Name</th>
+                    <th style="padding:12px 16px;">Game ID</th>
+                    <th style="padding:12px 16px;">Furnace</th>
+                    <th style="padding:12px 16px; text-align:center;">Signup Status</th>
+                  </tr>
+                </thead>
+                <tbody id="champTableBody">
+                  ${rosterList.map(p => {
+                      let gIdStr = p.gameId.toString().trim();
+                      let record = championshipData[gIdStr];
+                      let isSignedUp = record && record.signedUp;
+                      return `
+                        <tr class="champ-row" data-name="${escapeHTML((p.name || '').toLowerCase())}" data-gid="${gIdStr}" data-signed="${isSignedUp ? 'yes' : 'no'}" style="border-bottom:1px solid var(--border);">
+                          <td style="padding:12px 16px; font-weight:bold; color:var(--text-main);">${escapeHTML(p.name)}</td>
+                          <td style="padding:12px 16px; color:var(--text-muted); font-family:monospace;">${gIdStr}</td>
+                          <td style="padding:12px 16px; color:var(--text-main);">${p.furnaceLevel || '-'}</td>
+                          <td style="padding:12px 16px; text-align:center;">
+                            <button onclick="window.onChampToggle('${gIdStr}')" style="background:${isSignedUp ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)'}; color:${isSignedUp ? '#10b981' : '#ef4444'}; border:1px solid ${isSignedUp ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.4)'}; padding:6px 16px; border-radius:20px; font-weight:bold; cursor:pointer; font-size:13px; transition:0.2s;">
+                              ${isSignedUp ? '✅ Signed Up' : '❌ Action Required'}
+                            </button>
+                          </td>
+                        </tr>
+                      `;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+        `;
+
+        app.innerHTML = html;
+
+        window.copyMissingChampionshipList = () => {
+            if (missingNames.length === 0) {
+                window.showToast("No missing members to copy!", "info");
+                return;
+            }
+            const text = "🏆 Alliance Championship Pending Signups (" + missingNames.length + "):\n" + missingNames.join(", ");
+            navigator.clipboard.writeText(text);
+            window.showToast("Copied missing signup list to clipboard!", "success");
+        };
+
+        window.onChampToggle = async (gameId) => {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.innerHTML = '...';
+            const ok = await window.toggleChampionshipStatus(gameId);
+            if (ok) {
+                window.championshipCache = null; // bust cache
+                views.championshipAdmin(); // refresh view
+            } else {
+                btn.disabled = false;
+            }
+        };
+
+        window.champCurrentFilter = 'all';
+
+        window.setChampFilter = (filter) => {
+            window.champCurrentFilter = filter;
+            document.querySelectorAll('.champ-filter-btn').forEach(b => {
+                if (b.getAttribute('data-filter') === filter) {
+                    b.style.background = 'var(--accent)';
+                    b.style.color = 'white';
+                } else {
+                    b.style.background = 'var(--bg-main)';
+                    b.style.color = 'var(--text-main)';
+                }
+            });
+            window.filterChampTable();
+        };
+
+        window.filterChampTable = () => {
+            const query = (document.getElementById('champSearchInput')?.value || '').toLowerCase().trim();
+            const filter = window.champCurrentFilter || 'all';
+
+            document.querySelectorAll('.champ-row').forEach(row => {
+                const name = row.getAttribute('data-name');
+                const gid = row.getAttribute('data-gid');
+                const signed = row.getAttribute('data-signed');
+
+                const matchesSearch = !query || name.includes(query) || gid.includes(query);
+                const matchesFilter = (filter === 'all') || (filter === 'yes' && signed === 'yes') || (filter === 'no' && signed === 'no');
+
+                if (matchesSearch && matchesFilter) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        };
+
+    } catch(e) {
+        app.innerHTML = '<div class="card"><div class="loading" style="color:var(--danger);">Error loading Championship Admin UI</div></div>';
+        console.error(e);
+    }
+  },
+
   beartrap: async () => {
     if (!window.isAdminUser(currentUser)) {
       views.home();
