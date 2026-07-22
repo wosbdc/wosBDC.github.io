@@ -4965,8 +4965,33 @@ html += `</select>
           <h2 style="margin:0; color:var(--text-main); font-size:24px;">📰 Alliance News</h2>
         </div>
       `;
-      
-      app.innerHTML = countdownHtml + headerHtml + `
+      let onboardingBannerHtml = '';
+      if (!currentUser) {
+        onboardingBannerHtml = `
+          <div style="background: linear-gradient(135deg, rgba(59,130,246,0.15), rgba(147,51,234,0.15)); border: 1px solid rgba(59,130,246,0.3); border-radius: 16px; padding: 20px 25px; margin-bottom: 25px; display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; text-align: left; box-shadow: 0 8px 32px rgba(0,0,0,0.2);">
+            <div style="flex: 1; min-width: 280px;">
+              <div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(59,130,246,0.2); color: #60a5fa; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-bottom: 8px;">
+                ✨ Alliance Member Onboarding
+              </div>
+              <h2 style="margin: 0 0 6px 0; color: var(--text-main); font-size: 20px;">Claim Your Chief Profile & Unlock Personal Stats!</h2>
+              <p style="margin: 0; color: var(--text-muted); font-size: 13px; line-height: 1.5;">
+                Already on the alliance roster? Link your email to track your daily Bear Trap donations, Showdown progress, and personal activity logs.
+              </p>
+            </div>
+
+            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+              <button onclick="document.getElementById('authModal').style.display='block'; document.getElementById('authModalOverlay').style.display='block';" style="background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; border: none; padding: 12px 22px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(37,99,235,0.4); transition: 0.2s;">
+                ✨ Claim / Create Account
+              </button>
+              <button onclick="document.getElementById('authModal').style.display='block'; document.getElementById('authModalOverlay').style.display='block';" style="background: rgba(255,255,255,0.08); color: var(--text-main); border: 1px solid var(--border); padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s;">
+                🔑 Sign In
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      app.innerHTML = onboardingBannerHtml + countdownHtml + headerHtml + `
         <div class="card">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px; flex-wrap:wrap; gap:15px; border-bottom:1px solid var(--border); padding-bottom:15px;">
             <div class="card-title" style="margin:0;">Recent Updates</div>

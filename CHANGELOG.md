@@ -1,3 +1,8 @@
+## [1.29.62] - 2026-07-22
+### Added
+- **Home Page Onboarding Hero Banner**: Added a high-visibility, glassmorphism hero announcement card to `views.home()` for guest visitors, prompting alliance members to claim their pre-loaded roster profile or sign in.
+- **Popup-Blocker Safe Registration Flow**: Enabled direct in-page profile claiming (`Claim / Create Account`) for linking roster characters to Firebase Auth user accounts.
+
 ## [1.29.61] - 2026-07-22
 ### Changed
 - **Personal Activity Log (Today Only & Compact UI)**: Updated `window.loadUserPersonalLog()` in Account Hub (`views.account`) to filter for **Today's log entries ONLY**, styled with a compact 240px container height and custom scrollbar for seamless mobile viewing.
