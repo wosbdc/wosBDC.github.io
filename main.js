@@ -4863,11 +4863,12 @@ const views = {
              `;
          }
 
-         liveShowdownHtml = `<div class="card" style="flex: 1 1 0px; min-width: 300px; overflow-x:auto;"><div class="card-title">Current - Showdown Leaderboard</div>
+         liveShowdownHtml = `<div class="card" style="flex: 1 1 0px; min-width: 300px;"><div class="card-title">Current - Showdown Leaderboard</div>
          ${mvpBannerHtml}
-         <table style="min-width:500px; text-align:left;"><thead><tr>
-            <th>RANK</th><th>NAME</th><th>TOTAL HORNS</th><th>DAY WINS</th><th>TOTAL</th>
-         </tr></thead><tbody>`;
+         <div style="overflow-x: auto; width: 100%;">
+           <table style="min-width: max-content; width: 100%; text-align:left;"><thead><tr>
+              <th>RANK</th><th>NAME</th><th>TOTAL HORNS</th><th>DAY WINS</th><th>TOTAL</th>
+           </tr></thead><tbody>`;
          
          players.slice(0, 4).forEach((p, index) => {
              let rank = index + 1;
@@ -4880,7 +4881,7 @@ const views = {
                 <td>${p.total > 0 ? p.total.toLocaleString() : '0'}</td>
              </tr>`;
          });
-         liveShowdownHtml += `</tbody></table></div>`;
+         liveShowdownHtml += `</tbody></table></div></div>`;
          
          let totalAllianceScore = ourScores.d1 + ourScores.d2 + ourScores.d3 + ourScores.d4 + ourScores.d5 + ourScores.d6;
          ourScores.total = totalAllianceScore;
