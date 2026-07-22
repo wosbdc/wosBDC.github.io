@@ -4942,7 +4942,7 @@ const views = {
             goalsCard += `<div style="background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
                <div style="font-weight: bold; color: var(--text-main); font-size: 1.05em; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px dashed var(--border); display:flex; justify-content:space-between; align-items:center;">
                  <span>Event Day ${i}</span>
-                 ${leftVal <= 0 && !isPending ? `<span style="color:var(--success); font-size:10px; background:rgba(46,204,113,0.1); padding:2px 6px; border-radius:10px; border:1px solid rgba(46,204,113,0.3);">✅ Completed</span>` : ''}
+                 ${leftVal <= 0 && !isPending ? `<span style="color:var(--success); font-size:10px; background:rgba(46,204,113,0.1); padding:2px 6px; border-radius:10px; border:1px solid rgba(46,204,113,0.3);">✅ Daily Goal Met</span>` : ''}
                </div>
                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                  <span style="color: var(--text-muted); font-size: 0.9em;">Daily Goal</span>
