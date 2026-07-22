@@ -1,6 +1,11 @@
 ## [1.29.87] - 2026-07-22
+### Added
+- **All-Time Showdown Leaderboard Horn Calculation**: Built full Horn calculation logic into `calculateAllTimeShowdown(historyRows)` and `views.home()` for both Current & All-Time Showdown leaderboards.
+- **Showdown MVP Header Cards**: Displays dynamic MVP winner banners with custom avatar badges, player names, and total Horn scores for both Current and All-Time Showdown tables.
+- **Sticky & Scrollable Card Tables**: Created CSS `.card-table-scroll` container with custom scrollbars and sticky table headers (`position: sticky; top: 0;`), allowing full scrollability on mobile without stretching card heights.
+- **Synced Live Activity & Championship Toggles**: Synchronized real-time status updates between Roster Event Activity Matrix and Alliance Championship Signup Tracker.
 ### Changed
-- **Navbar Header Branding**: Restored the navigation brand text in `index.html` back to **`❄️ Dashboard for BDC Alliance`**.
+- **Navbar Header Branding**: Restored navigation brand text in `index.html` back to **`❄️ Dashboard for BDC Alliance`**.
 
 ## [1.29.86] - 2026-07-22
 ### Fixed

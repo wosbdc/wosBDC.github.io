@@ -6326,7 +6326,6 @@ html += `</select>
              boards = JSON.parse(JSON.stringify(allBoards.filter(b => b.title && b.title.toLowerCase().includes(filterString.toLowerCase()))));
          }
       }
-
       // Fetch champions config & Bear Trap Firebase nodes
       let btWinners = {};
       let fbBtWins = {};
@@ -6367,9 +6366,6 @@ html += `</select>
       }
       
       try {
-   
-         
-         
          const [liveSnap, metaSnap] = await Promise.all([
             get(ref(db, 'showdown_live')),
             get(ref(db, 'showdown_meta'))
@@ -6382,180 +6378,180 @@ html += `</select>
          let players = [];
          
          for (const [pName, scores] of Object.entries(liveData)) {
-            let pd1 = scores.d1 || 0;
-            let pd2 = scores.d2 || 0;
-            let pd3 = scores.d3 || 0;
-            let pd4 = scores.d4 || 0;
-            let pd5 = scores.d5 || 0;
-            let pd6 = scores.d6 || 0;
-            let pTotal = pd1 + pd2 + pd3 + pd4 + pd5 + pd6;
-            
-            ourScores.d1 += pd1;
-            ourScores.d2 += pd2;
-            ourScores.d3 += pd3;
-            ourScores.d4 += pd4;
-            ourScores.d5 += pd5;
-            ourScores.d6 += pd6;
-            
-            if (pd1 > topPlayers.d1.score) topPlayers.d1 = { name: pName, score: pd1 };
-            if (pd2 > topPlayers.d2.score) topPlayers.d2 = { name: pName, score: pd2 };
-            if (pd3 > topPlayers.d3.score) topPlayers.d3 = { name: pName, score: pd3 };
-            if (pd4 > topPlayers.d4.score) topPlayers.d4 = { name: pName, score: pd4 };
-            if (pd5 > topPlayers.d5.score) topPlayers.d5 = { name: pName, score: pd5 };
-            if (pd6 > topPlayers.d6.score) topPlayers.d6 = { name: pName, score: pd6 };
-            
-            players.push({ name: pName, d1: pd1, d2: pd2, d3: pd3, d4: pd4, d5: pd5, d6: pd6, total: pTotal });
-         }
-         
-         const staticHorns = { d1: 1, d2: 2, d3: 2, d4: 2, d5: 2, d6: 4 };
-         players.forEach(p => {
-             p.horns = 0;
-             p.wins = 0;
-             for (let i = 1; i <= 6; i++) {
-                 let dVal = p['d'+i] || 0;
-                 let topPlayerScore = topPlayers['d'+i].score;
-                 if (dVal > 0 && dVal === topPlayerScore) {
-                     p.horns += staticHorns['d'+i];
-                     p.wins += 1;
-                 }
-             }
-         });
-         players.sort((a, b) => {
-             if (b.horns !== a.horns) return b.horns - a.horns;
-             return b.total - a.total;
-         });
-         
-         let mvpBannerHtml = "";
-         if (players.length > 0 && players[0].horns > 0) {
-             let champName = players[0].name;
-             let maxHorns = players[0].horns;
-             let champId = null;
-             for (const [gid, name] of Object.entries(idToNameMap)) {
-                 if (name.toLowerCase() === champName.toLowerCase()) {
-                     champId = gid; break;
-                 }
-             }
-             const avatarSrc = (champId && avatarMap[champId]) ? avatarMap[champId] : `images/${champName}.png`;
+             let pd1 = scores.d1 || 0;
+             let pd2 = scores.d2 || 0;
+             let pd3 = scores.d3 || 0;
+             let pd4 = scores.d4 || 0;
+             let pd5 = scores.d5 || 0;
+             let pd6 = scores.d6 || 0;
+             let pTotal = pd1 + pd2 + pd3 + pd4 + pd5 + pd6;
+             ourScores.d1 += pd1;
+             ourScores.d2 += pd2;
+             ourScores.d3 += pd3;
+             ourScores.d4 += pd4;
+             ourScores.d5 += pd5;
+             ourScores.d6 += pd6;
              
-             mvpBannerHtml = `
-               <div style="background: linear-gradient(135deg, rgba(255,215,0,0.1) 0%, rgba(255,215,0,0.02) 100%); border: 1px solid rgba(255,215,0,0.3); border-radius: 12px; padding: 15px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; box-shadow: 0 4px 15px rgba(255,215,0,0.05);">
-                 <div style="width: 50px; height: 50px; border-radius: 50%; border: 2px solid #FFD700; overflow: hidden; flex-shrink: 0; box-shadow: 0 0 10px rgba(255,215,0,0.2);">
-                   <img src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='images/default.png';">
-                 </div>
-                 <div style="flex: 1; text-align: left;">
-                   <div style="color: #FFD700; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">👑 Showdown MVP</div>
-                   <div style="color: var(--text-main); font-size: 18px; font-weight: bold;">${escapeHTML(champName)}</div>
-                 </div>
-                 <div style="text-align: right;">
-                   <div style="color: var(--text-muted); font-size: 11px;">Total Score</div>
-                   <div style="color: var(--accent); font-size: 20px; font-weight: bold;">${maxHorns}</div>
-                 </div>
-               </div>
-             `;
-         }
+             if (pd1 > topPlayers.d1.score) topPlayers.d1 = { name: pName, score: pd1 };
+             if (pd2 > topPlayers.d2.score) topPlayers.d2 = { name: pName, score: pd2 };
+             if (pd3 > topPlayers.d3.score) topPlayers.d3 = { name: pName, score: pd3 };
+             if (pd4 > topPlayers.d4.score) topPlayers.d4 = { name: pName, score: pd4 };
+             if (pd5 > topPlayers.d5.score) topPlayers.d5 = { name: pName, score: pd5 };
+             if (pd6 > topPlayers.d6.score) topPlayers.d6 = { name: pName, score: pd6 };
+             players.push({ name: pName, d1: pd1, d2: pd2, d3: pd3, d4: pd4, d5: pd5, d6: pd6, total: pTotal });
+          }
 
-         liveShowdownHtml = `<div class="card" style="flex: 1 1 0px; min-width: 300px;"><div class="card-title">Current - Showdown Leaderboard</div>
-         ${mvpBannerHtml}
-         <div style="overflow-x: auto; width: 100%;">
-           <table style="min-width: max-content; width: 100%; text-align:left;"><thead><tr>
-              <th>RANK</th><th>NAME</th><th>TOTAL HORNS</th><th>DAY WINS</th><th>TOTAL</th>
-           </tr></thead><tbody>`;
-         
-         players.slice(0, 4).forEach((p, index) => {
-             let rank = index + 1;
-             
-             liveShowdownHtml += `<tr>
-                <td style="font-weight:bold; color:var(--text-muted);">${rank}</td>
-                <td>${formatCell(p.name)}</td>
-                <td>${p.horns}</td>
-                <td>${p.wins}</td>
-                <td>${p.total > 0 ? p.total.toLocaleString() : '0'}</td>
-             </tr>`;
-         });
-         liveShowdownHtml += `</tbody></table></div></div>`;
-         
-         let rawHistory = sdHistoryData;
-         if (rawHistory && typeof rawHistory === 'object' && rawHistory.data) {
-             rawHistory = rawHistory.data;
-         }
-         const historyRows = rawHistory ? (Array.isArray(rawHistory) ? rawHistory : Object.values(rawHistory)) : [];
-         if (historyRows.length > 0 || (players && players.length > 0)) {
-             let allTimePlayers = calculateAllTimeShowdown(historyRows);
-             
-             // Merge current live event scores with history for real-time all-time standings
-             if (players && players.length > 0) {
-                 let allTimeMap = {};
-                 allTimePlayers.forEach(p => {
-                     allTimeMap[p.name.toLowerCase()] = { name: p.name, horns: p.horns, wins: p.wins, total: p.total };
-                 });
-                 
-                 players.forEach(lp => {
-                     if (lp.horns > 0 || lp.total > 0) {
-                         let key = lp.name.toLowerCase();
-                         if (!allTimeMap[key]) {
-                             allTimeMap[key] = { name: lp.name, horns: 0, wins: 0, total: 0 };
-                         }
-                         allTimeMap[key].horns += lp.horns;
-                         allTimeMap[key].wins += lp.wins;
-                         allTimeMap[key].total += lp.total;
-                     }
-                 });
-                 
-                 allTimePlayers = Object.values(allTimeMap).sort((a, b) => {
-                     if (b.horns !== a.horns) return b.horns - a.horns;
-                     return b.total - a.total;
-                 });
-             }
-             
-             let allTimeMvpHtml = "";
-             if (allTimePlayers.length > 0 && allTimePlayers[0].horns > 0) {
-                 let champName = allTimePlayers[0].name;
-                 let maxHorns = allTimePlayers[0].horns;
-                 let champId = null;
-                 for (const [gid, name] of Object.entries(idToNameMap)) {
-                     if (name.toLowerCase() === champName.toLowerCase()) {
-                         champId = gid; break;
-                     }
-                 }
-                 const avatarSrc = (champId && avatarMap[champId]) ? avatarMap[champId] : `images/${champName}.png`;
-                 
-                 allTimeMvpHtml = `
-                   <div style="background: linear-gradient(135deg, rgba(255,215,0,0.1) 0%, rgba(255,215,0,0.02) 100%); border: 1px solid rgba(255,215,0,0.3); border-radius: 12px; padding: 15px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; box-shadow: 0 4px 15px rgba(255,215,0,0.05);">
-                     <div style="width: 50px; height: 50px; border-radius: 50%; border: 2px solid #FFD700; overflow: hidden; flex-shrink: 0; box-shadow: 0 0 10px rgba(255,215,0,0.2);">
-                       <img src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='images/default.png';">
-                     </div>
-                     <div style="flex: 1; text-align: left;">
-                       <div style="color: #FFD700; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">👑 All-Time Champion</div>
-                       <div style="color: var(--text-main); font-size: 18px; font-weight: bold;">${escapeHTML(champName)}</div>
-                     </div>
-                     <div style="text-align: right;">
-                       <div style="color: var(--text-muted); font-size: 11px;">Total Score</div>
-                       <div style="color: var(--accent); font-size: 20px; font-weight: bold;">${maxHorns}</div>
-                     </div>
-                   </div>
-                 `;
-             }
+          const staticHorns = { d1: 1, d2: 2, d3: 2, d4: 2, d5: 2, d6: 4 };
+          players.forEach(p => {
+              p.horns = 0;
+              p.wins = 0;
+              for (let i = 1; i <= 6; i++) {
+                  let dVal = p['d'+i] || 0;
+                  let topPlayerScore = topPlayers['d'+i].score;
+                  if (dVal > 0 && dVal === topPlayerScore) {
+                      p.horns += staticHorns['d'+i];
+                      p.wins += 1;
+                  }
+              }
+          });
+          players.sort((a, b) => {
+              if (b.horns !== a.horns) return b.horns - a.horns;
+              return b.total - a.total;
+          });
+          
+          let mvpBannerHtml = "";
+          if (players.length > 0 && players[0].horns > 0) {
+              let champName = players[0].name;
+              let maxHorns = players[0].horns;
+              let champId = null;
+              for (const [gid, name] of Object.entries(idToNameMap)) {
+                  if (name.toLowerCase() === champName.toLowerCase()) {
+                      champId = gid; break;
+                  }
+              }
+              const avatarSrc = (champId && avatarMap[champId]) ? avatarMap[champId] : `images/${champName}.png`;
+              
+              mvpBannerHtml = `
+                <div style="background: linear-gradient(135deg, rgba(255,215,0,0.1) 0%, rgba(255,215,0,0.02) 100%); border: 1px solid rgba(255,215,0,0.3); border-radius: 12px; padding: 15px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; box-shadow: 0 4px 15px rgba(255,215,0,0.05);">
+                  <div style="width: 50px; height: 50px; border-radius: 50%; border: 2px solid #FFD700; overflow: hidden; flex-shrink: 0; box-shadow: 0 0 10px rgba(255,215,0,0.2);">
+                    <img src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='images/default.png';">
+                  </div>
+                  <div style="flex: 1; text-align: left;">
+                    <div style="color: #FFD700; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">👑 Showdown MVP</div>
+                    <div style="color: var(--text-main); font-size: 18px; font-weight: bold;">${escapeHTML(champName)}</div>
+                  </div>
+                  <div style="text-align: right;">
+                    <div style="color: var(--text-muted); font-size: 11px;">Total Score</div>
+                    <div style="color: var(--accent); font-size: 20px; font-weight: bold;">${maxHorns}</div>
+                  </div>
+                </div>
+              `;
+          }
 
-             allTimeShowdownHtml = `<div class="card" style="flex: 1 1 0px; min-width: 300px;"><div class="card-title">All-Time - Showdown Leaderboard</div>
-             ${allTimeMvpHtml}
-             <div style="overflow-x: auto; width: 100%;">
-               <table style="min-width: max-content; width: 100%; text-align:left;"><thead><tr>
-                  <th>RANK</th><th>NAME</th><th>TOTAL HORNS</th><th>DAY WINS</th><th>TOTAL</th>
-               </tr></thead><tbody>`;
-             
-             allTimePlayers.slice(0, 4).forEach((p, index) => {
-                 let rank = index + 1;
-                 
-                 allTimeShowdownHtml += `<tr>
-                    <td style="font-weight:bold; color:var(--text-muted);">${rank}</td>
-                    <td>${formatCell(p.name)}</td>
-                    <td>${p.horns}</td>
-                    <td>${p.wins}</td>
-                    <td>${p.total > 0 ? p.total.toLocaleString() : '0'}</td>
-                 </tr>`;
-             });
-             allTimeShowdownHtml += `</tbody></table></div></div>`;
-         }
+          const showAllLive = (filterString && filterString.toLowerCase() === 'showdown');
+          const liveDisplayList = showAllLive ? players : players.slice(0, 10);
+
+          liveShowdownHtml = `<div class="card" style="flex: 1 1 0px; min-width: 300px;"><div class="card-title">Current - Showdown Leaderboard (${players.length})</div>
+          ${mvpBannerHtml}
+          <div class="card-table-scroll">
+            <table style="min-width: max-content; width: 100%; text-align:left;"><thead><tr>
+               <th>RANK</th><th>NAME</th><th>TOTAL HORNS</th><th>DAY WINS</th><th>TOTAL</th>
+            </tr></thead><tbody>`;
+          
+          liveDisplayList.forEach((p, index) => {
+              let rank = index + 1;
+              liveShowdownHtml += `<tr>
+                 <td style="font-weight:bold; color:var(--text-muted);">${rank}</td>
+                 <td>${formatCell(p.name)}</td>
+                 <td>${p.horns}</td>
+                 <td>${p.wins}</td>
+                 <td>${p.total > 0 ? p.total.toLocaleString() : '0'}</td>
+              </tr>`;
+          });
+          liveShowdownHtml += `</tbody></table></div></div>`;
+          
+          let rawHistory = sdHistoryData;
+          if (rawHistory && typeof rawHistory === 'object' && rawHistory.data) {
+              rawHistory = rawHistory.data;
+          }
+          const historyRows = rawHistory ? (Array.isArray(rawHistory) ? rawHistory : Object.values(rawHistory)) : [];
+          if (historyRows.length > 0 || (players && players.length > 0)) {
+              let allTimePlayers = calculateAllTimeShowdown(historyRows);
+              
+              if (players && players.length > 0) {
+                  let allTimeMap = {};
+                  allTimePlayers.forEach(p => {
+                      allTimeMap[p.name.toLowerCase()] = { name: p.name, horns: p.horns, wins: p.wins, total: p.total };
+                  });
+                  
+                  players.forEach(lp => {
+                      if (lp.horns > 0 || lp.total > 0) {
+                          let key = lp.name.toLowerCase();
+                          if (!allTimeMap[key]) {
+                              allTimeMap[key] = { name: lp.name, horns: 0, wins: 0, total: 0 };
+                          }
+                          allTimeMap[key].horns += lp.horns;
+                          allTimeMap[key].wins += lp.wins;
+                          allTimeMap[key].total += lp.total;
+                      }
+                  });
+                  
+                  allTimePlayers = Object.values(allTimeMap).sort((a, b) => {
+                      if (b.horns !== a.horns) return b.horns - a.horns;
+                      return b.total - a.total;
+                  });
+              }
+              
+              let allTimeMvpHtml = "";
+              if (allTimePlayers.length > 0 && allTimePlayers[0].horns > 0) {
+                  let champName = allTimePlayers[0].name;
+                  let maxHorns = allTimePlayers[0].horns;
+                  let champId = null;
+                  for (const [gid, name] of Object.entries(idToNameMap)) {
+                      if (name.toLowerCase() === champName.toLowerCase()) {
+                          champId = gid; break;
+                      }
+                  }
+                  const avatarSrc = (champId && avatarMap[champId]) ? avatarMap[champId] : `images/${champName}.png`;
+                  
+                  allTimeMvpHtml = `
+                    <div style="background: linear-gradient(135deg, rgba(255,215,0,0.1) 0%, rgba(255,215,0,0.02) 100%); border: 1px solid rgba(255,215,0,0.3); border-radius: 12px; padding: 15px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; box-shadow: 0 4px 15px rgba(255,215,0,0.05);">
+                      <div style="width: 50px; height: 50px; border-radius: 50%; border: 2px solid #FFD700; overflow: hidden; flex-shrink: 0; box-shadow: 0 0 10px rgba(255,215,0,0.2);">
+                        <img src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='images/default.png';">
+                      </div>
+                      <div style="flex: 1; text-align: left;">
+                        <div style="color: #FFD700; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">👑 All-Time Champion</div>
+                        <div style="color: var(--text-main); font-size: 18px; font-weight: bold;">${escapeHTML(champName)}</div>
+                      </div>
+                      <div style="text-align: right;">
+                        <div style="color: var(--text-muted); font-size: 11px;">Total Score</div>
+                        <div style="color: var(--accent); font-size: 20px; font-weight: bold;">${maxHorns}</div>
+                      </div>
+                    </div>
+                  `;
+              }
+
+              const showAllTime = (filterString && filterString.toLowerCase() === 'showdown');
+              const allTimeDisplayList = showAllTime ? allTimePlayers : allTimePlayers.slice(0, 10);
+
+              allTimeShowdownHtml = `<div class="card" style="flex: 1 1 0px; min-width: 300px;"><div class="card-title">All-Time - Showdown Leaderboard (${allTimePlayers.length})</div>
+              ${allTimeMvpHtml}
+              <div class="card-table-scroll">
+                <table style="min-width: max-content; width: 100%; text-align:left;"><thead><tr>
+                   <th>RANK</th><th>NAME</th><th>TOTAL HORNS</th><th>DAY WINS</th><th>TOTAL</th>
+                </tr></thead><tbody>`;
+              
+              allTimeDisplayList.forEach((p, index) => {
+                  let rank = index + 1;
+                  allTimeShowdownHtml += `<tr>
+                     <td style="font-weight:bold; color:var(--text-muted);">${rank}</td>
+                     <td>${formatCell(p.name)}</td>
+                     <td>${p.horns}</td>
+                     <td>${p.wins}</td>
+                     <td>${p.total > 0 ? p.total.toLocaleString() : '0'}</td>
+                  </tr>`;
+              });
+          }
          
          let totalAllianceScore = ourScores.d1 + ourScores.d2 + ourScores.d3 + ourScores.d4 + ourScores.d5 + ourScores.d6;
          ourScores.total = totalAllianceScore;
@@ -6853,7 +6849,7 @@ html += `</select>
             });
             html += `</div></div>`;
         } else {
-            html += `<div style="overflow-x: auto; width: 100%;"><table style="min-width: max-content;"><thead><tr>`;
+            html += `<div class="card-table-scroll"><table style="min-width: max-content; width: 100%;"><thead><tr>`;
             board.headers.forEach(h => html += `<th>${h}</th>`);
             html += `</tr></thead><tbody>`;
             
