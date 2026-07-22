@@ -2520,6 +2520,50 @@ if (!window._autocompleteListenerAdded) {
     window._autocompleteListenerAdded = true;
 }
 
+window.archiveCurrentShowdownToFirebase = async () => {
+    if (!confirm("Are you sure you want to archive the current Showdown event into Firebase History?")) return;
+    try {
+        const [liveSnap, histSnap] = await Promise.all([
+            get(ref(db, 'showdown_live')),
+            get(ref(db, 'showdown_history'))
+        ]);
+        
+        const liveData = liveSnap.val() || {};
+        let currentHistory = histSnap.val() || [];
+        if (!Array.isArray(currentHistory)) currentHistory = [];
+        
+        let newBlock = [];
+        let dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        newBlock.push(["", "Date:", dateStr, "", "", "", "", "", "", ""]);
+        newBlock.push(["", "Ranking", "Member", "Day 1", "Day 2", "Day 3", "Day 4", "Day 5", "Day 6", "Total"]);
+        
+        let pList = [];
+        for (const [pName, scores] of Object.entries(liveData)) {
+            let pd1 = scores.d1 || 0;
+            let pd2 = scores.d2 || 0;
+            let pd3 = scores.d3 || 0;
+            let pd4 = scores.d4 || 0;
+            let pd5 = scores.d5 || 0;
+            let pd6 = scores.d6 || 0;
+            let pTotal = pd1 + pd2 + pd3 + pd4 + pd5 + pd6;
+            pList.push({ name: pName, d1: pd1, d2: pd2, d3: pd3, d4: pd4, d5: pd5, d6: pd6, total: pTotal });
+        }
+        pList.sort((a, b) => b.total - a.total);
+        
+        pList.forEach((p, idx) => {
+            newBlock.push(["", idx + 1, p.name, p.d1, p.d2, p.d3, p.d4, p.d5, p.d6, p.total]);
+        });
+        
+        newBlock.push(["", "", "", "", "", "", "", "", "", ""]);
+        
+        const updatedHistory = [...currentHistory, ...newBlock];
+        await set(ref(db, 'showdown_history'), updatedHistory);
+        if (window.showToast) window.showToast("Successfully archived current Showdown event into Firebase History!", "success");
+    } catch(err) {
+        if (window.showToast) window.showToast("Error archiving event: " + err.message, "error");
+    }
+};
+
 const getAutocompleteShield = () => {
     // We no longer return a physical shield div. Return a dummy object to prevent errors if existing code calls style.display on it
     return { style: {} };
@@ -4865,10 +4909,18 @@ const views = {
       let finalGoalsCard = "";
       let liveShowdownHtml = "";
       let allTimeShowdownHtml = "";
-      let sdHistoryData = [];
-      
       if (filterString && filterString.toLowerCase() === 'showdown') {
-         try { sdHistoryData = await fetchSheet("Showdown History"); } catch(e) {}
+         try {
+            const histSnap = await get(ref(db, 'showdown_history'));
+            if (histSnap.exists() && histSnap.val()) {
+               sdHistoryData = histSnap.val();
+            } else {
+               sdHistoryData = await fetchSheet("Showdown History");
+               if (sdHistoryData && Array.isArray(sdHistoryData) && sdHistoryData.length > 0) {
+                  await set(ref(db, 'showdown_history'), sdHistoryData);
+               }
+            }
+         } catch(e) { console.warn("Showdown history fetch error", e); }
       }
       
       try {
