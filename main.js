@@ -4863,7 +4863,7 @@ const views = {
              `;
          }
 
-         liveShowdownHtml = `<div class="card" style="width:100%; margin-bottom:20px; overflow-x:auto;"><div class="card-title">Current - Showdown Leaderboard</div>
+         liveShowdownHtml = `<div class="card" style="flex: 1 1 45%; min-width: 320px; overflow-x:auto;"><div class="card-title">Current - Showdown Leaderboard</div>
          ${mvpBannerHtml}
          <table style="min-width:500px; text-align:left;"><thead><tr>
             <th>RANK</th><th>NAME</th><th>TOTAL HORNS</th><th>DAY WINS</th><th>TOTAL</th>
