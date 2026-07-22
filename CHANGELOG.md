@@ -1,3 +1,7 @@
+## [1.29.84] - 2026-07-22
+### Fixed
+- **Instant In-Place Championship Signup Toggles (`views.championshipAdmin()`)**: Replaced full-page DOM re-renders with instant optimistic in-place button state updates (`✅ YES` / `❌ NO`), zero scroll resetting, zero `--` flicker, and real-time KPI card & missing signup list recalibrations!
+
 ## [1.29.83] - 2026-07-22
 ### Changed
 - **Alliance Championship Tracker Table Redesign (`views.championshipAdmin()`)**: Simplified the Alliance Championship roster table to display **Chief Name** and **Signup Status** (`✅ YES` / `❌ NO`), removing Game ID and Furnace Level columns for a cleaner, high-density layout.

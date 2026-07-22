@@ -4861,19 +4861,19 @@ html += `</select>
             <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:15px;">
               <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:16px; text-align:center;">
                 <div style="font-size:12px; color:var(--text-muted); text-transform:uppercase; font-weight:bold;">Total Roster</div>
-                <div style="font-size:28px; font-weight:bold; color:var(--text-main); margin-top:4px;">${totalCount}</div>
+                <div id="champStatTotal" style="font-size:28px; font-weight:bold; color:var(--text-main); margin-top:4px;">${totalCount}</div>
               </div>
               <div style="background:var(--card-bg); border:1px solid rgba(16,185,129,0.3); border-radius:12px; padding:16px; text-align:center;">
                 <div style="font-size:12px; color:#10b981; text-transform:uppercase; font-weight:bold;">✅ Signed Up (YES)</div>
-                <div style="font-size:28px; font-weight:bold; color:#10b981; margin-top:4px;">${yesCount}</div>
+                <div id="champStatYes" style="font-size:28px; font-weight:bold; color:#10b981; margin-top:4px;">${yesCount}</div>
               </div>
               <div style="background:var(--card-bg); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:16px; text-align:center;">
                 <div style="font-size:12px; color:#ef4444; text-transform:uppercase; font-weight:bold;">❌ Action Required (NO)</div>
-                <div style="font-size:28px; font-weight:bold; color:#ef4444; margin-top:4px;">${noCount}</div>
+                <div id="champStatNo" style="font-size:28px; font-weight:bold; color:#ef4444; margin-top:4px;">${noCount}</div>
               </div>
               <div style="background:var(--card-bg); border:1px solid rgba(59,130,246,0.3); border-radius:12px; padding:16px; text-align:center;">
                 <div style="font-size:12px; color:#60a5fa; text-transform:uppercase; font-weight:bold;">Response Rate</div>
-                <div style="font-size:28px; font-weight:bold; color:#60a5fa; margin-top:4px;">${percentSignedUp}%</div>
+                <div id="champStatPct" style="font-size:28px; font-weight:bold; color:#60a5fa; margin-top:4px;">${percentSignedUp}%</div>
               </div>
             </div>
 
@@ -4881,7 +4881,7 @@ html += `</select>
             <div style="background:linear-gradient(135deg, rgba(239,68,68,0.12), rgba(245,158,11,0.12)); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:20px;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:10px;">
                 <h3 style="margin:0; color:#ef4444; font-size:16px; display:flex; align-items:center; gap:8px;">
-                  ⚠️ Members Pending / Missing Signup (${missingNames.length})
+                  ⚠️ Members Pending / Missing Signup <span id="missingCountTitle">(${missingNames.length})</span>
                 </h3>
                 <button onclick="window.copyMissingChampionshipList()" style="background:#ef4444; color:white; border:none; padding:8px 16px; border-radius:6px; font-weight:bold; cursor:pointer; font-size:12px; box-shadow:0 2px 8px rgba(239,68,68,0.3);">
                   📋 Copy Missing List for Chat
@@ -4897,9 +4897,9 @@ html += `</select>
               <input type="text" id="champSearchInput" placeholder="🔍 Filter player name..." style="flex:1; min-width:200px; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:14px;" onkeyup="window.filterChampTable()">
               
               <div style="display:flex; gap:6px;">
-                <button class="champ-filter-btn active" data-filter="all" onclick="window.setChampFilter('all')" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--accent); color:white; font-weight:bold; cursor:pointer; font-size:13px;">All (${totalCount})</button>
-                <button class="champ-filter-btn" data-filter="yes" onclick="window.setChampFilter('yes')" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-weight:bold; cursor:pointer; font-size:13px;">Signed Up (${yesCount})</button>
-                <button class="champ-filter-btn" data-filter="no" onclick="window.setChampFilter('no')" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-weight:bold; cursor:pointer; font-size:13px;">Missing (${noCount})</button>
+                <button id="champFilterBtnAll" class="champ-filter-btn active" data-filter="all" onclick="window.setChampFilter('all')" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--accent); color:white; font-weight:bold; cursor:pointer; font-size:13px;">All (${totalCount})</button>
+                <button id="champFilterBtnYes" class="champ-filter-btn" data-filter="yes" onclick="window.setChampFilter('yes')" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-weight:bold; cursor:pointer; font-size:13px;">Signed Up (${yesCount})</button>
+                <button id="champFilterBtnNo" class="champ-filter-btn" data-filter="no" onclick="window.setChampFilter('no')" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-weight:bold; cursor:pointer; font-size:13px;">Missing (${noCount})</button>
               </div>
             </div>
 
@@ -4919,9 +4919,9 @@ html += `</select>
                       let isSignedUp = record && record.signedUp;
                       return `
                         <tr class="champ-row" data-name="${escapeHTML((p.name || '').toLowerCase())}" data-gid="${gIdStr}" data-signed="${isSignedUp ? 'yes' : 'no'}" style="border-bottom:1px solid var(--border);">
-                          <td style="padding:14px 20px; font-weight:bold; color:var(--text-main); font-size:15px;">${escapeHTML(p.name)}</td>
+                          <td class="champ-name-cell" style="padding:14px 20px; font-weight:bold; color:var(--text-main); font-size:15px;">${escapeHTML(p.name)}</td>
                           <td style="padding:14px 20px; text-align:right;">
-                            <button onclick="window.onChampToggle('${gIdStr}')" style="background:${isSignedUp ? '#10b981' : 'rgba(239,68,68,0.15)'}; color:${isSignedUp ? '#ffffff' : '#ef4444'}; border:${isSignedUp ? 'none' : '1px solid rgba(239,68,68,0.4)'}; padding:6px 20px; border-radius:20px; font-weight:bold; cursor:pointer; font-size:13px; transition:0.2s; box-shadow:${isSignedUp ? '0 2px 8px rgba(16,185,129,0.35)' : 'none'};">
+                            <button class="champ-toggle-btn" onclick="window.onChampToggle('${gIdStr}', this)" style="background:${isSignedUp ? '#10b981' : 'rgba(239,68,68,0.15)'}; color:${isSignedUp ? '#ffffff' : '#ef4444'}; border:${isSignedUp ? 'none' : '1px solid rgba(239,68,68,0.4)'}; padding:6px 20px; border-radius:20px; font-weight:bold; cursor:pointer; font-size:13px; transition:0.2s; box-shadow:${isSignedUp ? '0 2px 8px rgba(16,185,129,0.35)' : 'none'};">
                               ${isSignedUp ? '✅ YES' : '❌ NO'}
                             </button>
                           </td>
@@ -4936,27 +4936,98 @@ html += `</select>
         `;
 
         app.innerHTML = html;
+        window.champMissingNames = missingNames;
+
+        window.updateChampStatsUI = () => {
+            let total = 0, yes = 0, no = 0;
+            let missingList = [];
+
+            document.querySelectorAll('.champ-row').forEach(row => {
+                total++;
+                const isSigned = row.getAttribute('data-signed') === 'yes';
+                const pName = row.querySelector('.champ-name-cell')?.textContent || '';
+                if (isSigned) {
+                    yes++;
+                } else {
+                    no++;
+                    if (pName) missingList.push(pName);
+                }
+            });
+
+            const pct = total > 0 ? Math.round((yes / total) * 100) : 0;
+
+            const elTotal = document.getElementById('champStatTotal');
+            const elYes = document.getElementById('champStatYes');
+            const elNo = document.getElementById('champStatNo');
+            const elPct = document.getElementById('champStatPct');
+            const elBtnAll = document.getElementById('champFilterBtnAll');
+            const elBtnYes = document.getElementById('champFilterBtnYes');
+            const elBtnNo = document.getElementById('champFilterBtnNo');
+            const elMissingBox = document.getElementById('missingListText');
+            const elMissingCount = document.getElementById('missingCountTitle');
+
+            if (elTotal) elTotal.textContent = total;
+            if (elYes) elYes.textContent = yes;
+            if (elNo) elNo.textContent = no;
+            if (elPct) elPct.textContent = `${pct}%`;
+            if (elBtnAll) elBtnAll.textContent = `All (${total})`;
+            if (elBtnYes) elBtnYes.textContent = `Signed Up (${yes})`;
+            if (elBtnNo) elBtnNo.textContent = `Missing (${no})`;
+            if (elMissingCount) elMissingCount.textContent = `(${missingList.length})`;
+            if (elMissingBox) {
+                elMissingBox.innerHTML = missingList.length > 0 ? missingList.join(', ') : '<span style="color:var(--success);">🎉 All members have signed up!</span>';
+            }
+            window.champMissingNames = missingList;
+        };
 
         window.copyMissingChampionshipList = () => {
-            if (missingNames.length === 0) {
+            const list = window.champMissingNames || [];
+            if (list.length === 0) {
                 window.showToast("No missing members to copy!", "info");
                 return;
             }
-            const text = "🏆 Alliance Championship Pending Signups (" + missingNames.length + "):\n" + missingNames.join(", ");
+            const text = "🏆 Alliance Championship Pending Signups (" + list.length + "):\n" + list.join(", ");
             navigator.clipboard.writeText(text);
             window.showToast("Copied missing signup list to clipboard!", "success");
         };
 
-        window.onChampToggle = async (gameId) => {
-            const btn = event.target;
+        window.onChampToggle = async (gameId, btnElement) => {
+            const btn = btnElement || (event && (event.currentTarget || event.target));
+            if (!btn || btn.disabled) return;
+
+            const row = btn.closest('.champ-row');
+            if (!row) return;
+
+            const wasSigned = row.getAttribute('data-signed') === 'yes';
+            const willSign = !wasSigned;
+
+            // Optimistic in-place update
             btn.disabled = true;
-            btn.innerHTML = '...';
-            const ok = await window.toggleChampionshipStatus(gameId);
-            if (ok) {
-                window.championshipCache = null; // bust cache
-                views.championshipAdmin(); // refresh view
-            } else {
-                btn.disabled = false;
+            row.setAttribute('data-signed', willSign ? 'yes' : 'no');
+            
+            btn.style.background = willSign ? '#10b981' : 'rgba(239,68,68,0.15)';
+            btn.style.color = willSign ? '#ffffff' : '#ef4444';
+            btn.style.border = willSign ? 'none' : '1px solid rgba(239,68,68,0.4)';
+            btn.style.boxShadow = willSign ? '0 2px 8px rgba(16,185,129,0.35)' : 'none';
+            btn.innerHTML = willSign ? '✅ YES' : '❌ NO';
+
+            window.updateChampStatsUI();
+            window.filterChampTable();
+
+            const ok = await window.toggleChampionshipStatus(gameId, willSign);
+            btn.disabled = false;
+
+            if (!ok) {
+                // Revert on write error
+                row.setAttribute('data-signed', wasSigned ? 'yes' : 'no');
+                btn.style.background = wasSigned ? '#10b981' : 'rgba(239,68,68,0.15)';
+                btn.style.color = wasSigned ? '#ffffff' : '#ef4444';
+                btn.style.border = wasSigned ? 'none' : '1px solid rgba(239,68,68,0.4)';
+                btn.style.boxShadow = wasSigned ? '0 2px 8px rgba(16,185,129,0.35)' : 'none';
+                btn.innerHTML = wasSigned ? '✅ YES' : '❌ NO';
+                window.updateChampStatsUI();
+                window.filterChampTable();
+                if (window.showToast) window.showToast("Failed to save signup status", "error");
             }
         };
 
