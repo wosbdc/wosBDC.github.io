@@ -1,3 +1,7 @@
+## [1.29.64] - 2026-07-22
+### Security
+- **Mandatory Google Sign-In for Admin Hub**: Enforced `window.isGoogleAuthVerified()` check in `views.admin()`. Accessing the Admin Hub now strictly requires a verified Google Sign-In session in addition to R4/R5 leadership credentials.
+
 ## [1.29.63] - 2026-07-22
 ### Changed
 - **Player Database Editor Firebase Integration**: Updated `window.searchPlayerFull()` to query player roster profiles natively from Firebase Realtime Database (`roster_live`), eliminating latency when looking up, inspecting, editing, or deleting player accounts.

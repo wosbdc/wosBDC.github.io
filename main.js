@@ -2960,6 +2960,13 @@ const views = {
       return;
     }
     
+    const isGoogleAuth = await window.isGoogleAuthVerified();
+    if (!isGoogleAuth) {
+      if (window.showToast) window.showToast("🔒 Mandatory Security: Google Sign-In is required to access the Admin Hub.", "error");
+      views.home();
+      return;
+    }
+    
 
     const isR5 = window.getAdminLevel(currentUser) === 'R5';
     
