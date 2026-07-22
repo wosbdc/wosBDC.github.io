@@ -7050,16 +7050,20 @@ html += `</select>
         console.warn("Could not fetch showdown event goals for leaderboards view", e);
       }
 
+      if (finalGoalsCard) {
+          html += finalGoalsCard;
+      }
+
       html += `<div style="display:flex; flex-wrap:wrap; gap:20px;">`;
       
-      if (filterString && filterString.toLowerCase() === 'showdown') {
+      if (!filterString || filterString.toLowerCase() === 'showdown') {
           if (liveShowdownHtml) html += liveShowdownHtml;
           if (allTimeShowdownHtml) html += allTimeShowdownHtml;
       }
       
       boards.forEach(board => {
         let titleTrim = board.title.trim().toLowerCase();
-        if (titleTrim === 'showdown leaderboard' || titleTrim.includes('all-time showdown')) return;
+        if (titleTrim.includes('showdown') || titleTrim.includes('event goals')) return;
         
         let titleLower = board.title.toLowerCase();
 
@@ -7294,7 +7298,6 @@ html += `</select>
       });
       
       html += `</div>`;
-      html += finalGoalsCard;
       app.innerHTML = html;
       
       // Initialize Firebase Listeners for any Bear Trap widgets rendered

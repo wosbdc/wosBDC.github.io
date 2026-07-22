@@ -1,3 +1,7 @@
+## [1.29.89] - 2026-07-22
+### Fixed
+- **Showdown Leaderboards & Event Goals Layout Separation**: Fixed layout clash in `views.home()`. Cleanly separated **🎯 Event Goals** (rendered at the top as a full-width card) from **Current Showdown Leaderboard** and **All-Time Showdown Leaderboard** (rendered side-by-side below). Prevented duplicate static sheet tables from rendering over live Firebase components.
+
 ## [1.29.88] - 2026-07-22
 ### Added
 - **Mercenary Prestige Signup Tracker (`views.mercenaryAdmin()`)**: Dedicated real-time event tracker page matching the Alliance Championship setup! Includes instant in-place `✅ YES` / `❌ NO` status toggles, zero-page-refresh KPI recalculations, missing signup list quick-copy banner (`window.copyMissingMercenaryList()`), and search filtering.
