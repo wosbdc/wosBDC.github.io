@@ -584,7 +584,7 @@ window.showPWAInstallBanner = () => {
       <div style="display:flex; align-items:center; gap:12px;">
         <div style="width:44px; height:44px; background:var(--accent); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:24px;">📱</div>
         <div>
-          <div style="font-weight:bold; color:var(--text-main); font-size:14px;">Install WOS 1515 App</div>
+          <div style="font-weight:bold; color:var(--text-main); font-size:14px;">Install WOS BDC App</div>
           <div style="font-size:11px; color:var(--text-muted);">Add to Home Screen for fast 1-tap access!</div>
         </div>
       </div>

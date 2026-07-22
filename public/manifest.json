@@ -1,7 +1,7 @@
 {
-  "short_name": "WOS 1515",
-  "name": "WhiteOut Survival State 1515 BDC Hub",
-  "description": "Official Whiteout Survival State 1515 Alliance Dashboard & Tracker",
+  "short_name": "WOS BDC",
+  "name": "WhiteOut Survival BDC Alliance Hub",
+  "description": "Official Whiteout Survival BDC Alliance Dashboard & Tracker",
   "icons": [
     {
       "src": "favicon.svg",

@@ -15,9 +15,9 @@ const svgContent = `<svg width="512" height="512" viewBox="0 0 512 512" xmlns="h
   <rect x="16" y="16" width="480" height="480" rx="94" fill="none" stroke="url(#accentGrad)" stroke-width="12" opacity="0.6"/>
   <circle cx="256" cy="256" r="180" fill="url(#accentGrad)" opacity="0.2"/>
   <text x="256" y="310" font-size="200" text-anchor="middle" font-family="system-ui, sans-serif" fill="#ffffff">❄️</text>
-  <text x="256" y="440" font-size="38" font-weight="bold" text-anchor="middle" font-family="system-ui, sans-serif" fill="#38bdf8" letter-spacing="4">BDC 1515</text>
+  <text x="256" y="440" font-size="42" font-weight="bold" text-anchor="middle" font-family="system-ui, sans-serif" fill="#38bdf8" letter-spacing="4">WOS BDC</text>
 </svg>`;
 
 fs.writeFileSync('public/icon-512.svg', svgContent);
 fs.writeFileSync('public/icon-192.svg', svgContent);
-console.log("PWA Icons created successfully!");
+console.log("PWA Icons updated to WOS BDC!");

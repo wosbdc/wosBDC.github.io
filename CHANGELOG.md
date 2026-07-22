@@ -1,3 +1,7 @@
+## [1.29.79] - 2026-07-22
+### Changed
+- **PWA App Branding Update**: Updated Progressive Web App name, mobile titles, manifest settings, SVG icons, and installation banners to **WOS BDC** (`WhiteOut Survival BDC Alliance Hub`).
+
 ## [1.29.78] - 2026-07-22
 ### Added
 - **Mobile Progressive Web App (PWA) Support**: Configured `manifest.json`, Service Worker (`sw.js`), high-res SVG app icons (`icon-192.svg`, `icon-512.svg`), Apple mobile web app meta tags, and an in-app **"📱 Install WOS 1515 App"** banner for 1-tap Home Screen installation on iOS & Android!
