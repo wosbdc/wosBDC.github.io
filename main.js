@@ -8376,7 +8376,7 @@ window.generatePlayerProfileHtml = (chiefName, p, headers, colIsUpcoming, roster
           ${adminActionBtn ? adminActionBtn : ''}
           <button onclick="window.promptLogBearTrapWinner('${chiefName.replace(/'/g, "\\'")}')" style="background:rgba(255,215,0,0.1); color:#FFD700; border:1px solid rgba(255,215,0,0.3); padding:8px 12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:12px; text-align:left; transition: 0.2s;" onmouseover="this.style.background='rgba(255,215,0,0.2)'" onmouseout="this.style.background='rgba(255,215,0,0.1)'">👑 Crown Winner</button>
           <button onclick="window.promptBearTrap('${chiefName.replace(/'/g, "\\'")}')" style="background:rgba(46,204,113,0.1); color:var(--success); border:1px solid rgba(46,204,113,0.3); padding:8px 12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:12px; text-align:left; transition: 0.2s;" onmouseover="this.style.background='rgba(46,204,113,0.2)'" onmouseout="this.style.background='rgba(46,204,113,0.1)'">🥩 + Bear Donation</button>
-          <button onclick="window.promptEditEvents('${chiefName.replace(/'/g, "\\'")}', decodeURIComponent('${missedJson}'))" style="background:rgba(52,152,219,0.1); color:var(--accent); border:1px solid rgba(52,152,219,0.3); padding:8px 12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:12px; text-align:left; transition: 0.2s;" onmouseover="this.style.background='rgba(52,152,219,0.2)'" onmouseout="this.style.background='rgba(52,152,219,0.1)'">📝 Edit Events</button>
+          <button onclick="window.promptEditEvents('${chiefName.replace(/'/g, "\\'")}')" style="background:rgba(52,152,219,0.1); color:var(--accent); border:1px solid rgba(52,152,219,0.3); padding:8px 12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:12px; text-align:left; transition: 0.2s;" onmouseover="this.style.background='rgba(52,152,219,0.2)'" onmouseout="this.style.background='rgba(52,152,219,0.1)'">📝 Edit Events</button>
           <button onclick="window.adminLinkAltAccountPromptByChief('${chiefName.replace(/'/g, "\\'")}')" style="background:rgba(52,152,219,0.1); color:var(--accent); border:1px solid rgba(52,152,219,0.3); padding:8px 12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:12px; text-align:left; transition: 0.2s; margin-top:5px;" onmouseover="this.style.background='rgba(52,152,219,0.2)'" onmouseout="this.style.background='rgba(52,152,219,0.1)'">➕ Add Alt Account</button>
           <div style="height:1px; background:var(--border); margin:5px 0;"></div>
           ${playerGameId ? `<button onclick="window.adminSpoofPlayer('${playerGameId}')" style="background:rgba(236,72,153,0.1); color:var(--danger); border:1px solid rgba(236,72,153,0.3); padding:8px 12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:12px; text-align:left; transition: 0.2s;" onmouseover="this.style.background='rgba(236,72,153,0.2)'" onmouseout="this.style.background='rgba(236,72,153,0.1)'">🎭 Spoof Session</button>` : ''}
@@ -8496,87 +8496,152 @@ window.generatePlayerProfileHtml = (chiefName, p, headers, colIsUpcoming, roster
     return html;
 };
 
-window.promptEditEvents = (name, missedEventsStr) => {
-  let missedEvents = [];
-  try { missedEvents = JSON.parse(missedEventsStr); } catch { /* ignore */ }
-  
-  if (missedEvents.length === 0) {
-    if (window.showToast) { window.showToast("This player has no supported missing events this week.", "info"); } else { window.showToast("This player has no supported missing events this week.", "error"); }
-    return;
+window.promptEditEvents = async (name) => {
+  if (!name) return;
+  const gameId = window.nameToIdMap ? window.nameToIdMap[name] : null;
+  const gIdStr = gameId ? gameId.toString().trim() : '';
+
+  // 1. Fetch live activity status from Firebase activity_live
+  let currentActivity = {};
+  try {
+    if (gIdStr) {
+      const snap = await get(ref(db, `activity_live/${gIdStr}`));
+      if (snap.exists()) currentActivity = snap.val() || {};
+    }
+  } catch(e) {
+    console.warn("Could not fetch activity_live from Firebase:", e);
   }
-  
+
+  // Fallback to fetchActivityData matrix if Firebase node is clean
+  if (!currentActivity || Object.keys(currentActivity).length === 0) {
+    try {
+      const actMatrix = await window.fetchActivityData();
+      if (actMatrix && Array.isArray(actMatrix)) {
+        const row = actMatrix.find(r => r[0] && r[0].toString().trim() === name.toString().trim());
+        if (row) {
+          const isT = (v) => v === true || (typeof v === 'string' && (v.toLowerCase().trim() === 'true' || v.toLowerCase().trim() === 'yes'));
+          currentActivity = {
+            perfectAttendance: row[1] === 0 || row[1] === "0",
+            championship: isT(row[2]),
+            mercenary: isT(row[3]),
+            polarTerrors: isT(row[4]),
+            voter: isT(row[5])
+          };
+        }
+      }
+    } catch(e) {}
+  }
+
+  const eventsList = [
+    { key: 'perfectAttendance', label: '🔥 Perfect Attendance', desc: 'Participated in all Showdown event days' },
+    { key: 'championship', label: '🏆 Championship', desc: 'Registered / Participated in Alliance Championship' },
+    { key: 'mercenary', label: '⚔️ Mercenary', desc: 'Participated in Mercenary Prestige event' },
+    { key: 'polarTerrors', label: '🐻‍❄️ Polar Terrors', desc: 'Defeated Polar Terrors rallies' },
+    { key: 'voter', label: '🗳️ Voter', desc: 'Participated in Alliance Surveys & Votes' }
+  ];
+
   const modal = document.createElement('div');
-  modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); z-index:10001; display:flex; justify-content:center; align-items:center;';
-  
-  let checkboxHtml = missedEvents.map((ev, i) => `
-    <label style="display:flex; align-items:center; gap:10px; background:var(--bg-main); padding:12px; border-radius:8px; border:1px solid var(--border); cursor:pointer;">
-      <input type="checkbox" id="evCheck${i}" value="${ev}" style="width:18px; height:18px; cursor:pointer;">
-      <span style="font-weight:bold; color:var(--text-main);">${ev}</span>
-    </label>
-  `).join('');
-  
+  modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.75); backdrop-filter:blur(5px); z-index:10001; display:flex; justify-content:center; align-items:center; animation:fadeIn 0.2s ease;';
+
+  const rowsHtml = eventsList.map((ev) => {
+    const isChecked = !!currentActivity[ev.key];
+    return `
+      <div style="display:flex; align-items:center; justify-content:space-between; background:var(--bg-main); padding:12px 16px; border-radius:10px; border:1px solid var(--border);">
+        <div>
+          <div style="font-weight:bold; color:var(--text-main); font-size:15px;">${ev.label}</div>
+          <div style="font-size:11px; color:var(--text-muted);">${ev.desc}</div>
+        </div>
+        <label style="position:relative; display:inline-block; width:50px; height:26px; flex-shrink:0; cursor:pointer;">
+          <input type="checkbox" id="evToggle_${ev.key}" ${isChecked ? 'checked' : ''} style="opacity:0; width:0; height:0;">
+          <span style="position:absolute; top:0; left:0; right:0; bottom:0; background:${isChecked ? 'var(--success)' : '#475569'}; border-radius:26px; transition:0.3s;" id="switchBg_${ev.key}"></span>
+          <span style="position:absolute; content:''; height:20px; width:20px; left:${isChecked ? '26px' : '3px'}; bottom:3px; background:white; border-radius:50%; transition:0.3s;" id="switchDot_${ev.key}"></span>
+        </label>
+      </div>
+    `;
+  }).join('');
+
   modal.innerHTML = `
-    <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:30px; max-width:400px; width:90%; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
-      <h2 style="margin:0 0 5px 0; color:var(--text-main); font-size:20px;">📝 Edit Events for ${name}</h2>
-      <p style="margin:0 0 20px 0; color:var(--text-muted); font-size:13px;">Select the events below to mark them as Participated (✅).</p>
+    <div style="background:var(--card-bg); border:1px solid var(--accent); border-radius:16px; padding:24px; max-width:440px; width:90%; box-shadow:0 20px 50px rgba(0,0,0,0.8);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid var(--border); padding-bottom:10px;">
+        <h3 style="margin:0; color:var(--text-main); font-size:18px; display:flex; align-items:center; gap:8px;">
+          ⚙️ Edit Events for ${window.escapeHTML(name)}
+        </h3>
+        <button id="closeEvModalX" style="background:none; border:none; color:var(--text-muted); font-size:24px; cursor:pointer; padding:0;">&times;</button>
+      </div>
+      <p style="margin:0 0 16px 0; color:var(--text-muted); font-size:13px;">Toggle event participation status below. Updates save directly to Firebase Realtime Database in real time (&lt; 10ms)!</p>
       
-      <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px; max-height:300px; overflow-y:auto;">
-        ${checkboxHtml}
+      <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px;">
+        ${rowsHtml}
       </div>
       
+      <div id="evStatusFeedback" style="font-size:12px; font-weight:bold; text-align:center; margin-bottom:10px;"></div>
+
       <div style="display:flex; gap:10px;">
-        <button id="cancelEvBtn" style="flex:1; padding:10px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--text-muted); cursor:pointer; font-weight:bold; font-size:13px;">Cancel</button>
-        <button id="submitEvBtn" style="flex:2; padding:10px; border-radius:8px; border:none; background:var(--accent); color:#fff; cursor:pointer; font-weight:bold; font-size:13px;">Submit Updates</button>
+        <button id="cancelEvBtn" style="flex:1; padding:12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); cursor:pointer; font-weight:bold; font-size:14px;">Cancel</button>
+        <button id="submitEvBtn" style="flex:2; padding:12px; border-radius:8px; border:none; background:var(--accent); color:#fff; cursor:pointer; font-weight:bold; font-size:14px;">💾 Save Event Status</button>
       </div>
     </div>
   `;
   document.body.appendChild(modal);
-  
-  modal.querySelector('#cancelEvBtn').addEventListener('click', () => modal.remove());
-  modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
-  
+
+  // Toggle switch animation listener
+  eventsList.forEach(ev => {
+    const input = modal.querySelector(`#evToggle_${ev.key}`);
+    const bg = modal.querySelector(`#switchBg_${ev.key}`);
+    const dot = modal.querySelector(`#switchDot_${ev.key}`);
+    if (input) {
+      input.addEventListener('change', () => {
+        bg.style.background = input.checked ? 'var(--success)' : '#475569';
+        dot.style.left = input.checked ? '26px' : '3px';
+      });
+    }
+  });
+
+  const closeModal = () => modal.remove();
+  modal.querySelector('#cancelEvBtn').addEventListener('click', closeModal);
+  modal.querySelector('#closeEvModalX').addEventListener('click', closeModal);
+
   modal.querySelector('#submitEvBtn').addEventListener('click', async () => {
-    let checked = [];
-    for (let i = 0; i < missedEvents.length; i++) {
-      if (document.getElementById(`evCheck${i}`).checked) checked.push(missedEvents[i]);
-    }
-    
-    if (checked.length === 0) {
-      window.showToast("No events selected.", "error");
-      return;
-    }
-    
-    modal.remove();
-    const adminName = currentUser ? (idToNameMap[currentUser.gameId] || "Admin") : "Admin";
-    
-    for (let i = 0; i < checked.length; i++) {
-      let ev = checked[i];
-      window.showToast(`Updating ${ev} (${i+1}/${checked.length})...`, "success");
-      
-      let eventSheetName = ev;
-      if (ev.toLowerCase().includes('championship')) eventSheetName = "Alliance Championship ";
-      
-      try {
-        const evToken = await getAuthToken();
-        const res = await fetch(`${API_BASE_URL}?api=updateEvent&name=${encodeURIComponent(name)}&eventName=${encodeURIComponent(eventSheetName)}&status=yes&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(evToken)}`).then(r => r.json());
-        if (!res.success) {
-          window.showToast(`Error updating ${ev}: ${res.message}`, "error");
-          break; // stop on error
-        }
-      } catch (err) {
-        window.showToast(`Network Error on ${ev}: ${err.message}`, "error");
-        break; // stop on error
+    const submitBtn = modal.querySelector('#submitEvBtn');
+    const feedback = modal.querySelector('#evStatusFeedback');
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Saving...";
+    feedback.style.color = "var(--text-muted)";
+    feedback.textContent = "Saving event status to Firebase...";
+
+    const newActivityObj = {
+      name: name,
+      perfectAttendance: modal.querySelector('#evToggle_perfectAttendance').checked,
+      championship: modal.querySelector('#evToggle_championship').checked,
+      mercenary: modal.querySelector('#evToggle_mercenary').checked,
+      polarTerrors: modal.querySelector('#evToggle_polarTerrors').checked,
+      voter: modal.querySelector('#evToggle_voter').checked,
+      updatedAt: Date.now()
+    };
+
+    try {
+      // 1. Write natively to Firebase Realtime Database
+      if (gIdStr) {
+        await set(ref(db, `activity_live/${gIdStr}`), newActivityObj);
       }
-    }
-    
-    window.showToast("Updates complete!", "success");
-    window.sheetCache = {}; 
-    window.liveData['LeaderBoards'] = null; window.livePromises['LeaderBoards'] = null;
-    window.liveData['activity '] = null; window.livePromises['activity '] = null;
-    if (document.getElementById('uniSearchInput')) {
-      window.searchPlayerFull(name); 
-    } else {
-      views.roster();
+      
+      // 2. Also log admin action
+      if (window.logAdminAction) {
+        window.logAdminAction("Edit Roster Member Events", `Updated event statuses for ${name}`, name);
+      }
+
+      if (window.showToast) window.showToast(`Updated event status for ${name}!`, "success");
+      modal.remove();
+
+      // Refresh view
+      if (typeof window.activeViewFunc === 'function') window.activeViewFunc();
+    } catch(err) {
+      console.error(err);
+      feedback.style.color = "#ef4444";
+      feedback.textContent = err.message || "Failed to update events.";
+      submitBtn.disabled = false;
+      submitBtn.textContent = "💾 Save Event Status";
     }
   });
 };

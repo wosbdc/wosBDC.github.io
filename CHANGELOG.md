@@ -1,3 +1,8 @@
+## [1.29.80] - 2026-07-22
+### Added
+- **Live Event Activity Matrix Editing (`window.promptEditEvents()`)**: Upgraded **Player Database Editor ➔ Actions ➔ 📝 Edit Events** to natively toggle all 5 event participation badges (`🔥 Perfect Attendance`, `🏆 Championship`, `⚔️ Mercenary`, `🐻‍❄️ Polar Terrors`, `🗳️ Voter`). Writes directly to Firebase Realtime Database (`activity_live/${gameId}`) in < 10ms with real-time UI matrix updates!
+- **App Name Update**: Changed main navigation branding header to **wosBDC** (`❄️ wosBDC for BDC Alliance`).
+
 ## [1.29.79] - 2026-07-22
 ### Changed
 - **PWA App Branding Update**: Updated Progressive Web App name, mobile titles, manifest settings, SVG icons, and installation banners to **WOS BDC** (`WhiteOut Survival BDC Alliance Hub`).
