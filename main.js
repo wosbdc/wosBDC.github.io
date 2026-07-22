@@ -1596,6 +1596,43 @@ if(authToggleBtn) authToggleBtn.addEventListener('click', (e) => {
   }
 });
 
+window.openLoginModal = () => {
+  isRegistering = false;
+  if (authErrorMsg) authErrorMsg.style.display = 'none';
+  if (authModalTitle) authModalTitle.textContent = 'Sign In';
+  if (authGameIdWrapper) authGameIdWrapper.style.display = 'none';
+  const authForgotPwWrapper = document.getElementById('authForgotPwWrapper');
+  if (authForgotPwWrapper) authForgotPwWrapper.style.display = 'block';
+  const authDateWrapper = document.getElementById('authDateWrapper');
+  if (authDateWrapper) authDateWrapper.style.display = 'none';
+  if (authChiefConfirm) authChiefConfirm.style.display = 'none';
+  if (authSubmitBtn) authSubmitBtn.textContent = 'Sign In';
+  if (authToggleText) authToggleText.textContent = 'Need an account?';
+  if (authToggleBtn) authToggleBtn.textContent = 'Register';
+  if (document.getElementById('authModal')) document.getElementById('authModal').style.display = 'block';
+  if (document.getElementById('authModalOverlay')) document.getElementById('authModalOverlay').style.display = 'block';
+};
+
+window.openRegisterModal = () => {
+  isRegistering = true;
+  if (authErrorMsg) authErrorMsg.style.display = 'none';
+  if (authModalTitle) authModalTitle.textContent = 'Create Account / Claim Profile';
+  if (authGameIdWrapper) authGameIdWrapper.style.display = 'flex';
+  const authForgotPwWrapper = document.getElementById('authForgotPwWrapper');
+  if (authForgotPwWrapper) authForgotPwWrapper.style.display = 'none';
+  const authDateWrapper = document.getElementById('authDateWrapper');
+  if (authDateWrapper) authDateWrapper.style.display = 'block';
+  if (authGameId) authGameId.value = '';
+  if (authChiefConfirm) authChiefConfirm.style.display = 'none';
+  if (authSubmitBtn) authSubmitBtn.textContent = 'Create Account';
+  if (authToggleText) authToggleText.textContent = 'Already have an account?';
+  if (authToggleBtn) authToggleBtn.textContent = 'Sign In';
+  if (document.getElementById('authModal')) document.getElementById('authModal').style.display = 'block';
+  if (document.getElementById('authModalOverlay')) document.getElementById('authModalOverlay').style.display = 'block';
+};
+
+window.openClaimProfileModal = window.openRegisterModal;
+
 const authChiefConfirm = document.getElementById('authChiefConfirm');
 let wosLookupTimeout = null;
 export let verifiedFurnaceLevel = ""; // Save furnace level to send during registration
@@ -4981,10 +5018,10 @@ html += `</select>
             </div>
 
             <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-              <button onclick="document.getElementById('authModal').style.display='block'; document.getElementById('authModalOverlay').style.display='block';" style="background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; border: none; padding: 12px 22px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(37,99,235,0.4); transition: 0.2s;">
+              <button onclick="window.openRegisterModal()" style="background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; border: none; padding: 12px 22px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(37,99,235,0.4); transition: 0.2s;">
                 ✨ Claim / Create Account
               </button>
-              <button onclick="document.getElementById('authModal').style.display='block'; document.getElementById('authModalOverlay').style.display='block';" style="background: rgba(255,255,255,0.08); color: var(--text-main); border: 1px solid var(--border); padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s;">
+              <button onclick="window.openLoginModal()" style="background: rgba(255,255,255,0.08); color: var(--text-main); border: 1px solid var(--border); padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s;">
                 🔑 Sign In
               </button>
             </div>

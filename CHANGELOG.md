@@ -1,3 +1,7 @@
+## [1.29.65] - 2026-07-22
+### Fixed
+- **Onboarding Modal Triggering**: Fixed the `Claim / Create Account` button on the Home Page Onboarding Banner to directly open `window.openRegisterModal()`, pre-configuring the modal with the "Create Account / Claim Profile" title and character lookup inputs.
+
 ## [1.29.64] - 2026-07-22
 ### Security
 - **Mandatory Google Sign-In for Admin Hub**: Enforced `window.isGoogleAuthVerified()` check in `views.admin()`. Accessing the Admin Hub now strictly requires a verified Google Sign-In session in addition to R4/R5 leadership credentials.
