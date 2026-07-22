@@ -2726,6 +2726,89 @@ function calculateAllTimeShowdown(historyData) {
     return sorted;
 }
 
+window.loadUserPersonalLog = async (chiefName) => {
+    const cont = document.getElementById('userPersonalLogContainer');
+    if (!cont) return;
+    
+    try {
+        let userLogs = [];
+        let nameLower = (chiefName || '').toLowerCase();
+        
+        try {
+            const snap = await get(ref(db, 'admin_logs'));
+            if (snap.exists()) {
+                const allLogs = Object.values(snap.val() || {});
+                userLogs = allLogs.filter(log => {
+                    const t = (log.target || '').toLowerCase();
+                    const d = (log.details || '').toLowerCase();
+                    return t === nameLower || (nameLower && t.includes(nameLower)) || (nameLower && d.includes(nameLower));
+                });
+            }
+        } catch(e) {
+            console.warn("Firebase personal log query failed or denied", e);
+        }
+        
+        if (userLogs.length === 0) {
+            try {
+                const token = await getAuthToken();
+                const res = await fetch(`${API_BASE_URL}?api=getSheetData&sheetName=Admin Log&token=${encodeURIComponent(token)}`).then(r => r.json());
+                if (res && res.success && res.data && res.data.length > 1) {
+                    for (let i = 1; i < res.data.length; i++) {
+                        let row = res.data[i];
+                        if (row && row[2] && row[2].toString().toLowerCase() === nameLower) {
+                            let d = new Date(row[0]);
+                            userLogs.push({
+                                id: 'sheets_' + i,
+                                admin: row[1] || 'Admin',
+                                action: 'Donation Recorded',
+                                target: row[2],
+                                details: `Added +${row[3] || 0} Bear Trap donation points (New Total: ${row[4] || 0})`,
+                                timestamp: isNaN(d.getTime()) ? Date.now() : d.getTime(),
+                                dateStr: isNaN(d.getTime()) ? 'Past Record' : d.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}),
+                                timeStr: isNaN(d.getTime()) ? '' : d.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'})
+                            });
+                        }
+                    }
+                }
+            } catch(e) {}
+        }
+        
+        userLogs.sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
+        
+        if (userLogs.length === 0) {
+            cont.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:20px; background:rgba(255,255,255,0.02); border-radius:10px;">No recent administrative activity logged for your account.</div>`;
+            return;
+        }
+        
+        let html = `<div style="display:flex; flex-direction:column; gap:10px;">`;
+        userLogs.slice(0, 10).forEach(log => {
+            let icon = "📋";
+            let actLower = (log.action || '').toLowerCase();
+            if (actLower.includes('donation')) icon = "🥩";
+            else if (actLower.includes('champion') || actLower.includes('crown')) icon = "👑";
+            else if (actLower.includes('showdown') || actLower.includes('score')) icon = "🎯";
+            else if (actLower.includes('role') || actLower.includes('staff')) icon = "🛡️";
+            
+            let dateDisp = log.dateStr ? `${log.dateStr} ${log.timeStr || ''}` : new Date(log.timestamp).toLocaleString();
+            
+            html += `
+              <div style="display:flex; align-items:center; gap:12px; padding:12px; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:10px;">
+                <div style="width:36px; height:36px; border-radius:50%; background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.3); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;">${icon}</div>
+                <div style="flex:1; min-width:0;">
+                  <div style="font-weight:bold; color:var(--text-main); font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHTML(log.action || 'Activity Recorded')}</div>
+                  <div style="color:var(--text-muted); font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHTML(log.details || '')} (by <span style="color:var(--accent); font-weight:bold;">${escapeHTML(log.admin || 'Admin')}</span>)</div>
+                </div>
+                <div style="font-size:11px; color:var(--text-muted); text-align:right; flex-shrink:0; white-space:nowrap;">${dateDisp}</div>
+              </div>
+            `;
+        });
+        html += `</div>`;
+        cont.innerHTML = html;
+    } catch(err) {
+        cont.innerHTML = `<div style="text-align:center; color:var(--danger); padding:15px;">Failed to load personal logs.</div>`;
+    }
+};
+
 // View renderers
 const views = {
   staff: async () => {
@@ -2948,83 +3031,88 @@ const views = {
         }
       });
 
-      // Global function to fetch real-time Admin Logs from Firebase Realtime Database
+      // Global function to fetch real-time Admin Logs from Firebase with fallback to Sheets API
       window.fetchAdminLog = async () => {
         const tb = document.getElementById('adminLogsTableBody');
         if (!tb) return;
-        tb.innerHTML = `<tr><td colspan="5" style="padding:15px; text-align:center; color:var(--text-muted);">Loading Firebase Admin Logs...</td></tr>`;
+        tb.innerHTML = `<tr><td colspan="5" style="padding:15px; text-align:center; color:var(--text-muted);">Loading Admin Activity Logs...</td></tr>`;
+        
+        let logItems = [];
+        let fetchedFromFirebase = false;
+
         try {
           const logSnap = await get(ref(db, 'admin_logs'));
-          let fbLogs = logSnap.val() || {};
-          let logItems = Object.values(fbLogs);
-
-          // Seed legacy logs from Google Sheets if Firebase log node is empty
-          if (logItems.length === 0) {
-             try {
-               const logToken = await getAuthToken();
-               const res = await fetch(API_BASE_URL + '?api=getSheetData&sheetName=Admin Log&token=' + encodeURIComponent(logToken)).then(r => r.json());
-               if (res && res.success && res.data && res.data.length > 1) {
-                  for (let i = 1; i < res.data.length; i++) {
-                     let row = res.data[i];
-                     if (row && row[0]) {
-                        let d = new Date(row[0]);
-                        let logId = 'legacy_' + i;
-                        let item = {
-                           id: logId,
-                           admin: row[1] || 'Admin',
-                           email: '',
-                           action: 'Donation Added',
-                           target: row[2] || '',
-                           details: `Added ${row[3] || ''} donation points (New Total: ${row[4] !== undefined ? row[4] : ''})`,
-                           timestamp: isNaN(d.getTime()) ? Date.now() : d.getTime(),
-                           dateStr: isNaN(d.getTime()) ? 'Legacy' : d.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}),
-                           timeStr: isNaN(d.getTime()) ? '' : d.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'})
-                        };
-                        logItems.push(item);
-                        set(ref(db, `admin_logs/${logId}`), item).catch(() => null);
-                     }
-                  }
-               }
-             } catch(e) {}
+          if (logSnap.exists()) {
+             let fbLogs = logSnap.val() || {};
+             logItems = Object.values(fbLogs);
+             fetchedFromFirebase = true;
           }
+        } catch(e) {
+          console.warn("Firebase admin_logs read failed or restricted, falling back to Sheets API", e);
+        }
 
-          logItems.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+        // Fallback to Google Sheets API if Firebase returned empty or permission denied
+        if (!fetchedFromFirebase || logItems.length === 0) {
+           try {
+             const logToken = await getAuthToken();
+             const res = await fetch(API_BASE_URL + '?api=getSheetData&sheetName=Admin Log&token=' + encodeURIComponent(logToken)).then(r => r.json());
+             if (res && res.success && res.data && res.data.length > 1) {
+                for (let i = res.data.length - 1; i >= 1; i--) {
+                   let row = res.data[i];
+                   if (row && row[0]) {
+                      let d = new Date(row[0]);
+                      logItems.push({
+                         id: 'sheets_' + i,
+                         admin: row[1] || 'Admin',
+                         action: 'Donation Recorded',
+                         target: row[2] || '',
+                         details: `Added ${row[3] || ''} donation points (New Total: ${row[4] !== undefined ? row[4] : ''})`,
+                         timestamp: isNaN(d.getTime()) ? Date.now() : d.getTime(),
+                         dateStr: isNaN(d.getTime()) ? 'Legacy Record' : d.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}),
+                         timeStr: isNaN(d.getTime()) ? '' : d.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'})
+                      });
+                   }
+                }
+             }
+           } catch(e) {
+             console.warn("Sheets API log fetch failed", e);
+           }
+        }
 
-          let tbodyHtml = '';
-          let uniqueAdmins = new Set();
-          
-          logItems.forEach(log => {
-             let adminName = log.admin || 'Admin';
-             uniqueAdmins.add(adminName);
-             let dateDisplay = log.dateStr ? `${log.dateStr} ${log.timeStr || ''}` : new Date(log.timestamp).toLocaleString();
-             let actionBadge = `<span style="background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.3); color:#60a5fa; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:bold;">${log.action || 'Admin Action'}</span>`;
-             
-             tbodyHtml += `
-               <tr class="admin-log-row" data-admin="${adminName.toLowerCase()}" data-timestamp="${log.timestamp || 0}" style="border-bottom:1px solid var(--border);">
-                 <td style="padding:10px; font-size:12px; color:var(--text-muted); white-space:nowrap;">${dateDisplay}</td>
-                 <td style="padding:10px; font-weight:bold; color:var(--accent);">${adminName}</td>
-                 <td style="padding:10px;">${actionBadge}</td>
-                 <td style="padding:10px; font-weight:bold; color:var(--text-main);">${log.target || '-'}</td>
-                 <td style="padding:10px; font-size:13px; color:var(--text-main);">${log.details || '-'}</td>
-               </tr>
-             `;
-          });
+        logItems.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 
-          if (tbodyHtml === '') tbodyHtml = `<tr><td colspan="5" style="padding:15px; text-align:center; color:var(--text-muted);">No admin logs recorded yet.</td></tr>`;
-          tb.innerHTML = tbodyHtml;
-          
-          const adminSelect = document.getElementById('adminLogFilter');
-          if (adminSelect) {
-             const currentSelection = adminSelect.value;
-             let selectHtml = '<option value="">All Admins</option>';
-             Array.from(uniqueAdmins).sort().forEach(admin => {
-                selectHtml += `<option value="${admin.toLowerCase()}">${admin}</option>`;
-             });
-             adminSelect.innerHTML = selectHtml;
-             adminSelect.value = currentSelection;
-          }
-        } catch(err) {
-          tb.innerHTML = `<tr><td colspan="5" style="padding:15px; text-align:center; color:var(--danger);">Error loading Firebase logs: ${err.message}</td></tr>`;
+        let tbodyHtml = '';
+        let uniqueAdmins = new Set();
+        
+        logItems.forEach(log => {
+           let adminName = log.admin || 'Admin';
+           uniqueAdmins.add(adminName);
+           let dateDisplay = log.dateStr ? `${log.dateStr} ${log.timeStr || ''}` : new Date(log.timestamp).toLocaleString();
+           let actionBadge = `<span style="background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.3); color:#60a5fa; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:bold;">${escapeHTML(log.action || 'Admin Action')}</span>`;
+           
+           tbodyHtml += `
+             <tr class="admin-log-row" data-admin="${adminName.toLowerCase()}" data-timestamp="${log.timestamp || 0}" style="border-bottom:1px solid var(--border);">
+               <td style="padding:10px; font-size:12px; color:var(--text-muted); white-space:nowrap;">${dateDisplay}</td>
+               <td style="padding:10px; font-weight:bold; color:var(--accent);">${escapeHTML(adminName)}</td>
+               <td style="padding:10px;">${actionBadge}</td>
+               <td style="padding:10px; font-weight:bold; color:var(--text-main);">${escapeHTML(log.target || '-')}</td>
+               <td style="padding:10px; font-size:13px; color:var(--text-main);">${escapeHTML(log.details || '-')}</td>
+             </tr>
+           `;
+        });
+
+        if (tbodyHtml === '') tbodyHtml = `<tr><td colspan="5" style="padding:15px; text-align:center; color:var(--text-muted);">No admin logs recorded yet.</td></tr>`;
+        tb.innerHTML = tbodyHtml;
+        
+        const adminSelect = document.getElementById('adminLogFilter');
+        if (adminSelect) {
+           const currentSelection = adminSelect.value;
+           let selectHtml = '<option value="">All Admins</option>';
+           Array.from(uniqueAdmins).sort().forEach(admin => {
+              selectHtml += `<option value="${admin.toLowerCase()}">${escapeHTML(admin)}</option>`;
+           });
+           adminSelect.innerHTML = selectHtml;
+           adminSelect.value = currentSelection;
         }
       };
       
@@ -4188,7 +4276,7 @@ html += `</select>
       }
     });
   },
-  
+
   account: async () => {
     if (!currentUser) {
       views.home();
@@ -4490,8 +4578,21 @@ html += `</select>
         <input type="file" id="avatarUploadInput" accept="image/png, image/jpeg, image/webp" style="display:none;">
             ${staffProfileHtml}
             ${linkedHtml}
+            
+            <!-- Personal Activity Log Card -->
+            <div class="card" style="margin-top:20px; text-align:left;">
+              <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
+                <span>📜 My Personal Activity Log</span>
+                <span style="font-size:12px; color:var(--text-muted); font-weight:normal;">Filtered for ${escapeHTML(currentChiefName)}</span>
+              </div>
+              <div id="userPersonalLogContainer" style="margin-top:15px;">
+                <div style="text-align:center; color:var(--text-muted); padding:15px;">Loading activity history...</div>
+              </div>
+            </div>
       </div>
     `;
+    
+    setTimeout(() => window.loadUserPersonalLog(currentChiefName), 100);
     
     
     if (accLevel) {

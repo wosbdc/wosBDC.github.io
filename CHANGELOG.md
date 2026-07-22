@@ -1,3 +1,8 @@
+## [1.29.60] - 2026-07-22
+### Added
+- **Personal Activity Log in Account Hub**: Integrated a "My Personal Activity Log" timeline widget into every player's Account Hub (`views.account`), showing real-time timestamps, action icons, admin names, and details for their account.
+- **Resilient Fallback for Admin Logs**: Updated `window.fetchAdminLog()` and `window.loadUserPersonalLog()` to catch Firebase `Permission denied` errors gracefully and automatically fall back to Google Sheets API (`API_BASE_URL?api=getSheetData&sheetName=Admin Log`).
+
 ## [1.29.59] - 2026-07-22
 ### Added
 - **Firebase Realtime Database Admin Action Logging System**: Integrated `window.logAdminAction()` across all admin functions (Bear Trap crowning, winner resets, multi-donations, single donations, Showdown score updates, Enemy Alliance settings, event archiving, and live resets).
