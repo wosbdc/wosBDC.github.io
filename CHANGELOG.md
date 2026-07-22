@@ -1,3 +1,17 @@
+## [1.29.45] - 2026-07-22
+### Added
+- **Firebase Showdown History Node**: Migrated all historical Showdown records natively into Firebase (`showdown_history`), completely disconnecting Google Sheets for Showdown.
+- **Admin Event Archiving & Reset**: Added `window.archiveCurrentShowdownToFirebase` and `window.resetCurrentShowdown` functions to the Showdown Admin header for easy event rotation.
+- **Side-by-Side Showdown Cards**: Styled `Current - Showdown Leaderboard` and `All-Time - Showdown Leaderboard` into a balanced 50/50 flex layout with `🎯 Event Goals` sitting full-width below both.
+
+### Changed
+- **Events Dropdown Navigation**: Moved standalone Showdown link under an `Events ▾` dropdown in the top navbar.
+- **Event Goals Tag**: Updated daily status badge to `✅ Daily Goal Met`.
+
+### Fixed
+- **Mobile Horizontal Table Scroll**: Wrapped Leaderboard tables in dedicated `overflow-x: auto` containers for smooth mobile scrolling.
+- **GitHub Actions Vite Build**: Fixed JavaScript syntax error where helper functions were defined inside object literals.
+
 ## [1.29.20] - 2026-07-21
 ### Added
 - **Bear Trap Auto-Reset**: Connected Bear Trap Champion banners to the real-time event schedule. Champion banners will now automatically display "Pending..." with a blank score for exactly 30 minutes after a Bear Trap event is scheduled to start, overriding the all-time manual Firebase winner temporarily.
