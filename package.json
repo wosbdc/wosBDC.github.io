@@ -1,7 +1,7 @@
 {
   "name": "wos-dashboard",
   "private": true,
-  "version": "1.29.87",
+  "version": "1.29.88",
   "type": "module",
   "scripts": {
     "dev": "vite --host",

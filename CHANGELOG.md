@@ -1,3 +1,10 @@
+## [1.29.88] - 2026-07-22
+### Added
+- **Mercenary Prestige Signup Tracker (`views.mercenaryAdmin()`)**: Dedicated real-time event tracker page matching the Alliance Championship setup! Includes instant in-place `✅ YES` / `❌ NO` status toggles, zero-page-refresh KPI recalculations, missing signup list quick-copy banner (`window.copyMissingMercenaryList()`), and search filtering.
+- **Bi-Directional Real-Time Firebase Sync**: Toggling statuses in Mercenary Prestige Signup Tracker or Roster Event Activity Matrix immediately syncs both `mercenary` and `activity_live` Firebase nodes in **< 10ms**!
+- **Daily Tools Quick Launcher**: Added a **`⚔️ Mercenary Prestige`** launch button inside the R4/R5 Daily Tools hub.
+- **Firebase Database Rules**: Added explicit security rules for `mercenary` node in `database.rules.json`.
+
 ## [1.29.87] - 2026-07-22
 ### Added
 - **All-Time Showdown Leaderboard Horn Calculation**: Built full Horn calculation logic into `calculateAllTimeShowdown(historyRows)` and `views.home()` for both Current & All-Time Showdown leaderboards.

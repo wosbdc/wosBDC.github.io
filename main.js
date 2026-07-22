@@ -467,6 +467,14 @@ window.toggleChampionshipStatus = async (gameId, forceStatus = null) => {
         if (window.championshipCache) {
             window.championshipCache[gIdStr] = existing;
         }
+
+        // Keep activity_live node in sync
+        try {
+            await update(ref(db, `activity_live/${gIdStr}`), {
+                championship: newSignedUpStatus,
+                updatedAt: Date.now()
+            });
+        } catch(e) {}
         
         // Log Admin Action
         if (window.logAdminAction) {
@@ -486,6 +494,114 @@ window.toggleChampionshipStatus = async (gameId, forceStatus = null) => {
         console.error("Failed to toggle championship status in Firebase:", e);
         if (window.championshipCache) {
             window.championshipCache[gIdStr] = existing;
+        }
+        return true;
+    }
+};
+
+// Fetch Mercenary Prestige Data natively from Firebase Realtime Database
+window.fetchMercenaryData = async () => {
+    if (window.mercenaryCache) return window.mercenaryCache;
+    try {
+        const snap = await get(ref(db, 'mercenary'));
+        if (snap.exists()) {
+            window.mercenaryCache = snap.val();
+            return window.mercenaryCache;
+        }
+    } catch(e) { console.warn("Firebase mercenary read error:", e); }
+
+    let seeded = {};
+    try {
+        const [rawSheet, rosterData] = await Promise.all([
+            fetchSheet("Mercenary Prestige").catch(() => null),
+            window.fetchRoster().catch(() => null)
+        ]);
+
+        if (rosterData) {
+            Object.values(rosterData).forEach(p => {
+                if (p.gameId) {
+                    seeded[p.gameId.toString().trim()] = {
+                        gameId: p.gameId.toString().trim(),
+                        name: p.name || '',
+                        signedUp: false,
+                        lastUpdated: Date.now()
+                    };
+                }
+            });
+        }
+
+        if (rawSheet && rawSheet.length > 1) {
+            for (let i = 1; i < rawSheet.length; i++) {
+                let pName = rawSheet[i][0] ? rawSheet[i][0].toString().trim() : '';
+                let statusVal = rawSheet[i][1] ? rawSheet[i][1].toString().toLowerCase().trim() : '';
+                let isSignedUp = (statusVal === 'yes' || statusVal === 'true' || statusVal === '✅' || statusVal === '1');
+                
+                let foundGid = window.nameToIdMap ? window.nameToIdMap[pName] : null;
+                if (foundGid) {
+                    if (!seeded[foundGid]) {
+                        seeded[foundGid] = { gameId: foundGid, name: pName, signedUp: isSignedUp, lastUpdated: Date.now() };
+                    } else {
+                        seeded[foundGid].signedUp = isSignedUp;
+                    }
+                }
+            }
+        }
+
+        try { await set(ref(db, 'mercenary'), seeded); } catch(e) {}
+    } catch(e) {}
+
+    window.mercenaryCache = seeded;
+    return seeded;
+};
+
+// Toggle Mercenary Prestige signup status natively in Firebase
+window.toggleMercenaryStatus = async (gameId, forceStatus = null) => {
+    if (!gameId) return false;
+    const gIdStr = gameId.toString().trim();
+    let data = {};
+    try {
+        data = await window.fetchMercenaryData();
+    } catch(e) {}
+
+    const existing = data[gIdStr] || { gameId: gIdStr, name: (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief', signedUp: false };
+    
+    const newSignedUpStatus = (forceStatus !== null) ? forceStatus : !existing.signedUp;
+    existing.signedUp = newSignedUpStatus;
+    existing.lastUpdated = Date.now();
+    existing.updatedBy = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name || "Admin") : "Admin";
+
+    try {
+        await set(ref(db, `mercenary/${gIdStr}`), existing);
+        if (window.mercenaryCache) {
+            window.mercenaryCache[gIdStr] = existing;
+        }
+
+        // Keep activity_live node in sync
+        try {
+            await update(ref(db, `activity_live/${gIdStr}`), {
+                mercenary: newSignedUpStatus,
+                updatedAt: Date.now()
+            });
+        } catch(e) {}
+        
+        // Log Admin Action
+        if (window.logAdminAction) {
+            window.logAdminAction("Mercenary Prestige Toggle", `Toggled ${existing.name} (${gIdStr}) to ${newSignedUpStatus ? 'YES (✅)' : 'NO (❌)'}`);
+        }
+        
+        // Also ping GAS backend as fallback safely
+        try {
+            const evToken = await getAuthToken().catch(() => '');
+            const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || "Admin") : "Admin";
+            const url = `${API_BASE_URL}?api=updateEvent&name=${encodeURIComponent(existing.name)}&eventName=${encodeURIComponent("Mercenary Prestige")}&status=${encodeURIComponent(newSignedUpStatus ? 'yes' : 'no')}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(evToken)}`;
+            fetch(url, { mode: 'no-cors' }).catch(e => null);
+        } catch(e) {}
+
+        return true;
+    } catch(e) {
+        console.error("Failed to toggle mercenary status in Firebase:", e);
+        if (window.mercenaryCache) {
+            window.mercenaryCache[gIdStr] = existing;
         }
         return true;
     }
@@ -3774,14 +3890,16 @@ const views = {
         tbody.innerHTML = `<tr><td colspan="6" style="padding:20px; text-align:center; color:var(--text-muted);">Loading live Activity Matrix...</td></tr>`;
         
         try {
-          const [actSnap, champSnap, rosterData] = await Promise.all([
+          const [actSnap, champSnap, mercSnap, rosterData] = await Promise.all([
             get(ref(db, 'activity_live')).catch(() => null),
             get(ref(db, 'championship')).catch(() => null),
+            get(ref(db, 'mercenary')).catch(() => null),
             window.fetchRoster().catch(() => ({}))
           ]);
 
           const actObj = (actSnap && actSnap.exists()) ? actSnap.val() : {};
           const champObj = (champSnap && champSnap.exists()) ? champSnap.val() : {};
+          const mercObj = (mercSnap && mercSnap.exists()) ? mercSnap.val() : {};
 
           let playersList = [];
           if (rosterData) {
@@ -3790,6 +3908,7 @@ const views = {
                    const gIdStr = p.gameId.toString().trim();
                    const actRec = actObj[gIdStr] || {};
                    const champRec = champObj[gIdStr] || {};
+                   const mercRec = mercObj[gIdStr] || {};
 
                    const isTrue = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
 
@@ -3798,7 +3917,7 @@ const views = {
                       name: p.name,
                       perfAtt: actRec.perfectAttendance !== undefined ? isTrue(actRec.perfectAttendance) : false,
                       champ: champRec.signedUp !== undefined ? isTrue(champRec.signedUp) : isTrue(actRec.championship),
-                      merc: isTrue(actRec.mercenary),
+                      merc: mercRec.signedUp !== undefined ? isTrue(mercRec.signedUp) : isTrue(actRec.mercenary),
                       polar: isTrue(actRec.polarTerrors),
                       voter: isTrue(actRec.voter)
                    });
@@ -3881,9 +4000,11 @@ const views = {
 
           await set(ref(db, `activity_live/${gIdStr}`), currentRec);
 
-          // If championship event, sync with championship node as well
+          // If championship or mercenary event, sync with their primary nodes as well
           if (key === 'championship') {
             await window.toggleChampionshipStatus(gIdStr, isChecked);
+          } else if (key === 'mercenary') {
+            await window.toggleMercenaryStatus(gIdStr, isChecked);
           }
 
           if (window.showToast) window.showToast(`Updated event status to ${isChecked ? '✅ Yes' : '❌ No'}!`, "success");
@@ -4012,6 +4133,7 @@ const views = {
               <button onclick="window.openAddPlayerModal()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px; box-shadow:0 4px 12px rgba(16,185,129,0.3);">➕ Add New Player to Roster</button>
               <button onclick="views.showdownAdmin()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px;">⚔️ ShowDown</button>
               <button onclick="views.championshipAdmin()" style="background:linear-gradient(135deg, #f59e0b, #d97706); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px; box-shadow:0 4px 12px rgba(217,119,6,0.3);">🏆 Alliance Championship</button>
+              <button onclick="views.mercenaryAdmin()" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px; box-shadow:0 4px 12px rgba(239,68,68,0.3);">⚔️ Mercenary Prestige</button>
             </div>
 
             <!-- Push Notification Broadcast -->
@@ -5139,6 +5261,291 @@ html += `</select>
 
     } catch(e) {
         app.innerHTML = '<div class="card"><div class="loading" style="color:var(--danger);">Error loading Championship Admin UI</div></div>';
+        console.error(e);
+    }
+  },
+
+  mercenaryAdmin: async () => {
+    const app = document.getElementById('app');
+    if (!app) return;
+
+    const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+    if (!isManager) {
+       if(window.showToast) window.showToast("Only R4/R5 managers can edit Mercenary Prestige data", "error");
+       return;
+    }
+
+    renderLoading("Loading Mercenary Prestige Tracker...");
+
+    if (document.querySelector('.navbar')) {
+        document.querySelector('.navbar').style.display = 'none';
+    }
+
+    try {
+        const [mercenaryData, rosterData] = await Promise.all([
+            window.fetchMercenaryData(),
+            window.fetchRoster().catch(() => ({}))
+        ]);
+
+        let rosterList = [];
+        if (rosterData) {
+            Object.values(rosterData).forEach(p => {
+                if (p.name && p.gameId) rosterList.push(p);
+            });
+        }
+
+        // Sort roster by name
+        rosterList.sort((a,b) => (a.name || '').localeCompare(b.name || ''));
+
+        // Calculate statistics
+        let totalCount = rosterList.length;
+        let yesCount = 0;
+        let noCount = 0;
+        let missingNames = [];
+
+        rosterList.forEach(p => {
+            let gIdStr = p.gameId.toString().trim();
+            let record = mercenaryData[gIdStr];
+            let isSignedUp = record && record.signedUp;
+            if (isSignedUp) {
+                yesCount++;
+            } else {
+                noCount++;
+                missingNames.push(p.name);
+            }
+        });
+
+        let percentSignedUp = totalCount > 0 ? Math.round((yesCount / totalCount) * 100) : 0;
+
+        let html = `
+          <div style="display:flex; flex-direction:column; gap:20px; max-width:900px; margin:0 auto; padding-bottom:40px; animation: fadeIn 0.3s ease; position:relative;">
+            
+            <button onclick="if(document.querySelector('.navbar')) document.querySelector('.navbar').style.display='flex'; views.admin()" style="position:absolute; top:0px; right:0px; background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); padding:6px 14px; border-radius:8px; cursor:pointer; z-index:10; font-weight:bold;">&times; Close</button>
+            
+            <div style="border-bottom: 2px solid #ef4444; padding-bottom: 12px; margin-bottom: 10px; display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:12px;">
+              <div>
+                <h2 style="margin:0; color:var(--text-main); font-size:24px; display:flex; align-items:center; gap:10px;">
+                  ⚔️ Mercenary Prestige Signup Tracker
+                </h2>
+                <p style="margin:5px 0 0 0; color:var(--text-muted); font-size:13px;">Real-time tracking of member event signups & missing roster responses.</p>
+              </div>
+              <button onclick="if(document.querySelector('.navbar')) document.querySelector('.navbar').style.display='flex'; views.admin(); setTimeout(()=>window.switchLogsSubtab('subtab-activity-matrix'), 150);" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:white; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(239,68,68,0.3);">
+                📊 Open Roster Event Activity Matrix ➔
+              </button>
+            </div>
+
+            <!-- Summary KPI Cards -->
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:15px;">
+              <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:16px; text-align:center;">
+                <div style="font-size:12px; color:var(--text-muted); text-transform:uppercase; font-weight:bold;">Total Roster</div>
+                <div id="mercStatTotal" style="font-size:28px; font-weight:bold; color:var(--text-main); margin-top:4px;">${totalCount}</div>
+              </div>
+              <div style="background:var(--card-bg); border:1px solid rgba(16,185,129,0.3); border-radius:12px; padding:16px; text-align:center;">
+                <div style="font-size:12px; color:#10b981; text-transform:uppercase; font-weight:bold;">✅ Signed Up (YES)</div>
+                <div id="mercStatYes" style="font-size:28px; font-weight:bold; color:#10b981; margin-top:4px;">${yesCount}</div>
+              </div>
+              <div style="background:var(--card-bg); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:16px; text-align:center;">
+                <div style="font-size:12px; color:#ef4444; text-transform:uppercase; font-weight:bold;">❌ Action Required (NO)</div>
+                <div id="mercStatNo" style="font-size:28px; font-weight:bold; color:#ef4444; margin-top:4px;">${noCount}</div>
+              </div>
+              <div style="background:var(--card-bg); border:1px solid rgba(59,130,246,0.3); border-radius:12px; padding:16px; text-align:center;">
+                <div style="font-size:12px; color:#60a5fa; text-transform:uppercase; font-weight:bold;">Response Rate</div>
+                <div id="mercStatPct" style="font-size:28px; font-weight:bold; color:#60a5fa; margin-top:4px;">${percentSignedUp}%</div>
+              </div>
+            </div>
+
+            <!-- Missing Members Quick-Copy Banner -->
+            <div style="background:linear-gradient(135deg, rgba(239,68,68,0.12), rgba(245,158,11,0.12)); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:20px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:10px;">
+                <h3 style="margin:0; color:#ef4444; font-size:16px; display:flex; align-items:center; gap:8px;">
+                  ⚠️ Members Pending / Missing Signup <span id="mercMissingCountTitle">(${missingNames.length})</span>
+                </h3>
+                <button onclick="window.copyMissingMercenaryList()" style="background:#ef4444; color:white; border:none; padding:8px 16px; border-radius:6px; font-weight:bold; cursor:pointer; font-size:12px; box-shadow:0 2px 8px rgba(239,68,68,0.3);">
+                  📋 Copy Missing List for Chat
+                </button>
+              </div>
+              <div id="mercMissingListText" style="background:var(--bg-main); border:1px solid var(--border); border-radius:8px; padding:12px; font-size:13px; color:var(--text-main); max-height:120px; overflow-y:auto; line-height:1.5;">
+                ${missingNames.length > 0 ? missingNames.join(', ') : '<span style="color:var(--success);">🎉 All members have signed up!</span>'}
+              </div>
+            </div>
+
+            <!-- Search & Filter Controls -->
+            <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:16px; display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:space-between;">
+              <input type="text" id="mercSearchInput" placeholder="🔍 Filter player name..." style="flex:1; min-width:200px; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:14px;" onkeyup="window.filterMercTable()">
+              
+              <div style="display:flex; gap:6px;">
+                <button id="mercFilterBtnAll" class="merc-filter-btn active" data-filter="all" onclick="window.setMercFilter('all')" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--accent); color:white; font-weight:bold; cursor:pointer; font-size:13px;">All (${totalCount})</button>
+                <button id="mercFilterBtnYes" class="merc-filter-btn" data-filter="yes" onclick="window.setMercFilter('yes')" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-weight:bold; cursor:pointer; font-size:13px;">Signed Up (${yesCount})</button>
+                <button id="mercFilterBtnNo" class="merc-filter-btn" data-filter="no" onclick="window.setMercFilter('no')" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-weight:bold; cursor:pointer; font-size:13px;">Missing (${noCount})</button>
+              </div>
+            </div>
+
+            <!-- Roster Table -->
+            <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; overflow:hidden;">
+              <table style="width:100%; border-collapse:collapse; text-align:left; font-size:14px;">
+                <thead>
+                  <tr style="background:var(--bg-main); border-bottom:1px solid var(--border); color:var(--text-muted); font-size:12px; text-transform:uppercase;">
+                    <th style="padding:12px 20px;">Chief Name</th>
+                    <th style="padding:12px 20px; text-align:right;">Signup Status</th>
+                  </tr>
+                </thead>
+                <tbody id="mercTableBody">
+                  ${rosterList.map(p => {
+                      let gIdStr = p.gameId.toString().trim();
+                      let record = mercenaryData[gIdStr];
+                      let isSignedUp = record && record.signedUp;
+                      return `
+                        <tr class="merc-row" data-name="${escapeHTML((p.name || '').toLowerCase())}" data-gid="${gIdStr}" data-signed="${isSignedUp ? 'yes' : 'no'}" style="border-bottom:1px solid var(--border);">
+                          <td class="merc-name-cell" style="padding:14px 20px; font-weight:bold; color:var(--text-main); font-size:15px;">${escapeHTML(p.name)}</td>
+                          <td style="padding:14px 20px; text-align:right;">
+                            <button class="merc-toggle-btn" onclick="window.onMercToggle('${gIdStr}', this)" style="background:${isSignedUp ? '#10b981' : 'rgba(239,68,68,0.15)'}; color:${isSignedUp ? '#ffffff' : '#ef4444'}; border:${isSignedUp ? 'none' : '1px solid rgba(239,68,68,0.4)'}; padding:6px 20px; border-radius:20px; font-weight:bold; cursor:pointer; font-size:13px; transition:0.2s; box-shadow:${isSignedUp ? '0 2px 8px rgba(16,185,129,0.35)' : 'none'};">
+                              ${isSignedUp ? '✅ YES' : '❌ NO'}
+                            </button>
+                          </td>
+                        </tr>
+                      `;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+        `;
+
+        app.innerHTML = html;
+        window.mercMissingNames = missingNames;
+
+        window.updateMercStatsUI = () => {
+            let total = 0, yes = 0, no = 0;
+            let missingList = [];
+
+            document.querySelectorAll('.merc-row').forEach(row => {
+                total++;
+                const isSigned = row.getAttribute('data-signed') === 'yes';
+                const pName = row.querySelector('.merc-name-cell')?.textContent || '';
+                if (isSigned) {
+                    yes++;
+                } else {
+                    no++;
+                    if (pName) missingList.push(pName);
+                }
+            });
+
+            const pct = total > 0 ? Math.round((yes / total) * 100) : 0;
+
+            const elTotal = document.getElementById('mercStatTotal');
+            const elYes = document.getElementById('mercStatYes');
+            const elNo = document.getElementById('mercStatNo');
+            const elPct = document.getElementById('mercStatPct');
+            const elBtnAll = document.getElementById('mercFilterBtnAll');
+            const elBtnYes = document.getElementById('mercFilterBtnYes');
+            const elBtnNo = document.getElementById('mercFilterBtnNo');
+            const elMissingBox = document.getElementById('mercMissingListText');
+            const elMissingCount = document.getElementById('mercMissingCountTitle');
+
+            if (elTotal) elTotal.textContent = total;
+            if (elYes) elYes.textContent = yes;
+            if (elNo) elNo.textContent = no;
+            if (elPct) elPct.textContent = `${pct}%`;
+            if (elBtnAll) elBtnAll.textContent = `All (${total})`;
+            if (elBtnYes) elBtnYes.textContent = `Signed Up (${yes})`;
+            if (elBtnNo) elBtnNo.textContent = `Missing (${no})`;
+            if (elMissingCount) elMissingCount.textContent = `(${missingList.length})`;
+            if (elMissingBox) {
+                elMissingBox.innerHTML = missingList.length > 0 ? missingList.join(', ') : '<span style="color:var(--success);">🎉 All members have signed up!</span>';
+            }
+            window.mercMissingNames = missingList;
+        };
+
+        window.copyMissingMercenaryList = () => {
+            const list = window.mercMissingNames || [];
+            if (list.length === 0) {
+                window.showToast("No missing members to copy!", "info");
+                return;
+            }
+            const text = "⚔️ Mercenary Prestige Pending Signups (" + list.length + "):\n" + list.join(", ");
+            navigator.clipboard.writeText(text);
+            window.showToast("Copied missing signup list to clipboard!", "success");
+        };
+
+        window.onMercToggle = async (gameId, btnElement) => {
+            const btn = btnElement || (event && (event.currentTarget || event.target));
+            if (!btn || btn.disabled) return;
+
+            const row = btn.closest('.merc-row');
+            if (!row) return;
+
+            const wasSigned = row.getAttribute('data-signed') === 'yes';
+            const willSign = !wasSigned;
+
+            // Optimistic in-place update
+            btn.disabled = true;
+            row.setAttribute('data-signed', willSign ? 'yes' : 'no');
+            
+            btn.style.background = willSign ? '#10b981' : 'rgba(239,68,68,0.15)';
+            btn.style.color = willSign ? '#ffffff' : '#ef4444';
+            btn.style.border = willSign ? 'none' : '1px solid rgba(239,68,68,0.4)';
+            btn.style.boxShadow = willSign ? '0 2px 8px rgba(16,185,129,0.35)' : 'none';
+            btn.innerHTML = willSign ? '✅ YES' : '❌ NO';
+
+            window.updateMercStatsUI();
+            window.filterMercTable();
+
+            const ok = await window.toggleMercenaryStatus(gameId, willSign);
+            btn.disabled = false;
+
+            if (!ok) {
+                // Revert on write error
+                row.setAttribute('data-signed', wasSigned ? 'yes' : 'no');
+                btn.style.background = wasSigned ? '#10b981' : 'rgba(239,68,68,0.15)';
+                btn.style.color = wasSigned ? '#ffffff' : '#ef4444';
+                btn.style.border = wasSigned ? 'none' : '1px solid rgba(239,68,68,0.4)';
+                btn.style.boxShadow = wasSigned ? '0 2px 8px rgba(16,185,129,0.35)' : 'none';
+                btn.innerHTML = wasSigned ? '✅ YES' : '❌ NO';
+                window.updateMercStatsUI();
+                window.filterMercTable();
+                if (window.showToast) window.showToast("Failed to save signup status", "error");
+            }
+        };
+
+        window.mercCurrentFilter = 'all';
+
+        window.setMercFilter = (filter) => {
+            window.mercCurrentFilter = filter;
+            document.querySelectorAll('.merc-filter-btn').forEach(b => {
+                if (b.getAttribute('data-filter') === filter) {
+                    b.style.background = 'var(--accent)';
+                    b.style.color = 'white';
+                } else {
+                    b.style.background = 'var(--bg-main)';
+                    b.style.color = 'var(--text-main)';
+                }
+            });
+            window.filterMercTable();
+        };
+
+        window.filterMercTable = () => {
+            const query = (document.getElementById('mercSearchInput')?.value || '').toLowerCase().trim();
+            const filter = window.mercCurrentFilter || 'all';
+
+            document.querySelectorAll('.merc-row').forEach(row => {
+                const name = row.getAttribute('data-name');
+                const gid = row.getAttribute('data-gid');
+                const signed = row.getAttribute('data-signed');
+
+                const matchesSearch = !query || name.includes(query) || gid.includes(query);
+                const matchesFilter = (filter === 'all') || (filter === 'yes' && signed === 'yes') || (filter === 'no' && signed === 'no');
+
+                if (matchesSearch && matchesFilter) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        };
+
+    } catch(e) {
+        app.innerHTML = '<div class="card"><div class="loading" style="color:var(--danger);">Error loading Mercenary Admin UI</div></div>';
         console.error(e);
     }
   },
