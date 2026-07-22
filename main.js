@@ -4940,6 +4940,7 @@ html += `</select>
       let finalGoalsCard = "";
       let liveShowdownHtml = "";
       let allTimeShowdownHtml = "";
+      let sdHistoryData = null;
       if (filterString && filterString.toLowerCase() === 'showdown') {
          try {
             const histSnap = await get(ref(db, 'showdown_history'));

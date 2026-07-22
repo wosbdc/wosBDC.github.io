@@ -1,3 +1,7 @@
+## [1.29.51] - 2026-07-22
+### Fixed
+- **Showdown Leaderboard Rendering ReferenceError**: Fixed `Uncaught ReferenceError: sdHistoryData is not defined` in `views.leaderboards` by explicitly declaring `let sdHistoryData = null;` before fetching database history. This completely restores the **Current - Showdown Leaderboard**, **All-Time - Showdown Leaderboard**, and **Event Goals** cards on the `Leaderboards -> Showdown` page.
+
 ## [1.29.50] - 2026-07-22
 ### Changed
 - **Showdown Data Entry Locked Pill UI**: Upgraded Day 1-6 score inputs in Showdown Admin from a plain lock emoji to clear, interactive `🔒 Locked` (red pill) and `✏️ Edit` (green pill) badges.
