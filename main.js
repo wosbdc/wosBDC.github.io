@@ -4774,6 +4774,7 @@ const views = {
 
       // Fetch Showdown Event Goals
       let finalGoalsCard = "";
+      let liveShowdownHtml = "";
       try {
    
          
@@ -4786,14 +4787,72 @@ const views = {
          const liveData = liveSnap.val() || {};
          
          let ourScores = { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 };
+         let topPlayers = { d1:{score:0}, d2:{score:0}, d3:{score:0}, d4:{score:0}, d5:{score:0}, d6:{score:0} };
+         let players = [];
+         
          for (const [pName, scores] of Object.entries(liveData)) {
-            ourScores.d1 += scores.d1 || 0;
-            ourScores.d2 += scores.d2 || 0;
-            ourScores.d3 += scores.d3 || 0;
-            ourScores.d4 += scores.d4 || 0;
-            ourScores.d5 += scores.d5 || 0;
-            ourScores.d6 += scores.d6 || 0;
+            let pd1 = scores.d1 || 0;
+            let pd2 = scores.d2 || 0;
+            let pd3 = scores.d3 || 0;
+            let pd4 = scores.d4 || 0;
+            let pd5 = scores.d5 || 0;
+            let pd6 = scores.d6 || 0;
+            let pTotal = pd1 + pd2 + pd3 + pd4 + pd5 + pd6;
+            
+            ourScores.d1 += pd1;
+            ourScores.d2 += pd2;
+            ourScores.d3 += pd3;
+            ourScores.d4 += pd4;
+            ourScores.d5 += pd5;
+            ourScores.d6 += pd6;
+            
+            if (pd1 > topPlayers.d1.score) topPlayers.d1 = { name: pName, score: pd1 };
+            if (pd2 > topPlayers.d2.score) topPlayers.d2 = { name: pName, score: pd2 };
+            if (pd3 > topPlayers.d3.score) topPlayers.d3 = { name: pName, score: pd3 };
+            if (pd4 > topPlayers.d4.score) topPlayers.d4 = { name: pName, score: pd4 };
+            if (pd5 > topPlayers.d5.score) topPlayers.d5 = { name: pName, score: pd5 };
+            if (pd6 > topPlayers.d6.score) topPlayers.d6 = { name: pName, score: pd6 };
+            
+            players.push({ name: pName, d1: pd1, d2: pd2, d3: pd3, d4: pd4, d5: pd5, d6: pd6, total: pTotal });
          }
+         
+         const staticHorns = { d1: 1, d2: 2, d3: 2, d4: 2, d5: 2, d6: 4 };
+         players.forEach(p => {
+             p.horns = 0;
+             p.wins = 0;
+             for (let i = 1; i <= 6; i++) {
+                 let dVal = p['d'+i] || 0;
+                 let topPlayerScore = topPlayers['d'+i].score;
+                 if (dVal > 0 && dVal === topPlayerScore) {
+                     p.horns += staticHorns['d'+i];
+                     p.wins += 1;
+                 }
+             }
+         });
+         players.sort((a, b) => {
+             if (b.horns !== a.horns) return b.horns - a.horns;
+             return b.total - a.total;
+         });
+         
+         liveShowdownHtml = `<div class="card" style="width:100%; margin-bottom:20px; overflow-x:auto;"><div class="card-title">🏆 Current Event Showdown</div><table style="min-width:500px; text-align:center;"><thead><tr>
+            <th style="text-align:left;">Rank</th><th style="text-align:left;">Name</th><th>Total Horns</th><th>Days Won</th><th>Total Points</th>
+         </tr></thead><tbody>`;
+         
+         players.forEach((p, index) => {
+             let rank = index + 1;
+             if (rank === 1) rank = '🥇 1';
+             else if (rank === 2) rank = '🥈 2';
+             else if (rank === 3) rank = '🥉 3';
+             
+             liveShowdownHtml += `<tr>
+                <td style="font-weight:bold; color:var(--text-muted); text-align:left;">${rank}</td>
+                <td style="font-weight:bold; color:var(--text-muted); text-align:left;">${formatCell(p.name)}</td>
+                <td style="font-weight:bold; color:#FFD700; font-size:1.1em;">${p.horns > 0 ? p.horns + ' 📯' : '<span style="color:var(--text-muted); font-size:0.9em; font-weight:normal;">-</span>'}</td>
+                <td style="font-weight:bold; color:var(--text-main);">${p.wins > 0 ? p.wins : '<span style="color:var(--text-muted); font-weight:normal;">-</span>'}</td>
+                <td style="font-weight:bold; color:var(--text-muted);">${p.total > 0 ? p.total.toLocaleString() : '<span style="color:var(--text-muted); font-weight:normal;">-</span>'}</td>
+             </tr>`;
+         });
+         liveShowdownHtml += `</tbody></table></div>`;
          
          let totalAllianceScore = ourScores.d1 + ourScores.d2 + ourScores.d3 + ourScores.d4 + ourScores.d5 + ourScores.d6;
          ourScores.total = totalAllianceScore;
@@ -4886,6 +4945,10 @@ const views = {
       }
 
       html += `<div style="display:flex; flex-wrap:wrap; gap:20px;">`;
+      
+      if (filterString && filterString.toLowerCase() === 'showdown' && liveShowdownHtml) {
+          html += liveShowdownHtml;
+      }
       
       boards.forEach(board => {
         let cardStyle = `flex: 1; min-width: 320px;`;
