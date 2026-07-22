@@ -1,3 +1,8 @@
+## [1.29.85] - 2026-07-22
+### Added
+- **Interactive Checkbox Matrix in Roster Event Activity Matrix**: Equipping each member's row in **📊 Roster Event Activity Matrix** with interactive checkboxes for all 5 event categories (`🔥 Perfect Attendance`, `🏆 Championship`, `⚔️ Mercenary`, `🐻‍❄️ Polar Terrors`, `🗳️ Voter`). Checking any box updates Firebase (`activity_live/${gameId}` and `championship/${gameId}`) in **< 10ms**!
+- **Direct Navigation Link**: Added a **`📊 Open Roster Event Activity Matrix ➔`** button inside the Alliance Championship Signup Tracker header for seamless 1-click navigation.
+
 ## [1.29.84] - 2026-07-22
 ### Fixed
 - **Instant In-Place Championship Signup Toggles (`views.championshipAdmin()`)**: Replaced full-page DOM re-renders with instant optimistic in-place button state updates (`✅ YES` / `❌ NO`), zero scroll resetting, zero `--` flicker, and real-time KPI card & missing signup list recalibrations!

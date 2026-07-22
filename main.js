@@ -3767,33 +3767,34 @@ const views = {
         tbody.innerHTML = `<tr><td colspan="6" style="padding:20px; text-align:center; color:var(--text-muted);">Loading live Activity Matrix...</td></tr>`;
         
         try {
-          const [actData, rosterData] = await Promise.all([
-            window.fetchActivityData(),
+          const [actSnap, champSnap, rosterData] = await Promise.all([
+            get(ref(db, 'activity_live')).catch(() => null),
+            get(ref(db, 'championship')).catch(() => null),
             window.fetchRoster().catch(() => ({}))
           ]);
 
-          window._rawActivityMatrix = actData || [];
+          const actObj = (actSnap && actSnap.exists()) ? actSnap.val() : {};
+          const champObj = (champSnap && champSnap.exists()) ? champSnap.val() : {};
+
           let playersList = [];
-
-          if (Array.isArray(actData) && actData.length > 1) {
-             for (let i = 1; i < actData.length; i++) {
-                let row = actData[i];
-                if (row && row[0]) {
-                   let pName = row[0].toString().trim();
-                   let perfAtt = row[1] && row[1].toString().toLowerCase().includes('yes');
-                   let champ = row[2] && row[2].toString().toLowerCase().includes('yes');
-                   let merc = row[3] && row[3].toString().toLowerCase().includes('yes');
-                   let polar = row[4] && row[4].toString().toLowerCase().includes('yes');
-                   let voter = row[5] && row[5].toString().toLowerCase().includes('yes');
-                   playersList.push({ name: pName, perfAtt, champ, merc, polar, voter });
-                }
-             }
-          }
-
-          if (playersList.length === 0 && rosterData) {
+          if (rosterData) {
              Object.values(rosterData).forEach(p => {
-                if (p.name) {
-                   playersList.push({ name: p.name, perfAtt: false, champ: false, merc: false, polar: false, voter: false });
+                if (p.name && p.gameId) {
+                   const gIdStr = p.gameId.toString().trim();
+                   const actRec = actObj[gIdStr] || {};
+                   const champRec = champObj[gIdStr] || {};
+
+                   const isTrue = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
+
+                   playersList.push({
+                      gameId: gIdStr,
+                      name: p.name,
+                      perfAtt: actRec.perfectAttendance !== undefined ? isTrue(actRec.perfectAttendance) : false,
+                      champ: champRec.signedUp !== undefined ? isTrue(champRec.signedUp) : isTrue(actRec.championship),
+                      merc: isTrue(actRec.mercenary),
+                      polar: isTrue(actRec.polarTerrors),
+                      voter: isTrue(actRec.voter)
+                   });
                 }
              });
           }
@@ -3816,16 +3817,73 @@ const views = {
           return;
         }
 
+        const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+
         tbody.innerHTML = list.map(p => `
-          <tr class="activity-matrix-row" data-name="${escapeHTML(p.name.toLowerCase())}" style="border-bottom:1px solid var(--border);">
-            <td style="padding:10px; font-weight:bold; color:var(--text-main);">${escapeHTML(p.name)}</td>
-            <td style="padding:10px;">${p.perfAtt ? '<span style="color:#f97316; font-weight:bold;">🔥 Perfect</span>' : '<span style="color:var(--text-muted);">-</span>'}</td>
-            <td style="padding:10px;">${p.champ ? '<span style="color:#fbbf24; font-weight:bold;">🏆 Championship</span>' : '<span style="color:var(--text-muted);">-</span>'}</td>
-            <td style="padding:10px;">${p.merc ? '<span style="color:#ef4444; font-weight:bold;">⚔️ Mercenary</span>' : '<span style="color:var(--text-muted);">-</span>'}</td>
-            <td style="padding:10px;">${p.polar ? '<span style="color:#38bdf8; font-weight:bold;">🐻‍❄️ Polar Terrors</span>' : '<span style="color:var(--text-muted);">-</span>'}</td>
-            <td style="padding:10px;">${p.voter ? '<span style="color:#a855f7; font-weight:bold;">🗳️ Voter</span>' : '<span style="color:var(--text-muted);">-</span>'}</td>
+          <tr class="activity-matrix-row" data-name="${escapeHTML(p.name.toLowerCase())}" data-gid="${p.gameId}" style="border-bottom:1px solid var(--border);">
+            <td style="padding:12px 14px; font-weight:bold; color:var(--text-main); font-size:14px;">${escapeHTML(p.name)}</td>
+            
+            <td style="padding:12px 14px;">
+              <label style="display:inline-flex; align-items:center; gap:8px; cursor:${isManager ? 'pointer' : 'default'};">
+                <input type="checkbox" ${p.perfAtt ? 'checked' : ''} ${isManager ? '' : 'disabled'} onchange="window.toggleActivityMatrixCell('${p.gameId}', 'perfectAttendance', this.checked)" style="width:18px; height:18px; accent-color:#f97316; cursor:${isManager ? 'pointer' : 'default'};">
+                <span style="color:${p.perfAtt ? '#f97316' : 'var(--text-muted)'}; font-weight:bold; font-size:13px;">🔥 Perfect</span>
+              </label>
+            </td>
+
+            <td style="padding:12px 14px;">
+              <label style="display:inline-flex; align-items:center; gap:8px; cursor:${isManager ? 'pointer' : 'default'};">
+                <input type="checkbox" ${p.champ ? 'checked' : ''} ${isManager ? '' : 'disabled'} onchange="window.toggleActivityMatrixCell('${p.gameId}', 'championship', this.checked)" style="width:18px; height:18px; accent-color:#fbbf24; cursor:${isManager ? 'pointer' : 'default'};">
+                <span style="color:${p.champ ? '#fbbf24' : 'var(--text-muted)'}; font-weight:bold; font-size:13px;">🏆 Championship</span>
+              </label>
+            </td>
+
+            <td style="padding:12px 14px;">
+              <label style="display:inline-flex; align-items:center; gap:8px; cursor:${isManager ? 'pointer' : 'default'};">
+                <input type="checkbox" ${p.merc ? 'checked' : ''} ${isManager ? '' : 'disabled'} onchange="window.toggleActivityMatrixCell('${p.gameId}', 'mercenary', this.checked)" style="width:18px; height:18px; accent-color:#ef4444; cursor:${isManager ? 'pointer' : 'default'};">
+                <span style="color:${p.merc ? '#ef4444' : 'var(--text-muted)'}; font-weight:bold; font-size:13px;">⚔️ Mercenary</span>
+              </label>
+            </td>
+
+            <td style="padding:12px 14px;">
+              <label style="display:inline-flex; align-items:center; gap:8px; cursor:${isManager ? 'pointer' : 'default'};">
+                <input type="checkbox" ${p.polar ? 'checked' : ''} ${isManager ? '' : 'disabled'} onchange="window.toggleActivityMatrixCell('${p.gameId}', 'polarTerrors', this.checked)" style="width:18px; height:18px; accent-color:#38bdf8; cursor:${isManager ? 'pointer' : 'default'};">
+                <span style="color:${p.polar ? '#38bdf8' : 'var(--text-muted)'}; font-weight:bold; font-size:13px;">🐻‍❄️ Polar</span>
+              </label>
+            </td>
+
+            <td style="padding:12px 14px;">
+              <label style="display:inline-flex; align-items:center; gap:8px; cursor:${isManager ? 'pointer' : 'default'};">
+                <input type="checkbox" ${p.voter ? 'checked' : ''} ${isManager ? '' : 'disabled'} onchange="window.toggleActivityMatrixCell('${p.gameId}', 'voter', this.checked)" style="width:18px; height:18px; accent-color:#a855f7; cursor:${isManager ? 'pointer' : 'default'};">
+                <span style="color:${p.voter ? '#a855f7' : 'var(--text-muted)'}; font-weight:bold; font-size:13px;">🗳️ Voter</span>
+              </label>
+            </td>
           </tr>
         `).join('');
+      };
+
+      window.toggleActivityMatrixCell = async (gameId, key, isChecked) => {
+        if (!gameId) return;
+        const gIdStr = gameId.toString().trim();
+
+        try {
+          // Update activity_live node
+          const snap = await get(ref(db, `activity_live/${gIdStr}`));
+          const currentRec = (snap && snap.exists()) ? snap.val() : { name: (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief' };
+          currentRec[key] = isChecked;
+          currentRec.updatedAt = Date.now();
+
+          await set(ref(db, `activity_live/${gIdStr}`), currentRec);
+
+          // If championship event, sync with championship node as well
+          if (key === 'championship') {
+            await window.toggleChampionshipStatus(gIdStr, isChecked);
+          }
+
+          if (window.showToast) window.showToast(`Updated event status to ${isChecked ? '✅ Yes' : '❌ No'}!`, "success");
+        } catch(err) {
+          console.error("Error toggling activity matrix cell:", err);
+          if (window.showToast) window.showToast("Failed to update status", "error");
+        }
       };
 
       window.filterActivityMatrix = () => {
@@ -4850,11 +4908,16 @@ html += `</select>
             
             <button onclick="if(document.querySelector('.navbar')) document.querySelector('.navbar').style.display='flex'; views.admin()" style="position:absolute; top:0px; right:0px; background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); padding:6px 14px; border-radius:8px; cursor:pointer; z-index:10; font-weight:bold;">&times; Close</button>
             
-            <div style="border-bottom: 2px solid var(--accent); padding-bottom: 12px; margin-bottom: 10px;">
-              <h2 style="margin:0; color:var(--text-main); font-size:24px; display:flex; align-items:center; gap:10px;">
-                🏆 Alliance Championship Signup Tracker
-              </h2>
-              <p style="margin:5px 0 0 0; color:var(--text-muted); font-size:13px;">Real-time tracking of member event signups & missing roster responses.</p>
+            <div style="border-bottom: 2px solid var(--accent); padding-bottom: 12px; margin-bottom: 10px; display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:12px;">
+              <div>
+                <h2 style="margin:0; color:var(--text-main); font-size:24px; display:flex; align-items:center; gap:10px;">
+                  🏆 Alliance Championship Signup Tracker
+                </h2>
+                <p style="margin:5px 0 0 0; color:var(--text-muted); font-size:13px;">Real-time tracking of member event signups & missing roster responses.</p>
+              </div>
+              <button onclick="if(document.querySelector('.navbar')) document.querySelector('.navbar').style.display='flex'; views.admin(); setTimeout(()=>window.switchLogsSubtab('subtab-activity-matrix'), 150);" style="background:linear-gradient(135deg, var(--accent), #1d4ed8); color:white; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(59,130,246,0.3);">
+                📊 Open Roster Event Activity Matrix ➔
+              </button>
             </div>
 
             <!-- Summary KPI Cards -->
