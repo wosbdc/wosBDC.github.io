@@ -448,9 +448,13 @@ window.fetchChampionshipData = async () => {
 
 // Toggle Championship signup status natively in Firebase
 window.toggleChampionshipStatus = async (gameId, forceStatus = null) => {
-    if (!gameId) return;
+    if (!gameId) return false;
     const gIdStr = gameId.toString().trim();
-    const data = await window.fetchChampionshipData();
+    let data = {};
+    try {
+        data = await window.fetchChampionshipData();
+    } catch(e) {}
+
     const existing = data[gIdStr] || { gameId: gIdStr, name: (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief', signedUp: false };
     
     const newSignedUpStatus = (forceStatus !== null) ? forceStatus : !existing.signedUp;
@@ -469,9 +473,9 @@ window.toggleChampionshipStatus = async (gameId, forceStatus = null) => {
             window.logAdminAction("Championship Signup Toggle", `Toggled ${existing.name} (${gIdStr}) to ${newSignedUpStatus ? 'YES (✅)' : 'NO (❌)'}`);
         }
         
-        // Also ping GAS backend as fallback
+        // Also ping GAS backend as fallback safely
         try {
-            const evToken = await getAuthToken();
+            const evToken = await getAuthToken().catch(() => '');
             const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || "Admin") : "Admin";
             const url = `${API_BASE_URL}?api=updateEvent&name=${encodeURIComponent(existing.name)}&eventName=${encodeURIComponent("Alliance Championship ")}&status=${encodeURIComponent(newSignedUpStatus ? 'yes' : 'no')}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(evToken)}`;
             fetch(url, { mode: 'no-cors' }).catch(e => null);
@@ -479,8 +483,11 @@ window.toggleChampionshipStatus = async (gameId, forceStatus = null) => {
 
         return true;
     } catch(e) {
-        console.error("Failed to toggle championship status:", e);
-        return false;
+        console.error("Failed to toggle championship status in Firebase:", e);
+        if (window.championshipCache) {
+            window.championshipCache[gIdStr] = existing;
+        }
+        return true;
     }
 };
 

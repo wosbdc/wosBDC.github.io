@@ -12,6 +12,30 @@
       ".read": true,
       ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() == 318843189 || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())"
     },
+    "championship": {
+      ".read": true,
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() == 318843189 || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())"
+    },
+    "activity_live": {
+      ".read": true,
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() == 318843189 || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())"
+    },
+    "beartrap_wins": {
+      ".read": true,
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() == 318843189 || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())"
+    },
+    "beartrap_donations": {
+      ".read": true,
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() == 318843189 || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())"
+    },
+    "leaderboards": {
+      ".read": true,
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() == 318843189 || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())"
+    },
+    "admin_logs": {
+      ".read": true,
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() == 318843189 || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())"
+    },
     "users": {
       ".read": true,
       "$uid": {

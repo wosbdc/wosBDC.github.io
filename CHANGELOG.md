@@ -1,3 +1,7 @@
+## [1.29.86] - 2026-07-22
+### Fixed
+- **Firebase Security Rules & Toggle Permission Error**: Added explicit `.read` & `.write` rules for `championship`, `activity_live`, `beartrap_wins`, `beartrap_donations`, `leaderboards`, and `admin_logs` in `database.rules.json`. Fixed permission error when toggling signup statuses!
+
 ## [1.29.85] - 2026-07-22
 ### Added
 - **Interactive Checkbox Matrix in Roster Event Activity Matrix**: Equipping each member's row in **📊 Roster Event Activity Matrix** with interactive checkboxes for all 5 event categories (`🔥 Perfect Attendance`, `🏆 Championship`, `⚔️ Mercenary`, `🐻‍❄️ Polar Terrors`, `🗳️ Voter`). Checking any box updates Firebase (`activity_live/${gameId}` and `championship/${gameId}`) in **< 10ms**!
