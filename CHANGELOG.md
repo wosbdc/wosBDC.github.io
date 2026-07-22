@@ -1,3 +1,7 @@
+## [1.29.58] - 2026-07-22
+### Fixed
+- **Bear Trap 1 & 2 Champion Banner Display**: Updated champion banner logic in `views.leaderboards` so that explicit crowned winners (from `config/bearTrapWinners`) and Rank #1 players (from `beartrap_wins`) are correctly displayed on Bear Trap 1 & 2 cards.
+
 ## [1.29.57] - 2026-07-22
 ### Changed
 - **Final Production Build & Deployment**: Verified production bundle build via Vite (`npm run build`) and deployed latest Firebase Realtime Database Bear Trap & Showdown migration features.

@@ -5324,9 +5324,9 @@ html += `</select>
         let trapNum = null;
         let isAllTime = false;
         
-        if (titleLower.includes('bear trap 1')) trapNum = '1';
-        else if (titleLower.includes('bear trap 2')) trapNum = '2';
-        else if (titleLower.includes('all-time bear trap')) isAllTime = true;
+        if (titleLower.includes('bear trap 1') && !titleLower.includes('donation')) trapNum = '1';
+        else if (titleLower.includes('bear trap 2') && !titleLower.includes('donation')) trapNum = '2';
+        else if (titleLower.includes('all-time bear trap') && !titleLower.includes('donation')) isAllTime = true;
         
         let isShowdown = titleLower.includes('showdown') && !titleLower.includes('all-time');
         let isAllTimeShowdown = titleLower.includes('all-time showdown');
@@ -5335,13 +5335,17 @@ html += `</select>
         let champScore = null;
         let bannerTitle = "👑 Reigning Champion";
         let scoreLabel = "Total Wins";
-         if (trapNum && btWinners[trapNum]) {
-            if (isBearTrapActive) {
-               champName = "Pending...";
-               champScore = "-";
-            } else {
+         if (trapNum) {
+            if (btWinners[trapNum] && btWinners[trapNum].name && btWinners[trapNum].name !== "Pending...") {
                champName = btWinners[trapNum].name;
                champScore = btWinners[trapNum].score;
+            } else if (board.rows.length > 0) {
+               let firstRow = board.rows[0];
+               champName = firstRow[1] ? firstRow[1].toString() : null;
+               champScore = firstRow[2] !== undefined ? firstRow[2] : null;
+            } else if (isBearTrapActive) {
+               champName = "Pending...";
+               champScore = "-";
             }
          } else if (isAllTime && board.rows.length > 0) {
            let firstRow = board.rows[0];
