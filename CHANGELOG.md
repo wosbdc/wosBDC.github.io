@@ -1,3 +1,7 @@
+## [1.34.5] - 2026-07-23
+### Glowing Question Mark Badge for Reset Champions
+- **Reset Winner Mystery Badge**: Updated Reigning Champion Banner card in `views.leaderboards()` so that when Bear Trap winners are reset (or unassigned/`Pending...`), the avatar box displays a glowing gold mystery question mark **`❓`** badge instead of a broken/missing player image.
+
 ## [1.34.4] - 2026-07-23
 ### Target Player Account Names in Bear Trap Log
 - **Target Player Account Display**: Updated `loadBeartrapLog()` to display target player account names and amounts added (e.g. `(BrianDCox (+50), ThaDwarf (+100))`) in metallic gold text next to every log entry.

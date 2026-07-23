@@ -8181,21 +8181,34 @@ html += `</select>
         }
         
         if (champName) {
-           // Look up their gameId to get the avatar
-           let champId = null;
-           for (const [gid, name] of Object.entries(idToNameMap)) {
-               if (name.toLowerCase() === champName.toLowerCase()) {
-                   champId = gid; break;
-               }
-           }
+           let avatarHtml = '';
+           let isPending = champName === "Pending..." || champName === "?" || !champName;
            
-           const avatarSrc = (champId && avatarMap[champId]) ? avatarMap[champId] : `images/${champName}.png`;
+           if (isPending) {
+              avatarHtml = `
+                <div style="width: 50px; height: 50px; border-radius: 50%; border: 2px solid rgba(255,215,0,0.6); background: rgba(255,215,0,0.1); display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: bold; color: #FFD700; flex-shrink: 0; box-shadow: 0 0 12px rgba(255,215,0,0.3);">
+                  ❓
+                </div>
+              `;
+           } else {
+              // Look up their gameId to get the avatar
+              let champId = null;
+              for (const [gid, name] of Object.entries(idToNameMap)) {
+                  if (name.toLowerCase() === champName.toLowerCase()) {
+                      champId = gid; break;
+                  }
+              }
+              const avatarSrc = (champId && avatarMap[champId]) ? avatarMap[champId] : `images/${champName}.png`;
+              avatarHtml = `
+                <div style="width: 50px; height: 50px; border-radius: 50%; border: 2px solid #FFD700; overflow: hidden; flex-shrink: 0; box-shadow: 0 0 10px rgba(255,215,0,0.2);">
+                  <img src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='images/default.png';">
+                </div>
+              `;
+           }
            
            html += `
              <div style="background: linear-gradient(135deg, rgba(255,215,0,0.1) 0%, rgba(255,215,0,0.02) 100%); border: 1px solid rgba(255,215,0,0.3); border-radius: 12px; padding: 15px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; box-shadow: 0 4px 15px rgba(255,215,0,0.05);">
-               <div style="width: 50px; height: 50px; border-radius: 50%; border: 2px solid #FFD700; overflow: hidden; flex-shrink: 0; box-shadow: 0 0 10px rgba(255,215,0,0.2);">
-                 <img src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='images/default.png';">
-               </div>
+               ${avatarHtml}
                <div style="flex: 1;">
                  <div style="color: #FFD700; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">${bannerTitle}</div>
                  <div style="color: var(--text-main); font-size: 18px; font-weight: bold;">${champName}</div>
