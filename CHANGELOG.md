@@ -1,3 +1,8 @@
+## [1.40.0] - 2026-07-23
+### Bear Trap Tracker Widescreen Optimization
+- **Responsive Widescreen Dual-Column Layout**: Expanded Bear Trap Tracker (`bearTrapAdmin`) container width to `1600px` and converted the main section into a responsive 2-column grid layout (Missing Signups sticky box on the left, Roster Status table on the right) to eliminate wasted screen space on desktop monitors.
+- **Expanded Container Widths**: Increased `views.beartrap()` max-width to `1200px` for better utilization of wide displays.
+
 ## [1.39.3] - 2026-07-23
 ### Fix Mobile Navigation Modal HTML Nesting Location
 - **HTML DOM Nesting Fix**: Moved `#mobileNavModal` and `#mobileNavModalOverlay` outside of `#cropperModal` directly to root body level so the modal opens cleanly and pops up 100% of the time when tapped.
