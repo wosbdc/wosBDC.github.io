@@ -1,3 +1,8 @@
+## [1.33.6] - 2026-07-23
+### Fix Bear Trap Reset Winners & Admin Features
+- **Reset BT Winners Fix**: Updated `resetBearTrapWinners()` in `views.beartrap()` to concurrently reset Bear Trap 1 & 2 champions in Firebase via `Promise.all`, fixed toast error styling, and smoothly re-rendered `views.beartrap()` without forcing full browser reloads.
+- **Reset Player Modal Auto-Close**: Added automatic modal dismissal after successfully wiping a player's Bear Trap donations to 0.
+
 ## [1.33.5] - 2026-07-23
 ### Broadcast Push Notification Button & Modal
 - **Push Notification Modal Conversion**: Converted the inline Broadcast Push Notification box into a clean `🚀 Broadcast Push Notification` button under `System & Roster Tools`. Clicking the button opens a modal (`openBroadcastPushModal()`) for drafting and sending push alerts.
