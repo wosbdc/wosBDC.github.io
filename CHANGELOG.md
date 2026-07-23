@@ -1,3 +1,7 @@
+## [1.35.4] - 2026-07-23
+### Fix GitHub Actions Deprecation Warning & Set Node 24 Explicitly
+- **Node 24 Explicit Deployment**: Updated `.github/workflows/deploy.yml` with `FORCE_JAVASCRIPT_ACTIONS_TO_NODE20: "false"` and explicit `node-version: '24'` to eliminate Node 20 deprecation warnings inside GitHub Actions runner.
+
 ## [1.35.3] - 2026-07-23
 ### Unignore Tools Script for GitHub Actions Runner
 - **GitHub Actions Execution Fix**: Updated `.gitignore` to explicitly unignore `!tools/*.cjs` so `tools/check_window_bindings.cjs` is tracked and committed to git, resolving `Cannot find module` exit code 1 in GitHub Actions deployment pipelines.
