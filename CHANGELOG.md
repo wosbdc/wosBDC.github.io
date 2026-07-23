@@ -1,3 +1,7 @@
+## [1.30.4] - 2026-07-22
+### Fixed
+- **All-Time Bear Donations**: Fixed a bug where the All-Time Bear Donations leaderboard was only displaying recent scores tracked in Firebase. The frontend now correctly pulls historical all-time data from the Google Sheet and automatically merges it with the live Firebase data before sorting and ranking.
+
 ## [1.30.3] - 2026-07-22
 ### Fixed
 - **Reset Ghost IDs**: Fixed a bug where the Reset Player tool would refuse to run if you entered a raw numeric ID that no longer existed in the Roster. Now, you can forcefully wipe orphan IDs (like 705413646) from the leaderboard even if they have already left the alliance.
