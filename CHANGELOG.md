@@ -1,3 +1,7 @@
+## [1.32.2] - 2026-07-23
+### Dense In-Order Tie Ranking for Leaderboards Tab
+- **Dense Sequential Ranking**: Updated tie ranking logic on `menu | leaderboards | showdown leaderboards` (`views.leaderboards('showdown')`) so ranks count dynamically in order without skipping numbers (e.g. Rank 1, Rank 1, Rank 2, Rank 3).
+
 ## [1.32.1] - 2026-07-23
 ### Pure Horns-Based Tie Ranking for Leaderboards Tab
 - **Pure Horns Ranking**: Updated tie detection on `menu | leaderboards | showdown leaderboards` so shared rank numbers (e.g. Rank 1 for both tied players) are calculated **100% purely on Horns (`p.horns`)**. Removed point score fallback when evaluating rank equality.

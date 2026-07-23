@@ -7589,7 +7589,7 @@ html += `</select>
               if (index > 0) {
                   let prev = liveDisplayList[index - 1];
                   if (p.horns !== prev.horns) {
-                      currentLiveRank = index + 1;
+                      currentLiveRank += 1;
                   }
               }
               let rankDisplay = currentLiveRank;
@@ -7680,7 +7680,7 @@ html += `</select>
                   if (index > 0) {
                       let prev = allTimeDisplayList[index - 1];
                       if (p.horns !== prev.horns) {
-                          currentAllTimeRank = index + 1;
+                          currentAllTimeRank += 1;
                       }
                   }
                   let rankDisplay = currentAllTimeRank;
