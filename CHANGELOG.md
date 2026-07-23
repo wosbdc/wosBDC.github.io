@@ -1,3 +1,7 @@
+## [1.30.6] - 2026-07-22
+### Fixed
+- **Bear Trap DB Editor Modal**: Fixed an issue where the DB Editor modal was silently failing to open due to the UI injection missing the modal HTML container. 
+
 ## [1.30.5] - 2026-07-22
 ### Added
 - **Bear Trap DB Editor**: Added a new "🛠️ DB Editor" tool to the Bear Trap Admin Menu. This raw database editor fetches and displays all `beartrap_donations` nodes directly from Firebase, and allows admins to permanently delete any orphaned ghost entries or mistakes with a single click, completely bypassing roster validation rules.
