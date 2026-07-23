@@ -781,6 +781,7 @@ window.updateBearTrapDonationInline = async (gameId, newDonationStr) => {
         donData.allTime = (donData.allTime || 0) + diff;
         donData.lastUpdated = Date.now();
         await set(donRef, donData);
+           if (addAmt > 0) await window.autoSyncBtSignup(finalName);
         
         if (window.logAdminAction) {
             window.logAdminAction("Bear Trap Donation", `Updated ${chiefName}'s active donation to ${addAmt}`);
@@ -1565,6 +1566,7 @@ window.doBeartrapResetPlayer = async () => {
         const donRef = ref(db, `beartrap_donations/${donKey}`);
         let donData = { name: finalName, current: 0, allTime: 0, lastUpdated: Date.now() };
         await set(donRef, donData);
+           if (addAmt > 0) await window.autoSyncBtSignup(finalName);
         
         resDiv.innerHTML = '<span style="color:var(--success)">✅ Successfully reset donations for ' + finalName + '.</span>';
         window.logAdminAction("Bear Trap Player Reset", `Wiped Bear Trap donations for ${finalName} to zero`, finalName);
@@ -4439,16 +4441,20 @@ const views = {
         tbody.innerHTML = `<tr><td colspan="6" style="padding:20px; text-align:center; color:var(--text-muted);">Loading live Activity Matrix...</td></tr>`;
         
         try {
-          const [actSnap, champSnap, mercSnap, rosterData] = await Promise.all([
+          const [actSnap, champSnap, mercSnap, btSnap, donSnap, rosterData] = await Promise.all([
             get(ref(db, 'activity_live')).catch(() => null),
             get(ref(db, 'championship')).catch(() => null),
             get(ref(db, 'mercenary')).catch(() => null),
+            get(ref(db, 'beartrap')).catch(() => null),
+            get(ref(db, 'beartrap_donations')).catch(() => null),
             window.fetchRoster().catch(() => ({}))
           ]);
 
           const actObj = (actSnap && actSnap.exists()) ? actSnap.val() : {};
           const champObj = (champSnap && champSnap.exists()) ? champSnap.val() : {};
           const mercObj = (mercSnap && mercSnap.exists()) ? mercSnap.val() : {};
+          const btObj = (btSnap && btSnap.exists()) ? btSnap.val() : {};
+          const donObj = (donSnap && donSnap.exists()) ? donSnap.val() : {};
 
           let playersList = [];
           if (rosterData) {
@@ -4461,6 +4467,11 @@ const views = {
 
                    const isTrue = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
 
+                   const donKey = p.name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+                   const donRec = donObj[donKey] || {};
+                   const btRec = btObj[gIdStr] || {};
+                   const isBtActive = (donRec.current && donRec.current > 0) || isTrue(btRec.signedUp) || isTrue(actRec.beartrap);
+
                    playersList.push({
                       gameId: gIdStr,
                       name: p.name,
@@ -4468,6 +4479,7 @@ const views = {
                       champ: champRec.signedUp !== undefined ? isTrue(champRec.signedUp) : isTrue(actRec.championship),
                       merc: mercRec.signedUp !== undefined ? isTrue(mercRec.signedUp) : isTrue(actRec.mercenary),
                       polar: isTrue(actRec.polarTerrors),
+                      beartrap: isBtActive,
                       voter: isTrue(actRec.voter)
                    });
                 }
@@ -6252,6 +6264,7 @@ html += `</select>
         window.onBtDonationChange = async (gameId, newVal) => {
             if (newVal === '') newVal = "0";
             const ok = await window.updateBearTrapDonationInline(gameId, newVal);
+            if (ok && Number(newVal) > 0) await window.autoSyncBtSignup(gameId);
             if (ok) {
                 if (window.showToast) window.showToast("Saved donation!", "success");
             } else {
@@ -6583,6 +6596,7 @@ html += `</select>
             🐻 Multi-BT Donations
             <button onclick="document.getElementById('btLookupModal').style.display='block'" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--accent); padding:4px 8px; border-radius:6px; cursor:pointer; font-size:12px; margin-left:10px;">🔍 Lookup</button>
             <button onclick="document.getElementById('btCrownModal').style.display='block'" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--success); padding:4px 8px; border-radius:6px; cursor:pointer; font-size:12px; margin-left:10px;">👑 Crown Winner</button>
+            <button onclick="window.resetBearTrapEvent()" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:#fff; border:none; padding:4px 10px; border-radius:6px; cursor:pointer; font-size:12px; margin-left:10px; font-weight:bold; box-shadow:0 2px 8px rgba(239,68,68,0.3);">🔄 Reset BT Event</button>
             <button onclick="window.resetBearTrapWinners()" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--danger); padding:4px 8px; border-radius:6px; cursor:pointer; font-size:12px; margin-left:10px;">🔄 Reset BT Winners</button>
             <button onclick="document.getElementById('btResetPlayerModal').style.display='block'" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--danger); padding:4px 8px; border-radius:6px; cursor:pointer; font-size:12px; margin-left:10px;">🗑️ Reset Player</button>
             <button onclick="window.openBtDbEditor()" style="background:var(--card-bg); color:var(--text-main); border:1px solid #8b5cf6; padding:4px 8px; border-radius:6px; cursor:pointer; font-size:12px; margin-left:10px;">🛠️ DB Editor</button>
@@ -6718,7 +6732,83 @@ html += `</select>
       }
     };
 
-        window.submitBeartrapDonations = async () => {
+        window.autoSyncBtSignup = async (playerNameOrGid) => {
+    if (!playerNameOrGid) return;
+    try {
+        let gameId = null;
+        let pName = playerNameOrGid.toString().trim();
+        
+        if (!isNaN(pName) && pName.length >= 7) {
+            gameId = pName;
+        } else {
+            for (const [gid, name] of Object.entries(idToNameMap)) {
+                if (name.toLowerCase() === pName.toLowerCase()) {
+                    gameId = gid; break;
+                }
+            }
+        }
+
+        if (gameId) {
+            await set(ref(db, `beartrap/${gameId}/signedUp`), true);
+        }
+    } catch(e) {
+        console.warn("Could not auto-sync Bear Trap signup:", e);
+    }
+};
+
+window.resetBearTrapEvent = async () => {
+    if (!confirm("⚠️ Are you sure you want to RESET the entire Bear Trap Event?\n\nThis will:\n1. Archive current donations into all-time totals\n2. Reset current donations to 0\n3. Reset all signups to NO\n4. Reset champions to Pending...")) return;
+
+    if (window.showToast) window.showToast("Resetting Bear Trap Event...", "info");
+
+    try {
+        const [donSnap, btSnap] = await Promise.all([
+            get(ref(db, 'beartrap_donations')),
+            get(ref(db, 'beartrap'))
+        ]);
+
+        if (donSnap.exists()) {
+            const dons = donSnap.val();
+            for (const [key, don] of Object.entries(dons)) {
+                if (don) {
+                    const currentAmt = don.current || 0;
+                    don.allTime = (don.allTime || 0) + currentAmt;
+                    don.current = 0;
+                    don.lastUpdated = Date.now();
+                    await set(ref(db, `beartrap_donations/${key}`), don);
+                }
+            }
+        }
+
+        if (btSnap.exists()) {
+            const bts = btSnap.val();
+            for (const key of Object.keys(bts)) {
+                await set(ref(db, `beartrap/${key}/signedUp`), false);
+            }
+        }
+
+        await Promise.all([
+            set(ref(db, 'beartrap_wins/1'), { name: "Pending...", score: 0 }),
+            set(ref(db, 'beartrap_wins/2'), { name: "Pending...", score: 0 })
+        ]);
+
+        window.logAdminAction("Bear Trap Full Event Reset", "Archived current donations, reset scores to 0, cleared signups to NO, and reset champions to Pending...", "All Players");
+
+        if (window.showToast) window.showToast("✅ Bear Trap Event successfully reset!", "success");
+
+        if (window.location.hash.includes('beartrap') || document.getElementById('beartrapEntries')) {
+            if (views.beartrap) views.beartrap();
+        } else if (views.bearTrapAdmin) {
+            views.bearTrapAdmin();
+        }
+
+    } catch (e) {
+        console.error("Reset Event Error:", e);
+        if (window.showToast) window.showToast("Error resetting event: " + e.message, "error");
+    }
+};
+
+    window.submitBeartrapDonations = async () => {
       const rows = document.querySelectorAll('.beartrap-row');
       const entries = [];
       rows.forEach(r => {
@@ -6761,6 +6851,7 @@ html += `</select>
            donData.allTime = (donData.allTime || 0) + addAmt;
            donData.lastUpdated = Date.now();
            await set(donRef, donData);
+           if (addAmt > 0) await window.autoSyncBtSignup(finalName);
 
            const donToken = await getAuthToken();
            fetch(`${API_BASE_URL}?api=addDonation&name=${encodeURIComponent(finalName)}&amount=${encodeURIComponent(entry.amount)}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(donToken)}`).catch(() => null);
@@ -10381,6 +10472,7 @@ window.promptBearTrap = async (name) => {
     donData.allTime = (donData.allTime || 0) + addAmt;
     donData.lastUpdated = Date.now();
     await set(donRef, donData);
+           if (addAmt > 0) await window.autoSyncBtSignup(finalName);
     window.logAdminAction("Single Bear Trap Donation Added", `Added +${addAmt.toLocaleString()} Bear Trap donation points to ${name}`, name);
 
     const donToken2 = await getAuthToken();

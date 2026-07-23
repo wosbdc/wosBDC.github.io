@@ -1,3 +1,9 @@
+## [1.35.0] - 2026-07-23
+### Full Bear Trap Event Cycle, Auto-Signup & Activity Matrix Sync
+- **Auto-Signup Detection (`Donation > 0` ➔ `YES`)**: Added `window.autoSyncBtSignup()` so whenever a player donates `> 0` (via single entry, inline table edit, or `Submit All` multi-batch), their Bear Trap signup status automatically flips to `YES` (`signedUp: true`).
+- **`🔄 Reset Bear Trap Event` Master Button**: Added a dedicated `🔄 Reset Bear Trap Event` button that archives `current` donation scores into `allTime` historical totals, resets `current` scores to `0`, clears all attendance signups to `NO`, resets Reigning Champions to `Pending...` (`❓`), and logs the full event audit.
+- **Roster Event Activity Matrix Synchronization**: Updated `loadActivityMatrix()` to automatically check `✅ 🐻 Bear Trap` for any player with active donations (`current > 0`) or attendance signups (`YES`), and syncs real-time checkbox toggles directly back to Firebase.
+
 ## [1.34.8] - 2026-07-23
 ### Automated Pre-Build Handler Audit
 - **Pre-Build Event Handler Validation**: Integrated `tools/check_window_bindings.cjs` into the `npm run build` process to automatically audit all HTML `onclick` handlers (`window.xxx()` & `views.xxx()`), guaranteeing zero broken or unattached button handlers reach production.
