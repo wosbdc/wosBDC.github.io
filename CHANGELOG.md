@@ -1,3 +1,7 @@
+## [1.38.2] - 2026-07-23
+### Fix Modal Helpers Closure Scope Reference
+- **Modal Opening Fix**: Fixed `ReferenceError` inside `window.openMobileNavModal()` by using direct DOM queries (`settingsSidebar` & `sidebarOverlay`) instead of referencing inner module closures.
+
 ## [1.38.1] - 2026-07-23
 ### Global Modal Helper Handlers Fix
 - **Global Modal Trigger Fix**: Added `window.openMobileNavModal()`, `window.openThemeModal()`, and `window.openNotificationsModal()` helper handlers so settings action buttons open their respective popups cleanly and reliably across all devices.

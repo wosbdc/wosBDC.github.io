@@ -10773,13 +10773,10 @@ window.openNotificationsModal = () => {
   const overlay = document.getElementById('notificationsModalOverlay');
   if (modal) modal.style.display = 'block';
   if (overlay) overlay.style.display = 'block';
-  if (typeof closeSidebarFunc === 'function') closeSidebarFunc();
-  else {
-    const sidebar = document.getElementById('settingsSidebar');
-    const sideOverlay = document.getElementById('sidebarOverlay');
-    if (sidebar) sidebar.classList.remove('open');
-    if (sideOverlay) sideOverlay.classList.remove('active');
-  }
+  const sidebar = document.getElementById('settingsSidebar');
+  const sideOverlay = document.getElementById('sidebarOverlay');
+  if (sidebar) sidebar.classList.remove('open');
+  if (sideOverlay) sideOverlay.classList.remove('active');
 };
 
 window.openThemeModal = () => {
@@ -10787,13 +10784,10 @@ window.openThemeModal = () => {
   const overlay = document.getElementById('themeModalOverlay');
   if (modal) modal.style.display = 'block';
   if (overlay) overlay.style.display = 'block';
-  if (typeof closeSidebarFunc === 'function') closeSidebarFunc();
-  else {
-    const sidebar = document.getElementById('settingsSidebar');
-    const sideOverlay = document.getElementById('sidebarOverlay');
-    if (sidebar) sidebar.classList.remove('open');
-    if (sideOverlay) sideOverlay.classList.remove('active');
-  }
+  const sidebar = document.getElementById('settingsSidebar');
+  const sideOverlay = document.getElementById('sidebarOverlay');
+  if (sidebar) sidebar.classList.remove('open');
+  if (sideOverlay) sideOverlay.classList.remove('active');
 };
 
 window.openMobileNavModal = () => {
@@ -10801,13 +10795,10 @@ window.openMobileNavModal = () => {
   const overlay = document.getElementById('mobileNavModalOverlay');
   if (modal) modal.style.display = 'block';
   if (overlay) overlay.style.display = 'block';
-  if (typeof closeSidebarFunc === 'function') closeSidebarFunc();
-  else {
-    const sidebar = document.getElementById('settingsSidebar');
-    const sideOverlay = document.getElementById('sidebarOverlay');
-    if (sidebar) sidebar.classList.remove('open');
-    if (sideOverlay) sideOverlay.classList.remove('active');
-  }
+  const sidebar = document.getElementById('settingsSidebar');
+  const sideOverlay = document.getElementById('sidebarOverlay');
+  if (sidebar) sidebar.classList.remove('open');
+  if (sideOverlay) sideOverlay.classList.remove('active');
 };
 
 window.closeMobileNavModal = () => {
