@@ -1,3 +1,7 @@
+## [1.39.2] - 2026-07-23
+### Settings Header & Global Timers Top Breathing Room
+- **Header Spacing Adjustment**: Added `margin-bottom: 15px` to `.sidebar-header` and `margin-top: 15px` to Section 1 so Global Timers has comfortable breathing room below the header border line.
+
 ## [1.39.1] - 2026-07-23
 ### Uniform Sidebar Button Styling & User Account Order Adjustment
 - **User Account Promoted Before Preferences**: Moved `👤 User Account` section directly above `📱 Preferences`.
