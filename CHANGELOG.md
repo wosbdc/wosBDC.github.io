@@ -1,3 +1,7 @@
+## [1.41.1] - 2026-07-23
+### Removed Redundant Add Player Button in BT Tracker
+- **Header Cleanup**: Removed redundant `➕ Add Player` buttons from `bearTrapAdmin` and `views.beartrap()` headers since player creation is already managed in Roster Management.
+
 ## [1.41.0] - 2026-07-23
 ### Replaced Big Text Box with Roster Filter Tabs & One-Tap Copy
 - **Removed Missing Names Text Box**: Removed the large scrollable missing names card box from BT Donations Tracker to maximize table real estate.
