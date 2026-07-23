@@ -1,3 +1,7 @@
+## [1.33.0] - 2026-07-23
+### Clean Revert of Experimental Shortcut Button & Modal Popup
+- **Clean Event Page Restoration**: Completely removed experimental modal popup code and header shortcut button from `Menu | Events | Showdown Page` (`views.showdown()`), restoring stable, clean navigation.
+
 ## [1.32.9] - 2026-07-23
 ### Modal Firebase Permission Handling Fix
 - **Permission Denied Error Fix**: Wrapped Firebase database node lookups in `openShowdownLeaderboardModal()` with individual `.catch()` handlers so that unauthenticated or restricted node read errors never block or crash the Showdown Leaderboards modal popup.
