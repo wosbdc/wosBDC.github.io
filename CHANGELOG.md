@@ -1,3 +1,9 @@
+## [1.41.0] - 2026-07-23
+### Replaced Big Text Box with Roster Filter Tabs & One-Tap Copy
+- **Removed Missing Names Text Box**: Removed the large scrollable missing names card box from BT Donations Tracker to maximize table real estate.
+- **Added Roster Filter Tabs**: Integrated interactive filter tabs above the roster table: **`ALL`**, **`❌ MISSING ONLY`**, and **`✅ DONATED ONLY`**.
+- **Added 1-Tap Copy Missing List Button**: Added **`📋 Copy Missing List`** button that dynamically copies all missing player names to clipboard with a toast notification.
+
 ## [1.40.2] - 2026-07-23
 ### Renamed Bear Trap Labels to BT Donations Tracker
 - **BT Donations Tracker Terminology**: Renamed page title to **`🐻 BT Donations Tracker`**, table status column header to **`Donated`**, donation score column to **`Amount`**, and table badges to **`✅ Donated`** / **`❌ Missing`**.
