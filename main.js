@@ -1584,14 +1584,22 @@ window.syncAllSheetsToFirebase = async () => {
     const btn = document.getElementById('syncAllSheetsBtn');
     if (btn) {
         btn.disabled = true;
-        btn.innerHTML = '⚡ Syncing Google Sheets ➔ Firebase...';
+        btn.innerHTML = '⚡ Syncing (Smart Merge)...';
     }
-    if (window.showToast) window.showToast("Starting Master Sync from Google Sheets to Firebase...", "accent");
+    if (window.showToast) window.showToast("Starting Smart Non-Destructive Sync...", "accent");
 
     try {
-        let syncedStats = { btWins: 0, btDonations: 0, showdown: 0 };
+        let syncedStats = { btWins: 0, btDonations: 0, preservedFirebase: 0 };
 
-        // 1. Sync LeaderBoards (Bear Trap Wins & Donations)
+        // Read existing Firebase nodes first so we NEVER overwrite newer data
+        const [existingWinsSnap, existingDonSnap] = await Promise.all([
+            get(ref(db, 'beartrap_wins')),
+            get(ref(db, 'beartrap_donations'))
+        ]);
+        const existingWins = existingWinsSnap.exists() ? (existingWinsSnap.val() || {}) : {};
+        const existingDon = existingDonSnap.exists() ? (existingDonSnap.val() || {}) : {};
+
+        // 1. Sync LeaderBoards (Bear Trap Wins & Donations) safely
         const rawSheet = await fetchSheet("LeaderBoards");
         if (rawSheet && Array.isArray(rawSheet) && rawSheet.length > 0) {
             let parsedBoards = [];
@@ -1626,10 +1634,10 @@ window.syncAllSheetsToFirebase = async () => {
                 }
             }
 
-            // Sync Bear Trap Wins into Firebase beartrap_wins
-            let winsAgg = {};
-            // Sync Bear Trap Donations into Firebase beartrap_donations
-            let donAgg = {};
+            // Seed/Merge Bear Trap Wins with Math.max protection
+            let winsAgg = JSON.parse(JSON.stringify(existingWins));
+            // Seed/Merge Bear Trap Donations with Math.max protection
+            let donAgg = JSON.parse(JSON.stringify(existingDon));
 
             parsedBoards.forEach(board => {
                 let t = board.title.toLowerCase();
@@ -1647,64 +1655,57 @@ window.syncAllSheetsToFirebase = async () => {
 
                     if (isDonation) {
                         if (!donAgg[key]) donAgg[key] = { name: pName, current: 0, allTime: 0, lastUpdated: Date.now() };
-                        if (isAllTime) donAgg[key].allTime = Math.max(donAgg[key].allTime, val);
-                        else donAgg[key].current = Math.max(donAgg[key].current, val);
+                        donAgg[key].name = pName;
+                        if (isAllTime) donAgg[key].allTime = Math.max(donAgg[key].allTime || 0, val);
+                        else donAgg[key].current = Math.max(donAgg[key].current || 0, val);
                     } else {
                         if (!winsAgg[key]) winsAgg[key] = { name: pName, bt1: 0, bt2: 0, total: 0 };
-                        if (isBt1) winsAgg[key].bt1 = Math.max(winsAgg[key].bt1, val);
-                        else if (isBt2) winsAgg[key].bt2 = Math.max(winsAgg[key].bt2, val);
-                        else if (isAllTime) winsAgg[key].total = Math.max(winsAgg[key].total, val);
+                        winsAgg[key].name = pName;
+                        if (isBt1) winsAgg[key].bt1 = Math.max(winsAgg[key].bt1 || 0, val);
+                        else if (isBt2) winsAgg[key].bt2 = Math.max(winsAgg[key].bt2 || 0, val);
+                        else if (isAllTime) winsAgg[key].total = Math.max(winsAgg[key].total || 0, val);
                     }
                 });
             });
 
-            // Calculate totals for wins
+            // Recalculate totals for wins
             Object.values(winsAgg).forEach(w => {
-                if (w.total === 0) w.total = (w.bt1 || 0) + (w.bt2 || 0);
+                let calcTotal = (w.bt1 || 0) + (w.bt2 || 0);
+                w.total = Math.max(w.total || 0, calcTotal);
             });
 
-            // Write winsAgg to Firebase beartrap_wins
+            // Write winsAgg back to Firebase safely
             for (const [key, val] of Object.entries(winsAgg)) {
                 await set(ref(db, `beartrap_wins/${key}`), val);
                 syncedStats.btWins++;
             }
 
-            // Write donAgg to Firebase beartrap_donations
+            // Write donAgg back to Firebase safely
             for (const [key, val] of Object.entries(donAgg)) {
                 await set(ref(db, `beartrap_donations/${key}`), val);
                 syncedStats.btDonations++;
             }
         }
 
-        // 2. Sync Showdown History
-        try {
-            const sdHist = await fetchSheet("Showdown History");
-            if (sdHist) {
-                await set(ref(db, 'showdown_history'), { data: sdHist, lastSynced: Date.now() });
-                syncedStats.showdown = Array.isArray(sdHist) ? sdHist.length : 1;
-            }
-        } catch(e) {
-            console.warn("Error syncing showdown history:", e);
-        }
-
-        // Log Master Sync
-        window.logAdminAction("Firebase Master Sync", `Synced ${syncedStats.btWins} Bear Trap Win records, ${syncedStats.btDonations} Donation records, and Showdown history into Firebase`);
-        if (window.showToast) window.showToast(`✅ Master Sync Complete! Firebase is now 100% updated (${syncedStats.btWins} win records, ${syncedStats.btDonations} donation records synced).`, "success");
+        // NOTE: Showdown live data in Firebase ('showdown') is NEVER overwritten because Firebase is the primary source of truth for Showdown!
+        
+        // Log Smart Sync
+        window.logAdminAction("Firebase Smart Sync", `Smart merged ${syncedStats.btWins} Bear Trap Win records and ${syncedStats.btDonations} Donation records into Firebase (Preserving all live Firebase Showdown data)`);
+        if (window.showToast) window.showToast(`🛡️ Smart Sync Complete! Preserved live Firebase Showdown data & merged highest values into Firebase (${syncedStats.btWins} win records, ${syncedStats.btDonations} donation records).`, "success");
 
         if (btn) {
             btn.disabled = false;
-            btn.innerHTML = '⚡ Master Sync Google Sheets ➔ Firebase';
+            btn.innerHTML = '⚡ Master Sync Sheets ➔ Firebase';
         }
     } catch (e) {
-        console.error("Master sync error:", e);
-        if (window.showToast) window.showToast("Error during Master Sync: " + e.message, "error");
+        console.error("Smart sync error:", e);
+        if (window.showToast) window.showToast("Error during Smart Sync: " + e.message, "error");
         if (btn) {
             btn.disabled = false;
-            btn.innerHTML = '⚡ Master Sync Google Sheets ➔ Firebase';
+            btn.innerHTML = '⚡ Master Sync Sheets ➔ Firebase';
         }
     }
 };
-
 
 window.logAdminAction = async (actionType, details, targetPlayer = '') => {
     try {

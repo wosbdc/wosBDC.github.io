@@ -1,3 +1,8 @@
+## [1.34.1] - 2026-07-23
+### Smart Non-Destructive Master Sync & Showdown Protection
+- **Showdown Live Data Protection**: Updated `syncAllSheetsToFirebase()` to completely bypass and protect active Firebase Showdown data (`showdown/` node), guaranteeing zero overwrites of live daily Showdown scores or MVP progress.
+- **Math.max() Conflict Resolution**: Used `Math.max()` value comparison for Bear Trap wins and donations, ensuring that whichever database has the higher/newer totals is preserved in Firebase without overwriting newer Firebase entries.
+
 ## [1.34.0] - 2026-07-23
 ### Firebase Primary Database & One-Click Master Sync
 - **Firebase Primary Database Architecture**: Made Firebase Realtime Database the primary source of truth for all alliance leaderboards, event wins, and donations.
