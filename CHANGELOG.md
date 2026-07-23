@@ -1,3 +1,9 @@
+## [1.30.0] - 2026-07-22
+### Added
+- **Add/Remove Toggle**: Added a dropdown toggle to the Multi-BT Donations tool, allowing admins to easily switch between adding and removing amounts.
+### Changed
+- **Reset Player Tool**: Modified the Reset Player tool so that it now completely deletes the player's node from the database instead of setting it to 0. This ensures ghost entries (like deleted players) are completely removed from the leaderboard rather than lingering with a score of 0.
+
 ## [1.29.99] - 2026-07-22
 ### Added
 - **Reset Player Tool**: Added a dedicated "Reset Player" tool inside the Bear Trap Admin page. This allows admins to easily wipe a player's Bear Trap donations (both Current and All-Time) back to 0 without having to calculate negative amounts.
