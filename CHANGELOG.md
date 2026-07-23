@@ -1,3 +1,8 @@
+## [1.34.0] - 2026-07-23
+### Firebase Primary Database & One-Click Master Sync
+- **Firebase Primary Database Architecture**: Made Firebase Realtime Database the primary source of truth for all alliance leaderboards, event wins, and donations.
+- **One-Click Master Sync (`syncAllSheetsToFirebase`)**: Added `⚡ Master Sync Sheets ➔ Firebase` tool under `Menu | Admin ➔ System & Roster Tools`. One click reads all historical Google Sheets tables (`LeaderBoards`, `Showdown History`) and populates/seeds Firebase Realtime Database nodes (`beartrap_wins`, `beartrap_donations`, `showdown_history`), permanently migrating Firebase into the primary DB.
+
 ## [1.33.9] - 2026-07-23
 ### Fix Bear Trap Roster Overwrite (Safe Row Merge)
 - **Roster Loss Fix**: Updated Bear Trap leaderboard rendering in `views.leaderboards()` so native Firebase `beartrap_wins` merge cleanly on top of Google Sheets historical player rows instead of completely overwriting `board.rows`. Preserves all historical alliance players on Bear Trap 1, Bear Trap 2, and All-Time tables.
