@@ -1,3 +1,7 @@
+## [1.37.2] - 2026-07-23
+### Clean GitHub Actions Deployment Workflow
+- **Clean GitHub Actions Runner**: Updated `.github/workflows/deploy.yml` with clean standard Node 24 setup (`node-version: '24'`), removing legacy environment flags to prevent GitHub Actions runner annotations.
+
 ## [1.37.1] - 2026-07-23
 ### Smartphone Bottom App Navigation Dock
 - **Dedicated Smartphone Mobile Dock (`#mobileNavDock`)**: Added a fixed mobile app navigation dock for smartphones (`🏠 Home`, `👤 Chief's`, `🏆 Boards`, `⚔️ Events`, `⚙️ Settings`).
