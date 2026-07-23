@@ -1,3 +1,7 @@
+## [1.31.3] - 2026-07-23
+### Showdown UI Improvements
+- **Alliance Progress Table Styling**: Removed green background block highlights from table cells. Winning daily and total scores between Our Alliance and Enemy Alliance are now highlighted purely with green text color, keeping the background clean.
+
 ## [1.31.2] - 2026-07-23
 ### Maintenance Script & Reliability
 - **Maintenance Script**: Added `Run_Weekly_Maintenance.bat` for one-click automated backups, security audits, and production build checks.

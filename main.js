@@ -8161,7 +8161,7 @@ html += `</select>
            
            titleRightHtml = `
               <div style="background: linear-gradient(135deg, rgba(255,215,0,0.1) 0%, rgba(255,215,0,0.02) 100%); border: 1px solid rgba(255,215,0,0.3); border-radius: 12px; padding: 15px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; box-shadow: 0 4px 15px rgba(255,215,0,0.05);">
-                <div style="width: 50px; height: 50px; border-radius: 50%; border: 2px solid #FFD700; overflow: hidden; flex-shrink: 0; box-shadow: 0 0 10px rgba(255,215,0,0.2);">
+                  <div style="width: 50px; height: 50px; border-radius: 50%; border: 2px solid #FFD700; overflow: hidden; flex-shrink: 0; box-shadow: 0 0 10px rgba(255,215,0,0.2);">
                   <img src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='images/default.png';">
                 </div>
                 <div style="flex: 1; text-align: left;">
@@ -8183,29 +8183,35 @@ html += `</select>
           <th>Alliance's Showdown</th><th>Total</th><th>Day 1</th><th>Day 2</th><th>Day 3</th><th>Day 4</th><th>Day 5</th><th>Day 6</th>
        </tr></thead><tbody>`;
        
+       // Determine Total winner
+       let enemyTotalStyle = "font-weight:bold;";
+       let ourTotalStyle = "font-weight:bold;";
+       if (enemyTotal > 0 || ourScores.total > 0) {
+           if (enemyTotal > ourScores.total) enemyTotalStyle += " color:#10b981;";
+           else if (ourScores.total > enemyTotal) ourTotalStyle += " color:#10b981;";
+       }
+
        // Enemy Row
-       allianceCard += `<tr><td style="font-weight:bold;">${enemyAlliance.name || 'Enemy Alliance'}</td><td style="font-weight:bold;">${enemyTotal.toLocaleString()}</td>`;
+       allianceCard += `<tr><td style="font-weight:bold;">${enemyAlliance.name || 'Enemy Alliance'}</td><td style="${enemyTotalStyle}">${enemyTotal.toLocaleString()}</td>`;
        for(let i=1; i<=6; i++) {
            let eScore = enemyAlliance.scores['d'+i] || 0;
            let oScore = ourScores['d'+i] || 0;
            let style = "";
            if (eScore > 0 || oScore > 0) {
-              if (oScore > eScore) style = "background:rgba(16,185,129,0.15);";
-              else if (oScore < eScore) style = "background:rgba(239,68,68,0.15);";
+              if (eScore > oScore) style = "color:#10b981; font-weight:bold;";
            }
            allianceCard += `<td style="${style}">${eScore > 0 ? eScore.toLocaleString() : ''}</td>`;
        }
        allianceCard += `</tr>`;
        
        // Our Row
-       allianceCard += `<tr><td style="font-weight:bold;">Our Alliance</td><td style="font-weight:bold;">${ourScores.total.toLocaleString()}</td>`;
+       allianceCard += `<tr><td style="font-weight:bold;">Our Alliance</td><td style="${ourTotalStyle}">${ourScores.total.toLocaleString()}</td>`;
        for(let i=1; i<=6; i++) {
            let eScore = enemyAlliance.scores['d'+i] || 0;
            let oScore = ourScores['d'+i] || 0;
            let style = "font-weight:bold;";
            if (eScore > 0 || oScore > 0) {
-              if (oScore > eScore) style += " background:rgba(16,185,129,0.15); color:#10b981;";
-              else if (oScore < eScore) style += " background:rgba(239,68,68,0.15); color:#ef4444;";
+              if (oScore > eScore) style += " color:#10b981;";
            }
            allianceCard += `<td style="${style}">${oScore > 0 ? oScore.toLocaleString() : ''}</td>`;
        }
@@ -8224,8 +8230,7 @@ html += `</select>
            let oScore = ourScores['d'+i] || 0;
            let style = "font-weight:bold;";
            if (eScore > 0 || oScore > 0) {
-              if (oScore > eScore) style += " background:rgba(16,185,129,0.15); color:#10b981;";
-              else if (oScore < eScore) style += " background:rgba(239,68,68,0.15); color:#ef4444;";
+              if (oScore > eScore) style += " color:#10b981;";
            }
            allianceCard += `<td style="${style}">${escapeHTML(w)}</td>`;
        }
