@@ -1,3 +1,7 @@
+## [1.32.6] - 2026-07-23
+### Showdown Page Container ID Fix
+- **Container Target Fix**: Corrected element container target in `views.showdown()` from `mainContent` to `app` (`app.innerHTML = html`), resolving null container runtime error when loading `Menu | Events | Showdown Page`.
+
 ## [1.32.5] - 2026-07-23
 ### Events Tab Showdown Daily MVP & Tie Enhancements
 - **Daily MVP Auto-Detection**: Updated `menu | events | showdown page` (`views.showdown()`) so the MVP header banner automatically tracks the winner of the **latest active played day** (e.g. `👑 DAY 3 MVP` ➔ `ThaDwarf`).

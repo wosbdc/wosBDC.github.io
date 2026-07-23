@@ -8364,7 +8364,7 @@ html += `</select>
        playersCard += `</tbody></table></div></div>`;
        
        html += allianceCard + playersCard + `</div>`;
-       document.getElementById('mainContent').innerHTML = html;
+       app.innerHTML = html;
        
     } catch(e) { renderError(e.message); }
   },
