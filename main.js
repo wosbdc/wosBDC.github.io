@@ -7499,8 +7499,7 @@ html += `</select>
               `;
           }
 
-          const showAllLive = (filterString && filterString.toLowerCase() === 'showdown');
-          const liveDisplayList = showAllLive ? players : players.slice(0, 10);
+          const liveDisplayList = players.slice(0, 4);
 
           liveShowdownHtml = `<div class="card" style="flex: 1 1 0px; min-width: 300px;"><div class="card-title">Current - Showdown Leaderboard (${players.length})</div>
           ${mvpBannerHtml}

@@ -1,3 +1,7 @@
+## [1.29.95] - 2026-07-22
+### Changed
+- **Showdown Leaderboards Length**: Reduced the displayed rows on the Showdown Leaderboards page for both the Current Showdown and All-Time Showdown leaderboards to only show the Top 4 players instead of Top 10 to keep the display concise.
+
 ## [1.29.94] - 2026-07-22
 ### Fixed
 - **Multi-BT Donations Bug**: Fixed an issue in the older Bear Trap admin panel where clicking the 'X' button to remove a newly added donation row or attempting to submit the form would unintentionally delete the entire donations container, preventing R4/R5 managers from adding batch Bear Trap donations.
