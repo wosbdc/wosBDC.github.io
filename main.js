@@ -6865,7 +6865,8 @@ window.resetBearTrapEvent = async () => {
       
       let completed = 0;
       let resultsHTML = "<div style='text-align:left; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); padding:10px; border-radius:6px; color:var(--success); font-size:13px;'><strong>Results:</strong><br>";
-      
+      let processedSummaries = [];
+
       for (const entry of entries) {
          try {
            const addAmt = Number(entry.amount) || 0;
@@ -6889,6 +6890,7 @@ window.resetBearTrapEvent = async () => {
            const donToken = await getAuthToken();
            fetch(`${API_BASE_URL}?api=addDonation&name=${encodeURIComponent(finalName)}&amount=${encodeURIComponent(entry.amount)}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(donToken)}`).catch(() => null);
            
+           processedSummaries.push(`${finalName} (+${addAmt.toLocaleString()} ➔ New Total: ${donData.current.toLocaleString()})`);
            resultsHTML += `✅ <b>${finalName}</b>: +${addAmt.toLocaleString()} (New Current Total: ${donData.current.toLocaleString()})<br>`;
          } catch(e) {
            resultsHTML += `❌ <b>${entry.name}</b>: Error updating donation: ${e.message}<br>`;
@@ -6900,7 +6902,7 @@ window.resetBearTrapEvent = async () => {
       resultsHTML += "</div>";
       statusDiv.innerHTML = resultsHTML;
 
-      const playerSummary = entries.map(e => `${e.name} (+${Number(e.amount).toLocaleString()})`).join(', ');
+      const playerSummary = processedSummaries.length > 0 ? processedSummaries.join(', ') : entries.map(e => `${e.name} (+${Number(e.amount).toLocaleString()})`).join(', ');
       window.logAdminAction("Bear Trap Donations Added", `Added multi-donation batch for ${entries.length} player(s)`, playerSummary);
       
       // Reset form

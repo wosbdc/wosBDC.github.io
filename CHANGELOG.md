@@ -1,3 +1,7 @@
+## [1.35.6] - 2026-07-23
+### New Total Display Restored in Bear Trap Audit Log
+- **New Total Log Summary Restored**: Updated `submitBeartrapDonations` so that Bear Trap donation audit log entries explicitly display the player's updated total score (e.g. `(BrianDCox (+1 ➔ New Total: 10))`) in the Admin Log feed.
+
 ## [1.35.5] - 2026-07-23
 ### Case-Insensitive Player Search & Roster Fallback
 - **Case-Insensitive Search**: Updated `window.searchPlayerFull()` to perform case-insensitive matching across all searches (e.g. `thadwarf`, `THADWARF`, `ThaDwarf`).
