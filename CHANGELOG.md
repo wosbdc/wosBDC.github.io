@@ -1,3 +1,13 @@
+## [1.44.0] - 2026-07-23
+### Modernized Polar Terrors Tracker (Same Treatment as BT Donations Tracker)
+- **Compact 1-Tap Status Badges**: Replaced bulky `[ YES ] [ NO ]` dual-button toggle with a single compact pill badge (`✅ Done` / `❌ Missing`) that toggles on tap.
+- **Filter Tabs**: Added `[ ALL ] [ ❌ MISSING ONLY ] [ ✅ DONE ONLY ]` interactive filter tabs with `📋 Copy Missing List` button.
+- **Removed Large Text Box**: Eliminated the `Missing Signups` text box card in favor of filter-based browsing.
+- **Column Renamed**: Changed table column header from `Donated` to **`Status`**.
+- **Labels Updated**: Changed stats from `Donated (YES)` / `Response Rate` to `Done (YES)` / `Completion Rate`.
+- **Activity Matrix Link**: Added `📊 Activity Matrix ➔` button in the header bar linking to `views.admin('tab-logs')`.
+- **Widescreen Layout**: Expanded container max-width to `1600px` for better widescreen use.
+
 ## [1.43.2] - 2026-07-23
 ### Capped Donation Leaderboards to Top 4
 - **All-Time Bear Trap Donations Leaderboard**: Now displays Top 4 only.

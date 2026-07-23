@@ -5938,40 +5938,35 @@ html += `</select>
         let totalCount = rosterList.length;
         let yesCount = 0;
         let noCount = 0;
-        let missingNames = [];
 
         rosterList.forEach(p => {
             let gIdStr = p.gameId.toString().trim();
             let record = polarData[gIdStr];
-            let isSignedUp = record && record.signedUp;
-            if (isSignedUp) {
+            let isDone = record && record.signedUp;
+            if (isDone) {
                 yesCount++;
             } else {
                 noCount++;
-                missingNames.push(p.name);
             }
         });
 
-        let percentSignedUp = totalCount > 0 ? Math.round((yesCount / totalCount) * 100) : 0;
+        let percentDone = totalCount > 0 ? Math.round((yesCount / totalCount) * 100) : 0;
 
         let html = `
         <div style="background:var(--bg-main); min-height:100vh; font-family:var(--font-family); color:var(--text-main);">
           <div style="background:linear-gradient(135deg, #0ea5e9, #0284c7); padding:20px; box-shadow:0 2px 10px rgba(0,0,0,0.1); display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:100;">
             <div style="display:flex; align-items:center; gap:15px;">
-              <button onclick="views.admin('tab-indev')" style="background:rgba(255,255,255,0.2); border:none; color:#fff; cursor:pointer; font-size:18px; padding:8px 12px; border-radius:8px; transition:0.2s;">⬅ Back to Admin</button>
+              <button onclick="views.admin('tab-indev')" style="background:rgba(255,255,255,0.2); border:none; color:#fff; cursor:pointer; font-size:18px; padding:8px 12px; border-radius:8px; transition:0.2s;">⬅ Back</button>
               <h2 style="margin:0; color:#fff; font-size:1.3em;">🐻‍❄️ Polar Terrors Tracker</h2>
             </div>
+            <button onclick="views.admin('tab-logs')" style="background:rgba(255,255,255,0.2); border:none; color:#fff; cursor:pointer; font-size:13px; padding:8px 14px; border-radius:8px; font-weight:bold; transition:0.2s;">📊 Activity Matrix ➔</button>
           </div>
 
-          <div style="padding:20px; max-width:1000px; margin:0 auto;">
-            
-            <button onclick="views.admin('tab-logs')" style="background:linear-gradient(135deg, #a855f7, #9333ea); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; box-shadow:0 4px 12px rgba(168,85,247,0.3); margin-bottom: 20px; transition: transform 0.2s ease;">
-              📊 Open Roster Event Activity Matrix ➔
-            </button>
+          <div style="padding:20px; max-width:1600px; margin:0 auto;">
 
             <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:15px; margin-bottom:20px;">
               <div class="card" style="text-align:center;">
-                <div style="font-size:13px; color:var(--text-muted); margin-bottom:5px;">Donated (YES)</div>
+                <div style="font-size:13px; color:var(--text-muted); margin-bottom:5px;">Done (YES)</div>
                 <div style="font-size:24px; font-weight:bold; color:var(--success);" id="pt-yes-count">${yesCount}</div>
               </div>
               <div class="card" style="text-align:center;">
@@ -5979,51 +5974,45 @@ html += `</select>
                 <div style="font-size:24px; font-weight:bold; color:var(--danger);" id="pt-no-count">${noCount}</div>
               </div>
               <div class="card" style="text-align:center;">
-                <div style="font-size:13px; color:var(--text-muted); margin-bottom:5px;">Response Rate</div>
-                <div style="font-size:24px; font-weight:bold; color:var(--accent);" id="pt-percent">${percentSignedUp}%</div>
-              </div>
-            </div>
-
-            <div class="card" style="margin-bottom:20px;">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                <h3 style="margin:0; font-size:1.1em;">Missing Signups (${noCount})</h3>
-                <button onclick="
-                  const text = document.getElementById('pt-missing-names').innerText;
-                  navigator.clipboard.writeText(text).then(() => {
-                    if(window.showToast) window.showToast('Copied missing names to clipboard!', 'success');
-                  });
-                " style="background:var(--accent); color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:13px;">📋 Copy List</button>
-              </div>
-              <div id="pt-missing-names" style="font-family:monospace; background:var(--bg-main); padding:15px; border-radius:8px; border:1px solid var(--border); max-height:150px; overflow-y:auto; color:var(--text-muted); line-height:1.6; word-break:break-all;">
-                ${missingNames.length > 0 ? missingNames.join(', ') : 'Everyone has donated! 🎉'}
+                <div style="font-size:13px; color:var(--text-muted); margin-bottom:5px;">Completion Rate</div>
+                <div style="font-size:24px; font-weight:bold; color:var(--accent);" id="pt-percent">${percentDone}%</div>
               </div>
             </div>
 
             <div class="card">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
                 <h3 style="margin:0; font-size:1.1em;">Roster Status (${totalCount})</h3>
                 <input type="text" id="ptSearch" placeholder="🔍 Search name..." onkeyup="window.filterPolarTerrorsTable()" style="padding:8px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:14px; width:200px;">
               </div>
+
+              <div style="display:flex; gap:8px; margin-bottom:15px; flex-wrap:wrap; align-items:center;">
+                <button id="ptFilterAll" onclick="window.setPtFilter('all')" style="padding:6px 14px; border-radius:20px; border:1px solid var(--accent); background:var(--accent); color:#fff; cursor:pointer; font-size:13px; font-weight:bold;">ALL</button>
+                <button id="ptFilterMissing" onclick="window.setPtFilter('missing')" style="padding:6px 14px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--text-muted); cursor:pointer; font-size:13px; font-weight:bold;">❌ MISSING ONLY</button>
+                <button id="ptFilterDone" onclick="window.setPtFilter('done')" style="padding:6px 14px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--text-muted); cursor:pointer; font-size:13px; font-weight:bold;">✅ DONE ONLY</button>
+                <button onclick="window.copyPtMissingList()" style="padding:6px 14px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--text-muted); cursor:pointer; font-size:13px; font-weight:bold; margin-left:auto;">📋 Copy Missing List</button>
+              </div>
+
               <div style="overflow-x:auto;">
                 <table style="width:100%; border-collapse:collapse; min-width:300px;">
                   <thead>
                     <tr style="background:var(--bg-main); border-bottom:2px solid var(--border);">
                       <th style="padding:12px; text-align:left; font-weight:bold; color:var(--text-muted); font-size:13px; text-transform:uppercase;">Chief Name</th>
-                      <th style="padding:12px; text-align:center; font-weight:bold; color:var(--text-muted); font-size:13px; text-transform:uppercase;">Donated</th>
+                      <th style="padding:12px; text-align:center; font-weight:bold; color:var(--text-muted); font-size:13px; text-transform:uppercase;">Status</th>
                     </tr>
                   </thead>
                   <tbody id="ptTableBody">
                     ${rosterList.map(p => {
                        let gIdStr = p.gameId.toString().trim();
-                       let isSignedUp = polarData[gIdStr] ? polarData[gIdStr].signedUp : false;
+                       let isDone = polarData[gIdStr] ? polarData[gIdStr].signedUp : false;
+                       let badgeBg = isDone ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)';
+                       let badgeColor = isDone ? '#10b981' : '#ef4444';
+                       let badgeBorder = isDone ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)';
+                       let badgeText = isDone ? '✅ Done' : '❌ Missing';
                        return `
-                       <tr class="pt-row" data-name="${escapeHTML(p.name.toLowerCase())}" style="border-bottom:1px solid var(--border);">
+                       <tr class="pt-row" data-name="${escapeHTML(p.name.toLowerCase())}" data-status="${isDone ? 'done' : 'missing'}" style="border-bottom:1px solid var(--border);">
                          <td style="padding:12px; font-weight:bold; color:var(--text-main);">${escapeHTML(p.name)}</td>
                          <td style="padding:12px; text-align:center;">
-                           <div style="display:inline-flex; border-radius:8px; overflow:hidden; border:1px solid var(--border);">
-                             <button onclick="window.onPtToggle('${gIdStr}', true, this)" style="border:none; padding:8px 16px; font-weight:bold; cursor:pointer; background:${isSignedUp ? 'var(--success)' : 'transparent'}; color:${isSignedUp ? '#fff' : 'var(--text-muted)'}; transition:0.2s; width:80px;">YES</button>
-                             <button onclick="window.onPtToggle('${gIdStr}', false, this)" style="border:none; padding:8px 16px; font-weight:bold; cursor:pointer; background:${!isSignedUp ? 'var(--danger)' : 'transparent'}; color:${!isSignedUp ? '#fff' : 'var(--text-muted)'}; transition:0.2s; width:80px;">NO</button>
-                           </div>
+                           <button onclick="window.onPtToggleSingle('${gIdStr}', this)" style="background:${badgeBg}; color:${badgeColor}; border:1px solid ${badgeBorder}; padding:6px 16px; border-radius:20px; cursor:pointer; font-weight:bold; font-size:13px; min-width:85px; transition:all 0.2s ease;">${badgeText}</button>
                          </td>
                        </tr>
                        `;
@@ -6037,52 +6026,99 @@ html += `</select>
 
         app.innerHTML = html;
 
-        window.ptRosterList = rosterList; 
-        
+        window.ptRosterList = rosterList;
+        window.currentPtFilter = 'all';
+
+        window.setPtFilter = (filter) => {
+            window.currentPtFilter = filter;
+            const allBtns = { all: document.getElementById('ptFilterAll'), missing: document.getElementById('ptFilterMissing'), done: document.getElementById('ptFilterDone') };
+            Object.entries(allBtns).forEach(([key, btnEl]) => {
+                if (!btnEl) return;
+                btnEl.style.border = key === filter ? '1px solid var(--accent)' : '1px solid var(--border)';
+                btnEl.style.background = key === filter ? 'var(--accent)' : 'transparent';
+                btnEl.style.color = key === filter ? '#fff' : 'var(--text-muted)';
+            });
+            window.filterPolarTerrorsTable();
+        };
+
         window.filterPolarTerrorsTable = () => {
-            const q = document.getElementById('ptSearch').value.toLowerCase().trim();
+            const q = (document.getElementById('ptSearch')?.value || '').toLowerCase().trim();
+            const filter = window.currentPtFilter || 'all';
             document.querySelectorAll('.pt-row').forEach(row => {
                 const name = row.getAttribute('data-name');
-                row.style.display = (!q || name.includes(q)) ? '' : 'none';
+                const status = row.getAttribute('data-status');
+                let matchSearch = !q || name.includes(q);
+                let matchFilter = filter === 'all' || (filter === 'missing' && status === 'missing') || (filter === 'done' && status === 'done');
+                row.style.display = (matchSearch && matchFilter) ? '' : 'none';
             });
         };
 
-        window.onPtToggle = async (gameId, willSign, btnElement) => {
-            const container = btnElement.parentElement;
-            const buttons = container.querySelectorAll('button');
-            
-            buttons[0].style.background = willSign ? 'var(--success)' : 'transparent';
-            buttons[0].style.color = willSign ? '#fff' : 'var(--text-muted)';
-            
-            buttons[1].style.background = !willSign ? 'var(--danger)' : 'transparent';
-            buttons[1].style.color = !willSign ? '#fff' : 'var(--text-muted)';
+        window.copyPtMissingList = () => {
+            const missingList = [];
+            document.querySelectorAll('.pt-row').forEach(row => {
+                if (row.getAttribute('data-status') === 'missing') {
+                    const nameCell = row.querySelector('td');
+                    if (nameCell) missingList.push(nameCell.textContent.trim());
+                }
+            });
+            if (missingList.length === 0) {
+                if (window.showToast) window.showToast('Everyone is done! 🎉', 'success');
+                return;
+            }
+            const text = missingList.join(', ');
+            navigator.clipboard.writeText(text).then(() => {
+                if (window.showToast) window.showToast(`Copied ${missingList.length} missing player(s) to clipboard!`, 'success');
+            });
+        };
+
+        window.onPtToggleSingle = async (gameId, btnElement) => {
+            const row = btnElement.closest('tr');
+            const currentStatus = row.getAttribute('data-status');
+            const willSign = currentStatus === 'missing';
+
+            // Optimistic UI update
+            if (willSign) {
+                btnElement.textContent = '✅ Done';
+                btnElement.style.background = 'rgba(16,185,129,0.15)';
+                btnElement.style.color = '#10b981';
+                btnElement.style.borderColor = 'rgba(16,185,129,0.3)';
+                row.setAttribute('data-status', 'done');
+            } else {
+                btnElement.textContent = '❌ Missing';
+                btnElement.style.background = 'rgba(239,68,68,0.15)';
+                btnElement.style.color = '#ef4444';
+                btnElement.style.borderColor = 'rgba(239,68,68,0.3)';
+                row.setAttribute('data-status', 'missing');
+            }
 
             const ok = await window.togglePolarTerrorsStatus(gameId, willSign);
             if (!ok) {
                 if(window.showToast) window.showToast("Failed to sync to Firebase", "error");
-                buttons[0].style.background = !willSign ? 'var(--success)' : 'transparent';
-                buttons[0].style.color = !willSign ? '#fff' : 'var(--text-muted)';
-                buttons[1].style.background = willSign ? 'var(--danger)' : 'transparent';
-                buttons[1].style.color = willSign ? '#fff' : 'var(--text-muted)';
+                // Revert
+                if (!willSign) {
+                    btnElement.textContent = '✅ Done';
+                    btnElement.style.background = 'rgba(16,185,129,0.15)';
+                    btnElement.style.color = '#10b981';
+                    btnElement.style.borderColor = 'rgba(16,185,129,0.3)';
+                    row.setAttribute('data-status', 'done');
+                } else {
+                    btnElement.textContent = '❌ Missing';
+                    btnElement.style.background = 'rgba(239,68,68,0.15)';
+                    btnElement.style.color = '#ef4444';
+                    btnElement.style.borderColor = 'rgba(239,68,68,0.3)';
+                    row.setAttribute('data-status', 'missing');
+                }
             } else {
-                let pData = await window.fetchPolarTerrorsData();
+                // Update counters
                 let newYes = 0;
                 let newNo = 0;
-                let newMissing = [];
-                window.ptRosterList.forEach(rp => {
-                    let st = pData[rp.gameId.toString().trim()];
-                    if (st && st.signedUp) newYes++;
-                    else {
-                        newNo++;
-                        newMissing.push(rp.name);
-                    }
+                document.querySelectorAll('.pt-row').forEach(r => {
+                    if (r.getAttribute('data-status') === 'done') newYes++;
+                    else newNo++;
                 });
-                
                 document.getElementById('pt-yes-count').textContent = newYes;
                 document.getElementById('pt-no-count').textContent = newNo;
                 document.getElementById('pt-percent').textContent = window.ptRosterList.length > 0 ? Math.round((newYes / window.ptRosterList.length) * 100) + '%' : '0%';
-                
-                document.getElementById('pt-missing-names').innerText = newMissing.length > 0 ? newMissing.join(', ') : 'Everyone has donated! 🎉';
             }
         };
 
