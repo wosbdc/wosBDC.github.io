@@ -1,3 +1,7 @@
+## [1.32.7] - 2026-07-23
+### Leaderboards Shortcut Button on Showdown Event Page
+- **Leaderboards Shortcut Button**: Added a metallic gold `🏆 Showdown Leaderboards →` button at the top header of `Menu | Events | Showdown Page` (`views.showdown()`) that instantly navigates to `views.leaderboards('showdown')` in 1 click.
+
 ## [1.32.6] - 2026-07-23
 ### Showdown Page Container ID Fix
 - **Container Target Fix**: Corrected element container target in `views.showdown()` from `mainContent` to `app` (`app.innerHTML = html`), resolving null container runtime error when loading `Menu | Events | Showdown Page`.

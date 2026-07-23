@@ -8266,7 +8266,12 @@ html += `</select>
        }
 
        let allianceCard = `<div class="card">
-          <div class="card-title">⚔️ Alliance Progress</div>${titleRightHtml}
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:15px;">
+            <div class="card-title" style="margin:0;">⚔️ Alliance Progress</div>
+            <button onclick="views.leaderboards('showdown')" style="background: linear-gradient(135deg, rgba(255,215,0,0.15) 0%, rgba(255,215,0,0.05) 100%); border: 1px solid rgba(255,215,0,0.4); color: #FFD700; padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); transition: all 0.2s ease;">
+              🏆 Showdown Leaderboards &rarr;
+            </button>
+          </div>${titleRightHtml}
           <div class="card-table-scroll" style="overflow-x:auto; width:100%; border-radius:8px; border:1px solid var(--border);">
           <table style="min-width:650px; border-collapse:collapse;"><thead><tr>
           <th style="position:sticky; left:0; background:var(--card-bg); z-index:6; box-shadow: 1px 0 0 var(--border);">Alliance's Showdown</th><th style="border-right: 1px solid rgba(255,255,255,0.12); text-align:center;">Total</th>${dayHeadersHtml}
