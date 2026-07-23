@@ -6720,153 +6720,54 @@ html += `</select>
     window.loadBeartrapLog = async () => {
       const logDiv = document.getElementById('beartrapLog');
       if (!logDiv) return;
-      logDiv.innerHTML = '<span style="color:var(--text-muted)">Loading activity...</span>';
+      logDiv.innerHTML = '<span style="color:var(--text-muted)">Loading Firebase logs...</span>';
       
-      let combinedLogs = [];
-
-      // 1. Fetch Firebase admin_logs for Bear Trap actions
       try {
         const fbSnap = await get(ref(db, 'admin_logs'));
         if (fbSnap.exists() && fbSnap.val()) {
           const logsData = fbSnap.val();
-          Object.values(logsData).forEach(item => {
-            if (item.action && item.action.toLowerCase().includes('bear trap')) {
-              combinedLogs.push({
-                type: 'system',
-                action: item.action,
-                details: item.details || '',
-                admin: item.admin || item.email || 'Admin',
-                timestamp: item.timestamp || Date.now(),
-                timeStr: item.dateStr ? `${item.dateStr} ${item.timeStr || ''}` : new Date(item.timestamp).toLocaleString()
-              });
-            }
-          });
-        }
-      } catch(e) {
-        console.warn("Could not fetch Firebase admin_logs:", e);
-      }
+          const btLogs = Object.values(logsData)
+            .filter(item => {
+              if (!item || !item.action) return false;
+              const act = item.action.toLowerCase();
+              const det = (item.details || '').toLowerCase();
+              return act.includes('bear trap') || act.includes('beartrap') || act.includes('bt') || det.includes('bear trap');
+            })
+            .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 
-      // 2. Fetch Google Sheets donation logs
-      try {
-        const adminLogToken = await getAuthToken();
-        const res = await fetch(`${API_BASE_URL}?api=adminLog&token=${encodeURIComponent(adminLogToken)}`).then(r => r.json());
-        if (res.success && Array.isArray(res.data)) {
-          res.data.forEach(log => {
-            combinedLogs.push({
-              type: 'donation',
-              name: log.name,
-              amount: log.amount,
-              newTotal: log.newTotal,
-              admin: log.email || 'Admin',
-              timeStr: log.timestamp,
-              timestamp: new Date(log.timestamp).getTime() || Date.now()
-            });
-          });
-        }
-      } catch(e) {
-        console.warn("Could not fetch GS adminLog:", e);
-      }
+          if (btLogs.length > 0) {
+            let html = '';
+            btLogs.slice(0, 40).forEach(log => {
+              let badgeColor = 'var(--accent)';
+              if (log.action.includes('Reset') || log.action.includes('Wipe')) badgeColor = 'var(--danger)';
+              else if (log.action.includes('Crown')) badgeColor = '#FFD700';
+              else if (log.action.includes('Donation')) badgeColor = 'var(--success)';
 
-      // Sort by timestamp descending
-      combinedLogs.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-
-      if (combinedLogs.length > 0) {
-        let html = '';
-        combinedLogs.slice(0, 30).forEach(log => {
-          if (log.type === 'system') {
-            let badgeColor = 'var(--accent)';
-            if (log.action.includes('Reset')) badgeColor = 'var(--danger)';
-            else if (log.action.includes('Crown')) badgeColor = '#FFD700';
-            
-            html += `
-              <div style="padding:8px 0; border-bottom:1px solid var(--border);">
-                <div style="color:var(--text-main); font-weight:bold; display:flex; align-items:center; gap:6px;">
-                  <span style="color:${badgeColor};">[${log.action}]</span> ${log.details}
+              const timeDisplay = log.dateStr ? `${log.dateStr} ${log.timeStr || ''}` : new Date(log.timestamp).toLocaleString();
+              
+              html += `
+                <div style="padding:10px 0; border-bottom:1px solid var(--border);">
+                  <div style="color:var(--text-main); font-weight:bold; font-size:13px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                    <span style="background:rgba(255,255,255,0.05); border:1px solid ${badgeColor}; color:${badgeColor}; padding:2px 8px; border-radius:4px; font-size:11px;">${log.action}</span>
+                    <span>${log.details}</span>
+                  </div>
+                  <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">
+                    ${timeDisplay} • By <span style="color:var(--accent); font-weight:bold;">${log.admin || log.email || 'Admin'}</span>
+                  </div>
                 </div>
-                <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${log.timeStr} • By ${log.admin}</div>
-              </div>
-            `;
+              `;
+            });
+            logDiv.innerHTML = html;
           } else {
-            html += `
-              <div style="padding:8px 0; border-bottom:1px solid var(--border);">
-                <div style="color:var(--text-main);">${log.name} <span style="color:var(--success); font-weight:bold;">+${log.amount}</span> (Total: ${log.newTotal})</div>
-                <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${log.timeStr} • By ${log.admin}</div>
-              </div>
-            `;
+            logDiv.innerHTML = '<span style="color:var(--text-muted)">No Bear Trap activity logged yet.</span>';
           }
-        });
-        logDiv.innerHTML = html;
-      } else {
-        logDiv.innerHTML = '<span style="color:var(--text-muted)">No activity found.</span>';
+        } else {
+          logDiv.innerHTML = '<span style="color:var(--text-muted)">No activity logged yet.</span>';
+        }
+      } catch (e) {
+        console.error("Error reading Bear Trap Firebase logs:", e);
+        logDiv.innerHTML = `<span style="color:var(--danger)">Error loading logs: ${e.message}</span>`;
       }
-    };
-
-    window.submitBeartrapDonations = async () => {
-      const rows = document.querySelectorAll('.beartrap-row');
-      const entries = [];
-      rows.forEach(r => {
-        const name = r.querySelector('.bt-name').value.trim();
-        const amt = r.querySelector('.bt-amount').value.trim();
-        if (name && amt) entries.push({name, amount: amt});
-      });
-      
-      const statusDiv = document.getElementById('beartrapStatus');
-      const submitBtn = document.getElementById('submitBeartrapBtn');
-      if (entries.length === 0) {
-         statusDiv.innerHTML = '<span style="color:var(--danger)">No entries to submit.</span>';
-         return;
-      }
-      
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Processing...';
-      statusDiv.innerHTML = `<span style="color:var(--text-muted)">Processing ${entries.length} entries...</span>`;
-      
-      const adminName = idToNameMap[currentUser.gameId] || "Admin";
-      
-      let completed = 0;
-      let resultsHTML = "<div style='text-align:left; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); padding:10px; border-radius:6px; color:var(--success); font-size:13px;'><strong>Results:</strong><br>";
-      
-      for (const entry of entries) {
-         try {
-           const addAmt = Number(entry.amount) || 0;
-           const donKey = entry.name.toLowerCase().replace(/[^a-z0-9]/g, '_');
-           const donRef = ref(db, `beartrap_donations/${donKey}`);
-           const donSnap = await get(donRef);
-           let donData = donSnap.val() || { name: entry.name, current: 0, allTime: 0 };
-           donData.name = entry.name;
-           donData.current = (donData.current || 0) + addAmt;
-           donData.allTime = (donData.allTime || 0) + addAmt;
-           donData.lastUpdated = Date.now();
-           await set(donRef, donData);
-
-           const donToken = await getAuthToken();
-           fetch(`${API_BASE_URL}?api=addDonation&name=${encodeURIComponent(entry.name)}&amount=${encodeURIComponent(entry.amount)}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(donToken)}`).catch(() => null);
-           
-           resultsHTML += `✅ <b>${entry.name}</b>: +${addAmt.toLocaleString()} (New Current Total: ${donData.current.toLocaleString()})<br>`;
-         } catch(e) {
-           resultsHTML += `❌ <b>${entry.name}</b>: Error updating donation: ${e.message}<br>`;
-         }
-         completed++;
-         statusDiv.innerHTML = `<span style="color:var(--text-muted)">Processed ${completed} of ${entries.length}...</span>`;
-      }
-      
-      resultsHTML += "</div>";
-      statusDiv.innerHTML = resultsHTML;
-      window.logAdminAction("Bear Trap Donations Added", `Added multi-donation batch for ${entries.length} player(s)`, entries.map(e => e.name).join(', '));
-      
-      // Reset form
-      const cont = document.getElementById('beartrapEntries');
-      cont.innerHTML = `
-        <div class="beartrap-row" style="display:flex; gap:10px; margin-bottom:10px;">
-          <input type="text" class="bt-name" list="beartrapRosterDatalist" placeholder="Player Name..." style="flex:2; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);">
-          <input type="number" class="bt-amount" placeholder="Amount..." style="flex:1; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);">
-          <button onclick="this.parentElement.remove()" style="background:var(--danger); color:#fff; border:none; width:40px; border-radius:6px; cursor:pointer; font-weight:bold;">X</button>
-        </div>
-      `;
-      
-      window.loadBeartrapLog();
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Submit All';
     };
 
     window.loadBeartrapLog();

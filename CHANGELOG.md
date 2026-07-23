@@ -1,3 +1,8 @@
+## [1.34.3] - 2026-07-23
+### 100% Firebase Bear Trap Admin Log
+- **Firebase-Exclusive Bear Trap Admin Log**: Switched `loadBeartrapLog()` in `views.beartrap()` to read 100% directly from Firebase Realtime Database (`admin_logs`), completely removing Google Sheets API fetch.
+- **Bear Trap Filtering & Badges**: Filtered log entries strictly for Bear Trap activity (`Bear Trap Reset`, `Bear Trap Champion Crowned`, `Bear Trap Player Reset`, `Bear Trap Donations Added`) with color-coded badges.
+
 ## [1.34.2] - 2026-07-23
 ### Comprehensive 8-Sheet Master Sync
 - **All-Sheet Coverage**: Expanded `syncAllSheetsToFirebase()` to cover ALL 8 Google Sheets:
