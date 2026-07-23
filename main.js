@@ -5909,7 +5909,7 @@ html += `</select>
         app.innerHTML = `<div style="padding:40px; text-align:center; color:var(--danger); font-size:18px;">Error loading Bear Trap Tracker. <br><br> <button onclick="views.adminHub()" style="padding:10px 20px; background:var(--bg-main); border:1px solid var(--border); border-radius:6px; color:var(--text-main); cursor:pointer;">Back to Admin Hub</button></div>`;
     }
   },
-\n  mercenaryAdmin: async () => {
+  mercenaryAdmin: async () => {
     const app = document.getElementById('app');
     if (!app) return;
 
