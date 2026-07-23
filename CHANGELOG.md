@@ -1,3 +1,7 @@
+## [1.32.3] - 2026-07-23
+### Leaderboards Tab Tie Emoji Badge
+- **Tie Emoji Badge**: Added a subtle `🤝` emoji next to rank numbers on `menu | leaderboards | showdown leaderboards` (`views.leaderboards('showdown')`) whenever multiple players share the exact same rank.
+
 ## [1.32.2] - 2026-07-23
 ### Dense In-Order Tie Ranking for Leaderboards Tab
 - **Dense Sequential Ranking**: Updated tie ranking logic on `menu | leaderboards | showdown leaderboards` (`views.leaderboards('showdown')`) so ranks count dynamically in order without skipping numbers (e.g. Rank 1, Rank 1, Rank 2, Rank 3).

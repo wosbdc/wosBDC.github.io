@@ -7592,7 +7592,9 @@ html += `</select>
                       currentLiveRank += 1;
                   }
               }
-              let rankDisplay = currentLiveRank;
+              let isTie = liveDisplayList.filter(o => o.horns === p.horns).length > 1;
+              let tieBadge = isTie ? ' <span style="font-size:11px; opacity:0.85;" title="Tied Rank">🤝</span>' : '';
+              let rankDisplay = `${currentLiveRank}${tieBadge}`;
               liveShowdownHtml += `<tr>
                  <td style="font-weight:bold; color:var(--text-muted);">${rankDisplay}</td>
                  <td>${formatCell(p.name)}</td>
@@ -7683,7 +7685,9 @@ html += `</select>
                           currentAllTimeRank += 1;
                       }
                   }
-                  let rankDisplay = currentAllTimeRank;
+                  let isTie = allTimeDisplayList.filter(o => o.horns === p.horns).length > 1;
+                  let tieBadge = isTie ? ' <span style="font-size:11px; opacity:0.85;" title="Tied Rank">🤝</span>' : '';
+                  let rankDisplay = `${currentAllTimeRank}${tieBadge}`;
                   allTimeShowdownHtml += `<tr>
                      <td style="font-weight:bold; color:var(--text-muted);">${rankDisplay}</td>
                      <td>${formatCell(p.name)}</td>
