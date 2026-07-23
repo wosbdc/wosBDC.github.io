@@ -1,3 +1,7 @@
+## [1.38.1] - 2026-07-23
+### Global Modal Helper Handlers Fix
+- **Global Modal Trigger Fix**: Added `window.openMobileNavModal()`, `window.openThemeModal()`, and `window.openNotificationsModal()` helper handlers so settings action buttons open their respective popups cleanly and reliably across all devices.
+
 ## [1.38.0] - 2026-07-23
 ### Mobile Navigation Settings Modal & Clean Button
 - **Mobile Navigation Quick Button**: Converted the big Mobile Navigation section box into a clean action button (`📱 Mobile Navigation`) inside Settings right alongside `🔔 Push Notifications` and `🎨 Theme Engine`.
