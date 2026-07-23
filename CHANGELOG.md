@@ -1,3 +1,7 @@
+## [1.32.8] - 2026-07-23
+### Modal Popup for Showdown Leaderboards
+- **Leaderboards Modal Popup**: Updated `🏆 Showdown Leaderboards` shortcut button on `Menu | Events | Showdown Page` to open the Showdown Leaderboards inside a sleek, glassmorphic modal popup (`openShowdownLeaderboardModal()`) with a `✕ Close` button, keeping users on the Event page without navigation confusion.
+
 ## [1.32.7] - 2026-07-23
 ### Leaderboards Shortcut Button on Showdown Event Page
 - **Leaderboards Shortcut Button**: Added a metallic gold `🏆 Showdown Leaderboards →` button at the top header of `Menu | Events | Showdown Page` (`views.showdown()`) that instantly navigates to `views.leaderboards('showdown')` in 1 click.
