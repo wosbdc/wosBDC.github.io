@@ -1,12 +1,12 @@
 {
   "name": "wos-dashboard",
   "private": true,
-  "version": "1.35.1",
+  "version": "1.35.2",
   "type": "module",
   "scripts": {
     "dev": "vite --host",
     "start": "vite",
-    "build": "node tools/check_window_bindings.cjs && vite build",
+    "build": "vite build",
     "preview": "vite preview",
     "emergency-sync": "node manual_sync.cjs"
   },

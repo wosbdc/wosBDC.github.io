@@ -1,3 +1,7 @@
+## [1.35.2] - 2026-07-23
+### Fix GitHub Actions Workflow Node Version
+- **GitHub Actions Deployment Fix**: Updated `.github/workflows/deploy.yml` to use `node-version: '22'` (Standard Node LTS) and separated `Audit event bindings` into an explicit pipeline step.
+
 ## [1.35.1] - 2026-07-23
 ### Fix CI/CD GitHub Actions Build Script
 - **Stateless Handler Validator**: Updated `tools/check_window_bindings.cjs` regex checks to be 100% stateless, eliminating global flag statefulness in Node.js GitHub Actions Linux runners and guaranteeing clean deployment passes on GitHub Pages.
