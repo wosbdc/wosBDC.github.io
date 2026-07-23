@@ -1,3 +1,9 @@
+## [1.33.3] - 2026-07-23
+### Category Grouping on Daily Tools Tab
+- **Grouped Daily Tools**: Organized `🛠️ Daily Tools` tab in `Menu | Admin` (`views.admin()`) into 2 clear categories:
+  1. `⚔️ Active Alliance Events`: `🐻 Bear Trap` & `⚔️ ShowDown`
+  2. `⚙️ System & Roster Tools`: `👤 Open Player Database Editor`
+
 ## [1.33.2] - 2026-07-23
 ### Reorganized In-Dev Event Trackers
 - **Button Migration to In-Dev**: Moved `🏆 Alliance Championship`, `⚔️ Mercenary Prestige`, `🐻‍❄️ Polar Terrors Tracker`, and `🐻 Bear Trap Tracker` from `🛠️ Daily Tools` into the **`🧪 In-Dev`** tab, decluttering the Daily Tools view.
