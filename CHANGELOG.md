@@ -1,3 +1,7 @@
+## [1.29.97] - 2026-07-22
+### Added
+- **Combined Showdown Leaderboard**: Updated the All-Time Showdown Leaderboard logic to dynamically combine historical archived scores with live current event scores. Players' active progress (e.g. 1 win) is now immediately added to their historical totals (e.g. 39 wins) resulting in a combined total (40) shown in real time.
+
 ## [1.29.96] - 2026-07-22
 ### Changed
 - **Showdown Leaderboards**: Removed the total player count numbers from the "Current Showdown" and "All-Time Showdown" leaderboard titles for a cleaner look.

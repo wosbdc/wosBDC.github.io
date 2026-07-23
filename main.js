@@ -7528,8 +7528,27 @@ html += `</select>
           if (historyRows.length > 0 || (players && players.length > 0)) {
               let allTimePlayers = calculateAllTimeShowdown(historyRows);
               
-              // Do not combine live active scores with all-time history.
-              // allTimePlayers remains strictly the archived history until manually archived.
+              // Combine live active scores with all-time history
+              let combinedMap = {};
+              allTimePlayers.forEach(p => {
+                  combinedMap[p.name.toLowerCase()] = { name: p.name, horns: p.horns, wins: p.wins, total: p.total };
+              });
+              
+              players.forEach(p => {
+                  let key = p.name.toLowerCase();
+                  if (!combinedMap[key]) {
+                      combinedMap[key] = { name: p.name, horns: 0, wins: 0, total: 0 };
+                  }
+                  combinedMap[key].horns += (p.horns || 0);
+                  combinedMap[key].wins += (p.wins || 0);
+                  combinedMap[key].total += (p.total || 0);
+              });
+              
+              allTimePlayers = Object.values(combinedMap).sort((a, b) => {
+                  if (b.horns !== a.horns) return b.horns - a.horns;
+                  return b.total - a.total;
+              });
+
               
               let allTimeMvpHtml = "";
               if (allTimePlayers.length > 0 && allTimePlayers[0].horns > 0) {
