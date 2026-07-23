@@ -1,3 +1,8 @@
+## [1.39.1] - 2026-07-23
+### Uniform Sidebar Button Styling & User Account Order Adjustment
+- **User Account Promoted Before Preferences**: Moved `👤 User Account` section directly above `📱 Preferences`.
+- **Uniform Button Styling (`.sidebar-action-btn`)**: Applied a unified CSS button class to all buttons across User Account and Preferences cards for consistent padding, fonts, borders, and hover effects.
+
 ## [1.39.0] - 2026-07-23
 ### Reordered Settings Sidebar Sections
 - **Global Timers Promoted to Top**: Moved `🕐 Global Timers` to the absolute top of `#settingsSidebar` as requested.
