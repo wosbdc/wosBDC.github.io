@@ -1,3 +1,8 @@
+## [1.38.0] - 2026-07-23
+### Mobile Navigation Settings Modal & Clean Button
+- **Mobile Navigation Quick Button**: Converted the big Mobile Navigation section box into a clean action button (`📱 Mobile Navigation`) inside Settings right alongside `🔔 Push Notifications` and `🎨 Theme Engine`.
+- **Dedicated Settings Modal**: Clicking `📱 Mobile Navigation` opens a clean popup modal (`#mobileNavModal`) containing the `🖐️ Left-Handed` and `✋ Right-Handed` options.
+
 ## [1.37.5] - 2026-07-23
 ### Removed Bottom Mobile Dock
 - **Removed Unwanted Bottom Dock**: Completely removed the bottom mobile navigation bar (`#mobileNavDock`) from `index.html` as requested, keeping navigation strictly within the top navbar and hamburger menu.
