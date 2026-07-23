@@ -1,3 +1,8 @@
+## [1.42.1] - 2026-07-23
+### Restored Clean Bear Trap Admin Flow & Updated Back Button Target
+- **Admin Hub Daily Tools Restored**: Kept single **`🐻 Bear Trap`** button under `Active Alliance Events` in Admin Hub which opens Multi-BT Donations (`views.beartrap()`).
+- **Updated BT Tracker Back Button**: Updated top-left back button inside BT Donations Tracker to **`⬅ Back to Bear Trap`** so it routes straight back to Multi-BT Donations (`views.beartrap()`).
+
 ## [1.42.0] - 2026-07-23
 ### Promoted BT Donations Tracker & Fixed Reset Player Modal Dropdown
 - **Promoted BT Donations Tracker to Daily Tools**: Added **`🐻 BT Donations Tracker`** directly into the `⚔️ Active Alliance Events` section under `🛠️ Daily Tools` in the Admin Hub for quick management access.

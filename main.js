@@ -4748,8 +4748,7 @@ const views = {
               <p style="margin:0 0 15px 0; font-size:12px; color:var(--text-muted); text-align:left;">Live event management, score tracking, and log recording.</p>
               
               <div style="display:flex; flex-direction:column; gap:12px; align-items:center;">
-                <button onclick="views.bearTrapAdmin()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(16,185,129,0.3);">🐻 BT Donations Tracker</button>
-                <button onclick="views.beartrap()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px;">🐻 Multi-BT Donations</button>
+                <button onclick="views.beartrap()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px;">🐻 Bear Trap</button>
                 <button onclick="views.showdownAdmin()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px;">⚔️ ShowDown</button>
               </div>
             </div>
@@ -6150,7 +6149,7 @@ html += `</select>
         <div style="background:var(--bg-main); min-height:100vh; font-family:var(--font-family); color:var(--text-main);">
           <div style="background:linear-gradient(135deg, #10b981, #059669); padding:20px; box-shadow:0 2px 10px rgba(0,0,0,0.1); display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:100;">
             <div style="display:flex; align-items:center; gap:15px;">
-              <button onclick="views.admin('tab-indev')" style="background:rgba(255,255,255,0.2); border:none; color:#fff; cursor:pointer; font-size:18px; padding:8px 12px; border-radius:8px; transition:0.2s;">⬅ Back to Admin</button>
+              <button onclick="views.beartrap()" style="background:rgba(255,255,255,0.2); border:none; color:#fff; cursor:pointer; font-size:16px; padding:8px 14px; border-radius:8px; transition:0.2s; font-weight:bold;">⬅ Back to Bear Trap</button>
               <h2 style="margin:0; color:#fff; font-size:1.3em;">🐻 BT Donations Tracker</h2>
             </div>
           </div>
@@ -6411,7 +6410,7 @@ html += `</select>
 
     } catch (e) {
         console.error("Bear Trap Admin Error:", e);
-        app.innerHTML = `<div style="padding:40px; text-align:center; color:var(--danger); font-size:18px;">Error loading Bear Trap Tracker. <br><br> <button onclick="views.admin('tab-indev')" style="padding:10px 20px; background:var(--bg-main); border:1px solid var(--border); border-radius:6px; color:var(--text-main); cursor:pointer;">Back to Admin Hub</button></div>`;
+        app.innerHTML = `<div style="padding:40px; text-align:center; color:var(--danger); font-size:18px;">Error loading Bear Trap Tracker. <br><br> <button onclick="views.beartrap()" style="padding:10px 20px; background:var(--bg-main); border:1px solid var(--border); border-radius:6px; color:var(--text-main); cursor:pointer;">Back to Bear Trap</button></div>`;
     }
   },
   mercenaryAdmin: async () => {
