@@ -1,3 +1,7 @@
+## [1.31.5] - 2026-07-23
+### Showdown UX Improvements
+- **Isolated Table Scrolling**: Restricted horizontal scrolling exclusively to the data table container rather than scrolling the outer card or page title. Added sticky left column positioning so alliance names and player rankings remain fixed on screen while scrolling across day columns.
+
 ## [1.31.4] - 2026-07-23
 ### Showdown Alliance Progress Table Enhancements
 - **Gold Winners Styling**: Formatted top player names in the Winners row with metallic gold text (`#FFD700`) without emojis for a clean appearance.

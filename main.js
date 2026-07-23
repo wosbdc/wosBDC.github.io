@@ -8182,10 +8182,11 @@ html += `</select>
            dayHeadersHtml += `<th style="border-right: 1px solid rgba(255,255,255,0.08); text-align:center;"><span style="background:rgba(255,255,255,0.05); padding:3px 10px; border-radius:6px; font-size:11px; text-transform:uppercase; letter-spacing:0.5px;">Day ${i}</span></th>`;
        }
 
-       let allianceCard = `<div class="card" style="overflow-x:auto;">
+       let allianceCard = `<div class="card">
           <div class="card-title">⚔️ Alliance Progress</div>${titleRightHtml}
+          <div class="card-table-scroll" style="overflow-x:auto; width:100%; border-radius:8px; border:1px solid var(--border);">
           <table style="min-width:650px; border-collapse:collapse;"><thead><tr>
-          <th>Alliance's Showdown</th><th style="border-right: 1px solid rgba(255,255,255,0.12); text-align:center;">Total</th>${dayHeadersHtml}
+          <th style="position:sticky; left:0; background:var(--card-bg); z-index:6; box-shadow: 1px 0 0 var(--border);">Alliance's Showdown</th><th style="border-right: 1px solid rgba(255,255,255,0.12); text-align:center;">Total</th>${dayHeadersHtml}
        </tr></thead><tbody>`;
        
        // Determine Total winner
@@ -8197,7 +8198,7 @@ html += `</select>
        }
 
        // Enemy Row
-       allianceCard += `<tr><td style="font-weight:bold;">${enemyAlliance.name || 'Enemy Alliance'}</td><td style="${enemyTotalStyle}">${enemyTotal.toLocaleString()}</td>`;
+       allianceCard += `<tr><td style="font-weight:bold; position:sticky; left:0; background:var(--card-bg); z-index:2; box-shadow: 1px 0 0 var(--border);">${enemyAlliance.name || 'Enemy Alliance'}</td><td style="${enemyTotalStyle}">${enemyTotal.toLocaleString()}</td>`;
        for(let i=1; i<=6; i++) {
            let eScore = enemyAlliance.scores['d'+i] || 0;
            let oScore = ourScores['d'+i] || 0;
@@ -8210,7 +8211,7 @@ html += `</select>
        allianceCard += `</tr>`;
        
        // Our Row
-       allianceCard += `<tr><td style="font-weight:bold;">Our Alliance</td><td style="${ourTotalStyle}">${ourScores.total.toLocaleString()}</td>`;
+       allianceCard += `<tr><td style="font-weight:bold; position:sticky; left:0; background:var(--card-bg); z-index:2; box-shadow: 1px 0 0 var(--border);">Our Alliance</td><td style="${ourTotalStyle}">${ourScores.total.toLocaleString()}</td>`;
        for(let i=1; i<=6; i++) {
            let eScore = enemyAlliance.scores['d'+i] || 0;
            let oScore = ourScores['d'+i] || 0;
@@ -8223,24 +8224,24 @@ html += `</select>
        allianceCard += `</tr>`;
        
        // Horns
-       allianceCard += `<tr><td style="font-weight:bold;">Alliance's Horns</td><td style="border-right: 1px solid rgba(255,255,255,0.12); text-align:center;">${hornsTotal}</td>`;
+       allianceCard += `<tr><td style="font-weight:bold; position:sticky; left:0; background:var(--card-bg); z-index:2; box-shadow: 1px 0 0 var(--border);">Alliance's Horns</td><td style="border-right: 1px solid rgba(255,255,255,0.12); text-align:center;">${hornsTotal}</td>`;
        for(let i=1; i<=6; i++) allianceCard += `<td style="border-right: 1px solid rgba(255,255,255,0.06); text-align:center;">${staticHorns['d'+i]}</td>`;
        allianceCard += `</tr>`;
        
        // Winners
-       allianceCard += `<tr><td style="font-weight:bold;">Winners</td><td style="border-right: 1px solid rgba(255,255,255,0.12);"></td>`;
+       allianceCard += `<tr><td style="font-weight:bold; position:sticky; left:0; background:var(--card-bg); z-index:2; box-shadow: 1px 0 0 var(--border);">Winners</td><td style="border-right: 1px solid rgba(255,255,255,0.12);"></td>`;
        for(let i=1; i<=6; i++) {
            let w = topPlayers['d'+i].name || '';
            let style = "font-weight:bold; color:#FFD700; border-right: 1px solid rgba(255,255,255,0.06); text-align:center;";
            allianceCard += `<td style="${style}">${escapeHTML(w)}</td>`;
        }
-       allianceCard += `</tr></tbody></table></div>`;
+       allianceCard += `</tr></tbody></table></div></div>`;
        
        // 3. Player Rankings
        players.sort((a, b) => b.total - a.total);
        
-       let playersCard = `<div class="card" style="overflow-x:auto;"><div class="card-title">🏆 Player Rankings</div><table style="min-width:700px;"><thead><tr>
-          <th>Ranking</th><th>Name</th><th>Total Score</th><th>Day 1</th><th>Day 2</th><th>Day 3</th><th>Day 4</th><th>Day 5</th><th>Day 6</th>
+       let playersCard = `<div class="card"><div class="card-title">🏆 Player Rankings</div><div class="card-table-scroll" style="overflow-x:auto; width:100%; border-radius:8px; border:1px solid var(--border);"><table style="min-width:700px;"><thead><tr>
+          <th style="position:sticky; left:0; background:var(--card-bg); z-index:6;">Ranking</th><th style="position:sticky; left:60px; background:var(--card-bg); z-index:6; box-shadow: 1px 0 0 var(--border);">Name</th><th>Total Score</th><th>Day 1</th><th>Day 2</th><th>Day 3</th><th>Day 4</th><th>Day 5</th><th>Day 6</th>
        </tr></thead><tbody>`;
        
        players.forEach((p, index) => {
@@ -8261,7 +8262,7 @@ html += `</select>
               <td>${p.d6 > 0 ? p.d6.toLocaleString() : ''}</td>
            </tr>`;
        });
-       playersCard += `</tbody></table></div>`;
+       playersCard += `</tbody></table></div></div>`;
        
        html += allianceCard + playersCard + `</div>`;
        app.innerHTML = html;
