@@ -1,3 +1,7 @@
+## [1.29.98] - 2026-07-22
+### Fixed
+- **Multi-Bear Trap Donations**: Enhanced the error logging for the "Multi-BT Donations" admin tool to print the exact error message to the UI instead of a generic "Error updating donation" message, helping diagnose Firebase permission issues.
+
 ## [1.29.97] - 2026-07-22
 ### Added
 - **Combined Showdown Leaderboard**: Updated the All-Time Showdown Leaderboard logic to dynamically combine historical archived scores with live current event scores. Players' active progress (e.g. 1 win) is now immediately added to their historical totals (e.g. 39 wins) resulting in a combined total (40) shown in real time.

@@ -6405,7 +6405,7 @@ html += `</select>
            
            resultsHTML += `✅ <b>${entry.name}</b>: +${addAmt.toLocaleString()} (New Current Total: ${donData.current.toLocaleString()})<br>`;
          } catch(e) {
-           resultsHTML += `❌ <b>${entry.name}</b>: Error updating donation.<br>`;
+           resultsHTML += `❌ <b>${entry.name}</b>: Error updating donation: ${e.message}<br>`;
          }
          completed++;
          statusDiv.innerHTML = `<span style="color:var(--text-muted)">Processed ${completed} of ${entries.length}...</span>`;
