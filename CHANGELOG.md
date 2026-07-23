@@ -1,3 +1,7 @@
+## [1.33.8] - 2026-07-23
+### Combined Bear Trap Admin Log (Firebase & Google Sheets)
+- **Bear Trap Admin Log Upgrade**: Updated `loadBeartrapLog()` in `views.beartrap()` to query both Firebase Realtime Database (`admin_logs`) and Google Sheets (`api=adminLog`), combining system actions (e.g. `[Bear Trap Reset]`, `[Bear Trap Champion Crowned]`, `[Bear Trap Player Reset]`) with player donation entries into a single, reverse-chronological feed.
+
 ## [1.33.7] - 2026-07-23
 ### Fix Bear Trap Leaderboard Reset Banner Bug
 - **Pending... Banner Fallback Fix**: Removed `&& btWinners[trapNum].name !== "Pending..."` condition in `views.leaderboards()` so that when Bear Trap winners are reset to `"Pending..."` in Firebase by the admin button, the leaderboard header cards accurately display `Pending...` instead of falling back to the #1 player in the Google Sheet table.
