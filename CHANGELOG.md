@@ -1,3 +1,9 @@
+## [1.43.0] - 2026-07-23
+### Fixed Bear Trap & Donations Leaderboards Calculation & Top 4 Capping
+- **All-Time Bear Trap Leaderboard Top 4 Limit**: Capped `All-Time Bear Trap Leaderboard` to **Top 4 ONLY**, filtering for players with Crown wins (`totalWins > 0`).
+- **Renamed & Corrected Donations Leaderboards**: Renamed titles back to **`Current Bear Trap Donations Leaderboard`** and **`All-Time Bear Trap Donations Leaderboard`**.
+- **Fixed Double Counting Bug**: Replaced score additions with `Math.max()` when merging Firebase donation totals with historical sheets data to ensure calculations update live and remain 100% accurate.
+
 ## [1.42.2] - 2026-07-23
 ### Updated Admin Section Heading & Green Bear Trap Button
 - **Updated Section Heading**: Renamed category to **`⚔️ Active Alliance Events Tools`** under `🛠️ Daily Tools`.
