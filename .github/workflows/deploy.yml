@@ -1,5 +1,5 @@
 name: Deploy to GitHub Pages
-
+run-name: ${{ github.event.head_commit.message || format('Manual Deploy by {0}', github.actor) }}
 on:
   push:
     branches: ["main"]

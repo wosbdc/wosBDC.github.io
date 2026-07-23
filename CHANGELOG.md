@@ -1,3 +1,7 @@
+## [1.30.2] - 2026-07-22
+### Fixed
+- **GitHub Actions Titles**: Added a `run-name` directive to `deploy.yml` to strictly enforce that GitHub Actions uses the commit message as the workflow run title, fixing a bug where GitHub would occasionally hide the summary and default to "Deploy to GitHub Pages".
+
 ## [1.30.1] - 2026-07-22
 ### Removed
 - **Add New Player Button**: Removed the redundant "Add New Player to Roster" button from the Daily Tools admin menu, as it already exists inside the Player Database Editor.
