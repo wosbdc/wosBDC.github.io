@@ -1,3 +1,7 @@
+## [1.37.3] - 2026-07-23
+### Top Navbar Hamburger Button Handedness Movement
+- **Hamburger Button & Dropdown Handedness Alignment**: Updated top navbar CSS so that when `🖐️ Left-Handed` is active, the `☰` hamburger button and `⚙️` settings button physically relocate to the **far left edge** of the top navbar, and the mobile dropdown menu panel anchors its links to the left. When `✋ Right-Handed` is active, they anchor to the **far right edge**.
+
 ## [1.37.2] - 2026-07-23
 ### Clean GitHub Actions Deployment Workflow
 - **Clean GitHub Actions Runner**: Updated `.github/workflows/deploy.yml` with clean standard Node 24 setup (`node-version: '24'`), removing legacy environment flags to prevent GitHub Actions runner annotations.

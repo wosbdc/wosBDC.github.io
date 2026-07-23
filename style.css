@@ -751,3 +751,77 @@ tr:hover td {
   background: var(--accent);
   color: #fff;
 }
+
+/* --- Handedness Mobile Top Navbar & Hamburger Rules --- */
+@media (max-width: 900px) {
+  /* Right-Handed (Default): Hamburger ☰ button on FAR RIGHT */
+  body.hand-right .nav-inner {
+    flex-direction: row !important;
+  }
+  body.hand-right .nav-controls {
+    order: 2 !important;
+    margin-left: auto !important;
+    margin-right: 0 !important;
+  }
+  body.hand-right .nav-brand {
+    order: 1 !important;
+    margin-right: auto !important;
+    margin-left: 0 !important;
+  }
+  body.hand-right .mobile-menu {
+    text-align: right !important;
+    align-items: flex-end !important;
+    left: auto !important;
+    right: 0 !important;
+  }
+  body.hand-right .nav-links {
+    align-items: flex-end !important;
+    width: 100% !important;
+  }
+  body.hand-right .sub-link, body.hand-right .nav-link {
+    text-align: right !important;
+  }
+
+  /* Left-Handed: Hamburger ☰ button moves over to FAR LEFT */
+  body.hand-left .nav-inner {
+    flex-direction: row-reverse !important;
+  }
+  body.hand-left .nav-controls {
+    order: 1 !important;
+    margin-right: auto !important;
+    margin-left: 0 !important;
+  }
+  body.hand-left .nav-brand {
+    order: 2 !important;
+    margin-left: auto !important;
+    margin-right: 0 !important;
+  }
+  body.hand-left .mobile-menu {
+    text-align: left !important;
+    align-items: flex-start !important;
+    right: auto !important;
+    left: 0 !important;
+  }
+  body.hand-left .nav-links {
+    align-items: flex-start !important;
+    width: 100% !important;
+  }
+  body.hand-left .sub-link, body.hand-left .nav-link {
+    text-align: left !important;
+  }
+  body.hand-left .settings-sidebar {
+    left: 0 !important;
+    right: auto !important;
+    transform: translateX(-100%) !important;
+    border-right: 1px solid var(--border) !important;
+    border-left: none !important;
+  }
+  body.hand-left .settings-sidebar.open {
+    transform: translateX(0) !important;
+  }
+  body.hand-left #devDeployBanner {
+    left: 20px !important;
+    right: auto !important;
+  }
+}
+
