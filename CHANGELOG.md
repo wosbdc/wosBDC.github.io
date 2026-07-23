@@ -1,3 +1,7 @@
+## [1.34.8] - 2026-07-23
+### Automated Pre-Build Handler Audit
+- **Pre-Build Event Handler Validation**: Integrated `tools/check_window_bindings.cjs` into the `npm run build` process to automatically audit all HTML `onclick` handlers (`window.xxx()` & `views.xxx()`), guaranteeing zero broken or unattached button handlers reach production.
+
 ## [1.34.7] - 2026-07-23
 ### Restore Multi-BT Submit All Functionality
 - **Submit All Button Restored**: Restored `window.submitBeartrapDonations` in `views.beartrap()`, allowing admins to submit multi-row Bear Trap batch donations directly to Firebase and Google Sheets.
