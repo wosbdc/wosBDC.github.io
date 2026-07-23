@@ -1527,6 +1527,45 @@ window.doBeartrapCrown = async () => {
     window._executeLogBearTrapWinner(finalName, trap);
 };
 
+window.doBeartrapResetPlayer = async () => {
+    const rawName = document.getElementById('beartrapResetPlayerName').value.trim();
+    if (!rawName) {
+        if(window.showToast) window.showToast("Please enter a player name", "error");
+        return;
+    }
+    
+    let finalName = rawName;
+    if (!isNaN(rawName) && rawName.length >= 7) {
+       await refreshIdToNameMap();
+       let foundName = idToNameMap[rawName];
+       if (foundName) finalName = foundName;
+       else if(window.showToast) {
+          window.showToast("Could not resolve ID to player name", "error");
+          return;
+       }
+    }
+    
+    let confirmReset = await window.customConfirm('🗑️ WARNING 🗑️\n\nAre you sure you want to completely WIPE all Bear Trap donations to 0 for ' + finalName + '?\n\nThis action cannot be undone.');
+    if (!confirmReset) return;
+    
+    const resDiv = document.getElementById('beartrapResetPlayerResult');
+    resDiv.innerHTML = '<span style="color:var(--text-muted)">Wiping data...</span>';
+    
+    try {
+        const donKey = finalName.toLowerCase().replace(/[^a-z0-9]/g, '_');
+        const donRef = ref(db, `beartrap_donations/${donKey}`);
+        let donData = { name: finalName, current: 0, allTime: 0, lastUpdated: Date.now() };
+        await set(donRef, donData);
+        
+        resDiv.innerHTML = '<span style="color:var(--success)">✅ Successfully reset donations for ' + finalName + '.</span>';
+        window.logAdminAction("Bear Trap Player Reset", `Wiped Bear Trap donations for ${finalName} to zero`, finalName);
+        document.getElementById('beartrapResetPlayerName').value = '';
+    } catch(e) {
+        console.error("Error resetting BT player:", e);
+        resDiv.innerHTML = '<span style="color:var(--danger)">❌ Error resetting player: ' + e.message + '</span>';
+    }
+};
+
 window.logAdminAction = async (actionType, details, targetPlayer = '') => {
     try {
         const adminName = (currentUser && currentUser.gameId && idToNameMap[currentUser.gameId]) 
@@ -6229,6 +6268,7 @@ html += `</select>
             <button onclick="document.getElementById('btLookupModal').style.display='block'" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--accent); padding:4px 8px; border-radius:6px; cursor:pointer; font-size:12px; margin-left:10px;">🔍 Lookup</button>
             <button onclick="document.getElementById('btCrownModal').style.display='block'" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--success); padding:4px 8px; border-radius:6px; cursor:pointer; font-size:12px; margin-left:10px;">👑 Crown Winner</button>
             <button onclick="window.resetBearTrapWinners()" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--danger); padding:4px 8px; border-radius:6px; cursor:pointer; font-size:12px; margin-left:10px;">🔄 Reset BT Winners</button>
+            <button onclick="document.getElementById('btResetPlayerModal').style.display='block'" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--danger); padding:4px 8px; border-radius:6px; cursor:pointer; font-size:12px; margin-left:10px;">🗑️ Reset Player</button>
           </h2>
           <button onclick="views.admin()" style="background:var(--bg-main); color:var(--text-main); border:1px solid var(--border); padding:5px 12px; border-radius:6px; cursor:pointer;">Back to Admin</button>
         </div>
@@ -6259,6 +6299,19 @@ html += `</select>
             </select>
             <button onclick="window.doBeartrapCrown()" style="background:var(--success); color:#fff; border:none; padding:10px; border-radius:6px; cursor:pointer; font-weight:bold;">Submit</button>
           </div>
+        </div>
+        
+        <!-- Reset Player Modal (Hidden by default) -->
+        <div id="btResetPlayerModal" style="display:none; position:absolute; top:50px; left:0; width:100%; background:var(--bg-main); padding:20px; border-radius:12px; border:1px solid var(--danger); box-shadow:0 10px 25px rgba(0,0,0,0.5); z-index:10; box-sizing:border-box;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <h3 style="margin:0; color:var(--text-main); font-size:16px;">🗑️ Reset Player Donations</h3>
+            <button onclick="document.getElementById('btResetPlayerModal').style.display='none'" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:20px;">&times;</button>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <input type="text" id="beartrapResetPlayerName" list="beartrapRosterDatalist" placeholder="Player Name or ID..." style="flex:1; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);">
+            <button onclick="window.doBeartrapResetPlayer()" style="background:var(--danger); color:#fff; border:none; padding:0 20px; border-radius:6px; cursor:pointer; font-weight:bold;">Wipe to 0</button>
+          </div>
+          <div id="beartrapResetPlayerResult" style="margin-top:10px; font-weight:bold; text-align:center;"></div>
         </div>
 
         <div style="background:var(--bg-main); padding:15px; border-radius:12px; border:1px solid var(--border); margin-bottom:20px;">

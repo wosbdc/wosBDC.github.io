@@ -1,3 +1,7 @@
+## [1.29.99] - 2026-07-22
+### Added
+- **Reset Player Tool**: Added a dedicated "Reset Player" tool inside the Bear Trap Admin page. This allows admins to easily wipe a player's Bear Trap donations (both Current and All-Time) back to 0 without having to calculate negative amounts.
+
 ## [1.29.98] - 2026-07-22
 ### Fixed
 - **Multi-Bear Trap Donations**: Enhanced the error logging for the "Multi-BT Donations" admin tool to print the exact error message to the UI instead of a generic "Error updating donation" message, helping diagnose Firebase permission issues.
