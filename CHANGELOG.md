@@ -1,3 +1,8 @@
+## [1.31.2] - 2026-07-23
+### Maintenance Script & Reliability
+- **Maintenance Script**: Added `Run_Weekly_Maintenance.bat` for one-click automated backups, security audits, and production build checks.
+- **Build Reliability**: Moved inline HTML `<style>` rules from `index.html` into `src/style.css` to eliminate Vite html-proxy cache issues and ensure 100% deterministic builds.
+
 ## [1.31.1] - 2026-07-23
 ### Updated
 - **Dependencies Upgrade**: Upgraded all npm dependencies (`firebase`, `lucide`, `vite`) to their latest releases and resolved all package audit advisories.
