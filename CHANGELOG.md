@@ -1,3 +1,7 @@
+## [1.35.1] - 2026-07-23
+### Fix CI/CD GitHub Actions Build Script
+- **Stateless Handler Validator**: Updated `tools/check_window_bindings.cjs` regex checks to be 100% stateless, eliminating global flag statefulness in Node.js GitHub Actions Linux runners and guaranteeing clean deployment passes on GitHub Pages.
+
 ## [1.35.0] - 2026-07-23
 ### Full Bear Trap Event Cycle, Auto-Signup & Activity Matrix Sync
 - **Auto-Signup Detection (`Donation > 0` ➔ `YES`)**: Added `window.autoSyncBtSignup()` so whenever a player donates `> 0` (via single entry, inline table edit, or `Submit All` multi-batch), their Bear Trap signup status automatically flips to `YES` (`signedUp: true`).
