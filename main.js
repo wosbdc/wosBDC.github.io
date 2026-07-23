@@ -1,44 +1,10 @@
 import './style.css'
 import { initPresence, listenToAuth, loginUser, logoutUser, registerUser, uploadAvatar, deleteAvatar, db, auth, requestPushPermission, listenForForegroundMessages, linkAltAccount, unlinkAltAccount, loginWithGoogle, resetPassword } from './src/firebase.js'
 import { ref, onValue, get, set, remove } from 'firebase/database'
+import pkg from './package.json'
 
 
-window.adminDeletePlayer = async (name) => {
-    let confirmDelete = await window.customConfirm('⚠️ WARNING ⚠️\n\nAre you sure you want to COMPLETELY DELETE ' + name + '?\n\nThis will remove them from the Chief\'s List, Giftcode Bot, wipe their ghost rows, AND permanently delete their Firebase roster entry.\n\nThis action cannot be undone.');
-    if (!confirmDelete) return;
-    
-    let resDiv = document.getElementById('uniEditorRes');
-    if (!resDiv) {
-        if (window.showToast) window.showToast('Deleting player ' + name + '...', 'info');
-    } else {
-        resDiv.innerHTML = '<span style="color:var(--text-muted)">Deleting player from master sheets...</span>';
-    }
-    
-    try {
-        const token = await window.getAuthToken();
-        const adminName = window.currentUser ? (window.idToNameMap[window.currentUser.gameId] || 'Admin') : 'Admin';
-        
-        try {
-            await remove(ref(db, 'roster_live/' + name.trim()));
-            console.log('Deleted from Firebase roster_live');
-        } catch(e) { console.warn('Could not delete from Firebase', e); }
-        
-        const res = await fetch(`${API_BASE_URL}?api=deletePlayer&name=${encodeURIComponent(name)}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(token)}`).then(r => r.json());
-        
-        if (res.success) {
-            if (window.showToast) window.showToast('Player permanently deleted!', 'success');
-            if (resDiv) resDiv.innerHTML = '<span style="color:var(--success); font-weight:bold;">✅ Player deleted successfully.</span>';
-            window.rosterCache = null;
-            await window.fetchRoster();
-        } else {
-            if (resDiv) resDiv.innerHTML = '<span style="color:var(--danger)">Error: ' + res.message + '</span>';
-            if (window.showToast) window.showToast('Error: ' + res.message, 'error');
-        }
-    } catch(err) {
-        if (resDiv) resDiv.innerHTML = '<span style="color:var(--danger)">Network Error: ' + err.message + '</span>';
-        if (window.showToast) window.showToast('Network error while deleting', 'error');
-    }
-};
+// adminDeletePlayer is defined below at line ~1703 (single canonical definition)
 
 window.fetchRoster = async () => {
    if (window.rosterCache) return window.rosterCache;
@@ -244,7 +210,7 @@ const authPassword = document.getElementById('authPassword');
 const authGameIdWrapper = document.getElementById('authGameIdWrapper');
 const authGameId = document.getElementById('authGameId');
 const authVerifyGameIdBtn = document.getElementById('authVerifyGameIdBtn');
-const authChiefName = document.getElementById('authChiefName');
+// authChiefName removed — element does not exist in index.html (uses authChiefConfirm instead)
 const authDateStarted = document.getElementById('authDateStarted');
 const authErrorMsg = document.getElementById('authErrorMsg');
 const authModalTitle = document.getElementById('authModalTitle');
@@ -323,9 +289,9 @@ window.fetchGiftcodeEnrollments = async () => {
                     };
                 }
             }
-            try { await set(ref(db, 'giftcode_bot'), seededData); } catch(e) {}
+            try { await set(ref(db, 'giftcode_bot'), seededData); } catch(e) { console.error(e); }
         }
-    } catch(e) {}
+    } catch(e) { console.error(e); }
     
     window.giftcodeCache = seededData;
     return seededData;
@@ -383,9 +349,9 @@ window.fetchActivityData = async () => {
         const raw = await fetchSheet("activity ");
         if (raw && raw.length > 0) {
             seededData = raw;
-            try { await set(ref(db, 'activity_live'), seededData); } catch(e) {}
+            try { await set(ref(db, 'activity_live'), seededData); } catch(e) { console.error(e); }
         }
-    } catch(e) {}
+    } catch(e) { console.error(e); }
 
     window.activityCache = seededData;
     return seededData;
@@ -439,8 +405,8 @@ window.fetchChampionshipData = async () => {
             }
         }
 
-        try { await set(ref(db, 'championship'), seeded); } catch(e) {}
-    } catch(e) {}
+        try { await set(ref(db, 'championship'), seeded); } catch(e) { console.error(e); }
+    } catch(e) { console.error(e); }
 
     window.championshipCache = seeded;
     return seeded;
@@ -453,7 +419,7 @@ window.toggleChampionshipStatus = async (gameId, forceStatus = null) => {
     let data = {};
     try {
         data = await window.fetchChampionshipData();
-    } catch(e) {}
+    } catch(e) { console.error(e); }
 
     const existing = data[gIdStr] || { gameId: gIdStr, name: (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief', signedUp: false };
     
@@ -474,7 +440,7 @@ window.toggleChampionshipStatus = async (gameId, forceStatus = null) => {
                 championship: newSignedUpStatus,
                 updatedAt: Date.now()
             });
-        } catch(e) {}
+        } catch(e) { console.error(e); }
         
         // Log Admin Action
         if (window.logAdminAction) {
@@ -487,7 +453,7 @@ window.toggleChampionshipStatus = async (gameId, forceStatus = null) => {
             const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || "Admin") : "Admin";
             const url = `${API_BASE_URL}?api=updateEvent&name=${encodeURIComponent(existing.name)}&eventName=${encodeURIComponent("Alliance Championship ")}&status=${encodeURIComponent(newSignedUpStatus ? 'yes' : 'no')}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(evToken)}`;
             fetch(url, { mode: 'no-cors' }).catch(e => null);
-        } catch(e) {}
+        } catch(e) { console.error(e); }
 
         return true;
     } catch(e) {
@@ -547,8 +513,8 @@ window.fetchMercenaryData = async () => {
             }
         }
 
-        try { await set(ref(db, 'mercenary'), seeded); } catch(e) {}
-    } catch(e) {}
+        try { await set(ref(db, 'mercenary'), seeded); } catch(e) { console.error(e); }
+    } catch(e) { console.error(e); }
 
     window.mercenaryCache = seeded;
     return seeded;
@@ -561,7 +527,7 @@ window.toggleMercenaryStatus = async (gameId, forceStatus = null) => {
     let data = {};
     try {
         data = await window.fetchMercenaryData();
-    } catch(e) {}
+    } catch(e) { console.error(e); }
 
     const existing = data[gIdStr] || { gameId: gIdStr, name: (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief', signedUp: false };
     
@@ -582,7 +548,7 @@ window.toggleMercenaryStatus = async (gameId, forceStatus = null) => {
                 mercenary: newSignedUpStatus,
                 updatedAt: Date.now()
             });
-        } catch(e) {}
+        } catch(e) { console.error(e); }
         
         // Log Admin Action
         if (window.logAdminAction) {
@@ -595,7 +561,7 @@ window.toggleMercenaryStatus = async (gameId, forceStatus = null) => {
             const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || "Admin") : "Admin";
             const url = `${API_BASE_URL}?api=updateEvent&name=${encodeURIComponent(existing.name)}&eventName=${encodeURIComponent("Mercenary Prestige")}&status=${encodeURIComponent(newSignedUpStatus ? 'yes' : 'no')}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(evToken)}`;
             fetch(url, { mode: 'no-cors' }).catch(e => null);
-        } catch(e) {}
+        } catch(e) { console.error(e); }
 
         return true;
     } catch(e) {
@@ -654,8 +620,8 @@ window.fetchPolarTerrorsData = async () => {
                 }
             }
         }
-        try { await set(ref(db, 'polarterrors'), seeded); } catch(e) {}
-    } catch(e) {}
+        try { await set(ref(db, 'polarterrors'), seeded); } catch(e) { console.error(e); }
+    } catch(e) { console.error(e); }
 
     window.polarTerrorsCache = seeded;
     return seeded;
@@ -666,7 +632,7 @@ window.togglePolarTerrorsStatus = async (gameId, forceStatus = null) => {
     if (!gameId) return false;
     const gIdStr = gameId.toString().trim();
     let data = {};
-    try { data = await window.fetchPolarTerrorsData(); } catch(e) {}
+    try { data = await window.fetchPolarTerrorsData(); } catch(e) { console.error(e); }
 
     const existing = data[gIdStr] || { gameId: gIdStr, name: (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief', signedUp: false };
     
@@ -683,7 +649,7 @@ window.togglePolarTerrorsStatus = async (gameId, forceStatus = null) => {
                 polarTerrors: newSignedUpStatus,
                 updatedAt: Date.now()
             });
-        } catch(e) {}
+        } catch(e) { console.error(e); }
         
         if (window.logAdminAction) {
             window.logAdminAction("Polar Terrors Toggle", `Toggled ${existing.name} (${gIdStr}) to ${newSignedUpStatus ? 'YES (✅)' : 'NO (❌)'}`);
@@ -694,7 +660,7 @@ window.togglePolarTerrorsStatus = async (gameId, forceStatus = null) => {
             const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || "Admin") : "Admin";
             const url = `${API_BASE_URL}?api=updateEvent&name=${encodeURIComponent(existing.name)}&eventName=${encodeURIComponent("Polar Terrors")}&status=${encodeURIComponent(newSignedUpStatus ? 'yes' : 'no')}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(evToken)}`;
             fetch(url, { mode: 'no-cors' }).catch(e => null);
-        } catch(e) {}
+        } catch(e) { console.error(e); }
         
         return true;
     } catch(err) {
@@ -749,8 +715,8 @@ window.fetchBearTrapData = async () => {
                 }
             }
         }
-        try { await set(ref(db, 'beartrap'), seeded); } catch(e) {}
-    } catch(e) {}
+        try { await set(ref(db, 'beartrap'), seeded); } catch(e) { console.error(e); }
+    } catch(e) { console.error(e); }
 
     window.bearTrapCache = seeded;
     return seeded;
@@ -761,7 +727,7 @@ window.toggleBearTrapStatus = async (gameId, forceStatus = null) => {
     if (!gameId) return false;
     const gIdStr = gameId.toString().trim();
     let data = {};
-    try { data = await window.fetchBearTrapData(); } catch(e) {}
+    try { data = await window.fetchBearTrapData(); } catch(e) { console.error(e); }
 
     const existing = data[gIdStr] || { gameId: gIdStr, name: (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief', signedUp: false };
     
@@ -778,7 +744,7 @@ window.toggleBearTrapStatus = async (gameId, forceStatus = null) => {
                 beartrap: newSignedUpStatus,
                 updatedAt: Date.now()
             });
-        } catch(e) {}
+        } catch(e) { console.error(e); }
         
         if (window.logAdminAction) {
             window.logAdminAction("Bear Trap Toggle", `Toggled ${existing.name} (${gIdStr}) to ${newSignedUpStatus ? 'YES (✅)' : 'NO (❌)'}`);
@@ -789,7 +755,7 @@ window.toggleBearTrapStatus = async (gameId, forceStatus = null) => {
             const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || "Admin") : "Admin";
             const url = `${API_BASE_URL}?api=updateEvent&name=${encodeURIComponent(existing.name)}&eventName=${encodeURIComponent("Bear Trap Tracker")}&status=${encodeURIComponent(newSignedUpStatus ? 'yes' : 'no')}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(evToken)}`;
             fetch(url, { mode: 'no-cors' }).catch(e => null);
-        } catch(e) {}
+        } catch(e) { console.error(e); }
         
         return true;
     } catch(err) {
@@ -888,7 +854,7 @@ window.fetchLeaderboardsData = async () => {
                 }
             }
 
-            try { await set(ref(db, 'leaderboards'), parsedBoards); } catch(e) {}
+            try { await set(ref(db, 'leaderboards'), parsedBoards); } catch(e) { console.error(e); }
         }
     } catch(e) {
         console.error("Leaderboards sheet fetch error:", e);
@@ -1044,7 +1010,7 @@ window.addNewChiefToRoster = async (gameId, name, furnaceLevel = 'F30', dateStar
     const regToken = await getAuthToken();
     const url = `${API_BASE_URL}?api=registerNewPlayer&gameId=${encodeURIComponent(gIdStr)}&name=${encodeURIComponent(cleanName)}&dateStarted=${encodeURIComponent(cleanDate)}&level=${encodeURIComponent(cleanLevel)}${regToken ? '&token=' + encodeURIComponent(regToken) : ''}`;
     fetch(url, { mode: 'no-cors' }).catch(e => null);
-  } catch(e) {}
+  } catch(e) { console.error(e); }
 
   return record;
 };
@@ -1150,7 +1116,7 @@ window.verifyAddPlayerGameId = async () => {
          btn.textContent = '🔍 Verify ID';
          return;
      }
-  } catch(e) {}
+  } catch(e) { console.error(e); }
 
   // 2. Query official Century Games server
   try {
@@ -1878,7 +1844,7 @@ window.adminFetchAltFurnace = async (gid, spanId) => {
                 flEl.innerHTML = typeof flHtml === 'string' ? flHtml.replace('🔥 ', '').replace('Lv ', '') : flHtml;
             }
         }
-    } catch(e) {}
+    } catch(e) { console.error(e); }
 };
 
   window.doPlayerLookup = async (playerName) => {
@@ -2808,7 +2774,7 @@ if(authSubmitBtn) authSubmitBtn.addEventListener('click', async () => {
           const regToken = await getAuthToken();
           const url = `${API_BASE_URL}?api=registerNewPlayer&gameId=${encodeURIComponent(gameId)}&name=${encodeURIComponent(chiefName)}&dateStarted=${encodeURIComponent(dateStarted)}&level=${encodeURIComponent(furnaceLevel)}${regToken ? '&token=' + encodeURIComponent(regToken) : ''}`;
           fetch(url, { mode: 'no-cors' }).catch(e => console.warn("Failed to ping GAS for registration", e));
-      } catch(e) {}
+      } catch(e) { console.error(e); }
 
       window.showToast("Account created & signed in!", "success");
     } else {
@@ -2891,7 +2857,7 @@ if (authGoogleBtn) authGoogleBtn.addEventListener('click', async () => {
                 const token = await user.getIdToken();
                 const url = `${API_BASE_URL}?api=registerNewPlayer&gameId=${encodeURIComponent(gameId.trim())}&name=${encodeURIComponent(chiefName.trim())}&dateStarted=${encodeURIComponent(dateStarted)}&level=${encodeURIComponent(furnaceLevel)}&token=${encodeURIComponent(token)}`;
                 fetch(url, { mode: 'no-cors' }).catch(e => console.warn("Failed to ping GAS for registration", e));
-            } catch(e) {}
+            } catch(e) { console.error(e); }
             
             window.showToast("Account created & signed in with Google!", "success");
             closeAuthModal();
@@ -2917,7 +2883,7 @@ const changelogModalOverlay = document.getElementById('changelogModalOverlay');
 const closeChangelogBtn = document.getElementById('closeChangelogBtn');
 const changelogContent = document.getElementById('changelogContent');
 
-import pkg from './package.json';
+
 if (versionBadge) versionBadge.innerHTML = `v${pkg.version}`;
 
 const closeChangelogModal = () => {
@@ -3241,7 +3207,7 @@ window.fetchMergedShowdown = async () => {
    try {
        let snap = await get(ref(db, 'showdown_live'));
        if (snap.exists()) sdLiveData = snap.val();
-   } catch(e) {}
+   } catch(e) { console.error(e); }
    
    let baseDataCopy = JSON.parse(JSON.stringify(baseData)); 
    let mergedData = window.mergeShowdownData(baseDataCopy, sdLiveData);
@@ -3789,7 +3755,7 @@ window.loadUserPersonalLog = async (chiefName) => {
                         }
                     }
                 }
-            } catch(e) {}
+            } catch(e) { console.error(e); }
         }
 
         // Filter ONLY for today's entries
@@ -4417,7 +4383,7 @@ const views = {
       };
       
       let html = `
-        <div class="card" style="max-width:800px; margin:0 auto; animation: fadeIn 0.3s ease;">
+        <div id="adminHubView" class="card" style="max-width:800px; margin:0 auto; animation: fadeIn 0.3s ease;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
             <h2 style="color:var(--danger); margin:0;">🛡️ Admin Menu</h2>
           </div>
@@ -5925,7 +5891,7 @@ html += `</select>
                         }
                     });
                 }
-             } catch(e) {}
+             } catch(e) { console.error(e); }
         }, 500);
         
         window.filterBearTrapTable = () => {
@@ -6719,7 +6685,7 @@ html += `</select>
                               const flEl = document.getElementById(flSpanId);
                               if (flEl) flEl.innerHTML = window.getFurnaceIconHtml(data.stove_lv);
                           }
-                      } catch(e) {}
+                      } catch(e) { console.error(e); }
                   }, 100);
               }
               
@@ -6837,7 +6803,7 @@ html += `</select>
                       try {
                           const d = new Date(gcb[i][3]);
                           if (!isNaN(d)) joinedDateStr = d.toLocaleDateString();
-                      } catch(e) {}
+                      } catch(e) { console.error(e); }
                   }
                   break;
               }
@@ -6854,7 +6820,7 @@ html += `</select>
                   try {
                       const d = new Date(p.joinedDate);
                       if (!isNaN(d)) joinedDateStr = d.toLocaleDateString();
-                  } catch(e){}
+                  } catch(e) { console.error(e); }
               }
               if (p.timeActive) timeActiveStr = window.formatTimeActiveShort(p.timeActive.toString());
           }
@@ -7437,7 +7403,7 @@ html += `</select>
     try {
       const allBoards = await window.fetchLeaderboardsData();
       let scheduleData = [];
-      try { scheduleData = await fetchSheet("WhiteOut Survival"); } catch(e) {}
+      try { scheduleData = await fetchSheet("WhiteOut Survival"); } catch(e) { console.error(e); }
       
       let isBearTrapActive = false;
       if (scheduleData && Array.isArray(scheduleData) && scheduleData.length > 0) {
@@ -9834,7 +9800,7 @@ window.promptEditEvents = async (name) => {
           };
         }
       }
-    } catch(e) {}
+    } catch(e) { console.error(e); }
   }
 
   const eventsList = [

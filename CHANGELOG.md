@@ -1,3 +1,13 @@
+## [1.31.0] - 2026-07-23
+### Security & Audit Hardening Release
+- **Backend API Security**: Removed hardcoded emergency bypass secret from Apps Script API endpoints. All write endpoints now strictly enforce Firebase token authentication and admin role verification.
+- **Endpoint Protection**: Moved `forceSyncActivity`, `getSheetNames`, `getFormulas`, `getFormulasActivity`, `installAllTimeFormula`, and `installMissedDaysFormula` from public endpoints to `ADMIN_ENDPOINTS`.
+- **WOS API Encryption**: Secured Century Games API encryption key in Apps Script properties instead of hardcoding.
+- **Firebase Rule Lockdown**: Restricted `users` and `admin_logs` nodes in Realtime Database rules from public read access to authenticated-only (`auth != null`).
+- **Repository Hygiene**: Removed over 140 temporary scratch scripts (`.cjs`), static data dumps (`.json`), and local batch files (`.bat`) from Git history. Updated `.gitignore` to prevent future clutter.
+- **Admin Hub Auto-Refresh**: Fixed broken `adminHubView` container ID reference in `main.js`, restoring automatic UI refresh after admin actions.
+- **Code Cleanliness**: Removed duplicate `adminDeletePlayer` function definition, eliminated dead `authChiefName` variable, moved ES module imports to top level, and added `console.error` logging across all silent catch blocks.
+
 ## [1.30.7] - 2026-07-22
 ### Fixed
 - **Bear Trap DB Editor Error**: Fixed a bug where opening the editor threw a `Cannot read properties of undefined` error because it was attempting to dynamically load a separate Firebase instance instead of using the core initialized database. 

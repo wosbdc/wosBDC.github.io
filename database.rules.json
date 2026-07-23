@@ -37,11 +37,11 @@
       ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() + '' == '318843189' || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())"
     },
     "admin_logs": {
-      ".read": true,
+      ".read": "auth != null",
       ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() + '' == '318843189' || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())"
     },
     "users": {
-      ".read": true,
+      ".read": "auth != null",
       "$uid": {
         ".write": "$uid === auth.uid || (root.child('users').child(auth.uid).child('gameId').val() + '' == '318843189' || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())"
       }
