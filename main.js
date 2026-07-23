@@ -8177,15 +8177,20 @@ html += `</select>
        }
        
        // 2. Alliance Progress
+       let dayHeadersHtml = '';
+       for(let i=1; i<=6; i++) {
+           dayHeadersHtml += `<th style="border-right: 1px solid rgba(255,255,255,0.08); text-align:center;"><span style="background:rgba(255,255,255,0.05); padding:3px 10px; border-radius:6px; font-size:11px; text-transform:uppercase; letter-spacing:0.5px;">Day ${i}</span></th>`;
+       }
+
        let allianceCard = `<div class="card" style="overflow-x:auto;">
           <div class="card-title">⚔️ Alliance Progress</div>${titleRightHtml}
-          <table style="min-width:600px;"><thead><tr>
-          <th>Alliance's Showdown</th><th>Total</th><th>Day 1</th><th>Day 2</th><th>Day 3</th><th>Day 4</th><th>Day 5</th><th>Day 6</th>
+          <table style="min-width:650px; border-collapse:collapse;"><thead><tr>
+          <th>Alliance's Showdown</th><th style="border-right: 1px solid rgba(255,255,255,0.12); text-align:center;">Total</th>${dayHeadersHtml}
        </tr></thead><tbody>`;
        
        // Determine Total winner
-       let enemyTotalStyle = "font-weight:bold;";
-       let ourTotalStyle = "font-weight:bold;";
+       let enemyTotalStyle = "font-weight:bold; border-right: 1px solid rgba(255,255,255,0.12); text-align:center;";
+       let ourTotalStyle = "font-weight:bold; border-right: 1px solid rgba(255,255,255,0.12); text-align:center;";
        if (enemyTotal > 0 || ourScores.total > 0) {
            if (enemyTotal > ourScores.total) enemyTotalStyle += " color:#10b981;";
            else if (ourScores.total > enemyTotal) ourTotalStyle += " color:#10b981;";
@@ -8196,9 +8201,9 @@ html += `</select>
        for(let i=1; i<=6; i++) {
            let eScore = enemyAlliance.scores['d'+i] || 0;
            let oScore = ourScores['d'+i] || 0;
-           let style = "";
+           let style = "border-right: 1px solid rgba(255,255,255,0.06); text-align:center;";
            if (eScore > 0 || oScore > 0) {
-              if (eScore > oScore) style = "color:#10b981; font-weight:bold;";
+              if (eScore > oScore) style += " color:#10b981; font-weight:bold;";
            }
            allianceCard += `<td style="${style}">${eScore > 0 ? eScore.toLocaleString() : ''}</td>`;
        }
@@ -8209,7 +8214,7 @@ html += `</select>
        for(let i=1; i<=6; i++) {
            let eScore = enemyAlliance.scores['d'+i] || 0;
            let oScore = ourScores['d'+i] || 0;
-           let style = "font-weight:bold;";
+           let style = "font-weight:bold; border-right: 1px solid rgba(255,255,255,0.06); text-align:center;";
            if (eScore > 0 || oScore > 0) {
               if (oScore > eScore) style += " color:#10b981;";
            }
@@ -8218,20 +8223,15 @@ html += `</select>
        allianceCard += `</tr>`;
        
        // Horns
-       allianceCard += `<tr><td style="font-weight:bold;">Alliance's Horns</td><td>${hornsTotal}</td>`;
-       for(let i=1; i<=6; i++) allianceCard += `<td>${staticHorns['d'+i]}</td>`;
+       allianceCard += `<tr><td style="font-weight:bold;">Alliance's Horns</td><td style="border-right: 1px solid rgba(255,255,255,0.12); text-align:center;">${hornsTotal}</td>`;
+       for(let i=1; i<=6; i++) allianceCard += `<td style="border-right: 1px solid rgba(255,255,255,0.06); text-align:center;">${staticHorns['d'+i]}</td>`;
        allianceCard += `</tr>`;
        
        // Winners
-       allianceCard += `<tr><td style="font-weight:bold;">Winners</td><td></td>`;
+       allianceCard += `<tr><td style="font-weight:bold;">Winners</td><td style="border-right: 1px solid rgba(255,255,255,0.12);"></td>`;
        for(let i=1; i<=6; i++) {
            let w = topPlayers['d'+i].name || '';
-           let eScore = enemyAlliance.scores['d'+i] || 0;
-           let oScore = ourScores['d'+i] || 0;
-           let style = "font-weight:bold;";
-           if (eScore > 0 || oScore > 0) {
-              if (oScore > eScore) style += " color:#10b981;";
-           }
+           let style = "font-weight:bold; color:#FFD700; border-right: 1px solid rgba(255,255,255,0.06); text-align:center;";
            allianceCard += `<td style="${style}">${escapeHTML(w)}</td>`;
        }
        allianceCard += `</tr></tbody></table></div>`;

@@ -1,3 +1,8 @@
+## [1.31.4] - 2026-07-23
+### Showdown Alliance Progress Table Enhancements
+- **Gold Winners Styling**: Formatted top player names in the Winners row with metallic gold text (`#FFD700`) without emojis for a clean appearance.
+- **Card-Style Day Column Separation**: Added subtle vertical divider borders and pill-style headers (`Day 1`, `Day 2`...) to cleanly separate each day.
+
 ## [1.31.3] - 2026-07-23
 ### Showdown UI Improvements
 - **Alliance Progress Table Styling**: Removed green background block highlights from table cells. Winning daily and total scores between Our Alliance and Enemy Alliance are now highlighted purely with green text color, keeping the background clean.
