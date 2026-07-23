@@ -1,3 +1,7 @@
+## [1.36.3] - 2026-07-23
+### Fix Dropdown Selection & Card Rendering in Player Lookup
+- **Dropdown Click & Profile Card Fix**: Replaced `const p` check in `renderCardForChief()` with dynamic Roster fallback (`idToNameMap`), and bound both `pointerdown` and `click` event listeners to dropdown items so selecting any Chief from the dropdown instantly renders their profile card on all desktop and mobile devices.
+
 ## [1.36.2] - 2026-07-23
 ### Fix Player Lookup in Navbar Chief's Menu
 - **Navbar Chief's Menu Player Lookup Fixed**: Updated `views.roster()` (`views.playerLookup()`) to merge all Alliance Roster names into the search dropdown list and added Roster fallback so any player or test account can be searched and rendered directly from the Chief's dropdown menu!

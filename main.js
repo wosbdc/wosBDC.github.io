@@ -9141,12 +9141,17 @@ window.resetBearTrapEvent = async () => {
                 dropdown.querySelectorAll('.custom-dropdown-item').forEach(el => {
                     el.addEventListener('mouseover', () => el.style.background = 'var(--bg-main)');
                     el.addEventListener('mouseout', () => el.style.background = 'transparent');
-                    el.addEventListener('pointerdown', (e) => {
-                        e.preventDefault(); // prevent blur
-                        select.value = el.getAttribute('data-value');
-                        dropdown.style.display = 'none';
-                        renderCardForChief(select.value);
-                    });
+                    const selectItem = (e) => {
+                        if (e) e.preventDefault();
+                        const val = el.getAttribute('data-value');
+                        if (val) {
+                            select.value = val;
+                            dropdown.style.display = 'none';
+                            renderCardForChief(val);
+                        }
+                    };
+                    el.addEventListener('pointerdown', selectItem);
+                    el.addEventListener('click', selectItem);
                 });
             }
             dropdown.style.display = 'flex';
@@ -9165,9 +9170,23 @@ window.resetBearTrapEvent = async () => {
           return;
         }
         
-        const p = players.find(row => row[0].toString().trim().toLowerCase() === chiefName.toLowerCase().trim());
-        if (!p) return; // ignore invalid names
-        chiefName = p[0].toString().trim(); // use correct casing
+        let p = players.find(row => row && row[0] && row[0].toString().trim().toLowerCase() === chiefName.toLowerCase().trim());
+        if (!p) {
+            let matchedChief = null;
+            if (typeof idToNameMap === 'object') {
+                for (const [gid, name] of Object.entries(idToNameMap)) {
+                    if (name && name.toLowerCase().trim() === chiefName.toLowerCase().trim()) {
+                        matchedChief = name; break;
+                    }
+                }
+            }
+            if (matchedChief) {
+                chiefName = matchedChief;
+                p = [chiefName, 0, false, false, false, false, false];
+            }
+        }
+        if (!p) return;
+        chiefName = p[0].toString().trim();
         
         window.currentRosterChiefName = chiefName;
         
