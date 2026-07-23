@@ -607,6 +607,225 @@ window.toggleMercenaryStatus = async (gameId, forceStatus = null) => {
     }
 };
 
+// Fetch Polar Terrors Data
+window.fetchPolarTerrorsData = async () => {
+    if (window.polarTerrorsCache) return window.polarTerrorsCache;
+    try {
+        const snap = await get(ref(db, 'polarterrors'));
+        if (snap.exists()) {
+            window.polarTerrorsCache = snap.val();
+            return window.polarTerrorsCache;
+        }
+    } catch(e) { console.warn("Firebase polarterrors read error:", e); }
+
+    let seeded = {};
+    try {
+        const [rawSheet, rosterData] = await Promise.all([
+            fetchSheet("Polar Terrors").catch(() => null),
+            window.fetchRoster().catch(() => null)
+        ]);
+
+        if (rosterData) {
+            Object.values(rosterData).forEach(p => {
+                if (p.gameId) {
+                    seeded[p.gameId.toString().trim()] = {
+                        gameId: p.gameId.toString().trim(),
+                        name: p.name || '',
+                        signedUp: false,
+                        lastUpdated: Date.now()
+                    };
+                }
+            });
+        }
+
+        if (rawSheet && rawSheet.length > 1) {
+            for (let i = 1; i < rawSheet.length; i++) {
+                let pName = rawSheet[i][0] ? rawSheet[i][0].toString().trim() : '';
+                let statusVal = rawSheet[i][1] ? rawSheet[i][1].toString().toLowerCase().trim() : '';
+                let isSignedUp = (statusVal === 'yes' || statusVal === 'true' || statusVal === '✅' || statusVal === '1');
+                
+                let foundGid = window.nameToIdMap ? window.nameToIdMap[pName] : null;
+                if (foundGid) {
+                    if (!seeded[foundGid]) {
+                        seeded[foundGid] = { gameId: foundGid, name: pName, signedUp: isSignedUp, lastUpdated: Date.now() };
+                    } else {
+                        seeded[foundGid].signedUp = isSignedUp;
+                    }
+                }
+            }
+        }
+        try { await set(ref(db, 'polarterrors'), seeded); } catch(e) {}
+    } catch(e) {}
+
+    window.polarTerrorsCache = seeded;
+    return seeded;
+};
+
+// Toggle Polar Terrors Status
+window.togglePolarTerrorsStatus = async (gameId, forceStatus = null) => {
+    if (!gameId) return false;
+    const gIdStr = gameId.toString().trim();
+    let data = {};
+    try { data = await window.fetchPolarTerrorsData(); } catch(e) {}
+
+    const existing = data[gIdStr] || { gameId: gIdStr, name: (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief', signedUp: false };
+    
+    const newSignedUpStatus = (forceStatus !== null) ? forceStatus : !existing.signedUp;
+    existing.signedUp = newSignedUpStatus;
+    existing.lastUpdated = Date.now();
+    existing.updatedBy = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name || "Admin") : "Admin";
+
+    try {
+        await set(ref(db, `polarterrors/${gIdStr}`), existing);
+        if (window.polarTerrorsCache) window.polarTerrorsCache[gIdStr] = existing;
+        try {
+            await update(ref(db, `activity_live/${gIdStr}`), {
+                polarTerrors: newSignedUpStatus,
+                updatedAt: Date.now()
+            });
+        } catch(e) {}
+        
+        if (window.logAdminAction) {
+            window.logAdminAction("Polar Terrors Toggle", `Toggled ${existing.name} (${gIdStr}) to ${newSignedUpStatus ? 'YES (✅)' : 'NO (❌)'}`);
+        }
+        
+        try {
+            const evToken = await getAuthToken().catch(() => '');
+            const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || "Admin") : "Admin";
+            const url = `${API_BASE_URL}?api=updateEvent&name=${encodeURIComponent(existing.name)}&eventName=${encodeURIComponent("Polar Terrors")}&status=${encodeURIComponent(newSignedUpStatus ? 'yes' : 'no')}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(evToken)}`;
+            fetch(url, { mode: 'no-cors' }).catch(e => null);
+        } catch(e) {}
+        
+        return true;
+    } catch(err) {
+        return false;
+    }
+};
+
+// Fetch Bear Trap Tracker Data
+window.fetchBearTrapData = async () => {
+    if (window.bearTrapCache) return window.bearTrapCache;
+    try {
+        const snap = await get(ref(db, 'beartrap'));
+        if (snap.exists()) {
+            window.bearTrapCache = snap.val();
+            return window.bearTrapCache;
+        }
+    } catch(e) { console.warn("Firebase beartrap read error:", e); }
+
+    let seeded = {};
+    try {
+        const [rawSheet, rosterData] = await Promise.all([
+            fetchSheet("Bear Trap Tracker").catch(() => null),
+            window.fetchRoster().catch(() => null)
+        ]);
+
+        if (rosterData) {
+            Object.values(rosterData).forEach(p => {
+                if (p.gameId) {
+                    seeded[p.gameId.toString().trim()] = {
+                        gameId: p.gameId.toString().trim(),
+                        name: p.name || '',
+                        signedUp: false,
+                        lastUpdated: Date.now()
+                    };
+                }
+            });
+        }
+        
+        if (rawSheet && rawSheet.length > 1) {
+            for (let i = 1; i < rawSheet.length; i++) {
+                let pName = rawSheet[i][0] ? rawSheet[i][0].toString().trim() : '';
+                let statusVal = rawSheet[i][1] ? rawSheet[i][1].toString().toLowerCase().trim() : '';
+                let isSignedUp = (statusVal === 'yes' || statusVal === 'true' || statusVal === '✅' || statusVal === '1');
+                
+                let foundGid = window.nameToIdMap ? window.nameToIdMap[pName] : null;
+                if (foundGid) {
+                    if (!seeded[foundGid]) {
+                        seeded[foundGid] = { gameId: foundGid, name: pName, signedUp: isSignedUp, lastUpdated: Date.now() };
+                    } else {
+                        seeded[foundGid].signedUp = isSignedUp;
+                    }
+                }
+            }
+        }
+        try { await set(ref(db, 'beartrap'), seeded); } catch(e) {}
+    } catch(e) {}
+
+    window.bearTrapCache = seeded;
+    return seeded;
+};
+
+// Toggle Bear Trap Status
+window.toggleBearTrapStatus = async (gameId, forceStatus = null) => {
+    if (!gameId) return false;
+    const gIdStr = gameId.toString().trim();
+    let data = {};
+    try { data = await window.fetchBearTrapData(); } catch(e) {}
+
+    const existing = data[gIdStr] || { gameId: gIdStr, name: (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief', signedUp: false };
+    
+    const newSignedUpStatus = (forceStatus !== null) ? forceStatus : !existing.signedUp;
+    existing.signedUp = newSignedUpStatus;
+    existing.lastUpdated = Date.now();
+    existing.updatedBy = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name || "Admin") : "Admin";
+
+    try {
+        await set(ref(db, `beartrap/${gIdStr}`), existing);
+        if (window.bearTrapCache) window.bearTrapCache[gIdStr] = existing;
+        try {
+            await update(ref(db, `activity_live/${gIdStr}`), {
+                beartrap: newSignedUpStatus,
+                updatedAt: Date.now()
+            });
+        } catch(e) {}
+        
+        if (window.logAdminAction) {
+            window.logAdminAction("Bear Trap Toggle", `Toggled ${existing.name} (${gIdStr}) to ${newSignedUpStatus ? 'YES (✅)' : 'NO (❌)'}`);
+        }
+        
+        try {
+            const evToken = await getAuthToken().catch(() => '');
+            const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || "Admin") : "Admin";
+            const url = `${API_BASE_URL}?api=updateEvent&name=${encodeURIComponent(existing.name)}&eventName=${encodeURIComponent("Bear Trap Tracker")}&status=${encodeURIComponent(newSignedUpStatus ? 'yes' : 'no')}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(evToken)}`;
+            fetch(url, { mode: 'no-cors' }).catch(e => null);
+        } catch(e) {}
+        
+        return true;
+    } catch(err) {
+        return false;
+    }
+};
+
+window.updateBearTrapDonationInline = async (gameId, newDonationStr) => {
+    if (!gameId) return false;
+    const gIdStr = gameId.toString().trim();
+    const chiefName = window.idToNameMap[gIdStr] || "Chief";
+    const addAmt = Number(newDonationStr) || 0;
+    
+    const donKey = chiefName.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    const donRef = ref(db, `beartrap_donations/${donKey}`);
+    
+    try {
+        const donSnap = await get(donRef);
+        let donData = donSnap.val() || { name: chiefName, current: 0, allTime: 0 };
+        donData.name = chiefName;
+        let diff = addAmt - (donData.current || 0);
+        donData.current = addAmt;
+        donData.allTime = (donData.allTime || 0) + diff;
+        donData.lastUpdated = Date.now();
+        await set(donRef, donData);
+        
+        if (window.logAdminAction) {
+            window.logAdminAction("Bear Trap Donation", `Updated ${chiefName}'s active donation to ${addAmt}`);
+        }
+        return true;
+    } catch (e) {
+        console.error("Failed to save bear trap donation", e);
+        return false;
+    }
+};
+
 // Fetch Leaderboards Data natively from Firebase Realtime Database with automated Google Sheets seeding
 window.fetchLeaderboardsData = async () => {
     if (window.leaderboardsCache) return window.leaderboardsCache;
@@ -3979,6 +4198,13 @@ const views = {
 
             <td style="padding:12px 14px;">
               <label style="display:inline-flex; align-items:center; gap:8px; cursor:${isManager ? 'pointer' : 'default'};">
+                <input type="checkbox" ${p.beartrap ? 'checked' : ''} ${isManager ? '' : 'disabled'} onchange="window.toggleActivityMatrixCell('${p.gameId}', 'beartrap', this.checked)" style="width:18px; height:18px; accent-color:#10b981; cursor:${isManager ? 'pointer' : 'default'};">
+                <span style="color:${p.beartrap ? '#10b981' : 'var(--text-muted)'}; font-weight:bold; font-size:13px;">🐻 Bear Trap</span>
+              </label>
+            </td>
+
+            <td style="padding:12px 14px;">
+              <label style="display:inline-flex; align-items:center; gap:8px; cursor:${isManager ? 'pointer' : 'default'};">
                 <input type="checkbox" ${p.voter ? 'checked' : ''} ${isManager ? '' : 'disabled'} onchange="window.toggleActivityMatrixCell('${p.gameId}', 'voter', this.checked)" style="width:18px; height:18px; accent-color:#a855f7; cursor:${isManager ? 'pointer' : 'default'};">
                 <span style="color:${p.voter ? '#a855f7' : 'var(--text-muted)'}; font-weight:bold; font-size:13px;">🗳️ Voter</span>
               </label>
@@ -4005,6 +4231,10 @@ const views = {
             await window.toggleChampionshipStatus(gIdStr, isChecked);
           } else if (key === 'mercenary') {
             await window.toggleMercenaryStatus(gIdStr, isChecked);
+          } else if (key === 'polarTerrors') {
+            if (window.togglePolarTerrorsStatus) await window.togglePolarTerrorsStatus(gIdStr, isChecked);
+          } else if (key === 'beartrap') {
+            if (window.toggleBearTrapStatus) await window.toggleBearTrapStatus(gIdStr, isChecked);
           }
 
           if (window.showToast) window.showToast(`Updated event status to ${isChecked ? '✅ Yes' : '❌ No'}!`, "success");
@@ -4134,6 +4364,8 @@ const views = {
               <button onclick="views.showdownAdmin()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px;">⚔️ ShowDown</button>
               <button onclick="views.championshipAdmin()" style="background:linear-gradient(135deg, #f59e0b, #d97706); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px; box-shadow:0 4px 12px rgba(217,119,6,0.3);">🏆 Alliance Championship</button>
               <button onclick="views.mercenaryAdmin()" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px; box-shadow:0 4px 12px rgba(239,68,68,0.3);">⚔️ Mercenary Prestige</button>
+              <button onclick="views.polarTerrorsAdmin()" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px; box-shadow:0 4px 12px rgba(14,165,233,0.3);">🐻‍❄️ Polar Terrors Tracker</button>
+              <button onclick="views.bearTrapAdmin()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px; box-shadow:0 4px 12px rgba(16,185,129,0.3);">🐻 Bear Trap Tracker</button>
             </div>
 
             <!-- Push Notification Broadcast -->
@@ -5265,7 +5497,419 @@ html += `</select>
     }
   },
 
-  mercenaryAdmin: async () => {
+  
+  polarTerrorsAdmin: async () => {
+    const app = document.getElementById('app');
+    if (!app) return;
+
+    const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+    if (!isManager) {
+       if(window.showToast) window.showToast("Only R4/R5 managers can edit Polar Terrors data", "error");
+       return;
+    }
+
+    renderLoading("Loading Polar Terrors Tracker...");
+
+    if (document.querySelector('.navbar')) {
+        document.querySelector('.navbar').style.display = 'none';
+    }
+
+    try {
+        const [polarData, rosterData] = await Promise.all([
+            window.fetchPolarTerrorsData(),
+            window.fetchRoster().catch(() => ({}))
+        ]);
+
+        let rosterList = [];
+        if (rosterData) {
+            Object.values(rosterData).forEach(p => {
+                if (p.name && p.gameId) rosterList.push(p);
+            });
+        }
+
+        rosterList.sort((a,b) => (a.name || '').localeCompare(b.name || ''));
+
+        let totalCount = rosterList.length;
+        let yesCount = 0;
+        let noCount = 0;
+        let missingNames = [];
+
+        rosterList.forEach(p => {
+            let gIdStr = p.gameId.toString().trim();
+            let record = polarData[gIdStr];
+            let isSignedUp = record && record.signedUp;
+            if (isSignedUp) {
+                yesCount++;
+            } else {
+                noCount++;
+                missingNames.push(p.name);
+            }
+        });
+
+        let percentSignedUp = totalCount > 0 ? Math.round((yesCount / totalCount) * 100) : 0;
+
+        let html = `
+        <div style="background:var(--bg-main); min-height:100vh; font-family:var(--font-family); color:var(--text-main);">
+          <div style="background:linear-gradient(135deg, #0ea5e9, #0284c7); padding:20px; box-shadow:0 2px 10px rgba(0,0,0,0.1); display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:100;">
+            <div style="display:flex; align-items:center; gap:15px;">
+              <button onclick="views.adminHub()" style="background:rgba(255,255,255,0.2); border:none; color:#fff; cursor:pointer; font-size:18px; padding:8px 12px; border-radius:8px; transition:0.2s;">⬅ Back</button>
+              <h2 style="margin:0; color:#fff; font-size:1.3em;">🐻‍❄️ Polar Terrors Tracker</h2>
+            </div>
+          </div>
+
+          <div style="padding:20px; max-width:1000px; margin:0 auto;">
+            
+            <button onclick="views.adminHub('logs')" style="background:linear-gradient(135deg, #a855f7, #9333ea); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; box-shadow:0 4px 12px rgba(168,85,247,0.3); margin-bottom: 20px; transition: transform 0.2s ease;">
+              📊 Open Roster Event Activity Matrix ➔
+            </button>
+
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:15px; margin-bottom:20px;">
+              <div class="card" style="text-align:center;">
+                <div style="font-size:13px; color:var(--text-muted); margin-bottom:5px;">Signed Up (YES)</div>
+                <div style="font-size:24px; font-weight:bold; color:var(--success);" id="pt-yes-count">${yesCount}</div>
+              </div>
+              <div class="card" style="text-align:center;">
+                <div style="font-size:13px; color:var(--text-muted); margin-bottom:5px;">Missing (NO)</div>
+                <div style="font-size:24px; font-weight:bold; color:var(--danger);" id="pt-no-count">${noCount}</div>
+              </div>
+              <div class="card" style="text-align:center;">
+                <div style="font-size:13px; color:var(--text-muted); margin-bottom:5px;">Response Rate</div>
+                <div style="font-size:24px; font-weight:bold; color:var(--accent);" id="pt-percent">${percentSignedUp}%</div>
+              </div>
+            </div>
+
+            <div class="card" style="margin-bottom:20px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h3 style="margin:0; font-size:1.1em;">Missing Signups (${noCount})</h3>
+                <button onclick="
+                  const text = document.getElementById('pt-missing-names').innerText;
+                  navigator.clipboard.writeText(text).then(() => {
+                    if(window.showToast) window.showToast('Copied missing names to clipboard!', 'success');
+                  });
+                " style="background:var(--accent); color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:13px;">📋 Copy List</button>
+              </div>
+              <div id="pt-missing-names" style="font-family:monospace; background:var(--bg-main); padding:15px; border-radius:8px; border:1px solid var(--border); max-height:150px; overflow-y:auto; color:var(--text-muted); line-height:1.6; word-break:break-all;">
+                ${missingNames.length > 0 ? missingNames.join(', ') : 'Everyone is signed up! 🎉'}
+              </div>
+            </div>
+
+            <div class="card">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h3 style="margin:0; font-size:1.1em;">Roster Status (${totalCount})</h3>
+                <input type="text" id="ptSearch" placeholder="🔍 Search name..." onkeyup="window.filterPolarTerrorsTable()" style="padding:8px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:14px; width:200px;">
+              </div>
+              <div style="overflow-x:auto;">
+                <table style="width:100%; border-collapse:collapse; min-width:300px;">
+                  <thead>
+                    <tr style="background:var(--bg-main); border-bottom:2px solid var(--border);">
+                      <th style="padding:12px; text-align:left; font-weight:bold; color:var(--text-muted); font-size:13px; text-transform:uppercase;">Chief Name</th>
+                      <th style="padding:12px; text-align:center; font-weight:bold; color:var(--text-muted); font-size:13px; text-transform:uppercase;">Signed Up</th>
+                    </tr>
+                  </thead>
+                  <tbody id="ptTableBody">
+                    ${rosterList.map(p => {
+                       let gIdStr = p.gameId.toString().trim();
+                       let isSignedUp = polarData[gIdStr] ? polarData[gIdStr].signedUp : false;
+                       return `
+                       <tr class="pt-row" data-name="${escapeHTML(p.name.toLowerCase())}" style="border-bottom:1px solid var(--border);">
+                         <td style="padding:12px; font-weight:bold; color:var(--text-main);">${escapeHTML(p.name)}</td>
+                         <td style="padding:12px; text-align:center;">
+                           <div style="display:inline-flex; border-radius:8px; overflow:hidden; border:1px solid var(--border);">
+                             <button onclick="window.onPtToggle('${gIdStr}', true, this)" style="border:none; padding:8px 16px; font-weight:bold; cursor:pointer; background:${isSignedUp ? 'var(--success)' : 'transparent'}; color:${isSignedUp ? '#fff' : 'var(--text-muted)'}; transition:0.2s; width:80px;">YES</button>
+                             <button onclick="window.onPtToggle('${gIdStr}', false, this)" style="border:none; padding:8px 16px; font-weight:bold; cursor:pointer; background:${!isSignedUp ? 'var(--danger)' : 'transparent'}; color:${!isSignedUp ? '#fff' : 'var(--text-muted)'}; transition:0.2s; width:80px;">NO</button>
+                           </div>
+                         </td>
+                       </tr>
+                       `;
+                    }).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+        `;
+
+        app.innerHTML = html;
+
+        window.ptRosterList = rosterList; 
+        
+        window.filterPolarTerrorsTable = () => {
+            const q = document.getElementById('ptSearch').value.toLowerCase().trim();
+            document.querySelectorAll('.pt-row').forEach(row => {
+                const name = row.getAttribute('data-name');
+                row.style.display = (!q || name.includes(q)) ? '' : 'none';
+            });
+        };
+
+        window.onPtToggle = async (gameId, willSign, btnElement) => {
+            const container = btnElement.parentElement;
+            const buttons = container.querySelectorAll('button');
+            
+            buttons[0].style.background = willSign ? 'var(--success)' : 'transparent';
+            buttons[0].style.color = willSign ? '#fff' : 'var(--text-muted)';
+            
+            buttons[1].style.background = !willSign ? 'var(--danger)' : 'transparent';
+            buttons[1].style.color = !willSign ? '#fff' : 'var(--text-muted)';
+
+            const ok = await window.togglePolarTerrorsStatus(gameId, willSign);
+            if (!ok) {
+                if(window.showToast) window.showToast("Failed to sync to Firebase", "error");
+                buttons[0].style.background = !willSign ? 'var(--success)' : 'transparent';
+                buttons[0].style.color = !willSign ? '#fff' : 'var(--text-muted)';
+                buttons[1].style.background = willSign ? 'var(--danger)' : 'transparent';
+                buttons[1].style.color = willSign ? '#fff' : 'var(--text-muted)';
+            } else {
+                let pData = await window.fetchPolarTerrorsData();
+                let newYes = 0;
+                let newNo = 0;
+                let newMissing = [];
+                window.ptRosterList.forEach(rp => {
+                    let st = pData[rp.gameId.toString().trim()];
+                    if (st && st.signedUp) newYes++;
+                    else {
+                        newNo++;
+                        newMissing.push(rp.name);
+                    }
+                });
+                
+                document.getElementById('pt-yes-count').textContent = newYes;
+                document.getElementById('pt-no-count').textContent = newNo;
+                document.getElementById('pt-percent').textContent = window.ptRosterList.length > 0 ? Math.round((newYes / window.ptRosterList.length) * 100) + '%' : '0%';
+                
+                document.getElementById('pt-missing-names').innerText = newMissing.length > 0 ? newMissing.join(', ') : 'Everyone is signed up! 🎉';
+            }
+        };
+
+    } catch (e) {
+        console.error("Polar Terrors Admin Error:", e);
+        app.innerHTML = `<div style="padding:40px; text-align:center; color:var(--danger); font-size:18px;">Error loading Polar Terrors Tracker. <br><br> <button onclick="views.adminHub()" style="padding:10px 20px; background:var(--bg-main); border:1px solid var(--border); border-radius:6px; color:var(--text-main); cursor:pointer;">Back to Admin Hub</button></div>`;
+    }
+  },
+
+  bearTrapAdmin: async () => {
+    const app = document.getElementById('app');
+    if (!app) return;
+
+    const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+    if (!isManager) {
+       if(window.showToast) window.showToast("Only R4/R5 managers can edit Bear Trap data", "error");
+       return;
+    }
+
+    renderLoading("Loading Bear Trap Tracker...");
+
+    if (document.querySelector('.navbar')) {
+        document.querySelector('.navbar').style.display = 'none';
+    }
+
+    try {
+        const [btData, rosterData] = await Promise.all([
+            window.fetchBearTrapData(),
+            window.fetchRoster().catch(() => ({}))
+        ]);
+
+        let rosterList = [];
+        if (rosterData) {
+            Object.values(rosterData).forEach(p => {
+                if (p.name && p.gameId) rosterList.push(p);
+            });
+        }
+
+        rosterList.sort((a,b) => (a.name || '').localeCompare(b.name || ''));
+
+        let totalCount = rosterList.length;
+        let yesCount = 0;
+        let noCount = 0;
+        let missingNames = [];
+
+        rosterList.forEach(p => {
+            let gIdStr = p.gameId.toString().trim();
+            let record = btData[gIdStr];
+            let isSignedUp = record && record.signedUp;
+            if (isSignedUp) {
+                yesCount++;
+            } else {
+                noCount++;
+                missingNames.push(p.name);
+            }
+        });
+
+        let percentSignedUp = totalCount > 0 ? Math.round((yesCount / totalCount) * 100) : 0;
+
+        let html = `
+        <div style="background:var(--bg-main); min-height:100vh; font-family:var(--font-family); color:var(--text-main);">
+          <div style="background:linear-gradient(135deg, #10b981, #059669); padding:20px; box-shadow:0 2px 10px rgba(0,0,0,0.1); display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:100;">
+            <div style="display:flex; align-items:center; gap:15px;">
+              <button onclick="views.adminHub()" style="background:rgba(255,255,255,0.2); border:none; color:#fff; cursor:pointer; font-size:18px; padding:8px 12px; border-radius:8px; transition:0.2s;">⬅ Back</button>
+              <h2 style="margin:0; color:#fff; font-size:1.3em;">🐻 Bear Trap Tracker</h2>
+            </div>
+          </div>
+
+          <div style="padding:20px; max-width:1000px; margin:0 auto;">
+            
+            <button onclick="views.adminHub('logs')" style="background:linear-gradient(135deg, #a855f7, #9333ea); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; box-shadow:0 4px 12px rgba(168,85,247,0.3); margin-bottom: 20px; transition: transform 0.2s ease;">
+              📊 Open Roster Event Activity Matrix ➔
+            </button>
+
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:15px; margin-bottom:20px;">
+              <div class="card" style="text-align:center;">
+                <div style="font-size:13px; color:var(--text-muted); margin-bottom:5px;">Signed Up (YES)</div>
+                <div style="font-size:24px; font-weight:bold; color:var(--success);" id="bt-yes-count">${yesCount}</div>
+              </div>
+              <div class="card" style="text-align:center;">
+                <div style="font-size:13px; color:var(--text-muted); margin-bottom:5px;">Missing (NO)</div>
+                <div style="font-size:24px; font-weight:bold; color:var(--danger);" id="bt-no-count">${noCount}</div>
+              </div>
+              <div class="card" style="text-align:center;">
+                <div style="font-size:13px; color:var(--text-muted); margin-bottom:5px;">Response Rate</div>
+                <div style="font-size:24px; font-weight:bold; color:var(--accent);" id="bt-percent">${percentSignedUp}%</div>
+              </div>
+            </div>
+
+            <div class="card" style="margin-bottom:20px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h3 style="margin:0; font-size:1.1em;">Missing Signups (${noCount})</h3>
+                <button onclick="
+                  const text = document.getElementById('bt-missing-names').innerText;
+                  navigator.clipboard.writeText(text).then(() => {
+                    if(window.showToast) window.showToast('Copied missing names to clipboard!', 'success');
+                  });
+                " style="background:var(--accent); color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:13px;">📋 Copy List</button>
+              </div>
+              <div id="bt-missing-names" style="font-family:monospace; background:var(--bg-main); padding:15px; border-radius:8px; border:1px solid var(--border); max-height:150px; overflow-y:auto; color:var(--text-muted); line-height:1.6; word-break:break-all;">
+                ${missingNames.length > 0 ? missingNames.join(', ') : 'Everyone is signed up! 🎉'}
+              </div>
+            </div>
+
+            <div class="card">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h3 style="margin:0; font-size:1.1em;">Roster Status (${totalCount})</h3>
+                <input type="text" id="btSearch" placeholder="🔍 Search name..." onkeyup="window.filterBearTrapTable()" style="padding:8px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:14px; width:200px;">
+              </div>
+              <div style="overflow-x:auto;">
+                <table style="width:100%; border-collapse:collapse; min-width:500px;">
+                  <thead>
+                    <tr style="background:var(--bg-main); border-bottom:2px solid var(--border);">
+                      <th style="padding:12px; text-align:left; font-weight:bold; color:var(--text-muted); font-size:13px; text-transform:uppercase;">Chief Name</th>
+                      <th style="padding:12px; text-align:center; font-weight:bold; color:var(--text-muted); font-size:13px; text-transform:uppercase;">Signed Up</th>
+                      <th style="padding:12px; text-align:right; font-weight:bold; color:var(--text-muted); font-size:13px; text-transform:uppercase;">Donations</th>
+                    </tr>
+                  </thead>
+                  <tbody id="btTableBody">
+                    ${rosterList.map(p => {
+                       let gIdStr = p.gameId.toString().trim();
+                       let isSignedUp = btData[gIdStr] ? btData[gIdStr].signedUp : false;
+                       return `
+                       <tr class="bt-row" data-name="${escapeHTML(p.name.toLowerCase())}" style="border-bottom:1px solid var(--border);">
+                         <td style="padding:12px; font-weight:bold; color:var(--text-main);">${escapeHTML(p.name)}</td>
+                         <td style="padding:12px; text-align:center;">
+                           <div style="display:inline-flex; border-radius:8px; overflow:hidden; border:1px solid var(--border);">
+                             <button onclick="window.onBtToggle('${gIdStr}', true, this)" style="border:none; padding:8px 16px; font-weight:bold; cursor:pointer; background:${isSignedUp ? 'var(--success)' : 'transparent'}; color:${isSignedUp ? '#fff' : 'var(--text-muted)'}; transition:0.2s; width:80px;">YES</button>
+                             <button onclick="window.onBtToggle('${gIdStr}', false, this)" style="border:none; padding:8px 16px; font-weight:bold; cursor:pointer; background:${!isSignedUp ? 'var(--danger)' : 'transparent'}; color:${!isSignedUp ? '#fff' : 'var(--text-muted)'}; transition:0.2s; width:80px;">NO</button>
+                           </div>
+                         </td>
+                         <td style="padding:12px; text-align:right;">
+                            <input type="number" placeholder="0" class="bt-donation-input" data-gid="${gIdStr}" onchange="window.onBtDonationChange('${gIdStr}', this.value)" style="width:80px; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-weight:bold; text-align:center;">
+                         </td>
+                       </tr>
+                       `;
+                    }).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+        `;
+
+        app.innerHTML = html;
+
+        window.btRosterList = rosterList; 
+        
+        // Asynchronously populate the donation inputs
+        setTimeout(async () => {
+             try {
+                const donSnap = await get(ref(db, 'beartrap_donations'));
+                if (donSnap.exists()) {
+                    const allDonations = donSnap.val();
+                    document.querySelectorAll('.bt-donation-input').forEach(input => {
+                        const gid = input.getAttribute('data-gid');
+                        const chiefName = window.idToNameMap[gid];
+                        if (chiefName) {
+                            const donKey = chiefName.toLowerCase().replace(/[^a-z0-9]/g, '_');
+                            if (allDonations[donKey]) {
+                                input.value = allDonations[donKey].current || '';
+                            }
+                        }
+                    });
+                }
+             } catch(e) {}
+        }, 500);
+        
+        window.filterBearTrapTable = () => {
+            const q = document.getElementById('btSearch').value.toLowerCase().trim();
+            document.querySelectorAll('.bt-row').forEach(row => {
+                const name = row.getAttribute('data-name');
+                row.style.display = (!q || name.includes(q)) ? '' : 'none';
+            });
+        };
+
+        window.onBtToggle = async (gameId, willSign, btnElement) => {
+            const container = btnElement.parentElement;
+            const buttons = container.querySelectorAll('button');
+            
+            buttons[0].style.background = willSign ? 'var(--success)' : 'transparent';
+            buttons[0].style.color = willSign ? '#fff' : 'var(--text-muted)';
+            
+            buttons[1].style.background = !willSign ? 'var(--danger)' : 'transparent';
+            buttons[1].style.color = !willSign ? '#fff' : 'var(--text-muted)';
+
+            const ok = await window.toggleBearTrapStatus(gameId, willSign);
+            if (!ok) {
+                if(window.showToast) window.showToast("Failed to sync to Firebase", "error");
+                buttons[0].style.background = !willSign ? 'var(--success)' : 'transparent';
+                buttons[0].style.color = !willSign ? '#fff' : 'var(--text-muted)';
+                buttons[1].style.background = willSign ? 'var(--danger)' : 'transparent';
+                buttons[1].style.color = willSign ? '#fff' : 'var(--text-muted)';
+            } else {
+                let pData = await window.fetchBearTrapData();
+                let newYes = 0;
+                let newNo = 0;
+                let newMissing = [];
+                window.btRosterList.forEach(rp => {
+                    let st = pData[rp.gameId.toString().trim()];
+                    if (st && st.signedUp) newYes++;
+                    else {
+                        newNo++;
+                        newMissing.push(rp.name);
+                    }
+                });
+                
+                document.getElementById('bt-yes-count').textContent = newYes;
+                document.getElementById('bt-no-count').textContent = newNo;
+                document.getElementById('bt-percent').textContent = window.btRosterList.length > 0 ? Math.round((newYes / window.btRosterList.length) * 100) + '%' : '0%';
+                
+                document.getElementById('bt-missing-names').innerText = newMissing.length > 0 ? newMissing.join(', ') : 'Everyone is signed up! 🎉';
+            }
+        };
+
+        window.onBtDonationChange = async (gameId, newVal) => {
+            if (newVal === '') newVal = "0";
+            const ok = await window.updateBearTrapDonationInline(gameId, newVal);
+            if (ok) {
+                if (window.showToast) window.showToast("Saved donation!", "success");
+            } else {
+                if (window.showToast) window.showToast("Error saving donation", "error");
+            }
+        };
+
+    } catch (e) {
+        console.error("Bear Trap Admin Error:", e);
+        app.innerHTML = `<div style="padding:40px; text-align:center; color:var(--danger); font-size:18px;">Error loading Bear Trap Tracker. <br><br> <button onclick="views.adminHub()" style="padding:10px 20px; background:var(--bg-main); border:1px solid var(--border); border-radius:6px; color:var(--text-main); cursor:pointer;">Back to Admin Hub</button></div>`;
+    }
+  },
+\n  mercenaryAdmin: async () => {
     const app = document.getElementById('app');
     if (!app) return;
 

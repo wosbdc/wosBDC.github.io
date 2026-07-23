@@ -1,3 +1,9 @@
+## [1.29.92] - 2026-07-22
+### Added
+- **Polar Terrors Admin Tracker**: Added a dedicated Polar Terrors tracker mirroring the Mercenary Prestige module to the Daily Admin Tools hub.
+- **Bear Trap Admin Tracker**: Added a dedicated Bear Trap tracker to the Daily Admin Tools hub, featuring inline Donation inputs.
+- **Roster Event Activity Matrix Expansion**: Expanded the Member Activity Matrix with a new column/checkbox to track Bear Trap signups directly from the matrix.
+
 ## [1.29.91] - 2026-07-22
 ### Fixed
 - **Visual Overlap & DOM HTML Bug**: Fixed a critical HTML parsing bug where the Bear Trap Activity Widget was injected incorrectly inside a `<tbody>` tag, causing the browser to forcibly close containers and visually overlap/merge cards together.
