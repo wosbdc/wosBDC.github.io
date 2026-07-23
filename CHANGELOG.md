@@ -1,3 +1,7 @@
+## [1.32.1] - 2026-07-23
+### Pure Horns-Based Tie Ranking for Leaderboards Tab
+- **Pure Horns Ranking**: Updated tie detection on `menu | leaderboards | showdown leaderboards` so shared rank numbers (e.g. Rank 1 for both tied players) are calculated **100% purely on Horns (`p.horns`)**. Removed point score fallback when evaluating rank equality.
+
 ## [1.32.0] - 2026-07-23
 ### Leaderboards Tab Showdown Tie Handling
 - **Co-MVP Banner & Shared Ranks**: Updated `Current - Showdown Leaderboard` and `All-Time - Showdown Leaderboard` under `menu | leaderboards | showdown leaderboards` (`views.leaderboards('showdown')`) to handle ties seamlessly:

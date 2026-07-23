@@ -7568,8 +7568,8 @@ html += `</select>
                     <div style="color: var(--text-main); font-size: 18px; font-weight: bold;">${champDisplayNames}</div>
                   </div>
                   <div style="text-align: right;">
-                    <div style="color: var(--text-muted); font-size: 11px;">Total Score</div>
-                    <div style="color: var(--accent); font-size: 20px; font-weight: bold;">${maxHorns}</div>
+                    <div style="color: var(--text-muted); font-size: 11px; text-transform: uppercase;">Total Horns</div>
+                    <div style="color: #FFD700; font-size: 20px; font-weight: bold;">${maxHorns}</div>
                   </div>
                 </div>
               `;
@@ -7588,7 +7588,7 @@ html += `</select>
           liveDisplayList.forEach((p, index) => {
               if (index > 0) {
                   let prev = liveDisplayList[index - 1];
-                  if (p.horns !== prev.horns || p.total !== prev.total) {
+                  if (p.horns !== prev.horns) {
                       currentLiveRank = index + 1;
                   }
               }
@@ -7679,7 +7679,7 @@ html += `</select>
               allTimeDisplayList.forEach((p, index) => {
                   if (index > 0) {
                       let prev = allTimeDisplayList[index - 1];
-                      if (p.horns !== prev.horns || p.total !== prev.total) {
+                      if (p.horns !== prev.horns) {
                           currentAllTimeRank = index + 1;
                       }
                   }
