@@ -1,3 +1,7 @@
+## [1.35.3] - 2026-07-23
+### Unignore Tools Script for GitHub Actions Runner
+- **GitHub Actions Execution Fix**: Updated `.gitignore` to explicitly unignore `!tools/*.cjs` so `tools/check_window_bindings.cjs` is tracked and committed to git, resolving `Cannot find module` exit code 1 in GitHub Actions deployment pipelines.
+
 ## [1.35.2] - 2026-07-23
 ### Fix GitHub Actions Workflow Node Version
 - **GitHub Actions Deployment Fix**: Updated `.github/workflows/deploy.yml` to use `node-version: '22'` (Standard Node LTS) and separated `Audit event bindings` into an explicit pipeline step.
