@@ -1,3 +1,8 @@
+## [1.37.0] - 2026-07-23
+### Mobile Handedness Navigation & Ergonomics System
+- **Mobile Navigation Alignment (`✋ Right-Handed` vs `🖐️ Left-Handed`)**: Added a dedicated Mobile Navigation handedness toggle in Settings (`#settingsSidebar`).
+- **Left/Right Ergonomics**: Allows users on smartphones to align navigation controls, dropdown menus, and sidebars to either the right edge (right-hand thumb) or left edge (left-hand thumb) for comfortable 1-handed smartphone use. Settings persist across sessions in `localStorage`.
+
 ## [1.36.3] - 2026-07-23
 ### Fix Dropdown Selection & Card Rendering in Player Lookup
 - **Dropdown Click & Profile Card Fix**: Replaced `const p` check in `renderCardForChief()` with dynamic Roster fallback (`idToNameMap`), and bound both `pointerdown` and `click` event listeners to dropdown items so selecting any Chief from the dropdown instantly renders their profile card on all desktop and mobile devices.

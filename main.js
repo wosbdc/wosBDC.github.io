@@ -10661,3 +10661,61 @@ window.openAltPerksModal = (gameId, altName) => {
 
 
 
+
+// --- Mobile Handedness Navigation System ---
+window.initHandOrientation = () => {
+  const savedHand = localStorage.getItem('wos_hand_orientation') || 'right';
+  document.body.classList.remove('hand-right', 'hand-left');
+  document.body.classList.add(`hand-${savedHand}`);
+
+  const btns = document.querySelectorAll('.hand-opt-btn');
+  btns.forEach(btn => {
+    if (btn.getAttribute('data-hand') === savedHand) {
+      btn.style.background = 'var(--accent)';
+      btn.style.color = '#fff';
+    } else {
+      btn.style.background = 'transparent';
+      btn.style.color = 'var(--text-muted)';
+    }
+  });
+};
+
+window.setHandOrientation = (hand) => {
+  localStorage.setItem('wos_hand_orientation', hand);
+  window.initHandOrientation();
+  if (window.showToast) window.showToast(`Mobile Navigation aligned for ${hand === 'left' ? '🖐️ Left-Handed' : '✋ Right-Handed'} use!`, "info");
+};
+
+// Auto-run on startup
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => window.initHandOrientation());
+} else {
+  window.initHandOrientation();
+}
+
+const styleEl = document.createElement('style'); styleEl.textContent = `
+/* --- Handedness Mobile Navigation Alignment --- */
+@media (max-width: 768px) {
+  body.hand-left .nav-inner {
+    flex-direction: row-reverse !important;
+  }
+  body.hand-left .mobile-menu {
+    left: 10px !important;
+    right: auto !important;
+  }
+  body.hand-left .settings-sidebar {
+    left: 0 !important;
+    right: auto !important;
+    transform: translateX(-100%) !important;
+    border-right: 1px solid var(--border) !important;
+    border-left: none !important;
+  }
+  body.hand-left .settings-sidebar.open {
+    transform: translateX(0) !important;
+  }
+  body.hand-left #devDeployBanner {
+    left: 20px !important;
+    right: auto !important;
+  }
+}
+`; document.head.appendChild(styleEl);
