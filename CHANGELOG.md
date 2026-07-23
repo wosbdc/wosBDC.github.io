@@ -1,3 +1,7 @@
+## [1.33.9] - 2026-07-23
+### Fix Bear Trap Roster Overwrite (Safe Row Merge)
+- **Roster Loss Fix**: Updated Bear Trap leaderboard rendering in `views.leaderboards()` so native Firebase `beartrap_wins` merge cleanly on top of Google Sheets historical player rows instead of completely overwriting `board.rows`. Preserves all historical alliance players on Bear Trap 1, Bear Trap 2, and All-Time tables.
+
 ## [1.33.8] - 2026-07-23
 ### Combined Bear Trap Admin Log (Firebase & Google Sheets)
 - **Bear Trap Admin Log Upgrade**: Updated `loadBeartrapLog()` in `views.beartrap()` to query both Firebase Realtime Database (`admin_logs`) and Google Sheets (`api=adminLog`), combining system actions (e.g. `[Bear Trap Reset]`, `[Bear Trap Champion Crowned]`, `[Bear Trap Player Reset]`) with player donation entries into a single, reverse-chronological feed.
