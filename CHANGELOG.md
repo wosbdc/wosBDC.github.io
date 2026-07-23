@@ -1,3 +1,9 @@
+## [1.32.5] - 2026-07-23
+### Events Tab Showdown Daily MVP & Tie Enhancements
+- **Daily MVP Auto-Detection**: Updated `menu | events | showdown page` (`views.showdown()`) so the MVP header banner automatically tracks the winner of the **latest active played day** (e.g. `👑 DAY 3 MVP` ➔ `ThaDwarf`).
+- **Co-MVP & Overlapping Avatar Stack**: Added tie support for daily MVPs (`👑 DAY 3 CO-MVPS`) rendering the overlapping avatar stack (`renderAvatarStack`) for tied profile pictures.
+- **Winners Row & Table Formatting**: Applied metallic gold text (`color: #FFD700`) for daily winners, renamed row to `Horn Rewards`, and added dense tie ranking with `🤝` badges to the `Player Rankings` table.
+
 ## [1.32.4] - 2026-07-23
 ### Overlapping Avatar Stack for Co-MVPs / Co-Champions
 - **Overlapping Avatar Stack**: Implemented a modern GitHub/Slack-style overlapping avatar stack on `menu | leaderboards | showdown leaderboards` (`views.leaderboards('showdown')`). When multiple players tie for Co-MVP or Co-Champion, up to 3 circular avatars overlap with metallic gold borders (plus a `+N` indicator badge if more than 3 tie), preventing card clutter while showcasing all winners.

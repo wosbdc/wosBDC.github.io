@@ -8143,9 +8143,6 @@ html += `</select>
   showdown: async () => {
     renderLoading("Loading Showdown Data");
     try {
- 
-       
-       
        const [liveSnap, metaSnap] = await Promise.all([
           get(ref(db, 'showdown_live')),
           get(ref(db, 'showdown_meta'))
@@ -8160,7 +8157,7 @@ html += `</select>
        // Calculate Our Scores
        let ourScores = { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 };
        let players = [];
-       let topPlayers = { d1:{name:'', score:0}, d2:{name:'', score:0}, d3:{name:'', score:0}, d4:{name:'', score:0}, d5:{name:'', score:0}, d6:{name:'', score:0} };
+       let topPlayers = { d1:{names:[], score:0}, d2:{names:[], score:0}, d3:{names:[], score:0}, d4:{names:[], score:0}, d5:{names:[], score:0}, d6:{names:[], score:0} };
        
        for (const [pName, scores] of Object.entries(liveData)) {
           let pd1 = scores.d1 || 0;
@@ -8178,12 +8175,16 @@ html += `</select>
           ourScores.d5 += pd5;
           ourScores.d6 += pd6;
           
-          if (pd1 > topPlayers.d1.score) topPlayers.d1 = { name: pName, score: pd1 };
-          if (pd2 > topPlayers.d2.score) topPlayers.d2 = { name: pName, score: pd2 };
-          if (pd3 > topPlayers.d3.score) topPlayers.d3 = { name: pName, score: pd3 };
-          if (pd4 > topPlayers.d4.score) topPlayers.d4 = { name: pName, score: pd4 };
-          if (pd5 > topPlayers.d5.score) topPlayers.d5 = { name: pName, score: pd5 };
-          if (pd6 > topPlayers.d6.score) topPlayers.d6 = { name: pName, score: pd6 };
+          for (let di = 1; di <= 6; di++) {
+             let dScore = scores['d' + di] || 0;
+             if (dScore > 0) {
+                if (dScore > topPlayers['d' + di].score) {
+                   topPlayers['d' + di] = { names: [pName], score: dScore };
+                } else if (dScore === topPlayers['d' + di].score) {
+                   topPlayers['d' + di].names.push(pName);
+                }
+             }
+          }
           
           players.push({ name: pName, d1: pd1, d2: pd2, d3: pd3, d4: pd4, d5: pd5, d6: pd6, total: pTotal });
        }
@@ -8195,43 +8196,64 @@ html += `</select>
        const hornsTotal = 13;
        const dailyGoal = 3333333;
        
-
-       
-       // MVP Calculation
-       let playerHorns = {};
-       for(let i=1; i<=6; i++) {
-           let p = topPlayers['d'+i];
-           if (p.name && p.score > 0) {
-               playerHorns[p.name] = (playerHorns[p.name] || 0) + staticHorns['d'+i];
-           }
-       }
-       let maxHorns = 0;
-       for (const horns of Object.values(playerHorns)) if (horns > maxHorns) maxHorns = horns;
-       let overallWinners = Object.keys(playerHorns).filter(name => playerHorns[name] === maxHorns);
-       
-       let titleRightHtml = "";
-       if (maxHorns > 0 && overallWinners.length > 0) {
-           let champName = overallWinners[0];
-           let champId = null;
-           for (const [gid, name] of Object.entries(idToNameMap)) {
-               if (name.toLowerCase() === champName.toLowerCase()) {
-                   champId = gid; break;
+       // MVP Calculation - Detect latest active day MVP
+       let currentActiveDay = 1;
+       for (let di = 6; di >= 1; di--) {
+           let dayHasScore = false;
+           for (const scores of Object.values(liveData)) {
+               if ((scores['d' + di] || 0) > 0) {
+                   dayHasScore = true; break;
                }
            }
-           const avatarSrc = (champId && avatarMap[champId]) ? avatarMap[champId] : `images/${champName}.png`;
+           if (dayHasScore) {
+               currentActiveDay = di; break;
+           }
+       }
+       
+       let isEventComplete = (currentActiveDay === 6 && (ourScores.d6 > 0 || (enemyAlliance.scores && enemyAlliance.scores.d6 > 0)));
+       let mvpTitle = "";
+       let mvpWinners = [];
+       let mvpDisplayHorns = 0;
+       let mvpLabelText = "Total Horns";
+       
+       if (isEventComplete) {
+           let playerHorns = {};
+           for(let di=1; di<=6; di++) {
+               let dayObj = topPlayers['d'+di];
+               if (dayObj && dayObj.score > 0 && dayObj.names.length > 0) {
+                   dayObj.names.forEach(name => {
+                       playerHorns[name] = (playerHorns[name] || 0) + staticHorns['d'+di];
+                   });
+               }
+           }
+           let maxHorns = 0;
+           for (const horns of Object.values(playerHorns)) if (horns > maxHorns) maxHorns = horns;
+           mvpWinners = Object.keys(playerHorns).filter(name => playerHorns[name] === maxHorns);
+           mvpTitle = mvpWinners.length > 1 ? "👑 Showdown Co-MVPs" : "👑 Showdown MVP";
+           mvpDisplayHorns = maxHorns;
+       } else {
+           let dayObj = topPlayers['d' + currentActiveDay];
+           mvpWinners = (dayObj && dayObj.names) ? dayObj.names : [];
+           mvpTitle = mvpWinners.length > 1 ? `👑 DAY ${currentActiveDay} CO-MVPS` : `👑 DAY ${currentActiveDay} MVP`;
+           mvpDisplayHorns = staticHorns['d' + currentActiveDay];
+           mvpLabelText = `Day ${currentActiveDay} Horns`;
+       }
+       
+       let titleRightHtml = "";
+       if (mvpWinners.length > 0) {
+           let champDisplayNames = mvpWinners.map(escapeHTML).join(" & ");
+           let avatarStackHtml = renderAvatarStack(mvpWinners);
            
            titleRightHtml = `
               <div style="background: linear-gradient(135deg, rgba(255,215,0,0.1) 0%, rgba(255,215,0,0.02) 100%); border: 1px solid rgba(255,215,0,0.3); border-radius: 12px; padding: 15px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; box-shadow: 0 4px 15px rgba(255,215,0,0.05);">
-                  <div style="width: 50px; height: 50px; border-radius: 50%; border: 2px solid #FFD700; overflow: hidden; flex-shrink: 0; box-shadow: 0 0 10px rgba(255,215,0,0.2);">
-                  <img src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='images/default.png';">
-                </div>
+                ${avatarStackHtml}
                 <div style="flex: 1; text-align: left;">
-                  <div style="color: #FFD700; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">👑 Showdown MVP</div>
-                  <div style="color: var(--text-main); font-size: 18px; font-weight: bold;">${escapeHTML(champName)}</div>
+                  <div style="color: #FFD700; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">${mvpTitle}</div>
+                  <div style="color: var(--text-main); font-size: 18px; font-weight: bold;">${champDisplayNames}</div>
                 </div>
                 <div style="text-align: right;">
-                  <div style="color: var(--text-muted); font-size: 11px; text-transform: uppercase;">Total Horns</div>
-                  <div style="color: #FFD700; font-size: 20px; font-weight: bold;">${maxHorns}</div>
+                  <div style="color: var(--text-muted); font-size: 11px; text-transform: uppercase;">${mvpLabelText}</div>
+                  <div style="color: #FFD700; font-size: 20px; font-weight: bold;">${mvpDisplayHorns}</div>
                 </div>
               </div>
             `;
@@ -8284,49 +8306,65 @@ html += `</select>
        }
        allianceCard += `</tr>`;
        
-       // Horns
-       allianceCard += `<tr><td style="font-weight:bold; position:sticky; left:0; background:var(--card-bg); z-index:2; box-shadow: 1px 0 0 var(--border);">Alliance's Horns</td><td style="border-right: 1px solid rgba(255,255,255,0.12); text-align:center;">${hornsTotal}</td>`;
+       // Horn Rewards
+       allianceCard += `<tr><td style="font-weight:bold; position:sticky; left:0; background:var(--card-bg); z-index:2; box-shadow: 1px 0 0 var(--border);">Horn Rewards</td><td style="border-right: 1px solid rgba(255,255,255,0.12); text-align:center;">${hornsTotal}</td>`;
        for(let i=1; i<=6; i++) allianceCard += `<td style="border-right: 1px solid rgba(255,255,255,0.06); text-align:center;">${staticHorns['d'+i]}</td>`;
        allianceCard += `</tr>`;
        
-       // Winners
+       // Winners Row
        allianceCard += `<tr><td style="font-weight:bold; position:sticky; left:0; background:var(--card-bg); z-index:2; box-shadow: 1px 0 0 var(--border);">Winners</td><td style="border-right: 1px solid rgba(255,255,255,0.12);"></td>`;
-       for(let i=1; i<=6; i++) {
-           let w = topPlayers['d'+i].name || '';
+       for(let di=1; di<=6; di++) {
+           let dayObj = topPlayers['d'+di];
+           let w = (dayObj && dayObj.names && dayObj.names.length > 0) ? dayObj.names.map(escapeHTML).join(' & ') : '';
            let style = "font-weight:bold; color:#FFD700; border-right: 1px solid rgba(255,255,255,0.06); text-align:center;";
-           allianceCard += `<td style="${style}">${escapeHTML(w)}</td>`;
+           allianceCard += `<td style="${style}">${w}</td>`;
        }
        allianceCard += `</tr></tbody></table></div></div>`;
        
-       // 3. Player Rankings
+       // 3. Player Rankings Table
        players.sort((a, b) => b.total - a.total);
        
-       let playersCard = `<div class="card"><div class="card-title">🏆 Player Rankings</div><div class="card-table-scroll" style="overflow-x:auto; width:100%; border-radius:8px; border:1px solid var(--border);"><table style="min-width:700px;"><thead><tr>
-          <th style="position:sticky; left:0; background:var(--card-bg); z-index:6;">Ranking</th><th style="position:sticky; left:60px; background:var(--card-bg); z-index:6; box-shadow: 1px 0 0 var(--border);">Name</th><th>Total Score</th><th>Day 1</th><th>Day 2</th><th>Day 3</th><th>Day 4</th><th>Day 5</th><th>Day 6</th>
+       let pDayHeaders = '';
+       for(let i=1; i<=6; i++) {
+           pDayHeaders += `<th style="border-right: 1px solid rgba(255,255,255,0.08); text-align:center;"><span style="background:rgba(255,255,255,0.05); padding:3px 10px; border-radius:6px; font-size:11px; text-transform:uppercase; letter-spacing:0.5px;">Day ${i}</span></th>`;
+       }
+       
+       let playersCard = `<div class="card"><div class="card-title">🏆 Player Rankings</div><div class="card-table-scroll" style="overflow-x:auto; width:100%; border-radius:8px; border:1px solid var(--border);"><table style="min-width:700px; border-collapse:collapse;"><thead><tr>
+          <th style="position:sticky; left:0; background:var(--card-bg); z-index:6; width:45px;">Rank</th><th style="position:sticky; left:45px; background:var(--card-bg); z-index:6; box-shadow: 1px 0 0 var(--border); max-width:120px;">Name</th><th style="border-right: 1px solid rgba(255,255,255,0.12); text-align:center;">Total Score</th>${pDayHeaders}
        </tr></thead><tbody>`;
        
+       let currentPRank = 1;
        players.forEach((p, index) => {
-           let rank = index + 1;
-           if (rank === 1) rank = '🥇 1';
-           else if (rank === 2) rank = '🥈 2';
-           else if (rank === 3) rank = '🥉 3';
+           if (index > 0) {
+               let prev = players[index - 1];
+               if (p.total !== prev.total) {
+                   currentPRank += 1;
+               }
+           }
+           let isTie = players.filter(o => o.total === p.total).length > 1;
+           let tieBadge = isTie ? ' <span style="font-size:11px; opacity:0.85;" title="Tied Rank">🤝</span>' : '';
+           let rankDisplay = `${currentPRank}${tieBadge}`;
+           if (currentPRank === 1) rankDisplay = `🥇 1${tieBadge}`;
+           else if (currentPRank === 2) rankDisplay = `🥈 2${tieBadge}`;
+           else if (currentPRank === 3) rankDisplay = `🥉 3${tieBadge}`;
+           
+           let dayCells = '';
+           for (let di = 1; di <= 6; di++) {
+               let val = p['d' + di] || 0;
+               dayCells += `<td style="border-right: 1px solid rgba(255,255,255,0.06); text-align:center;">${val > 0 ? val.toLocaleString() : '-'}</td>`;
+           }
            
            playersCard += `<tr>
-              <td style="font-weight:bold; color:var(--text-muted);">${rank}</td>
-              <td style="font-weight:bold; color:var(--text-muted);">${formatCell(p.name)}</td>
-              <td style="font-weight:bold;">${p.total > 0 ? p.total.toLocaleString() : ''}</td>
-              <td>${p.d1 > 0 ? p.d1.toLocaleString() : ''}</td>
-              <td>${p.d2 > 0 ? p.d2.toLocaleString() : ''}</td>
-              <td>${p.d3 > 0 ? p.d3.toLocaleString() : ''}</td>
-              <td>${p.d4 > 0 ? p.d4.toLocaleString() : ''}</td>
-              <td>${p.d5 > 0 ? p.d5.toLocaleString() : ''}</td>
-              <td>${p.d6 > 0 ? p.d6.toLocaleString() : ''}</td>
+              <td style="font-weight:bold; color:var(--text-muted); position:sticky; left:0; background:var(--card-bg); z-index:2; text-align:center;">${rankDisplay}</td>
+              <td style="position:sticky; left:45px; background:var(--card-bg); z-index:2; box-shadow: 1px 0 0 var(--border); max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${formatCell(p.name)}</td>
+              <td style="font-weight:bold; border-right: 1px solid rgba(255,255,255,0.12); text-align:center;">${p.total > 0 ? p.total.toLocaleString() : '0'}</td>
+              ${dayCells}
            </tr>`;
        });
        playersCard += `</tbody></table></div></div>`;
        
        html += allianceCard + playersCard + `</div>`;
-       app.innerHTML = html;
+       document.getElementById('mainContent').innerHTML = html;
        
     } catch(e) { renderError(e.message); }
   },
