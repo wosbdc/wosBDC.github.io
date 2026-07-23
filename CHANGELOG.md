@@ -1,3 +1,7 @@
+## [1.33.5] - 2026-07-23
+### Broadcast Push Notification Button & Modal
+- **Push Notification Modal Conversion**: Converted the inline Broadcast Push Notification box into a clean `🚀 Broadcast Push Notification` button under `System & Roster Tools`. Clicking the button opens a modal (`openBroadcastPushModal()`) for drafting and sending push alerts.
+
 ## [1.33.4] - 2026-07-23
 ### Fixed In-Dev Tab DOM Structure
 - **DOM Container Nesting Fix**: Corrected HTML structure so `#tab-indev` is a standalone top-level tab container sibling (rather than nested inside `#tab-tools`), allowing the 4 in-dev buttons (`Alliance Championship`, `Mercenary Prestige`, `Polar Terrors Tracker`, `Bear Trap Tracker`) to render instantly when clicking the `🧪 In-Dev` tab button.
