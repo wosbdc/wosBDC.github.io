@@ -2224,7 +2224,7 @@ window.adminFetchAltFurnace = async (gid, spanId) => {
        colIsUpcoming[c] = !hasAnyTrue;
     }
     
-    let targetName = name.trim();
+    if (!targetName && name) targetName = name.trim();
     let pRow = null;
     if (data && Array.isArray(data)) {
       for (let i = 1; i < data.length; i++) {
@@ -2285,10 +2285,18 @@ window.adminFetchAltFurnace = async (gid, spanId) => {
 
 window.searchPlayerFull = async (name) => {
   let targetName = name ? name.replace(/^✅\s*/, '').trim() : '';
-  if (name) name = name.replace(/^✅\s*/, '');
   window.activeViewFunc = () => window.searchPlayerFull(name);
-  const resDiv = document.getElementById('uniEditorRes');
-  if (!name || !name.trim()) {
+  
+  let resDiv = document.getElementById('uniEditorRes');
+  if (!resDiv) {
+    if (views.playerEditor) await views.playerEditor();
+    resDiv = document.getElementById('uniEditorRes');
+    const searchInput = document.getElementById('uniSearchInput');
+    if (searchInput) searchInput.value = targetName;
+  }
+
+  if (!resDiv) return;
+  if (!targetName) {
     resDiv.style.display = 'none';
     return;
   }
@@ -2439,7 +2447,7 @@ window.searchPlayerFull = async (name) => {
        colIsUpcoming[c] = !hasAnyTrue;
     }
     
-    let targetName = name.trim();
+    if (!targetName && name) targetName = name.trim();
     let pRow = null;
     if (data && Array.isArray(data)) {
       for (let i = 1; i < data.length; i++) {

@@ -1,3 +1,7 @@
+## [1.36.1] - 2026-07-23
+### Fix Temporal Dead Zone Variable Scope in searchPlayerFull
+- **Fixed `Cannot access 'v' before initialization`**: Fixed duplicate `let targetName` re-declaration in `searchPlayerFull()` that caused JavaScript Temporal Dead Zone errors during minified execution.
+
 ## [1.36.0] - 2026-07-23
 ### 1-Click Quick Add Player & Test Account Tool
 - **1-Click Quick Add Player Button**: Placed a `➕ Add Player` button directly on the Bear Trap admin headers (`views.beartrap()` & `views.bearTrapAdmin()`).
