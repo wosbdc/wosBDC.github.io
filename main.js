@@ -4139,10 +4139,11 @@ const views = {
       </div>
     `;
   },
-  admin: async () => {
-    // Ensure navbar is always visible when returning to the admin menu
+  admin: async (initialTab) => {
     const navbar = document.querySelector('.navbar');
     if (navbar) navbar.style.display = 'block';
+    const targetTab = initialTab || window._lastAdminTab || 'tab-tools';
+    window._lastAdminTab = targetTab;
 
     window.refreshAdminUsers = async () => {
         if (window.showToast) window.showToast("Refreshing user database...", "info");
@@ -5906,14 +5907,14 @@ html += `</select>
         <div style="background:var(--bg-main); min-height:100vh; font-family:var(--font-family); color:var(--text-main);">
           <div style="background:linear-gradient(135deg, #0ea5e9, #0284c7); padding:20px; box-shadow:0 2px 10px rgba(0,0,0,0.1); display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:100;">
             <div style="display:flex; align-items:center; gap:15px;">
-              <button onclick="views.adminHub()" style="background:rgba(255,255,255,0.2); border:none; color:#fff; cursor:pointer; font-size:18px; padding:8px 12px; border-radius:8px; transition:0.2s;">⬅ Back</button>
+              <button onclick="views.admin('tab-indev')" style="background:rgba(255,255,255,0.2); border:none; color:#fff; cursor:pointer; font-size:18px; padding:8px 12px; border-radius:8px; transition:0.2s;">⬅ Back to Admin</button>
               <h2 style="margin:0; color:#fff; font-size:1.3em;">🐻‍❄️ Polar Terrors Tracker</h2>
             </div>
           </div>
 
           <div style="padding:20px; max-width:1000px; margin:0 auto;">
             
-            <button onclick="views.adminHub('logs')" style="background:linear-gradient(135deg, #a855f7, #9333ea); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; box-shadow:0 4px 12px rgba(168,85,247,0.3); margin-bottom: 20px; transition: transform 0.2s ease;">
+            <button onclick="views.admin('tab-logs')" style="background:linear-gradient(135deg, #a855f7, #9333ea); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; box-shadow:0 4px 12px rgba(168,85,247,0.3); margin-bottom: 20px; transition: transform 0.2s ease;">
               📊 Open Roster Event Activity Matrix ➔
             </button>
 
@@ -6037,7 +6038,7 @@ html += `</select>
 
     } catch (e) {
         console.error("Polar Terrors Admin Error:", e);
-        app.innerHTML = `<div style="padding:40px; text-align:center; color:var(--danger); font-size:18px;">Error loading Polar Terrors Tracker. <br><br> <button onclick="views.adminHub()" style="padding:10px 20px; background:var(--bg-main); border:1px solid var(--border); border-radius:6px; color:var(--text-main); cursor:pointer;">Back to Admin Hub</button></div>`;
+        app.innerHTML = `<div style="padding:40px; text-align:center; color:var(--danger); font-size:18px;">Error loading Polar Terrors Tracker. <br><br> <button onclick="views.admin('tab-indev')" style="padding:10px 20px; background:var(--bg-main); border:1px solid var(--border); border-radius:6px; color:var(--text-main); cursor:pointer;">Back to Admin Hub</button></div>`;
     }
   },
 
@@ -6095,14 +6096,14 @@ html += `</select>
         <div style="background:var(--bg-main); min-height:100vh; font-family:var(--font-family); color:var(--text-main);">
           <div style="background:linear-gradient(135deg, #10b981, #059669); padding:20px; box-shadow:0 2px 10px rgba(0,0,0,0.1); display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:100;">
             <div style="display:flex; align-items:center; gap:15px;">
-              <button onclick="views.adminHub()" style="background:rgba(255,255,255,0.2); border:none; color:#fff; cursor:pointer; font-size:18px; padding:8px 12px; border-radius:8px; transition:0.2s;">⬅ Back</button>
+              <button onclick="views.admin('tab-indev')" style="background:rgba(255,255,255,0.2); border:none; color:#fff; cursor:pointer; font-size:18px; padding:8px 12px; border-radius:8px; transition:0.2s;">⬅ Back to Admin</button>
               <h2 style="margin:0; color:#fff; font-size:1.3em;">🐻 Bear Trap Tracker</h2>
             </div>
           </div>
 
           <div style="padding:20px; max-width:1000px; margin:0 auto;">
             
-            <button onclick="views.adminHub('logs')" style="background:linear-gradient(135deg, #a855f7, #9333ea); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; box-shadow:0 4px 12px rgba(168,85,247,0.3); margin-bottom: 20px; transition: transform 0.2s ease;">
+            <button onclick="views.admin('tab-logs')" style="background:linear-gradient(135deg, #a855f7, #9333ea); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; box-shadow:0 4px 12px rgba(168,85,247,0.3); margin-bottom: 20px; transition: transform 0.2s ease;">
               📊 Open Roster Event Activity Matrix ➔
             </button>
 
@@ -6260,7 +6261,7 @@ html += `</select>
 
     } catch (e) {
         console.error("Bear Trap Admin Error:", e);
-        app.innerHTML = `<div style="padding:40px; text-align:center; color:var(--danger); font-size:18px;">Error loading Bear Trap Tracker. <br><br> <button onclick="views.adminHub()" style="padding:10px 20px; background:var(--bg-main); border:1px solid var(--border); border-radius:6px; color:var(--text-main); cursor:pointer;">Back to Admin Hub</button></div>`;
+        app.innerHTML = `<div style="padding:40px; text-align:center; color:var(--danger); font-size:18px;">Error loading Bear Trap Tracker. <br><br> <button onclick="views.admin('tab-indev')" style="padding:10px 20px; background:var(--bg-main); border:1px solid var(--border); border-radius:6px; color:var(--text-main); cursor:pointer;">Back to Admin Hub</button></div>`;
     }
   },
   mercenaryAdmin: async () => {

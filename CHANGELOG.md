@@ -1,3 +1,8 @@
+## [1.34.6] - 2026-07-23
+### Fix Bear Trap Tracker Back Button Navigation
+- **Back Button Navigation Fix**: Fixed `⬅ Back to Admin` button in `views.bearTrapAdmin()` to return directly to `views.admin('tab-indev')`, automatically opening the **`🧪 In-Dev`** tab and restoring top navbar visibility.
+- **Global Alias**: Registered global `views.adminHub` alias to guarantee zero navigation errors.
+
 ## [1.34.5] - 2026-07-23
 ### Glowing Question Mark Badge for Reset Champions
 - **Reset Winner Mystery Badge**: Updated Reigning Champion Banner card in `views.leaderboards()` so that when Bear Trap winners are reset (or unassigned/`Pending...`), the avatar box displays a glowing gold mystery question mark **`❓`** badge instead of a broken/missing player image.
