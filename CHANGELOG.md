@@ -1,3 +1,7 @@
+## [1.40.1] - 2026-07-23
+### Compact 1-Tap Bear Trap Status Badge
+- **Compact Mobile Status Badge**: Replaced bulky side-by-side `[ YES ] [ NO ]` toggle boxes in Bear Trap Tracker table with a clean 1-tap status badge (`✅ Signed Up` vs `❌ Missing`) saving 75px per row for perfect mobile screen fit.
+
 ## [1.40.0] - 2026-07-23
 ### Bear Trap Tracker Widescreen Optimization
 - **Responsive Widescreen Dual-Column Layout**: Expanded Bear Trap Tracker (`bearTrapAdmin`) container width to `1600px` and converted the main section into a responsive 2-column grid layout (Missing Signups sticky box on the left, Roster Status table on the right) to eliminate wasted screen space on desktop monitors.
