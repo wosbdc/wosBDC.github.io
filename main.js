@@ -1533,8 +1533,7 @@ window.openBtDbEditor = async () => {
     contentDiv.innerHTML = '<p style="text-align:center; color:var(--text-muted);">Fetching live database...</p>';
     
     try {
-        const { get, ref, remove } = await import('https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js');
-        const snap = await get(ref(window.db, 'beartrap_donations'));
+        const snap = await get(ref(db, 'beartrap_donations'));
         if (!snap.exists() || !snap.val()) {
             contentDiv.innerHTML = '<p style="text-align:center; color:var(--text-muted);">No entries found in database.</p>';
             return;
@@ -1566,8 +1565,7 @@ window.deleteBtDbEntry = async (key) => {
     if (!confirmDel) return;
     
     try {
-        const { ref, remove } = await import('https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js');
-        await remove(ref(window.db, `beartrap_donations/${key}`));
+        await remove(ref(db, `beartrap_donations/${key}`));
         if(window.showToast) window.showToast("Node deleted successfully", "success");
         // Refresh the editor view
         window.openBtDbEditor();

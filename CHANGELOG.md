@@ -1,3 +1,7 @@
+## [1.30.7] - 2026-07-22
+### Fixed
+- **Bear Trap DB Editor Error**: Fixed a bug where opening the editor threw a `Cannot read properties of undefined` error because it was attempting to dynamically load a separate Firebase instance instead of using the core initialized database. 
+
 ## [1.30.6] - 2026-07-22
 ### Fixed
 - **Bear Trap DB Editor Modal**: Fixed an issue where the DB Editor modal was silently failing to open due to the UI injection missing the modal HTML container. 
