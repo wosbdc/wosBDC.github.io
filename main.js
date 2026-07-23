@@ -9098,8 +9098,19 @@ window.resetBearTrapEvent = async () => {
             const onlyReg = globalRosterRegisteredOnly || (regToggle && regToggle.checked);
             
             dropdownItems = [];
-            players.forEach((p, i) => {
-                let name = p[0].toString().trim();
+            const allNamesSet = new Set();
+            if (Array.isArray(players)) {
+                players.forEach(p => {
+                    if (p[0]) allNamesSet.add(p[0].toString().trim());
+                });
+            }
+            if (typeof idToNameMap === 'object') {
+                Object.values(idToNameMap).forEach(name => {
+                    if (name) allNamesSet.add(name.toString().trim());
+                });
+            }
+            
+            Array.from(allNamesSet).sort((a,b) => a.localeCompare(b)).forEach(name => {
                 let isReg = false;
                 let gid = nameToIdMap[name];
                 if (gid && registeredGameIds.has(gid.toString().trim())) isReg = true;

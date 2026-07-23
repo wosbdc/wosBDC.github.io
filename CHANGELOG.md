@@ -1,3 +1,7 @@
+## [1.36.2] - 2026-07-23
+### Fix Player Lookup in Navbar Chief's Menu
+- **Navbar Chief's Menu Player Lookup Fixed**: Updated `views.roster()` (`views.playerLookup()`) to merge all Alliance Roster names into the search dropdown list and added Roster fallback so any player or test account can be searched and rendered directly from the Chief's dropdown menu!
+
 ## [1.36.1] - 2026-07-23
 ### Fix Temporal Dead Zone Variable Scope in searchPlayerFull
 - **Fixed `Cannot access 'v' before initialization`**: Fixed duplicate `let targetName` re-declaration in `searchPlayerFull()` that caused JavaScript Temporal Dead Zone errors during minified execution.
