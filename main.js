@@ -6144,6 +6144,7 @@ html += `</select>
               <button onclick="views.admin('tab-indev')" style="background:rgba(255,255,255,0.2); border:none; color:#fff; cursor:pointer; font-size:18px; padding:8px 12px; border-radius:8px; transition:0.2s;">⬅ Back to Admin</button>
               <h2 style="margin:0; color:#fff; font-size:1.3em;">🐻 Bear Trap Tracker</h2>
             </div>
+            <button onclick="window.openAddPlayerModal()" style="background:rgba(255,255,255,0.2); border:none; color:#fff; cursor:pointer; font-size:14px; padding:6px 12px; border-radius:6px; font-weight:bold;">➕ Add Player</button>
           </div>
 
           <div style="padding:20px; max-width:1000px; margin:0 auto;">
@@ -6627,6 +6628,7 @@ html += `</select>
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid var(--border); padding-bottom:10px;">
           <h2 style="color:var(--accent); margin:0; display:flex; align-items:center; flex-wrap:wrap; gap:10px;">
             🐻 Multi-BT Donations
+            <button onclick="window.openAddPlayerModal()" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--accent); padding:4px 8px; border-radius:6px; cursor:pointer; font-size:12px; margin-left:10px;">➕ Add Player</button>
             <button onclick="document.getElementById('btLookupModal').style.display='block'" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--accent); padding:4px 8px; border-radius:6px; cursor:pointer; font-size:12px; margin-left:10px;">🔍 Lookup</button>
             <button onclick="document.getElementById('btCrownModal').style.display='block'" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--success); padding:4px 8px; border-radius:6px; cursor:pointer; font-size:12px; margin-left:10px;">👑 Crown Winner</button>
             <button onclick="window.resetBearTrapEvent()" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:#fff; border:none; padding:4px 10px; border-radius:6px; cursor:pointer; font-size:12px; margin-left:10px; font-weight:bold; box-shadow:0 2px 8px rgba(239,68,68,0.3);">🔄 Reset BT Event</button>

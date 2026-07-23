@@ -1,3 +1,8 @@
+## [1.36.0] - 2026-07-23
+### 1-Click Quick Add Player & Test Account Tool
+- **1-Click Quick Add Player Button**: Placed a `➕ Add Player` button directly on the Bear Trap admin headers (`views.beartrap()` & `views.bearTrapAdmin()`).
+- **Instant Test Account Creation**: Admins can now add any test account or player to the Roster in 3 seconds without going through the public signup flow! Includes auto-filling official Chief names from the WOS API via `🔍 Verify ID`.
+
 ## [1.35.6] - 2026-07-23
 ### New Total Display Restored in Bear Trap Audit Log
 - **New Total Log Summary Restored**: Updated `submitBeartrapDonations` so that Bear Trap donation audit log entries explicitly display the player's updated total score (e.g. `(BrianDCox (+1 ➔ New Total: 10))`) in the Admin Log feed.
