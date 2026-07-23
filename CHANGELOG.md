@@ -1,3 +1,8 @@
+## [1.35.5] - 2026-07-23
+### Case-Insensitive Player Search & Roster Fallback
+- **Case-Insensitive Search**: Updated `window.searchPlayerFull()` to perform case-insensitive matching across all searches (e.g. `thadwarf`, `THADWARF`, `ThaDwarf`).
+- **Roster Fallback**: Added dynamic fallback to Alliance Roster data (`idToNameMap` / `rosterMap`) so any registered player can be searched and viewed seamlessly even if they don't have an old row in the Google Activity sheet.
+
 ## [1.35.4] - 2026-07-23
 ### Fix GitHub Actions Deprecation Warning & Set Node 24 Explicitly
 - **Node 24 Explicit Deployment**: Updated `.github/workflows/deploy.yml` with `FORCE_JAVASCRIPT_ACTIONS_TO_NODE20: "false"` and explicit `node-version: '24'` to eliminate Node 20 deprecation warnings inside GitHub Actions runner.

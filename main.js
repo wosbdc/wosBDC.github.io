@@ -2205,7 +2205,7 @@ window.adminFetchAltFurnace = async (gid, spanId) => {
     let dynamicSD = null;
     const sortedShowdownPlayers = Object.entries(allTimeShowdownMap).map(([n, s]) => ({ name: n, score: s })).sort((a, b) => b.score - a.score);
     sortedShowdownPlayers.forEach((p, index) => {
-      if (p.name === name) dynamicSD = { score: p.score, rank: index + 1 };
+      if (p.name.toLowerCase() === targetName.toLowerCase()) dynamicSD = { score: p.score, rank: index + 1 };
     });
     
     const headers = data[0];
@@ -2224,13 +2224,29 @@ window.adminFetchAltFurnace = async (gid, spanId) => {
        colIsUpcoming[c] = !hasAnyTrue;
     }
     
-    // Find player row in Activity
+    let targetName = name.trim();
     let pRow = null;
-    for (let i = 1; i < data.length; i++) {
-       if (data[i][0] && data[i][0].toString().trim() === name) { pRow = data[i]; break; }
+    if (data && Array.isArray(data)) {
+      for (let i = 1; i < data.length; i++) {
+         if (data[i][0] && data[i][0].toString().trim().toLowerCase() === targetName.toLowerCase()) { 
+             pRow = data[i]; 
+             targetName = data[i][0].toString().trim();
+             break; 
+         }
+      }
     }
     
-    if (!pRow) throw new Error("Player not found in Activity sheet.");
+    if (!pRow) {
+      for (const [gid, chiefName] of Object.entries(idToNameMap)) {
+         if (chiefName && chiefName.toLowerCase().trim() === targetName.toLowerCase()) {
+            targetName = chiefName;
+            pRow = [targetName, 0, false, false, false, false, false];
+            break;
+         }
+      }
+    }
+    
+    if (!pRow) throw new Error(`Chief "${name}" not found in roster or activity database.`);
     
     // Generate HTML
     let altAccounts = [];
@@ -2258,7 +2274,7 @@ window.adminFetchAltFurnace = async (gid, spanId) => {
     }
     
     const isUnlocked = await window.isGoogleAuthVerified();
-    let html = window.generatePlayerProfileHtml(name, pRow, headers, colIsUpcoming, rosterMap[name], null, dynamicSD, showdownActive, bearBoth, bear1, bear2, bearAllTime, btDonationsAllTime, btDonationsCurrent, otherLbs, isUnlocked, altAccounts);
+    let html = window.generatePlayerProfileHtml(targetName, pRow, headers, colIsUpcoming, rosterMap[targetName], null, dynamicSD, showdownActive, bearBoth, bear1, bear2, bearAllTime, btDonationsAllTime, btDonationsCurrent, otherLbs, isUnlocked, altAccounts);
     
     resDiv.innerHTML = html;
     
@@ -2268,6 +2284,7 @@ window.adminFetchAltFurnace = async (gid, spanId) => {
 };
 
 window.searchPlayerFull = async (name) => {
+  let targetName = name ? name.replace(/^✅\s*/, '').trim() : '';
   if (name) name = name.replace(/^✅\s*/, '');
   window.activeViewFunc = () => window.searchPlayerFull(name);
   const resDiv = document.getElementById('uniEditorRes');
@@ -2351,7 +2368,7 @@ window.searchPlayerFull = async (name) => {
               let pName = lbRawData[dr][c + 1];
               let pScore = lbRawData[dr][scoreCol];
               
-              if (pName && pScore && pName.toString().trim() === name) {
+              if (pName && pScore && pName.toString().trim().toLowerCase() === targetName.toLowerCase()) {
                 if (typeof pScore === 'number') pScore = pScore.toLocaleString();
                 else if (typeof pScore === 'string' && !isNaN(pScore) && pScore.trim() !== "") pScore = Number(pScore).toLocaleString();
                 
@@ -2403,7 +2420,7 @@ window.searchPlayerFull = async (name) => {
     let dynamicSD = null;
     const sortedShowdownPlayers = Object.entries(allTimeShowdownMap).map(([n, s]) => ({ name: n, score: s })).sort((a, b) => b.score - a.score);
     sortedShowdownPlayers.forEach((p, index) => {
-      if (p.name === name) dynamicSD = { score: p.score, rank: index + 1 };
+      if (p.name.toLowerCase() === targetName.toLowerCase()) dynamicSD = { score: p.score, rank: index + 1 };
     });
     
     const headers = data[0];
@@ -2422,13 +2439,29 @@ window.searchPlayerFull = async (name) => {
        colIsUpcoming[c] = !hasAnyTrue;
     }
     
-    // Find player row in Activity
+    let targetName = name.trim();
     let pRow = null;
-    for (let i = 1; i < data.length; i++) {
-       if (data[i][0] && data[i][0].toString().trim() === name) { pRow = data[i]; break; }
+    if (data && Array.isArray(data)) {
+      for (let i = 1; i < data.length; i++) {
+         if (data[i][0] && data[i][0].toString().trim().toLowerCase() === targetName.toLowerCase()) { 
+             pRow = data[i]; 
+             targetName = data[i][0].toString().trim();
+             break; 
+         }
+      }
     }
     
-    if (!pRow) throw new Error("Player not found in Activity sheet.");
+    if (!pRow) {
+      for (const [gid, chiefName] of Object.entries(idToNameMap)) {
+         if (chiefName && chiefName.toLowerCase().trim() === targetName.toLowerCase()) {
+            targetName = chiefName;
+            pRow = [targetName, 0, false, false, false, false, false];
+            break;
+         }
+      }
+    }
+    
+    if (!pRow) throw new Error(`Chief "${name}" not found in roster or activity database.`);
     
     // Generate HTML
     let altAccounts = [];
@@ -2456,7 +2489,7 @@ window.searchPlayerFull = async (name) => {
     }
     
     const isUnlocked = await window.isGoogleAuthVerified();
-    let html = window.generatePlayerProfileHtml(name, pRow, headers, colIsUpcoming, rosterMap[name], null, dynamicSD, showdownActive, bearBoth, bear1, bear2, bearAllTime, btDonationsAllTime, btDonationsCurrent, otherLbs, isUnlocked, altAccounts);
+    let html = window.generatePlayerProfileHtml(targetName, pRow, headers, colIsUpcoming, rosterMap[targetName], null, dynamicSD, showdownActive, bearBoth, bear1, bear2, bearAllTime, btDonationsAllTime, btDonationsCurrent, otherLbs, isUnlocked, altAccounts);
     
     resDiv.innerHTML = html;
     
