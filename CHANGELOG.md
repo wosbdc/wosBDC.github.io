@@ -1,3 +1,7 @@
+## [1.30.5] - 2026-07-22
+### Added
+- **Bear Trap DB Editor**: Added a new "🛠️ DB Editor" tool to the Bear Trap Admin Menu. This raw database editor fetches and displays all `beartrap_donations` nodes directly from Firebase, and allows admins to permanently delete any orphaned ghost entries or mistakes with a single click, completely bypassing roster validation rules.
+
 ## [1.30.4] - 2026-07-22
 ### Fixed
 - **All-Time Bear Donations**: Fixed a bug where the All-Time Bear Donations leaderboard was only displaying recent scores tracked in Firebase. The frontend now correctly pulls historical all-time data from the Google Sheet and automatically merges it with the live Firebase data before sorting and ranking.
