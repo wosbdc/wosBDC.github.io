@@ -1,3 +1,7 @@
+## [1.31.1] - 2026-07-23
+### Updated
+- **Dependencies Upgrade**: Upgraded all npm dependencies (`firebase`, `lucide`, `vite`) to their latest releases and resolved all package audit advisories.
+
 ## [1.31.0] - 2026-07-23
 ### Security & Audit Hardening Release
 - **Backend API Security**: Removed hardcoded emergency bypass secret from Apps Script API endpoints. All write endpoints now strictly enforce Firebase token authentication and admin role verification.
