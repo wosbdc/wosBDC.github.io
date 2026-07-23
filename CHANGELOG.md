@@ -1,3 +1,10 @@
+## [1.44.1] - 2026-07-23
+### Full Cross-Site Event Sync from Edit Events Modal
+- **Championship, Mercenary, Polar Terrors**: `📝 Edit Events` modal now writes to individual Firebase nodes (`championship/`, `mercenary/`, `polarterrors/`) in addition to `activity_live`.
+- **Google Sheets Sync**: Each event status change also pings the GAS backend `updateEvent` API to keep Google Sheets in sync.
+- **Cache Invalidation**: Activity cache and Activity Matrix loaded flags are cleared after save to ensure fresh data.
+- **Full Sync Chain**: Any event status change from any admin tool (Edit Events, event trackers, Activity Matrix) is now fully synchronized across all views.
+
 ## [1.44.0] - 2026-07-23
 ### Modernized Polar Terrors Tracker (Same Treatment as BT Donations Tracker)
 - **Compact 1-Tap Status Badges**: Replaced bulky `[ YES ] [ NO ]` dual-button toggle with a single compact pill badge (`✅ Done` / `❌ Missing`) that toggles on tap.

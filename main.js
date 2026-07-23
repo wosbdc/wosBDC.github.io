@@ -10683,18 +10683,81 @@ window.promptEditEvents = async (name) => {
     };
 
     try {
-      // 1. Write natively to Firebase Realtime Database
+      // 1. Write natively to Firebase activity_live
       if (gIdStr) {
         await set(ref(db, `activity_live/${gIdStr}`), newActivityObj);
       }
-      
-      // 2. Also log admin action
+
+      // 2. Sync to individual event-specific Firebase nodes
+      const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name || "Admin") : "Admin";
+      const updatedBy = adminName;
+      const timestamp = Date.now();
+
+      if (gIdStr) {
+        // Championship node
+        try {
+          await update(ref(db, `championship/${gIdStr}`), {
+            gameId: gIdStr, name: name, signedUp: newActivityObj.championship,
+            lastUpdated: timestamp, updatedBy: updatedBy
+          });
+          if (window.championshipCache) {
+            if (!window.championshipCache[gIdStr]) window.championshipCache[gIdStr] = {};
+            window.championshipCache[gIdStr].signedUp = newActivityObj.championship;
+          }
+        } catch(e) { console.warn("Edit Events: championship sync error", e); }
+
+        // Mercenary node
+        try {
+          await update(ref(db, `mercenary/${gIdStr}`), {
+            gameId: gIdStr, name: name, signedUp: newActivityObj.mercenary,
+            lastUpdated: timestamp, updatedBy: updatedBy
+          });
+          if (window.mercenaryCache) {
+            if (!window.mercenaryCache[gIdStr]) window.mercenaryCache[gIdStr] = {};
+            window.mercenaryCache[gIdStr].signedUp = newActivityObj.mercenary;
+          }
+        } catch(e) { console.warn("Edit Events: mercenary sync error", e); }
+
+        // Polar Terrors node
+        try {
+          await update(ref(db, `polarterrors/${gIdStr}`), {
+            gameId: gIdStr, name: name, signedUp: newActivityObj.polarTerrors,
+            lastUpdated: timestamp, updatedBy: updatedBy
+          });
+          if (window.polarTerrorsCache) {
+            if (!window.polarTerrorsCache[gIdStr]) window.polarTerrorsCache[gIdStr] = {};
+            window.polarTerrorsCache[gIdStr].signedUp = newActivityObj.polarTerrors;
+          }
+        } catch(e) { console.warn("Edit Events: polarterrors sync error", e); }
+      }
+
+      // 3. Ping GAS backend for each event to sync Google Sheets
+      try {
+        const evToken = await getAuthToken().catch(() => '');
+        const eventMap = {
+          'championship': 'Alliance Championship ',
+          'mercenary': 'Mercenary Prestige',
+          'polarTerrors': 'Polar Terrors',
+          'voter': 'Voter'
+        };
+        for (const [key, sheetEventName] of Object.entries(eventMap)) {
+          const status = newActivityObj[key] ? 'yes' : 'no';
+          const url = `${API_BASE_URL}?api=updateEvent&name=${encodeURIComponent(name)}&eventName=${encodeURIComponent(sheetEventName)}&status=${encodeURIComponent(status)}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(evToken)}`;
+          fetch(url, { mode: 'no-cors' }).catch(e => null);
+        }
+      } catch(e) { console.warn("Edit Events: GAS backend sync error", e); }
+
+      // 4. Log admin action
       if (window.logAdminAction) {
         window.logAdminAction("Edit Roster Member Events", `Updated event statuses for ${name}`, name);
       }
 
       if (window.showToast) window.showToast(`Updated event status for ${name}!`, "success");
       modal.remove();
+
+      // Clear caches so fresh data is fetched
+      window.activityCache = null;
+      window._activityMatrixLoaded = false;
 
       // Refresh view
       if (typeof window.activeViewFunc === 'function') window.activeViewFunc();
