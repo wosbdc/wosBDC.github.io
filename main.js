@@ -1517,7 +1517,7 @@ window.doBeartrapCrown = async () => {
        await refreshIdToNameMap();
        let foundName = idToNameMap[name];
        if (foundName) finalName = foundName;
-       else if(window.showToast) {
+       else {
           window.showToast("Could not resolve ID to player name", "error");
           return;
        }
@@ -1530,7 +1530,7 @@ window.doBeartrapCrown = async () => {
 window.doBeartrapResetPlayer = async () => {
     const rawName = document.getElementById('beartrapResetPlayerName').value.trim();
     if (!rawName) {
-        if(window.showToast) window.showToast("Please enter a player name", "error");
+        window.showToast("Please enter a player name", "error");
         return;
     }
     
@@ -1539,10 +1539,6 @@ window.doBeartrapResetPlayer = async () => {
        await refreshIdToNameMap();
        let foundName = idToNameMap[rawName];
        if (foundName) finalName = foundName;
-       else if(window.showToast) {
-          window.showToast("Could not resolve ID to player name", "error");
-          return;
-       }
     }
     
     let confirmReset = await window.customConfirm('🗑️ WARNING 🗑️\n\nAre you sure you want to completely WIPE all Bear Trap donations to 0 for ' + finalName + '?\n\nThis action cannot be undone.');

@@ -1,3 +1,7 @@
+## [1.30.3] - 2026-07-22
+### Fixed
+- **Reset Ghost IDs**: Fixed a bug where the Reset Player tool would refuse to run if you entered a raw numeric ID that no longer existed in the Roster. Now, you can forcefully wipe orphan IDs (like 705413646) from the leaderboard even if they have already left the alliance.
+
 ## [1.30.2] - 2026-07-22
 ### Fixed
 - **GitHub Actions Titles**: Added a `run-name` directive to `deploy.yml` to strictly enforce that GitHub Actions uses the commit message as the workflow run title, fixing a bug where GitHub would occasionally hide the summary and default to "Deploy to GitHub Pages".
