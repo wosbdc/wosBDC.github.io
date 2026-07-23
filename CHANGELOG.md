@@ -1,3 +1,8 @@
+## [1.37.1] - 2026-07-23
+### Smartphone Bottom App Navigation Dock
+- **Dedicated Smartphone Mobile Dock (`#mobileNavDock`)**: Added a fixed mobile app navigation dock for smartphones (`🏠 Home`, `👤 Chief's`, `🏆 Boards`, `⚔️ Events`, `⚙️ Settings`).
+- **Handedness Re-Ordering**: The mobile bottom dock layout automatically shifts its items and primary action buttons to the far-right (`flex-direction: row`) for `✋ Right-Handed` users or far-left (`flex-direction: row-reverse`) for `🖐️ Left-Handed` users!
+
 ## [1.37.0] - 2026-07-23
 ### Mobile Handedness Navigation & Ergonomics System
 - **Mobile Navigation Alignment (`✋ Right-Handed` vs `🖐️ Left-Handed`)**: Added a dedicated Mobile Navigation handedness toggle in Settings (`#settingsSidebar`).
