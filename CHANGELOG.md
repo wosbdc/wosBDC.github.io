@@ -1,3 +1,7 @@
+## [1.37.5] - 2026-07-23
+### Removed Bottom Mobile Dock
+- **Removed Unwanted Bottom Dock**: Completely removed the bottom mobile navigation bar (`#mobileNavDock`) from `index.html` as requested, keeping navigation strictly within the top navbar and hamburger menu.
+
 ## [1.37.4] - 2026-07-23
 ### Handedness Toggle Button Order Alignment
 - **Natural Handedness Button Order**: Swapped button positions inside the Settings Mobile Navigation card (`#handOrientationToggle`) so `🖐️ Left-Handed` sits on the **left side** of the container and `✋ Right-Handed` sits on the **right side** of the container.
