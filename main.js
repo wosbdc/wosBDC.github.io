@@ -8457,7 +8457,7 @@ window.resetBearTrapEvent = async () => {
                         }
                     });
                 }
-                const list = Object.entries(mergedScores).filter(kv => kv[1] > 0).sort((a,b) => b[1] - a[1]);
+                const list = Object.entries(mergedScores).filter(kv => kv[1] > 0).sort((a,b) => b[1] - a[1]).slice(0, 4);
                 if (list.length > 0) board.rows = list.map((kv, idx) => [idx + 1, kv[0], kv[1]]);
             } else {
                 board.title = "Current Bear Trap Donations Leaderboard";
@@ -8480,7 +8480,7 @@ window.resetBearTrapEvent = async () => {
                         }
                     });
                 }
-                const list = Object.entries(currentScores).filter(kv => kv[1] > 0).sort((a,b) => b[1] - a[1]);
+                const list = Object.entries(currentScores).filter(kv => kv[1] > 0).sort((a,b) => b[1] - a[1]).slice(0, 4);
                 if (list.length > 0) board.rows = list.map((kv, idx) => [idx + 1, kv[0], kv[1]]);
             }
         }

@@ -1,3 +1,8 @@
+## [1.43.2] - 2026-07-23
+### Capped Donation Leaderboards to Top 4
+- **All-Time Bear Trap Donations Leaderboard**: Now displays Top 4 only.
+- **Current Bear Trap Donations Leaderboard**: Now displays Top 4 only.
+
 ## [1.43.1] - 2026-07-23
 ### Enforced Strict Bear Trap Crown Wins (BT1 + BT2 Sum Only)
 - **Strict Crown Wins Calculation**: Updated All-Time Bear Trap Leaderboard calculations so total wins are strictly evaluated as `(bt1Wins + bt2Wins)`.
