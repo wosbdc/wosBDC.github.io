@@ -3849,9 +3849,9 @@ window.openShowdownLeaderboardModal = async function() {
     
     try {
         const [liveSnap, metaSnap, histSnap] = await Promise.all([
-           get(ref(db, 'showdown_live')),
-           get(ref(db, 'showdown_meta')),
-           get(ref(db, 'showdown_history'))
+           get(ref(db, 'showdown_live')).catch(e => { console.warn("showdown_live read error", e); return { exists: () => false, val: () => ({}) }; }),
+           get(ref(db, 'showdown_meta')).catch(e => { console.warn("showdown_meta read error", e); return { exists: () => false, val: () => ({}) }; }),
+           get(ref(db, 'showdown_history')).catch(e => { console.warn("showdown_history read error", e); return { exists: () => false, val: () => null }; })
         ]);
         
         let sdHistoryData = await fetchSheet("Showdown History").catch(() => null);

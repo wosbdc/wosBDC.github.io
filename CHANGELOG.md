@@ -1,3 +1,7 @@
+## [1.32.9] - 2026-07-23
+### Modal Firebase Permission Handling Fix
+- **Permission Denied Error Fix**: Wrapped Firebase database node lookups in `openShowdownLeaderboardModal()` with individual `.catch()` handlers so that unauthenticated or restricted node read errors never block or crash the Showdown Leaderboards modal popup.
+
 ## [1.32.8] - 2026-07-23
 ### Modal Popup for Showdown Leaderboards
 - **Leaderboards Modal Popup**: Updated `🏆 Showdown Leaderboards` shortcut button on `Menu | Events | Showdown Page` to open the Showdown Leaderboards inside a sleek, glassmorphic modal popup (`openShowdownLeaderboardModal()`) with a `✕ Close` button, keeping users on the Event page without navigation confusion.
