@@ -1,3 +1,7 @@
+## [1.34.7] - 2026-07-23
+### Restore Multi-BT Submit All Functionality
+- **Submit All Button Restored**: Restored `window.submitBeartrapDonations` in `views.beartrap()`, allowing admins to submit multi-row Bear Trap batch donations directly to Firebase and Google Sheets.
+
 ## [1.34.6] - 2026-07-23
 ### Fix Bear Trap Tracker Back Button Navigation
 - **Back Button Navigation Fix**: Fixed `⬅ Back to Admin` button in `views.bearTrapAdmin()` to return directly to `views.admin('tab-indev')`, automatically opening the **`🧪 In-Dev`** tab and restoring top navbar visibility.
