@@ -4467,6 +4467,21 @@ const views = {
               </div>
             </div>
 
+
+
+          <!-- Push Notification Broadcast -->
+            ${isR5 ? `
+            <div style="background:var(--bg-main); padding:15px; border-radius:12px; border:1px solid var(--accent); margin-bottom:20px;">
+              <h3 style="margin:0 0 5px 0; color:var(--accent);">Broadcast Push Notification</h3>
+              <p style="margin:0 0 15px 0; font-size:12px; color:var(--text-muted);">Send an instant alert to all registered devices.</p>
+              <input type="text" id="adminPushTitle" placeholder="Notification Title (e.g. Bear Trap Starting!)" style="width:100%; padding:10px; margin-bottom:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold;">
+              <textarea id="adminPushBody" placeholder="Message Body" style="width:100%; padding:10px; margin-bottom:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); min-height:80px;"></textarea>
+              <button onclick="window.sendBroadcastPush()" style="background:var(--danger); color:#fff; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:bold; width:100%;">Send Alert 🚀</button>
+              <div id="adminPushStatus" style="font-size:12px; font-weight:bold; margin-top:10px; text-align:center;"></div>
+            </div>
+            ` : ''}
+          </div>
+
             <!-- Tab: In-Dev (Projects & Feature Lab) -->
           <div id="tab-indev" class="admin-tab-content" style="display:none;">
             <div style="background:var(--bg-main); padding:20px; border-radius:12px; border:1px solid rgba(168,85,247,0.4); margin-bottom:20px;">
@@ -4485,19 +4500,6 @@ const views = {
                 <button onclick="views.bearTrapAdmin()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px; box-shadow:0 4px 12px rgba(16,185,129,0.3);">🐻 Bear Trap Tracker</button>
               </div>
             </div>
-          </div>
-
-          <!-- Push Notification Broadcast -->
-            ${isR5 ? `
-            <div style="background:var(--bg-main); padding:15px; border-radius:12px; border:1px solid var(--accent); margin-bottom:20px;">
-              <h3 style="margin:0 0 5px 0; color:var(--accent);">Broadcast Push Notification</h3>
-              <p style="margin:0 0 15px 0; font-size:12px; color:var(--text-muted);">Send an instant alert to all registered devices.</p>
-              <input type="text" id="adminPushTitle" placeholder="Notification Title (e.g. Bear Trap Starting!)" style="width:100%; padding:10px; margin-bottom:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold;">
-              <textarea id="adminPushBody" placeholder="Message Body" style="width:100%; padding:10px; margin-bottom:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); min-height:80px;"></textarea>
-              <button onclick="window.sendBroadcastPush()" style="background:var(--danger); color:#fff; border:none; padding:10px 20px; border-radius:6px; cursor:pointer; font-weight:bold; width:100%;">Send Alert 🚀</button>
-              <div id="adminPushStatus" style="font-size:12px; font-weight:bold; margin-top:10px; text-align:center;"></div>
-            </div>
-            ` : ''}
           </div>
       `;
       

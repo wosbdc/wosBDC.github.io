@@ -1,3 +1,7 @@
+## [1.33.4] - 2026-07-23
+### Fixed In-Dev Tab DOM Structure
+- **DOM Container Nesting Fix**: Corrected HTML structure so `#tab-indev` is a standalone top-level tab container sibling (rather than nested inside `#tab-tools`), allowing the 4 in-dev buttons (`Alliance Championship`, `Mercenary Prestige`, `Polar Terrors Tracker`, `Bear Trap Tracker`) to render instantly when clicking the `🧪 In-Dev` tab button.
+
 ## [1.33.3] - 2026-07-23
 ### Category Grouping on Daily Tools Tab
 - **Grouped Daily Tools**: Organized `🛠️ Daily Tools` tab in `Menu | Admin` (`views.admin()`) into 2 clear categories:
