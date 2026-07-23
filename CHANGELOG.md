@@ -1,3 +1,9 @@
+## [1.42.2] - 2026-07-23
+### Updated Admin Section Heading & Green Bear Trap Button
+- **Updated Section Heading**: Renamed category to **`⚔️ Active Alliance Events Tools`** under `🛠️ Daily Tools`.
+- **Green Bear Trap Button**: Styled **`🐻 Bear Trap`** button with an emerald green gradient for prominent visibility.
+- **Removed BT Tracker from In-Dev**: Cleaned up `#tab-indev` by removing the redundant `BT Donations Tracker` button.
+
 ## [1.42.1] - 2026-07-23
 ### Restored Clean Bear Trap Admin Flow & Updated Back Button Target
 - **Admin Hub Daily Tools Restored**: Kept single **`🐻 Bear Trap`** button under `Active Alliance Events` in Admin Hub which opens Multi-BT Donations (`views.beartrap()`).
