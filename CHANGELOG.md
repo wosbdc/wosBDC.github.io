@@ -1,3 +1,9 @@
+## [1.42.0] - 2026-07-23
+### Promoted BT Donations Tracker & Fixed Reset Player Modal Dropdown
+- **Promoted BT Donations Tracker to Daily Tools**: Added **`🐻 BT Donations Tracker`** directly into the `⚔️ Active Alliance Events` section under `🛠️ Daily Tools` in the Admin Hub for quick management access.
+- **Added Cross-Navigation Link**: Added a **`📊 BT Tracker`** header shortcut button inside `views.beartrap()` for seamless toggling between Multi-BT Donations and BT Tracker.
+- **Fixed Reset Player Modal Autocomplete Sidebar Bug**: Replaced native browser `<datalist>` auto-completion (which caused a giant vertical sidebar list bug) with a clean, styled `<select>` roster dropdown and updated modal to fixed backdrop overlay styling (`btResetPlayerModalOverlay`).
+
 ## [1.41.1] - 2026-07-23
 ### Removed Redundant Add Player Button in BT Tracker
 - **Header Cleanup**: Removed redundant `➕ Add Player` buttons from `bearTrapAdmin` and `views.beartrap()` headers since player creation is already managed in Roster Management.
