@@ -7545,8 +7545,11 @@ html += `</select>
           
           let mvpBannerHtml = "";
           if (players.length > 0 && players[0].horns > 0) {
-              let champName = players[0].name;
               let maxHorns = players[0].horns;
+              let topMvps = players.filter(p => p.horns === maxHorns);
+              let mvpTitle = topMvps.length > 1 ? "👑 Showdown Co-MVPs" : "👑 Showdown MVP";
+              let champDisplayNames = topMvps.map(p => escapeHTML(p.name)).join(" & ");
+              let champName = topMvps[0].name;
               let champId = null;
               for (const [gid, name] of Object.entries(idToNameMap)) {
                   if (name.toLowerCase() === champName.toLowerCase()) {
@@ -7561,8 +7564,8 @@ html += `</select>
                     <img src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='images/default.png';">
                   </div>
                   <div style="flex: 1; text-align: left;">
-                    <div style="color: #FFD700; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">👑 Showdown MVP</div>
-                    <div style="color: var(--text-main); font-size: 18px; font-weight: bold;">${escapeHTML(champName)}</div>
+                    <div style="color: #FFD700; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">${mvpTitle}</div>
+                    <div style="color: var(--text-main); font-size: 18px; font-weight: bold;">${champDisplayNames}</div>
                   </div>
                   <div style="text-align: right;">
                     <div style="color: var(--text-muted); font-size: 11px;">Total Score</div>
@@ -7581,10 +7584,17 @@ html += `</select>
                <th>RANK</th><th>NAME</th><th>TOTAL HORNS</th><th>DAY WINS</th><th>TOTAL</th>
             </tr></thead><tbody>`;
           
+          let currentLiveRank = 1;
           liveDisplayList.forEach((p, index) => {
-              let rank = index + 1;
+              if (index > 0) {
+                  let prev = liveDisplayList[index - 1];
+                  if (p.horns !== prev.horns || p.total !== prev.total) {
+                      currentLiveRank = index + 1;
+                  }
+              }
+              let rankDisplay = currentLiveRank;
               liveShowdownHtml += `<tr>
-                 <td style="font-weight:bold; color:var(--text-muted);">${rank}</td>
+                 <td style="font-weight:bold; color:var(--text-muted);">${rankDisplay}</td>
                  <td>${formatCell(p.name)}</td>
                  <td>${p.horns}</td>
                  <td>${p.wins}</td>
@@ -7625,8 +7635,11 @@ html += `</select>
               
               let allTimeMvpHtml = "";
               if (allTimePlayers.length > 0 && allTimePlayers[0].horns > 0) {
-                  let champName = allTimePlayers[0].name;
                   let maxHorns = allTimePlayers[0].horns;
+                  let topChamps = allTimePlayers.filter(p => p.horns === maxHorns);
+                  let champTitle = topChamps.length > 1 ? "👑 All-Time Co-Champions" : "👑 All-Time Champion";
+                  let champDisplayNames = topChamps.map(p => escapeHTML(p.name)).join(" & ");
+                  let champName = topChamps[0].name;
                   let champId = null;
                   for (const [gid, name] of Object.entries(idToNameMap)) {
                       if (name.toLowerCase() === champName.toLowerCase()) {
@@ -7641,8 +7654,8 @@ html += `</select>
                         <img src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='images/default.png';">
                       </div>
                       <div style="flex: 1; text-align: left;">
-                        <div style="color: #FFD700; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">👑 All-Time Champion</div>
-                        <div style="color: var(--text-main); font-size: 18px; font-weight: bold;">${escapeHTML(champName)}</div>
+                        <div style="color: #FFD700; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">${champTitle}</div>
+                        <div style="color: var(--text-main); font-size: 18px; font-weight: bold;">${champDisplayNames}</div>
                       </div>
                       <div style="text-align: right;">
                         <div style="color: var(--text-muted); font-size: 11px;">Total Score</div>
@@ -7662,10 +7675,17 @@ html += `</select>
                    <th>RANK</th><th>NAME</th><th>TOTAL HORNS</th><th>DAY WINS</th><th>TOTAL</th>
                 </tr></thead><tbody>`;
               
+              let currentAllTimeRank = 1;
               allTimeDisplayList.forEach((p, index) => {
-                  let rank = index + 1;
+                  if (index > 0) {
+                      let prev = allTimeDisplayList[index - 1];
+                      if (p.horns !== prev.horns || p.total !== prev.total) {
+                          currentAllTimeRank = index + 1;
+                      }
+                  }
+                  let rankDisplay = currentAllTimeRank;
                   allTimeShowdownHtml += `<tr>
-                     <td style="font-weight:bold; color:var(--text-muted);">${rank}</td>
+                     <td style="font-weight:bold; color:var(--text-muted);">${rankDisplay}</td>
                      <td>${formatCell(p.name)}</td>
                      <td>${p.horns}</td>
                      <td>${p.wins}</td>

@@ -1,3 +1,9 @@
+## [1.32.0] - 2026-07-23
+### Leaderboards Tab Showdown Tie Handling
+- **Co-MVP Banner & Shared Ranks**: Updated `Current - Showdown Leaderboard` and `All-Time - Showdown Leaderboard` under `menu | leaderboards | showdown leaderboards` (`views.leaderboards('showdown')`) to handle ties seamlessly:
+  - Top banners render `👑 Showdown Co-MVPs` / `👑 All-Time Co-Champions` with all tied player names.
+  - Table rows assign shared rank numbers (e.g. Rank 1 for both tied top players) when scores match.
+
 ## [1.31.5] - 2026-07-23
 ### Showdown UX Improvements
 - **Isolated Table Scrolling**: Restricted horizontal scrolling exclusively to the data table container rather than scrolling the outer card or page title. Added sticky left column positioning so alliance names and player rankings remain fixed on screen while scrolling across day columns.
