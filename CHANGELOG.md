@@ -1,3 +1,7 @@
+## [1.32.4] - 2026-07-23
+### Overlapping Avatar Stack for Co-MVPs / Co-Champions
+- **Overlapping Avatar Stack**: Implemented a modern GitHub/Slack-style overlapping avatar stack on `menu | leaderboards | showdown leaderboards` (`views.leaderboards('showdown')`). When multiple players tie for Co-MVP or Co-Champion, up to 3 circular avatars overlap with metallic gold borders (plus a `+N` indicator badge if more than 3 tie), preventing card clutter while showcasing all winners.
+
 ## [1.32.3] - 2026-07-23
 ### Leaderboards Tab Tie Emoji Badge
 - **Tie Emoji Badge**: Added a subtle `🤝` emoji next to rank numbers on `menu | leaderboards | showdown leaderboards` (`views.leaderboards('showdown')`) whenever multiple players share the exact same rank.

@@ -3810,6 +3810,45 @@ window.loadUserPersonalLog = async (chiefName) => {
 };
 
 // View renderers
+function renderAvatarStack(playersList) {
+
+    if (!playersList || playersList.length === 0) return '';
+    if (playersList.length === 1) {
+        let pName = typeof playersList[0] === 'string' ? playersList[0] : playersList[0].name;
+        let champId = null;
+        for (const [gid, name] of Object.entries(idToNameMap)) {
+            if (name.toLowerCase() === pName.toLowerCase()) { champId = gid; break; }
+        }
+        const avatarSrc = (champId && avatarMap[champId]) ? avatarMap[champId] : `images/${pName}.png`;
+        return `<div style="width: 50px; height: 50px; border-radius: 50%; border: 2px solid #FFD700; overflow: hidden; flex-shrink: 0; box-shadow: 0 0 10px rgba(255,215,0,0.2);">
+            <img src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='images/default.png';">
+          </div>`;
+    }
+    let displayList = playersList.slice(0, 3);
+    let overflowCount = playersList.length - 3;
+    let stackHtml = `<div style="display: flex; align-items: center; flex-shrink: 0;">`;
+    displayList.forEach((p, idx) => {
+        let pName = typeof p === 'string' ? p : p.name;
+        let champId = null;
+        for (const [gid, name] of Object.entries(idToNameMap)) {
+            if (name.toLowerCase() === pName.toLowerCase()) { champId = gid; break; }
+        }
+        const avatarSrc = (champId && avatarMap[champId]) ? avatarMap[champId] : `images/${pName}.png`;
+        let marginLeft = idx === 0 ? '0px' : '-14px';
+        let zIndex = 10 - idx;
+        stackHtml += `<div style="width: 42px; height: 42px; border-radius: 50%; border: 2px solid #FFD700; overflow: hidden; margin-left: ${marginLeft}; z-index: ${zIndex}; background: var(--card-bg); box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
+            <img src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='images/default.png';">
+          </div>`;
+    });
+    if (overflowCount > 0) {
+        stackHtml += `<div style="width: 42px; height: 42px; border-radius: 50%; border: 2px solid #FFD700; background: rgba(255,215,0,0.2); color: #FFD700; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 11px; margin-left: -14px; z-index: 1; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
+            +${overflowCount}
+          </div>`;
+    }
+    stackHtml += `</div>`;
+    return stackHtml;
+}
+
 const views = {
   staff: async () => {
     let r5Html = '';
@@ -7398,6 +7437,8 @@ html += `</select>
   
 
 
+
+
   leaderboards: async (filterString) => {
     renderLoading("Loading Leaderboards");
     try {
@@ -7556,13 +7597,11 @@ html += `</select>
                       champId = gid; break;
                   }
               }
-              const avatarSrc = (champId && avatarMap[champId]) ? avatarMap[champId] : `images/${champName}.png`;
+              let avatarStackHtml = renderAvatarStack(topMvps);
               
               mvpBannerHtml = `
                 <div style="background: linear-gradient(135deg, rgba(255,215,0,0.1) 0%, rgba(255,215,0,0.02) 100%); border: 1px solid rgba(255,215,0,0.3); border-radius: 12px; padding: 15px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; box-shadow: 0 4px 15px rgba(255,215,0,0.05);">
-                  <div style="width: 50px; height: 50px; border-radius: 50%; border: 2px solid #FFD700; overflow: hidden; flex-shrink: 0; box-shadow: 0 0 10px rgba(255,215,0,0.2);">
-                    <img src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='images/default.png';">
-                  </div>
+                  ${avatarStackHtml}
                   <div style="flex: 1; text-align: left;">
                     <div style="color: #FFD700; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">${mvpTitle}</div>
                     <div style="color: var(--text-main); font-size: 18px; font-weight: bold;">${champDisplayNames}</div>
@@ -7648,13 +7687,11 @@ html += `</select>
                           champId = gid; break;
                       }
                   }
-                  const avatarSrc = (champId && avatarMap[champId]) ? avatarMap[champId] : `images/${champName}.png`;
+                  let allTimeAvatarStackHtml = renderAvatarStack(topChamps);
                   
                   allTimeMvpHtml = `
                     <div style="background: linear-gradient(135deg, rgba(255,215,0,0.1) 0%, rgba(255,215,0,0.02) 100%); border: 1px solid rgba(255,215,0,0.3); border-radius: 12px; padding: 15px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; box-shadow: 0 4px 15px rgba(255,215,0,0.05);">
-                      <div style="width: 50px; height: 50px; border-radius: 50%; border: 2px solid #FFD700; overflow: hidden; flex-shrink: 0; box-shadow: 0 0 10px rgba(255,215,0,0.2);">
-                        <img src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='images/default.png';">
-                      </div>
+                      ${allTimeAvatarStackHtml}
                       <div style="flex: 1; text-align: left;">
                         <div style="color: #FFD700; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">${champTitle}</div>
                         <div style="color: var(--text-main); font-size: 18px; font-weight: bold;">${champDisplayNames}</div>
