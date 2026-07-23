@@ -1,3 +1,7 @@
+## [1.30.1] - 2026-07-22
+### Removed
+- **Add New Player Button**: Removed the redundant "Add New Player to Roster" button from the Daily Tools admin menu, as it already exists inside the Player Database Editor.
+
 ## [1.30.0] - 2026-07-22
 ### Added
 - **Add/Remove Toggle**: Added a dropdown toggle to the Multi-BT Donations tool, allowing admins to easily switch between adding and removing amounts.
