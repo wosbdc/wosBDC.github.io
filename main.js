@@ -6745,11 +6745,14 @@ html += `</select>
 
               const timeDisplay = log.dateStr ? `${log.dateStr} ${log.timeStr || ''}` : new Date(log.timestamp).toLocaleString();
               
+              const targetHtml = log.target ? `<span style="color:#FFD700; font-weight:bold; font-size:12px;">(${log.target})</span>` : '';
+
               html += `
                 <div style="padding:10px 0; border-bottom:1px solid var(--border);">
                   <div style="color:var(--text-main); font-weight:bold; font-size:13px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
                     <span style="background:rgba(255,255,255,0.05); border:1px solid ${badgeColor}; color:${badgeColor}; padding:2px 8px; border-radius:4px; font-size:11px;">${log.action}</span>
                     <span>${log.details}</span>
+                    ${targetHtml}
                   </div>
                   <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">
                     ${timeDisplay} • By <span style="color:var(--accent); font-weight:bold;">${log.admin || log.email || 'Admin'}</span>

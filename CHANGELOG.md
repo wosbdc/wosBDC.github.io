@@ -1,3 +1,8 @@
+## [1.34.4] - 2026-07-23
+### Target Player Account Names in Bear Trap Log
+- **Target Player Account Display**: Updated `loadBeartrapLog()` to display target player account names and amounts added (e.g. `(BrianDCox (+50), ThaDwarf (+100))`) in metallic gold text next to every log entry.
+- **Unified Single Log Confirmation**: Confirmed that both `Menu | Admin ➔ 📋 Logs` and `Menu | Admin | Bear Trap` read from the **same single Firebase Realtime Database node** (`admin_logs`).
+
 ## [1.34.3] - 2026-07-23
 ### 100% Firebase Bear Trap Admin Log
 - **Firebase-Exclusive Bear Trap Admin Log**: Switched `loadBeartrapLog()` in `views.beartrap()` to read 100% directly from Firebase Realtime Database (`admin_logs`), completely removing Google Sheets API fetch.
