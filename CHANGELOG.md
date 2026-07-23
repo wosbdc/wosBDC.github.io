@@ -1,3 +1,15 @@
+## [1.34.2] - 2026-07-23
+### Comprehensive 8-Sheet Master Sync
+- **All-Sheet Coverage**: Expanded `syncAllSheetsToFirebase()` to cover ALL 8 Google Sheets:
+  1. `LeaderBoards` (Bear Trap Wins & Donations)
+  2. `Chief's List` (Alliance Roster)
+  3. `Alliance Championship`
+  4. `Mercenary Prestige`
+  5. `Polar Terrors`
+  6. `WhiteOut Survival` (Event Schedule)
+  7. `Showdown History`
+- **Full Non-Destructive Protection**: All 8 sheets sync into Firebase using `Math.max()` non-destructive merging while protecting live Firebase Showdown data.
+
 ## [1.34.1] - 2026-07-23
 ### Smart Non-Destructive Master Sync & Showdown Protection
 - **Showdown Live Data Protection**: Updated `syncAllSheetsToFirebase()` to completely bypass and protect active Firebase Showdown data (`showdown/` node), guaranteeing zero overwrites of live daily Showdown scores or MVP progress.
