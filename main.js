@@ -1665,14 +1665,12 @@ window.syncAllSheetsToFirebase = async () => {
                             winsAgg[key].name = pName;
                             if (isBt1) winsAgg[key].bt1 = Math.max(winsAgg[key].bt1 || 0, val);
                             else if (isBt2) winsAgg[key].bt2 = Math.max(winsAgg[key].bt2 || 0, val);
-                            else if (isAllTime) winsAgg[key].total = Math.max(winsAgg[key].total || 0, val);
                         }
                     });
                 });
 
                 Object.values(winsAgg).forEach(w => {
-                    let calcTotal = (w.bt1 || 0) + (w.bt2 || 0);
-                    w.total = Math.max(w.total || 0, calcTotal);
+                    w.total = (w.bt1 || 0) + (w.bt2 || 0);
                 });
 
                 for (const [key, val] of Object.entries(winsAgg)) {
@@ -8411,10 +8409,10 @@ window.resetBearTrapEvent = async () => {
                     if (w && w.name) {
                         let pName = w.name.trim();
                         let addVal = 0;
-                        if (titleLower.includes('all-time bear trap')) addVal = w.total || 0;
+                        if (titleLower.includes('all-time bear trap')) addVal = (w.bt1 || 0) + (w.bt2 || 0);
                         else if (titleLower.includes('bear trap 1')) addVal = w.bt1 || 0;
                         else if (titleLower.includes('bear trap 2')) addVal = w.bt2 || 0;
-                        else if (titleLower.includes('both bear trap')) addVal = (w.bt1 > 0 && w.bt2 > 0) ? (w.total || 0) : 0;
+                        else if (titleLower.includes('both bear trap')) addVal = (w.bt1 > 0 && w.bt2 > 0) ? ((w.bt1 || 0) + (w.bt2 || 0)) : 0;
 
                         if (addVal > 0) {
                             winsMap[pName] = Math.max(winsMap[pName] || 0, addVal);

@@ -1,3 +1,8 @@
+## [1.43.1] - 2026-07-23
+### Enforced Strict Bear Trap Crown Wins (BT1 + BT2 Sum Only)
+- **Strict Crown Wins Calculation**: Updated All-Time Bear Trap Leaderboard calculations so total wins are strictly evaluated as `(bt1Wins + bt2Wins)`.
+- **Eliminated Unverified Sheet Aggregation**: Removed legacy sheets total fallback that misclassified player donation rows as win counts, ensuring zero-win players like ThaDwarf are not listed.
+
 ## [1.43.0] - 2026-07-23
 ### Fixed Bear Trap & Donations Leaderboards Calculation & Top 4 Capping
 - **All-Time Bear Trap Leaderboard Top 4 Limit**: Capped `All-Time Bear Trap Leaderboard` to **Top 4 ONLY**, filtering for players with Crown wins (`totalWins > 0`).
