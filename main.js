@@ -7501,7 +7501,7 @@ html += `</select>
 
           const liveDisplayList = players.slice(0, 4);
 
-          liveShowdownHtml = `<div class="card" style="flex: 1 1 0px; min-width: 300px;"><div class="card-title">Current - Showdown Leaderboard (${players.length})</div>
+          liveShowdownHtml = `<div class="card" style="flex: 1 1 0px; min-width: 300px;"><div class="card-title">Current - Showdown Leaderboard</div>
           ${mvpBannerHtml}
           <div class="card-table-scroll">
             <table style="min-width: max-content; width: 100%; text-align:left;"><thead><tr>
@@ -7561,9 +7561,9 @@ html += `</select>
               }
 
               const showAllTime = (filterString && filterString.toLowerCase() === 'showdown');
-              const allTimeDisplayList = showAllTime ? allTimePlayers : allTimePlayers.slice(0, 10);
+              const allTimeDisplayList = allTimePlayers.slice(0, 4);
 
-              allTimeShowdownHtml = `<div class="card" style="flex: 1 1 0px; min-width: 300px;"><div class="card-title">All-Time - Showdown Leaderboard (${allTimePlayers.length})</div>
+              allTimeShowdownHtml = `<div class="card" style="flex: 1 1 0px; min-width: 300px;"><div class="card-title">All-Time - Showdown Leaderboard</div>
               ${allTimeMvpHtml}
               <div class="card-table-scroll">
                 <table style="min-width: max-content; width: 100%; text-align:left;"><thead><tr>

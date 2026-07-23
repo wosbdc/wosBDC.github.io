@@ -1,3 +1,8 @@
+## [1.29.96] - 2026-07-22
+### Changed
+- **Showdown Leaderboards**: Removed the total player count numbers from the "Current Showdown" and "All-Time Showdown" leaderboard titles for a cleaner look.
+- **All-Time Showdown Length**: Reduced the displayed rows on the All-Time Showdown leaderboard to only show the Top 4 players, matching the Current Showdown view.
+
 ## [1.29.95] - 2026-07-22
 ### Changed
 - **Showdown Leaderboards Length**: Reduced the displayed rows on the Showdown Leaderboards page for both the Current Showdown and All-Time Showdown leaderboards to only show the Top 4 players instead of Top 10 to keep the display concise.
