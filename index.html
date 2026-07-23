@@ -94,25 +94,7 @@
         <button id="closeSidebar" class="close-btn">&times;</button>
       </div>
       
-      <div class="sidebar-section" style="margin-bottom:20px; background:var(--bg-main); padding:15px; border-radius:8px; border:1px solid var(--border);">
-        <h3 style="margin-top:0; margin-bottom:10px; font-size:16px; color:var(--text-main); border-bottom:1px solid var(--border); padding-bottom:5px;">User Account</h3>
-        <button id="authSidebarBtn" style="width:100%; padding:10px; background:var(--accent); color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:14px; transition:0.2s;">
-          🔐 Sign In / Register
-        </button>
-        <button id="adminSidebarBtn" style="width:100%; padding:10px; background:var(--danger); color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:14px; transition:0.2s; margin-top:10px; display:none;">
-          🛡️ Admin Menu
-        </button>
-        <button id="signOutSidebarBtn" style="width:100%; padding:10px; background:var(--bg-card); color:var(--text-main); border:1px solid var(--border); border-radius:6px; font-weight:bold; cursor:pointer; font-size:14px; transition:0.2s; margin-top:10px; display:none;">
-          🚪 Sign Out
-        </button>
-        <button id="contactSidebarBtn" style="width:100%; padding:10px; background:var(--accent); color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:14px; transition:0.2s; margin-top:10px;">
-          💬 Contact Support
-        </button>
-      </div>
-      
-
-      
-      
+      <!-- Section 1: Global Timers (AT THE TOP) -->
       <div class="sidebar-section" style="margin-bottom:20px; background:var(--bg-main); padding:15px; border-radius:10px; border:1px solid var(--border);">
         <h3 style="margin-top:0; margin-bottom:12px; font-size:15px; color:var(--text-main); border-bottom:1px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:6px;">🕐 Global Timers</h3>
 
@@ -162,27 +144,47 @@
 
         </div>
       </div>
-      
+
+      <!-- Section 2: Preferences & Appearance -->
       <div class="sidebar-section" style="margin-bottom:20px; background:var(--bg-main); padding:15px; border-radius:8px; border:1px solid var(--border); display:flex; flex-direction:column; gap:10px;">
-        <button onclick="window.openNotificationsModal && window.openNotificationsModal()" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--border); padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; display:flex; align-items:center; justify-content:center; gap:8px; transition:0.2s;" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--card-bg)'">
-          🔔 Push Notifications
+        <h3 style="margin-top:0; margin-bottom:5px; font-size:15px; color:var(--text-main); border-bottom:1px solid var(--border); padding-bottom:6px;">📱 Preferences</h3>
+        <button onclick="window.openMobileNavModal && window.openMobileNavModal()" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--border); padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; display:flex; align-items:center; justify-content:center; gap:8px; transition:0.2s;" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--card-bg)'">
+          📱 Mobile Navigation
         </button>
         <button onclick="window.openThemeModal && window.openThemeModal()" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--border); padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; display:flex; align-items:center; justify-content:center; gap:8px; transition:0.2s;" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--card-bg)'">
           🎨 Theme Engine
         </button>
-        <button onclick="window.openMobileNavModal && window.openMobileNavModal()" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--border); padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; display:flex; align-items:center; justify-content:center; gap:8px; transition:0.2s;" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--card-bg)'">
-          📱 Mobile Navigation
+        <button onclick="window.openNotificationsModal && window.openNotificationsModal()" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--border); padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; display:flex; align-items:center; justify-content:center; gap:8px; transition:0.2s;" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--card-bg)'">
+          🔔 Push Notifications
         </button>
-        
-        <!-- Spoofing Controls -->
-        <div id="floatingSpoofControls" style="display:none; flex-direction:column; gap:10px; margin-top:10px; border-top:1px solid var(--border); padding-top:20px;">
-            <button onclick="window.clearSpoof && window.clearSpoof()" style="background:var(--danger); color:#fff; border:none; padding:12px; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer; animation: pulse 2s infinite; text-align:center;">
-                🛑 Stop Spoofing
-            </button>
-            <button onclick="window.switchSpoofUser && window.switchSpoofUser()" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--accent); padding:10px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; transition:0.2s; text-align:center;" onmouseover="this.style.background='var(--bg-main)'" onmouseout="this.style.background='var(--card-bg)'">
-                🔄 Switch User
-            </button>
-        </div>
+      </div>
+
+      <!-- Section 3: User Account & Support -->
+      <div class="sidebar-section" style="margin-bottom:20px; background:var(--bg-main); padding:15px; border-radius:8px; border:1px solid var(--border);">
+        <h3 style="margin-top:0; margin-bottom:10px; font-size:16px; color:var(--text-main); border-bottom:1px solid var(--border); padding-bottom:5px;">User Account</h3>
+        <button id="authSidebarBtn" style="width:100%; padding:10px; background:var(--accent); color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:14px; transition:0.2s;">
+          🔐 Sign In / Register
+        </button>
+        <button id="adminSidebarBtn" style="width:100%; padding:10px; background:var(--danger); color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:14px; transition:0.2s; margin-top:10px; display:none;">
+          🛡️ Admin Menu
+        </button>
+        <button id="signOutSidebarBtn" style="width:100%; padding:10px; background:var(--bg-card); color:var(--text-main); border:1px solid var(--border); border-radius:6px; font-weight:bold; cursor:pointer; font-size:14px; transition:0.2s; margin-top:10px; display:none;">
+          🚪 Sign Out
+        </button>
+        <button id="contactSidebarBtn" style="width:100%; padding:10px; background:var(--accent); color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:14px; transition:0.2s; margin-top:10px;">
+          💬 Contact Support
+        </button>
+      </div>
+
+      <!-- Section 4: Admin / Developer Controls -->
+      <div id="floatingSpoofControls" style="display:none; flex-direction:column; gap:10px; margin-bottom:20px; background:var(--bg-main); padding:15px; border-radius:8px; border:1px solid var(--border);">
+          <button onclick="window.clearSpoof && window.clearSpoof()" style="background:var(--danger); color:#fff; border:none; padding:12px; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer; animation: pulse 2s infinite; text-align:center;">
+              🛑 Stop Spoofing
+          </button>
+          <button onclick="window.switchSpoofUser && window.switchSpoofUser()" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--accent); padding:10px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; transition:0.2s; text-align:center;" onmouseover="this.style.background='var(--bg-main)'" onmouseout="this.style.background='var(--card-bg)'">
+              🔄 Switch User
+          </button>
+      </div>
       </div>
 
       </div>

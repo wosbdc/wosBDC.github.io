@@ -1,3 +1,12 @@
+## [1.39.0] - 2026-07-23
+### Reordered Settings Sidebar Sections
+- **Global Timers Promoted to Top**: Moved `🕐 Global Timers` to the absolute top of `#settingsSidebar` as requested.
+- **Clean Logical Grouping**:
+  1. `🕐 Global Timers` (Clocks, Daily & Intel Reset Countdowns)
+  2. `📱 Preferences` (`📱 Mobile Navigation`, `🎨 Theme Engine`, `🔔 Push Notifications`)
+  3. `👤 User Account` (Sign In / Register, Admin Menu, Sign Out, Contact Support)
+  4. `🧪 Admin & Dev Tools` (Spoofing Controls)
+
 ## [1.38.2] - 2026-07-23
 ### Fix Modal Helpers Closure Scope Reference
 - **Modal Opening Fix**: Fixed `ReferenceError` inside `window.openMobileNavModal()` by using direct DOM queries (`settingsSidebar` & `sidebarOverlay`) instead of referencing inner module closures.
