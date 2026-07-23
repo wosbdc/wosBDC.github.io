@@ -1,3 +1,7 @@
+## [1.33.2] - 2026-07-23
+### Reorganized In-Dev Event Trackers
+- **Button Migration to In-Dev**: Moved `🏆 Alliance Championship`, `⚔️ Mercenary Prestige`, `🐻‍❄️ Polar Terrors Tracker`, and `🐻 Bear Trap Tracker` from `🛠️ Daily Tools` into the **`🧪 In-Dev`** tab, decluttering the Daily Tools view.
+
 ## [1.33.1] - 2026-07-23
 ### New In-Dev Tab in Admin Menu
 - **In-Dev Tab Added**: Created a dedicated **`🧪 In-Dev`** (Projects & Feature Lab) tab inside `Menu | Admin` (`views.admin()`). Provides a private development workspace for experimental components, staging tools, and draft event calculators.
