@@ -7987,7 +7987,7 @@ html += `</select>
         let bannerTitle = "👑 Reigning Champion";
         let scoreLabel = "Total Wins";
          if (trapNum) {
-            if (btWinners[trapNum] && btWinners[trapNum].name && btWinners[trapNum].name !== "Pending...") {
+            if (btWinners[trapNum] && btWinners[trapNum].name) {
                champName = btWinners[trapNum].name;
                champScore = btWinners[trapNum].score;
             } else if (board.rows.length > 0) {

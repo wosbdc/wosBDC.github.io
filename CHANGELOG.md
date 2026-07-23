@@ -1,3 +1,7 @@
+## [1.33.7] - 2026-07-23
+### Fix Bear Trap Leaderboard Reset Banner Bug
+- **Pending... Banner Fallback Fix**: Removed `&& btWinners[trapNum].name !== "Pending..."` condition in `views.leaderboards()` so that when Bear Trap winners are reset to `"Pending..."` in Firebase by the admin button, the leaderboard header cards accurately display `Pending...` instead of falling back to the #1 player in the Google Sheet table.
+
 ## [1.33.6] - 2026-07-23
 ### Fix Bear Trap Reset Winners & Admin Features
 - **Reset BT Winners Fix**: Updated `resetBearTrapWinners()` in `views.beartrap()` to concurrently reset Bear Trap 1 & 2 champions in Firebase via `Promise.all`, fixed toast error styling, and smoothly re-rendered `views.beartrap()` without forcing full browser reloads.
