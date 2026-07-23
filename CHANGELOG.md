@@ -1,3 +1,7 @@
+## [1.33.1] - 2026-07-23
+### New In-Dev Tab in Admin Menu
+- **In-Dev Tab Added**: Created a dedicated **`🧪 In-Dev`** (Projects & Feature Lab) tab inside `Menu | Admin` (`views.admin()`). Provides a private development workspace for experimental components, staging tools, and draft event calculators.
+
 ## [1.33.0] - 2026-07-23
 ### Clean Revert of Experimental Shortcut Button & Modal Popup
 - **Clean Event Page Restoration**: Completely removed experimental modal popup code and header shortcut button from `Menu | Events | Showdown Page` (`views.showdown()`), restoring stable, clean navigation.
