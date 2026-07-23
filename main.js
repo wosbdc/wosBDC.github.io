@@ -4784,7 +4784,7 @@ const views = {
                 <button onclick="views.championshipAdmin()" style="background:linear-gradient(135deg, #f59e0b, #d97706); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px; box-shadow:0 4px 12px rgba(217,119,6,0.3);">🏆 Alliance Championship</button>
                 <button onclick="views.mercenaryAdmin()" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px; box-shadow:0 4px 12px rgba(239,68,68,0.3);">⚔️ Mercenary Prestige</button>
                 <button onclick="views.polarTerrorsAdmin()" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px; box-shadow:0 4px 12px rgba(14,165,233,0.3);">🐻‍❄️ Polar Terrors Tracker</button>
-                <button onclick="views.bearTrapAdmin()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px; box-shadow:0 4px 12px rgba(16,185,129,0.3);">🐻 Bear Trap Tracker</button>
+                <button onclick="views.bearTrapAdmin()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px; box-shadow:0 4px 12px rgba(16,185,129,0.3);">🐻 BT Donations Tracker</button>
               </div>
             </div>
           </div>
@@ -5696,7 +5696,7 @@ html += `</select>
                 <div id="champStatTotal" style="font-size:28px; font-weight:bold; color:var(--text-main); margin-top:4px;">${totalCount}</div>
               </div>
               <div style="background:var(--card-bg); border:1px solid rgba(16,185,129,0.3); border-radius:12px; padding:16px; text-align:center;">
-                <div style="font-size:12px; color:#10b981; text-transform:uppercase; font-weight:bold;">✅ Signed Up (YES)</div>
+                <div style="font-size:12px; color:#10b981; text-transform:uppercase; font-weight:bold;">✅ Donated (YES)</div>
                 <div id="champStatYes" style="font-size:28px; font-weight:bold; color:#10b981; margin-top:4px;">${yesCount}</div>
               </div>
               <div style="background:var(--card-bg); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:16px; text-align:center;">
@@ -5973,7 +5973,7 @@ html += `</select>
 
             <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:15px; margin-bottom:20px;">
               <div class="card" style="text-align:center;">
-                <div style="font-size:13px; color:var(--text-muted); margin-bottom:5px;">Signed Up (YES)</div>
+                <div style="font-size:13px; color:var(--text-muted); margin-bottom:5px;">Donated (YES)</div>
                 <div style="font-size:24px; font-weight:bold; color:var(--success);" id="pt-yes-count">${yesCount}</div>
               </div>
               <div class="card" style="text-align:center;">
@@ -5997,7 +5997,7 @@ html += `</select>
                 " style="background:var(--accent); color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:13px;">📋 Copy List</button>
               </div>
               <div id="pt-missing-names" style="font-family:monospace; background:var(--bg-main); padding:15px; border-radius:8px; border:1px solid var(--border); max-height:150px; overflow-y:auto; color:var(--text-muted); line-height:1.6; word-break:break-all;">
-                ${missingNames.length > 0 ? missingNames.join(', ') : 'Everyone is signed up! 🎉'}
+                ${missingNames.length > 0 ? missingNames.join(', ') : 'Everyone has donated! 🎉'}
               </div>
             </div>
 
@@ -6011,7 +6011,7 @@ html += `</select>
                   <thead>
                     <tr style="background:var(--bg-main); border-bottom:2px solid var(--border);">
                       <th style="padding:12px; text-align:left; font-weight:bold; color:var(--text-muted); font-size:13px; text-transform:uppercase;">Chief Name</th>
-                      <th style="padding:12px; text-align:center; font-weight:bold; color:var(--text-muted); font-size:13px; text-transform:uppercase;">Signed Up</th>
+                      <th style="padding:12px; text-align:center; font-weight:bold; color:var(--text-muted); font-size:13px; text-transform:uppercase;">Donated</th>
                     </tr>
                   </thead>
                   <tbody id="ptTableBody">
@@ -6085,7 +6085,7 @@ html += `</select>
                 document.getElementById('pt-no-count').textContent = newNo;
                 document.getElementById('pt-percent').textContent = window.ptRosterList.length > 0 ? Math.round((newYes / window.ptRosterList.length) * 100) + '%' : '0%';
                 
-                document.getElementById('pt-missing-names').innerText = newMissing.length > 0 ? newMissing.join(', ') : 'Everyone is signed up! 🎉';
+                document.getElementById('pt-missing-names').innerText = newMissing.length > 0 ? newMissing.join(', ') : 'Everyone has donated! 🎉';
             }
         };
 
@@ -6150,7 +6150,7 @@ html += `</select>
           <div style="background:linear-gradient(135deg, #10b981, #059669); padding:20px; box-shadow:0 2px 10px rgba(0,0,0,0.1); display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:100;">
             <div style="display:flex; align-items:center; gap:15px;">
               <button onclick="views.admin('tab-indev')" style="background:rgba(255,255,255,0.2); border:none; color:#fff; cursor:pointer; font-size:18px; padding:8px 12px; border-radius:8px; transition:0.2s;">⬅ Back to Admin</button>
-              <h2 style="margin:0; color:#fff; font-size:1.3em;">🐻 Bear Trap Tracker</h2>
+              <h2 style="margin:0; color:#fff; font-size:1.3em;">🐻 BT Donations Tracker</h2>
             </div>
             <button onclick="window.openAddPlayerModal()" style="background:rgba(255,255,255,0.2); border:none; color:#fff; cursor:pointer; font-size:14px; padding:6px 12px; border-radius:6px; font-weight:bold;">➕ Add Player</button>
           </div>
@@ -6163,7 +6163,7 @@ html += `</select>
 
             <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:20px; margin-bottom:25px;">
               <div class="card" style="text-align:center; padding:20px;">
-                <div style="font-size:13px; color:var(--text-muted); font-weight:bold; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Signed Up (YES)</div>
+                <div style="font-size:13px; color:var(--text-muted); font-weight:bold; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Donated (YES)</div>
                 <div style="font-size:32px; font-weight:bold; color:var(--success);" id="bt-yes-count">${yesCount}</div>
               </div>
               <div class="card" style="text-align:center; padding:20px;">
@@ -6190,7 +6190,7 @@ html += `</select>
                   " style="background:var(--accent); color:#fff; border:none; padding:8px 14px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:13px;">📋 Copy List</button>
                 </div>
                 <div id="bt-missing-names" style="font-family:monospace; background:var(--bg-main); padding:15px; border-radius:8px; border:1px solid var(--border); max-height:500px; overflow-y:auto; color:var(--text-muted); line-height:1.8; word-break:break-all;">
-                  ${missingNames.length > 0 ? missingNames.join(', ') : 'Everyone is signed up! 🎉'}
+                  ${missingNames.length > 0 ? missingNames.join(', ') : 'Everyone has donated! 🎉'}
                 </div>
               </div>
 
@@ -6204,8 +6204,8 @@ html += `</select>
                   <thead>
                     <tr style="background:var(--bg-main); border-bottom:2px solid var(--border);">
                       <th style="padding:12px; text-align:left; font-weight:bold; color:var(--text-muted); font-size:13px; text-transform:uppercase;">Chief Name</th>
-                      <th style="padding:12px; text-align:center; font-weight:bold; color:var(--text-muted); font-size:13px; text-transform:uppercase;">Signed Up</th>
-                      <th style="padding:12px; text-align:right; font-weight:bold; color:var(--text-muted); font-size:13px; text-transform:uppercase;">Donations</th>
+                      <th style="padding:12px; text-align:center; font-weight:bold; color:var(--text-muted); font-size:13px; text-transform:uppercase;">Donated</th>
+                      <th style="padding:12px; text-align:right; font-weight:bold; color:var(--text-muted); font-size:13px; text-transform:uppercase;">Amount</th>
                     </tr>
                   </thead>
                   <tbody id="btTableBody">
@@ -6217,7 +6217,7 @@ html += `</select>
                          <td style="padding:12px; font-weight:bold; color:var(--text-main);">${escapeHTML(p.name)}</td>
                          <td style="padding:8px 12px; text-align:center;">
                            <button onclick="window.onBtToggleSingle('${gIdStr}', this)" data-signed="${isSignedUp ? 'true' : 'false'}" style="border:none; padding:6px 14px; font-weight:bold; border-radius:20px; cursor:pointer; font-size:12px; transition:all 0.2s ease; background:${isSignedUp ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)'}; color:${isSignedUp ? '#10b981' : '#ef4444'}; border:1px solid ${isSignedUp ? '#10b981' : '#ef4444'};">
-                             ${isSignedUp ? '✅ Signed Up' : '❌ Missing'}
+                             ${isSignedUp ? '✅ Donated' : '❌ Missing'}
                            </button>
                          </td>
                          <td style="padding:12px; text-align:right;">
@@ -6275,7 +6275,7 @@ html += `</select>
             btnElement.style.background = newStatus ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)';
             btnElement.style.color = newStatus ? '#10b981' : '#ef4444';
             btnElement.style.borderColor = newStatus ? '#10b981' : '#ef4444';
-            btnElement.innerHTML = newStatus ? '✅ Signed Up' : '❌ Missing';
+            btnElement.innerHTML = newStatus ? '✅ Donated' : '❌ Missing';
 
             const ok = await window.toggleBearTrapStatus(gameId, newStatus);
             if (!ok) {
@@ -6284,7 +6284,7 @@ html += `</select>
                 btnElement.style.background = currentStatus ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)';
                 btnElement.style.color = currentStatus ? '#10b981' : '#ef4444';
                 btnElement.style.borderColor = currentStatus ? '#10b981' : '#ef4444';
-                btnElement.innerHTML = currentStatus ? '✅ Signed Up' : '❌ Missing';
+                btnElement.innerHTML = currentStatus ? '✅ Donated' : '❌ Missing';
             } else {
                 let pData = await window.fetchBearTrapData();
                 let newYes = 0;
@@ -6304,7 +6304,7 @@ html += `</select>
                 document.getElementById('bt-percent').textContent = window.btRosterList.length > 0 ? Math.round((newYes / window.btRosterList.length) * 100) + '%' : '0%';
                 const missingEl = document.getElementById('bt-missing-names');
                 if (missingEl) {
-                  missingEl.textContent = newMissing.length > 0 ? newMissing.join(', ') : 'Everyone is signed up! 🎉';
+                  missingEl.textContent = newMissing.length > 0 ? newMissing.join(', ') : 'Everyone has donated! 🎉';
                 }
             }
         };
@@ -6344,7 +6344,7 @@ html += `</select>
                 document.getElementById('bt-no-count').textContent = newNo;
                 document.getElementById('bt-percent').textContent = window.btRosterList.length > 0 ? Math.round((newYes / window.btRosterList.length) * 100) + '%' : '0%';
                 
-                document.getElementById('bt-missing-names').innerText = newMissing.length > 0 ? newMissing.join(', ') : 'Everyone is signed up! 🎉';
+                document.getElementById('bt-missing-names').innerText = newMissing.length > 0 ? newMissing.join(', ') : 'Everyone has donated! 🎉';
             }
         };
 
@@ -6440,7 +6440,7 @@ html += `</select>
                 <div id="mercStatTotal" style="font-size:28px; font-weight:bold; color:var(--text-main); margin-top:4px;">${totalCount}</div>
               </div>
               <div style="background:var(--card-bg); border:1px solid rgba(16,185,129,0.3); border-radius:12px; padding:16px; text-align:center;">
-                <div style="font-size:12px; color:#10b981; text-transform:uppercase; font-weight:bold;">✅ Signed Up (YES)</div>
+                <div style="font-size:12px; color:#10b981; text-transform:uppercase; font-weight:bold;">✅ Donated (YES)</div>
                 <div id="mercStatYes" style="font-size:28px; font-weight:bold; color:#10b981; margin-top:4px;">${yesCount}</div>
               </div>
               <div style="background:var(--card-bg); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:16px; text-align:center;">

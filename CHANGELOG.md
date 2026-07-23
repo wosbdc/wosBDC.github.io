@@ -1,3 +1,7 @@
+## [1.40.2] - 2026-07-23
+### Renamed Bear Trap Labels to BT Donations Tracker
+- **BT Donations Tracker Terminology**: Renamed page title to **`🐻 BT Donations Tracker`**, table status column header to **`Donated`**, donation score column to **`Amount`**, and table badges to **`✅ Donated`** / **`❌ Missing`**.
+
 ## [1.40.1] - 2026-07-23
 ### Compact 1-Tap Bear Trap Status Badge
 - **Compact Mobile Status Badge**: Replaced bulky side-by-side `[ YES ] [ NO ]` toggle boxes in Bear Trap Tracker table with a clean 1-tap status badge (`✅ Signed Up` vs `❌ Missing`) saving 75px per row for perfect mobile screen fit.
