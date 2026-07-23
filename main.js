@@ -6312,7 +6312,7 @@ html += `</select>
       div.innerHTML = `
         <input type="text" class="bt-name" list="beartrapRosterDatalist" placeholder="Player Name or ID..." style="flex:2; min-width:0; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);">
         <input type="number" class="bt-amount" placeholder="Amount..." style="flex:1; min-width:0; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);">
-        <button onclick="this.parentElement.parentElement.remove()" style="background:var(--danger); color:#fff; border:none; width:40px; flex-shrink:0; border-radius:6px; cursor:pointer; font-weight:bold;">X</button>
+        <button onclick="this.parentElement.remove()" style="background:var(--danger); color:#fff; border:none; width:40px; flex-shrink:0; border-radius:6px; cursor:pointer; font-weight:bold;">X</button>
       `;
       cont.appendChild(div);
       const newNameInput = div.querySelector('.bt-name');
@@ -6419,7 +6419,7 @@ html += `</select>
       const cont = document.getElementById('beartrapEntries');
       cont.innerHTML = `
         <div class="beartrap-row" style="display:flex; gap:10px; margin-bottom:10px;">
-          <input type="text" class="bt-name" list="chiefList" placeholder="Player Name..." style="flex:2; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);">
+          <input type="text" class="bt-name" list="beartrapRosterDatalist" placeholder="Player Name..." style="flex:2; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);">
           <input type="number" class="bt-amount" placeholder="Amount..." style="flex:1; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);">
           <button onclick="this.parentElement.remove()" style="background:var(--danger); color:#fff; border:none; width:40px; border-radius:6px; cursor:pointer; font-weight:bold;">X</button>
         </div>

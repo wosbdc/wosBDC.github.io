@@ -1,3 +1,8 @@
+## [1.29.94] - 2026-07-22
+### Fixed
+- **Multi-BT Donations Bug**: Fixed an issue in the older Bear Trap admin panel where clicking the 'X' button to remove a newly added donation row or attempting to submit the form would unintentionally delete the entire donations container, preventing R4/R5 managers from adding batch Bear Trap donations.
+- **Bear Trap Roster Datalist**: Updated the autocomplete input fields in the multi-BT donations panel to correctly map to the new `beartrapRosterDatalist` (was pointing to the deprecated `chiefList`), fixing the auto-complete lookup issue.
+
 ## [1.29.93] - 2026-07-22
 ### Fixed
 - **Leaderboards Filter HTML Bug**: Fixed a missing set of closing HTML tags in the All-Time Showdown Leaderboard generation that was causing the Current Showdown and All-Time Showdown cards to visually merge and break the side-by-side flexbox layout on the specific Showdown Leaderboards page.
