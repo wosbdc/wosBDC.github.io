@@ -7581,6 +7581,7 @@ html += `</select>
                      <td>${p.total > 0 ? p.total.toLocaleString() : '0'}</td>
                   </tr>`;
               });
+              allTimeShowdownHtml += `</tbody></table></div></div>`;
           }
          
          let totalAllianceScore = ourScores.d1 + ourScores.d2 + ourScores.d3 + ourScores.d4 + ourScores.d5 + ourScores.d6;

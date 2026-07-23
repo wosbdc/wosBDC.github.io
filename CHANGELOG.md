@@ -1,3 +1,7 @@
+## [1.29.93] - 2026-07-22
+### Fixed
+- **Leaderboards Filter HTML Bug**: Fixed a missing set of closing HTML tags in the All-Time Showdown Leaderboard generation that was causing the Current Showdown and All-Time Showdown cards to visually merge and break the side-by-side flexbox layout on the specific Showdown Leaderboards page.
+
 ## [1.29.92] - 2026-07-22
 ### Added
 - **Polar Terrors Admin Tracker**: Added a dedicated Polar Terrors tracker mirroring the Mercenary Prestige module to the Daily Admin Tools hub.
