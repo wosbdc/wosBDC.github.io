@@ -1,3 +1,9 @@
+## [1.48.2] - 2026-07-23
+### Fixed Showdown Missed Days Report Button & Added Button State Feedback
+- **Fixed Button Binding Syntax**: Cleaned up syntax boundary in `resetCurrentShowdown()` and `showMissedDaysReportModal()`.
+- **Button Loading Feedback**: Added button state indicator (`⏳ Loading...`) while fetching Showdown data to prevent double clicks on mobile devices.
+- **Universal Clipboard Fallback**: Added fallback clipboard copy handler so the copy feature works seamlessly across all mobile Safari and Android browsers.
+
 ## [1.48.1] - 2026-07-23
 ### Added Pending Status Badges for Unstarted Showdown Days
 - **`⏳ Pending` Status for Unstarted Days**: Updated `window.showMissedDaysReportModal()` to automatically detect unstarted days (e.g. Days 5 & 6) and display a **`⏳ Pending`** badge with a *"Day not started yet"* note.

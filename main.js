@@ -3878,189 +3878,222 @@ window.resetCurrentShowdown = async () => {
 };
 
 // Showdown Missed Days Report Modal
-window.showMissedDaysReportModal = async () => {
-    let sdRes = {};
-    let rosterRawData = {};
+window.showMissedDaysReportModal = async (btnEl = null) => {
+    let origHtml = '';
+    if (btnEl) {
+        origHtml = btnEl.innerHTML;
+        btnEl.disabled = true;
+        btnEl.innerHTML = '⏳ Loading...';
+    }
+
     try {
-        [sdRes, rosterRawData] = await Promise.all([
-            window.fetchMergedShowdown(),
-            window.fetchRoster().catch(() => ({}))
-        ]);
-    } catch(e) {
-        console.error("Error fetching showdown data for missed report:", e);
-    }
+        let sdRes = {};
+        let rosterRawData = {};
+        try {
+            [sdRes, rosterRawData] = await Promise.all([
+                window.fetchMergedShowdown(),
+                window.fetchRoster().catch(() => ({}))
+            ]);
+        } catch(e) {
+            console.error("Error fetching showdown data for missed report:", e);
+        }
 
-    const sdLiveData = (sdRes && sdRes.sdLiveData) || {};
+        const sdLiveData = (sdRes && sdRes.sdLiveData) || {};
 
-    let allPlayers = [];
-    if (rosterRawData && Object.keys(rosterRawData).length > 0) {
-        Object.values(rosterRawData).forEach(p => {
-            if (p.name) allPlayers.push(p.name.toString().trim());
+        let allPlayers = [];
+        if (rosterRawData && Object.keys(rosterRawData).length > 0) {
+            Object.values(rosterRawData).forEach(p => {
+                if (p.name) allPlayers.push(p.name.toString().trim());
+            });
+        }
+        if (allPlayers.length === 0) allPlayers = Object.keys(sdLiveData);
+        allPlayers = [...new Set(allPlayers)].sort((a,b) => a.localeCompare(b));
+
+        const isDayActive = {};
+        let maxActiveDay = 0;
+        for (let d = 1; d <= 6; d++) {
+            let dayHasScore = Object.values(sdLiveData).some(scores => scores && Number(scores['d'+d] || 0) > 0);
+            isDayActive[d] = dayHasScore;
+            if (dayHasScore) maxActiveDay = d;
+        }
+        // Day 1 is active by default if event has begun
+        if (maxActiveDay === 0) maxActiveDay = 1;
+
+        const playerMissedMap = {};
+        const dayMissedMap = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
+
+        allPlayers.forEach(pName => {
+            const scores = sdLiveData[pName] || {};
+            const missedDays = [];
+            for (let d = 1; d <= maxActiveDay; d++) {
+                const score = Number(scores['d' + d] || 0);
+                if (score === 0) {
+                    missedDays.push(d);
+                    dayMissedMap[d].push(pName);
+                }
+            }
+            if (missedDays.length > 0) {
+                playerMissedMap[pName] = missedDays;
+            }
         });
-    }
-    if (allPlayers.length === 0) allPlayers = Object.keys(sdLiveData);
-    allPlayers = [...new Set(allPlayers)].sort((a,b) => a.localeCompare(b));
 
-    const isDayActive = {};
-    let maxActiveDay = 0;
-    for (let d = 1; d <= 6; d++) {
-        let dayHasScore = Object.values(sdLiveData).some(scores => scores && Number(scores['d'+d] || 0) > 0);
-        isDayActive[d] = dayHasScore;
-        if (dayHasScore) maxActiveDay = d;
-    }
-    // Day 1 is active by default if event has begun
-    if (maxActiveDay === 0) maxActiveDay = 1;
+        const playersWithMisses = Object.keys(playerMissedMap).sort((a,b) => playerMissedMap[b].length - playerMissedMap[a].length || a.localeCompare(b));
 
-    const playerMissedMap = {};
-    const dayMissedMap = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
+        let copyText = `📅 ALLIANCE SHOWDOWN MISSED DAYS REPORT (Active Days 1-${maxActiveDay})\n`;
+        copyText += `----------------------------------------\n`;
+        if (playersWithMisses.length === 0) {
+            copyText += `🎉 Perfect Attendance! 0 players missed any active days!\n`;
+        } else {
+            playersWithMisses.forEach(pName => {
+                const daysStr = playerMissedMap[pName].map(d => `Day ${d}`).join(', ');
+                copyText += `• ${pName}: ${daysStr} (${playerMissedMap[pName].length} missed)\n`;
+            });
+        }
+        copyText += `----------------------------------------\nTotal Players with Missed Days: ${playersWithMisses.length}`;
 
-    allPlayers.forEach(pName => {
-        const scores = sdLiveData[pName] || {};
-        const missedDays = [];
-        for (let d = 1; d <= maxActiveDay; d++) {
-            const score = Number(scores['d' + d] || 0);
-            if (score === 0) {
-                missedDays.push(d);
-                dayMissedMap[d].push(pName);
+        const modal = document.createElement('div');
+        modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); backdrop-filter:blur(6px); z-index:10002; display:flex; justify-content:center; align-items:center; animation:fadeIn 0.2s ease; padding:15px; box-sizing:border-box;';
+
+        let dayCardsHtml = '';
+        for (let d = 1; d <= 6; d++) {
+            const active = d <= maxActiveDay;
+            const missedList = dayMissedMap[d] || [];
+            if (!active) {
+                dayCardsHtml += `
+                    <div style="background:var(--bg-main); border:1px dashed var(--border); border-radius:10px; padding:12px 14px; opacity:0.8;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <span style="font-weight:bold; color:var(--text-muted); font-size:14px;">Day ${d}</span>
+                            <span style="background:rgba(234,179,8,0.15); color:#eab308; border:1px solid rgba(234,179,8,0.3); font-size:11px; font-weight:bold; padding:2px 8px; border-radius:12px;">
+                                ⏳ Pending
+                            </span>
+                        </div>
+                        <div style="font-size:12px; color:var(--text-muted); font-style:italic;">Day not started yet</div>
+                    </div>
+                `;
+            } else {
+                dayCardsHtml += `
+                    <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:12px 14px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <span style="font-weight:bold; color:var(--text-main); font-size:14px;">Day ${d}</span>
+                            <span style="background:${missedList.length > 0 ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)'}; color:${missedList.length > 0 ? '#ef4444' : '#10b981'}; border:1px solid ${missedList.length > 0 ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.3)'}; font-size:11px; font-weight:bold; padding:2px 8px; border-radius:12px;">
+                                ${missedList.length > 0 ? `${missedList.length} Missed` : '✅ All Scored'}
+                            </span>
+                        </div>
+                        ${missedList.length === 0 ? '<div style="font-size:12px; color:var(--text-muted); font-style:italic;">100% Participation</div>' : `
+                            <div style="font-size:12px; color:var(--text-muted); max-height:80px; overflow-y:auto; line-height:1.4;">
+                                ${missedList.map(name => `<div>• ${window.escapeHTML(name)}</div>`).join('')}
+                            </div>
+                        `}
+                    </div>
+                `;
             }
         }
-        if (missedDays.length > 0) {
-            playerMissedMap[pName] = missedDays;
-        }
-    });
 
-    const playersWithMisses = Object.keys(playerMissedMap).sort((a,b) => playerMissedMap[b].length - playerMissedMap[a].length || a.localeCompare(b));
-
-    let copyText = `📅 ALLIANCE SHOWDOWN MISSED DAYS REPORT (Active Days 1-${maxActiveDay})\n`;
-    copyText += `----------------------------------------\n`;
-    if (playersWithMisses.length === 0) {
-        copyText += `🎉 Perfect Attendance! 0 players missed any active days!\n`;
-    } else {
-        playersWithMisses.forEach(pName => {
-            const daysStr = playerMissedMap[pName].map(d => `Day ${d}`).join(', ');
-            copyText += `• ${pName}: ${daysStr} (${playerMissedMap[pName].length} missed)\n`;
-        });
-    }
-    copyText += `----------------------------------------\nTotal Players with Missed Days: ${playersWithMisses.length}`;
-
-    const modal = document.createElement('div');
-    modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); backdrop-filter:blur(6px); z-index:10002; display:flex; justify-content:center; align-items:center; animation:fadeIn 0.2s ease; padding:15px; box-sizing:border-box;';
-
-    let dayCardsHtml = '';
-    for (let d = 1; d <= 6; d++) {
-        const active = d <= maxActiveDay;
-        const missedList = dayMissedMap[d] || [];
-        if (!active) {
-            dayCardsHtml += `
-                <div style="background:var(--bg-main); border:1px dashed var(--border); border-radius:10px; padding:12px 14px; opacity:0.8;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                        <span style="font-weight:bold; color:var(--text-muted); font-size:14px;">Day ${d}</span>
-                        <span style="background:rgba(234,179,8,0.15); color:#eab308; border:1px solid rgba(234,179,8,0.3); font-size:11px; font-weight:bold; padding:2px 8px; border-radius:12px;">
-                            ⏳ Pending
-                        </span>
-                    </div>
-                    <div style="font-size:12px; color:var(--text-muted); font-style:italic;">Day not started yet</div>
-                </div>
-            `;
+        let playerRowsHtml = '';
+        if (playersWithMisses.length === 0) {
+            playerRowsHtml = `<tr><td colspan="3" style="padding:20px; text-align:center; color:var(--success); font-weight:bold;">🎉 100% Perfect Attendance! 0 players missed any active days.</td></tr>`;
         } else {
-            dayCardsHtml += `
-                <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:12px 14px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                        <span style="font-weight:bold; color:var(--text-main); font-size:14px;">Day ${d}</span>
-                        <span style="background:${missedList.length > 0 ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)'}; color:${missedList.length > 0 ? '#ef4444' : '#10b981'}; border:1px solid ${missedList.length > 0 ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.3)'}; font-size:11px; font-weight:bold; padding:2px 8px; border-radius:12px;">
-                            ${missedList.length > 0 ? `${missedList.length} Missed` : '✅ All Scored'}
-                        </span>
+            playerRowsHtml = playersWithMisses.map(pName => {
+                const missedDays = playerMissedMap[pName];
+                const badges = missedDays.map(d => `<span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:2px 6px; border-radius:4px; font-size:11px; font-weight:bold;">Day ${d}</span>`).join(' ');
+                return `
+                    <tr style="border-bottom:1px solid var(--border);">
+                        <td style="padding:10px; font-weight:bold; color:var(--text-main);">${window.escapeHTML(pName)}</td>
+                        <td style="padding:10px;">${badges}</td>
+                        <td style="padding:10px; text-align:right; font-weight:bold; color:var(--danger);">${missedDays.length}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        modal.innerHTML = `
+            <div style="background:var(--card-bg); border:1px solid var(--accent); border-radius:16px; width:100%; max-width:680px; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 25px 60px rgba(0,0,0,0.8); overflow:hidden;">
+                <div style="padding:20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; background:linear-gradient(135deg, rgba(239,68,68,0.1), transparent);">
+                    <div>
+                        <h3 style="margin:0; color:var(--text-main); font-size:18px; display:flex; align-items:center; gap:8px;">
+                            📋 Showdown Missed Days Report
+                        </h3>
+                        <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">Showing active Days 1 through ${maxActiveDay} (${playersWithMisses.length} player(s) missed scores)</div>
                     </div>
-                    ${missedList.length === 0 ? '<div style="font-size:12px; color:var(--text-muted); font-style:italic;">100% Participation</div>' : `
-                        <div style="font-size:12px; color:var(--text-muted); max-height:80px; overflow-y:auto; line-height:1.4;">
-                            ${missedList.map(name => `<div>• ${window.escapeHTML(name)}</div>`).join('')}
-                        </div>
-                    `}
+                    <button id="closeMissedReportX" style="background:none; border:none; color:var(--text-muted); font-size:24px; cursor:pointer; padding:0;">&times;</button>
                 </div>
-            `;
+
+                <div style="padding:20px; overflow-y:auto; display:flex; flex-direction:column; gap:20px;">
+                    <div>
+                        <div style="font-size:13px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; margin-bottom:10px;">📅 Daily Breakdown</div>
+                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px;">
+                            ${dayCardsHtml}
+                        </div>
+                    </div>
+
+                    <div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                            <div style="font-size:13px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">👤 Players with Missed Days (${playersWithMisses.length})</div>
+                        </div>
+                        <div style="max-height:260px; overflow-y:auto; border:1px solid var(--border); border-radius:10px; background:var(--bg-main);">
+                            <table style="width:100%; border-collapse:collapse; text-align:left; font-size:13px;">
+                                <thead>
+                                    <tr style="border-bottom:1px solid var(--border); background:rgba(255,255,255,0.03); color:var(--text-muted); font-size:11px; text-transform:uppercase;">
+                                        <th style="padding:10px;">Chief Name</th>
+                                        <th style="padding:10px;">Missed Days</th>
+                                        <th style="padding:10px; text-align:right;">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${playerRowsHtml}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="padding:15px 20px; border-top:1px solid var(--border); background:rgba(0,0,0,0.2); display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+                    <button id="copyMissedListBtn" style="background:var(--accent); color:#fff; border:none; padding:10px 18px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(14,165,233,0.3);">
+                        📋 Copy Missed List to Clipboard
+                    </button>
+                    <button id="closeMissedReportBtn" style="background:var(--bg-main); color:var(--text-main); border:1px solid var(--border); padding:10px 18px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer;">
+                        Close
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        const closeModal = () => modal.remove();
+        modal.querySelector('#closeMissedReportX').addEventListener('click', closeModal);
+        modal.querySelector('#closeMissedReportBtn').addEventListener('click', closeModal);
+
+        modal.querySelector('#copyMissedListBtn').addEventListener('click', () => {
+            const doCopy = (txt) => {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(txt).then(() => {
+                        if (window.showToast) window.showToast(`Copied Showdown Missed Days list to clipboard!`, 'success');
+                    }).catch(() => fallbackCopy(txt));
+                } else {
+                    fallbackCopy(txt);
+                }
+            };
+            const fallbackCopy = (txt) => {
+                const ta = document.createElement('textarea');
+                ta.value = txt;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                if (window.showToast) window.showToast(`Copied Showdown Missed Days list to clipboard!`, 'success');
+            };
+            doCopy(copyText);
+        });
+    } catch(err) {
+        console.error("Error opening Showdown Missed Days Report:", err);
+        if (window.showToast) window.showToast("Error opening report: " + err.message, "error");
+    } finally {
+        if (btnEl) {
+            btnEl.disabled = false;
+            btnEl.innerHTML = origHtml;
         }
     }
-
-    let playerRowsHtml = '';
-    if (playersWithMisses.length === 0) {
-        playerRowsHtml = `<tr><td colspan="3" style="padding:20px; text-align:center; color:var(--success); font-weight:bold;">🎉 100% Perfect Attendance! 0 players missed any active days.</td></tr>`;
-    } else {
-        playerRowsHtml = playersWithMisses.map(pName => {
-            const missedDays = playerMissedMap[pName];
-            const badges = missedDays.map(d => `<span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:2px 6px; border-radius:4px; font-size:11px; font-weight:bold;">Day ${d}</span>`).join(' ');
-            return `
-                <tr style="border-bottom:1px solid var(--border);">
-                    <td style="padding:10px; font-weight:bold; color:var(--text-main);">${window.escapeHTML(pName)}</td>
-                    <td style="padding:10px;">${badges}</td>
-                    <td style="padding:10px; text-align:right; font-weight:bold; color:var(--danger);">${missedDays.length}</td>
-                </tr>
-            `;
-        }).join('');
-    }
-
-    modal.innerHTML = `
-        <div style="background:var(--card-bg); border:1px solid var(--accent); border-radius:16px; width:100%; max-width:680px; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 25px 60px rgba(0,0,0,0.8); overflow:hidden;">
-            <div style="padding:20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; background:linear-gradient(135deg, rgba(239,68,68,0.1), transparent);">
-                <div>
-                    <h3 style="margin:0; color:var(--text-main); font-size:18px; display:flex; align-items:center; gap:8px;">
-                        📋 Showdown Missed Days Report
-                    </h3>
-                    <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">Showing active Days 1 through ${activeDaysCount} (${playersWithMisses.length} player(s) missed scores)</div>
-                </div>
-                <button id="closeMissedReportX" style="background:none; border:none; color:var(--text-muted); font-size:24px; cursor:pointer; padding:0;">&times;</button>
-            </div>
-
-            <div style="padding:20px; overflow-y:auto; display:flex; flex-direction:column; gap:20px;">
-                <div>
-                    <div style="font-size:13px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; margin-bottom:10px;">📅 Daily Breakdown</div>
-                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px;">
-                        ${dayCardsHtml}
-                    </div>
-                </div>
-
-                <div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <div style="font-size:13px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">👤 Players with Missed Days (${playersWithMisses.length})</div>
-                    </div>
-                    <div style="max-height:260px; overflow-y:auto; border:1px solid var(--border); border-radius:10px; background:var(--bg-main);">
-                        <table style="width:100%; border-collapse:collapse; text-align:left; font-size:13px;">
-                            <thead>
-                                <tr style="border-bottom:1px solid var(--border); background:rgba(255,255,255,0.03); color:var(--text-muted); font-size:11px; text-transform:uppercase;">
-                                    <th style="padding:10px;">Chief Name</th>
-                                    <th style="padding:10px;">Missed Days</th>
-                                    <th style="padding:10px; text-align:right;">Total</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${playerRowsHtml}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <div style="padding:15px 20px; border-top:1px solid var(--border); background:rgba(0,0,0,0.2); display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
-                <button id="copyMissedListBtn" style="background:var(--accent); color:#fff; border:none; padding:10px 18px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(14,165,233,0.3);">
-                    📋 Copy Missed List to Clipboard
-                </button>
-                <button id="closeMissedReportBtn" style="background:var(--bg-main); color:var(--text-main); border:1px solid var(--border); padding:10px 18px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer;">
-                    Close
-                </button>
-            </div>
-        </div>
-    `;
-
-    document.body.appendChild(modal);
-
-    const closeModal = () => modal.remove();
-    modal.querySelector('#closeMissedReportX').addEventListener('click', closeModal);
-    modal.querySelector('#closeMissedReportBtn').addEventListener('click', closeModal);
-
-    modal.querySelector('#copyMissedListBtn').addEventListener('click', () => {
-        navigator.clipboard.writeText(copyText).then(() => {
-            if (window.showToast) window.showToast(`Copied Showdown Missed Days list to clipboard!`, 'success');
-        });
-    });
 };
 
 const getAutocompleteShield = () => {
@@ -5799,7 +5832,7 @@ const views = {
            <div class="card-title" style="text-align:center; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
               <span>⚔️ Showdown Data Entry</span>
               <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                 <button onclick="window.showMissedDaysReportModal()" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--accent); padding:4px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:4px;">📋 Missed Days Report</button>
+                 <button onclick="window.showMissedDaysReportModal(this)" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--accent); padding:4px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:4px;">📋 Missed Days Report</button>
                  <button onclick="window.archiveCurrentShowdownToFirebase()" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--success); padding:4px 8px; border-radius:6px; cursor:pointer; font-size:12px;">📁 Archive to History</button>
                  <button onclick="window.resetCurrentShowdown()" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--danger); padding:4px 8px; border-radius:6px; cursor:pointer; font-size:12px;">🔄 Reset Event</button>
                </div>
