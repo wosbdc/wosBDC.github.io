@@ -1,3 +1,8 @@
+## [1.48.3] - 2026-07-23
+### Deduplicated Player Names in Showdown Missed Days Cards
+- **Case-Insensitive Roster Deduplication**: Normalized and deduplicated player names across `rosterRawData` and `sdLiveData` case-insensitively so player variations (e.g. casing or trailing spaces) are merged into a single unique player entry.
+- **Card Missed List Deduplication**: Added `Set` filtering on daily missed player lists to ensure no player name can ever appear more than once in the same day card.
+
 ## [1.48.2] - 2026-07-23
 ### Fixed Showdown Missed Days Report Button & Added Button State Feedback
 - **Fixed Button Binding Syntax**: Cleaned up syntax boundary in `resetCurrentShowdown()` and `showMissedDaysReportModal()`.

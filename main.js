@@ -3900,15 +3900,41 @@ window.showMissedDaysReportModal = async (btnEl = null) => {
 
         const sdLiveData = (sdRes && sdRes.sdLiveData) || {};
 
-        let allPlayers = [];
+        // 1. Build case-insensitive lookup for sdLiveData
+        const sdLiveDataLowerMap = {};
+        Object.entries(sdLiveData).forEach(([k, scores]) => {
+            if (k && typeof k === 'string') {
+                sdLiveDataLowerMap[k.trim().toLowerCase()] = scores;
+            }
+        });
+
+        // 2. Extract unique player list deduplicated case-insensitively
+        const seenPlayerNames = new Map();
         if (rosterRawData && Object.keys(rosterRawData).length > 0) {
             Object.values(rosterRawData).forEach(p => {
-                if (p.name) allPlayers.push(p.name.toString().trim());
+                if (p.name && typeof p.name === 'string') {
+                    const cleanName = p.name.trim();
+                    const lower = cleanName.toLowerCase();
+                    if (cleanName && !seenPlayerNames.has(lower)) {
+                        seenPlayerNames.set(lower, cleanName);
+                    }
+                }
             });
         }
-        if (allPlayers.length === 0) allPlayers = Object.keys(sdLiveData);
-        allPlayers = [...new Set(allPlayers)].sort((a,b) => a.localeCompare(b));
+        if (seenPlayerNames.size === 0) {
+            Object.keys(sdLiveData).forEach(k => {
+                if (k && typeof k === 'string') {
+                    const cleanName = k.trim();
+                    const lower = cleanName.toLowerCase();
+                    if (cleanName && !seenPlayerNames.has(lower)) {
+                        seenPlayerNames.set(lower, cleanName);
+                    }
+                }
+            });
+        }
+        const allPlayers = Array.from(seenPlayerNames.values()).sort((a,b) => a.localeCompare(b));
 
+        // 3. Determine active days (days with > 0 scores)
         const isDayActive = {};
         let maxActiveDay = 0;
         for (let d = 1; d <= 6; d++) {
@@ -3916,14 +3942,14 @@ window.showMissedDaysReportModal = async (btnEl = null) => {
             isDayActive[d] = dayHasScore;
             if (dayHasScore) maxActiveDay = d;
         }
-        // Day 1 is active by default if event has begun
         if (maxActiveDay === 0) maxActiveDay = 1;
 
         const playerMissedMap = {};
         const dayMissedMap = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
 
         allPlayers.forEach(pName => {
-            const scores = sdLiveData[pName] || {};
+            const lowerName = pName.trim().toLowerCase();
+            const scores = sdLiveDataLowerMap[lowerName] || {};
             const missedDays = [];
             for (let d = 1; d <= maxActiveDay; d++) {
                 const score = Number(scores['d' + d] || 0);
@@ -3957,7 +3983,7 @@ window.showMissedDaysReportModal = async (btnEl = null) => {
         let dayCardsHtml = '';
         for (let d = 1; d <= 6; d++) {
             const active = d <= maxActiveDay;
-            const missedList = dayMissedMap[d] || [];
+            const missedList = Array.from(new Set(dayMissedMap[d] || []));
             if (!active) {
                 dayCardsHtml += `
                     <div style="background:var(--bg-main); border:1px dashed var(--border); border-radius:10px; padding:12px 14px; opacity:0.8;">
