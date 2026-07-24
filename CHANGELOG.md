@@ -1,3 +1,9 @@
+## [1.48.0] - 2026-07-23
+### Added Showdown Missed Days Report Feature
+- **`📋 Missed Days Report` Button**: Added a dedicated report button in the **Showdown Data Entry** header card (`views.showdownAdmin()`).
+- **Daily Breakdown & Player Summary Modal**: Renders a modal displaying per-day participation cards (Days 1–6) alongside a table listing every player who missed scoring and their exact missed days.
+- **1-Tap Clipboard Copy (`📋 Copy Missed List`)**: Generates a pre-formatted missed days summary ready to paste directly into Alliance Chat or Discord.
+
 ## [1.47.2] - 2026-07-23
 ### Robust Player Key Generation for Non-Numeric Test Players
 - **Universal Player Key Fallback**: Updated `promptEditEvents`, `getLivePlayerEventRow`, `polarTerrorsAdmin`, `championshipAdmin`, and `mercenaryAdmin` to fall back to a safe name slug key (`test_agent`) whenever a player lacks a numeric Game ID.
