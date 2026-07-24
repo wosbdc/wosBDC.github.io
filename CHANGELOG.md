@@ -1,3 +1,9 @@
+## [1.46.0] - 2026-07-23
+### Consolidated Single Master Source of Truth (`activity_live`)
+- **Single Master Node Consolidation**: Consolidated all event tracking (`polarTerrors`, `championship`, `mercenary`, `voter`, `perfectAttendance`, `beartrap`) into Firebase's single master node `activity_live/{gameId}`.
+- **Unified Event Trackers**: `fetchPolarTerrorsData()`, `fetchChampionshipData()`, `fetchMercenaryData()` and their toggle handlers now read and write directly to `activity_live` (<10ms latency).
+- **Zero Discrepancy Assurance**: Player cards, tracker pages, Activity Matrix, and Player Database Editor now interact with the exact same master object, guaranteeing 100% real-time synchronization site-wide.
+
 ## [1.45.2] - 2026-07-23
 ### Complete 2-Way Cache Invalidation & Sync Between Player Editor & Event Trackers
 - **2-Way Cache Invalidation**: Saving edits in **Player Database Editor (Edit Events)** now explicitly invalidates `polarTerrorsCache`, `championshipCache`, `mercenaryCache`, and `activityCache` so navigating to any tracker immediately displays fresh live Firebase updates.

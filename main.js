@@ -357,277 +357,220 @@ window.fetchActivityData = async () => {
     return seededData;
 };
 
-// Fetch Championship Data natively from Firebase Realtime Database
-window.fetchChampionshipData = async () => {
-    if (window.championshipCache) return window.championshipCache;
-    try {
-        const snap = await get(ref(db, 'championship'));
-        if (snap.exists()) {
-            window.championshipCache = snap.val();
-            return window.championshipCache;
-        }
-    } catch(e) { console.warn("Firebase championship read error:", e); }
-
-    let seeded = {};
-    try {
-        const [rawSheet, rosterData] = await Promise.all([
-            fetchSheet("Alliance Championship ").catch(() => null),
-            window.fetchRoster().catch(() => null)
-        ]);
-
-        if (rosterData) {
-            Object.values(rosterData).forEach(p => {
-                if (p.gameId) {
-                    seeded[p.gameId.toString().trim()] = {
-                        gameId: p.gameId.toString().trim(),
-                        name: p.name || '',
-                        signedUp: false,
-                        lastUpdated: Date.now()
-                    };
-                }
-            });
-        }
-
-        if (rawSheet && rawSheet.length > 1) {
-            for (let i = 1; i < rawSheet.length; i++) {
-                let pName = rawSheet[i][0] ? rawSheet[i][0].toString().trim() : '';
-                let statusVal = rawSheet[i][1] ? rawSheet[i][1].toString().toLowerCase().trim() : '';
-                let isSignedUp = (statusVal === 'yes' || statusVal === 'true' || statusVal === '✅' || statusVal === '1');
-                
-                let foundGid = window.nameToIdMap ? window.nameToIdMap[pName] : null;
-                if (foundGid) {
-                    if (!seeded[foundGid]) {
-                        seeded[foundGid] = { gameId: foundGid, name: pName, signedUp: isSignedUp, lastUpdated: Date.now() };
-                    } else {
-                        seeded[foundGid].signedUp = isSignedUp;
-                    }
-                }
-            }
-        }
-
-        try { await set(ref(db, 'championship'), seeded); } catch(e) { console.error(e); }
-    } catch(e) { console.error(e); }
-
-    window.championshipCache = seeded;
-    return seeded;
+// Helper to clear all event-related in-memory caches across the entire app
+window.clearAllEventCaches = () => {
+    window.polarTerrorsCache = null;
+    window.championshipCache = null;
+    window.mercenaryCache = null;
+    window.activityCache = null;
+    window._activityMatrixLoaded = false;
 };
 
-// Toggle Championship signup status natively in Firebase
+// Fetch Championship Data natively from single master node activity_live
+window.fetchChampionshipData = async () => {
+    if (window.championshipCache) return window.championshipCache;
+    const result = {};
+    const isT = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
+
+    try {
+        const snap = await get(ref(db, 'activity_live'));
+        if (snap.exists()) {
+            const actObj = snap.val() || {};
+            if (typeof actObj === 'object') {
+                Object.entries(actObj).forEach(([gid, rec]) => {
+                    if (rec && typeof rec === 'object') {
+                        result[gid] = {
+                            gameId: gid,
+                            name: rec.name || (window.idToNameMap && window.idToNameMap[gid]) || 'Chief',
+                            signedUp: isT(rec.championship),
+                            lastUpdated: rec.updatedAt || Date.now()
+                        };
+                    }
+                });
+            }
+        }
+    } catch(e) { console.warn("Firebase activity_live championship read error:", e); }
+
+    // Ensure all roster players are represented
+    if (window.idToNameMap) {
+        Object.entries(window.idToNameMap).forEach(([gid, name]) => {
+            if (!result[gid]) {
+                result[gid] = { gameId: gid, name: name, signedUp: false, lastUpdated: Date.now() };
+            }
+        });
+    }
+
+    window.championshipCache = result;
+    return result;
+};
+
+// Toggle Championship signup status natively in master node activity_live
 window.toggleChampionshipStatus = async (gameId, forceStatus = null) => {
     if (!gameId) return false;
     const gIdStr = gameId.toString().trim();
     let data = {};
-    try {
-        data = await window.fetchChampionshipData();
-    } catch(e) { console.error(e); }
+    try { data = await window.fetchChampionshipData(); } catch(e) { console.error(e); }
 
     const existing = data[gIdStr] || { gameId: gIdStr, name: (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief', signedUp: false };
-    
     const newSignedUpStatus = (forceStatus !== null) ? forceStatus : !existing.signedUp;
-    existing.signedUp = newSignedUpStatus;
-    existing.lastUpdated = Date.now();
-    existing.updatedBy = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name || "Admin") : "Admin";
+    const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name || "Admin") : "Admin";
 
     try {
-        await set(ref(db, `championship/${gIdStr}`), existing);
-        if (window.championshipCache) {
-            window.championshipCache[gIdStr] = existing;
-        }
+        // 1. Write directly to master node activity_live
+        await update(ref(db, `activity_live/${gIdStr}`), {
+            name: existing.name,
+            championship: newSignedUpStatus,
+            updatedAt: Date.now()
+        });
 
-        // Keep activity_live node in sync
+        // 2. Secondary write for legacy node
         try {
-            await update(ref(db, `activity_live/${gIdStr}`), {
-                championship: newSignedUpStatus,
-                updatedAt: Date.now()
+            await set(ref(db, `championship/${gIdStr}`), {
+                gameId: gIdStr, name: existing.name, signedUp: newSignedUpStatus, lastUpdated: Date.now(), updatedBy: adminName
             });
-        } catch(e) { console.error(e); }
-        
-        // Log Admin Action
+        } catch(e) {}
+
+        window.clearAllEventCaches();
+
         if (window.logAdminAction) {
             window.logAdminAction("Championship Signup Toggle", `Toggled ${existing.name} (${gIdStr}) to ${newSignedUpStatus ? 'YES (✅)' : 'NO (❌)'}`);
         }
         
-        // Also ping GAS backend as fallback safely
         try {
             const evToken = await getAuthToken().catch(() => '');
-            const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || "Admin") : "Admin";
             const url = `${API_BASE_URL}?api=updateEvent&name=${encodeURIComponent(existing.name)}&eventName=${encodeURIComponent("Alliance Championship ")}&status=${encodeURIComponent(newSignedUpStatus ? 'yes' : 'no')}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(evToken)}`;
-            fetch(url, { mode: 'no-cors' }).catch(e => null);
-        } catch(e) { console.error(e); }
+            fetch(url, { mode: 'no-cors' }).catch(() => null);
+        } catch(e) {}
 
         return true;
     } catch(e) {
         console.error("Failed to toggle championship status in Firebase:", e);
-        if (window.championshipCache) {
-            window.championshipCache[gIdStr] = existing;
-        }
-        return true;
+        return false;
     }
 };
 
-// Fetch Mercenary Prestige Data natively from Firebase Realtime Database
+// Fetch Mercenary Prestige Data natively from single master node activity_live
 window.fetchMercenaryData = async () => {
     if (window.mercenaryCache) return window.mercenaryCache;
+    const result = {};
+    const isT = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
+
     try {
-        const snap = await get(ref(db, 'mercenary'));
+        const snap = await get(ref(db, 'activity_live'));
         if (snap.exists()) {
-            window.mercenaryCache = snap.val();
-            return window.mercenaryCache;
-        }
-    } catch(e) { console.warn("Firebase mercenary read error:", e); }
-
-    let seeded = {};
-    try {
-        const [rawSheet, rosterData] = await Promise.all([
-            fetchSheet("Mercenary Prestige").catch(() => null),
-            window.fetchRoster().catch(() => null)
-        ]);
-
-        if (rosterData) {
-            Object.values(rosterData).forEach(p => {
-                if (p.gameId) {
-                    seeded[p.gameId.toString().trim()] = {
-                        gameId: p.gameId.toString().trim(),
-                        name: p.name || '',
-                        signedUp: false,
-                        lastUpdated: Date.now()
-                    };
-                }
-            });
-        }
-
-        if (rawSheet && rawSheet.length > 1) {
-            for (let i = 1; i < rawSheet.length; i++) {
-                let pName = rawSheet[i][0] ? rawSheet[i][0].toString().trim() : '';
-                let statusVal = rawSheet[i][1] ? rawSheet[i][1].toString().toLowerCase().trim() : '';
-                let isSignedUp = (statusVal === 'yes' || statusVal === 'true' || statusVal === '✅' || statusVal === '1');
-                
-                let foundGid = window.nameToIdMap ? window.nameToIdMap[pName] : null;
-                if (foundGid) {
-                    if (!seeded[foundGid]) {
-                        seeded[foundGid] = { gameId: foundGid, name: pName, signedUp: isSignedUp, lastUpdated: Date.now() };
-                    } else {
-                        seeded[foundGid].signedUp = isSignedUp;
+            const actObj = snap.val() || {};
+            if (typeof actObj === 'object') {
+                Object.entries(actObj).forEach(([gid, rec]) => {
+                    if (rec && typeof rec === 'object') {
+                        result[gid] = {
+                            gameId: gid,
+                            name: rec.name || (window.idToNameMap && window.idToNameMap[gid]) || 'Chief',
+                            signedUp: isT(rec.mercenary),
+                            lastUpdated: rec.updatedAt || Date.now()
+                        };
                     }
-                }
+                });
             }
         }
+    } catch(e) { console.warn("Firebase activity_live mercenary read error:", e); }
 
-        try { await set(ref(db, 'mercenary'), seeded); } catch(e) { console.error(e); }
-    } catch(e) { console.error(e); }
+    // Ensure all roster players are represented
+    if (window.idToNameMap) {
+        Object.entries(window.idToNameMap).forEach(([gid, name]) => {
+            if (!result[gid]) {
+                result[gid] = { gameId: gid, name: name, signedUp: false, lastUpdated: Date.now() };
+            }
+        });
+    }
 
-    window.mercenaryCache = seeded;
-    return seeded;
+    window.mercenaryCache = result;
+    return result;
 };
 
-// Toggle Mercenary Prestige signup status natively in Firebase
+// Toggle Mercenary Prestige signup status natively in master node activity_live
 window.toggleMercenaryStatus = async (gameId, forceStatus = null) => {
     if (!gameId) return false;
     const gIdStr = gameId.toString().trim();
     let data = {};
-    try {
-        data = await window.fetchMercenaryData();
-    } catch(e) { console.error(e); }
+    try { data = await window.fetchMercenaryData(); } catch(e) { console.error(e); }
 
     const existing = data[gIdStr] || { gameId: gIdStr, name: (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief', signedUp: false };
-    
     const newSignedUpStatus = (forceStatus !== null) ? forceStatus : !existing.signedUp;
-    existing.signedUp = newSignedUpStatus;
-    existing.lastUpdated = Date.now();
-    existing.updatedBy = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name || "Admin") : "Admin";
+    const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name || "Admin") : "Admin";
 
     try {
-        await set(ref(db, `mercenary/${gIdStr}`), existing);
-        if (window.mercenaryCache) {
-            window.mercenaryCache[gIdStr] = existing;
-        }
+        // 1. Write directly to master node activity_live
+        await update(ref(db, `activity_live/${gIdStr}`), {
+            name: existing.name,
+            mercenary: newSignedUpStatus,
+            updatedAt: Date.now()
+        });
 
-        // Keep activity_live node in sync
+        // 2. Secondary write for legacy node
         try {
-            await update(ref(db, `activity_live/${gIdStr}`), {
-                mercenary: newSignedUpStatus,
-                updatedAt: Date.now()
+            await set(ref(db, `mercenary/${gIdStr}`), {
+                gameId: gIdStr, name: existing.name, signedUp: newSignedUpStatus, lastUpdated: Date.now(), updatedBy: adminName
             });
-        } catch(e) { console.error(e); }
-        
-        // Log Admin Action
+        } catch(e) {}
+
+        window.clearAllEventCaches();
+
         if (window.logAdminAction) {
             window.logAdminAction("Mercenary Prestige Toggle", `Toggled ${existing.name} (${gIdStr}) to ${newSignedUpStatus ? 'YES (✅)' : 'NO (❌)'}`);
         }
         
-        // Also ping GAS backend as fallback safely
         try {
             const evToken = await getAuthToken().catch(() => '');
-            const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || "Admin") : "Admin";
             const url = `${API_BASE_URL}?api=updateEvent&name=${encodeURIComponent(existing.name)}&eventName=${encodeURIComponent("Mercenary Prestige")}&status=${encodeURIComponent(newSignedUpStatus ? 'yes' : 'no')}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(evToken)}`;
-            fetch(url, { mode: 'no-cors' }).catch(e => null);
-        } catch(e) { console.error(e); }
+            fetch(url, { mode: 'no-cors' }).catch(() => null);
+        } catch(e) {}
 
         return true;
     } catch(e) {
         console.error("Failed to toggle mercenary status in Firebase:", e);
-        if (window.mercenaryCache) {
-            window.mercenaryCache[gIdStr] = existing;
-        }
-        return true;
+        return false;
     }
 };
 
-// Fetch Polar Terrors Data
+// Fetch Polar Terrors Data natively from single master node activity_live
 window.fetchPolarTerrorsData = async () => {
     if (window.polarTerrorsCache) return window.polarTerrorsCache;
+    const result = {};
+    const isT = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
+
     try {
-        const snap = await get(ref(db, 'polarterrors'));
+        const snap = await get(ref(db, 'activity_live'));
         if (snap.exists()) {
-            window.polarTerrorsCache = snap.val();
-            return window.polarTerrorsCache;
-        }
-    } catch(e) { console.warn("Firebase polarterrors read error:", e); }
-
-    let seeded = {};
-    try {
-        const [rawSheet, rosterData] = await Promise.all([
-            fetchSheet("Polar Terrors").catch(() => null),
-            window.fetchRoster().catch(() => null)
-        ]);
-
-        if (rosterData) {
-            Object.values(rosterData).forEach(p => {
-                if (p.gameId) {
-                    seeded[p.gameId.toString().trim()] = {
-                        gameId: p.gameId.toString().trim(),
-                        name: p.name || '',
-                        signedUp: false,
-                        lastUpdated: Date.now()
-                    };
-                }
-            });
-        }
-
-        if (rawSheet && rawSheet.length > 1) {
-            for (let i = 1; i < rawSheet.length; i++) {
-                let pName = rawSheet[i][0] ? rawSheet[i][0].toString().trim() : '';
-                let statusVal = rawSheet[i][1] ? rawSheet[i][1].toString().toLowerCase().trim() : '';
-                let isSignedUp = (statusVal === 'yes' || statusVal === 'true' || statusVal === '✅' || statusVal === '1');
-                
-                let foundGid = window.nameToIdMap ? window.nameToIdMap[pName] : null;
-                if (foundGid) {
-                    if (!seeded[foundGid]) {
-                        seeded[foundGid] = { gameId: foundGid, name: pName, signedUp: isSignedUp, lastUpdated: Date.now() };
-                    } else {
-                        seeded[foundGid].signedUp = isSignedUp;
+            const actObj = snap.val() || {};
+            if (typeof actObj === 'object') {
+                Object.entries(actObj).forEach(([gid, rec]) => {
+                    if (rec && typeof rec === 'object') {
+                        result[gid] = {
+                            gameId: gid,
+                            name: rec.name || (window.idToNameMap && window.idToNameMap[gid]) || 'Chief',
+                            signedUp: isT(rec.polarTerrors),
+                            lastUpdated: rec.updatedAt || Date.now()
+                        };
                     }
-                }
+                });
             }
         }
-        try { await set(ref(db, 'polarterrors'), seeded); } catch(e) { console.error(e); }
-    } catch(e) { console.error(e); }
+    } catch(e) { console.warn("Firebase activity_live polarTerrors read error:", e); }
 
-    window.polarTerrorsCache = seeded;
-    return seeded;
+    // Ensure all roster players are represented
+    if (window.idToNameMap) {
+        Object.entries(window.idToNameMap).forEach(([gid, name]) => {
+            if (!result[gid]) {
+                result[gid] = { gameId: gid, name: name, signedUp: false, lastUpdated: Date.now() };
+            }
+        });
+    }
+
+    window.polarTerrorsCache = result;
+    return result;
 };
 
-// Toggle Polar Terrors Status
+// Toggle Polar Terrors Status natively in master node activity_live
 window.togglePolarTerrorsStatus = async (gameId, forceStatus = null) => {
     if (!gameId) return false;
     const gIdStr = gameId.toString().trim();
@@ -635,37 +578,39 @@ window.togglePolarTerrorsStatus = async (gameId, forceStatus = null) => {
     try { data = await window.fetchPolarTerrorsData(); } catch(e) { console.error(e); }
 
     const existing = data[gIdStr] || { gameId: gIdStr, name: (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief', signedUp: false };
-    
     const newSignedUpStatus = (forceStatus !== null) ? forceStatus : !existing.signedUp;
-    existing.signedUp = newSignedUpStatus;
-    existing.lastUpdated = Date.now();
-    existing.updatedBy = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name || "Admin") : "Admin";
+    const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name || "Admin") : "Admin";
 
     try {
-        await set(ref(db, `polarterrors/${gIdStr}`), existing);
-        if (window.polarTerrorsCache) window.polarTerrorsCache[gIdStr] = existing;
+        // 1. Write directly to master node activity_live
+        await update(ref(db, `activity_live/${gIdStr}`), {
+            name: existing.name,
+            polarTerrors: newSignedUpStatus,
+            updatedAt: Date.now()
+        });
+
+        // 2. Secondary write for legacy node
         try {
-            await update(ref(db, `activity_live/${gIdStr}`), {
-                polarTerrors: newSignedUpStatus,
-                updatedAt: Date.now()
+            await set(ref(db, `polarterrors/${gIdStr}`), {
+                gameId: gIdStr, name: existing.name, signedUp: newSignedUpStatus, lastUpdated: Date.now(), updatedBy: adminName
             });
-            window.activityCache = null;
-            window._activityMatrixLoaded = false;
-        } catch(e) { console.error(e); }
-        
+        } catch(e) {}
+
+        window.clearAllEventCaches();
+
         if (window.logAdminAction) {
             window.logAdminAction("Polar Terrors Toggle", `Toggled ${existing.name} (${gIdStr}) to ${newSignedUpStatus ? 'YES (✅)' : 'NO (❌)'}`);
         }
         
         try {
             const evToken = await getAuthToken().catch(() => '');
-            const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || "Admin") : "Admin";
             const url = `${API_BASE_URL}?api=updateEvent&name=${encodeURIComponent(existing.name)}&eventName=${encodeURIComponent("Polar Terrors")}&status=${encodeURIComponent(newSignedUpStatus ? 'yes' : 'no')}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(evToken)}`;
-            fetch(url, { mode: 'no-cors' }).catch(e => null);
-        } catch(e) { console.error(e); }
+            fetch(url, { mode: 'no-cors' }).catch(() => null);
+        } catch(e) {}
         
         return true;
     } catch(err) {
+        console.error("Failed to toggle polar terrors status in Firebase:", err);
         return false;
     }
 };
@@ -2049,26 +1994,20 @@ window.getLivePlayerEventRow = async (chiefName, pRow, headers) => {
     if (!gIdStr) return row;
 
     try {
-        const [actSnap, champSnap, mercSnap, ptSnap, statsSnap] = await Promise.all([
+        const [actSnap, statsSnap] = await Promise.all([
             get(ref(db, `activity_live/${gIdStr}`)).catch(() => null),
-            get(ref(db, `championship/${gIdStr}`)).catch(() => null),
-            get(ref(db, `mercenary/${gIdStr}`)).catch(() => null),
-            get(ref(db, `polarterrors/${gIdStr}`)).catch(() => null),
             get(ref(db, `player_event_stats/${gIdStr}`)).catch(() => null)
         ]);
 
         const actData = (actSnap && actSnap.exists()) ? (actSnap.val() || {}) : {};
-        const champData = (champSnap && champSnap.exists()) ? (champSnap.val() || {}) : {};
-        const mercData = (mercSnap && mercSnap.exists()) ? (mercSnap.val() || {}) : {};
-        const ptData = (ptSnap && ptSnap.exists()) ? (ptSnap.val() || {}) : {};
         const statsData = (statsSnap && statsSnap.exists()) ? (statsSnap.val() || {}) : null;
 
         const isT = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
 
-        const liveChamp = (champSnap && champSnap.exists() && champData.signedUp !== undefined) ? isT(champData.signedUp) : (actData.championship !== undefined ? isT(actData.championship) : false);
-        const liveMerc = (mercSnap && mercSnap.exists() && mercData.signedUp !== undefined) ? isT(mercData.signedUp) : (actData.mercenary !== undefined ? isT(actData.mercenary) : false);
-        const livePt = (ptSnap && ptSnap.exists() && ptData.signedUp !== undefined) ? isT(ptData.signedUp) : (actData.polarTerrors !== undefined ? isT(actData.polarTerrors) : false);
-        const liveVoter = actData.voter !== undefined ? isT(actData.voter) : false;
+        const liveChamp = isT(actData.championship);
+        const liveMerc = isT(actData.mercenary);
+        const livePt = isT(actData.polarTerrors);
+        const liveVoter = isT(actData.voter);
 
         const safeHeaders = headers || ["Chief Name", "ShowDown missed days", "Alliance Championship ", "Mercenary Prestige", "Polar Terrors", "Voter"];
 
