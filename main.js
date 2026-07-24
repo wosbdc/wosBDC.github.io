@@ -2038,6 +2038,53 @@ window.adminFetchAltFurnace = async (gid, spanId) => {
     } catch(e) { console.error(e); }
 };
 
+window.getLivePlayerEventRow = async (chiefName, pRow, headers) => {
+    if (!chiefName) return pRow;
+    const row = pRow ? [...pRow] : [chiefName, 0, false, false, false, false];
+    const playerGameId = window.nameToIdMap ? window.nameToIdMap[chiefName] : null;
+    const gIdStr = playerGameId ? playerGameId.toString().trim() : '';
+
+    if (!gIdStr) return row;
+
+    try {
+        const [actSnap, champSnap, mercSnap, ptSnap] = await Promise.all([
+            get(ref(db, `activity_live/${gIdStr}`)).catch(() => null),
+            get(ref(db, `championship/${gIdStr}`)).catch(() => null),
+            get(ref(db, `mercenary/${gIdStr}`)).catch(() => null),
+            get(ref(db, `polarterrors/${gIdStr}`)).catch(() => null)
+        ]);
+
+        const actData = (actSnap && actSnap.exists()) ? (actSnap.val() || {}) : {};
+        const champData = (champSnap && champSnap.exists()) ? (champSnap.val() || {}) : {};
+        const mercData = (mercSnap && mercSnap.exists()) ? (mercSnap.val() || {}) : {};
+        const ptData = (ptSnap && ptSnap.exists()) ? (ptSnap.val() || {}) : {};
+
+        const isT = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
+
+        const liveChamp = champData.signedUp !== undefined ? isT(champData.signedUp) : (actData.championship !== undefined ? isT(actData.championship) : row[2]);
+        const liveMerc = mercData.signedUp !== undefined ? isT(mercData.signedUp) : (actData.mercenary !== undefined ? isT(actData.mercenary) : row[3]);
+        const livePt = ptData.signedUp !== undefined ? isT(ptData.signedUp) : (actData.polarTerrors !== undefined ? isT(actData.polarTerrors) : row[4]);
+        const liveVoter = actData.voter !== undefined ? isT(actData.voter) : row[5];
+
+        const safeHeaders = headers || ["Chief Name", "ShowDown missed days", "Alliance Championship ", "Mercenary Prestige", "Polar Terrors", "Voter"];
+
+        for (let col = 1; col < safeHeaders.length; col++) {
+            const h = (safeHeaders[col] || '').toLowerCase();
+            if (h.includes('championship')) {
+                row[col] = liveChamp;
+            } else if (h.includes('mercenary')) {
+                row[col] = liveMerc;
+            } else if (h.includes('polar')) {
+                row[col] = livePt;
+            } else if (h.includes('voter')) {
+                row[col] = liveVoter;
+            }
+        }
+    } catch(e) { console.warn("Error fetching live player event status:", e); }
+
+    return row;
+};
+
   window.doPlayerLookup = async (playerName) => {
     let name = playerName ? playerName : document.getElementById('rosterPlayerSelect').value;
     if (!name) return;
@@ -2207,15 +2254,17 @@ window.adminFetchAltFurnace = async (gid, spanId) => {
       if (p.name.toLowerCase() === targetName.toLowerCase()) dynamicSD = { score: p.score, rank: index + 1 };
     });
     
-    const headers = data[0];
+    const defaultHeaders = ["Chief Name", "ShowDown missed days", "Alliance Championship ", "Mercenary Prestige", "Polar Terrors", "Voter"];
+    const headers = (data && data[0] && Array.isArray(data[0])) ? data[0] : defaultHeaders;
     let showdownActive = false;
     let colIsUpcoming = {};
+    let dataRows = Array.isArray(data) ? data : (data && typeof data === 'object' ? Object.values(data).filter(v => Array.isArray(v)) : []);
     for (let c = 1; c < headers.length; c++) {
        let hasAnyTrue = false;
-       for (let r = 1; r < data.length; r++) {
-          let v = data[r][c];
-          if (c === 1 && data[r]) {
-             let missed = data[r][1];
+       for (let r = 0; r < dataRows.length; r++) {
+          let v = dataRows[r][c];
+          if (c === 1 && dataRows[r]) {
+             let missed = dataRows[r][1];
              if (missed !== undefined && missed !== null && missed.toString().trim() !== "" && missed !== 0 && missed !== "0") showdownActive = true;
           }
           if (v === true || (typeof v === 'string' && (v.toLowerCase().trim() === 'true' || v.toLowerCase().trim() === 'yes'))) hasAnyTrue = true;
@@ -2225,11 +2274,11 @@ window.adminFetchAltFurnace = async (gid, spanId) => {
     
     if (!targetName && name) targetName = name.trim();
     let pRow = null;
-    if (data && Array.isArray(data)) {
-      for (let i = 1; i < data.length; i++) {
-         if (data[i][0] && data[i][0].toString().trim().toLowerCase() === targetName.toLowerCase()) { 
-             pRow = data[i]; 
-             targetName = data[i][0].toString().trim();
+    if (dataRows && dataRows.length > 0) {
+      for (let i = 0; i < dataRows.length; i++) {
+         if (dataRows[i][0] && dataRows[i][0].toString().trim().toLowerCase() === targetName.toLowerCase()) { 
+             pRow = dataRows[i]; 
+             targetName = dataRows[i][0].toString().trim();
              break; 
          }
       }
@@ -2246,6 +2295,8 @@ window.adminFetchAltFurnace = async (gid, spanId) => {
     }
     
     if (!pRow) throw new Error(`Chief "${name}" not found in roster or activity database.`);
+
+    pRow = await window.getLivePlayerEventRow(targetName, pRow, headers);
     
     // Generate HTML
     let altAccounts = [];
@@ -2430,15 +2481,17 @@ window.searchPlayerFull = async (name) => {
       if (p.name.toLowerCase() === targetName.toLowerCase()) dynamicSD = { score: p.score, rank: index + 1 };
     });
     
-    const headers = data[0];
+    const defaultHeaders = ["Chief Name", "ShowDown missed days", "Alliance Championship ", "Mercenary Prestige", "Polar Terrors", "Voter"];
+    const headers = (data && data[0] && Array.isArray(data[0])) ? data[0] : defaultHeaders;
     let showdownActive = false;
     let colIsUpcoming = {};
+    let dataRows = Array.isArray(data) ? data : (data && typeof data === 'object' ? Object.values(data).filter(v => Array.isArray(v)) : []);
     for (let c = 1; c < headers.length; c++) {
        let hasAnyTrue = false;
-       for (let r = 1; r < data.length; r++) {
-          let v = data[r][c];
-          if (c === 1 && data[r]) {
-             let missed = data[r][1];
+       for (let r = 0; r < dataRows.length; r++) {
+          let v = dataRows[r][c];
+          if (c === 1 && dataRows[r]) {
+             let missed = dataRows[r][1];
              if (missed !== undefined && missed !== null && missed.toString().trim() !== "" && missed !== 0 && missed !== "0") showdownActive = true;
           }
           if (v === true || (typeof v === 'string' && (v.toLowerCase().trim() === 'true' || v.toLowerCase().trim() === 'yes'))) hasAnyTrue = true;
@@ -2448,11 +2501,11 @@ window.searchPlayerFull = async (name) => {
     
     if (!targetName && name) targetName = name.trim();
     let pRow = null;
-    if (data && Array.isArray(data)) {
-      for (let i = 1; i < data.length; i++) {
-         if (data[i][0] && data[i][0].toString().trim().toLowerCase() === targetName.toLowerCase()) { 
-             pRow = data[i]; 
-             targetName = data[i][0].toString().trim();
+    if (dataRows && dataRows.length > 0) {
+      for (let i = 0; i < dataRows.length; i++) {
+         if (dataRows[i][0] && dataRows[i][0].toString().trim().toLowerCase() === targetName.toLowerCase()) { 
+             pRow = dataRows[i]; 
+             targetName = dataRows[i][0].toString().trim();
              break; 
          }
       }
@@ -2469,6 +2522,8 @@ window.searchPlayerFull = async (name) => {
     }
     
     if (!pRow) throw new Error(`Chief "${name}" not found in roster or activity database.`);
+
+    pRow = await window.getLivePlayerEventRow(targetName, pRow, headers);
     
     // Generate HTML
     let altAccounts = [];
@@ -9342,7 +9397,7 @@ window.resetBearTrapEvent = async () => {
         
         renderDropdownOptions();
       
-      const renderCardForChief = (chiefName) => {
+      const renderCardForChief = async (chiefName) => {
         if (!chiefName || chiefName.trim() === "") {
           container.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:40px; font-size:16px;">Select a player to view their activity profile.</div>`;
           window.currentRosterChiefName = null;
@@ -9412,6 +9467,7 @@ window.resetBearTrapEvent = async () => {
           }
         });
         
+        p = await window.getLivePlayerEventRow(chiefName, p, headers);
         let html = window.generatePlayerProfileHtml(chiefName, p, headers, colIsUpcoming, rosterMap[chiefName], lbData, dynamicSD, showdownActive, bearBoth, bear1, bear2, bearAllTime, btDonationsAllTime, btDonationsCurrent, otherLbs, false, altAccounts);
         container.innerHTML = html;
       };

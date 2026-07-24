@@ -1,3 +1,8 @@
+## [1.44.2] - 2026-07-23
+### Fixed Player Card Events Checklist Discrepancy
+- **Live Firebase Status Integration**: Added `window.getLivePlayerEventRow()` helper so player cards in the Player Database Editor, Chief Lookup, and Roster Modal fetch live Firebase status for Championship, Mercenary, Polar Terrors, and Voter.
+- **Resolved ⏳ Pending Issue**: Player card Events Checklist now accurately renders `✅` instead of stale `⏳` (Upcoming) when events have been enabled in `Edit Events` or event trackers.
+
 ## [1.44.1] - 2026-07-23
 ### Full Cross-Site Event Sync from Edit Events Modal
 - **Championship, Mercenary, Polar Terrors**: `📝 Edit Events` modal now writes to individual Firebase nodes (`championship/`, `mercenary/`, `polarterrors/`) in addition to `activity_live`.
