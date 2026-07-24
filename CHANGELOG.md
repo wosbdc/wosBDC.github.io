@@ -1,3 +1,10 @@
+## [1.45.0] - 2026-07-23
+### Lifetime Event Attendance Tracking & Cycle Archiving System
+- **`🔄 Archive & Reset Cycle` Button**: R4/R5 managers can now archive the active event cycle into Firebase (`activity_history_archives/{timestamp}`), automatically incrementing lifetime miss counters for missing players, and resetting the matrix for the next cycle.
+- **`player_event_stats` Firebase Node**: Persistent node tracking lifetime missed events per player (Showdown, Championship, Mercenary, Polar Terrors, Bear Trap).
+- **Activity Matrix Misses Column**: Added **Missed (Cycle / Total)** column in the **📊 Roster Event Activity Matrix** table displaying cycle misses alongside lifetime total misses.
+- **📊 Lifetime Attendance Record Card**: Embedded a dedicated attendance stats card on Player Profile Cards (Database Editor, Chief Lookup, Roster Modal) showing detailed per-event miss tallies and attendance status badges.
+
 ## [1.44.2] - 2026-07-23
 ### Fixed Player Card Events Checklist Discrepancy
 - **Live Firebase Status Integration**: Added `window.getLivePlayerEventRow()` helper so player cards in the Player Database Editor, Chief Lookup, and Roster Modal fetch live Firebase status for Championship, Mercenary, Polar Terrors, and Voter.

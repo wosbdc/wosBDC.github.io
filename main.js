@@ -2047,17 +2047,19 @@ window.getLivePlayerEventRow = async (chiefName, pRow, headers) => {
     if (!gIdStr) return row;
 
     try {
-        const [actSnap, champSnap, mercSnap, ptSnap] = await Promise.all([
+        const [actSnap, champSnap, mercSnap, ptSnap, statsSnap] = await Promise.all([
             get(ref(db, `activity_live/${gIdStr}`)).catch(() => null),
             get(ref(db, `championship/${gIdStr}`)).catch(() => null),
             get(ref(db, `mercenary/${gIdStr}`)).catch(() => null),
-            get(ref(db, `polarterrors/${gIdStr}`)).catch(() => null)
+            get(ref(db, `polarterrors/${gIdStr}`)).catch(() => null),
+            get(ref(db, `player_event_stats/${gIdStr}`)).catch(() => null)
         ]);
 
         const actData = (actSnap && actSnap.exists()) ? (actSnap.val() || {}) : {};
         const champData = (champSnap && champSnap.exists()) ? (champSnap.val() || {}) : {};
         const mercData = (mercSnap && mercSnap.exists()) ? (mercSnap.val() || {}) : {};
         const ptData = (ptSnap && ptSnap.exists()) ? (ptSnap.val() || {}) : {};
+        const statsData = (statsSnap && statsSnap.exists()) ? (statsSnap.val() || {}) : null;
 
         const isT = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
 
@@ -2080,6 +2082,8 @@ window.getLivePlayerEventRow = async (chiefName, pRow, headers) => {
                 row[col] = liveVoter;
             }
         }
+
+        row._eventStats = statsData;
     } catch(e) { console.warn("Error fetching live player event status:", e); }
 
     return row;
@@ -4529,20 +4533,143 @@ const views = {
         }
       };
 
+      // Fetch / Cache persistent player event stats from Firebase
+      window.fetchPlayerEventStats = async () => {
+        if (window._playerEventStatsCache) return window._playerEventStatsCache;
+        try {
+          const snap = await get(ref(db, 'player_event_stats'));
+          if (snap && snap.exists()) {
+            window._playerEventStatsCache = snap.val() || {};
+          } else {
+            window._playerEventStatsCache = {};
+          }
+        } catch(e) {
+          console.warn("Firebase player_event_stats read error:", e);
+          window._playerEventStatsCache = {};
+        }
+        return window._playerEventStatsCache;
+      };
+
+      // Archive current cycle & increment lifetime miss counters for missing players
+      window.archiveAndResetEventCycle = async () => {
+        const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+        if (!isManager) {
+          if (window.showToast) window.showToast("Only R4/R5 managers can archive & reset event cycles", "error");
+          return;
+        }
+
+        const confirmFirst = await window.customConfirm("🔄 Archive & Reset Event Cycle?\n\nThis will:\n1. Save a timestamped snapshot of current event attendance to archives.\n2. Increment lifetime miss counters for any player marked MISSING in this cycle.\n3. Reset event checkboxes for the next event round.\n\nProceed?");
+        if (!confirmFirst) return;
+
+        const confirmSecond = await window.customConfirm("⚠️ FINAL CONFIRMATION:\n\nAre you sure you want to reset current event statuses now?");
+        if (!confirmSecond) return;
+
+        if (window.showToast) window.showToast("Archiving current cycle and updating lifetime stats...", "info");
+
+        try {
+          const timestamp = Date.now();
+          const dateStr = new Date(timestamp).toISOString().split('T')[0];
+          const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name || "Admin") : "Admin";
+
+          // 1. Fetch current activity matrix list & stats
+          await window.loadActivityMatrix();
+          const matrixList = window._activityMatrixList || [];
+          const statsObj = await window.fetchPlayerEventStats();
+
+          // 2. Save snapshot to activity_history_archives
+          const archivePayload = {
+            timestamp: timestamp,
+            dateStr: dateStr,
+            archivedBy: adminName,
+            matrix: matrixList
+          };
+          await set(ref(db, `activity_history_archives/${timestamp}`), archivePayload);
+
+          // 3. Increment lifetime stats for missed events
+          for (const p of matrixList) {
+            if (!p.gameId) continue;
+            const gIdStr = p.gameId.toString().trim();
+            const pStats = statsObj[gIdStr] || {
+              gameId: gIdStr,
+              name: p.name,
+              missedShowdown: 0,
+              missedChampionship: 0,
+              missedMercenary: 0,
+              missedPolarTerrors: 0,
+              missedBearTrap: 0,
+              totalCyclesTracked: 0,
+              totalMisses: 0
+            };
+
+            pStats.name = p.name;
+            pStats.totalCyclesTracked = (pStats.totalCyclesTracked || 0) + 1;
+
+            if (!p.perfAtt) pStats.missedShowdown = (pStats.missedShowdown || 0) + 1;
+            if (!p.champ) pStats.missedChampionship = (pStats.missedChampionship || 0) + 1;
+            if (!p.merc) pStats.missedMercenary = (pStats.missedMercenary || 0) + 1;
+            if (!p.polar) pStats.missedPolarTerrors = (pStats.missedPolarTerrors || 0) + 1;
+            if (!p.beartrap) pStats.missedBearTrap = (pStats.missedBearTrap || 0) + 1;
+
+            pStats.totalMisses = (pStats.missedShowdown || 0) + (pStats.missedChampionship || 0) + (pStats.missedMercenary || 0) + (pStats.missedPolarTerrors || 0) + (pStats.missedBearTrap || 0);
+            pStats.lastUpdated = timestamp;
+
+            statsObj[gIdStr] = pStats;
+          }
+
+          // Write updated stats back to Firebase
+          await set(ref(db, 'player_event_stats'), statsObj);
+          window._playerEventStatsCache = statsObj;
+
+          // 4. Reset activity_live for next cycle
+          const resetObj = {};
+          for (const p of matrixList) {
+            if (p.gameId) {
+              resetObj[p.gameId] = {
+                name: p.name,
+                perfectAttendance: false,
+                championship: false,
+                mercenary: false,
+                polarTerrors: false,
+                beartrap: false,
+                voter: false,
+                updatedAt: timestamp
+              };
+            }
+          }
+          await set(ref(db, 'activity_live'), resetObj);
+
+          // 5. Clear caches & refresh matrix UI
+          window.activityCache = null;
+          window._activityMatrixLoaded = false;
+          window._activityHistoryLoaded = false;
+
+          if (window.logAdminAction) {
+            window.logAdminAction("Archive & Reset Event Cycle", `Archived cycle ${dateStr} and updated lifetime miss counters for ${matrixList.length} members`);
+          }
+
+          if (window.showToast) window.showToast(`Successfully archived cycle & updated lifetime stats! 🎉`, "success");
+          await window.loadActivityMatrix();
+        } catch(err) {
+          console.error("Archive & reset error:", err);
+          if (window.showToast) window.showToast("Error archiving cycle: " + err.message, "error");
+        }
+      };
+
       // Load Activity Matrix Sub-Tab
       window.loadActivityMatrix = async () => {
         const tbody = document.getElementById('activityMatrixTableBody');
         if (!tbody) return;
-        tbody.innerHTML = `<tr><td colspan="6" style="padding:20px; text-align:center; color:var(--text-muted);">Loading live Activity Matrix...</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" style="padding:20px; text-align:center; color:var(--text-muted);">Loading live Activity Matrix...</td></tr>`;
         
         try {
-          const [actSnap, champSnap, mercSnap, btSnap, donSnap, rosterData] = await Promise.all([
+          const [actSnap, champSnap, mercSnap, btSnap, donSnap, rosterData, statsObj] = await Promise.all([
             get(ref(db, 'activity_live')).catch(() => null),
             get(ref(db, 'championship')).catch(() => null),
             get(ref(db, 'mercenary')).catch(() => null),
             get(ref(db, 'beartrap')).catch(() => null),
             get(ref(db, 'beartrap_donations')).catch(() => null),
-            window.fetchRoster().catch(() => ({}))
+            window.fetchRoster().catch(() => ({})),
+            window.fetchPlayerEventStats().catch(() => ({}))
           ]);
 
           const actObj = (actSnap && actSnap.exists()) ? actSnap.val() : {};
@@ -4559,6 +4686,7 @@ const views = {
                    const actRec = actObj[gIdStr] || {};
                    const champRec = champObj[gIdStr] || {};
                    const mercRec = mercObj[gIdStr] || {};
+                   const pStats = statsObj[gIdStr] || {};
 
                    const isTrue = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
 
@@ -4567,15 +4695,33 @@ const views = {
                    const btRec = btObj[gIdStr] || {};
                    const isBtActive = (donRec.current && donRec.current > 0) || isTrue(btRec.signedUp) || isTrue(actRec.beartrap);
 
+                   const isPerf = actRec.perfectAttendance !== undefined ? isTrue(actRec.perfectAttendance) : false;
+                   const isChamp = champRec.signedUp !== undefined ? isTrue(champRec.signedUp) : isTrue(actRec.championship);
+                   const isMerc = mercRec.signedUp !== undefined ? isTrue(mercRec.signedUp) : isTrue(actRec.mercenary);
+                   const isPolar = isTrue(actRec.polarTerrors);
+                   const isVoter = isTrue(actRec.voter);
+
+                   let currentMisses = 0;
+                   if (!isPerf) currentMisses++;
+                   if (!isChamp) currentMisses++;
+                   if (!isMerc) currentMisses++;
+                   if (!isPolar) currentMisses++;
+                   if (!isBtActive) currentMisses++;
+
+                   const lifetimeMisses = pStats.totalMisses || 0;
+
                    playersList.push({
                       gameId: gIdStr,
                       name: p.name,
-                      perfAtt: actRec.perfectAttendance !== undefined ? isTrue(actRec.perfectAttendance) : false,
-                      champ: champRec.signedUp !== undefined ? isTrue(champRec.signedUp) : isTrue(actRec.championship),
-                      merc: mercRec.signedUp !== undefined ? isTrue(mercRec.signedUp) : isTrue(actRec.mercenary),
-                      polar: isTrue(actRec.polarTerrors),
+                      perfAtt: isPerf,
+                      champ: isChamp,
+                      merc: isMerc,
+                      polar: isPolar,
                       beartrap: isBtActive,
-                      voter: isTrue(actRec.voter)
+                      voter: isVoter,
+                      currentMisses: currentMisses,
+                      lifetimeMisses: lifetimeMisses,
+                      stats: pStats
                    });
                 }
              });
@@ -4587,7 +4733,7 @@ const views = {
           window.renderActivityMatrixTable(playersList);
         } catch(e) {
           console.error(e);
-          tbody.innerHTML = `<tr><td colspan="6" style="padding:20px; text-align:center; color:var(--danger);">Error loading Activity Matrix</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="8" style="padding:20px; text-align:center; color:var(--danger);">Error loading Activity Matrix</td></tr>`;
         }
       };
 
@@ -4595,7 +4741,7 @@ const views = {
         const tbody = document.getElementById('activityMatrixTableBody');
         if (!tbody) return;
         if (!list || list.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="6" style="padding:20px; text-align:center; color:var(--text-muted);">No activity data found.</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="8" style="padding:20px; text-align:center; color:var(--text-muted);">No activity data found.</td></tr>`;
           return;
         }
 
@@ -4604,6 +4750,11 @@ const views = {
         tbody.innerHTML = list.map(p => `
           <tr class="activity-matrix-row" data-name="${escapeHTML(p.name.toLowerCase())}" data-gid="${p.gameId}" style="border-bottom:1px solid var(--border);">
             <td style="padding:12px 14px; font-weight:bold; color:var(--text-main); font-size:14px;">${escapeHTML(p.name)}</td>
+
+            <td style="padding:12px 14px; white-space:nowrap;">
+              <span style="color:${p.currentMisses > 0 ? '#ef4444' : '#10b981'}; font-weight:bold; font-size:13px;">${p.currentMisses > 0 ? `⚠️ ${p.currentMisses} Missed` : '✅ All Done'}</span>
+              <span style="color:var(--text-muted); font-size:11px; margin-left:6px;">(Total: ${p.lifetimeMisses})</span>
+            </td>
             
             <td style="padding:12px 14px;">
               <label style="display:inline-flex; align-items:center; gap:8px; cursor:${isManager ? 'pointer' : 'default'};">
@@ -5081,22 +5232,27 @@ const views = {
                     <h3 style="margin:0; color:var(--text-main);">📊 Roster Event Activity Matrix</h3>
                     <p style="margin:4px 0 0 0; color:var(--text-muted); font-size:12px;">Live participation checklist across all alliance events & attendance.</p>
                   </div>
-                  <input type="text" id="activityMatrixSearch" placeholder="🔍 Search chief name..." onkeyup="window.filterActivityMatrix()" style="padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); width:220px;">
+                  <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                    <button onclick="window.archiveAndResetEventCycle()" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:white; border:none; padding:8px 14px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13px; box-shadow:0 2px 8px rgba(239,68,68,0.3); display:flex; align-items:center; gap:6px;">🔄 Archive & Reset Cycle</button>
+                    <input type="text" id="activityMatrixSearch" placeholder="🔍 Search chief name..." onkeyup="window.filterActivityMatrix()" style="padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); width:200px;">
+                  </div>
                 </div>
                 <div style="overflow-x:auto;">
                   <table style="width:100%; border-collapse:collapse; text-align:left; font-size:13px;">
                     <thead>
                       <tr style="border-bottom:2px solid var(--border); color:var(--text-muted); font-size:11px; text-transform:uppercase;">
                         <th style="padding:10px;">Chief Name</th>
+                        <th style="padding:10px;">Missed (Cycle / Total)</th>
                         <th style="padding:10px;">Perfect Attendance</th>
                         <th style="padding:10px;">Championship</th>
                         <th style="padding:10px;">Mercenary</th>
                         <th style="padding:10px;">Polar Terrors</th>
+                        <th style="padding:10px;">Bear Trap</th>
                         <th style="padding:10px;">Voter</th>
                       </tr>
                     </thead>
                     <tbody id="activityMatrixTableBody">
-                      <tr><td colspan="6" style="padding:20px; text-align:center; color:var(--text-muted);">Click tab to load activity matrix...</td></tr>
+                      <tr><td colspan="8" style="padding:20px; text-align:center; color:var(--text-muted);">Click tab to load activity matrix...</td></tr>
                     </tbody>
                   </table>
                 </div>
@@ -10465,7 +10621,51 @@ window.generatePlayerProfileHtml = (chiefName, p, headers, colIsUpcoming, roster
     
     metricsHtml += '<div style="'+boxStyle+'">' + boxContent + '</div>';
   }
-  metricsHtml += '</div></div>';
+  metricsHtml += '</div>';
+
+  // Lifetime Attendance Record Card
+  const evStats = p._eventStats || {};
+  const mShowdown = evStats.missedShowdown || 0;
+  const mChamp = evStats.missedChampionship || 0;
+  const mMerc = evStats.missedMercenary || 0;
+  const mPolar = evStats.missedPolarTerrors || 0;
+  const mBear = evStats.missedBearTrap || 0;
+  const totalMisses = evStats.totalMisses !== undefined ? evStats.totalMisses : (mShowdown + mChamp + mMerc + mPolar + mBear);
+
+  metricsHtml += `
+    <div style="margin-top: 20px; background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:15px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:8px; margin-bottom:12px; flex-wrap:wrap; gap:10px;">
+        <h3 style="margin:0; color:var(--text-main); font-size:15px; display:flex; align-items:center; gap:6px;">📊 Lifetime Attendance Record</h3>
+        <span style="font-size:12px; font-weight:bold; padding:3px 10px; border-radius:12px; background:${totalMisses === 0 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)'}; color:${totalMisses === 0 ? '#10b981' : '#ef4444'}; border:1px solid ${totalMisses === 0 ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'};">
+          ${totalMisses === 0 ? '⭐ Perfect Record (0 Misses)' : `⚠️ ${totalMisses} Total Miss${totalMisses === 1 ? '' : 'es'}`}
+        </span>
+      </div>
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap:10px; text-align:center;">
+        <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:6px; padding:10px;">
+          <div style="font-size:11px; color:var(--text-muted); margin-bottom:4px; font-weight:bold;">🔥 Showdown Missed</div>
+          <div style="font-size:16px; font-weight:bold; color:${mShowdown > 0 ? '#ef4444' : 'var(--text-main)'};">${mShowdown}</div>
+        </div>
+        <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:6px; padding:10px;">
+          <div style="font-size:11px; color:var(--text-muted); margin-bottom:4px; font-weight:bold;">🏆 Champ Missed</div>
+          <div style="font-size:16px; font-weight:bold; color:${mChamp > 0 ? '#ef4444' : 'var(--text-main)'};">${mChamp}</div>
+        </div>
+        <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:6px; padding:10px;">
+          <div style="font-size:11px; color:var(--text-muted); margin-bottom:4px; font-weight:bold;">⚔️ Merc Missed</div>
+          <div style="font-size:16px; font-weight:bold; color:${mMerc > 0 ? '#ef4444' : 'var(--text-main)'};">${mMerc}</div>
+        </div>
+        <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:6px; padding:10px;">
+          <div style="font-size:11px; color:var(--text-muted); margin-bottom:4px; font-weight:bold;">🐻‍❄️ Polar Missed</div>
+          <div style="font-size:16px; font-weight:bold; color:${mPolar > 0 ? '#ef4444' : 'var(--text-main)'};">${mPolar}</div>
+        </div>
+        <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:6px; padding:10px;">
+          <div style="font-size:11px; color:var(--text-muted); margin-bottom:4px; font-weight:bold;">🐻 Bear Trap Missed</div>
+          <div style="font-size:16px; font-weight:bold; color:${mBear > 0 ? '#ef4444' : 'var(--text-main)'};">${mBear}</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  metricsHtml += '</div>';
   
   let playerGameId = nameToIdMap[chiefName];
   let tryUrl = (playerGameId && avatarMap[playerGameId]) ? avatarMap[playerGameId] : 'images/' + chiefName + '.png';
