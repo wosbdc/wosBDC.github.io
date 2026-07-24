@@ -1,3 +1,8 @@
+## [1.45.2] - 2026-07-23
+### Complete 2-Way Cache Invalidation & Sync Between Player Editor & Event Trackers
+- **2-Way Cache Invalidation**: Saving edits in **Player Database Editor (Edit Events)** now explicitly invalidates `polarTerrorsCache`, `championshipCache`, `mercenaryCache`, and `activityCache` so navigating to any tracker immediately displays fresh live Firebase updates.
+- **Tracker Live Cache Refresh**: Opening Polar Terrors, Alliance Championship, or Mercenary Prestige tracker pages now invalidates in-memory caches before loading, guaranteeing 100% real-time accuracy across all pages.
+
 ## [1.45.1] - 2026-07-23
 ### Fixed Polar Terrors Status Sync Between Tracker and Player Card
 - **Primary Node Prioritization**: Updated `getLivePlayerEventRow` so `polarterrors/{gameId}` node explicitly takes precedence over legacy fallback fields when reading Polar Terrors status.

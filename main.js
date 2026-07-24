@@ -649,6 +649,8 @@ window.togglePolarTerrorsStatus = async (gameId, forceStatus = null) => {
                 polarTerrors: newSignedUpStatus,
                 updatedAt: Date.now()
             });
+            window.activityCache = null;
+            window._activityMatrixLoaded = false;
         } catch(e) { console.error(e); }
         
         if (window.logAdminAction) {
@@ -5846,6 +5848,7 @@ html += `</select>
     }
 
     try {
+        window.championshipCache = null;
         const [championshipData, rosterData] = await Promise.all([
             window.fetchChampionshipData(),
             window.fetchRoster().catch(() => ({}))
@@ -6132,6 +6135,7 @@ html += `</select>
     }
 
     try {
+        window.polarTerrorsCache = null;
         const [polarData, rosterData] = await Promise.all([
             window.fetchPolarTerrorsData(),
             window.fetchRoster().catch(() => ({}))
@@ -6674,6 +6678,7 @@ html += `</select>
     }
 
     try {
+        window.mercenaryCache = null;
         const [mercenaryData, rosterData] = await Promise.all([
             window.fetchMercenaryData(),
             window.fetchRoster().catch(() => ({}))
@@ -11015,7 +11020,10 @@ window.promptEditEvents = async (name) => {
       if (window.showToast) window.showToast(`Updated event status for ${name}!`, "success");
       modal.remove();
 
-      // Clear caches so fresh data is fetched
+      // Clear caches so fresh data is fetched across all trackers
+      window.polarTerrorsCache = null;
+      window.championshipCache = null;
+      window.mercenaryCache = null;
       window.activityCache = null;
       window._activityMatrixLoaded = false;
 
