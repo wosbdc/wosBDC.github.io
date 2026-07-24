@@ -1,3 +1,8 @@
+## [1.47.2] - 2026-07-23
+### Robust Player Key Generation for Non-Numeric Test Players
+- **Universal Player Key Fallback**: Updated `promptEditEvents`, `getLivePlayerEventRow`, `polarTerrorsAdmin`, `championshipAdmin`, and `mercenaryAdmin` to fall back to a safe name slug key (`test_agent`) whenever a player lacks a numeric Game ID.
+- **Test Player Real-Time Compatibility**: Ensured test players and non-numeric roster members read and write properly to `activity_live` and render accurately across all event trackers.
+
 ## [1.47.1] - 2026-07-23
 ### Added Activity Matrix Manual Refresh Button
 - **`🔄 Refresh Matrix` Button**: Added a explicit manual refresh button in the **📊 Roster Event Activity Matrix** subtab header controls so managers can force an instant cache-busting re-fetch at any time.

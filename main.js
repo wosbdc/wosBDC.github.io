@@ -2026,7 +2026,7 @@ window.getLivePlayerEventRow = async (chiefName, pRow, headers) => {
     if (!chiefName) return pRow;
     const row = pRow ? [...pRow] : [chiefName, 0, false, false, false, false];
     const playerGameId = window.nameToIdMap ? window.nameToIdMap[chiefName] : null;
-    const gIdStr = playerGameId ? playerGameId.toString().trim() : '';
+    const gIdStr = (playerGameId && playerGameId.toString().trim()) ? playerGameId.toString().trim() : (chiefName ? chiefName.toLowerCase().replace(/[^a-z0-9]/g, '_') : '');
 
     if (!gIdStr) return row;
 
@@ -5935,7 +5935,7 @@ html += `</select>
                 </thead>
                 <tbody id="champTableBody">
                   ${rosterList.map(p => {
-                      let gIdStr = p.gameId.toString().trim();
+                      let gIdStr = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (p.name ? p.name.toLowerCase().replace(/[^a-z0-9]/g, '_') : '');
                       let record = championshipData[gIdStr];
                       let isSignedUp = record && record.signedUp;
                       return `
@@ -6194,7 +6194,7 @@ html += `</select>
                   </thead>
                   <tbody id="ptTableBody">
                     ${rosterList.map(p => {
-                       let gIdStr = p.gameId.toString().trim();
+                       let gIdStr = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (p.name ? p.name.toLowerCase().replace(/[^a-z0-9]/g, '_') : '');
                        let isDone = polarData[gIdStr] ? polarData[gIdStr].signedUp : false;
                        let badgeBg = isDone ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)';
                        let badgeColor = isDone ? '#10b981' : '#ef4444';
@@ -6765,7 +6765,7 @@ html += `</select>
                 </thead>
                 <tbody id="mercTableBody">
                   ${rosterList.map(p => {
-                      let gIdStr = p.gameId.toString().trim();
+                      let gIdStr = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (p.name ? p.name.toLowerCase().replace(/[^a-z0-9]/g, '_') : '');
                       let record = mercenaryData[gIdStr];
                       let isSignedUp = record && record.signedUp;
                       return `
@@ -10803,7 +10803,7 @@ window.generatePlayerProfileHtml = (chiefName, p, headers, colIsUpcoming, roster
 window.promptEditEvents = async (name) => {
   if (!name) return;
   const gameId = window.nameToIdMap ? window.nameToIdMap[name] : null;
-  const gIdStr = gameId ? gameId.toString().trim() : '';
+  const gIdStr = (gameId && gameId.toString().trim()) ? gameId.toString().trim() : (name ? name.toLowerCase().replace(/[^a-z0-9]/g, '_') : '');
 
   // 1. Fetch live activity status from Firebase activity_live
   let currentActivity = {};
