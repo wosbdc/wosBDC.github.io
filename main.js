@@ -6948,8 +6948,8 @@ html += `</select>
         rosterList.forEach(p => {
             let gIdStr = p.gameId.toString().trim();
             let record = mercenaryData[gIdStr];
-            let isSignedUp = record && record.signedUp;
-            if (isSignedUp) {
+            let isDone = record && record.signedUp;
+            if (isDone) {
                 yesCount++;
             } else {
                 noCount++;
@@ -6967,9 +6967,9 @@ html += `</select>
             <div style="border-bottom: 2px solid #ef4444; padding-bottom: 12px; margin-bottom: 10px; display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:12px;">
               <div>
                 <h2 style="margin:0; color:var(--text-main); font-size:24px; display:flex; align-items:center; gap:10px;">
-                  ⚔️ Mercenary Prestige Signup Tracker
+                  ⚔️ Mercenary Prestige Done Tracker
                 </h2>
-                <p style="margin:5px 0 0 0; color:var(--text-muted); font-size:13px;">Real-time tracking of member event signups & missing roster responses.</p>
+                <p style="margin:5px 0 0 0; color:var(--text-muted); font-size:13px;">Real-time tracking of who has completed Mercenary Prestige & who still needs to.</p>
               </div>
               <button onclick="window.openActivityMatrix()" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:white; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(239,68,68,0.3);">
                 📊 Open Roster Event Activity Matrix ➔
@@ -6983,11 +6983,11 @@ html += `</select>
                 <div id="mercStatTotal" style="font-size:28px; font-weight:bold; color:var(--text-main); margin-top:4px;">${totalCount}</div>
               </div>
               <div style="background:var(--card-bg); border:1px solid rgba(16,185,129,0.3); border-radius:12px; padding:16px; text-align:center;">
-                <div style="font-size:12px; color:#10b981; text-transform:uppercase; font-weight:bold;">✅ Donated (YES)</div>
+                <div style="font-size:12px; color:#10b981; text-transform:uppercase; font-weight:bold;">✅ Done</div>
                 <div id="mercStatYes" style="font-size:28px; font-weight:bold; color:#10b981; margin-top:4px;">${yesCount}</div>
               </div>
               <div style="background:var(--card-bg); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:16px; text-align:center;">
-                <div style="font-size:12px; color:#ef4444; text-transform:uppercase; font-weight:bold;">❌ Action Required (NO)</div>
+                <div style="font-size:12px; color:#ef4444; text-transform:uppercase; font-weight:bold;">❌ Not Done Yet</div>
                 <div id="mercStatNo" style="font-size:28px; font-weight:bold; color:#ef4444; margin-top:4px;">${noCount}</div>
               </div>
               <div style="background:var(--card-bg); border:1px solid rgba(59,130,246,0.3); border-radius:12px; padding:16px; text-align:center;">
@@ -7000,14 +7000,14 @@ html += `</select>
             <div style="background:linear-gradient(135deg, rgba(239,68,68,0.12), rgba(245,158,11,0.12)); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:20px;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:10px;">
                 <h3 style="margin:0; color:#ef4444; font-size:16px; display:flex; align-items:center; gap:8px;">
-                  ⚠️ Members Pending / Missing Signup <span id="mercMissingCountTitle">(${missingNames.length})</span>
+                  ⚠️ Members Not Done Yet <span id="mercMissingCountTitle">(${missingNames.length})</span>
                 </h3>
                 <button onclick="window.copyMissingMercenaryList()" style="background:#ef4444; color:white; border:none; padding:8px 16px; border-radius:6px; font-weight:bold; cursor:pointer; font-size:12px; box-shadow:0 2px 8px rgba(239,68,68,0.3);">
-                  📋 Copy Missing List for Chat
+                  📋 Copy Not Done List for Chat
                 </button>
               </div>
               <div id="mercMissingListText" style="background:var(--bg-main); border:1px solid var(--border); border-radius:8px; padding:12px; font-size:13px; color:var(--text-main); max-height:120px; overflow-y:auto; line-height:1.5;">
-                ${missingNames.length > 0 ? missingNames.join(', ') : '<span style="color:var(--success);">🎉 All members have signed up!</span>'}
+                ${missingNames.length > 0 ? missingNames.join(', ') : '<span style="color:var(--success);">🎉 All members have completed Mercenary Prestige!</span>'}
               </div>
             </div>
 
@@ -7017,8 +7017,8 @@ html += `</select>
               
               <div style="display:flex; gap:6px;">
                 <button id="mercFilterBtnAll" class="merc-filter-btn active" data-filter="all" onclick="window.setMercFilter('all')" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--accent); color:white; font-weight:bold; cursor:pointer; font-size:13px;">All (${totalCount})</button>
-                <button id="mercFilterBtnYes" class="merc-filter-btn" data-filter="yes" onclick="window.setMercFilter('yes')" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-weight:bold; cursor:pointer; font-size:13px;">Signed Up (${yesCount})</button>
-                <button id="mercFilterBtnNo" class="merc-filter-btn" data-filter="no" onclick="window.setMercFilter('no')" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-weight:bold; cursor:pointer; font-size:13px;">Missing (${noCount})</button>
+                <button id="mercFilterBtnYes" class="merc-filter-btn" data-filter="yes" onclick="window.setMercFilter('yes')" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-weight:bold; cursor:pointer; font-size:13px;">✅ Done (${yesCount})</button>
+                <button id="mercFilterBtnNo" class="merc-filter-btn" data-filter="no" onclick="window.setMercFilter('no')" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-weight:bold; cursor:pointer; font-size:13px;">❌ Not Done (${noCount})</button>
               </div>
             </div>
 
@@ -7035,13 +7035,13 @@ html += `</select>
                   ${rosterList.map(p => {
                       let gIdStr = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (p.name ? p.name.toLowerCase().replace(/[^a-z0-9]/g, '_') : '');
                       let record = mercenaryData[gIdStr];
-                      let isSignedUp = record && record.signedUp;
+                      let isDone = record && record.signedUp;
                       return `
-                        <tr class="merc-row" data-name="${escapeHTML((p.name || '').toLowerCase())}" data-gid="${gIdStr}" data-signed="${isSignedUp ? 'yes' : 'no'}" style="border-bottom:1px solid var(--border);">
+                        <tr class="merc-row" data-name="${escapeHTML((p.name || '').toLowerCase())}" data-gid="${gIdStr}" data-signed="${isDone ? 'yes' : 'no'}" style="border-bottom:1px solid var(--border);">
                           <td class="merc-name-cell" style="padding:14px 20px; font-weight:bold; color:var(--text-main); font-size:15px;">${escapeHTML(p.name)}</td>
                           <td style="padding:14px 20px; text-align:right;">
-                            <button class="merc-toggle-btn" onclick="window.onMercToggle('${gIdStr}', this)" style="background:${isSignedUp ? '#10b981' : 'rgba(239,68,68,0.15)'}; color:${isSignedUp ? '#ffffff' : '#ef4444'}; border:${isSignedUp ? 'none' : '1px solid rgba(239,68,68,0.4)'}; padding:6px 20px; border-radius:20px; font-weight:bold; cursor:pointer; font-size:13px; transition:0.2s; box-shadow:${isSignedUp ? '0 2px 8px rgba(16,185,129,0.35)' : 'none'};">
-                              ${isSignedUp ? '✅ YES' : '❌ NO'}
+                            <button class="merc-toggle-btn" onclick="window.onMercToggle('${gIdStr}', this)" style="background:${isDone ? '#10b981' : 'rgba(239,68,68,0.15)'}; color:${isDone ? '#ffffff' : '#ef4444'}; border:${isDone ? 'none' : '1px solid rgba(239,68,68,0.4)'}; padding:6px 20px; border-radius:20px; font-weight:bold; cursor:pointer; font-size:13px; transition:0.2s; box-shadow:${isDone ? '0 2px 8px rgba(16,185,129,0.35)' : 'none'};">
+                              ${isDone ? '✅ Done' : '❌ Not Done'}
                             </button>
                           </td>
                         </tr>
@@ -7090,11 +7090,11 @@ html += `</select>
             if (elNo) elNo.textContent = no;
             if (elPct) elPct.textContent = `${pct}%`;
             if (elBtnAll) elBtnAll.textContent = `All (${total})`;
-            if (elBtnYes) elBtnYes.textContent = `Signed Up (${yes})`;
-            if (elBtnNo) elBtnNo.textContent = `Missing (${no})`;
+            if (elBtnYes) elBtnYes.textContent = `✅ Done (${yes})`;
+            if (elBtnNo) elBtnNo.textContent = `❌ Not Done (${no})`;
             if (elMissingCount) elMissingCount.textContent = `(${missingList.length})`;
             if (elMissingBox) {
-                elMissingBox.innerHTML = missingList.length > 0 ? missingList.join(', ') : '<span style="color:var(--success);">🎉 All members have signed up!</span>';
+                elMissingBox.innerHTML = missingList.length > 0 ? missingList.join(', ') : '<span style="color:var(--success);">🎉 All members have completed Mercenary Prestige!</span>';
             }
             window.mercMissingNames = missingList;
         };
@@ -7102,12 +7102,21 @@ html += `</select>
         window.copyMissingMercenaryList = () => {
             const list = window.mercMissingNames || [];
             if (list.length === 0) {
-                window.showToast("No missing members to copy!", "info");
+                window.showToast("All members are Done — nothing to copy!", "info");
                 return;
             }
-            const text = "⚔️ Mercenary Prestige Pending Signups (" + list.length + "):\n" + list.join(", ");
-            navigator.clipboard.writeText(text);
-            window.showToast("Copied missing signup list to clipboard!", "success");
+            const text = "⚔️ Mercenary Prestige — Not Done Yet (" + list.length + "):\n" + list.join(", ");
+            const doCopy = (txt) => {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(txt).then(() => window.showToast("Copied Not Done list to clipboard!", "success")).catch(() => fallback(txt));
+                } else { fallback(txt); }
+            };
+            const fallback = (txt) => {
+                const ta = document.createElement('textarea'); ta.value = txt;
+                document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+                window.showToast("Copied Not Done list to clipboard!", "success");
+            };
+            doCopy(text);
         };
 
         window.onMercToggle = async (gameId, btnElement) => {
@@ -7117,36 +7126,36 @@ html += `</select>
             const row = btn.closest('.merc-row');
             if (!row) return;
 
-            const wasSigned = row.getAttribute('data-signed') === 'yes';
-            const willSign = !wasSigned;
+            const wasDone = row.getAttribute('data-signed') === 'yes';
+            const willBeDone = !wasDone;
 
             // Optimistic in-place update
             btn.disabled = true;
-            row.setAttribute('data-signed', willSign ? 'yes' : 'no');
+            row.setAttribute('data-signed', willBeDone ? 'yes' : 'no');
             
-            btn.style.background = willSign ? '#10b981' : 'rgba(239,68,68,0.15)';
-            btn.style.color = willSign ? '#ffffff' : '#ef4444';
-            btn.style.border = willSign ? 'none' : '1px solid rgba(239,68,68,0.4)';
-            btn.style.boxShadow = willSign ? '0 2px 8px rgba(16,185,129,0.35)' : 'none';
-            btn.innerHTML = willSign ? '✅ YES' : '❌ NO';
+            btn.style.background = willBeDone ? '#10b981' : 'rgba(239,68,68,0.15)';
+            btn.style.color = willBeDone ? '#ffffff' : '#ef4444';
+            btn.style.border = willBeDone ? 'none' : '1px solid rgba(239,68,68,0.4)';
+            btn.style.boxShadow = willBeDone ? '0 2px 8px rgba(16,185,129,0.35)' : 'none';
+            btn.innerHTML = willBeDone ? '✅ Done' : '❌ Not Done';
 
             window.updateMercStatsUI();
             window.filterMercTable();
 
-            const ok = await window.toggleMercenaryStatus(gameId, willSign);
+            const ok = await window.toggleMercenaryStatus(gameId, willBeDone);
             btn.disabled = false;
 
             if (!ok) {
                 // Revert on write error
-                row.setAttribute('data-signed', wasSigned ? 'yes' : 'no');
-                btn.style.background = wasSigned ? '#10b981' : 'rgba(239,68,68,0.15)';
-                btn.style.color = wasSigned ? '#ffffff' : '#ef4444';
-                btn.style.border = wasSigned ? 'none' : '1px solid rgba(239,68,68,0.4)';
-                btn.style.boxShadow = wasSigned ? '0 2px 8px rgba(16,185,129,0.35)' : 'none';
-                btn.innerHTML = wasSigned ? '✅ YES' : '❌ NO';
+                row.setAttribute('data-signed', wasDone ? 'yes' : 'no');
+                btn.style.background = wasDone ? '#10b981' : 'rgba(239,68,68,0.15)';
+                btn.style.color = wasDone ? '#ffffff' : '#ef4444';
+                btn.style.border = wasDone ? 'none' : '1px solid rgba(239,68,68,0.4)';
+                btn.style.boxShadow = wasDone ? '0 2px 8px rgba(16,185,129,0.35)' : 'none';
+                btn.innerHTML = wasDone ? '✅ Done' : '❌ Not Done';
                 window.updateMercStatsUI();
                 window.filterMercTable();
-                if (window.showToast) window.showToast("Failed to save signup status", "error");
+                if (window.showToast) window.showToast("Failed to save done status", "error");
             }
         };
 

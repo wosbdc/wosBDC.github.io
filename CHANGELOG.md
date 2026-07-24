@@ -1,3 +1,13 @@
+## [1.48.5] - 2026-07-23
+### Mercenary Prestige Tracker Redesigned as Done/Not Done Tracker
+- **Renamed**: "Mercenary Prestige Signup Tracker" → **"Mercenary Prestige Done Tracker"**
+- **Toggle Buttons**: Changed from `✅ YES / ❌ NO` → **`✅ Done / ❌ Not Done`**
+- **KPI Cards**: `✅ Donated (YES)` → `✅ Done`, `❌ Action Required (NO)` → `❌ Not Done Yet`
+- **Filter Buttons**: `Signed Up / Missing` → **`✅ Done / ❌ Not Done`**
+- **Not Done Banner**: "Members Pending / Missing Signup" → **"Members Not Done Yet"**
+- **Copy Button**: "Copy Missing List for Chat" → **"Copy Not Done List for Chat"** with clipboard fallback for mobile
+- **Alliance Championship**: Confirmed as Signup Tracker — labels restored to `Signed Up / Missing`
+
 ## [1.48.4] - 2026-07-23
 ### Fixed Event Trackers "Open Roster Event Activity Matrix" Navigation
 - **Global `window.openActivityMatrix()` Navigation Helper**: Created a dedicated helper function that makes navbar visible, opens Admin Hub on the `tab-logs` main tab, and switches directly to the **📊 Roster Event Activity Matrix** subtab.
