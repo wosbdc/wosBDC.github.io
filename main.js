@@ -6997,8 +6997,8 @@ html += `</select>
             </div>
 
             <!-- Missing Members Quick-Copy Banner -->
-            <div style="background:linear-gradient(135deg, rgba(239,68,68,0.12), rgba(245,158,11,0.12)); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:20px;">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:10px;">
+            <div style="background:linear-gradient(135deg, rgba(239,68,68,0.12), rgba(245,158,11,0.12)); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:16px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
                 <h3 style="margin:0; color:#ef4444; font-size:16px; display:flex; align-items:center; gap:8px;">
                   ⚠️ Members Not Done Yet <span id="mercMissingCountTitle">(${missingNames.length})</span>
                 </h3>
@@ -7006,8 +7006,6 @@ html += `</select>
                   📋 Copy Not Done List for Chat
                 </button>
               </div>
-              <div id="mercMissingListText" style="background:var(--bg-main); border:1px solid var(--border); border-radius:8px; padding:12px; font-size:13px; color:var(--text-main); max-height:120px; overflow-y:auto; line-height:1.5;">
-                ${missingNames.length > 0 ? missingNames.join(', ') : '<span style="color:var(--success);">🎉 All members have completed Mercenary Prestige!</span>'}
               </div>
             </div>
 
@@ -7082,7 +7080,6 @@ html += `</select>
             const elBtnAll = document.getElementById('mercFilterBtnAll');
             const elBtnYes = document.getElementById('mercFilterBtnYes');
             const elBtnNo = document.getElementById('mercFilterBtnNo');
-            const elMissingBox = document.getElementById('mercMissingListText');
             const elMissingCount = document.getElementById('mercMissingCountTitle');
 
             if (elTotal) elTotal.textContent = total;
@@ -7093,9 +7090,6 @@ html += `</select>
             if (elBtnYes) elBtnYes.textContent = `✅ Done (${yes})`;
             if (elBtnNo) elBtnNo.textContent = `❌ Not Done (${no})`;
             if (elMissingCount) elMissingCount.textContent = `(${missingList.length})`;
-            if (elMissingBox) {
-                elMissingBox.innerHTML = missingList.length > 0 ? missingList.join(', ') : '<span style="color:var(--success);">🎉 All members have completed Mercenary Prestige!</span>';
-            }
             window.mercMissingNames = missingList;
         };
 
