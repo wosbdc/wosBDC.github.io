@@ -913,6 +913,43 @@ onValue(ref(db, 'staffProfiles'), (snap) => {
   if (document.querySelector('.staff-grid')) views.staff();
 });
 
+// Global Realtime Master Listener for Live Event Status across all devices
+let _isFirstActivityLoad = true;
+onValue(ref(db, 'activity_live'), async (snap) => {
+  if (typeof window.clearAllEventCaches === 'function') {
+    window.clearAllEventCaches();
+  }
+
+  if (_isFirstActivityLoad) {
+    _isFirstActivityLoad = false;
+    return;
+  }
+
+  // 1. If Polar Terrors Tracker page is currently open
+  if (document.getElementById('pt-yes-count')) {
+    if (typeof views.polarTerrorsAdmin === 'function') await views.polarTerrorsAdmin();
+  }
+  // 2. If Alliance Championship Tracker page is currently open
+  else if (document.getElementById('champ-yes-count')) {
+    if (typeof views.championshipAdmin === 'function') await views.championshipAdmin();
+  }
+  // 3. If Mercenary Prestige Tracker page is currently open
+  else if (document.getElementById('merc-yes-count')) {
+    if (typeof views.mercenaryAdmin === 'function') await views.mercenaryAdmin();
+  }
+
+  // 4. If Activity Matrix subtab is active in Admin Hub
+  const matrixSubtab = document.getElementById('subtab-activity-matrix');
+  if (matrixSubtab && matrixSubtab.style.display !== 'none') {
+    if (typeof window.loadActivityMatrix === 'function') await window.loadActivityMatrix();
+  }
+
+  // 5. If a Player Profile card is currently open
+  if (window.currentRosterChiefName && typeof window.renderCardForChief === 'function') {
+    await window.renderCardForChief(window.currentRosterChiefName);
+  }
+});
+
 window.unlinkAltAccountPrompt = async (gid) => {
     const confirmed = await window.customConfirm(`Are you sure you want to unlink Game ID ${gid}?`);
     if (!confirmed) return;

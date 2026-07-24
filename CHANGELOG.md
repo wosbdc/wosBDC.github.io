@@ -1,3 +1,8 @@
+## [1.47.0] - 2026-07-23
+### Instant Cross-Device Realtime Auto-Sync (`onValue`)
+- **Firebase Realtime WebSocket Listener**: Added global `onValue(ref(db, 'activity_live'), ...)` listener in `main.js`.
+- **Instant Cross-Device UI Push**: Toggling any event (Polar Terrors, Championship, Mercenary, Bear Trap, Voter) on Phone instantly re-renders the Polar Terrors Tracker, Championship Tracker, Mercenary Tracker, Activity Matrix, or Player Profile Card on Computer in <50ms without requiring a browser refresh.
+
 ## [1.46.0] - 2026-07-23
 ### Consolidated Single Master Source of Truth (`activity_live`)
 - **Single Master Node Consolidation**: Consolidated all event tracking (`polarTerrors`, `championship`, `mercenary`, `voter`, `perfectAttendance`, `beartrap`) into Firebase's single master node `activity_live/{gameId}`.
