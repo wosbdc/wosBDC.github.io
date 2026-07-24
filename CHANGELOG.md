@@ -1,3 +1,10 @@
+## [1.48.6] - 2026-07-24
+### Fixed Championship & Event Trackers Toggle Error
+- **Resolved Write Error**: Fixed `Failed to save signup status` error when toggling players in Alliance Championship Tracker.
+- **Robust Player Name & Firebase Fallback**: Ensured player names resolve cleanly from `idToNameMap` if missing in cached records, preventing Firebase `undefined` property errors during `activity_live` node updates.
+- **Safe Secondary Side-Effects**: Isolated non-critical logging & backend synchronization calls inside try-catch blocks so network or token issues never cause status toggles to fail or revert.
+- **Unified Event Trackers**: Applied the same status toggle safety fixes across all 4 event trackers (Championship, Mercenary Prestige, Polar Terrors, and Bear Trap).
+
 ## [1.48.5] - 2026-07-23
 ### Mercenary Prestige Tracker Redesigned as Done/Not Done Tracker
 - **Renamed**: "Mercenary Prestige Signup Tracker" → **"Mercenary Prestige Done Tracker"**

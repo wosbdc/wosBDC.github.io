@@ -414,31 +414,43 @@ window.toggleChampionshipStatus = async (gameId, forceStatus = null) => {
     const existing = data[gIdStr] || { gameId: gIdStr, name: (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief', signedUp: false };
     const newSignedUpStatus = (forceStatus !== null) ? forceStatus : !existing.signedUp;
     const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name || "Admin") : "Admin";
+    const playerName = existing.name || (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief';
 
     try {
         // 1. Write directly to master node activity_live
-        await update(ref(db, `activity_live/${gIdStr}`), {
-            name: existing.name,
-            championship: newSignedUpStatus,
-            updatedAt: Date.now()
-        });
+        try {
+            await update(ref(db, `activity_live/${gIdStr}`), {
+                name: playerName,
+                championship: newSignedUpStatus,
+                updatedAt: Date.now()
+            });
+        } catch(uErr) {
+            const snap = await get(ref(db, `activity_live/${gIdStr}`));
+            const currentRec = (snap && snap.exists()) ? snap.val() : { name: playerName };
+            currentRec.name = playerName;
+            currentRec.championship = newSignedUpStatus;
+            currentRec.updatedAt = Date.now();
+            await set(ref(db, `activity_live/${gIdStr}`), currentRec);
+        }
 
         // 2. Secondary write for legacy node
         try {
             await set(ref(db, `championship/${gIdStr}`), {
-                gameId: gIdStr, name: existing.name, signedUp: newSignedUpStatus, lastUpdated: Date.now(), updatedBy: adminName
+                gameId: gIdStr, name: playerName, signedUp: newSignedUpStatus, lastUpdated: Date.now(), updatedBy: adminName
             });
         } catch(e) {}
 
         window.clearAllEventCaches();
 
-        if (window.logAdminAction) {
-            window.logAdminAction("Championship Signup Toggle", `Toggled ${existing.name} (${gIdStr}) to ${newSignedUpStatus ? 'YES (✅)' : 'NO (❌)'}`);
-        }
+        try {
+            if (window.logAdminAction) {
+                window.logAdminAction("Championship Signup Toggle", `Toggled ${playerName} (${gIdStr}) to ${newSignedUpStatus ? 'YES (✅)' : 'NO (❌)'}`);
+            }
+        } catch(e) {}
         
         try {
             const evToken = await getAuthToken().catch(() => '');
-            const url = `${API_BASE_URL}?api=updateEvent&name=${encodeURIComponent(existing.name)}&eventName=${encodeURIComponent("Alliance Championship ")}&status=${encodeURIComponent(newSignedUpStatus ? 'yes' : 'no')}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(evToken)}`;
+            const url = `${API_BASE_URL}?api=updateEvent&name=${encodeURIComponent(playerName)}&eventName=${encodeURIComponent("Alliance Championship")}&status=${encodeURIComponent(newSignedUpStatus ? 'yes' : 'no')}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(evToken)}`;
             fetch(url, { mode: 'no-cors' }).catch(() => null);
         } catch(e) {}
 
@@ -497,31 +509,43 @@ window.toggleMercenaryStatus = async (gameId, forceStatus = null) => {
     const existing = data[gIdStr] || { gameId: gIdStr, name: (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief', signedUp: false };
     const newSignedUpStatus = (forceStatus !== null) ? forceStatus : !existing.signedUp;
     const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name || "Admin") : "Admin";
+    const playerName = existing.name || (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief';
 
     try {
         // 1. Write directly to master node activity_live
-        await update(ref(db, `activity_live/${gIdStr}`), {
-            name: existing.name,
-            mercenary: newSignedUpStatus,
-            updatedAt: Date.now()
-        });
+        try {
+            await update(ref(db, `activity_live/${gIdStr}`), {
+                name: playerName,
+                mercenary: newSignedUpStatus,
+                updatedAt: Date.now()
+            });
+        } catch(uErr) {
+            const snap = await get(ref(db, `activity_live/${gIdStr}`));
+            const currentRec = (snap && snap.exists()) ? snap.val() : { name: playerName };
+            currentRec.name = playerName;
+            currentRec.mercenary = newSignedUpStatus;
+            currentRec.updatedAt = Date.now();
+            await set(ref(db, `activity_live/${gIdStr}`), currentRec);
+        }
 
         // 2. Secondary write for legacy node
         try {
             await set(ref(db, `mercenary/${gIdStr}`), {
-                gameId: gIdStr, name: existing.name, signedUp: newSignedUpStatus, lastUpdated: Date.now(), updatedBy: adminName
+                gameId: gIdStr, name: playerName, signedUp: newSignedUpStatus, lastUpdated: Date.now(), updatedBy: adminName
             });
         } catch(e) {}
 
         window.clearAllEventCaches();
 
-        if (window.logAdminAction) {
-            window.logAdminAction("Mercenary Prestige Toggle", `Toggled ${existing.name} (${gIdStr}) to ${newSignedUpStatus ? 'YES (✅)' : 'NO (❌)'}`);
-        }
+        try {
+            if (window.logAdminAction) {
+                window.logAdminAction("Mercenary Prestige Toggle", `Toggled ${playerName} (${gIdStr}) to ${newSignedUpStatus ? 'YES (✅)' : 'NO (❌)'}`);
+            }
+        } catch(e) {}
         
         try {
             const evToken = await getAuthToken().catch(() => '');
-            const url = `${API_BASE_URL}?api=updateEvent&name=${encodeURIComponent(existing.name)}&eventName=${encodeURIComponent("Mercenary Prestige")}&status=${encodeURIComponent(newSignedUpStatus ? 'yes' : 'no')}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(evToken)}`;
+            const url = `${API_BASE_URL}?api=updateEvent&name=${encodeURIComponent(playerName)}&eventName=${encodeURIComponent("Mercenary Prestige")}&status=${encodeURIComponent(newSignedUpStatus ? 'yes' : 'no')}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(evToken)}`;
             fetch(url, { mode: 'no-cors' }).catch(() => null);
         } catch(e) {}
 
@@ -580,31 +604,43 @@ window.togglePolarTerrorsStatus = async (gameId, forceStatus = null) => {
     const existing = data[gIdStr] || { gameId: gIdStr, name: (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief', signedUp: false };
     const newSignedUpStatus = (forceStatus !== null) ? forceStatus : !existing.signedUp;
     const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name || "Admin") : "Admin";
+    const playerName = existing.name || (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief';
 
     try {
         // 1. Write directly to master node activity_live
-        await update(ref(db, `activity_live/${gIdStr}`), {
-            name: existing.name,
-            polarTerrors: newSignedUpStatus,
-            updatedAt: Date.now()
-        });
+        try {
+            await update(ref(db, `activity_live/${gIdStr}`), {
+                name: playerName,
+                polarTerrors: newSignedUpStatus,
+                updatedAt: Date.now()
+            });
+        } catch(uErr) {
+            const snap = await get(ref(db, `activity_live/${gIdStr}`));
+            const currentRec = (snap && snap.exists()) ? snap.val() : { name: playerName };
+            currentRec.name = playerName;
+            currentRec.polarTerrors = newSignedUpStatus;
+            currentRec.updatedAt = Date.now();
+            await set(ref(db, `activity_live/${gIdStr}`), currentRec);
+        }
 
         // 2. Secondary write for legacy node
         try {
             await set(ref(db, `polarterrors/${gIdStr}`), {
-                gameId: gIdStr, name: existing.name, signedUp: newSignedUpStatus, lastUpdated: Date.now(), updatedBy: adminName
+                gameId: gIdStr, name: playerName, signedUp: newSignedUpStatus, lastUpdated: Date.now(), updatedBy: adminName
             });
         } catch(e) {}
 
         window.clearAllEventCaches();
 
-        if (window.logAdminAction) {
-            window.logAdminAction("Polar Terrors Toggle", `Toggled ${existing.name} (${gIdStr}) to ${newSignedUpStatus ? 'YES (✅)' : 'NO (❌)'}`);
-        }
+        try {
+            if (window.logAdminAction) {
+                window.logAdminAction("Polar Terrors Toggle", `Toggled ${playerName} (${gIdStr}) to ${newSignedUpStatus ? 'YES (✅)' : 'NO (❌)'}`);
+            }
+        } catch(e) {}
         
         try {
             const evToken = await getAuthToken().catch(() => '');
-            const url = `${API_BASE_URL}?api=updateEvent&name=${encodeURIComponent(existing.name)}&eventName=${encodeURIComponent("Polar Terrors")}&status=${encodeURIComponent(newSignedUpStatus ? 'yes' : 'no')}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(evToken)}`;
+            const url = `${API_BASE_URL}?api=updateEvent&name=${encodeURIComponent(playerName)}&eventName=${encodeURIComponent("Polar Terrors")}&status=${encodeURIComponent(newSignedUpStatus ? 'yes' : 'no')}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(evToken)}`;
             fetch(url, { mode: 'no-cors' }).catch(() => null);
         } catch(e) {}
         
@@ -678,6 +714,8 @@ window.toggleBearTrapStatus = async (gameId, forceStatus = null) => {
 
     const existing = data[gIdStr] || { gameId: gIdStr, name: (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief', signedUp: false };
     
+    const playerName = existing.name || (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief';
+    existing.name = playerName;
     const newSignedUpStatus = (forceStatus !== null) ? forceStatus : !existing.signedUp;
     existing.signedUp = newSignedUpStatus;
     existing.lastUpdated = Date.now();
@@ -688,21 +726,24 @@ window.toggleBearTrapStatus = async (gameId, forceStatus = null) => {
         if (window.bearTrapCache) window.bearTrapCache[gIdStr] = existing;
         try {
             await update(ref(db, `activity_live/${gIdStr}`), {
+                name: playerName,
                 beartrap: newSignedUpStatus,
                 updatedAt: Date.now()
             });
-        } catch(e) { console.error(e); }
+        } catch(e) {}
         
-        if (window.logAdminAction) {
-            window.logAdminAction("Bear Trap Toggle", `Toggled ${existing.name} (${gIdStr}) to ${newSignedUpStatus ? 'YES (✅)' : 'NO (❌)'}`);
-        }
+        try {
+            if (window.logAdminAction) {
+                window.logAdminAction("Bear Trap Toggle", `Toggled ${playerName} (${gIdStr}) to ${newSignedUpStatus ? 'YES (✅)' : 'NO (❌)'}`);
+            }
+        } catch(e) {}
         
         try {
             const evToken = await getAuthToken().catch(() => '');
             const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || "Admin") : "Admin";
-            const url = `${API_BASE_URL}?api=updateEvent&name=${encodeURIComponent(existing.name)}&eventName=${encodeURIComponent("Bear Trap Tracker")}&status=${encodeURIComponent(newSignedUpStatus ? 'yes' : 'no')}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(evToken)}`;
+            const url = `${API_BASE_URL}?api=updateEvent&name=${encodeURIComponent(playerName)}&eventName=${encodeURIComponent("Bear Trap Tracker")}&status=${encodeURIComponent(newSignedUpStatus ? 'yes' : 'no')}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(evToken)}`;
             fetch(url, { mode: 'no-cors' }).catch(e => null);
-        } catch(e) { console.error(e); }
+        } catch(e) {}
         
         return true;
     } catch(err) {
