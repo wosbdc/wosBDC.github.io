@@ -1,3 +1,8 @@
+## [1.48.7] - 2026-07-24
+### Cleaned Up Championship Signup Tracker UI
+- **Removed Text Box**: Removed the redundant text box displaying the list of missing players under the missing banner in Alliance Championship Signup Tracker.
+- **Compact Quick-Copy Banner**: Retained the heading, count title, and **📋 Copy Missing List for Chat** button in a clean, compact single-row banner.
+
 ## [1.48.6] - 2026-07-24
 ### Fixed Championship & Event Trackers Toggle Error
 - **Resolved Write Error**: Fixed `Failed to save signup status` error when toggling players in Alliance Championship Tracker.

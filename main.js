@@ -6208,17 +6208,14 @@ html += `</select>
             </div>
 
             <!-- Missing Members Quick-Copy Banner -->
-            <div style="background:linear-gradient(135deg, rgba(239,68,68,0.12), rgba(245,158,11,0.12)); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:20px;">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:10px;">
+            <div style="background:linear-gradient(135deg, rgba(239,68,68,0.12), rgba(245,158,11,0.12)); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:16px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
                 <h3 style="margin:0; color:#ef4444; font-size:16px; display:flex; align-items:center; gap:8px;">
                   ⚠️ Members Pending / Missing Signup <span id="missingCountTitle">(${missingNames.length})</span>
                 </h3>
                 <button onclick="window.copyMissingChampionshipList()" style="background:#ef4444; color:white; border:none; padding:8px 16px; border-radius:6px; font-weight:bold; cursor:pointer; font-size:12px; box-shadow:0 2px 8px rgba(239,68,68,0.3);">
                   📋 Copy Missing List for Chat
                 </button>
-              </div>
-              <div id="missingListText" style="background:var(--bg-main); border:1px solid var(--border); border-radius:8px; padding:12px; font-size:13px; color:var(--text-main); max-height:120px; overflow-y:auto; line-height:1.5;">
-                ${missingNames.length > 0 ? missingNames.join(', ') : '<span style="color:var(--success);">🎉 All members have signed up!</span>'}
               </div>
             </div>
 
@@ -6293,7 +6290,6 @@ html += `</select>
             const elBtnAll = document.getElementById('champFilterBtnAll');
             const elBtnYes = document.getElementById('champFilterBtnYes');
             const elBtnNo = document.getElementById('champFilterBtnNo');
-            const elMissingBox = document.getElementById('missingListText');
             const elMissingCount = document.getElementById('missingCountTitle');
 
             if (elTotal) elTotal.textContent = total;
