@@ -1,3 +1,8 @@
+## [1.48.1] - 2026-07-23
+### Added Pending Status Badges for Unstarted Showdown Days
+- **`⏳ Pending` Status for Unstarted Days**: Updated `window.showMissedDaysReportModal()` to automatically detect unstarted days (e.g. Days 5 & 6) and display a **`⏳ Pending`** badge with a *"Day not started yet"* note.
+- **Accurate Miss Tallies**: Unstarted pending days are automatically excluded from player miss tallies and clipboard copy summaries so members aren't prematurely marked as missing future event days.
+
 ## [1.48.0] - 2026-07-23
 ### Added Showdown Missed Days Report Feature
 - **`📋 Missed Days Report` Button**: Added a dedicated report button in the **Showdown Data Entry** header card (`views.showdownAdmin()`).

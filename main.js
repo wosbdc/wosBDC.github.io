@@ -3901,13 +3901,15 @@ window.showMissedDaysReportModal = async () => {
     if (allPlayers.length === 0) allPlayers = Object.keys(sdLiveData);
     allPlayers = [...new Set(allPlayers)].sort((a,b) => a.localeCompare(b));
 
-    // Determine highest active day with non-zero scores
-    let activeDaysCount = 0;
+    const isDayActive = {};
+    let maxActiveDay = 0;
     for (let d = 1; d <= 6; d++) {
-        let dayHasScore = Object.values(sdLiveData).some(scores => scores && (scores['d'+d] || 0) > 0);
-        if (dayHasScore) activeDaysCount = d;
+        let dayHasScore = Object.values(sdLiveData).some(scores => scores && Number(scores['d'+d] || 0) > 0);
+        isDayActive[d] = dayHasScore;
+        if (dayHasScore) maxActiveDay = d;
     }
-    if (activeDaysCount === 0) activeDaysCount = 6;
+    // Day 1 is active by default if event has begun
+    if (maxActiveDay === 0) maxActiveDay = 1;
 
     const playerMissedMap = {};
     const dayMissedMap = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
@@ -3915,7 +3917,7 @@ window.showMissedDaysReportModal = async () => {
     allPlayers.forEach(pName => {
         const scores = sdLiveData[pName] || {};
         const missedDays = [];
-        for (let d = 1; d <= activeDaysCount; d++) {
+        for (let d = 1; d <= maxActiveDay; d++) {
             const score = Number(scores['d' + d] || 0);
             if (score === 0) {
                 missedDays.push(d);
@@ -3929,10 +3931,10 @@ window.showMissedDaysReportModal = async () => {
 
     const playersWithMisses = Object.keys(playerMissedMap).sort((a,b) => playerMissedMap[b].length - playerMissedMap[a].length || a.localeCompare(b));
 
-    let copyText = `📅 ALLIANCE SHOWDOWN MISSED DAYS REPORT (Days 1-${activeDaysCount})\n`;
+    let copyText = `📅 ALLIANCE SHOWDOWN MISSED DAYS REPORT (Active Days 1-${maxActiveDay})\n`;
     copyText += `----------------------------------------\n`;
     if (playersWithMisses.length === 0) {
-        copyText += `🎉 Perfect Attendance! 0 players missed any days!\n`;
+        copyText += `🎉 Perfect Attendance! 0 players missed any active days!\n`;
     } else {
         playersWithMisses.forEach(pName => {
             const daysStr = playerMissedMap[pName].map(d => `Day ${d}`).join(', ');
@@ -3945,23 +3947,38 @@ window.showMissedDaysReportModal = async () => {
     modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); backdrop-filter:blur(6px); z-index:10002; display:flex; justify-content:center; align-items:center; animation:fadeIn 0.2s ease; padding:15px; box-sizing:border-box;';
 
     let dayCardsHtml = '';
-    for (let d = 1; d <= activeDaysCount; d++) {
-        const missedList = dayMissedMap[d];
-        dayCardsHtml += `
-            <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:12px 14px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                    <span style="font-weight:bold; color:var(--text-main); font-size:14px;">Day ${d}</span>
-                    <span style="background:${missedList.length > 0 ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)'}; color:${missedList.length > 0 ? '#ef4444' : '#10b981'}; border:1px solid ${missedList.length > 0 ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.3)'}; font-size:11px; font-weight:bold; padding:2px 8px; border-radius:12px;">
-                        ${missedList.length > 0 ? `${missedList.length} Missed` : '✅ All Scored'}
-                    </span>
-                </div>
-                ${missedList.length === 0 ? '<div style="font-size:12px; color:var(--text-muted); font-style:italic;">100% Participation</div>' : `
-                    <div style="font-size:12px; color:var(--text-muted); max-height:80px; overflow-y:auto; line-height:1.4;">
-                        ${missedList.map(name => `<div>• ${window.escapeHTML(name)}</div>`).join('')}
+    for (let d = 1; d <= 6; d++) {
+        const active = d <= maxActiveDay;
+        const missedList = dayMissedMap[d] || [];
+        if (!active) {
+            dayCardsHtml += `
+                <div style="background:var(--bg-main); border:1px dashed var(--border); border-radius:10px; padding:12px 14px; opacity:0.8;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <span style="font-weight:bold; color:var(--text-muted); font-size:14px;">Day ${d}</span>
+                        <span style="background:rgba(234,179,8,0.15); color:#eab308; border:1px solid rgba(234,179,8,0.3); font-size:11px; font-weight:bold; padding:2px 8px; border-radius:12px;">
+                            ⏳ Pending
+                        </span>
                     </div>
-                `}
-            </div>
-        `;
+                    <div style="font-size:12px; color:var(--text-muted); font-style:italic;">Day not started yet</div>
+                </div>
+            `;
+        } else {
+            dayCardsHtml += `
+                <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:12px 14px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <span style="font-weight:bold; color:var(--text-main); font-size:14px;">Day ${d}</span>
+                        <span style="background:${missedList.length > 0 ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)'}; color:${missedList.length > 0 ? '#ef4444' : '#10b981'}; border:1px solid ${missedList.length > 0 ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.3)'}; font-size:11px; font-weight:bold; padding:2px 8px; border-radius:12px;">
+                            ${missedList.length > 0 ? `${missedList.length} Missed` : '✅ All Scored'}
+                        </span>
+                    </div>
+                    ${missedList.length === 0 ? '<div style="font-size:12px; color:var(--text-muted); font-style:italic;">100% Participation</div>' : `
+                        <div style="font-size:12px; color:var(--text-muted); max-height:80px; overflow-y:auto; line-height:1.4;">
+                            ${missedList.map(name => `<div>• ${window.escapeHTML(name)}</div>`).join('')}
+                        </div>
+                    `}
+                </div>
+            `;
+        }
     }
 
     let playerRowsHtml = '';
