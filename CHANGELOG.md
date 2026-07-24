@@ -1,3 +1,8 @@
+## [1.45.1] - 2026-07-23
+### Fixed Polar Terrors Status Sync Between Tracker and Player Card
+- **Primary Node Prioritization**: Updated `getLivePlayerEventRow` so `polarterrors/{gameId}` node explicitly takes precedence over legacy fallback fields when reading Polar Terrors status.
+- **Dynamic Header Badges**: Refactored `activityBadges` rendering in `generatePlayerProfileHtml` to match header names dynamically instead of relying on fixed column index offsets.
+
 ## [1.45.0] - 2026-07-23
 ### Lifetime Event Attendance Tracking & Cycle Archiving System
 - **`🔄 Archive & Reset Cycle` Button**: R4/R5 managers can now archive the active event cycle into Firebase (`activity_history_archives/{timestamp}`), automatically incrementing lifetime miss counters for missing players, and resetting the matrix for the next cycle.

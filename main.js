@@ -2063,10 +2063,10 @@ window.getLivePlayerEventRow = async (chiefName, pRow, headers) => {
 
         const isT = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
 
-        const liveChamp = champData.signedUp !== undefined ? isT(champData.signedUp) : (actData.championship !== undefined ? isT(actData.championship) : row[2]);
-        const liveMerc = mercData.signedUp !== undefined ? isT(mercData.signedUp) : (actData.mercenary !== undefined ? isT(actData.mercenary) : row[3]);
-        const livePt = ptData.signedUp !== undefined ? isT(ptData.signedUp) : (actData.polarTerrors !== undefined ? isT(actData.polarTerrors) : row[4]);
-        const liveVoter = actData.voter !== undefined ? isT(actData.voter) : row[5];
+        const liveChamp = (champSnap && champSnap.exists() && champData.signedUp !== undefined) ? isT(champData.signedUp) : (actData.championship !== undefined ? isT(actData.championship) : false);
+        const liveMerc = (mercSnap && mercSnap.exists() && mercData.signedUp !== undefined) ? isT(mercData.signedUp) : (actData.mercenary !== undefined ? isT(actData.mercenary) : false);
+        const livePt = (ptSnap && ptSnap.exists() && ptData.signedUp !== undefined) ? isT(ptData.signedUp) : (actData.polarTerrors !== undefined ? isT(actData.polarTerrors) : false);
+        const liveVoter = actData.voter !== undefined ? isT(actData.voter) : false;
 
         const safeHeaders = headers || ["Chief Name", "ShowDown missed days", "Alliance Championship ", "Mercenary Prestige", "Polar Terrors", "Voter"];
 
@@ -10498,14 +10498,18 @@ window.generatePlayerProfileHtml = (chiefName, p, headers, colIsUpcoming, roster
   
   const isTrue = (val) => val === true || (typeof val === 'string' && val.toLowerCase().trim() === 'true');
   
-  if (isTrue(p[2])) {
-     activityBadges += '<span style="background:color-mix(in srgb, #fbbf24 15%, transparent); border:1px solid #fbbf24; color:var(--text-main); padding:4px 8px; border-radius:12px; font-size:11px; font-weight:bold;">🏆 Championship</span>';
-  }
-  if (isTrue(p[3])) {
-     activityBadges += '<span style="background:color-mix(in srgb, #ef4444 15%, transparent); border:1px solid #ef4444; color:var(--text-main); padding:4px 8px; border-radius:12px; font-size:11px; font-weight:bold;">⚔️ Mercenary</span>';
-  }
-  if (isTrue(p[4])) {
-     activityBadges += '<span style="background:color-mix(in srgb, #38bdf8 15%, transparent); border:1px solid #38bdf8; color:var(--text-main); padding:4px 8px; border-radius:12px; font-size:11px; font-weight:bold;">🐻‍❄️ Polar Terrors</span>';
+  for (let c = 1; c < headers.length; c++) {
+    const h = (headers[c] || '').toLowerCase();
+    const val = p[c];
+    if (isTrue(val)) {
+      if (h.includes('championship') && !activityBadges.includes('Championship')) {
+        activityBadges += '<span style="background:color-mix(in srgb, #fbbf24 15%, transparent); border:1px solid #fbbf24; color:var(--text-main); padding:4px 8px; border-radius:12px; font-size:11px; font-weight:bold;">🏆 Championship</span>';
+      } else if (h.includes('mercenary') && !activityBadges.includes('Mercenary')) {
+        activityBadges += '<span style="background:color-mix(in srgb, #ef4444 15%, transparent); border:1px solid #ef4444; color:var(--text-main); padding:4px 8px; border-radius:12px; font-size:11px; font-weight:bold;">⚔️ Mercenary</span>';
+      } else if (h.includes('polar') && !activityBadges.includes('Polar')) {
+        activityBadges += '<span style="background:color-mix(in srgb, #38bdf8 15%, transparent); border:1px solid #38bdf8; color:var(--text-main); padding:4px 8px; border-radius:12px; font-size:11px; font-weight:bold;">🐻‍❄️ Polar Terrors</span>';
+      }
+    }
   }
   
   if (activityBadges) {
