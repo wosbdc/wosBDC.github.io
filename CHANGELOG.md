@@ -1,3 +1,7 @@
+## [1.47.1] - 2026-07-23
+### Added Activity Matrix Manual Refresh Button
+- **`🔄 Refresh Matrix` Button**: Added a explicit manual refresh button in the **📊 Roster Event Activity Matrix** subtab header controls so managers can force an instant cache-busting re-fetch at any time.
+
 ## [1.47.0] - 2026-07-23
 ### Instant Cross-Device Realtime Auto-Sync (`onValue`)
 - **Firebase Realtime WebSocket Listener**: Added global `onValue(ref(db, 'activity_live'), ...)` listener in `main.js`.

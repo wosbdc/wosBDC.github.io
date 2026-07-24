@@ -5211,6 +5211,7 @@ const views = {
                     <p style="margin:4px 0 0 0; color:var(--text-muted); font-size:12px;">Live participation checklist across all alliance events & attendance.</p>
                   </div>
                   <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                    <button onclick="window.clearAllEventCaches(); window._activityMatrixLoaded=false; window.loadActivityMatrix();" style="background:var(--accent); color:white; border:none; padding:8px 14px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13px; display:flex; align-items:center; gap:6px;">🔄 Refresh Matrix</button>
                     <button onclick="window.archiveAndResetEventCycle()" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:white; border:none; padding:8px 14px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13px; box-shadow:0 2px 8px rgba(239,68,68,0.3); display:flex; align-items:center; gap:6px;">🔄 Archive & Reset Cycle</button>
                     <input type="text" id="activityMatrixSearch" placeholder="🔍 Search chief name..." onkeyup="window.filterActivityMatrix()" style="padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); width:200px;">
                   </div>
