@@ -4756,6 +4756,17 @@ const views = {
         }
       };
 
+      window.openActivityMatrix = async () => {
+          if (document.querySelector('.navbar')) document.querySelector('.navbar').style.display = 'flex';
+          await views.admin('tab-logs');
+          setTimeout(() => {
+              const logsTabBtn = document.querySelector('.admin-tab-btn[data-tab="tab-logs"]');
+              if (logsTabBtn) logsTabBtn.click();
+              if (window.switchLogsSubtab) window.switchLogsSubtab('subtab-activity-matrix');
+              if (window.loadActivityMatrix) window.loadActivityMatrix();
+          }, 100);
+      };
+
       // Fetch / Cache persistent player event stats from Firebase
       window.fetchPlayerEventStats = async () => {
         if (window._playerEventStatsCache) return window._playerEventStatsCache;
@@ -5543,6 +5554,17 @@ const views = {
           }
         });
       });
+
+      // Automatically open requested targetTab (or default to tab-tools)
+      setTimeout(() => {
+          const targetTabBtn = document.querySelector(`.admin-tab-btn[data-tab="${targetTab}"]`);
+          if (targetTabBtn) {
+              targetTabBtn.click();
+          } else {
+              const defaultTabBtn = document.querySelector('.admin-tab-btn[data-tab="tab-tools"]');
+              if (defaultTabBtn) defaultTabBtn.click();
+          }
+      }, 50);
       
       window.frostDataLoaded = false;
       window.frostState = { alts: [] };
@@ -6119,7 +6141,7 @@ html += `</select>
                 </h2>
                 <p style="margin:5px 0 0 0; color:var(--text-muted); font-size:13px;">Real-time tracking of member event signups & missing roster responses.</p>
               </div>
-              <button onclick="if(document.querySelector('.navbar')) document.querySelector('.navbar').style.display='flex'; views.admin(); setTimeout(()=>window.switchLogsSubtab('subtab-activity-matrix'), 150);" style="background:linear-gradient(135deg, var(--accent), #1d4ed8); color:white; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(59,130,246,0.3);">
+              <button onclick="window.openActivityMatrix()" style="background:linear-gradient(135deg, var(--accent), #1d4ed8); color:white; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(59,130,246,0.3);">
                 📊 Open Roster Event Activity Matrix ➔
               </button>
             </div>
@@ -6397,7 +6419,7 @@ html += `</select>
               <button onclick="views.admin('tab-indev')" style="background:rgba(255,255,255,0.2); border:none; color:#fff; cursor:pointer; font-size:18px; padding:8px 12px; border-radius:8px; transition:0.2s;">⬅ Back</button>
               <h2 style="margin:0; color:#fff; font-size:1.3em;">🐻‍❄️ Polar Terrors Tracker</h2>
             </div>
-            <button onclick="views.admin('tab-logs')" style="background:rgba(255,255,255,0.2); border:none; color:#fff; cursor:pointer; font-size:13px; padding:8px 14px; border-radius:8px; font-weight:bold; transition:0.2s;">📊 Activity Matrix ➔</button>
+            <button onclick="window.openActivityMatrix()" style="background:rgba(255,255,255,0.2); border:none; color:#fff; cursor:pointer; font-size:13px; padding:8px 14px; border-radius:8px; font-weight:bold; transition:0.2s;">📊 Activity Matrix ➔</button>
           </div>
 
           <div style="padding:20px; max-width:1600px; margin:0 auto;">
@@ -6627,7 +6649,7 @@ html += `</select>
 
           <div style="padding:25px; max-width:1600px; margin:0 auto;">
             
-            <button onclick="views.admin('tab-logs')" style="background:linear-gradient(135deg, #a855f7, #9333ea); color:#fff; border:none; padding:14px 24px; border-radius:10px; cursor:pointer; font-weight:bold; font-size:15px; width:100%; box-shadow:0 4px 12px rgba(168,85,247,0.3); margin-bottom: 20px; transition: transform 0.2s ease;">
+            <button onclick="window.openActivityMatrix()" style="background:linear-gradient(135deg, #a855f7, #9333ea); color:#fff; border:none; padding:14px 24px; border-radius:10px; cursor:pointer; font-weight:bold; font-size:15px; width:100%; box-shadow:0 4px 12px rgba(168,85,247,0.3); margin-bottom: 20px; transition: transform 0.2s ease;">
               📊 Open Roster Event Activity Matrix ➔
             </button>
 
@@ -6949,7 +6971,7 @@ html += `</select>
                 </h2>
                 <p style="margin:5px 0 0 0; color:var(--text-muted); font-size:13px;">Real-time tracking of member event signups & missing roster responses.</p>
               </div>
-              <button onclick="if(document.querySelector('.navbar')) document.querySelector('.navbar').style.display='flex'; views.admin(); setTimeout(()=>window.switchLogsSubtab('subtab-activity-matrix'), 150);" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:white; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(239,68,68,0.3);">
+              <button onclick="window.openActivityMatrix()" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:white; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(239,68,68,0.3);">
                 📊 Open Roster Event Activity Matrix ➔
               </button>
             </div>

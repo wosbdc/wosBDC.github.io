@@ -1,3 +1,9 @@
+## [1.48.4] - 2026-07-23
+### Fixed Event Trackers "Open Roster Event Activity Matrix" Navigation
+- **Global `window.openActivityMatrix()` Navigation Helper**: Created a dedicated helper function that makes navbar visible, opens Admin Hub on the `tab-logs` main tab, and switches directly to the **📊 Roster Event Activity Matrix** subtab.
+- **Admin Target Tab Support**: Updated `views.admin(initialTab)` to automatically select and display requested target tabs (`tab-logs`, etc.) upon loading.
+- **Event Tracker Button Unification**: Updated buttons across Polar Terrors, Alliance Championship, Mercenary Prestige, and Bear Trap trackers to call `window.openActivityMatrix()`.
+
 ## [1.48.3] - 2026-07-23
 ### Deduplicated Player Names in Showdown Missed Days Cards
 - **Case-Insensitive Roster Deduplication**: Normalized and deduplicated player names across `rosterRawData` and `sdLiveData` case-insensitively so player variations (e.g. casing or trailing spaces) are merged into a single unique player entry.
