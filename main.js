@@ -6967,7 +6967,7 @@ html += `</select>
             <div style="border-bottom: 2px solid #ef4444; padding-bottom: 12px; margin-bottom: 10px; display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:12px;">
               <div>
                 <h2 style="margin:0; color:var(--text-main); font-size:24px; display:flex; align-items:center; gap:10px;">
-                  ⚔️ Mercenary Prestige Done Tracker
+                  ⚔️ Mercenary Prestige: Tracker
                 </h2>
                 <p style="margin:5px 0 0 0; color:var(--text-muted); font-size:13px;">Real-time tracking of who has completed Mercenary Prestige & who still needs to.</p>
               </div>
