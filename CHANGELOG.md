@@ -1,3 +1,7 @@
+## [1.48.58] - 2026-07-26
+### Clean Zero-Score Event Reset Implementation
+- **Zero-Score Event Reset**: Updated `window.resetCurrentShowdown()` so clicking **`🔄 Reset Event`** sets all player Day 1..6 scores to **0**, resets enemy alliance scores to **0**, and resets `isReset` to `true`, providing a completely fresh, zeroed-out live tracker for the new event.
+
 ## [1.48.57] - 2026-07-26
 ### Crash-Proof Showdown Event Reset Workflow
 - **Crash-Proof Event Reset**: Updated `window.resetCurrentShowdown()` and `views.showdown()` with explicit reset flags (`showdown_meta/isReset`), atomic node cleanup, and cache purging to guarantee that clicking **`🔄 Reset Event`** clears live scores cleanly with zero crashes or forced re-seeding.
