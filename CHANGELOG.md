@@ -1,3 +1,8 @@
+## [1.48.30] - 2026-07-26
+### Added Direct Showdown Vault Links Everywhere
+- **Top Navigation Bar Links**: Added direct **`📜 Showdown Vault`** sub-links under both `Events ▾` and `Leaderboards ▾` in the main top navigation bar.
+- **Admin Menu Open Vault Button**: Added a prominent cyan **`📜 Open Vault`** button directly into the `Showdown Data Entry` admin header bar.
+
 ## [1.48.29] - 2026-07-26
 ### Prominently Exposed Option A Sync & Delete Archive Tools
 - **Permanently Exposed Manager Tools Bar**: Placed the `⚡ Sync All Sheets History (Option A)` button and `📋 Paste Custom Sheet Event` button directly inside the Vault modal header so they are 100% visible at all times.
