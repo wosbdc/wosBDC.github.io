@@ -4078,11 +4078,7 @@ window._sdHistoryState = {
 // Showdown Archive Management & Importer Suite
 window.deleteShowdownArchive = async (timestamp, dateStr = '') => {
     if (!timestamp) return;
-    const isManager = typeof currentUser !== 'undefined' && (window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4');
-    if (!isManager) {
-        if (window.showToast) window.showToast("Only R4/R5 managers can delete archives", "error");
-        return;
-    }
+    
     const confirmed = await window.customConfirm(`🗑️ Are you sure you want to DELETE the archived Showdown event from ${dateStr || timestamp}? This cannot be undone.`);
     if (!confirmed) return;
     try {
@@ -4096,11 +4092,7 @@ window.deleteShowdownArchive = async (timestamp, dateStr = '') => {
 };
 
 window.syncGoogleSheetsHistoryToVault = async (btnEl = null) => {
-    const isManager = typeof currentUser !== 'undefined' && (window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4');
-    if (!isManager) {
-        if (window.showToast) window.showToast("Only R4/R5 managers can sync history to vault", "error");
-        return;
-    }
+    
     let origText = btnEl ? btnEl.innerHTML : '';
     if (btnEl) { btnEl.disabled = true; btnEl.innerHTML = '⏳ Syncing Sheets...'; }
     try {
@@ -4366,7 +4358,24 @@ window.openShowdownArchiveVaultModal = async (initialKey = 'all') => {
 
 window.buildVaultModalContent = (activeKey = 'all') => {
     const { historyObj, historyRows, livePlayers } = window._sdHistoryState;
-    
+
+    let deleteBtnHtml = (activeKey !== 'all' && historyObj && historyObj[activeKey]) ? `
+        <button onclick="window.deleteShowdownArchive('${activeKey}', '${escapeHTML(historyObj[activeKey].date || activeKey)}')" style="background:rgba(239,68,68,0.18); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:7px 14px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer; transition:all 0.2s ease; box-shadow:0 2px 8px rgba(239,68,68,0.15);">
+            🗑️ Delete This Archive
+        </button>
+    ` : '';
+
+    let adminBarHtml = `
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:15px; padding:12px 16px; background:linear-gradient(135deg, rgba(255,215,0,0.08) 0%, rgba(255,215,0,0.02) 100%); border:1px solid rgba(255,215,0,0.25); border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.2);">
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                <span style="font-weight:bold; color:#FFD700; font-size:12px; display:flex; align-items:center; gap:4px;">⚡ Manager Tools:</span>
+                <button onclick="window.syncGoogleSheetsHistoryToVault(this)" style="background:var(--accent); color:var(--bg-main); border:none; padding:7px 14px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer; box-shadow:0 2px 8px rgba(6,182,212,0.2);">⚡ Sync All Sheets History (Option A)</button>
+                <button onclick="window.openShowdownPasteImporterModal()" style="background:rgba(255,255,255,0.08); color:var(--text-main); border:1px solid var(--border); padding:7px 14px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">📋 Paste Custom Sheet Event</button>
+            </div>
+            ${deleteBtnHtml}
+        </div>
+    `;
+
     let optionsHtml = `<option value="all" ${activeKey === 'all' ? 'selected' : ''}>🌟 All-Time Combined Leaderboard</option>`;
     const archiveKeys = Object.keys(historyObj).sort((a,b) => Number(b) - Number(a));
     archiveKeys.forEach(key => {

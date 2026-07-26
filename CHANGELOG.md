@@ -1,3 +1,8 @@
+## [1.48.29] - 2026-07-26
+### Prominently Exposed Option A Sync & Delete Archive Tools
+- **Permanently Exposed Manager Tools Bar**: Placed the `⚡ Sync All Sheets History (Option A)` button and `📋 Paste Custom Sheet Event` button directly inside the Vault modal header so they are 100% visible at all times.
+- **Unrestricted Archive Deletion**: Made `🗑️ Delete This Archive` button directly visible whenever any past archived Showdown event is selected inside the Vault modal.
+
 ## [1.48.28] - 2026-07-26
 ### Added Archive Deletion & 1-Click Google Sheets Importer Suite
 - **1-Click Delete Archive (`window.deleteShowdownArchive`)**: Added an inline red `🗑️ Delete This Archive` button inside the Vault modal for R4/R5 managers to immediately remove unneeded or test archives.
