@@ -1,3 +1,7 @@
+## [1.48.36] - 2026-07-26
+### Tailored 4-Block Header Extractor for Google Sheets Showdown History
+- **Enhanced Header Pattern Regex**: Tailored `syncGoogleSheetsHistoryToVault` date range & alliance tag extraction for exact sheet headers (`Block 4 ([NYd] シトリン): June 22 – June 28, 2026`, `Block 3 ([000]黃楓谷): June 29 – July 5, 2026`, `Block 2 ([NBD]ムラタク): July 6 – July 12, 2026`, `Block 1 ([RED]Army): July 13 – July 19, 2026`).
+
 ## [1.48.35] - 2026-07-26
 ### Fixed Duplicate Events on Sync & Automatic Vault Cleanup
 - **Resolved Duplicate Sync Accumulation**: Updated `syncGoogleSheetsHistoryToVault` to automatically clear old/stale history nodes in Firebase RTDB before uploading freshly parsed event blocks from Google Sheets.

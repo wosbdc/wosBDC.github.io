@@ -4249,18 +4249,22 @@ window.syncGoogleSheetsHistoryToVault = async (btnEl = null) => {
             let col1 = String(row[1] || '').trim();
             let col2 = String(row[2] || '').trim();
 
-            if (/date/i.test(fullRowStr) || /\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|\d{1,2}\/\d{1,2}\/\d{2,4}|\d{4}-\d{2}-\d{2})\b/i.test(fullRowStr)) {
-                let dateMatch = fullRowStr.match(/(?:date\s*:?\s*)?([a-z]{3,9}\s+\d{1,2},?\s+\d{4}|\d{1,2}\/\d{1,2}\/\d{2,4}|\d{4}-\d{2}-\d{2}|[a-z]{3,9}\s+\d{1,2})/i);
-                if (dateMatch && dateMatch[1]) {
-                    currentDate = dateMatch[1].replace(/^date\s*:?\s*/i, '').trim();
-                }
+            // Extract Date Range e.g. "July 13 – July 19, 2026" or "June 22 – June 28, 2026"
+            let dateMatch = fullRowStr.match(/\b(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b\s+\d{1,2}(?:\s*[\u2013\u2014\-–—:]\s*(?:[a-z]+\s+)?\d{1,2})?,?\s*\d{4}/i);
+            if (dateMatch) {
+                currentDate = dateMatch[0].trim();
             }
 
-            if (/vs|enemy|opponent|alliance|versus/i.test(fullRowStr)) {
-                let enemyClean = fullRowStr.replace(/^.*?(?:vs\.?|versus|enemy\s*alliance|enemy|opponent|alliance)\s*:?\s*/i, '').trim();
-                if (enemyClean && !/ranking|member|name|date|day/i.test(enemyClean)) {
-                    currentEnemy = enemyClean;
+            // Extract Enemy Alliance Name e.g. "Block 4 ([NYd] シトリン)", "([000]黃楓谷)", "[NBD]ムラタク", "[RED]Army"
+            let enemyMatch = fullRowStr.match(/(?:block\s*\d+\s*)?(?:\(([^)]+)\)|(?:vs\.?|versus|enemy\s*alliance|enemy|opponent|alliance)\s*:?\s*([^\s:(]+(?:[\s:][^\s:(]+)*))/i);
+            if (enemyMatch) {
+                let extracted = (enemyMatch[1] || enemyMatch[2] || '').trim();
+                if (extracted && !/ranking|member|name|date|day|winners|alliance score/i.test(extracted)) {
+                    currentEnemy = extracted;
                 }
+            } else if (/\[.+\]/.test(fullRowStr)) {
+                let tagMatch = fullRowStr.match(/(\[[^\]]+\][^\s:()]+(?:\s+[^\s:()]+)*)/);
+                if (tagMatch) currentEnemy = tagMatch[1].trim();
             }
 
             if (col1.toLowerCase() === 'ranking' && (col2.toLowerCase() === 'member' || col2.toLowerCase() === 'name')) {
