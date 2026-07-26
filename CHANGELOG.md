@@ -1,3 +1,7 @@
+## [1.48.53] - 2026-07-26
+### Seeded Vault & Live Tracker with July 20–26 Dataset
+- **Vault & Live Seeder (`window.ensureJuly20BlockInHistory`)**: Added automatic initialization of **July 20 – July 26, 2026** (vs `[WWA] Whiteoutwarriors`) featuring Thadwarf's **29,515,364** score and all alliance members into both `showdown_meta/history` (Vault) and `showdown_live` (Live Tracker).
+
 ## [1.48.52] - 2026-07-26
 ### Cleaned `historyObj` Declaration Scope in `views.showdown`
 - **Scope Fix**: Relocated `historyObj` and `metaData` declarations to the very top of `views.showdown()` right after `Promise.all`, resolving the `Cannot access 'historyObj' before initialization` ReferenceError completely.

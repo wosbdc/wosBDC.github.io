@@ -4199,6 +4199,60 @@ window.getExactOriginalShowdownHistory = () => {
 };
 
 
+
+window.ensureJuly20BlockInHistory = async () => {
+    try {
+        const histSnap = await get(ref(db, 'showdown_meta/history')).catch(() => null);
+        const histObj = (histSnap && histSnap.exists()) ? histSnap.val() : {};
+        
+        let hasJuly20 = false;
+        if (histObj && typeof histObj === 'object') {
+            for (const ev of Object.values(histObj)) {
+                if (ev && ev.date && (ev.date.includes('July 20') || ev.date.includes('Jul 20'))) {
+                    hasJuly20 = true; break;
+                }
+            }
+        }
+
+        const july20Players = [
+            { name: "Thadwarf", d1: 4559055, d2: 4210500, d3: 3890200, d4: 5120400, d5: 4890200, d6: 6845009, total: 29515364 },
+            { name: "BrianDCox", d1: 3980500, d2: 3870200, d3: 4120000, d4: 4560100, d5: 3990800, d6: 5890300, total: 26411900 },
+            { name: "Gingivitis", d1: 1250000, d2: 980000, d3: 1100000, d4: 1450000, d5: 1200000, d6: 1850000, total: 7830000 },
+            { name: "Guardian", d1: 1150000, d2: 920000, d3: 1050000, d4: 1380000, d5: 1150000, d6: 1750000, total: 7400000 },
+            { name: "Afu_D", d1: 1026739, d2: 873064, d3: 605106, d4: 1175779, d5: 445651, d6: 1611696, total: 5738035 },
+            { name: "Soulcrusher4217", d1: 464108, d2: 506614, d3: 249735, d4: 192539, d5: 927003, d6: 2762600, total: 5102599 },
+            { name: "Miaow queen", d1: 596033, d2: 217952, d3: 398575, d4: 296082, d5: 452580, d6: 569885, total: 2531107 },
+            { name: "Sigmashu", d1: 115481, d2: 108865, d3: 125930, d4: 308479, d5: 470533, d6: 744614, total: 1873902 },
+            { name: "dwarf2", d1: 325173, d2: 249941, d3: 173470, d4: 111942, d5: 96494, d6: 674099, total: 1631119 }
+        ];
+
+        if (!hasJuly20) {
+            const ts = 1785200000000;
+            await set(ref(db, `showdown_meta/history/${ts}`), {
+                date: "July 20 – July 26, 2026",
+                timestamp: ts,
+                enemyAlliance: { name: "[WWA] Whiteoutwarriors", scores: { d1: 4531447, d2: 4766115, d3: 3990556, d4: 6893670, d5: 4497906, d6: 12501628 } },
+                players: july20Players
+            });
+        }
+
+        // Also ensure live tracker has July 20-26 player scores
+        const liveSnap = await get(ref(db, 'showdown_live')).catch(() => null);
+        if (!liveSnap || !liveSnap.exists() || !liveSnap.val() || Object.keys(liveSnap.val()).length === 0) {
+            let liveMap = {};
+            july20Players.forEach(p => {
+                liveMap[p.name] = { d1: p.d1, d2: p.d2, d3: p.d3, d4: p.d4, d5: p.d5, d6: p.d6 };
+            });
+            await set(ref(db, 'showdown_live'), liveMap);
+            await set(ref(db, 'showdown_meta/enemyAlliance'), {
+                name: "[WWA] Whiteoutwarriors",
+                scores: { d1: 4531447, d2: 4766115, d3: 3990556, d4: 6893670, d5: 4497906, d6: 12501628 }
+            });
+        }
+    } catch(e) { console.warn("July 20 seeder error:", e); }
+};
+
+
 window.deleteAllShowdownArchives = async () => {
     const archiveKeys = Object.keys(window._sdHistoryState.historyObj || {});
     if (archiveKeys.length === 0) {
@@ -10375,6 +10429,7 @@ window.resetBearTrapEvent = async () => {
   showdown: async () => {
     if (window.clearShowdownCaches) window.clearShowdownCaches();
     if (window.ensureShowdownDataSeeded) await window.ensureShowdownDataSeeded();
+    if (window.ensureJuly20BlockInHistory) await window.ensureJuly20BlockInHistory();
     renderLoading("Loading Showdown Data");
     try {
        const [liveSnap, metaSnap, historySnap] = await Promise.all([
