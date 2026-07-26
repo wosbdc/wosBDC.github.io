@@ -3865,7 +3865,7 @@ if (!window._autocompleteListenerAdded) {
 }
 
 window.archiveCurrentShowdownToFirebase = async () => {
-    const confirmed = await window.customConfirm("⚠️ WARNING: Do NOT archive until the Showdown event is 100% finished (after Day 6)!\n\nAre you sure you want to archive current scores into All-Time History?");
+    const confirmed = await window.customConfirm("📁 Save a historical snapshot of current Showdown scores into All-Time History?");
     if (!confirmed) return;
     try {
         const liveSnap = await get(ref(db, 'showdown_live'));
@@ -3875,7 +3875,7 @@ window.archiveCurrentShowdownToFirebase = async () => {
         
         let pList = [];
         for (const [pName, scores] of Object.entries(liveData)) {
-            if (!scores) continue;
+            if (!scores || typeof scores !== 'object') continue;
             let pd1 = scores.d1 || 0;
             let pd2 = scores.d2 || 0;
             let pd3 = scores.d3 || 0;
@@ -3887,6 +3887,14 @@ window.archiveCurrentShowdownToFirebase = async () => {
         }
         pList.sort((a, b) => b.total - a.total);
         
+        // 2D Array format for Google Sheets compatibility
+        const tableRows = [
+            ["", "Date:", dateStr, "", "", "", "", "", "", ""],
+            ["", "Ranking", "Member", "Day 1", "Day 2", "Day 3", "Day 4", "Day 5", "Day 6", "Total"],
+            ...pList.map((p, idx) => ["", idx + 1, p.name, p.d1, p.d2, p.d3, p.d4, p.d5, p.d6, p.total]),
+            ["", "", "", "", "", "", "", "", "", ""]
+        ];
+
         const archivePayload = {
             date: dateStr,
             timestamp: timestamp,
@@ -3900,10 +3908,11 @@ window.archiveCurrentShowdownToFirebase = async () => {
                 d5: p.d5,
                 d6: p.d6,
                 total: p.total
-            }))
+            })),
+            tableRows: tableRows
         };
         
-        // 1. Write structured archive object to showdown_meta/history/${timestamp} (showdown_meta is pre-permitted in RTDB security rules)
+        // Save to permitted Firebase node
         let savedSuccessfully = false;
         try {
             await set(ref(db, `showdown_meta/history/${timestamp}`), archivePayload);
@@ -3923,24 +3932,27 @@ window.archiveCurrentShowdownToFirebase = async () => {
             }
         }
 
-        // 2. Reset live scores by deleting child keys individually
-        const liveKeys = Object.keys(liveData);
-        if (liveKeys.length > 0) {
-            await Promise.all(liveKeys.map(k => set(ref(db, `showdown_live/${k}`), null).catch(() => null)));
-        }
-
-        // 3. Reset enemy alliance metadata
-        try {
-            await set(ref(db, 'showdown_meta/enemyAlliance'), { name: "Enemy Alliance", scores: {} });
-        } catch(e) {}
-
         if (window.logAdminAction) {
             try {
-                window.logAdminAction("Showdown Event Archived", `Archived current Showdown scores (${pList.length} players) to Firebase History and reset live event`);
+                window.logAdminAction("Showdown Event Archived", `Archived current Showdown scores (${pList.length} players) into History`);
             } catch(e) {}
         }
         
-        if (window.showToast) window.showToast("Successfully archived current Showdown event into Firebase History & reset live event!", "success");
+        // Ask user if they also want to reset live scores now
+        const resetNow = await window.customConfirm("✅ Showdown event successfully saved to History!\n\nDo you want to RESET the live tracker now for the next event?");
+        if (resetNow) {
+            const liveKeys = Object.keys(liveData);
+            if (liveKeys.length > 0) {
+                await Promise.all(liveKeys.map(k => set(ref(db, `showdown_live/${k}`), null).catch(() => null)));
+            }
+            try {
+                await set(ref(db, 'showdown_meta/enemyAlliance'), { name: "Enemy Alliance", scores: {} });
+            } catch(e) {}
+            if (window.showToast) window.showToast("Showdown archived to History AND live event reset!", "success");
+        } else {
+            if (window.showToast) window.showToast("Showdown archived to History (live tracker kept active)!", "success");
+        }
+
         if (typeof views !== 'undefined' && views.showdownAdmin) views.showdownAdmin();
     } catch(err) {
         console.error("Error archiving showdown event:", err);

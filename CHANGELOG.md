@@ -1,3 +1,8 @@
+## [1.48.16] - 2026-07-26
+### Improved Showdown Archiving Workflow
+- **Dual Format Payload**: Saved both structured player objects (`players`) and standard 2D matrix rows (`tableRows`) under `showdown_meta/history/${timestamp}` to maintain 100% compatibility with Google Sheets and the Leaderboards history reader.
+- **Optional Live Reset Prompt**: Separated archiving from automatic wiping. Admins are now asked after archiving whether they want to reset live scores immediately or keep live tracking active.
+
 ## [1.48.15] - 2026-07-26
 ### Comprehensive Protection Against Showdown d1 Property Crash
 - **Hardened `processEvent`**: Added object type check (`if (!p || typeof p !== 'object') return;`) inside history event processor (~line 4313).
