@@ -1,3 +1,8 @@
+## [1.48.45] - 2026-07-26
+### Purged All Synthetic Code & Restored Pure Google Sheets Parsing
+- **Removed Synthetic Data Generators**: Completely purged mock synthetic dataset generators (`getJuly2026DefaultBlock`, `restoreJuly20to26Event`) to rely 100% on pure Google Sheets and Firebase Realtime Database entries.
+- **Pure Sync Engine**: `syncGoogleSheetsHistoryToVault` now processes 100% exact rows directly from your Google Sheets `"Showdown History"` tab.
+
 ## [1.48.44] - 2026-07-26
 ### Added 1-Click Restore Original Data Button in Showdown Admin
 - **`👑 Restore Original Data (Thadwarf: 29.5M)` Button**: Added a dedicated golden restore button directly inside `⚔️ Showdown Data Entry` to restore July 20 – July 26, 2026 data with Thadwarf's **29,515,364** total score in 1 tap through your authenticated browser session.
