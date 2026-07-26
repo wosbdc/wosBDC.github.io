@@ -9647,7 +9647,7 @@ window.resetBearTrapEvent = async () => {
        }
 
        // Enemy Row
-       allianceCard += `<tr><td style="font-weight:bold; position:sticky; left:0; background:var(--card-bg); z-index:2; box-shadow: 1px 0 0 var(--border);">${enemyAlliance.name || 'Enemy Alliance'}</td><td style="${enemyTotalStyle}">${enemyTotal.toLocaleString()}</td>`;
+       allianceCard += `<tr><td style="font-weight:bold; position:sticky; left:0; background:var(--card-bg); z-index:2; box-shadow: 1px 0 0 var(--border);">${enemyName}</td><td style="${enemyTotalStyle}">${enemyTotal.toLocaleString()}</td>`;
        for(let i=1; i<=6; i++) {
            let eScore = eScores['d'+i] || 0;
            let oScore = ourScores['d'+i] || 0;
@@ -9662,7 +9662,7 @@ window.resetBearTrapEvent = async () => {
        // Our Row
        allianceCard += `<tr><td style="font-weight:bold; position:sticky; left:0; background:var(--card-bg); z-index:2; box-shadow: 1px 0 0 var(--border);">Our Alliance</td><td style="${ourTotalStyle}">${ourScores.total.toLocaleString()}</td>`;
        for(let i=1; i<=6; i++) {
-           let eScore = enemyAlliance.scores['d'+i] || 0;
+           let eScore = eScores['d'+i] || 0;
            let oScore = ourScores['d'+i] || 0;
            let style = "font-weight:bold; border-right: 1px solid rgba(255,255,255,0.06); text-align:center;";
            if (eScore > 0 || oScore > 0) {

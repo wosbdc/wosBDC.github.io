@@ -1,3 +1,8 @@
+## [1.48.25] - 2026-07-26
+### Fixed Hidden Unsafe Property Reference in Events > Showdown
+- **Resolved TypeError Crash**: Fixed line 9665 inside `views.showdown` where `enemyAlliance.scores['d'+i]` was still being called directly instead of using the safe `eScores['d'+i]` object guard.
+- **Events > Showdown Page Restoration**: Restored `Events > Showdown` rendering cleanly under all state scenarios (including empty, reset, or missing enemy alliance data).
+
 ## [1.48.24] - 2026-07-26
 ### Optimized Responsive Pending Message Layout
 - **Compact & Responsive Pending State**: Shortened the pending message text (`⏳ Event Pending — Waiting for Day 1 scores`), enabled word wrapping, and styled the banner with `flex-wrap: wrap` so it fits cleanly inside card boundaries on mobile phones and small screens.
