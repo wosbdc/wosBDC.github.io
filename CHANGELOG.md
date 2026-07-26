@@ -1,3 +1,7 @@
+## [1.48.46] - 2026-07-26
+### Multi-Node Firebase RTDB Restore Picker Suite
+- **Universal Archive Scanner**: Updated `window.showRestoreArchiveSelectorModal` to search across ALL 3 Firebase archive nodes (`showdown_meta/history`, `showdown_history`, `activity_history_archives`), displaying every saved snapshot with its date, opponent, player count, and source location.
+
 ## [1.48.45] - 2026-07-26
 ### Purged All Synthetic Code & Restored Pure Google Sheets Parsing
 - **Removed Synthetic Data Generators**: Completely purged mock synthetic dataset generators (`getJuly2026DefaultBlock`, `restoreJuly20to26Event`) to rely 100% on pure Google Sheets and Firebase Realtime Database entries.
