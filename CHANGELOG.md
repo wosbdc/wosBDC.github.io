@@ -1,3 +1,7 @@
+## [1.48.63] - 2026-07-26
+### Guaranteed 5-Block Historical Dropdown Integration
+- **Fallback Merging Engine**: Embedded `window.DEFAULT_SD_HISTORY_BLOCKS` and `getMergedShowdownHistoryObj()` to guarantee that all 5 historical event blocks (`July 20–26`, `June 22–28`, `June 15–21`, `June 8–14`, `June 1–7`) are 100% present in all Vault modals, restore dropdowns, and Leaderboard historical selectors regardless of network state.
+
 ## [1.48.62] - 2026-07-26
 ### Direct Reset Action Button on `Events > Showdown` Page
 - **Direct Page Reset**: Added a prominent **`🔄 Reset Event`** action button right at the top of the **`Events > Showdown`** page (next to **`📜 View Showdown Archive Vault`**), allowing admins to reset the live event tracker directly from the Showdown view in 1 tap.
