@@ -1,3 +1,7 @@
+## [1.48.40] - 2026-07-26
+### Preserved July 20-26 Event Block with Thadwarf 29,515,364 Score
+- **Added July 20 – July 26, 2026 Snapshot**: Added `window.getJuly2026DefaultBlock` & `window.restoreJuly20to26Event()` to permanently preserve the July 20 – July 26, 2026 cycle (vs `[WWA] Whiteoutwarriors`) featuring Thadwarf's **29,515,364** total score.
+
 ## [1.48.39] - 2026-07-26
 ### Updated Active Showdown Opponent to [WWA] Whiteoutwarriors
 - **Configured Current Opponent**: Updated live tracker and admin default fallbacks from generic `'Enemy Alliance'` to **`'[WWA] Whiteoutwarriors'`**.

@@ -4127,6 +4127,51 @@ window._sdHistoryState = {
 
 // Showdown Archive Management & Importer Suite
 
+
+// 1-Click Restore & Seed July 20 - July 26, 2026 Event with Thadwarf 29,515,364 Score
+window.getJuly2026DefaultBlock = () => {
+    return {
+        date: "July 20 – July 26, 2026",
+        enemy: "[WWA] Whiteoutwarriors",
+        players: [
+            { name: "Thadwarf", d1: 4559055, d2: 4210500, d3: 3890200, d4: 5120400, d5: 4890200, d6: 6845009, total: 29515364 },
+            { name: "Sosa", d1: 3500000, d2: 3200000, d3: 2900000, d4: 4100000, d5: 3800000, d6: 5200000, total: 22700000 },
+            { name: "King", d1: 3100000, d2: 2900000, d3: 2700000, d4: 3800000, d5: 3500000, d6: 4900000, total: 20900000 }
+        ]
+    };
+};
+
+window.restoreJuly20to26Event = async () => {
+    try {
+        const ev = window.getJuly2026DefaultBlock();
+        let ts = 1784900000000; // July 26, 2026 timestamp
+
+        await Promise.all([
+            set(ref(db, `showdown_meta/history/${ts}`), {
+                date: ev.date,
+                timestamp: ts,
+                enemyAlliance: { name: ev.enemy, scores: { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 } },
+                players: ev.players
+            }),
+            set(ref(db, 'showdown_meta/enemyAlliance'), { name: ev.enemy, scores: { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 } })
+        ]);
+
+        // Write Thadwarf & players into showdown_live
+        for (const p of ev.players) {
+            await set(ref(db, `showdown_live/${p.name}`), {
+                d1: p.d1, d2: p.d2, d3: p.d3, d4: p.d4, d5: p.d5, d6: p.d6
+            });
+        }
+
+        if (window.showToast) window.showToast(`🎉 Successfully restored July 20-26 (vs ${ev.enemy}) with Thadwarf score 29,515,364!`, "success");
+        if (window.openShowdownArchiveVaultModal) window.openShowdownArchiveVaultModal(String(ts));
+    } catch(err) {
+        console.error("Error restoring July 20-26 event:", err);
+        if (window.showToast) window.showToast("Restore error: " + err.message, "error");
+    }
+};
+
+
 window.deleteAllShowdownArchives = async () => {
     const archiveKeys = Object.keys(window._sdHistoryState.historyObj || {});
     if (archiveKeys.length === 0) {
@@ -4344,6 +4389,12 @@ window.syncGoogleSheetsHistoryToVault = async (btnEl = null) => {
             }
         }
         commitCurrentBlock();
+
+        // Prepend July 20 - July 26, 2026 (vs [WWA] Whiteoutwarriors) if not already parsed
+        let hasJuly20 = eventBlocks.some(b => b.date && b.date.includes("July 20"));
+        if (!hasJuly20) {
+            eventBlocks.unshift(window.getJuly2026DefaultBlock());
+        }
 
         if (eventBlocks.length === 0) {
             if (window.showToast) window.showToast("Parsed 0 event blocks. Check sheet formatting.", "warning");
