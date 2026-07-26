@@ -1,6 +1,6 @@
 import './style.css'
 import { initPresence, listenToAuth, loginUser, logoutUser, registerUser, uploadAvatar, deleteAvatar, db, auth, requestPushPermission, listenForForegroundMessages, linkAltAccount, unlinkAltAccount, loginWithGoogle, resetPassword } from './src/firebase.js'
-import { ref, onValue, get, set, remove } from 'firebase/database'
+import { ref, onValue, get, set, remove, update } from 'firebase/database'
 import pkg from './package.json'
 
 
