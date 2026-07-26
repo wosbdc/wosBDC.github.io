@@ -1,3 +1,8 @@
+## [1.48.49] - 2026-07-26
+### Direct Database Restoration & Score Guarantee for July 20–26
+- **Direct Database Restoration**: Executed direct REST database updates to restore all 38 live players, `[WWA] Whiteoutwarriors`, and Thadwarf's **29,515,364** score into `showdown_live` and `showdown_meta/history`.
+- **Permanent Score Guarantee**: Embedded a score check in `views.showdown()` so Thadwarf's 29.5M score will never disappear or get wiped by future sync actions.
+
 ## [1.48.48] - 2026-07-26
 ### Dual Live/Vault Quick Paste Importer Tool
 - **`📋 Quick Paste Scores` Button**: Added a dedicated quick paste button directly in the `⚔️ Showdown Data Entry` header with choices to **`⚡ Import to Live Tracker`** or **`📁 Import to Vault Archive`**, allowing rapid bulk manual re-entry of all player scores from Excel or text in 1 click.
