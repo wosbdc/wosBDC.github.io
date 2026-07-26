@@ -1,3 +1,7 @@
+## [1.48.54] - 2026-07-26
+### Updated Top 2 Scores for July 20–26
+- **Top 2 Scores Sync**: Updated July 20 – July 26, 2026 dataset so **#1 Thadwarf (29,515,364)** and **#2 Soulcrusher4217 (19,294,803)** are locked at the top of the leaderboard in both `showdown_live` and `showdown_meta/history`.
+
 ## [1.48.53] - 2026-07-26
 ### Seeded Vault & Live Tracker with July 20–26 Dataset
 - **Vault & Live Seeder (`window.ensureJuly20BlockInHistory`)**: Added automatic initialization of **July 20 – July 26, 2026** (vs `[WWA] Whiteoutwarriors`) featuring Thadwarf's **29,515,364** score and all alliance members into both `showdown_meta/history` (Vault) and `showdown_live` (Live Tracker).

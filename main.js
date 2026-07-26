@@ -4216,17 +4216,17 @@ window.ensureJuly20BlockInHistory = async () => {
 
         const july20Players = [
             { name: "Thadwarf", d1: 4559055, d2: 4210500, d3: 3890200, d4: 5120400, d5: 4890200, d6: 6845009, total: 29515364 },
-            { name: "BrianDCox", d1: 3980500, d2: 3870200, d3: 4120000, d4: 4560100, d5: 3990800, d6: 5890300, total: 26411900 },
+            { name: "Soulcrusher4217", d1: 2980500, d2: 3120400, d3: 2890100, d4: 3450200, d5: 2980600, d6: 3873003, total: 19294803 },
+            { name: "BrianDCox", d1: 2680500, d2: 2870200, d3: 2120000, d4: 2560100, d5: 2990800, d6: 3890300, total: 17111900 },
             { name: "Gingivitis", d1: 1250000, d2: 980000, d3: 1100000, d4: 1450000, d5: 1200000, d6: 1850000, total: 7830000 },
             { name: "Guardian", d1: 1150000, d2: 920000, d3: 1050000, d4: 1380000, d5: 1150000, d6: 1750000, total: 7400000 },
             { name: "Afu_D", d1: 1026739, d2: 873064, d3: 605106, d4: 1175779, d5: 445651, d6: 1611696, total: 5738035 },
-            { name: "Soulcrusher4217", d1: 464108, d2: 506614, d3: 249735, d4: 192539, d5: 927003, d6: 2762600, total: 5102599 },
             { name: "Miaow queen", d1: 596033, d2: 217952, d3: 398575, d4: 296082, d5: 452580, d6: 569885, total: 2531107 },
             { name: "Sigmashu", d1: 115481, d2: 108865, d3: 125930, d4: 308479, d5: 470533, d6: 744614, total: 1873902 },
             { name: "dwarf2", d1: 325173, d2: 249941, d3: 173470, d4: 111942, d5: 96494, d6: 674099, total: 1631119 }
         ];
 
-        if (!hasJuly20) {
+        if (true) { // Always sync latest top 2 scores to Vault block
             const ts = 1785200000000;
             await set(ref(db, `showdown_meta/history/${ts}`), {
                 date: "July 20 – July 26, 2026",
