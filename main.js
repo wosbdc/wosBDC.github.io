@@ -4067,6 +4067,162 @@ window.restoreLatestShowdownArchive = async () => {
     }
 };
 
+window._sdHistoryState = {
+    historyObj: {},
+    historyRows: [],
+    livePlayers: [],
+    activeFilter: 'all'
+};
+
+window.renderShowdownHistoryCard = (historyObj = {}, historyRows = [], livePlayers = [], activeFilter = 'all') => {
+    window._sdHistoryState.historyObj = historyObj || {};
+    window._sdHistoryState.historyRows = historyRows || [];
+    window._sdHistoryState.livePlayers = livePlayers || [];
+    window._sdHistoryState.activeFilter = activeFilter || 'all';
+
+    return window.buildShowdownHistoryCardHtml(activeFilter);
+};
+
+window.buildShowdownHistoryCardHtml = (activeFilter = 'all') => {
+    const { historyObj, historyRows, livePlayers } = window._sdHistoryState;
+    
+    let optionsHtml = `<option value="all" ${activeFilter === 'all' ? 'selected' : ''}>🌟 All-Time Combined</option>`;
+    
+    const archiveKeys = Object.keys(historyObj).sort((a,b) => Number(b) - Number(a));
+    archiveKeys.forEach(key => {
+        let entry = historyObj[key];
+        let dStr = (entry && entry.date) ? entry.date : new Date(Number(key) || key).toLocaleDateString([], {month:'short', day:'numeric', year:'numeric'});
+        optionsHtml += `<option value="${key}" ${activeFilter === String(key) ? 'selected' : ''}>📅 Event: ${dStr}</option>`;
+    });
+
+    let contentHtml = "";
+
+    if (activeFilter === 'all') {
+        let allTimePlayers = calculateAllTimeShowdown(historyRows);
+        let combinedMap = {};
+        allTimePlayers.forEach(p => {
+            combinedMap[p.name.toLowerCase()] = { name: p.name, horns: p.horns, wins: p.wins, total: p.total };
+        });
+        livePlayers.forEach(p => {
+            let k = p.name.toLowerCase();
+            if (!combinedMap[k]) combinedMap[k] = { name: p.name, horns: 0, wins: 0, total: 0 };
+            combinedMap[k].horns += (p.horns || 0);
+            combinedMap[k].wins += (p.wins || 0);
+            combinedMap[k].total += (p.total || 0);
+        });
+        allTimePlayers = Object.values(combinedMap).sort((a, b) => b.horns !== a.horns ? b.horns - a.horns : b.total - a.total);
+        
+        let allTimeMvpHtml = "";
+        if (allTimePlayers.length > 0 && allTimePlayers[0].horns > 0) {
+            let maxHorns = allTimePlayers[0].horns;
+            let topChamps = allTimePlayers.filter(p => p.horns === maxHorns);
+            let champTitle = topChamps.length > 1 ? "👑 All-Time Co-Champions" : "👑 All-Time Champion";
+            let champDisplayNames = topChamps.map(p => escapeHTML(p.name)).join(" & ");
+            let avatarStack = renderAvatarStack(topChamps);
+            allTimeMvpHtml = `
+                <div style="background: linear-gradient(135deg, rgba(255,215,0,0.1) 0%, rgba(255,215,0,0.02) 100%); border: 1px solid rgba(255,215,0,0.3); border-radius: 12px; padding: 15px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px;">
+                  ${avatarStack}
+                  <div style="flex: 1; text-align: left;">
+                    <div style="color: #FFD700; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">${champTitle}</div>
+                    <div style="color: var(--text-main); font-size: 18px; font-weight: bold;">${champDisplayNames}</div>
+                  </div>
+                  <div style="text-align: right;">
+                    <div style="color: var(--text-muted); font-size: 11px;">Total Horns</div>
+                    <div style="color: var(--accent); font-size: 20px; font-weight: bold;">${maxHorns}</div>
+                  </div>
+                </div>
+            `;
+        }
+
+        let tableRows = '';
+        allTimePlayers.forEach((p, idx) => {
+            tableRows += `<tr>
+                <td style="font-weight:bold; color:var(--text-muted);">${idx + 1}</td>
+                <td>${formatCell(p.name)}</td>
+                <td>${p.horns}</td>
+                <td>${p.wins}</td>
+                <td>${p.total > 0 ? p.total.toLocaleString() : '0'}</td>
+            </tr>`;
+        });
+
+        contentHtml = `${allTimeMvpHtml}
+            <div class="card-table-scroll">
+               <table style="min-width: max-content; width: 100%; text-align:left;"><thead><tr>
+                  <th>RANK</th><th>NAME</th><th>TOTAL HORNS</th><th>DAY WINS</th><th>TOTAL</th>
+               </tr></thead><tbody>${tableRows}</tbody></table>
+            </div>`;
+    } else {
+        const entry = historyObj[activeFilter];
+        if (entry) {
+            let archivedPlayers = Array.isArray(entry.players) ? entry.players : [];
+            archivedPlayers.sort((a,b) => (b.total||0) - (a.total||0));
+            let dStr = (entry && entry.date) ? entry.date : new Date(Number(activeFilter) || activeFilter).toLocaleDateString([], {month:'short', day:'numeric', year:'numeric'});
+            let enemy = entry.enemyAlliance || { name: 'Enemy Alliance' };
+            
+            let champName = archivedPlayers.length > 0 ? archivedPlayers[0].name : 'N/A';
+            let champScore = archivedPlayers.length > 0 ? archivedPlayers[0].total : 0;
+            
+            contentHtml = `
+                <div style="background: linear-gradient(135deg, rgba(6,182,212,0.1) 0%, rgba(6,182,212,0.02) 100%); border: 1px solid rgba(6,182,212,0.3); border-radius: 12px; padding: 15px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                  <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="font-size:24px;">📅</div>
+                    <div style="text-align: left;">
+                      <div style="color: var(--accent); font-size: 11px; font-weight: bold; text-transform: uppercase;">Archived Event: ${dStr}</div>
+                      <div style="color: var(--text-main); font-size: 16px; font-weight: bold;">Vs: ${escapeHTML(enemy.name || 'Enemy Alliance')}</div>
+                    </div>
+                  </div>
+                  <div style="text-align: right;">
+                    <div style="color: var(--text-muted); font-size: 11px;">Event Top Player</div>
+                    <div style="color: #FFD700; font-size: 15px; font-weight: bold;">${escapeHTML(champName)} (${(champScore||0).toLocaleString()})</div>
+                  </div>
+                </div>
+                <div class="card-table-scroll">
+                   <table style="min-width: max-content; width: 100%; text-align:left;"><thead><tr>
+                      <th>RANK</th><th>NAME</th><th>TOTAL SCORE</th><th>D1</th><th>D2</th><th>D3</th><th>D4</th><th>D5</th><th>D6</th>
+                   </tr></thead><tbody>`;
+            
+            archivedPlayers.forEach((p, idx) => {
+                contentHtml += `<tr>
+                    <td style="font-weight:bold; color:var(--text-muted);">${idx + 1}</td>
+                    <td>${formatCell(p.name)}</td>
+                    <td style="font-weight:bold; color:var(--accent);">${(p.total||0).toLocaleString()}</td>
+                    <td>${(p.d1||0) > 0 ? (p.d1||0).toLocaleString() : '-'}</td>
+                    <td>${(p.d2||0) > 0 ? (p.d2||0).toLocaleString() : '-'}</td>
+                    <td>${(p.d3||0) > 0 ? (p.d3||0).toLocaleString() : '-'}</td>
+                    <td>${(p.d4||0) > 0 ? (p.d4||0).toLocaleString() : '-'}</td>
+                    <td>${(p.d5||0) > 0 ? (p.d5||0).toLocaleString() : '-'}</td>
+                    <td>${(p.d6||0) > 0 ? (p.d6||0).toLocaleString() : '-'}</td>
+                </tr>`;
+            });
+            contentHtml += `</tbody></table></div>`;
+        }
+    }
+
+    return `<div class="card" style="flex: 1 1 0px; min-width: 300px;">
+      <div class="card-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <span>🏆 Showdown History & Archives</span>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:11px; color:var(--text-muted);">Event Filter:</span>
+          <select id="sdHistoryFilter" style="padding:6px 12px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;" onchange="window.filterShowdownHistoryView(this.value)">
+             ${optionsHtml}
+          </select>
+        </div>
+      </div>
+      <div id="sdHistoryContentArea">${contentHtml}</div>
+    </div>`;
+};
+
+window.filterShowdownHistoryView = (selectedVal) => {
+    window._sdHistoryState.activeFilter = selectedVal;
+    const target = document.getElementById('sdHistoryContentArea');
+    if (target) {
+        let tempDiv = document.createElement('div');
+        tempDiv.innerHTML = window.buildShowdownHistoryCardHtml(selectedVal);
+        let newContent = tempDiv.querySelector('#sdHistoryContentArea');
+        if (newContent) target.innerHTML = newContent.innerHTML;
+    }
+};
+
 // Showdown Missed Days Report Modal
 window.showMissedDaysReportModal = async (btnEl = null) => {
     let origHtml = '';
@@ -8810,12 +8966,14 @@ window.resetBearTrapEvent = async () => {
       }
       
       try {
-         const [liveSnap, metaSnap] = await Promise.all([
+         const [liveSnap, metaSnap, historySnap] = await Promise.all([
             get(ref(db, 'showdown_live')),
-            get(ref(db, 'showdown_meta'))
+            get(ref(db, 'showdown_meta')),
+            get(ref(db, 'showdown_meta/history')).catch(() => null)
          ]);
          
          const liveData = liveSnap.val() || {};
+         const historyObj = (historySnap && historySnap.exists() && historySnap.val()) ? historySnap.val() : {};
          
          let ourScores = { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 };
          let topPlayers = { d1:{score:0}, d2:{score:0}, d3:{score:0}, d4:{score:0}, d5:{score:0}, d6:{score:0} };
@@ -8947,92 +9105,7 @@ window.resetBearTrapEvent = async () => {
               rawHistory = rawHistory.data;
           }
           const historyRows = rawHistory ? (Array.isArray(rawHistory) ? rawHistory : Object.values(rawHistory)) : [];
-          if (historyRows.length > 0 || (players && players.length > 0)) {
-              let allTimePlayers = calculateAllTimeShowdown(historyRows);
-              
-              // Combine live active scores with all-time history
-              let combinedMap = {};
-              allTimePlayers.forEach(p => {
-                  combinedMap[p.name.toLowerCase()] = { name: p.name, horns: p.horns, wins: p.wins, total: p.total };
-              });
-              
-              players.forEach(p => {
-                  let key = p.name.toLowerCase();
-                  if (!combinedMap[key]) {
-                      combinedMap[key] = { name: p.name, horns: 0, wins: 0, total: 0 };
-                  }
-                  combinedMap[key].horns += (p.horns || 0);
-                  combinedMap[key].wins += (p.wins || 0);
-                  combinedMap[key].total += (p.total || 0);
-              });
-              
-              allTimePlayers = Object.values(combinedMap).sort((a, b) => {
-                  if (b.horns !== a.horns) return b.horns - a.horns;
-                  return b.total - a.total;
-              });
-
-              
-              let allTimeMvpHtml = "";
-              if (allTimePlayers.length > 0 && allTimePlayers[0].horns > 0) {
-                  let maxHorns = allTimePlayers[0].horns;
-                  let topChamps = allTimePlayers.filter(p => p.horns === maxHorns);
-                  let champTitle = topChamps.length > 1 ? "👑 All-Time Co-Champions" : "👑 All-Time Champion";
-                  let champDisplayNames = topChamps.map(p => escapeHTML(p.name)).join(" & ");
-                  let champName = topChamps[0].name;
-                  let champId = null;
-                  for (const [gid, name] of Object.entries(idToNameMap)) {
-                      if (name.toLowerCase() === champName.toLowerCase()) {
-                          champId = gid; break;
-                      }
-                  }
-                  let allTimeAvatarStackHtml = renderAvatarStack(topChamps);
-                  
-                  allTimeMvpHtml = `
-                    <div style="background: linear-gradient(135deg, rgba(255,215,0,0.1) 0%, rgba(255,215,0,0.02) 100%); border: 1px solid rgba(255,215,0,0.3); border-radius: 12px; padding: 15px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; box-shadow: 0 4px 15px rgba(255,215,0,0.05);">
-                      ${allTimeAvatarStackHtml}
-                      <div style="flex: 1; text-align: left;">
-                        <div style="color: #FFD700; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">${champTitle}</div>
-                        <div style="color: var(--text-main); font-size: 18px; font-weight: bold;">${champDisplayNames}</div>
-                      </div>
-                      <div style="text-align: right;">
-                        <div style="color: var(--text-muted); font-size: 11px;">Total Score</div>
-                        <div style="color: var(--accent); font-size: 20px; font-weight: bold;">${maxHorns}</div>
-                      </div>
-                    </div>
-                  `;
-              }
-
-              const showAllTime = (filterString && filterString.toLowerCase() === 'showdown');
-              const allTimeDisplayList = allTimePlayers.slice(0, 4);
-
-              allTimeShowdownHtml = `<div class="card" style="flex: 1 1 0px; min-width: 300px;"><div class="card-title">All-Time - Showdown Leaderboard</div>
-              ${allTimeMvpHtml}
-              <div class="card-table-scroll">
-                <table style="min-width: max-content; width: 100%; text-align:left;"><thead><tr>
-                   <th>RANK</th><th>NAME</th><th>TOTAL HORNS</th><th>DAY WINS</th><th>TOTAL</th>
-                </tr></thead><tbody>`;
-              
-              let currentAllTimeRank = 1;
-              allTimeDisplayList.forEach((p, index) => {
-                  if (index > 0) {
-                      let prev = allTimeDisplayList[index - 1];
-                      if (p.horns !== prev.horns) {
-                          currentAllTimeRank += 1;
-                      }
-                  }
-                  let isTie = allTimeDisplayList.filter(o => o.horns === p.horns).length > 1;
-                  let tieBadge = isTie ? ' <span style="font-size:11px; opacity:0.85;" title="Tied Rank">🤝</span>' : '';
-                  let rankDisplay = `${currentAllTimeRank}${tieBadge}`;
-                  allTimeShowdownHtml += `<tr>
-                     <td style="font-weight:bold; color:var(--text-muted);">${rankDisplay}</td>
-                     <td>${formatCell(p.name)}</td>
-                     <td>${p.horns}</td>
-                     <td>${p.wins}</td>
-                     <td>${p.total > 0 ? p.total.toLocaleString() : '0'}</td>
-                  </tr>`;
-              });
-              allTimeShowdownHtml += `</tbody></table></div></div>`;
-          }
+          allTimeShowdownHtml = window.renderShowdownHistoryCard(historyObj, historyRows, players, 'all');
          
          let totalAllianceScore = ourScores.d1 + ourScores.d2 + ourScores.d3 + ourScores.d4 + ourScores.d5 + ourScores.d6;
          ourScores.total = totalAllianceScore;
@@ -9507,13 +9580,15 @@ window.resetBearTrapEvent = async () => {
   showdown: async () => {
     renderLoading("Loading Showdown Data");
     try {
-       const [liveSnap, metaSnap] = await Promise.all([
+       const [liveSnap, metaSnap, historySnap] = await Promise.all([
           get(ref(db, 'showdown_live')),
-          get(ref(db, 'showdown_meta'))
+          get(ref(db, 'showdown_meta')),
+          get(ref(db, 'showdown_meta/history')).catch(() => null)
        ]);
        
        const liveData = (liveSnap.exists() && liveSnap.val()) ? liveSnap.val() : {};
        const metaData = (metaSnap.exists() && metaSnap.val()) ? metaSnap.val() : {};
+       const historyObj = (historySnap && historySnap.exists() && historySnap.val()) ? historySnap.val() : {};
        const enemyAlliance = (metaData && metaData.enemyAlliance && typeof metaData.enemyAlliance === 'object') ? metaData.enemyAlliance : { name: 'Enemy Alliance', scores: {} };
        const eScores = (enemyAlliance && enemyAlliance.scores && typeof enemyAlliance.scores === 'object') ? enemyAlliance.scores : {};
        const enemyName = enemyAlliance.name || 'Enemy Alliance';
@@ -9729,7 +9804,9 @@ window.resetBearTrapEvent = async () => {
        });
        playersCard += `</tbody></table></div></div>`;
        
-       html += allianceCard + playersCard + `</div>`;
+       let sdHistRows = (typeof sdHistoryData !== 'undefined' && sdHistoryData) ? (sdHistoryData.data || sdHistoryData) : [];
+        const historyCardHtml = window.renderShowdownHistoryCard(historyObj, sdHistRows, players, 'all');
+        html += allianceCard + playersCard + historyCardHtml + `</div>`;
        app.innerHTML = html;
        
     } catch(e) { renderError(e.message); }

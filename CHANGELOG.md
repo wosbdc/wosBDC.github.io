@@ -1,3 +1,8 @@
+## [1.48.26] - 2026-07-26
+### Added Interactive Showdown Event History & Archive Dropdown Filter
+- **Showdown History & Archive Selector**: Added a dropdown filter to `Leaderboards > Showdown` and `Events > Showdown` allowing users to switch between `🌟 All-Time Combined` and individual past archived Showdown events (`📅 Event: <Date>`).
+- **Dynamic Archive View**: Selecting a past event dynamically displays that event's opponent alliance, top player MVP, and complete player score breakdown!
+
 ## [1.48.25] - 2026-07-26
 ### Fixed Hidden Unsafe Property Reference in Events > Showdown
 - **Resolved TypeError Crash**: Fixed line 9665 inside `views.showdown` where `enemyAlliance.scores['d'+i]` was still being called directly instead of using the safe `eScores['d'+i]` object guard.
