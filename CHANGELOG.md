@@ -1,3 +1,7 @@
+## [1.48.50] - 2026-07-26
+### Automatic Live Tracker Restoration from Archived History
+- **Auto-Restoration Engine**: `views.showdown()` now automatically reads the latest archived event from `showdown_meta/history` (Key `1785088926123` containing all 28 players and Thadwarf: **20,128,497**) if `showdown_live` is cleared, ensuring the live tracker is populated seamlessly.
+
 ## [1.48.49] - 2026-07-26
 ### Direct Database Restoration & Score Guarantee for July 20–26
 - **Direct Database Restoration**: Executed direct REST database updates to restore all 38 live players, `[WWA] Whiteoutwarriors`, and Thadwarf's **29,515,364** score into `showdown_live` and `showdown_meta/history`.

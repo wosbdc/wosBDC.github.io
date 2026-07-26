@@ -10383,7 +10383,30 @@ window.resetBearTrapEvent = async () => {
           get(ref(db, 'showdown_meta/history')).catch(() => null)
        ]);
        
-       const liveData = (liveSnap.exists() && liveSnap.val()) ? liveSnap.val() : {};
+       let liveData = (liveSnap && liveSnap.exists() && liveSnap.val()) ? liveSnap.val() : {};
+       if (liveData && liveData.error) delete liveData.error;
+
+       // If liveData is empty, auto-restore from the latest archived event in showdown_meta/history
+       if (!liveData || Object.keys(liveData).length === 0) {
+           liveData = {};
+           if (historyObj && typeof historyObj === 'object') {
+               let sortedKeys = Object.keys(historyObj).sort((a,b) => Number(b) - Number(a));
+               if (sortedKeys.length > 0) {
+                   let latestEv = historyObj[sortedKeys[0]];
+                   if (latestEv && Array.isArray(latestEv.players)) {
+                       latestEv.players.forEach(p => {
+                           if (p.name) {
+                               liveData[p.name] = {
+                                   d1: p.d1 || 0, d2: p.d2 || 0, d3: p.d3 || 0,
+                                   d4: p.d4 || 0, d5: p.d5 || 0, d6: p.d6 || 0
+                               };
+                           }
+                       });
+                       try { set(ref(db, 'showdown_live'), liveData).catch(() => null); } catch(e) {}
+                   }
+               }
+           }
+       }
        const metaData = (metaSnap.exists() && metaSnap.val()) ? metaSnap.val() : {};
        const historyObj = (historySnap && historySnap.exists() && historySnap.val()) ? historySnap.val() : {};
        const enemyAlliance = (metaData && metaData.enemyAlliance && typeof metaData.enemyAlliance === 'object') ? metaData.enemyAlliance : { name: '[WWA] Whiteoutwarriors', scores: {} };
