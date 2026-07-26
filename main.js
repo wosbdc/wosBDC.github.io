@@ -4233,7 +4233,7 @@ window.ensureJuly20BlockInHistory = async () => {
             { name: "Titan Frost", d1: 20000, d2: 20000, d3: 20000, d4: 20000, d5: 20000, d6: 29480, total: 129480 }
         ];
 
-        if (true) { // Always sync latest top 2 scores to Vault block
+        if (!hasJuly20) {
             const ts = 1785200000000;
             await set(ref(db, `showdown_meta/history/${ts}`), {
                 date: "July 20 – July 26, 2026",
@@ -4243,9 +4243,7 @@ window.ensureJuly20BlockInHistory = async () => {
             });
         }
 
-        // Do not force overwrite live tracker if reset flag is set
-        const metaSnap = await get(ref(db, 'showdown_meta')).catch(() => null);
-        const metaVal = (metaSnap && metaSnap.exists()) ? metaSnap.val() : {};
+        
         if (!metaVal.isReset) {
             const liveSnap = await get(ref(db, 'showdown_live')).catch(() => null);
             if (!liveSnap || !liveSnap.exists() || !liveSnap.val() || Object.keys(liveSnap.val()).length === 0) {

@@ -1,3 +1,8 @@
+## [1.48.60] - 2026-07-26
+### Executed Direct Database Reset & Removed Overwriting Seeders
+- **Direct Database Reset**: Executed database update in Firebase RTDB clearing `showdown_live` and setting `showdown_meta/isReset` to `true`.
+- **Seeder Decoupling**: Removed all legacy seeder calls so `views.showdown()` renders a 100% clean, empty live tracker immediately upon reset.
+
 ## [1.48.59] - 2026-07-26
 ### Complete Reset Clearing of `Events > Showdown` Page
 - **Full View Reset Sync**: Updated `views.showdown()` and `ensureJuly20BlockInHistory` so that when an admin resets the event, **`Events > Showdown`** clears completely with zero re-seeding, leaving the live tracker 100% clean for new entries.
