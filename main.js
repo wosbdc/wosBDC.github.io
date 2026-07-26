@@ -4076,6 +4076,98 @@ window._sdHistoryState = {
 
 
 // Showdown Archive Management & Importer Suite
+
+window.deleteAllShowdownArchives = async () => {
+    const archiveKeys = Object.keys(window._sdHistoryState.historyObj || {});
+    if (archiveKeys.length === 0) {
+        if (window.showToast) window.showToast("No archives to delete!", "warning");
+        return;
+    }
+
+    let confirmed = false;
+    try {
+        if (typeof window.customConfirm === 'function') {
+            confirmed = await window.customConfirm(`⚠️ MASS DELETE WARNING:\n\nAre you sure you want to PERMANENTLY WIPE ALL ${archiveKeys.length} archived Showdown events from the Vault?\n\nThis cannot be undone.`);
+        } else {
+            confirmed = window.confirm(`⚠️ Are you sure you want to PERMANENTLY DELETE ALL ${archiveKeys.length} archived Showdown events?`);
+        }
+    } catch(e) {
+        confirmed = window.confirm(`⚠️ Delete all ${archiveKeys.length} archives?`);
+    }
+
+    if (!confirmed) return;
+
+    try {
+        await remove(ref(db, 'showdown_meta/history'));
+        if (window._sdHistoryState) window._sdHistoryState.historyObj = {};
+        if (window.showToast) window.showToast(`🎉 All ${archiveKeys.length} Showdown archives deleted successfully!`, "success");
+        if (window.openShowdownArchiveVaultModal) window.openShowdownArchiveVaultModal('all');
+    } catch(err) {
+        console.error("Error wiping archives:", err);
+        if (window.showToast) window.showToast("Error wiping archives: " + err.message, "error");
+    }
+};
+
+window.openEditShowdownArchiveModal = (key, currentDate = '', currentEnemy = '') => {
+    let existing = document.getElementById('sdEditArchiveModal');
+    if (existing) existing.remove();
+
+    let modal = document.createElement('div');
+    modal.id = 'sdEditArchiveModal';
+    modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); z-index:100020; display:flex; justify-content:center; align-items:center; animation:fadeIn 0.2s ease; padding:15px; box-sizing:border-box;';
+
+    modal.innerHTML = `
+        <div style="background:var(--card-bg); border:1px solid var(--accent); border-radius:16px; width:100%; max-width:450px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 10px 40px rgba(0,0,0,0.6);">
+            <div style="padding:18px 24px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02);">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="font-size:22px;">✏️</div>
+                    <div style="font-size:16px; font-weight:bold; color:var(--text-main);">Edit Event Details</div>
+                </div>
+                <button onclick="document.getElementById('sdEditArchiveModal').remove()" style="background:rgba(255,255,255,0.1); border:none; color:var(--text-main); width:30px; height:30px; border-radius:50%; font-size:15px; font-weight:bold; cursor:pointer;">✕</button>
+            </div>
+            <div style="padding:20px;">
+                <div style="margin-bottom:15px;">
+                    <label style="font-size:12px; font-weight:bold; color:var(--text-muted); display:block; margin-bottom:4px;">Opponent Alliance Name</label>
+                    <input type="text" id="editEvEnemy" value="${escapeHTML(currentEnemy)}" placeholder="e.g. [RED]Army" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:14px; box-sizing:border-box;">
+                </div>
+                <div style="margin-bottom:20px;">
+                    <label style="font-size:12px; font-weight:bold; color:var(--text-muted); display:block; margin-bottom:4px;">Event Date String</label>
+                    <input type="text" id="editEvDate" value="${escapeHTML(currentDate)}" placeholder="e.g. Jul 26, 2026" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:14px; box-sizing:border-box;">
+                </div>
+                <button onclick="window.saveShowdownArchiveDetails('${key}')" style="background:var(--accent); color:var(--bg-main); border:none; width:100%; padding:12px; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer;">💾 Save Details</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+};
+
+window.saveShowdownArchiveDetails = async (key) => {
+    let newEnemy = document.getElementById('editEvEnemy').value.trim() || 'Enemy Alliance';
+    let newDate = document.getElementById('editEvDate').value.trim() || 'Archived Event';
+
+    try {
+        await update(ref(db, `showdown_meta/history/${key}`), {
+            date: newDate,
+            'enemyAlliance/name': newEnemy
+        });
+
+        if (window._sdHistoryState && window._sdHistoryState.historyObj && window._sdHistoryState.historyObj[key]) {
+            window._sdHistoryState.historyObj[key].date = newDate;
+            if (!window._sdHistoryState.historyObj[key].enemyAlliance) window._sdHistoryState.historyObj[key].enemyAlliance = {};
+            window._sdHistoryState.historyObj[key].enemyAlliance.name = newEnemy;
+        }
+
+        if (window.showToast) window.showToast("✅ Event details updated!", "success");
+        let editModal = document.getElementById('sdEditArchiveModal');
+        if (editModal) editModal.remove();
+        if (window.openShowdownArchiveVaultModal) window.openShowdownArchiveVaultModal(String(key));
+    } catch(err) {
+        console.error("Error updating archive details:", err);
+        if (window.showToast) window.showToast("Update error: " + err.message, "error");
+    }
+};
+
+
 window.deleteShowdownArchive = async (timestamp, dateStr = '') => {
     if (!timestamp) return;
     
@@ -4389,6 +4481,7 @@ window.buildVaultModalContent = (activeKey = 'all') => {
                 <span style="font-weight:bold; color:#FFD700; font-size:12px; display:flex; align-items:center; gap:4px;">⚡ Manager Tools:</span>
                 <button onclick="window.syncGoogleSheetsHistoryToVault(this)" style="background:var(--accent); color:var(--bg-main); border:none; padding:7px 14px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer; box-shadow:0 2px 8px rgba(6,182,212,0.2);">⚡ Sync All Sheets History (Option A)</button>
                 <button onclick="window.openShowdownPasteImporterModal()" style="background:rgba(255,255,255,0.08); color:var(--text-main); border:1px solid var(--border); padding:7px 14px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">📋 Paste Custom Sheet Event</button>
+                <button onclick="window.deleteAllShowdownArchives()" style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:7px 14px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">🗑️ Wipe All Archives</button>
             </div>
             ${deleteBtnHtml}
         </div>
@@ -4483,6 +4576,7 @@ window.buildVaultModalContent = (activeKey = 'all') => {
                     <div style="text-align: left;">
                       <div style="display:flex; align-items:center; gap:10px; margin-bottom:4px;">
                         <span style="color: var(--accent); font-size: 12px; font-weight: bold; text-transform: uppercase;">Event Date: ${dStr}</span>
+                        <button onclick="window.openEditShowdownArchiveModal('${activeKey}', '${escapeHTML(dStr)}', '${escapeHTML(enemy.name || '')}')" style="background:rgba(255,215,0,0.15); border:1px solid rgba(255,215,0,0.3); color:#FFD700; padding:2px 8px; border-radius:6px; font-weight:bold; font-size:11px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">✏️ Edit Date & Enemy</button>
                         ${resultBadge}
                       </div>
                       <div style="color: var(--text-main); font-size: 20px; font-weight: bold;">Our Alliance (${ourTotal.toLocaleString()}) vs ${escapeHTML(enemy.name)} (${enemyTotal.toLocaleString()})</div>

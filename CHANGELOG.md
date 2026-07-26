@@ -1,3 +1,8 @@
+## [1.48.33] - 2026-07-26
+### Added Mass Archive Wipe & Inline Quick Edit Opponent Alliance Name
+- **1-Click Mass Delete (`window.deleteAllShowdownArchives`)**: Added a red `🗑️ Wipe All Archives` button in the Vault Manager Tools bar to permanently wipe all stored archive snapshots in 1 click.
+- **Inline Quick Edit Opponent Name & Date (`window.openEditShowdownArchiveModal`)**: Added a gold `✏️ Edit Date & Enemy` button inside every archived event banner, allowing managers to rename missing/incorrect alliance names and update event dates in 5 seconds!
+
 ## [1.48.32] - 2026-07-26
 ### Fixed Delete Archive Modal Stacking & Enhanced Google Sheets Enemy Name Extractor
 - **Fixed Confirmation Dialog Layer Stacking (`z-index: 100050`)**: Increased confirm overlay `z-index` so the `customConfirm` modal floats above the full-screen Vault modal (`z-index: 10005`), making `🗑️ Delete This Archive` 100% responsive and clickable.
