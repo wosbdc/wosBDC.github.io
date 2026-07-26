@@ -3860,18 +3860,10 @@ window.archiveCurrentShowdownToFirebase = async () => {
     const confirmed = await window.customConfirm("⚠️ WARNING: Do NOT archive until the Showdown event is 100% finished (after Day 6)!\n\nAre you sure you want to archive current scores into All-Time History?");
     if (!confirmed) return;
     try {
-        const [liveSnap, histSnap] = await Promise.all([
-            get(ref(db, 'showdown_live')),
-            get(ref(db, 'showdown_history'))
-        ]);
-        
+        const liveSnap = await get(ref(db, 'showdown_live'));
         const liveData = (liveSnap.exists() && liveSnap.val()) ? liveSnap.val() : {};
         const timestamp = Date.now();
-        
-        let newBlock = [];
-        let dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-        newBlock.push(["", "Date:", dateStr, "", "", "", "", "", "", ""]);
-        newBlock.push(["", "Ranking", "Member", "Day 1", "Day 2", "Day 3", "Day 4", "Day 5", "Day 6", "Total"]);
+        const dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         
         let pList = [];
         for (const [pName, scores] of Object.entries(liveData)) {
@@ -3887,21 +3879,24 @@ window.archiveCurrentShowdownToFirebase = async () => {
         }
         pList.sort((a, b) => b.total - a.total);
         
-        pList.forEach((p, idx) => {
-            newBlock.push(["", idx + 1, p.name, p.d1, p.d2, p.d3, p.d4, p.d5, p.d6, p.total]);
-        });
+        const archivePayload = {
+            date: dateStr,
+            timestamp: timestamp,
+            players: pList.map((p, idx) => ({
+                rank: idx + 1,
+                name: p.name,
+                d1: p.d1,
+                d2: p.d2,
+                d3: p.d3,
+                d4: p.d4,
+                d5: p.d5,
+                d6: p.d6,
+                total: p.total
+            }))
+        };
         
-        newBlock.push(["", "", "", "", "", "", "", "", "", ""]);
-        
-        // 1. Write archive block to a child node under showdown_history to respect Firebase RTDB child rules
-        try {
-            await set(ref(db, `showdown_history/${timestamp}`), newBlock);
-        } catch(hErr) {
-            console.warn("Child write failed, attempting root append...", hErr);
-            let currentHistory = histSnap.exists() ? histSnap.val() : [];
-            if (!Array.isArray(currentHistory)) currentHistory = [];
-            await set(ref(db, 'showdown_history'), [...currentHistory, ...newBlock]);
-        }
+        // 1. Write structured archive object to showdown_history/${timestamp}
+        await set(ref(db, `showdown_history/${timestamp}`), archivePayload);
 
         // 2. Reset live scores by deleting child keys individually
         const liveKeys = Object.keys(liveData);

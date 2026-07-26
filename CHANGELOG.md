@@ -1,3 +1,8 @@
+## [1.48.9] - 2026-07-26
+### Fixed Realtime Database 2D Array Validation Error on Archive
+- **Resolved Permission Denied Error**: Firebase Realtime Database rejects multi-dimensional/2D JavaScript arrays (`Array<Array>`). Replaced nested 2D array archive structure with a clean, native JavaScript object payload (`{ date, timestamp, players }`).
+- **Updated History Renderer**: Updated Showdown Leaderboard history reader to dynamically parse structured object payloads into formatted leaderboard tables.
+
 ## [1.48.8] - 2026-07-26
 ### Fixed Showdown Archive & Reset Permission Denied Error
 - **Child Node Scoped Writes**: Updated `archiveCurrentShowdownToFirebase` to write timestamped history blocks under `showdown_history/${timestamp}` and reset live player scores by deleting child keys individually (`showdown_live/${playerKey}`). This prevents root-level overwrites from triggering Firebase Realtime Database `Permission denied` errors.
