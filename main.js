@@ -8774,13 +8774,17 @@ window.resetBearTrapEvent = async () => {
                      if (!entry) return;
                      if (Array.isArray(entry)) {
                         extraRows.push(...entry);
+                     } else if (entry.tableRows && Array.isArray(entry.tableRows)) {
+                        extraRows.push(...entry.tableRows);
                      } else if (entry.players || entry.pList) {
                         let plist = entry.players || entry.pList || [];
                         let dateStr = entry.date || new Date(entry.timestamp || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                         extraRows.push(["", "Date:", dateStr, "", "", "", "", "", "", ""]);
                         extraRows.push(["", "Ranking", "Member", "Day 1", "Day 2", "Day 3", "Day 4", "Day 5", "Day 6", "Total"]);
                         plist.forEach((p, idx) => {
-                           extraRows.push(["", p.rank || (idx + 1), p.name, p.d1 || 0, p.d2 || 0, p.d3 || 0, p.d4 || 0, p.d5 || 0, p.d6 || 0, p.total || 0]);
+                           if (p && typeof p === 'object') {
+                              extraRows.push(["", p.rank || (idx + 1), p.name || '', p.d1 || 0, p.d2 || 0, p.d3 || 0, p.d4 || 0, p.d5 || 0, p.d6 || 0, p.total || 0]);
+                           }
                         });
                         extraRows.push(["", "", "", "", "", "", "", "", "", ""]);
                      } else if (Array.isArray(entry.data)) {

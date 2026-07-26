@@ -1,3 +1,10 @@
+## [1.48.19] - 2026-07-26
+### Dual Showdown Location Verification & Parse Protection
+- **Dual Location Support Verified**: Verified both Showdown navigation locations:
+  1. `Events > Showdown` (`data-target="showdown"` -> `views.showdown()`)
+  2. `Leaderboards > Showdown` (`data-target="leaderboards"` with `data-filter="Showdown"` -> `views.leaderboards('Showdown')`)
+- **Hardened History Snapshots Parsing**: Added `entry.tableRows` matrix support and player object null guards in `parseSnapVal` (~line 8774) so both locations load smoothly without `TypeError`.
+
 ## [1.48.18] - 2026-07-26
 ### Restored Showdown Page & Enemy Team Restore Support
 - **Restored Enemy Team Scores on Archive & Restore**: `archiveCurrentShowdownToFirebase` now saves `enemyAlliance` name and scores in the historical snapshot payload, and `restoreLatestShowdownArchive` restores enemy team scores to `showdown_meta/enemyAlliance`.
