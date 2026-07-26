@@ -1,3 +1,8 @@
+## [1.48.15] - 2026-07-26
+### Comprehensive Protection Against Showdown d1 Property Crash
+- **Hardened `processEvent`**: Added object type check (`if (!p || typeof p !== 'object') return;`) inside history event processor (~line 4313).
+- **Hardened Missed Days Calculator**: Added object type check to `Object.values(sdLiveData)` loop (~line 9705).
+
 ## [1.48.14] - 2026-07-26
 ### Added Showdown Archive Restore Utility & UI Button
 - **Added `restoreLatestShowdownArchive`**: Utility function that locates the latest archived Showdown event across Firebase nodes (`showdown_meta/history`, `showdown_history`, `activity_history_archives`) and restores all player scores back into live tracker `showdown_live`.

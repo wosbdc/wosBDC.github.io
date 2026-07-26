@@ -4313,12 +4313,13 @@ function calculateAllTimeShowdown(historyData) {
         let topPlayers = { d1:{score:0}, d2:{score:0}, d3:{score:0}, d4:{score:0}, d5:{score:0}, d6:{score:0} };
         
         players.forEach(p => {
-            if (p.d1 > topPlayers.d1.score) topPlayers.d1 = { name: p.name, score: p.d1 };
-            if (p.d2 > topPlayers.d2.score) topPlayers.d2 = { name: p.name, score: p.d2 };
-            if (p.d3 > topPlayers.d3.score) topPlayers.d3 = { name: p.name, score: p.d3 };
-            if (p.d4 > topPlayers.d4.score) topPlayers.d4 = { name: p.name, score: p.d4 };
-            if (p.d5 > topPlayers.d5.score) topPlayers.d5 = { name: p.name, score: p.d5 };
-            if (p.d6 > topPlayers.d6.score) topPlayers.d6 = { name: p.name, score: p.d6 };
+            if (!p || typeof p !== 'object') return;
+            if ((p.d1 || 0) > topPlayers.d1.score) topPlayers.d1 = { name: p.name, score: (p.d1 || 0) };
+            if ((p.d2 || 0) > topPlayers.d2.score) topPlayers.d2 = { name: p.name, score: (p.d2 || 0) };
+            if ((p.d3 || 0) > topPlayers.d3.score) topPlayers.d3 = { name: p.name, score: (p.d3 || 0) };
+            if ((p.d4 || 0) > topPlayers.d4.score) topPlayers.d4 = { name: p.name, score: (p.d4 || 0) };
+            if ((p.d5 || 0) > topPlayers.d5.score) topPlayers.d5 = { name: p.name, score: (p.d5 || 0) };
+            if ((p.d6 || 0) > topPlayers.d6.score) topPlayers.d6 = { name: p.name, score: (p.d6 || 0) };
         });
         
         players.forEach(p => {
@@ -9702,6 +9703,7 @@ window.resetBearTrapEvent = async () => {
 
       let currentDay = 0;
       Object.values(sdLiveData).forEach(p => {
+         if (!p || typeof p !== 'object') return;
          if ((p.d6||0) > 0 && currentDay < 6) currentDay = 6;
          else if ((p.d5||0) > 0 && currentDay < 5) currentDay = 5;
          else if ((p.d4||0) > 0 && currentDay < 4) currentDay = 4;
