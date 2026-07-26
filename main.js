@@ -4145,16 +4145,23 @@ window.saveShowdownArchiveDetails = async (key) => {
     let newEnemy = document.getElementById('editEvEnemy').value.trim() || 'Enemy Alliance';
     let newDate = document.getElementById('editEvDate').value.trim() || 'Archived Event';
 
+    let btn = event ? event.target : null;
+    let origText = btn ? btn.innerHTML : '';
+    if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Saving...'; }
+
     try {
-        await update(ref(db, `showdown_meta/history/${key}`), {
-            date: newDate,
-            'enemyAlliance/name': newEnemy
-        });
+        await Promise.all([
+            update(ref(db, `showdown_meta/history/${key}`), { date: newDate }),
+            update(ref(db, `showdown_meta/history/${key}/enemyAlliance`), { name: newEnemy })
+        ]);
 
         if (window._sdHistoryState && window._sdHistoryState.historyObj && window._sdHistoryState.historyObj[key]) {
             window._sdHistoryState.historyObj[key].date = newDate;
-            if (!window._sdHistoryState.historyObj[key].enemyAlliance) window._sdHistoryState.historyObj[key].enemyAlliance = {};
-            window._sdHistoryState.historyObj[key].enemyAlliance.name = newEnemy;
+            if (!window._sdHistoryState.historyObj[key].enemyAlliance) {
+                window._sdHistoryState.historyObj[key].enemyAlliance = { name: newEnemy };
+            } else {
+                window._sdHistoryState.historyObj[key].enemyAlliance.name = newEnemy;
+            }
         }
 
         if (window.showToast) window.showToast("✅ Event details updated!", "success");
@@ -4164,6 +4171,7 @@ window.saveShowdownArchiveDetails = async (key) => {
     } catch(err) {
         console.error("Error updating archive details:", err);
         if (window.showToast) window.showToast("Update error: " + err.message, "error");
+        if (btn) { btn.disabled = false; btn.innerHTML = origText; }
     }
 };
 

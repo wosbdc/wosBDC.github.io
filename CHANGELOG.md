@@ -1,3 +1,7 @@
+## [1.48.34] - 2026-07-26
+### Fixed Firebase Realtime DB Updates in Edit Event Details
+- **Fixed `saveShowdownArchiveDetails` Execution**: Refactored Firebase RTDB updates to run parallel direct node updates (`update(ref(db, ...))`) for `date` and `enemyAlliance/name`, eliminating path syntax errors and ensuring changes save instantly.
+
 ## [1.48.33] - 2026-07-26
 ### Added Mass Archive Wipe & Inline Quick Edit Opponent Alliance Name
 - **1-Click Mass Delete (`window.deleteAllShowdownArchives`)**: Added a red `🗑️ Wipe All Archives` button in the Vault Manager Tools bar to permanently wipe all stored archive snapshots in 1 click.
