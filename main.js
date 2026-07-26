@@ -10451,8 +10451,9 @@ window.resetBearTrapEvent = async () => {
        let liveData = (liveSnap && liveSnap.exists() && liveSnap.val()) ? liveSnap.val() : {};
        if (liveData && liveData.error) delete liveData.error;
 
-       // If liveData is empty, auto-restore from the latest archived event in showdown_meta/history
-       if (!liveData || Object.keys(liveData).length === 0) {
+       const isResetFlag = (metaData && metaData.isReset === true);
+       // If liveData is empty and not explicitly reset, auto-restore from the latest archived event in showdown_meta/history
+       if (!isResetFlag && (!liveData || Object.keys(liveData).length === 0)) {
            liveData = {};
            if (historyObj && typeof historyObj === 'object') {
                let sortedKeys = Object.keys(historyObj).sort((a,b) => Number(b) - Number(a));

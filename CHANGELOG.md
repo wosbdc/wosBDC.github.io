@@ -1,3 +1,7 @@
+## [1.48.57] - 2026-07-26
+### Crash-Proof Showdown Event Reset Workflow
+- **Crash-Proof Event Reset**: Updated `window.resetCurrentShowdown()` and `views.showdown()` with explicit reset flags (`showdown_meta/isReset`), atomic node cleanup, and cache purging to guarantee that clicking **`🔄 Reset Event`** clears live scores cleanly with zero crashes or forced re-seeding.
+
 ## [1.48.56] - 2026-07-26
 ### Exact Top 2 Leaderboard Ranking Match
 - **Exact Top 2 Order**: Updated July 20 – July 26, 2026 leaderboard rankings so **#1 Thadwarf (29,515,364)** and **#2 Soulcrusher4217 (19,294,803)** render as your absolute top 2 leaders with zero score overlaps.
