@@ -1,3 +1,8 @@
+## [1.48.35] - 2026-07-26
+### Fixed Duplicate Events on Sync & Automatic Vault Cleanup
+- **Resolved Duplicate Sync Accumulation**: Updated `syncGoogleSheetsHistoryToVault` to automatically clear old/stale history nodes in Firebase RTDB before uploading freshly parsed event blocks from Google Sheets.
+- **Strict 1-Block Commit Rule**: Refactored the block parser to commit event blocks strictly once per `Ranking | Member` block boundaries, preventing duplicate event entries.
+
 ## [1.48.34] - 2026-07-26
 ### Fixed Firebase Realtime DB Updates in Edit Event Details
 - **Fixed `saveShowdownArchiveDetails` Execution**: Refactored Firebase RTDB updates to run parallel direct node updates (`update(ref(db, ...))`) for `date` and `enemyAlliance/name`, eliminating path syntax errors and ensuring changes save instantly.

@@ -4225,6 +4225,20 @@ window.syncGoogleSheetsHistoryToVault = async (btnEl = null) => {
         let currentEnemy = "Enemy Alliance";
         let inBlock = false;
 
+        function commitCurrentBlock() {
+            if (currentPlayers.length > 0) {
+                eventBlocks.push({
+                    date: currentDate || `Event ${eventBlocks.length + 1}`,
+                    enemy: currentEnemy || "Enemy Alliance",
+                    players: [...currentPlayers]
+                });
+                currentPlayers = [];
+                currentDate = "";
+                currentEnemy = "Enemy Alliance";
+            }
+            inBlock = false;
+        }
+
         for (let i = 0; i < rows.length; i++) {
             let row = rows[i];
             if (!row) continue;
@@ -4250,20 +4264,14 @@ window.syncGoogleSheetsHistoryToVault = async (btnEl = null) => {
             }
 
             if (col1.toLowerCase() === 'ranking' && (col2.toLowerCase() === 'member' || col2.toLowerCase() === 'name')) {
-                if (inBlock && currentPlayers.length > 0) {
-                    eventBlocks.push({ date: currentDate || `Event ${eventBlocks.length + 1}`, enemy: currentEnemy, players: [...currentPlayers] });
-                }
+                commitCurrentBlock();
                 inBlock = true;
-                currentPlayers = [];
                 continue;
             }
 
             if (inBlock) {
                 if (!col2 || col1.toLowerCase() === 'date:' || col1.toLowerCase() === 'alliance' || col1.toLowerCase() === 'winners') {
-                    eventBlocks.push({ date: currentDate || `Event ${eventBlocks.length + 1}`, enemy: currentEnemy, players: [...currentPlayers] });
-                    inBlock = false;
-                    currentPlayers = [];
-                    currentDate = ""; currentEnemy = "Enemy Alliance";
+                    commitCurrentBlock();
                     continue;
                 }
 
@@ -4276,18 +4284,22 @@ window.syncGoogleSheetsHistoryToVault = async (btnEl = null) => {
                 let d6 = typeof row[8] === 'number' ? row[8] : (parseInt(String(row[8] || '').replace(/,/g, '')) || 0);
                 let total = typeof row[9] === 'number' ? row[9] : (d1+d2+d3+d4+d5+d6);
 
-                currentPlayers.push({ name: pName, d1, d2, d3, d4, d5, d6, total });
+                if (pName && (total > 0 || d1 > 0 || d2 > 0 || d3 > 0 || d4 > 0 || d5 > 0 || d6 > 0)) {
+                    currentPlayers.push({ name: pName, d1, d2, d3, d4, d5, d6, total });
+                }
             }
         }
-        if (inBlock && currentPlayers.length > 0) {
-            eventBlocks.push({ date: currentDate || `Event ${eventBlocks.length + 1}`, enemy: currentEnemy, players: [...currentPlayers] });
-        }
+        commitCurrentBlock();
 
         if (eventBlocks.length === 0) {
             if (window.showToast) window.showToast("Parsed 0 event blocks. Check sheet formatting.", "warning");
             if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = origText; }
             return;
         }
+
+        // Wipe old history node in Firebase RTDB first so sync is clean and exact
+        await remove(ref(db, 'showdown_meta/history'));
+        if (window._sdHistoryState) window._sdHistoryState.historyObj = {};
 
         let baseTs = Date.now();
         for (let idx = 0; idx < eventBlocks.length; idx++) {
@@ -4301,7 +4313,7 @@ window.syncGoogleSheetsHistoryToVault = async (btnEl = null) => {
             });
         }
 
-        if (window.showToast) window.showToast(`🎉 Successfully imported ${eventBlocks.length} Showdown events into the Vault!`, "success");
+        if (window.showToast) window.showToast(`🎉 Successfully synced ${eventBlocks.length} Showdown events from Google Sheets!`, "success");
         if (window.openShowdownArchiveVaultModal) window.openShowdownArchiveVaultModal('all');
     } catch(err) {
         console.error("Error syncing Google Sheets history:", err);
