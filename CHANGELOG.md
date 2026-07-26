@@ -1,3 +1,8 @@
+## [1.48.23] - 2026-07-26
+### Bulletproof Event Reset & Enemy Scores Object Preservation
+- **Firebase Empty Object Stripping Prevention**: Configured event reset functions (`resetCurrentShowdown` & `archiveCurrentShowdownToFirebase`) to initialize `enemyAlliance` with explicit zeroed scores (`{ name: "Enemy Alliance", scores: { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 } }`), preventing Firebase RTDB from stripping empty `{}` objects.
+- **Deep Defensive Object Guards**: Hardened `views.showdown` and `showdownAdmin` with explicit `typeof meta.enemyAlliance === 'object'` checks and safe `eScores` fallbacks so resetting the event can never break page loads.
+
 ## [1.48.22] - 2026-07-26
 ### Event Pending / Reset Indicators for Showdown
 - **Added Event Pending Banners & Messages**: When Showdown live scores are reset or empty, both `views.leaderboards('Showdown')` and `views.showdown()` now display a clean, styled **`⏳ Event Pending / Waiting for Day 1 Scores`** banner and table indicator so users know the event is waiting to begin instead of thinking it failed to load.

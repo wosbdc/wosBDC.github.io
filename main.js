@@ -3950,7 +3950,7 @@ window.archiveCurrentShowdownToFirebase = async () => {
                 await Promise.all(liveKeys.map(k => set(ref(db, `showdown_live/${k}`), null).catch(() => null)));
             }
             try {
-                await set(ref(db, 'showdown_meta/enemyAlliance'), { name: "Enemy Alliance", scores: {} });
+                await set(ref(db, 'showdown_meta/enemyAlliance'), { name: "Enemy Alliance", scores: { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 } });
             } catch(e) {}
             if (window.showToast) window.showToast("Showdown archived to History AND live event reset!", "success");
         } else {
@@ -3974,7 +3974,7 @@ window.resetCurrentShowdown = async () => {
             await Promise.all(liveKeys.map(k => set(ref(db, `showdown_live/${k}`), null).catch(() => null)));
         }
         try {
-            await set(ref(db, 'showdown_meta/enemyAlliance'), { name: "Enemy Alliance", scores: {} });
+            await set(ref(db, 'showdown_meta/enemyAlliance'), { name: "Enemy Alliance", scores: { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 } });
         } catch(e) {}
         if (window.logAdminAction) {
             try {
@@ -6039,9 +6039,9 @@ const views = {
           window.fetchRoster().catch(() => ({}))
        ]);
        
-       let meta = metaSnap.val() || {};
-       if (!meta.enemyAlliance) meta.enemyAlliance = { name: "", scores: {} };
-       if (!meta.enemyAlliance.scores) meta.enemyAlliance.scores = {};
+       let meta = (metaSnap && metaSnap.exists() && metaSnap.val()) ? metaSnap.val() : {};
+       if (!meta.enemyAlliance || typeof meta.enemyAlliance !== 'object') meta.enemyAlliance = { name: "Enemy Alliance", scores: { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 } };
+       if (!meta.enemyAlliance.scores || typeof meta.enemyAlliance.scores !== 'object') meta.enemyAlliance.scores = { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 };
        
        const sdLiveData = sdRes.sdLiveData || {};
        
@@ -9512,9 +9512,11 @@ window.resetBearTrapEvent = async () => {
           get(ref(db, 'showdown_meta'))
        ]);
        
-       const liveData = liveSnap.val() || {};
-       const metaData = metaSnap.val() || {};
-       const enemyAlliance = metaData.enemyAlliance || { name: 'Enemy Alliance', scores: {} };
+       const liveData = (liveSnap.exists() && liveSnap.val()) ? liveSnap.val() : {};
+       const metaData = (metaSnap.exists() && metaSnap.val()) ? metaSnap.val() : {};
+       const enemyAlliance = (metaData && metaData.enemyAlliance && typeof metaData.enemyAlliance === 'object') ? metaData.enemyAlliance : { name: 'Enemy Alliance', scores: {} };
+       const eScores = (enemyAlliance && enemyAlliance.scores && typeof enemyAlliance.scores === 'object') ? enemyAlliance.scores : {};
+       const enemyName = enemyAlliance.name || 'Enemy Alliance';
        
        let html = `<div style="display:flex; flex-direction:column; gap:20px;">`;
        
@@ -9555,7 +9557,6 @@ window.resetBearTrapEvent = async () => {
        }
        
        ourScores.total = ourScores.d1 + ourScores.d2 + ourScores.d3 + ourScores.d4 + ourScores.d5 + ourScores.d6;
-       const eScores = (enemyAlliance && enemyAlliance.scores) ? enemyAlliance.scores : {};
        let enemyTotal = (eScores.d1||0) + (eScores.d2||0) + (eScores.d3||0) + (eScores.d4||0) + (eScores.d5||0) + (eScores.d6||0);
        
        const staticHorns = { d1: 1, d2: 2, d3: 2, d4: 2, d5: 2, d6: 4 };
@@ -9566,7 +9567,7 @@ window.resetBearTrapEvent = async () => {
        for (let di = 6; di >= 1; di--) {
            let dayHasScore = false;
            for (const scores of Object.values(liveData)) {
-               if ((scores['d' + di] || 0) > 0) {
+               if (scores && typeof scores === 'object' && (scores['d' + di] || 0) > 0) {
                    dayHasScore = true; break;
                }
            }
@@ -9575,7 +9576,7 @@ window.resetBearTrapEvent = async () => {
            }
        }
        
-       let isEventComplete = (currentActiveDay === 6 && (ourScores.d6 > 0 || (enemyAlliance.scores && enemyAlliance.scores.d6 > 0)));
+       let isEventComplete = (currentActiveDay === 6 && (ourScores.d6 > 0 || ((eScores.d6 || 0) > 0)));
        let mvpTitle = "";
        let mvpWinners = [];
        let mvpDisplayHorns = 0;
