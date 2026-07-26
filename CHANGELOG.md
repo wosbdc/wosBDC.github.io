@@ -1,3 +1,8 @@
+## [1.48.18] - 2026-07-26
+### Restored Showdown Page & Enemy Team Restore Support
+- **Restored Enemy Team Scores on Archive & Restore**: `archiveCurrentShowdownToFirebase` now saves `enemyAlliance` name and scores in the historical snapshot payload, and `restoreLatestShowdownArchive` restores enemy team scores to `showdown_meta/enemyAlliance`.
+- **Fixed Public Showdown Page (`views.showdown`)**: Hardened `enemyAlliance.scores['d'+i]` rendering loop with safe fallback (`eScores['d'+i] || 0`), completely eliminating `Cannot read properties of undefined (reading 'd1')` on the public Showdown page.
+
 ## [1.48.17] - 2026-07-26
 ### Fixed Showdown Data Entry UI Null Exception
 - **Hardened `showdownAdmin` Enemy Scores Access**: Added defensive checks (`if (!meta.enemyAlliance.scores) meta.enemyAlliance.scores = {};` & `(meta.enemyAlliance && meta.enemyAlliance.scores) ? ... : 0`) to prevent `TypeError: Cannot read properties of undefined (reading 'd1')` when rendering the Showdown Admin Data Entry menu.

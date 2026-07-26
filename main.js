@@ -3895,6 +3895,9 @@ window.archiveCurrentShowdownToFirebase = async () => {
             ["", "", "", "", "", "", "", "", "", ""]
         ];
 
+        const metaSnap = await get(ref(db, 'showdown_meta')).catch(() => null);
+        const metaVal = (metaSnap && metaSnap.exists()) ? metaSnap.val() : {};
+
         const archivePayload = {
             date: dateStr,
             timestamp: timestamp,
@@ -3909,6 +3912,7 @@ window.archiveCurrentShowdownToFirebase = async () => {
                 d6: p.d6,
                 total: p.total
             })),
+            enemyAlliance: metaVal.enemyAlliance || { name: "Enemy Alliance", scores: {} },
             tableRows: tableRows
         };
         
@@ -4038,6 +4042,13 @@ window.restoreLatestShowdownArchive = async () => {
                 d6: p.d6 || 0
             };
             await set(ref(db, `showdown_live/${p.name}`), updates);
+        }
+
+        // Restore enemy alliance scores if saved in archive
+        if (latest.val.enemyAlliance) {
+            try {
+                await set(ref(db, 'showdown_meta/enemyAlliance'), latest.val.enemyAlliance);
+            } catch(e) { console.warn("Could not restore enemy alliance meta:", e); }
         }
 
         if (window.logAdminAction) {
@@ -9613,7 +9624,7 @@ window.resetBearTrapEvent = async () => {
        // Enemy Row
        allianceCard += `<tr><td style="font-weight:bold; position:sticky; left:0; background:var(--card-bg); z-index:2; box-shadow: 1px 0 0 var(--border);">${enemyAlliance.name || 'Enemy Alliance'}</td><td style="${enemyTotalStyle}">${enemyTotal.toLocaleString()}</td>`;
        for(let i=1; i<=6; i++) {
-           let eScore = enemyAlliance.scores['d'+i] || 0;
+           let eScore = eScores['d'+i] || 0;
            let oScore = ourScores['d'+i] || 0;
            let style = "border-right: 1px solid rgba(255,255,255,0.06); text-align:center;";
            if (eScore > 0 || oScore > 0) {
