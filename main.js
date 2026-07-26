@@ -4481,14 +4481,18 @@ window.openShowdownPasteImporterModal = () => {
                     <label style="font-size:12px; font-weight:bold; color:var(--text-muted); display:block; margin-bottom:4px;">Paste Player Rows (Name, D1, D2, D3, D4, D5, D6)</label>
                     <textarea id="pasteEvData" rows="8" placeholder="Paste tab-separated or comma-separated rows from Google Sheets...&#10;PlayerOne&#t100000&#t200000&#t150000...&#10;PlayerTwo&#t80000&#t120000&#t90000..." style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box; font-family:monospace; font-size:12px; white-space:pre;"></textarea>
                 </div>
-                <button onclick="window.importPastedShowdownEvent(this)" style="background:var(--success); color:white; border:none; width:100%; padding:12px; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer;">📥 Import Event into Vault</button>
+                
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+    <button onclick="window.importPastedShowdownEvent(this, 'live')" style="background:var(--accent); color:var(--bg-main); border:none; padding:12px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; box-shadow:0 4px 12px rgba(6,182,212,0.3);">⚡ Import to Live Tracker</button>
+    <button onclick="window.importPastedShowdownEvent(this, 'vault')" style="background:var(--success); color:white; border:none; padding:12px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer;">📁 Import to Vault Archive</button>
+</div>
             </div>
         </div>
     `;
     document.body.appendChild(modal);
 };
 
-window.importPastedShowdownEvent = async (btnEl) => {
+window.importPastedShowdownEvent = async (btnEl, targetMode = 'vault') => {
     let dateStr = document.getElementById('pasteEvDate').value.trim() || new Date().toLocaleDateString([], {month:'short', day:'numeric', year:'numeric'});
     let enemyName = document.getElementById('pasteEvEnemy').value.trim() || 'Enemy Alliance';
     let rawText = document.getElementById('pasteEvData').value.trim();
@@ -6945,7 +6949,8 @@ const views = {
               <span>⚔️ Showdown Data Entry</span>
               <div style="display:flex; gap:8px; flex-wrap:wrap;">
                  <button onclick="window.openShowdownArchiveVaultModal()" style="background:linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(6,182,212,0.05) 100%); color:var(--accent); border:1px solid rgba(6,182,212,0.4); padding:4px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:4px;">📜 Open Vault</button>
-                 <button onclick="window.showMissedDaysReportModal(this)" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--accent); padding:4px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:4px;">📋 Missed Days Report</button>
+                 <button onclick="window.openShowdownPasteImporterModal()" style="background:rgba(255,215,0,0.18); border:1px solid rgba(255,215,0,0.5); color:#FFD700; padding:4px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:4px;">📋 Quick Paste Scores</button>
+                  <button onclick="window.showMissedDaysReportModal(this)" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--accent); padding:4px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:4px;">📋 Missed Days Report</button>
                  <button onclick="window.archiveCurrentShowdownToFirebase()" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--success); padding:4px 8px; border-radius:6px; cursor:pointer; font-size:12px;">📁 Archive to History</button>
                  <button onclick="window.restoreLatestShowdownArchive()" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--accent); padding:4px 8px; border-radius:6px; cursor:pointer; font-size:12px;">↩️ Restore Choice</button>
                  <button onclick="window.resetCurrentShowdown()" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--danger); padding:4px 8px; border-radius:6px; cursor:pointer; font-size:12px;">🔄 Reset Event</button>

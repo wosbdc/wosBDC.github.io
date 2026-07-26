@@ -1,3 +1,7 @@
+## [1.48.48] - 2026-07-26
+### Dual Live/Vault Quick Paste Importer Tool
+- **`📋 Quick Paste Scores` Button**: Added a dedicated quick paste button directly in the `⚔️ Showdown Data Entry` header with choices to **`⚡ Import to Live Tracker`** or **`📁 Import to Vault Archive`**, allowing rapid bulk manual re-entry of all player scores from Excel or text in 1 click.
+
 ## [1.48.47] - 2026-07-26
 ### Recovered Original Unaltered Showdown Dataset (47.7M / 52.3M Thadwarf Score)
 - **Transcript Deep Recovery**: Extracted the exact, unaltered JSON backup matrix (`sd_history_utf8.json`) from past transcripts containing the 4 original event blocks (`July 13-19 vs [RED]Army`, `July 6-12 vs [NBD]ムラタク`, `June 29-July 5 vs [000]黃楓谷`, `June 22-28 vs [NYd] シトリン`).
