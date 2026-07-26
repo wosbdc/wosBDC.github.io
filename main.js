@@ -2148,10 +2148,11 @@ window.getLivePlayerEventRow = async (chiefName, pRow, headers) => {
               get(ref(db, 'showdown_live'))
             ]);
       
-      const sdLiveData = sdLiveSnap.val() || {};
+      const sdLiveData = sdLiveSnap && sdLiveSnap.exists() ? sdLiveSnap.val() || {} : {};
   
       let currentDay = 0;
       Object.values(sdLiveData).forEach(p => {
+         if (!p || typeof p !== 'object') return;
          if ((p.d6||0) > 0 && currentDay < 6) currentDay = 6;
          else if ((p.d5||0) > 0 && currentDay < 5) currentDay = 5;
          else if ((p.d4||0) > 0 && currentDay < 4) currentDay = 4;
@@ -3452,12 +3453,14 @@ window.mergeShowdownData = (data, sdLiveData) => {
    
    let totals = { d1: 0, d2: 0, d3: 0, d4: 0, d5: 0, d6: 0 };
    Object.values(sdLiveData).forEach(p => {
-      totals.d1 += (p.d1 || 0);
-      totals.d2 += (p.d2 || 0);
-      totals.d3 += (p.d3 || 0);
-      totals.d4 += (p.d4 || 0);
-      totals.d5 += (p.d5 || 0);
-      totals.d6 += (p.d6 || 0);
+      if (p && typeof p === 'object') {
+         totals.d1 += (p.d1 || 0);
+         totals.d2 += (p.d2 || 0);
+         totals.d3 += (p.d3 || 0);
+         totals.d4 += (p.d4 || 0);
+         totals.d5 += (p.d5 || 0);
+         totals.d6 += (p.d6 || 0);
+      }
    });
    
    for (let r = 0; r < data.length; r++) {
@@ -3481,21 +3484,25 @@ window.mergeShowdownData = (data, sdLiveData) => {
            let pr = r + 1;
            
            let newRows = [];
-           let playerList = Object.entries(sdLiveData).map(([name, scores]) => {
-               let total = (scores.d1||0) + (scores.d2||0) + (scores.d3||0) + (scores.d4||0) + (scores.d5||0) + (scores.d6||0);
-               return { name, scores, total };
-           }).sort((a,b) => b.total - a.total);
+           let playerList = Object.entries(sdLiveData)
+             .filter(([name, scores]) => scores && typeof scores === 'object')
+             .map(([name, scores]) => {
+                let total = (scores.d1||0) + (scores.d2||0) + (scores.d3||0) + (scores.d4||0) + (scores.d5||0) + (scores.d6||0);
+                return { name, scores, total };
+             })
+             .sort((a,b) => b.total - a.total);
            
            playerList.forEach((p, idx) => {
                let newRow = new Array(Math.max(row.length, startCol + 9)).fill("");
+               let sc = p.scores || {};
                newRow[startCol] = idx + 1;
                newRow[nameCol] = p.name;
-               newRow[startCol + 2] = p.scores.d1 || 0;
-               newRow[startCol + 3] = p.scores.d2 || 0;
-               newRow[startCol + 4] = p.scores.d3 || 0;
-               newRow[startCol + 5] = p.scores.d4 || 0;
-               newRow[startCol + 6] = p.scores.d5 || 0;
-               newRow[startCol + 7] = p.scores.d6 || 0;
+               newRow[startCol + 2] = sc.d1 || 0;
+               newRow[startCol + 3] = sc.d2 || 0;
+               newRow[startCol + 4] = sc.d3 || 0;
+               newRow[startCol + 5] = sc.d4 || 0;
+               newRow[startCol + 6] = sc.d5 || 0;
+               newRow[startCol + 7] = sc.d6 || 0;
                newRow[startCol + 8] = p.total;
                newRows.push(newRow);
            });

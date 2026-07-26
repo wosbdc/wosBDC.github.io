@@ -1,3 +1,8 @@
+## [1.48.13] - 2026-07-26
+### Fixed Merge Showdown Data & Active Day Calculation Null Crash
+- **Hardened mergeShowdownData**: Added object type check (`if (p && typeof p === 'object')`) to prevent `TypeError: Cannot read properties of undefined (reading 'd1')` when merging live score data into tables.
+- **Hardened Active Day Calculation**: Added defensive checks to `Object.values(sdLiveData)` loops (~lines 2154 & 2396).
+
 ## [1.48.12] - 2026-07-26
 ### Fixed Showdown Page Score Property TypeError
 - **Added Defensive Guard Checks**: Hardened all Showdown page renderer functions (`views.showdown`, `views.showdownAdmin`, `leaderboards`, etc.) against `undefined` / `null` player score objects and missing `enemyAlliance.scores` properties.
