@@ -1,3 +1,7 @@
+## [1.48.21] - 2026-07-26
+### Bulletproof Missing Enemy Scores Guard in views.showdown
+- **Replaced Unsafe Property Reference**: Replaced `enemyAlliance.scores['d'+i]` with safe `eScores['d'+i]` accessor in `views.showdown` (~line 9646) so missing or reset enemy alliance records can never trigger `TypeError` or break page rendering.
+
 ## [1.48.20] - 2026-07-26
 ### Automatic Enemy Team Scores Restore ([RED]Army)
 - **Enemy Alliance Restore Fallback**: Configured `restoreLatestShowdownArchive` to automatically restore Enemy Alliance name **[RED]Army** and daily battle scores (`Day 1: 4,531,447`, `Day 2: 4,766,115`, `Day 3: 3,990,556`, `Day 4: 6,893,670`, `Day 5: 4,497,906`, `Day 6: 12,501,628`) alongside all 30 player scores.
