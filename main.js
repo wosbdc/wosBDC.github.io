@@ -4243,18 +4243,18 @@ window.ensureJuly20BlockInHistory = async () => {
             });
         }
 
-        // Also ensure live tracker has July 20-26 player scores
-        const liveSnap = await get(ref(db, 'showdown_live')).catch(() => null);
-        if (!liveSnap || !liveSnap.exists() || !liveSnap.val() || Object.keys(liveSnap.val()).length === 0) {
-            let liveMap = {};
-            july20Players.forEach(p => {
-                liveMap[p.name] = { d1: p.d1, d2: p.d2, d3: p.d3, d4: p.d4, d5: p.d5, d6: p.d6 };
-            });
-            await set(ref(db, 'showdown_live'), liveMap);
-            await set(ref(db, 'showdown_meta/enemyAlliance'), {
-                name: "[WWA] Whiteoutwarriors",
-                scores: { d1: 4531447, d2: 4766115, d3: 3990556, d4: 6893670, d5: 4497906, d6: 12501628 }
-            });
+        // Do not force overwrite live tracker if reset flag is set
+        const metaSnap = await get(ref(db, 'showdown_meta')).catch(() => null);
+        const metaVal = (metaSnap && metaSnap.exists()) ? metaSnap.val() : {};
+        if (!metaVal.isReset) {
+            const liveSnap = await get(ref(db, 'showdown_live')).catch(() => null);
+            if (!liveSnap || !liveSnap.exists() || !liveSnap.val() || Object.keys(liveSnap.val()).length === 0) {
+                let liveMap = {};
+                july20Players.forEach(p => {
+                    liveMap[p.name] = { d1: p.d1, d2: p.d2, d3: p.d3, d4: p.d4, d5: p.d5, d6: p.d6 };
+                });
+                await set(ref(db, 'showdown_live'), liveMap);
+            }
         }
     } catch(e) { console.warn("July 20 seeder error:", e); }
 };
@@ -10436,7 +10436,7 @@ window.resetBearTrapEvent = async () => {
   showdown: async () => {
     if (window.clearShowdownCaches) window.clearShowdownCaches();
     if (window.ensureShowdownDataSeeded) await window.ensureShowdownDataSeeded();
-    if (window.ensureJuly20BlockInHistory) await window.ensureJuly20BlockInHistory();
+    // ensureJuly20BlockInHistory checked on init only
     renderLoading("Loading Showdown Data");
     try {
        const [liveSnap, metaSnap, historySnap] = await Promise.all([

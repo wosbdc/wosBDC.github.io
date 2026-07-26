@@ -1,3 +1,7 @@
+## [1.48.59] - 2026-07-26
+### Complete Reset Clearing of `Events > Showdown` Page
+- **Full View Reset Sync**: Updated `views.showdown()` and `ensureJuly20BlockInHistory` so that when an admin resets the event, **`Events > Showdown`** clears completely with zero re-seeding, leaving the live tracker 100% clean for new entries.
+
 ## [1.48.58] - 2026-07-26
 ### Clean Zero-Score Event Reset Implementation
 - **Zero-Score Event Reset**: Updated `window.resetCurrentShowdown()` so clicking **`🔄 Reset Event`** sets all player Day 1..6 scores to **0**, resets enemy alliance scores to **0**, and resets `isReset` to `true`, providing a completely fresh, zeroed-out live tracker for the new event.
