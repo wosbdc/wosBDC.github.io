@@ -1,3 +1,7 @@
+## [1.48.52] - 2026-07-26
+### Cleaned `historyObj` Declaration Scope in `views.showdown`
+- **Scope Fix**: Relocated `historyObj` and `metaData` declarations to the very top of `views.showdown()` right after `Promise.all`, resolving the `Cannot access 'historyObj' before initialization` ReferenceError completely.
+
 ## [1.48.51] - 2026-07-26
 ### Fixed Variable Declaration Order in `views.showdown`
 - **Fixed ReferenceError**: Moved `historyObj` initialization above `if (!liveData)` check in `views.showdown()`, fixing a runtime crash on `Events > Showdown` and ensuring smooth auto-restoration from history.

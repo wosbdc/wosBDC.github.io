@@ -10383,6 +10383,9 @@ window.resetBearTrapEvent = async () => {
           get(ref(db, 'showdown_meta/history')).catch(() => null)
        ]);
        
+       const metaData = (metaSnap && metaSnap.exists() && metaSnap.val()) ? metaSnap.val() : {};
+       const historyObj = (historySnap && historySnap.exists() && historySnap.val()) ? historySnap.val() : {};
+
        let liveData = (liveSnap && liveSnap.exists() && liveSnap.val()) ? liveSnap.val() : {};
        if (liveData && liveData.error) delete liveData.error;
 
@@ -10407,8 +10410,6 @@ window.resetBearTrapEvent = async () => {
                }
            }
        }
-       const metaData = (metaSnap.exists() && metaSnap.val()) ? metaSnap.val() : {};
-       const historyObj = (historySnap && historySnap.exists() && historySnap.val()) ? historySnap.val() : {};
        const enemyAlliance = (metaData && metaData.enemyAlliance && typeof metaData.enemyAlliance === 'object') ? metaData.enemyAlliance : { name: '[WWA] Whiteoutwarriors', scores: {} };
        const eScores = (enemyAlliance && enemyAlliance.scores && typeof enemyAlliance.scores === 'object') ? enemyAlliance.scores : {};
        const enemyName = enemyAlliance.name || '[WWA] Whiteoutwarriors';
