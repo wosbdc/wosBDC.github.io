@@ -8864,8 +8864,9 @@ window.resetBearTrapEvent = async () => {
               return b.total - a.total;
           });
           
+          let hasLiveScores = players.some(p => p.total > 0 || p.horns > 0);
           let mvpBannerHtml = "";
-          if (players.length > 0 && players[0].horns > 0) {
+          if (hasLiveScores && players.length > 0 && players[0].horns > 0) {
               let maxHorns = players[0].horns;
               let topMvps = players.filter(p => p.horns === maxHorns);
               let mvpTitle = topMvps.length > 1 ? "👑 Showdown Co-MVPs" : "👑 Showdown MVP";
@@ -8892,9 +8893,22 @@ window.resetBearTrapEvent = async () => {
                   </div>
                 </div>
               `;
+          } else {
+              mvpBannerHtml = `
+                <div style="background: linear-gradient(135deg, rgba(148,163,184,0.08) 0%, rgba(148,163,184,0.02) 100%); border: 1px dashed rgba(148,163,184,0.3); border-radius: 12px; padding: 15px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px;">
+                  <div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 20px;">⏳</div>
+                  <div style="flex: 1; text-align: left;">
+                    <div style="color: var(--accent); font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">Event Pending / Reset</div>
+                    <div style="color: var(--text-main); font-size: 16px; font-weight: bold;">Pending Day 1 Scores...</div>
+                  </div>
+                  <div style="text-align: right;">
+                    <span style="background: rgba(6,182,212,0.15); color: var(--accent); border: 1px solid rgba(6,182,212,0.3); padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: bold;">Waiting for Battle</span>
+                  </div>
+                </div>
+              `;
           }
 
-          const liveDisplayList = players.slice(0, 4);
+          const liveDisplayList = players.filter(p => p.total > 0 || p.horns > 0).slice(0, 4);
 
           liveShowdownHtml = `<div class="card" style="flex: 1 1 0px; min-width: 300px;"><div class="card-title">Current - Showdown Leaderboard</div>
           ${mvpBannerHtml}
@@ -8903,25 +8917,29 @@ window.resetBearTrapEvent = async () => {
                <th>RANK</th><th>NAME</th><th>TOTAL HORNS</th><th>DAY WINS</th><th>TOTAL</th>
             </tr></thead><tbody>`;
           
-          let currentLiveRank = 1;
-          liveDisplayList.forEach((p, index) => {
-              if (index > 0) {
-                  let prev = liveDisplayList[index - 1];
-                  if (p.horns !== prev.horns) {
-                      currentLiveRank += 1;
+          if (liveDisplayList.length === 0) {
+              liveShowdownHtml += `<tr><td colspan="5" style="text-align:center; padding: 25px; color: var(--text-muted); font-size: 13px;">⏳ <b>Showdown Event Pending</b> — No scores recorded for current event yet. Live rankings will update as scores are saved!</td></tr>`;
+          } else {
+              let currentLiveRank = 1;
+              liveDisplayList.forEach((p, index) => {
+                  if (index > 0) {
+                      let prev = liveDisplayList[index - 1];
+                      if (p.horns !== prev.horns) {
+                          currentLiveRank += 1;
+                      }
                   }
-              }
-              let isTie = liveDisplayList.filter(o => o.horns === p.horns).length > 1;
-              let tieBadge = isTie ? ' <span style="font-size:11px; opacity:0.85;" title="Tied Rank">🤝</span>' : '';
-              let rankDisplay = `${currentLiveRank}${tieBadge}`;
-              liveShowdownHtml += `<tr>
-                 <td style="font-weight:bold; color:var(--text-muted);">${rankDisplay}</td>
-                 <td>${formatCell(p.name)}</td>
-                 <td>${p.horns}</td>
-                 <td>${p.wins}</td>
-                 <td>${p.total > 0 ? p.total.toLocaleString() : '0'}</td>
-              </tr>`;
-          });
+                  let isTie = liveDisplayList.filter(o => o.horns === p.horns).length > 1;
+                  let tieBadge = isTie ? ' <span style="font-size:11px; opacity:0.85;" title="Tied Rank">🤝</span>' : '';
+                  let rankDisplay = `${currentLiveRank}${tieBadge}`;
+                  liveShowdownHtml += `<tr>
+                     <td style="font-weight:bold; color:var(--text-muted);">${rankDisplay}</td>
+                     <td>${formatCell(p.name)}</td>
+                     <td>${p.horns}</td>
+                     <td>${p.wins}</td>
+                     <td>${p.total > 0 ? p.total.toLocaleString() : '0'}</td>
+                  </tr>`;
+              });
+          }
           liveShowdownHtml += `</tbody></table></div></div>`;
           
           let rawHistory = sdHistoryData;

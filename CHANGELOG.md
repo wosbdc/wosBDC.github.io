@@ -1,3 +1,7 @@
+## [1.48.22] - 2026-07-26
+### Event Pending / Reset Indicators for Showdown
+- **Added Event Pending Banners & Messages**: When Showdown live scores are reset or empty, both `views.leaderboards('Showdown')` and `views.showdown()` now display a clean, styled **`⏳ Event Pending / Waiting for Day 1 Scores`** banner and table indicator so users know the event is waiting to begin instead of thinking it failed to load.
+
 ## [1.48.21] - 2026-07-26
 ### Bulletproof Missing Enemy Scores Guard in views.showdown
 - **Replaced Unsafe Property Reference**: Replaced `enemyAlliance.scores['d'+i]` with safe `eScores['d'+i]` accessor in `views.showdown` (~line 9646) so missing or reset enemy alliance records can never trigger `TypeError` or break page rendering.
