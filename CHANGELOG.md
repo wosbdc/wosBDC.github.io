@@ -1,3 +1,8 @@
+## [1.48.32] - 2026-07-26
+### Fixed Delete Archive Modal Stacking & Enhanced Google Sheets Enemy Name Extractor
+- **Fixed Confirmation Dialog Layer Stacking (`z-index: 100050`)**: Increased confirm overlay `z-index` so the `customConfirm` modal floats above the full-screen Vault modal (`z-index: 10005`), making `🗑️ Delete This Archive` 100% responsive and clickable.
+- **Enhanced Enemy Alliance Name & Date Parsing**: Improved regex pattern parsing in `syncGoogleSheetsHistoryToVault` to strip prefixes (`VS:`, `vs `, `Enemy:`, `Opponent:`) and capture opponent alliance names and dates cleanly.
+
 ## [1.48.31] - 2026-07-26
 ### Fixed Manager Tools Bar Render in Showdown Archive Vault
 - **Resolved Admin Bar Template String Bug**: Fixed missing `${adminBarHtml}` interpolation in `buildVaultModalContent` return template string, ensuring the `⚡ Manager Tools` bar (`Option A Sync`, `Paste Custom Event`, `Delete Archive`) renders 100% reliably in the Vault modal.

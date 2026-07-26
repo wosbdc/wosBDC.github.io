@@ -1049,7 +1049,7 @@ window.openAddPlayerModal = () => {
   const todayStr = new Date().toISOString().split('T')[0];
 
   const modalHtml = `
-    <div id="addPlayerModal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.75); backdrop-filter:blur(5px); z-index:9999; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease;">
+    <div id="addPlayerModal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.75); backdrop-filter:blur(5px); z-index:100050; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease;">
       <div style="background:var(--card-bg); border:1px solid var(--accent); border-radius:16px; padding:24px; width:90%; max-width:480px; box-shadow:0 20px 50px rgba(0,0,0,0.8); position:relative;">
         
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:12px;">
@@ -3240,7 +3240,7 @@ const app = document.getElementById('app');
 window.customConfirm = (message) => {
     return new Promise((resolve) => {
         const overlay = document.createElement('div');
-        overlay.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); z-index:9999; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s; backdrop-filter:blur(3px);';
+        overlay.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); z-index:100050; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s; backdrop-filter:blur(3px);';
         
         const modal = document.createElement('div');
         modal.style.cssText = 'background:var(--bg-main); padding:25px; border-radius:12px; max-width:400px; width:90%; border:1px solid var(--border); box-shadow:0 10px 30px rgba(0,0,0,0.5); text-align:center; transform:scale(0.95); animation:zoomIn 0.2s forwards;';
@@ -3278,7 +3278,7 @@ window.customConfirm = (message) => {
 window.customAlert = (message) => {
     return new Promise((resolve) => {
         const overlay = document.createElement('div');
-        overlay.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); z-index:9999; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s; backdrop-filter:blur(3px);';
+        overlay.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); z-index:100050; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s; backdrop-filter:blur(3px);';
         
         const modal = document.createElement('div');
         modal.style.cssText = 'background:var(--bg-main); padding:25px; border-radius:12px; max-width:400px; width:90%; border:1px solid var(--border); box-shadow:0 10px 30px rgba(0,0,0,0.5); text-align:center; transform:scale(0.95); animation:zoomIn 0.2s forwards;';
@@ -3305,7 +3305,7 @@ window.alert = window.customAlert;
 window.customPrompt = (message, defaultValue = '') => {
     return new Promise((resolve) => {
         const overlay = document.createElement('div');
-        overlay.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); z-index:9999; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s; backdrop-filter:blur(3px);';
+        overlay.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); z-index:100050; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s; backdrop-filter:blur(3px);';
         
         const modal = document.createElement('div');
         modal.style.cssText = 'background:var(--bg-main); padding:25px; border-radius:12px; max-width:400px; width:90%; border:1px solid var(--border); box-shadow:0 10px 30px rgba(0,0,0,0.5); text-align:center; transform:scale(0.95); animation:zoomIn 0.2s forwards; display:flex; flex-direction:column; gap:15px;';
@@ -4079,10 +4079,23 @@ window._sdHistoryState = {
 window.deleteShowdownArchive = async (timestamp, dateStr = '') => {
     if (!timestamp) return;
     
-    const confirmed = await window.customConfirm(`🗑️ Are you sure you want to DELETE the archived Showdown event from ${dateStr || timestamp}? This cannot be undone.`);
+    let confirmed = false;
+    try {
+        if (typeof window.customConfirm === 'function') {
+            confirmed = await window.customConfirm(`🗑️ Are you sure you want to DELETE the archived Showdown event from ${dateStr || timestamp}? This cannot be undone.`);
+        } else {
+            confirmed = window.confirm(`🗑️ Are you sure you want to DELETE the archived Showdown event from ${dateStr || timestamp}?`);
+        }
+    } catch(e) {
+        confirmed = window.confirm(`🗑️ Are you sure you want to DELETE the archived Showdown event from ${dateStr || timestamp}?`);
+    }
+    
     if (!confirmed) return;
     try {
         await remove(ref(db, `showdown_meta/history/${timestamp}`));
+        if (window._sdHistoryState && window._sdHistoryState.historyObj) {
+            delete window._sdHistoryState.historyObj[timestamp];
+        }
         if (window.showToast) window.showToast(`Archived event (${dateStr || timestamp}) deleted successfully! 🗑️`, "success");
         if (window.openShowdownArchiveVaultModal) window.openShowdownArchiveVaultModal('all');
     } catch(err) {
@@ -4092,7 +4105,6 @@ window.deleteShowdownArchive = async (timestamp, dateStr = '') => {
 };
 
 window.syncGoogleSheetsHistoryToVault = async (btnEl = null) => {
-    
     let origText = btnEl ? btnEl.innerHTML : '';
     if (btnEl) { btnEl.disabled = true; btnEl.innerHTML = '⏳ Syncing Sheets...'; }
     try {
@@ -4119,16 +4131,22 @@ window.syncGoogleSheetsHistoryToVault = async (btnEl = null) => {
             if (!Array.isArray(row) && typeof row === 'object') row = Object.values(row);
             if (!Array.isArray(row)) continue;
 
-            let col0 = String(row[0] || '').trim();
+            let fullRowStr = row.map(cell => String(cell || '').trim()).filter(Boolean).join(" ");
             let col1 = String(row[1] || '').trim();
             let col2 = String(row[2] || '').trim();
 
-            if (col0.toLowerCase().includes('date') || col1.toLowerCase().includes('date')) {
-                let match = (col0 + ' ' + col1 + ' ' + col2).match(/(\w+\s+\d+,\s+\d{4}|\d{4}-\d{2}-\d{2}|\w+\s+\d+)/i);
-                if (match) currentDate = match[0];
+            if (/date/i.test(fullRowStr) || /\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|\d{1,2}\/\d{1,2}\/\d{2,4}|\d{4}-\d{2}-\d{2})\b/i.test(fullRowStr)) {
+                let dateMatch = fullRowStr.match(/(?:date\s*:?\s*)?([a-z]{3,9}\s+\d{1,2},?\s+\d{4}|\d{1,2}\/\d{1,2}\/\d{2,4}|\d{4}-\d{2}-\d{2}|[a-z]{3,9}\s+\d{1,2})/i);
+                if (dateMatch && dateMatch[1]) {
+                    currentDate = dateMatch[1].replace(/^date\s*:?\s*/i, '').trim();
+                }
             }
-            if (col0.toLowerCase().includes('vs') || col1.toLowerCase().includes('vs') || col0.toLowerCase().includes('enemy')) {
-                currentEnemy = col0 || col1 || col2 || "Enemy Alliance";
+
+            if (/vs|enemy|opponent|alliance|versus/i.test(fullRowStr)) {
+                let enemyClean = fullRowStr.replace(/^.*?(?:vs\.?|versus|enemy\s*alliance|enemy|opponent|alliance)\s*:?\s*/i, '').trim();
+                if (enemyClean && !/ranking|member|name|date|day/i.test(enemyClean)) {
+                    currentEnemy = enemyClean;
+                }
             }
 
             if (col1.toLowerCase() === 'ranking' && (col2.toLowerCase() === 'member' || col2.toLowerCase() === 'name')) {
@@ -8067,7 +8085,7 @@ html += `</select>
         
         <!-- Reset Player Modal Backdrop & Card -->
         <div id="btResetPlayerModalOverlay" onclick="document.getElementById('btResetPlayerModal').style.display='none'; this.style.display='none';" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); backdrop-filter:blur(5px); z-index:9998;"></div>
-        <div id="btResetPlayerModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:90%; max-width:420px; background:var(--card-bg); border:1px solid var(--danger); border-radius:16px; padding:24px; box-shadow:0 20px 50px rgba(0,0,0,0.8); z-index:9999; animation:fadeIn 0.2s ease;">
+        <div id="btResetPlayerModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:90%; max-width:420px; background:var(--card-bg); border:1px solid var(--danger); border-radius:16px; padding:24px; box-shadow:0 20px 50px rgba(0,0,0,0.8); z-index:100050; animation:fadeIn 0.2s ease;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid var(--border); padding-bottom:12px;">
             <h3 style="margin:0; color:var(--danger); font-size:18px; display:flex; align-items:center; gap:8px;">
               🗑️ Reset Player Donations
