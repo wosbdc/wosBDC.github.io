@@ -1,3 +1,7 @@
+## [1.48.51] - 2026-07-26
+### Fixed Variable Declaration Order in `views.showdown`
+- **Fixed ReferenceError**: Moved `historyObj` initialization above `if (!liveData)` check in `views.showdown()`, fixing a runtime crash on `Events > Showdown` and ensuring smooth auto-restoration from history.
+
 ## [1.48.50] - 2026-07-26
 ### Automatic Live Tracker Restoration from Archived History
 - **Auto-Restoration Engine**: `views.showdown()` now automatically reads the latest archived event from `showdown_meta/history` (Key `1785088926123` containing all 28 players and Thadwarf: **20,128,497**) if `showdown_live` is cleared, ensuring the live tracker is populated seamlessly.
