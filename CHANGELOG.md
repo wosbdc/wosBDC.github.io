@@ -1,3 +1,7 @@
+## [1.48.31] - 2026-07-26
+### Fixed Manager Tools Bar Render in Showdown Archive Vault
+- **Resolved Admin Bar Template String Bug**: Fixed missing `${adminBarHtml}` interpolation in `buildVaultModalContent` return template string, ensuring the `⚡ Manager Tools` bar (`Option A Sync`, `Paste Custom Event`, `Delete Archive`) renders 100% reliably in the Vault modal.
+
 ## [1.48.30] - 2026-07-26
 ### Added Direct Showdown Vault Links Everywhere
 - **Top Navigation Bar Links**: Added direct **`📜 Showdown Vault`** sub-links under both `Events ▾` and `Leaderboards ▾` in the main top navigation bar.

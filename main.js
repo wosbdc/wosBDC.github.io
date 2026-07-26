@@ -4499,6 +4499,7 @@ window.buildVaultModalContent = (activeKey = 'all') => {
     }
 
     return `
+        ${adminBarHtml}
         <div style="margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; background:rgba(255,255,255,0.03); padding:12px 18px; border-radius:10px; border:1px solid var(--border);">
             <div style="font-weight:bold; font-size:13px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
                 <span>📅 Select Event Archive:</span>
