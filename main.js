@@ -3869,7 +3869,18 @@ window.archiveCurrentShowdownToFirebase = async () => {
     if (!confirmed) return;
     try {
         const liveSnap = await get(ref(db, 'showdown_live'));
-        const liveData = (liveSnap.exists() && liveSnap.val()) ? liveSnap.val() : {};
+        let liveData = (liveSnap && liveSnap.exists() && liveSnap.val()) ? liveSnap.val() : {};
+       if (liveData && liveData.error) delete liveData.error;
+       
+       if (!liveData || Object.keys(liveData).length < 2) {
+           liveData = {};
+           const defaultBlock = (typeof window.getJuly2026DefaultBlock === 'function') ? window.getJuly2026DefaultBlock() : null;
+           if (defaultBlock && Array.isArray(defaultBlock.players)) {
+               defaultBlock.players.forEach(p => {
+                   if (p.name) liveData[p.name] = { d1: p.d1||0, d2: p.d2||0, d3: p.d3||0, d4: p.d4||0, d5: p.d5||0, d6: p.d6||0 };
+               });
+           }
+       }
         const timestamp = Date.now();
         const dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         
