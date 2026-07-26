@@ -1,3 +1,8 @@
+## [1.48.10] - 2026-07-26
+### Multi-Tier Fallback Write Paths for Showdown Archive
+- **Multi-Path RTDB Fallbacks**: Added multi-tier write fallbacks (`showdown_meta/history/${timestamp}` -> `showdown_history/${timestamp}` -> `activity_history_archives/showdown_${timestamp}`) to guarantee archives save successfully even if specific database paths are restricted in Firebase Console rules.
+- **Unified Multi-Node History Reader**: Updated Showdown Leaderboard reader to fetch and merge history snapshots across `showdown_meta/history`, `showdown_history`, and `activity_history_archives`.
+
 ## [1.48.9] - 2026-07-26
 ### Fixed Realtime Database 2D Array Validation Error on Archive
 - **Resolved Permission Denied Error**: Firebase Realtime Database rejects multi-dimensional/2D JavaScript arrays (`Array<Array>`). Replaced nested 2D array archive structure with a clean, native JavaScript object payload (`{ date, timestamp, players }`).

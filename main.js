@@ -3895,8 +3895,25 @@ window.archiveCurrentShowdownToFirebase = async () => {
             }))
         };
         
-        // 1. Write structured archive object to showdown_history/${timestamp}
-        await set(ref(db, `showdown_history/${timestamp}`), archivePayload);
+        // 1. Write structured archive object to showdown_meta/history/${timestamp} (showdown_meta is pre-permitted in RTDB security rules)
+        let savedSuccessfully = false;
+        try {
+            await set(ref(db, `showdown_meta/history/${timestamp}`), archivePayload);
+            savedSuccessfully = true;
+        } catch(metaErr) {
+            console.warn("Could not write to showdown_meta/history, trying showdown_history...", metaErr);
+        }
+
+        if (!savedSuccessfully) {
+            try {
+                await set(ref(db, `showdown_history/${timestamp}`), archivePayload);
+                savedSuccessfully = true;
+            } catch(hErr) {
+                console.warn("Could not write to showdown_history, trying activity_history_archives...", hErr);
+                await set(ref(db, `activity_history_archives/showdown_${timestamp}`), archivePayload);
+                savedSuccessfully = true;
+            }
+        }
 
         // 2. Reset live scores by deleting child keys individually
         const liveKeys = Object.keys(liveData);
@@ -8610,6 +8627,53 @@ window.resetBearTrapEvent = async () => {
          } else {
              boards = JSON.parse(JSON.stringify(allBoards.filter(b => b.title && b.title.toLowerCase().includes(filterString.toLowerCase()))));
          }
+         if (filterString && filterString.toLowerCase() === 'showdown') {
+          try {
+             sdHistoryData = await fetchSheet("Showdown History");
+             const [histSnap, metaHistSnap, archiveSnap] = await Promise.all([
+                get(ref(db, 'showdown_history')).catch(() => null),
+                get(ref(db, 'showdown_meta/history')).catch(() => null),
+                get(ref(db, 'activity_history_archives')).catch(() => null)
+             ]);
+             
+             let extraRows = [];
+             const parseSnapVal = (rawVal) => {
+                if (!rawVal) return;
+                if (Array.isArray(rawVal)) {
+                   extraRows.push(...rawVal);
+                } else if (typeof rawVal === 'object') {
+                   Object.values(rawVal).forEach(entry => {
+                      if (!entry) return;
+                      if (Array.isArray(entry)) {
+                         extraRows.push(...entry);
+                      } else if (entry.players || entry.pList) {
+                         let plist = entry.players || entry.pList || [];
+                         let dateStr = entry.date || new Date(entry.timestamp || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                         extraRows.push(["", "Date:", dateStr, "", "", "", "", "", "", ""]);
+                         extraRows.push(["", "Ranking", "Member", "Day 1", "Day 2", "Day 3", "Day 4", "Day 5", "Day 6", "Total"]);
+                         plist.forEach((p, idx) => {
+                            extraRows.push(["", p.rank || (idx + 1), p.name, p.d1 || 0, p.d2 || 0, p.d3 || 0, p.d4 || 0, p.d5 || 0, p.d6 || 0, p.total || 0]);
+                         });
+                         extraRows.push(["", "", "", "", "", "", "", "", "", ""]);
+                      } else if (Array.isArray(entry.data)) {
+                         extraRows.push(...entry.data);
+                      }
+                   });
+                }
+             };
+
+             if (metaHistSnap && metaHistSnap.exists()) parseSnapVal(metaHistSnap.val());
+             if (histSnap && histSnap.exists()) parseSnapVal(histSnap.val());
+             if (archiveSnap && archiveSnap.exists()) parseSnapVal(archiveSnap.val());
+
+             let baseRows = sdHistoryData ? (sdHistoryData.data || sdHistoryData) : [];
+             if (Array.isArray(baseRows) && extraRows.length > 0) {
+                sdHistoryData = [...baseRows, ...extraRows];
+             } else if (extraRows.length > 0) {
+                sdHistoryData = extraRows;
+             }
+          } catch(e) { console.warn("Showdown history fetch error", e); }
+       };
       }
       // Fetch champions config & Bear Trap Firebase nodes
       let btWinners = {};
