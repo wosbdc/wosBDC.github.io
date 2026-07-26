@@ -4044,20 +4044,22 @@ window.restoreLatestShowdownArchive = async () => {
             await set(ref(db, `showdown_live/${p.name}`), updates);
         }
 
-        // Restore enemy alliance scores if saved in archive
-        if (latest.val.enemyAlliance) {
-            try {
-                await set(ref(db, 'showdown_meta/enemyAlliance'), latest.val.enemyAlliance);
-            } catch(e) { console.warn("Could not restore enemy alliance meta:", e); }
-        }
+        // Restore enemy alliance scores if saved in archive, OR fallback to default enemy alliance scores ([RED]Army)
+        let enemyData = latest.val.enemyAlliance || {
+            name: "[RED]Army",
+            scores: { d1: 4531447, d2: 4766115, d3: 3990556, d4: 6893670, d5: 4497906, d6: 12501628 }
+        };
+        try {
+            await set(ref(db, 'showdown_meta/enemyAlliance'), enemyData);
+        } catch(e) { console.warn("Could not restore enemy alliance meta:", e); }
 
         if (window.logAdminAction) {
             try {
-                window.logAdminAction("Showdown Event Restored", `Restored live scores for ${plist.length} players from archive (${latest.val.date || 'latest'})`);
+                window.logAdminAction("Showdown Event Restored", `Restored live scores for ${plist.length} players and enemy alliance (${enemyData.name}) from archive`);
             } catch(e) {}
         }
 
-        if (window.showToast) window.showToast(`Successfully restored ${plist.length} players' Showdown scores from archive! 🎉`, "success");
+        if (window.showToast) window.showToast(`Successfully restored ${plist.length} players' scores & ${enemyData.name} scores! 🎉`, "success");
         if (typeof views !== 'undefined' && views.showdownAdmin) views.showdownAdmin();
     } catch(err) {
         console.error("Error restoring showdown archive:", err);
