@@ -5395,6 +5395,18 @@ function renderAvatarStack(playersList) {
     return stackHtml;
 }
 
+window.clearShowdownCaches = () => {
+    if (window.liveData) {
+        delete window.liveData['Showdown History'];
+        delete window.liveData['Showdown'];
+    }
+    if (window.livePromises) {
+        delete window.livePromises['Showdown History'];
+        delete window.livePromises['Showdown'];
+    }
+    window.rosterCache = null;
+};
+
 const views = {
   staff: async () => {
     let r5Html = '';
@@ -10328,7 +10340,12 @@ window.resetBearTrapEvent = async () => {
   },
 
   
+  
+
+
+
   showdown: async () => {
+    if (window.clearShowdownCaches) window.clearShowdownCaches();
     renderLoading("Loading Showdown Data");
     try {
        const [liveSnap, metaSnap, historySnap] = await Promise.all([

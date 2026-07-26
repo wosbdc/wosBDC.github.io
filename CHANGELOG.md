@@ -1,3 +1,7 @@
+## [1.48.41] - 2026-07-26
+### Automatic Cache Purging for Showdown Live & Vault Views
+- **In-Memory Cache Purge (`window.clearShowdownCaches`)**: Added automatic cache purging when rendering Showdown views to ensure fresh Firebase RTDB data is pulled immediately without serving stale cached memory objects.
+
 ## [1.48.40] - 2026-07-26
 ### Preserved July 20-26 Event Block with Thadwarf 29,515,364 Score
 - **Added July 20 – July 26, 2026 Snapshot**: Added `window.getJuly2026DefaultBlock` & `window.restoreJuly20to26Event()` to permanently preserve the July 20 – July 26, 2026 cycle (vs `[WWA] Whiteoutwarriors`) featuring Thadwarf's **29,515,364** total score.
