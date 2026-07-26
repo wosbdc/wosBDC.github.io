@@ -1,3 +1,9 @@
+## [1.48.27] - 2026-07-26
+### Created Dedicated Full-Screen Showdown Archive Vault Modal
+- **Full-Screen Archive Vault Modal**: Replaced crowded inline card dropdowns with a dedicated, spacious full-screen modal (`📜 Showdown Archive Vault`).
+- **Clean Page Layout**: Restored the clean, uncluttered layouts for `Events > Showdown` and `Leaderboards > Showdown`, featuring high-visibility `📜 View Showdown Archive Vault` button pills.
+- **Rich Matchup Overview**: The Archive Vault modal displays opponent details, final alliance scores, victory/defeat badges, top MVP spotlight cards, and a spacious 6-day score breakdown matrix.
+
 ## [1.48.26] - 2026-07-26
 ### Added Interactive Showdown Event History & Archive Dropdown Filter
 - **Showdown History & Archive Selector**: Added a dropdown filter to `Leaderboards > Showdown` and `Events > Showdown` allowing users to switch between `🌟 All-Time Combined` and individual past archived Showdown events (`📅 Event: <Date>`).

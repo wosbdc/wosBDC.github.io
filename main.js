@@ -4074,6 +4074,213 @@ window._sdHistoryState = {
     activeFilter: 'all'
 };
 
+window.openShowdownArchiveVaultModal = async (initialKey = 'all') => {
+    let existingModal = document.getElementById('showdownArchiveVaultModal');
+    if (existingModal) existingModal.remove();
+
+    let modal = document.createElement('div');
+    modal.id = 'showdownArchiveVaultModal';
+    modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); z-index:10005; display:flex; justify-content:center; align-items:center; animation:fadeIn 0.2s ease; padding:15px; box-sizing:border-box;';
+    
+    modal.innerHTML = `
+        <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:16px; width:100%; max-width:950px; max-height:90vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 10px 40px rgba(0,0,0,0.6);">
+            <div style="padding:18px 24px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02);">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div style="font-size:24px;">📜</div>
+                    <div>
+                        <div style="font-size:18px; font-weight:bold; color:var(--text-main);">Showdown Archive Vault</div>
+                        <div style="font-size:12px; color:var(--text-muted);">Historical Event Standings & Matchup Records</div>
+                    </div>
+                </div>
+                <button onclick="document.getElementById('showdownArchiveVaultModal').remove()" style="background:rgba(255,255,255,0.1); border:none; color:var(--text-main); width:32px; height:32px; border-radius:50%; font-size:16px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center;">✕</button>
+            </div>
+            <div id="vaultModalBody" style="padding:24px; overflow-y:auto; flex:1;">
+                <div style="text-align:center; padding:40px 20px; color:var(--text-muted);">⏳ Fetching historical archives...</div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    try {
+        const [histSnap, liveSnap, sdHistRaw] = await Promise.all([
+            get(ref(db, 'showdown_meta/history')).catch(() => null),
+            get(ref(db, 'showdown_live')).catch(() => null),
+            (typeof sdHistoryData !== 'undefined' && sdHistoryData) ? Promise.resolve(sdHistoryData) : fetchSheet("Showdown History").catch(() => null)
+        ]);
+
+        const historyObj = (histSnap && histSnap.exists() && histSnap.val()) ? histSnap.val() : {};
+        const liveData = (liveSnap && liveSnap.exists() && liveSnap.val()) ? liveSnap.val() : {};
+        
+        let livePlayers = [];
+        for (const [pName, scores] of Object.entries(liveData)) {
+            if (!scores || typeof scores !== 'object') continue;
+            let pTotal = (scores.d1||0) + (scores.d2||0) + (scores.d3||0) + (scores.d4||0) + (scores.d5||0) + (scores.d6||0);
+            livePlayers.push({ name: pName, d1: scores.d1||0, d2: scores.d2||0, d3: scores.d3||0, d4: scores.d4||0, d5: scores.d5||0, d6: scores.d6||0, total: pTotal });
+        }
+
+        let rawHistory = sdHistRaw;
+        if (rawHistory && typeof rawHistory === 'object' && rawHistory.data) rawHistory = rawHistory.data;
+        const historyRows = rawHistory ? (Array.isArray(rawHistory) ? rawHistory : Object.values(rawHistory)) : [];
+
+        window._sdHistoryState = { historyObj, historyRows, livePlayers, activeFilter: initialKey };
+        
+        const vaultBody = document.getElementById('vaultModalBody');
+        if (vaultBody) {
+            vaultBody.innerHTML = window.buildVaultModalContent(initialKey);
+        }
+    } catch(err) {
+        console.error("Error loading vault modal:", err);
+        const vaultBody = document.getElementById('vaultModalBody');
+        if (vaultBody) vaultBody.innerHTML = `<div style="color:var(--error); text-align:center; padding:30px;">❌ Failed to load archives: ${escapeHTML(err.message)}</div>`;
+    }
+};
+
+window.buildVaultModalContent = (activeKey = 'all') => {
+    const { historyObj, historyRows, livePlayers } = window._sdHistoryState;
+    
+    let optionsHtml = `<option value="all" ${activeKey === 'all' ? 'selected' : ''}>🌟 All-Time Combined Leaderboard</option>`;
+    const archiveKeys = Object.keys(historyObj).sort((a,b) => Number(b) - Number(a));
+    archiveKeys.forEach(key => {
+        let entry = historyObj[key];
+        let dStr = (entry && entry.date) ? entry.date : new Date(Number(key) || key).toLocaleDateString([], {month:'short', day:'numeric', year:'numeric'});
+        let enemyName = (entry && entry.enemyAlliance && entry.enemyAlliance.name) ? entry.enemyAlliance.name : 'Enemy Alliance';
+        optionsHtml += `<option value="${key}" ${activeKey === String(key) ? 'selected' : ''}>📅 Event: ${dStr} (vs ${escapeHTML(enemyName)})</option>`;
+    });
+
+    let mainContent = "";
+
+    if (activeKey === 'all') {
+        let allTimePlayers = calculateAllTimeShowdown(historyRows);
+        let combinedMap = {};
+        allTimePlayers.forEach(p => {
+            combinedMap[p.name.toLowerCase()] = { name: p.name, horns: p.horns, wins: p.wins, total: p.total };
+        });
+        livePlayers.forEach(p => {
+            let k = p.name.toLowerCase();
+            if (!combinedMap[k]) combinedMap[k] = { name: p.name, horns: 0, wins: 0, total: 0 };
+            combinedMap[k].horns += (p.horns || 0);
+            combinedMap[k].wins += (p.wins || 0);
+            combinedMap[k].total += (p.total || 0);
+        });
+        allTimePlayers = Object.values(combinedMap).sort((a, b) => b.horns !== a.horns ? b.horns - a.horns : b.total - a.total);
+        
+        let allTimeMvpHtml = "";
+        if (allTimePlayers.length > 0 && allTimePlayers[0].horns > 0) {
+            let maxHorns = allTimePlayers[0].horns;
+            let topChamps = allTimePlayers.filter(p => p.horns === maxHorns);
+            let champTitle = topChamps.length > 1 ? "👑 All-Time Co-Champions" : "👑 All-Time Champion";
+            let champDisplayNames = topChamps.map(p => escapeHTML(p.name)).join(" & ");
+            let avatarStack = renderAvatarStack(topChamps);
+            allTimeMvpHtml = `
+                <div style="background: linear-gradient(135deg, rgba(255,215,0,0.12) 0%, rgba(255,215,0,0.02) 100%); border: 1px solid rgba(255,215,0,0.3); border-radius: 12px; padding: 20px; margin-bottom: 20px; display: flex; align-items: center; gap: 20px;">
+                  ${avatarStack}
+                  <div style="flex: 1; text-align: left;">
+                    <div style="color: #FFD700; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">${champTitle}</div>
+                    <div style="color: var(--text-main); font-size: 22px; font-weight: bold;">${champDisplayNames}</div>
+                  </div>
+                  <div style="text-align: right;">
+                    <div style="color: var(--text-muted); font-size: 12px;">Total Horns Won</div>
+                    <div style="color: #FFD700; font-size: 26px; font-weight: bold;">${maxHorns}</div>
+                  </div>
+                </div>
+            `;
+        }
+
+        let tableRows = '';
+        allTimePlayers.forEach((p, idx) => {
+            tableRows += `<tr>
+                <td style="font-weight:bold; color:var(--text-muted); text-align:center;">${idx + 1}</td>
+                <td style="font-weight:bold;">${formatCell(p.name)}</td>
+                <td style="font-weight:bold; color:#FFD700;">${p.horns}</td>
+                <td>${p.wins}</td>
+                <td>${p.total > 0 ? p.total.toLocaleString() : '0'}</td>
+            </tr>`;
+        });
+
+        mainContent = `${allTimeMvpHtml}
+            <div class="card-table-scroll" style="max-height:55vh;">
+               <table style="min-width: max-content; width: 100%; text-align:left;"><thead><tr>
+                  <th style="text-align:center;">RANK</th><th>PLAYER NAME</th><th>TOTAL HORNS</th><th>DAY WINS</th><th>TOTAL SCORE</th>
+               </tr></thead><tbody>${tableRows}</tbody></table>
+            </div>`;
+    } else {
+        const entry = historyObj[activeKey];
+        if (entry) {
+            let archivedPlayers = Array.isArray(entry.players) ? entry.players : [];
+            archivedPlayers.sort((a,b) => (b.total||0) - (a.total||0));
+            let dStr = (entry && entry.date) ? entry.date : new Date(Number(activeKey) || activeKey).toLocaleDateString([], {month:'short', day:'numeric', year:'numeric'});
+            let enemy = entry.enemyAlliance || { name: 'Enemy Alliance', scores: {} };
+            let eScores = enemy.scores || {};
+            let enemyTotal = (eScores.d1||0) + (eScores.d2||0) + (eScores.d3||0) + (eScores.d4||0) + (eScores.d5||0) + (eScores.d6||0);
+            
+            let ourTotal = archivedPlayers.reduce((sum, p) => sum + (p.total||0), 0);
+            let isVictory = ourTotal > enemyTotal;
+            let resultBadge = isVictory ? '<span style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:4px 12px; border-radius:12px; font-weight:bold; font-size:12px;">🏆 VICTORY</span>' : '<span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:4px 12px; border-radius:12px; font-weight:bold; font-size:12px;">💔 DEFEAT</span>';
+
+            let champName = archivedPlayers.length > 0 ? archivedPlayers[0].name : 'N/A';
+            let champScore = archivedPlayers.length > 0 ? archivedPlayers[0].total : 0;
+            
+            mainContent = `
+                <div style="background: linear-gradient(135deg, rgba(6,182,212,0.1) 0%, rgba(6,182,212,0.02) 100%); border: 1px solid rgba(6,182,212,0.3); border-radius: 12px; padding: 20px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
+                  <div style="display: flex; align-items: center; gap: 15px;">
+                    <div style="font-size:32px;">⚔️</div>
+                    <div style="text-align: left;">
+                      <div style="display:flex; align-items:center; gap:10px; margin-bottom:4px;">
+                        <span style="color: var(--accent); font-size: 12px; font-weight: bold; text-transform: uppercase;">Event Date: ${dStr}</span>
+                        ${resultBadge}
+                      </div>
+                      <div style="color: var(--text-main); font-size: 20px; font-weight: bold;">Our Alliance (${ourTotal.toLocaleString()}) vs ${escapeHTML(enemy.name)} (${enemyTotal.toLocaleString()})</div>
+                    </div>
+                  </div>
+                  <div style="text-align: right;">
+                    <div style="color: var(--text-muted); font-size: 11px; text-transform: uppercase;">Event Top MVP</div>
+                    <div style="color: #FFD700; font-size: 18px; font-weight: bold;">👑 ${escapeHTML(champName)} (${(champScore||0).toLocaleString()})</div>
+                  </div>
+                </div>
+
+                <div class="card-table-scroll" style="max-height:50vh;">
+                   <table style="min-width: max-content; width: 100%; text-align:left;"><thead><tr>
+                      <th style="text-align:center;">RANK</th><th>PLAYER NAME</th><th>TOTAL SCORE</th><th>DAY 1</th><th>DAY 2</th><th>DAY 3</th><th>DAY 4</th><th>DAY 5</th><th>DAY 6</th>
+                   </tr></thead><tbody>`;
+            
+            archivedPlayers.forEach((p, idx) => {
+                mainContent += `<tr>
+                    <td style="font-weight:bold; color:var(--text-muted); text-align:center;">${idx + 1}</td>
+                    <td style="font-weight:bold;">${formatCell(p.name)}</td>
+                    <td style="font-weight:bold; color:var(--accent);">${(p.total||0).toLocaleString()}</td>
+                    <td>${(p.d1||0) > 0 ? (p.d1||0).toLocaleString() : '-'}</td>
+                    <td>${(p.d2||0) > 0 ? (p.d2||0).toLocaleString() : '-'}</td>
+                    <td>${(p.d3||0) > 0 ? (p.d3||0).toLocaleString() : '-'}</td>
+                    <td>${(p.d4||0) > 0 ? (p.d4||0).toLocaleString() : '-'}</td>
+                    <td>${(p.d5||0) > 0 ? (p.d5||0).toLocaleString() : '-'}</td>
+                    <td>${(p.d6||0) > 0 ? (p.d6||0).toLocaleString() : '-'}</td>
+                </tr>`;
+            });
+            mainContent += `</tbody></table></div>`;
+        }
+    }
+
+    return `
+        <div style="margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; background:rgba(255,255,255,0.03); padding:12px 18px; border-radius:10px; border:1px solid var(--border);">
+            <div style="font-weight:bold; font-size:13px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+                <span>📅 Select Event Archive:</span>
+            </div>
+            <select style="padding:8px 14px; border-radius:8px; border:1px solid var(--accent); background:var(--card-bg); color:var(--text-main); font-size:13px; font-weight:bold; cursor:pointer; min-width:280px;" onchange="window.switchVaultModalView(this.value)">
+                ${optionsHtml}
+            </select>
+        </div>
+        <div>${mainContent}</div>
+    `;
+};
+
+window.switchVaultModalView = (key) => {
+    window._sdHistoryState.activeFilter = key;
+    const vaultBody = document.getElementById('vaultModalBody');
+    if (vaultBody) {
+        vaultBody.innerHTML = window.buildVaultModalContent(key);
+    }
+};
+
 window.renderShowdownHistoryCard = (historyObj = {}, historyRows = [], livePlayers = [], activeFilter = 'all') => {
     window._sdHistoryState.historyObj = historyObj || {};
     window._sdHistoryState.historyRows = historyRows || [];
@@ -9075,7 +9282,7 @@ window.resetBearTrapEvent = async () => {
                <th>RANK</th><th>NAME</th><th>TOTAL HORNS</th><th>DAY WINS</th><th>TOTAL</th>
             </tr></thead><tbody>`;
           
-          if (liveDisplayList.length === 0) {
+                    if (liveDisplayList.length === 0) {
               liveShowdownHtml += `<tr><td colspan="5" style="text-align:center; padding: 15px 10px; color: var(--text-muted); font-size: 12px; white-space: normal; word-break: break-word;">⏳ <b>Event Pending</b> — Waiting for Day 1 scores</td></tr>`;
           } else {
               let currentLiveRank = 1;
@@ -9105,7 +9312,73 @@ window.resetBearTrapEvent = async () => {
               rawHistory = rawHistory.data;
           }
           const historyRows = rawHistory ? (Array.isArray(rawHistory) ? rawHistory : Object.values(rawHistory)) : [];
-          allTimeShowdownHtml = window.renderShowdownHistoryCard(historyObj, historyRows, players, 'all');
+          if (historyRows.length > 0 || (players && players.length > 0)) {
+              let allTimePlayers = calculateAllTimeShowdown(historyRows);
+              let combinedMap = {};
+              allTimePlayers.forEach(p => {
+                  combinedMap[p.name.toLowerCase()] = { name: p.name, horns: p.horns, wins: p.wins, total: p.total };
+              });
+              players.forEach(p => {
+                  let key = p.name.toLowerCase();
+                  if (!combinedMap[key]) combinedMap[key] = { name: p.name, horns: 0, wins: 0, total: 0 };
+                  combinedMap[key].horns += (p.horns || 0);
+                  combinedMap[key].wins += (p.wins || 0);
+                  combinedMap[key].total += (p.total || 0);
+              });
+              allTimePlayers = Object.values(combinedMap).sort((a, b) => b.horns !== a.horns ? b.horns - a.horns : b.total - a.total);
+              
+              let allTimeMvpHtml = "";
+              if (allTimePlayers.length > 0 && allTimePlayers[0].horns > 0) {
+                  let maxHorns = allTimePlayers[0].horns;
+                  let topChamps = allTimePlayers.filter(p => p.horns === maxHorns);
+                  let champTitle = topChamps.length > 1 ? "👑 All-Time Co-Champions" : "👑 All-Time Champion";
+                  let champDisplayNames = topChamps.map(p => escapeHTML(p.name)).join(" & ");
+                  let avatarStackHtml = renderAvatarStack(topChamps);
+                  allTimeMvpHtml = `
+                    <div style="background: linear-gradient(135deg, rgba(255,215,0,0.1) 0%, rgba(255,215,0,0.02) 100%); border: 1px solid rgba(255,215,0,0.3); border-radius: 12px; padding: 15px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px;">
+                      ${avatarStackHtml}
+                      <div style="flex: 1; text-align: left;">
+                        <div style="color: #FFD700; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">${champTitle}</div>
+                        <div style="color: var(--text-main); font-size: 18px; font-weight: bold;">${champDisplayNames}</div>
+                      </div>
+                      <div style="text-align: right;">
+                        <div style="color: var(--text-muted); font-size: 11px;">Total Score</div>
+                        <div style="color: var(--accent); font-size: 20px; font-weight: bold;">${maxHorns}</div>
+                      </div>
+                    </div>
+                  `;
+              }
+              
+              const allTimeDisplayList = allTimePlayers.slice(0, 4);
+              allTimeShowdownHtml = `<div class="card" style="flex: 1 1 0px; min-width: 300px;">
+              <div class="card-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                 <span>All-Time - Showdown Leaderboard</span>
+                 <button onclick="window.openShowdownArchiveVaultModal()" style="background:linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(6,182,212,0.05) 100%); border:1px solid rgba(6,182,212,0.4); color:var(--accent); padding:4px 10px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; gap:5px;">📜 View Archive Vault</button>
+              </div>
+              ${allTimeMvpHtml}
+              <div class="card-table-scroll">
+                <table style="min-width: max-content; width: 100%; text-align:left;"><thead><tr>
+                   <th>RANK</th><th>NAME</th><th>TOTAL HORNS</th><th>DAY WINS</th><th>TOTAL</th>
+                </tr></thead><tbody>`;
+              let currentAllTimeRank = 1;
+              allTimeDisplayList.forEach((p, index) => {
+                  if (index > 0) {
+                      let prev = allTimeDisplayList[index - 1];
+                      if (p.horns !== prev.horns) currentAllTimeRank += 1;
+                  }
+                  let isTie = allTimeDisplayList.filter(o => o.horns === p.horns).length > 1;
+                  let tieBadge = isTie ? ' <span style="font-size:11px; opacity:0.85;" title="Tied Rank">🤝</span>' : '';
+                  let rankDisplay = `${currentAllTimeRank}${tieBadge}`;
+                  allTimeShowdownHtml += `<tr>
+                     <td style="font-weight:bold; color:var(--text-muted);">${rankDisplay}</td>
+                     <td>${formatCell(p.name)}</td>
+                     <td>${p.horns}</td>
+                     <td>${p.wins}</td>
+                     <td>${p.total > 0 ? p.total.toLocaleString() : '0'}</td>
+                  </tr>`;
+              });
+              allTimeShowdownHtml += `</tbody></table></div></div>`;
+          }
          
          let totalAllianceScore = ourScores.d1 + ourScores.d2 + ourScores.d3 + ourScores.d4 + ourScores.d5 + ourScores.d6;
          ourScores.total = totalAllianceScore;
@@ -9775,39 +10048,44 @@ window.resetBearTrapEvent = async () => {
        </tr></thead><tbody>`;
        
        let currentPRank = 1;
-       players.forEach((p, index) => {
-           if (index > 0) {
-               let prev = players[index - 1];
-               if (p.total !== prev.total) {
-                   currentPRank += 1;
-               }
-           }
-           let isTie = players.filter(o => o.total === p.total).length > 1;
-           let tieBadge = isTie ? ' <span style="font-size:11px; opacity:0.85;" title="Tied Rank">🤝</span>' : '';
-           let rankDisplay = `${currentPRank}${tieBadge}`;
-           if (currentPRank === 1) rankDisplay = `🥇 1${tieBadge}`;
-           else if (currentPRank === 2) rankDisplay = `🥈 2${tieBadge}`;
-           else if (currentPRank === 3) rankDisplay = `🥉 3${tieBadge}`;
-           
-           let dayCells = '';
-           for (let di = 1; di <= 6; di++) {
-               let val = p['d' + di] || 0;
-               dayCells += `<td style="border-right: 1px solid rgba(255,255,255,0.06); text-align:center;">${val > 0 ? val.toLocaleString() : '-'}</td>`;
-           }
-           
-           playersCard += `<tr>
-              <td style="font-weight:bold; color:var(--text-muted); position:sticky; left:0; background:var(--card-bg); z-index:2; text-align:center;">${rankDisplay}</td>
-              <td style="position:sticky; left:45px; background:var(--card-bg); z-index:2; box-shadow: 1px 0 0 var(--border); max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${formatCell(p.name)}</td>
-              <td style="font-weight:bold; border-right: 1px solid rgba(255,255,255,0.12); text-align:center;">${p.total > 0 ? p.total.toLocaleString() : '0'}</td>
-              ${dayCells}
-           </tr>`;
-       });
-       playersCard += `</tbody></table></div></div>`;
-       
-       let sdHistRows = (typeof sdHistoryData !== 'undefined' && sdHistoryData) ? (sdHistoryData.data || sdHistoryData) : [];
-        const historyCardHtml = window.renderShowdownHistoryCard(historyObj, sdHistRows, players, 'all');
-        html += allianceCard + playersCard + historyCardHtml + `</div>`;
-       app.innerHTML = html;
+        players.forEach((p, index) => {
+            if (index > 0) {
+                let prev = players[index - 1];
+                if (p.total !== prev.total) {
+                    currentPRank += 1;
+                }
+            }
+            let isTie = players.filter(o => o.total === p.total).length > 1;
+            let tieBadge = isTie ? ' <span style="font-size:11px; opacity:0.85;" title="Tied Rank">🤝</span>' : '';
+            let rankDisplay = `${currentPRank}${tieBadge}`;
+            if (currentPRank === 1) rankDisplay = `🥇 1${tieBadge}`;
+            else if (currentPRank === 2) rankDisplay = `🥈 2${tieBadge}`;
+            else if (currentPRank === 3) rankDisplay = `🥉 3${tieBadge}`;
+            
+            let dayCells = '';
+            for (let di = 1; di <= 6; di++) {
+                let val = p['d' + di] || 0;
+                dayCells += `<td style="border-right: 1px solid rgba(255,255,255,0.06); text-align:center;">${val > 0 ? val.toLocaleString() : '-'}</td>`;
+            }
+            
+            playersCard += `<tr>
+               <td style="font-weight:bold; color:var(--text-muted); position:sticky; left:0; background:var(--card-bg); z-index:2; text-align:center;">${rankDisplay}</td>
+               <td style="position:sticky; left:45px; background:var(--card-bg); z-index:2; box-shadow: 1px 0 0 var(--border); max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${formatCell(p.name)}</td>
+               <td style="font-weight:bold; border-right: 1px solid rgba(255,255,255,0.12); text-align:center;">${p.total > 0 ? p.total.toLocaleString() : '0'}</td>
+               ${dayCells}
+            </tr>`;
+        });
+        playersCard += `</tbody></table></div></div>`;
+        
+        const archiveVaultBannerHtml = `
+          <div style="margin-bottom:20px; display:flex; justify-content:flex-end; align-items:center;">
+            <button onclick="window.openShowdownArchiveVaultModal()" style="background:linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(6,182,212,0.05) 100%); border:1px solid rgba(6,182,212,0.4); color:var(--accent); padding:8px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 12px rgba(6,182,212,0.15); transition:all 0.2s ease;">
+              📜 View Showdown Archive Vault
+            </button>
+          </div>
+        `;
+        html += archiveVaultBannerHtml + allianceCard + playersCard + `</div>`;
+        app.innerHTML = html;
        
     } catch(e) { renderError(e.message); }
   },
