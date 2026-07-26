@@ -1,3 +1,7 @@
+## [1.48.39] - 2026-07-26
+### Updated Active Showdown Opponent to [WWA] Whiteoutwarriors
+- **Configured Current Opponent**: Updated live tracker and admin default fallbacks from generic `'Enemy Alliance'` to **`'[WWA] Whiteoutwarriors'`**.
+
 ## [1.48.38] - 2026-07-26
 ### Interactive Showdown Restore Archive Selection Suite
 - **Archive Selector Modal (`window.showRestoreArchiveSelectorModal`)**: Replaced automatic single-archive restore with an interactive selection modal listing all historical snapshots with date, opponent alliance, and player count.

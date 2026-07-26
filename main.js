@@ -3912,7 +3912,7 @@ window.archiveCurrentShowdownToFirebase = async () => {
                 d6: p.d6,
                 total: p.total
             })),
-            enemyAlliance: metaVal.enemyAlliance || { name: "Enemy Alliance", scores: {} },
+            enemyAlliance: metaVal.enemyAlliance || { name: "[WWA] Whiteoutwarriors", scores: {} },
             tableRows: tableRows
         };
         
@@ -3950,7 +3950,7 @@ window.archiveCurrentShowdownToFirebase = async () => {
                 await Promise.all(liveKeys.map(k => set(ref(db, `showdown_live/${k}`), null).catch(() => null)));
             }
             try {
-                await set(ref(db, 'showdown_meta/enemyAlliance'), { name: "Enemy Alliance", scores: { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 } });
+                await set(ref(db, 'showdown_meta/enemyAlliance'), { name: "[WWA] Whiteoutwarriors", scores: { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 } });
             } catch(e) {}
             if (window.showToast) window.showToast("Showdown archived to History AND live event reset!", "success");
         } else {
@@ -3974,7 +3974,7 @@ window.resetCurrentShowdown = async () => {
             await Promise.all(liveKeys.map(k => set(ref(db, `showdown_live/${k}`), null).catch(() => null)));
         }
         try {
-            await set(ref(db, 'showdown_meta/enemyAlliance'), { name: "Enemy Alliance", scores: { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 } });
+            await set(ref(db, 'showdown_meta/enemyAlliance'), { name: "[WWA] Whiteoutwarriors", scores: { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 } });
         } catch(e) {}
         if (window.logAdminAction) {
             try {
@@ -4063,7 +4063,7 @@ window.restoreSpecificShowdownArchive = async (archiveKey, btnEl = null) => {
         const evData = snap.val();
         const players = Array.isArray(evData.players) ? evData.players : [];
         const dateStr = evData.date || archiveKey;
-        const enemyObj = evData.enemyAlliance || { name: "Enemy Alliance", scores: { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 } };
+        const enemyObj = evData.enemyAlliance || { name: "[WWA] Whiteoutwarriors", scores: { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 } };
 
         let confirmed = false;
         try {
@@ -4632,7 +4632,7 @@ window.buildVaultModalContent = (activeKey = 'all') => {
             let archivedPlayers = Array.isArray(entry.players) ? entry.players : [];
             archivedPlayers.sort((a,b) => (b.total||0) - (a.total||0));
             let dStr = (entry && entry.date) ? entry.date : new Date(Number(activeKey) || activeKey).toLocaleDateString([], {month:'short', day:'numeric', year:'numeric'});
-            let enemy = entry.enemyAlliance || { name: 'Enemy Alliance', scores: {} };
+            let enemy = entry.enemyAlliance || { name: '[WWA] Whiteoutwarriors', scores: {} };
             let eScores = enemy.scores || {};
             let enemyTotal = (eScores.d1||0) + (eScores.d2||0) + (eScores.d3||0) + (eScores.d4||0) + (eScores.d5||0) + (eScores.d6||0);
             
@@ -4790,7 +4790,7 @@ window.buildShowdownHistoryCardHtml = (activeFilter = 'all') => {
             let archivedPlayers = Array.isArray(entry.players) ? entry.players : [];
             archivedPlayers.sort((a,b) => (b.total||0) - (a.total||0));
             let dStr = (entry && entry.date) ? entry.date : new Date(Number(activeFilter) || activeFilter).toLocaleDateString([], {month:'short', day:'numeric', year:'numeric'});
-            let enemy = entry.enemyAlliance || { name: 'Enemy Alliance' };
+            let enemy = entry.enemyAlliance || { name: '[WWA] Whiteoutwarriors' };
             
             let champName = archivedPlayers.length > 0 ? archivedPlayers[0].name : 'N/A';
             let champScore = archivedPlayers.length > 0 ? archivedPlayers[0].total : 0;
@@ -4801,7 +4801,7 @@ window.buildShowdownHistoryCardHtml = (activeFilter = 'all') => {
                     <div style="font-size:24px;">📅</div>
                     <div style="text-align: left;">
                       <div style="color: var(--accent); font-size: 11px; font-weight: bold; text-transform: uppercase;">Archived Event: ${dStr}</div>
-                      <div style="color: var(--text-main); font-size: 16px; font-weight: bold;">Vs: ${escapeHTML(enemy.name || 'Enemy Alliance')}</div>
+                      <div style="color: var(--text-main); font-size: 16px; font-weight: bold;">Vs: ${escapeHTML(enemy.name || '[WWA] Whiteoutwarriors')}</div>
                     </div>
                   </div>
                   <div style="text-align: right;">
@@ -6829,7 +6829,7 @@ const views = {
        ]);
        
        let meta = (metaSnap && metaSnap.exists() && metaSnap.val()) ? metaSnap.val() : {};
-       if (!meta.enemyAlliance || typeof meta.enemyAlliance !== 'object') meta.enemyAlliance = { name: "Enemy Alliance", scores: { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 } };
+       if (!meta.enemyAlliance || typeof meta.enemyAlliance !== 'object') meta.enemyAlliance = { name: "[WWA] Whiteoutwarriors", scores: { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 } };
        if (!meta.enemyAlliance.scores || typeof meta.enemyAlliance.scores !== 'object') meta.enemyAlliance.scores = { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 };
        
        const sdLiveData = sdRes.sdLiveData || {};
@@ -7043,7 +7043,7 @@ html += `</select>
           
           try {
              await set(ref(db, 'showdown_meta'), newMeta);
-             window.logAdminAction("Enemy Alliance Update", `Updated Enemy Alliance name to '${newMeta.enemyAlliance.name || 'Enemy Alliance'}' and daily enemy scores`, newMeta.enemyAlliance.name);
+             window.logAdminAction("Enemy Alliance Update", `Updated Enemy Alliance name to '${newMeta.enemyAlliance.name || '[WWA] Whiteoutwarriors'}' and daily enemy scores`, newMeta.enemyAlliance.name);
              if(window.showToast) window.showToast("Event Settings saved successfully!", "success");
           } catch(e) {
              console.error(e);
@@ -10289,9 +10289,9 @@ window.resetBearTrapEvent = async () => {
        const liveData = (liveSnap.exists() && liveSnap.val()) ? liveSnap.val() : {};
        const metaData = (metaSnap.exists() && metaSnap.val()) ? metaSnap.val() : {};
        const historyObj = (historySnap && historySnap.exists() && historySnap.val()) ? historySnap.val() : {};
-       const enemyAlliance = (metaData && metaData.enemyAlliance && typeof metaData.enemyAlliance === 'object') ? metaData.enemyAlliance : { name: 'Enemy Alliance', scores: {} };
+       const enemyAlliance = (metaData && metaData.enemyAlliance && typeof metaData.enemyAlliance === 'object') ? metaData.enemyAlliance : { name: '[WWA] Whiteoutwarriors', scores: {} };
        const eScores = (enemyAlliance && enemyAlliance.scores && typeof enemyAlliance.scores === 'object') ? enemyAlliance.scores : {};
-       const enemyName = enemyAlliance.name || 'Enemy Alliance';
+       const enemyName = enemyAlliance.name || '[WWA] Whiteoutwarriors';
        
        let html = `<div style="display:flex; flex-direction:column; gap:20px;">`;
        
