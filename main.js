@@ -3972,6 +3972,76 @@ window.resetCurrentShowdown = async () => {
     }
 };
 
+window.restoreLatestShowdownArchive = async () => {
+    const confirmed = await window.customConfirm("↩️ Are you sure you want to RESTORE live scores from the latest archived Showdown event?");
+    if (!confirmed) return;
+    try {
+        const [histSnap, metaHistSnap, archiveSnap] = await Promise.all([
+            get(ref(db, 'showdown_history')).catch(() => null),
+            get(ref(db, 'showdown_meta/history')).catch(() => null),
+            get(ref(db, 'activity_history_archives')).catch(() => null)
+        ]);
+
+        let candidateArchives = [];
+
+        const extractArchives = (rawVal, sourcePath) => {
+            if (!rawVal || typeof rawVal !== 'object') return;
+            Object.entries(rawVal).forEach(([key, val]) => {
+                if (!val) return;
+                if (val.players || val.pList) {
+                    let ts = val.timestamp || parseInt(key) || 0;
+                    candidateArchives.push({ key, sourcePath, val, timestamp: ts });
+                }
+            });
+        };
+
+        if (metaHistSnap && metaHistSnap.exists()) extractArchives(metaHistSnap.val(), 'showdown_meta/history');
+        if (histSnap && histSnap.exists()) extractArchives(histSnap.val(), 'showdown_history');
+        if (archiveSnap && archiveSnap.exists()) extractArchives(archiveSnap.val(), 'activity_history_archives');
+
+        if (candidateArchives.length === 0) {
+            if (window.showToast) window.showToast("No archived Showdown snapshots found to restore.", "error");
+            return;
+        }
+
+        // Sort candidate archives by timestamp descending to get latest
+        candidateArchives.sort((a, b) => b.timestamp - a.timestamp);
+        const latest = candidateArchives[0];
+        const plist = latest.val.players || latest.val.pList || [];
+
+        if (plist.length === 0) {
+            if (window.showToast) window.showToast("Latest archive contains no player data.", "error");
+            return;
+        }
+
+        // Restore each player's scores into showdown_live
+        for (const p of plist) {
+            if (!p.name) continue;
+            let updates = {
+                d1: p.d1 || 0,
+                d2: p.d2 || 0,
+                d3: p.d3 || 0,
+                d4: p.d4 || 0,
+                d5: p.d5 || 0,
+                d6: p.d6 || 0
+            };
+            await set(ref(db, `showdown_live/${p.name}`), updates);
+        }
+
+        if (window.logAdminAction) {
+            try {
+                window.logAdminAction("Showdown Event Restored", `Restored live scores for ${plist.length} players from archive (${latest.val.date || 'latest'})`);
+            } catch(e) {}
+        }
+
+        if (window.showToast) window.showToast(`Successfully restored ${plist.length} players' Showdown scores from archive! 🎉`, "success");
+        if (typeof views !== 'undefined' && views.showdownAdmin) views.showdownAdmin();
+    } catch(err) {
+        console.error("Error restoring showdown archive:", err);
+        if (window.showToast) window.showToast("Error restoring archive: " + err.message, "error");
+    }
+};
+
 // Showdown Missed Days Report Modal
 window.showMissedDaysReportModal = async (btnEl = null) => {
     let origHtml = '';
@@ -5978,6 +6048,7 @@ const views = {
               <div style="display:flex; gap:8px; flex-wrap:wrap;">
                  <button onclick="window.showMissedDaysReportModal(this)" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--accent); padding:4px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:4px;">📋 Missed Days Report</button>
                  <button onclick="window.archiveCurrentShowdownToFirebase()" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--success); padding:4px 8px; border-radius:6px; cursor:pointer; font-size:12px;">📁 Archive to History</button>
+                 <button onclick="window.restoreLatestShowdownArchive()" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--accent); padding:4px 8px; border-radius:6px; cursor:pointer; font-size:12px;">↩️ Restore Last Archive</button>
                  <button onclick="window.resetCurrentShowdown()" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--danger); padding:4px 8px; border-radius:6px; cursor:pointer; font-size:12px;">🔄 Reset Event</button>
                </div>
            </div>

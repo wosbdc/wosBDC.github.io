@@ -1,3 +1,8 @@
+## [1.48.14] - 2026-07-26
+### Added Showdown Archive Restore Utility & UI Button
+- **Added `restoreLatestShowdownArchive`**: Utility function that locates the latest archived Showdown event across Firebase nodes (`showdown_meta/history`, `showdown_history`, `activity_history_archives`) and restores all player scores back into live tracker `showdown_live`.
+- **Added UI Restore Button**: Added `↩️ Restore Last Archive` button in Showdown Data Entry panel (`showdownAdmin`).
+
 ## [1.48.13] - 2026-07-26
 ### Fixed Merge Showdown Data & Active Day Calculation Null Crash
 - **Hardened mergeShowdownData**: Added object type check (`if (p && typeof p === 'object')`) to prevent `TypeError: Cannot read properties of undefined (reading 'd1')` when merging live score data into tables.
