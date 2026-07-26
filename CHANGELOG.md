@@ -1,3 +1,7 @@
+## [1.48.44] - 2026-07-26
+### Added 1-Click Restore Original Data Button in Showdown Admin
+- **`👑 Restore Original Data (Thadwarf: 29.5M)` Button**: Added a dedicated golden restore button directly inside `⚔️ Showdown Data Entry` to restore July 20 – July 26, 2026 data with Thadwarf's **29,515,364** total score in 1 tap through your authenticated browser session.
+
 ## [1.48.43] - 2026-07-26
 ### Bulletproof Showdown Live View Fallback
 - **Guaranteed Dataset Render**: Added a client-side fallback inside `views.showdown()` so if Firebase RTDB returns an unauthenticated/empty snapshot, the view automatically falls back to rendering the July 20 – July 26, 2026 dataset featuring Thadwarf's **29,515,364** score.
