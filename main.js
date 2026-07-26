@@ -8895,15 +8895,15 @@ window.resetBearTrapEvent = async () => {
               `;
           } else {
               mvpBannerHtml = `
-                <div style="background: linear-gradient(135deg, rgba(148,163,184,0.08) 0%, rgba(148,163,184,0.02) 100%); border: 1px dashed rgba(148,163,184,0.3); border-radius: 12px; padding: 15px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px;">
-                  <div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 20px;">⏳</div>
-                  <div style="flex: 1; text-align: left;">
-                    <div style="color: var(--accent); font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">Event Pending / Reset</div>
-                    <div style="color: var(--text-main); font-size: 16px; font-weight: bold;">Pending Day 1 Scores...</div>
+                <div style="background: linear-gradient(135deg, rgba(148,163,184,0.08) 0%, rgba(148,163,184,0.02) 100%); border: 1px dashed rgba(148,163,184,0.3); border-radius: 12px; padding: 12px 15px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                  <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;">⏳</div>
+                    <div style="text-align: left;">
+                      <div style="color: var(--accent); font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">Event Pending / Reset</div>
+                      <div style="color: var(--text-main); font-size: 15px; font-weight: bold;">Pending Day 1 Scores...</div>
+                    </div>
                   </div>
-                  <div style="text-align: right;">
-                    <span style="background: rgba(6,182,212,0.15); color: var(--accent); border: 1px solid rgba(6,182,212,0.3); padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: bold;">Waiting for Battle</span>
-                  </div>
+                  <span style="background: rgba(6,182,212,0.15); color: var(--accent); border: 1px solid rgba(6,182,212,0.3); padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: bold; white-space: nowrap;">Waiting for Battle</span>
                 </div>
               `;
           }
@@ -8918,7 +8918,7 @@ window.resetBearTrapEvent = async () => {
             </tr></thead><tbody>`;
           
           if (liveDisplayList.length === 0) {
-              liveShowdownHtml += `<tr><td colspan="5" style="text-align:center; padding: 25px; color: var(--text-muted); font-size: 13px;">⏳ <b>Showdown Event Pending</b> — No scores recorded for current event yet. Live rankings will update as scores are saved!</td></tr>`;
+              liveShowdownHtml += `<tr><td colspan="5" style="text-align:center; padding: 15px 10px; color: var(--text-muted); font-size: 12px; white-space: normal; word-break: break-word;">⏳ <b>Event Pending</b> — Waiting for Day 1 scores</td></tr>`;
           } else {
               let currentLiveRank = 1;
               liveDisplayList.forEach((p, index) => {

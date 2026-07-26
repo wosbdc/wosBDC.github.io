@@ -1,3 +1,7 @@
+## [1.48.24] - 2026-07-26
+### Optimized Responsive Pending Message Layout
+- **Compact & Responsive Pending State**: Shortened the pending message text (`⏳ Event Pending — Waiting for Day 1 scores`), enabled word wrapping, and styled the banner with `flex-wrap: wrap` so it fits cleanly inside card boundaries on mobile phones and small screens.
+
 ## [1.48.23] - 2026-07-26
 ### Bulletproof Event Reset & Enemy Scores Object Preservation
 - **Firebase Empty Object Stripping Prevention**: Configured event reset functions (`resetCurrentShowdown` & `archiveCurrentShowdownToFirebase`) to initialize `enemyAlliance` with explicit zeroed scores (`{ name: "Enemy Alliance", scores: { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 } }`), preventing Firebase RTDB from stripping empty `{}` objects.
