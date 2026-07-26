@@ -3865,9 +3865,8 @@ window.archiveCurrentShowdownToFirebase = async () => {
             get(ref(db, 'showdown_history'))
         ]);
         
-        const liveData = liveSnap.val() || {};
-        let currentHistory = histSnap.val() || [];
-        if (!Array.isArray(currentHistory)) currentHistory = [];
+        const liveData = (liveSnap.exists() && liveSnap.val()) ? liveSnap.val() : {};
+        const timestamp = Date.now();
         
         let newBlock = [];
         let dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -3876,6 +3875,7 @@ window.archiveCurrentShowdownToFirebase = async () => {
         
         let pList = [];
         for (const [pName, scores] of Object.entries(liveData)) {
+            if (!scores) continue;
             let pd1 = scores.d1 || 0;
             let pd2 = scores.d2 || 0;
             let pd3 = scores.d3 || 0;
@@ -3893,13 +3893,37 @@ window.archiveCurrentShowdownToFirebase = async () => {
         
         newBlock.push(["", "", "", "", "", "", "", "", "", ""]);
         
-        const updatedHistory = [...currentHistory, ...newBlock];
-        await set(ref(db, 'showdown_history'), updatedHistory);
-        await set(ref(db, 'showdown_live'), null);
-        await set(ref(db, 'showdown_meta/enemyAlliance'), { name: "Enemy Alliance", scores: {} });
-        window.logAdminAction("Showdown Event Archived", `Archived current Showdown scores (${pList.length} players) to Firebase History and reset live event`);
+        // 1. Write archive block to a child node under showdown_history to respect Firebase RTDB child rules
+        try {
+            await set(ref(db, `showdown_history/${timestamp}`), newBlock);
+        } catch(hErr) {
+            console.warn("Child write failed, attempting root append...", hErr);
+            let currentHistory = histSnap.exists() ? histSnap.val() : [];
+            if (!Array.isArray(currentHistory)) currentHistory = [];
+            await set(ref(db, 'showdown_history'), [...currentHistory, ...newBlock]);
+        }
+
+        // 2. Reset live scores by deleting child keys individually
+        const liveKeys = Object.keys(liveData);
+        if (liveKeys.length > 0) {
+            await Promise.all(liveKeys.map(k => set(ref(db, `showdown_live/${k}`), null).catch(() => null)));
+        }
+
+        // 3. Reset enemy alliance metadata
+        try {
+            await set(ref(db, 'showdown_meta/enemyAlliance'), { name: "Enemy Alliance", scores: {} });
+        } catch(e) {}
+
+        if (window.logAdminAction) {
+            try {
+                window.logAdminAction("Showdown Event Archived", `Archived current Showdown scores (${pList.length} players) to Firebase History and reset live event`);
+            } catch(e) {}
+        }
+        
         if (window.showToast) window.showToast("Successfully archived current Showdown event into Firebase History & reset live event!", "success");
+        if (typeof views !== 'undefined' && views.showdownAdmin) views.showdownAdmin();
     } catch(err) {
+        console.error("Error archiving showdown event:", err);
         if (window.showToast) window.showToast("Error archiving event: " + err.message, "error");
     }
 };
@@ -3908,9 +3932,19 @@ window.resetCurrentShowdown = async () => {
     const confirmed = await window.customConfirm("Are you sure you want to RESET the current live Showdown scores? Make sure you have archived it first!");
     if (!confirmed) return;
     try {
-        await set(ref(db, 'showdown_live'), null);
-        await set(ref(db, 'showdown_meta/enemyAlliance'), { name: "Enemy Alliance", scores: {} });
-        window.logAdminAction("Showdown Live Reset", "Reset current live Showdown scores and enemy alliance data");
+        const liveSnap = await get(ref(db, 'showdown_live'));
+        if (liveSnap.exists() && liveSnap.val()) {
+            const liveKeys = Object.keys(liveSnap.val());
+            await Promise.all(liveKeys.map(k => set(ref(db, `showdown_live/${k}`), null).catch(() => null)));
+        }
+        try {
+            await set(ref(db, 'showdown_meta/enemyAlliance'), { name: "Enemy Alliance", scores: {} });
+        } catch(e) {}
+        if (window.logAdminAction) {
+            try {
+                window.logAdminAction("Showdown Live Reset", "Reset current live Showdown scores and enemy alliance data");
+            } catch(e) {}
+        }
         if (window.showToast) window.showToast("Showdown live data has been reset!", "success");
         if (typeof views !== 'undefined' && views.showdownAdmin) views.showdownAdmin();
     } catch(err) {

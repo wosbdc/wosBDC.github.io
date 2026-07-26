@@ -1,3 +1,9 @@
+## [1.48.8] - 2026-07-26
+### Fixed Showdown Archive & Reset Permission Denied Error
+- **Child Node Scoped Writes**: Updated `archiveCurrentShowdownToFirebase` to write timestamped history blocks under `showdown_history/${timestamp}` and reset live player scores by deleting child keys individually (`showdown_live/${playerKey}`). This prevents root-level overwrites from triggering Firebase Realtime Database `Permission denied` errors.
+- **Robust History Reader**: Updated the Showdown history parser to seamlessly support both flat legacy arrays and object/map timestamped history blocks.
+- **Safe Reset Operation**: Updated `resetCurrentShowdown` to cleanly delete child keys without attempting root node deletion.
+
 ## [1.48.7] - 2026-07-24
 ### Cleaned Up Championship Signup Tracker UI
 - **Removed Text Box**: Removed the redundant text box displaying the list of missing players under the missing banner in Alliance Championship Signup Tracker.
