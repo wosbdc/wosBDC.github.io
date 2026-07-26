@@ -2264,6 +2264,7 @@ window.getLivePlayerEventRow = async (chiefName, pRow, headers) => {
       processShowdownTable(sdHistoryRawData);
       
       for (const [pName, scores] of Object.entries(sdLiveData)) {
+          if (!scores || typeof scores !== 'object') continue;
           let safeName = pName.toString().trim();
           let pScore = (scores.d1||0) + (scores.d2||0) + (scores.d3||0) + (scores.d4||0) + (scores.d5||0) + (scores.d6||0);
           if (!allTimeShowdownMap[safeName]) allTimeShowdownMap[safeName] = 0;
@@ -5949,6 +5950,7 @@ const views = {
        let winners = {d1:{name:'', score:0}, d2:{name:'', score:0}, d3:{name:'', score:0}, d4:{name:'', score:0}, d5:{name:'', score:0}, d6:{name:'', score:0}};
        
        Object.entries(sdLiveData).forEach(([playerName, scores]) => {
+          if (!scores || typeof scores !== 'object') return;
           for (let i = 1; i <= 6; i++) {
               let score = scores['d'+i] || 0;
               allianceTotals['d'+i] += score;
@@ -8711,6 +8713,7 @@ window.resetBearTrapEvent = async () => {
          let players = [];
          
          for (const [pName, scores] of Object.entries(liveData)) {
+             if (!scores || typeof scores !== 'object') continue;
              let pd1 = scores.d1 || 0;
              let pd2 = scores.d2 || 0;
              let pd3 = scores.d3 || 0;
@@ -9394,6 +9397,7 @@ window.resetBearTrapEvent = async () => {
        let topPlayers = { d1:{names:[], score:0}, d2:{names:[], score:0}, d3:{names:[], score:0}, d4:{names:[], score:0}, d5:{names:[], score:0}, d6:{names:[], score:0} };
        
        for (const [pName, scores] of Object.entries(liveData)) {
+          if (!scores || typeof scores !== 'object') continue;
           let pd1 = scores.d1 || 0;
           let pd2 = scores.d2 || 0;
           let pd3 = scores.d3 || 0;
@@ -9424,12 +9428,12 @@ window.resetBearTrapEvent = async () => {
        }
        
        ourScores.total = ourScores.d1 + ourScores.d2 + ourScores.d3 + ourScores.d4 + ourScores.d5 + ourScores.d6;
-       let enemyTotal = (enemyAlliance.scores.d1||0) + (enemyAlliance.scores.d2||0) + (enemyAlliance.scores.d3||0) + (enemyAlliance.scores.d4||0) + (enemyAlliance.scores.d5||0) + (enemyAlliance.scores.d6||0);
+       const eScores = (enemyAlliance && enemyAlliance.scores) ? enemyAlliance.scores : {};
+       let enemyTotal = (eScores.d1||0) + (eScores.d2||0) + (eScores.d3||0) + (eScores.d4||0) + (eScores.d5||0) + (eScores.d6||0);
        
        const staticHorns = { d1: 1, d2: 2, d3: 2, d4: 2, d5: 2, d6: 4 };
        const hornsTotal = 13;
        const dailyGoal = 3333333;
-       
        // MVP Calculation - Detect latest active day MVP
        let currentActiveDay = 1;
        for (let di = 6; di >= 1; di--) {
@@ -9740,6 +9744,7 @@ window.resetBearTrapEvent = async () => {
       processShowdownTable(sdHistoryRawData);
       
       for (const [pName, scores] of Object.entries(sdLiveData)) {
+          if (!scores || typeof scores !== 'object') continue;
           let safeName = pName.toString().trim();
           let pScore = (scores.d1||0) + (scores.d2||0) + (scores.d3||0) + (scores.d4||0) + (scores.d5||0) + (scores.d6||0);
           if (!allTimeShowdownMap[safeName]) allTimeShowdownMap[safeName] = 0;

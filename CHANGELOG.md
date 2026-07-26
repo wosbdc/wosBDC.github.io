@@ -1,3 +1,8 @@
+## [1.48.12] - 2026-07-26
+### Fixed Showdown Page Score Property TypeError
+- **Added Defensive Guard Checks**: Hardened all Showdown page renderer functions (`views.showdown`, `views.showdownAdmin`, `leaderboards`, etc.) against `undefined` / `null` player score objects and missing `enemyAlliance.scores` properties.
+- **Resolved TypeError**: Prevented `Cannot read properties of undefined (reading 'd1')` when rendering Showdown page after event reset or missing player entries.
+
 ## [1.48.11] - 2026-07-26
 ### Fixed Data Entry UI Loading Error
 - **Cleaned Up Duplicated Code**: Removed duplicated `sdHistoryData` block that caused a syntax collision during module execution, restoring clean loading for `showdownAdmin` Data Entry UI.
