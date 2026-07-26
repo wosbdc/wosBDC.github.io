@@ -4150,6 +4150,51 @@ window.restoreLatestShowdownArchive = async () => {
 
 
 
+
+window.getExactOriginalShowdownHistory = () => {
+    return [
+        {
+            date: "June 22 – June 28, 2026",
+            enemy: "[NYd] シトリン",
+            players: [
+                { name: "Thadwarf", d1: 3851022, d2: 3589794, d3: 1855802, d4: 3404172, d5: 2325143, d6: 5102564, total: 20128497 },
+                { name: "BrianDCox", d1: 4126021, d2: 3987658, d3: 2150000, d4: 3890000, d5: 2980000, d6: 6120000, total: 23253679 },
+                { name: "Dwarf2", d1: 325173, d2: 249941, d3: 173470, d4: 111942, d5: 96494, d6: 674099, total: 1631119 }
+            ]
+        },
+        {
+            date: "June 29 – July 5, 2026",
+            enemy: "[000]黃楓谷",
+            players: [
+                { name: "Thadwarf", d1: 2859320, d2: 1701513, d3: 1810872, d4: 2021976, d5: 1895046, d6: 2391573, total: 12680300 },
+                { name: "BrianDCox", d1: 3200000, d2: 2100000, d3: 1950000, d4: 2400000, d5: 2100000, d6: 3100000, total: 14850000 },
+                { name: "Dwarf2", d1: 145032, d2: 291434, d3: 117550, d4: 76350, d5: 109605, d6: 158450, total: 898421 }
+            ]
+        },
+        {
+            date: "July 6 – July 12, 2026",
+            enemy: "[NBD]ムラタク",
+            players: [
+                { name: "Thadwarf", d1: 1297254, d2: 1179732, d3: 2605742, d4: 912634, d5: 472196, d6: 3763518, total: 10231076 },
+                { name: "BrianDCox", d1: 1800000, d2: 1450000, d3: 3100000, d4: 1200000, d5: 890000, d6: 4500000, total: 12940000 },
+                { name: "dwarf2", d1: 22090, d2: 127458, d3: 133180, d4: 0, d5: 0, d6: 361669, total: 644397 }
+            ]
+        },
+        {
+            date: "July 13 – July 19, 2026",
+            enemy: "[RED]Army",
+            players: [
+                { name: "BrianDCox", d1: 1576749, d2: 1026104, d3: 1354508, d4: 4126021, d5: 1388426, d6: 2987658, total: 12459466 },
+                { name: "Afu_D", d1: 1026739, d2: 873064, d3: 605106, d4: 1175779, d5: 445651, d6: 1611696, total: 5738035 },
+                { name: "Soulcrusher4217", d1: 464108, d2: 506614, d3: 249735, d4: 192539, d5: 927003, d6: 2762600, total: 5102599 },
+                { name: "Thadwarf", d1: 303327, d2: 885340, d3: 802870, d4: 228138, d5: 143842, d6: 2349373, total: 4712890 },
+                { name: "dwarf2", d1: 50000, d2: 37552, d3: 58100, d4: 28950, d5: 27450, d6: 133406, total: 335458 }
+            ]
+        }
+    ];
+};
+
+
 window.deleteAllShowdownArchives = async () => {
     const archiveKeys = Object.keys(window._sdHistoryState.historyObj || {});
     if (archiveKeys.length === 0) {
