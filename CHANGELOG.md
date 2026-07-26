@@ -1,3 +1,7 @@
+## [1.48.56] - 2026-07-26
+### Exact Top 2 Leaderboard Ranking Match
+- **Exact Top 2 Order**: Updated July 20 – July 26, 2026 leaderboard rankings so **#1 Thadwarf (29,515,364)** and **#2 Soulcrusher4217 (19,294,803)** render as your absolute top 2 leaders with zero score overlaps.
+
 ## [1.48.55] - 2026-07-26
 ### Synced Full Alliance Roster & Scores for July 20–26
 - **Full Roster Sync**: Fetched real alliance roster scores from Google Sheets `"Showdown"` tab and synced all player scores under **#1 Thadwarf (29,515,364)** and **#2 Soulcrusher4217 (19,294,803)** into both `showdown_live` and `showdown_meta/history`.
