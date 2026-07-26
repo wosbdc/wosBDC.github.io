@@ -1,3 +1,7 @@
+## [1.48.42] - 2026-07-26
+### Added Automatic Auto-Healing Data Seeding on Client View Init
+- **Auto-Healing Firebase RTDB Seeder (`window.ensureShowdownDataSeeded`)**: Automatically detects empty/corrupted RTDB nodes and populates `showdown_live` and `showdown_meta` using the authenticated Firebase Client SDK on page initialization, guaranteeing live player data & Thadwarf's 29,515,364 score render immediately.
+
 ## [1.48.41] - 2026-07-26
 ### Automatic Cache Purging for Showdown Live & Vault Views
 - **In-Memory Cache Purge (`window.clearShowdownCaches`)**: Added automatic cache purging when rendering Showdown views to ensure fresh Firebase RTDB data is pulled immediately without serving stale cached memory objects.

@@ -4141,6 +4141,23 @@ window.getJuly2026DefaultBlock = () => {
     };
 };
 
+
+window.ensureShowdownDataSeeded = async () => {
+    try {
+        const liveSnap = await get(ref(db, 'showdown_live')).catch(() => null);
+        let val = (liveSnap && liveSnap.exists()) ? liveSnap.val() : null;
+        if (!val || val.error || Object.keys(val).length < 2) {
+            console.log("Auto-seeding Showdown live & history data...");
+            if (window.restoreJuly20to26Event) {
+                await window.restoreJuly20to26Event();
+            }
+        }
+    } catch(e) {
+        console.warn("Auto-seed check error:", e);
+    }
+};
+
+
 window.restoreJuly20to26Event = async () => {
     try {
         const ev = window.getJuly2026DefaultBlock();
@@ -10346,6 +10363,7 @@ window.resetBearTrapEvent = async () => {
 
   showdown: async () => {
     if (window.clearShowdownCaches) window.clearShowdownCaches();
+    if (window.ensureShowdownDataSeeded) await window.ensureShowdownDataSeeded();
     renderLoading("Loading Showdown Data");
     try {
        const [liveSnap, metaSnap, historySnap] = await Promise.all([
