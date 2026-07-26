@@ -1,3 +1,7 @@
+## [1.48.17] - 2026-07-26
+### Fixed Showdown Data Entry UI Null Exception
+- **Hardened `showdownAdmin` Enemy Scores Access**: Added defensive checks (`if (!meta.enemyAlliance.scores) meta.enemyAlliance.scores = {};` & `(meta.enemyAlliance && meta.enemyAlliance.scores) ? ... : 0`) to prevent `TypeError: Cannot read properties of undefined (reading 'd1')` when rendering the Showdown Admin Data Entry menu.
+
 ## [1.48.16] - 2026-07-26
 ### Improved Showdown Archiving Workflow
 - **Dual Format Payload**: Saved both structured player objects (`players`) and standard 2D matrix rows (`tableRows`) under `showdown_meta/history/${timestamp}` to maintain 100% compatibility with Google Sheets and the Leaderboards history reader.

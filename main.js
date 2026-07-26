@@ -6028,6 +6028,7 @@ const views = {
        
        let meta = metaSnap.val() || {};
        if (!meta.enemyAlliance) meta.enemyAlliance = { name: "", scores: {} };
+       if (!meta.enemyAlliance.scores) meta.enemyAlliance.scores = {};
        
        const sdLiveData = sdRes.sdLiveData || {};
        
@@ -6113,7 +6114,7 @@ html += `</select>
                <tbody>`;
                
        for (let i = 1; i <= 6; i++) {
-         let es = meta.enemyAlliance.scores['d'+i] || 0;
+         let es = (meta.enemyAlliance && meta.enemyAlliance.scores) ? (meta.enemyAlliance.scores['d'+i] || 0) : 0;
          let h = staticHorns['d'+i];
          let wName = winners['d'+i].name || '-';
          let at = allianceTotals['d'+i];
