@@ -1,3 +1,9 @@
+## [1.48.28] - 2026-07-26
+### Added Archive Deletion & 1-Click Google Sheets Importer Suite
+- **1-Click Delete Archive (`window.deleteShowdownArchive`)**: Added an inline red `🗑️ Delete This Archive` button inside the Vault modal for R4/R5 managers to immediately remove unneeded or test archives.
+- **1-Click Google Sheets Sync (`window.syncGoogleSheetsHistoryToVault`)**: Added a 1-click sync button in the Vault modal for managers to automatically fetch, parse, and store all historical event blocks from Google Sheets into the Vault.
+- **Raw Text / CSV Importer (`window.openShowdownPasteImporterModal`)**: Added a custom paste importer modal allowing admins to paste raw tab-separated/CSV rows from any Google Sheet tab and import them directly into the Vault in seconds.
+
 ## [1.48.27] - 2026-07-26
 ### Created Dedicated Full-Screen Showdown Archive Vault Modal
 - **Full-Screen Archive Vault Modal**: Replaced crowded inline card dropdowns with a dedicated, spacious full-screen modal (`📜 Showdown Archive Vault`).

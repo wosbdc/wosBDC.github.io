@@ -4074,6 +4074,235 @@ window._sdHistoryState = {
     activeFilter: 'all'
 };
 
+
+// Showdown Archive Management & Importer Suite
+window.deleteShowdownArchive = async (timestamp, dateStr = '') => {
+    if (!timestamp) return;
+    const isManager = typeof currentUser !== 'undefined' && (window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4');
+    if (!isManager) {
+        if (window.showToast) window.showToast("Only R4/R5 managers can delete archives", "error");
+        return;
+    }
+    const confirmed = await window.customConfirm(`🗑️ Are you sure you want to DELETE the archived Showdown event from ${dateStr || timestamp}? This cannot be undone.`);
+    if (!confirmed) return;
+    try {
+        await remove(ref(db, `showdown_meta/history/${timestamp}`));
+        if (window.showToast) window.showToast(`Archived event (${dateStr || timestamp}) deleted successfully! 🗑️`, "success");
+        if (window.openShowdownArchiveVaultModal) window.openShowdownArchiveVaultModal('all');
+    } catch(err) {
+        console.error("Error deleting archive:", err);
+        if (window.showToast) window.showToast("Error deleting archive: " + err.message, "error");
+    }
+};
+
+window.syncGoogleSheetsHistoryToVault = async (btnEl = null) => {
+    const isManager = typeof currentUser !== 'undefined' && (window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4');
+    if (!isManager) {
+        if (window.showToast) window.showToast("Only R4/R5 managers can sync history to vault", "error");
+        return;
+    }
+    let origText = btnEl ? btnEl.innerHTML : '';
+    if (btnEl) { btnEl.disabled = true; btnEl.innerHTML = '⏳ Syncing Sheets...'; }
+    try {
+        const sdHistRaw = await fetchSheet("Showdown History");
+        let rawHistory = sdHistRaw;
+        if (rawHistory && typeof rawHistory === 'object' && rawHistory.data) rawHistory = rawHistory.data;
+        const rows = rawHistory ? (Array.isArray(rawHistory) ? rawHistory : Object.values(rawHistory)) : [];
+        
+        if (!rows || rows.length === 0) {
+            if (window.showToast) window.showToast("No historical rows found in Google Sheets", "warning");
+            if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = origText; }
+            return;
+        }
+
+        let eventBlocks = [];
+        let currentPlayers = [];
+        let currentDate = "";
+        let currentEnemy = "Enemy Alliance";
+        let inBlock = false;
+
+        for (let i = 0; i < rows.length; i++) {
+            let row = rows[i];
+            if (!row) continue;
+            if (!Array.isArray(row) && typeof row === 'object') row = Object.values(row);
+            if (!Array.isArray(row)) continue;
+
+            let col0 = String(row[0] || '').trim();
+            let col1 = String(row[1] || '').trim();
+            let col2 = String(row[2] || '').trim();
+
+            if (col0.toLowerCase().includes('date') || col1.toLowerCase().includes('date')) {
+                let match = (col0 + ' ' + col1 + ' ' + col2).match(/(\w+\s+\d+,\s+\d{4}|\d{4}-\d{2}-\d{2}|\w+\s+\d+)/i);
+                if (match) currentDate = match[0];
+            }
+            if (col0.toLowerCase().includes('vs') || col1.toLowerCase().includes('vs') || col0.toLowerCase().includes('enemy')) {
+                currentEnemy = col0 || col1 || col2 || "Enemy Alliance";
+            }
+
+            if (col1.toLowerCase() === 'ranking' && (col2.toLowerCase() === 'member' || col2.toLowerCase() === 'name')) {
+                if (inBlock && currentPlayers.length > 0) {
+                    eventBlocks.push({ date: currentDate || `Event ${eventBlocks.length + 1}`, enemy: currentEnemy, players: [...currentPlayers] });
+                }
+                inBlock = true;
+                currentPlayers = [];
+                continue;
+            }
+
+            if (inBlock) {
+                if (!col2 || col1.toLowerCase() === 'date:' || col1.toLowerCase() === 'alliance' || col1.toLowerCase() === 'winners') {
+                    eventBlocks.push({ date: currentDate || `Event ${eventBlocks.length + 1}`, enemy: currentEnemy, players: [...currentPlayers] });
+                    inBlock = false;
+                    currentPlayers = [];
+                    currentDate = ""; currentEnemy = "Enemy Alliance";
+                    continue;
+                }
+
+                let pName = col2;
+                let d1 = typeof row[3] === 'number' ? row[3] : (parseInt(String(row[3] || '').replace(/,/g, '')) || 0);
+                let d2 = typeof row[4] === 'number' ? row[4] : (parseInt(String(row[4] || '').replace(/,/g, '')) || 0);
+                let d3 = typeof row[5] === 'number' ? row[5] : (parseInt(String(row[5] || '').replace(/,/g, '')) || 0);
+                let d4 = typeof row[6] === 'number' ? row[6] : (parseInt(String(row[6] || '').replace(/,/g, '')) || 0);
+                let d5 = typeof row[7] === 'number' ? row[7] : (parseInt(String(row[7] || '').replace(/,/g, '')) || 0);
+                let d6 = typeof row[8] === 'number' ? row[8] : (parseInt(String(row[8] || '').replace(/,/g, '')) || 0);
+                let total = typeof row[9] === 'number' ? row[9] : (d1+d2+d3+d4+d5+d6);
+
+                currentPlayers.push({ name: pName, d1, d2, d3, d4, d5, d6, total });
+            }
+        }
+        if (inBlock && currentPlayers.length > 0) {
+            eventBlocks.push({ date: currentDate || `Event ${eventBlocks.length + 1}`, enemy: currentEnemy, players: [...currentPlayers] });
+        }
+
+        if (eventBlocks.length === 0) {
+            if (window.showToast) window.showToast("Parsed 0 event blocks. Check sheet formatting.", "warning");
+            if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = origText; }
+            return;
+        }
+
+        let baseTs = Date.now();
+        for (let idx = 0; idx < eventBlocks.length; idx++) {
+            let ev = eventBlocks[idx];
+            let ts = baseTs - (idx * 1000);
+            await set(ref(db, `showdown_meta/history/${ts}`), {
+                date: ev.date,
+                timestamp: ts,
+                enemyAlliance: { name: ev.enemy, scores: { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 } },
+                players: ev.players
+            });
+        }
+
+        if (window.showToast) window.showToast(`🎉 Successfully imported ${eventBlocks.length} Showdown events into the Vault!`, "success");
+        if (window.openShowdownArchiveVaultModal) window.openShowdownArchiveVaultModal('all');
+    } catch(err) {
+        console.error("Error syncing Google Sheets history:", err);
+        if (window.showToast) window.showToast("Sync error: " + err.message, "error");
+    }
+    if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = origText; }
+};
+
+window.openShowdownPasteImporterModal = () => {
+    let existing = document.getElementById('sdPasteImporterModal');
+    if (existing) existing.remove();
+
+    let modal = document.createElement('div');
+    modal.id = 'sdPasteImporterModal';
+    modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); z-index:10010; display:flex; justify-content:center; align-items:center; animation:fadeIn 0.2s ease; padding:15px; box-sizing:border-box;';
+
+    modal.innerHTML = `
+        <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:16px; width:100%; max-width:650px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 10px 40px rgba(0,0,0,0.6);">
+            <div style="padding:18px 24px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02);">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div style="font-size:24px;">📋</div>
+                    <div>
+                        <div style="font-size:18px; font-weight:bold; color:var(--text-main);">Paste & Import Event</div>
+                        <div style="font-size:12px; color:var(--text-muted);">Copy cells directly from Google Sheets or Excel & paste below</div>
+                    </div>
+                </div>
+                <button onclick="document.getElementById('sdPasteImporterModal').remove()" style="background:rgba(255,255,255,0.1); border:none; color:var(--text-main); width:32px; height:32px; border-radius:50%; font-size:16px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center;">✕</button>
+            </div>
+            <div style="padding:20px; overflow-y:auto; max-height:75vh;">
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:15px;">
+                    <div>
+                        <label style="font-size:12px; font-weight:bold; color:var(--text-muted); display:block; margin-bottom:4px;">Event Date</label>
+                        <input type="text" id="pasteEvDate" placeholder="e.g. Jul 26, 2026" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box; font-size:13px;">
+                    </div>
+                    <div>
+                        <label style="font-size:12px; font-weight:bold; color:var(--text-muted); display:block; margin-bottom:4px;">Enemy Alliance Name</label>
+                        <input type="text" id="pasteEvEnemy" placeholder="e.g. [RED]Army" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box; font-size:13px;">
+                    </div>
+                </div>
+                <div style="margin-bottom:15px;">
+                    <label style="font-size:12px; font-weight:bold; color:var(--text-muted); display:block; margin-bottom:4px;">Paste Player Rows (Name, D1, D2, D3, D4, D5, D6)</label>
+                    <textarea id="pasteEvData" rows="8" placeholder="Paste tab-separated or comma-separated rows from Google Sheets...&#10;PlayerOne&#t100000&#t200000&#t150000...&#10;PlayerTwo&#t80000&#t120000&#t90000..." style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box; font-family:monospace; font-size:12px; white-space:pre;"></textarea>
+                </div>
+                <button onclick="window.importPastedShowdownEvent(this)" style="background:var(--success); color:white; border:none; width:100%; padding:12px; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer;">📥 Import Event into Vault</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+};
+
+window.importPastedShowdownEvent = async (btnEl) => {
+    let dateStr = document.getElementById('pasteEvDate').value.trim() || new Date().toLocaleDateString([], {month:'short', day:'numeric', year:'numeric'});
+    let enemyName = document.getElementById('pasteEvEnemy').value.trim() || 'Enemy Alliance';
+    let rawText = document.getElementById('pasteEvData').value.trim();
+
+    if (!rawText) {
+        if (window.showToast) window.showToast("Please paste player rows before importing!", "warning");
+        return;
+    }
+
+    btnEl.disabled = true;
+    btnEl.innerHTML = "⏳ Processing...";
+
+    try {
+        let lines = rawText.split(/\r?\n/);
+        let players = [];
+
+        lines.forEach(line => {
+            if (!line.trim()) return;
+            let parts = line.split(/[\t,]+/);
+            if (parts.length >= 2) {
+                let name = parts[0].trim();
+                let d1 = parseInt((parts[1]||'0').replace(/,/g, '')) || 0;
+                let d2 = parseInt((parts[2]||'0').replace(/,/g, '')) || 0;
+                let d3 = parseInt((parts[3]||'0').replace(/,/g, '')) || 0;
+                let d4 = parseInt((parts[4]||'0').replace(/,/g, '')) || 0;
+                let d5 = parseInt((parts[5]||'0').replace(/,/g, '')) || 0;
+                let d6 = parseInt((parts[6]||'0').replace(/,/g, '')) || 0;
+                let total = parts[7] ? (parseInt(parts[7].replace(/,/g, '')) || (d1+d2+d3+d4+d5+d6)) : (d1+d2+d3+d4+d5+d6);
+                if (name && (total > 0 || d1 > 0)) {
+                    players.push({ name, d1, d2, d3, d4, d5, d6, total });
+                }
+            }
+        });
+
+        if (players.length === 0) {
+            if (window.showToast) window.showToast("Could not parse any valid player rows from text", "error");
+            btnEl.disabled = false; btnEl.innerHTML = "📥 Import Event into Vault";
+            return;
+        }
+
+        let ts = Date.now();
+        await set(ref(db, `showdown_meta/history/${ts}`), {
+            date: dateStr,
+            timestamp: ts,
+            enemyAlliance: { name: enemyName, scores: { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 } },
+            players: players
+        });
+
+        if (window.showToast) window.showToast(`🎉 Imported event "${dateStr}" with ${players.length} players into Vault!`, "success");
+        let pasteModal = document.getElementById('sdPasteImporterModal');
+        if (pasteModal) pasteModal.remove();
+        if (window.openShowdownArchiveVaultModal) window.openShowdownArchiveVaultModal(String(ts));
+    } catch(err) {
+        console.error("Import error:", err);
+        if (window.showToast) window.showToast("Import error: " + err.message, "error");
+        btnEl.disabled = false; btnEl.innerHTML = "📥 Import Event into Vault";
+    }
+};
+
+
 window.openShowdownArchiveVaultModal = async (initialKey = 'all') => {
     let existingModal = document.getElementById('showdownArchiveVaultModal');
     if (existingModal) existingModal.remove();
