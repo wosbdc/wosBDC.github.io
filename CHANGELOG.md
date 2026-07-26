@@ -1,3 +1,7 @@
+## [1.48.55] - 2026-07-26
+### Synced Full Alliance Roster & Scores for July 20–26
+- **Full Roster Sync**: Fetched real alliance roster scores from Google Sheets `"Showdown"` tab and synced all player scores under **#1 Thadwarf (29,515,364)** and **#2 Soulcrusher4217 (19,294,803)** into both `showdown_live` and `showdown_meta/history`.
+
 ## [1.48.54] - 2026-07-26
 ### Updated Top 2 Scores for July 20–26
 - **Top 2 Scores Sync**: Updated July 20 – July 26, 2026 dataset so **#1 Thadwarf (29,515,364)** and **#2 Soulcrusher4217 (19,294,803)** are locked at the top of the leaderboard in both `showdown_live` and `showdown_meta/history`.
