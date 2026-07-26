@@ -4204,59 +4204,82 @@ window.ensureJuly20BlockInHistory = async () => {
     try {
         const histSnap = await get(ref(db, 'showdown_meta/history')).catch(() => null);
         const histObj = (histSnap && histSnap.exists()) ? histSnap.val() : {};
-        
-        let hasJuly20 = false;
-        if (histObj && typeof histObj === 'object') {
-            for (const ev of Object.values(histObj)) {
-                if (ev && ev.date && (ev.date.includes('July 20') || ev.date.includes('Jul 20'))) {
-                    hasJuly20 = true; break;
-                }
-            }
-        }
 
-        const july20Players = [
-            { name: "Thadwarf", d1: 4559055, d2: 4210500, d3: 3890200, d4: 5120400, d5: 4890200, d6: 6845009, total: 29515364 },
-            { name: "Soulcrusher4217", d1: 2969963, d2: 3120400, d3: 2890100, d4: 3450200, d5: 2980600, d6: 3883540, total: 19294803 },
-            { name: "BrianDCox", d1: 4881161, d2: 2570200, d3: 2820000, d4: 2960100, d5: 2490800, d6: 2858900, total: 18581161 },
-            { name: "Miaow Queen", d1: 627850, d2: 510200, d3: 680500, d4: 720100, d5: 690400, d6: 835693, total: 4064743 },
-            { name: "Sugardaddy", d1: 513465, d2: 480200, d3: 520400, d4: 590300, d5: 510200, d6: 709631, total: 3324196 },
-            { name: "Ghozt", d1: 466956, d2: 410200, d3: 490500, d4: 510200, d5: 480300, d6: 664981, total: 3023194 },
-            { name: "Dwarf 2", d1: 229021, d2: 198000, d3: 210400, d4: 245000, d5: 210200, d6: 390131, total: 1482752 },
-            { name: "Favas", d1: 196980, d2: 180200, d3: 195400, d4: 210300, d5: 198000, d6: 294421, total: 1275301 },
-            { name: "AngrygermanDaddy", d1: 182000, d2: 175000, d3: 181200, d4: 199000, d5: 178000, d6: 263190, total: 1178390 },
-            { name: "Lilangrygerman", d1: 163308, d2: 152000, d3: 168400, d4: 180200, d5: 159000, d6: 234376, total: 1057284 },
-            { name: "Sigmashu", d1: 80554, d2: 78000, d3: 84200, d4: 92000, d5: 81000, d6: 105766, total: 521520 },
-            { name: "Guardian", d1: 54250, d2: 51000, d3: 56000, d4: 62000, d5: 53000, d6: 74950, total: 351200 },
-            { name: "Sentinel Frost", d1: 20000, d2: 20000, d3: 20000, d4: 20000, d5: 20000, d6: 29480, total: 129480 },
-            { name: "Cyrus Frost", d1: 20000, d2: 20000, d3: 20000, d4: 20000, d5: 20000, d6: 29480, total: 129480 },
-            { name: "Dragon Frost", d1: 20000, d2: 20000, d3: 20000, d4: 20000, d5: 20000, d6: 29480, total: 129480 },
-            { name: "Titan Frost", d1: 20000, d2: 20000, d3: 20000, d4: 20000, d5: 20000, d6: 29480, total: 129480 }
-        ];
-
-        if (!hasJuly20) {
-            const ts = 1785200000000;
-            await set(ref(db, `showdown_meta/history/${ts}`), {
+        const all5Blocks = {
+            "1785200000000": {
                 date: "July 20 – July 26, 2026",
-                timestamp: ts,
-                enemyAlliance: { name: "[WWA] Whiteoutwarriors", scores: { d1: 4531447, d2: 4766115, d3: 3990556, d4: 6893670, d5: 4497906, d6: 12501628 } },
-                players: july20Players
-            });
-        }
+                timestamp: 1785200000000,
+                enemyAlliance: { name: "[WWA] Whiteoutwarriors", scores: { d1: 1469154, d2: 0, d3: 0, d4: 0, d5: 0, d6: 0 } },
+                players: [
+                    { name: "Thadwarf", d1: 4559055, d2: 4210500, d3: 3890200, d4: 5120400, d5: 4890200, d6: 6845009, total: 29515364 },
+                    { name: "Soulcrusher4217", d1: 2969963, d2: 3120400, d3: 2890100, d4: 3450200, d5: 2980600, d6: 3883540, total: 19294803 },
+                    { name: "BrianDCox", d1: 4881161, d2: 2570200, d3: 2820000, d4: 2960100, d5: 2490800, d6: 2858900, total: 18581161 },
+                    { name: "Miaow Queen", d1: 627850, d2: 510200, d3: 680500, d4: 720100, d5: 690400, d6: 835693, total: 4064743 },
+                    { name: "Sugardaddy", d1: 513465, d2: 480200, d3: 520400, d4: 590300, d5: 510200, d6: 709631, total: 3324196 },
+                    { name: "Ghozt", d1: 466956, d2: 410200, d3: 490500, d4: 510200, d5: 480300, d6: 664981, total: 3023194 },
+                    { name: "Dwarf 2", d1: 229021, d2: 198000, d3: 210400, d4: 245000, d5: 210200, d6: 390131, total: 1482752 },
+                    { name: "Favas", d1: 196980, d2: 180200, d3: 195400, d4: 210300, d5: 198000, d6: 294421, total: 1275301 },
+                    { name: "AngrygermanDaddy", d1: 182000, d2: 175000, d3: 181200, d4: 199000, d5: 178000, d6: 263190, total: 1178390 },
+                    { name: "Lilangrygerman", d1: 163308, d2: 152000, d3: 168400, d4: 180200, d5: 159000, d6: 234376, total: 1057284 },
+                    { name: "Sigmashu", d1: 80554, d2: 78000, d3: 84200, d4: 92000, d5: 81000, d6: 105766, total: 521520 },
+                    { name: "Guardian", d1: 54250, d2: 51000, d3: 56000, d4: 62000, d5: 53000, d6: 74950, total: 351200 },
+                    { name: "Sentinel Frost", d1: 20000, d2: 20000, d3: 20000, d4: 20000, d5: 20000, d6: 29480, total: 129480 },
+                    { name: "Cyrus Frost", d1: 20000, d2: 20000, d3: 20000, d4: 20000, d5: 20000, d6: 29480, total: 129480 },
+                    { name: "Dragon Frost", d1: 20000, d2: 20000, d3: 20000, d4: 20000, d5: 20000, d6: 29480, total: 129480 },
+                    { name: "Titan Frost", d1: 20000, d2: 20000, d3: 20000, d4: 20000, d5: 20000, d6: 29480, total: 129480 }
+                ]
+            },
+            "1785088926123": {
+                date: "June 22 – June 28, 2026",
+                timestamp: 1785088926123,
+                enemyAlliance: { name: "([NYd] シトリン)", scores: { d1: 13153095, d2: 12824871, d3: 7145263, d4: 12548851, d5: 15342065, d6: 25805332 } },
+                players: [
+                    { name: "BrianDCox", d1: 4126021, d2: 3987658, d3: 2150000, d4: 3890000, d5: 2980000, d6: 6120000, total: 23253679 },
+                    { name: "Thadwarf", d1: 3851022, d2: 3589794, d3: 1855802, d4: 3404172, d5: 2325143, d6: 5102564, total: 20128497 },
+                    { name: "Dwarf2", d1: 325173, d2: 249941, d3: 173470, d4: 111942, d5: 96494, d6: 674099, total: 1631119 }
+                ]
+            },
+            "1785088927123": {
+                date: "June 15th – 21st, 2026",
+                timestamp: 1785088927123,
+                enemyAlliance: { name: "[000]黃楓谷", scores: { d1: 16101704, d2: 13569156, d3: 10017141, d4: 9406282, d5: 9131009, d6: 7432005 } },
+                players: [
+                    { name: "BrianDCox", d1: 3200000, d2: 2100000, d3: 1950000, d4: 2400000, d5: 2100000, d6: 3100000, total: 14850000 },
+                    { name: "Thadwarf", d1: 2859320, d2: 1701513, d3: 1810872, d4: 2021976, d5: 1895046, d6: 2391573, total: 12680300 },
+                    { name: "Dwarf2", d1: 145032, d2: 291434, d3: 117550, d4: 76350, d5: 109605, d6: 158450, total: 898421 }
+                ]
+            },
+            "1785088928123": {
+                date: "June 8th – 14th, 2026",
+                timestamp: 1785088928123,
+                enemyAlliance: { name: "[NBD]ムラタク", scores: { d1: 6433892, d2: 10821760, d3: 8824467, d4: 5525919, d5: 4956792, d6: 22328992 } },
+                players: [
+                    { name: "BrianDCox", d1: 1800000, d2: 1450000, d3: 3100000, d4: 1200000, d5: 890000, d6: 4500000, total: 12940000 },
+                    { name: "Thadwarf", d1: 1297254, d2: 1179732, d3: 2605742, d4: 912634, d5: 472196, d6: 3763518, total: 10231076 },
+                    { name: "dwarf2", d1: 22090, d2: 127458, d3: 133180, d4: 0, d5: 0, d6: 361669, total: 644397 }
+                ]
+            },
+            "1785088929123": {
+                date: "Jun 1st – 7th 2026",
+                timestamp: 1785088929123,
+                enemyAlliance: { name: "[RED]Army", scores: { d1: 4531447, d2: 4766115, d3: 3990556, d4: 6893670, d5: 4497906, d6: 12501628 } },
+                players: [
+                    { name: "BrianDCox", d1: 1576749, d2: 1026104, d3: 1354508, d4: 4126021, d5: 1388426, d6: 2987658, total: 12459466 },
+                    { name: "Afu_D", d1: 1026739, d2: 873064, d3: 605106, d4: 1175779, d5: 445651, d6: 1611696, total: 5738035 },
+                    { name: "Soulcrusher4217", d1: 464108, d2: 506614, d3: 249735, d4: 192539, d5: 927003, d6: 2762600, total: 5102599 },
+                    { name: "Thadwarf", d1: 303327, d2: 885340, d3: 802870, d4: 228138, d5: 143842, d6: 2349373, total: 4712890 },
+                    { name: "dwarf2", d1: 50000, d2: 37552, d3: 58100, d4: 28950, d5: 27450, d6: 133406, total: 335458 }
+                ]
+            }
+        };
 
-        
-        if (!metaVal.isReset) {
-            const liveSnap = await get(ref(db, 'showdown_live')).catch(() => null);
-            if (!liveSnap || !liveSnap.exists() || !liveSnap.val() || Object.keys(liveSnap.val()).length === 0) {
-                let liveMap = {};
-                july20Players.forEach(p => {
-                    liveMap[p.name] = { d1: p.d1, d2: p.d2, d3: p.d3, d4: p.d4, d5: p.d5, d6: p.d6 };
-                });
-                await set(ref(db, 'showdown_live'), liveMap);
+        for (const [key, block] of Object.entries(all5Blocks)) {
+            if (!histObj[key]) {
+                await set(ref(db, `showdown_meta/history/${key}`), block).catch(() => null);
             }
         }
-    } catch(e) { console.warn("July 20 seeder error:", e); }
+    } catch(e) { console.warn("All history seeder error:", e); }
 };
-
 
 window.deleteAllShowdownArchives = async () => {
     const archiveKeys = Object.keys(window._sdHistoryState.historyObj || {});

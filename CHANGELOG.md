@@ -1,3 +1,7 @@
+## [1.48.61] - 2026-07-26
+### Restored All 5 History Blocks in Vault
+- **5-Block Vault Seeder**: Updated `ensureJuly20BlockInHistory()` to seed all 5 historical event blocks (`July 20–26`, `June 22–28`, `June 15–21`, `June 8–14`, `June 1–7`) into `showdown_meta/history` via the authenticated Firebase SDK, ensuring complete historical records are available in the Vault at all times.
+
 ## [1.48.60] - 2026-07-26
 ### Executed Direct Database Reset & Removed Overwriting Seeders
 - **Direct Database Reset**: Executed database update in Firebase RTDB clearing `showdown_live` and setting `showdown_meta/isReset` to `true`.
