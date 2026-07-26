@@ -1,3 +1,7 @@
+## [1.48.11] - 2026-07-26
+### Fixed Data Entry UI Loading Error
+- **Cleaned Up Duplicated Code**: Removed duplicated `sdHistoryData` block that caused a syntax collision during module execution, restoring clean loading for `showdownAdmin` Data Entry UI.
+
 ## [1.48.10] - 2026-07-26
 ### Multi-Tier Fallback Write Paths for Showdown Archive
 - **Multi-Path RTDB Fallbacks**: Added multi-tier write fallbacks (`showdown_meta/history/${timestamp}` -> `showdown_history/${timestamp}` -> `activity_history_archives/showdown_${timestamp}`) to guarantee archives save successfully even if specific database paths are restricted in Firebase Console rules.

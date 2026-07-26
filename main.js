@@ -8627,53 +8627,6 @@ window.resetBearTrapEvent = async () => {
          } else {
              boards = JSON.parse(JSON.stringify(allBoards.filter(b => b.title && b.title.toLowerCase().includes(filterString.toLowerCase()))));
          }
-         if (filterString && filterString.toLowerCase() === 'showdown') {
-          try {
-             sdHistoryData = await fetchSheet("Showdown History");
-             const [histSnap, metaHistSnap, archiveSnap] = await Promise.all([
-                get(ref(db, 'showdown_history')).catch(() => null),
-                get(ref(db, 'showdown_meta/history')).catch(() => null),
-                get(ref(db, 'activity_history_archives')).catch(() => null)
-             ]);
-             
-             let extraRows = [];
-             const parseSnapVal = (rawVal) => {
-                if (!rawVal) return;
-                if (Array.isArray(rawVal)) {
-                   extraRows.push(...rawVal);
-                } else if (typeof rawVal === 'object') {
-                   Object.values(rawVal).forEach(entry => {
-                      if (!entry) return;
-                      if (Array.isArray(entry)) {
-                         extraRows.push(...entry);
-                      } else if (entry.players || entry.pList) {
-                         let plist = entry.players || entry.pList || [];
-                         let dateStr = entry.date || new Date(entry.timestamp || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                         extraRows.push(["", "Date:", dateStr, "", "", "", "", "", "", ""]);
-                         extraRows.push(["", "Ranking", "Member", "Day 1", "Day 2", "Day 3", "Day 4", "Day 5", "Day 6", "Total"]);
-                         plist.forEach((p, idx) => {
-                            extraRows.push(["", p.rank || (idx + 1), p.name, p.d1 || 0, p.d2 || 0, p.d3 || 0, p.d4 || 0, p.d5 || 0, p.d6 || 0, p.total || 0]);
-                         });
-                         extraRows.push(["", "", "", "", "", "", "", "", "", ""]);
-                      } else if (Array.isArray(entry.data)) {
-                         extraRows.push(...entry.data);
-                      }
-                   });
-                }
-             };
-
-             if (metaHistSnap && metaHistSnap.exists()) parseSnapVal(metaHistSnap.val());
-             if (histSnap && histSnap.exists()) parseSnapVal(histSnap.val());
-             if (archiveSnap && archiveSnap.exists()) parseSnapVal(archiveSnap.val());
-
-             let baseRows = sdHistoryData ? (sdHistoryData.data || sdHistoryData) : [];
-             if (Array.isArray(baseRows) && extraRows.length > 0) {
-                sdHistoryData = [...baseRows, ...extraRows];
-             } else if (extraRows.length > 0) {
-                sdHistoryData = extraRows;
-             }
-          } catch(e) { console.warn("Showdown history fetch error", e); }
-       };
       }
       // Fetch champions config & Bear Trap Firebase nodes
       let btWinners = {};
@@ -8700,16 +8653,47 @@ window.resetBearTrapEvent = async () => {
       if (filterString && filterString.toLowerCase() === 'showdown') {
          try {
             sdHistoryData = await fetchSheet("Showdown History");
-            const histSnap = await get(ref(db, 'showdown_history'));
-            if (histSnap.exists() && histSnap.val()) {
-               const extraHistory = histSnap.val();
-               let baseRows = sdHistoryData ? (sdHistoryData.data || sdHistoryData) : [];
-               let extraRows = extraHistory ? (extraHistory.data || extraHistory) : [];
-               if (Array.isArray(baseRows) && Array.isArray(extraRows) && extraRows.length > 0) {
-                  sdHistoryData = [...baseRows, ...extraRows];
-               } else if (extraRows.length > 0) {
-                  sdHistoryData = extraRows;
+            const [histSnap, metaHistSnap, archiveSnap] = await Promise.all([
+               get(ref(db, 'showdown_history')).catch(() => null),
+               get(ref(db, 'showdown_meta/history')).catch(() => null),
+               get(ref(db, 'activity_history_archives')).catch(() => null)
+            ]);
+            
+            let extraRows = [];
+            const parseSnapVal = (rawVal) => {
+               if (!rawVal) return;
+               if (Array.isArray(rawVal)) {
+                  extraRows.push(...rawVal);
+               } else if (typeof rawVal === 'object') {
+                  Object.values(rawVal).forEach(entry => {
+                     if (!entry) return;
+                     if (Array.isArray(entry)) {
+                        extraRows.push(...entry);
+                     } else if (entry.players || entry.pList) {
+                        let plist = entry.players || entry.pList || [];
+                        let dateStr = entry.date || new Date(entry.timestamp || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                        extraRows.push(["", "Date:", dateStr, "", "", "", "", "", "", ""]);
+                        extraRows.push(["", "Ranking", "Member", "Day 1", "Day 2", "Day 3", "Day 4", "Day 5", "Day 6", "Total"]);
+                        plist.forEach((p, idx) => {
+                           extraRows.push(["", p.rank || (idx + 1), p.name, p.d1 || 0, p.d2 || 0, p.d3 || 0, p.d4 || 0, p.d5 || 0, p.d6 || 0, p.total || 0]);
+                        });
+                        extraRows.push(["", "", "", "", "", "", "", "", "", ""]);
+                     } else if (Array.isArray(entry.data)) {
+                        extraRows.push(...entry.data);
+                     }
+                  });
                }
+            };
+
+            if (metaHistSnap && metaHistSnap.exists()) parseSnapVal(metaHistSnap.val());
+            if (histSnap && histSnap.exists()) parseSnapVal(histSnap.val());
+            if (archiveSnap && archiveSnap.exists()) parseSnapVal(archiveSnap.val());
+
+            let baseRows = sdHistoryData ? (sdHistoryData.data || sdHistoryData) : [];
+            if (Array.isArray(baseRows) && extraRows.length > 0) {
+               sdHistoryData = [...baseRows, ...extraRows];
+            } else if (extraRows.length > 0) {
+               sdHistoryData = extraRows;
             }
          } catch(e) { console.warn("Showdown history fetch error", e); }
       }
