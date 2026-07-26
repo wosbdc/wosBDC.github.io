@@ -3988,84 +3988,134 @@ window.resetCurrentShowdown = async () => {
     }
 };
 
-window.restoreLatestShowdownArchive = async () => {
-    const confirmed = await window.customConfirm("↩️ Are you sure you want to RESTORE live scores from the latest archived Showdown event?");
-    if (!confirmed) return;
+
+window.showRestoreArchiveSelectorModal = async () => {
     try {
-        const [histSnap, metaHistSnap, archiveSnap] = await Promise.all([
-            get(ref(db, 'showdown_history')).catch(() => null),
-            get(ref(db, 'showdown_meta/history')).catch(() => null),
-            get(ref(db, 'activity_history_archives')).catch(() => null)
-        ]);
+        const metaHistSnap = await get(ref(db, 'showdown_meta/history')).catch(() => null);
+        let archivesObj = (metaHistSnap && metaHistSnap.exists()) ? metaHistSnap.val() : {};
 
-        let candidateArchives = [];
-
-        const extractArchives = (rawVal, sourcePath) => {
-            if (!rawVal || typeof rawVal !== 'object') return;
-            Object.entries(rawVal).forEach(([key, val]) => {
-                if (!val) return;
-                if (val.players || val.pList) {
-                    let ts = val.timestamp || parseInt(key) || 0;
-                    candidateArchives.push({ key, sourcePath, val, timestamp: ts });
-                }
-            });
-        };
-
-        if (metaHistSnap && metaHistSnap.exists()) extractArchives(metaHistSnap.val(), 'showdown_meta/history');
-        if (histSnap && histSnap.exists()) extractArchives(histSnap.val(), 'showdown_history');
-        if (archiveSnap && archiveSnap.exists()) extractArchives(archiveSnap.val(), 'activity_history_archives');
-
-        if (candidateArchives.length === 0) {
-            if (window.showToast) window.showToast("No archived Showdown snapshots found to restore.", "error");
+        let keys = Object.keys(archivesObj).sort((a,b) => Number(b) - Number(a));
+        if (keys.length === 0) {
+            if (window.showToast) window.showToast("No archived Showdown snapshots found to restore.", "warning");
             return;
         }
 
-        // Sort candidate archives by timestamp descending to get latest
-        candidateArchives.sort((a, b) => b.timestamp - a.timestamp);
-        const latest = candidateArchives[0];
-        const plist = latest.val.players || latest.val.pList || [];
+        let existing = document.getElementById('sdRestoreSelectorModal');
+        if (existing) existing.remove();
 
-        if (plist.length === 0) {
-            if (window.showToast) window.showToast("Latest archive contains no player data.", "error");
+        let modal = document.createElement('div');
+        modal.id = 'sdRestoreSelectorModal';
+        modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); z-index:100020; display:flex; justify-content:center; align-items:center; animation:fadeIn 0.2s ease; padding:15px; box-sizing:border-box;';
+
+        let optionsHtml = '';
+        keys.forEach(k => {
+            let ev = archivesObj[k];
+            let dateStr = ev.date || new Date(Number(k)).toLocaleDateString([], {month:'short', day:'numeric', year:'numeric'});
+            let enemyName = (ev.enemyAlliance && ev.enemyAlliance.name) ? ev.enemyAlliance.name : 'Enemy Alliance';
+            let pCount = Array.isArray(ev.players) ? ev.players.length : 0;
+            optionsHtml += `<option value="${k}">📅 ${escapeHTML(dateStr)} — vs ${escapeHTML(enemyName)} (${pCount} players)</option>`;
+        });
+
+        modal.innerHTML = `
+            <div style="background:var(--card-bg); border:1px solid var(--accent); border-radius:16px; width:100%; max-width:500px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 10px 40px rgba(0,0,0,0.6);">
+                <div style="padding:18px 24px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02);">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <div style="font-size:24px;">↩️</div>
+                        <div>
+                            <div style="font-size:16px; font-weight:bold; color:var(--text-main);">Restore Archive to Live Tracker</div>
+                            <div style="font-size:12px; color:var(--text-muted);">Choose which snapshot to push into live Showdown scores</div>
+                        </div>
+                    </div>
+                    <button onclick="document.getElementById('sdRestoreSelectorModal').remove()" style="background:rgba(255,255,255,0.1); border:none; color:var(--text-main); width:30px; height:30px; border-radius:50%; font-size:15px; font-weight:bold; cursor:pointer;">✕</button>
+                </div>
+                <div style="padding:20px;">
+                    <div style="margin-bottom:20px;">
+                        <label style="font-size:12px; font-weight:bold; color:var(--text-muted); display:block; margin-bottom:6px;">Select Backup Snapshot</label>
+                        <select id="sdRestoreKeySelect" style="width:100%; padding:12px; border-radius:8px; border:1px solid var(--accent); background:var(--bg-main); color:var(--text-main); font-size:14px; font-weight:bold; cursor:pointer;">
+                            ${optionsHtml}
+                        </select>
+                    </div>
+                    <button onclick="window.restoreSpecificShowdownArchive(document.getElementById('sdRestoreKeySelect').value, this)" style="background:var(--accent); color:var(--bg-main); border:none; width:100%; padding:12px; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer; box-shadow:0 4px 12px rgba(6,182,212,0.3);">↩️ Restore Selected Snapshot to Live Tracker</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    } catch(err) {
+        console.error("Error opening restore selector modal:", err);
+        if (window.showToast) window.showToast("Error loading archives: " + err.message, "error");
+    }
+};
+
+window.restoreSpecificShowdownArchive = async (archiveKey, btnEl = null) => {
+    if (!archiveKey) return;
+    
+    let origText = btnEl ? btnEl.innerHTML : '';
+    if (btnEl) { btnEl.disabled = true; btnEl.innerHTML = '⏳ Restoring...'; }
+
+    try {
+        const snap = await get(ref(db, `showdown_meta/history/${archiveKey}`));
+        if (!snap.exists()) {
+            if (window.showToast) window.showToast("Selected archive snapshot not found.", "error");
+            if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = origText; }
             return;
         }
 
-        // Restore each player's scores into showdown_live
-        for (const p of plist) {
+        const evData = snap.val();
+        const players = Array.isArray(evData.players) ? evData.players : [];
+        const dateStr = evData.date || archiveKey;
+        const enemyObj = evData.enemyAlliance || { name: "Enemy Alliance", scores: { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 } };
+
+        let confirmed = false;
+        try {
+            if (typeof window.customConfirm === 'function') {
+                confirmed = await window.customConfirm(`↩️ Are you sure you want to RESTORE live scores from "${dateStr} (vs ${enemyObj.name || 'Enemy'})"?\n\nThis will update current live Showdown scores.`);
+            } else {
+                confirmed = window.confirm(`↩️ Restore live scores from "${dateStr}"?`);
+            }
+        } catch(e) {
+            confirmed = window.confirm(`↩️ Restore live scores from "${dateStr}"?`);
+        }
+
+        if (!confirmed) {
+            if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = origText; }
+            return;
+        }
+
+        await remove(ref(db, 'showdown_live'));
+
+        for (const p of players) {
             if (!p.name) continue;
-            let updates = {
+            await set(ref(db, `showdown_live/${p.name}`), {
                 d1: p.d1 || 0,
                 d2: p.d2 || 0,
                 d3: p.d3 || 0,
                 d4: p.d4 || 0,
                 d5: p.d5 || 0,
                 d6: p.d6 || 0
-            };
-            await set(ref(db, `showdown_live/${p.name}`), updates);
+            });
         }
 
-        // Restore enemy alliance scores if saved in archive, OR fallback to default enemy alliance scores ([RED]Army)
-        let enemyData = latest.val.enemyAlliance || {
-            name: "[RED]Army",
-            scores: { d1: 4531447, d2: 4766115, d3: 3990556, d4: 6893670, d5: 4497906, d6: 12501628 }
-        };
-        try {
-            await set(ref(db, 'showdown_meta/enemyAlliance'), enemyData);
-        } catch(e) { console.warn("Could not restore enemy alliance meta:", e); }
+        await set(ref(db, 'showdown_meta/enemyAlliance'), enemyObj);
 
-        if (window.logAdminAction) {
-            try {
-                window.logAdminAction("Showdown Event Restored", `Restored live scores for ${plist.length} players and enemy alliance (${enemyData.name}) from archive`);
-            } catch(e) {}
+        if (window.showToast) window.showToast(`🎉 Successfully restored live scores from "${dateStr}" (${players.length} players)!`, "success");
+        
+        let selModal = document.getElementById('sdRestoreSelectorModal');
+        if (selModal) selModal.remove();
+
+        if (typeof views !== 'undefined' && views.showdownAdmin) {
+            views.showdownAdmin();
         }
-
-        if (window.showToast) window.showToast(`Successfully restored ${plist.length} players' scores & ${enemyData.name} scores! 🎉`, "success");
-        if (typeof views !== 'undefined' && views.showdownAdmin) views.showdownAdmin();
     } catch(err) {
-        console.error("Error restoring showdown archive:", err);
-        if (window.showToast) window.showToast("Error restoring archive: " + err.message, "error");
+        console.error("Error restoring specific archive:", err);
+        if (window.showToast) window.showToast("Restore error: " + err.message, "error");
+        if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = origText; }
     }
 };
+
+window.restoreLatestShowdownArchive = async () => {
+    return window.showRestoreArchiveSelectorModal();
+};
+
 
 window._sdHistoryState = {
     historyObj: {},
@@ -4601,6 +4651,7 @@ window.buildVaultModalContent = (activeKey = 'all') => {
                       <div style="display:flex; align-items:center; gap:10px; margin-bottom:4px;">
                         <span style="color: var(--accent); font-size: 12px; font-weight: bold; text-transform: uppercase;">Event Date: ${dStr}</span>
                         <button onclick="window.openEditShowdownArchiveModal('${activeKey}', '${escapeHTML(dStr)}', '${escapeHTML(enemy.name || '')}')" style="background:rgba(255,215,0,0.15); border:1px solid rgba(255,215,0,0.3); color:#FFD700; padding:2px 8px; border-radius:6px; font-weight:bold; font-size:11px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">✏️ Edit Date & Enemy</button>
+                        <button onclick="window.restoreSpecificShowdownArchive('${activeKey}')" style="background:rgba(6,182,212,0.18); border:1px solid rgba(6,182,212,0.4); color:var(--accent); padding:2px 8px; border-radius:6px; font-weight:bold; font-size:11px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">↩️ Restore to Live</button>
                         ${resultBadge}
                       </div>
                       <div style="color: var(--text-main); font-size: 20px; font-weight: bold;">Our Alliance (${ourTotal.toLocaleString()}) vs ${escapeHTML(enemy.name)} (${enemyTotal.toLocaleString()})</div>

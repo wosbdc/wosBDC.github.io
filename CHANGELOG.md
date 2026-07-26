@@ -1,3 +1,8 @@
+## [1.48.38] - 2026-07-26
+### Interactive Showdown Restore Archive Selection Suite
+- **Archive Selector Modal (`window.showRestoreArchiveSelectorModal`)**: Replaced automatic single-archive restore with an interactive selection modal listing all historical snapshots with date, opponent alliance, and player count.
+- **Specific Snapshot Restore (`window.restoreSpecificShowdownArchive`)**: Added ability to restore any chosen historical snapshot directly into live Showdown scores, with 1-click `↩️ Restore to Live` buttons on Vault cards and Admin Data Entry header.
+
 ## [1.48.37] - 2026-07-26
 ### Fixed Missing Firebase `update` Export in `main.js`
 - **Imported `update` function from `firebase/database`**: Added `update` to top-level Firebase RTDB imports in `main.js`, resolving `Update error: update is not defined` and allowing inline editing of event details to save instantly.
