@@ -4685,7 +4685,7 @@ window.openShowdownArchiveVaultModal = async (initialKey = 'all') => {
             (typeof sdHistoryData !== 'undefined' && sdHistoryData) ? Promise.resolve(sdHistoryData) : fetchSheet("Showdown History").catch(() => null)
         ]);
 
-        const historyObj = (histSnap && histSnap.exists() && histSnap.val()) ? histSnap.val() : {};
+        const historyObj = window.getMergedShowdownHistoryObj((histSnap && histSnap.exists() && histSnap.val()) ? histSnap.val() : {});
         const liveData = (liveSnap && liveSnap.exists() && liveSnap.val()) ? liveSnap.val() : {};
         
         let livePlayers = [];
@@ -9864,7 +9864,7 @@ window.resetBearTrapEvent = async () => {
          ]);
          
          const liveData = liveSnap.val() || {};
-         const historyObj = (historySnap && historySnap.exists() && historySnap.val()) ? historySnap.val() : {};
+         const historyObj = window.getMergedShowdownHistoryObj((historySnap && historySnap.exists() && historySnap.val()) ? historySnap.val() : {});
          
          let ourScores = { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 };
          let topPlayers = { d1:{score:0}, d2:{score:0}, d3:{score:0}, d4:{score:0}, d5:{score:0}, d6:{score:0} };
@@ -10551,7 +10551,7 @@ window.resetBearTrapEvent = async () => {
        ]);
        
        const metaData = (metaSnap && metaSnap.exists() && metaSnap.val()) ? metaSnap.val() : {};
-       const historyObj = (historySnap && historySnap.exists() && historySnap.val()) ? historySnap.val() : {};
+       const historyObj = window.getMergedShowdownHistoryObj((historySnap && historySnap.exists() && historySnap.val()) ? historySnap.val() : {});
 
        let liveData = (liveSnap && liveSnap.exists() && liveSnap.val()) ? liveSnap.val() : {};
        if (liveData && liveData.error) delete liveData.error;

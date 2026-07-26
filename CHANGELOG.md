@@ -1,3 +1,7 @@
+## [1.48.64] - 2026-07-26
+### Connected Vault Modal Engine to Merged History Provider
+- **Vault Modal Integration**: Updated `openShowdownArchiveVaultModal()` to parse raw snapshot objects through `getMergedShowdownHistoryObj()`, guaranteeing that all 5 historical event blocks are rendered in the Vault modal dropdown and card body instantly.
+
 ## [1.48.63] - 2026-07-26
 ### Guaranteed 5-Block Historical Dropdown Integration
 - **Fallback Merging Engine**: Embedded `window.DEFAULT_SD_HISTORY_BLOCKS` and `getMergedShowdownHistoryObj()` to guarantee that all 5 historical event blocks (`July 20–26`, `June 22–28`, `June 15–21`, `June 8–14`, `June 1–7`) are 100% present in all Vault modals, restore dropdowns, and Leaderboard historical selectors regardless of network state.
