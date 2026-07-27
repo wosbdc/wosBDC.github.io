@@ -4549,7 +4549,7 @@ window.buildVaultModalContent = (activeKey = 'all') => {
             </tr>`;
         });
 
-        mainContent = winnersBarHtml + `${allTimeMvpHtml}
+        mainContent = `${allTimeMvpHtml}
             <div class="card-table-scroll" style="max-height:55vh;">
                <table style="min-width: max-content; width: 100%; text-align:left;"><thead><tr>
                   <th style="text-align:center;">RANK</th><th>PLAYER NAME</th><th>TOTAL HORNS</th><th>DAY WINS</th><th>TOTAL SCORE</th>

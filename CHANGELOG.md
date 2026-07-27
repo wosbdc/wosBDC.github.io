@@ -1,3 +1,7 @@
+## [1.48.72] - 2026-07-26
+### Fix winnersBarHtml Scope Reference Error
+- **Bug Fix**: Fixed a `ReferenceError` where `winnersBarHtml` was referenced in the all-time combined view branch of `buildVaultModalContent()`. All-time view now builds cleanly without errors.
+
 ## [1.48.71] - 2026-07-26
 ### Google Sheets Winners Row Integration
 - **Daily Winners & MVP Parser**: Updated `parseShowdownHistoryRows()` to parse the `Winners ` row from Google Sheets tab `"Showdown History"`, extracting exact daily winner names for Day 1..6 and overall MVP string.
