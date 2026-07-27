@@ -4503,24 +4503,6 @@ window.openShowdownArchiveVaultModal = async (initialKey = 'all') => {
 window.buildVaultModalContent = (activeKey = 'all') => {
     const { historyObj, historyRows, livePlayers } = window._sdHistoryState;
 
-    let deleteBtnHtml = (activeKey !== 'all' && historyObj && historyObj[activeKey]) ? `
-        <button onclick="window.deleteShowdownArchive('${activeKey}', '${escapeHTML(historyObj[activeKey].date || activeKey)}')" style="background:rgba(239,68,68,0.18); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:7px 14px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer; transition:all 0.2s ease; box-shadow:0 2px 8px rgba(239,68,68,0.15);">
-            🗑️ Delete This Archive
-        </button>
-    ` : '';
-
-    let adminBarHtml = `
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:15px; padding:12px 16px; background:linear-gradient(135deg, rgba(255,215,0,0.08) 0%, rgba(255,215,0,0.02) 100%); border:1px solid rgba(255,215,0,0.25); border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.2);">
-            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                <span style="font-weight:bold; color:#FFD700; font-size:12px; display:flex; align-items:center; gap:4px;">⚡ Manager Tools:</span>
-                <button onclick="window.syncGoogleSheetsHistoryToVault(this)" style="background:var(--accent); color:var(--bg-main); border:none; padding:7px 14px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer; box-shadow:0 2px 8px rgba(6,182,212,0.2);">⚡ Sync All Sheets History (Option A)</button>
-                <button onclick="window.openShowdownPasteImporterModal()" style="background:rgba(255,255,255,0.08); color:var(--text-main); border:1px solid var(--border); padding:7px 14px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">📋 Paste Custom Sheet Event</button>
-                <button onclick="window.deleteAllShowdownArchives()" style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:7px 14px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">🗑️ Wipe All Archives</button>
-            </div>
-            ${deleteBtnHtml}
-        </div>
-    `;
-
     const archiveKeys = Object.keys(historyObj).sort((a,b) => Number(b) - Number(a));
     let optionsHtml = archiveKeys.length > 0 ? `<option value="all" ${activeKey === 'all' ? 'selected' : ''}>🌟 All-Time Combined Leaderboard</option>` : `<option value="none">📂 Vault Empty (No Saved Archives)</option>`;
     archiveKeys.forEach(key => {
@@ -4646,7 +4628,6 @@ window.buildVaultModalContent = (activeKey = 'all') => {
     }
 
     return `
-        ${adminBarHtml}
         <div style="margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; background:rgba(255,255,255,0.03); padding:12px 18px; border-radius:10px; border:1px solid var(--border);">
             <div style="font-weight:bold; font-size:13px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
                 <span>📅 Select Event Archive:</span>
@@ -6896,8 +6877,10 @@ const views = {
                  <button onclick="window.openShowdownPasteImporterModal()" style="background:rgba(255,215,0,0.18); border:1px solid rgba(255,215,0,0.5); color:#FFD700; padding:4px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:4px;">📋 Quick Paste Scores</button>
                   <button onclick="window.showMissedDaysReportModal(this)" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--accent); padding:4px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:4px;">📋 Missed Days Report</button>
                  <button onclick="window.archiveCurrentShowdownToFirebase()" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--success); padding:4px 8px; border-radius:6px; cursor:pointer; font-size:12px;">📁 Archive to History</button>
+                 <button onclick="window.syncGoogleSheetsHistoryToVault(this)" style="background:var(--accent); color:var(--bg-main); border:none; padding:4px 8px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer; box-shadow:0 2px 8px rgba(6,182,212,0.2);">⚡ Sync All Sheets History</button>
                  <button onclick="window.restoreLatestShowdownArchive()" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--accent); padding:4px 8px; border-radius:6px; cursor:pointer; font-size:12px;">↩️ Restore Choice</button>
                  <button onclick="window.resetCurrentShowdown()" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--danger); padding:4px 8px; border-radius:6px; cursor:pointer; font-size:12px;">🔄 Reset Event</button>
+                 <button onclick="window.deleteAllShowdownArchives()" style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:4px 8px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">🗑️ Wipe All Archives</button>
                </div>
            </div>
            <div style="background:rgba(255,255,255,0.02); padding:15px; border-radius:8px; border:1px solid var(--border); margin-bottom:10px;">

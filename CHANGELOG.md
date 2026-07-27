@@ -1,3 +1,7 @@
+## [1.48.81] - 2026-07-26
+### Secure Showdown Manager Tools
+- **Migrated Tools to Admin Dashboard**: Moved the "⚡ Sync All Sheets History" and "🗑️ Wipe All Archives" buttons completely out of the public-facing Showdown Archive Vault modal. These sensitive manager tools are now securely relocated to the private Admin Menu -> Showdown section, ensuring that standard users can no longer accidentally trigger global syncing or archiving actions.
+
 ## [1.48.80] - 2026-07-26
 ### Fix Vault Sync Relying on Stale Firebase Cache
 - **Direct GAS Fetching**: Fixed a critical bug where the `⚡ Sync All Sheets History (Option A)` button was incorrectly routing its fetch through the Firebase cache mechanism instead of requesting a fresh pull from the Google Apps Script endpoint. This caused new Showdown events (like the latest `[WWA]` battle) to be completely ignored because the Vault was just syncing stale data back onto itself. The sync button now bypasses Firebase completely, guaranteeing a direct and live pull of your raw Google Sheet data so that the newest battles are instantly recognized and permanently saved.
