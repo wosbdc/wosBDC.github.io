@@ -1,3 +1,7 @@
+## [1.48.73] - 2026-07-26
+### Mandatory Pre-Build Automated Testing Suite
+- **Automated Pre-Build Verification**: Created `tools/test_all_features.cjs` and integrated it with `tools/check_window_bindings.cjs` into `package.json`'s build script. Every build now automatically runs comprehensive AST scope audits and binding verification before code can compile or deploy.
+
 ## [1.48.72] - 2026-07-26
 ### Fix winnersBarHtml Scope Reference Error
 - **Bug Fix**: Fixed a `ReferenceError` where `winnersBarHtml` was referenced in the all-time combined view branch of `buildVaultModalContent()`. All-time view now builds cleanly without errors.
