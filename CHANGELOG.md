@@ -1,3 +1,7 @@
+## [1.48.66] - 2026-07-26
+### All-Time Showdown Leaderboard Full Recalculation Engine
+- **All-Time Score Recalculation**: Updated `calculateAllTimeShowdown()` to parse object map event blocks directly, accurately calculating total all-time scores, total horns, and day win counts across all 5 historical event blocks for every alliance player.
+
 ## [1.48.65] - 2026-07-26
 ### Permanent Removal of Auto-Restore Legacy Seeder & Database Cleared
 - **Permanent Seeder Removal**: Completely removed the auto-restore seeder block from `views.showdown()`. `Events > Showdown` will now stay 100% clean and zeroed out upon reset, with zero auto-copying of historical scores.

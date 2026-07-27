@@ -5352,101 +5352,114 @@ const getAutocompleteShield = () => {
 
 function calculateAllTimeShowdown(historyData) {
     if (!historyData) return [];
-    let rows = historyData;
-    if (typeof historyData === 'object' && historyData.data) {
-        rows = historyData.data;
-    } else if (!Array.isArray(historyData) && typeof historyData === 'object') {
-        rows = Object.values(historyData);
-    }
-    if (!rows || !Array.isArray(rows) || rows.length === 0) return [];
     
     let allTimeStats = {};
     const staticHorns = { d1: 1, d2: 2, d3: 2, d4: 2, d5: 2, d6: 4 };
-    
-    let currentEventPlayers = [];
-    let inPlayerBlock = false;
-    
-    function processEvent(players) {
-        if (!players || players.length === 0) return;
-        let topPlayers = { d1:{score:0}, d2:{score:0}, d3:{score:0}, d4:{score:0}, d5:{score:0}, d6:{score:0} };
-        
-        players.forEach(p => {
-            if (!p || typeof p !== 'object') return;
-            if ((p.d1 || 0) > topPlayers.d1.score) topPlayers.d1 = { name: p.name, score: (p.d1 || 0) };
-            if ((p.d2 || 0) > topPlayers.d2.score) topPlayers.d2 = { name: p.name, score: (p.d2 || 0) };
-            if ((p.d3 || 0) > topPlayers.d3.score) topPlayers.d3 = { name: p.name, score: (p.d3 || 0) };
-            if ((p.d4 || 0) > topPlayers.d4.score) topPlayers.d4 = { name: p.name, score: (p.d4 || 0) };
-            if ((p.d5 || 0) > topPlayers.d5.score) topPlayers.d5 = { name: p.name, score: (p.d5 || 0) };
-            if ((p.d6 || 0) > topPlayers.d6.score) topPlayers.d6 = { name: p.name, score: (p.d6 || 0) };
-        });
-        
-        players.forEach(p => {
-            const key = p.name.toLowerCase();
-            if (!allTimeStats[key]) {
-                allTimeStats[key] = { name: p.name, horns: 0, wins: 0, total: 0 };
+
+    function processEventPlayers(playersList) {
+        if (!Array.isArray(playersList) || playersList.length === 0) return;
+        let topPlayers = { d1:{names:[], score:0}, d2:{names:[], score:0}, d3:{names:[], score:0}, d4:{names:[], score:0}, d5:{names:[], score:0}, d6:{names:[], score:0} };
+
+        playersList.forEach(p => {
+            if (!p || typeof p !== 'object' || !p.name) return;
+            for (let di = 1; di <= 6; di++) {
+                let dScore = Number(p['d' + di]) || 0;
+                if (dScore > 0) {
+                    if (dScore > topPlayers['d' + di].score) {
+                        topPlayers['d' + di] = { names: [p.name], score: dScore };
+                    } else if (dScore === topPlayers['d' + di].score) {
+                        topPlayers['d' + di].names.push(p.name);
+                    }
+                }
             }
-            allTimeStats[key].total += p.total;
-            
+        });
+
+        playersList.forEach(p => {
+            if (!p || typeof p !== 'object' || !p.name) return;
+            const key = p.name.trim().toLowerCase();
+            if (!allTimeStats[key]) {
+                allTimeStats[key] = { name: p.name.trim(), horns: 0, wins: 0, total: 0 };
+            }
+            let pTotal = (Number(p.total) > 0) ? Number(p.total) : ((Number(p.d1)||0)+(Number(p.d2)||0)+(Number(p.d3)||0)+(Number(p.d4)||0)+(Number(p.d5)||0)+(Number(p.d6)||0));
+            allTimeStats[key].total += pTotal;
+
             for (let i = 1; i <= 6; i++) {
-                let dVal = p['d'+i] || 0;
-                let topScore = topPlayers['d'+i].score;
-                if (dVal > 0 && dVal === topScore) {
+                let dVal = Number(p['d'+i]) || 0;
+                let topObj = topPlayers['d'+i];
+                if (dVal > 0 && topObj && topObj.score > 0 && dVal === topObj.score) {
                     allTimeStats[key].horns += staticHorns['d'+i];
                     allTimeStats[key].wins += 1;
                 }
             }
         });
     }
-    
-    for (let i = 0; i < rows.length; i++) {
-        let row = rows[i];
-        if (!row) continue;
-        if (!Array.isArray(row) && typeof row === 'object') row = Object.values(row);
-        if (!Array.isArray(row)) continue;
-        
-        let col1 = String(row[1] || '').trim();
-        let col2 = String(row[2] || '').trim();
-        
-        if (col1.toLowerCase() === 'ranking' && (col2.toLowerCase() === 'member' || col2.toLowerCase() === 'name')) {
-            if (inPlayerBlock && currentEventPlayers.length > 0) {
-                processEvent(currentEventPlayers);
+
+    // Handle object map of historical event blocks
+    if (typeof historyData === 'object' && !Array.isArray(historyData) && !historyData.data) {
+        Object.values(historyData).forEach(ev => {
+            if (ev && typeof ev === 'object') {
+                let plist = Array.isArray(ev.players) ? ev.players : (Array.isArray(ev.pList) ? ev.pList : []);
+                processEventPlayers(plist);
             }
-            inPlayerBlock = true;
-            currentEventPlayers = [];
-            continue;
-        }
-        
-        if (inPlayerBlock) {
-            if (!col2 || col1.toLowerCase() === 'date:' || col1.toLowerCase() === 'alliance' || col1.toLowerCase() === 'winners') {
-                processEvent(currentEventPlayers);
-                inPlayerBlock = false;
-                currentEventPlayers = [];
-                continue;
+        });
+    } else {
+        let rows = historyData;
+        if (typeof historyData === 'object' && historyData.data) rows = historyData.data;
+        else if (typeof historyData === 'object' && !Array.isArray(historyData)) rows = Object.values(historyData);
+
+        if (Array.isArray(rows)) {
+            let currentEventPlayers = [];
+            let inPlayerBlock = false;
+
+            for (let i = 0; i < rows.length; i++) {
+                let row = rows[i];
+                if (!row) continue;
+                if (!Array.isArray(row) && typeof row === 'object') {
+                    if (row.players || row.pList) {
+                        processEventPlayers(row.players || row.pList);
+                        continue;
+                    }
+                    row = Object.values(row);
+                }
+                if (!Array.isArray(row)) continue;
+
+                let col1 = String(row[1] || '').trim();
+                let col2 = String(row[2] || '').trim();
+
+                if (col1.toLowerCase() === 'ranking' && (col2.toLowerCase() === 'member' || col2.toLowerCase() === 'name')) {
+                    if (inPlayerBlock && currentEventPlayers.length > 0) processEventPlayers(currentEventPlayers);
+                    inPlayerBlock = true;
+                    currentEventPlayers = [];
+                    continue;
+                }
+
+                if (inPlayerBlock) {
+                    if (!col2 || col1.toLowerCase() === 'date:' || col1.toLowerCase() === 'alliance' || col1.toLowerCase() === 'winners') {
+                        if (currentEventPlayers.length > 0) processEventPlayers(currentEventPlayers);
+                        inPlayerBlock = false;
+                        currentEventPlayers = [];
+                        continue;
+                    }
+
+                    let pName = col2;
+                    let pd1 = Number(row[3]) || 0;
+                    let pd2 = Number(row[4]) || 0;
+                    let pd3 = Number(row[5]) || 0;
+                    let pd4 = Number(row[6]) || 0;
+                    let pd5 = Number(row[7]) || 0;
+                    let pd6 = Number(row[8]) || 0;
+                    let pTotal = Number(row[9]) || (pd1 + pd2 + pd3 + pd4 + pd5 + pd6);
+
+                    currentEventPlayers.push({ name: pName, d1: pd1, d2: pd2, d3: pd3, d4: pd4, d5: pd5, d6: pd6, total: pTotal });
+                }
             }
-            
-            let name = col2;
-            let d1 = typeof row[3] === 'number' ? row[3] : (parseInt(String(row[3] || '').replace(/,/g, '')) || 0);
-            let d2 = typeof row[4] === 'number' ? row[4] : (parseInt(String(row[4] || '').replace(/,/g, '')) || 0);
-            let d3 = typeof row[5] === 'number' ? row[5] : (parseInt(String(row[5] || '').replace(/,/g, '')) || 0);
-            let d4 = typeof row[6] === 'number' ? row[6] : (parseInt(String(row[6] || '').replace(/,/g, '')) || 0);
-            let d5 = typeof row[7] === 'number' ? row[7] : (parseInt(String(row[7] || '').replace(/,/g, '')) || 0);
-            let d6 = typeof row[8] === 'number' ? row[8] : (parseInt(String(row[8] || '').replace(/,/g, '')) || 0);
-            let total = typeof row[9] === 'number' ? row[9] : (parseInt(String(row[9] || '').replace(/,/g, '')) || 0);
-            
-            currentEventPlayers.push({ name, d1, d2, d3, d4, d5, d6, total });
+            if (inPlayerBlock && currentEventPlayers.length > 0) processEventPlayers(currentEventPlayers);
         }
     }
-    
-    if (inPlayerBlock && currentEventPlayers.length > 0) {
-        processEvent(currentEventPlayers);
-    }
-    
-    let sorted = Object.values(allTimeStats).sort((a, b) => {
-        if (b.horns !== a.horns) return b.horns - a.horns;
-        return b.total - a.total;
-    });
-    
-    return sorted;
+
+    let result = Object.values(allTimeStats);
+    result.sort((a, b) => b.horns !== a.horns ? b.horns - a.horns : b.total - a.total);
+    return result;
 }
 
 window.loadUserPersonalLog = async (chiefName) => {
