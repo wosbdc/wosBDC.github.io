@@ -4605,8 +4605,28 @@ window.buildVaultModalContent = (activeKey = 'all') => {
             let isVictory = ourTotal > enemyTotal;
             let resultBadge = isVictory ? '<span style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:4px 12px; border-radius:12px; font-weight:bold; font-size:12px;">🏆 VICTORY</span>' : '<span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:4px 12px; border-radius:12px; font-weight:bold; font-size:12px;">💔 DEFEAT</span>';
 
-            let champName = archivedPlayers.length > 0 ? archivedPlayers[0].name : 'N/A';
             let champScore = archivedPlayers.length > 0 ? archivedPlayers[0].total : 0;
+            let topMvps = archivedPlayers.filter(p => p.total === champScore && champScore > 0);
+            let mvpBannerHtml = '';
+            if (topMvps.length > 0) {
+                let mvpTitle = topMvps.length > 1 ? "👑 Event Co-MVPs" : "👑 Event MVP";
+                let champDisplayNames = topMvps.map(p => escapeHTML(p.name)).join(" & ");
+                let avatarStackHtml = renderAvatarStack(topMvps);
+                
+                mvpBannerHtml = `
+                  <div style="background: linear-gradient(135deg, rgba(255,215,0,0.1) 0%, rgba(255,215,0,0.02) 100%); border: 1px solid rgba(255,215,0,0.3); border-radius: 12px; padding: 15px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; box-shadow: 0 4px 15px rgba(255,215,0,0.05);">
+                    ${avatarStackHtml}
+                    <div style="flex: 1; text-align: left;">
+                      <div style="color: #FFD700; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">${mvpTitle}</div>
+                      <div style="color: var(--text-main); font-size: 18px; font-weight: bold;">${champDisplayNames}</div>
+                    </div>
+                    <div style="text-align: right;">
+                      <div style="color: var(--text-muted); font-size: 11px; text-transform: uppercase;">Total Score</div>
+                      <div style="color: #FFD700; font-size: 20px; font-weight: bold;">${champScore.toLocaleString()}</div>
+                    </div>
+                  </div>
+                `;
+            }
             
             mainContent = `
                 <div style="background: linear-gradient(135deg, rgba(6,182,212,0.1) 0%, rgba(6,182,212,0.02) 100%); border: 1px solid rgba(6,182,212,0.3); border-radius: 12px; padding: 20px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
@@ -4622,11 +4642,8 @@ window.buildVaultModalContent = (activeKey = 'all') => {
                       <div style="color: var(--text-main); font-size: 20px; font-weight: bold;">Our Alliance (${ourTotal.toLocaleString()}) vs ${escapeHTML(enemy.name)} (${enemyTotal.toLocaleString()})</div>
                     </div>
                   </div>
-                  <div style="text-align: right;">
-                    <div style="color: var(--text-muted); font-size: 11px; text-transform: uppercase;">Event Top MVP</div>
-                    <div style="color: #FFD700; font-size: 18px; font-weight: bold;">👑 ${escapeHTML(champName)} (${(champScore||0).toLocaleString()})</div>
-                  </div>
-                </div>`;
+                </div>
+                ${mvpBannerHtml}`;
 
             let w = entry.winners || {};
             let hasWinners = w.d1 || w.d2 || w.d3 || w.d4 || w.d5 || w.d6;

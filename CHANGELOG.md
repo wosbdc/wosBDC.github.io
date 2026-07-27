@@ -1,3 +1,7 @@
+## [1.48.87] - 2026-07-27
+### Showdown Vault MVP Banners
+- **Stylized MVP Banner in Archives**: The individual Event Archive view in the Showdown Vault now utilizes the same premium, stylized MVP banner (complete with player avatars and golden gradient styling) that is featured on the live Event page, replacing the previous plain-text "Event Top MVP" string.
+
 ## [1.48.86] - 2026-07-27
 ### Showdown Vault Header Tweaks
 - **Renamed Player Name Header**: In the Showdown Archive Vault views (both All-Time and Event-specific), the `PLAYER NAME` table header has been shortened to simply `NAME` for a cleaner, more concise layout.
