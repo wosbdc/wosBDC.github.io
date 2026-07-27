@@ -1,3 +1,7 @@
+## [1.48.78] - 2026-07-26
+### Fix All-Time Showdown Leaderboard Horn Calculation
+- **Accurate Winners Assignment**: Fixed a bug where the All-Time Leaderboard was mistakenly ignoring the explicit "Winners" row from the historical data and manually calculating Horns/Wins by guessing the highest numeric scorers. It now correctly parses the "Winners" list for every event, ensuring players explicitly designated as Winners accurately receive their Horns and Wins.
+
 ## [1.48.77] - 2026-07-26
 ### Fix Missing Events in All-Time Showdown Leaderboard
 - **Data Merging Fix**: Fixed a bug where the All-Time Showdown Leaderboard on the main dashboard and Vault modal was missing historical events if they hadn't been fully synced to Firebase. The leaderboard now successfully pulls and safely merges event data from BOTH Google Sheets and Firebase on the fly, accurately preventing double-counting while assuring all historical events are represented.

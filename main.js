@@ -5056,7 +5056,7 @@ function calculateAllTimeShowdown(historyData) {
     let allTimeStats = {};
     const staticHorns = { d1: 1, d2: 2, d3: 2, d4: 2, d5: 2, d6: 4 };
 
-    function processEventPlayers(playersList) {
+    function processEventPlayers(playersList, winnersObj = null) {
         if (!Array.isArray(playersList) || playersList.length === 0) return;
         let topPlayers = { d1:{names:[], score:0}, d2:{names:[], score:0}, d3:{names:[], score:0}, d4:{names:[], score:0}, d5:{names:[], score:0}, d6:{names:[], score:0} };
 
@@ -5066,9 +5066,9 @@ function calculateAllTimeShowdown(historyData) {
                 let dScore = Number(p['d' + di]) || 0;
                 if (dScore > 0) {
                     if (dScore > topPlayers['d' + di].score) {
-                        topPlayers['d' + di] = { names: [p.name], score: dScore };
+                        topPlayers['d' + di] = { names: [p.name.trim().toLowerCase()], score: dScore };
                     } else if (dScore === topPlayers['d' + di].score) {
-                        topPlayers['d' + di].names.push(p.name);
+                        topPlayers['d' + di].names.push(p.name.trim().toLowerCase());
                     }
                 }
             }
@@ -5076,17 +5076,45 @@ function calculateAllTimeShowdown(historyData) {
 
         playersList.forEach(p => {
             if (!p || typeof p !== 'object' || !p.name) return;
-            const key = p.name.trim().toLowerCase();
+            const rawName = p.name.trim();
+            const key = rawName.toLowerCase();
             if (!allTimeStats[key]) {
-                allTimeStats[key] = { name: p.name.trim(), horns: 0, wins: 0, total: 0 };
+                allTimeStats[key] = { name: rawName, horns: 0, wins: 0, total: 0 };
             }
             let pTotal = (Number(p.total) > 0) ? Number(p.total) : ((Number(p.d1)||0)+(Number(p.d2)||0)+(Number(p.d3)||0)+(Number(p.d4)||0)+(Number(p.d5)||0)+(Number(p.d6)||0));
             allTimeStats[key].total += pTotal;
 
             for (let i = 1; i <= 6; i++) {
                 let dVal = Number(p['d'+i]) || 0;
-                let topObj = topPlayers['d'+i];
-                if (dVal > 0 && topObj && topObj.score > 0 && dVal === topObj.score) {
+                if (dVal <= 0) continue; // Must have a score > 0 to get horns
+
+                let isWinner = false;
+                
+                // Explicit winners check
+                if (winnersObj && winnersObj['d'+i] && String(winnersObj['d'+i]).trim().length > 0) {
+                    let wStr = String(winnersObj['d'+i]).toLowerCase();
+                    // Clean split for multiple winners (e.g. "Brian, John & Jane")
+                    let wNames = wStr.split(/[,&/]| and /).map(s => s.trim()).filter(s => s);
+                    if (wNames.includes(key)) {
+                        isWinner = true;
+                    } else {
+                        // Word boundary regex for exact substring match
+                        try {
+                            let escKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                            if (new RegExp(`(?:^|\\b|\\s|_)${escKey}(?:$|\\b|\\s|_)`, 'i').test(wStr)) {
+                                isWinner = true;
+                            }
+                        } catch(e) {}
+                    }
+                } else {
+                    // Fallback to highest scorer if explicit winner string is empty or missing
+                    let topObj = topPlayers['d'+i];
+                    if (topObj && topObj.score > 0 && dVal === topObj.score && topObj.names.includes(key)) {
+                        isWinner = true;
+                    }
+                }
+
+                if (isWinner) {
                     allTimeStats[key].horns += staticHorns['d'+i];
                     allTimeStats[key].wins += 1;
                 }
@@ -5099,7 +5127,7 @@ function calculateAllTimeShowdown(historyData) {
         Object.values(historyData).forEach(ev => {
             if (ev && typeof ev === 'object') {
                 let plist = Array.isArray(ev.players) ? ev.players : (Array.isArray(ev.pList) ? ev.pList : []);
-                processEventPlayers(plist);
+                processEventPlayers(plist, ev.winners);
             }
         });
     } else {
@@ -5109,6 +5137,7 @@ function calculateAllTimeShowdown(historyData) {
 
         if (Array.isArray(rows)) {
             let currentEventPlayers = [];
+            let currentEventWinners = null;
             let inPlayerBlock = false;
 
             for (let i = 0; i < rows.length; i++) {
@@ -5116,7 +5145,7 @@ function calculateAllTimeShowdown(historyData) {
                 if (!row) continue;
                 if (!Array.isArray(row) && typeof row === 'object') {
                     if (row.players || row.pList) {
-                        processEventPlayers(row.players || row.pList);
+                        processEventPlayers(row.players || row.pList, row.winners);
                         continue;
                     }
                     row = Object.values(row);
@@ -5126,8 +5155,15 @@ function calculateAllTimeShowdown(historyData) {
                 let col1 = String(row[1] || '').trim();
                 let col2 = String(row[2] || '').trim();
 
+                if (col1.toLowerCase() === 'winners') {
+                    currentEventWinners = {
+                        d1: String(row[3] || ''), d2: String(row[4] || ''), d3: String(row[5] || ''),
+                        d4: String(row[6] || ''), d5: String(row[7] || ''), d6: String(row[8] || '')
+                    };
+                }
+
                 if (col1.toLowerCase() === 'ranking' && (col2.toLowerCase() === 'member' || col2.toLowerCase() === 'name')) {
-                    if (inPlayerBlock && currentEventPlayers.length > 0) processEventPlayers(currentEventPlayers);
+                    if (inPlayerBlock && currentEventPlayers.length > 0) processEventPlayers(currentEventPlayers, currentEventWinners);
                     inPlayerBlock = true;
                     currentEventPlayers = [];
                     continue;
@@ -5135,9 +5171,10 @@ function calculateAllTimeShowdown(historyData) {
 
                 if (inPlayerBlock) {
                     if (!col2 || col1.toLowerCase() === 'date:' || col1.toLowerCase() === 'alliance' || col1.toLowerCase() === 'winners') {
-                        if (currentEventPlayers.length > 0) processEventPlayers(currentEventPlayers);
+                        if (currentEventPlayers.length > 0) processEventPlayers(currentEventPlayers, currentEventWinners);
                         inPlayerBlock = false;
                         currentEventPlayers = [];
+                        if (col1.toLowerCase() !== 'winners') currentEventWinners = null;
                         continue;
                     }
 
@@ -5153,7 +5190,7 @@ function calculateAllTimeShowdown(historyData) {
                     currentEventPlayers.push({ name: pName, d1: pd1, d2: pd2, d3: pd3, d4: pd4, d5: pd5, d6: pd6, total: pTotal });
                 }
             }
-            if (inPlayerBlock && currentEventPlayers.length > 0) processEventPlayers(currentEventPlayers);
+            if (inPlayerBlock && currentEventPlayers.length > 0) processEventPlayers(currentEventPlayers, currentEventWinners);
         }
     }
 
