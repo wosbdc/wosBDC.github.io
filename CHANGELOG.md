@@ -1,3 +1,7 @@
+## [1.48.90] - 2026-07-27
+### Vault UI Hotfix
+- **Winner Color Logic**: Fixed an issue where the Enemy Alliance's score on the Vault VS card would highlight in red if they won. The winning side will now always correctly highlight in emerald green, regardless of whether it's our alliance or the enemy.
+
 ## [1.48.89] - 2026-07-27
 ### Showdown Vault Admin Access
 - **Secured Admin Controls**: The "Edit Date & Enemy" and "Restore to Live" buttons in the Showdown Vault are now strictly restricted to administrators and completely hidden from public users.

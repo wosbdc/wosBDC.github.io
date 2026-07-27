@@ -4714,8 +4714,8 @@ window.buildVaultModalContent = (activeKey = 'all') => {
             
             let ourColor = isVictory ? '#10b981' : 'var(--text-muted)';
             let ourShadow = isVictory ? 'text-shadow: 0 0 15px rgba(16,185,129,0.5);' : '';
-            let enemyColor = !isVictory ? '#ef4444' : 'var(--text-muted)';
-            let enemyShadow = !isVictory ? 'text-shadow: 0 0 15px rgba(239,68,68,0.5);' : '';
+            let enemyColor = !isVictory ? '#10b981' : 'var(--text-muted)';
+            let enemyShadow = !isVictory ? 'text-shadow: 0 0 15px rgba(16,185,129,0.5);' : '';
             
             let headToHeadHtml = `
               <div style="display: flex; align-items: center; justify-content: center; gap: 20px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 15px 30px; margin-top: 15px; box-shadow: inset 0 2px 10px rgba(0,0,0,0.3); width: 100%;">
