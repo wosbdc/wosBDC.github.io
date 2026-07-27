@@ -1,3 +1,7 @@
+## [1.48.67] - 2026-07-26
+### Dynamic All-Time Combined Leaderboard Calculation
+- **Dynamic History Object Calculation**: Updated all `calculateAllTimeShowdown()` call sites to pass `historyObj` directly. The **All-Time Combined Leaderboard** (in both the Vault Modal and Leaderboards page) now dynamically computes totals on the fly across all archived and future event blocks in `showdown_meta/history` automatically without needing manual rebuilds.
+
 ## [1.48.66] - 2026-07-26
 ### All-Time Showdown Leaderboard Full Recalculation Engine
 - **All-Time Score Recalculation**: Updated `calculateAllTimeShowdown()` to parse object map event blocks directly, accurately calculating total all-time scores, total horns, and day win counts across all 5 historical event blocks for every alliance player.

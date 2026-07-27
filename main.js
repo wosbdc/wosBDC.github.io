@@ -4745,7 +4745,7 @@ window.buildVaultModalContent = (activeKey = 'all') => {
     let mainContent = "";
 
     if (activeKey === 'all') {
-        let allTimePlayers = calculateAllTimeShowdown(historyRows);
+        let allTimePlayers = calculateAllTimeShowdown(historyObj);
         let combinedMap = {};
         allTimePlayers.forEach(p => {
             combinedMap[p.name.toLowerCase()] = { name: p.name, horns: p.horns, wins: p.wins, total: p.total };
@@ -4975,7 +4975,7 @@ window.buildShowdownHistoryCardHtml = (activeFilter = 'all') => {
     let contentHtml = "";
 
     if (activeFilter === 'all') {
-        let allTimePlayers = calculateAllTimeShowdown(historyRows);
+        let allTimePlayers = calculateAllTimeShowdown(historyObj);
         let combinedMap = {};
         allTimePlayers.forEach(p => {
             combinedMap[p.name.toLowerCase()] = { name: p.name, horns: p.horns, wins: p.wins, total: p.total };
@@ -10010,7 +10010,7 @@ window.resetBearTrapEvent = async () => {
           }
           const historyRows = rawHistory ? (Array.isArray(rawHistory) ? rawHistory : Object.values(rawHistory)) : [];
           if (historyRows.length > 0 || (players && players.length > 0)) {
-              let allTimePlayers = calculateAllTimeShowdown(historyRows);
+              let allTimePlayers = calculateAllTimeShowdown(historyObj);
               let combinedMap = {};
               allTimePlayers.forEach(p => {
                   combinedMap[p.name.toLowerCase()] = { name: p.name, horns: p.horns, wins: p.wins, total: p.total };
