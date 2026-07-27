@@ -4234,31 +4234,51 @@ window.parseShowdownHistoryRows = (rows) => {
         if (!r || !Array.isArray(r)) continue;
         let rStr = r.join(" | ");
 
-        // Detect Date Row
-        let dateIdx = r.findIndex(c => String(c).toLowerCase().includes('date:'));
-        if (dateIdx !== -1) {
-            if (currentEvent && currentEvent.players.length > 0) {
-                events[currentEvent.timestamp] = currentEvent;
+        // Detect Date Row or Alliance Header Row to trigger a new event block
+        let dateIdx = r.findIndex(c => String(c).toLowerCase() === 'date' || String(c).toLowerCase().includes('date:'));
+        let isAllianceRow = r.some(c => String(c).toLowerCase().includes("alliance's") || String(c).toLowerCase() === 'alliances');
+        
+        if (dateIdx !== -1 || isAllianceRow) {
+            // Only start a new event if we aren't already in one that hasn't captured players yet
+            if (!currentEvent || (currentEvent && currentEvent.players.length > 0)) {
+                if (currentEvent && currentEvent.players.length > 0) {
+                    events[currentEvent.timestamp] = currentEvent;
+                }
+                
+                let dateVal = "";
+                if (dateIdx !== -1) {
+                    dateVal = String(r[dateIdx + 1] || r[dateIdx + 2] || '').trim();
+                } else if (i > 0) {
+                    // If we triggered on Alliance's, check if the previous row had the date
+                    let prevR = rows[i-1];
+                    let pDateIdx = prevR.findIndex(c => String(c).toLowerCase().includes('date'));
+                    if (pDateIdx !== -1) {
+                        dateVal = String(prevR[pDateIdx + 1] || prevR[pDateIdx + 2] || '').trim();
+                    } else {
+                        dateVal = String(prevR.find(c => String(c).trim().length > 0) || '').trim();
+                    }
+                }
+                
+                if (!dateVal) dateVal = "Historical Event " + (Object.keys(events).length + 1);
+                
+                let baseTs = 1785088925000 + (Object.keys(events).length * 1000);
+                if (dateVal.includes('July 20')) baseTs = 1785200000000;
+                else if (dateVal.includes('June 22')) baseTs = 1785088926123;
+                else if (dateVal.includes('June 15')) baseTs = 1785088927123;
+                else if (dateVal.includes('June 8')) baseTs = 1785088928123;
+                else if (dateVal.includes('June 1') || dateVal.includes('Jun 1')) baseTs = 1785088929123;
+    
+                currentEvent = {
+                    date: dateVal,
+                    timestamp: baseTs,
+                    enemyAlliance: { name: "Enemy Alliance", scores: { d1: 0, d2: 0, d3: 0, d4: 0, d5: 0, d6: 0 } },
+                    winners: { d1: "", d2: "", d3: "", d4: "", d5: "", d6: "", mvp: "" },
+                    players: []
+                };
+                inPlayers = false;
             }
-            let dateVal = String(r[dateIdx + 1] || r[dateIdx + 2] || '').trim();
-            if (!dateVal) dateVal = "Historical Event " + (Object.keys(events).length + 1);
-            
-            let baseTs = 1785088925000 + (Object.keys(events).length * 1000);
-            if (dateVal.includes('July 20')) baseTs = 1785200000000;
-            else if (dateVal.includes('June 22')) baseTs = 1785088926123;
-            else if (dateVal.includes('June 15')) baseTs = 1785088927123;
-            else if (dateVal.includes('June 8')) baseTs = 1785088928123;
-            else if (dateVal.includes('June 1') || dateVal.includes('Jun 1')) baseTs = 1785088929123;
-
-            currentEvent = {
-                date: dateVal,
-                timestamp: baseTs,
-                enemyAlliance: { name: "Enemy Alliance", scores: { d1: 0, d2: 0, d3: 0, d4: 0, d5: 0, d6: 0 } },
-                winners: { d1: "", d2: "", d3: "", d4: "", d5: "", d6: "", mvp: "" },
-                players: []
-            };
-            inPlayers = false;
-            continue;
+            if (dateIdx !== -1) continue; // Skip Date row
+            // If it was the Alliance row, we don't continue because we still need to process headers!
         }
 
         if (!currentEvent) continue;
