@@ -1,3 +1,8 @@
+## [1.48.71] - 2026-07-26
+### Google Sheets Winners Row Integration
+- **Daily Winners & MVP Parser**: Updated `parseShowdownHistoryRows()` to parse the `Winners ` row from Google Sheets tab `"Showdown History"`, extracting exact daily winner names for Day 1..6 and overall MVP string.
+- **Vault Winners Display**: Added a dedicated **`🏆 Event Daily Winners & MVP`** banner inside archived event views in the Vault modal.
+
 ## [1.48.70] - 2026-07-26
 ### Total Elimination of Legacy Auto-Seeders & True Source-of-Truth Vault Architecture
 - **Root Cause Resolution**: Removed the legacy `ensureJuly20BlockInHistory` auto-seeder and default block fallback that were re-populating wiped Vault data on app init.

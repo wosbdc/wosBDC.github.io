@@ -4254,6 +4254,7 @@ window.parseShowdownHistoryRows = (rows) => {
                 date: dateVal,
                 timestamp: baseTs,
                 enemyAlliance: { name: "Enemy Alliance", scores: { d1: 0, d2: 0, d3: 0, d4: 0, d5: 0, d6: 0 } },
+                winners: { d1: "", d2: "", d3: "", d4: "", d5: "", d6: "", mvp: "" },
                 players: []
             };
             inPlayers = false;
@@ -4262,10 +4263,10 @@ window.parseShowdownHistoryRows = (rows) => {
 
         if (!currentEvent) continue;
 
-        // Detect Enemy Row (contains '[' or 'Battle:' or 'Alliance')
+        // Detect Enemy Row
         let enemyCell = r.find(c => String(c).includes('[') || String(c).toLowerCase().includes('battle:'));
-        if (enemyCell && !rStr.toLowerCase().includes('our alliance')) {
-            let cleanEnemy = String(enemyCell).replace(/battle:s*/i, '').trim();
+        if (enemyCell && !rStr.toLowerCase().includes('our alliance') && !rStr.toLowerCase().includes('winners')) {
+            let cleanEnemy = String(enemyCell).replace(/battle:\s*/i, '').trim();
             currentEvent.enemyAlliance.name = cleanEnemy;
             currentEvent.enemyAlliance.scores = {
                 d1: cleanNum(r[3]), d2: cleanNum(r[4]), d3: cleanNum(r[5]),
@@ -4274,9 +4275,28 @@ window.parseShowdownHistoryRows = (rows) => {
             continue;
         }
 
+        // Detect Winners Row
+        let isWinnersRow = r.some(c => String(c).toLowerCase().includes('winners'));
+        if (isWinnersRow) {
+            let winD1 = String(r[3] || r[2] || '').trim();
+            let winD2 = String(r[4] || r[3] || '').trim();
+            let winD3 = String(r[5] || r[4] || '').trim();
+            let winD4 = String(r[6] || r[5] || '').trim();
+            let winD5 = String(r[7] || r[6] || '').trim();
+            let winD6 = String(r[8] || r[7] || '').trim();
+            let mvpStr = String(r[9] || r[8] || r[7] || '').trim();
+
+            currentEvent.winners = {
+                d1: winD1, d2: winD2, d3: winD3,
+                d4: winD4, d5: winD5, d6: winD6,
+                mvp: mvpStr
+            };
+            continue;
+        }
+
         // Detect Player Ranking Header
         let isRankingHeader = r.some(c => String(c).toLowerCase() === 'ranking' || String(c).toLowerCase() === 'rank');
-        let isMemberHeader = r.some(c => String(c).toLowerCase() === 'member' || String(c).toLowerCase() === 'player' || String(c).toLowerCase() === 'winners ');
+        let isMemberHeader = r.some(c => String(c).toLowerCase() === 'member' || String(c).toLowerCase() === 'player');
         if (isRankingHeader || isMemberHeader) {
             inPlayers = true;
             continue;
@@ -4285,7 +4305,7 @@ window.parseShowdownHistoryRows = (rows) => {
         // Process Player Row
         if (inPlayers) {
             let pName = String(r[2] || '').trim();
-            if (!pName || pName.toLowerCase() === 'our alliance' || pName.toLowerCase() === 'horns' || pName.toLowerCase().includes('date:')) {
+            if (!pName || pName.toLowerCase() === 'our alliance' || pName.toLowerCase() === 'horns' || pName.toLowerCase().includes('date:') || pName.toLowerCase().includes('winners')) {
                 continue;
             }
             let d1 = cleanNum(r[3]);
@@ -4529,7 +4549,7 @@ window.buildVaultModalContent = (activeKey = 'all') => {
             </tr>`;
         });
 
-        mainContent = `${allTimeMvpHtml}
+        mainContent = winnersBarHtml + `${allTimeMvpHtml}
             <div class="card-table-scroll" style="max-height:55vh;">
                <table style="min-width: max-content; width: 100%; text-align:left;"><thead><tr>
                   <th style="text-align:center;">RANK</th><th>PLAYER NAME</th><th>TOTAL HORNS</th><th>DAY WINS</th><th>TOTAL SCORE</th>
