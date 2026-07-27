@@ -1,3 +1,9 @@
+## [1.48.89] - 2026-07-27
+### Showdown Vault Admin Access
+- **Secured Admin Controls**: The "Edit Date & Enemy" and "Restore to Live" buttons in the Showdown Vault are now strictly restricted to administrators and completely hidden from public users.
+- **Implemented Edit Archive Modal**: The previously non-functional "Edit Date & Enemy" button now properly opens prompts to allow admins to seamlessly edit an archive's date string and enemy name directly from the Vault, and pushes the changes across all historical Firebase nodes.
+- **Fixed Restore Archive**: The "Restore to Live" button on specific archives now correctly rebuilds the entire live tracker dataset from the selected archive and immediately renders the live view, effectively enabling 1-click event rollbacks.
+
 ## [1.48.88] - 2026-07-27
 ### Showdown Vault Redesign
 - **Head-to-Head VS Cards**: Replaced the plain "Our Alliance vs Enemy" text in the Showdown Vault event headers with a premium, stylized "Head-to-Head" VS card. The new design places the alliances symmetrically around a central VS badge, with dynamic glowing accents (green for victory, red for defeat) that instantly communicate the event's outcome at a glance.

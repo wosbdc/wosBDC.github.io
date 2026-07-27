@@ -4148,7 +4148,56 @@ window.restoreSelectedCandidate = async (candidateIndex, btnEl = null) => {
 };
 
 window.restoreSpecificShowdownArchive = async (archiveKey, btnEl = null) => {
-    return window.showRestoreArchiveSelectorModal();
+    let confirmed = await window.customConfirm("⚠️ Are you sure you want to restore this specific archive to LIVE?\n\nThis will completely overwrite the current live tracking data.");
+    if (!confirmed) return;
+    
+    try {
+        let metaPath = `showdown_meta/history/${archiveKey}`;
+        let histPath = `showdown_history/${archiveKey}`;
+        let actPath = `activity_history_archives/showdown_${archiveKey}`;
+        
+        const paths = [metaPath, histPath, actPath];
+        let archiveData = null;
+        for (let p of paths) {
+            let snap = await get(ref(db, p)).catch(()=>null);
+            if (snap && snap.exists()) {
+                archiveData = snap.val();
+                break;
+            }
+        }
+        
+        if (!archiveData) {
+            if (window.showToast) window.showToast("Archive not found in database.", "error");
+            return;
+        }
+        
+        let liveUpdates = {};
+        if (archiveData.players && Array.isArray(archiveData.players)) {
+            archiveData.players.forEach(p => {
+                liveUpdates[`showdown_live/${p.name}`] = {
+                    d1: p.d1||0, d2: p.d2||0, d3: p.d3||0, d4: p.d4||0, d5: p.d5||0, d6: p.d6||0
+                };
+            });
+        }
+        
+        await set(ref(db, 'showdown_live'), null);
+        if (Object.keys(liveUpdates).length > 0) {
+            await update(ref(db), liveUpdates);
+        }
+        
+        if (archiveData.enemyAlliance) {
+            await set(ref(db, 'showdown_meta/enemyAlliance'), archiveData.enemyAlliance);
+        }
+        
+        if (window.showToast) window.showToast("Archive restored to live successfully!", "success");
+        if (window.renderShowdownTracker) {
+            let vModal = document.getElementById('sdArchiveVaultModal');
+            if (vModal) vModal.remove();
+            window.renderShowdownTracker();
+        }
+    } catch(err) {
+        if (window.showToast) window.showToast("Restore failed: " + err.message, "error");
+    }
 };
 
 window.restoreLatestShowdownArchive = async () => {
@@ -4434,8 +4483,43 @@ window.openShowdownPasteImporterModal = () => {
     }
 };
 
-window.openEditShowdownArchiveModal = (archiveKey) => {
-    if (window.showToast) window.showToast("Select any block in Vault to view details.", "info");
+window.openEditShowdownArchiveModal = async (archiveKey, currentDate, currentEnemy) => {
+    let newDate = await window.customPrompt("Enter new Date (e.g. Aug 1 - Aug 7, 2026):", currentDate);
+    if (!newDate) return;
+    let newEnemy = await window.customPrompt("Enter new Enemy Name:", currentEnemy);
+    if (!newEnemy) return;
+    
+    try {
+        let updates = {};
+        let metaPath = `showdown_meta/history/${archiveKey}`;
+        let histPath = `showdown_history/${archiveKey}`;
+        let actPath = `activity_history_archives/showdown_${archiveKey}`;
+        
+        const paths = [metaPath, histPath, actPath];
+        let foundPath = null;
+        for (let p of paths) {
+            let snap = await get(ref(db, p)).catch(()=>null);
+            if (snap && snap.exists()) {
+                foundPath = p;
+                break;
+            }
+        }
+        
+        if (foundPath) {
+            updates[`${foundPath}/date`] = newDate;
+            updates[`${foundPath}/enemyAlliance/name`] = newEnemy;
+            await update(ref(db), updates);
+            if (window.showToast) window.showToast("Archive details updated!", "success");
+            
+            if (window.openShowdownArchiveVaultModal) {
+               window.openShowdownArchiveVaultModal(archiveKey);
+            }
+        } else {
+             if (window.showToast) window.showToast("Could not find archive in database to edit.", "error");
+        }
+    } catch(err) {
+        if (window.showToast) window.showToast("Error updating archive: " + err.message, "error");
+    }
 };
 
 window.deleteAllShowdownArchives = async () => {
@@ -4649,6 +4733,14 @@ window.buildVaultModalContent = (activeKey = 'all') => {
               </div>
             `;
 
+            let adminControlsHtml = '';
+            if (window.isAdminUser && window.isAdminUser(currentUser)) {
+                adminControlsHtml = `
+                  <button onclick="window.openEditShowdownArchiveModal('${activeKey}', '${escapeHTML(dStr)}', '${escapeHTML(enemy.name || '')}')" style="background:rgba(255,215,0,0.15); border:1px solid rgba(255,215,0,0.3); color:#FFD700; padding:4px 10px; border-radius:6px; font-weight:bold; font-size:11px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,215,0,0.25)'" onmouseout="this.style.background='rgba(255,215,0,0.15)'">✏️ Edit Date & Enemy</button>
+                  <button onclick="window.restoreSpecificShowdownArchive('${activeKey}')" style="background:rgba(6,182,212,0.18); border:1px solid rgba(6,182,212,0.4); color:var(--accent); padding:4px 10px; border-radius:6px; font-weight:bold; font-size:11px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition: all 0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.28)'" onmouseout="this.style.background='rgba(6,182,212,0.18)'">↩️ Restore to Live</button>
+                `;
+            }
+
             mainContent = `
                 <div style="background: linear-gradient(135deg, rgba(6,182,212,0.1) 0%, rgba(6,182,212,0.02) 100%); border: 1px solid rgba(6,182,212,0.3); border-radius: 12px; padding: 20px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 5px;">
                   <div style="display:flex; align-items:center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
@@ -4657,8 +4749,7 @@ window.buildVaultModalContent = (activeKey = 'all') => {
                     </div>
                     <div style="display:flex; align-items:center; gap:8px;">
                       ${resultBadge}
-                      <button onclick="window.openEditShowdownArchiveModal('${activeKey}', '${escapeHTML(dStr)}', '${escapeHTML(enemy.name || '')}')" style="background:rgba(255,215,0,0.15); border:1px solid rgba(255,215,0,0.3); color:#FFD700; padding:4px 10px; border-radius:6px; font-weight:bold; font-size:11px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,215,0,0.25)'" onmouseout="this.style.background='rgba(255,215,0,0.15)'">✏️ Edit Date & Enemy</button>
-                      <button onclick="window.restoreSpecificShowdownArchive('${activeKey}')" style="background:rgba(6,182,212,0.18); border:1px solid rgba(6,182,212,0.4); color:var(--accent); padding:4px 10px; border-radius:6px; font-weight:bold; font-size:11px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition: all 0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.28)'" onmouseout="this.style.background='rgba(6,182,212,0.18)'">↩️ Restore to Live</button>
+                      ${adminControlsHtml}
                     </div>
                   </div>
                   ${headToHeadHtml}
