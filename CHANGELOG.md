@@ -1,3 +1,7 @@
+## [1.48.77] - 2026-07-26
+### Fix Missing Events in All-Time Showdown Leaderboard
+- **Data Merging Fix**: Fixed a bug where the All-Time Showdown Leaderboard on the main dashboard and Vault modal was missing historical events if they hadn't been fully synced to Firebase. The leaderboard now successfully pulls and safely merges event data from BOTH Google Sheets and Firebase on the fly, accurately preventing double-counting while assuring all historical events are represented.
+
 ## [1.48.76] - 2026-07-26
 ### Fix Temporal Dead Zone (TDZ) Order in Vault Initialization
 - **Bug Fix**: Fixed a `ReferenceError` in `openShowdownArchiveVaultModal()` where `historyRows` was referenced before its `const` declaration line. Restructured variable declarations so `historyRows` is evaluated before any conditional auto-parse calls.

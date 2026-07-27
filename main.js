@@ -4445,6 +4445,10 @@ window.openShowdownArchiveVaultModal = async (initialKey = 'all') => {
             (typeof sdHistoryData !== 'undefined' && sdHistoryData) ? Promise.resolve(sdHistoryData) : fetchSheet("Showdown History").catch(() => null)
         ]);
 
+        let rawHistory = sdHistRaw;
+        if (rawHistory && typeof rawHistory === 'object' && rawHistory.data) rawHistory = rawHistory.data;
+        const historyRows = rawHistory ? (Array.isArray(rawHistory) ? rawHistory : Object.values(rawHistory)) : [];
+
         let fetchedHist = (histSnap && histSnap.exists() && histSnap.val()) ? histSnap.val() : null;
         if ((!fetchedHist || Object.keys(fetchedHist).length === 0) && historyRows && historyRows.length > 0) {
             fetchedHist = window.parseShowdownHistoryRows(historyRows);
@@ -4458,10 +4462,6 @@ window.openShowdownArchiveVaultModal = async (initialKey = 'all') => {
             let pTotal = (scores.d1||0) + (scores.d2||0) + (scores.d3||0) + (scores.d4||0) + (scores.d5||0) + (scores.d6||0);
             livePlayers.push({ name: pName, d1: scores.d1||0, d2: scores.d2||0, d3: scores.d3||0, d4: scores.d4||0, d5: scores.d5||0, d6: scores.d6||0, total: pTotal });
         }
-
-        let rawHistory = sdHistRaw;
-        if (rawHistory && typeof rawHistory === 'object' && rawHistory.data) rawHistory = rawHistory.data;
-        const historyRows = rawHistory ? (Array.isArray(rawHistory) ? rawHistory : Object.values(rawHistory)) : [];
 
         window._sdHistoryState = { historyObj, historyRows, livePlayers, activeFilter: initialKey };
         
@@ -9577,7 +9577,15 @@ window.resetBearTrapEvent = async () => {
          ]);
          
          const liveData = liveSnap.val() || {};
-         const historyObj = window.getMergedShowdownHistoryObj((historySnap && historySnap.exists() && historySnap.val()) ? historySnap.val() : {});
+         let fetchedHist = (historySnap && historySnap.exists() && historySnap.val()) ? historySnap.val() : {};
+         let rawHist = sdHistoryData;
+         if (rawHist && typeof rawHist === 'object' && rawHist.data) rawHist = rawHist.data;
+         let histRows = rawHist ? (Array.isArray(rawHist) ? rawHist : Object.values(rawHist)) : [];
+         if (histRows && histRows.length > 0) {
+             let parsedSheets = window.parseShowdownHistoryRows(histRows);
+             fetchedHist = Object.assign({}, parsedSheets, fetchedHist);
+         }
+         const historyObj = window.getMergedShowdownHistoryObj(fetchedHist);
          
          let ourScores = { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 };
          let topPlayers = { d1:{score:0}, d2:{score:0}, d3:{score:0}, d4:{score:0}, d5:{score:0}, d6:{score:0} };
@@ -10264,7 +10272,18 @@ window.resetBearTrapEvent = async () => {
        ]);
        
        const metaData = (metaSnap && metaSnap.exists() && metaSnap.val()) ? metaSnap.val() : {};
-       const historyObj = window.getMergedShowdownHistoryObj((historySnap && historySnap.exists() && historySnap.val()) ? historySnap.val() : {});
+       let fetchedHist = (historySnap && historySnap.exists() && historySnap.val()) ? historySnap.val() : {};
+       try {
+           let sdRaw = await fetchSheet("Showdown History");
+           let rawHist = sdRaw;
+           if (rawHist && typeof rawHist === 'object' && rawHist.data) rawHist = rawHist.data;
+           let histRows = rawHist ? (Array.isArray(rawHist) ? rawHist : Object.values(rawHist)) : [];
+           if (histRows && histRows.length > 0) {
+               let parsedSheets = window.parseShowdownHistoryRows(histRows);
+               fetchedHist = Object.assign({}, parsedSheets, fetchedHist);
+           }
+       } catch (err) { console.warn("Failed to fetch Google Sheets history:", err); }
+       const historyObj = window.getMergedShowdownHistoryObj(fetchedHist);
 
        let liveData = (liveSnap && liveSnap.exists() && liveSnap.val()) ? liveSnap.val() : {};
        if (liveData && liveData.error) delete liveData.error;
