@@ -10556,31 +10556,9 @@ window.resetBearTrapEvent = async () => {
        let liveData = (liveSnap && liveSnap.exists() && liveSnap.val()) ? liveSnap.val() : {};
        if (liveData && liveData.error) delete liveData.error;
 
-       const isResetFlag = (metaData && metaData.isReset === true);
-       // If liveData is empty and not explicitly reset, auto-restore from the latest archived event in showdown_meta/history
-       if (!isResetFlag && (!liveData || Object.keys(liveData).length === 0)) {
-           liveData = {};
-           if (historyObj && typeof historyObj === 'object') {
-               let sortedKeys = Object.keys(historyObj).sort((a,b) => Number(b) - Number(a));
-               if (sortedKeys.length > 0) {
-                   let latestEv = historyObj[sortedKeys[0]];
-                   if (latestEv && Array.isArray(latestEv.players)) {
-                       latestEv.players.forEach(p => {
-                           if (p.name) {
-                               liveData[p.name] = {
-                                   d1: p.d1 || 0, d2: p.d2 || 0, d3: p.d3 || 0,
-                                   d4: p.d4 || 0, d5: p.d5 || 0, d6: p.d6 || 0
-                               };
-                           }
-                       });
-                       try { set(ref(db, 'showdown_live'), liveData).catch(() => null); } catch(e) {}
-                   }
-               }
-           }
-       }
-       const enemyAlliance = (metaData && metaData.enemyAlliance && typeof metaData.enemyAlliance === 'object') ? metaData.enemyAlliance : { name: '[WWA] Whiteoutwarriors', scores: {} };
+       const enemyAlliance = (metaData && metaData.enemyAlliance && typeof metaData.enemyAlliance === 'object') ? metaData.enemyAlliance : { name: 'Enemy Alliance', scores: {} };
        const eScores = (enemyAlliance && enemyAlliance.scores && typeof enemyAlliance.scores === 'object') ? enemyAlliance.scores : {};
-       const enemyName = enemyAlliance.name || '[WWA] Whiteoutwarriors';
+       const enemyName = enemyAlliance.name || 'Enemy Alliance';
        
        let html = `<div style="display:flex; flex-direction:column; gap:20px;">`;
        

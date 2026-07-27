@@ -1,3 +1,8 @@
+## [1.48.65] - 2026-07-26
+### Permanent Removal of Auto-Restore Legacy Seeder & Database Cleared
+- **Permanent Seeder Removal**: Completely removed the auto-restore seeder block from `views.showdown()`. `Events > Showdown` will now stay 100% clean and zeroed out upon reset, with zero auto-copying of historical scores.
+- **Direct Database Cleared**: Cleared `showdown_live` and reset `enemyAlliance` in Firebase RTDB directly.
+
 ## [1.48.64] - 2026-07-26
 ### Connected Vault Modal Engine to Merged History Provider
 - **Vault Modal Integration**: Updated `openShowdownArchiveVaultModal()` to parse raw snapshot objects through `getMergedShowdownHistoryObj()`, guaranteeing that all 5 historical event blocks are rendered in the Vault modal dropdown and card body instantly.
