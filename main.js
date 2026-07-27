@@ -4389,6 +4389,8 @@ window.parseShowdownHistoryRows = (rows) => {
 };
 
 window.syncGoogleSheetsHistoryToVault = async (btnEl = null) => {
+    window._isVaultWiped = false;
+    await set(ref(db, 'showdown_meta/isWiped'), false).catch(() => null);
     let origText = btnEl ? btnEl.innerHTML : '';
     if (btnEl) { btnEl.disabled = true; btnEl.innerHTML = '⏳ Syncing Sheets...'; }
     try {
@@ -4446,13 +4448,17 @@ window.openEditShowdownArchiveModal = (archiveKey) => {
 };
 
 window.deleteAllShowdownArchives = async () => {
-    let confirmed = await window.customConfirm("⚠️ Are you sure you want to WIPE all archives from the Showdown Vault?\\n\\nThis will clear all saved event history from Firebase.");
+    let confirmed = await window.customConfirm("⚠️ Are you sure you want to WIPE all archives from the Showdown Vault?\n\nThis will clear all saved event history from Firebase.");
     if (!confirmed) return;
     try {
+        window._isVaultWiped = true;
+        await set(ref(db, 'showdown_meta/isWiped'), true).catch(() => null);
         await remove(ref(db, 'showdown_meta/history')).catch(() => null);
         await remove(ref(db, 'showdown_history')).catch(() => null);
         await remove(ref(db, 'activity_history_archives')).catch(() => null);
-        window._sdHistoryState.historyObj = {};
+        if (window._sdHistoryState) {
+            window._sdHistoryState.historyObj = {};
+        }
         if (window.showToast) window.showToast("All Showdown archives wiped cleanly!", "success");
         if (window.openShowdownArchiveVaultModal) window.openShowdownArchiveVaultModal('all');
     } catch(err) {
@@ -4757,8 +4763,14 @@ window.DEFAULT_SD_HISTORY_BLOCKS = {
     }
 };
 
+window._isVaultWiped = false;
+
 window.getMergedShowdownHistoryObj = (rawHistoryObj) => {
-    return Object.assign({}, window.DEFAULT_SD_HISTORY_BLOCKS, rawHistoryObj || {});
+    if (window._isVaultWiped) return {};
+    if (rawHistoryObj && typeof rawHistoryObj === 'object' && Object.keys(rawHistoryObj).length > 0) {
+        return rawHistoryObj;
+    }
+    return Object.assign({}, window.DEFAULT_SD_HISTORY_BLOCKS || {});
 };
 
 window.renderShowdownHistoryCard = (historyObj = {}, historyRows = [], livePlayers = [], activeFilter = 'all') => {

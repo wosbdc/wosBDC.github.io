@@ -1,3 +1,7 @@
+## [1.48.69] - 2026-07-26
+### Wiped Vault Dropdown Reset Guarantee
+- **Vault Dropdown Reset Guarantee**: Updated `getMergedShowdownHistoryObj()` and `deleteAllShowdownArchives()` so that when an admin wipes the Vault (`_isVaultWiped = true`), the dropdown selector immediately clears completely and displays no event blocks until synced.
+
 ## [1.48.68] - 2026-07-26
 ### Full Universal Google Sheets Showdown History Sync & Wipe Tools
 - **Universal Google Sheets Parser**: Implemented `parseShowdownHistoryRows()` and `syncGoogleSheetsHistoryToVault()` to parse all blocks from Google Sheets `"Showdown History"`. Automatically extracts dates, enemy alliances with bracket syntax `[...]`, daily opponent scores, and all 30+ player scores per event into `showdown_meta/history`.
