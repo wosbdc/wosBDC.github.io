@@ -4354,8 +4354,13 @@ window.syncGoogleSheetsHistoryToVault = async (btnEl = null) => {
     let origText = btnEl ? btnEl.innerHTML : '';
     if (btnEl) { btnEl.disabled = true; btnEl.innerHTML = '⏳ Syncing Sheets...'; }
     try {
-        let sheetData = await fetchSheet("Showdown History");
-        let rows = sheetData ? (Array.isArray(sheetData) ? sheetData : (sheetData.data || [])) : [];
+        const fallbackToken = await getAuthToken();
+        const res = await fetch(`${API_BASE_URL}?api=${encodeURIComponent("Showdown History")}${fallbackToken ? '&token=' + encodeURIComponent(fallbackToken) : ''}`);
+        const text = await res.text();
+        const json = JSON.parse(text);
+        let sheetData = json.data || [];
+        
+        let rows = Array.isArray(sheetData) ? sheetData : (sheetData.data || []);
         let parsedEvents = window.parseShowdownHistoryRows(rows);
         
         let eventCount = Object.keys(parsedEvents).length;

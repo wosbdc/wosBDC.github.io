@@ -1,3 +1,7 @@
+## [1.48.80] - 2026-07-26
+### Fix Vault Sync Relying on Stale Firebase Cache
+- **Direct GAS Fetching**: Fixed a critical bug where the `⚡ Sync All Sheets History (Option A)` button was incorrectly routing its fetch through the Firebase cache mechanism instead of requesting a fresh pull from the Google Apps Script endpoint. This caused new Showdown events (like the latest `[WWA]` battle) to be completely ignored because the Vault was just syncing stale data back onto itself. The sync button now bypasses Firebase completely, guaranteeing a direct and live pull of your raw Google Sheet data so that the newest battles are instantly recognized and permanently saved.
+
 ## [1.48.79] - 2026-07-26
 ### Perfected Google Sheets Showdown History Parsing Logic
 - **Dynamic Header Column Indexing**: Completely rewrote the `parseShowdownHistoryRows` logic in `main.js`. Previously, the code hardcoded indices (e.g. `r[2]`, `r[3]`) assuming a perfectly uniform column layout. However, when users merge cells (like "Winners" or "Our Alliance") in the top header blocks of their Google Sheet, the Google Sheets API shifts the array indices differently than the unmerged rows below them. This caused an invisible "off-by-one" data shift, which resulted in the All-Time Leaderboard ignoring Day 1's true winner, and accidentally assigning Day 2's winner to Day 1, etc.
