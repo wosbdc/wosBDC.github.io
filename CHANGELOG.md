@@ -1,3 +1,8 @@
+## [1.48.70] - 2026-07-26
+### Total Elimination of Legacy Auto-Seeders & True Source-of-Truth Vault Architecture
+- **Root Cause Resolution**: Removed the legacy `ensureJuly20BlockInHistory` auto-seeder and default block fallback that were re-populating wiped Vault data on app init.
+- **Single Source-of-Truth**: `showdown_meta/history` in Firebase RTDB is now the sole source of truth. When wiped, the Vault stays 100% empty across all refreshes until synced from Google Sheets.
+
 ## [1.48.69] - 2026-07-26
 ### Wiped Vault Dropdown Reset Guarantee
 - **Vault Dropdown Reset Guarantee**: Updated `getMergedShowdownHistoryObj()` and `deleteAllShowdownArchives()` so that when an admin wipes the Vault (`_isVaultWiped = true`), the dropdown selector immediately clears completely and displays no event blocks until synced.
