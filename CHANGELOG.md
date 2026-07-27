@@ -1,3 +1,7 @@
+## [1.48.83] - 2026-07-26
+### Fix Showdown Parsing for Merged Headers
+- **Merged Header Support**: Resolved a critical parsing failure where event blocks that combined the "Winners" row and the "Ranking" player header into a single row (such as the original RED event) were silently skipping player extraction. The parser's logic was incorrectly aborting early when it detected the "Winners" keyword, causing it to completely ignore the player roster below it. It now intelligently processes both elements simultaneously if they share a row, ensuring all player scores are captured for uniquely formatted sheets.
+
 ## [1.48.82] - 2026-07-26
 ### Fix Showdown Sync Skipping First Event
 - **Robust Event Detection**: Fixed a bug in the Google Sheets history sync where the very first event (e.g., the RED battle) would be completely skipped if the "Date" header row was missing or malformed. The parser now intelligently detects the start of a new battle block using either the "Date" row or the "Alliance's" header row. If the Date label is missing entirely, it will fallback and extract the date from the raw cell above the alliance headers. This ensures that every single event block is captured, no matter how the top rows are formatted in the spreadsheet.

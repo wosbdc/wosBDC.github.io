@@ -4323,7 +4323,10 @@ window.parseShowdownHistoryRows = (rows) => {
                 d6: String(r[di.d6] || '').trim(),
                 mvp: String(r[di.d6 + 1] || '').trim()
             };
-            continue;
+            // Don't continue if it also has player headers!
+            if (!r.some(c => String(c).toLowerCase() === 'ranking' || String(c).toLowerCase() === 'rank' || String(c).toLowerCase() === 'member')) {
+                continue;
+            }
         }
 
         // Detect Player Ranking Header
