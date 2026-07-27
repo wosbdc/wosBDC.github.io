@@ -4350,6 +4350,9 @@ window.syncGoogleSheetsHistoryToVault = async (btnEl = null) => {
             await set(ref(db, `showdown_meta/history/${ts}`), ev).catch(() => null);
         }
 
+        if (window._sdHistoryState) {
+            window._sdHistoryState.historyObj = parsedEvents;
+        }
         if (window.showToast) window.showToast(`Successfully synced ${eventCount} event blocks from Google Sheets to Vault!`, "success");
         if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = origText; }
         if (window.openShowdownArchiveVaultModal) window.openShowdownArchiveVaultModal('all');
@@ -4442,7 +4445,11 @@ window.openShowdownArchiveVaultModal = async (initialKey = 'all') => {
             (typeof sdHistoryData !== 'undefined' && sdHistoryData) ? Promise.resolve(sdHistoryData) : fetchSheet("Showdown History").catch(() => null)
         ]);
 
-        const historyObj = window.getMergedShowdownHistoryObj((histSnap && histSnap.exists() && histSnap.val()) ? histSnap.val() : {});
+        let fetchedHist = (histSnap && histSnap.exists() && histSnap.val()) ? histSnap.val() : null;
+        if ((!fetchedHist || Object.keys(fetchedHist).length === 0) && historyRows && historyRows.length > 0) {
+            fetchedHist = window.parseShowdownHistoryRows(historyRows);
+        }
+        const historyObj = window.getMergedShowdownHistoryObj(fetchedHist || {});
         const liveData = (liveSnap && liveSnap.exists() && liveSnap.val()) ? liveSnap.val() : {};
         
         let livePlayers = [];

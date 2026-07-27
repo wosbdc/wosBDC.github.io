@@ -1,3 +1,7 @@
+## [1.48.75] - 2026-07-26
+### Automatic Raw Sheets Parser Fallback for Instant Vault Rendering
+- **Instant Vault Auto-Parse**: Upgraded `openShowdownArchiveVaultModal()` so if Firebase `showdown_meta/history` is empty, it automatically parses raw Google Sheets `Showdown History` rows on the fly. All 5 event blocks with daily winners and 30+ player scores render instantly in the Vault without requiring any manual clicks!
+
 ## [1.48.74] - 2026-07-26
 ### Prominent Winners Bar Placement in Vault Modal
 - **Vault Modal Winners Bar**: Embedded the **`🏆 Event Daily Winners & MVP`** grid directly above the standings table in individual event views inside the Vault modal. Displays Day 1..6 MVPs and overall event MVP badge.
