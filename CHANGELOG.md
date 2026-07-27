@@ -1,3 +1,7 @@
+## [1.48.86] - 2026-07-27
+### Showdown Vault Header Tweaks
+- **Renamed Player Name Header**: In the Showdown Archive Vault views (both All-Time and Event-specific), the `PLAYER NAME` table header has been shortened to simply `NAME` for a cleaner, more concise layout.
+
 ## [1.48.85] - 2026-07-26
 ### Responsive Mobile Tables
 - **Streamlined Mobile View**: Implemented a responsive design for the Showdown Vault and Live Event tables on smaller screens (e.g., mobile phones). The non-essential "Day 1" through "Day 6" score breakdown columns are now elegantly hidden on mobile devices, ensuring the table remains clean, legible, and fits perfectly without requiring horizontal scrolling. Users can now comfortably view Player Ranks, Names, and Total Scores at a glance on their phones.

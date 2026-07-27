@@ -4588,7 +4588,7 @@ window.buildVaultModalContent = (activeKey = 'all') => {
         mainContent = `${allTimeMvpHtml}
             <div class="card-table-scroll" style="max-height:55vh;">
                <table style="min-width: max-content; width: 100%; text-align:left;"><thead><tr>
-                  <th style="text-align:center;">RANK</th><th>PLAYER NAME</th><th>TOTAL HORNS</th><th>DAY WINS</th><th>TOTAL SCORE</th>
+                  <th style="text-align:center;">RANK</th><th>NAME</th><th>TOTAL HORNS</th><th>DAY WINS</th><th>TOTAL SCORE</th>
                </tr></thead><tbody>${tableRows}</tbody></table>
             </div>`;
     } else {
@@ -4648,7 +4648,7 @@ window.buildVaultModalContent = (activeKey = 'all') => {
             }
             
             mainContent += `<tr>
-                      <th style="text-align:center;">RANK</th><th>PLAYER NAME</th><th>TOTAL SCORE</th><th class="hide-mobile">DAY 1</th><th class="hide-mobile">DAY 2</th><th class="hide-mobile">DAY 3</th><th class="hide-mobile">DAY 4</th><th class="hide-mobile">DAY 5</th><th class="hide-mobile">DAY 6</th>
+                      <th style="text-align:center;">RANK</th><th>NAME</th><th>TOTAL SCORE</th><th class="hide-mobile">DAY 1</th><th class="hide-mobile">DAY 2</th><th class="hide-mobile">DAY 3</th><th class="hide-mobile">DAY 4</th><th class="hide-mobile">DAY 5</th><th class="hide-mobile">DAY 6</th>
                    </tr></thead><tbody>`;
             
             archivedPlayers.forEach((p, idx) => {
