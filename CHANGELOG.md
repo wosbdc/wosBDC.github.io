@@ -1,3 +1,7 @@
+## [1.48.76] - 2026-07-26
+### Fix Temporal Dead Zone (TDZ) Order in Vault Initialization
+- **Bug Fix**: Fixed a `ReferenceError` in `openShowdownArchiveVaultModal()` where `historyRows` was referenced before its `const` declaration line. Restructured variable declarations so `historyRows` is evaluated before any conditional auto-parse calls.
+
 ## [1.48.75] - 2026-07-26
 ### Automatic Raw Sheets Parser Fallback for Instant Vault Rendering
 - **Instant Vault Auto-Parse**: Upgraded `openShowdownArchiveVaultModal()` so if Firebase `showdown_meta/history` is empty, it automatically parses raw Google Sheets `Showdown History` rows on the fly. All 5 event blocks with daily winners and 30+ player scores render instantly in the Vault without requiring any manual clicks!
