@@ -4263,58 +4263,77 @@ window.parseShowdownHistoryRows = (rows) => {
 
         if (!currentEvent) continue;
 
+        // Detect Days Header Row
+        let isDaysHeader = r.some(c => String(c).toLowerCase().includes('day 1'));
+        if (isDaysHeader && !currentEvent.dayIndices) {
+            currentEvent.dayIndices = {
+                d1: r.findIndex(c => String(c).toLowerCase().includes('day 1')),
+                d2: r.findIndex(c => String(c).toLowerCase().includes('day 2')),
+                d3: r.findIndex(c => String(c).toLowerCase().includes('day 3')),
+                d4: r.findIndex(c => String(c).toLowerCase().includes('day 4')),
+                d5: r.findIndex(c => String(c).toLowerCase().includes('day 5')),
+                d6: r.findIndex(c => String(c).toLowerCase().includes('day 6'))
+            };
+            continue; // Can skip since it's just headers
+        }
+
+        let di = currentEvent.dayIndices || { d1: 3, d2: 4, d3: 5, d4: 6, d5: 7, d6: 8 };
+
         // Detect Enemy Row
-        let enemyCell = r.find(c => String(c).includes('[') || String(c).toLowerCase().includes('battle:'));
-        if (enemyCell && !rStr.toLowerCase().includes('our alliance') && !rStr.toLowerCase().includes('winners')) {
-            let cleanEnemy = String(enemyCell).replace(/battle:\s*/i, '').trim();
+        let enemyCellIdx = r.findIndex(c => String(c).includes('[') || String(c).toLowerCase().includes('battle:'));
+        if (enemyCellIdx !== -1 && !rStr.toLowerCase().includes('our alliance') && !rStr.toLowerCase().includes('winners')) {
+            let cleanEnemy = String(r[enemyCellIdx]).replace(/battle:\s*/i, '').trim();
             currentEvent.enemyAlliance.name = cleanEnemy;
             currentEvent.enemyAlliance.scores = {
-                d1: cleanNum(r[3]), d2: cleanNum(r[4]), d3: cleanNum(r[5]),
-                d4: cleanNum(r[6]), d5: cleanNum(r[7]), d6: cleanNum(r[8])
+                d1: cleanNum(r[di.d1]), d2: cleanNum(r[di.d2]), d3: cleanNum(r[di.d3]),
+                d4: cleanNum(r[di.d4]), d5: cleanNum(r[di.d5]), d6: cleanNum(r[di.d6])
             };
             continue;
         }
 
         // Detect Winners Row
-        let isWinnersRow = r.some(c => String(c).toLowerCase().includes('winners'));
-        if (isWinnersRow) {
-            let winD1 = String(r[3] || r[2] || '').trim();
-            let winD2 = String(r[4] || r[3] || '').trim();
-            let winD3 = String(r[5] || r[4] || '').trim();
-            let winD4 = String(r[6] || r[5] || '').trim();
-            let winD5 = String(r[7] || r[6] || '').trim();
-            let winD6 = String(r[8] || r[7] || '').trim();
-            let mvpStr = String(r[9] || r[8] || r[7] || '').trim();
-
+        let winIdx = r.findIndex(c => String(c).toLowerCase().includes('winners'));
+        if (winIdx !== -1) {
             currentEvent.winners = {
-                d1: winD1, d2: winD2, d3: winD3,
-                d4: winD4, d5: winD5, d6: winD6,
-                mvp: mvpStr
+                d1: String(r[di.d1] || '').trim(),
+                d2: String(r[di.d2] || '').trim(),
+                d3: String(r[di.d3] || '').trim(),
+                d4: String(r[di.d4] || '').trim(),
+                d5: String(r[di.d5] || '').trim(),
+                d6: String(r[di.d6] || '').trim(),
+                mvp: String(r[di.d6 + 1] || '').trim()
             };
             continue;
         }
 
         // Detect Player Ranking Header
         let isRankingHeader = r.some(c => String(c).toLowerCase() === 'ranking' || String(c).toLowerCase() === 'rank');
-        let isMemberHeader = r.some(c => String(c).toLowerCase() === 'member' || String(c).toLowerCase() === 'player');
-        if (isRankingHeader || isMemberHeader) {
+        let memberIdx = r.findIndex(c => String(c).toLowerCase() === 'member' || String(c).toLowerCase() === 'player' || String(c).toLowerCase() === 'name');
+        
+        if (isRankingHeader || memberIdx !== -1) {
             inPlayers = true;
+            if (memberIdx !== -1) {
+                currentEvent.memberIdx = memberIdx;
+            }
             continue;
         }
 
         // Process Player Row
         if (inPlayers) {
-            let pName = String(r[2] || '').trim();
+            let pIdx = currentEvent.memberIdx !== undefined ? currentEvent.memberIdx : 2;
+            let pName = String(r[pIdx] || '').trim();
+            
             if (!pName || pName.toLowerCase() === 'our alliance' || pName.toLowerCase() === 'horns' || pName.toLowerCase().includes('date:') || pName.toLowerCase().includes('winners')) {
                 continue;
             }
-            let d1 = cleanNum(r[3]);
-            let d2 = cleanNum(r[4]);
-            let d3 = cleanNum(r[5]);
-            let d4 = cleanNum(r[6]);
-            let d5 = cleanNum(r[7]);
-            let d6 = cleanNum(r[8]);
-            let total = cleanNum(r[9]) || (d1 + d2 + d3 + d4 + d5 + d6);
+            
+            let d1 = cleanNum(r[di.d1]);
+            let d2 = cleanNum(r[di.d2]);
+            let d3 = cleanNum(r[di.d3]);
+            let d4 = cleanNum(r[di.d4]);
+            let d5 = cleanNum(r[di.d5]);
+            let d6 = cleanNum(r[di.d6]);
+            let total = cleanNum(r[di.d6 + 1]) || (d1 + d2 + d3 + d4 + d5 + d6);
 
             if (pName && (total > 0 || d1 > 0 || d2 > 0 || d3 > 0 || d4 > 0 || d5 > 0 || d6 > 0)) {
                 currentEvent.players.push({ name: pName, d1, d2, d3, d4, d5, d6, total });

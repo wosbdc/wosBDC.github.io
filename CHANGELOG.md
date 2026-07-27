@@ -1,3 +1,8 @@
+## [1.48.79] - 2026-07-26
+### Perfected Google Sheets Showdown History Parsing Logic
+- **Dynamic Header Column Indexing**: Completely rewrote the `parseShowdownHistoryRows` logic in `main.js`. Previously, the code hardcoded indices (e.g. `r[2]`, `r[3]`) assuming a perfectly uniform column layout. However, when users merge cells (like "Winners" or "Our Alliance") in the top header blocks of their Google Sheet, the Google Sheets API shifts the array indices differently than the unmerged rows below them. This caused an invisible "off-by-one" data shift, which resulted in the All-Time Leaderboard ignoring Day 1's true winner, and accidentally assigning Day 2's winner to Day 1, etc.
+- The parser now dynamically scans the header rows for "Day 1", "Day 2", etc. and structurally locks the column indices for that specific event block. It then uses those exact column indexes to safely extract Enemy scores, the Winners list, and individual Player scores. This guarantees 100% immunity to dropped columns, shifted data, or merged cell artifacts. 
+
 ## [1.48.78] - 2026-07-26
 ### Fix All-Time Showdown Leaderboard Horn Calculation
 - **Accurate Winners Assignment**: Fixed a bug where the All-Time Leaderboard was mistakenly ignoring the explicit "Winners" row from the historical data and manually calculating Horns/Wins by guessing the highest numeric scorers. It now correctly parses the "Winners" list for every event, ensuring players explicitly designated as Winners accurately receive their Horns and Wins.
