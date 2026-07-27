@@ -4633,6 +4633,20 @@ window.buildVaultModalContent = (activeKey = 'all') => {
                       <th style="text-align:center;">RANK</th><th>PLAYER NAME</th><th>TOTAL SCORE</th><th>DAY 1</th><th>DAY 2</th><th>DAY 3</th><th>DAY 4</th><th>DAY 5</th><th>DAY 6</th>
                    </tr></thead><tbody>`;
             
+            let w = entry.winners || {};
+            let hasWinners = w.d1 || w.d2 || w.d3 || w.d4 || w.d5 || w.d6;
+            if (hasWinners) {
+                mainContent += `<tr style="background:rgba(255,215,0,0.12); border-bottom:2px solid rgba(255,215,0,0.3);">
+                    <td colspan="3" style="font-weight:bold; color:#FFD700; text-align:right; padding-right:15px;">🏆 Daily Winners</td>
+                    <td style="color:#FFD700; font-weight:bold;">${escapeHTML(w.d1 || '-')}</td>
+                    <td style="color:#FFD700; font-weight:bold;">${escapeHTML(w.d2 || '-')}</td>
+                    <td style="color:#FFD700; font-weight:bold;">${escapeHTML(w.d3 || '-')}</td>
+                    <td style="color:#FFD700; font-weight:bold;">${escapeHTML(w.d4 || '-')}</td>
+                    <td style="color:#FFD700; font-weight:bold;">${escapeHTML(w.d5 || '-')}</td>
+                    <td style="color:#FFD700; font-weight:bold;">${escapeHTML(w.d6 || '-')}</td>
+                </tr>`;
+            }
+            
             archivedPlayers.forEach((p, idx) => {
                 mainContent += `<tr>
                     <td style="font-weight:bold; color:var(--text-muted); text-align:center;">${idx + 1}</td>

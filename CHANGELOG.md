@@ -1,3 +1,7 @@
+## [1.48.84] - 2026-07-26
+### Showdown Vault Winners Row
+- **Daily Winners Display**: Added a dedicated "🏆 Daily Winners" row to the top of the player standings table when viewing an individual event archive inside the Showdown Vault. This mirrors the exact formatting of the Google Sheet, allowing users to quickly see who won the Horns for Day 1 through Day 6 without having to manually scan the columns for the highest score.
+
 ## [1.48.83] - 2026-07-26
 ### Fix Showdown Parsing for Merged Headers
 - **Merged Header Support**: Resolved a critical parsing failure where event blocks that combined the "Winners" row and the "Ranking" player header into a single row (such as the original RED event) were silently skipping player extraction. The parser's logic was incorrectly aborting early when it detected the "Winners" keyword, causing it to completely ignore the player roster below it. It now intelligently processes both elements simultaneously if they share a row, ensuring all player scores are captured for uniquely formatted sheets.
