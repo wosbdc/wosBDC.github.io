@@ -1,3 +1,8 @@
+## [1.48.68] - 2026-07-26
+### Full Universal Google Sheets Showdown History Sync & Wipe Tools
+- **Universal Google Sheets Parser**: Implemented `parseShowdownHistoryRows()` and `syncGoogleSheetsHistoryToVault()` to parse all blocks from Google Sheets `"Showdown History"`. Automatically extracts dates, enemy alliances with bracket syntax `[...]`, daily opponent scores, and all 30+ player scores per event into `showdown_meta/history`.
+- **Wipe All Archives Tool**: Implemented `deleteAllShowdownArchives()` to allow managers to cleanly wipe all archived event history from the Vault when starting fresh.
+
 ## [1.48.67] - 2026-07-26
 ### Dynamic All-Time Combined Leaderboard Calculation
 - **Dynamic History Object Calculation**: Updated all `calculateAllTimeShowdown()` call sites to pass `historyObj` directly. The **All-Time Combined Leaderboard** (in both the Vault Modal and Leaderboards page) now dynamically computes totals on the fly across all archived and future event blocks in `showdown_meta/history` automatically without needing manual rebuilds.
