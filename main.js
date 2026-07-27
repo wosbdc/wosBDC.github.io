@@ -4638,17 +4638,17 @@ window.buildVaultModalContent = (activeKey = 'all') => {
             if (hasWinners) {
                 mainContent += `<tr style="background:rgba(255,215,0,0.12); border-bottom:1px solid rgba(255,215,0,0.3);">
                     <th colspan="3" style="font-weight:bold; color:#FFD700; text-align:right; padding-right:15px; border-bottom: none;">🏆 Daily Winners</th>
-                    <th style="color:#FFD700; font-weight:bold; border-bottom: none;">${escapeHTML(w.d1 || '-')}</th>
-                    <th style="color:#FFD700; font-weight:bold; border-bottom: none;">${escapeHTML(w.d2 || '-')}</th>
-                    <th style="color:#FFD700; font-weight:bold; border-bottom: none;">${escapeHTML(w.d3 || '-')}</th>
-                    <th style="color:#FFD700; font-weight:bold; border-bottom: none;">${escapeHTML(w.d4 || '-')}</th>
-                    <th style="color:#FFD700; font-weight:bold; border-bottom: none;">${escapeHTML(w.d5 || '-')}</th>
-                    <th style="color:#FFD700; font-weight:bold; border-bottom: none;">${escapeHTML(w.d6 || '-')}</th>
+                    <th class="hide-mobile" style="color:#FFD700; font-weight:bold; border-bottom: none;">${escapeHTML(w.d1 || '-')}</th>
+                    <th class="hide-mobile" style="color:#FFD700; font-weight:bold; border-bottom: none;">${escapeHTML(w.d2 || '-')}</th>
+                    <th class="hide-mobile" style="color:#FFD700; font-weight:bold; border-bottom: none;">${escapeHTML(w.d3 || '-')}</th>
+                    <th class="hide-mobile" style="color:#FFD700; font-weight:bold; border-bottom: none;">${escapeHTML(w.d4 || '-')}</th>
+                    <th class="hide-mobile" style="color:#FFD700; font-weight:bold; border-bottom: none;">${escapeHTML(w.d5 || '-')}</th>
+                    <th class="hide-mobile" style="color:#FFD700; font-weight:bold; border-bottom: none;">${escapeHTML(w.d6 || '-')}</th>
                 </tr>`;
             }
             
             mainContent += `<tr>
-                      <th style="text-align:center;">RANK</th><th>PLAYER NAME</th><th>TOTAL SCORE</th><th>DAY 1</th><th>DAY 2</th><th>DAY 3</th><th>DAY 4</th><th>DAY 5</th><th>DAY 6</th>
+                      <th style="text-align:center;">RANK</th><th>PLAYER NAME</th><th>TOTAL SCORE</th><th class="hide-mobile">DAY 1</th><th class="hide-mobile">DAY 2</th><th class="hide-mobile">DAY 3</th><th class="hide-mobile">DAY 4</th><th class="hide-mobile">DAY 5</th><th class="hide-mobile">DAY 6</th>
                    </tr></thead><tbody>`;
             
             archivedPlayers.forEach((p, idx) => {
@@ -4656,12 +4656,12 @@ window.buildVaultModalContent = (activeKey = 'all') => {
                     <td style="font-weight:bold; color:var(--text-muted); text-align:center;">${idx + 1}</td>
                     <td style="font-weight:bold;">${formatCell(p.name)}</td>
                     <td style="font-weight:bold; color:var(--accent);">${(p.total||0).toLocaleString()}</td>
-                    <td>${(p.d1||0) > 0 ? (p.d1||0).toLocaleString() : '-'}</td>
-                    <td>${(p.d2||0) > 0 ? (p.d2||0).toLocaleString() : '-'}</td>
-                    <td>${(p.d3||0) > 0 ? (p.d3||0).toLocaleString() : '-'}</td>
-                    <td>${(p.d4||0) > 0 ? (p.d4||0).toLocaleString() : '-'}</td>
-                    <td>${(p.d5||0) > 0 ? (p.d5||0).toLocaleString() : '-'}</td>
-                    <td>${(p.d6||0) > 0 ? (p.d6||0).toLocaleString() : '-'}</td>
+                    <td class="hide-mobile">${(p.d1||0) > 0 ? (p.d1||0).toLocaleString() : '-'}</td>
+                    <td class="hide-mobile">${(p.d2||0) > 0 ? (p.d2||0).toLocaleString() : '-'}</td>
+                    <td class="hide-mobile">${(p.d3||0) > 0 ? (p.d3||0).toLocaleString() : '-'}</td>
+                    <td class="hide-mobile">${(p.d4||0) > 0 ? (p.d4||0).toLocaleString() : '-'}</td>
+                    <td class="hide-mobile">${(p.d5||0) > 0 ? (p.d5||0).toLocaleString() : '-'}</td>
+                    <td class="hide-mobile">${(p.d6||0) > 0 ? (p.d6||0).toLocaleString() : '-'}</td>
                 </tr>`;
             });
             mainContent += `</tbody></table></div>`;
@@ -10551,7 +10551,7 @@ window.resetBearTrapEvent = async () => {
        
        let pDayHeaders = '';
        for(let i=1; i<=6; i++) {
-           pDayHeaders += `<th style="border-right: 1px solid rgba(255,255,255,0.08); text-align:center;"><span style="background:rgba(255,255,255,0.05); padding:3px 10px; border-radius:6px; font-size:11px; text-transform:uppercase; letter-spacing:0.5px;">Day ${i}</span></th>`;
+           pDayHeaders += `<th class="hide-mobile" style="border-right: 1px solid rgba(255,255,255,0.08); text-align:center;"><span style="background:rgba(255,255,255,0.05); padding:3px 10px; border-radius:6px; font-size:11px; text-transform:uppercase; letter-spacing:0.5px;">Day ${i}</span></th>`;
        }
        
        let playersCard = `<div class="card"><div class="card-title">🏆 Player Rankings</div><div class="card-table-scroll" style="overflow-x:auto; width:100%; border-radius:8px; border:1px solid var(--border);"><table style="min-width:700px; border-collapse:collapse;"><thead><tr>
@@ -10576,7 +10576,7 @@ window.resetBearTrapEvent = async () => {
             let dayCells = '';
             for (let di = 1; di <= 6; di++) {
                 let val = p['d' + di] || 0;
-                dayCells += `<td style="border-right: 1px solid rgba(255,255,255,0.06); text-align:center;">${val > 0 ? val.toLocaleString() : '-'}</td>`;
+                dayCells += `<td class="hide-mobile" style="border-right: 1px solid rgba(255,255,255,0.06); text-align:center;">${val > 0 ? val.toLocaleString() : '-'}</td>`;
             }
             
             playersCard += `<tr>

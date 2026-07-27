@@ -1,3 +1,7 @@
+## [1.48.85] - 2026-07-26
+### Responsive Mobile Tables
+- **Streamlined Mobile View**: Implemented a responsive design for the Showdown Vault and Live Event tables on smaller screens (e.g., mobile phones). The non-essential "Day 1" through "Day 6" score breakdown columns are now elegantly hidden on mobile devices, ensuring the table remains clean, legible, and fits perfectly without requiring horizontal scrolling. Users can now comfortably view Player Ranks, Names, and Total Scores at a glance on their phones.
+
 ## [1.48.84] - 2026-07-26
 ### Showdown Vault Winners Row
 - **Daily Winners Display**: Added a dedicated "🏆 Daily Winners" row to the top of the player standings table when viewing an individual event archive inside the Showdown Vault. This mirrors the exact formatting of the Google Sheet, allowing users to quickly see who won the Horns for Day 1 through Day 6 without having to manually scan the columns for the highest score.
