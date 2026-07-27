@@ -4626,26 +4626,30 @@ window.buildVaultModalContent = (activeKey = 'all') => {
                     <div style="color: var(--text-muted); font-size: 11px; text-transform: uppercase;">Event Top MVP</div>
                     <div style="color: #FFD700; font-size: 18px; font-weight: bold;">👑 ${escapeHTML(champName)} (${(champScore||0).toLocaleString()})</div>
                   </div>
-                </div>
+                </div>`;
 
-                <div class="card-table-scroll" style="max-height:50vh;">
-                   <table style="min-width: max-content; width: 100%; text-align:left;"><thead><tr>
-                      <th style="text-align:center;">RANK</th><th>PLAYER NAME</th><th>TOTAL SCORE</th><th>DAY 1</th><th>DAY 2</th><th>DAY 3</th><th>DAY 4</th><th>DAY 5</th><th>DAY 6</th>
-                   </tr></thead><tbody>`;
-            
             let w = entry.winners || {};
             let hasWinners = w.d1 || w.d2 || w.d3 || w.d4 || w.d5 || w.d6;
+            
+            mainContent += `
+                <div class="card-table-scroll" style="max-height:50vh;">
+                   <table style="min-width: max-content; width: 100%; text-align:left;"><thead>`;
+                   
             if (hasWinners) {
-                mainContent += `<tr style="background:rgba(255,215,0,0.12); border-bottom:2px solid rgba(255,215,0,0.3);">
-                    <td colspan="3" style="font-weight:bold; color:#FFD700; text-align:right; padding-right:15px;">🏆 Daily Winners</td>
-                    <td style="color:#FFD700; font-weight:bold;">${escapeHTML(w.d1 || '-')}</td>
-                    <td style="color:#FFD700; font-weight:bold;">${escapeHTML(w.d2 || '-')}</td>
-                    <td style="color:#FFD700; font-weight:bold;">${escapeHTML(w.d3 || '-')}</td>
-                    <td style="color:#FFD700; font-weight:bold;">${escapeHTML(w.d4 || '-')}</td>
-                    <td style="color:#FFD700; font-weight:bold;">${escapeHTML(w.d5 || '-')}</td>
-                    <td style="color:#FFD700; font-weight:bold;">${escapeHTML(w.d6 || '-')}</td>
+                mainContent += `<tr style="background:rgba(255,215,0,0.12); border-bottom:1px solid rgba(255,215,0,0.3);">
+                    <th colspan="3" style="font-weight:bold; color:#FFD700; text-align:right; padding-right:15px; border-bottom: none;">🏆 Daily Winners</th>
+                    <th style="color:#FFD700; font-weight:bold; border-bottom: none;">${escapeHTML(w.d1 || '-')}</th>
+                    <th style="color:#FFD700; font-weight:bold; border-bottom: none;">${escapeHTML(w.d2 || '-')}</th>
+                    <th style="color:#FFD700; font-weight:bold; border-bottom: none;">${escapeHTML(w.d3 || '-')}</th>
+                    <th style="color:#FFD700; font-weight:bold; border-bottom: none;">${escapeHTML(w.d4 || '-')}</th>
+                    <th style="color:#FFD700; font-weight:bold; border-bottom: none;">${escapeHTML(w.d5 || '-')}</th>
+                    <th style="color:#FFD700; font-weight:bold; border-bottom: none;">${escapeHTML(w.d6 || '-')}</th>
                 </tr>`;
             }
+            
+            mainContent += `<tr>
+                      <th style="text-align:center;">RANK</th><th>PLAYER NAME</th><th>TOTAL SCORE</th><th>DAY 1</th><th>DAY 2</th><th>DAY 3</th><th>DAY 4</th><th>DAY 5</th><th>DAY 6</th>
+                   </tr></thead><tbody>`;
             
             archivedPlayers.forEach((p, idx) => {
                 mainContent += `<tr>
