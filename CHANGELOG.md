@@ -1,3 +1,7 @@
+## [1.48.88] - 2026-07-27
+### Showdown Vault Redesign
+- **Head-to-Head VS Cards**: Replaced the plain "Our Alliance vs Enemy" text in the Showdown Vault event headers with a premium, stylized "Head-to-Head" VS card. The new design places the alliances symmetrically around a central VS badge, with dynamic glowing accents (green for victory, red for defeat) that instantly communicate the event's outcome at a glance.
+
 ## [1.48.87] - 2026-07-27
 ### Showdown Vault MVP Banners
 - **Stylized MVP Banner in Archives**: The individual Event Archive view in the Showdown Vault now utilizes the same premium, stylized MVP banner (complete with player avatars and golden gradient styling) that is featured on the live Event page, replacing the previous plain-text "Event Top MVP" string.

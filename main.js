@@ -4628,20 +4628,40 @@ window.buildVaultModalContent = (activeKey = 'all') => {
                 `;
             }
             
+            let ourColor = isVictory ? '#10b981' : 'var(--text-muted)';
+            let ourShadow = isVictory ? 'text-shadow: 0 0 15px rgba(16,185,129,0.5);' : '';
+            let enemyColor = !isVictory ? '#ef4444' : 'var(--text-muted)';
+            let enemyShadow = !isVictory ? 'text-shadow: 0 0 15px rgba(239,68,68,0.5);' : '';
+            
+            let headToHeadHtml = `
+              <div style="display: flex; align-items: center; justify-content: center; gap: 20px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 15px 30px; margin-top: 15px; box-shadow: inset 0 2px 10px rgba(0,0,0,0.3); width: 100%;">
+                <div style="text-align: right; flex: 1;">
+                  <div style="color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 4px;">Our Alliance</div>
+                  <div style="color: ${ourColor}; font-size: 28px; font-weight: 900; ${ourShadow} font-family: var(--mono);">${ourTotal.toLocaleString()}</div>
+                </div>
+                <div style="flex-shrink: 0; display: flex; flex-direction: column; align-items: center;">
+                  <div style="background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.02)); border: 1px solid rgba(255,255,255,0.15); border-radius: 50%; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 900; color: var(--accent); font-style: italic; box-shadow: 0 4px 15px rgba(0,0,0,0.4);">VS</div>
+                </div>
+                <div style="text-align: left; flex: 1;">
+                  <div style="color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px;" title="${escapeHTML(enemy.name)}">${escapeHTML(enemy.name)}</div>
+                  <div style="color: ${enemyColor}; font-size: 28px; font-weight: 900; ${enemyShadow} font-family: var(--mono);">${enemyTotal.toLocaleString()}</div>
+                </div>
+              </div>
+            `;
+
             mainContent = `
-                <div style="background: linear-gradient(135deg, rgba(6,182,212,0.1) 0%, rgba(6,182,212,0.02) 100%); border: 1px solid rgba(6,182,212,0.3); border-radius: 12px; padding: 20px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
-                  <div style="display: flex; align-items: center; gap: 15px;">
-                    <div style="font-size:32px;">⚔️</div>
-                    <div style="text-align: left;">
-                      <div style="display:flex; align-items:center; gap:10px; margin-bottom:4px;">
-                        <span style="color: var(--accent); font-size: 12px; font-weight: bold; text-transform: uppercase;">Event Date: ${dStr}</span>
-                        <button onclick="window.openEditShowdownArchiveModal('${activeKey}', '${escapeHTML(dStr)}', '${escapeHTML(enemy.name || '')}')" style="background:rgba(255,215,0,0.15); border:1px solid rgba(255,215,0,0.3); color:#FFD700; padding:2px 8px; border-radius:6px; font-weight:bold; font-size:11px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">✏️ Edit Date & Enemy</button>
-                        <button onclick="window.restoreSpecificShowdownArchive('${activeKey}')" style="background:rgba(6,182,212,0.18); border:1px solid rgba(6,182,212,0.4); color:var(--accent); padding:2px 8px; border-radius:6px; font-weight:bold; font-size:11px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">↩️ Restore to Live</button>
-                        ${resultBadge}
-                      </div>
-                      <div style="color: var(--text-main); font-size: 20px; font-weight: bold;">Our Alliance (${ourTotal.toLocaleString()}) vs ${escapeHTML(enemy.name)} (${enemyTotal.toLocaleString()})</div>
+                <div style="background: linear-gradient(135deg, rgba(6,182,212,0.1) 0%, rgba(6,182,212,0.02) 100%); border: 1px solid rgba(6,182,212,0.3); border-radius: 12px; padding: 20px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 5px;">
+                  <div style="display:flex; align-items:center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                      <span style="color: var(--accent); font-size: 12px; font-weight: bold; text-transform: uppercase;">📅 Event Date: ${dStr}</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                      ${resultBadge}
+                      <button onclick="window.openEditShowdownArchiveModal('${activeKey}', '${escapeHTML(dStr)}', '${escapeHTML(enemy.name || '')}')" style="background:rgba(255,215,0,0.15); border:1px solid rgba(255,215,0,0.3); color:#FFD700; padding:4px 10px; border-radius:6px; font-weight:bold; font-size:11px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,215,0,0.25)'" onmouseout="this.style.background='rgba(255,215,0,0.15)'">✏️ Edit Date & Enemy</button>
+                      <button onclick="window.restoreSpecificShowdownArchive('${activeKey}')" style="background:rgba(6,182,212,0.18); border:1px solid rgba(6,182,212,0.4); color:var(--accent); padding:4px 10px; border-radius:6px; font-weight:bold; font-size:11px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition: all 0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.28)'" onmouseout="this.style.background='rgba(6,182,212,0.18)'">↩️ Restore to Live</button>
                     </div>
                   </div>
+                  ${headToHeadHtml}
                 </div>
                 ${mvpBannerHtml}`;
 
