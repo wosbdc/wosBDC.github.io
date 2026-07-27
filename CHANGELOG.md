@@ -1,3 +1,7 @@
+## [1.48.74] - 2026-07-26
+### Prominent Winners Bar Placement in Vault Modal
+- **Vault Modal Winners Bar**: Embedded the **`🏆 Event Daily Winners & MVP`** grid directly above the standings table in individual event views inside the Vault modal. Displays Day 1..6 MVPs and overall event MVP badge.
+
 ## [1.48.73] - 2026-07-26
 ### Mandatory Pre-Build Automated Testing Suite
 - **Automated Pre-Build Verification**: Created `tools/test_all_features.cjs` and integrated it with `tools/check_window_bindings.cjs` into `package.json`'s build script. Every build now automatically runs comprehensive AST scope audits and binding verification before code can compile or deploy.
