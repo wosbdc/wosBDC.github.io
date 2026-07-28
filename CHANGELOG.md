@@ -1,3 +1,12 @@
+## [1.48.92] - 2026-07-27
+### Changed
+- Moved Showdown Vault editing tools (Edit Date & Enemy, Restore to Live) out of public views and into the newly created Showdown Vault Manager button under the Admin Menu.
+- Hid the Player actions menu (Crown Winner, Bear Donation, Edit Events, etc.) from public player cards. These tools are now exclusively available through the Player Database Editor in the Admin Menu.
+
+## [1.48.91] - 2026-07-28
+### Player Card Rendering Fixes
+- **Restored Missing Elements**: Fixed a bug where the Event Checklist and Leaderboard Tags would sometimes completely disappear from a player's profile card (such as when viewing them from the Vault, or when their primary metrics fetch defaulted to an object). The card renderer now includes strict fallbacks for missing table headers and correctly displays peripheral leaderboard badges (like Mercenary Prestige or Polar Terrors) even if they aren't part of the core Showdown tracking block.
+
 ## [1.48.90] - 2026-07-27
 ### Vault UI Hotfix
 - **Winner Color Logic**: Fixed an issue where the Enemy Alliance's score on the Vault VS card would highlight in red if they won. The winning side will now always correctly highlight in emerald green, regardless of whether it's our alliance or the enemy.

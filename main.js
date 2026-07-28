@@ -2349,7 +2349,7 @@ window.getLivePlayerEventRow = async (chiefName, pRow, headers) => {
     }
     
     const isUnlocked = await window.isGoogleAuthVerified();
-    let html = window.generatePlayerProfileHtml(targetName, pRow, headers, colIsUpcoming, rosterMap[targetName], null, dynamicSD, showdownActive, bearBoth, bear1, bear2, bearAllTime, btDonationsAllTime, btDonationsCurrent, otherLbs, isUnlocked, altAccounts);
+    let html = window.generatePlayerProfileHtml(targetName, pRow, headers, colIsUpcoming, rosterMap[targetName], null, dynamicSD, showdownActive, bearBoth, bear1, bear2, bearAllTime, btDonationsAllTime, btDonationsCurrent, otherLbs, isUnlocked, altAccounts, true);
     
     resDiv.innerHTML = html;
     
@@ -2576,7 +2576,7 @@ window.searchPlayerFull = async (name) => {
     }
     
     const isUnlocked = await window.isGoogleAuthVerified();
-    let html = window.generatePlayerProfileHtml(targetName, pRow, headers, colIsUpcoming, rosterMap[targetName], null, dynamicSD, showdownActive, bearBoth, bear1, bear2, bearAllTime, btDonationsAllTime, btDonationsCurrent, otherLbs, isUnlocked, altAccounts);
+    let html = window.generatePlayerProfileHtml(targetName, pRow, headers, colIsUpcoming, rosterMap[targetName], null, dynamicSD, showdownActive, bearBoth, bear1, bear2, bearAllTime, btDonationsAllTime, btDonationsCurrent, otherLbs, isUnlocked, altAccounts, true);
     
     resDiv.innerHTML = html;
     
@@ -4542,7 +4542,7 @@ window.deleteAllShowdownArchives = async () => {
     }
 };
 
-window.openShowdownArchiveVaultModal = async (initialKey = 'all') => {
+window.openShowdownArchiveVaultModal = async (initialKey = 'all', isAdminMode = false) => {
     let existingModal = document.getElementById('showdownArchiveVaultModal');
     if (existingModal) existingModal.remove();
 
@@ -4594,11 +4594,11 @@ window.openShowdownArchiveVaultModal = async (initialKey = 'all') => {
             livePlayers.push({ name: pName, d1: scores.d1||0, d2: scores.d2||0, d3: scores.d3||0, d4: scores.d4||0, d5: scores.d5||0, d6: scores.d6||0, total: pTotal });
         }
 
-        window._sdHistoryState = { historyObj, historyRows, livePlayers, activeFilter: initialKey };
+        window._sdHistoryState = { historyObj, historyRows, livePlayers, activeFilter: initialKey, isAdminMode };
         
         const vaultBody = document.getElementById('vaultModalBody');
         if (vaultBody) {
-            vaultBody.innerHTML = window.buildVaultModalContent(initialKey);
+            vaultBody.innerHTML = window.buildVaultModalContent(initialKey, isAdminMode);
         }
     } catch(err) {
         console.error("Error loading vault modal:", err);
@@ -4607,7 +4607,7 @@ window.openShowdownArchiveVaultModal = async (initialKey = 'all') => {
     }
 };
 
-window.buildVaultModalContent = (activeKey = 'all') => {
+window.buildVaultModalContent = (activeKey = 'all', isAdminMode = false) => {
     const { historyObj, historyRows, livePlayers } = window._sdHistoryState;
 
     const archiveKeys = Object.keys(historyObj).sort((a,b) => Number(b) - Number(a));
@@ -4734,7 +4734,7 @@ window.buildVaultModalContent = (activeKey = 'all') => {
             `;
 
             let adminControlsHtml = '';
-            if (window.isAdminUser && window.isAdminUser(currentUser)) {
+            if (isAdminMode && window.isAdminUser && window.isAdminUser(currentUser)) {
                 adminControlsHtml = `
                   <button onclick="window.openEditShowdownArchiveModal('${activeKey}', '${escapeHTML(dStr)}', '${escapeHTML(enemy.name || '')}')" style="background:rgba(255,215,0,0.15); border:1px solid rgba(255,215,0,0.3); color:#FFD700; padding:4px 10px; border-radius:6px; font-weight:bold; font-size:11px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,215,0,0.25)'" onmouseout="this.style.background='rgba(255,215,0,0.15)'">✏️ Edit Date & Enemy</button>
                   <button onclick="window.restoreSpecificShowdownArchive('${activeKey}')" style="background:rgba(6,182,212,0.18); border:1px solid rgba(6,182,212,0.4); color:var(--accent); padding:4px 10px; border-radius:6px; font-weight:bold; font-size:11px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition: all 0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.28)'" onmouseout="this.style.background='rgba(6,182,212,0.18)'">↩️ Restore to Live</button>
@@ -4813,7 +4813,7 @@ window.switchVaultModalView = (key) => {
     window._sdHistoryState.activeFilter = key;
     const vaultBody = document.getElementById('vaultModalBody');
     if (vaultBody) {
-        vaultBody.innerHTML = window.buildVaultModalContent(key);
+        vaultBody.innerHTML = window.buildVaultModalContent(key, window._sdHistoryState.isAdminMode);
     }
 };
 
@@ -6348,6 +6348,7 @@ const views = {
               <div style="display:flex; flex-direction:column; gap:12px; align-items:center;">
                 <button onclick="views.beartrap()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(16,185,129,0.3);">🐻 Bear Trap</button>
                 <button onclick="views.showdownAdmin()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px;">⚔️ ShowDown</button>
+                <button onclick="window.openShowdownArchiveVaultModal('all', true)" style="background:linear-gradient(135deg, #8b5cf6, #7c3aed); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(139,92,246,0.3);">📂 Showdown Vault Manager</button>
               </div>
             </div>
 
@@ -11967,7 +11968,7 @@ initPresence();
 window.views = views;
 
 
-window.generatePlayerProfileHtml = (chiefName, p, headers, colIsUpcoming, rosterInfo, lbData, dynamicSD, showdownActive, bearBoth, bear1, bear2, bearAllTime, btDonationsAllTime, btDonationsCurrent, otherLbs, isAdmin = false, altAccounts = []) => {
+window.generatePlayerProfileHtml = (chiefName, p, headers, colIsUpcoming, rosterInfo, lbData, dynamicSD, showdownActive, bearBoth, bear1, bear2, bearAllTime, btDonationsAllTime, btDonationsCurrent, otherLbs, isAdmin = false, altAccounts = [], isFromAdminMenu = false) => {
   let headerBadgesHtml = '';
   if (rosterInfo) {
     let flVal = rosterInfo.furnaceLevel;
@@ -11996,6 +11997,8 @@ window.generatePlayerProfileHtml = (chiefName, p, headers, colIsUpcoming, roster
   
   const isTrue = (val) => val === true || (typeof val === 'string' && val.toLowerCase().trim() === 'true');
   
+  headers = headers || ["Chief Name", "ShowDown missed days", "Alliance Championship ", "Mercenary Prestige", "Polar Terrors", "Voter"];
+  
   for (let c = 1; c < headers.length; c++) {
     const h = (headers[c] || '').toLowerCase();
     const val = p[c];
@@ -12014,7 +12017,7 @@ window.generatePlayerProfileHtml = (chiefName, p, headers, colIsUpcoming, roster
      headerBadgesHtml += '<div style="display:flex; gap:10px; margin-top:8px; flex-wrap:wrap;">' + activityBadges + '</div>';
   }
   
-  if ((lbData && lbData.length > 0) || dynamicSD || bear1 || bear2 || bearBoth || bearAllTime || isAdmin) {
+  if ((lbData && lbData.length > 0) || dynamicSD || bear1 || bear2 || bearBoth || bearAllTime || isAdmin || (otherLbs && otherLbs.length > 0)) {
     headerBadgesHtml += '<div style="display:flex; gap:10px; margin-top:8px; flex-wrap:wrap; align-items:center;">';
     
     if (dynamicSD) {
@@ -12175,7 +12178,7 @@ window.generatePlayerProfileHtml = (chiefName, p, headers, colIsUpcoming, roster
   let avatarImgHtml = '<img src="'+tryUrl+'" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.style.display=\'none\'; this.nextElementSibling.style.display=\'flex\';"><div style="display:none; align-items:center; justify-content:center; width:100%; height:100%;">' + chiefName.charAt(0).toUpperCase() + '</div>';
   
   let adminBarHtml = '';
-  if (isAdmin) {
+  if (isAdmin && isFromAdminMenu) {
     let missedJson = encodeURIComponent(JSON.stringify(missedEvents));
     let adminActionBtn = '';
     if (playerGameId && window.getAdminLevel(currentUser) === 'R5') {
