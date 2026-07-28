@@ -1,3 +1,8 @@
+## [1.48.93] - 2026-07-27
+### Changed
+- Integrated Showdown Vault Manager directly inside the ⚔️ Showdown Admin dashboard header controls.
+- Removed standalone Vault Manager button from main Admin menu tab for a cleaner layout.
+
 ## [1.48.92] - 2026-07-27
 ### Changed
 - Moved Showdown Vault editing tools (Edit Date & Enemy, Restore to Live) out of public views and into the newly created Showdown Vault Manager button under the Admin Menu.

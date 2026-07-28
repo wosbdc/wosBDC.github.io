@@ -6348,7 +6348,6 @@ const views = {
               <div style="display:flex; flex-direction:column; gap:12px; align-items:center;">
                 <button onclick="views.beartrap()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(16,185,129,0.3);">🐻 Bear Trap</button>
                 <button onclick="views.showdownAdmin()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px;">⚔️ ShowDown</button>
-                <button onclick="window.openShowdownArchiveVaultModal('all', true)" style="background:linear-gradient(135deg, #8b5cf6, #7c3aed); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(139,92,246,0.3);">📂 Showdown Vault Manager</button>
               </div>
             </div>
 
@@ -7043,7 +7042,7 @@ const views = {
            <div class="card-title" style="text-align:center; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
               <span>⚔️ Showdown Data Entry</span>
               <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                 <button onclick="window.openShowdownArchiveVaultModal()" style="background:linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(6,182,212,0.05) 100%); color:var(--accent); border:1px solid rgba(6,182,212,0.4); padding:4px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:4px;">📜 Open Vault</button>
+                 <button onclick="window.openShowdownArchiveVaultModal('all', true)" style="background:linear-gradient(135deg, rgba(139,92,246,0.3) 0%, rgba(124,58,237,0.15) 100%); color:#a78bfa; border:1px solid rgba(139,92,246,0.5); padding:4px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:4px;">📂 Vault Manager</button>
                  <button onclick="window.openShowdownPasteImporterModal()" style="background:rgba(255,215,0,0.18); border:1px solid rgba(255,215,0,0.5); color:#FFD700; padding:4px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:4px;">📋 Quick Paste Scores</button>
                   <button onclick="window.showMissedDaysReportModal(this)" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--accent); padding:4px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:4px;">📋 Missed Days Report</button>
                  <button onclick="window.archiveCurrentShowdownToFirebase()" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--success); padding:4px 8px; border-radius:6px; cursor:pointer; font-size:12px;">📁 Archive to History</button>
