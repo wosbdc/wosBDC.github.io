@@ -1,3 +1,8 @@
+## [1.48.100] - 2026-07-29
+### Fixed
+- Fixed Player Not Found error when deleting a player from the Player Database Editor by updating Google Apps Script backend to perform flexible name and Game ID matching across all rows.
+- Added automatic cleanup for player avatars and Bear Trap data in Firebase upon deletion.
+
 ## [1.48.99] - 2026-07-29
 ### Fixed & Added
 - Added global window.getAvatarUrl helper to automatically detect if a player has uploaded a custom profile picture.

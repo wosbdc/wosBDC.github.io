@@ -1916,17 +1916,21 @@ window._executeLogBearTrapWinner = async (name, trap) => {
         const res = await fetch(url).then(r => r.json());
         
         if (res && res.success) {
-            // Delete from Firebase account system
+            // Delete from Firebase account system and avatars
             if (targetUid) {
-                await remove(ref(db, `users/${targetUid}`));
+                await remove(ref(db, `users/${targetUid}`)).catch(() => null);
+            }
+            if (gameId) {
+                await remove(ref(db, `avatars/${gameId}`)).catch(() => null);
+                await remove(ref(db, `beartrap/${gameId}`)).catch(() => null);
             }
             
             // Instantly remove from local data so the player card disappears immediately
             if (typeof globalData !== 'undefined' && globalData && globalData.chiefsList) {
-                globalData.chiefsList = globalData.chiefsList.filter(row => row[0] !== name);
+                globalData.chiefsList = globalData.chiefsList.filter(row => String(row[0]).trim().toLowerCase() !== String(name).trim().toLowerCase());
             }
             
-            window.showToast(`?? Successfully deleted ${name}.`, "success");
+            window.showToast(`🗑️ Successfully deleted ${name}.`, "success");
             if (document.querySelector('.admin-tab-content')) views.admin();
         } else {
             window.showToast(`Error: ${res ? res.message : 'Unknown backend error'}`, "error");
