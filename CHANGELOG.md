@@ -1,3 +1,9 @@
+## [1.48.96] - 2026-07-29
+### Changed & Fixed
+- Renamed Bear Trap summary card label from Missing (NO) to Donated (NO).
+- Updated Bear Trap table row badge for un-donated status from Missing to NO.
+- Fixed live UI reactivity so entering a donation greater than 0 instantly updates the status badge to Donated in real-time.
+
 ## [1.48.95] - 2026-07-29
 ### Changed
 - Moved Alliance Championship tool button from the In-Dev tab to the Daily Tools tab under Active Alliance Events Tools in the Admin Menu.

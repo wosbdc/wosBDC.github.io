@@ -7822,7 +7822,7 @@ html += `</select>
                 <div style="font-size:32px; font-weight:bold; color:var(--success);" id="bt-yes-count">${yesCount}</div>
               </div>
               <div class="card" style="text-align:center; padding:20px;">
-                <div style="font-size:13px; color:var(--text-muted); font-weight:bold; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Missing (NO)</div>
+                <div style="font-size:13px; color:var(--text-muted); font-weight:bold; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Donated (NO)</div>
                 <div style="font-size:32px; font-weight:bold; color:var(--danger);" id="bt-no-count">${noCount}</div>
               </div>
               <div class="card" style="text-align:center; padding:20px;">
@@ -7870,7 +7870,7 @@ html += `</select>
                          <td style="padding:12px; font-weight:bold; color:var(--text-main);">${escapeHTML(p.name)}</td>
                          <td style="padding:8px 12px; text-align:center;">
                            <button onclick="window.onBtToggleSingle('${gIdStr}', this)" data-signed="${isSignedUp ? 'true' : 'false'}" style="border:none; padding:6px 14px; font-weight:bold; border-radius:20px; cursor:pointer; font-size:12px; transition:all 0.2s ease; background:${isSignedUp ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)'}; color:${isSignedUp ? '#10b981' : '#ef4444'}; border:1px solid ${isSignedUp ? '#10b981' : '#ef4444'};">
-                             ${isSignedUp ? '✅ Donated' : '❌ Missing'}
+                             ${isSignedUp ? '✅ Donated' : '❌ NO'}
                            </button>
                          </td>
                          <td style="padding:12px; text-align:right;">
@@ -7927,7 +7927,7 @@ html += `</select>
             btnElement.style.background = newStatus ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)';
             btnElement.style.color = newStatus ? '#10b981' : '#ef4444';
             btnElement.style.borderColor = newStatus ? '#10b981' : '#ef4444';
-            btnElement.innerHTML = newStatus ? '✅ Donated' : '❌ Missing';
+            btnElement.innerHTML = newStatus ? '✅ Donated' : '❌ NO';
 
             const ok = await window.toggleBearTrapStatus(gameId, newStatus);
             if (!ok) {
@@ -7936,7 +7936,7 @@ html += `</select>
                 btnElement.style.background = currentStatus ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)';
                 btnElement.style.color = currentStatus ? '#10b981' : '#ef4444';
                 btnElement.style.borderColor = currentStatus ? '#10b981' : '#ef4444';
-                btnElement.innerHTML = currentStatus ? '✅ Donated' : '❌ Missing';
+                btnElement.innerHTML = currentStatus ? '✅ Donated' : '❌ NO';
             } else {
                 let pData = await window.fetchBearTrapData();
                 let newYes = 0;
@@ -8056,7 +8056,21 @@ html += `</select>
         window.onBtDonationChange = async (gameId, newVal) => {
             if (newVal === '') newVal = "0";
             const ok = await window.updateBearTrapDonationInline(gameId, newVal);
-            if (ok && Number(newVal) > 0) await window.autoSyncBtSignup(gameId);
+            if (ok && Number(newVal) > 0) {
+                await window.autoSyncBtSignup(gameId);
+                const inputEl = document.querySelector(`.bt-donation-input[data-gid="${gameId}"]`);
+                if (inputEl) {
+                    const row = inputEl.closest('tr');
+                    const btn = row ? row.querySelector('button[data-signed]') : null;
+                    if (btn) {
+                        btn.setAttribute('data-signed', 'true');
+                        btn.style.background = 'rgba(16,185,129,0.15)';
+                        btn.style.color = '#10b981';
+                        btn.style.borderColor = '#10b981';
+                        btn.innerHTML = '✅ Donated';
+                    }
+                }
+            }
             if (ok) {
                 if (window.showToast) window.showToast("Saved donation!", "success");
             } else {
