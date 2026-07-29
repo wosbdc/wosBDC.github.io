@@ -7320,11 +7320,11 @@ html += `</select>
                 <div id="champStatTotal" style="font-size:28px; font-weight:bold; color:var(--text-main); margin-top:4px;">${totalCount}</div>
               </div>
               <div style="background:var(--card-bg); border:1px solid rgba(16,185,129,0.3); border-radius:12px; padding:16px; text-align:center;">
-                <div style="font-size:12px; color:#10b981; text-transform:uppercase; font-weight:bold;">✅ Donated (YES)</div>
+                <div style="font-size:12px; color:#10b981; text-transform:uppercase; font-weight:bold;">✅ Signed-up (YES)</div>
                 <div id="champStatYes" style="font-size:28px; font-weight:bold; color:#10b981; margin-top:4px;">${yesCount}</div>
               </div>
               <div style="background:var(--card-bg); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:16px; text-align:center;">
-                <div style="font-size:12px; color:#ef4444; text-transform:uppercase; font-weight:bold;">❌ Action Required (NO)</div>
+                <div style="font-size:12px; color:#ef4444; text-transform:uppercase; font-weight:bold;">❌ Not Signed up (NO)</div>
                 <div id="champStatNo" style="font-size:28px; font-weight:bold; color:#ef4444; margin-top:4px;">${noCount}</div>
               </div>
               <div style="background:var(--card-bg); border:1px solid rgba(59,130,246,0.3); border-radius:12px; padding:16px; text-align:center;">
