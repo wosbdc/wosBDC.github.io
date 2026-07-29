@@ -1,3 +1,7 @@
+## [1.48.97] - 2026-07-29
+### Fixed
+- Fixed Permission Denied error when resetting Bear Trap Event by correcting the winner configuration Firebase reference (config/bearTrapWinners) and adding permission fallback error handling.
+
 ## [1.48.96] - 2026-07-29
 ### Changed & Fixed
 - Renamed Bear Trap summary card label from Missing (NO) to Donated (NO).

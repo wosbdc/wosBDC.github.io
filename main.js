@@ -8591,36 +8591,40 @@ window.resetBearTrapEvent = async () => {
 
     try {
         const [donSnap, btSnap] = await Promise.all([
-            get(ref(db, 'beartrap_donations')),
-            get(ref(db, 'beartrap'))
+            get(ref(db, 'beartrap_donations')).catch(() => null),
+            get(ref(db, 'beartrap')).catch(() => null)
         ]);
 
-        if (donSnap.exists()) {
+        if (donSnap && donSnap.exists()) {
             const dons = donSnap.val();
-            for (const [key, don] of Object.entries(dons)) {
+            const donPromises = Object.entries(dons).map(([key, don]) => {
                 if (don) {
                     const currentAmt = don.current || 0;
                     don.allTime = (don.allTime || 0) + currentAmt;
                     don.current = 0;
                     don.lastUpdated = Date.now();
-                    await set(ref(db, `beartrap_donations/${key}`), don);
+                    return set(ref(db, `beartrap_donations/${key}`), don).catch(() => null);
                 }
-            }
+            }).filter(Boolean);
+            await Promise.all(donPromises);
         }
 
-        if (btSnap.exists()) {
+        if (btSnap && btSnap.exists()) {
             const bts = btSnap.val();
-            for (const key of Object.keys(bts)) {
-                await set(ref(db, `beartrap/${key}/signedUp`), false);
-            }
+            const btPromises = Object.keys(bts).map(key => 
+                set(ref(db, `beartrap/${key}/signedUp`), false).catch(() => null)
+            );
+            await Promise.all(btPromises);
         }
 
         await Promise.all([
-            set(ref(db, 'beartrap_wins/1'), { name: "Pending...", score: 0 }),
-            set(ref(db, 'beartrap_wins/2'), { name: "Pending...", score: 0 })
+            set(ref(db, 'config/bearTrapWinners/1'), { name: "Pending...", score: "-", timestamp: Date.now() }).catch(() => null),
+            set(ref(db, 'config/bearTrapWinners/2'), { name: "Pending...", score: "-", timestamp: Date.now() }).catch(() => null)
         ]);
 
-        window.logAdminAction("Bear Trap Full Event Reset", "Archived current donations, reset scores to 0, cleared signups to NO, and reset champions to Pending...", "All Players");
+        try {
+            window.logAdminAction("Bear Trap Full Event Reset", "Archived current donations, reset scores to 0, cleared signups to NO, and reset champions to Pending...", "All Players");
+        } catch(e) {}
 
         if (window.showToast) window.showToast("✅ Bear Trap Event successfully reset!", "success");
 
