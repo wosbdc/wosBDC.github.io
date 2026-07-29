@@ -1,3 +1,7 @@
+## [1.48.101] - 2026-07-29
+### Enhanced
+- Enhanced adminDeletePlayer to search and remove player records directly from Firebase database nodes (users, avatars, beartrap, beartrap_donations, staffProfiles) even if the entry is orphaned or not found in Google Sheets.
+
 ## [1.48.100] - 2026-07-29
 ### Fixed
 - Fixed Player Not Found error when deleting a player from the Player Database Editor by updating Google Apps Script backend to perform flexible name and Game ID matching across all rows.

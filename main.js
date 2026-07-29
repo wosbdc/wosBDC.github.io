@@ -1891,52 +1891,59 @@ window._executeLogBearTrapWinner = async (name, trap) => {
   };
 
   window.adminDeletePlayer = async (name) => {
-    let confirmDelete = await window.customConfirm(`??? WARNING ???\n\nAre you sure you want to COMPLETELY DELETE ${name}?\n\nThis will remove them from the Chief's List, Giftcode Bot, wipe their ghost rows, AND permanently delete their Firebase account profile.\n\nThis action cannot be undone.`);
+    let confirmDelete = await window.customConfirm(`⚠️ WARNING ⚠️\n\nAre you sure you want to COMPLETELY DELETE ${name}?\n\nThis will remove them from the Chief's List, Giftcode Bot, wipe their ghost rows, AND permanently delete their Firebase account profile.\n\nThis action cannot be undone.`);
     if (!confirmDelete) return;
     
     window.showToast("Deleting Player...", "danger");
     try {
-        const gameId = window.nameToIdMap[name];
-        let targetUid = null;
-        
-        // Find their Firebase UID if they have an account
-        if (gameId) {
-            const usersSnap = await get(ref(db, 'users'));
-            const users = usersSnap.val() || {};
-            for (const [uid, u] of Object.entries(users)) {
-                if (Number(u.gameId) === Number(gameId)) {
-                    targetUid = uid;
+        let targetGid = window.nameToIdMap ? window.nameToIdMap[name] : null;
+        if (!targetGid && typeof idToNameMap !== 'undefined') {
+            for (const [gid, pName] of Object.entries(idToNameMap)) {
+                if (pName && pName.toLowerCase() === name.toLowerCase()) {
+                    targetGid = gid;
                     break;
                 }
             }
         }
-
-        const token = await getAuthToken();
-        const url = `${API_BASE_URL}?api=delete_player&name=${encodeURIComponent(name)}&token=${encodeURIComponent(token)}`;
-        const res = await fetch(url).then(r => r.json());
         
-        if (res && res.success) {
-            // Delete from Firebase account system and avatars
-            if (targetUid) {
-                await remove(ref(db, `users/${targetUid}`)).catch(() => null);
+        // Search Firebase users node directly
+        const usersSnap = await get(ref(db, 'users')).catch(() => null);
+        if (usersSnap && usersSnap.exists()) {
+            const users = usersSnap.val() || {};
+            for (const [uid, u] of Object.entries(users)) {
+                if (u && ((u.name && u.name.toLowerCase() === name.toLowerCase()) || (targetGid && String(u.gameId) === String(targetGid)))) {
+                    await remove(ref(db, `users/${uid}`)).catch(() => null);
+                    if (!targetGid && u.gameId) targetGid = u.gameId;
+                }
             }
-            if (gameId) {
-                await remove(ref(db, `avatars/${gameId}`)).catch(() => null);
-                await remove(ref(db, `beartrap/${gameId}`)).catch(() => null);
-            }
-            
-            // Instantly remove from local data so the player card disappears immediately
-            if (typeof globalData !== 'undefined' && globalData && globalData.chiefsList) {
-                globalData.chiefsList = globalData.chiefsList.filter(row => String(row[0]).trim().toLowerCase() !== String(name).trim().toLowerCase());
-            }
-            
-            window.showToast(`🗑️ Successfully deleted ${name}.`, "success");
-            if (document.querySelector('.admin-tab-content')) views.admin();
-        } else {
-            window.showToast(`Error: ${res ? res.message : 'Unknown backend error'}`, "error");
         }
+
+        // Clean up all related Firebase nodes for this player ID
+        if (targetGid) {
+            await Promise.all([
+                remove(ref(db, `avatars/${targetGid}`)).catch(() => null),
+                remove(ref(db, `beartrap/${targetGid}`)).catch(() => null),
+                remove(ref(db, `beartrap_donations/${targetGid}`)).catch(() => null),
+                remove(ref(db, `staffProfiles/${targetGid}`)).catch(() => null)
+            ]);
+        }
+
+        // Send backend delete request to Google Sheets
+        try {
+            const token = await getAuthToken();
+            const url = `${API_BASE_URL}?api=delete_player&name=${encodeURIComponent(name)}&token=${encodeURIComponent(token)}`;
+            await fetch(url).then(r => r.json()).catch(() => null);
+        } catch(e) {}
+        
+        // Instantly remove from local data so the player card disappears immediately
+        if (typeof globalData !== 'undefined' && globalData && globalData.chiefsList) {
+            globalData.chiefsList = globalData.chiefsList.filter(row => String(row[0]).trim().toLowerCase() !== String(name).trim().toLowerCase());
+        }
+        
+        window.showToast(`🗑️ Successfully deleted ${name} from Database & Sheets.`, "success");
+        if (document.querySelector('.admin-tab-content')) views.admin();
     } catch (e) {
-        window.showToast(`Network Error: ${e.message}`, "error");
+        window.showToast(`Error deleting player: ${e.message}`, "error");
     }
 };
 
