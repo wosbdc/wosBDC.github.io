@@ -1900,7 +1900,7 @@ window._executeLogBearTrapWinner = async (name, trap) => {
   };
 
   window.adminDeletePlayer = async (name) => {
-    let confirmDelete = await window.customConfirm(`⚠️ WARNING ⚠️\n\nAre you sure you want to COMPLETELY DELETE ${name}?\n\nThis will remove them from the Chief's List, Giftcode Bot, wipe their ghost rows, AND permanently delete their Firebase account profile.\n\nThis action cannot be undone.`);
+    let confirmDelete = await window.customConfirm(`⚠️ WARNING ⚠️\n\nAre you sure you want to COMPLETELY DELETE ${name}?\n\nThis will remove them from the database, wipe their ghost rows, AND permanently delete their Firebase account profile.\n\nThis action cannot be undone.`);
     if (!confirmDelete) return;
     
     window.showToast("Deleting Player...", "danger");
@@ -1915,7 +1915,11 @@ window._executeLogBearTrapWinner = async (name, trap) => {
             }
         }
         
-        // Search Firebase users node directly
+        // 1. Purge from Firebase roster_live node directly by name
+        await remove(ref(db, `roster_live/${name}`)).catch(() => null);
+        await remove(ref(db, `roster_live/${encodeURIComponent(name)}`)).catch(() => null);
+        
+        // 2. Search Firebase users node directly and purge
         const usersSnap = await get(ref(db, 'users')).catch(() => null);
         if (usersSnap && usersSnap.exists()) {
             const users = usersSnap.val() || {};
@@ -1927,7 +1931,7 @@ window._executeLogBearTrapWinner = async (name, trap) => {
             }
         }
 
-        // Clean up all related Firebase nodes for this player ID
+        // 3. Clean up all related Firebase nodes for this player ID
         if (targetGid) {
             await Promise.all([
                 remove(ref(db, `avatars/${targetGid}`)).catch(() => null),
@@ -1937,20 +1941,26 @@ window._executeLogBearTrapWinner = async (name, trap) => {
             ]);
         }
 
-        // Send backend delete request to Google Sheets
+        // 4. Non-blocking backend delete request to Google Sheets (4-second timeout so page NEVER hangs)
         try {
             const token = await getAuthToken();
             const url = `${API_BASE_URL}?api=delete_player&name=${encodeURIComponent(name)}&token=${encodeURIComponent(token)}`;
-            await fetch(url).then(r => r.json()).catch(() => null);
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 4000);
+            fetch(url, { signal: controller.signal }).catch(() => null).finally(() => clearTimeout(timeoutId));
         } catch(e) {}
         
-        // Instantly remove from local data so the player card disappears immediately
+        // 5. Instantly clear from local caches and refresh UI
+        if (window.rosterCache) {
+            delete window.rosterCache[name];
+        }
         if (typeof globalData !== 'undefined' && globalData && globalData.chiefsList) {
             globalData.chiefsList = globalData.chiefsList.filter(row => String(row[0]).trim().toLowerCase() !== String(name).trim().toLowerCase());
         }
         
-        window.showToast(`🗑️ Successfully deleted ${name} from Database & Sheets.`, "success");
+        window.showToast(`🗑️ Successfully deleted ${name}.`, "success");
         if (document.querySelector('.admin-tab-content')) views.admin();
+        else if (window.location.hash.includes('admin') || (typeof views !== 'undefined' && views.admin)) views.admin();
     } catch (e) {
         window.showToast(`Error deleting player: ${e.message}`, "error");
     }

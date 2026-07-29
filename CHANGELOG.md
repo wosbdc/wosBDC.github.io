@@ -1,3 +1,7 @@
+## [1.48.104] - 2026-07-29
+### Fixed & Improved
+- Updated adminDeletePlayer to purge roster_live node in Firebase directly and use non-blocking background fetch so player deletion completes instantly without hanging when Google Sheets backend is slow or missing the entry.
+
 ## [1.48.103] - 2026-07-29
 ### Fixed
 - Fixed fetchRoster in main.js to skip spreadsheet title and table header rows 0-2 so column titles like Chief Name and Game ID are never synced as player entries to Firebase.
