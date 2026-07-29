@@ -1,3 +1,7 @@
+## [1.48.98] - 2026-07-29
+### Changed
+- Consolidated Multi-BT Donations header buttons (Crown Winner, Reset BT Winners, Reset BT Event, Reset Player, and DB Editor) into a clean Options dropdown menu.
+
 ## [1.48.97] - 2026-07-29
 ### Fixed
 - Fixed Permission Denied error when resetting Bear Trap Event by correcting the winner configuration Firebase reference (config/bearTrapWinners) and adding permission fallback error handling.
