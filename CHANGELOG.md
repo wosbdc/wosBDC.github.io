@@ -1,3 +1,8 @@
+## [1.48.99] - 2026-07-29
+### Fixed & Added
+- Added global window.getAvatarUrl helper to automatically detect if a player has uploaded a custom profile picture.
+- Replaced non-existent image path fallbacks with dynamic UI Avatars so players without uploaded avatars show clean personalized initial avatars instead of broken image boxes.
+
 ## [1.48.98] - 2026-07-29
 ### Changed
 - Consolidated Multi-BT Donations header buttons (Crown Winner, Reset BT Winners, Reset BT Event, Reset Player, and DB Editor) into a clean Options dropdown menu.

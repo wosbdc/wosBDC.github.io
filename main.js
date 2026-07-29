@@ -948,6 +948,14 @@ onValue(ref(db, 'avatars'), (snap) => {
   if (document.querySelector('.r4-grid')) views.roster();
 });
 
+window.getAvatarUrl = (gameId, name = '', background = '06b6d4') => {
+    if (gameId && avatarMap && avatarMap[gameId]) {
+        return avatarMap[gameId];
+    }
+    const cleanName = (name || 'Player').trim();
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(cleanName)}&background=${background}&color=fff&bold=true&size=128`;
+};
+
 onValue(ref(db, 'staffProfiles'), (snap) => {
   staffProfilesMap = snap.val() || {};
   window.staffProfilesMap = staffProfilesMap; // Attach to window for global access
@@ -5482,9 +5490,9 @@ function renderAvatarStack(playersList) {
         for (const [gid, name] of Object.entries(idToNameMap)) {
             if (name.toLowerCase() === pName.toLowerCase()) { champId = gid; break; }
         }
-        const avatarSrc = (champId && avatarMap[champId]) ? avatarMap[champId] : `images/${pName}.png`;
+        const avatarSrc = window.getAvatarUrl(champId, pName, 'FFD700');
         return `<div style="width: 50px; height: 50px; border-radius: 50%; border: 2px solid #FFD700; overflow: hidden; flex-shrink: 0; box-shadow: 0 0 10px rgba(255,215,0,0.2);">
-            <img src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='images/default.png';">
+            <img src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(pName)}&background=FFD700&color=fff&bold=true&size=128';">
           </div>`;
     }
     let displayList = playersList.slice(0, 3);
@@ -5496,11 +5504,11 @@ function renderAvatarStack(playersList) {
         for (const [gid, name] of Object.entries(idToNameMap)) {
             if (name.toLowerCase() === pName.toLowerCase()) { champId = gid; break; }
         }
-        const avatarSrc = (champId && avatarMap[champId]) ? avatarMap[champId] : `images/${pName}.png`;
+        const avatarSrc = window.getAvatarUrl(champId, pName, 'FFD700');
         let marginLeft = idx === 0 ? '0px' : '-14px';
         let zIndex = 10 - idx;
         stackHtml += `<div style="width: 42px; height: 42px; border-radius: 50%; border: 2px solid #FFD700; overflow: hidden; margin-left: ${marginLeft}; z-index: ${zIndex}; background: var(--card-bg); box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
-            <img src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='images/default.png';">
+            <img src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(pName)}&background=FFD700&color=fff&bold=true&size=128';">
           </div>`;
     });
     if (overflowCount > 0) {
@@ -6434,7 +6442,7 @@ const views = {
       for (const [uid, u] of Object.entries(users)) {
         const cName = idToNameMap[u.gameId] || "Not Found";
         const hasAvatar = avatarMap[u.gameId] ? true : false;
-        const avatarSrc = avatarMap[u.gameId] || `images/${cName}.png`;
+        const avatarSrc = window.getAvatarUrl(u.gameId, cName);
         
         const hasAlts = (u.linkedGameIds && Array.isArray(u.linkedGameIds) && u.linkedGameIds.length > 0);
         
@@ -6468,7 +6476,7 @@ const views = {
             <td style="padding:10px; color:var(--text-muted); font-size:12px;">${u.email}</td>
             <td style="padding:10px;">
               <div style="width:30px; height:30px; border-radius:50%; overflow:hidden; background:var(--accent);">
-                <img src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.style.display='none';">
+                <img src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(cName)}&background=06b6d4&color=fff&bold=true&size=128';">
               </div>
             </td>
             <td style="padding:10px; display:flex; gap:5px; flex-wrap:wrap;">
@@ -8980,7 +8988,7 @@ window.resetBearTrapEvent = async () => {
                       <div style="display:flex; gap:16px; align-items:center;">
                           <!-- Avatar (clickable to upload) -->
                           <div style="width:70px; height:70px; border-radius:50%; border:2px solid #06b6d4; box-shadow:0 0 15px rgba(6,182,212,0.5); overflow:hidden; background:var(--bg-secondary); position:relative; cursor:pointer; flex-shrink:0;" onclick="window._uploadTargetId='${gid}'; document.getElementById('avatarUploadInput').click();" title="Change Alt Avatar">
-                              <img id="altAvatarImg-${gid}" src="${avatarMap[gid] || `images/${altName}.png`}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                              <img id="altAvatarImg-${gid}" src="${window.getAvatarUrl(gid, altName)}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(altName)}&background=06b6d4&color=fff&bold=true&size=128';">
                               <div id="altAvatarFallback-${gid}" style="display:none; align-items:center; justify-content:center; width:100%; height:100%; font-size:24px; font-weight:bold; color:#fff;">${altName.charAt(0).toUpperCase()}</div>
                               <div style="position:absolute; inset:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0'"><span style="font-size:18px;">✏️</span></div>
                           </div>
@@ -9109,7 +9117,7 @@ window.resetBearTrapEvent = async () => {
           }
       }
 
-      const avatarSrc = avatarMap[currentUser.gameId] || `images/${currentChiefName}.png`;
+      const avatarSrc = window.getAvatarUrl(currentUser.gameId, currentChiefName);
       const isEnrolled = isMainEnrolled || enrolledGameIds.has(currentUser.gameId.toString());
 
       const botStatusHtml = isEnrolled 
@@ -10291,10 +10299,10 @@ window.resetBearTrapEvent = async () => {
                       champId = gid; break;
                   }
               }
-              const avatarSrc = (champId && avatarMap[champId]) ? avatarMap[champId] : `images/${champName}.png`;
+              const avatarSrc = window.getAvatarUrl(champId, champName, 'FFD700');
               avatarHtml = `
                 <div style="width: 50px; height: 50px; border-radius: 50%; border: 2px solid #FFD700; overflow: hidden; flex-shrink: 0; box-shadow: 0 0 10px rgba(255,215,0,0.2);">
-                  <img src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='images/default.png';">
+                  <img src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(champName)}&background=FFD700&color=fff&bold=true&size=128';">
                 </div>
               `;
            }
