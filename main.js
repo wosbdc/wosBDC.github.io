@@ -11,7 +11,10 @@ window.fetchRoster = async () => {
    try {
        const snap = await get(ref(db, 'roster_live'));
        if (snap.exists()) {
-           window.rosterCache = snap.val();
+           let cached = snap.val() || {};
+           delete cached['Chief Name'];
+           delete cached['chief name'];
+           window.rosterCache = cached;
            return window.rosterCache;
        }
    } catch(e) { console.warn('Firebase read error:', e); }
@@ -19,19 +22,25 @@ window.fetchRoster = async () => {
    const rosterRaw = await fetchSheet("Chief's List");
    let newRoster = {};
    if (rosterRaw && rosterRaw.length > 1) {
-       for (let i = 1; i < rosterRaw.length; i++) {
+       // Rows 0-2 on Chief's List are title and table header labels ("Chief Name", "Game ID")
+       for (let i = 3; i < rosterRaw.length; i++) {
            const name = rosterRaw[i][0] ? rosterRaw[i][0].toString().trim() : '';
-           if (!name) continue;
+           const gameId = rosterRaw[i][1] ? rosterRaw[i][1].toString().trim() : '';
+           if (!name || name.toLowerCase() === 'chief name' || gameId.toLowerCase() === 'game id') continue;
            newRoster[name] = {
                name: name,
-               gameId: rosterRaw[i][1] ? rosterRaw[i][1].toString().trim() : '',
+               gameId: gameId,
                furnaceLevel: rosterRaw[i][2] || '',
                giftCodes: rosterRaw[i][3] || '',
                joinedDate: rosterRaw[i][4] || '',
                timeActive: rosterRaw[i][5] || ''
            };
        }
-       try { await set(ref(db, 'roster_live'), newRoster); } catch(e) { console.warn('Could not seed Firebase', e); }
+       try {
+           await set(ref(db, 'roster_live'), newRoster);
+           await remove(ref(db, 'roster_live/Chief Name')).catch(() => null);
+           await remove(ref(db, 'roster_live/chief name')).catch(() => null);
+       } catch(e) { console.warn('Could not seed Firebase', e); }
    }
    window.rosterCache = newRoster;
    return newRoster;

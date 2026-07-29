@@ -1,3 +1,7 @@
+## [1.48.103] - 2026-07-29
+### Fixed
+- Fixed fetchRoster in main.js to skip spreadsheet title and table header rows 0-2 so column titles like Chief Name and Game ID are never synced as player entries to Firebase.
+
 ## [1.48.102] - 2026-07-29
 ### Fixed
 - Fixed header row collision in Google Apps Script when deleting a player whose name is literally Chief Name by skipping table header rows 1-3.
