@@ -1,3 +1,7 @@
+## [1.48.102] - 2026-07-29
+### Fixed
+- Fixed header row collision in Google Apps Script when deleting a player whose name is literally Chief Name by skipping table header rows 1-3.
+
 ## [1.48.101] - 2026-07-29
 ### Enhanced
 - Enhanced adminDeletePlayer to search and remove player records directly from Firebase database nodes (users, avatars, beartrap, beartrap_donations, staffProfiles) even if the entry is orphaned or not found in Google Sheets.
