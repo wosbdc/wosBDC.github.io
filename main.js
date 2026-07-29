@@ -6348,6 +6348,7 @@ const views = {
               <div style="display:flex; flex-direction:column; gap:12px; align-items:center;">
                 <button onclick="views.beartrap()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(16,185,129,0.3);">🐻 Bear Trap</button>
                 <button onclick="views.showdownAdmin()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px;">⚔️ ShowDown</button>
+                <button onclick="views.championshipAdmin()" style="background:linear-gradient(135deg, #f59e0b, #d97706); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(217,119,6,0.3);">🏆 Alliance Championship</button>
               </div>
             </div>
 
@@ -6380,7 +6381,6 @@ const views = {
               </div>
               
               <div style="background:var(--card-bg); padding:20px; border-radius:12px; border:1px solid var(--border); text-align:center; display:flex; flex-direction:column; gap:15px; align-items:center;">
-                <button onclick="views.championshipAdmin()" style="background:linear-gradient(135deg, #f59e0b, #d97706); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px; box-shadow:0 4px 12px rgba(217,119,6,0.3);">🏆 Alliance Championship</button>
                 <button onclick="views.mercenaryAdmin()" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px; box-shadow:0 4px 12px rgba(239,68,68,0.3);">⚔️ Mercenary Prestige</button>
                 <button onclick="views.polarTerrorsAdmin()" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px; box-shadow:0 4px 12px rgba(14,165,233,0.3);">🐻‍❄️ Polar Terrors Tracker</button>
               </div>

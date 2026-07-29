@@ -1,3 +1,7 @@
+## [1.48.95] - 2026-07-29
+### Changed
+- Moved Alliance Championship tool button from the In-Dev tab to the Daily Tools tab under Active Alliance Events Tools in the Admin Menu.
+
 ## [1.48.94] - 2026-07-29
 ### Changed
 - Renamed Alliance Championship KPI summary card labels from Donated (YES) to Signed-up (YES) and Action Required (NO) to Not Signed up (NO).
