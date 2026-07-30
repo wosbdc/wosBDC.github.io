@@ -1,3 +1,7 @@
+## [1.48.107] - 2026-07-30
+### Added
+- Added Mercenary Prestige page under the Events dropdown in the main navigation bar, including real-time KPI cards, completion progress, search filter, and R4/R5 manager shortcuts.
+
 ## [1.48.106] - 2026-07-29
 ### Removed
 - Removed duplicate Reset Event button and Vault banner from the public Events Showdown view in main.js, keeping event resets strictly protected inside Admin Showdown Data Entry.

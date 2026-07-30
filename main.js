@@ -11195,6 +11195,128 @@ window.resetBearTrapEvent = async () => {
       
     } catch(e) { renderError(e.message); }
   },
+  mercenary: async () => {
+    renderLoading("Loading Mercenary Prestige...");
+    const app = document.getElementById('app');
+    if (!app) return;
+
+    const navbar = document.querySelector('.navbar');
+    if (navbar) navbar.style.display = 'flex';
+
+    try {
+        window.mercenaryCache = null;
+        const [mercenaryData, rosterData] = await Promise.all([
+            window.fetchMercenaryData().catch(() => ({})),
+            window.fetchRoster().catch(() => ({}))
+        ]);
+
+        let rosterList = [];
+        if (rosterData) {
+            Object.values(rosterData).forEach(p => {
+                if (p.name && p.gameId) rosterList.push(p);
+            });
+        }
+        rosterList.sort((a,b) => (a.name || '').localeCompare(b.name || ''));
+
+        let totalCount = rosterList.length;
+        let yesCount = 0;
+        let noCount = 0;
+
+        rosterList.forEach(p => {
+            let gIdStr = String(p.gameId || '').trim();
+            let record = mercenaryData[gIdStr];
+            let isDone = record && record.signedUp;
+            if (isDone) yesCount++;
+            else noCount++;
+        });
+
+        let percentDone = totalCount > 0 ? Math.round((yesCount / totalCount) * 100) : 0;
+        const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+
+        let html = `
+          <div style="display:flex; flex-direction:column; gap:20px; max-width:900px; margin:0 auto; padding-bottom:40px; animation: fadeIn 0.3s ease;">
+            
+            <div style="border-bottom: 2px solid #ef4444; padding-bottom: 14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+              <div>
+                <h2 style="margin:0; color:var(--text-main); font-size:24px; display:flex; align-items:center; gap:10px;">
+                  ⚔️ Mercenary Prestige Event
+                </h2>
+                <p style="margin:4px 0 0 0; color:var(--text-muted); font-size:13px;">Track alliance member participation and status for Mercenary Prestige.</p>
+              </div>
+              ${isManager ? `
+                <button onclick="views.mercenaryAdmin()" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:white; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(239,68,68,0.3);">
+                  ⚙️ Open Manager Mode ➔
+                </button>
+              ` : ''}
+            </div>
+
+            <!-- KPI Cards -->
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:15px;">
+              <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:16px; text-align:center;">
+                <div style="font-size:12px; color:var(--text-muted); text-transform:uppercase; font-weight:bold;">Total Roster</div>
+                <div style="font-size:28px; font-weight:bold; color:var(--text-main); margin-top:4px;">${totalCount}</div>
+              </div>
+              <div style="background:var(--card-bg); border:1px solid rgba(16,185,129,0.3); border-radius:12px; padding:16px; text-align:center;">
+                <div style="font-size:12px; color:#10b981; text-transform:uppercase; font-weight:bold;">✅ Done / Signed Up</div>
+                <div style="font-size:28px; font-weight:bold; color:#10b981; margin-top:4px;">${yesCount}</div>
+              </div>
+              <div style="background:var(--card-bg); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:16px; text-align:center;">
+                <div style="font-size:12px; color:#ef4444; text-transform:uppercase; font-weight:bold;">❌ Pending</div>
+                <div style="font-size:28px; font-weight:bold; color:#ef4444; margin-top:4px;">${noCount}</div>
+              </div>
+              <div style="background:var(--card-bg); border:1px solid rgba(59,130,246,0.3); border-radius:12px; padding:16px; text-align:center;">
+                <div style="font-size:12px; color:#60a5fa; text-transform:uppercase; font-weight:bold;">Completion Rate</div>
+                <div style="font-size:28px; font-weight:bold; color:#60a5fa; margin-top:4px;">${percentDone}%</div>
+              </div>
+            </div>
+
+            <!-- Player Table Card -->
+            <div class="card">
+              <div class="card-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                <span>🛡️ Member Participation Status</span>
+                <input type="text" id="mercPublicSearch" placeholder="🔍 Search player..." onkeyup="window.filterMercPublicTable(this.value)" style="padding:6px 12px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; outline:none; min-width:200px;">
+              </div>
+              
+              <div class="card-table-scroll" style="overflow-x:auto; width:100%; border-radius:8px; border:1px solid var(--border);">
+                <table id="mercPublicTable" style="min-width:600px; width:100%; border-collapse:collapse; text-align:left;">
+                  <thead>
+                    <tr style="background:rgba(255,255,255,0.03); border-bottom:1px solid var(--border);">
+                      <th style="padding:12px 16px;">Player</th>
+                      <th style="padding:12px 16px;">Game ID</th>
+                      <th style="padding:12px 16px; text-align:center;">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${rosterList.map(p => {
+                      let gIdStr = String(p.gameId || '').trim();
+                      let record = mercenaryData[gIdStr];
+                      let isDone = record && record.signedUp;
+                      let avatarUrl = window.getAvatarUrl ? window.getAvatarUrl(gIdStr, p.name) : `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=3b82f6&color=fff`;
+                      return `
+                        <tr class="merc-pub-row" data-name="${p.name.toLowerCase()}" style="border-bottom:1px solid rgba(255,255,255,0.05); transition:background 0.2s;">
+                          <td style="padding:12px 16px; display:flex; align-items:center; gap:10px;">
+                            <img src="${avatarUrl}" style="width:32px; height:32px; border-radius:50%; object-fit:cover; border:1px solid var(--border);" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=3b82f6&color=fff';">
+                            <span style="font-weight:bold; color:var(--text-main);">${escapeHTML(p.name)}</span>
+                          </td>
+                          <td style="padding:12px 16px; color:var(--text-muted); font-size:13px; font-family:monospace;">${escapeHTML(gIdStr)}</td>
+                          <td style="padding:12px 16px; text-align:center;">
+                            ${isDone ? 
+                              `<span style="background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.4); color:#10b981; padding:4px 12px; border-radius:12px; font-weight:bold; font-size:12px; display:inline-flex; align-items:center; gap:4px;">✅ Done</span>` :
+                              `<span style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:4px 12px; border-radius:12px; font-weight:bold; font-size:12px; display:inline-flex; align-items:center; gap:4px;">❌ Pending</span>`
+                            }
+                          </td>
+                        </tr>
+                      `;
+                    }).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        `;
+        app.innerHTML = html;
+    } catch(e) { renderError(e.message); }
+  },
   giftcodes: async () => {
       let contentHtml = '';
       
