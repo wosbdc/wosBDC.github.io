@@ -1,3 +1,7 @@
+## [1.48.105] - 2026-07-29
+### Cleaned
+- Removed redundant Showdown Vault links from the Leaderboards and Events navigation dropdown menus in index.html to streamline the top navigation bar and keep Vault management inside the Showdown page.
+
 ## [1.48.104] - 2026-07-29
 ### Fixed & Improved
 - Updated adminDeletePlayer to purge roster_live node in Firebase directly and use non-blocking background fetch so player deletion completes instantly without hanging when Google Sheets backend is slow or missing the entry.
