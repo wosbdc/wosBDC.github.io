@@ -1,3 +1,7 @@
+## [1.48.109] - 2026-07-30
+### Added
+- Extracted and cropped individual tank graphics for all 5 Phaethon Mercenary Captains (Dr. Toxin Theodore, Zenobia Queen of Violence, Helios Cannon, Callisto Mark II, Behemoth) and embedded each captain thumbnail directly into its level boss card box.
+
 ## [1.48.108] - 2026-07-30
 ### Added
 - Added Phaethon Mercenary Captains & Level Boss Requirements section at the bottom of the Mercenary Prestige page for all 5 boss tiers (Lv 1: Dr. Toxin Theodore, Lv 2: Zenobia Queen of Violence, Lv 3: Helios Cannon, Lv 4: Callisto Mark II, Lv 5: Behemoth) along with an interactive modal to view the official Captains Guide Chart.

@@ -5017,6 +5017,7 @@ window.renderMercenaryCaptainsSectionHtml = () => {
     {
       level: "Lv. 1",
       name: "Dr. Toxin Theodore",
+      image: "./images/merc_boss_lv1.png",
       color: "#22c55e",
       bgGradient: "linear-gradient(135deg, rgba(34,197,94,0.15) 0%, rgba(34,197,94,0.02) 100%)",
       borderColor: "rgba(34,197,94,0.35)",
@@ -5027,6 +5028,7 @@ window.renderMercenaryCaptainsSectionHtml = () => {
     {
       level: "Lv. 2",
       name: "Zenobia Queen of Violence",
+      image: "./images/merc_boss_lv2.png",
       color: "#eab308",
       bgGradient: "linear-gradient(135deg, rgba(234,179,8,0.15) 0%, rgba(234,179,8,0.02) 100%)",
       borderColor: "rgba(234,179,8,0.35)",
@@ -5037,6 +5039,7 @@ window.renderMercenaryCaptainsSectionHtml = () => {
     {
       level: "Lv. 3",
       name: "Helios Cannon",
+      image: "./images/merc_boss_lv3.png",
       color: "#f97316",
       bgGradient: "linear-gradient(135deg, rgba(249,115,22,0.15) 0%, rgba(249,115,22,0.02) 100%)",
       borderColor: "rgba(249,115,22,0.35)",
@@ -5047,6 +5050,7 @@ window.renderMercenaryCaptainsSectionHtml = () => {
     {
       level: "Lv. 4",
       name: "Callisto Mark II",
+      image: "./images/merc_boss_lv4.png",
       color: "#ef4444",
       bgGradient: "linear-gradient(135deg, rgba(239,68,68,0.15) 0%, rgba(239,68,68,0.02) 100%)",
       borderColor: "rgba(239,68,68,0.35)",
@@ -5057,6 +5061,7 @@ window.renderMercenaryCaptainsSectionHtml = () => {
     {
       level: "Lv. 5",
       name: "Behemoth",
+      image: "./images/merc_boss_lv5.png",
       color: "#a855f7",
       bgGradient: "linear-gradient(135deg, rgba(168,85,247,0.15) 0%, rgba(168,85,247,0.02) 100%)",
       borderColor: "rgba(168,85,247,0.35)",
@@ -5073,7 +5078,7 @@ window.renderMercenaryCaptainsSectionHtml = () => {
           🎖️ Phaethon Mercenary Captains & Level Boss Requirements
         </span>
         <button onclick="window.openMercenaryChartModal()" style="background:linear-gradient(135deg, rgba(168,85,247,0.25) 0%, rgba(168,85,247,0.08) 100%); border:1px solid rgba(168,85,247,0.4); color:#c084fc; padding:6px 14px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(168,85,247,0.15);">
-          🖼️ View Captains Chart Diagram
+          🖼️ View Full Captains Guide Chart
         </button>
       </div>
 
@@ -5081,15 +5086,18 @@ window.renderMercenaryCaptainsSectionHtml = () => {
         Track difficulty tiers and unlock requirements for each Phaethon Mercenary Captain boss (Level 1 to Level 5). Requirements will be updated as alliance data is confirmed.
       </p>
 
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:16px;">
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:16px;">
         ${captains.map(c => `
           <div style="background:${c.bgGradient}; border:1px solid ${c.borderColor}; border-radius:12px; padding:16px; display:flex; flex-direction:column; justify-content:space-between; gap:12px; box-shadow:0 4px 15px rgba(0,0,0,0.2); transition:transform 0.2s ease;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
             <div>
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                 <span style="background:${c.badgeBg}; color:${c.badgeColor}; border:1px solid ${c.borderColor}; padding:3px 10px; border-radius:12px; font-size:12px; font-weight:bold;">${c.level}</span>
-                <span style="font-size:18px;">⚙️</span>
+                <span style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:600; letter-spacing:0.5px;">Captain</span>
               </div>
-              <h4 style="margin:0; font-size:16px; color:var(--text-main); font-weight:bold;">${c.name}</h4>
+              <div style="text-align:center; margin:6px 0 10px 0;">
+                <img src="${c.image}" style="max-height:110px; max-width:100%; border-radius:8px; border:1px solid ${c.borderColor}; box-shadow:0 4px 14px rgba(0,0,0,0.35); object-fit:contain;" alt="${c.name}">
+              </div>
+              <h4 style="margin:0; font-size:15px; color:var(--text-main); font-weight:bold; text-align:center;">${c.name}</h4>
             </div>
 
             <div style="background:rgba(0,0,0,0.25); border:1px solid var(--border); border-radius:8px; padding:10px 12px;">
