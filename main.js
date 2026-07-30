@@ -5023,7 +5023,7 @@ window.renderMercenaryCaptainsSectionHtml = () => {
       borderColor: "rgba(34,197,94,0.35)",
       badgeBg: "rgba(34,197,94,0.2)",
       badgeColor: "#4ade80",
-      reqText: "Requirements Pending"
+      reqText: "⚔️ 100% Tier 1 Alliance Progress (Defeat Tier 1 Mercenaries)"
     },
     {
       level: "Lv. 2",
@@ -5034,7 +5034,7 @@ window.renderMercenaryCaptainsSectionHtml = () => {
       borderColor: "rgba(234,179,8,0.35)",
       badgeBg: "rgba(234,179,8,0.2)",
       badgeColor: "#facc15",
-      reqText: "Requirements Pending"
+      reqText: "⚔️ Defeat Lv. 1 Boss + 100% Tier 2 Alliance Progress"
     },
     {
       level: "Lv. 3",
@@ -5045,7 +5045,7 @@ window.renderMercenaryCaptainsSectionHtml = () => {
       borderColor: "rgba(249,115,22,0.35)",
       badgeBg: "rgba(249,115,22,0.2)",
       badgeColor: "#fb923c",
-      reqText: "Requirements Pending"
+      reqText: "⚔️ Defeat Lv. 2 Boss + 100% Tier 3 Alliance Progress"
     },
     {
       level: "Lv. 4",
@@ -5056,7 +5056,7 @@ window.renderMercenaryCaptainsSectionHtml = () => {
       borderColor: "rgba(239,68,68,0.35)",
       badgeBg: "rgba(239,68,68,0.2)",
       badgeColor: "#f87171",
-      reqText: "Requirements Pending"
+      reqText: "⚔️ Defeat Lv. 3 Boss + 100% Tier 4 Alliance Progress"
     },
     {
       level: "Lv. 5",
@@ -5067,7 +5067,7 @@ window.renderMercenaryCaptainsSectionHtml = () => {
       borderColor: "rgba(168,85,247,0.35)",
       badgeBg: "rgba(168,85,247,0.2)",
       badgeColor: "#c084fc",
-      reqText: "Requirements Pending"
+      reqText: "⚔️ Defeat Lv. 4 Boss + 100% Tier 5 Alliance Progress"
     }
   ];
 
