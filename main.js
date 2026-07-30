@@ -5012,6 +5012,121 @@ window.filterShowdownHistoryView = (selectedVal) => {
     }
 };
 
+window.renderMercenaryCaptainsSectionHtml = () => {
+  const captains = [
+    {
+      level: "Lv. 1",
+      name: "Dr. Toxin Theodore",
+      color: "#22c55e",
+      bgGradient: "linear-gradient(135deg, rgba(34,197,94,0.15) 0%, rgba(34,197,94,0.02) 100%)",
+      borderColor: "rgba(34,197,94,0.35)",
+      badgeBg: "rgba(34,197,94,0.2)",
+      badgeColor: "#4ade80",
+      reqText: "Requirements Pending"
+    },
+    {
+      level: "Lv. 2",
+      name: "Zenobia Queen of Violence",
+      color: "#eab308",
+      bgGradient: "linear-gradient(135deg, rgba(234,179,8,0.15) 0%, rgba(234,179,8,0.02) 100%)",
+      borderColor: "rgba(234,179,8,0.35)",
+      badgeBg: "rgba(234,179,8,0.2)",
+      badgeColor: "#facc15",
+      reqText: "Requirements Pending"
+    },
+    {
+      level: "Lv. 3",
+      name: "Helios Cannon",
+      color: "#f97316",
+      bgGradient: "linear-gradient(135deg, rgba(249,115,22,0.15) 0%, rgba(249,115,22,0.02) 100%)",
+      borderColor: "rgba(249,115,22,0.35)",
+      badgeBg: "rgba(249,115,22,0.2)",
+      badgeColor: "#fb923c",
+      reqText: "Requirements Pending"
+    },
+    {
+      level: "Lv. 4",
+      name: "Callisto Mark II",
+      color: "#ef4444",
+      bgGradient: "linear-gradient(135deg, rgba(239,68,68,0.15) 0%, rgba(239,68,68,0.02) 100%)",
+      borderColor: "rgba(239,68,68,0.35)",
+      badgeBg: "rgba(239,68,68,0.2)",
+      badgeColor: "#f87171",
+      reqText: "Requirements Pending"
+    },
+    {
+      level: "Lv. 5",
+      name: "Behemoth",
+      color: "#a855f7",
+      bgGradient: "linear-gradient(135deg, rgba(168,85,247,0.15) 0%, rgba(168,85,247,0.02) 100%)",
+      borderColor: "rgba(168,85,247,0.35)",
+      badgeBg: "rgba(168,85,247,0.2)",
+      badgeColor: "#c084fc",
+      reqText: "Requirements Pending"
+    }
+  ];
+
+  return `
+    <div class="card" style="margin-top:10px;">
+      <div class="card-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <span style="display:flex; align-items:center; gap:8px;">
+          🎖️ Phaethon Mercenary Captains & Level Boss Requirements
+        </span>
+        <button onclick="window.openMercenaryChartModal()" style="background:linear-gradient(135deg, rgba(168,85,247,0.25) 0%, rgba(168,85,247,0.08) 100%); border:1px solid rgba(168,85,247,0.4); color:#c084fc; padding:6px 14px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(168,85,247,0.15);">
+          🖼️ View Captains Chart Diagram
+        </button>
+      </div>
+
+      <p style="color:var(--text-muted); font-size:13px; margin:0 0 16px 0; line-height:1.5;">
+        Track difficulty tiers and unlock requirements for each Phaethon Mercenary Captain boss (Level 1 to Level 5). Requirements will be updated as alliance data is confirmed.
+      </p>
+
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:16px;">
+        ${captains.map(c => `
+          <div style="background:${c.bgGradient}; border:1px solid ${c.borderColor}; border-radius:12px; padding:16px; display:flex; flex-direction:column; justify-content:space-between; gap:12px; box-shadow:0 4px 15px rgba(0,0,0,0.2); transition:transform 0.2s ease;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+            <div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <span style="background:${c.badgeBg}; color:${c.badgeColor}; border:1px solid ${c.borderColor}; padding:3px 10px; border-radius:12px; font-size:12px; font-weight:bold;">${c.level}</span>
+                <span style="font-size:18px;">⚙️</span>
+              </div>
+              <h4 style="margin:0; font-size:16px; color:var(--text-main); font-weight:bold;">${c.name}</h4>
+            </div>
+
+            <div style="background:rgba(0,0,0,0.25); border:1px solid var(--border); border-radius:8px; padding:10px 12px;">
+              <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:bold; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
+                📋 Requirements
+              </div>
+              <div style="font-size:13px; color:var(--text-main); font-weight:500;">
+                ${c.reqText}
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+};
+
+window.openMercenaryChartModal = () => {
+  let modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); backdrop-filter:blur(6px); z-index:99999; display:flex; align-items:center; justify-content:center; padding:20px; box-sizing:border-box; animation:fadeIn 0.2s ease;';
+  modal.onclick = (e) => { if(e.target === modal) modal.remove(); };
+  modal.innerHTML = `
+    <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:16px; max-width:700px; width:100%; max-height:90vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 50px rgba(0,0,0,0.7);">
+      <div style="padding:16px 20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.2);">
+        <h3 style="margin:0; color:var(--text-main); font-size:16px; display:flex; align-items:center; gap:8px;">
+          ⚔️ Phaethon Mercenary Captains Guide Chart
+        </h3>
+        <button onclick="this.closest('div').parentElement.parentElement.remove()" style="background:rgba(255,255,255,0.1); border:none; color:var(--text-main); width:32px; height:32px; border-radius:50%; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center;">✕</button>
+      </div>
+      <div style="padding:20px; overflow-y:auto; flex:1; text-align:center;">
+        <img src="./images/phaethon_mercenary_captains.png" style="max-width:100%; height:auto; border-radius:12px; border:1px solid var(--border); box-shadow:0 8px 25px rgba(0,0,0,0.4);" alt="Phaethon Mercenary Captains Guide">
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+};
+
 // Showdown Missed Days Report Modal
 window.showMissedDaysReportModal = async (btnEl = null) => {
     let origHtml = '';
@@ -8264,6 +8379,8 @@ html += `</select>
               </table>
             </div>
 
+            ${window.renderMercenaryCaptainsSectionHtml()}
+
           </div>
         `;
 
@@ -11312,6 +11429,8 @@ window.resetBearTrapEvent = async () => {
                 </table>
               </div>
             </div>
+
+            ${window.renderMercenaryCaptainsSectionHtml()}
           </div>
         `;
         app.innerHTML = html;
