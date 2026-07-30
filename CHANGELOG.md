@@ -1,3 +1,7 @@
+## [1.48.111] - 2026-07-30
+### Removed
+- Trimmed red 100% progress bars from all 5 Phaethon Mercenary Captain cropped boss images so only clean captain tank graphics appear in each card box.
+
 ## [1.48.110] - 2026-07-30
 ### Added
 - Added official Whiteout Survival Mercenary Prestige unlock requirements and progression flow for all 5 Phaethon Captain bosses (Dr. Toxin Theodore, Zenobia Queen of Violence, Helios Cannon, Callisto Mark II, Behemoth).
