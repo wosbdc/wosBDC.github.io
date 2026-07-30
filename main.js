@@ -10781,17 +10781,7 @@ window.resetBearTrapEvent = async () => {
         });
         playersCard += `</tbody></table></div></div>`;
         
-        const archiveVaultBannerHtml = `
-          <div style="margin-bottom:20px; display:flex; justify-content:flex-end; align-items:center; gap:10px; flex-wrap:wrap;">
-            <button onclick="window.openShowdownArchiveVaultModal()" style="background:linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(6,182,212,0.05) 100%); border:1px solid rgba(6,182,212,0.4); color:var(--accent); padding:8px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 12px rgba(6,182,212,0.15); transition:all 0.2s ease;">
-              📜 View Showdown Archive Vault
-            </button>
-            <button onclick="window.resetCurrentShowdown()" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:var(--danger); padding:8px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:8px; transition:all 0.2s ease;">
-              🔄 Reset Event
-            </button>
-          </div>
-        `;
-        html += archiveVaultBannerHtml + allianceCard + playersCard + `</div>`;
+        html += allianceCard + playersCard + `</div>`;
         app.innerHTML = html;
        
     } catch(e) { renderError(e.message); }

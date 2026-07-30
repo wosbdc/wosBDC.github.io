@@ -1,3 +1,7 @@
+## [1.48.106] - 2026-07-29
+### Removed
+- Removed duplicate Reset Event button and Vault banner from the public Events Showdown view in main.js, keeping event resets strictly protected inside Admin Showdown Data Entry.
+
 ## [1.48.105] - 2026-07-29
 ### Cleaned
 - Removed redundant Showdown Vault links from the Leaderboards and Events navigation dropdown menus in index.html to streamline the top navigation bar and keep Vault management inside the Showdown page.
