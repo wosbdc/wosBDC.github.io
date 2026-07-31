@@ -1,3 +1,9 @@
+## [1.48.118] - 2026-07-31
+### Added
+- Transformed Mercenary Prestige page into an elite 🏆 Wall of Champions.
+- Introduced ⚔️ 25/25 Phaethon Master badges for members who clear all 25 scout battles.
+- Added Alliance Victory KPI progress bar and view toggle (Champion Wall vs Roster Status).
+
 ## [1.48.117] - 2026-07-31
 ### Added
 - Added live Current / Next Event countdown widget to Global Timers sidebar.

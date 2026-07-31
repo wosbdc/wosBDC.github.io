@@ -8353,8 +8353,8 @@ html += `</select>
                         <tr class="merc-row" data-name="${escapeHTML((p.name || '').toLowerCase())}" data-gid="${gIdStr}" data-signed="${isDone ? 'yes' : 'no'}" style="border-bottom:1px solid var(--border);">
                           <td class="merc-name-cell" style="padding:14px 20px; font-weight:bold; color:var(--text-main); font-size:15px;">${escapeHTML(p.name)}</td>
                           <td style="padding:14px 20px; text-align:right;">
-                            <button class="merc-toggle-btn" onclick="window.onMercToggle('${gIdStr}', this)" style="background:${isDone ? '#10b981' : 'rgba(239,68,68,0.15)'}; color:${isDone ? '#ffffff' : '#ef4444'}; border:${isDone ? 'none' : '1px solid rgba(239,68,68,0.4)'}; padding:6px 20px; border-radius:20px; font-weight:bold; cursor:pointer; font-size:13px; transition:0.2s; box-shadow:${isDone ? '0 2px 8px rgba(16,185,129,0.35)' : 'none'};">
-                              ${isDone ? '✅ Done' : '❌ Not Done'}
+                            <button class="merc-toggle-btn" onclick="window.onMercToggle('${gIdStr}', this)" style="background:${isDone ? 'linear-gradient(135deg, #eab308, #ca8a04)' : 'rgba(239,68,68,0.15)'}; color:${isDone ? '#ffffff' : '#ef4444'}; border:${isDone ? 'none' : '1px solid rgba(239,68,68,0.4)'}; padding:6px 20px; border-radius:20px; font-weight:bold; cursor:pointer; font-size:13px; transition:0.2s; box-shadow:${isDone ? '0 2px 8px rgba(234,179,8,0.35)' : 'none'};">
+                              ${isDone ? '⚔️ Phaethon Master (Done)' : '❌ Not Done (0/25)'}
                             </button>
                           </td>
                         </tr>
@@ -8417,15 +8417,15 @@ html += `</select>
                 return;
             }
             const text = "⚔️ Mercenary Prestige — Not Done Yet (" + list.length + "):\n" + list.join(", ");
-            const doCopy = (txt) => {
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                    navigator.clipboard.writeText(txt).then(() => window.showToast("Copied Not Done list to clipboard!", "success")).catch(() => fallback(txt));
-                } else { fallback(txt); }
-            };
             const fallback = (txt) => {
                 const ta = document.createElement('textarea'); ta.value = txt;
                 document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
                 window.showToast("Copied Not Done list to clipboard!", "success");
+            };
+            const doCopy = (txt) => {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(txt).then(() => window.showToast("Copied Not Done list to clipboard!", "success")).catch(() => fallback(txt));
+                } else { fallback(txt); }
             };
             doCopy(text);
         };
@@ -8444,11 +8444,11 @@ html += `</select>
             btn.disabled = true;
             row.setAttribute('data-signed', willBeDone ? 'yes' : 'no');
             
-            btn.style.background = willBeDone ? '#10b981' : 'rgba(239,68,68,0.15)';
+            btn.style.background = willBeDone ? 'linear-gradient(135deg, #eab308, #ca8a04)' : 'rgba(239,68,68,0.15)';
             btn.style.color = willBeDone ? '#ffffff' : '#ef4444';
             btn.style.border = willBeDone ? 'none' : '1px solid rgba(239,68,68,0.4)';
-            btn.style.boxShadow = willBeDone ? '0 2px 8px rgba(16,185,129,0.35)' : 'none';
-            btn.innerHTML = willBeDone ? '✅ Done' : '❌ Not Done';
+            btn.style.boxShadow = willBeDone ? '0 2px 8px rgba(234,179,8,0.35)' : 'none';
+            btn.innerHTML = willBeDone ? '⚔️ Phaethon Master (Done)' : '❌ Not Done (0/25)';
 
             window.updateMercStatsUI();
             window.filterMercTable();
@@ -8459,11 +8459,11 @@ html += `</select>
             if (!ok) {
                 // Revert on write error
                 row.setAttribute('data-signed', wasDone ? 'yes' : 'no');
-                btn.style.background = wasDone ? '#10b981' : 'rgba(239,68,68,0.15)';
+                btn.style.background = wasDone ? 'linear-gradient(135deg, #eab308, #ca8a04)' : 'rgba(239,68,68,0.15)';
                 btn.style.color = wasDone ? '#ffffff' : '#ef4444';
                 btn.style.border = wasDone ? 'none' : '1px solid rgba(239,68,68,0.4)';
-                btn.style.boxShadow = wasDone ? '0 2px 8px rgba(16,185,129,0.35)' : 'none';
-                btn.innerHTML = wasDone ? '✅ Done' : '❌ Not Done';
+                btn.style.boxShadow = wasDone ? '0 2px 8px rgba(234,179,8,0.35)' : 'none';
+                btn.innerHTML = wasDone ? '⚔️ Phaethon Master (Done)' : '❌ Not Done (0/25)';
                 window.updateMercStatsUI();
                 window.filterMercTable();
                 if (window.showToast) window.showToast("Failed to save done status", "error");
@@ -11349,15 +11349,53 @@ window.resetBearTrapEvent = async () => {
         let percentDone = totalCount > 0 ? Math.round((yesCount / totalCount) * 100) : 0;
         const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
 
+        window.switchMercView = (tab) => {
+          const wallDiv = document.getElementById('mercViewWall');
+          const rosterDiv = document.getElementById('mercViewRoster');
+          const btnWall = document.getElementById('mercBtnWall');
+          const btnRoster = document.getElementById('mercBtnRoster');
+          if (!wallDiv || !rosterDiv) return;
+
+          if (tab === 'wall') {
+            wallDiv.style.display = 'grid';
+            rosterDiv.style.display = 'none';
+            if (btnWall) { btnWall.style.background = 'linear-gradient(135deg, #eab308, #ca8a04)'; btnWall.style.color = '#fff'; }
+            if (btnRoster) { btnRoster.style.background = 'var(--bg-main)'; btnRoster.style.color = 'var(--text-muted)'; }
+          } else {
+            wallDiv.style.display = 'none';
+            rosterDiv.style.display = 'block';
+            if (btnWall) { btnWall.style.background = 'var(--bg-main)'; btnWall.style.color = 'var(--text-muted)'; }
+            if (btnRoster) { btnRoster.style.background = 'var(--accent)'; btnRoster.style.color = '#fff'; }
+          }
+        };
+
+        window.filterMercPublicTable = (query) => {
+          const q = String(query || '').toLowerCase().trim();
+          document.querySelectorAll('.merc-champ-card').forEach(card => {
+            const name = (card.getAttribute('data-name') || '').toLowerCase();
+            card.style.display = name.includes(q) ? 'flex' : 'none';
+          });
+          document.querySelectorAll('.merc-pub-row').forEach(row => {
+            const name = (row.getAttribute('data-name') || '').toLowerCase();
+            row.style.display = name.includes(q) ? '' : 'none';
+          });
+        };
+
+        const championList = rosterList.filter(p => {
+          let gIdStr = String(p.gameId || '').trim();
+          let record = mercenaryData[gIdStr];
+          return record && record.signedUp;
+        });
+
         let html = `
-          <div style="display:flex; flex-direction:column; gap:20px; max-width:900px; margin:0 auto; padding-bottom:40px; animation: fadeIn 0.3s ease;">
+          <div style="display:flex; flex-direction:column; gap:20px; max-width:950px; margin:0 auto; padding-bottom:40px; animation: fadeIn 0.3s ease;">
             
-            <div style="border-bottom: 2px solid #ef4444; padding-bottom: 14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+            <div style="border-bottom: 2px solid #eab308; padding-bottom: 14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
               <div>
                 <h2 style="margin:0; color:var(--text-main); font-size:24px; display:flex; align-items:center; gap:10px;">
-                  ⚔️ Mercenary Prestige Event
+                  🏆 Mercenary Prestige: Wall of Champions
                 </h2>
-                <p style="margin:4px 0 0 0; color:var(--text-muted); font-size:13px;">Track alliance member participation and status for Mercenary Prestige.</p>
+                <p style="margin:4px 0 0 0; color:var(--text-muted); font-size:13px;">Honor roll of alliance members who have conquered all 25 Phaethon Scout battles.</p>
               </div>
               ${isManager ? `
                 <button onclick="views.mercenaryAdmin()" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:white; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(239,68,68,0.3);">
@@ -11366,33 +11404,55 @@ window.resetBearTrapEvent = async () => {
               ` : ''}
             </div>
 
-            <!-- KPI Cards -->
-            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:15px;">
-              <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:16px; text-align:center;">
-                <div style="font-size:12px; color:var(--text-muted); text-transform:uppercase; font-weight:bold;">Total Roster</div>
-                <div style="font-size:28px; font-weight:bold; color:var(--text-main); margin-top:4px;">${totalCount}</div>
+            <!-- Alliance Progress Bar Card -->
+            <div style="background:linear-gradient(135deg, rgba(234,179,8,0.08), rgba(239,68,68,0.08)); border:1px solid rgba(234,179,8,0.3); border-radius:14px; padding:18px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+                <span style="font-weight:bold; color:var(--text-main); font-size:15px; display:flex; align-items:center; gap:8px;">
+                  🏆 Alliance Victory Progress — ⚔️ 25/25 Phaethon Masters
+                </span>
+                <span style="font-weight:bold; color:#eab308; font-size:16px;">
+                  ${yesCount} / ${totalCount} Cleared (${percentDone}%)
+                </span>
               </div>
-              <div style="background:var(--card-bg); border:1px solid rgba(16,185,129,0.3); border-radius:12px; padding:16px; text-align:center;">
-                <div style="font-size:12px; color:#10b981; text-transform:uppercase; font-weight:bold;">✅ Done / Signed Up</div>
-                <div style="font-size:28px; font-weight:bold; color:#10b981; margin-top:4px;">${yesCount}</div>
-              </div>
-              <div style="background:var(--card-bg); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:16px; text-align:center;">
-                <div style="font-size:12px; color:#ef4444; text-transform:uppercase; font-weight:bold;">❌ Pending</div>
-                <div style="font-size:28px; font-weight:bold; color:#ef4444; margin-top:4px;">${noCount}</div>
-              </div>
-              <div style="background:var(--card-bg); border:1px solid rgba(59,130,246,0.3); border-radius:12px; padding:16px; text-align:center;">
-                <div style="font-size:12px; color:#60a5fa; text-transform:uppercase; font-weight:bold;">Completion Rate</div>
-                <div style="font-size:28px; font-weight:bold; color:#60a5fa; margin-top:4px;">${percentDone}%</div>
+              <div style="width:100%; height:12px; background:var(--bg-main); border-radius:6px; overflow:hidden; border:1px solid var(--border);">
+                <div style="width:${percentDone}%; height:100%; background:linear-gradient(90deg, #eab308, #ef4444); border-radius:6px; transition:width 0.5s ease;"></div>
               </div>
             </div>
 
-            <!-- Player Table Card -->
-            <div class="card">
-              <div class="card-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-                <span>🛡️ Member Participation Status</span>
-                <input type="text" id="mercPublicSearch" placeholder="🔍 Search player..." onkeyup="window.filterMercPublicTable(this.value)" style="padding:6px 12px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; outline:none; min-width:200px;">
+            <!-- View Switcher & Search Bar -->
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+              <div style="display:flex; background:var(--bg-main); border:1px solid var(--border); border-radius:8px; overflow:hidden;">
+                <button id="mercBtnWall" onclick="window.switchMercView('wall')" style="padding:8px 18px; border:none; background:linear-gradient(135deg, #eab308, #ca8a04); color:#fff; font-weight:bold; cursor:pointer; font-size:13px; transition:0.2s;">🏆 Champion Wall (${yesCount})</button>
+                <button id="mercBtnRoster" onclick="window.switchMercView('roster')" style="padding:8px 18px; border:none; background:transparent; color:var(--text-muted); font-weight:bold; cursor:pointer; font-size:13px; transition:0.2s;">📋 Roster Status (${totalCount})</button>
               </div>
-              
+              <input type="text" id="mercPublicSearch" placeholder="🔍 Search Chief..." onkeyup="window.filterMercPublicTable(this.value)" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; outline:none; min-width:220px;">
+            </div>
+
+            <!-- 🏆 Champion Wall Grid -->
+            <div id="mercViewWall" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap:16px;">
+              ${championList.length === 0 ? `
+                <div style="grid-column:1/-1; background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:30px; text-align:center; color:var(--text-muted);">
+                  🛡️ No <b>Phaethon Masters</b> registered yet for this event cycle.<br>Complete all 25 scout battles to be immortalized on the Wall of Champions!
+                </div>
+              ` : championList.map(p => {
+                let gIdStr = String(p.gameId || '').trim();
+                let avatarUrl = window.getAvatarUrl ? window.getAvatarUrl(gIdStr, p.name) : `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=eab308&color=fff`;
+                return `
+                  <div class="merc-champ-card" data-name="${p.name.toLowerCase()}" style="background:var(--card-bg); border:1px solid rgba(234,179,8,0.4); border-radius:14px; padding:18px; display:flex; flex-direction:column; align-items:center; text-align:center; position:relative; overflow:hidden; box-shadow:0 4px 18px rgba(234,179,8,0.12); transition:transform 0.2s, box-shadow 0.2s;">
+                    <div style="position:absolute; top:0; left:0; width:100%; height:4px; background:linear-gradient(90deg, #eab308, #ef4444);"></div>
+                    <img src="${avatarUrl}" style="width:64px; height:64px; border-radius:50%; object-fit:cover; border:2px solid #eab308; box-shadow:0 0 12px rgba(234,179,8,0.3); margin-bottom:10px;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=eab308&color=fff';">
+                    <div style="font-weight:bold; font-size:16px; color:var(--text-main); margin-bottom:2px;">${escapeHTML(p.name)}</div>
+                    <div style="font-size:12px; color:var(--text-muted); font-family:monospace; margin-bottom:10px;">${escapeHTML(gIdStr)}</div>
+                    <span style="background:linear-gradient(135deg, #eab308, #ca8a04); color:#fff; font-weight:bold; font-size:11px; padding:4px 12px; border-radius:20px; text-transform:uppercase; letter-spacing:0.5px; box-shadow:0 2px 8px rgba(234,179,8,0.35); display:inline-flex; align-items:center; gap:5px;">
+                      ⚔️ 25/25 Phaethon Master
+                    </span>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+
+            <!-- 📋 Roster Table View (Initially Hidden) -->
+            <div id="mercViewRoster" class="card" style="display:none;">
               <div class="card-table-scroll" style="overflow-x:auto; width:100%; border-radius:8px; border:1px solid var(--border);">
                 <table id="mercPublicTable" style="min-width:600px; width:100%; border-collapse:collapse; text-align:left;">
                   <thead>
@@ -11417,8 +11477,8 @@ window.resetBearTrapEvent = async () => {
                           <td style="padding:12px 16px; color:var(--text-muted); font-size:13px; font-family:monospace;">${escapeHTML(gIdStr)}</td>
                           <td style="padding:12px 16px; text-align:center;">
                             ${isDone ? 
-                              `<span style="background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.4); color:#10b981; padding:4px 12px; border-radius:12px; font-weight:bold; font-size:12px; display:inline-flex; align-items:center; gap:4px;">✅ Done</span>` :
-                              `<span style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:4px 12px; border-radius:12px; font-weight:bold; font-size:12px; display:inline-flex; align-items:center; gap:4px;">❌ Pending</span>`
+                              `<span style="background:linear-gradient(135deg, #eab308, #ca8a04); color:#fff; padding:4px 12px; border-radius:12px; font-weight:bold; font-size:12px; display:inline-flex; align-items:center; gap:4px; box-shadow:0 2px 6px rgba(234,179,8,0.3);">⚔️ 25/25 Phaethon Master</span>` :
+                              `<span style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:4px 12px; border-radius:12px; font-weight:bold; font-size:12px; display:inline-flex; align-items:center; gap:4px;">❌ Pending (0/25)</span>`
                             }
                           </td>
                         </tr>
