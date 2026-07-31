@@ -1,3 +1,7 @@
+## [1.48.114] - 2026-07-31
+### Added
+- Added green dot 🟢 Sign-Ups section and status dot badges to Calendar View on Event Schedule page.
+
 ## [1.48.113] - 2026-07-31
 ### Fixed
 - Fixed Current Bear Trap Donations Leaderboard reset bug where old static values from Google Sheets (Sigmashu: 37, BrianDCox: 1) persisted after an event reset. Firebase beartrap_donations is now the sole source of truth when present, properly clearing to 0.

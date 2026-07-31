@@ -11877,26 +11877,60 @@ window.resetBearTrapEvent = async () => {
         }
       }
       
+      // Also extract live sign-ups from todayData sheet if present
+      let todaySignups = [];
+      if (todayData && Array.isArray(todayData)) {
+        let hIdx = -1;
+        for (let i = 0; i < todayData.length; i++) {
+          const cell = String(todayData[i][5] || '').trim().toLowerCase();
+          if (cell === 'rewards') { hIdx = i; break; }
+        }
+        if (hIdx !== -1) {
+          for (let i = hIdx + 1; i < todayData.length; i++) {
+            const g = todayData[i][6];
+            if (g && String(g).trim() !== '' && String(g).trim().toLowerCase() !== 'no events') {
+              todaySignups.push(String(g).trim());
+            }
+          }
+        }
+      }
+
       // Extract events for each day, grouping by category
       let currentCategory = "Events";
       for (let r = dateRowIdx + 1; r < data.length; r++) {
         if (data[r].every(cell => cell === "")) continue;
         
-        // Detect category headers: A row with exactly one non-empty cell located in Column B (index 1)
-        let nonEmptyCells = data[r].filter(c => c !== "");
-        if (nonEmptyCells.length === 1 && typeof data[r][1] === 'string' && data[r][1].trim() !== "") {
-          currentCategory = data[r][1].trim();
-          continue;
+        // Detect category headers (any row with exactly 1 non-empty cell across columns)
+        let nonEmptyCells = data[r].filter(c => c !== undefined && c !== null && String(c).trim() !== "");
+        if (nonEmptyCells.length === 1) {
+          let catVal = String(nonEmptyCells[0]).trim();
+          if (catVal && !catVal.match(/\d{1,2}\/\d{1,2}/) && !catVal.match(/^\d{4}-\d{2}-\d{2}/)) {
+            currentCategory = catVal;
+            continue;
+          }
         }
         
         days.forEach(day => {
           let eventCell = data[r][day.colIdx];
-          if (eventCell && eventCell.trim() !== "") {
+          if (eventCell && String(eventCell).trim() !== "") {
             if (!day.categories[currentCategory]) day.categories[currentCategory] = [];
-            day.categories[currentCategory].push(eventCell);
+            day.categories[currentCategory].push(String(eventCell).trim());
           }
         });
       }
+
+      // Merge today's sign-ups onto today's card if available
+      const nowStr = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      days.forEach(day => {
+        if (todaySignups.length > 0 && (day.dateStr === nowStr || day.dateStr.toLowerCase().includes('today'))) {
+          if (!day.categories['Sign-Ups']) day.categories['Sign-Ups'] = [];
+          todaySignups.forEach(s => {
+            if (!day.categories['Sign-Ups'].includes(s)) {
+              day.categories['Sign-Ups'].push(s);
+            }
+          });
+        }
+      });
       
       // Render the timeline as Daily Cards
       let html = '';
@@ -11914,13 +11948,51 @@ window.resetBearTrapEvent = async () => {
           html += `<div style="padding:10px 0; color:var(--text-muted); text-align:center; font-style:italic;">No Events</div>`;
         } else {
           catKeys.forEach((cat, index) => {
-            // Add extra top margin for categories after the first one (e.g. between Events and Rewards)
-            let topMargin = index === 0 ? "5px" : "25px";
-            html += `<div style="font-weight:bold; color:var(--text-main); margin-top:${topMargin}; margin-bottom:8px; text-transform:uppercase; font-size:11px; letter-spacing:1px;">${cat}</div>`;
-            html += `<ul style="list-style:none; padding:0; margin:0; margin-bottom:15px;">`;
-            day.categories[cat].forEach((ev, idx) => {
-              html += `<li style="padding:8px 0; font-size:14px; color:var(--text-muted);">
-                         ${ev.includes('Bear Trap') ? '🪤' : '✨'} ${ev}
+            let topMargin = index === 0 ? "5px" : "18px";
+            let catLower = cat.toLowerCase();
+            let catColor = "var(--text-main)";
+            let catIcon = "✨";
+            let dotColor = "var(--accent)";
+
+            if (catLower.includes('signup') || catLower.includes('sign-up') || catLower.includes('sign up')) {
+              catColor = "#10b981"; // Green
+              catIcon = "📋";
+              dotColor = "#10b981";
+            } else if (catLower.includes('reward')) {
+              catColor = "#eab308"; // Yellow
+              catIcon = "🎁";
+              dotColor = "#eab308";
+            } else if (catLower.includes('week')) {
+              catColor = "#818cf8"; // Indigo
+              catIcon = "📆";
+              dotColor = "#818cf8";
+            } else if (catLower.includes('holiday')) {
+              catColor = "#f97316"; // Orange
+              catIcon = "🎉";
+              dotColor = "#f97316";
+            } else if (catLower.includes('event')) {
+              catColor = "#0ea5e9"; // Cyan
+              catIcon = "⏰";
+              dotColor = "#0ea5e9";
+            }
+
+            html += `
+              <div style="margin-top:${topMargin}; margin-bottom:8px;">
+                <div style="font-weight:bold; color:${catColor}; font-size:11px; letter-spacing:1px; text-transform:uppercase; display:flex; align-items:center; gap:6px;">
+                  <span style="width:8px; height:8px; background:${dotColor}; border-radius:50%; display:inline-block; box-shadow:0 0 6px ${dotColor};"></span>
+                  ${catIcon} ${cat}
+                </div>
+              </div>
+              <ul style="list-style:none; padding:0; margin:0; margin-bottom:12px;">`;
+
+            day.categories[cat].forEach((ev) => {
+              let isBt = ev.includes('Bear Trap') || ev.includes('🪤') || ev.includes('🐻');
+              let isSignupCat = catLower.includes('signup') || catLower.includes('sign-up') || catLower.includes('sign up');
+              let bullet = isSignupCat ? '<span style="color:#10b981; font-weight:bold; font-size:11px;">🟢</span>' : (isBt ? '🪤' : '✨');
+              
+              html += `<li style="padding:6px 0; font-size:13px; color:var(--text-main); display:flex; align-items:center; gap:8px; border-bottom:1px solid rgba(255,255,255,0.05);">
+                         <span>${bullet}</span>
+                         <span>${ev}</span>
                        </li>`;
             });
             html += `</ul>`;
