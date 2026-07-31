@@ -5073,13 +5073,10 @@ window.renderMercenaryCaptainsSectionHtml = () => {
 
   return `
     <div class="card" style="margin-top:10px;">
-      <div class="card-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <div class="card-title">
         <span style="display:flex; align-items:center; gap:8px;">
           🎖️ Phaethon Mercenary Captains & Level Boss Requirements
         </span>
-        <button onclick="window.openMercenaryChartModal()" style="background:linear-gradient(135deg, rgba(168,85,247,0.25) 0%, rgba(168,85,247,0.08) 100%); border:1px solid rgba(168,85,247,0.4); color:#c084fc; padding:6px 14px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(168,85,247,0.15);">
-          🖼️ View Full Captains Guide Chart
-        </button>
       </div>
 
       <p style="color:var(--text-muted); font-size:13px; margin:0 0 16px 0; line-height:1.5;">
@@ -5113,26 +5110,6 @@ window.renderMercenaryCaptainsSectionHtml = () => {
       </div>
     </div>
   `;
-};
-
-window.openMercenaryChartModal = () => {
-  let modal = document.createElement('div');
-  modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); backdrop-filter:blur(6px); z-index:99999; display:flex; align-items:center; justify-content:center; padding:20px; box-sizing:border-box; animation:fadeIn 0.2s ease;';
-  modal.onclick = (e) => { if(e.target === modal) modal.remove(); };
-  modal.innerHTML = `
-    <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:16px; max-width:700px; width:100%; max-height:90vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 50px rgba(0,0,0,0.7);">
-      <div style="padding:16px 20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.2);">
-        <h3 style="margin:0; color:var(--text-main); font-size:16px; display:flex; align-items:center; gap:8px;">
-          ⚔️ Phaethon Mercenary Captains Guide Chart
-        </h3>
-        <button onclick="this.closest('div').parentElement.parentElement.remove()" style="background:rgba(255,255,255,0.1); border:none; color:var(--text-main); width:32px; height:32px; border-radius:50%; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center;">✕</button>
-      </div>
-      <div style="padding:20px; overflow-y:auto; flex:1; text-align:center;">
-        <img src="./images/phaethon_mercenary_captains.png" style="max-width:100%; height:auto; border-radius:12px; border:1px solid var(--border); box-shadow:0 8px 25px rgba(0,0,0,0.4);" alt="Phaethon Mercenary Captains Guide">
-      </div>
-    </div>
-  `;
-  document.body.appendChild(modal);
 };
 
 // Showdown Missed Days Report Modal

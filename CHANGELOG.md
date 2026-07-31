@@ -1,3 +1,7 @@
+## [1.48.112] - 2026-07-30
+### Removed
+- Removed redundant View Full Captains Guide Chart button and lightbox modal from Mercenary Prestige section header.
+
 ## [1.48.111] - 2026-07-30
 ### Removed
 - Trimmed red 100% progress bars from all 5 Phaethon Mercenary Captain cropped boss images so only clean captain tank graphics appear in each card box.
