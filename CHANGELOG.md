@@ -1,3 +1,7 @@
+## [1.48.115] - 2026-07-31
+### Added
+- Added live UTC Date display (e.g., 📅 Fri, Jul 31 UTC) directly under the UTC Clock in Global Timers, preventing date confusion for US players when UTC rolls over.
+
 ## [1.48.114] - 2026-07-31
 ### Added
 - Added green dot 🟢 Sign-Ups section and status dot badges to Calendar View on Event Schedule page.

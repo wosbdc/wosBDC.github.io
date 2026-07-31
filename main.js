@@ -12195,16 +12195,26 @@ function updateGlobalTimers() {
   const now = new Date();
   const is12 = clockFormat === '12';
 
-  // UTC Clock
+  // UTC Clock & Date
   const utcClockEl = document.getElementById('utc-clock');
+  const utcDateEl = document.getElementById('utc-date');
   if (utcClockEl) {
     utcClockEl.textContent = formatClockTime(now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds(), is12);
   }
+  if (utcDateEl) {
+    const utcDateStr = now.toLocaleDateString('en-US', { timeZone: 'UTC', weekday: 'short', month: 'short', day: 'numeric' });
+    utcDateEl.textContent = `📅 ${utcDateStr} UTC`;
+  }
 
-  // Local Clock
+  // Local Clock & Date
   const localClockEl = document.getElementById('local-clock');
+  const localDateEl = document.getElementById('local-date');
   if (localClockEl) {
     localClockEl.textContent = formatClockTime(now.getHours(), now.getMinutes(), now.getSeconds(), is12);
+  }
+  if (localDateEl) {
+    const localDateStr = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    localDateEl.textContent = `${localDateStr} local`;
   }
 
   // --- DAILY RESET (UTC 00:00) ---
