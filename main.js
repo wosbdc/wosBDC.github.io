@@ -8748,9 +8748,10 @@ window.resetBearTrapEvent = async () => {
             const dons = donSnap.val();
             const donPromises = Object.entries(dons).map(([key, don]) => {
                 if (don) {
-                    const currentAmt = don.current || 0;
+                    const currentAmt = don.current !== undefined ? don.current : (don.amount || 0);
                     don.allTime = (don.allTime || 0) + currentAmt;
                     don.current = 0;
+                    don.amount = 0;
                     don.lastUpdated = Date.now();
                     return set(ref(db, `beartrap_donations/${key}`), don).catch(() => null);
                 }
@@ -10337,26 +10338,34 @@ window.resetBearTrapEvent = async () => {
             } else {
                 board.title = "Current Bear Trap Donations Leaderboard";
                 let currentScores = {};
-                if (board.rows && Array.isArray(board.rows)) {
-                    board.rows.forEach(r => {
-                        if (r && r[1]) {
-                            currentScores[r[1].toString().trim()] = parseInt(String(r[2]).replace(/,/g, '')) || 0;
-                        }
-                    });
-                }
                 if (Object.keys(fbBtDonations).length > 0) {
+                    // Firebase is authoritative for current event donations
                     Object.values(fbBtDonations).forEach(d => {
                         if (d && d.name) {
                             let pName = d.name.trim();
-                            let fbAmt = d.current !== undefined ? d.current : (d.amount || 0);
+                            let fbAmt = d.current !== undefined ? d.current : 0;
                             if (fbAmt > 0) {
                                 currentScores[pName] = fbAmt;
                             }
                         }
                     });
+                } else if (board.rows && Array.isArray(board.rows)) {
+                    // Fallback to Google Sheets ONLY if Firebase node is completely empty
+                    board.rows.forEach(r => {
+                        if (r && r[1]) {
+                            let amt = parseInt(String(r[2]).replace(/,/g, '')) || 0;
+                            if (amt > 0) {
+                                currentScores[r[1].toString().trim()] = amt;
+                            }
+                        }
+                    });
                 }
                 const list = Object.entries(currentScores).filter(kv => kv[1] > 0).sort((a,b) => b[1] - a[1]).slice(0, 4);
-                if (list.length > 0) board.rows = list.map((kv, idx) => [idx + 1, kv[0], kv[1]]);
+                if (list.length > 0) {
+                    board.rows = list.map((kv, idx) => [idx + 1, kv[0], kv[1]]);
+                } else {
+                    board.rows = []; // Empty when all current donations are 0 after event reset
+                }
             }
         }
 
@@ -10543,29 +10552,34 @@ window.resetBearTrapEvent = async () => {
             board.headers.forEach(h => html += `<th>${h}</th>`);
             html += `</tr></thead><tbody>`;
             
-            board.rows.forEach(row => {
-              html += `<tr>`;
-              row.forEach((cell, idx) => {
-                if (typeof cell === 'number') {
-                  if (idx === 0) {
-                     if (cell === 1) cell = '🥇 1';
-                     else if (cell === 2) cell = '🥈 2';
-                     else if (cell === 3) cell = '🥉 3';
-                     else cell = cell.toLocaleString();
-                  } else {
-                     cell = cell.toLocaleString();
-                  }
-                }
-                // Ensure strings that look like numbers are also formatted, but carefully
-                else if (typeof cell === 'string' && !isNaN(cell) && cell.trim() !== "" && idx > 0) {
-                  cell = Number(cell).toLocaleString();
-                }
-                
-                let formattedCell = formatCell(cell);
-                html += `<td ${idx === 0 ? 'style="font-weight:bold; color:var(--text-muted);"' : ''}>${formattedCell}</td>`;
-              });
-              html += `</tr>`;
-            });
+            if (!board.rows || board.rows.length === 0) {
+                let colSpan = (board.headers && board.headers.length) ? board.headers.length : 3;
+                html += `<tr><td colspan="${colSpan}" style="text-align:center; padding:18px; color:var(--text-muted); font-style:italic; font-size:13px;">No current donations recorded for this event cycle.</td></tr>`;
+            } else {
+                board.rows.forEach(row => {
+                  html += `<tr>`;
+                  row.forEach((cell, idx) => {
+                    if (typeof cell === 'number') {
+                      if (idx === 0) {
+                         if (cell === 1) cell = '🥇 1';
+                         else if (cell === 2) cell = '🥈 2';
+                         else if (cell === 3) cell = '🥉 3';
+                         else cell = cell.toLocaleString();
+                      } else {
+                         cell = cell.toLocaleString();
+                      }
+                    }
+                    // Ensure strings that look like numbers are also formatted, but carefully
+                    else if (typeof cell === 'string' && !isNaN(cell) && cell.trim() !== "" && idx > 0) {
+                      cell = Number(cell).toLocaleString();
+                    }
+                    
+                    let formattedCell = formatCell(cell);
+                    html += `<td ${idx === 0 ? 'style="font-weight:bold; color:var(--text-muted);"' : ''}>${formattedCell}</td>`;
+                  });
+                  html += `</tr>`;
+                });
+            }
             html += `</tbody></table>`;
         if (((board.title.toLowerCase().includes('bear') || board.title.toLowerCase().includes('bt')) && board.title.toLowerCase().includes('donation'))) {
            // We'll append the widget placeholder specifically under the Bear Donations board
