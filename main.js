@@ -11877,7 +11877,7 @@ window.resetBearTrapEvent = async () => {
         }
       }
       
-      // Also extract live sign-ups from todayData sheet if present
+      // Also extract clean live sign-ups from todayData sheet if present
       let todaySignups = [];
       if (todayData && Array.isArray(todayData)) {
         let hIdx = -1;
@@ -11887,10 +11887,12 @@ window.resetBearTrapEvent = async () => {
         }
         if (hIdx !== -1) {
           for (let i = hIdx + 1; i < todayData.length; i++) {
-            const g = todayData[i][6];
-            if (g && String(g).trim() !== '' && String(g).trim().toLowerCase() !== 'no events') {
-              todaySignups.push(String(g).trim());
-            }
+            const val = todayData[i][6];
+            if (!val) break;
+            const str = String(val).trim();
+            if (str === '' || str.toLowerCase() === 'no events') break;
+            if (!isNaN(str) || str.toLowerCase() === 'current' || str.toLowerCase().includes('training') || str.toLowerCase().includes('buy gems') || str.toLowerCase().includes('money')) break;
+            todaySignups.push(str);
           }
         }
       }
@@ -11913,20 +11915,25 @@ window.resetBearTrapEvent = async () => {
         days.forEach(day => {
           let eventCell = data[r][day.colIdx];
           if (eventCell && String(eventCell).trim() !== "") {
-            if (!day.categories[currentCategory]) day.categories[currentCategory] = [];
-            day.categories[currentCategory].push(String(eventCell).trim());
+            let text = String(eventCell).trim();
+            let isSignupItem = text.toLowerCase().includes('signup') || text.toLowerCase().includes('sign-up') || text.toLowerCase().includes('sign up') || text.toLowerCase().includes('registration');
+            let targetCategory = isSignupItem ? 'Sign-Ups' : currentCategory;
+            if (!day.categories[targetCategory]) day.categories[targetCategory] = [];
+            day.categories[targetCategory].push(text);
           }
         });
       }
 
-      // Merge today's sign-ups onto today's card if available
-      const nowStr = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-      days.forEach(day => {
-        if (todaySignups.length > 0 && (day.dateStr === nowStr || day.dateStr.toLowerCase().includes('today'))) {
+      // Merge today's active sign-ups onto today's card (or Day 0)
+      const now = new Date();
+      const todayStr = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      days.forEach((day, idx) => {
+        const isTodayCard = (day.dateStr === todayStr) || (day.dateObj && day.dateObj.toDateString() === now.toDateString()) || (idx === 0);
+        if (isTodayCard && todaySignups.length > 0) {
           if (!day.categories['Sign-Ups']) day.categories['Sign-Ups'] = [];
           todaySignups.forEach(s => {
             if (!day.categories['Sign-Ups'].includes(s)) {
-              day.categories['Sign-Ups'].push(s);
+              day.categories['Sign-Ups'].unshift(s);
             }
           });
         }
@@ -11944,6 +11951,13 @@ window.resetBearTrapEvent = async () => {
                    <div style="padding:15px;">`;
                    
         let catKeys = Object.keys(day.categories);
+        catKeys.sort((a, b) => {
+          const aIsSU = a.toLowerCase().includes('sign');
+          const bIsSU = b.toLowerCase().includes('sign');
+          if (aIsSU && !bIsSU) return -1;
+          if (!aIsSU && bIsSU) return 1;
+          return 0;
+        });
         if (catKeys.length === 0) {
           html += `<div style="padding:10px 0; color:var(--text-muted); text-align:center; font-style:italic;">No Events</div>`;
         } else {

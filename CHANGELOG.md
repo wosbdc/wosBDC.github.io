@@ -1,3 +1,7 @@
+## [1.48.116] - 2026-07-31
+### Fixed
+- Fixed Calendar View sign-up events rendering. Cleaned up Google Sheets signups parser to skip metric lines and automatically attach active sign-ups (e.g., Fortress Battle Sign-ups) directly under a prominent green dot 🟢 Sign-Ups section.
+
 ## [1.48.115] - 2026-07-31
 ### Added
 - Added live UTC Date display (e.g., 📅 Fri, Jul 31 UTC) directly under the UTC Clock in Global Timers, preventing date confusion for US players when UTC rolls over.
