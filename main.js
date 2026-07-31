@@ -12217,7 +12217,7 @@ function updateGlobalTimers() {
   }
   if (utcDateEl) {
     const utcDateStr = now.toLocaleDateString('en-US', { timeZone: 'UTC', weekday: 'short', month: 'short', day: 'numeric' });
-    utcDateEl.textContent = `📅 ${utcDateStr} UTC`;
+    utcDateEl.textContent = `${utcDateStr} UTC`;
   }
 
   // Local Clock & Date
@@ -12229,6 +12229,102 @@ function updateGlobalTimers() {
   if (localDateEl) {
     const localDateStr = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
     localDateEl.textContent = `${localDateStr} local`;
+  }
+
+  // --- CURRENT / NEXT EVENT TIMER ---
+  const activeNameEl = document.getElementById('active-event-name');
+  if (activeNameEl) {
+    let scheduleData = window.liveData['WhiteOut Survival'];
+    if (scheduleData && Array.isArray(scheduleData)) {
+      let events = [];
+      for (let i = 1; i < Math.min(34, scheduleData.length); i++) {
+        const row = scheduleData[i];
+        const eventName = row[5], dateRaw = row[6], utcRaw = row[7];
+        if (!eventName || String(eventName).trim() === '') continue;
+        if (String(eventName).includes("Event's")) continue;
+        if (String(eventName).trim() === 'Rewards') break;
+
+        const dateStr = String(dateRaw || '').trim();
+        let eventDate = null;
+        const mdMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})$/);
+        const isoMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})T/);
+        if (mdMatch) {
+          eventDate = new Date(now.getFullYear(), parseInt(mdMatch[1]) - 1, parseInt(mdMatch[2]));
+        } else if (isoMatch) {
+          let parts = dateStr.split('T')[0].split('-');
+          eventDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        } else continue;
+
+        let utcDisplay = '';
+        let eventDateTime = null;
+        const utcStr = String(utcRaw || '').trim();
+        const hmMatch = utcStr.match(/^(\d{1,2}):(\d{2})$/);
+        const isoUtcMatch = utcStr.match(/^\d{4}-\d{2}-\d{2}T/);
+
+        if (hmMatch) {
+          const h = parseInt(hmMatch[1]), m = parseInt(hmMatch[2]);
+          utcDisplay = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')} UTC`;
+          eventDateTime = new Date(Date.UTC(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate(), h, m));
+        } else if (isoUtcMatch) {
+          const gasDate = new Date(utcStr);
+          gasDate.setUTCHours(gasDate.getUTCHours() - 8);
+          const h = gasDate.getUTCHours(), m = gasDate.getUTCMinutes();
+          utcDisplay = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')} UTC`;
+          eventDateTime = new Date(Date.UTC(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate(), h, m));
+        }
+
+        if (!eventDateTime) continue;
+
+        let durationMs = 3600000;
+        const nameLower = String(eventName).toLowerCase();
+        if (nameLower.includes('bear trap') || nameLower.includes('🪤')) durationMs = 30 * 60 * 1000;
+        else if (nameLower.includes('brothers in arms') || nameLower.includes('k. e.') || nameLower.includes('ke')) durationMs = 24 * 3600 * 1000;
+        else if (nameLower.includes('shield')) durationMs = 8 * 3600 * 1000;
+        else if (nameLower.includes('castle')) durationMs = 4 * 3600 * 1000;
+
+        events.push({
+          name: String(eventName).trim(),
+          start: eventDateTime,
+          end: new Date(eventDateTime.getTime() + durationMs),
+          utcDisplay
+        });
+      }
+
+      let activeEv = events.find(e => now >= e.start && now < e.end);
+      let nextEv = events.filter(e => e.start > now).sort((a,b) => a.start - b.start)[0];
+
+      const labelEl = document.getElementById('active-event-label');
+      const statusEl = document.getElementById('active-event-status');
+      const timeEl = document.getElementById('active-event-time');
+      const timerEl = document.getElementById('active-event-timer');
+      const cardEl = document.getElementById('active-event-card');
+
+      if (activeEv) {
+        if (cardEl) { cardEl.style.background = 'rgba(16,185,129,0.06)'; cardEl.style.borderColor = 'rgba(16,185,129,0.22)'; }
+        if (labelEl) labelEl.textContent = '🔥 Active Event';
+        if (statusEl) { statusEl.textContent = 'LIVE NOW'; statusEl.style.background = 'rgba(16,185,129,0.15)'; statusEl.style.color = '#10b981'; }
+        if (activeNameEl) activeNameEl.textContent = activeEv.name;
+        if (timeEl) timeEl.textContent = `Ends ${activeEv.end.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
+        
+        let diff = Math.max(0, Math.floor((activeEv.end - now) / 1000));
+        let h = Math.floor(diff / 3600), m = Math.floor((diff % 3600) / 60), s = diff % 60;
+        if (timerEl) { timerEl.textContent = h > 0 ? `${h}h ${m}m ${s}s left` : `${m}m ${s}s left`; timerEl.style.color = '#10b981'; }
+      } else if (nextEv) {
+        if (cardEl) { cardEl.style.background = 'rgba(56,189,248,0.06)'; cardEl.style.borderColor = 'rgba(56,189,248,0.18)'; }
+        if (labelEl) labelEl.textContent = '⏳ Next Event';
+        if (statusEl) { statusEl.textContent = 'UPCOMING'; statusEl.style.background = 'rgba(56,189,248,0.15)'; statusEl.style.color = '#38bdf8'; }
+        if (activeNameEl) activeNameEl.textContent = nextEv.name;
+        if (timeEl) timeEl.textContent = nextEv.utcDisplay;
+
+        let diff = Math.max(0, Math.floor((nextEv.start - now) / 1000));
+        let h = Math.floor(diff / 3600), m = Math.floor((diff % 3600) / 60), s = diff % 60;
+        if (timerEl) { timerEl.textContent = h > 0 ? `in ${h}h ${m}m` : `in ${m}m ${s}s`; timerEl.style.color = '#38bdf8'; }
+      } else {
+        if (activeNameEl) activeNameEl.textContent = 'No events scheduled';
+      }
+    } else {
+      fetchSheet('WhiteOut Survival').catch(() => null);
+    }
   }
 
   // --- DAILY RESET (UTC 00:00) ---

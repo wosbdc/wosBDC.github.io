@@ -1,3 +1,8 @@
+## [1.48.117] - 2026-07-31
+### Added
+- Added live Current / Next Event countdown widget to Global Timers sidebar.
+- Updated UTC date styling to match Local date and added clean divider lines between clock sections.
+
 ## [1.48.116] - 2026-07-31
 ### Fixed
 - Fixed Calendar View sign-up events rendering. Cleaned up Google Sheets signups parser to skip metric lines and automatically attach active sign-ups (e.g., Fortress Battle Sign-ups) directly under a prominent green dot 🟢 Sign-Ups section.
