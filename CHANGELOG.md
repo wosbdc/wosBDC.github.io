@@ -1,3 +1,8 @@
+## [1.48.124] - 2026-07-31
+### Improved
+- Enhanced Google Sign-In post-authentication flow to extract Chief Name directly from Realtime Database profile snapshot (`uData.name || user.displayName`).
+- Guaranteed instant banner dismissal and welcome popup trigger for all Google Sign-In sessions.
+
 ## [1.48.123] - 2026-07-31
 ### Fixed
 - Fixed post-login banner dismissal and welcome popup trigger.

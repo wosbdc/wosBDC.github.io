@@ -3316,7 +3316,9 @@ if (authGoogleBtn) authGoogleBtn.addEventListener('click', async () => {
             closeAuthModal();
             const onboardingEl = document.getElementById('essentialOnboardingBanner');
             if (onboardingEl) onboardingEl.remove();
-            let uName = (currentUser && currentUser.gameId && idToNameMap[currentUser.gameId]) ? idToNameMap[currentUser.gameId] : (currentUser ? (currentUser.displayName || 'Chief') : 'Chief');
+            
+            const uData = snapshot.val() || {};
+            let uName = uData.name || (uData.gameId && idToNameMap[uData.gameId]) || user.displayName || 'Chief';
             if (window.showWelcomePop) window.showWelcomePop(uName);
             if (typeof window.activeViewFunc === 'function') window.activeViewFunc();
             else views.home();
