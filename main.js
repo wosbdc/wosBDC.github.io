@@ -5012,7 +5012,17 @@ window.filterShowdownHistoryView = (selectedVal) => {
     }
 };
 
-window.renderMercenaryCaptainsSectionHtml = () => {
+window.renderMercenaryCaptainsSectionHtml = (clearedCount = null) => {
+  let doneCount = clearedCount;
+  if (doneCount === null) {
+    doneCount = 0;
+    if (window.mercenaryCache) {
+      Object.values(window.mercenaryCache).forEach(rec => {
+        if (rec && rec.signedUp) doneCount++;
+      });
+    }
+  }
+
   const captains = [
     {
       level: "Lv. 1",
@@ -5023,7 +5033,8 @@ window.renderMercenaryCaptainsSectionHtml = () => {
       borderColor: "rgba(34,197,94,0.35)",
       badgeBg: "rgba(34,197,94,0.2)",
       badgeColor: "#4ade80",
-      reqText: "⚔️ 100% Tier 1 Alliance Progress (Defeat Tier 1 Mercenaries)"
+      reqMembers: 10,
+      reqText: "👥 <b>10 Members</b> — Reach Level 5 Scout (Easy+)"
     },
     {
       level: "Lv. 2",
@@ -5034,7 +5045,8 @@ window.renderMercenaryCaptainsSectionHtml = () => {
       borderColor: "rgba(234,179,8,0.35)",
       badgeBg: "rgba(234,179,8,0.2)",
       badgeColor: "#facc15",
-      reqText: "⚔️ Defeat Lv. 1 Boss + 100% Tier 2 Alliance Progress"
+      reqMembers: 10,
+      reqText: "👥 <b>10 Members</b> — Reach Level 5 Scout (Normal+)"
     },
     {
       level: "Lv. 3",
@@ -5045,7 +5057,8 @@ window.renderMercenaryCaptainsSectionHtml = () => {
       borderColor: "rgba(249,115,22,0.35)",
       badgeBg: "rgba(249,115,22,0.2)",
       badgeColor: "#fb923c",
-      reqText: "⚔️ Defeat Lv. 2 Boss + 100% Tier 3 Alliance Progress"
+      reqMembers: 15,
+      reqText: "👥 <b>15 Members</b> — Reach Level 10 Scout (Normal+)"
     },
     {
       level: "Lv. 4",
@@ -5056,7 +5069,8 @@ window.renderMercenaryCaptainsSectionHtml = () => {
       borderColor: "rgba(239,68,68,0.35)",
       badgeBg: "rgba(239,68,68,0.2)",
       badgeColor: "#f87171",
-      reqText: "⚔️ Defeat Lv. 3 Boss + 100% Tier 4 Alliance Progress"
+      reqMembers: 15,
+      reqText: "👥 <b>15 Members</b> — Reach Level 15 Scout (Hard+)"
     },
     {
       level: "Lv. 5",
@@ -5067,46 +5081,63 @@ window.renderMercenaryCaptainsSectionHtml = () => {
       borderColor: "rgba(168,85,247,0.35)",
       badgeBg: "rgba(168,85,247,0.2)",
       badgeColor: "#c084fc",
-      reqText: "⚔️ Defeat Lv. 4 Boss + 100% Tier 5 Alliance Progress"
+      reqMembers: 20,
+      reqText: "👥 <b>20 Members</b> — Reach Level 20 Scout (Nightmare+)"
     }
   ];
 
   return `
     <div class="card" style="margin-top:10px;">
-      <div class="card-title">
+      <div class="card-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
         <span style="display:flex; align-items:center; gap:8px;">
-          🎖️ Phaethon Mercenary Captains & Level Boss Requirements
+          🎖️ Phaethon Mercenary Captain Boss Unlocks
+        </span>
+        <span style="font-size:12px; background:rgba(234,179,8,0.15); border:1px solid rgba(234,179,8,0.4); color:#eab308; padding:4px 10px; border-radius:12px; font-weight:bold;">
+          🔥 ${doneCount} Alliance Masters Ready
         </span>
       </div>
 
       <p style="color:var(--text-muted); font-size:13px; margin:0 0 16px 0; line-height:1.5;">
-        Track difficulty tiers and unlock requirements for each Phaethon Mercenary Captain boss (Level 1 to Level 5). Requirements will be updated as alliance data is confirmed.
+        Official unlock requirements and live rally availability for all 5 Phaethon Mercenary Captain bosses.
       </p>
 
       <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:16px;">
-        ${captains.map(c => `
-          <div style="background:${c.bgGradient}; border:1px solid ${c.borderColor}; border-radius:12px; padding:16px; display:flex; flex-direction:column; justify-content:space-between; gap:12px; box-shadow:0 4px 15px rgba(0,0,0,0.2); transition:transform 0.2s ease;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
-            <div>
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                <span style="background:${c.badgeBg}; color:${c.badgeColor}; border:1px solid ${c.borderColor}; padding:3px 10px; border-radius:12px; font-size:12px; font-weight:bold;">${c.level}</span>
-                <span style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:600; letter-spacing:0.5px;">Captain</span>
+        ${captains.map(c => {
+          const isUnlocked = doneCount >= c.reqMembers;
+          const pct = Math.min(100, Math.round((doneCount / c.reqMembers) * 100));
+          return `
+            <div style="background:${c.bgGradient}; border:1px solid ${isUnlocked ? c.borderColor : 'var(--border)'}; border-radius:14px; padding:16px; display:flex; flex-direction:column; justify-content:space-between; gap:12px; box-shadow:0 4px 15px rgba(0,0,0,0.2); transition:transform 0.2s ease; position:relative; overflow:hidden;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+              ${isUnlocked ? `<div style="position:absolute; top:0; left:0; width:100%; height:4px; background:linear-gradient(90deg, #10b981, #22c55e);"></div>` : ''}
+              <div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                  <span style="background:${c.badgeBg}; color:${c.badgeColor}; border:1px solid ${c.borderColor}; padding:3px 10px; border-radius:12px; font-size:12px; font-weight:bold;">${c.level}</span>
+                  ${isUnlocked ? 
+                    `<span style="background:rgba(16,185,129,0.2); border:1px solid rgba(16,185,129,0.4); color:#10b981; font-weight:bold; font-size:11px; padding:3px 8px; border-radius:10px; display:inline-flex; align-items:center; gap:4px;">🔓 UNLOCKED</span>` :
+                    `<span style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); color:#ef4444; font-weight:bold; font-size:11px; padding:3px 8px; border-radius:10px; display:inline-flex; align-items:center; gap:4px;">🔒 LOCKED (${doneCount}/${c.reqMembers})</span>`
+                  }
+                </div>
+                <div style="text-align:center; margin:6px 0 10px 0;">
+                  <img src="${c.image}" style="max-height:110px; max-width:100%; border-radius:8px; border:1px solid ${c.borderColor}; box-shadow:0 4px 14px rgba(0,0,0,0.35); object-fit:contain; filter:${isUnlocked ? 'none' : 'grayscale(40%)'};" alt="${c.name}">
+                </div>
+                <h4 style="margin:0; font-size:15px; color:var(--text-main); font-weight:bold; text-align:center;">${c.name}</h4>
               </div>
-              <div style="text-align:center; margin:6px 0 10px 0;">
-                <img src="${c.image}" style="max-height:110px; max-width:100%; border-radius:8px; border:1px solid ${c.borderColor}; box-shadow:0 4px 14px rgba(0,0,0,0.35); object-fit:contain;" alt="${c.name}">
-              </div>
-              <h4 style="margin:0; font-size:15px; color:var(--text-main); font-weight:bold; text-align:center;">${c.name}</h4>
-            </div>
 
-            <div style="background:rgba(0,0,0,0.25); border:1px solid var(--border); border-radius:8px; padding:10px 12px;">
-              <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:bold; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
-                📋 Requirements
-              </div>
-              <div style="font-size:13px; color:var(--text-main); font-weight:500;">
-                ${c.reqText}
+              <!-- Requirement Info & Progress -->
+              <div style="background:rgba(0,0,0,0.25); border:1px solid var(--border); border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; gap:6px;">
+                <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:bold; display:flex; justify-content:space-between; align-items:center;">
+                  <span>📋 Unlock Criteria</span>
+                  <span style="color:${isUnlocked ? '#10b981' : '#eab308'};">${pct}%</span>
+                </div>
+                <div style="font-size:12px; color:var(--text-main); font-weight:500; line-height:1.4;">
+                  ${c.reqText}
+                </div>
+                <div style="width:100%; height:6px; background:var(--bg-main); border-radius:3px; overflow:hidden; border:1px solid var(--border); margin-top:2px;">
+                  <div style="width:${pct}%; height:100%; background:${isUnlocked ? 'linear-gradient(90deg, #10b981, #22c55e)' : 'linear-gradient(90deg, #eab308, #ef4444)'}; border-radius:3px; transition:width 0.5s ease;"></div>
+                </div>
               </div>
             </div>
-          </div>
-        `).join('')}
+          `;
+        }).join('')}
       </div>
     </div>
   `;
@@ -8364,7 +8395,7 @@ html += `</select>
               </table>
             </div>
 
-            ${window.renderMercenaryCaptainsSectionHtml()}
+            ${window.renderMercenaryCaptainsSectionHtml(yesCount)}
 
           </div>
         `;
@@ -11489,7 +11520,7 @@ window.resetBearTrapEvent = async () => {
               </div>
             </div>
 
-            ${window.renderMercenaryCaptainsSectionHtml()}
+            ${window.renderMercenaryCaptainsSectionHtml(yesCount)}
           </div>
         `;
         app.innerHTML = html;

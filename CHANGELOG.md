@@ -1,3 +1,8 @@
+## [1.48.119] - 2026-07-31
+### Added
+- Integrated official Phaethon Mercenary Captain Boss unlock requirements for all 5 Bosses (Dr. Toxin, Zenobia, Helios Cannon, Callisto Mark II, Behemoth).
+- Added live 🔓 UNLOCKED / 🔒 LOCKED alliance progress badges and progress bars for Boss rally tracking.
+
 ## [1.48.118] - 2026-07-31
 ### Added
 - Transformed Mercenary Prestige page into an elite 🏆 Wall of Champions.
