@@ -20,6 +20,10 @@
       ".read": true,
       ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() + '' == '318843189' || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())"
     },
+    "mercenary_boss_progress": {
+      ".read": true,
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() + '' == '318843189' || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())"
+    },
     "activity_live": {
       ".read": true,
       ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() + '' == '318843189' || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())"

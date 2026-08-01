@@ -1,3 +1,8 @@
+## [1.48.125] - 2026-07-31
+### Fixed
+- Fixed permission error when saving Phaethon Boss Unlock counts in Boss Unlock Manager.
+- Redirected Firebase RTDB writes to `mercenary/boss_progress` (which is authorized under existing `mercenary/*` security rules) and added explicit `mercenary_boss_progress` rule to `database.rules.json`.
+
 ## [1.48.124] - 2026-07-31
 ### Improved
 - Enhanced Google Sign-In post-authentication flow to extract Chief Name directly from Realtime Database profile snapshot (`uData.name || user.displayName`).

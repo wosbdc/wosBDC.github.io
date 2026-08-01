@@ -565,20 +565,30 @@ window.toggleMercenaryStatus = async (gameId, forceStatus = null) => {
     }
 };
 
-// Fetch Mercenary Boss Progress from Firebase node mercenary_boss_progress
+// Fetch Mercenary Boss Progress from Firebase node mercenary/boss_progress
 window.mercenaryBossProgressCache = null;
 
 window.fetchMercenaryBossProgress = async () => {
     if (window.mercenaryBossProgressCache) return window.mercenaryBossProgressCache;
     const defaultData = { lv1: 0, lv2: 0, lv3: 0, lv4: 0, lv5: 0 };
     try {
-        const snap = await get(ref(db, 'mercenary_boss_progress'));
+        let snap = await get(ref(db, 'mercenary/boss_progress'));
+        if (!snap.exists()) {
+            snap = await get(ref(db, 'mercenary_boss_progress'));
+        }
         if (snap.exists()) {
-            const val = snap.val() || {};
-            window.mercenaryBossProgressCache = { ...defaultData, ...val };
+            const data = snap.val();
+            window.mercenaryBossProgressCache = {
+                lv1: parseInt(data.lv1) || 0,
+                lv2: parseInt(data.lv2) || 0,
+                lv3: parseInt(data.lv3) || 0,
+                lv4: parseInt(data.lv4) || 0,
+                lv5: parseInt(data.lv5) || 0,
+                updatedAt: data.updatedAt || Date.now()
+            };
             return window.mercenaryBossProgressCache;
         }
-    } catch(e) { console.warn("Firebase mercenary_boss_progress read error:", e); }
+    } catch(e) { console.warn("Firebase mercenary boss progress read error:", e); }
     window.mercenaryBossProgressCache = defaultData;
     return defaultData;
 };
@@ -594,11 +604,13 @@ window.saveMercenaryBossProgress = async (bossData) => {
             lv5: parseInt(bossData.lv5) || 0,
             updatedAt: Date.now()
         };
-        await set(ref(db, 'mercenary_boss_progress'), payload);
+        // Save to mercenary/boss_progress which is authorized under mercenary rules
+        await set(ref(db, 'mercenary/boss_progress'), payload);
+        await set(ref(db, 'mercenary_boss_progress'), payload).catch(() => null);
         window.mercenaryBossProgressCache = payload;
         return true;
     } catch(e) {
-        console.error("Error writing mercenary_boss_progress to Firebase:", e);
+        console.error("Error writing mercenary boss progress to Firebase:", e);
         return false;
     }
 };
