@@ -565,6 +565,83 @@ window.toggleMercenaryStatus = async (gameId, forceStatus = null) => {
     }
 };
 
+// Fetch Mercenary Boss Progress from Firebase node mercenary_boss_progress
+window.mercenaryBossProgressCache = null;
+
+window.fetchMercenaryBossProgress = async () => {
+    if (window.mercenaryBossProgressCache) return window.mercenaryBossProgressCache;
+    const defaultData = { lv1: 0, lv2: 0, lv3: 0, lv4: 0, lv5: 0 };
+    try {
+        const snap = await get(ref(db, 'mercenary_boss_progress'));
+        if (snap.exists()) {
+            const val = snap.val() || {};
+            window.mercenaryBossProgressCache = { ...defaultData, ...val };
+            return window.mercenaryBossProgressCache;
+        }
+    } catch(e) { console.warn("Firebase mercenary_boss_progress read error:", e); }
+    window.mercenaryBossProgressCache = defaultData;
+    return defaultData;
+};
+
+window.saveMercenaryBossProgress = async (bossData) => {
+    if (!bossData || typeof bossData !== 'object') return false;
+    try {
+        const payload = {
+            lv1: parseInt(bossData.lv1) || 0,
+            lv2: parseInt(bossData.lv2) || 0,
+            lv3: parseInt(bossData.lv3) || 0,
+            lv4: parseInt(bossData.lv4) || 0,
+            lv5: parseInt(bossData.lv5) || 0,
+            updatedAt: Date.now()
+        };
+        await update(ref(db, 'mercenary_boss_progress'), payload);
+        window.mercenaryBossProgressCache = payload;
+        return true;
+    } catch(e) {
+        console.error("Error writing mercenary_boss_progress to Firebase:", e);
+        return false;
+    }
+};
+
+window.adjustBossProgressCount = async (bossKey, delta) => {
+    const input = document.getElementById(`boss_input_${bossKey}`);
+    let current = input ? (parseInt(input.value) || 0) : 0;
+    let nextVal = Math.max(0, current + delta);
+    if (input) input.value = nextVal;
+    await window.saveBossProgressInput(bossKey, nextVal);
+};
+
+window.saveBossProgressInput = async (bossKey, value) => {
+    let currentBP = await window.fetchMercenaryBossProgress();
+    currentBP[bossKey] = Math.max(0, parseInt(value) || 0);
+    const ok = await window.saveMercenaryBossProgress(currentBP);
+    if (ok) {
+        if (window.showToast) window.showToast(`Saved ${bossKey.toUpperCase()} count to ${currentBP[bossKey]}`, "success");
+        if (window.views && window.views.mercenaryAdmin && window.location.hash.includes('Admin')) {
+            window.views.mercenaryAdmin();
+        } else if (window.views && window.views.mercenary) {
+            window.views.mercenary();
+        }
+    } else {
+        if (window.showToast) window.showToast("Failed to save boss count", "error");
+    }
+};
+
+window.syncBossProgressFromMasters = async (rosterMasterCount) => {
+    const bp = {
+        lv1: rosterMasterCount,
+        lv2: rosterMasterCount,
+        lv3: rosterMasterCount,
+        lv4: rosterMasterCount,
+        lv5: rosterMasterCount
+    };
+    const ok = await window.saveMercenaryBossProgress(bp);
+    if (ok) {
+        if (window.showToast) window.showToast(`Auto-filled all boss counts to ${rosterMasterCount}!`, "success");
+        if (window.views && window.views.mercenaryAdmin) window.views.mercenaryAdmin();
+    }
+};
+
 // Fetch Polar Terrors Data natively from single master node activity_live
 window.fetchPolarTerrorsData = async () => {
     if (window.polarTerrorsCache) return window.polarTerrorsCache;
@@ -5012,7 +5089,7 @@ window.filterShowdownHistoryView = (selectedVal) => {
     }
 };
 
-window.renderMercenaryCaptainsSectionHtml = (clearedCount = null) => {
+window.renderMercenaryCaptainsSectionHtml = (clearedCount = null, bossProgress = null) => {
   let doneCount = clearedCount;
   if (doneCount === null) {
     doneCount = 0;
@@ -5023,9 +5100,12 @@ window.renderMercenaryCaptainsSectionHtml = (clearedCount = null) => {
     }
   }
 
+  const pData = bossProgress || window.mercenaryBossProgressCache || {};
+
   const captains = [
     {
       level: "Lv. 1",
+      key: "lv1",
       name: "Dr. Toxin Theodore",
       image: "./images/merc_boss_lv1.png",
       color: "#22c55e",
@@ -5038,6 +5118,7 @@ window.renderMercenaryCaptainsSectionHtml = (clearedCount = null) => {
     },
     {
       level: "Lv. 2",
+      key: "lv2",
       name: "Zenobia Queen of Violence",
       image: "./images/merc_boss_lv2.png",
       color: "#eab308",
@@ -5050,6 +5131,7 @@ window.renderMercenaryCaptainsSectionHtml = (clearedCount = null) => {
     },
     {
       level: "Lv. 3",
+      key: "lv3",
       name: "Helios Cannon",
       image: "./images/merc_boss_lv3.png",
       color: "#f97316",
@@ -5062,6 +5144,7 @@ window.renderMercenaryCaptainsSectionHtml = (clearedCount = null) => {
     },
     {
       level: "Lv. 4",
+      key: "lv4",
       name: "Callisto Mark II",
       image: "./images/merc_boss_lv4.png",
       color: "#ef4444",
@@ -5074,6 +5157,7 @@ window.renderMercenaryCaptainsSectionHtml = (clearedCount = null) => {
     },
     {
       level: "Lv. 5",
+      key: "lv5",
       name: "Behemoth",
       image: "./images/merc_boss_lv5.png",
       color: "#a855f7",
@@ -5093,7 +5177,7 @@ window.renderMercenaryCaptainsSectionHtml = (clearedCount = null) => {
           🎖️ Phaethon Mercenary Captain Boss Unlocks
         </span>
         <span style="font-size:12px; background:rgba(234,179,8,0.15); border:1px solid rgba(234,179,8,0.4); color:#eab308; padding:4px 10px; border-radius:12px; font-weight:bold;">
-          🔥 ${doneCount} Alliance Masters Ready
+          🔥 ${doneCount} Roster Masters Cleared
         </span>
       </div>
 
@@ -5103,8 +5187,9 @@ window.renderMercenaryCaptainsSectionHtml = (clearedCount = null) => {
 
       <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:16px;">
         ${captains.map(c => {
-          const isUnlocked = doneCount >= c.reqMembers;
-          const pct = Math.min(100, Math.round((doneCount / c.reqMembers) * 100));
+          const currentCount = (pData && pData[c.key] !== undefined && pData[c.key] !== null) ? parseInt(pData[c.key]) : doneCount;
+          const isUnlocked = currentCount >= c.reqMembers;
+          const pct = Math.min(100, Math.round((currentCount / c.reqMembers) * 100));
           return `
             <div style="background:${c.bgGradient}; border:1px solid ${isUnlocked ? c.borderColor : 'var(--border)'}; border-radius:14px; padding:16px; display:flex; flex-direction:column; justify-content:space-between; gap:12px; box-shadow:0 4px 15px rgba(0,0,0,0.2); transition:transform 0.2s ease; position:relative; overflow:hidden;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
               ${isUnlocked ? `<div style="position:absolute; top:0; left:0; width:100%; height:4px; background:linear-gradient(90deg, #10b981, #22c55e);"></div>` : ''}
@@ -5113,7 +5198,7 @@ window.renderMercenaryCaptainsSectionHtml = (clearedCount = null) => {
                   <span style="background:${c.badgeBg}; color:${c.badgeColor}; border:1px solid ${c.borderColor}; padding:3px 10px; border-radius:12px; font-size:12px; font-weight:bold;">${c.level}</span>
                   ${isUnlocked ? 
                     `<span style="background:rgba(16,185,129,0.2); border:1px solid rgba(16,185,129,0.4); color:#10b981; font-weight:bold; font-size:11px; padding:3px 8px; border-radius:10px; display:inline-flex; align-items:center; gap:4px;">🔓 UNLOCKED</span>` :
-                    `<span style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); color:#ef4444; font-weight:bold; font-size:11px; padding:3px 8px; border-radius:10px; display:inline-flex; align-items:center; gap:4px;">🔒 LOCKED (${doneCount}/${c.reqMembers})</span>`
+                    `<span style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); color:#ef4444; font-weight:bold; font-size:11px; padding:3px 8px; border-radius:10px; display:inline-flex; align-items:center; gap:4px;">🔒 LOCKED (${currentCount}/${c.reqMembers})</span>`
                   }
                 </div>
                 <div style="text-align:center; margin:6px 0 10px 0;">
@@ -5125,7 +5210,7 @@ window.renderMercenaryCaptainsSectionHtml = (clearedCount = null) => {
               <!-- Requirement Info & Progress -->
               <div style="background:rgba(0,0,0,0.25); border:1px solid var(--border); border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; gap:6px;">
                 <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:bold; display:flex; justify-content:space-between; align-items:center;">
-                  <span>📋 Unlock Criteria</span>
+                  <span>📋 Progress (${currentCount}/${c.reqMembers})</span>
                   <span style="color:${isUnlocked ? '#10b981' : '#eab308'};">${pct}%</span>
                 </div>
                 <div style="font-size:12px; color:var(--text-main); font-weight:500; line-height:1.4;">
@@ -5141,6 +5226,59 @@ window.renderMercenaryCaptainsSectionHtml = (clearedCount = null) => {
       </div>
     </div>
   `;
+};
+
+window.renderMercenaryBossAdminCardHtml = (bossProgress, totalRosterMasters = 0) => {
+    const bp = bossProgress || { lv1: 0, lv2: 0, lv3: 0, lv4: 0, lv5: 0 };
+    const bossDefs = [
+        { key: 'lv1', label: 'Lv. 1: Dr. Toxin Theodore', target: 10, diff: 'Easy+' },
+        { key: 'lv2', label: 'Lv. 2: Zenobia Queen of Violence', target: 10, diff: 'Normal+' },
+        { key: 'lv3', label: 'Lv. 3: Helios Cannon', target: 15, diff: 'Normal+' },
+        { key: 'lv4', label: 'Lv. 4: Callisto Mark II', target: 15, diff: 'Hard+' },
+        { key: 'lv5', label: 'Lv. 5: Behemoth', target: 20, diff: 'Nightmare+' }
+    ];
+
+    return `
+      <div class="card" style="background:linear-gradient(135deg, rgba(234,179,8,0.08), rgba(59,130,246,0.05)); border:1px solid rgba(234,179,8,0.3); margin-top:20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+          <h3 style="margin:0; font-size:16px; color:#facc15; display:flex; align-items:center; gap:8px;">
+            ⚙️ Phaethon Boss Unlock Manager (Alliance Progress)
+          </h3>
+          <button onclick="window.syncBossProgressFromMasters(${totalRosterMasters})" style="background:rgba(234,179,8,0.18); border:1px solid rgba(234,179,8,0.4); color:#facc15; padding:6px 14px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:12px; display:inline-flex; align-items:center; gap:6px;">
+            ⚡ Auto-Fill All from Roster (${totalRosterMasters} Masters)
+          </button>
+        </div>
+
+        <p style="color:var(--text-muted); font-size:13px; margin:0 0 16px 0; line-height:1.5;">
+          Directly update the current completed member count for each boss (as shown in-game under Alliance Tab unlock conditions e.g. <code>7 / 10</code>). Changes save instantly to Firebase!
+        </p>
+
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:14px;">
+          ${bossDefs.map(b => {
+              const currentVal = (bp[b.key] !== undefined && bp[b.key] !== null) ? parseInt(bp[b.key]) : totalRosterMasters;
+              const isUnlocked = currentVal >= b.target;
+              return `
+                <div style="background:var(--bg-main); border:1px solid ${isUnlocked ? 'rgba(16,185,129,0.4)' : 'var(--border)'}; border-radius:10px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                  <div>
+                    <div style="font-size:13px; font-weight:bold; color:var(--text-main);">${b.label}</div>
+                    <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">Req: <b>${b.target} Members</b> (${b.diff})</div>
+                  </div>
+
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    <button onclick="window.adjustBossProgressCount('${b.key}', -1)" style="width:28px; height:28px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; cursor:pointer;">-</button>
+                    
+                    <input type="number" id="boss_input_${b.key}" value="${currentVal}" min="0" max="100" onchange="window.saveBossProgressInput('${b.key}', this.value)" style="width:48px; text-align:center; padding:5px; border-radius:6px; border:1px solid ${isUnlocked ? 'rgba(16,185,129,0.5)' : 'var(--border)'}; background:var(--card-bg); color:${isUnlocked ? '#10b981' : 'var(--text-main)'}; font-weight:bold; font-size:14px;">
+                    
+                    <button onclick="window.adjustBossProgressCount('${b.key}', 1)" style="width:28px; height:28px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; cursor:pointer;">+</button>
+
+                    <span style="font-size:13px; font-weight:bold; color:var(--text-muted); min-width:32px;">/ ${b.target}</span>
+                  </div>
+                </div>
+              `;
+          }).join('')}
+        </div>
+      </div>
+    `;
 };
 
 // Showdown Missed Days Report Modal
@@ -8270,9 +8408,10 @@ html += `</select>
 
     try {
         window.mercenaryCache = null;
-        const [mercenaryData, rosterData] = await Promise.all([
+        const [mercenaryData, rosterData, bossProgressData] = await Promise.all([
             window.fetchMercenaryData(),
-            window.fetchRoster().catch(() => ({}))
+            window.fetchRoster().catch(() => ({})),
+            window.fetchMercenaryBossProgress().catch(() => ({}))
         ]);
 
         let rosterList = [];
@@ -8395,7 +8534,9 @@ html += `</select>
               </table>
             </div>
 
-            ${window.renderMercenaryCaptainsSectionHtml(yesCount)}
+            ${window.renderMercenaryBossAdminCardHtml(bossProgressData, yesCount)}
+
+            ${window.renderMercenaryCaptainsSectionHtml(yesCount, bossProgressData)}
 
           </div>
         `;
@@ -11352,9 +11493,10 @@ window.resetBearTrapEvent = async () => {
 
     try {
         window.mercenaryCache = null;
-        const [mercenaryData, rosterData] = await Promise.all([
+        const [mercenaryData, rosterData, bossProgressData] = await Promise.all([
             window.fetchMercenaryData().catch(() => ({})),
-            window.fetchRoster().catch(() => ({}))
+            window.fetchRoster().catch(() => ({})),
+            window.fetchMercenaryBossProgress().catch(() => ({}))
         ]);
 
         let rosterList = [];
@@ -11520,7 +11662,7 @@ window.resetBearTrapEvent = async () => {
               </div>
             </div>
 
-            ${window.renderMercenaryCaptainsSectionHtml(yesCount)}
+            ${window.renderMercenaryCaptainsSectionHtml(yesCount, bossProgressData)}
           </div>
         `;
         app.innerHTML = html;
