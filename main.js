@@ -603,27 +603,33 @@ window.saveMercenaryBossProgress = async (bossData) => {
     }
 };
 
-window.adjustBossProgressCount = async (bossKey, delta) => {
+window.adjustBossProgressCount = (bossKey, delta) => {
     const input = document.getElementById(`boss_input_${bossKey}`);
-    let current = input ? (parseInt(input.value) || 0) : 0;
-    let nextVal = Math.max(0, current + delta);
-    if (input) input.value = nextVal;
-    await window.saveBossProgressInput(bossKey, nextVal);
+    if (input) {
+        let current = parseInt(input.value) || 0;
+        let nextVal = Math.max(0, current + delta);
+        input.value = nextVal;
+    }
 };
 
-window.saveBossProgressInput = async (bossKey, value) => {
-    let currentBP = await window.fetchMercenaryBossProgress();
-    currentBP[bossKey] = Math.max(0, parseInt(value) || 0);
-    const ok = await window.saveMercenaryBossProgress(currentBP);
+window.saveAllBossProgress = async () => {
+    const keys = ['lv1', 'lv2', 'lv3', 'lv4', 'lv5'];
+    const payload = {};
+    keys.forEach(k => {
+        const input = document.getElementById(`boss_input_${k}`);
+        payload[k] = input ? Math.max(0, parseInt(input.value) || 0) : 0;
+    });
+    
+    const ok = await window.saveMercenaryBossProgress(payload);
     if (ok) {
-        if (window.showToast) window.showToast(`Saved ${bossKey.toUpperCase()} count to ${currentBP[bossKey]}`, "success");
+        if (window.showToast) window.showToast("🎉 All 5 boss unlock counts saved successfully!", "success");
         if (typeof window.activeViewFunc === 'function') {
             window.activeViewFunc();
         } else if (window.views && window.views.mercenaryAdmin) {
             window.views.mercenaryAdmin();
         }
     } else {
-        if (window.showToast) window.showToast("Failed to save boss count", "error");
+        if (window.showToast) window.showToast("Failed to save boss counts. Check your network or admin permissions.", "error");
     }
 };
 
@@ -5305,13 +5311,18 @@ window.renderMercenaryBossAdminCardHtml = (bossProgress, totalRosterMasters = 0)
           <h3 style="margin:0; font-size:16px; color:#facc15; display:flex; align-items:center; gap:8px;">
             ⚙️ Phaethon Boss Unlock Manager (Alliance Progress)
           </h3>
-          <button onclick="window.syncBossProgressFromMasters(${totalRosterMasters})" style="background:rgba(234,179,8,0.18); border:1px solid rgba(234,179,8,0.4); color:#facc15; padding:6px 14px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:12px; display:inline-flex; align-items:center; gap:6px;">
-            ⚡ Auto-Fill All from Roster (${totalRosterMasters} Masters)
-          </button>
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <button onclick="window.syncBossProgressFromMasters(${totalRosterMasters})" style="background:rgba(234,179,8,0.18); border:1px solid rgba(234,179,8,0.4); color:#facc15; padding:6px 14px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:12px; display:inline-flex; align-items:center; gap:6px;">
+              ⚡ Auto-Fill All from Roster (${totalRosterMasters} Masters)
+            </button>
+            <button onclick="window.saveAllBossProgress()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:7px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(16,185,129,0.3);">
+              💾 Save All Boss Counts
+            </button>
+          </div>
         </div>
 
         <p style="color:var(--text-muted); font-size:13px; margin:0 0 16px 0; line-height:1.5;">
-          Directly update the current completed member count for each boss (as shown in-game under Alliance Tab unlock conditions e.g. <code>7 / 10</code>). Changes save instantly to Firebase!
+          Directly update the completed member count for each boss level. Adjust numbers below and click <b>💾 Save All Boss Counts</b> to update Firebase!
         </p>
 
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:14px;">
@@ -5328,7 +5339,7 @@ window.renderMercenaryBossAdminCardHtml = (bossProgress, totalRosterMasters = 0)
                   <div style="display:flex; align-items:center; gap:6px;">
                     <button onclick="window.adjustBossProgressCount('${b.key}', -1)" style="width:28px; height:28px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; cursor:pointer;">-</button>
                     
-                    <input type="number" id="boss_input_${b.key}" value="${currentVal}" min="0" max="100" onchange="window.saveBossProgressInput('${b.key}', this.value)" style="width:48px; text-align:center; padding:5px; border-radius:6px; border:1px solid ${isUnlocked ? 'rgba(16,185,129,0.5)' : 'var(--border)'}; background:var(--card-bg); color:${isUnlocked ? '#10b981' : 'var(--text-main)'}; font-weight:bold; font-size:14px;">
+                    <input type="number" id="boss_input_${b.key}" value="${currentVal}" min="0" max="100" style="width:48px; text-align:center; padding:5px; border-radius:6px; border:1px solid ${isUnlocked ? 'rgba(16,185,129,0.5)' : 'var(--border)'}; background:var(--card-bg); color:${isUnlocked ? '#10b981' : 'var(--text-main)'}; font-weight:bold; font-size:14px;">
                     
                     <button onclick="window.adjustBossProgressCount('${b.key}', 1)" style="width:28px; height:28px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; cursor:pointer;">+</button>
 

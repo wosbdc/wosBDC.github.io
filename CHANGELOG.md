@@ -1,3 +1,8 @@
+## [1.48.122] - 2026-07-31
+### Changed
+- Added a dedicated **💾 Save All Boss Counts** batch submit button to the Phaethon Boss Unlock Manager.
+- Removed single-input auto-save triggers (`onchange`) and keyboard focus re-render interruptions, eliminating toast popup spam while editing numbers.
+
 ## [1.48.121] - 2026-07-31
 ### Added
 - Added a modern, glowing **👋 Welcome, [Chief Name]!** sign-in popup banner with glassmorphism styling and smooth micro-animations.
