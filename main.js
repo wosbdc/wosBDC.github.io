@@ -2832,9 +2832,14 @@ listenToAuth((user) => {
       }
     }
     
-    // If they are on the home page, maybe reload or show a toast
+    // Automatically remove onboarding banner and refresh views on sign-in
+    const onboardingEl = document.getElementById('essentialOnboardingBanner');
+    if (onboardingEl) onboardingEl.remove();
+    
     if (app.querySelector('#accountHubView')) views.account(); // Refresh account view if open
+    else if (typeof window.activeViewFunc === 'function') window.activeViewFunc();
   } else {
+    hasShownSessionWelcome = false;
     if(authSidebarBtn) authSidebarBtn.innerHTML = `👤 Sign In / Register`;
     if(adminSidebarBtn) adminSidebarBtn.style.display = 'none';
     if(signOutSidebarBtn) signOutSidebarBtn.style.display = 'none';
@@ -3277,6 +3282,12 @@ if(authSubmitBtn) authSubmitBtn.addEventListener('click', async () => {
     }
     
     closeAuthModal();
+    const onboardingEl = document.getElementById('essentialOnboardingBanner');
+    if (onboardingEl) onboardingEl.remove();
+    let uName = (currentUser && currentUser.gameId && idToNameMap[currentUser.gameId]) ? idToNameMap[currentUser.gameId] : (currentUser ? (currentUser.displayName || 'Chief') : 'Chief');
+    if (window.showWelcomePop) window.showWelcomePop(uName);
+    if (typeof window.activeViewFunc === 'function') window.activeViewFunc();
+    else views.home();
   } catch(err) {
     authErrorMsg.textContent = err.message;
     authErrorMsg.style.display = 'block';
@@ -3303,6 +3314,12 @@ if (authGoogleBtn) authGoogleBtn.addEventListener('click', async () => {
         if (snapshot.exists()) {
             window.showToast("Successfully signed in with Google!", "success");
             closeAuthModal();
+            const onboardingEl = document.getElementById('essentialOnboardingBanner');
+            if (onboardingEl) onboardingEl.remove();
+            let uName = (currentUser && currentUser.gameId && idToNameMap[currentUser.gameId]) ? idToNameMap[currentUser.gameId] : (currentUser ? (currentUser.displayName || 'Chief') : 'Chief');
+            if (window.showWelcomePop) window.showWelcomePop(uName);
+            if (typeof window.activeViewFunc === 'function') window.activeViewFunc();
+            else views.home();
         } else {
             // New user! They signed in with Google but we don't have their WOS Game ID
             // We need to ask for it.
@@ -9976,7 +9993,7 @@ window.resetBearTrapEvent = async () => {
       let onboardingBannerHtml = '';
       if (!currentUser) {
         onboardingBannerHtml = `
-          <div style="background: linear-gradient(135deg, rgba(59,130,246,0.18), rgba(147,51,234,0.18)); border: 1px solid rgba(59,130,246,0.35); border-radius: 16px; padding: 22px 26px; margin-bottom: 25px; display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; text-align: left; box-shadow: 0 8px 32px rgba(0,0,0,0.25);">
+          <div id="essentialOnboardingBanner" style="background: linear-gradient(135deg, rgba(59,130,246,0.18), rgba(147,51,234,0.18)); border: 1px solid rgba(59,130,246,0.35); border-radius: 16px; padding: 22px 26px; margin-bottom: 25px; display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; text-align: left; box-shadow: 0 8px 32px rgba(0,0,0,0.25);">
             <div style="flex: 1; min-width: 280px;">
               <div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(59,130,246,0.2); color: #60a5fa; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-bottom: 8px;">
                 ✨ Essential Alliance Member Portal

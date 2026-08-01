@@ -1,3 +1,8 @@
+## [1.48.123] - 2026-07-31
+### Fixed
+- Fixed post-login banner dismissal and welcome popup trigger.
+- Added `essentialOnboardingBanner` ID and automatic view refresh on login so the **✨ Essential Alliance Member Portal** onboarding card instantly disappears upon sign in, while triggering the **👋 Welcome, [Chief Name]!** popup.
+
 ## [1.48.122] - 2026-07-31
 ### Changed
 - Added a dedicated **💾 Save All Boss Counts** batch submit button to the Phaethon Boss Unlock Manager.
