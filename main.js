@@ -478,10 +478,10 @@ window.MERCENARY_PHASES = [
 ];
 
 window.MERCENARY_PHASE_STYLES = {
-    "Champion's Initiation": { label: "Champion's Initiation", color: "#10b981", bg: "rgba(16,185,129,0.15)", border: "rgba(16,185,129,0.4)", gradient: "linear-gradient(135deg, #059669, #10b981)", icon: "🛡️" },
-    "Epic Initiation": { label: "Epic Initiation", color: "#a855f7", bg: "rgba(168,85,247,0.15)", border: "rgba(168,85,247,0.4)", gradient: "linear-gradient(135deg, #7e22ce, #a855f7)", icon: "⚡" },
-    "Legend's Initiation": { label: "Legend's Initiation", color: "#06b6d4", bg: "rgba(6,182,212,0.15)", border: "rgba(6,182,212,0.4)", gradient: "linear-gradient(135deg, #0e7490, #06b6d4)", icon: "🌟" },
-    "Fearless": { label: "Fearless", color: "#f43f5e", bg: "rgba(244,63,94,0.15)", border: "rgba(244,63,94,0.4)", gradient: "linear-gradient(135deg, #be123c, #f43f5e)", icon: "🔥" }
+    "Champion's Initiation": { label: "Champion's Initiation", color: "#10b981", bg: "rgba(16,185,129,0.15)", border: "rgba(16,185,129,0.4)", gradient: "linear-gradient(135deg, #059669, #10b981)" },
+    "Epic Initiation": { label: "Epic Initiation", color: "#a855f7", bg: "rgba(168,85,247,0.15)", border: "rgba(168,85,247,0.4)", gradient: "linear-gradient(135deg, #7e22ce, #a855f7)" },
+    "Legend's Initiation": { label: "Legend's Initiation", color: "#06b6d4", bg: "rgba(6,182,212,0.15)", border: "rgba(6,182,212,0.4)", gradient: "linear-gradient(135deg, #0e7490, #06b6d4)" },
+    "Fearless": { label: "Fearless", color: "#f43f5e", bg: "rgba(244,63,94,0.15)", border: "rgba(244,63,94,0.4)", gradient: "linear-gradient(135deg, #be123c, #f43f5e)" }
 };
 
 window.MERCENARY_DIFFICULTIES = {
@@ -11814,22 +11814,16 @@ window.resetBearTrapEvent = async () => {
                 let diffConfig = window.MERCENARY_DIFFICULTIES[diffKey] || window.MERCENARY_DIFFICULTIES["Hard"];
                 let avatarUrl = window.getAvatarUrl ? window.getAvatarUrl(gIdStr, p.name) : `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=eab308&color=fff`;
 
-                let crestIcon = "🦅";
                 let crestGradient = "linear-gradient(135deg, #3b82f6, #1d4ed8)";
                 if (diffKey === "Insane") {
-                  crestIcon = "🔥🦅🔥";
                   crestGradient = "linear-gradient(135deg, #ef4444, #991b1b)";
                 } else if (diffKey === "Nightmare") {
-                  crestIcon = "👑🦅";
                   crestGradient = "linear-gradient(135deg, #eab308, #ca8a04)";
                 } else if (diffKey === "Hard") {
-                  crestIcon = "💎🦅";
                   crestGradient = "linear-gradient(135deg, #3b82f6, #1d4ed8)";
                 } else if (diffKey === "Normal") {
-                  crestIcon = "⚔️🦅";
                   crestGradient = "linear-gradient(135deg, #d97706, #92400e)";
                 } else if (diffKey === "Easy") {
-                  crestIcon = "🛡️🦅";
                   crestGradient = "linear-gradient(135deg, #64748b, #334155)";
                 }
 
@@ -11838,28 +11832,25 @@ window.resetBearTrapEvent = async () => {
                     <!-- Top Phase Accent Bar -->
                     <div style="position:absolute; top:0; left:0; width:100%; height:4px; background:${phaseStyle.gradient};"></div>
                     
-                    <!-- 1. 🖼️ Member Avatar -->
+                    <!-- 1. Member Avatar -->
                     <img src="${avatarUrl}" style="width:64px; height:64px; border-radius:50%; object-fit:cover; border:2px solid ${phaseStyle.color}; box-shadow:0 0 14px ${phaseStyle.bg}; margin-bottom:10px;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=eab308&color=fff';">
                     
-                    <!-- 2. 👑 Chief Name -->
+                    <!-- 2. Chief Name -->
                     <div style="font-weight:bold; font-size:16px; color:var(--text-main); margin-bottom:8px;">${escapeHTML(p.name)}</div>
                     
-                    <!-- 3. ⚔️ Phaethon Master glowing badge -->
-                    <span style="background:linear-gradient(135deg, #eab308, #ca8a04); color:#fff; font-weight:bold; font-size:11px; padding:4px 14px; border-radius:20px; text-transform:uppercase; letter-spacing:0.5px; box-shadow:0 2px 10px rgba(234,179,8,0.4); display:inline-flex; align-items:center; gap:5px; margin-bottom:12px;">
-                      ⚔️ 25/25 Phaethon Master
+                    <!-- 3. Phaethon Master glowing badge -->
+                    <span style="background:linear-gradient(135deg, #eab308, #ca8a04); color:#fff; font-weight:bold; font-size:11px; padding:4px 14px; border-radius:20px; text-transform:uppercase; letter-spacing:0.5px; box-shadow:0 2px 10px rgba(234,179,8,0.4); display:inline-flex; align-items:center; margin-bottom:12px;">
+                      25/25 Phaethon Master
                     </span>
 
-                    <!-- 4. 🏆 Initiation Phase & Difficulty Tier Badge -->
-                    <div style="background:${crestGradient}; color:#ffffff; border-radius:12px; padding:10px 14px; width:100%; box-sizing:border-box; box-shadow:0 4px 14px ${diffConfig.bg}; border:1px solid ${diffConfig.border}; display:flex; flex-direction:column; align-items:center; gap:3px;">
+                    <!-- 4. Initiation Phase & Difficulty Badge -->
+                    <div style="background:${crestGradient}; color:#ffffff; border-radius:12px; padding:10px 14px; width:100%; box-sizing:border-box; box-shadow:0 4px 14px ${diffConfig.bg}; border:1px solid ${diffConfig.border}; display:flex; flex-direction:column; align-items:center; gap:4px;">
                       <!-- Initiation Phase Chip (Distinct Phase Color) -->
-                      <div style="background:rgba(0,0,0,0.35); border:1px solid ${phaseStyle.color}; color:${phaseStyle.color}; font-size:10px; font-weight:bold; padding:2px 8px; border-radius:10px; text-transform:uppercase; letter-spacing:0.5px; display:inline-flex; align-items:center; gap:4px; margin-bottom:2px;">
-                        ${phaseStyle.icon} ${escapeHTML(phase)}
+                      <div style="background:rgba(0,0,0,0.35); border:1px solid ${phaseStyle.color}; color:${phaseStyle.color}; font-size:10px; font-weight:bold; padding:2px 8px; border-radius:10px; text-transform:uppercase; letter-spacing:0.5px; display:inline-flex; align-items:center; margin-bottom:2px;">
+                        ${escapeHTML(phase)}
                       </div>
-                      <!-- Crest Icon & Difficulty Title -->
-                      <div style="font-size:18px; filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5)); display:flex; align-items:center; gap:4px;">
-                        ${crestIcon}
-                      </div>
-                      <div style="font-weight:900; font-size:12px; text-transform:uppercase; letter-spacing:0.8px; text-shadow:0 1px 3px rgba(0,0,0,0.6);">
+                      <!-- Difficulty Title -->
+                      <div style="font-weight:900; font-size:13px; text-transform:uppercase; letter-spacing:1px; text-shadow:0 1px 3px rgba(0,0,0,0.6);">
                         ${diffKey}
                       </div>
                       <!-- Star Rating -->

@@ -1,3 +1,7 @@
+## [1.48.133] - 2026-08-01
+### Changed
+- Removed all emojis from Champion Cards on the Wall of Champions for a clean, sleek, high-end design.
+
 ## [1.48.132] - 2026-08-01
 ### Changed
 - Removed the word "TIER" from the Champion Card 3D Insignia Crest Badge (`HARD`, `INSANE`, `NIGHTMARE`, `NORMAL`, `EASY`).
