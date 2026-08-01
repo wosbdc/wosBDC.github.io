@@ -1,3 +1,12 @@
+## [1.48.126] - 2026-07-31
+### Changed
+- Updated Phaethon Boss Unlock Manager requirement labels to display full level specifications:
+  - **Lv. 1**: `10 members reach level 5 (Easy+)`
+  - **Lv. 2**: `10 members reach level 5 (Normal+)`
+  - **Lv. 3**: `15 members reach level 10 (Normal+)`
+  - **Lv. 4**: `15 members reach level 15 (Hard+)`
+  - **Lv. 5**: `20 members reach level 20 (Nightmare+)`
+
 ## [1.48.125] - 2026-07-31
 ### Fixed
 - Fixed permission error when saving Phaethon Boss Unlock counts in Boss Unlock Manager.

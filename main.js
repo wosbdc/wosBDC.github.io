@@ -5329,11 +5329,11 @@ window.renderMercenaryCaptainsSectionHtml = (clearedCount = null, bossProgress =
 window.renderMercenaryBossAdminCardHtml = (bossProgress, totalRosterMasters = 0) => {
     const bp = bossProgress || { lv1: 0, lv2: 0, lv3: 0, lv4: 0, lv5: 0 };
     const bossDefs = [
-        { key: 'lv1', label: 'Lv. 1: Dr. Toxin Theodore', target: 10, diff: 'Easy+' },
-        { key: 'lv2', label: 'Lv. 2: Zenobia Queen of Violence', target: 10, diff: 'Normal+' },
-        { key: 'lv3', label: 'Lv. 3: Helios Cannon', target: 15, diff: 'Normal+' },
-        { key: 'lv4', label: 'Lv. 4: Callisto Mark II', target: 15, diff: 'Hard+' },
-        { key: 'lv5', label: 'Lv. 5: Behemoth', target: 20, diff: 'Nightmare+' }
+        { key: 'lv1', label: 'Lv. 1: Dr. Toxin Theodore', target: 10, reqDesc: '10 members reach level 5 (Easy+)' },
+        { key: 'lv2', label: 'Lv. 2: Zenobia Queen of Violence', target: 10, reqDesc: '10 members reach level 5 (Normal+)' },
+        { key: 'lv3', label: 'Lv. 3: Helios Cannon', target: 15, reqDesc: '15 members reach level 10 (Normal+)' },
+        { key: 'lv4', label: 'Lv. 4: Callisto Mark II', target: 15, reqDesc: '15 members reach level 15 (Hard+)' },
+        { key: 'lv5', label: 'Lv. 5: Behemoth', target: 20, reqDesc: '20 members reach level 20 (Nightmare+)' }
     ];
 
     return `
@@ -5356,7 +5356,7 @@ window.renderMercenaryBossAdminCardHtml = (bossProgress, totalRosterMasters = 0)
           Directly update the completed member count for each boss level. Adjust numbers below and click <b>💾 Save All Boss Counts</b> to update Firebase!
         </p>
 
-        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:14px;">
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:14px;">
           ${bossDefs.map(b => {
               const currentVal = (bp[b.key] !== undefined && bp[b.key] !== null) ? parseInt(bp[b.key]) : totalRosterMasters;
               const isUnlocked = currentVal >= b.target;
@@ -5364,7 +5364,7 @@ window.renderMercenaryBossAdminCardHtml = (bossProgress, totalRosterMasters = 0)
                 <div style="background:var(--bg-main); border:1px solid ${isUnlocked ? 'rgba(16,185,129,0.4)' : 'var(--border)'}; border-radius:10px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
                   <div>
                     <div style="font-size:13px; font-weight:bold; color:var(--text-main);">${b.label}</div>
-                    <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">Req: <b>${b.target} Members</b> (${b.diff})</div>
+                    <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">Req: <b style="color:var(--text-main);">${b.reqDesc}</b></div>
                   </div>
 
                   <div style="display:flex; align-items:center; gap:6px;">
