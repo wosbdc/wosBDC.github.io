@@ -1,3 +1,8 @@
+## [1.48.131] - 2026-08-01
+### Changed
+- Reordered Champion Card layout to: 🖼️ Member Avatar ➔ 👑 Chief Name ➔ ⚔️ 25/25 Phaethon Master glowing badge ➔ 🏆 Initiation Phase & Difficulty Tier Crest Shield.
+- Assigned unique theme colors and icons for each Initiation Phase (`Champion's Initiation` = Emerald Green 🛡️, `Epic Initiation` = Radiant Purple ⚡, `Legend's Initiation` = Cyan Teal 🌟, `Fearless` = Blood Crimson 🔥).
+
 ## [1.48.130] - 2026-08-01
 ### Added
 - Upgraded the Mercenary Prestige **Wall of Champions** with custom **3D Star Crest Insignia Badges** (`INSANE MASTER 🔥🦅🔥 ⭐⭐⭐⭐⭐`, `NIGHTMARE MASTER 👑🦅 ⭐⭐⭐⭐`, `HARD MASTER 💎🦅 ⭐⭐⭐`, `NORMAL MASTER ⚔️🦅 ⭐⭐`, `EASY MASTER 🛡️🦅 ⭐`).
