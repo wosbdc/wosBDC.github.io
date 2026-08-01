@@ -1,3 +1,8 @@
+## [1.48.130] - 2026-08-01
+### Added
+- Upgraded the Mercenary Prestige **Wall of Champions** with custom **3D Star Crest Insignia Badges** (`INSANE MASTER 🔥🦅🔥 ⭐⭐⭐⭐⭐`, `NIGHTMARE MASTER 👑🦅 ⭐⭐⭐⭐`, `HARD MASTER 💎🦅 ⭐⭐⭐`, `NORMAL MASTER ⚔️🦅 ⭐⭐`, `EASY MASTER 🛡️🦅 ⭐`).
+- Embedded 3D gradient shield badges with drop-shadows and star icons directly onto each champion card.
+
 ## [1.48.129] - 2026-08-01
 ### Added
 - Integrated Initiation Phases (`Champion's Initiation`, `Epic Initiation`, `Legend's Initiation`, `Fearless`) and Difficulty Tiers (`Easy ⭐`, `Normal ⭐⭐`, `Hard ⭐⭐⭐`, `Nightmare ⭐⭐⭐⭐`, `Insane ⭐⭐⭐⭐⭐`) into the Mercenary Prestige Wall of Champions & R4/R5 Manager.

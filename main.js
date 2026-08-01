@@ -11806,19 +11806,47 @@ window.resetBearTrapEvent = async () => {
                 let diffConfig = window.MERCENARY_DIFFICULTIES[diffKey] || window.MERCENARY_DIFFICULTIES["Hard"];
                 let avatarUrl = window.getAvatarUrl ? window.getAvatarUrl(gIdStr, p.name) : `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=eab308&color=fff`;
 
-                return `
-                  <div class="merc-champ-card" data-name="${escapeHTML(p.name.toLowerCase())}" data-phase="${escapeHTML(phase)}" data-diff="${escapeHTML(diffKey)}" style="background:var(--card-bg); border:1px solid ${diffConfig.border}; border-radius:14px; padding:18px; display:flex; flex-direction:column; align-items:center; text-align:center; position:relative; overflow:hidden; box-shadow:0 4px 18px ${diffConfig.bg}; transition:transform 0.2s, box-shadow 0.2s;">
-                    <div style="position:absolute; top:0; left:0; width:100%; height:4px; background:linear-gradient(90deg, ${diffConfig.color}, #ef4444);"></div>
-                    <img src="${avatarUrl}" style="width:64px; height:64px; border-radius:50%; object-fit:cover; border:2px solid ${diffConfig.color}; box-shadow:0 0 12px ${diffConfig.bg}; margin-bottom:10px;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=eab308&color=fff';">
-                    <div style="font-weight:bold; font-size:16px; color:var(--text-main); margin-bottom:6px;">${escapeHTML(p.name)}</div>
-                    
-                    <span style="background:linear-gradient(135deg, #eab308, #ca8a04); color:#fff; font-weight:bold; font-size:11px; padding:4px 12px; border-radius:20px; text-transform:uppercase; letter-spacing:0.5px; box-shadow:0 2px 8px rgba(234,179,8,0.35); display:inline-flex; align-items:center; gap:5px; margin-bottom:8px;">
-                      ⚔️ 25/25 Phaethon Master
-                    </span>
+                let crestIcon = "🦅";
+                let crestGradient = "linear-gradient(135deg, #3b82f6, #1d4ed8)";
+                if (diffKey === "Insane") {
+                  crestIcon = "🔥🦅🔥";
+                  crestGradient = "linear-gradient(135deg, #ef4444, #991b1b)";
+                } else if (diffKey === "Nightmare") {
+                  crestIcon = "👑🦅";
+                  crestGradient = "linear-gradient(135deg, #eab308, #ca8a04)";
+                } else if (diffKey === "Hard") {
+                  crestIcon = "💎🦅";
+                  crestGradient = "linear-gradient(135deg, #3b82f6, #1d4ed8)";
+                } else if (diffKey === "Normal") {
+                  crestIcon = "⚔️🦅";
+                  crestGradient = "linear-gradient(135deg, #d97706, #92400e)";
+                } else if (diffKey === "Easy") {
+                  crestIcon = "🛡️🦅";
+                  crestGradient = "linear-gradient(135deg, #64748b, #334155)";
+                }
 
-                    <div style="background:${diffConfig.bg}; border:1px solid ${diffConfig.border}; border-radius:10px; padding:6px 12px; font-size:11px; color:${diffConfig.color}; font-weight:bold; display:inline-flex; flex-direction:column; align-items:center; gap:2px; width:100%; box-sizing:border-box;">
-                      <span style="font-size:10px; opacity:0.85; text-transform:uppercase; letter-spacing:0.5px;">${escapeHTML(phase)}</span>
-                      <span style="font-size:12px;">${diffConfig.label}</span>
+                return `
+                  <div class="merc-champ-card" data-name="${escapeHTML(p.name.toLowerCase())}" data-phase="${escapeHTML(phase)}" data-diff="${escapeHTML(diffKey)}" style="background:var(--card-bg); border:1px solid ${diffConfig.border}; border-radius:16px; padding:18px; display:flex; flex-direction:column; align-items:center; text-align:center; position:relative; overflow:hidden; box-shadow:0 6px 24px ${diffConfig.bg}; transition:transform 0.2s, box-shadow 0.2s;">
+                    <div style="position:absolute; top:0; left:0; width:100%; height:4px; background:${crestGradient};"></div>
+                    <img src="${avatarUrl}" style="width:64px; height:64px; border-radius:50%; object-fit:cover; border:2px solid ${diffConfig.color}; box-shadow:0 0 14px ${diffConfig.bg}; margin-bottom:10px;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=eab308&color=fff';">
+                    <div style="font-weight:bold; font-size:16px; color:var(--text-main); margin-bottom:10px;">${escapeHTML(p.name)}</div>
+                    
+                    <!-- 3D Star Crest Insignia Badge -->
+                    <div style="background:${crestGradient}; color:#ffffff; border-radius:12px; padding:10px 14px; width:100%; box-sizing:border-box; box-shadow:0 4px 14px ${diffConfig.bg}; border:1px solid ${diffConfig.border}; margin-bottom:10px; display:flex; flex-direction:column; align-items:center; gap:3px;">
+                      <div style="font-size:20px; filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5)); display:flex; align-items:center; gap:4px;">
+                        ${crestIcon}
+                      </div>
+                      <div style="font-weight:900; font-size:12px; text-transform:uppercase; letter-spacing:0.8px; text-shadow:0 1px 3px rgba(0,0,0,0.6);">
+                        ${diffKey} MASTER
+                      </div>
+                      <div style="font-size:12px; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.8)); margin-top:2px;">
+                        ${diffConfig.stars}
+                      </div>
+                    </div>
+
+                    <!-- Initiation Phase Badge -->
+                    <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:8px; padding:4px 10px; font-size:10px; color:var(--text-muted); font-weight:bold; text-transform:uppercase; letter-spacing:0.5px;">
+                      ${escapeHTML(phase)}
                     </div>
                   </div>
                 `;
