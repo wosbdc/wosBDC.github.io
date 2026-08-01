@@ -11860,7 +11860,7 @@ window.resetBearTrapEvent = async () => {
                         ${crestIcon}
                       </div>
                       <div style="font-weight:900; font-size:12px; text-transform:uppercase; letter-spacing:0.8px; text-shadow:0 1px 3px rgba(0,0,0,0.6);">
-                        ${diffKey} TIER
+                        ${diffKey}
                       </div>
                       <!-- Star Rating -->
                       <div style="font-size:12px; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.8)); margin-top:1px;">

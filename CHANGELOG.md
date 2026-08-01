@@ -1,3 +1,7 @@
+## [1.48.132] - 2026-08-01
+### Changed
+- Removed the word "TIER" from the Champion Card 3D Insignia Crest Badge (`HARD`, `INSANE`, `NIGHTMARE`, `NORMAL`, `EASY`).
+
 ## [1.48.131] - 2026-08-01
 ### Changed
 - Reordered Champion Card layout to: 🖼️ Member Avatar ➔ 👑 Chief Name ➔ ⚔️ 25/25 Phaethon Master glowing badge ➔ 🏆 Initiation Phase & Difficulty Tier Crest Shield.
