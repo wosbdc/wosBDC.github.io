@@ -1,3 +1,7 @@
+## [1.48.128] - 2026-08-01
+### Changed
+- Removed Game ID display from member cards on the Mercenary Prestige **Wall of Champions** for a cleaner aesthetic.
+
 ## [1.48.127] - 2026-07-31
 ### Changed
 - Removed misleading `Auto-Fill All from Roster` button from Boss Unlock Manager since individual member battle difficulties (Easy+, Normal+, Hard+, Nightmare+) are not tracked per player.

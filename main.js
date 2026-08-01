@@ -11711,8 +11711,7 @@ window.resetBearTrapEvent = async () => {
                   <div class="merc-champ-card" data-name="${p.name.toLowerCase()}" style="background:var(--card-bg); border:1px solid rgba(234,179,8,0.4); border-radius:14px; padding:18px; display:flex; flex-direction:column; align-items:center; text-align:center; position:relative; overflow:hidden; box-shadow:0 4px 18px rgba(234,179,8,0.12); transition:transform 0.2s, box-shadow 0.2s;">
                     <div style="position:absolute; top:0; left:0; width:100%; height:4px; background:linear-gradient(90deg, #eab308, #ef4444);"></div>
                     <img src="${avatarUrl}" style="width:64px; height:64px; border-radius:50%; object-fit:cover; border:2px solid #eab308; box-shadow:0 0 12px rgba(234,179,8,0.3); margin-bottom:10px;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=eab308&color=fff';">
-                    <div style="font-weight:bold; font-size:16px; color:var(--text-main); margin-bottom:2px;">${escapeHTML(p.name)}</div>
-                    <div style="font-size:12px; color:var(--text-muted); font-family:monospace; margin-bottom:10px;">${escapeHTML(gIdStr)}</div>
+                    <div style="font-weight:bold; font-size:16px; color:var(--text-main); margin-bottom:10px;">${escapeHTML(p.name)}</div>
                     <span style="background:linear-gradient(135deg, #eab308, #ca8a04); color:#fff; font-weight:bold; font-size:11px; padding:4px 12px; border-radius:20px; text-transform:uppercase; letter-spacing:0.5px; box-shadow:0 2px 8px rgba(234,179,8,0.35); display:inline-flex; align-items:center; gap:5px;">
                       ⚔️ 25/25 Phaethon Master
                     </span>
