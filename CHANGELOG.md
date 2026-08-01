@@ -1,3 +1,8 @@
+## [1.48.129] - 2026-08-01
+### Added
+- Integrated Initiation Phases (`Champion's Initiation`, `Epic Initiation`, `Legend's Initiation`, `Fearless`) and Difficulty Tiers (`Easy ⭐`, `Normal ⭐⭐`, `Hard ⭐⭐⭐`, `Nightmare ⭐⭐⭐⭐`, `Insane ⭐⭐⭐⭐⭐`) into the Mercenary Prestige Wall of Champions & R4/R5 Manager.
+- Added color-coded badges, star crest styling, and live Phase / Difficulty filter dropdowns to the Wall of Champions.
+
 ## [1.48.128] - 2026-08-01
 ### Changed
 - Removed Game ID display from member cards on the Mercenary Prestige **Wall of Champions** for a cleaner aesthetic.

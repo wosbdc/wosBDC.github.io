@@ -470,6 +470,21 @@ window.toggleChampionshipStatus = async (gameId, forceStatus = null) => {
     }
 };
 
+window.MERCENARY_PHASES = [
+    "Champion's Initiation",
+    "Epic Initiation",
+    "Legend's Initiation",
+    "Fearless"
+];
+
+window.MERCENARY_DIFFICULTIES = {
+    "Easy": { label: "Easy ⭐", stars: "⭐", color: "#94a3b8", bg: "rgba(148,163,184,0.15)", border: "rgba(148,163,184,0.4)" },
+    "Normal": { label: "Normal ⭐⭐", stars: "⭐⭐", color: "#cd7f32", bg: "rgba(205,127,50,0.15)", border: "rgba(205,127,50,0.4)" },
+    "Hard": { label: "Hard ⭐⭐⭐", stars: "⭐⭐⭐", color: "#60a5fa", bg: "rgba(96,165,250,0.15)", border: "rgba(96,165,250,0.4)" },
+    "Nightmare": { label: "Nightmare ⭐⭐⭐⭐", stars: "⭐⭐⭐⭐", color: "#facc15", bg: "rgba(250,204,21,0.15)", border: "rgba(250,204,21,0.4)" },
+    "Insane": { label: "Insane ⭐⭐⭐⭐⭐", stars: "⭐⭐⭐⭐⭐", color: "#ef4444", bg: "rgba(239,68,68,0.15)", border: "rgba(239,68,68,0.4)" }
+};
+
 // Fetch Mercenary Prestige Data natively from single master node activity_live
 window.fetchMercenaryData = async () => {
     if (window.mercenaryCache) return window.mercenaryCache;
@@ -487,6 +502,8 @@ window.fetchMercenaryData = async () => {
                             gameId: gid,
                             name: rec.name || (window.idToNameMap && window.idToNameMap[gid]) || 'Chief',
                             signedUp: isT(rec.mercenary),
+                            phase: rec.mercenaryPhase || "Champion's Initiation",
+                            difficulty: rec.mercenaryDifficulty || "Hard",
                             lastUpdated: rec.updatedAt || Date.now()
                         };
                     }
@@ -499,13 +516,51 @@ window.fetchMercenaryData = async () => {
     if (window.idToNameMap) {
         Object.entries(window.idToNameMap).forEach(([gid, name]) => {
             if (!result[gid]) {
-                result[gid] = { gameId: gid, name: name, signedUp: false, lastUpdated: Date.now() };
+                result[gid] = { gameId: gid, name: name, signedUp: false, phase: "Champion's Initiation", difficulty: "Hard", lastUpdated: Date.now() };
             }
         });
     }
 
     window.mercenaryCache = result;
     return result;
+};
+
+window.updateMercenaryTier = async (gameId, phase = "Champion's Initiation", difficulty = "Hard") => {
+    if (!gameId) return false;
+    const gIdStr = gameId.toString().trim();
+    const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name || "Admin") : "Admin";
+    let data = {};
+    try { data = await window.fetchMercenaryData(); } catch(e) { console.error(e); }
+    const existing = data[gIdStr] || { gameId: gIdStr, name: 'Chief' };
+    const playerName = existing.name || (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief';
+
+    try {
+        await update(ref(db, `activity_live/${gIdStr}`), {
+            name: playerName,
+            mercenaryPhase: phase,
+            mercenaryDifficulty: difficulty,
+            updatedAt: Date.now()
+        });
+    } catch(e) {}
+
+    try {
+        await update(ref(db, `mercenary/${gIdStr}`), {
+            gameId: gIdStr, name: playerName, phase: phase, difficulty: difficulty, lastUpdated: Date.now(), updatedBy: adminName
+        });
+    } catch(e) {}
+
+    window.clearAllEventCaches();
+    if (window.showToast) window.showToast(`Updated ${playerName} ➔ ${phase}: ${difficulty}`, "success");
+    return true;
+};
+
+window.onMercTierChange = async (gameId) => {
+    const phaseSel = document.getElementById(`merc_phase_${gameId}`);
+    const diffSel = document.getElementById(`merc_diff_${gameId}`);
+    if (!phaseSel || !diffSel) return;
+    const phase = phaseSel.value;
+    const diff = diffSel.value;
+    await window.updateMercenaryTier(gameId, phase, diff);
 };
 
 // Toggle Mercenary Prestige signup status natively in master node activity_live
@@ -8613,17 +8668,31 @@ html += `</select>
                 <thead>
                   <tr style="background:var(--bg-main); border-bottom:1px solid var(--border); color:var(--text-muted); font-size:12px; text-transform:uppercase;">
                     <th style="padding:12px 20px;">Chief Name</th>
-                    <th style="padding:12px 20px; text-align:right;">Signup Status</th>
+                    <th style="padding:12px 10px;">Initiation Phase</th>
+                    <th style="padding:12px 10px;">Difficulty Tier</th>
+                    <th style="padding:12px 20px; text-align:right;">Master Status</th>
                   </tr>
                 </thead>
                 <tbody id="mercTableBody">
                   ${rosterList.map(p => {
                       let gIdStr = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (p.name ? p.name.toLowerCase().replace(/[^a-z0-9]/g, '_') : '');
-                      let record = mercenaryData[gIdStr];
+                      let record = mercenaryData[gIdStr] || {};
                       let isDone = record && record.signedUp;
+                      let currentPhase = record.phase || "Champion's Initiation";
+                      let currentDiff = record.difficulty || "Hard";
                       return `
                         <tr class="merc-row" data-name="${escapeHTML((p.name || '').toLowerCase())}" data-gid="${gIdStr}" data-signed="${isDone ? 'yes' : 'no'}" style="border-bottom:1px solid var(--border);">
                           <td class="merc-name-cell" style="padding:14px 20px; font-weight:bold; color:var(--text-main); font-size:15px;">${escapeHTML(p.name)}</td>
+                          <td style="padding:14px 10px;">
+                            <select id="merc_phase_${gIdStr}" onchange="window.onMercTierChange('${gIdStr}')" style="background:var(--bg-main); color:var(--text-main); border:1px solid var(--border); border-radius:6px; padding:6px 10px; font-size:12px; font-weight:bold;">
+                              ${window.MERCENARY_PHASES.map(ph => `<option value="${escapeHTML(ph)}" ${currentPhase === ph ? 'selected' : ''}>${escapeHTML(ph)}</option>`).join('')}
+                            </select>
+                          </td>
+                          <td style="padding:14px 10px;">
+                            <select id="merc_diff_${gIdStr}" onchange="window.onMercTierChange('${gIdStr}')" style="background:var(--bg-main); color:var(--text-main); border:1px solid var(--border); border-radius:6px; padding:6px 10px; font-size:12px; font-weight:bold;">
+                              ${Object.entries(window.MERCENARY_DIFFICULTIES).map(([dk, dv]) => `<option value="${dk}" ${currentDiff === dk ? 'selected' : ''}>${dv.label}</option>`).join('')}
+                            </select>
+                          </td>
                           <td style="padding:14px 20px; text-align:right;">
                             <button class="merc-toggle-btn" onclick="window.onMercToggle('${gIdStr}', this)" style="background:${isDone ? 'linear-gradient(135deg, #eab308, #ca8a04)' : 'rgba(239,68,68,0.15)'}; color:${isDone ? '#ffffff' : '#ef4444'}; border:${isDone ? 'none' : '1px solid rgba(239,68,68,0.4)'}; padding:6px 20px; border-radius:20px; font-weight:bold; cursor:pointer; font-size:13px; transition:0.2s; box-shadow:${isDone ? '0 2px 8px rgba(234,179,8,0.35)' : 'none'};">
                               ${isDone ? '⚔️ Phaethon Master (Done)' : '❌ Not Done (0/25)'}
@@ -11644,15 +11713,29 @@ window.resetBearTrapEvent = async () => {
           }
         };
 
-        window.filterMercPublicTable = (query) => {
-          const q = String(query || '').toLowerCase().trim();
+        window.filterMercPublicTable = () => {
+          const q = String(document.getElementById('mercPublicSearch')?.value || '').toLowerCase().trim();
+          const selectedDiff = document.getElementById('mercPublicDiffFilter')?.value || '';
+          const selectedPhase = document.getElementById('mercPublicPhaseFilter')?.value || '';
+
           document.querySelectorAll('.merc-champ-card').forEach(card => {
             const name = (card.getAttribute('data-name') || '').toLowerCase();
-            card.style.display = name.includes(q) ? 'flex' : 'none';
+            const diff = card.getAttribute('data-diff') || '';
+            const phase = card.getAttribute('data-phase') || '';
+            const nameMatches = name.includes(q);
+            const diffMatches = !selectedDiff || diff === selectedDiff;
+            const phaseMatches = !selectedPhase || phase === selectedPhase;
+            card.style.display = (nameMatches && diffMatches && phaseMatches) ? 'flex' : 'none';
           });
+
           document.querySelectorAll('.merc-pub-row').forEach(row => {
             const name = (row.getAttribute('data-name') || '').toLowerCase();
-            row.style.display = name.includes(q) ? '' : 'none';
+            const diff = row.getAttribute('data-diff') || '';
+            const phase = row.getAttribute('data-phase') || '';
+            const nameMatches = name.includes(q);
+            const diffMatches = !selectedDiff || diff === selectedDiff;
+            const phaseMatches = !selectedPhase || phase === selectedPhase;
+            row.style.display = (nameMatches && diffMatches && phaseMatches) ? '' : 'none';
           });
         };
 
@@ -11689,13 +11772,24 @@ window.resetBearTrapEvent = async () => {
               </div>
             </div>
 
-            <!-- View Switcher & Search Bar -->
+            <!-- View Switcher & Search / Filters -->
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
               <div style="display:flex; background:var(--bg-main); border:1px solid var(--border); border-radius:8px; overflow:hidden;">
                 <button id="mercBtnWall" onclick="window.switchMercView('wall')" style="padding:8px 18px; border:none; background:linear-gradient(135deg, #eab308, #ca8a04); color:#fff; font-weight:bold; cursor:pointer; font-size:13px; transition:0.2s;">🏆 Champion Wall (${yesCount})</button>
                 <button id="mercBtnRoster" onclick="window.switchMercView('roster')" style="padding:8px 18px; border:none; background:transparent; color:var(--text-muted); font-weight:bold; cursor:pointer; font-size:13px; transition:0.2s;">📋 Roster Status (${totalCount})</button>
               </div>
-              <input type="text" id="mercPublicSearch" placeholder="🔍 Search Chief..." onkeyup="window.filterMercPublicTable(this.value)" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; outline:none; min-width:220px;">
+
+              <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                <select id="mercPublicPhaseFilter" onchange="window.filterMercPublicTable()" style="padding:8px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; font-weight:bold;">
+                  <option value="">All Phases</option>
+                  ${window.MERCENARY_PHASES.map(ph => `<option value="${escapeHTML(ph)}">${escapeHTML(ph)}</option>`).join('')}
+                </select>
+                <select id="mercPublicDiffFilter" onchange="window.filterMercPublicTable()" style="padding:8px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; font-weight:bold;">
+                  <option value="">All Tiers ⭐</option>
+                  ${Object.entries(window.MERCENARY_DIFFICULTIES).map(([dk, dv]) => `<option value="${dk}">${dv.label}</option>`).join('')}
+                </select>
+                <input type="text" id="mercPublicSearch" placeholder="🔍 Search Chief..." onkeyup="window.filterMercPublicTable()" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; outline:none; min-width:160px;">
+              </div>
             </div>
 
             <!-- 🏆 Champion Wall Grid -->
@@ -11706,15 +11800,26 @@ window.resetBearTrapEvent = async () => {
                 </div>
               ` : championList.map(p => {
                 let gIdStr = String(p.gameId || '').trim();
+                let record = mercenaryData[gIdStr] || {};
+                let phase = record.phase || "Champion's Initiation";
+                let diffKey = record.difficulty || "Hard";
+                let diffConfig = window.MERCENARY_DIFFICULTIES[diffKey] || window.MERCENARY_DIFFICULTIES["Hard"];
                 let avatarUrl = window.getAvatarUrl ? window.getAvatarUrl(gIdStr, p.name) : `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=eab308&color=fff`;
+
                 return `
-                  <div class="merc-champ-card" data-name="${p.name.toLowerCase()}" style="background:var(--card-bg); border:1px solid rgba(234,179,8,0.4); border-radius:14px; padding:18px; display:flex; flex-direction:column; align-items:center; text-align:center; position:relative; overflow:hidden; box-shadow:0 4px 18px rgba(234,179,8,0.12); transition:transform 0.2s, box-shadow 0.2s;">
-                    <div style="position:absolute; top:0; left:0; width:100%; height:4px; background:linear-gradient(90deg, #eab308, #ef4444);"></div>
-                    <img src="${avatarUrl}" style="width:64px; height:64px; border-radius:50%; object-fit:cover; border:2px solid #eab308; box-shadow:0 0 12px rgba(234,179,8,0.3); margin-bottom:10px;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=eab308&color=fff';">
-                    <div style="font-weight:bold; font-size:16px; color:var(--text-main); margin-bottom:10px;">${escapeHTML(p.name)}</div>
-                    <span style="background:linear-gradient(135deg, #eab308, #ca8a04); color:#fff; font-weight:bold; font-size:11px; padding:4px 12px; border-radius:20px; text-transform:uppercase; letter-spacing:0.5px; box-shadow:0 2px 8px rgba(234,179,8,0.35); display:inline-flex; align-items:center; gap:5px;">
+                  <div class="merc-champ-card" data-name="${escapeHTML(p.name.toLowerCase())}" data-phase="${escapeHTML(phase)}" data-diff="${escapeHTML(diffKey)}" style="background:var(--card-bg); border:1px solid ${diffConfig.border}; border-radius:14px; padding:18px; display:flex; flex-direction:column; align-items:center; text-align:center; position:relative; overflow:hidden; box-shadow:0 4px 18px ${diffConfig.bg}; transition:transform 0.2s, box-shadow 0.2s;">
+                    <div style="position:absolute; top:0; left:0; width:100%; height:4px; background:linear-gradient(90deg, ${diffConfig.color}, #ef4444);"></div>
+                    <img src="${avatarUrl}" style="width:64px; height:64px; border-radius:50%; object-fit:cover; border:2px solid ${diffConfig.color}; box-shadow:0 0 12px ${diffConfig.bg}; margin-bottom:10px;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=eab308&color=fff';">
+                    <div style="font-weight:bold; font-size:16px; color:var(--text-main); margin-bottom:6px;">${escapeHTML(p.name)}</div>
+                    
+                    <span style="background:linear-gradient(135deg, #eab308, #ca8a04); color:#fff; font-weight:bold; font-size:11px; padding:4px 12px; border-radius:20px; text-transform:uppercase; letter-spacing:0.5px; box-shadow:0 2px 8px rgba(234,179,8,0.35); display:inline-flex; align-items:center; gap:5px; margin-bottom:8px;">
                       ⚔️ 25/25 Phaethon Master
                     </span>
+
+                    <div style="background:${diffConfig.bg}; border:1px solid ${diffConfig.border}; border-radius:10px; padding:6px 12px; font-size:11px; color:${diffConfig.color}; font-weight:bold; display:inline-flex; flex-direction:column; align-items:center; gap:2px; width:100%; box-sizing:border-box;">
+                      <span style="font-size:10px; opacity:0.85; text-transform:uppercase; letter-spacing:0.5px;">${escapeHTML(phase)}</span>
+                      <span style="font-size:12px;">${diffConfig.label}</span>
+                    </div>
                   </div>
                 `;
               }).join('')}
@@ -11723,27 +11828,32 @@ window.resetBearTrapEvent = async () => {
             <!-- 📋 Roster Table View (Initially Hidden) -->
             <div id="mercViewRoster" class="card" style="display:none;">
               <div class="card-table-scroll" style="overflow-x:auto; width:100%; border-radius:8px; border:1px solid var(--border);">
-                <table id="mercPublicTable" style="min-width:600px; width:100%; border-collapse:collapse; text-align:left;">
+                <table id="mercPublicTable" style="min-width:650px; width:100%; border-collapse:collapse; text-align:left;">
                   <thead>
                     <tr style="background:rgba(255,255,255,0.03); border-bottom:1px solid var(--border);">
                       <th style="padding:12px 16px;">Player</th>
-                      <th style="padding:12px 16px;">Game ID</th>
+                      <th style="padding:12px 16px;">Phase & Difficulty</th>
                       <th style="padding:12px 16px; text-align:center;">Status</th>
                     </tr>
                   </thead>
                   <tbody>
                     ${rosterList.map(p => {
                       let gIdStr = String(p.gameId || '').trim();
-                      let record = mercenaryData[gIdStr];
+                      let record = mercenaryData[gIdStr] || {};
                       let isDone = record && record.signedUp;
+                      let phase = record.phase || "Champion's Initiation";
+                      let diffKey = record.difficulty || "Hard";
+                      let diffConfig = window.MERCENARY_DIFFICULTIES[diffKey] || window.MERCENARY_DIFFICULTIES["Hard"];
                       let avatarUrl = window.getAvatarUrl ? window.getAvatarUrl(gIdStr, p.name) : `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=3b82f6&color=fff`;
                       return `
-                        <tr class="merc-pub-row" data-name="${p.name.toLowerCase()}" style="border-bottom:1px solid rgba(255,255,255,0.05); transition:background 0.2s;">
+                        <tr class="merc-pub-row" data-name="${escapeHTML(p.name.toLowerCase())}" data-phase="${escapeHTML(phase)}" data-diff="${escapeHTML(diffKey)}" style="border-bottom:1px solid rgba(255,255,255,0.05); transition:background 0.2s;">
                           <td style="padding:12px 16px; display:flex; align-items:center; gap:10px;">
                             <img src="${avatarUrl}" style="width:32px; height:32px; border-radius:50%; object-fit:cover; border:1px solid var(--border);" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=3b82f6&color=fff';">
                             <span style="font-weight:bold; color:var(--text-main);">${escapeHTML(p.name)}</span>
                           </td>
-                          <td style="padding:12px 16px; color:var(--text-muted); font-size:13px; font-family:monospace;">${escapeHTML(gIdStr)}</td>
+                          <td style="padding:12px 16px; font-size:12px;">
+                            ${isDone ? `<span style="color:${diffConfig.color}; font-weight:bold;">${escapeHTML(phase)}: ${diffConfig.label}</span>` : `<span style="color:var(--text-muted);">-</span>`}
+                          </td>
                           <td style="padding:12px 16px; text-align:center;">
                             ${isDone ? 
                               `<span style="background:linear-gradient(135deg, #eab308, #ca8a04); color:#fff; padding:4px 12px; border-radius:12px; font-weight:bold; font-size:12px; display:inline-flex; align-items:center; gap:4px; box-shadow:0 2px 6px rgba(234,179,8,0.3);">⚔️ 25/25 Phaethon Master</span>` :
