@@ -1,3 +1,9 @@
+## [1.48.120] - 2026-07-31
+### Fixed
+- Fixed Firebase `saveMercenaryBossProgress` write bug by replacing `update` with `set` to guarantee reliable persistence of boss counts.
+- Fixed active view state refresh on boss count updates using `window.activeViewFunc`.
+- Enforced strict Admin Menu security policy: removed all admin shortcuts from public main windows so all manager and admin tools are strictly accessible only from behind the Admin Menu (`views.admin()`).
+
 ## [1.48.119] - 2026-07-31
 ### Added
 - Integrated official Phaethon Mercenary Captain Boss unlock requirements for all 5 Bosses (Dr. Toxin, Zenobia, Helios Cannon, Callisto Mark II, Behemoth).

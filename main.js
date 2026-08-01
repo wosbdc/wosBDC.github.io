@@ -594,7 +594,7 @@ window.saveMercenaryBossProgress = async (bossData) => {
             lv5: parseInt(bossData.lv5) || 0,
             updatedAt: Date.now()
         };
-        await update(ref(db, 'mercenary_boss_progress'), payload);
+        await set(ref(db, 'mercenary_boss_progress'), payload);
         window.mercenaryBossProgressCache = payload;
         return true;
     } catch(e) {
@@ -617,10 +617,10 @@ window.saveBossProgressInput = async (bossKey, value) => {
     const ok = await window.saveMercenaryBossProgress(currentBP);
     if (ok) {
         if (window.showToast) window.showToast(`Saved ${bossKey.toUpperCase()} count to ${currentBP[bossKey]}`, "success");
-        if (window.views && window.views.mercenaryAdmin && window.location.hash.includes('Admin')) {
+        if (typeof window.activeViewFunc === 'function') {
+            window.activeViewFunc();
+        } else if (window.views && window.views.mercenaryAdmin) {
             window.views.mercenaryAdmin();
-        } else if (window.views && window.views.mercenary) {
-            window.views.mercenary();
         }
     } else {
         if (window.showToast) window.showToast("Failed to save boss count", "error");
@@ -8394,6 +8394,8 @@ html += `</select>
     const app = document.getElementById('app');
     if (!app) return;
 
+    window.activeViewFunc = () => views.mercenaryAdmin();
+
     const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
     if (!isManager) {
        if(window.showToast) window.showToast("Only R4/R5 managers can edit Mercenary Prestige data", "error");
@@ -11570,11 +11572,6 @@ window.resetBearTrapEvent = async () => {
                 </h2>
                 <p style="margin:4px 0 0 0; color:var(--text-muted); font-size:13px;">Honor roll of alliance members who have conquered all 25 Phaethon Scout battles.</p>
               </div>
-              ${isManager ? `
-                <button onclick="views.mercenaryAdmin()" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:white; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(239,68,68,0.3);">
-                  ⚙️ Open Manager Mode ➔
-                </button>
-              ` : ''}
             </div>
 
             <!-- Alliance Progress Bar Card -->
