@@ -5326,7 +5326,7 @@ window.renderMercenaryCaptainsSectionHtml = (clearedCount = null, bossProgress =
   `;
 };
 
-window.renderMercenaryBossAdminCardHtml = (bossProgress, totalRosterMasters = 0) => {
+window.renderMercenaryBossAdminCardHtml = (bossProgress) => {
     const bp = bossProgress || { lv1: 0, lv2: 0, lv3: 0, lv4: 0, lv5: 0 };
     const bossDefs = [
         { key: 'lv1', label: 'Lv. 1: Dr. Toxin Theodore', target: 10, reqDesc: '10 members reach level 5 (Easy+)' },
@@ -5343,9 +5343,6 @@ window.renderMercenaryBossAdminCardHtml = (bossProgress, totalRosterMasters = 0)
             ⚙️ Phaethon Boss Unlock Manager (Alliance Progress)
           </h3>
           <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-            <button onclick="window.syncBossProgressFromMasters(${totalRosterMasters})" style="background:rgba(234,179,8,0.18); border:1px solid rgba(234,179,8,0.4); color:#facc15; padding:6px 14px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:12px; display:inline-flex; align-items:center; gap:6px;">
-              ⚡ Auto-Fill All from Roster (${totalRosterMasters} Masters)
-            </button>
             <button onclick="window.saveAllBossProgress()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:7px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(16,185,129,0.3);">
               💾 Save All Boss Counts
             </button>
@@ -5353,12 +5350,12 @@ window.renderMercenaryBossAdminCardHtml = (bossProgress, totalRosterMasters = 0)
         </div>
 
         <p style="color:var(--text-muted); font-size:13px; margin:0 0 16px 0; line-height:1.5;">
-          Directly update the completed member count for each boss level. Adjust numbers below and click <b>💾 Save All Boss Counts</b> to update Firebase!
+          Directly enter the confirmed member count for each boss difficulty level. Adjust numbers below and click <b>💾 Save All Boss Counts</b> to update Firebase!
         </p>
 
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:14px;">
           ${bossDefs.map(b => {
-              const currentVal = (bp[b.key] !== undefined && bp[b.key] !== null) ? parseInt(bp[b.key]) : totalRosterMasters;
+              const currentVal = (bp[b.key] !== undefined && bp[b.key] !== null) ? parseInt(bp[b.key]) : 0;
               const isUnlocked = currentVal >= b.target;
               return `
                 <div style="background:var(--bg-main); border:1px solid ${isUnlocked ? 'rgba(16,185,129,0.4)' : 'var(--border)'}; border-radius:10px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
@@ -8639,7 +8636,7 @@ html += `</select>
               </table>
             </div>
 
-            ${window.renderMercenaryBossAdminCardHtml(bossProgressData, yesCount)}
+            ${window.renderMercenaryBossAdminCardHtml(bossProgressData)}
 
             ${window.renderMercenaryCaptainsSectionHtml(yesCount, bossProgressData)}
 

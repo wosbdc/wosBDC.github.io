@@ -1,3 +1,8 @@
+## [1.48.127] - 2026-07-31
+### Changed
+- Removed misleading `Auto-Fill All from Roster` button from Boss Unlock Manager since individual member battle difficulties (Easy+, Normal+, Hard+, Nightmare+) are not tracked per player.
+- Set default un-saved fallback count for new boss unlock cards to `0` instead of total roster count.
+
 ## [1.48.126] - 2026-07-31
 ### Changed
 - Updated Phaethon Boss Unlock Manager requirement labels to display full level specifications:
