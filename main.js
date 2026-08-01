@@ -2733,8 +2733,65 @@ onValue(ref(db, 'config/maintenanceMode'), (snapshot) => {
   checkMaintenanceAccess();
 });
 
+// Welcome Popup Banner
+window.showWelcomePop = (userName) => {
+    let existing = document.getElementById('welcomePopModal');
+    if (existing) existing.remove();
+    
+    const displayName = userName && userName.trim() ? userName.trim() : 'Chief';
+    
+    const pop = document.createElement('div');
+    pop.id = 'welcomePopModal';
+    pop.style.cssText = `
+        position: fixed;
+        top: 25px;
+        left: 50%;
+        transform: translateX(-50%) translateY(-25px);
+        z-index: 10000;
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.98));
+        border: 1px solid rgba(234, 179, 8, 0.5);
+        box-shadow: 0 12px 35px rgba(0, 0, 0, 0.6), 0 0 25px rgba(234, 179, 8, 0.25);
+        border-radius: 16px;
+        padding: 16px 28px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        color: #fff;
+        backdrop-filter: blur(12px);
+        opacity: 0;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        pointer-events: none;
+    `;
+    
+    pop.innerHTML = `
+        <div style="font-size:32px; line-height:1; filter: drop-shadow(0 0 10px rgba(234,179,8,0.7));">👋</div>
+        <div>
+            <div style="font-size:18px; font-weight:800; background: linear-gradient(135deg, #fef08a, #eab308); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                Welcome, ${escapeHTML(displayName)}!
+            </div>
+            <div style="font-size:12px; color: var(--text-muted, #94a3b8); margin-top:2px; font-weight:500;">
+                Successfully logged in to WOS Alliance Hub
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(pop);
+    
+    requestAnimationFrame(() => {
+        pop.style.opacity = '1';
+        pop.style.transform = 'translateX(-50%) translateY(0)';
+    });
+    
+    setTimeout(() => {
+        pop.style.opacity = '0';
+        pop.style.transform = 'translateX(-50%) translateY(-25px)';
+        setTimeout(() => pop.remove(), 400);
+    }, 4500);
+};
+
 // Listen to Auth State
 let realUser = null; // Store the actual logged in user so we can revert from spoofing
+let hasShownSessionWelcome = false;
 
 listenToAuth((user) => {
   if (!window._spoofedUser) {
@@ -2746,7 +2803,11 @@ listenToAuth((user) => {
   const adminMasterKeySection = document.getElementById('adminMasterKeySection');
   
   if (currentUser) {
-    let name = idToNameMap[currentUser.gameId] || 'Account';
+    let name = (currentUser.gameId && idToNameMap[currentUser.gameId]) ? idToNameMap[currentUser.gameId] : (currentUser.displayName || 'Chief');
+    if (!hasShownSessionWelcome && !window._spoofedUser) {
+        hasShownSessionWelcome = true;
+        setTimeout(() => window.showWelcomePop(name), 600);
+    }
     if(authSidebarBtn) authSidebarBtn.innerHTML = window._spoofedUser ? `🎭 Spoofing: ${name}` : `👤 ${name}'s Profile`;
     if(adminSidebarBtn && window.isAdminUser(currentUser)) {
       adminSidebarBtn.style.display = 'block';

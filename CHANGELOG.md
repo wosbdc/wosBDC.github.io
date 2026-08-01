@@ -1,3 +1,7 @@
+## [1.48.121] - 2026-07-31
+### Added
+- Added a modern, glowing **👋 Welcome, [Chief Name]!** sign-in popup banner with glassmorphism styling and smooth micro-animations.
+
 ## [1.48.120] - 2026-07-31
 ### Fixed
 - Fixed Firebase `saveMercenaryBossProgress` write bug by replacing `update` with `set` to guarantee reliable persistence of boss counts.
