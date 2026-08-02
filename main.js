@@ -453,7 +453,7 @@ window.toggleChampionshipStatus = async (gameId, forceStatus = null) => {
 
         try {
             if (window.logAdminAction) {
-                window.logAdminAction("Championship Signup Toggle", `Toggled ${playerName} (${gIdStr}) to ${newSignedUpStatus ? 'YES (✅)' : 'NO (❌)'}`);
+                window.logAdminAction("Championship Signup Toggle", `Toggled ${playerName} (${gIdStr}) to ${newSignedUpStatus ? 'YES (✅)' : 'NO (❌)'}`, playerName);
             }
         } catch(e) {}
         
@@ -557,6 +557,9 @@ window.updateMercenaryTier = async (gameId, phase = "Champion's Initiation", dif
     } catch(e) {}
 
     window.clearAllEventCaches();
+    if (window.logAdminAction) {
+        window.logAdminAction("Mercenary Prestige Tier Update", `Set ${playerName} to ${phase} (${difficulty})`, playerName);
+    }
     if (window.showToast) window.showToast(`Updated ${playerName} ➔ ${phase}: ${difficulty}`, "success");
     return true;
 };
@@ -610,7 +613,7 @@ window.toggleMercenaryStatus = async (gameId, forceStatus = null) => {
 
         try {
             if (window.logAdminAction) {
-                window.logAdminAction("Mercenary Prestige Toggle", `Toggled ${playerName} (${gIdStr}) to ${newSignedUpStatus ? 'YES (✅)' : 'NO (❌)'}`);
+                window.logAdminAction("Mercenary Prestige Toggle", `Toggled ${playerName} (${gIdStr}) to ${newSignedUpStatus ? 'YES (✅)' : 'NO (❌)'}`, playerName);
             }
         } catch(e) {}
         
@@ -800,7 +803,7 @@ window.togglePolarTerrorsStatus = async (gameId, forceStatus = null) => {
 
         try {
             if (window.logAdminAction) {
-                window.logAdminAction("Polar Terrors Toggle", `Toggled ${playerName} (${gIdStr}) to ${newSignedUpStatus ? 'YES (✅)' : 'NO (❌)'}`);
+                window.logAdminAction("Polar Terrors Toggle", `Toggled ${playerName} (${gIdStr}) to ${newSignedUpStatus ? 'YES (✅)' : 'NO (❌)'}`, playerName);
             }
         } catch(e) {}
         
@@ -900,7 +903,7 @@ window.toggleBearTrapStatus = async (gameId, forceStatus = null) => {
         
         try {
             if (window.logAdminAction) {
-                window.logAdminAction("Bear Trap Toggle", `Toggled ${playerName} (${gIdStr}) to ${newSignedUpStatus ? 'YES (✅)' : 'NO (❌)'}`);
+                window.logAdminAction("Bear Trap Toggle", `Toggled ${playerName} (${gIdStr}) to ${newSignedUpStatus ? 'YES (✅)' : 'NO (❌)'}`, playerName);
             }
         } catch(e) {}
         
@@ -938,7 +941,7 @@ window.updateBearTrapDonationInline = async (gameId, newDonationStr) => {
            if (addAmt > 0) await window.autoSyncBtSignup(finalName);
         
         if (window.logAdminAction) {
-            window.logAdminAction("Bear Trap Donation", `Updated ${chiefName}'s active donation to ${addAmt}`);
+            window.logAdminAction("Bear Trap Donation", `Updated ${chiefName}'s active donation to ${addAmt}`, chiefName);
         }
         return true;
     } catch (e) {
@@ -11839,8 +11842,8 @@ window.resetBearTrapEvent = async () => {
                     <div style="font-weight:bold; font-size:16px; color:var(--text-main); margin-bottom:8px;">${escapeHTML(p.name)}</div>
                     
                     <!-- 3. Phaethon Master glowing badge -->
-                    <span style="background:linear-gradient(135deg, #eab308, #ca8a04); color:#fff; font-weight:bold; font-size:11px; padding:4px 14px; border-radius:20px; text-transform:uppercase; letter-spacing:0.5px; box-shadow:0 2px 10px rgba(234,179,8,0.4); display:inline-flex; align-items:center; margin-bottom:12px;">
-                      25/25 Phaethon Master
+                    <span style="background:linear-gradient(135deg, #eab308, #ca8a04); color:#fff; font-weight:bold; font-size:11px; padding:4px 14px; border-radius:20px; text-transform:uppercase; letter-spacing:0.5px; box-shadow:0 2px 10px rgba(234,179,8,0.4); display:inline-flex; align-items:center; gap:4px; margin-bottom:12px;">
+                      ⚔️ 25/25 Phaethon Master
                     </span>
 
                     <!-- 4. Initiation Phase & Difficulty Badge -->

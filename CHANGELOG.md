@@ -1,3 +1,8 @@
+## [1.48.134] - 2026-08-02
+### Fixed & Updated
+- Added `⚔️` icon to the 25/25 Phaethon Master badge on Mercenary Prestige champion cards.
+- Passed target player name as 3rd parameter to `window.logAdminAction` calls across Bear Trap donations for detailed audit trail logging.
+
 ## [1.48.133] - 2026-08-01
 ### Changed
 - Removed all emojis from Champion Cards on the Wall of Champions for a clean, sleek, high-end design.
