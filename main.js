@@ -12093,6 +12093,7 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
              liveSched.events.forEach(ev => {
                const dateStr = String(ev.dateStr || '').trim();
                const utcStr = String(ev.utcStr || '').trim();
+               const endUtcStr = String(ev.endUtcStr || '').trim();
                let eventDate = null;
                const mdMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})$/);
                const isoMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
@@ -12107,23 +12108,43 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
                const isToday = eventDate.toDateString() === todayStr;
                const isFuture = eventDate > now && !isToday;
 
-               let utcDisplay = `${utcStr} UTC`;
+               let utcDisplay = `${utcStr}${endUtcStr ? ' - ' + endUtcStr : ''} UTC`;
                let localTimeStr = '';
                let eventDateTime = null;
+               let eventEndDateTime = null;
 
                const hmMatch = utcStr.match(/^(\d{1,2}):(\d{2})$/);
                if (hmMatch) {
                  const h = parseInt(hmMatch[1]), m = parseInt(hmMatch[2]);
-                 utcDisplay = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')} UTC`;
                  const localRef = new Date();
                  localRef.setUTCHours(h, m, 0, 0);
-                 localTimeStr = localRef.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                 let startLocal = localRef.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                 
                  eventDateTime = new Date(eventDate);
                  eventDateTime.setUTCHours(h, m, 0, 0);
+
+                 const endHmMatch = endUtcStr.match(/^(\d{1,2}):(\d{2})$/);
+                 if (endHmMatch) {
+                   const eh = parseInt(endHmMatch[1]), em = parseInt(endHmMatch[2]);
+                   const endLocalRef = new Date();
+                   endLocalRef.setUTCHours(eh, em, 0, 0);
+                   let endLocal = endLocalRef.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                   localTimeStr = `${startLocal} - ${endLocal}`;
+
+                   eventEndDateTime = new Date(eventDate);
+                   eventEndDateTime.setUTCHours(eh, em, 0, 0);
+                   if (eventEndDateTime <= eventDateTime) {
+                     eventEndDateTime.setDate(eventEndDateTime.getDate() + 1);
+                   }
+                 } else {
+                   localTimeStr = startLocal;
+                   eventEndDateTime = new Date(eventDateTime.getTime() + 30 * 60000);
+                 }
                }
 
-               const isPast = eventDateTime ? eventDateTime < now : (!isToday && eventDate < now);
-               const entry = { eventName: String(ev.eventName).trim(), utcDisplay, localTimeStr, pdtVal: String(ev.pdtVal || ''), isPast, emoji: ev.emoji || '✨', eventDateTime, eventDate };
+               const isLiveNow = eventDateTime && eventEndDateTime && (eventDateTime <= now && now <= eventEndDateTime);
+               const isPast = eventEndDateTime ? eventEndDateTime < now : (eventDateTime ? eventDateTime < now : (!isToday && eventDate < now));
+               const entry = { eventName: String(ev.eventName).trim(), utcDisplay, localTimeStr, pdtVal: String(ev.pdtVal || ''), isLiveNow, isPast, emoji: ev.emoji || '✨', eventDateTime, eventEndDateTime, eventDate };
 
                if (isToday) {
                  todayEvents.push(entry);
@@ -12245,21 +12266,30 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
       } else {
         todayEvents.forEach(ev => {
           const strikeStyle = ev.isPast ? 'opacity:0.45;text-decoration:line-through;' : '';
-          // Live countdown id
           const countdownId = 'cd_' + Math.random().toString(36).slice(2,8);
           let countdownHtml = '';
-          if (ev.eventDateTime && !ev.isPast) {
+
+          if (ev.isLiveNow) {
+            const diffMs = (ev.eventEndDateTime || new Date(ev.eventDateTime.getTime() + 30 * 60000)) - now;
+            const mins = Math.max(1, Math.floor(diffMs / 60000));
+            const hrs = Math.floor(mins / 60);
+            const remMins = mins % 60;
+            const label = hrs > 0 ? `Ends in ${hrs}h ${remMins}m` : `Ends in ${mins}m`;
+            countdownHtml = `<span id="${countdownId}" style="background:linear-gradient(135deg, #10b981, #059669);color:#fff;font-size:11px;font-weight:bold;padding:4px 10px;border-radius:12px;box-shadow:0 0 10px rgba(16,185,129,0.5);animation:pulse 2s infinite;white-space:nowrap;">🟢 LIVE (${label})</span>`;
+            if (!window._scheduleCountdowns) window._scheduleCountdowns = [];
+            window._scheduleCountdowns.push({ id: countdownId, target: ev.eventEndDateTime, type: 'end' });
+          } else if (ev.eventDateTime && !ev.isPast) {
             const diffMs = ev.eventDateTime - now;
             const hrs = Math.floor(diffMs / 3600000);
             const mins = Math.floor((diffMs % 3600000) / 60000);
             const label = hrs > 0 ? `in ${hrs}h ${mins}m` : `in ${mins}m`;
             countdownHtml = `<span id="${countdownId}" style="background:rgba(16,185,129,0.15);color:#10b981;font-size:11px;font-weight:700;padding:3px 8px;border-radius:10px;white-space:nowrap;">${label}</span>`;
-            // Register countdown
             if (!window._scheduleCountdowns) window._scheduleCountdowns = [];
-            window._scheduleCountdowns.push({ id: countdownId, target: ev.eventDateTime });
+            window._scheduleCountdowns.push({ id: countdownId, target: ev.eventDateTime, type: 'start' });
           } else if (ev.isPast) {
             countdownHtml = `<span style="background:rgba(100,100,100,0.15);color:var(--text-muted);font-size:11px;padding:3px 8px;border-radius:10px;">Done</span>`;
           }
+
           todayRows += `
             <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg-main);border-radius:10px;margin-bottom:8px;gap:10px;${strikeStyle}flex-wrap:wrap;">
               <span style="font-size:14px;font-weight:600;color:var(--text-main);">${ev.emoji} ${ev.eventName}</span>
@@ -12852,11 +12882,11 @@ window.openScheduleEditorModal = async () => {
           <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:12px;">
             <div style="font-size:11px; font-weight:bold; text-transform:uppercase; color:var(--text-muted); margin-bottom:8px;">⚡ Quick Presets (1-Click Add):</div>
             <div style="display:flex; gap:8px; flex-wrap:wrap;">
-              <button class="sch-preset-btn" data-name="Bear Trap" data-utc="16:00" data-emoji="🪤" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">🪤 Bear Trap (16:00 UTC)</button>
-              <button class="sch-preset-btn" data-name="Crazy Joe" data-utc="14:00" data-emoji="🔥" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">🔥 Crazy Joe (14:00 UTC)</button>
-              <button class="sch-preset-btn" data-name="Sunfire Castle Battle" data-utc="12:00" data-emoji="🏰" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">🏰 Castle Battle (12:00 UTC)</button>
-              <button class="sch-preset-btn" data-name="Brothers in Arms K.E." data-utc="00:00" data-emoji="⚔️" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">⚔️ Brothers in Arms (00:00 UTC)</button>
-              <button class="sch-preset-btn" data-name="Polar Terrors Rally" data-utc="16:00" data-emoji="🐻‍❄️" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">🐻‍❄️ Polar Terrors (16:00 UTC)</button>
+              <button class="sch-preset-btn" data-name="Bear Trap" data-utc="16:00" data-endutc="16:30" data-emoji="🪤" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">🪤 Bear Trap (16:00-16:30 UTC)</button>
+              <button class="sch-preset-btn" data-name="Crazy Joe" data-utc="14:00" data-endutc="14:30" data-emoji="🔥" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">🔥 Crazy Joe (14:00-14:30 UTC)</button>
+              <button class="sch-preset-btn" data-name="Sunfire Castle Battle" data-utc="12:00" data-endutc="20:00" data-emoji="🏰" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">🏰 Castle Battle (12:00-20:00 UTC)</button>
+              <button class="sch-preset-btn" data-name="Brothers in Arms K.E." data-utc="00:00" data-endutc="23:59" data-emoji="⚔️" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">⚔️ Brothers in Arms (00:00-23:59 UTC)</button>
+              <button class="sch-preset-btn" data-name="Polar Terrors Rally" data-utc="16:00" data-endutc="16:45" data-emoji="🐻‍❄️" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">🐻‍❄️ Polar Terrors (16:00-16:45 UTC)</button>
             </div>
           </div>
 
@@ -12866,15 +12896,19 @@ window.openScheduleEditorModal = async () => {
               <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">Event Name</label>
               <input type="text" id="schNewName" placeholder="e.g. Bear Trap 2" style="width:100%; padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; box-sizing:border-box;">
             </div>
-            <div style="width:90px;">
+            <div style="width:85px;">
               <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">Date (M/D)</label>
               <input type="text" id="schNewDate" placeholder="8/5" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; text-align:center; box-sizing:border-box;">
             </div>
-            <div style="width:100px;">
-              <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">UTC Time</label>
+            <div style="width:90px;">
+              <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">Start UTC</label>
               <input type="text" id="schNewUtc" placeholder="16:00" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; text-align:center; box-sizing:border-box;">
             </div>
-            <div style="width:80px;">
+            <div style="width:90px;">
+              <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">End UTC (Opt)</label>
+              <input type="text" id="schNewEndUtc" placeholder="16:30" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; text-align:center; box-sizing:border-box;">
+            </div>
+            <div style="width:75px;">
               <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">Emoji</label>
               <select id="schNewEmoji" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; box-sizing:border-box;">
                 <option value="🪤">🪤</option>
@@ -12898,7 +12932,7 @@ window.openScheduleEditorModal = async () => {
                 <tr style="background:var(--bg-main); border-bottom:1px solid var(--border); color:var(--text-muted); font-size:11px; text-transform:uppercase;">
                   <th style="padding:10px 14px;">Event Name</th>
                   <th style="padding:10px 10px; text-align:center;">Date (M/D)</th>
-                  <th style="padding:10px 10px; text-align:center;">UTC Time</th>
+                  <th style="padding:10px 10px; text-align:center;">UTC Time Window</th>
                   <th style="padding:10px 14px; text-align:right;">Actions</th>
                 </tr>
               </thead>
@@ -12911,7 +12945,9 @@ window.openScheduleEditorModal = async () => {
                       <span style="margin-right:6px;">${ev.emoji || '✨'}</span> ${escapeHTML(ev.eventName)}
                     </td>
                     <td style="padding:10px 10px; text-align:center; font-weight:bold; color:var(--accent);">${escapeHTML(ev.dateStr || '-')}</td>
-                    <td style="padding:10px 10px; text-align:center; font-weight:bold; color:#10b981;">${escapeHTML(ev.utcStr || '-')} UTC</td>
+                    <td style="padding:10px 10px; text-align:center; font-weight:bold; color:#10b981;">
+                      ${escapeHTML(ev.utcStr || '-')}${ev.endUtcStr ? ' - ' + escapeHTML(ev.endUtcStr) : ''} UTC
+                    </td>
                     <td style="padding:10px 14px; text-align:right;">
                       <button class="sch-del-btn" data-idx="${idx}" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">✖ Delete</button>
                     </td>
@@ -12964,6 +13000,7 @@ window.openScheduleEditorModal = async () => {
       btn.addEventListener('click', () => {
         const name = btn.getAttribute('data-name');
         const utc = btn.getAttribute('data-utc');
+        const endUtc = btn.getAttribute('data-endutc') || '';
         const emoji = btn.getAttribute('data-emoji');
         const now = new Date();
         const m = now.getMonth() + 1, d = now.getDate();
@@ -12972,6 +13009,7 @@ window.openScheduleEditorModal = async () => {
           eventName: name,
           dateStr: `${m}/${d}`,
           utcStr: utc,
+          endUtcStr: endUtc,
           pdtVal: '',
           emoji: emoji
         });
@@ -12983,11 +13021,13 @@ window.openScheduleEditorModal = async () => {
       const nameEl = modal.querySelector('#schNewName');
       const dateEl = modal.querySelector('#schNewDate');
       const utcEl = modal.querySelector('#schNewUtc');
+      const endUtcEl = modal.querySelector('#schNewEndUtc');
       const emojiEl = modal.querySelector('#schNewEmoji');
 
       const name = String(nameEl?.value || '').trim();
       const dateStr = String(dateEl?.value || '').trim();
       const utcStr = String(utcEl?.value || '').trim();
+      const endUtcStr = String(endUtcEl?.value || '').trim();
       const emoji = emojiEl?.value || '✨';
 
       if (!name) {
@@ -13000,6 +13040,7 @@ window.openScheduleEditorModal = async () => {
         eventName: name,
         dateStr: dateStr || `${new Date().getMonth() + 1}/${new Date().getDate()}`,
         utcStr: utcStr || '16:00',
+        endUtcStr: endUtcStr,
         pdtVal: '',
         emoji: emoji
       });

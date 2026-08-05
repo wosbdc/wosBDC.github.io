@@ -1,3 +1,9 @@
+## [1.49.1] - 2026-08-05
+### Added
+- **End UTC Time Window Support**: Added optional `End UTC` time field (`endUtcStr`) to Live Schedule Manager and Quick Presets (`16:00 - 16:30 UTC`).
+- **🟢 LIVE NOW Pulsing Badges**: Added glowing green `🟢 LIVE NOW (Ends in Xm)` badges for events currently in progress.
+- **Dynamic Time Range Conversion**: Automatically calculates local start and end time windows (e.g. `9:00 AM - 9:30 AM local`).
+
 ## [1.49.0] - 2026-08-05
 ### Added
 - **Site-Based Real-Time Schedule Editor**: Built an interactive modal for R4/R5 managers to update timed events and category lists (Sign-ups, Rewards, All-Week, Holidays) directly from the website.
