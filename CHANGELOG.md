@@ -1,3 +1,11 @@
+## [1.49.0] - 2026-08-05
+### Added
+- **Site-Based Real-Time Schedule Editor**: Built an interactive modal for R4/R5 managers to update timed events and category lists (Sign-ups, Rewards, All-Week, Holidays) directly from the website.
+- **Firebase Fast-Sync (`<100ms`)**: Live edits push immediately to Firebase node `schedule_live`, eliminating Google Sheets API latency for site visitors.
+- **1-Click Quick Presets**: Integrated 1-click preset buttons for recurring alliance events (`Bear Trap`, `Crazy Joe`, `Castle Battle`, `Brothers in Arms`, `Polar Terrors`).
+- **Google Sheets Seed Import**: Included an `📥 Import from Google Sheets` button in the editor for instant initial data seeding.
+- **Admin Hub & Schedule Page Access**: Added `⚙️ Manage Schedule` button to the Event Schedule page for R4/R5 managers and a `📅 Live Schedule Manager` button in the Admin Hub (`#tab-indev`).
+
 ## [1.48.134] - 2026-08-02
 ### Fixed & Updated
 - Added `⚔️` icon to the 25/25 Phaethon Master badge on Mercenary Prestige champion cards.

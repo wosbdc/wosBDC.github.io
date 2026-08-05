@@ -6855,6 +6855,7 @@ const views = {
               <div style="background:var(--card-bg); padding:20px; border-radius:12px; border:1px solid var(--border); text-align:center; display:flex; flex-direction:column; gap:15px; align-items:center;">
                 <button onclick="views.mercenaryAdmin()" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px; box-shadow:0 4px 12px rgba(239,68,68,0.3);">⚔️ Mercenary Prestige</button>
                 <button onclick="views.polarTerrorsAdmin()" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px; box-shadow:0 4px 12px rgba(14,165,233,0.3);">🐻‍❄️ Polar Terrors Tracker</button>
+                <button onclick="window.openScheduleEditorModal()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px; box-shadow:0 4px 12px rgba(16,185,129,0.3);">📅 Live Schedule Manager</button>
               </div>
             </div>
           </div>
@@ -9398,7 +9399,7 @@ window.resetBearTrapEvent = async () => {
     
     searchInput.addEventListener('input', filterAndShowDropdown);
     searchInput.addEventListener('focus', filterAndShowDropdown);
-    searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.display = 'none', 150); });
+searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.display = 'none', 150); });
     searchInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
         dropdown.style.display = 'none';
@@ -12005,6 +12006,7 @@ window.resetBearTrapEvent = async () => {
 
   schedule: async () => {
     let currentTab = localStorage.getItem('scheduleView') || 'today';
+    const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
 
     window.refreshSchedule = async () => {
       const icon = document.getElementById('schRefreshIcon');
@@ -12041,9 +12043,10 @@ window.resetBearTrapEvent = async () => {
 
     renderLoading('Loading Schedule');
     try {
-      const [weeklyData, todayData] = await Promise.all([
+      const [weeklyData, todayData, liveSched] = await Promise.all([
         fetchSheet('schedule').catch(() => null),
-        fetchSheet('WhiteOut Survival').catch(() => null)
+        fetchSheet('WhiteOut Survival').catch(() => null),
+        window.fetchScheduleLiveData().catch(() => null)
       ]);
 
       const renderTabs = () => {
@@ -12059,7 +12062,12 @@ window.resetBearTrapEvent = async () => {
                 <button onclick="window.switchScheduleTab('calendar')" style="padding:6px 16px; border:none; background:${currentTab === 'calendar' ? 'var(--accent)' : 'transparent'}; color:${currentTab === 'calendar' ? '#fff' : 'var(--text-muted)'}; font-weight:bold; cursor:pointer; font-size:13px; transition:0.2s;">Calendar View</button>
               </div>
             </div>
-            <div style="display:flex; gap:10px; align-items:center;">
+            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+              ${isManager ? `
+                <button onclick="window.openScheduleEditorModal()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:7px 14px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12px; display:flex; align-items:center; gap:5px; box-shadow:0 2px 8px rgba(16,185,129,0.3);">
+                  ⚙️ Manage Schedule
+                </button>
+              ` : ''}
               <a href="https://www.google.com/url?q=https://calendar.google.com/calendar/u/0?cid%3DMWZkOTI2ZjdkNzVhYWIyMzM1N2IxYjE1NTc5MzE2YTRlYTRjMDI3NjA4NDlmOTRkZjg2MDRlZWY5YjdiMTI1OEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&sa=D&source=editors&ust=1783297509664500&usg=AOvVaw3Nu5FI78rflI7vvCvxd5MS" target="_blank" style="background:#0ea5e9; color:#fff; padding:7px 14px; border-radius:8px; text-decoration:none; font-weight:bold; font-size:12px;">➕ Google Cal</a>
               <button onclick="window.refreshSchedule()" style="background:var(--bg-main); color:var(--text-main); border:1px solid var(--border); padding:7px 14px; border-radius:8px; cursor:pointer; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:5px;">
                 <span id="schRefreshIcon">🔄</span> Refresh
@@ -12074,114 +12082,155 @@ window.resetBearTrapEvent = async () => {
 
         if (currentTab === 'today') {
            const data = todayData;
+           const now = new Date();
+           const todayStr = now.toDateString();
+           let todayEvents = [];
+           let upcomingEvents = [];
+           let rewards = [], signups = [], allWeek = [], holidays = [];
 
-      
+           if (liveSched && Array.isArray(liveSched.events)) {
+             // ── Fast Real-Time Firebase Schedule ──
+             liveSched.events.forEach(ev => {
+               const dateStr = String(ev.dateStr || '').trim();
+               const utcStr = String(ev.utcStr || '').trim();
+               let eventDate = null;
+               const mdMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})$/);
+               const isoMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+               if (mdMatch) {
+                 eventDate = new Date(now.getFullYear(), parseInt(mdMatch[1]) - 1, parseInt(mdMatch[2]));
+               } else if (isoMatch) {
+                 eventDate = new Date(dateStr);
+               } else {
+                 return;
+               }
 
-      if (!data || !Array.isArray(data) || data.length === 0) {
-        contentDiv.innerHTML = `<div class="card"><div class="loading">⚠️ Schedule data is currently unavailable. Please try again later.</div></div>`;
-        return;
-      }
+               const isToday = eventDate.toDateString() === todayStr;
+               const isFuture = eventDate > now && !isToday;
 
-      const now = new Date();
-      const todayStr = now.toDateString();
+               let utcDisplay = `${utcStr} UTC`;
+               let localTimeStr = '';
+               let eventDateTime = null;
 
-      // ── 1. Parse timed events (rows 2–8, col F=5, G=6, H=7, I=8) ──
-      let todayEvents = [];
-      let upcomingEvents = [];
+               const hmMatch = utcStr.match(/^(\d{1,2}):(\d{2})$/);
+               if (hmMatch) {
+                 const h = parseInt(hmMatch[1]), m = parseInt(hmMatch[2]);
+                 utcDisplay = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')} UTC`;
+                 const localRef = new Date();
+                 localRef.setUTCHours(h, m, 0, 0);
+                 localTimeStr = localRef.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                 eventDateTime = new Date(eventDate);
+                 eventDateTime.setUTCHours(h, m, 0, 0);
+               }
 
-      for (let i = 1; i < Math.min(34, data.length); i++) {
-        const row = data[i];
-        const eventName = row[5];
-        const dateRaw   = row[6];  // now "7/17" format
-        const utcRaw    = row[7];  // now "16:00" format
-        const pdtVal    = row[8];  // "9:00 AM" (display only)
+               const isPast = eventDateTime ? eventDateTime < now : (!isToday && eventDate < now);
+               const entry = { eventName: String(ev.eventName).trim(), utcDisplay, localTimeStr, pdtVal: String(ev.pdtVal || ''), isPast, emoji: ev.emoji || '✨', eventDateTime, eventDate };
 
-        // Skip blank rows and header rows — only BREAK on 'Rewards' which marks end of events section
-        if (!eventName || String(eventName).trim() === '') continue;
-        if (String(eventName).includes("Event's")) continue;
-        if (String(eventName).trim() === 'Rewards') break;
+               if (isToday) {
+                 todayEvents.push(entry);
+               } else if (isFuture && !isPast) {
+                 entry.dateLabel = eventDate.toLocaleDateString('en-US', { weekday:'short', month:'numeric', day:'numeric' });
+                 upcomingEvents.push(entry);
+               }
+             });
 
-        // ── Parse M/D date (e.g. "7/17") ──
-        const dateStr = String(dateRaw || '').trim();
-        // Support both "7/17" and legacy "2026-07-17T..." ISO format
-        let eventDate = null;
-        const mdMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})$/);
-        const isoMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})T/);
-        if (mdMatch) {
-          eventDate = new Date(now.getFullYear(), parseInt(mdMatch[1]) - 1, parseInt(mdMatch[2]));
-        } else if (isoMatch) {
-          eventDate = new Date(dateStr);
-        } else {
-          continue; // can't parse date — skip
-        }
+             rewards = liveSched.rewards || [];
+             signups = liveSched.signups || [];
+             allWeek = liveSched.allWeek || [];
+             holidays = liveSched.holidays || [];
+           } else {
+             // ── Google Sheets Fallback ──
+             if (!data || !Array.isArray(data) || data.length === 0) {
+               contentDiv.innerHTML = `<div class="card"><div class="loading">⚠️ Schedule data is currently unavailable. Please try again later.</div></div>`;
+               return;
+             }
 
-        const isToday = eventDate.toDateString() === todayStr;
-        const isFuture = eventDate > now && !isToday;
+             for (let i = 1; i < Math.min(34, data.length); i++) {
+               const row = data[i];
+               const eventName = row[5];
+               const dateRaw   = row[6];
+               const utcRaw    = row[7];
+               const pdtVal    = row[8];
 
-        // ── Parse UTC time (e.g. "16:00" or legacy ISO) ──
-        let utcDisplay = '';
-        let localTimeStr = '';
-        let eventDateTime = null;
+               if (!eventName || String(eventName).trim() === '') continue;
+               if (String(eventName).includes("Event's")) continue;
+               if (String(eventName).trim() === 'Rewards') break;
 
-        const utcStr = String(utcRaw || '').trim();
-        const hmMatch = utcStr.match(/^(\d{1,2}):(\d{2})$/);
-        const isoUtcMatch = utcStr.match(/^\d{4}-\d{2}-\d{2}T/);
+               const dateStr = String(dateRaw || '').trim();
+               let eventDate = null;
+               const mdMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})$/);
+               const isoMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})T/);
+               if (mdMatch) {
+                 eventDate = new Date(now.getFullYear(), parseInt(mdMatch[1]) - 1, parseInt(mdMatch[2]));
+               } else if (isoMatch) {
+                 eventDate = new Date(dateStr);
+               } else {
+                 continue;
+               }
 
-        if (hmMatch) {
-          const h = parseInt(hmMatch[1]), m = parseInt(hmMatch[2]);
-          utcDisplay = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')} UTC`;
-          const localRef = new Date();
-          localRef.setUTCHours(h, m, 0, 0);
-          localTimeStr = localRef.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-          eventDateTime = new Date(eventDate);
-          eventDateTime.setUTCHours(h, m, 0, 0);
-        } else if (isoUtcMatch) {
-          // Legacy ISO format: apply the -8h GAS offset correction
-          const gasDate = new Date(utcStr);
-          gasDate.setUTCHours(gasDate.getUTCHours() - 8);
-          const h = gasDate.getUTCHours(), m = gasDate.getUTCMinutes();
-          utcDisplay = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')} UTC`;
-          const localRef = new Date();
-          localRef.setUTCHours(h, m, 0, 0);
-          localTimeStr = localRef.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-          eventDateTime = new Date(eventDate);
-          eventDateTime.setUTCHours(h, m, 0, 0);
-        }
+               const isToday = eventDate.toDateString() === todayStr;
+               const isFuture = eventDate > now && !isToday;
 
-        const isPast = eventDateTime ? eventDateTime < now : (!isToday && eventDate < now);
-        const isBearTrap = String(eventName).includes('Bear Trap') || String(eventName).includes('🪤') || String(eventName).includes('🐻');
-        const emoji = isBearTrap ? '🪤' : '✨';
+               let utcDisplay = '';
+               let localTimeStr = '';
+               let eventDateTime = null;
 
-        const entry = { eventName: String(eventName).trim(), utcDisplay, localTimeStr, pdtVal: String(pdtVal || ''), isPast, emoji, eventDateTime, eventDate };
+               const utcStr = String(utcRaw || '').trim();
+               const hmMatch = utcStr.match(/^(\d{1,2}):(\d{2})$/);
+               const isoUtcMatch = utcStr.match(/^\d{4}-\d{2}-\d{2}T/);
 
-        if (isToday) {
-          todayEvents.push(entry);
-        } else if (isFuture && !isPast) {
-          entry.dateLabel = eventDate.toLocaleDateString('en-US', { weekday:'short', month:'numeric', day:'numeric' });
-          upcomingEvents.push(entry);
-        }
-      }
+               if (hmMatch) {
+                 const h = parseInt(hmMatch[1]), m = parseInt(hmMatch[2]);
+                 utcDisplay = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')} UTC`;
+                 const localRef = new Date();
+                 localRef.setUTCHours(h, m, 0, 0);
+                 localTimeStr = localRef.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                 eventDateTime = new Date(eventDate);
+                 eventDateTime.setUTCHours(h, m, 0, 0);
+               } else if (isoUtcMatch) {
+                 const gasDate = new Date(utcStr);
+                 gasDate.setUTCHours(gasDate.getUTCHours() - 8);
+                 const h = gasDate.getUTCHours(), m = gasDate.getUTCMinutes();
+                 utcDisplay = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')} UTC`;
+                 const localRef = new Date();
+                 localRef.setUTCHours(h, m, 0, 0);
+                 localTimeStr = localRef.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                 eventDateTime = new Date(eventDate);
+                 eventDateTime.setUTCHours(h, m, 0, 0);
+               }
 
-      // ── 2. Parse category columns (Rewards/Signups/All Week/Holidays) ──
-      let headerRowIdx = -1;
-      for (let i = 0; i < data.length; i++) {
-        const cell = String(data[i][5] || '').trim().toLowerCase();
-        if (cell === 'rewards') { headerRowIdx = i; break; }
-      }
+               const isPast = eventDateTime ? eventDateTime < now : (!isToday && eventDate < now);
+               const isBearTrap = String(eventName).includes('Bear Trap') || String(eventName).includes('🪤') || String(eventName).includes('🐻');
+               const emoji = isBearTrap ? '🪤' : '✨';
 
-      let rewards = [], signups = [], allWeek = [], holidays = [];
-      if (headerRowIdx !== -1) {
-        for (let i = headerRowIdx + 1; i < data.length; i++) {
-          const r = data[i][5], g = data[i][6], h = data[i][7], k = data[i][8];
-          const anyVal = [r,g,h,k].some(v => v && String(v).trim() !== '');
-          if (!anyVal) break;
-          const skip = (v) => !v || String(v).trim() === '' || String(v).trim().toLowerCase() === 'no events';
-          if (!skip(r)) rewards.push(String(r).trim());
-          if (!skip(g)) signups.push(String(g).trim());
-          if (!skip(h)) allWeek.push(String(h).trim());
-          if (!skip(k)) holidays.push(String(k).trim());
-        }
-      }
+               const entry = { eventName: String(eventName).trim(), utcDisplay, localTimeStr, pdtVal: String(pdtVal || ''), isPast, emoji, eventDateTime, eventDate };
+
+               if (isToday) {
+                 todayEvents.push(entry);
+               } else if (isFuture && !isPast) {
+                 entry.dateLabel = eventDate.toLocaleDateString('en-US', { weekday:'short', month:'numeric', day:'numeric' });
+                 upcomingEvents.push(entry);
+               }
+             }
+
+             let headerRowIdx = -1;
+             for (let i = 0; i < data.length; i++) {
+               const cell = String(data[i][5] || '').trim().toLowerCase();
+               if (cell === 'rewards') { headerRowIdx = i; break; }
+             }
+
+             if (headerRowIdx !== -1) {
+               for (let i = headerRowIdx + 1; i < data.length; i++) {
+                 const r = data[i][5], g = data[i][6], h = data[i][7], k = data[i][8];
+                 const anyVal = [r,g,h,k].some(v => v && String(v).trim() !== '');
+                 if (!anyVal) break;
+                 const skip = (v) => !v || String(v).trim() === '' || String(v).trim().toLowerCase() === 'no events';
+                 if (!skip(r)) rewards.push(String(r).trim());
+                 if (!skip(g)) signups.push(String(g).trim());
+                 if (!skip(h)) allWeek.push(String(h).trim());
+                 if (!skip(k)) holidays.push(String(k).trim());
+               }
+             }
+           }
 
       // ── 3. Build the unified card ──
       const dayName = now.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
@@ -12649,6 +12698,438 @@ window.resetBearTrapEvent = async () => {
       
     } catch(e) { renderError(e.message); }
   }
+};
+
+window.fetchScheduleLiveData = async () => {
+  try {
+    const snap = await get(ref(db, 'schedule_live'));
+    if (snap.exists()) {
+      return snap.val();
+    }
+  } catch(e) {
+    console.warn("Failed to read schedule_live from Firebase:", e);
+  }
+  return null;
+};
+
+window.saveScheduleToFirebase = async (scheduleObj) => {
+  try {
+    const adminName = (currentUser && currentUser.gameId && idToNameMap[currentUser.gameId]) 
+      ? idToNameMap[currentUser.gameId] 
+      : (currentUser && currentUser.email ? currentUser.email : "Admin");
+    
+    scheduleObj.lastUpdated = Date.now();
+    scheduleObj.updatedBy = adminName;
+
+    await set(ref(db, 'schedule_live'), scheduleObj);
+    if (window.logAdminAction) {
+      window.logAdminAction("Schedule Live Updated", `Updated live schedule with ${scheduleObj.events ? scheduleObj.events.length : 0} timed events and category lists`, "All Players");
+    }
+    if (window.showToast) window.showToast("Live Schedule saved to Firebase!", "success");
+    return true;
+  } catch(e) {
+    console.error("Failed to save schedule_live to Firebase:", e);
+    if (window.showToast) window.showToast("Error saving schedule to Firebase: " + e.message, "error");
+    return false;
+  }
+};
+
+window.openScheduleEditorModal = async () => {
+  const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+  if (!isManager) {
+    if (window.showToast) window.showToast("Only R4/R5 managers can edit the event schedule", "error");
+    return;
+  }
+
+  let liveData = await window.fetchScheduleLiveData();
+  
+  // If schedule_live is missing, initialize from current Google Sheets data if available
+  if (!liveData) {
+    let sheetData = window.liveData ? window.liveData['WhiteOut Survival'] : null;
+    let events = [];
+    let signups = [], rewards = [], allWeek = [], holidays = [];
+
+    if (sheetData && Array.isArray(sheetData)) {
+      const now = new Date();
+      for (let i = 1; i < Math.min(34, sheetData.length); i++) {
+        const row = sheetData[i];
+        const eventName = row[5];
+        const dateRaw   = row[6];
+        const utcRaw    = row[7];
+        const pdtVal    = row[8];
+        if (!eventName || String(eventName).trim() === '') continue;
+        if (String(eventName).includes("Event's")) continue;
+        if (String(eventName).trim() === 'Rewards') break;
+
+        const isBearTrap = String(eventName).includes('Bear Trap') || String(eventName).includes('🪤') || String(eventName).includes('🐻');
+        const isJoe = String(eventName).includes('Crazy Joe') || String(eventName).includes('🔥');
+        const isCastle = String(eventName).includes('Castle') || String(eventName).includes('🏰');
+        const isBia = String(eventName).includes('Brothers') || String(eventName).includes('⚔️');
+        let emoji = isBearTrap ? '🪤' : (isJoe ? '🔥' : (isCastle ? '🏰' : (isBia ? '⚔️' : '✨')));
+
+        events.push({
+          id: 'ev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+          eventName: String(eventName).trim(),
+          dateStr: String(dateRaw || '').trim(),
+          utcStr: String(utcRaw || '').trim(),
+          pdtVal: String(pdtVal || '').trim(),
+          emoji: emoji
+        });
+      }
+
+      let headerRowIdx = -1;
+      for (let i = 0; i < sheetData.length; i++) {
+        const cell = String(sheetData[i][5] || '').trim().toLowerCase();
+        if (cell === 'rewards') { headerRowIdx = i; break; }
+      }
+      if (headerRowIdx !== -1) {
+        for (let i = headerRowIdx + 1; i < sheetData.length; i++) {
+          const r = sheetData[i][5], g = sheetData[i][6], h = sheetData[i][7], k = sheetData[i][8];
+          const anyVal = [r,g,h,k].some(v => v && String(v).trim() !== '');
+          if (!anyVal) break;
+          const skip = (v) => !v || String(v).trim() === '' || String(v).trim().toLowerCase() === 'no events';
+          if (!skip(r)) rewards.push(String(r).trim());
+          if (!skip(g)) signups.push(String(g).trim());
+          if (!skip(h)) allWeek.push(String(h).trim());
+          if (!skip(k)) holidays.push(String(k).trim());
+        }
+      }
+    }
+
+    liveData = { events, signups, rewards, allWeek, holidays };
+  }
+
+  let activeModalTab = 'timed';
+  const modalId = 'scheduleEditorModal';
+  const overlayId = 'scheduleEditorModalOverlay';
+
+  let existingModal = document.getElementById(modalId);
+  let existingOverlay = document.getElementById(overlayId);
+  if (existingModal) existingModal.remove();
+  if (existingOverlay) existingOverlay.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = overlayId;
+  overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.75); backdrop-filter:blur(5px); z-index:9998; animation:fadeIn 0.2s;';
+
+  const modal = document.createElement('div');
+  modal.id = modalId;
+  modal.style.cssText = 'position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width:92%; max-width:850px; max-height:90vh; background:var(--card-bg); border:1px solid var(--border); border-radius:16px; padding:24px; box-shadow:0 20px 50px rgba(0,0,0,0.6); z-index:9999; display:flex; flex-direction:column; gap:16px; overflow:hidden; color:var(--text-main); animation:slideUp 0.3s;';
+
+  const currentEvents = [...(liveData.events || [])];
+  const currentSignups = [...(liveData.signups || [])];
+  const currentRewards = [...(liveData.rewards || [])];
+  const currentAllWeek = [...(liveData.allWeek || [])];
+  const currentHolidays = [...(liveData.holidays || [])];
+
+  const renderModalContent = () => {
+    modal.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:14px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div style="font-size:24px;">📅</div>
+          <div>
+            <h3 style="margin:0; font-size:20px; color:var(--text-main);">Live Schedule Manager</h3>
+            <p style="margin:2px 0 0 0; font-size:12px; color:var(--text-muted);">Edits push directly to Firebase and update all website visitors in real-time (&lt;100ms).</p>
+          </div>
+        </div>
+        <button id="schModalCloseBtn" style="background:transparent; border:none; color:var(--text-muted); font-size:24px; cursor:pointer; font-weight:bold;">&times;</button>
+      </div>
+
+      <!-- Navigation Subtabs -->
+      <div style="display:flex; gap:10px; border-bottom:1px solid var(--border); padding-bottom:10px;">
+        <button id="schTabBtnTimed" style="padding:8px 16px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; background:${activeModalTab === 'timed' ? 'var(--accent)' : 'var(--bg-main)'}; color:${activeModalTab === 'timed' ? '#fff' : 'var(--text-muted)'}; transition:0.2s;">
+          ⏱️ Timed Events (${currentEvents.length})
+        </button>
+        <button id="schTabBtnCats" style="padding:8px 16px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; background:${activeModalTab === 'cats' ? 'var(--accent)' : 'var(--bg-main)'}; color:${activeModalTab === 'cats' ? '#fff' : 'var(--text-muted)'}; transition:0.2s;">
+          📋 Category Lists
+        </button>
+      </div>
+
+      <!-- Main Body Content Area (Scrollable) -->
+      <div style="flex:1; overflow-y:auto; padding-right:4px; display:flex; flex-direction:column; gap:16px;">
+        ${activeModalTab === 'timed' ? `
+          <!-- Quick Preset Buttons Bar -->
+          <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:12px;">
+            <div style="font-size:11px; font-weight:bold; text-transform:uppercase; color:var(--text-muted); margin-bottom:8px;">⚡ Quick Presets (1-Click Add):</div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button class="sch-preset-btn" data-name="Bear Trap" data-utc="16:00" data-emoji="🪤" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">🪤 Bear Trap (16:00 UTC)</button>
+              <button class="sch-preset-btn" data-name="Crazy Joe" data-utc="14:00" data-emoji="🔥" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">🔥 Crazy Joe (14:00 UTC)</button>
+              <button class="sch-preset-btn" data-name="Sunfire Castle Battle" data-utc="12:00" data-emoji="🏰" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">🏰 Castle Battle (12:00 UTC)</button>
+              <button class="sch-preset-btn" data-name="Brothers in Arms K.E." data-utc="00:00" data-emoji="⚔️" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">⚔️ Brothers in Arms (00:00 UTC)</button>
+              <button class="sch-preset-btn" data-name="Polar Terrors Rally" data-utc="16:00" data-emoji="🐻‍❄️" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">🐻‍❄️ Polar Terrors (16:00 UTC)</button>
+            </div>
+          </div>
+
+          <!-- Add Event Form -->
+          <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:14px; display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+            <div style="flex:1; min-width:140px;">
+              <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">Event Name</label>
+              <input type="text" id="schNewName" placeholder="e.g. Bear Trap 2" style="width:100%; padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; box-sizing:border-box;">
+            </div>
+            <div style="width:90px;">
+              <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">Date (M/D)</label>
+              <input type="text" id="schNewDate" placeholder="8/5" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; text-align:center; box-sizing:border-box;">
+            </div>
+            <div style="width:100px;">
+              <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">UTC Time</label>
+              <input type="text" id="schNewUtc" placeholder="16:00" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; text-align:center; box-sizing:border-box;">
+            </div>
+            <div style="width:80px;">
+              <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">Emoji</label>
+              <select id="schNewEmoji" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; box-sizing:border-box;">
+                <option value="🪤">🪤</option>
+                <option value="🔥">🔥</option>
+                <option value="🏰">🏰</option>
+                <option value="⚔️">⚔️</option>
+                <option value="🐻‍❄️">🐻‍❄️</option>
+                <option value="🛡️">🛡️</option>
+                <option value="✨">✨</option>
+                <option value="💎">💎</option>
+                <option value="🏆">🏆</option>
+              </select>
+            </div>
+            <button id="schAddEventBtn" style="padding:9px 16px; border-radius:6px; border:none; background:linear-gradient(135deg, #10b981, #059669); color:#fff; font-weight:bold; cursor:pointer; font-size:13px;">➕ Add Event</button>
+          </div>
+
+          <!-- Timed Events Table -->
+          <div style="border:1px solid var(--border); border-radius:10px; overflow:hidden;">
+            <table style="width:100%; border-collapse:collapse; text-align:left; font-size:13px;">
+              <thead>
+                <tr style="background:var(--bg-main); border-bottom:1px solid var(--border); color:var(--text-muted); font-size:11px; text-transform:uppercase;">
+                  <th style="padding:10px 14px;">Event Name</th>
+                  <th style="padding:10px 10px; text-align:center;">Date (M/D)</th>
+                  <th style="padding:10px 10px; text-align:center;">UTC Time</th>
+                  <th style="padding:10px 14px; text-align:right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${currentEvents.length === 0 ? `
+                  <tr><td colspan="4" style="padding:20px; text-align:center; color:var(--text-muted); font-style:italic;">No timed events scheduled yet. Add one above!</td></tr>
+                ` : currentEvents.map((ev, idx) => `
+                  <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:10px 14px; font-weight:bold; color:var(--text-main);">
+                      <span style="margin-right:6px;">${ev.emoji || '✨'}</span> ${escapeHTML(ev.eventName)}
+                    </td>
+                    <td style="padding:10px 10px; text-align:center; font-weight:bold; color:var(--accent);">${escapeHTML(ev.dateStr || '-')}</td>
+                    <td style="padding:10px 10px; text-align:center; font-weight:bold; color:#10b981;">${escapeHTML(ev.utcStr || '-')} UTC</td>
+                    <td style="padding:10px 14px; text-align:right;">
+                      <button class="sch-del-btn" data-idx="${idx}" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">✖ Delete</button>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        ` : `
+          <!-- Category Lists Tab -->
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:16px;">
+            <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:14px;">
+              <div style="font-weight:bold; font-size:13px; color:#10b981; margin-bottom:6px;">🟢 Sign-Ups Requiring Events (1 per line)</div>
+              <textarea id="schCatSignups" rows="5" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-family:monospace; font-size:12px; box-sizing:border-box;">${currentSignups.join('\n')}</textarea>
+            </div>
+            <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:14px;">
+              <div style="font-weight:bold; font-size:13px; color:#eab308; margin-bottom:6px;">🟡 Rewards & Payout Track (1 per line)</div>
+              <textarea id="schCatRewards" rows="5" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-family:monospace; font-size:12px; box-sizing:border-box;">${currentRewards.join('\n')}</textarea>
+            </div>
+            <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:14px;">
+              <div style="font-weight:bold; font-size:13px; color:#a855f7; margin-bottom:6px;">🟣 All-Week Daily Routines (1 per line)</div>
+              <textarea id="schCatAllWeek" rows="5" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-family:monospace; font-size:12px; box-sizing:border-box;">${currentAllWeek.join('\n')}</textarea>
+            </div>
+            <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:14px;">
+              <div style="font-weight:bold; font-size:13px; color:#f97316; margin-bottom:6px;">🟠 Holidays & Announcements (1 per line)</div>
+              <textarea id="schCatHolidays" rows="5" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-family:monospace; font-size:12px; box-sizing:border-box;">${currentHolidays.join('\n')}</textarea>
+            </div>
+          </div>
+        `}
+      </div>
+
+      <!-- Modal Footer Controls -->
+      <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border); padding-top:14px; flex-wrap:wrap; gap:10px;">
+        <button id="schImportSheetBtn" style="background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); padding:8px 14px; border-radius:8px; cursor:pointer; font-size:12px; font-weight:bold;">📥 Import from Google Sheets</button>
+        <div style="display:flex; gap:10px;">
+          <button id="schCancelBtn" style="background:var(--bg-main); border:1px solid var(--border); color:var(--text-muted); padding:8px 16px; border-radius:8px; cursor:pointer; font-size:13px; font-weight:bold;">Cancel</button>
+          <button id="schSaveBtn" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:8px 22px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13px; box-shadow:0 4px 12px rgba(16,185,129,0.3);">💾 Save Live Schedule</button>
+        </div>
+      </div>
+    `;
+
+    // Attach Modal Listeners
+    modal.querySelector('#schModalCloseBtn')?.addEventListener('click', closeModal);
+    modal.querySelector('#schCancelBtn')?.addEventListener('click', closeModal);
+
+    modal.querySelector('#schTabBtnTimed')?.addEventListener('click', () => { activeModalTab = 'timed'; renderModalContent(); });
+    modal.querySelector('#schTabBtnCats')?.addEventListener('click', () => { activeModalTab = 'cats'; renderModalContent(); });
+
+    modal.querySelectorAll('.sch-preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const name = btn.getAttribute('data-name');
+        const utc = btn.getAttribute('data-utc');
+        const emoji = btn.getAttribute('data-emoji');
+        const now = new Date();
+        const m = now.getMonth() + 1, d = now.getDate();
+        currentEvents.push({
+          id: 'ev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+          eventName: name,
+          dateStr: `${m}/${d}`,
+          utcStr: utc,
+          pdtVal: '',
+          emoji: emoji
+        });
+        renderModalContent();
+      });
+    });
+
+    modal.querySelector('#schAddEventBtn')?.addEventListener('click', () => {
+      const nameEl = modal.querySelector('#schNewName');
+      const dateEl = modal.querySelector('#schNewDate');
+      const utcEl = modal.querySelector('#schNewUtc');
+      const emojiEl = modal.querySelector('#schNewEmoji');
+
+      const name = String(nameEl?.value || '').trim();
+      const dateStr = String(dateEl?.value || '').trim();
+      const utcStr = String(utcEl?.value || '').trim();
+      const emoji = emojiEl?.value || '✨';
+
+      if (!name) {
+        if (window.showToast) window.showToast("Please enter an Event Name", "error");
+        return;
+      }
+
+      currentEvents.push({
+        id: 'ev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+        eventName: name,
+        dateStr: dateStr || `${new Date().getMonth() + 1}/${new Date().getDate()}`,
+        utcStr: utcStr || '16:00',
+        pdtVal: '',
+        emoji: emoji
+      });
+
+      renderModalContent();
+    });
+
+    modal.querySelectorAll('.sch-del-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.getAttribute('data-idx'));
+        if (!isNaN(idx) && idx >= 0 && idx < currentEvents.length) {
+          currentEvents.splice(idx, 1);
+          renderModalContent();
+        }
+      });
+    });
+
+    modal.querySelector('#schSaveBtn')?.addEventListener('click', async () => {
+      const saveBtn = modal.querySelector('#schSaveBtn');
+      if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving...'; }
+
+      let finalSignups = currentSignups;
+      let finalRewards = currentRewards;
+      let finalAllWeek = currentAllWeek;
+      let finalHolidays = currentHolidays;
+
+      const signupsTa = modal.querySelector('#schCatSignups');
+      if (signupsTa) finalSignups = signupsTa.value.split('\n').map(s => s.trim()).filter(Boolean);
+
+      const rewardsTa = modal.querySelector('#schCatRewards');
+      if (rewardsTa) finalRewards = rewardsTa.value.split('\n').map(s => s.trim()).filter(Boolean);
+
+      const allWeekTa = modal.querySelector('#schCatAllWeek');
+      if (allWeekTa) finalAllWeek = allWeekTa.value.split('\n').map(s => s.trim()).filter(Boolean);
+
+      const holidaysTa = modal.querySelector('#schCatHolidays');
+      if (holidaysTa) finalHolidays = holidaysTa.value.split('\n').map(s => s.trim()).filter(Boolean);
+
+      const scheduleObj = {
+        events: currentEvents,
+        signups: finalSignups,
+        rewards: finalRewards,
+        allWeek: finalAllWeek,
+        holidays: finalHolidays
+      };
+
+      const ok = await window.saveScheduleToFirebase(scheduleObj);
+      if (ok) {
+        closeModal();
+        if (window.activeViewFunc) window.activeViewFunc();
+        else if (views.schedule) views.schedule();
+      } else {
+        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '💾 Save Live Schedule'; }
+      }
+    });
+
+    modal.querySelector('#schImportSheetBtn')?.addEventListener('click', async () => {
+      let sheetData = window.liveData ? window.liveData['WhiteOut Survival'] : null;
+      if (!sheetData) {
+        try { sheetData = await fetchSheet('WhiteOut Survival'); } catch(e) {}
+      }
+      if (!sheetData || !Array.isArray(sheetData)) {
+        if (window.showToast) window.showToast("Could not load Google Sheets schedule data", "error");
+        return;
+      }
+
+      currentEvents.length = 0;
+      currentSignups.length = 0;
+      currentRewards.length = 0;
+      currentAllWeek.length = 0;
+      currentHolidays.length = 0;
+
+      for (let i = 1; i < Math.min(34, sheetData.length); i++) {
+        const row = sheetData[i];
+        const eventName = row[5];
+        const dateRaw   = row[6];
+        const utcRaw    = row[7];
+        const pdtVal    = row[8];
+        if (!eventName || String(eventName).trim() === '') continue;
+        if (String(eventName).includes("Event's")) continue;
+        if (String(eventName).trim() === 'Rewards') break;
+
+        const isBearTrap = String(eventName).includes('Bear Trap') || String(eventName).includes('🪤') || String(eventName).includes('🐻');
+        const isJoe = String(eventName).includes('Crazy Joe') || String(eventName).includes('🔥');
+        const isCastle = String(eventName).includes('Castle') || String(eventName).includes('🏰');
+        const isBia = String(eventName).includes('Brothers') || String(eventName).includes('⚔️');
+        let emoji = isBearTrap ? '🪤' : (isJoe ? '🔥' : (isCastle ? '🏰' : (isBia ? '⚔️' : '✨')));
+
+        currentEvents.push({
+          id: 'ev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+          eventName: String(eventName).trim(),
+          dateStr: String(dateRaw || '').trim(),
+          utcStr: String(utcRaw || '').trim(),
+          pdtVal: String(pdtVal || '').trim(),
+          emoji: emoji
+        });
+      }
+
+      let headerRowIdx = -1;
+      for (let i = 0; i < sheetData.length; i++) {
+        const cell = String(sheetData[i][5] || '').trim().toLowerCase();
+        if (cell === 'rewards') { headerRowIdx = i; break; }
+      }
+      if (headerRowIdx !== -1) {
+        for (let i = headerRowIdx + 1; i < sheetData.length; i++) {
+          const r = sheetData[i][5], g = sheetData[i][6], h = sheetData[i][7], k = sheetData[i][8];
+          const anyVal = [r,g,h,k].some(v => v && String(v).trim() !== '');
+          if (!anyVal) break;
+          const skip = (v) => !v || String(v).trim() === '' || String(v).trim().toLowerCase() === 'no events';
+          if (!skip(r)) currentRewards.push(String(r).trim());
+          if (!skip(g)) currentSignups.push(String(g).trim());
+          if (!skip(h)) currentAllWeek.push(String(h).trim());
+          if (!skip(k)) currentHolidays.push(String(k).trim());
+        }
+      }
+
+      if (window.showToast) window.showToast("Imported schedule from Google Sheets!", "info");
+      renderModalContent();
+    });
+  };
+
+  const closeModal = () => {
+    modal.remove();
+    overlay.remove();
+  };
+
+  overlay.addEventListener('click', closeModal);
+  document.body.appendChild(overlay);
+  document.body.appendChild(modal);
+  renderModalContent();
 };
 
 // --- GLOBAL TIMERS ---
