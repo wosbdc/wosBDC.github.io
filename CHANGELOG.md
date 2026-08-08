@@ -1,3 +1,8 @@
+## [1.51.0] - 2026-08-07
+### Added
+- **⚡ Instant 1-Click Auto-Fill Schedule Button**: Added a dedicated `⚡ Instant Auto-Fill Schedule` button in the Live Schedule Manager modal footer to instantly populate default event templates in 0 milliseconds without waiting on Google Sheets Apps Script API response delays.
+- **🛡️ Robust Google Sheets Import Fallback**: If Apps Script or Google Sheets API fails or times out, `📥 Import from Google Sheets` gracefully falls back to the default schedule template and notifies managers with an informative toast.
+
 ## [1.50.0] - 2026-08-07
 ### Added
 - **🔍 Quick Search & Update Dates Editor (Google Sheets Replica)**: Added a dedicated `🔍 Search & Update Dates` tab to the Live Schedule Manager. Managers can type any event or reward name (e.g. Bear Trap, Crazy Joe, Foundry, SvS), click it, pick or press `Today` for date, and hit `💾 Update Event Date`!

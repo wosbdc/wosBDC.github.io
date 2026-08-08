@@ -13130,7 +13130,10 @@ window.openScheduleEditorModal = async () => {
 
       <!-- Modal Footer Controls -->
       <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border); padding-top:14px; flex-wrap:wrap; gap:10px;">
-        <button id="schImportSheetBtn" style="background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); padding:8px 14px; border-radius:8px; cursor:pointer; font-size:12px; font-weight:bold;">📥 Import from Google Sheets</button>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button id="schAutoFillBtn" style="background:rgba(14,165,233,0.15); border:1px solid rgba(14,165,233,0.4); color:var(--accent); padding:8px 14px; border-radius:8px; cursor:pointer; font-size:12px; font-weight:bold;" title="Instantly fill standard schedule templates">⚡ Instant Auto-Fill Schedule</button>
+          <button id="schImportSheetBtn" style="background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); padding:8px 14px; border-radius:8px; cursor:pointer; font-size:12px; font-weight:bold;">📥 Import from Google Sheets</button>
+        </div>
         <div style="display:flex; gap:10px;">
           <button id="schCancelBtn" style="background:var(--bg-main); border:1px solid var(--border); color:var(--text-muted); padding:8px 16px; border-radius:8px; cursor:pointer; font-size:13px; font-weight:bold;">Cancel</button>
           <button id="schSaveBtn" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:8px 22px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13px; box-shadow:0 4px 12px rgba(16,185,129,0.3);">💾 Save Live Schedule</button>
@@ -13389,13 +13392,44 @@ window.openScheduleEditorModal = async () => {
       }
     });
 
+    modal.querySelector('#schAutoFillBtn')?.addEventListener('click', () => {
+      const now = new Date();
+      const todayStr = `${now.getMonth() + 1}/${now.getDate()}`;
+      
+      currentEvents.length = 0;
+      currentEvents.push(
+        { id: 'ev_1', eventName: 'Bear Trap', dateStr: todayStr, utcStr: '16:00', endUtcStr: '16:30', emoji: '🪤' },
+        { id: 'ev_2', eventName: 'Crazy Joe', dateStr: todayStr, utcStr: '14:00', endUtcStr: '14:30', emoji: '🔥' },
+        { id: 'ev_3', eventName: 'Sunfire Castle Battle', dateStr: todayStr, utcStr: '12:00', endUtcStr: '20:00', emoji: '🏰' },
+        { id: 'ev_4', eventName: 'Brothers in Arms K.E.', dateStr: todayStr, utcStr: '00:00', endUtcStr: '23:59', emoji: '⚔️' },
+        { id: 'ev_5', eventName: 'Polar Terrors Rally', dateStr: todayStr, utcStr: '16:00', endUtcStr: '16:45', emoji: '🐻‍❄️' }
+      );
+
+      currentSignups.length = 0;
+      currentSignups.push("Sunfire Castle R5 Registration", "SvS Troop Training Registration", "Foundry Team Signups");
+
+      currentRewards.length = 0;
+      currentRewards.push("Foundry Battle Payouts", "Alliance Mobilization Rewards", "Canyon Clash Victory Chests", "SvS Victory Rewards");
+
+      currentAllWeek.length = 0;
+      currentAllWeek.push("Daily Intel Missions", "Alliance Tech Donations", "Bear Trap Rallies", "Auto Gift Codes Enrolled");
+
+      currentHolidays.length = 0;
+      currentHolidays.push("State Warmup Week", "Frostfire Prep Phase", "Alliance Championship Week");
+
+      if (window.showToast) window.showToast("⚡ Auto-filled standard schedule template! Click 'Save Live Schedule' to apply.", "success");
+      renderModalContent();
+    });
+
     modal.querySelector('#schImportSheetBtn')?.addEventListener('click', async () => {
       let sheetData = window.liveData ? window.liveData['WhiteOut Survival'] : null;
       if (!sheetData) {
         try { sheetData = await fetchSheet('WhiteOut Survival'); } catch(e) {}
       }
       if (!sheetData || !Array.isArray(sheetData)) {
-        if (window.showToast) window.showToast("Could not load Google Sheets schedule data", "error");
+        // Fallback: auto fill default template
+        modal.querySelector('#schAutoFillBtn')?.click();
+        if (window.showToast) window.showToast("Loaded default schedule template. Click Save Live Schedule to push live.", "info");
         return;
       }
 
