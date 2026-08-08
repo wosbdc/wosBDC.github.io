@@ -1,3 +1,8 @@
+## [1.50.0] - 2026-08-07
+### Added
+- **🔍 Quick Search & Update Dates Editor (Google Sheets Replica)**: Added a dedicated `🔍 Search & Update Dates` tab to the Live Schedule Manager. Managers can type any event or reward name (e.g. Bear Trap, Crazy Joe, Foundry, SvS), click it, pick or press `Today` for date, and hit `💾 Update Event Date`!
+- **⚡ Bear Trap 2-Day Auto-Formula**: Site now automatically calculates the 2-day Bear Trap cycle and displays `🪤 Bear Trap (Auto 2-Day Cycle)` in Today's View without requiring managers to manually schedule Bear Trap every 2 days!
+
 ## [1.49.3] - 2026-08-07
 ### Added
 - **⭐ 1-Click Save Preset Button**: Added a `⭐ Save Preset` button to the Live Schedule Manager form so managers can save ANY new event as a preloaded template.

@@ -12154,6 +12154,39 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
                }
              });
 
+             // ── Bear Trap 2-Day Auto-Formula Check ──
+             const hasBearTrapToday = todayEvents.some(e => e.eventName.includes('Bear Trap') || e.eventName.includes('🪤'));
+             if (!hasBearTrapToday) {
+               const anchorDate = new Date(2026, 7, 1); // 8/1/2026 anchor
+               const diffDays = Math.floor((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - anchorDate) / (1000 * 60 * 60 * 24));
+               if (diffDays % 2 === 0) {
+                 const localRef = new Date();
+                 localRef.setUTCHours(16, 0, 0, 0);
+                 const startLocal = localRef.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                 localRef.setUTCHours(16, 30, 0, 0);
+                 const endLocal = localRef.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                 const eventDateTime = new Date();
+                 eventDateTime.setUTCHours(16, 0, 0, 0);
+                 const eventEndDateTime = new Date();
+                 eventEndDateTime.setUTCHours(16, 30, 0, 0);
+                 const isLiveNow = eventDateTime <= now && now <= eventEndDateTime;
+                 const isPast = eventEndDateTime < now;
+
+                 todayEvents.push({
+                   eventName: "Bear Trap (Auto 2-Day Cycle)",
+                   utcDisplay: "16:00 - 16:30 UTC",
+                   localTimeStr: `${startLocal} - ${endLocal}`,
+                   pdtVal: "",
+                   isLiveNow,
+                   isPast,
+                   emoji: "🪤",
+                   eventDateTime,
+                   eventEndDateTime,
+                   eventDate: now
+                 });
+               }
+             }
+
              rewards = liveSched.rewards || [];
              signups = liveSched.signups || [];
              allWeek = liveSched.allWeek || [];
@@ -12899,9 +12932,12 @@ window.openScheduleEditorModal = async () => {
       </div>
 
       <!-- Navigation Subtabs -->
-      <div style="display:flex; gap:10px; border-bottom:1px solid var(--border); padding-bottom:10px;">
+      <div style="display:flex; gap:10px; border-bottom:1px solid var(--border); padding-bottom:10px; flex-wrap:wrap;">
         <button id="schTabBtnTimed" style="padding:8px 16px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; background:${activeModalTab === 'timed' ? 'var(--accent)' : 'var(--bg-main)'}; color:${activeModalTab === 'timed' ? '#fff' : 'var(--text-muted)'}; transition:0.2s;">
           ⏱️ Timed Events (${currentEvents.length})
+        </button>
+        <button id="schTabBtnSearch" style="padding:8px 16px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; background:${activeModalTab === 'search' ? 'var(--accent)' : 'var(--bg-main)'}; color:${activeModalTab === 'search' ? '#fff' : 'var(--text-muted)'}; transition:0.2s;">
+          🔍 Search & Update Dates
         </button>
         <button id="schTabBtnCats" style="padding:8px 16px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; background:${activeModalTab === 'cats' ? 'var(--accent)' : 'var(--bg-main)'}; color:${activeModalTab === 'cats' ? '#fff' : 'var(--text-muted)'}; transition:0.2s;">
           📋 Category Lists
@@ -13001,6 +13037,49 @@ window.openScheduleEditorModal = async () => {
               </tbody>
             </table>
           </div>
+        ` : activeModalTab === 'search' ? `
+          <!-- Search & Quick Date Update Tab (Replica of Google Sheets Rewards Editor) -->
+          <div style="display:flex; flex-direction:column; gap:14px;">
+            <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:12px;">
+              <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase;">🔍 Search Event or Reward</label>
+              <input type="text" id="schSearchQuery" placeholder="Type event name (e.g. Bear Trap, Crazy Joe, Foundry, SvS)..." style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:14px; box-sizing:border-box;">
+            </div>
+
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">
+              <!-- Items List -->
+              <div id="schSearchList" style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:10px; max-height:300px; overflow-y:auto; display:flex; flex-direction:column; gap:6px;">
+                ${allPresets.map(p => `
+                  <div class="sch-search-item" data-preset='${JSON.stringify(p)}' style="padding:10px; border-radius:6px; background:var(--card-bg); border:1px solid var(--border); cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-weight:bold; font-size:13px; color:var(--text-main);">${p.emoji || '✨'} ${escapeHTML(p.name)}</span>
+                    <span style="font-size:11px; font-weight:bold; color:var(--text-muted);">${p.utc}${p.endUtc ? '-' + p.endUtc : ''} UTC</span>
+                  </div>
+                `).join('')}
+              </div>
+
+              <!-- Selected Item Quick Date Editor -->
+              <div id="schSearchEditor" style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:16px; display:flex; flex-direction:column; gap:12px;">
+                <div id="schSelectedItemTitle" style="font-weight:bold; font-size:15px; color:var(--accent);">Select an event from list left</div>
+                <div style="display:flex; gap:10px;">
+                  <div style="flex:1;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                      <label style="font-size:11px; font-weight:bold; color:var(--text-muted);">Date (M/D)</label>
+                      <button id="schSetTodayBtn" type="button" style="font-size:10px; font-weight:bold; color:var(--accent); cursor:pointer; text-transform:uppercase; background:rgba(14,165,233,0.15); border:1px solid rgba(14,165,233,0.3); padding:2px 6px; border-radius:4px;">Today</button>
+                    </div>
+                    <input type="text" id="schSearchDate" placeholder="8/7" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; text-align:center; box-sizing:border-box;">
+                  </div>
+                  <div style="width:90px;">
+                    <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">Start UTC</label>
+                    <input type="text" id="schSearchUtc" placeholder="16:00" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; text-align:center; box-sizing:border-box;">
+                  </div>
+                  <div style="width:90px;">
+                    <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">End UTC</label>
+                    <input type="text" id="schSearchEndUtc" placeholder="16:30" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; text-align:center; box-sizing:border-box;">
+                  </div>
+                </div>
+                <button id="schSaveSearchItemBtn" style="width:100%; padding:10px; border-radius:8px; border:none; background:linear-gradient(135deg, #10b981, #059669); color:#fff; font-weight:bold; font-size:13px; cursor:pointer; box-shadow:0 4px 12px rgba(16,185,129,0.3);">💾 Update Event Date</button>
+              </div>
+            </div>
+          </div>
         ` : `
           <!-- Category Lists Tab with Quick Add Preloaded Badges -->
           <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:16px;">
@@ -13064,7 +13143,84 @@ window.openScheduleEditorModal = async () => {
     modal.querySelector('#schCancelBtn')?.addEventListener('click', closeModal);
 
     modal.querySelector('#schTabBtnTimed')?.addEventListener('click', () => { activeModalTab = 'timed'; renderModalContent(); });
+    modal.querySelector('#schTabBtnSearch')?.addEventListener('click', () => { activeModalTab = 'search'; renderModalContent(); });
     modal.querySelector('#schTabBtnCats')?.addEventListener('click', () => { activeModalTab = 'cats'; renderModalContent(); });
+
+    let selectedSearchItem = null;
+
+    modal.querySelector('#schSearchQuery')?.addEventListener('input', (e) => {
+      const q = String(e.target.value || '').trim().toLowerCase();
+      modal.querySelectorAll('.sch-search-item').forEach(el => {
+        const txt = el.textContent.toLowerCase();
+        if (!q || txt.includes(q)) el.style.display = 'flex';
+        else el.style.display = 'none';
+      });
+    });
+
+    modal.querySelectorAll('.sch-search-item').forEach(el => {
+      el.addEventListener('click', () => {
+        try {
+          const item = JSON.parse(el.getAttribute('data-preset'));
+          selectedSearchItem = item;
+          const titleEl = modal.querySelector('#schSelectedItemTitle');
+          const dateEl = modal.querySelector('#schSearchDate');
+          const utcEl = modal.querySelector('#schSearchUtc');
+          const endUtcEl = modal.querySelector('#schSearchEndUtc');
+          if (titleEl) titleEl.textContent = `${item.emoji || '✨'} ${item.name}`;
+          const now = new Date();
+          if (dateEl && !dateEl.value) dateEl.value = `${now.getMonth() + 1}/${now.getDate()}`;
+          if (utcEl) utcEl.value = item.utc || '16:00';
+          if (endUtcEl) endUtcEl.value = item.endUtc || '';
+        } catch(err) { console.error(err); }
+      });
+    });
+
+    modal.querySelector('#schSetTodayBtn')?.addEventListener('click', () => {
+      const dateEl = modal.querySelector('#schSearchDate');
+      const now = new Date();
+      if (dateEl) dateEl.value = `${now.getMonth() + 1}/${now.getDate()}`;
+    });
+
+    modal.querySelector('#schSaveSearchItemBtn')?.addEventListener('click', () => {
+      if (!selectedSearchItem) {
+        if (window.showToast) window.showToast("Please click an event from the list on the left", "error");
+        return;
+      }
+      const dateEl = modal.querySelector('#schSearchDate');
+      const utcEl = modal.querySelector('#schSearchUtc');
+      const endUtcEl = modal.querySelector('#schSearchEndUtc');
+
+      const dateStr = String(dateEl?.value || '').trim();
+      const utcStr = String(utcEl?.value || '').trim() || selectedSearchItem.utc || '16:00';
+      const endUtcStr = String(endUtcEl?.value || '').trim() || selectedSearchItem.endUtc || '';
+
+      if (!dateStr) {
+        if (window.showToast) window.showToast("Please enter or set a date", "error");
+        return;
+      }
+
+      // Check if event already exists in currentEvents, update or push
+      const existingIdx = currentEvents.findIndex(ev => ev.eventName.toLowerCase() === selectedSearchItem.name.toLowerCase());
+      if (existingIdx >= 0) {
+        currentEvents[existingIdx].dateStr = dateStr;
+        currentEvents[existingIdx].utcStr = utcStr;
+        currentEvents[existingIdx].endUtcStr = endUtcStr;
+      } else {
+        currentEvents.push({
+          id: 'ev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+          eventName: selectedSearchItem.name,
+          dateStr: dateStr,
+          utcStr: utcStr,
+          endUtcStr: endUtcStr,
+          pdtVal: '',
+          emoji: selectedSearchItem.emoji || '✨'
+        });
+      }
+
+      if (window.showToast) window.showToast(`Updated '${selectedSearchItem.name}' for ${dateStr}!`, "success");
+      activeModalTab = 'timed';
+      renderModalContent();
+    });
 
     modal.querySelector('#schPreloadedSelect')?.addEventListener('change', (e) => {
       const valStr = e.target.value;
