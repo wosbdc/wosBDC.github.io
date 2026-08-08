@@ -1,3 +1,9 @@
+## [1.49.2] - 2026-08-07
+### Added
+- **⚡ Preloaded Event Picker Catalog**: Added a preloaded dropdown selection picker in Live Schedule Manager for 1-click auto-fill of standard WhiteOut Survival events (Bear Trap, Crazy Joe, Castle Battle, Brothers in Arms, Polar Terrors, Frostfire Mine, Canyon Clash, Alliance Showdown, SvS Prep, Foundry Battle).
+- **🏷️ Preloaded Category Quick Badges**: Added pre-populated 1-click add chips for Sign-ups, Rewards, All-Week routines, and Holidays.
+- **📥 Full Data Transfer from Google Sheets**: Enhanced 1-click import to load all sheet events, sign-ups, rewards, and routines directly into Firebase.
+
 ## [1.49.1] - 2026-08-05
 ### Added
 - **End UTC Time Window Support**: Added optional `End UTC` time field (`endUtcStr`) to Live Schedule Manager and Quick Presets (`16:00 - 16:30 UTC`).

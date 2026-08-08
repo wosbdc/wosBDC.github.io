@@ -12878,15 +12878,31 @@ window.openScheduleEditorModal = async () => {
       <!-- Main Body Content Area (Scrollable) -->
       <div style="flex:1; overflow-y:auto; padding-right:4px; display:flex; flex-direction:column; gap:16px;">
         ${activeModalTab === 'timed' ? `
-          <!-- Quick Preset Buttons Bar -->
-          <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:12px;">
-            <div style="font-size:11px; font-weight:bold; text-transform:uppercase; color:var(--text-muted); margin-bottom:8px;">⚡ Quick Presets (1-Click Add):</div>
+          <!-- Preloaded Event Select & Presets Bar -->
+          <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:12px; display:flex; flex-direction:column; gap:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+              <div style="font-size:11px; font-weight:bold; text-transform:uppercase; color:var(--text-muted);">⚡ Select Preloaded Event or Quick Preset:</div>
+              <select id="schPreloadedSelect" style="padding:6px 12px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:12px; cursor:pointer;">
+                <option value="">-- Pick Preloaded Event --</option>
+                <option value='{"name":"Bear Trap","utc":"16:00","endUtc":"16:30","emoji":"🪤"}'>🪤 Bear Trap (16:00-16:30 UTC)</option>
+                <option value='{"name":"Crazy Joe","utc":"14:00","endUtc":"14:30","emoji":"🔥"}'>🔥 Crazy Joe (14:00-14:30 UTC)</option>
+                <option value='{"name":"Sunfire Castle Battle","utc":"12:00","endUtc":"20:00","emoji":"🏰"}'>🏰 Sunfire Castle Battle (12:00-20:00 UTC)</option>
+                <option value='{"name":"Brothers in Arms K.E.","utc":"00:00","endUtc":"23:59","emoji":"⚔️"}'>⚔️ Brothers in Arms (00:00-23:59 UTC)</option>
+                <option value='{"name":"Polar Terrors Rally","utc":"16:00","endUtc":"16:45","emoji":"🐻‍❄️"}'>🐻‍❄️ Polar Terrors (16:00-16:45 UTC)</option>
+                <option value='{"name":"Frostfire Mine","utc":"14:00","endUtc":"15:00","emoji":"⛏️"}'>⛏️ Frostfire Mine (14:00-15:00 UTC)</option>
+                <option value='{"name":"Canyon Clash","utc":"16:00","endUtc":"17:00","emoji":"🏔️"}'>🏔️ Canyon Clash (16:00-17:00 UTC)</option>
+                <option value='{"name":"Alliance Showdown","utc":"12:00","endUtc":"23:59","emoji":"🛡️"}'>🛡️ Alliance Showdown (12:00-23:59 UTC)</option>
+                <option value='{"name":"State vs State Prep","utc":"00:00","endUtc":"23:59","emoji":"💎"}'>💎 State vs State Prep (00:00-23:59 UTC)</option>
+                <option value='{"name":"Foundry Battle","utc":"19:00","endUtc":"20:00","emoji":"🏆"}'>🏆 Foundry Battle (19:00-20:00 UTC)</option>
+              </select>
+            </div>
+
             <div style="display:flex; gap:8px; flex-wrap:wrap;">
-              <button class="sch-preset-btn" data-name="Bear Trap" data-utc="16:00" data-endutc="16:30" data-emoji="🪤" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">🪤 Bear Trap (16:00-16:30 UTC)</button>
-              <button class="sch-preset-btn" data-name="Crazy Joe" data-utc="14:00" data-endutc="14:30" data-emoji="🔥" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">🔥 Crazy Joe (14:00-14:30 UTC)</button>
-              <button class="sch-preset-btn" data-name="Sunfire Castle Battle" data-utc="12:00" data-endutc="20:00" data-emoji="🏰" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">🏰 Castle Battle (12:00-20:00 UTC)</button>
-              <button class="sch-preset-btn" data-name="Brothers in Arms K.E." data-utc="00:00" data-endutc="23:59" data-emoji="⚔️" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">⚔️ Brothers in Arms (00:00-23:59 UTC)</button>
-              <button class="sch-preset-btn" data-name="Polar Terrors Rally" data-utc="16:00" data-endutc="16:45" data-emoji="🐻‍❄️" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">🐻‍❄️ Polar Terrors (16:00-16:45 UTC)</button>
+              <button class="sch-preset-btn" data-name="Bear Trap" data-utc="16:00" data-endutc="16:30" data-emoji="🪤" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">🪤 Bear Trap</button>
+              <button class="sch-preset-btn" data-name="Crazy Joe" data-utc="14:00" data-endutc="14:30" data-emoji="🔥" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">🔥 Crazy Joe</button>
+              <button class="sch-preset-btn" data-name="Sunfire Castle Battle" data-utc="12:00" data-endutc="20:00" data-emoji="🏰" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">🏰 Castle Battle</button>
+              <button class="sch-preset-btn" data-name="Brothers in Arms K.E." data-utc="00:00" data-endutc="23:59" data-emoji="⚔️" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">⚔️ Brothers in Arms</button>
+              <button class="sch-preset-btn" data-name="Polar Terrors Rally" data-utc="16:00" data-endutc="16:45" data-emoji="🐻‍❄️" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">🐻‍❄️ Polar Terrors</button>
             </div>
           </div>
 
@@ -12898,7 +12914,7 @@ window.openScheduleEditorModal = async () => {
             </div>
             <div style="width:85px;">
               <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">Date (M/D)</label>
-              <input type="text" id="schNewDate" placeholder="8/5" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; text-align:center; box-sizing:border-box;">
+              <input type="text" id="schNewDate" placeholder="8/7" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; text-align:center; box-sizing:border-box;">
             </div>
             <div style="width:90px;">
               <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">Start UTC</label>
@@ -12916,6 +12932,8 @@ window.openScheduleEditorModal = async () => {
                 <option value="🏰">🏰</option>
                 <option value="⚔️">⚔️</option>
                 <option value="🐻‍❄️">🐻‍❄️</option>
+                <option value="⛏️">⛏️</option>
+                <option value="🏔️">🏔️</option>
                 <option value="🛡️">🛡️</option>
                 <option value="✨">✨</option>
                 <option value="💎">💎</option>
@@ -12957,22 +12975,47 @@ window.openScheduleEditorModal = async () => {
             </table>
           </div>
         ` : `
-          <!-- Category Lists Tab -->
+          <!-- Category Lists Tab with Quick Add Preloaded Badges -->
           <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:16px;">
             <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:14px;">
-              <div style="font-weight:bold; font-size:13px; color:#10b981; margin-bottom:6px;">🟢 Sign-Ups Requiring Events (1 per line)</div>
+              <div style="font-weight:bold; font-size:13px; color:#10b981; margin-bottom:6px;">🟢 Sign-Ups Requiring Events</div>
+              <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
+                <button class="sch-cat-quick" data-target="schCatSignups" data-val="Sunfire Castle R5 Registration" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(16,185,129,0.4); background:rgba(16,185,129,0.12); color:#10b981; font-size:11px; font-weight:bold; cursor:pointer;">+ Castle R5</button>
+                <button class="sch-cat-quick" data-target="schCatSignups" data-val="SvS Troop Training Registration" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(16,185,129,0.4); background:rgba(16,185,129,0.12); color:#10b981; font-size:11px; font-weight:bold; cursor:pointer;">+ SvS Training</button>
+                <button class="sch-cat-quick" data-target="schCatSignups" data-val="Foundry Team Signups" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(16,185,129,0.4); background:rgba(16,185,129,0.12); color:#10b981; font-size:11px; font-weight:bold; cursor:pointer;">+ Foundry Team</button>
+              </div>
               <textarea id="schCatSignups" rows="5" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-family:monospace; font-size:12px; box-sizing:border-box;">${currentSignups.join('\n')}</textarea>
             </div>
+
             <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:14px;">
-              <div style="font-weight:bold; font-size:13px; color:#eab308; margin-bottom:6px;">🟡 Rewards & Payout Track (1 per line)</div>
+              <div style="font-weight:bold; font-size:13px; color:#eab308; margin-bottom:6px;">🟡 Rewards & Payout Track</div>
+              <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
+                <button class="sch-cat-quick" data-target="schCatRewards" data-val="Foundry Battle Payouts" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(234,179,8,0.4); background:rgba(234,179,8,0.12); color:#eab308; font-size:11px; font-weight:bold; cursor:pointer;">+ Foundry Payouts</button>
+                <button class="sch-cat-quick" data-target="schCatRewards" data-val="Alliance Mobilization Rewards" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(234,179,8,0.4); background:rgba(234,179,8,0.12); color:#eab308; font-size:11px; font-weight:bold; cursor:pointer;">+ Alliance Mobilization</button>
+                <button class="sch-cat-quick" data-target="schCatRewards" data-val="Canyon Clash Victory Chests" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(234,179,8,0.4); background:rgba(234,179,8,0.12); color:#eab308; font-size:11px; font-weight:bold; cursor:pointer;">+ Canyon Clash</button>
+                <button class="sch-cat-quick" data-target="schCatRewards" data-val="SvS Victory Rewards" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(234,179,8,0.4); background:rgba(234,179,8,0.12); color:#eab308; font-size:11px; font-weight:bold; cursor:pointer;">+ SvS Victory</button>
+              </div>
               <textarea id="schCatRewards" rows="5" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-family:monospace; font-size:12px; box-sizing:border-box;">${currentRewards.join('\n')}</textarea>
             </div>
+
             <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:14px;">
-              <div style="font-weight:bold; font-size:13px; color:#a855f7; margin-bottom:6px;">🟣 All-Week Daily Routines (1 per line)</div>
+              <div style="font-weight:bold; font-size:13px; color:#a855f7; margin-bottom:6px;">🟣 All-Week Daily Routines</div>
+              <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
+                <button class="sch-cat-quick" data-target="schCatAllWeek" data-val="Daily Intel Missions" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(168,85,247,0.4); background:rgba(168,85,247,0.12); color:#a855f7; font-size:11px; font-weight:bold; cursor:pointer;">+ Daily Intel</button>
+                <button class="sch-cat-quick" data-target="schCatAllWeek" data-val="Alliance Tech Donations" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(168,85,247,0.4); background:rgba(168,85,247,0.12); color:#a855f7; font-size:11px; font-weight:bold; cursor:pointer;">+ Tech Donations</button>
+                <button class="sch-cat-quick" data-target="schCatAllWeek" data-val="Bear Trap Rallies" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(168,85,247,0.4); background:rgba(168,85,247,0.12); color:#a855f7; font-size:11px; font-weight:bold; cursor:pointer;">+ Bear Trap</button>
+                <button class="sch-cat-quick" data-target="schCatAllWeek" data-val="Auto Gift Codes Enrolled" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(168,85,247,0.4); background:rgba(168,85,247,0.12); color:#a855f7; font-size:11px; font-weight:bold; cursor:pointer;">+ Gift Codes</button>
+              </div>
               <textarea id="schCatAllWeek" rows="5" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-family:monospace; font-size:12px; box-sizing:border-box;">${currentAllWeek.join('\n')}</textarea>
             </div>
+
             <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:14px;">
-              <div style="font-weight:bold; font-size:13px; color:#f97316; margin-bottom:6px;">🟠 Holidays & Announcements (1 per line)</div>
+              <div style="font-weight:bold; font-size:13px; color:#f97316; margin-bottom:6px;">🟠 Holidays & Announcements</div>
+              <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
+                <button class="sch-cat-quick" data-target="schCatHolidays" data-val="State Warmup Week" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(249,115,22,0.4); background:rgba(249,115,22,0.12); color:#f97316; font-size:11px; font-weight:bold; cursor:pointer;">+ State Warmup</button>
+                <button class="sch-cat-quick" data-target="schCatHolidays" data-val="Frostfire Prep Phase" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(249,115,22,0.4); background:rgba(249,115,22,0.12); color:#f97316; font-size:11px; font-weight:bold; cursor:pointer;">+ Frostfire Prep</button>
+                <button class="sch-cat-quick" data-target="schCatHolidays" data-val="Alliance Championship Week" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(249,115,22,0.4); background:rgba(249,115,22,0.12); color:#f97316; font-size:11px; font-weight:bold; cursor:pointer;">+ Championship</button>
+              </div>
               <textarea id="schCatHolidays" rows="5" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-family:monospace; font-size:12px; box-sizing:border-box;">${currentHolidays.join('\n')}</textarea>
             </div>
           </div>
@@ -12995,6 +13038,36 @@ window.openScheduleEditorModal = async () => {
 
     modal.querySelector('#schTabBtnTimed')?.addEventListener('click', () => { activeModalTab = 'timed'; renderModalContent(); });
     modal.querySelector('#schTabBtnCats')?.addEventListener('click', () => { activeModalTab = 'cats'; renderModalContent(); });
+
+    modal.querySelector('#schPreloadedSelect')?.addEventListener('change', (e) => {
+      const valStr = e.target.value;
+      if (!valStr) return;
+      try {
+        const item = JSON.parse(valStr);
+        const nameEl = modal.querySelector('#schNewName');
+        const utcEl = modal.querySelector('#schNewUtc');
+        const endUtcEl = modal.querySelector('#schNewEndUtc');
+        const emojiEl = modal.querySelector('#schNewEmoji');
+        if (nameEl) nameEl.value = item.name || '';
+        if (utcEl) utcEl.value = item.utc || '';
+        if (endUtcEl) endUtcEl.value = item.endUtc || '';
+        if (emojiEl) emojiEl.value = item.emoji || '✨';
+        e.target.value = '';
+      } catch(err) { console.error(err); }
+    });
+
+    modal.querySelectorAll('.sch-cat-quick').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetId = btn.getAttribute('data-target');
+        const val = btn.getAttribute('data-val');
+        const txtEl = modal.querySelector('#' + targetId);
+        if (txtEl && val) {
+          const currentTxt = txtEl.value.trim();
+          txtEl.value = currentTxt ? `${currentTxt}\n${val}` : val;
+          if (window.showToast) window.showToast(`Added '${val}'!`, 'info');
+        }
+      });
+    });
 
     modal.querySelectorAll('.sch-preset-btn').forEach(btn => {
       btn.addEventListener('click', () => {
