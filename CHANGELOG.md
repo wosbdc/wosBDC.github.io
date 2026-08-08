@@ -1,3 +1,8 @@
+## [1.49.3] - 2026-08-07
+### Added
+- **⭐ 1-Click Save Preset Button**: Added a `⭐ Save Preset` button to the Live Schedule Manager form so managers can save ANY new event as a preloaded template.
+- **🔥 Firebase Presets Sync (`schedule_presets`)**: Dynamically persists custom presets to Firebase so newly saved preloaded events appear in the preloaded dropdown list for all alliance managers automatically!
+
 ## [1.49.2] - 2026-08-07
 ### Added
 - **⚡ Preloaded Event Picker Catalog**: Added a preloaded dropdown selection picker in Live Schedule Manager for 1-click auto-fill of standard WhiteOut Survival events (Bear Trap, Crazy Joe, Castle Battle, Brothers in Arms, Polar Terrors, Frostfire Mine, Canyon Clash, Alliance Showdown, SvS Prep, Foundry Battle).

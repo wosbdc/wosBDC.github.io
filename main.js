@@ -12852,6 +12852,39 @@ window.openScheduleEditorModal = async () => {
   const currentAllWeek = [...(liveData.allWeek || [])];
   const currentHolidays = [...(liveData.holidays || [])];
 
+  // Load custom presets from Firebase if available
+  let customPresets = [];
+  try {
+    const db = window.firebaseDb;
+    const { ref, get } = window.firebaseDatabase || {};
+    if (db && ref && get) {
+      const snap = await get(ref(db, 'schedule_presets'));
+      if (snap.exists() && Array.isArray(snap.val())) {
+        customPresets = snap.val();
+      }
+    }
+  } catch(e) { console.error("Error loading schedule presets:", e); }
+
+  const defaultPresets = [
+    { name: "Bear Trap", utc: "16:00", endUtc: "16:30", emoji: "🪤" },
+    { name: "Crazy Joe", utc: "14:00", endUtc: "14:30", emoji: "🔥" },
+    { name: "Sunfire Castle Battle", utc: "12:00", endUtc: "20:00", emoji: "🏰" },
+    { name: "Brothers in Arms K.E.", utc: "00:00", endUtc: "23:59", emoji: "⚔️" },
+    { name: "Polar Terrors Rally", utc: "16:00", endUtc: "16:45", emoji: "🐻‍❄️" },
+    { name: "Frostfire Mine", utc: "14:00", endUtc: "15:00", emoji: "⛏️" },
+    { name: "Canyon Clash", utc: "16:00", endUtc: "17:00", emoji: "🏔️" },
+    { name: "Alliance Showdown", utc: "12:00", endUtc: "23:59", emoji: "🛡️" },
+    { name: "State vs State Prep", utc: "00:00", endUtc: "23:59", emoji: "💎" },
+    { name: "Foundry Battle", utc: "19:00", endUtc: "20:00", emoji: "🏆" }
+  ];
+
+  const allPresets = [...defaultPresets];
+  customPresets.forEach(cp => {
+    if (cp && cp.name && !allPresets.some(ap => ap.name.toLowerCase() === cp.name.toLowerCase())) {
+      allPresets.push(cp);
+    }
+  });
+
   const renderModalContent = () => {
     modal.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:14px;">
@@ -12881,19 +12914,10 @@ window.openScheduleEditorModal = async () => {
           <!-- Preloaded Event Select & Presets Bar -->
           <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:12px; display:flex; flex-direction:column; gap:10px;">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-              <div style="font-size:11px; font-weight:bold; text-transform:uppercase; color:var(--text-muted);">⚡ Select Preloaded Event or Quick Preset:</div>
+              <div style="font-size:11px; font-weight:bold; text-transform:uppercase; color:var(--text-muted);">⚡ Select Preloaded Event (${allPresets.length}):</div>
               <select id="schPreloadedSelect" style="padding:6px 12px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:12px; cursor:pointer;">
                 <option value="">-- Pick Preloaded Event --</option>
-                <option value='{"name":"Bear Trap","utc":"16:00","endUtc":"16:30","emoji":"🪤"}'>🪤 Bear Trap (16:00-16:30 UTC)</option>
-                <option value='{"name":"Crazy Joe","utc":"14:00","endUtc":"14:30","emoji":"🔥"}'>🔥 Crazy Joe (14:00-14:30 UTC)</option>
-                <option value='{"name":"Sunfire Castle Battle","utc":"12:00","endUtc":"20:00","emoji":"🏰"}'>🏰 Sunfire Castle Battle (12:00-20:00 UTC)</option>
-                <option value='{"name":"Brothers in Arms K.E.","utc":"00:00","endUtc":"23:59","emoji":"⚔️"}'>⚔️ Brothers in Arms (00:00-23:59 UTC)</option>
-                <option value='{"name":"Polar Terrors Rally","utc":"16:00","endUtc":"16:45","emoji":"🐻‍❄️"}'>🐻‍❄️ Polar Terrors (16:00-16:45 UTC)</option>
-                <option value='{"name":"Frostfire Mine","utc":"14:00","endUtc":"15:00","emoji":"⛏️"}'>⛏️ Frostfire Mine (14:00-15:00 UTC)</option>
-                <option value='{"name":"Canyon Clash","utc":"16:00","endUtc":"17:00","emoji":"🏔️"}'>🏔️ Canyon Clash (16:00-17:00 UTC)</option>
-                <option value='{"name":"Alliance Showdown","utc":"12:00","endUtc":"23:59","emoji":"🛡️"}'>🛡️ Alliance Showdown (12:00-23:59 UTC)</option>
-                <option value='{"name":"State vs State Prep","utc":"00:00","endUtc":"23:59","emoji":"💎"}'>💎 State vs State Prep (00:00-23:59 UTC)</option>
-                <option value='{"name":"Foundry Battle","utc":"19:00","endUtc":"20:00","emoji":"🏆"}'>🏆 Foundry Battle (19:00-20:00 UTC)</option>
+                ${allPresets.map(p => `<option value='${JSON.stringify(p)}'>${p.emoji || '✨'} ${escapeHTML(p.name)} (${p.utc}${p.endUtc ? '-' + p.endUtc : ''} UTC)</option>`).join('')}
               </select>
             </div>
 
@@ -12940,7 +12964,10 @@ window.openScheduleEditorModal = async () => {
                 <option value="🏆">🏆</option>
               </select>
             </div>
-            <button id="schAddEventBtn" style="padding:9px 16px; border-radius:6px; border:none; background:linear-gradient(135deg, #10b981, #059669); color:#fff; font-weight:bold; cursor:pointer; font-size:13px;">➕ Add Event</button>
+            <div style="display:flex; gap:6px;">
+              <button id="schAddEventBtn" style="padding:9px 14px; border-radius:6px; border:none; background:linear-gradient(135deg, #10b981, #059669); color:#fff; font-weight:bold; cursor:pointer; font-size:13px;">➕ Add Event</button>
+              <button id="schSavePresetBtn" style="padding:9px 12px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--accent); font-weight:bold; cursor:pointer; font-size:12px;" title="Save event template as preloaded preset">⭐ Save Preset</button>
+            </div>
           </div>
 
           <!-- Timed Events Table -->
@@ -13119,6 +13146,42 @@ window.openScheduleEditorModal = async () => {
       });
 
       renderModalContent();
+    });
+
+    modal.querySelector('#schSavePresetBtn')?.addEventListener('click', async () => {
+      const nameEl = modal.querySelector('#schNewName');
+      const utcEl = modal.querySelector('#schNewUtc');
+      const endUtcEl = modal.querySelector('#schNewEndUtc');
+      const emojiEl = modal.querySelector('#schNewEmoji');
+
+      const name = String(nameEl?.value || '').trim();
+      const utc = String(utcEl?.value || '').trim() || '16:00';
+      const endUtc = String(endUtcEl?.value || '').trim();
+      const emoji = emojiEl?.value || '✨';
+
+      if (!name) {
+        if (window.showToast) window.showToast("Please enter an Event Name to save as preset", "error");
+        return;
+      }
+
+      const newPreset = { name, utc, endUtc, emoji };
+      const updatedCustom = [...customPresets, newPreset];
+
+      try {
+        const db = window.firebaseDb;
+        const { ref, set } = window.firebaseDatabase || {};
+        if (db && ref && set) {
+          await set(ref(db, 'schedule_presets'), updatedCustom);
+          customPresets.push(newPreset);
+          allPresets.push(newPreset);
+          window.logAdminAction("Schedule Preset Added", `Saved '${name}' (${utc} UTC) to preloaded schedule presets catalog.`);
+          if (window.showToast) window.showToast(`⭐ Saved '${name}' to preloaded presets!`, "success");
+          renderModalContent();
+        }
+      } catch(err) {
+        console.error("Failed to save schedule preset:", err);
+        if (window.showToast) window.showToast("Failed to save preset to Firebase", "error");
+      }
     });
 
     modal.querySelectorAll('.sch-del-btn').forEach(btn => {
