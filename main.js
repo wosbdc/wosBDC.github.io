@@ -3822,10 +3822,13 @@ const fetchSheet = async (sheetName) => {
       let data = snapshot.val();
       
       if (!data) {
-        console.warn(`Firebase data missing for ${sheetName}, falling back to GAS...`);
+        console.warn(`Firebase data missing for ${sheetName}, trying fast GAS fallback (2.5s limit)...`);
         try {
           const fallbackToken = await getAuthToken();
-          const res = await fetch(`${API_BASE_URL}?api=${encodeURIComponent(sheetName)}${fallbackToken ? '&token=' + encodeURIComponent(fallbackToken) : ''}`);
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 2500);
+          const res = await fetch(`${API_BASE_URL}?api=${encodeURIComponent(sheetName)}${fallbackToken ? '&token=' + encodeURIComponent(fallbackToken) : ''}`, { signal: controller.signal });
+          clearTimeout(timeoutId);
           const text = await res.text();
           try {
             const json = JSON.parse(text);
@@ -3836,7 +3839,7 @@ const fetchSheet = async (sheetName) => {
              console.error("GAS fallback invalid JSON:", text);
           }
         } catch(e) {
-          console.error("GAS fallback network error:", e);
+          console.warn("GAS fallback timed out or network error:", e);
         }
       }
 
@@ -9938,12 +9941,15 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
 
     renderLoading('Loading Home & News');
     try {
-      const data = await fetchSheet('News');
+      const data = await fetchSheet('News').catch(() => null);
+      const liveSched = await window.fetchScheduleLiveData().catch(() => null);
       
       let scheduleData = null;
-      try {
-        scheduleData = await fetchSheet('WhiteOut Survival');
-      } catch(e) { console.error('Failed to load schedule for countdown', e); }
+      if (!liveSched || !Array.isArray(liveSched.events) || liveSched.events.length === 0) {
+        try {
+          scheduleData = await fetchSheet('WhiteOut Survival');
+        } catch(e) { console.error('Failed to load schedule for countdown', e); }
+      }
       
       let nextEvents = [];
       let nextEventTime = null;
@@ -12043,11 +12049,15 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
 
     renderLoading('Loading Schedule');
     try {
-      const [weeklyData, todayData, liveSched] = await Promise.all([
-        fetchSheet('schedule').catch(() => null),
-        fetchSheet('WhiteOut Survival').catch(() => null),
-        window.fetchScheduleLiveData().catch(() => null)
-      ]);
+      const liveSched = await window.fetchScheduleLiveData().catch(() => null);
+      let weeklyData = null;
+      let todayData = null;
+      if (!liveSched || !Array.isArray(liveSched.events) || liveSched.events.length === 0) {
+        [weeklyData, todayData] = await Promise.all([
+          fetchSheet('schedule').catch(() => null),
+          fetchSheet('WhiteOut Survival').catch(() => null)
+        ]);
+      }
 
       const renderTabs = () => {
         if (window._scheduleCountdownTimer) clearInterval(window._scheduleCountdownTimer);
