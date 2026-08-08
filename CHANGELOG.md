@@ -1,3 +1,7 @@
+## [1.52.1] - 2026-08-07
+### Fixed
+- **⚙️ GitHub Actions Workflow Compatibility**: Updated `.github/workflows/deploy.yml` Node.js version target from `24` to `lts/*` to guarantee runner compatibility and trigger instant GitHub Pages deployment.
+
 ## [1.52.0] - 2026-08-07
 ### Fixed
 - **🚀 Ultra-Fast Page Load Fix (<100ms Initial Load)**: Identified the exact root cause of initial site load delays. Replaced blocking Google Apps Script sheet requests in `views.home()` and `views.schedule()` with instant Firebase `schedule_live` reads (<50ms).
