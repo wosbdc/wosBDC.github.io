@@ -12047,14 +12047,64 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
       window.renderTabs();
     };
 
+    const parseRewardsI4O79 = (sheetData) => {
+      const items = [];
+      if (!sheetData || !Array.isArray(sheetData)) return items;
+
+      // Range I4:O79 corresponds to row index 3 to min(78, sheetData.length - 1)
+      const startRow = 3;
+      const endRow = Math.min(78, sheetData.length - 1);
+
+      for (let i = startRow; i <= endRow; i++) {
+        const row = sheetData[i];
+        if (!row || !Array.isArray(row)) continue;
+
+        // Col I (index 8) = Title, Col J (index 9) = Start Date, Col M (index 12) = End Date
+        let title = String(row[8] !== undefined && row[8] !== null && String(row[8]).trim() !== '' ? row[8] : (row[2] || row[0] || row[1] || '')).trim();
+        let startVal = row[9] !== undefined && row[9] !== null && String(row[9]).trim() !== '' ? String(row[9]).trim() : (row[3] || row[1] || row[2] || '');
+        let endVal = row[12] !== undefined && row[12] !== null && String(row[12]).trim() !== '' ? String(row[12]).trim() : (row[4] || row[2] || row[3] || '');
+
+        if (title && !title.toLowerCase().includes('title') && !title.toLowerCase().includes("event's") && !title.toLowerCase().includes('start date')) {
+          items.push({
+            row: i + 1,
+            title: title,
+            start: startVal ? String(startVal) : '',
+            end: endVal ? String(endVal) : ''
+          });
+        }
+      }
+
+      // Fallback if I4:O79 produced no items (e.g. fewer columns in standard tab)
+      if (items.length === 0 && sheetData.length >= 2) {
+        for (let i = 1; i < sheetData.length; i++) {
+          const row = sheetData[i];
+          const title = String(row[2] || row[0] || row[1] || '').trim();
+          const startVal = row[3] || row[1] || row[2] || '';
+          const endVal = row[4] || row[2] || row[3] || '';
+          if (title && !title.toLowerCase().includes('title') && !title.toLowerCase().includes("event's")) {
+            items.push({
+              row: i + 1,
+              title: title,
+              start: startVal ? String(startVal) : '',
+              end: endVal ? String(endVal) : ''
+            });
+          }
+        }
+      }
+
+      return items;
+    };
+
     window.fetchScheduleSheetData = async () => {
       if (window.liveData) {
+        if (window.liveData['WhiteOut Survival']) return window.liveData['WhiteOut Survival'];
         if (window.liveData['data']) return window.liveData['data'];
         if (window.liveData['Data']) return window.liveData['Data'];
         if (window.liveData['Schedule data']) return window.liveData['Schedule data'];
       }
       try {
         const results = await Promise.allSettled([
+          fetchSheet('WhiteOut Survival'),
           fetchSheet('data'),
           fetchSheet('Data'),
           fetchSheet('Schedule data')
@@ -12078,27 +12128,8 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
       const now = new Date();
       const todayStr = now.toDateString();
 
-      // Collect ALL Rewards & Challenges from Schedule data sheet
-      let allRewardsAndChallenges = [];
-
-      // Parse Schedule data sheet
-      if (schedSheetData && Array.isArray(schedSheetData) && schedSheetData.length >= 2) {
-        for (let i = 1; i < schedSheetData.length; i++) {
-          const row = schedSheetData[i];
-          const title = String(row[2] || row[0] || row[1] || '').trim();
-          const startVal = row[3] || row[1] || row[2] || '';
-          const endVal = row[4] || row[2] || row[3] || '';
-          if (title && !title.toLowerCase().includes('title') && !title.toLowerCase().includes("event's")) {
-            if (!allRewardsAndChallenges.some(r => r.title.toLowerCase() === title.toLowerCase())) {
-              allRewardsAndChallenges.push({
-                title,
-                start: startVal ? String(startVal) : '',
-                end: endVal ? String(endVal) : ''
-              });
-            }
-          }
-        }
-      }
+      // Collect ALL Rewards & Challenges using exact I4:O79 range parser
+      let allRewardsAndChallenges = parseRewardsI4O79(schedSheetData);
 
       // 3. Merge Firebase live rewards_schedule_live node
       try {
@@ -13137,31 +13168,20 @@ window.openScheduleEditorModal = async () => {
         }
       } catch(e) {}
 
-      // 2. Google Sheets data (data / Data / Schedule data tabs)
+      // 2. Google Sheets data (WhiteOut Survival tab range I4:O79)
       try {
         const sheetData = await window.fetchScheduleSheetData().catch(() => null);
-        if (sheetData && Array.isArray(sheetData) && sheetData.length >= 2) {
-          for (let i = 1; i < sheetData.length; i++) {
-            const row = sheetData[i];
-            const title = String(row[2] || row[0] || row[1] || '').trim();
-            const startVal = row[3] || row[1] || row[2] || '';
-            const endVal = row[4] || row[2] || row[3] || '';
-            if (title && !title.toLowerCase().includes('title') && !title.toLowerCase().includes("event's")) {
-              const existing = combined.find(x => x.title.toLowerCase() === title.toLowerCase());
-              if (existing) {
-                if (!existing.start) existing.start = startVal ? String(startVal) : '';
-                if (!existing.end) existing.end = endVal ? String(endVal) : '';
-              } else {
-                combined.push({
-                  row: combined.length + 1,
-                  title: title,
-                  start: startVal ? String(startVal) : '',
-                  end: endVal ? String(endVal) : ''
-                });
-              }
-            }
+        const parsedItems = parseRewardsI4O79(sheetData);
+        parsedItems.forEach(item => {
+          const existing = combined.find(x => x.title.toLowerCase() === item.title.toLowerCase());
+          if (existing) {
+            if (!existing.start) existing.start = item.start;
+            if (!existing.end) existing.end = item.end;
+            existing.row = item.row;
+          } else {
+            combined.push(item);
           }
-        }
+        });
       } catch(e) {}
 
       // Ensure row property exists for all items

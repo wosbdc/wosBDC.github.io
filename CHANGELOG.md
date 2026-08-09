@@ -1,3 +1,8 @@
+## [1.60.0] - 2026-08-09
+### Added & Updated
+- **🎯 Exact `I4:O79` Range Parsing**: Created `parseRewardsI4O79()` helper to specifically extract event titles (Col I / Col 9 / index 8), start dates (Col J / Col 10 / index 9), and end dates (Col M / Col 13 / index 12) from rows 4 to 79 of the `WhiteOut Survival` Google Sheets tab.
+- **⚡ Priority Sheet Retrieval**: Updated `fetchScheduleSheetData()` to prioritize `WhiteOut Survival` tab data for 1:1 parity with Google Sheets tool sidebars.
+
 ## [1.59.0] - 2026-08-09
 ### Fixed
 - **🐛 Fixed `weeklyData is not defined` Error in Schedule View**: Replaced legacy `weeklyData` reference with `schedSheetData` in `views.schedule()`, resolving the Calendar View runtime crash.
