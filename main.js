@@ -2724,9 +2724,10 @@ window.getLivePlayerEventRow = async (chiefName, pRow, headers) => {
                 let pName = tableData[dr][nameCol];
                 let pScore = tableData[dr][totalCol];
                 if (pName && (typeof pScore === 'number' || (typeof pScore === 'string' && !isNaN(pScore)))) {
-                  let safeName = pName.toString().trim();
-                  if (!allTimeShowdownMap[safeName]) allTimeShowdownMap[safeName] = 0;
-                  allTimeShowdownMap[safeName] += Number(pScore);
+                  let rawName = pName.toString().trim();
+                  let safeKey = rawName.toLowerCase();
+                  if (!allTimeShowdownMap[safeKey]) allTimeShowdownMap[safeKey] = { name: rawName, score: 0 };
+                  allTimeShowdownMap[safeKey].score += Number(pScore);
                 }
                 dr++;
               }
@@ -2738,15 +2739,16 @@ window.getLivePlayerEventRow = async (chiefName, pRow, headers) => {
       
       for (const [pName, scores] of Object.entries(sdLiveData)) {
           if (!scores || typeof scores !== 'object') continue;
-          let safeName = pName.toString().trim();
+          let rawName = pName.toString().trim();
+          let safeKey = rawName.toLowerCase();
           let pScore = (scores.d1||0) + (scores.d2||0) + (scores.d3||0) + (scores.d4||0) + (scores.d5||0) + (scores.d6||0);
-          if (!allTimeShowdownMap[safeName]) allTimeShowdownMap[safeName] = 0;
-          allTimeShowdownMap[safeName] += pScore;
+          if (!allTimeShowdownMap[safeKey]) allTimeShowdownMap[safeKey] = { name: rawName, score: 0 };
+          allTimeShowdownMap[safeKey].score += pScore;
       }
 
     
     let dynamicSD = null;
-    const sortedShowdownPlayers = Object.entries(allTimeShowdownMap).map(([n, s]) => ({ name: n, score: s })).sort((a, b) => b.score - a.score);
+    const sortedShowdownPlayers = Object.values(allTimeShowdownMap).sort((a, b) => b.score - a.score);
     sortedShowdownPlayers.forEach((p, index) => {
       if (p.name.toLowerCase() === targetName.toLowerCase()) dynamicSD = { score: p.score, rank: index + 1 };
     });
@@ -2921,9 +2923,10 @@ window.searchPlayerFull = async (name) => {
               let pName = tableData[dr][nameCol];
               let pScore = tableData[dr][totalCol];
               if (pName && (typeof pScore === 'number' || (typeof pScore === 'string' && !isNaN(pScore)))) {
-                let safeName = pName.toString().trim();
-                if (!allTimeShowdownMap[safeName]) allTimeShowdownMap[safeName] = 0;
-                allTimeShowdownMap[safeName] += Number(pScore);
+                let rawName = pName.toString().trim();
+                let safeKey = rawName.toLowerCase();
+                if (!allTimeShowdownMap[safeKey]) allTimeShowdownMap[safeKey] = { name: rawName, score: 0 };
+                allTimeShowdownMap[safeKey].score += Number(pScore);
               }
               dr++;
             }
@@ -2935,7 +2938,7 @@ window.searchPlayerFull = async (name) => {
     processShowdownTable(sdCurrentRawData);
     
     let dynamicSD = null;
-    const sortedShowdownPlayers = Object.entries(allTimeShowdownMap).map(([n, s]) => ({ name: n, score: s })).sort((a, b) => b.score - a.score);
+    const sortedShowdownPlayers = Object.values(allTimeShowdownMap).sort((a, b) => b.score - a.score);
     sortedShowdownPlayers.forEach((p, index) => {
       if (p.name.toLowerCase() === targetName.toLowerCase()) dynamicSD = { score: p.score, rank: index + 1 };
     });

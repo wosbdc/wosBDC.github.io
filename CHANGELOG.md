@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.53.2] - 2026-08-09
+### Fixed
+- **🔤 Case-Insensitive Showdown Player Aggregation**: Updated `allTimeShowdownMap` keying to normalize player names (`toLowerCase()`) across all functions. Resolves name casing splits (e.g. `Perma Frost` vs `perma frost`) so all historical points are seamlessly merged into a single entry with 100% precise ranking.
+
 ## [1.53.1] - 2026-08-09
 ### Improved & Streamlined
 - **⚡ Direct Firebase Showdown Vault & Rankings Data**: Streamlined `views.showdown()` and `openShowdownArchiveVaultModal()` to pull rankings and archived event history 100% directly from Firebase (`showdown_meta/history` and `showdown_live`), eliminating redundant Google Sheets fallback calls for instantaneous loading.
