@@ -11984,22 +11984,59 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
   roster: async () => {
     renderLoading("Loading Player Lookup");
     try {
-
-      
-      
-      const [data, rosterRawData, lbRawData, sdHistoryRawData, sdLiveSnap, fbWinsSnap, fbDonSnap] = await Promise.all([
-            window.fetchActivityData(),
-            window.fetchRoster(),
-            window.fetchLeaderboardsData(),
-            fetchSheet("Showdown History").catch(() => []),
-            get(ref(db, 'showdown_live')),
+      const [dataRaw, rosterRawData, lbRawData, sdHistSnap, sdLiveSnap, fbWinsSnap, fbDonSnap] = await Promise.all([
+            window.fetchActivityData().catch(() => null),
+            window.fetchRoster().catch(() => ({})),
+            window.fetchLeaderboardsData().catch(() => []),
+            get(ref(db, 'showdown_meta/history')).catch(() => null),
+            get(ref(db, 'showdown_live')).catch(() => null),
             get(ref(db, 'beartrap_wins')).catch(() => null),
             get(ref(db, 'beartrap_donations')).catch(() => null)
           ]);
       
-      const sdLiveData = sdLiveSnap.val() || {};
+      const sdLiveData = (sdLiveSnap && sdLiveSnap.exists()) ? (sdLiveSnap.val() || {}) : {};
       const fbWins = (fbWinsSnap && fbWinsSnap.exists()) ? fbWinsSnap.val() : {};
       const fbDonations = (fbDonSnap && fbDonSnap.exists()) ? fbDonSnap.val() : {};
+
+      let data = dataRaw;
+      if (!Array.isArray(data) || data.length < 2) {
+          const headers = ["Chief Name", "ShowDown missed days", "Alliance Championship ", "Mercenary Prestige", "Polar Terrors"];
+          const rows = [headers];
+          const sourceObj = (dataRaw && typeof dataRaw === 'object' && !Array.isArray(dataRaw)) ? dataRaw : (rosterRawData || {});
+          
+          const allNamesSet = new Set();
+          if (sourceObj) {
+              Object.values(sourceObj).forEach(p => {
+                  if (p && p.name) allNamesSet.add(p.name.toString().trim());
+              });
+          }
+          if (rosterRawData) {
+              Object.values(rosterRawData).forEach(p => {
+                  if (p && p.name) allNamesSet.add(p.name.toString().trim());
+              });
+          }
+          if (window.idToNameMap) {
+              Object.values(window.idToNameMap).forEach(name => {
+                  if (name) allNamesSet.add(name.toString().trim());
+              });
+          }
+          
+          Array.from(allNamesSet).sort((a,b) => a.localeCompare(b)).forEach(pName => {
+              let matchedRec = null;
+              if (sourceObj) {
+                  for (const rec of Object.values(sourceObj)) {
+                      if (rec && rec.name && rec.name.toLowerCase().trim() === pName.toLowerCase().trim()) {
+                          matchedRec = rec; break;
+                      }
+                  }
+              }
+              let isChamp = matchedRec ? (matchedRec.championship || false) : false;
+              let isMerc = matchedRec ? (matchedRec.mercenary || false) : false;
+              let isPt = matchedRec ? (matchedRec.polarTerrors || false) : false;
+              rows.push([pName, 0, isChamp, isMerc, isPt]);
+          });
+          data = rows;
+      }
 
       let currentDay = 0;
       Object.values(sdLiveData).forEach(p => {
@@ -12026,11 +12063,9 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
              data[r][1] = missedCount;
           }
       }
-        
-        let usersSnap = null;
-        try { usersSnap = await get(ref(db, 'users')); } catch(e) { console.warn("Could not fetch users:", e); }
-      
-      if (!data || data.length < 2) throw new Error("No data found.");
+          
+      let usersSnap = null;
+      try { usersSnap = await get(ref(db, 'users')); } catch(e) { console.warn("Could not fetch users:", e); }
       
       const rosterMap = rosterRawData || {};
       await refreshIdToNameMap();
@@ -12038,61 +12073,48 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
       // Parse Leaderboards data into a lookup map using unified helper
       const { lbMap } = window.parseLeaderboardsToPlayerMap(lbRawData);
       
-      // Parse dynamic All-Time Showdown totals from history and current showdown
-      const allTimeShowdownMap = {};
-      
-      const processShowdownTable = (tableData) => {
-        if (!tableData) return;
-        for (let r = 0; r < tableData.length; r++) {
-          let row = tableData[r];
-          // Find the Ranking/Name header row
-          if (row.some(c => typeof c === 'string' && c.toLowerCase().trim() === 'ranking')) {
-            let nameCol = row.findIndex(c => typeof c === 'string' && (c.toLowerCase().includes('name') || c.toLowerCase().includes('member') || c.toLowerCase().includes('player')));
-            let totalCol = row.findIndex(c => typeof c === 'string' && (c.toLowerCase().includes('total')));
-            
-            if (nameCol !== -1 && totalCol !== -1) {
-              let dr = r + 1;
-              // Skip horns/winners rows if they exist
-              while (dr < tableData.length && tableData[dr][nameCol] && (tableData[dr][nameCol].toString().toLowerCase().includes('horns') || tableData[dr][nameCol].toString().toLowerCase().includes('winners'))) {
-                dr++;
-              }
-              
-              // Process player scores
-              while (dr < tableData.length && tableData[dr][nameCol] !== undefined && tableData[dr][nameCol] !== "") {
-                let pName = tableData[dr][nameCol];
-                let pScore = tableData[dr][totalCol];
-                
-                if (pName && (typeof pScore === 'number' || (typeof pScore === 'string' && !isNaN(pScore)))) {
-                  let safeName = pName.toString().trim();
-                  if (!allTimeShowdownMap[safeName]) allTimeShowdownMap[safeName] = 0;
-                  allTimeShowdownMap[safeName] += Number(pScore);
-                }
-                dr++;
-              }
-            }
+      // Calculate All-Time Showdown Rankings dynamically from Firebase
+      const showdownHistObj = (sdHistSnap && sdHistSnap.exists()) ? (sdHistSnap.val() || {}) : {};
+      const historyObjMerged = (typeof window.getMergedShowdownHistoryObj === 'function') 
+        ? window.getMergedShowdownHistoryObj(showdownHistObj) 
+        : showdownHistObj;
+      let allTimePlayersModal = (typeof window.calculateAllTimeShowdown === 'function') 
+        ? window.calculateAllTimeShowdown(historyObjMerged) 
+        : [];
+
+      const modalSdMap = {};
+      allTimePlayersModal.forEach(p => {
+        if (p && p.name) {
+          const san = p.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+          const sKey = san.length > 0 ? san : p.name.toLowerCase().trim();
+          if (!modalSdMap[sKey]) {
+            modalSdMap[sKey] = { name: p.name, horns: p.horns || 0, wins: p.wins || 0, score: p.total || 0 };
+          } else {
+            modalSdMap[sKey].horns += (p.horns || 0);
+            modalSdMap[sKey].wins += (p.wins || 0);
+            modalSdMap[sKey].score += (p.total || 0);
           }
         }
-      };
-      
-      processShowdownTable(sdHistoryRawData);
-      
-      for (const [pName, scores] of Object.entries(sdLiveData)) {
-          if (!scores || typeof scores !== 'object') continue;
-          let safeName = pName.toString().trim();
-          let pScore = (scores.d1||0) + (scores.d2||0) + (scores.d3||0) + (scores.d4||0) + (scores.d5||0) + (scores.d6||0);
-          if (!allTimeShowdownMap[safeName]) allTimeShowdownMap[safeName] = 0;
-          allTimeShowdownMap[safeName] += pScore;
+      });
+
+      for (const [pKey, scores] of Object.entries(sdLiveData)) {
+        if (!scores || typeof scores !== 'object') continue;
+        let realName = scores.name || pKey;
+        let san = realName.toLowerCase().replace(/[^a-z0-9]/g, '');
+        let sKey = san.length > 0 ? san : realName.toLowerCase().trim();
+        let pTotal = Number(scores.total !== undefined ? scores.total : ((scores.d1||0) + (scores.d2||0) + (scores.d3||0) + (scores.d4||0) + (scores.d5||0) + (scores.d6||0)));
+        if (!modalSdMap[sKey]) {
+          modalSdMap[sKey] = { name: realName, horns: 0, wins: 0, score: 0 };
+        }
+        modalSdMap[sKey].score += pTotal;
       }
 
-      
-      // Calculate All-Time Showdown Rankings
       const allTimeRankingsMap = {};
-      const sortedShowdownPlayers = Object.entries(allTimeShowdownMap)
-        .map(([name, score]) => ({ name, score }))
-        .sort((a, b) => b.score - a.score);
-        
+      const sortedShowdownPlayers = Object.values(modalSdMap).sort((a, b) => (b.horns !== a.horns) ? (b.horns - a.horns) : (b.score - a.score));
       sortedShowdownPlayers.forEach((p, index) => {
-        allTimeRankingsMap[p.name] = {
+        const sanP = p.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const keyP = sanP.length > 0 ? sanP : p.name.toLowerCase().trim();
+        allTimeRankingsMap[keyP] = {
           score: p.score,
           rank: index + 1
         };

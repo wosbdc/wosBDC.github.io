@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [1.55.0] - 2026-08-09
+### Added & Improved
+- **📅 Streamlined Site Schedule & Rewards Editor**: Replaced cluttered schedule page and modal with a clean 1:1 replica of the Google Sheets `RewardsSidebar.html` tool.
+- **⚡ Instant Firebase Integration**: Reads and updates event dates in real-time (<50ms) using Firebase node `rewards_schedule_live`.
+- **🎨 Interactive Badges & Shortcuts**: Real-time search filtering, status indicators (🟡 No dates set, 🟢 Set, 🔴 Expired), and quick "Today" shortcut buttons.
+- **🚀 2.5s Sheet Fetch Safeguard & Instant Load**: Eliminate site load delays with non-blocking Firebase schedule data reads and fast fallback guards.
+
 ## [1.54.1] - 2026-08-09
 ### Improved & Fixed
 - **🔤 Complete Non-Latin / CJK Keying Alignment**: Updated `renderPlayerCardModal` to apply `san.length > 0 ? san : p.name.toLowerCase().trim()` across modal map initialization, live Firebase score merging, and target lookup. Completely eliminates empty string key collisions for non-Latin player names.
