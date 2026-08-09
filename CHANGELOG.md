@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.70.8] - 2026-08-09
+### Fixed
+- **🔥 Decoupled Outdated Google Sheets Data**: Overhauled `fetchLeaderboardsData()` to query live Firebase `ref(db, 'leaderboards')` as top priority. Prevents outdated Google Sheets data from overriding live Firebase leaderboard data across player cards and Account Hub rankings.
+
 ## [1.70.7] - 2026-08-09
 ### Fixed
 - **⚡ Live Firebase Leaderboards & Smart Score Column Parser**: Updated `fetchLeaderboardsData()` to read live Firebase `leaderboards` node directly with 2.5s timeout guard. Overhauled `parseLeaderboardsToPlayerMap()` with dynamic score column detection (scanning backwards for rightmost score value), fixing score column offsets across all player profile cards.

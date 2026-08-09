@@ -954,9 +954,20 @@ window.updateBearTrapDonationInline = async (gameId, newDonationStr) => {
 window.fetchLeaderboardsData = async () => {
     if (window.leaderboardsCache) return window.leaderboardsCache;
 
+    // 1. Try reading live Firebase parsed leaderboards node ref(db, 'leaderboards') FIRST
+    try {
+        const snapLeaderboards = await get(ref(db, 'leaderboards'));
+        if (snapLeaderboards.exists() && snapLeaderboards.val() && Array.isArray(snapLeaderboards.val()) && snapLeaderboards.val().length > 0) {
+            window.leaderboardsCache = snapLeaderboards.val();
+            return window.leaderboardsCache;
+        }
+    } catch(e) {
+        console.warn("Firebase leaderboards read error:", e);
+    }
+
     let rawSheet = null;
 
-    // 1. Try reading the live sheet 2D array pushed by Apps Script to Firebase ref(db, 'sheets/LeaderBoards')
+    // 2. Fallback to live sheet 2D array pushed by Apps Script to Firebase ref(db, 'sheets/LeaderBoards')
     try {
         const snap = await get(ref(db, 'sheets/LeaderBoards'));
         if (snap.exists() && snap.val() && Array.isArray(snap.val()) && snap.val().length > 0) {
@@ -964,19 +975,6 @@ window.fetchLeaderboardsData = async () => {
         }
     } catch(e) {
         console.warn("Firebase sheets/LeaderBoards read error:", e);
-    }
-
-    // 2. Fallback to cached parsed boards ref(db, 'leaderboards') if live sheet node is unavailable
-    if (!rawSheet) {
-        try {
-            const snapOld = await get(ref(db, 'leaderboards'));
-            if (snapOld.exists() && snapOld.val() && Array.isArray(snapOld.val()) && snapOld.val().length > 0) {
-                window.leaderboardsCache = snapOld.val();
-                return window.leaderboardsCache;
-            }
-        } catch(e) {
-            console.warn("Firebase leaderboards fallback error:", e);
-        }
     }
 
     // 3. Fallback to direct fetchSheet call if Firebase is unavailable
