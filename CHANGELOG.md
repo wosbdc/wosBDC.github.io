@@ -1,6 +1,14 @@
 # CHANGELOG
 
-## [1.74.0] - 2026-08-09
+## [1.53.0] - 2026-08-09
+### Added & Streamlined
+- **📅 1:1 Google Sheets Rewards & Events Editor**: Replaced bloated 6-tab modal with a sleek, 1:1 replica of the Google Sheets `RewardsSidebar.html` tool (`WhiteOut Survival` tab Col I Title, Col J Start Date, Col M End Date). Features real-time search filtering, instant status badges (🟡 Yellow: No dates set, 🔴 Red: Expired, 🟢 Green: Set/Active), and quick date buttons (Today/Clear). Pushes live updates directly to Firebase (`rewards_schedule_live`) in <50ms.
+- **⚡ High-Speed Schedule & Home View**: Replaced blocking Google Sheets sheet calls (`fetchSheet('WhiteOut Survival')`) with instant Firebase live reads, resolving slow page load issues and displaying streamlined event schedule cards with live status badges.
+- **🛡️ AbortController Guard**: Added 2.5s timeout protection to `fetchSheet()` in `main.js` to ensure the website stays fast and responsive even during Google Apps Script cold starts.
+
+## [1.52.1] - 2026-08-09
+### Fixed
+- **⚙️ GitHub Actions Workflow Compatibility**: Updated `.github/workflows/deploy.yml` Node version setting to `lts/*` for full runner compatibility.
 ### Fixed
 - **🎯 Off-By-One Rank Calculation Fix**: Identified and resolved the exact cause of ranks being off by 1 across leaderboards and Account Hub cards. Google Sheets Column A contains 1-based sheet row numbers (e.g. Row 2 for 1st player, Row 3 for 2nd player). The code now checks if the column contains raw sheet row indices and defaults to relative data row position (`rIdx + 1`). Added metadata key filtering (`_metadata`, `timestamp`, `config`) to prevent system records from polluting sorting arrays.
 

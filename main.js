@@ -950,11 +950,11 @@ window.updateBearTrapDonationInline = async (gameId, newDonationStr) => {
     }
 };
 
-// Fetch Leaderboards Data natively from Firebase Realtime Database with automated Google Sheets seeding
+// Fetch Leaderboards Data natively 100% from Firebase Realtime Database
 window.fetchLeaderboardsData = async () => {
     if (window.leaderboardsCache) return window.leaderboardsCache;
 
-    // 1. Try reading live Firebase parsed leaderboards node ref(db, 'leaderboards') FIRST
+    // 1. Read live Firebase parsed leaderboards node ref(db, 'leaderboards')
     try {
         const snapLeaderboards = await get(ref(db, 'leaderboards'));
         if (snapLeaderboards.exists() && snapLeaderboards.val() && Array.isArray(snapLeaderboards.val()) && snapLeaderboards.val().length > 0) {
@@ -965,82 +965,59 @@ window.fetchLeaderboardsData = async () => {
         console.warn("Firebase leaderboards read error:", e);
     }
 
-    let rawSheet = null;
+    let parsedBoards = [];
 
-    // 2. Fallback to live sheet 2D array pushed by Apps Script to Firebase ref(db, 'sheets/LeaderBoards')
+    // 2. Build live leaderboards fallback dynamically from Firebase activity_live & event nodes
     try {
-        const snap = await get(ref(db, 'sheets/LeaderBoards'));
-        if (snap.exists() && snap.val() && Array.isArray(snap.val()) && snap.val().length > 0) {
-            rawSheet = snap.val();
+        const actSnap = await get(ref(db, 'activity_live'));
+        const actData = (actSnap.exists() && actSnap.val()) ? actSnap.val() : {};
+
+        // Championship Leaderboard
+        const champList = [];
+        // Mercenary Leaderboard
+        const mercList = [];
+        // Polar Terrors Leaderboard
+        const polarList = [];
+
+        const skipKeys = ['metadata', 'config', 'lastupdated', 'updatedat', 'timestamp', 'last_updated', 'system'];
+        for (const [key, val] of Object.entries(actData)) {
+            if (!val || typeof val !== 'object' || skipKeys.includes(key.toLowerCase()) || key.startsWith('_')) continue;
+            let pName = val.name || key;
+            let champVal = Number(val.championship || val.champ || 0);
+            let mercVal = Number(val.mercenary || val.merc || 0);
+            let polarVal = Number(val.polarterrors || val.polar || 0);
+
+            if (champVal > 0 && champVal < 100000000) champList.push({ name: pName, score: champVal });
+            if (mercVal > 0 && mercVal < 100000000) mercList.push({ name: pName, score: mercVal });
+            if (polarVal > 0 && polarVal < 100000000) polarList.push({ name: pName, score: polarVal });
+        }
+
+        if (champList.length > 0) {
+            champList.sort((a,b) => b.score - a.score);
+            parsedBoards.push({
+                title: "Alliance Championship Leaderboard",
+                headers: ["Rank", "Member", "Total Score"],
+                rows: champList.map((p, idx) => [idx + 1, p.name, p.score])
+            });
+        }
+        if (mercList.length > 0) {
+            mercList.sort((a,b) => b.score - a.score);
+            parsedBoards.push({
+                title: "Mercenary Prestige Leaderboard",
+                headers: ["Rank", "Member", "Prestige Points"],
+                rows: mercList.map((p, idx) => [idx + 1, p.name, p.score])
+            });
+        }
+        if (polarList.length > 0) {
+            polarList.sort((a,b) => b.score - a.score);
+            parsedBoards.push({
+                title: "Polar Terrors Leaderboard",
+                headers: ["Rank", "Member", "Kill Count"],
+                rows: polarList.map((p, idx) => [idx + 1, p.name, p.score])
+            });
         }
     } catch(e) {
-        console.warn("Firebase sheets/LeaderBoards read error:", e);
-    }
-
-    // 3. Fallback to direct fetchSheet call if Firebase is unavailable
-    if (!rawSheet) {
-        try {
-            rawSheet = await fetchSheet("LeaderBoards");
-        } catch(e) {
-            console.error("Leaderboards sheet fetch error:", e);
-        }
-    }
-
-    let parsedBoards = [];
-    if (rawSheet && Array.isArray(rawSheet) && rawSheet.length > 0) {
-        for (let r = 0; r < rawSheet.length; r++) {
-            for (let c = 0; c < rawSheet[r].length; c++) {
-                let cell = rawSheet[r][c];
-                if (typeof cell === 'string' && cell.trim() !== '' && (
-                    cell.toLowerCase().includes('leaderboard') || 
-                    cell.toLowerCase().includes('ranking') || 
-                    cell.toLowerCase().includes('bear') || 
-                    cell.toLowerCase().includes('showdown') ||
-                    cell.toLowerCase().includes('championship') ||
-                    cell.toLowerCase().includes('mercenary') ||
-                    cell.toLowerCase().includes('polar')
-                )) {
-                    let title = cell;
-                    let headers = [];
-                    let hc = c;
-                    
-                    // Read headers on the next row
-                    if (r + 1 < rawSheet.length) {
-                        while (hc < rawSheet[r+1].length && rawSheet[r+1][hc] !== "") {
-                            headers.push(rawSheet[r+1][hc]);
-                            hc++;
-                        }
-                    }
-                    
-                    // Read data rows starting from 2 rows down
-                    let rows = [];
-                    let dr = r + 2;
-                    while (dr < rawSheet.length && rawSheet[dr][c] !== "") {
-                        let rowData = [];
-                        let hasPlayerData = false;
-                        
-                        for (let i = 0; i < headers.length; i++) {
-                            let cellVal = rawSheet[dr][c + i];
-                            rowData.push(cellVal);
-                            if (i > 0 && cellVal !== "") {
-                                hasPlayerData = true;
-                            }
-                        }
-                        
-                        if (hasPlayerData) {
-                            rows.push(rowData);
-                        }
-                        dr++;
-                    }
-                    
-                    if (headers.length > 0) {
-                        parsedBoards.push({ title, headers, rows });
-                    }
-                }
-            }
-        }
-
-        try { await set(ref(db, 'leaderboards'), parsedBoards); } catch(e) { console.error(e); }
+        console.warn("Dynamic Firebase leaderboards fallback build error:", e);
     }
 
     window.leaderboardsCache = parsedBoards;
@@ -2148,89 +2125,26 @@ window.syncAllSheetsToFirebase = async () => {
         const existingWins = existingWinsSnap.exists() ? (existingWinsSnap.val() || {}) : {};
         const existingDon = existingDonSnap.exists() ? (existingDonSnap.val() || {}) : {};
 
-        // 1. Sync LeaderBoards (Bear Trap Wins & Donations)
+        // 1. LeaderBoards are calculated live from Firebase nodes (activity_live, showdown_live, beartrap_wins, beartrap_donations)
         try {
-            const rawSheet = await fetchSheet("LeaderBoards");
-            if (rawSheet && Array.isArray(rawSheet) && rawSheet.length > 0) {
-                let parsedBoards = [];
-                for (let r = 0; r < rawSheet.length; r++) {
-                    for (let c = 0; c < rawSheet[r].length; c++) {
-                        let cell = rawSheet[r][c];
-                        if (typeof cell === 'string' && (cell.toLowerCase().includes('leaderboard') || (cell.toLowerCase().includes('all-time') && (cell.toLowerCase().includes('bear') || cell.toLowerCase().includes('bt')) && cell.toLowerCase().includes('donation')))) {
-                            let title = cell;
-                            let headers = [];
-                            let hc = c;
-                            if (r + 1 < rawSheet.length) {
-                                while (hc < rawSheet[r+1].length && rawSheet[r+1][hc] !== "") {
-                                    headers.push(rawSheet[r+1][hc]);
-                                    hc++;
-                                }
-                            }
-                            let rows = [];
-                            let dr = r + 2;
-                            while (dr < rawSheet.length && rawSheet[dr][c] !== "") {
-                                let rowData = [];
-                                let hasPlayerData = false;
-                                for (let i = 0; i < headers.length; i++) {
-                                    let cellVal = rawSheet[dr][c + i];
-                                    rowData.push(cellVal);
-                                    if (i > 0 && cellVal !== "") hasPlayerData = true;
-                                }
-                                if (hasPlayerData) rows.push(rowData);
-                                dr++;
-                            }
-                            if (headers.length > 0) parsedBoards.push({ title, headers, rows });
-                        }
-                    }
-                }
+            let winsAgg = JSON.parse(JSON.stringify(existingWins));
+            let donAgg = JSON.parse(JSON.stringify(existingDon));
 
-                let winsAgg = JSON.parse(JSON.stringify(existingWins));
-                let donAgg = JSON.parse(JSON.stringify(existingDon));
+            Object.values(winsAgg).forEach(w => {
+                w.total = (w.bt1 || 0) + (w.bt2 || 0);
+            });
 
-                parsedBoards.forEach(board => {
-                    let t = board.title.toLowerCase();
-                    let isDonation = t.includes('donation');
-                    let isAllTime = t.includes('all-time');
-                    let isBt1 = t.includes('bear trap 1');
-                    let isBt2 = t.includes('bear trap 2');
+            for (const [key, val] of Object.entries(winsAgg)) {
+                await set(ref(db, `beartrap_wins/${key}`), val);
+                stats.btWins++;
+            }
 
-                    board.rows.forEach(r => {
-                        let pName = r[1] ? r[1].toString().trim() : null;
-                        let val = parseInt(String(r[2]).replace(/,/g, '')) || 0;
-                        if (!pName || val <= 0) return;
-
-                        let key = pName.toLowerCase().replace(/[^a-z0-9]/g, '_');
-
-                        if (isDonation) {
-                            if (!donAgg[key]) donAgg[key] = { name: pName, current: 0, allTime: 0, lastUpdated: Date.now() };
-                            donAgg[key].name = pName;
-                            if (isAllTime) donAgg[key].allTime = Math.max(donAgg[key].allTime || 0, val);
-                            else donAgg[key].current = Math.max(donAgg[key].current || 0, val);
-                        } else {
-                            if (!winsAgg[key]) winsAgg[key] = { name: pName, bt1: 0, bt2: 0, total: 0 };
-                            winsAgg[key].name = pName;
-                            if (isBt1) winsAgg[key].bt1 = Math.max(winsAgg[key].bt1 || 0, val);
-                            else if (isBt2) winsAgg[key].bt2 = Math.max(winsAgg[key].bt2 || 0, val);
-                        }
-                    });
-                });
-
-                Object.values(winsAgg).forEach(w => {
-                    w.total = (w.bt1 || 0) + (w.bt2 || 0);
-                });
-
-                for (const [key, val] of Object.entries(winsAgg)) {
-                    await set(ref(db, `beartrap_wins/${key}`), val);
-                    stats.btWins++;
-                }
-
-                for (const [key, val] of Object.entries(donAgg)) {
-                    await set(ref(db, `beartrap_donations/${key}`), val);
-                    stats.btDonations++;
-                }
+            for (const [key, val] of Object.entries(donAgg)) {
+                await set(ref(db, `beartrap_donations/${key}`), val);
+                stats.btDonations++;
             }
         } catch(e) {
-            console.warn("Error syncing LeaderBoards sheet:", e);
+            console.warn("Error syncing LeaderBoards:", e);
         }
 
         // 2. Sync Alliance Roster (Chief's List)
