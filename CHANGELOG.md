@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [1.53.4] - 2026-08-09
+### Fixed
+- **⚡ Live Firebase Showdown Player Card Ranks**: Updated `renderPlayerCardModal` to calculate Showdown ranks live from Firebase history & active cycle snapshots rather than falling back to stale static Google Sheets values.
+- **🔀 Score Accumulation Bug Fix**: Fixed `calculateAllTimeShowdown` and `combinedMap` in `renderAccountRankings` to accumulate points across name variations (`Perma Frost` + `perma frost`) instead of overwriting, ensuring the Player Card Modal, Account Hub, and Leaderboard reflect **Rank #17** everywhere.
+
 ## [1.53.3] - 2026-08-09
 ### Fixed
 - **🔤 Comprehensive Alphanumeric Player Keying**: Enhanced `safeKey` in `allTimeShowdownMap` to strip punctuation/spaces (`replace(/[^a-z0-9]/g, '')`), ensuring name variations like `Dwarf2` / `Dwarf 2` and `Perma Frost` / `perma frost` are 100% unified across all views.

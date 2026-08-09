@@ -2908,39 +2908,46 @@ window.searchPlayerFull = async (name) => {
     const parsedLbRes = window.computeLiveFirebasePlayerStats(targetName, fbWins, fbDonations, lbRawData);
     let { btDonationsAllTime, btDonationsCurrent, bear1, bear2, bearBoth, bearAllTime, otherLbs, lbMap } = parsedLbRes;
     
-    const allTimeShowdownMap = {};
-    const processShowdownTable = (tableData) => {
-      if (!tableData) return;
-      for (let r = 0; r < tableData.length; r++) {
-        let row = tableData[r];
-        if (row.some(c => typeof c === 'string' && c.toLowerCase().trim() === 'ranking')) {
-          let nameCol = row.findIndex(c => typeof c === 'string' && (c.toLowerCase().includes('name') || c.toLowerCase().includes('member') || c.toLowerCase().includes('player')));
-          let totalCol = row.findIndex(c => typeof c === 'string' && (c.toLowerCase().includes('total')));
-          if (nameCol !== -1 && totalCol !== -1) {
-            let dr = r + 1;
-            while (dr < tableData.length && tableData[dr][nameCol] && (tableData[dr][nameCol].toString().toLowerCase().includes('horns') || tableData[dr][nameCol].toString().toLowerCase().includes('winners'))) dr++;
-            while (dr < tableData.length && tableData[dr][nameCol] !== undefined && tableData[dr][nameCol] !== "") {
-              let pName = tableData[dr][nameCol];
-              let pScore = tableData[dr][totalCol];
-              if (pName && (typeof pScore === 'number' || (typeof pScore === 'string' && !isNaN(pScore)))) {
-                let rawName = pName.toString().trim();
-                let safeKey = rawName.toLowerCase().replace(/[^a-z0-9]/g, '');
-                if (!allTimeShowdownMap[safeKey]) allTimeShowdownMap[safeKey] = { name: rawName, score: 0 };
-                allTimeShowdownMap[safeKey].score += Number(pScore);
-              }
-              dr++;
-            }
-          }
+    const showdownHistObj = (sdHistSnap && sdHistSnap.exists()) ? sdHistSnap.val() : {};
+    const historyObjMerged = (typeof window.getMergedShowdownHistoryObj === 'function') 
+      ? window.getMergedShowdownHistoryObj(showdownHistObj) 
+      : showdownHistObj;
+    let allTimePlayersModal = (typeof window.calculateAllTimeShowdown === 'function') 
+      ? window.calculateAllTimeShowdown(historyObjMerged) 
+      : [];
+
+    const modalSdMap = {};
+    allTimePlayersModal.forEach(p => {
+      if (p && p.name) {
+        const sKey = p.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (!modalSdMap[sKey]) {
+          modalSdMap[sKey] = { name: p.name, score: p.total || 0 };
+        } else {
+          modalSdMap[sKey].score += (p.total || 0);
         }
       }
-    };
-    processShowdownTable(sdHistoryRawData);
-    processShowdownTable(sdCurrentRawData);
-    
+    });
+
+    if (sdLiveData && typeof sdLiveData === 'object') {
+      for (const [pKey, scores] of Object.entries(sdLiveData)) {
+        if (!scores || typeof scores !== 'object') continue;
+        let realName = scores.name || pKey;
+        let sKey = realName.toLowerCase().replace(/[^a-z0-9]/g, '');
+        let pTotal = Number(scores.total !== undefined ? scores.total : ((scores.d1||0) + (scores.d2||0) + (scores.d3||0) + (scores.d4||0) + (scores.d5||0) + (scores.d6||0)));
+        if (!modalSdMap[sKey]) {
+          modalSdMap[sKey] = { name: realName, score: 0 };
+        }
+        modalSdMap[sKey].score += pTotal;
+      }
+    }
+
     let dynamicSD = null;
-    const sortedShowdownPlayers = Object.values(allTimeShowdownMap).sort((a, b) => b.score - a.score);
+    const targetSanitizedKey = targetName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const sortedShowdownPlayers = Object.values(modalSdMap).sort((a, b) => b.score - a.score);
     sortedShowdownPlayers.forEach((p, index) => {
-      if (p.name.toLowerCase() === targetName.toLowerCase()) dynamicSD = { score: p.score, rank: index + 1 };
+      if (p.name.toLowerCase().replace(/[^a-z0-9]/g, '') === targetSanitizedKey) {
+        dynamicSD = { score: p.score, rank: index + 1 };
+      }
     });
     
     const defaultHeaders = ["Chief Name", "ShowDown missed days", "Alliance Championship ", "Mercenary Prestige", "Polar Terrors", "Voter"];
@@ -5971,7 +5978,7 @@ function calculateAllTimeShowdown(historyData) {
         playersList.forEach(p => {
             if (!p || typeof p !== 'object' || !p.name) return;
             const rawName = p.name.trim();
-            const key = rawName.toLowerCase();
+            const key = rawName.toLowerCase().replace(/[^a-z0-9]/g, '');
             if (!allTimeStats[key]) {
                 allTimeStats[key] = { name: rawName, horns: 0, wins: 0, total: 0 };
             }
@@ -10079,9 +10086,15 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
         if (p && p.name) {
           const kTrim = p.name.toLowerCase().trim();
           const kSan = p.name.toLowerCase().replace(/[^a-z0-9]/g, '');
-          const entry = { name: p.name, horns: p.horns || 0, wins: p.wins || 0, total: p.total || 0 };
-          combinedMap[kTrim] = entry;
-          if (kSan) combinedMap[kSan] = entry;
+          let targetEntry = combinedMap[kSan] || combinedMap[kTrim];
+          if (!targetEntry) {
+            targetEntry = { name: p.name, horns: 0, wins: 0, total: 0 };
+            combinedMap[kSan] = targetEntry;
+            combinedMap[kTrim] = targetEntry;
+          }
+          targetEntry.total += (p.total || 0);
+          targetEntry.horns += (p.horns || 0);
+          targetEntry.wins += (p.wins || 0);
         }
       });
 
