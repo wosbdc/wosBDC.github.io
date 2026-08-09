@@ -12883,14 +12883,6 @@ window.openScheduleEditorModal = async () => {
   let allData = [];
   let currentRowIndex = -1;
 
-  // Load from Firebase rewards_schedule_live cache instantly (<20ms)
-  try {
-    const snap = await get(ref(db, 'rewards_schedule_live'));
-    if (snap.exists() && Array.isArray(snap.val())) {
-      allData = snap.val();
-    }
-  } catch(e) {}
-
   const formatDateForInput = (dStr) => {
     if (!dStr) return '';
     try {
@@ -12911,7 +12903,7 @@ window.openScheduleEditorModal = async () => {
           <div style="font-size:22px;">📅</div>
           <div>
             <h3 style="margin:0; font-size:18px; color:#0ea5e9; font-weight:bold;">Rewards & Events Editor</h3>
-            <p style="margin:2px 0 0 0; font-size:11px; color:#94a3b8;">Search any event/reward to set Start & End dates. Pushes to Firebase in &lt;100ms.</p>
+            <p style="margin:2px 0 0 0; font-size:11px; color:#94a3b8;">Search any event/reward to set Start & End dates. Saves instantly to Firebase.</p>
           </div>
         </div>
         <button id="schCloseBtn" style="background:transparent; border:none; color:#94a3b8; font-size:24px; cursor:pointer;">&times;</button>
@@ -12924,7 +12916,7 @@ window.openScheduleEditorModal = async () => {
 
       <!-- Scrollable List Container -->
       <div id="schListContainer" style="flex:1; max-height:220px; overflow-y:auto; background:#1e293b; border-radius:8px; border:1px solid #334155; padding:4px;">
-        <!-- Injected via filterList -->
+        <div style="padding:16px; text-align:center; color:#94a3b8; font-size:13px;">Loading events schedule...</div>
       </div>
 
       <!-- Editor Card -->
@@ -12966,12 +12958,8 @@ window.openScheduleEditorModal = async () => {
       const container = modal.querySelector('#schListContainer');
       if (!container) return;
 
-      if (!query) {
-        container.style.display = 'none';
-        return;
-      }
       container.style.display = 'block';
-      const filtered = allData.filter(item => item.title.toLowerCase().includes(query));
+      const filtered = query ? allData.filter(item => item && item.title && item.title.toLowerCase().includes(query)) : allData;
       
       const today = new Date().toISOString().split('T')[0];
       container.innerHTML = '';
@@ -13074,25 +13062,76 @@ window.openScheduleEditorModal = async () => {
         item.end = eVal;
       }
 
-      try {
-        await set(ref(db, 'rewards_schedule_live'), allData);
-        if (window.logAdminAction) {
-          window.logAdminAction("Rewards Schedule Updated", `Updated dates for '${item ? item.title : 'Event'}' to ${sVal || 'None'} - ${eVal || 'None'}`);
-        }
-        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '💾 Save Dates'; }
-        if (statusEl) { statusEl.style.color = '#10b981'; statusEl.textContent = '✓ Saved successfully!'; }
-        if (window.showToast) window.showToast(`✓ Saved dates for ${item ? item.title : 'Event'}!`, "success");
+      const ok = await window.saveScheduleRewardDates(allData);
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '💾 Save Dates'; }
+
+      if (ok) {
+        if (statusEl) { statusEl.style.color = '#10b981'; statusEl.textContent = '✅ Saved & synced live!'; }
         filterList();
-        if (window.activeViewFunc) window.activeViewFunc();
-        else if (views.schedule) views.schedule();
-      } catch(e) {
-        console.error("Save dates error:", e);
-        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '💾 Save Dates'; }
-        if (statusEl) { statusEl.style.color = '#ef4444'; statusEl.textContent = 'Error: ' + e.message; }
+        setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 3000);
+      } else {
+        if (statusEl) { statusEl.style.color = '#ef4444'; statusEl.textContent = '❌ Error saving to Firebase'; }
       }
     });
 
-    filterList();
+    // Populate data asynchronously from Firebase and Sheets
+    const loadScheduleData = async () => {
+      let combined = [];
+
+      // 1. Firebase live state (<20ms)
+      try {
+        const snap = await get(ref(db, 'rewards_schedule_live'));
+        if (snap.exists() && Array.isArray(snap.val())) {
+          snap.val().forEach((item, idx) => {
+            if (item && item.title) {
+              combined.push({
+                row: item.row || idx + 1,
+                title: String(item.title).trim(),
+                start: item.start ? String(item.start) : '',
+                end: item.end ? String(item.end) : ''
+              });
+            }
+          });
+        }
+      } catch(e) {}
+
+      // 2. Google Sheets data (data / Data / Schedule data tabs)
+      try {
+        const sheetData = await window.fetchScheduleSheetData().catch(() => null);
+        if (sheetData && Array.isArray(sheetData) && sheetData.length >= 2) {
+          for (let i = 1; i < sheetData.length; i++) {
+            const row = sheetData[i];
+            const title = String(row[2] || row[0] || row[1] || '').trim();
+            const startVal = row[3] || row[1] || row[2] || '';
+            const endVal = row[4] || row[2] || row[3] || '';
+            if (title && !title.toLowerCase().includes('title') && !title.toLowerCase().includes("event's")) {
+              const existing = combined.find(x => x.title.toLowerCase() === title.toLowerCase());
+              if (existing) {
+                if (!existing.start) existing.start = startVal ? String(startVal) : '';
+                if (!existing.end) existing.end = endVal ? String(endVal) : '';
+              } else {
+                combined.push({
+                  row: combined.length + 1,
+                  title: title,
+                  start: startVal ? String(startVal) : '',
+                  end: endVal ? String(endVal) : ''
+                });
+              }
+            }
+          }
+        }
+      } catch(e) {}
+
+      // Ensure row property exists for all items
+      combined.forEach((item, idx) => {
+        item.row = item.row || idx + 1;
+      });
+
+      allData = combined;
+      filterList();
+    };
+
+    loadScheduleData();
   };
 
   renderModal();

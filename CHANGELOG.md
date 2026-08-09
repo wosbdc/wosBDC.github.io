@@ -1,3 +1,8 @@
+## [1.58.0] - 2026-08-09
+### Fixed & Restored
+- **🔍 Full Default Event List & Live Search Filtering**: Fixed the Schedule Editor modal search so all events are listed by default when opening, and typing in the search box filters events live in real time.
+- **⚡ Asynchronous Multi-Source Data Merging**: Asynchronously combines Firebase live data (`rewards_schedule_live`) and Google Sheets (`data` / `Data` / `Schedule data`) into a unified indexed list, guaranteeing every event has a selectable row ID.
+
 ## [1.57.0] - 2026-08-09
 ### Fixed & Optimized
 - **⚡ Instant Modal Launch (<1ms)**: `openScheduleEditorModal()` now mounts the overlay and modal UI instantly when clicked, preventing any freeze or delay caused by network requests.
