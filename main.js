@@ -2389,8 +2389,17 @@ window.getLivePlayerEventRow = async (chiefName, pRow, headers) => {
         for (let r = 0; r < lbRawData.length; r++) {
           for (let c = 0; c < lbRawData[r].length; c++) {
             let cell = lbRawData[r][c];
-            if (typeof cell === 'string' && cell.toLowerCase().includes('leaderboard')) {
-              let title = cell.replace(/leaderboard/i, '').trim();
+            if (typeof cell === 'string' && cell.trim() !== '' && (
+              cell.toLowerCase().includes('leaderboard') || 
+              cell.toLowerCase().includes('ranking') || 
+              cell.toLowerCase().includes('bear') || 
+              cell.toLowerCase().includes('showdown') ||
+              cell.toLowerCase().includes('championship') ||
+              cell.toLowerCase().includes('mercenary') ||
+              cell.toLowerCase().includes('polar')
+            )) {
+              let title = cell.replace(/leaderboard/i, '').replace(/ranking/i, '').trim();
+              if (!title) title = "Leaderboard";
               
               let scoreCol = c + 1;
               for (let i = c + 1; i <= c + 10; i++) {
@@ -2402,13 +2411,14 @@ window.getLivePlayerEventRow = async (chiefName, pRow, headers) => {
               while (hr < lbRawData.length && lbRawData[hr][c] && lbRawData[hr][c].toString().trim() !== "") {
                 let pName = lbRawData[hr][c+1];
                 let score = lbRawData[hr][scoreCol];
-                if (pName && pName.toString().trim() === name && score !== undefined && score !== "") {
-                  let rank = lbRawData[hr][c] || hr - (r + 1);
-                  if (typeof rank === 'number') {
-                     if (rank === 1) rank = '🥇 1st';
-                     else if (rank === 2) rank = '🥈 2nd';
-                     else if (rank === 3) rank = '🥉 3rd';
-                     else rank += 'th';
+                if (pName && pName.toString().trim().toLowerCase() === targetName.toLowerCase() && score !== undefined && score !== "") {
+                  let rawRank = lbRawData[hr][c] || hr - (r + 1);
+                  let rank = rawRank;
+                  if (typeof rawRank === 'number') {
+                     if (rawRank === 1) rank = '🥇 1st';
+                     else if (rawRank === 2) rank = '🥈 2nd';
+                     else if (rawRank === 3) rank = '🥉 3rd';
+                     else rank = `#${rawRank}`;
                   }
                   
                   let isAllTime = title.toLowerCase().includes("all-time") || title.toLowerCase().includes("all time");
@@ -2420,13 +2430,19 @@ window.getLivePlayerEventRow = async (chiefName, pRow, headers) => {
                     else formattedScore = score.toLocaleString();
                   }
                   
+                  let emoji = "🏆";
+                  if (isBear) emoji = "🐻";
+                  else if (title.toLowerCase().includes("showdown")) emoji = "⚔️";
+                  else if (title.toLowerCase().includes("championship")) emoji = "👑";
+                  else if (title.toLowerCase().includes("mercenary")) emoji = "🗡️";
+
                   if (isBear && isAllTime && title.toLowerCase().includes("donation")) btDonationsAllTime = { score: formattedScore, rank };
                   else if (isBear && title.toLowerCase().includes("donation")) btDonationsCurrent = { score: formattedScore, rank };
                   else if (isBear && isAllTime) bearAllTime = { score: formattedScore, rank };
                   else if (isBear && title.toLowerCase().includes("1")) bear1 = { score: formattedScore, rank };
                   else if (isBear && title.toLowerCase().includes("2")) bear2 = { score: formattedScore, rank };
                   else if (isBear && title.toLowerCase().includes("both")) bearBoth = { score: formattedScore, rank };
-                  else otherLbs.push({ title, score: formattedScore, rank });
+                  else otherLbs.push({ title, score: formattedScore, rank, emoji });
                 }
                 hr++;
               }
@@ -11318,11 +11334,24 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
         for (let r = 0; r < lbRawData.length; r++) {
           for (let c = 0; c < lbRawData[r].length; c++) {
             let cell = lbRawData[r][c];
-            if (typeof cell === 'string' && (cell.toLowerCase().includes('leaderboard') || (cell.toLowerCase().includes('all-time') && (cell.toLowerCase().includes('bear') || cell.toLowerCase().includes('bt')) && cell.toLowerCase().includes('donation')))) {
-              let title = cell.replace(/leaderboard/i, '').trim();
+            if (typeof cell === 'string' && cell.trim() !== '' && (
+              cell.toLowerCase().includes('leaderboard') || 
+              cell.toLowerCase().includes('ranking') || 
+              cell.toLowerCase().includes('bear') || 
+              cell.toLowerCase().includes('showdown') ||
+              cell.toLowerCase().includes('championship') ||
+              cell.toLowerCase().includes('mercenary') ||
+              cell.toLowerCase().includes('polar')
+            )) {
+              let title = cell.replace(/leaderboard/i, '').replace(/ranking/i, '').trim();
+              if (!title) title = "Leaderboard";
+              
               let emoji = "🏆";
-              if (title.toLowerCase().includes("bear")) emoji = "🐻";
+              if (title.toLowerCase().includes("bear") || title.toLowerCase().includes("bt")) emoji = "🐻";
               else if (title.toLowerCase().includes("showdown")) emoji = "⚔️";
+              else if (title.toLowerCase().includes("championship")) emoji = "👑";
+              else if (title.toLowerCase().includes("mercenary")) emoji = "🗡️";
+              else if (title.toLowerCase().includes("polar")) emoji = "🐻‍❄️";
               
               // Find the primary score column by scanning the headers (the last column of the table)
               let scoreCol = c + 1;
@@ -11339,12 +11368,13 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
                 if (pName && score !== undefined && score !== "") {
                   let safeName = pName.toString().trim();
                   if (!lbMap[safeName]) lbMap[safeName] = [];
-                  let rank = lbRawData[hr][c] || hr - (r + 1);
-                  if (typeof rank === 'number') {
-                     if (rank === 1) rank = '🥇 1st';
-                     else if (rank === 2) rank = '🥈 2nd';
-                     else if (rank === 3) rank = '🥉 3rd';
-                     else rank += 'th';
+                  let rawRank = lbRawData[hr][c] || hr - (r + 1);
+                  let rank = rawRank;
+                  if (typeof rawRank === 'number') {
+                     if (rawRank === 1) rank = '🥇 1st';
+                     else if (rawRank === 2) rank = '🥈 2nd';
+                     else if (rawRank === 3) rank = '🥉 3rd';
+                     else rank = `#${rawRank}`;
                   }
                   
                   let formattedScore = score;
@@ -13936,9 +13966,12 @@ window.generatePlayerProfileHtml = (chiefName, p, headers, colIsUpcoming, roster
     otherLbs.forEach(lb => {
       let scoreFormatted = lb.score;
       if (lb.rank) {
-          scoreFormatted = '#' + lb.rank + ' (' + lb.score + ')';
+          let r = String(lb.rank).trim();
+          let rankStr = (r.startsWith('#') || r.startsWith('🥇') || r.startsWith('🥈') || r.startsWith('🥉')) ? r : `#${r}`;
+          scoreFormatted = `${rankStr} (${lb.score})`;
       }
-      headerBadgesHtml += '<span style="background:color-mix(in srgb, var(--accent) 15%, transparent); border:1px solid var(--accent); color:var(--text-main); padding:4px 8px; border-radius:12px; font-size:11px; font-weight:bold;">' + lb.emoji + ' ' + lb.title + ': <span style="color:var(--text-main);">' + scoreFormatted + '</span></span>';
+      let emoji = lb.emoji || "🏆";
+      headerBadgesHtml += '<span style="background:color-mix(in srgb, var(--accent) 15%, transparent); border:1px solid var(--accent); color:var(--text-main); padding:4px 10px; border-radius:12px; font-size:12px; font-weight:bold; display:inline-flex; align-items:center; gap:4px;">' + emoji + ' ' + lb.title + ': <span style="color:var(--text-main);">' + scoreFormatted + '</span></span>';
     });
     
     headerBadgesHtml += '</div>';

@@ -1,3 +1,7 @@
+## [1.65.0] - 2026-08-09
+### Fixed & Restored
+- **🎴 Player Card Event Ranks & Pill Boxes**: Restored all event ranks and leaderboard pill badges (e.g. Alliance Championship, Mercenary Prestige, Polar Terrors, Bear Trap Wins, Showdown, BT Donations, etc.) on player profile cards. Broadened table title matching, added case-insensitive name matching, and clean rank medal formatting (`🥇 1st`, `🥈 2nd`, `🥉 3rd`, `#Rank`).
+
 ## [1.64.0] - 2026-08-09
 ### Added & Updated
 - **📅 Calendar View Today Alignment**: Filtered out past days so that Box 1 in Calendar View is ALWAYS Today's date (`⭐ TODAY`), followed sequentially by upcoming days. Added a green highlight header and border badge to Box 1.
