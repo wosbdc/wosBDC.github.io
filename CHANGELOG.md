@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.70.4] - 2026-08-09
+### Fixed
+- **🛡️ Chief Guardian All-Time Showdown Score**: Updated Chief Guardian's All-Time Showdown stats to **7,036,858 Total Score** (2 Horns, 1 Day Win) in both `leaderboards.json` and `main.js` `views.account()`.
+
 ## [1.70.3] - 2026-08-09
 ### Fixed
 - **⚔️ Unified Event Rankings & Showdown Vault Algorithm**: Updated `views.account()` to fetch Firebase `showdown_history` and `showdown_live` nodes alongside Google Sheets `Showdown History` rows and `DEFAULT_SD_HISTORY_BLOCKS`. Event Rankings tab cards now match the Showdown Archive Vault 1:1, displaying exact Horns (e.g. 40), Day Wins (e.g. 19), and Total Score (e.g. 68.5M).
