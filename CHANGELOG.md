@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.70.5] - 2026-08-09
+### Improved
+- **⚡ Dynamic Live Score Accumulation**: Established baseline historical floor for Chief Guardian (`7,036,858` Total, `2` Horns, `1` Day Win) prior to live event map merging, ensuring live scores logged during active events add on top of Guardian's baseline dynamically.
+
 ## [1.70.4] - 2026-08-09
 ### Fixed
 - **🛡️ Chief Guardian All-Time Showdown Score**: Updated Chief Guardian's All-Time Showdown stats to **7,036,858 Total Score** (2 Horns, 1 Day Win) in both `leaderboards.json` and `main.js` `views.account()`.

@@ -10093,6 +10093,15 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
         }
       });
 
+      // Establish baseline historical floor for Guardian (2 Horns, 1 Day Win, 7,036,858 Total)
+      if (!combinedMap['guardian']) {
+        combinedMap['guardian'] = { name: 'Guardian', horns: 2, wins: 1, total: 7036858 };
+      } else {
+        if (combinedMap['guardian'].total < 7036858) combinedMap['guardian'].total = 7036858;
+        if (combinedMap['guardian'].horns < 2) combinedMap['guardian'].horns = 2;
+        if (combinedMap['guardian'].wins < 1) combinedMap['guardian'].wins = 1;
+      }
+
       const sdLiveData = (sdFbLiveSnap && sdFbLiveSnap.exists() && sdFbLiveSnap.val()) ? sdFbLiveSnap.val() : {};
       for (const [pName, scores] of Object.entries(sdLiveData)) {
         if (!scores || typeof scores !== 'object') continue;
@@ -10100,11 +10109,6 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
         let pTotal = (scores.d1||0) + (scores.d2||0) + (scores.d3||0) + (scores.d4||0) + (scores.d5||0) + (scores.d6||0);
         if (!combinedMap[k]) combinedMap[k] = { name: pName, horns: 0, wins: 0, total: 0 };
         combinedMap[k].total += pTotal;
-      }
-
-      // Ensure Guardian's updated stats (2 Horns, 1 Day Win, 7,036,858 Total) are populated
-      if (!combinedMap['guardian'] || (combinedMap['guardian'].total < 7036858 && combinedMap['guardian'].horns <= 2)) {
-        combinedMap['guardian'] = { name: 'Guardian', horns: 2, wins: 1, total: 7036858 };
       }
 
       let sortedSdList = Object.values(combinedMap).sort((a, b) => (b.horns !== a.horns) ? (b.horns - a.horns) : (b.total - a.total));
