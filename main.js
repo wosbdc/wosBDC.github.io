@@ -1116,7 +1116,8 @@ window.parseLeaderboardsToPlayerMap = (lbData, targetNameFilter = null) => {
           let safeName = pName.toString().trim();
           if (targetLower && safeName.toLowerCase() !== targetLower) return;
 
-          let rawRank = row[rankCol] || rIdx + 1;
+          let playerPosRank = rIdx + 1;
+          let rawRank = (row[rankCol] !== undefined && row[rankCol] !== null && row[rankCol] !== "" && !isNaN(row[rankCol]) && Number(row[rankCol]) !== (rIdx + 2)) ? Number(row[rankCol]) : playerPosRank;
           let rank = rawRank;
           if (typeof rawRank === 'number' || (typeof rawRank === 'string' && !isNaN(rawRank))) {
              let numRank = Number(rawRank);
@@ -1192,7 +1193,8 @@ window.parseLeaderboardsToPlayerMap = (lbData, targetNameFilter = null) => {
           if (pName && score !== undefined && score !== "") {
             let safeName = pName.toString().trim();
             if (!targetLower || safeName.toLowerCase() === targetLower) {
-              let rawRank = lbData[hr][c] || hr - (r + 1);
+              let playerPosRank = hr - (r + 1);
+              let rawRank = (lbData[hr][c] !== undefined && lbData[hr][c] !== null && lbData[hr][c] !== "" && !isNaN(lbData[hr][c]) && Number(lbData[hr][c]) !== hr) ? Number(lbData[hr][c]) : playerPosRank;
               let rank = rawRank;
               if (typeof rawRank === 'number' || (typeof rawRank === 'string' && !isNaN(rawRank))) {
                  let numRank = Number(rawRank);
@@ -1259,13 +1261,16 @@ window.computeLiveFirebasePlayerStats = (targetName, fbWins = {}, fbDonations = 
     // 1. Calculate Bear Trap Wins live from Firebase beartrap_wins node
     if (fbWins && typeof fbWins === 'object' && Object.keys(fbWins).length > 0) {
         const winsMap = {};
+        const skipKeys = ['metadata', 'config', 'lastupdated', 'updatedat', 'timestamp', 'last_updated', 'system'];
         for (const [key, val] of Object.entries(fbWins)) {
-            if (!val || typeof val !== 'object') continue;
+            if (!val || typeof val !== 'object' || skipKeys.includes(key.toLowerCase()) || key.startsWith('_')) continue;
             let name = val.name || key;
             let sKey = sanitizeKey(name) || sanitizeKey(key);
+            if (!sKey || skipKeys.includes(sKey)) continue;
             let bt1 = Number(val.bt1 || 0);
             let bt2 = Number(val.bt2 || 0);
             let total = val.total !== undefined ? Number(val.total) : (bt1 + bt2);
+            if (total > 100000000) continue; // Skip timestamp values
             if (!winsMap[sKey]) {
                 winsMap[sKey] = { name, key, bt1, bt2, total };
             } else {
@@ -1307,12 +1312,15 @@ window.computeLiveFirebasePlayerStats = (targetName, fbWins = {}, fbDonations = 
     // 2. Calculate Bear Trap Donations live from Firebase beartrap_donations node
     if (fbDonations && typeof fbDonations === 'object' && Object.keys(fbDonations).length > 0) {
         const donMap = {};
+        const skipKeys = ['metadata', 'config', 'lastupdated', 'updatedat', 'timestamp', 'last_updated', 'system'];
         for (const [key, val] of Object.entries(fbDonations)) {
-            if (!val || typeof val !== 'object') continue;
+            if (!val || typeof val !== 'object' || skipKeys.includes(key.toLowerCase()) || key.startsWith('_')) continue;
             let name = val.name || key;
             let sKey = sanitizeKey(name) || sanitizeKey(key);
+            if (!sKey || skipKeys.includes(sKey)) continue;
             let current = Number(val.current !== undefined ? val.current : (val.amount !== undefined ? val.amount : 0));
             let allTime = Number(val.allTime !== undefined ? val.allTime : 0);
+            if (current > 100000000 || allTime > 100000000) continue; // Skip timestamp values
             if (!donMap[sKey]) {
                 donMap[sKey] = { name, key, current, allTime };
             } else {
@@ -2748,7 +2756,8 @@ window.getLivePlayerEventRow = async (chiefName, pRow, headers) => {
                 let pName = lbRawData[hr][c+1];
                 let score = lbRawData[hr][scoreCol];
                 if (pName && pName.toString().trim().toLowerCase() === targetName.toLowerCase() && score !== undefined && score !== "") {
-                  let rawRank = lbRawData[hr][c] || hr - (r + 1);
+                  let playerPosRank = hr - (r + 1);
+                  let rawRank = (lbRawData[hr][c] !== undefined && lbRawData[hr][c] !== null && lbRawData[hr][c] !== "" && !isNaN(lbRawData[hr][c]) && Number(lbRawData[hr][c]) !== hr) ? Number(lbRawData[hr][c]) : playerPosRank;
                   let rank = rawRank;
                   if (typeof rawRank === 'number') {
                      if (rawRank === 1) rank = '🥇 1st';

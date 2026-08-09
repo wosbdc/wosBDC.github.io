@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.74.0] - 2026-08-09
+### Fixed
+- **🎯 Off-By-One Rank Calculation Fix**: Identified and resolved the exact cause of ranks being off by 1 across leaderboards and Account Hub cards. Google Sheets Column A contains 1-based sheet row numbers (e.g. Row 2 for 1st player, Row 3 for 2nd player). The code now checks if the column contains raw sheet row indices and defaults to relative data row position (`rIdx + 1`). Added metadata key filtering (`_metadata`, `timestamp`, `config`) to prevent system records from polluting sorting arrays.
+
 ## [1.73.0] - 2026-08-09
 ### Fixed & Improved
 - **📊 Exact Leaderboard Score Display**: Removed all score rounding and truncation (`.toFixed(1) + 'M' / 'K'`) across all leaderboards, account rankings, event cards, and challenge bars. Scores are now displayed exactly as they appear on the leaderboards with standard comma formatting (`num.toLocaleString()`).
