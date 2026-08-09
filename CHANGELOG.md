@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.70.3] - 2026-08-09
+### Fixed
+- **⚔️ Unified Event Rankings & Showdown Vault Algorithm**: Updated `views.account()` to fetch Firebase `showdown_history` and `showdown_live` nodes alongside Google Sheets `Showdown History` rows and `DEFAULT_SD_HISTORY_BLOCKS`. Event Rankings tab cards now match the Showdown Archive Vault 1:1, displaying exact Horns (e.g. 40), Day Wins (e.g. 19), and Total Score (e.g. 68.5M).
+
 ## [1.70.2] - 2026-08-09
 ### Fixed
 - **⚔️ Fixed Showdown All-Time Score & Horns Calculation**: Fixed Showdown All-Time calculation by parsing raw `sdHistoryRawData` rows with `window.parseShowdownHistoryRows(safeSdHistory)` before passing them into `calculateAllTimeShowdown()`, accurately computing every player's actual Horns, Day Wins, and Total Score instead of returning 0. Added fallback to leaderboard rank when history is unavailable.

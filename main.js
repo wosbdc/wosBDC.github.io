@@ -9843,12 +9843,14 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
       }
       
 
-      const [rosterRawData, lbRawData, fbWinsSnap, fbDonSnap, sdHistoryRawData] = await Promise.all([
+      const [rosterRawData, lbRawData, fbWinsSnap, fbDonSnap, sdHistoryRawData, sdFbHistorySnap, sdFbLiveSnap] = await Promise.all([
           window.fetchRoster().catch(() => ({})),
           window.fetchLeaderboardsData().catch(() => []),
           get(ref(db, 'beartrap_wins')).catch(() => null),
           get(ref(db, 'beartrap_donations')).catch(() => null),
-          fetchSheet("Showdown History").catch(() => [])
+          fetchSheet("Showdown History").catch(() => []),
+          get(ref(db, 'showdown_history')).catch(() => null),
+          get(ref(db, 'showdown_live')).catch(() => null)
       ]);
       const fbWins = (fbWinsSnap && fbWinsSnap.exists()) ? fbWinsSnap.val() : {};
       const fbDonations = (fbDonSnap && fbDonSnap.exists()) ? fbDonSnap.val() : {};
@@ -10066,29 +10068,58 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
       const currentDonNum = parseNumVal(rawCurVal);
       const allTimeDonNum = parseNumVal(rawAllVal);
 
-      // Build All-Time Showdown Map with Horns, Day Wins, and Total Score
+      // Build All-Time Showdown Map using complete Showdown Vault merging algorithm (Firebase history, Firebase live, Sheets history, and DEFAULT_SD_HISTORY_BLOCKS)
       const sdAllTimeMap = {};
       const safeSdHistory = (typeof sdHistoryRawData !== 'undefined' && Array.isArray(sdHistoryRawData)) ? sdHistoryRawData : [];
-      if (typeof window.calculateAllTimeShowdown === 'function' && typeof window.parseShowdownHistoryRows === 'function' && safeSdHistory.length > 0) {
-        let historyObj = window.parseShowdownHistoryRows(safeSdHistory);
-        let sdList = window.calculateAllTimeShowdown(historyObj);
-        sdList.forEach((p, index) => {
-          if (p && p.name) {
-            let formatRank = (num) => {
-              if (num === 1) return '🥇 1st';
-              if (num === 2) return '🥈 2nd';
-              if (num === 3) return '🥉 3rd';
-              return `#${num}`;
-            };
-            sdAllTimeMap[p.name.toLowerCase().trim()] = {
-              rank: formatRank(index + 1),
-              horns: p.horns || 0,
-              wins: p.wins || 0,
-              total: p.total || 0
-            };
-          }
-        });
+      
+      let fetchedHist = (sdFbHistorySnap && sdFbHistorySnap.exists() && sdFbHistorySnap.val()) ? sdFbHistorySnap.val() : {};
+      if (safeSdHistory.length > 0 && typeof window.parseShowdownHistoryRows === 'function') {
+        let parsedSheets = window.parseShowdownHistoryRows(safeSdHistory);
+        fetchedHist = Object.assign({}, parsedSheets, fetchedHist);
       }
+      
+      const historyObj = (typeof window.getMergedShowdownHistoryObj === 'function') 
+        ? window.getMergedShowdownHistoryObj(fetchedHist) 
+        : fetchedHist;
+
+      let allTimePlayers = (typeof window.calculateAllTimeShowdown === 'function') 
+        ? window.calculateAllTimeShowdown(historyObj) 
+        : [];
+
+      let combinedMap = {};
+      allTimePlayers.forEach(p => {
+        if (p && p.name) {
+          combinedMap[p.name.toLowerCase().trim()] = { name: p.name, horns: p.horns || 0, wins: p.wins || 0, total: p.total || 0 };
+        }
+      });
+
+      const sdLiveData = (sdFbLiveSnap && sdFbLiveSnap.exists() && sdFbLiveSnap.val()) ? sdFbLiveSnap.val() : {};
+      for (const [pName, scores] of Object.entries(sdLiveData)) {
+        if (!scores || typeof scores !== 'object') continue;
+        let k = pName.toLowerCase().trim();
+        let pTotal = (scores.d1||0) + (scores.d2||0) + (scores.d3||0) + (scores.d4||0) + (scores.d5||0) + (scores.d6||0);
+        if (!combinedMap[k]) combinedMap[k] = { name: pName, horns: 0, wins: 0, total: 0 };
+        combinedMap[k].total += pTotal;
+      }
+
+      let sortedSdList = Object.values(combinedMap).sort((a, b) => (b.horns !== a.horns) ? (b.horns - a.horns) : (b.total - a.total));
+
+      sortedSdList.forEach((p, index) => {
+        if (p && p.name) {
+          let formatRank = (num) => {
+            if (num === 1) return '🥇 1st';
+            if (num === 2) return '🥈 2nd';
+            if (num === 3) return '🥉 3rd';
+            return `#${num}`;
+          };
+          sdAllTimeMap[p.name.toLowerCase().trim()] = {
+            rank: formatRank(index + 1),
+            horns: p.horns || 0,
+            wins: p.wins || 0,
+            total: p.total || 0
+          };
+        }
+      });
 
       // Group additional leaderboards by base event name
       const eventGroups = {};
