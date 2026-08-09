@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.57.4] - 2026-08-09
+### Removed
+- **📋 Removed Quick Paste Scores**: Removed the `📋 Quick Paste Scores` button from the Showdown Data Entry header toolbar as requested.
+
 ## [1.57.3] - 2026-08-09
 ### Added
 - **🧪 Safe Simulation Demo Mode**: Added a dedicated `🧪 Run Simulation Demo (Safe Preview)` button to the Showdown Reset & Archival Pipeline modal. Executes the full multi-stage visual progress animation, percentage counter, and live stage badges in safe dry-run mode without modifying or deleting any real Firebase data.
