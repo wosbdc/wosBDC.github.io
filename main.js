@@ -971,7 +971,15 @@ window.fetchLeaderboardsData = async () => {
             for (let r = 0; r < rawSheet.length; r++) {
                 for (let c = 0; c < rawSheet[r].length; c++) {
                     let cell = rawSheet[r][c];
-                    if (typeof cell === 'string' && (cell.toLowerCase().includes('leaderboard') || (cell.toLowerCase().includes('all-time') && (cell.toLowerCase().includes('bear') || cell.toLowerCase().includes('bt')) && cell.toLowerCase().includes('donation')))) {
+                    if (typeof cell === 'string' && cell.trim() !== '' && (
+                        cell.toLowerCase().includes('leaderboard') || 
+                        cell.toLowerCase().includes('ranking') || 
+                        cell.toLowerCase().includes('bear') || 
+                        cell.toLowerCase().includes('showdown') ||
+                        cell.toLowerCase().includes('championship') ||
+                        cell.toLowerCase().includes('mercenary') ||
+                        cell.toLowerCase().includes('polar')
+                    )) {
                         let title = cell;
                         let headers = [];
                         let hc = c;
@@ -1020,6 +1028,172 @@ window.fetchLeaderboardsData = async () => {
 
     window.leaderboardsCache = parsedBoards;
     return parsedBoards;
+};
+
+// Unified Leaderboards parser supporting both object array format and raw 2D sheet array
+window.parseLeaderboardsToPlayerMap = (lbData, targetNameFilter = null) => {
+  const result = {
+    lbMap: {},
+    btDonationsAllTime: null,
+    btDonationsCurrent: null,
+    bear1: null,
+    bear2: null,
+    bearBoth: null,
+    bearAllTime: null,
+    otherLbs: []
+  };
+
+  if (!lbData || !Array.isArray(lbData) || lbData.length === 0) return result;
+
+  const targetLower = targetNameFilter ? targetNameFilter.toLowerCase().trim() : null;
+
+  // Case A: Array of Board Objects [{ title, headers, rows }] (from fetchLeaderboardsData / Firebase)
+  if (typeof lbData[0] === 'object' && lbData[0] !== null && lbData[0].title && Array.isArray(lbData[0].rows)) {
+    lbData.forEach(board => {
+      let rawTitle = board.title || 'Leaderboard';
+      let title = rawTitle.replace(/leaderboard/i, '').replace(/ranking/i, '').trim();
+      if (!title) title = "Leaderboard";
+
+      let headers = board.headers || [];
+      let nameCol = headers.findIndex(h => typeof h === 'string' && (h.toLowerCase().includes('name') || h.toLowerCase().includes('member') || h.toLowerCase().includes('player') || h.toLowerCase().includes('chief')));
+      if (nameCol === -1) nameCol = 1;
+
+      let scoreCol = headers.length - 1;
+      if (scoreCol <= nameCol) scoreCol = nameCol + 1;
+
+      let rankCol = 0;
+
+      let isAllTime = title.toLowerCase().includes("all-time") || title.toLowerCase().includes("all time");
+      let isBear = title.toLowerCase().includes("bear") || title.toLowerCase().includes("bt");
+
+      let emoji = "🏆";
+      if (isBear) emoji = "🐻";
+      else if (title.toLowerCase().includes("showdown")) emoji = "⚔️";
+      else if (title.toLowerCase().includes("championship")) emoji = "👑";
+      else if (title.toLowerCase().includes("mercenary")) emoji = "🗡️";
+      else if (title.toLowerCase().includes("polar")) emoji = "🐻‍❄️";
+
+      (board.rows || []).forEach((row, rIdx) => {
+        let pName = row[nameCol];
+        let score = row[scoreCol];
+        if (pName && score !== undefined && score !== null && score !== "") {
+          let safeName = pName.toString().trim();
+          if (targetLower && safeName.toLowerCase() !== targetLower) return;
+
+          let rawRank = row[rankCol] || rIdx + 1;
+          let rank = rawRank;
+          if (typeof rawRank === 'number' || (typeof rawRank === 'string' && !isNaN(rawRank))) {
+             let numRank = Number(rawRank);
+             if (numRank === 1) rank = '🥇 1st';
+             else if (numRank === 2) rank = '🥈 2nd';
+             else if (numRank === 3) rank = '🥉 3rd';
+             else rank = `#${numRank}`;
+          }
+
+          let formattedScore = score;
+          if (typeof score === 'number') {
+             if (score >= 1000000) formattedScore = (score / 1000000).toFixed(1) + 'M';
+             else formattedScore = score.toLocaleString();
+          }
+
+          let entry = { title, score: formattedScore, rank, emoji };
+
+          if (!result.lbMap[safeName]) result.lbMap[safeName] = [];
+          result.lbMap[safeName].push(entry);
+
+          if (targetLower && safeName.toLowerCase() === targetLower) {
+            if (isBear && isAllTime && title.toLowerCase().includes("donation")) result.btDonationsAllTime = { score: formattedScore, rank };
+            else if (isBear && title.toLowerCase().includes("donation")) result.btDonationsCurrent = { score: formattedScore, rank };
+            else if (isBear && isAllTime) result.bearAllTime = { score: formattedScore, rank };
+            else if (isBear && title.toLowerCase().includes("1")) result.bear1 = { score: formattedScore, rank };
+            else if (isBear && title.toLowerCase().includes("2")) result.bear2 = { score: formattedScore, rank };
+            else if (isBear && title.toLowerCase().includes("both")) result.bearBoth = { score: formattedScore, rank };
+            else result.otherLbs.push(entry);
+          }
+        }
+      });
+    });
+    return result;
+  }
+
+  // Case B: Raw 2D sheet array (Fallback)
+  for (let r = 0; r < lbData.length; r++) {
+    if (!Array.isArray(lbData[r])) continue;
+    for (let c = 0; c < lbData[r].length; c++) {
+      let cell = lbData[r][c];
+      if (typeof cell === 'string' && cell.trim() !== '' && (
+        cell.toLowerCase().includes('leaderboard') || 
+        cell.toLowerCase().includes('ranking') || 
+        cell.toLowerCase().includes('bear') || 
+        cell.toLowerCase().includes('showdown') ||
+        cell.toLowerCase().includes('championship') ||
+        cell.toLowerCase().includes('mercenary') ||
+        cell.toLowerCase().includes('polar')
+      )) {
+        let title = cell.replace(/leaderboard/i, '').replace(/ranking/i, '').trim();
+        if (!title) title = "Leaderboard";
+
+        let scoreCol = c + 1;
+        for (let i = c + 1; i <= c + 10; i++) {
+          if (!lbData[r+1] || !lbData[r+1][i]) break;
+          scoreCol = i;
+        }
+
+        let hr = r + 2;
+        while (hr < lbData.length && lbData[hr][c] && lbData[hr][c].toString().trim() !== "") {
+          let pName = lbData[hr][c+1];
+          let score = lbData[hr][scoreCol];
+          if (pName && score !== undefined && score !== "") {
+            let safeName = pName.toString().trim();
+            if (!targetLower || safeName.toLowerCase() === targetLower) {
+              let rawRank = lbData[hr][c] || hr - (r + 1);
+              let rank = rawRank;
+              if (typeof rawRank === 'number' || (typeof rawRank === 'string' && !isNaN(rawRank))) {
+                 let numRank = Number(rawRank);
+                 if (numRank === 1) rank = '🥇 1st';
+                 else if (numRank === 2) rank = '🥈 2nd';
+                 else if (numRank === 3) rank = '🥉 3rd';
+                 else rank = `#${numRank}`;
+              }
+
+              let isAllTime = title.toLowerCase().includes("all-time") || title.toLowerCase().includes("all time");
+              let isBear = title.toLowerCase().includes("bear") || title.toLowerCase().includes("bt");
+
+              let formattedScore = score;
+              if (typeof score === 'number') {
+                if (score >= 1000000) formattedScore = (score / 1000000).toFixed(1) + 'M';
+                else formattedScore = score.toLocaleString();
+              }
+
+              let emoji = "🏆";
+              if (isBear) emoji = "🐻";
+              else if (title.toLowerCase().includes("showdown")) emoji = "⚔️";
+              else if (title.toLowerCase().includes("championship")) emoji = "👑";
+              else if (title.toLowerCase().includes("mercenary")) emoji = "🗡️";
+              else if (title.toLowerCase().includes("polar")) emoji = "🐻‍❄️";
+
+              let entry = { title, score: formattedScore, rank, emoji };
+
+              if (!result.lbMap[safeName]) result.lbMap[safeName] = [];
+              result.lbMap[safeName].push(entry);
+
+              if (targetLower && safeName.toLowerCase() === targetLower) {
+                if (isBear && isAllTime && title.toLowerCase().includes("donation")) result.btDonationsAllTime = { score: formattedScore, rank };
+                else if (isBear && title.toLowerCase().includes("donation")) result.btDonationsCurrent = { score: formattedScore, rank };
+                else if (isBear && isAllTime) result.bearAllTime = { score: formattedScore, rank };
+                else if (isBear && title.toLowerCase().includes("1")) result.bear1 = { score: formattedScore, rank };
+                else if (isBear && title.toLowerCase().includes("2")) result.bear2 = { score: formattedScore, rank };
+                else if (isBear && title.toLowerCase().includes("both")) result.bearBoth = { score: formattedScore, rank };
+                else result.otherLbs.push(entry);
+              }
+            }
+          }
+          hr++;
+        }
+      }
+    }
+  }
+  return result;
 };
 
 // Register Service Worker for Mobile PWA
@@ -2640,51 +2814,8 @@ window.searchPlayerFull = async (name) => {
     
 
 
-    let btDonationsAllTime = null, btDonationsCurrent = null, bear1 = null, bear2 = null, bearBoth = null, bearAllTime = null;
-    let otherLbs = [];
-    
-    if (lbRawData) {
-      for (let r = 0; r < lbRawData.length; r++) {
-        for (let c = 0; c < lbRawData[r].length; c++) {
-          let cell = lbRawData[r][c];
-          if (typeof cell === 'string' && (cell.toLowerCase().includes('leaderboard') || (cell.toLowerCase().includes('all-time') && (cell.toLowerCase().includes('bear') || cell.toLowerCase().includes('bt')) && cell.toLowerCase().includes('donation')))) {
-            let title = cell.replace(/leaderboard/i, '').trim();
-            let emoji = "🏆";
-            if (title.toLowerCase().includes("bear")) emoji = "🐻";
-            else if (title.toLowerCase().includes("showdown")) emoji = "⚔️";
-            
-            let scoreCol = c + 2;
-            if (r + 1 < lbRawData.length) {
-              let hc = c;
-              while (hc < lbRawData[r+1].length && lbRawData[r+1][hc] !== "") { scoreCol = hc; hc++; }
-            }
-            
-            let dr = r + 2;
-            while (dr < lbRawData.length && lbRawData[dr][c] !== "") {
-              let pRank = lbRawData[dr][c];
-              let pName = lbRawData[dr][c + 1];
-              let pScore = lbRawData[dr][scoreCol];
-              
-              if (pName && pScore && pName.toString().trim().toLowerCase() === targetName.toLowerCase()) {
-                if (typeof pScore === 'number') pScore = pScore.toLocaleString();
-                else if (typeof pScore === 'string' && !isNaN(pScore) && pScore.trim() !== "") pScore = Number(pScore).toLocaleString();
-                
-                let t = title.toLowerCase();
-                if (t.includes('all-time showdown')) { /* noop */ }
-                else if (t.includes('all-time bear trap')) bearAllTime = {rank: pRank, score: pScore};
-                else if (t.includes('bear trap 1')) bear1 = {rank: pRank, score: pScore};
-                else if (t.includes('bear trap 2')) bear2 = {rank: pRank, score: pScore};
-                else if (t.includes('both bear trap')) bearBoth = {rank: pRank, score: pScore};
-                else if ((t.includes('all-time') && (t.includes('bear') || t.includes('bt')) && t.includes('donation'))) btDonationsAllTime = {rank: pRank, score: pScore};
-                else if (((t.includes('bear') || t.includes('bt')) && t.includes('donation'))) btDonationsCurrent = {rank: pRank, score: pScore};
-                else otherLbs.push({ title, score: pScore, rank: pRank, emoji });
-              }
-              dr++;
-            }
-          }
-        }
-      }
-    }
+    const parsedLbRes = window.parseLeaderboardsToPlayerMap(lbRawData, targetName);
+    let { btDonationsAllTime, btDonationsCurrent, bear1, bear2, bearBoth, bearAllTime, otherLbs, lbMap } = parsedLbRes;
     
     const allTimeShowdownMap = {};
     const processShowdownTable = (tableData) => {
@@ -11328,69 +11459,8 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
       const rosterMap = rosterRawData || {};
       await refreshIdToNameMap();
       
-      // Parse Leaderboards data into a lookup map (Name -> [{title, score, emoji}])
-      const lbMap = {};
-      if (lbRawData) {
-        for (let r = 0; r < lbRawData.length; r++) {
-          for (let c = 0; c < lbRawData[r].length; c++) {
-            let cell = lbRawData[r][c];
-            if (typeof cell === 'string' && cell.trim() !== '' && (
-              cell.toLowerCase().includes('leaderboard') || 
-              cell.toLowerCase().includes('ranking') || 
-              cell.toLowerCase().includes('bear') || 
-              cell.toLowerCase().includes('showdown') ||
-              cell.toLowerCase().includes('championship') ||
-              cell.toLowerCase().includes('mercenary') ||
-              cell.toLowerCase().includes('polar')
-            )) {
-              let title = cell.replace(/leaderboard/i, '').replace(/ranking/i, '').trim();
-              if (!title) title = "Leaderboard";
-              
-              let emoji = "🏆";
-              if (title.toLowerCase().includes("bear") || title.toLowerCase().includes("bt")) emoji = "🐻";
-              else if (title.toLowerCase().includes("showdown")) emoji = "⚔️";
-              else if (title.toLowerCase().includes("championship")) emoji = "👑";
-              else if (title.toLowerCase().includes("mercenary")) emoji = "🗡️";
-              else if (title.toLowerCase().includes("polar")) emoji = "🐻‍❄️";
-              
-              // Find the primary score column by scanning the headers (the last column of the table)
-              let scoreCol = c + 1;
-              for (let i = c + 1; i <= c + 10; i++) {
-                if (!lbRawData[r+1] || !lbRawData[r+1][i]) break;
-                scoreCol = i;
-              }
-              
-              // Process the rows below the header
-              let hr = r + 2;
-              while (hr < lbRawData.length && lbRawData[hr][c] && lbRawData[hr][c].toString().trim() !== "") {
-                let pName = lbRawData[hr][c+1]; // Name is typically one column over from Rank
-                let score = lbRawData[hr][scoreCol];
-                if (pName && score !== undefined && score !== "") {
-                  let safeName = pName.toString().trim();
-                  if (!lbMap[safeName]) lbMap[safeName] = [];
-                  let rawRank = lbRawData[hr][c] || hr - (r + 1);
-                  let rank = rawRank;
-                  if (typeof rawRank === 'number') {
-                     if (rawRank === 1) rank = '🥇 1st';
-                     else if (rawRank === 2) rank = '🥈 2nd';
-                     else if (rawRank === 3) rank = '🥉 3rd';
-                     else rank = `#${rawRank}`;
-                  }
-                  
-                  let formattedScore = score;
-                  if (typeof score === 'number') {
-                    if (score >= 1000000) formattedScore = (score / 1000000).toFixed(1) + 'M';
-                    else formattedScore = score.toLocaleString();
-                  }
-                  
-                  lbMap[safeName].push({ title, score: formattedScore, rank, emoji });
-                }
-                hr++;
-              }
-            }
-          }
-        }
-      }
+      // Parse Leaderboards data into a lookup map using unified helper
+      const { lbMap } = window.parseLeaderboardsToPlayerMap(lbRawData);
       
       // Parse dynamic All-Time Showdown totals from history and current showdown
       const allTimeShowdownMap = {};
@@ -11645,6 +11715,11 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
         }
         
         let lbData = lbMap[chiefName];
+        if (!lbData && lbMap) {
+            let lowerName = chiefName.toLowerCase().trim();
+            let matchedKey = Object.keys(lbMap).find(k => k.toLowerCase().trim() === lowerName);
+            if (matchedKey) lbData = lbMap[matchedKey];
+        }
         let bearBoth = null, bear1 = null, bear2 = null, bearAllTime = null, btDonationsAllTime = null, btDonationsCurrent = null;
         let otherLbs = [];
         if (lbData) {

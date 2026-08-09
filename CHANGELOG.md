@@ -1,3 +1,10 @@
+# CHANGELOG
+
+## [1.65.1] - 2026-08-09
+### Fixed
+- **Leaderboards Data Structure Mismatch**: Fixed player card event rank pill badges not displaying by updating the parser to support Firebase leaderboard object array format `[{ title, headers, rows }]` alongside raw 2D sheet arrays.
+- Added unified `window.parseLeaderboardsToPlayerMap` helper to accurately parse all event ranks and display pill badges across Search, Roster, and Event views.
+
 ## [1.65.0] - 2026-08-09
 ### Fixed & Restored
 - **🎴 Player Card Event Ranks & Pill Boxes**: Restored all event ranks and leaderboard pill badges (e.g. Alliance Championship, Mercenary Prestige, Polar Terrors, Bear Trap Wins, Showdown, BT Donations, etc.) on player profile cards. Broadened table title matching, added case-insensitive name matching, and clean rank medal formatting (`🥇 1st`, `🥈 2nd`, `🥉 3rd`, `#Rank`).
