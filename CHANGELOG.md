@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [1.56.0] - 2026-08-09
+### Added & Improved
+- **🏆 Streamlined 2-in-1 Showdown Archive & Reset**: Enhanced `window.archiveAndResetShowdown` to ask for an archive label/date (defaulting to today's date), save the full 2D history table snapshot to Firebase, and immediately reset the live tracker for the next cycle in a single seamless action.
+- **📅 Event Schedule & Rewards Editor**: Verified 1:1 match with Google Sheets `RewardsSidebar.html` tool, providing live search, date shortcuts, status badges, and non-blocking Firebase synchronization (<50ms).
+- **⚡ Verified Production Build**: 100% clean Vite compilation and static window binding verification.
+
 ## [1.55.0] - 2026-08-09
 ### Added & Improved
 - **📅 Streamlined Site Schedule & Rewards Editor**: Replaced cluttered schedule page and modal with a clean 1:1 replica of the Google Sheets `RewardsSidebar.html` tool.

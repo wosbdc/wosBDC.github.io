@@ -4413,19 +4413,24 @@ if (!window._autocompleteListenerAdded) {
     window._autocompleteListenerAdded = true;
 }
 
-window.archiveCurrentShowdownToFirebase = async () => {
-    const confirmed = await window.customConfirm("📁 Save a historical snapshot of current Showdown scores into All-Time History?");
+window.archiveAndResetShowdown = async () => {
+    const defaultDate = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const userDate = await window.customPrompt("Enter Date / Label for this Showdown archive:", defaultDate);
+    if (userDate === null) return; // User cancelled
+
+    const dateLabel = (userDate && userDate.trim()) ? userDate.trim() : defaultDate;
+    const confirmed = await window.customConfirm(`📁 Archive current Showdown scores into History as "${dateLabel}" AND reset tracker for the next event?`);
     if (!confirmed) return;
+
     try {
         const liveSnap = await get(ref(db, 'showdown_live'));
         let liveData = (liveSnap && liveSnap.exists() && liveSnap.val()) ? liveSnap.val() : {};
-       if (liveData && liveData.error) delete liveData.error;
-       
-       if (!liveData.Thadwarf || ((liveData.Thadwarf.d1||0) + (liveData.Thadwarf.d2||0) + (liveData.Thadwarf.d3||0) + (liveData.Thadwarf.d4||0) + (liveData.Thadwarf.d5||0) + (liveData.Thadwarf.d6||0)) < 100000) {
-           liveData.Thadwarf = { d1: 4559055, d2: 4210500, d3: 3890200, d4: 5120400, d5: 4890200, d6: 6845009 };
-       }
+        if (liveData && liveData.error) delete liveData.error;
+        
+        if (!liveData.Thadwarf || ((liveData.Thadwarf.d1||0) + (liveData.Thadwarf.d2||0) + (liveData.Thadwarf.d3||0) + (liveData.Thadwarf.d4||0) + (liveData.Thadwarf.d5||0) + (liveData.Thadwarf.d6||0)) < 100000) {
+            liveData.Thadwarf = { d1: 4559055, d2: 4210500, d3: 3890200, d4: 5120400, d5: 4890200, d6: 6845009 };
+        }
         const timestamp = Date.now();
-        const dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         
         let pList = [];
         for (const [pName, scores] of Object.entries(liveData)) {
@@ -4441,9 +4446,8 @@ window.archiveCurrentShowdownToFirebase = async () => {
         }
         pList.sort((a, b) => b.total - a.total);
         
-        // 2D Array format for Google Sheets compatibility
         const tableRows = [
-            ["", "Date:", dateStr, "", "", "", "", "", "", ""],
+            ["", "Date:", dateLabel, "", "", "", "", "", "", ""],
             ["", "Ranking", "Member", "Day 1", "Day 2", "Day 3", "Day 4", "Day 5", "Day 6", "Total"],
             ...pList.map((p, idx) => ["", idx + 1, p.name, p.d1, p.d2, p.d3, p.d4, p.d5, p.d6, p.total]),
             ["", "", "", "", "", "", "", "", "", ""]
@@ -4453,7 +4457,7 @@ window.archiveCurrentShowdownToFirebase = async () => {
         const metaVal = (metaSnap && metaSnap.exists()) ? metaSnap.val() : {};
 
         const archivePayload = {
-            date: dateStr,
+            date: dateLabel,
             timestamp: timestamp,
             players: pList.map((p, idx) => ({
                 rank: idx + 1,
@@ -4470,53 +4474,33 @@ window.archiveCurrentShowdownToFirebase = async () => {
             tableRows: tableRows
         };
         
-        // Save to permitted Firebase node
-        let savedSuccessfully = false;
-        try {
-            await set(ref(db, `showdown_meta/history/${timestamp}`), archivePayload);
-            savedSuccessfully = true;
-        } catch(metaErr) {
-            console.warn("Could not write to showdown_meta/history, trying showdown_history...", metaErr);
-        }
-
-        if (!savedSuccessfully) {
-            try {
-                await set(ref(db, `showdown_history/${timestamp}`), archivePayload);
-                savedSuccessfully = true;
-            } catch(hErr) {
-                console.warn("Could not write to showdown_history, trying activity_history_archives...", hErr);
-                await set(ref(db, `activity_history_archives/showdown_${timestamp}`), archivePayload);
-                savedSuccessfully = true;
-            }
-        }
+        // 1. Save archive FIRST to Firebase history
+        await set(ref(db, `showdown_meta/history/${timestamp}`), archivePayload);
 
         if (window.logAdminAction) {
             try {
-                window.logAdminAction("Showdown Event Archived", `Archived current Showdown scores (${pList.length} players) into History`);
+                window.logAdminAction("Showdown Event Archived & Reset", `Archived Showdown scores (${pList.length} players) as '${dateLabel}' and reset live tracker.`);
             } catch(e) {}
         }
         
-        // Ask user if they also want to reset live scores now
-        const resetNow = await window.customConfirm("✅ Showdown event successfully saved to History!\n\nDo you want to RESET the live tracker now for the next event?");
-        if (resetNow) {
-            const liveKeys = Object.keys(liveData);
-            if (liveKeys.length > 0) {
-                await Promise.all(liveKeys.map(k => set(ref(db, `showdown_live/${k}`), null).catch(() => null)));
-            }
-            try {
-                await set(ref(db, 'showdown_meta/enemyAlliance'), { name: "[WWA] Whiteoutwarriors", scores: { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 } });
-            } catch(e) {}
-            if (window.showToast) window.showToast("Showdown archived to History AND live event reset!", "success");
-        } else {
-            if (window.showToast) window.showToast("Showdown archived to History (live tracker kept active)!", "success");
+        // 2. Automatically reset live scores for the upcoming event
+        const liveKeys = Object.keys(liveData);
+        if (liveKeys.length > 0) {
+            await Promise.all(liveKeys.map(k => set(ref(db, `showdown_live/${k}`), null).catch(() => null)));
         }
+        try {
+            await set(ref(db, 'showdown_meta/enemyAlliance'), { name: "[WWA] Whiteoutwarriors", scores: { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 } });
+        } catch(e) {}
 
-        if (typeof views !== 'undefined' && views.showdown) views.showdown(); else if (typeof views !== 'undefined' && views.showdownAdmin) views.showdownAdmin();
+        if (window.showToast) window.showToast("✅ Event archived to History AND reset for the next cycle!", "success");
+        if (typeof views !== 'undefined' && views.showdownAdmin) views.showdownAdmin();
     } catch(err) {
         console.error("Error archiving showdown event:", err);
         if (window.showToast) window.showToast("Error archiving event: " + err.message, "error");
     }
 };
+
+window.archiveCurrentShowdownToFirebase = window.archiveAndResetShowdown;
 
 window.resetCurrentShowdown = async () => {
     const confirmed = await window.customConfirm("Are you sure you want to RESET the current live Showdown scores? Make sure you have archived it first!");
@@ -5024,11 +5008,112 @@ window.deleteShowdownArchive = async (archiveKey, dateStr) => {
     }
 };
 
-window.openShowdownPasteImporterModal = () => {
-    if (window.openQuickPasteModal) {
-        window.openQuickPasteModal();
-    } else if (window.showToast) {
-        window.showToast("Quick paste importer module opening...", "info");
+window.openShowdownPasteImporterModal = async () => {
+    let existingModal = document.getElementById('sdPasteImporterModal');
+    if (existingModal) existingModal.remove();
+
+    let modal = document.createElement('div');
+    modal.id = 'sdPasteImporterModal';
+    modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); backdrop-filter:blur(5px); z-index:10000; display:flex; align-items:center; justify-content:center; padding:15px; box-sizing:border-box; animation:fadeIn 0.2s ease;';
+
+    modal.innerHTML = `
+      <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; max-width:650px; width:100%; max-height:90vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 50px rgba(0,0,0,0.6);">
+         <div style="padding:15px 20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+             <h3 style="margin:0; font-size:18px; color:#FFD700; display:flex; align-items:center; gap:8px;">📋 Quick Paste Scores Importer</h3>
+             <button onclick="document.getElementById('sdPasteImporterModal').remove()" style="background:transparent; border:none; color:var(--text-muted); font-size:20px; cursor:pointer; padding:0;">✖</button>
+         </div>
+         
+         <div style="padding:20px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:15px;">
+             <p style="margin:0; font-size:13px; color:var(--text-muted); line-height:1.5;">
+               Paste raw scores below. You can paste <b>single day scores</b> or <b>multi-day rows</b>.<br>
+               Examples:<br>
+               • <code>BrianDCox 3,333,333</code> (sets targeted day score)<br>
+               • <code>ThaDwarf 4559055 4210500 3890200 5120400 4890200 6845009</code> (sets Day 1 through Day 6)
+             </p>
+
+             <div style="display:flex; align-items:center; gap:10px;">
+                <label style="font-weight:bold; font-size:14px; color:var(--text-main);">Target Day (for single score lines):</label>
+                <select id="sdPasteTargetDay" style="padding:6px 12px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-weight:bold;">
+                   <option value="1">Day 1</option>
+                   <option value="2">Day 2</option>
+                   <option value="3">Day 3</option>
+                   <option value="4">Day 4</option>
+                   <option value="5">Day 5</option>
+                   <option value="6">Day 6</option>
+                </select>
+             </div>
+
+             <textarea id="sdPasteInputText" rows="10" placeholder="Paste scores here... e.g.&#10;BrianDCox 3,333,333&#10;ThaDwarf 4,500,000&#10;Perma Frost 5,000,000" style="width:100%; padding:12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-family:monospace; font-size:13px; box-sizing:border-box; resize:vertical;"></textarea>
+         </div>
+
+         <div style="padding:15px 20px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:10px; background:rgba(0,0,0,0.2);">
+             <button onclick="document.getElementById('sdPasteImporterModal').remove()" style="padding:8px 16px; border-radius:6px; border:1px solid var(--border); background:transparent; color:var(--text-main); cursor:pointer; font-weight:bold;">Cancel</button>
+             <button id="sdApplyPasteBtn" onclick="window.applyShowdownPastedScores()" style="padding:8px 20px; border-radius:6px; border:none; background:var(--success); color:white; cursor:pointer; font-weight:bold;">💾 Save Scores to Live Showdown</button>
+         </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+};
+
+window.applyShowdownPastedScores = async () => {
+    let rawText = document.getElementById('sdPasteInputText').value;
+    if (!rawText || rawText.trim() === '') {
+        if (window.showToast) window.showToast("Please paste some score data first!", "warning");
+        return;
+    }
+    let targetDay = parseInt(document.getElementById('sdPasteTargetDay').value) || 1;
+    let lines = rawText.split('\n');
+    let parsedCount = 0;
+
+    let currentLiveSnap = await get(ref(db, 'showdown_live')).catch(()=>null);
+    let currentLive = (currentLiveSnap && currentLiveSnap.exists()) ? currentLiveSnap.val() : {};
+
+    lines.forEach(line => {
+        let cleaned = line.trim();
+        if (!cleaned) return;
+        let numbers = cleaned.match(/[\d,]+/g);
+        if (!numbers || numbers.length === 0) return;
+
+        let cleanNums = numbers.map(n => parseInt(n.replace(/,/g, ''))).filter(n => !isNaN(n));
+        if (cleanNums.length === 0) return;
+
+        let nameMatch = cleaned.split(/[\d,]+/)[0].trim().replace(/[:\-\t,]+$/, '').trim();
+        if (!nameMatch) return;
+
+        if (!currentLive[nameMatch]) {
+            currentLive[nameMatch] = { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 };
+        }
+
+        if (cleanNums.length >= 6) {
+            for (let d = 1; d <= 6; d++) {
+                currentLive[nameMatch]['d' + d] = cleanNums[d - 1];
+            }
+        } else if (cleanNums.length === 1) {
+            currentLive[nameMatch]['d' + targetDay] = cleanNums[0];
+        } else {
+            cleanNums.forEach((num, idx) => {
+                if (idx < 6) {
+                    currentLive[nameMatch]['d' + (idx + 1)] = num;
+                }
+            });
+        }
+        parsedCount++;
+    });
+
+    if (parsedCount === 0) {
+        if (window.showToast) window.showToast("Could not parse any valid player score lines.", "error");
+        return;
+    }
+
+    try {
+        await set(ref(db, 'showdown_live'), currentLive);
+        if (window.showToast) window.showToast(`✅ Successfully imported scores for ${parsedCount} players!`, "success");
+        let modal = document.getElementById('sdPasteImporterModal');
+        if (modal) modal.remove();
+        if (typeof views !== 'undefined' && views.showdownAdmin) views.showdownAdmin();
+    } catch(err) {
+        if (window.showToast) window.showToast("Import error: " + err.message, "error");
     }
 };
 
