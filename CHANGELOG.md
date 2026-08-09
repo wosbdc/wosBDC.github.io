@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.57.3] - 2026-08-09
+### Added
+- **🧪 Safe Simulation Demo Mode**: Added a dedicated `🧪 Run Simulation Demo (Safe Preview)` button to the Showdown Reset & Archival Pipeline modal. Executes the full multi-stage visual progress animation, percentage counter, and live stage badges in safe dry-run mode without modifying or deleting any real Firebase data.
+
 ## [1.57.2] - 2026-08-09
 ### Improved & Added
 - **🧹 Cleaned Legacy Sync/Wipe Tools**: Removed obsolete `window.deleteAllShowdownArchives` and legacy Google Sheets history sync handlers to prevent accidental archive wipes or duplicate sync conflicts.

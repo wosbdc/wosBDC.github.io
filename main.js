@@ -4459,9 +4459,15 @@ window.showResetAndArchiveEventModal = async () => {
                     </div>
                 </div>
 
-                <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 10px;">
-                    <button onclick="document.getElementById('sdResetPipelineModal').remove()" style="background: var(--bg-main); border: 1px solid var(--border); color: var(--text-main); padding: 10px 18px; border-radius: 8px; font-weight: bold; cursor: pointer;">Cancel</button>
-                    <button id="sdStartPipelineBtn" onclick="window.runSdResetPipeline()" style="background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none; padding: 10px 22px; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; box-shadow: 0 4px 15px rgba(239,68,68,0.3);">🚀 Start Sequential Pipeline</button>
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
+                    <button onclick="window.runSdResetPipeline(true)" style="background: rgba(168,85,247,0.18); border: 1px solid rgba(168,85,247,0.4); color: #c084fc; padding: 10px 16px; border-radius: 8px; font-weight: bold; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                        🧪 Run Simulation Demo (Safe Preview)
+                    </button>
+
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="document.getElementById('sdResetPipelineModal').remove()" style="background: var(--bg-main); border: 1px solid var(--border); color: var(--text-main); padding: 10px 18px; border-radius: 8px; font-weight: bold; cursor: pointer;">Cancel</button>
+                        <button id="sdStartPipelineBtn" onclick="window.runSdResetPipeline(false)" style="background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; box-shadow: 0 4px 15px rgba(239,68,68,0.3);">🚀 Start Real Pipeline</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -4469,7 +4475,7 @@ window.showResetAndArchiveEventModal = async () => {
 
     document.body.appendChild(overlay);
 
-    window.runSdResetPipeline = async () => {
+    window.runSdResetPipeline = async (isDemo = false) => {
         const dateLabel = document.getElementById('sdPipelineDateLabel')?.value || currentDateStr;
         const enemyName = document.getElementById('sdPipelineEnemyName')?.value || currentEnemyName;
 
@@ -4479,12 +4485,15 @@ window.showResetAndArchiveEventModal = async () => {
 
         if (body) {
             body.innerHTML = `
-                <div style="font-weight: bold; font-size: 14px; color: var(--text-main); margin-bottom: 10px;">
-                    ⚡ Execution Progress (<span id="sdPipelinePct">0%</span>)
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <div style="font-weight: bold; font-size: 14px; color: var(--text-main);">
+                        ⚡ ${isDemo ? '🧪 Simulation Demo Mode (No data will be changed)' : 'Execution Progress'} (<span id="sdPipelinePct">0%</span>)
+                    </div>
+                    ${isDemo ? '<span style="background: rgba(168,85,247,0.2); color: #c084fc; border: 1px solid rgba(168,85,247,0.4); padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: bold;">TEST MODE</span>' : ''}
                 </div>
                 
                 <div style="background: rgba(255,255,255,0.05); border-radius: 10px; height: 10px; overflow: hidden; margin-bottom: 20px; border: 1px solid var(--border);">
-                    <div id="sdPipelineBar" style="background: linear-gradient(90deg, var(--accent), #10b981); height: 100%; width: 0%; transition: width 0.4s ease;"></div>
+                    <div id="sdPipelineBar" style="background: linear-gradient(90deg, ${isDemo ? '#a855f7' : 'var(--accent)'}, #10b981); height: 100%; width: 0%; transition: width 0.4s ease;"></div>
                 </div>
 
                 <div id="sdPipelineSteps" style="display: flex; flex-direction: column; gap: 12px;">
@@ -4525,10 +4534,10 @@ window.showResetAndArchiveEventModal = async () => {
                 </div>
 
                 <div id="sdPipelineDoneArea" style="display: none; flex-direction: column; align-items: center; gap: 12px; margin-top: 15px;">
-                    <div style="background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.4); color: #10b981; padding: 12px 20px; border-radius: 12px; font-weight: bold; font-size: 14px; text-align: center; width: 100%; box-sizing: border-box;">
-                        🎉 Showdown Archival & Reset Pipeline Completed Successfully!
+                    <div style="background: ${isDemo ? 'rgba(168,85,247,0.15)' : 'rgba(16,185,129,0.15)'}; border: 1px solid ${isDemo ? 'rgba(168,85,247,0.4)' : 'rgba(16,185,129,0.4)'}; color: ${isDemo ? '#c084fc' : '#10b981'}; padding: 12px 20px; border-radius: 12px; font-weight: bold; font-size: 14px; text-align: center; width: 100%; box-sizing: border-box;">
+                        ${isDemo ? '🧪 Simulation Demo Completed Successfully!<br><span style="font-size:12px; font-weight:normal; opacity:0.8;">(Safe Preview Mode: No actual data was modified or deleted)</span>' : '🎉 Showdown Archival & Reset Pipeline Completed Successfully!'}
                     </div>
-                    <button onclick="document.getElementById('sdResetPipelineModal').remove(); if(typeof views !== 'undefined' && views.showdownAdmin) views.showdownAdmin();" style="background: var(--success); color: white; border: none; padding: 12px 30px; border-radius: 8px; font-weight: bold; font-size: 15px; cursor: pointer; box-shadow: 0 4px 15px rgba(16,185,129,0.3);">Done</button>
+                    <button onclick="document.getElementById('sdResetPipelineModal').remove(); if(typeof views !== 'undefined' && views.showdownAdmin) views.showdownAdmin();" style="background: ${isDemo ? '#8b5cf6' : 'var(--success)'}; color: white; border: none; padding: 12px 30px; border-radius: 8px; font-weight: bold; font-size: 15px; cursor: pointer; box-shadow: 0 4px 15px rgba(139,92,246,0.3);">Done</button>
                 </div>
             `;
         }
@@ -4568,7 +4577,7 @@ window.showResetAndArchiveEventModal = async () => {
         try {
             // Stage 1: Fetch live scores
             updateStep(1, 'running', '🔄 Fetching...', 10);
-            await sleep(300);
+            await sleep(500);
             const liveSnap = await get(ref(db, 'showdown_live'));
             let liveData = (liveSnap && liveSnap.exists() && liveSnap.val()) ? liveSnap.val() : {};
             if (liveData && liveData.error) delete liveData.error;
@@ -4599,39 +4608,45 @@ window.showResetAndArchiveEventModal = async () => {
                 tableRows: tableRows
             };
             updateStep(1, 'done', '✅ Done', 25);
-            await sleep(300);
+            await sleep(500);
 
             // Stage 2: Save Vault Snapshot (MUST RUN FIRST!)
             updateStep(2, 'running', '💾 Archiving...', 35);
-            await set(ref(db, `showdown_meta/history/${timestamp}`), archivePayload);
-            updateStep(2, 'done', '✅ Archived', 55);
-            await sleep(300);
+            if (!isDemo) {
+                await set(ref(db, `showdown_meta/history/${timestamp}`), archivePayload);
+            }
+            updateStep(2, 'done', isDemo ? '✅ Simulated' : '✅ Archived', 55);
+            await sleep(500);
 
             // Stage 3: Clear Live Scores
             updateStep(3, 'running', '🔄 Clearing...', 65);
-            const liveKeys = Object.keys(liveData);
-            if (liveKeys.length > 0) {
-                await Promise.all(liveKeys.map(k => set(ref(db, `showdown_live/${k}`), null).catch(() => null)));
+            if (!isDemo) {
+                const liveKeys = Object.keys(liveData);
+                if (liveKeys.length > 0) {
+                    await Promise.all(liveKeys.map(k => set(ref(db, `showdown_live/${k}`), null).catch(() => null)));
+                }
+                window._currentSdLiveData = {};
+                if (window.liveData && window.liveData['Showdown']) {
+                    window.liveData['Showdown'] = [];
+                }
             }
-            window._currentSdLiveData = {};
-            if (window.liveData && window.liveData['Showdown']) {
-                window.liveData['Showdown'] = [];
-            }
-            updateStep(3, 'done', '✅ Reset', 80);
-            await sleep(300);
+            updateStep(3, 'done', isDemo ? '✅ Simulated' : '✅ Reset', 80);
+            await sleep(500);
 
             // Stage 4: Reset Enemy Alliance Settings
             updateStep(4, 'running', '⚙️ Resetting...', 88);
-            await set(ref(db, 'showdown_meta/enemyAlliance'), {
-                name: "[WWA] Whiteoutwarriors",
-                scores: { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 }
-            }).catch(() => null);
-            updateStep(4, 'done', '✅ Reset', 95);
-            await sleep(300);
+            if (!isDemo) {
+                await set(ref(db, 'showdown_meta/enemyAlliance'), {
+                    name: "[WWA] Whiteoutwarriors",
+                    scores: { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 }
+                }).catch(() => null);
+            }
+            updateStep(4, 'done', isDemo ? '✅ Simulated' : '✅ Reset', 95);
+            await sleep(500);
 
             // Stage 5: Log & Refresh
             updateStep(5, 'running', '📋 Logging...', 98);
-            if (window.logAdminAction) {
+            if (!isDemo && window.logAdminAction) {
                 window.logAdminAction("Showdown Pipeline Executed", `Archived '${dateLabel}' (${pList.length} players) and reset live scores.`);
             }
             updateStep(5, 'done', '✅ Completed', 100);
