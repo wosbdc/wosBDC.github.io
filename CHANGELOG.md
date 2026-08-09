@@ -1,3 +1,12 @@
+## [1.54.0] - 2026-08-09
+### Added & Changed
+- **📊 Full Sheet Data Integration for Events, Rewards & Challenges**: Expanded data fetching across both Google Sheets (`WhiteOut Survival` and `Schedule data` tabs) and Firebase live nodes (`rewards_schedule_live` and `schedule_live`).
+- **🎁 Rewards & Challenges Tracker**: Added a dedicated grid view on the Schedule page displaying all alliance rewards, payouts, challenges, signups, and daily routines with live color-coded status badges:
+  - 🟢 **Set / Active**: `✅ Set (Start Date to End Date)`
+  - 🟡 **Unscheduled**: `⚠️ No dates set`
+  - 🔴 **Expired**: `❌ Expired (Start Date to End Date)`
+- **⚙️ Complete Manager Modal Sync**: Updated `openScheduleEditorModal()` to populate ALL rows from Column I (Col 8) and Column F (Col 5) across both Google Sheets, enabling managers to search and manage dates for any event, reward, or challenge!
+
 ## [1.53.0] - 2026-08-09
 ### Changed & Streamlined
 - **🎯 1:1 Google Sheets Rewards & Events Editor Replica**: Completely redesigned the Schedule Manager modal to match the exact `RewardsSidebar.html` Google Sheets tool provided by the user. 

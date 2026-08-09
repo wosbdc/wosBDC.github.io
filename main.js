@@ -12049,15 +12049,66 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
 
     renderLoading('Loading Schedule');
     try {
-      const liveSched = await window.fetchScheduleLiveData().catch(() => null);
-      let weeklyData = null;
-      let todayData = null;
-      if (!liveSched || !Array.isArray(liveSched.events) || liveSched.events.length === 0) {
-        [weeklyData, todayData] = await Promise.all([
-          fetchSheet('schedule').catch(() => null),
-          fetchSheet('WhiteOut Survival').catch(() => null)
-        ]);
+      const [liveSched, sheetData, schedSheetData] = await Promise.all([
+        window.fetchScheduleLiveData().catch(() => null),
+        fetchSheet('WhiteOut Survival').catch(() => null),
+        fetchSheet('Schedule data').catch(() => null)
+      ]);
+
+      const now = new Date();
+      const todayStr = now.toDateString();
+
+      // Collect ALL Rewards & Challenges from WhiteOut Survival & Schedule data sheets
+      let allRewardsAndChallenges = [];
+
+      // 1. Parse WhiteOut Survival sheet
+      if (sheetData && Array.isArray(sheetData) && sheetData.length >= 2) {
+        for (let i = 1; i < sheetData.length; i++) {
+          const title = String(sheetData[i][8] || '').trim(); // Col I
+          const startVal = sheetData[i][9] || '';              // Col J
+          const endVal = sheetData[i][12] || '';               // Col M
+          if (title && !title.includes("Event's")) {
+            allRewardsAndChallenges.push({
+              title,
+              start: startVal ? String(startVal) : '',
+              end: endVal ? String(endVal) : ''
+            });
+          }
+        }
       }
+
+      // 2. Parse Schedule data sheet
+      if (schedSheetData && Array.isArray(schedSheetData) && schedSheetData.length >= 2) {
+        for (let i = 1; i < schedSheetData.length; i++) {
+          const title = String(schedSheetData[i][2] || schedSheetData[i][0] || '').trim();
+          const startVal = schedSheetData[i][3] || schedSheetData[i][1] || '';
+          const endVal = schedSheetData[i][4] || schedSheetData[i][2] || '';
+          if (title && !title.toLowerCase().includes('title') && !allRewardsAndChallenges.some(r => r.title.toLowerCase() === title.toLowerCase())) {
+            allRewardsAndChallenges.push({
+              title,
+              start: startVal ? String(startVal) : '',
+              end: endVal ? String(endVal) : ''
+            });
+          }
+        }
+      }
+
+      // 3. Merge Firebase live rewards_schedule_live node
+      try {
+        const snap = await get(ref(db, 'rewards_schedule_live'));
+        if (snap.exists() && Array.isArray(snap.val())) {
+          const fbData = snap.val();
+          fbData.forEach(item => {
+            const existing = allRewardsAndChallenges.find(r => r.title.toLowerCase() === item.title.toLowerCase());
+            if (existing) {
+              existing.start = item.start || existing.start;
+              existing.end = item.end || existing.end;
+            } else if (item.title) {
+              allRewardsAndChallenges.push(item);
+            }
+          });
+        }
+      } catch(e) {}
 
       const renderTabs = () => {
         if (window._scheduleCountdownTimer) clearInterval(window._scheduleCountdownTimer);
@@ -12345,49 +12396,41 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
         });
       }
 
-      // Category columns (2-col grid for Rewards + Signups)
-      const listItems = (arr, color) => arr.map(x => `<div style="padding:6px 0;font-size:14px;color:var(--text-main);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;"><span style="width:7px;height:7px;background:${color};border-radius:50%;flex-shrink:0;"></span>${x}</div>`).join('');
-
+      // Category columns (2-col grid for Rewards & Challenges)
       let categoriesHtml = '';
 
-      const hasRewards  = rewards.length > 0;
-      const hasSignups  = signups.length > 0;
-      const hasAllWeek  = allWeek.length > 0;
-      const hasHolidays = holidays.length > 0;
+      if (allRewardsAndChallenges.length > 0) {
+        categoriesHtml += `<div style="background:var(--bg-main);border-radius:12px;padding:16px;margin-top:20px;">
+          ${sectionPill('🎁','Rewards & Challenges Tracker','#eab308','rgba(234,179,8,0.12)')}
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;">`;
 
-      if (hasRewards || hasSignups) {
-        categoriesHtml += `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;margin-top:20px;">`;
-        if (hasRewards) {
-          categoriesHtml += `<div style="background:var(--bg-main);border-radius:12px;padding:16px;">
-            ${sectionPill('🎁','Rewards','#eab308','rgba(234,179,8,0.12)')}
-            ${listItems(rewards,'#eab308')}
-          </div>`;
-        }
-        if (hasSignups) {
-          categoriesHtml += `<div style="background:var(--bg-main);border-radius:12px;padding:16px;">
-            ${sectionPill('📋','Sign-Ups','#10b981','rgba(16,185,129,0.12)')}
-            ${listItems(signups,'#10b981')}
-          </div>`;
-        }
-        categoriesHtml += `</div>`;
-      }
+        allRewardsAndChallenges.forEach(item => {
+          let badgeHtml = '';
+          let borderCol = '#eab308';
+          const s = item.start ? String(item.start).slice(0,10) : '';
+          const e = item.end ? String(item.end).slice(0,10) : '';
 
-      if (hasAllWeek) {
-        categoriesHtml += `<div style="background:var(--bg-main);border-radius:12px;padding:16px;margin-top:16px;">
-          ${sectionPill('📆','All Week','#818cf8','rgba(129,140,248,0.12)')}
-          <div style="display:flex;flex-wrap:wrap;gap:8px;">
-            ${allWeek.map(x => `<span style="background:rgba(129,140,248,0.15);color:#818cf8;padding:5px 12px;border-radius:20px;font-size:13px;font-weight:600;">${x}</span>`).join('')}
-          </div>
-        </div>`;
-      }
+          if (!s && !e) {
+            badgeHtml = `<span style="background:rgba(234,179,8,0.15);color:#eab308;font-size:11px;font-weight:bold;padding:2px 8px;border-radius:10px;">⚠️ No dates set</span>`;
+          } else {
+            const endDateObj = e ? new Date(e + 'T23:59:59') : null;
+            if (endDateObj && endDateObj < now) {
+              borderCol = '#ef4444';
+              badgeHtml = `<span style="background:rgba(239,68,68,0.15);color:#ef4444;font-size:11px;font-weight:bold;padding:2px 8px;border-radius:10px;">❌ Expired (${s || '?'} - ${e || '?'})</span>`;
+            } else {
+              borderCol = '#10b981';
+              badgeHtml = `<span style="background:rgba(16,185,129,0.15);color:#10b981;font-size:11px;font-weight:bold;padding:2px 8px;border-radius:10px;">✅ Set (${s || '?'} - ${e || '?'})</span>`;
+            }
+          }
 
-      if (hasHolidays) {
-        categoriesHtml += `<div style="background:var(--bg-main);border-radius:12px;padding:16px;margin-top:16px;">
-          ${sectionPill('🎉','Holidays','#f97316','rgba(249,115,22,0.12)')}
-          <div style="display:flex;flex-wrap:wrap;gap:8px;">
-            ${holidays.map(x => `<span style="background:rgba(249,115,22,0.15);color:#f97316;padding:5px 12px;border-radius:20px;font-size:13px;font-weight:600;">${x}</span>`).join('')}
-          </div>
-        </div>`;
+          categoriesHtml += `
+            <div style="padding:12px;background:var(--card-bg);border:1px solid var(--border);border-left:4px solid ${borderCol};border-radius:8px;display:flex;flex-direction:column;gap:6px;">
+              <div style="font-weight:bold;font-size:13px;color:var(--text-main);">${escapeHTML(item.title)}</div>
+              <div>${badgeHtml}</div>
+            </div>`;
+        });
+
+        categoriesHtml += `</div></div>`;
       }
 
       // Coming Up This Week
@@ -12816,22 +12859,66 @@ window.openScheduleEditorModal = async () => {
 
   // Load all rewards/events rows from Google Sheets or Firebase cache
   let sheetData = window.liveData ? window.liveData['WhiteOut Survival'] : null;
-  if (!sheetData) {
-    try { sheetData = await fetchSheet('WhiteOut Survival'); } catch(e) {}
+  let scheduleSheetData = window.liveData ? window.liveData['Schedule data'] : null;
+
+  if (!sheetData || !scheduleSheetData) {
+    try {
+      const [wData, sData] = await Promise.all([
+        sheetData ? Promise.resolve(sheetData) : fetchSheet('WhiteOut Survival').catch(() => null),
+        scheduleSheetData ? Promise.resolve(scheduleSheetData) : fetchSheet('Schedule data').catch(() => null)
+      ]);
+      sheetData = wData;
+      scheduleSheetData = sData;
+    } catch(e) {}
   }
 
   let allData = [];
+
+  // 1. Load Column I (Col 8 = Rewards/Challenges) & Column F (Col 5 = Events) from WhiteOut Survival tab
   if (sheetData && Array.isArray(sheetData) && sheetData.length >= 2) {
     for (let i = 1; i < sheetData.length; i++) {
-      const title = String(sheetData[i][8] || sheetData[i][5] || '').trim(); // Col I (col 8) or Col F (col 5)
-      const startDate = sheetData[i][9] || sheetData[i][6] || ''; // Col J (col 9) or Col G (col 6)
-      const endDate = sheetData[i][12] || sheetData[i][7] || '';   // Col M (col 12) or Col H (col 7)
-      if (title && title.toLowerCase() !== 'rewards' && !title.includes("Event's")) {
+      const titleColI = String(sheetData[i][8] || '').trim();
+      const startColJ = sheetData[i][9] || '';
+      const endColM = sheetData[i][12] || '';
+      if (titleColI && !titleColI.includes("Event's")) {
+        if (!allData.some(x => x.title.toLowerCase() === titleColI.toLowerCase())) {
+          allData.push({
+            row: i + 1,
+            title: titleColI,
+            start: startColJ ? String(startColJ) : '',
+            end: endColM ? String(endColM) : ''
+          });
+        }
+      }
+
+      const titleColF = String(sheetData[i][5] || '').trim();
+      const dateColG = sheetData[i][6] || '';
+      const utcColH = sheetData[i][7] || '';
+      if (titleColF && !titleColF.includes("Event's") && titleColF.toLowerCase() !== 'rewards') {
+        if (!allData.some(x => x.title.toLowerCase() === titleColF.toLowerCase())) {
+          allData.push({
+            row: i + 1,
+            title: titleColF,
+            start: dateColG ? String(dateColG) : '',
+            end: utcColH ? String(utcColH) : ''
+          });
+        }
+      }
+    }
+  }
+
+  // 2. Load rows from 'Schedule data' tab
+  if (scheduleSheetData && Array.isArray(scheduleSheetData) && scheduleSheetData.length >= 2) {
+    for (let i = 1; i < scheduleSheetData.length; i++) {
+      const title = String(scheduleSheetData[i][2] || scheduleSheetData[i][0] || '').trim();
+      const startVal = scheduleSheetData[i][3] || scheduleSheetData[i][1] || '';
+      const endVal = scheduleSheetData[i][4] || scheduleSheetData[i][2] || '';
+      if (title && !title.toLowerCase().includes('title') && !allData.some(x => x.title.toLowerCase() === title.toLowerCase())) {
         allData.push({
-          row: i + 1,
+          row: 1000 + i,
           title: title,
-          start: startDate ? String(startDate) : '',
-          end: endDate ? String(endDate) : ''
+          start: startVal ? String(startVal) : '',
+          end: endVal ? String(endVal) : ''
         });
       }
     }
