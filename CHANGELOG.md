@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.70.2] - 2026-08-09
+### Fixed
+- **⚔️ Fixed Showdown All-Time Score & Horns Calculation**: Fixed Showdown All-Time calculation by parsing raw `sdHistoryRawData` rows with `window.parseShowdownHistoryRows(safeSdHistory)` before passing them into `calculateAllTimeShowdown()`, accurately computing every player's actual Horns, Day Wins, and Total Score instead of returning 0. Added fallback to leaderboard rank when history is unavailable.
+
 ## [1.70.1] - 2026-08-09
 ### Fixed
 - **🐛 Fixed Event Rankings Tab Crash**: Fixed an unhandled `ReferenceError: sdHistoryRawData is not defined` inside `renderAccountRankings()` by including `fetchSheet("Showdown History")` in `views.account()`'s `Promise.all` data loader and adding defensive safety checks so the `🏆 Event Rankings` tab renders cleanly without crashing.

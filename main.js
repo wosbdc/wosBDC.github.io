@@ -10069,8 +10069,9 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
       // Build All-Time Showdown Map with Horns, Day Wins, and Total Score
       const sdAllTimeMap = {};
       const safeSdHistory = (typeof sdHistoryRawData !== 'undefined' && Array.isArray(sdHistoryRawData)) ? sdHistoryRawData : [];
-      if (typeof window.calculateAllTimeShowdown === 'function' && safeSdHistory.length > 0) {
-        let sdList = window.calculateAllTimeShowdown(safeSdHistory);
+      if (typeof window.calculateAllTimeShowdown === 'function' && typeof window.parseShowdownHistoryRows === 'function' && safeSdHistory.length > 0) {
+        let historyObj = window.parseShowdownHistoryRows(safeSdHistory);
+        let sdList = window.calculateAllTimeShowdown(historyObj);
         sdList.forEach((p, index) => {
           if (p && p.name) {
             let formatRank = (num) => {
@@ -10245,7 +10246,7 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
                         <span style="font-size:13px; font-weight:bold;">
                           ${(() => {
                             const tLower = chiefNameTarget.toLowerCase().trim();
-                            if (grp.baseTitle.toLowerCase().includes('showdown') && sdAllTimeMap[tLower]) {
+                            if (grp.baseTitle.toLowerCase().includes('showdown') && sdAllTimeMap[tLower] && (sdAllTimeMap[tLower].horns > 0 || sdAllTimeMap[tLower].total > 0)) {
                               const st = sdAllTimeMap[tLower];
                               const totStr = st.total >= 1000000 ? (st.total / 1000000).toFixed(1) + 'M' : (st.total || 0).toLocaleString();
                               const hornLabel = st.horns === 1 ? 'Horn' : 'Horns';
