@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [1.65.2] - 2026-08-09
+### Fixed
+- **Player Database Search Error Handling**: Added error boundaries (`.catch()`) around all dataset promises in `searchPlayerFull` so network/sheet timeouts never block search execution.
+- Added graceful fallback player row generation for unregistered or new players so search renders cards reliably for all query strings without throwing uncaught errors.
+
 ## [1.65.1] - 2026-08-09
 ### Fixed
 - **Leaderboards Data Structure Mismatch**: Fixed player card event rank pill badges not displaying by updating the parser to support Firebase leaderboard object array format `[{ title, headers, rows }]` alongside raw 2D sheet arrays.

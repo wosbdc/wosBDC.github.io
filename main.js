@@ -1074,6 +1074,7 @@ window.parseLeaderboardsToPlayerMap = (lbData, targetNameFilter = null) => {
       else if (title.toLowerCase().includes("polar")) emoji = "🐻‍❄️";
 
       (board.rows || []).forEach((row, rIdx) => {
+        if (!row || !Array.isArray(row)) return;
         let pName = row[nameCol];
         let score = row[scoreCol];
         if (pName && score !== undefined && score !== null && score !== "") {
@@ -2772,14 +2773,14 @@ window.searchPlayerFull = async (name) => {
   try {
     let sdLiveSnapshotPromise = window.fetchMergedShowdown();
     const [data, rosterRawData, lbRawData, sdHistoryRawData, sdMergedDataRes] = await Promise.all([
-            window.fetchActivityData(),
-            window.fetchRoster(),
-            window.fetchLeaderboardsData(),
-            fetchSheet("Showdown History"),
-            sdLiveSnapshotPromise
+            window.fetchActivityData().catch(() => []),
+            window.fetchRoster().catch(() => ({})),
+            window.fetchLeaderboardsData().catch(() => []),
+            fetchSheet("Showdown History").catch(() => []),
+            sdLiveSnapshotPromise.catch(() => ({ mergedData: [], sdLiveData: {} }))
           ]);
-    const sdCurrentRawData = sdMergedDataRes.mergedData;
-    const sdLiveData = sdMergedDataRes.sdLiveData || {};
+    const sdCurrentRawData = (sdMergedDataRes && sdMergedDataRes.mergedData) ? sdMergedDataRes.mergedData : [];
+    const sdLiveData = (sdMergedDataRes && sdMergedDataRes.sdLiveData) ? sdMergedDataRes.sdLiveData : {};
 
     let currentDay = 0;
     Object.values(sdLiveData).forEach(p => {
@@ -2881,7 +2882,7 @@ window.searchPlayerFull = async (name) => {
       }
     }
     
-    if (!pRow) {
+    if (!pRow && idToNameMap) {
       for (const [gid, chiefName] of Object.entries(idToNameMap)) {
          if (chiefName && chiefName.toLowerCase().trim() === targetName.toLowerCase()) {
             targetName = chiefName;
@@ -2891,7 +2892,20 @@ window.searchPlayerFull = async (name) => {
       }
     }
     
-    if (!pRow) throw new Error(`Chief "${name}" not found in roster or activity database.`);
+    if (!pRow && rosterRawData && typeof rosterRawData === 'object') {
+      const tLower = targetName.toLowerCase();
+      for (const pName of Object.keys(rosterRawData)) {
+         if (pName && pName.toLowerCase().trim() === tLower) {
+             targetName = pName.trim();
+             pRow = [targetName, 0, false, false, false, false, false];
+             break;
+         }
+      }
+    }
+    
+    if (!pRow) {
+      pRow = [targetName, 0, false, false, false, false, false];
+    }
 
     pRow = await window.getLivePlayerEventRow(targetName, pRow, headers);
     
