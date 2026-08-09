@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.68.3] - 2026-08-09
+### Changed
+- **🗡️ Spear Icon Branding**: Updated All-Time Trap Donations hero card and donation breakdown boxes in `views.account()` Event Rankings tab with the Spear icon `🗡️` and explicit labels (`All-Time Spears Donated` / `Current Spears Donated`).
+
 ## [1.68.2] - 2026-08-09
 ### Added
 - **💎 All-Time Trap Donations Card**: Added dedicated `All-Time Trap Donations` stat card and rank breakdown box in `views.account()` Event Rankings tab, separating current week trap donations from all-time cumulative trap donations.
