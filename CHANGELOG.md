@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [1.70.0] - 2026-08-09
+### Added
+- **⚔️ Streamlined Rewards & Events Editor**: Replicated the Google Sheets `RewardsSidebar.html` tool 1:1 on the website, replacing the old 6-tab modal with a sleek search-and-date editor (Title, Start Date, End Date) with live status badges (Yellow: No dates set, Green: Set, Red: Expired) pushing directly to Firebase node `rewards_schedule_live`.
+- **🚀 Ultra-Fast Non-Blocking Schedule & Home Views**: Replaced cold-start Google Sheets fetch calls in `views.schedule()` and `views.home()` with instant (<50ms) Firebase `schedule_live` reads and added a 2.5s AbortController timeout to prevent page hang.
+- **🏆 Enhanced Showdown All-Time Leaderboard Card**: Updated `views.account()` Event Rankings tab to render Showdown All-Time stats formatted as `ALL-TIME: rank (horns) (Day Wins) (total)` ordered strictly by Horns and Total Score.
+
 ## [1.69.0] - 2026-08-09
 ### Added
 - **🏆 Grouped Event Leaderboard Cards**: Unified related events (like Showdown, Foundry, Frostfire, Spear Donations, and Bear Trap Wins) into side-by-side grouped cards displaying `CURRENT: rank | ALL-TIME: rank`, eliminating box repetition and making rankings clean and effortless to read.

@@ -6097,6 +6097,7 @@ function calculateAllTimeShowdown(historyData) {
     result.sort((a, b) => b.horns !== a.horns ? b.horns - a.horns : b.total - a.total);
     return result;
 }
+window.calculateAllTimeShowdown = calculateAllTimeShowdown;
 
 window.loadUserPersonalLog = async (chiefName) => {
     const cont = document.getElementById('userPersonalLogContainer');
@@ -10064,6 +10065,28 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
       const currentDonNum = parseNumVal(rawCurVal);
       const allTimeDonNum = parseNumVal(rawAllVal);
 
+      // Build All-Time Showdown Map with Horns, Day Wins, and Total Score
+      const sdAllTimeMap = {};
+      if (typeof window.calculateAllTimeShowdown === 'function' && sdHistoryRawData) {
+        let sdList = window.calculateAllTimeShowdown(sdHistoryRawData);
+        sdList.forEach((p, index) => {
+          if (p && p.name) {
+            let formatRank = (num) => {
+              if (num === 1) return '🥇 1st';
+              if (num === 2) return '🥈 2nd';
+              if (num === 3) return '🥉 3rd';
+              return `#${num}`;
+            };
+            sdAllTimeMap[p.name.toLowerCase().trim()] = {
+              rank: formatRank(index + 1),
+              horns: p.horns || 0,
+              wins: p.wins || 0,
+              total: p.total || 0
+            };
+          }
+        });
+      }
+
       // Group additional leaderboards by base event name
       const eventGroups = {};
       otherLbs.forEach(lb => {
@@ -10091,6 +10114,23 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
           }
         }
       });
+
+      // Ensure Showdown All-Time is included if player has Showdown history
+      const targetLowerName = chiefNameTarget.toLowerCase().trim();
+      if (sdAllTimeMap[targetLowerName]) {
+        const sdStat = sdAllTimeMap[targetLowerName];
+        if (!eventGroups['Showdown']) {
+          eventGroups['Showdown'] = {
+            baseTitle: 'Showdown',
+            emoji: '⚔️',
+            current: null,
+            allTime: { title: 'All-Time Showdown', rank: sdStat.rank, score: '' },
+            others: []
+          };
+        } else if (!eventGroups['Showdown'].allTime) {
+          eventGroups['Showdown'].allTime = { title: 'All-Time Showdown', rank: sdStat.rank, score: '' };
+        }
+      }
 
       const groupedEventList = Object.values(eventGroups);
 
@@ -10200,7 +10240,19 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
                     ${grp.allTime ? `
                       <div style="display:flex; align-items:center; gap:6px;">
                         <span style="font-size:11px; font-weight:bold; color:var(--text-muted);">ALL-TIME:</span>
-                        <span style="font-size:13px; font-weight:bold;">${window.formatRankBadgeHtml(grp.allTime.rank)}${grp.allTime.score ? ` <span style="font-size:11px; color:var(--text-muted);">(${grp.allTime.score})</span>` : ''}</span>
+                        <span style="font-size:13px; font-weight:bold;">
+                          ${(() => {
+                            const tLower = chiefNameTarget.toLowerCase().trim();
+                            if (grp.baseTitle.toLowerCase().includes('showdown') && sdAllTimeMap[tLower]) {
+                              const st = sdAllTimeMap[tLower];
+                              const totStr = st.total >= 1000000 ? (st.total / 1000000).toFixed(1) + 'M' : (st.total || 0).toLocaleString();
+                              const hornLabel = st.horns === 1 ? 'Horn' : 'Horns';
+                              const winLabel = st.wins === 1 ? 'Day Win' : 'Day Wins';
+                              return `${window.formatRankBadgeHtml(st.rank)} <span style="font-size:11px; color:var(--text-muted);">(${st.horns} ${hornLabel}) (${st.wins} ${winLabel}) (${totStr} Total)</span>`;
+                            }
+                            return `${window.formatRankBadgeHtml(grp.allTime.rank)}${grp.allTime.score ? ` <span style="font-size:11px; color:var(--text-muted);">(${grp.allTime.score})</span>` : ''}`;
+                          })()}
+                        </span>
                       </div>
                     ` : ''}
                     ${!grp.current && !grp.allTime && grp.others.length > 0 ? grp.others.map(o => `
