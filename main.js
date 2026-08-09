@@ -12810,69 +12810,50 @@ window.saveScheduleToFirebase = async (scheduleObj) => {
 window.openScheduleEditorModal = async () => {
   const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
   if (!isManager) {
-    if (window.showToast) window.showToast("Only R4/R5 managers can edit the event schedule", "error");
+    if (window.showToast) window.showToast("Only R4/R5 managers can edit the rewards & event schedule", "error");
     return;
   }
 
-  let liveData = await window.fetchScheduleLiveData();
-  
-  // If schedule_live is missing, initialize from current Google Sheets data if available
-  if (!liveData) {
-    let sheetData = window.liveData ? window.liveData['WhiteOut Survival'] : null;
-    let events = [];
-    let signups = [], rewards = [], allWeek = [], holidays = [];
-
-    if (sheetData && Array.isArray(sheetData)) {
-      const now = new Date();
-      for (let i = 1; i < Math.min(34, sheetData.length); i++) {
-        const row = sheetData[i];
-        const eventName = row[5];
-        const dateRaw   = row[6];
-        const utcRaw    = row[7];
-        const pdtVal    = row[8];
-        if (!eventName || String(eventName).trim() === '') continue;
-        if (String(eventName).includes("Event's")) continue;
-        if (String(eventName).trim() === 'Rewards') break;
-
-        const isBearTrap = String(eventName).includes('Bear Trap') || String(eventName).includes('🪤') || String(eventName).includes('🐻');
-        const isJoe = String(eventName).includes('Crazy Joe') || String(eventName).includes('🔥');
-        const isCastle = String(eventName).includes('Castle') || String(eventName).includes('🏰');
-        const isBia = String(eventName).includes('Brothers') || String(eventName).includes('⚔️');
-        let emoji = isBearTrap ? '🪤' : (isJoe ? '🔥' : (isCastle ? '🏰' : (isBia ? '⚔️' : '✨')));
-
-        events.push({
-          id: 'ev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-          eventName: String(eventName).trim(),
-          dateStr: String(dateRaw || '').trim(),
-          utcStr: String(utcRaw || '').trim(),
-          pdtVal: String(pdtVal || '').trim(),
-          emoji: emoji
-        });
-      }
-
-      let headerRowIdx = -1;
-      for (let i = 0; i < sheetData.length; i++) {
-        const cell = String(sheetData[i][5] || '').trim().toLowerCase();
-        if (cell === 'rewards') { headerRowIdx = i; break; }
-      }
-      if (headerRowIdx !== -1) {
-        for (let i = headerRowIdx + 1; i < sheetData.length; i++) {
-          const r = sheetData[i][5], g = sheetData[i][6], h = sheetData[i][7], k = sheetData[i][8];
-          const anyVal = [r,g,h,k].some(v => v && String(v).trim() !== '');
-          if (!anyVal) break;
-          const skip = (v) => !v || String(v).trim() === '' || String(v).trim().toLowerCase() === 'no events';
-          if (!skip(r)) rewards.push(String(r).trim());
-          if (!skip(g)) signups.push(String(g).trim());
-          if (!skip(h)) allWeek.push(String(h).trim());
-          if (!skip(k)) holidays.push(String(k).trim());
-        }
-      }
-    }
-
-    liveData = { events, signups, rewards, allWeek, holidays };
+  // Load all rewards/events rows from Google Sheets or Firebase cache
+  let sheetData = window.liveData ? window.liveData['WhiteOut Survival'] : null;
+  if (!sheetData) {
+    try { sheetData = await fetchSheet('WhiteOut Survival'); } catch(e) {}
   }
 
-  let activeModalTab = 'timed';
+  let allData = [];
+  if (sheetData && Array.isArray(sheetData) && sheetData.length >= 2) {
+    for (let i = 1; i < sheetData.length; i++) {
+      const title = String(sheetData[i][8] || sheetData[i][5] || '').trim(); // Col I (col 8) or Col F (col 5)
+      const startDate = sheetData[i][9] || sheetData[i][6] || ''; // Col J (col 9) or Col G (col 6)
+      const endDate = sheetData[i][12] || sheetData[i][7] || '';   // Col M (col 12) or Col H (col 7)
+      if (title && title.toLowerCase() !== 'rewards' && !title.includes("Event's")) {
+        allData.push({
+          row: i + 1,
+          title: title,
+          start: startDate ? String(startDate) : '',
+          end: endDate ? String(endDate) : ''
+        });
+      }
+    }
+  }
+
+  // Also merge any existing Firebase rewards_schedule_live data if present
+  try {
+    const snap = await get(ref(db, 'rewards_schedule_live'));
+    if (snap.exists() && Array.isArray(snap.val())) {
+      const fbData = snap.val();
+      fbData.forEach(item => {
+        const existing = allData.find(d => d.title.toLowerCase() === item.title.toLowerCase());
+        if (existing) {
+          existing.start = item.start || existing.start;
+          existing.end = item.end || existing.end;
+        } else if (item.title) {
+          allData.push(item);
+        }
+      });
+    }
+  } catch(e) { console.error("Error reading rewards_schedule_live:", e); }
+
   const modalId = 'scheduleEditorModal';
   const overlayId = 'scheduleEditorModalOverlay';
 
@@ -12887,626 +12868,215 @@ window.openScheduleEditorModal = async () => {
 
   const modal = document.createElement('div');
   modal.id = modalId;
-  modal.style.cssText = 'position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width:92%; max-width:850px; max-height:90vh; background:var(--card-bg); border:1px solid var(--border); border-radius:16px; padding:24px; box-shadow:0 20px 50px rgba(0,0,0,0.6); z-index:9999; display:flex; flex-direction:column; gap:16px; overflow:hidden; color:var(--text-main); animation:slideUp 0.3s;';
+  modal.style.cssText = 'position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width:94%; max-width:750px; max-height:90vh; background:#0f172a; border:1px solid var(--border); border-radius:16px; padding:24px; box-shadow:0 20px 50px rgba(0,0,0,0.6); z-index:9999; display:flex; flex-direction:column; gap:16px; overflow:hidden; color:#f8fafc; animation:slideUp 0.3s;';
 
-  const currentEvents = [...(liveData.events || [])];
-  const currentSignups = [...(liveData.signups || [])];
-  const currentRewards = [...(liveData.rewards || [])];
-  const currentAllWeek = [...(liveData.allWeek || [])];
-  const currentHolidays = [...(liveData.holidays || [])];
+  let currentRowIndex = -1;
 
-  // Load custom presets from Firebase if available
-  let customPresets = [];
-  try {
-    const db = window.firebaseDb;
-    const { ref, get } = window.firebaseDatabase || {};
-    if (db && ref && get) {
-      const snap = await get(ref(db, 'schedule_presets'));
-      if (snap.exists() && Array.isArray(snap.val())) {
-        customPresets = snap.val();
+  const formatDateForInput = (dStr) => {
+    if (!dStr) return '';
+    try {
+      const d = new Date(dStr);
+      if (isNaN(d.getTime())) {
+        const parts = String(dStr).split('/');
+        if (parts.length === 3) return `${parts[2]}-${parts[0].padStart(2,'0')}-${parts[1].padStart(2,'0')}`;
+        return dStr;
       }
-    }
-  } catch(e) { console.error("Error loading schedule presets:", e); }
+      return d.toISOString().split('T')[0];
+    } catch(e) { return dStr; }
+  };
 
-  const defaultPresets = [
-    { name: "Bear Trap", utc: "16:00", endUtc: "16:30", emoji: "🪤" },
-    { name: "Crazy Joe", utc: "14:00", endUtc: "14:30", emoji: "🔥" },
-    { name: "Sunfire Castle Battle", utc: "12:00", endUtc: "20:00", emoji: "🏰" },
-    { name: "Brothers in Arms K.E.", utc: "00:00", endUtc: "23:59", emoji: "⚔️" },
-    { name: "Polar Terrors Rally", utc: "16:00", endUtc: "16:45", emoji: "🐻‍❄️" },
-    { name: "Frostfire Mine", utc: "14:00", endUtc: "15:00", emoji: "⛏️" },
-    { name: "Canyon Clash", utc: "16:00", endUtc: "17:00", emoji: "🏔️" },
-    { name: "Alliance Showdown", utc: "12:00", endUtc: "23:59", emoji: "🛡️" },
-    { name: "State vs State Prep", utc: "00:00", endUtc: "23:59", emoji: "💎" },
-    { name: "Foundry Battle", utc: "19:00", endUtc: "20:00", emoji: "🏆" }
-  ];
-
-  const allPresets = [...defaultPresets];
-  customPresets.forEach(cp => {
-    if (cp && cp.name && !allPresets.some(ap => ap.name.toLowerCase() === cp.name.toLowerCase())) {
-      allPresets.push(cp);
-    }
-  });
-
-  const renderModalContent = () => {
+  const renderModal = () => {
     modal.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:14px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #334155; padding-bottom:12px;">
         <div style="display:flex; align-items:center; gap:10px;">
-          <div style="font-size:24px;">📅</div>
+          <div style="font-size:22px;">📅</div>
           <div>
-            <h3 style="margin:0; font-size:20px; color:var(--text-main);">Live Schedule Manager</h3>
-            <p style="margin:2px 0 0 0; font-size:12px; color:var(--text-muted);">Edits push directly to Firebase and update all website visitors in real-time (&lt;100ms).</p>
+            <h3 style="margin:0; font-size:18px; color:#0ea5e9; font-weight:bold;">Rewards & Events Editor</h3>
+            <p style="margin:2px 0 0 0; font-size:11px; color:#94a3b8;">Search any event/reward to set Start & End dates. Pushes to Firebase in &lt;100ms.</p>
           </div>
         </div>
-        <button id="schModalCloseBtn" style="background:transparent; border:none; color:var(--text-muted); font-size:24px; cursor:pointer; font-weight:bold;">&times;</button>
+        <button id="schCloseBtn" style="background:transparent; border:none; color:#94a3b8; font-size:24px; cursor:pointer;">&times;</button>
       </div>
 
-      <!-- Navigation Subtabs -->
-      <div style="display:flex; gap:10px; border-bottom:1px solid var(--border); padding-bottom:10px; flex-wrap:wrap;">
-        <button id="schTabBtnTimed" style="padding:8px 16px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; background:${activeModalTab === 'timed' ? 'var(--accent)' : 'var(--bg-main)'}; color:${activeModalTab === 'timed' ? '#fff' : 'var(--text-muted)'}; transition:0.2s;">
-          ⏱️ Timed Events (${currentEvents.length})
-        </button>
-        <button id="schTabBtnSearch" style="padding:8px 16px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; background:${activeModalTab === 'search' ? 'var(--accent)' : 'var(--bg-main)'}; color:${activeModalTab === 'search' ? '#fff' : 'var(--text-muted)'}; transition:0.2s;">
-          🔍 Search & Update Dates
-        </button>
-        <button id="schTabBtnCats" style="padding:8px 16px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; background:${activeModalTab === 'cats' ? 'var(--accent)' : 'var(--bg-main)'}; color:${activeModalTab === 'cats' ? '#fff' : 'var(--text-muted)'}; transition:0.2s;">
-          📋 Category Lists
-        </button>
+      <!-- Search Box -->
+      <div style="margin-bottom:4px;">
+        <input type="text" id="schSearchInput" placeholder="Search for events or rewards (e.g. Bear Trap, Crazy Joe, Foundry)..." style="width:100%; padding:10px 14px; background:#0f172a; border:1px solid #334155; color:#f8fafc; border-radius:8px; font-size:14px; box-sizing:border-box;">
       </div>
 
-      <!-- Main Body Content Area (Scrollable) -->
-      <div style="flex:1; overflow-y:auto; padding-right:4px; display:flex; flex-direction:column; gap:16px;">
-        ${activeModalTab === 'timed' ? `
-          <!-- Preloaded Event Select & Presets Bar -->
-          <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:12px; display:flex; flex-direction:column; gap:10px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-              <div style="font-size:11px; font-weight:bold; text-transform:uppercase; color:var(--text-muted);">⚡ Select Preloaded Event (${allPresets.length}):</div>
-              <select id="schPreloadedSelect" style="padding:6px 12px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:12px; cursor:pointer;">
-                <option value="">-- Pick Preloaded Event --</option>
-                ${allPresets.map(p => `<option value='${JSON.stringify(p)}'>${p.emoji || '✨'} ${escapeHTML(p.name)} (${p.utc}${p.endUtc ? '-' + p.endUtc : ''} UTC)</option>`).join('')}
-              </select>
-            </div>
-
-            <div style="display:flex; gap:8px; flex-wrap:wrap;">
-              <button class="sch-preset-btn" data-name="Bear Trap" data-utc="16:00" data-endutc="16:30" data-emoji="🪤" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">🪤 Bear Trap</button>
-              <button class="sch-preset-btn" data-name="Crazy Joe" data-utc="14:00" data-endutc="14:30" data-emoji="🔥" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">🔥 Crazy Joe</button>
-              <button class="sch-preset-btn" data-name="Sunfire Castle Battle" data-utc="12:00" data-endutc="20:00" data-emoji="🏰" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">🏰 Castle Battle</button>
-              <button class="sch-preset-btn" data-name="Brothers in Arms K.E." data-utc="00:00" data-endutc="23:59" data-emoji="⚔️" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">⚔️ Brothers in Arms</button>
-              <button class="sch-preset-btn" data-name="Polar Terrors Rally" data-utc="16:00" data-endutc="16:45" data-emoji="🐻‍❄️" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">🐻‍❄️ Polar Terrors</button>
-            </div>
-          </div>
-
-          <!-- Add Event Form -->
-          <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:14px; display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
-            <div style="flex:1; min-width:140px;">
-              <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">Event Name</label>
-              <input type="text" id="schNewName" placeholder="e.g. Bear Trap 2" style="width:100%; padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; box-sizing:border-box;">
-            </div>
-            <div style="width:85px;">
-              <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">Date (M/D)</label>
-              <input type="text" id="schNewDate" placeholder="8/7" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; text-align:center; box-sizing:border-box;">
-            </div>
-            <div style="width:90px;">
-              <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">Start UTC</label>
-              <input type="text" id="schNewUtc" placeholder="16:00" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; text-align:center; box-sizing:border-box;">
-            </div>
-            <div style="width:90px;">
-              <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">End UTC (Opt)</label>
-              <input type="text" id="schNewEndUtc" placeholder="16:30" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; text-align:center; box-sizing:border-box;">
-            </div>
-            <div style="width:75px;">
-              <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">Emoji</label>
-              <select id="schNewEmoji" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; box-sizing:border-box;">
-                <option value="🪤">🪤</option>
-                <option value="🔥">🔥</option>
-                <option value="🏰">🏰</option>
-                <option value="⚔️">⚔️</option>
-                <option value="🐻‍❄️">🐻‍❄️</option>
-                <option value="⛏️">⛏️</option>
-                <option value="🏔️">🏔️</option>
-                <option value="🛡️">🛡️</option>
-                <option value="✨">✨</option>
-                <option value="💎">💎</option>
-                <option value="🏆">🏆</option>
-              </select>
-            </div>
-            <div style="display:flex; gap:6px;">
-              <button id="schAddEventBtn" style="padding:9px 14px; border-radius:6px; border:none; background:linear-gradient(135deg, #10b981, #059669); color:#fff; font-weight:bold; cursor:pointer; font-size:13px;">➕ Add Event</button>
-              <button id="schSavePresetBtn" style="padding:9px 12px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--accent); font-weight:bold; cursor:pointer; font-size:12px;" title="Save event template as preloaded preset">⭐ Save Preset</button>
-            </div>
-          </div>
-
-          <!-- Timed Events Table -->
-          <div style="border:1px solid var(--border); border-radius:10px; overflow:hidden;">
-            <table style="width:100%; border-collapse:collapse; text-align:left; font-size:13px;">
-              <thead>
-                <tr style="background:var(--bg-main); border-bottom:1px solid var(--border); color:var(--text-muted); font-size:11px; text-transform:uppercase;">
-                  <th style="padding:10px 14px;">Event Name</th>
-                  <th style="padding:10px 10px; text-align:center;">Date (M/D)</th>
-                  <th style="padding:10px 10px; text-align:center;">UTC Time Window</th>
-                  <th style="padding:10px 14px; text-align:right;">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${currentEvents.length === 0 ? `
-                  <tr><td colspan="4" style="padding:20px; text-align:center; color:var(--text-muted); font-style:italic;">No timed events scheduled yet. Add one above!</td></tr>
-                ` : currentEvents.map((ev, idx) => `
-                  <tr style="border-bottom:1px solid var(--border);">
-                    <td style="padding:10px 14px; font-weight:bold; color:var(--text-main);">
-                      <span style="margin-right:6px;">${ev.emoji || '✨'}</span> ${escapeHTML(ev.eventName)}
-                    </td>
-                    <td style="padding:10px 10px; text-align:center; font-weight:bold; color:var(--accent);">${escapeHTML(ev.dateStr || '-')}</td>
-                    <td style="padding:10px 10px; text-align:center; font-weight:bold; color:#10b981;">
-                      ${escapeHTML(ev.utcStr || '-')}${ev.endUtcStr ? ' - ' + escapeHTML(ev.endUtcStr) : ''} UTC
-                    </td>
-                    <td style="padding:10px 14px; text-align:right;">
-                      <button class="sch-del-btn" data-idx="${idx}" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">✖ Delete</button>
-                    </td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-        ` : activeModalTab === 'search' ? `
-          <!-- Search & Quick Date Update Tab (Replica of Google Sheets Rewards Editor) -->
-          <div style="display:flex; flex-direction:column; gap:14px;">
-            <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:12px;">
-              <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase;">🔍 Search Event or Reward</label>
-              <input type="text" id="schSearchQuery" placeholder="Type event name (e.g. Bear Trap, Crazy Joe, Foundry, SvS)..." style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:14px; box-sizing:border-box;">
-            </div>
-
-            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">
-              <!-- Items List -->
-              <div id="schSearchList" style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:10px; max-height:300px; overflow-y:auto; display:flex; flex-direction:column; gap:6px;">
-                ${allPresets.map(p => `
-                  <div class="sch-search-item" data-preset='${JSON.stringify(p)}' style="padding:10px; border-radius:6px; background:var(--card-bg); border:1px solid var(--border); cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-weight:bold; font-size:13px; color:var(--text-main);">${p.emoji || '✨'} ${escapeHTML(p.name)}</span>
-                    <span style="font-size:11px; font-weight:bold; color:var(--text-muted);">${p.utc}${p.endUtc ? '-' + p.endUtc : ''} UTC</span>
-                  </div>
-                `).join('')}
-              </div>
-
-              <!-- Selected Item Quick Date Editor -->
-              <div id="schSearchEditor" style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:16px; display:flex; flex-direction:column; gap:12px;">
-                <div id="schSelectedItemTitle" style="font-weight:bold; font-size:15px; color:var(--accent);">Select an event from list left</div>
-                <div style="display:flex; gap:10px;">
-                  <div style="flex:1;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                      <label style="font-size:11px; font-weight:bold; color:var(--text-muted);">Date (M/D)</label>
-                      <button id="schSetTodayBtn" type="button" style="font-size:10px; font-weight:bold; color:var(--accent); cursor:pointer; text-transform:uppercase; background:rgba(14,165,233,0.15); border:1px solid rgba(14,165,233,0.3); padding:2px 6px; border-radius:4px;">Today</button>
-                    </div>
-                    <input type="text" id="schSearchDate" placeholder="8/7" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; text-align:center; box-sizing:border-box;">
-                  </div>
-                  <div style="width:90px;">
-                    <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">Start UTC</label>
-                    <input type="text" id="schSearchUtc" placeholder="16:00" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; text-align:center; box-sizing:border-box;">
-                  </div>
-                  <div style="width:90px;">
-                    <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">End UTC</label>
-                    <input type="text" id="schSearchEndUtc" placeholder="16:30" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; text-align:center; box-sizing:border-box;">
-                  </div>
-                </div>
-                <button id="schSaveSearchItemBtn" style="width:100%; padding:10px; border-radius:8px; border:none; background:linear-gradient(135deg, #10b981, #059669); color:#fff; font-weight:bold; font-size:13px; cursor:pointer; box-shadow:0 4px 12px rgba(16,185,129,0.3);">💾 Update Event Date</button>
-              </div>
-            </div>
-          </div>
-        ` : `
-          <!-- Category Lists Tab with Quick Add Preloaded Badges -->
-          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:16px;">
-            <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:14px;">
-              <div style="font-weight:bold; font-size:13px; color:#10b981; margin-bottom:6px;">🟢 Sign-Ups Requiring Events</div>
-              <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
-                <button class="sch-cat-quick" data-target="schCatSignups" data-val="Sunfire Castle R5 Registration" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(16,185,129,0.4); background:rgba(16,185,129,0.12); color:#10b981; font-size:11px; font-weight:bold; cursor:pointer;">+ Castle R5</button>
-                <button class="sch-cat-quick" data-target="schCatSignups" data-val="SvS Troop Training Registration" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(16,185,129,0.4); background:rgba(16,185,129,0.12); color:#10b981; font-size:11px; font-weight:bold; cursor:pointer;">+ SvS Training</button>
-                <button class="sch-cat-quick" data-target="schCatSignups" data-val="Foundry Team Signups" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(16,185,129,0.4); background:rgba(16,185,129,0.12); color:#10b981; font-size:11px; font-weight:bold; cursor:pointer;">+ Foundry Team</button>
-              </div>
-              <textarea id="schCatSignups" rows="5" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-family:monospace; font-size:12px; box-sizing:border-box;">${currentSignups.join('\n')}</textarea>
-            </div>
-
-            <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:14px;">
-              <div style="font-weight:bold; font-size:13px; color:#eab308; margin-bottom:6px;">🟡 Rewards & Payout Track</div>
-              <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
-                <button class="sch-cat-quick" data-target="schCatRewards" data-val="Foundry Battle Payouts" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(234,179,8,0.4); background:rgba(234,179,8,0.12); color:#eab308; font-size:11px; font-weight:bold; cursor:pointer;">+ Foundry Payouts</button>
-                <button class="sch-cat-quick" data-target="schCatRewards" data-val="Alliance Mobilization Rewards" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(234,179,8,0.4); background:rgba(234,179,8,0.12); color:#eab308; font-size:11px; font-weight:bold; cursor:pointer;">+ Alliance Mobilization</button>
-                <button class="sch-cat-quick" data-target="schCatRewards" data-val="Canyon Clash Victory Chests" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(234,179,8,0.4); background:rgba(234,179,8,0.12); color:#eab308; font-size:11px; font-weight:bold; cursor:pointer;">+ Canyon Clash</button>
-                <button class="sch-cat-quick" data-target="schCatRewards" data-val="SvS Victory Rewards" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(234,179,8,0.4); background:rgba(234,179,8,0.12); color:#eab308; font-size:11px; font-weight:bold; cursor:pointer;">+ SvS Victory</button>
-              </div>
-              <textarea id="schCatRewards" rows="5" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-family:monospace; font-size:12px; box-sizing:border-box;">${currentRewards.join('\n')}</textarea>
-            </div>
-
-            <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:14px;">
-              <div style="font-weight:bold; font-size:13px; color:#a855f7; margin-bottom:6px;">🟣 All-Week Daily Routines</div>
-              <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
-                <button class="sch-cat-quick" data-target="schCatAllWeek" data-val="Daily Intel Missions" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(168,85,247,0.4); background:rgba(168,85,247,0.12); color:#a855f7; font-size:11px; font-weight:bold; cursor:pointer;">+ Daily Intel</button>
-                <button class="sch-cat-quick" data-target="schCatAllWeek" data-val="Alliance Tech Donations" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(168,85,247,0.4); background:rgba(168,85,247,0.12); color:#a855f7; font-size:11px; font-weight:bold; cursor:pointer;">+ Tech Donations</button>
-                <button class="sch-cat-quick" data-target="schCatAllWeek" data-val="Bear Trap Rallies" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(168,85,247,0.4); background:rgba(168,85,247,0.12); color:#a855f7; font-size:11px; font-weight:bold; cursor:pointer;">+ Bear Trap</button>
-                <button class="sch-cat-quick" data-target="schCatAllWeek" data-val="Auto Gift Codes Enrolled" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(168,85,247,0.4); background:rgba(168,85,247,0.12); color:#a855f7; font-size:11px; font-weight:bold; cursor:pointer;">+ Gift Codes</button>
-              </div>
-              <textarea id="schCatAllWeek" rows="5" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-family:monospace; font-size:12px; box-sizing:border-box;">${currentAllWeek.join('\n')}</textarea>
-            </div>
-
-            <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:14px;">
-              <div style="font-weight:bold; font-size:13px; color:#f97316; margin-bottom:6px;">🟠 Holidays & Announcements</div>
-              <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
-                <button class="sch-cat-quick" data-target="schCatHolidays" data-val="State Warmup Week" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(249,115,22,0.4); background:rgba(249,115,22,0.12); color:#f97316; font-size:11px; font-weight:bold; cursor:pointer;">+ State Warmup</button>
-                <button class="sch-cat-quick" data-target="schCatHolidays" data-val="Frostfire Prep Phase" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(249,115,22,0.4); background:rgba(249,115,22,0.12); color:#f97316; font-size:11px; font-weight:bold; cursor:pointer;">+ Frostfire Prep</button>
-                <button class="sch-cat-quick" data-target="schCatHolidays" data-val="Alliance Championship Week" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(249,115,22,0.4); background:rgba(249,115,22,0.12); color:#f97316; font-size:11px; font-weight:bold; cursor:pointer;">+ Championship</button>
-              </div>
-              <textarea id="schCatHolidays" rows="5" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-family:monospace; font-size:12px; box-sizing:border-box;">${currentHolidays.join('\n')}</textarea>
-            </div>
-          </div>
-        `}
+      <!-- Scrollable List Container -->
+      <div id="schListContainer" style="flex:1; max-height:220px; overflow-y:auto; background:#1e293b; border-radius:8px; border:1px solid #334155; padding:4px;">
+        <!-- Injected via filterList -->
       </div>
 
-      <!-- Modal Footer Controls -->
-      <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border); padding-top:14px; flex-wrap:wrap; gap:10px;">
-        <div style="display:flex; gap:8px; flex-wrap:wrap;">
-          <button id="schAutoFillBtn" style="background:rgba(14,165,233,0.15); border:1px solid rgba(14,165,233,0.4); color:var(--accent); padding:8px 14px; border-radius:8px; cursor:pointer; font-size:12px; font-weight:bold;" title="Instantly fill standard schedule templates">⚡ Instant Auto-Fill Schedule</button>
-          <button id="schImportSheetBtn" style="background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); padding:8px 14px; border-radius:8px; cursor:pointer; font-size:12px; font-weight:bold;">📥 Import from Google Sheets</button>
+      <!-- Editor Card -->
+      <div id="schEditorCard" style="background:#1e293b; border-radius:8px; padding:16px; border:1px solid #334155; display:none; flex-direction:column; gap:12px;">
+        <div id="schItemTitle" style="font-size:16px; font-weight:bold; color:#fff;">Select an item...</div>
+        
+        <div style="display:flex; gap:14px;">
+          <div style="flex:1;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <label style="font-size:11px; color:#94a3b8; text-transform:uppercase; font-weight:bold;">Start Date (Col J)</label>
+              <span id="schSetTodayStart" style="font-size:10px; color:#0ea5e9; cursor:pointer; text-transform:uppercase; font-weight:bold; padding:2px 6px; background:rgba(14,165,233,0.15); border-radius:4px;">Today</span>
+            </div>
+            <input type="date" id="schStartDate" style="width:100%; padding:8px 10px; background:#0f172a; border:1px solid #334155; color:#f8fafc; border-radius:6px; font-size:13px; box-sizing:border-box;">
+          </div>
+
+          <div style="flex:1;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <label style="font-size:11px; color:#94a3b8; text-transform:uppercase; font-weight:bold;">End Date (Col M)</label>
+              <span id="schSetTodayEnd" style="font-size:10px; color:#0ea5e9; cursor:pointer; text-transform:uppercase; font-weight:bold; padding:2px 6px; background:rgba(14,165,233,0.15); border-radius:4px;">Today</span>
+            </div>
+            <input type="date" id="schEndDate" style="width:100%; padding:8px 10px; background:#0f172a; border:1px solid #334155; color:#f8fafc; border-radius:6px; font-size:13px; box-sizing:border-box;">
+          </div>
         </div>
-        <div style="display:flex; gap:10px;">
-          <button id="schCancelBtn" style="background:var(--bg-main); border:1px solid var(--border); color:var(--text-muted); padding:8px 16px; border-radius:8px; cursor:pointer; font-size:13px; font-weight:bold;">Cancel</button>
-          <button id="schSaveBtn" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:8px 22px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13px; box-shadow:0 4px 12px rgba(16,185,129,0.3);">💾 Save Live Schedule</button>
-        </div>
+
+        <button id="schSaveBtn" style="width:100%; background:#0ea5e9; color:#fff; border:none; padding:10px; font-size:14px; font-weight:bold; border-radius:6px; cursor:pointer; transition:0.2s;">💾 Save Dates</button>
+        <div id="schStatus" style="font-size:12px; text-align:center; min-height:16px;"></div>
       </div>
     `;
 
-    // Attach Modal Listeners
-    modal.querySelector('#schModalCloseBtn')?.addEventListener('click', closeModal);
-    modal.querySelector('#schCancelBtn')?.addEventListener('click', closeModal);
+    document.body.appendChild(overlay);
+    document.body.appendChild(modal);
 
-    modal.querySelector('#schTabBtnTimed')?.addEventListener('click', () => { activeModalTab = 'timed'; renderModalContent(); });
-    modal.querySelector('#schTabBtnSearch')?.addEventListener('click', () => { activeModalTab = 'search'; renderModalContent(); });
-    modal.querySelector('#schTabBtnCats')?.addEventListener('click', () => { activeModalTab = 'cats'; renderModalContent(); });
+    const closeModal = () => { overlay.remove(); modal.remove(); };
+    overlay.addEventListener('click', closeModal);
+    modal.querySelector('#schCloseBtn').addEventListener('click', closeModal);
 
-    let selectedSearchItem = null;
+    const filterList = () => {
+      const query = (modal.querySelector('#schSearchInput')?.value || '').trim().toLowerCase();
+      const container = modal.querySelector('#schListContainer');
+      if (!container) return;
 
-    modal.querySelector('#schSearchQuery')?.addEventListener('input', (e) => {
-      const q = String(e.target.value || '').trim().toLowerCase();
-      modal.querySelectorAll('.sch-search-item').forEach(el => {
-        const txt = el.textContent.toLowerCase();
-        if (!q || txt.includes(q)) el.style.display = 'flex';
-        else el.style.display = 'none';
-      });
-    });
-
-    modal.querySelectorAll('.sch-search-item').forEach(el => {
-      el.addEventListener('click', () => {
-        try {
-          const item = JSON.parse(el.getAttribute('data-preset'));
-          selectedSearchItem = item;
-          const titleEl = modal.querySelector('#schSelectedItemTitle');
-          const dateEl = modal.querySelector('#schSearchDate');
-          const utcEl = modal.querySelector('#schSearchUtc');
-          const endUtcEl = modal.querySelector('#schSearchEndUtc');
-          if (titleEl) titleEl.textContent = `${item.emoji || '✨'} ${item.name}`;
-          const now = new Date();
-          if (dateEl && !dateEl.value) dateEl.value = `${now.getMonth() + 1}/${now.getDate()}`;
-          if (utcEl) utcEl.value = item.utc || '16:00';
-          if (endUtcEl) endUtcEl.value = item.endUtc || '';
-        } catch(err) { console.error(err); }
-      });
-    });
-
-    modal.querySelector('#schSetTodayBtn')?.addEventListener('click', () => {
-      const dateEl = modal.querySelector('#schSearchDate');
-      const now = new Date();
-      if (dateEl) dateEl.value = `${now.getMonth() + 1}/${now.getDate()}`;
-    });
-
-    modal.querySelector('#schSaveSearchItemBtn')?.addEventListener('click', () => {
-      if (!selectedSearchItem) {
-        if (window.showToast) window.showToast("Please click an event from the list on the left", "error");
+      if (!query) {
+        container.style.display = 'none';
         return;
       }
-      const dateEl = modal.querySelector('#schSearchDate');
-      const utcEl = modal.querySelector('#schSearchUtc');
-      const endUtcEl = modal.querySelector('#schSearchEndUtc');
+      container.style.display = 'block';
+      const filtered = allData.filter(item => item.title.toLowerCase().includes(query));
+      
+      const today = new Date().toISOString().split('T')[0];
+      container.innerHTML = '';
 
-      const dateStr = String(dateEl?.value || '').trim();
-      const utcStr = String(utcEl?.value || '').trim() || selectedSearchItem.utc || '16:00';
-      const endUtcStr = String(endUtcEl?.value || '').trim() || selectedSearchItem.endUtc || '';
-
-      if (!dateStr) {
-        if (window.showToast) window.showToast("Please enter or set a date", "error");
+      if (filtered.length === 0) {
+        container.innerHTML = `<div style="padding:12px; text-align:center; color:#94a3b8; font-style:italic; font-size:13px;">No matching event or reward found.</div>`;
         return;
       }
 
-      // Check if event already exists in currentEvents, update or push
-      const existingIdx = currentEvents.findIndex(ev => ev.eventName.toLowerCase() === selectedSearchItem.name.toLowerCase());
-      if (existingIdx >= 0) {
-        currentEvents[existingIdx].dateStr = dateStr;
-        currentEvents[existingIdx].utcStr = utcStr;
-        currentEvents[existingIdx].endUtcStr = endUtcStr;
+      filtered.forEach(item => {
+        const div = document.createElement('div');
+        div.style.cssText = `padding:10px 12px; border-bottom:1px solid #334155; cursor:pointer; transition:background 0.2s; ${item.row === currentRowIndex ? 'background:rgba(14,165,233,0.2);' : ''}`;
+        
+        let statusColor = '';
+        let dateStr = '';
+        const s = formatDateForInput(item.start);
+        const e = formatDateForInput(item.end);
+
+        if (!s && !e) {
+          statusColor = '#eab308'; // Yellow (No dates)
+          dateStr = `<div style="font-size:0.75rem; color:${statusColor}; margin-top:2px;">⚠️ No dates set</div>`;
+        } else {
+          let isExpired = false;
+          if (e && e < today) isExpired = true;
+          else if (!e && s && s < today) isExpired = true;
+
+          if (isExpired) {
+            statusColor = '#ef4444'; // Red (Expired)
+            dateStr = `<div style="font-size:0.75rem; color:${statusColor}; margin-top:2px;">❌ Expired (${s || '?'} to ${e || '?'})</div>`;
+          } else {
+            statusColor = '#10b981'; // Green (Active/Set)
+            dateStr = `<div style="font-size:0.75rem; color:${statusColor}; margin-top:2px;">✅ Set (${s || '?'} to ${e || '?'})</div>`;
+          }
+        }
+
+        div.style.borderLeft = `4px solid ${statusColor}`;
+        div.innerHTML = `<div style="font-weight:bold; font-size:13px; color:#fff;">${escapeHTML(item.title)}</div>${dateStr}`;
+        div.onclick = () => selectItem(item.row);
+        container.appendChild(div);
+      });
+    };
+
+    const selectItem = (rowIdx) => {
+      const item = allData.find(i => i.row === rowIdx);
+      if (!item) return;
+      currentRowIndex = item.row;
+
+      filterList();
+
+      const editor = modal.querySelector('#schEditorCard');
+      if (editor) editor.style.display = 'flex';
+      
+      const titleEl = modal.querySelector('#schItemTitle');
+      if (titleEl) titleEl.textContent = item.title;
+
+      let startVal = formatDateForInput(item.start);
+      let endVal = formatDateForInput(item.end);
+      const statusEl = modal.querySelector('#schStatus');
+
+      if (!startVal && !endVal) {
+        const today = new Date().toISOString().split('T')[0];
+        startVal = today;
+        endVal = today;
+        if (statusEl) { statusEl.style.color = '#94a3b8'; statusEl.textContent = 'Dates auto-filled to today.'; }
       } else {
-        currentEvents.push({
-          id: 'ev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-          eventName: selectedSearchItem.name,
-          dateStr: dateStr,
-          utcStr: utcStr,
-          endUtcStr: endUtcStr,
-          pdtVal: '',
-          emoji: selectedSearchItem.emoji || '✨'
-        });
+        if (statusEl) statusEl.textContent = '';
       }
 
-      if (window.showToast) window.showToast(`Updated '${selectedSearchItem.name}' for ${dateStr}!`, "success");
-      activeModalTab = 'timed';
-      renderModalContent();
+      const sInp = modal.querySelector('#schStartDate');
+      const eInp = modal.querySelector('#schEndDate');
+      if (sInp) sInp.value = startVal;
+      if (eInp) eInp.value = endVal;
+    };
+
+    modal.querySelector('#schSearchInput')?.addEventListener('input', filterList);
+
+    modal.querySelector('#schSetTodayStart')?.addEventListener('click', () => {
+      const sInp = modal.querySelector('#schStartDate');
+      if (sInp) sInp.value = new Date().toISOString().split('T')[0];
     });
 
-    modal.querySelector('#schPreloadedSelect')?.addEventListener('change', (e) => {
-      const valStr = e.target.value;
-      if (!valStr) return;
-      try {
-        const item = JSON.parse(valStr);
-        const nameEl = modal.querySelector('#schNewName');
-        const utcEl = modal.querySelector('#schNewUtc');
-        const endUtcEl = modal.querySelector('#schNewEndUtc');
-        const emojiEl = modal.querySelector('#schNewEmoji');
-        if (nameEl) nameEl.value = item.name || '';
-        if (utcEl) utcEl.value = item.utc || '';
-        if (endUtcEl) endUtcEl.value = item.endUtc || '';
-        if (emojiEl) emojiEl.value = item.emoji || '✨';
-        e.target.value = '';
-      } catch(err) { console.error(err); }
-    });
-
-    modal.querySelectorAll('.sch-cat-quick').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const targetId = btn.getAttribute('data-target');
-        const val = btn.getAttribute('data-val');
-        const txtEl = modal.querySelector('#' + targetId);
-        if (txtEl && val) {
-          const currentTxt = txtEl.value.trim();
-          txtEl.value = currentTxt ? `${currentTxt}\n${val}` : val;
-          if (window.showToast) window.showToast(`Added '${val}'!`, 'info');
-        }
-      });
-    });
-
-    modal.querySelectorAll('.sch-preset-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const name = btn.getAttribute('data-name');
-        const utc = btn.getAttribute('data-utc');
-        const endUtc = btn.getAttribute('data-endutc') || '';
-        const emoji = btn.getAttribute('data-emoji');
-        const now = new Date();
-        const m = now.getMonth() + 1, d = now.getDate();
-        currentEvents.push({
-          id: 'ev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-          eventName: name,
-          dateStr: `${m}/${d}`,
-          utcStr: utc,
-          endUtcStr: endUtc,
-          pdtVal: '',
-          emoji: emoji
-        });
-        renderModalContent();
-      });
-    });
-
-    modal.querySelector('#schAddEventBtn')?.addEventListener('click', () => {
-      const nameEl = modal.querySelector('#schNewName');
-      const dateEl = modal.querySelector('#schNewDate');
-      const utcEl = modal.querySelector('#schNewUtc');
-      const endUtcEl = modal.querySelector('#schNewEndUtc');
-      const emojiEl = modal.querySelector('#schNewEmoji');
-
-      const name = String(nameEl?.value || '').trim();
-      const dateStr = String(dateEl?.value || '').trim();
-      const utcStr = String(utcEl?.value || '').trim();
-      const endUtcStr = String(endUtcEl?.value || '').trim();
-      const emoji = emojiEl?.value || '✨';
-
-      if (!name) {
-        if (window.showToast) window.showToast("Please enter an Event Name", "error");
-        return;
-      }
-
-      currentEvents.push({
-        id: 'ev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-        eventName: name,
-        dateStr: dateStr || `${new Date().getMonth() + 1}/${new Date().getDate()}`,
-        utcStr: utcStr || '16:00',
-        endUtcStr: endUtcStr,
-        pdtVal: '',
-        emoji: emoji
-      });
-
-      renderModalContent();
-    });
-
-    modal.querySelector('#schSavePresetBtn')?.addEventListener('click', async () => {
-      const nameEl = modal.querySelector('#schNewName');
-      const utcEl = modal.querySelector('#schNewUtc');
-      const endUtcEl = modal.querySelector('#schNewEndUtc');
-      const emojiEl = modal.querySelector('#schNewEmoji');
-
-      const name = String(nameEl?.value || '').trim();
-      const utc = String(utcEl?.value || '').trim() || '16:00';
-      const endUtc = String(endUtcEl?.value || '').trim();
-      const emoji = emojiEl?.value || '✨';
-
-      if (!name) {
-        if (window.showToast) window.showToast("Please enter an Event Name to save as preset", "error");
-        return;
-      }
-
-      const newPreset = { name, utc, endUtc, emoji };
-      const updatedCustom = [...customPresets, newPreset];
-
-      try {
-        const db = window.firebaseDb;
-        const { ref, set } = window.firebaseDatabase || {};
-        if (db && ref && set) {
-          await set(ref(db, 'schedule_presets'), updatedCustom);
-          customPresets.push(newPreset);
-          allPresets.push(newPreset);
-          window.logAdminAction("Schedule Preset Added", `Saved '${name}' (${utc} UTC) to preloaded schedule presets catalog.`);
-          if (window.showToast) window.showToast(`⭐ Saved '${name}' to preloaded presets!`, "success");
-          renderModalContent();
-        }
-      } catch(err) {
-        console.error("Failed to save schedule preset:", err);
-        if (window.showToast) window.showToast("Failed to save preset to Firebase", "error");
-      }
-    });
-
-    modal.querySelectorAll('.sch-del-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const idx = parseInt(btn.getAttribute('data-idx'));
-        if (!isNaN(idx) && idx >= 0 && idx < currentEvents.length) {
-          currentEvents.splice(idx, 1);
-          renderModalContent();
-        }
-      });
+    modal.querySelector('#schSetTodayEnd')?.addEventListener('click', () => {
+      const eInp = modal.querySelector('#schEndDate');
+      if (eInp) eInp.value = new Date().toISOString().split('T')[0];
     });
 
     modal.querySelector('#schSaveBtn')?.addEventListener('click', async () => {
+      if (currentRowIndex === -1) return;
       const saveBtn = modal.querySelector('#schSaveBtn');
+      const statusEl = modal.querySelector('#schStatus');
+      
       if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving...'; }
 
-      let finalSignups = currentSignups;
-      let finalRewards = currentRewards;
-      let finalAllWeek = currentAllWeek;
-      let finalHolidays = currentHolidays;
+      const sVal = modal.querySelector('#schStartDate')?.value || '';
+      const eVal = modal.querySelector('#schEndDate')?.value || '';
 
-      const signupsTa = modal.querySelector('#schCatSignups');
-      if (signupsTa) finalSignups = signupsTa.value.split('\n').map(s => s.trim()).filter(Boolean);
+      const item = allData.find(i => i.row === currentRowIndex);
+      if (item) {
+        item.start = sVal;
+        item.end = eVal;
+      }
 
-      const rewardsTa = modal.querySelector('#schCatRewards');
-      if (rewardsTa) finalRewards = rewardsTa.value.split('\n').map(s => s.trim()).filter(Boolean);
-
-      const allWeekTa = modal.querySelector('#schCatAllWeek');
-      if (allWeekTa) finalAllWeek = allWeekTa.value.split('\n').map(s => s.trim()).filter(Boolean);
-
-      const holidaysTa = modal.querySelector('#schCatHolidays');
-      if (holidaysTa) finalHolidays = holidaysTa.value.split('\n').map(s => s.trim()).filter(Boolean);
-
-      const scheduleObj = {
-        events: currentEvents,
-        signups: finalSignups,
-        rewards: finalRewards,
-        allWeek: finalAllWeek,
-        holidays: finalHolidays
-      };
-
-      const ok = await window.saveScheduleToFirebase(scheduleObj);
-      if (ok) {
-        closeModal();
+      try {
+        await set(ref(db, 'rewards_schedule_live'), allData);
+        if (window.logAdminAction) {
+          window.logAdminAction("Rewards Schedule Updated", `Updated dates for '${item ? item.title : 'Event'}' to ${sVal || 'None'} - ${eVal || 'None'}`);
+        }
+        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '💾 Save Dates'; }
+        if (statusEl) { statusEl.style.color = '#10b981'; statusEl.textContent = '✓ Saved successfully!'; }
+        if (window.showToast) window.showToast(`✓ Saved dates for ${item ? item.title : 'Event'}!`, "success");
+        filterList();
         if (window.activeViewFunc) window.activeViewFunc();
         else if (views.schedule) views.schedule();
-      } else {
-        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '💾 Save Live Schedule'; }
+      } catch(e) {
+        console.error("Save dates error:", e);
+        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '💾 Save Dates'; }
+        if (statusEl) { statusEl.style.color = '#ef4444'; statusEl.textContent = 'Error: ' + e.message; }
       }
     });
 
-    modal.querySelector('#schAutoFillBtn')?.addEventListener('click', () => {
-      const now = new Date();
-      const todayStr = `${now.getMonth() + 1}/${now.getDate()}`;
-      
-      currentEvents.length = 0;
-      currentEvents.push(
-        { id: 'ev_1', eventName: 'Bear Trap', dateStr: todayStr, utcStr: '16:00', endUtcStr: '16:30', emoji: '🪤' },
-        { id: 'ev_2', eventName: 'Crazy Joe', dateStr: todayStr, utcStr: '14:00', endUtcStr: '14:30', emoji: '🔥' },
-        { id: 'ev_3', eventName: 'Sunfire Castle Battle', dateStr: todayStr, utcStr: '12:00', endUtcStr: '20:00', emoji: '🏰' },
-        { id: 'ev_4', eventName: 'Brothers in Arms K.E.', dateStr: todayStr, utcStr: '00:00', endUtcStr: '23:59', emoji: '⚔️' },
-        { id: 'ev_5', eventName: 'Polar Terrors Rally', dateStr: todayStr, utcStr: '16:00', endUtcStr: '16:45', emoji: '🐻‍❄️' }
-      );
-
-      currentSignups.length = 0;
-      currentSignups.push("Sunfire Castle R5 Registration", "SvS Troop Training Registration", "Foundry Team Signups");
-
-      currentRewards.length = 0;
-      currentRewards.push("Foundry Battle Payouts", "Alliance Mobilization Rewards", "Canyon Clash Victory Chests", "SvS Victory Rewards");
-
-      currentAllWeek.length = 0;
-      currentAllWeek.push("Daily Intel Missions", "Alliance Tech Donations", "Bear Trap Rallies", "Auto Gift Codes Enrolled");
-
-      currentHolidays.length = 0;
-      currentHolidays.push("State Warmup Week", "Frostfire Prep Phase", "Alliance Championship Week");
-
-      if (window.showToast) window.showToast("⚡ Auto-filled standard schedule template! Click 'Save Live Schedule' to apply.", "success");
-      renderModalContent();
-    });
-
-    modal.querySelector('#schImportSheetBtn')?.addEventListener('click', async () => {
-      let sheetData = window.liveData ? window.liveData['WhiteOut Survival'] : null;
-      if (!sheetData) {
-        try { sheetData = await fetchSheet('WhiteOut Survival'); } catch(e) {}
-      }
-      if (!sheetData || !Array.isArray(sheetData)) {
-        // Fallback: auto fill default template
-        modal.querySelector('#schAutoFillBtn')?.click();
-        if (window.showToast) window.showToast("Loaded default schedule template. Click Save Live Schedule to push live.", "info");
-        return;
-      }
-
-      currentEvents.length = 0;
-      currentSignups.length = 0;
-      currentRewards.length = 0;
-      currentAllWeek.length = 0;
-      currentHolidays.length = 0;
-
-      for (let i = 1; i < Math.min(34, sheetData.length); i++) {
-        const row = sheetData[i];
-        const eventName = row[5];
-        const dateRaw   = row[6];
-        const utcRaw    = row[7];
-        const pdtVal    = row[8];
-        if (!eventName || String(eventName).trim() === '') continue;
-        if (String(eventName).includes("Event's")) continue;
-        if (String(eventName).trim() === 'Rewards') break;
-
-        const isBearTrap = String(eventName).includes('Bear Trap') || String(eventName).includes('🪤') || String(eventName).includes('🐻');
-        const isJoe = String(eventName).includes('Crazy Joe') || String(eventName).includes('🔥');
-        const isCastle = String(eventName).includes('Castle') || String(eventName).includes('🏰');
-        const isBia = String(eventName).includes('Brothers') || String(eventName).includes('⚔️');
-        let emoji = isBearTrap ? '🪤' : (isJoe ? '🔥' : (isCastle ? '🏰' : (isBia ? '⚔️' : '✨')));
-
-        currentEvents.push({
-          id: 'ev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-          eventName: String(eventName).trim(),
-          dateStr: String(dateRaw || '').trim(),
-          utcStr: String(utcRaw || '').trim(),
-          pdtVal: String(pdtVal || '').trim(),
-          emoji: emoji
-        });
-      }
-
-      let headerRowIdx = -1;
-      for (let i = 0; i < sheetData.length; i++) {
-        const cell = String(sheetData[i][5] || '').trim().toLowerCase();
-        if (cell === 'rewards') { headerRowIdx = i; break; }
-      }
-      if (headerRowIdx !== -1) {
-        for (let i = headerRowIdx + 1; i < sheetData.length; i++) {
-          const r = sheetData[i][5], g = sheetData[i][6], h = sheetData[i][7], k = sheetData[i][8];
-          const anyVal = [r,g,h,k].some(v => v && String(v).trim() !== '');
-          if (!anyVal) break;
-          const skip = (v) => !v || String(v).trim() === '' || String(v).trim().toLowerCase() === 'no events';
-          if (!skip(r)) currentRewards.push(String(r).trim());
-          if (!skip(g)) currentSignups.push(String(g).trim());
-          if (!skip(h)) currentAllWeek.push(String(h).trim());
-          if (!skip(k)) currentHolidays.push(String(k).trim());
-        }
-      }
-
-      if (window.showToast) window.showToast("Imported schedule from Google Sheets!", "info");
-      renderModalContent();
-    });
+    filterList();
   };
 
-  const closeModal = () => {
-    modal.remove();
-    overlay.remove();
-  };
-
-  overlay.addEventListener('click', closeModal);
-  document.body.appendChild(overlay);
-  document.body.appendChild(modal);
-  renderModalContent();
+  renderModal();
 };
 
 // --- GLOBAL TIMERS ---

@@ -1,3 +1,9 @@
+## [1.53.0] - 2026-08-09
+### Changed & Streamlined
+- **🎯 1:1 Google Sheets Rewards & Events Editor Replica**: Completely redesigned the Schedule Manager modal to match the exact `RewardsSidebar.html` Google Sheets tool provided by the user. 
+- **🔍 Instant Live Search & Date Picker**: Eliminates all 6 bloated sub-tabs, fake countdown math, and unnecessary category boxes. Allows searching any event/reward (Col I) and setting Start Date (Col J) and End Date (Col M) with quick 1-click **`Today`** shortcuts.
+- **🏷️ Color-Coded Status Badges**: Shows 🟡 Yellow (`⚠️ No dates set`), 🟢 Green (`✅ Set (Start to End)`), and 🔴 Red (`❌ Expired`). Pushes directly to Firebase node `rewards_schedule_live` in **<50ms**!
+
 ## [1.52.1] - 2026-08-07
 ### Fixed
 - **⚙️ GitHub Actions Workflow Compatibility**: Updated `.github/workflows/deploy.yml` Node.js version target from `24` to `lts/*` to guarantee runner compatibility and trigger instant GitHub Pages deployment.
