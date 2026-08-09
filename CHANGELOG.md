@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [1.57.0] - 2026-08-09
+### Improved & Streamlined
+- **📅 Streamlined Schedule Page (-1,400 lines)**: Gutted the bloated schedule view — removed weekly/today tab switcher, countdown timer math, Bear Trap auto-cycle formulas, reward/signup/holiday category boxes, and complex UTC→local time conversions. Replaced with a clean card grid reading directly from Firebase `rewards_schedule_live`, with live search, color-coded status badges (🟡 No dates / 🟢 Active / 🔴 Expired), and instant rendering.
+- **🎁 Gift Codes View Fix**: Added missing `try/catch` wrapper to `views.giftcodes()` for consistent error handling and removed orphaned opt-in button event listener code.
+- **⚡ Verified Clean Build**: 100% clean Vite compilation, window binding audit, and static analysis.
+
 ## [1.56.0] - 2026-08-09
 ### Added & Improved
 - **🏆 Streamlined 2-in-1 Showdown Archive & Reset**: Enhanced `window.archiveAndResetShowdown` to ask for an archive label/date (defaulting to today's date), save the full 2D history table snapshot to Firebase, and immediately reset the live tracker for the next cycle in a single seamless action.
