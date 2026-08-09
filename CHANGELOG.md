@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [1.73.0] - 2026-08-09
+### Fixed & Improved
+- **📊 Exact Leaderboard Score Display**: Removed all score rounding and truncation (`.toFixed(1) + 'M' / 'K'`) across all leaderboards, account rankings, event cards, and challenge bars. Scores are now displayed exactly as they appear on the leaderboards with standard comma formatting (`num.toLocaleString()`).
+- **🛡️ Player Stat Deduplication & Build Cleanliness**: Deduplicated player entries in `computeLiveFirebasePlayerStats` for Bear Trap wins and donations to ensure clean rank placement, and resolved all scope declarations for a 100% clean production build.
+
 ## [1.72.0] - 2026-08-09
 ### Added & Streamlined
 - **📅 1:1 Google Sheets Rewards & Events Editor**: Replaced bloated schedule modal with a sleek, clean 1:1 replica of the Google Sheets `RewardsSidebar.html` tool (`WhiteOut Survival` Col I Title, Col J Start Date, Col M End Date). Features real-time search filtering, instant status badges (Yellow: No dates set, Red: Expired, Green: Active/Set), and quick date buttons (Today/Clear/Quick Pick). Instant Firebase live updates (<50ms).

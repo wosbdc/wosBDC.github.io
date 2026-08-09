@@ -1129,8 +1129,7 @@ window.parseLeaderboardsToPlayerMap = (lbData, targetNameFilter = null) => {
           let numScore = Number(score);
           let formattedScore = score;
           if (!isNaN(numScore) && typeof score !== 'string') {
-             if (numScore >= 1000000) formattedScore = (numScore / 1000000).toFixed(1) + 'M';
-             else formattedScore = numScore.toLocaleString();
+             formattedScore = numScore.toLocaleString();
           }
 
           let entry = { title, score: formattedScore, rank, emoji };
@@ -1208,8 +1207,7 @@ window.parseLeaderboardsToPlayerMap = (lbData, targetNameFilter = null) => {
 
               let formattedScore = score;
               if (typeof score === 'number') {
-                if (score >= 1000000) formattedScore = (score / 1000000).toFixed(1) + 'M';
-                else formattedScore = score.toLocaleString();
+                formattedScore = score.toLocaleString();
               }
 
               let emoji = "🏆";
@@ -1260,15 +1258,23 @@ window.computeLiveFirebasePlayerStats = (targetName, fbWins = {}, fbDonations = 
 
     // 1. Calculate Bear Trap Wins live from Firebase beartrap_wins node
     if (fbWins && typeof fbWins === 'object' && Object.keys(fbWins).length > 0) {
-        const winsList = [];
+        const winsMap = {};
         for (const [key, val] of Object.entries(fbWins)) {
             if (!val || typeof val !== 'object') continue;
             let name = val.name || key;
+            let sKey = sanitizeKey(name) || sanitizeKey(key);
             let bt1 = Number(val.bt1 || 0);
             let bt2 = Number(val.bt2 || 0);
             let total = val.total !== undefined ? Number(val.total) : (bt1 + bt2);
-            winsList.push({ name, key, bt1, bt2, total });
+            if (!winsMap[sKey]) {
+                winsMap[sKey] = { name, key, bt1, bt2, total };
+            } else {
+                winsMap[sKey].total = Math.max(winsMap[sKey].total, total);
+                winsMap[sKey].bt1 = Math.max(winsMap[sKey].bt1, bt1);
+                winsMap[sKey].bt2 = Math.max(winsMap[sKey].bt2, bt2);
+            }
         }
+        const winsList = Object.values(winsMap);
         
         // Total Wins (bearAllTime & bearBoth)
         const totalSorted = [...winsList].sort((a, b) => (b.total || 0) - (a.total || 0));
@@ -1300,14 +1306,21 @@ window.computeLiveFirebasePlayerStats = (targetName, fbWins = {}, fbDonations = 
 
     // 2. Calculate Bear Trap Donations live from Firebase beartrap_donations node
     if (fbDonations && typeof fbDonations === 'object' && Object.keys(fbDonations).length > 0) {
-        const donList = [];
+        const donMap = {};
         for (const [key, val] of Object.entries(fbDonations)) {
             if (!val || typeof val !== 'object') continue;
             let name = val.name || key;
+            let sKey = sanitizeKey(name) || sanitizeKey(key);
             let current = Number(val.current !== undefined ? val.current : (val.amount !== undefined ? val.amount : 0));
             let allTime = Number(val.allTime !== undefined ? val.allTime : 0);
-            donList.push({ name, key, current, allTime });
+            if (!donMap[sKey]) {
+                donMap[sKey] = { name, key, current, allTime };
+            } else {
+                donMap[sKey].current = Math.max(donMap[sKey].current, current);
+                donMap[sKey].allTime = Math.max(donMap[sKey].allTime, allTime);
+            }
         }
+        const donList = Object.values(donMap);
 
         // Current Donations
         const curSorted = [...donList].sort((a, b) => (b.current || 0) - (a.current || 0));
@@ -2749,8 +2762,7 @@ window.getLivePlayerEventRow = async (chiefName, pRow, headers) => {
                   
                   let formattedScore = score;
                   if (typeof score === 'number') {
-                    if (score >= 1000000) formattedScore = (score / 1000000).toFixed(1) + 'M';
-                    else formattedScore = score.toLocaleString();
+                    formattedScore = score.toLocaleString();
                   }
                   
                   let emoji = "🏆";
@@ -10186,9 +10198,21 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
         targetEntry.total += pTotal;
       }
 
-      // De-duplicate unique player objects before ranking
-      const uniquePlayers = Array.from(new Set(Object.values(combinedMap)));
-      let sortedSdList = uniquePlayers.sort((a, b) => (b.horns !== a.horns) ? (b.horns - a.horns) : (b.total - a.total));
+      // De-duplicate unique player records by sanitized key before ranking
+      const dedupedSdMap = {};
+      Object.values(combinedMap).forEach(p => {
+        if (p && p.name) {
+          const sKey = p.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+          if (!dedupedSdMap[sKey]) {
+            dedupedSdMap[sKey] = { name: p.name, horns: p.horns || 0, wins: p.wins || 0, total: p.total || 0 };
+          } else {
+            dedupedSdMap[sKey].total = Math.max(dedupedSdMap[sKey].total, p.total || 0);
+            dedupedSdMap[sKey].horns = Math.max(dedupedSdMap[sKey].horns, p.horns || 0);
+            dedupedSdMap[sKey].wins = Math.max(dedupedSdMap[sKey].wins, p.wins || 0);
+          }
+        }
+      });
+      let sortedSdList = Object.values(dedupedSdMap).sort((a, b) => (b.horns !== a.horns) ? (b.horns - a.horns) : (b.total - a.total));
 
       sortedSdList.forEach((p, index) => {
         if (p && p.name) {
@@ -10245,17 +10269,21 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
       // Calculate Current Live Showdown rank and score from Firebase showdown_live
       let curSdStat = null;
       const sdLiveObj = (sdFbLiveSnap && sdFbLiveSnap.exists() && sdFbLiveSnap.val()) ? sdFbLiveSnap.val() : {};
-      const liveSdPlayers = [];
 
+      const liveSdMap = {};
       for (const [pKey, pVal] of Object.entries(sdLiveObj)) {
         if (!pVal || typeof pVal !== 'object') continue;
         let pName = pVal.name || pKey;
         let score = Number(pVal.total !== undefined ? pVal.total : ((pVal.d1||0) + (pVal.d2||0) + (pVal.d3||0) + (pVal.d4||0) + (pVal.d5||0) + (pVal.d6||0)));
         if (score > 0) {
-          liveSdPlayers.push({ name: pName, key: pKey, score });
+          const sKey = pName.toLowerCase().replace(/[^a-z0-9]/g, '');
+          if (!liveSdMap[sKey] || score > liveSdMap[sKey].score) {
+            liveSdMap[sKey] = { name: pName, key: pKey, score };
+          }
         }
       }
 
+      const liveSdPlayers = Object.values(liveSdMap);
       liveSdPlayers.sort((a, b) => b.score - a.score);
 
       const targetSanitized = chiefNameTarget.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -10406,7 +10434,7 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
                             const tLower = chiefNameTarget.toLowerCase().trim();
                             if (grp.baseTitle.toLowerCase().includes('showdown') && sdAllTimeMap[tLower] && (sdAllTimeMap[tLower].horns > 0 || sdAllTimeMap[tLower].total > 0)) {
                               const st = sdAllTimeMap[tLower];
-                              const totStr = st.total >= 1000000 ? (st.total / 1000000).toFixed(1) + 'M' : (st.total || 0).toLocaleString();
+                              const totStr = (st.total || 0).toLocaleString();
                               let detailParts = [];
                               if (st.horns > 0) detailParts.push(`${st.horns} ${st.horns === 1 ? 'Horn' : 'Horns'}`);
                               if (st.wins > 0) detailParts.push(`${st.wins} ${st.wins === 1 ? 'Day Win' : 'Day Wins'}`);
@@ -11561,6 +11589,10 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
                 </div>
               `;
            }
+           
+           const formatNumber = (num) => {
+               return num.toLocaleString();
+           };
            
            html += `
              <div style="background: linear-gradient(135deg, rgba(255,215,0,0.1) 0%, rgba(255,215,0,0.02) 100%); border: 1px solid rgba(255,215,0,0.3); border-radius: 12px; padding: 15px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; box-shadow: 0 4px 15px rgba(255,215,0,0.05);">
