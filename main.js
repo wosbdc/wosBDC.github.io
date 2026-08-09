@@ -5980,7 +5980,8 @@ function calculateAllTimeShowdown(historyData) {
         playersList.forEach(p => {
             if (!p || typeof p !== 'object' || !p.name) return;
             const rawName = p.name.trim();
-            const key = rawName.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const sanitizedKey = rawName.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const key = sanitizedKey.length > 0 ? sanitizedKey : rawName.toLowerCase();
             if (!allTimeStats[key]) {
                 allTimeStats[key] = { name: rawName, horns: 0, wins: 0, total: 0 };
             }
@@ -5998,12 +5999,12 @@ function calculateAllTimeShowdown(historyData) {
                     let wStr = String(winnersObj['d'+i]).toLowerCase();
                     // Clean split for multiple winners (e.g. "Brian, John & Jane")
                     let wNames = wStr.split(/[,&/]| and /).map(s => s.trim()).filter(s => s);
-                    if (wNames.includes(key)) {
+                    if (wNames.includes(rawName.toLowerCase()) || wNames.includes(key)) {
                         isWinner = true;
-                    } else {
-                        // Word boundary regex for exact substring match
+                    } else if (sanitizedKey.length > 0) {
+                        // Word boundary regex for exact substring match (only if sanitized key is non-empty)
                         try {
-                            let escKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                            let escKey = sanitizedKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                             if (new RegExp(`(?:^|\\b|\\s|_)${escKey}(?:$|\\b|\\s|_)`, 'i').test(wStr)) {
                                 isWinner = true;
                             }
@@ -6012,7 +6013,7 @@ function calculateAllTimeShowdown(historyData) {
                 } else {
                     // Fallback to highest scorer if explicit winner string is empty or missing
                     let topObj = topPlayers['d'+i];
-                    if (topObj && topObj.score > 0 && dVal === topObj.score && topObj.names.includes(key)) {
+                    if (topObj && topObj.score > 0 && dVal === topObj.score && (topObj.names.includes(rawName.toLowerCase()) || topObj.names.includes(key))) {
                         isWinner = true;
                     }
                 }
@@ -10137,7 +10138,8 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
       const dedupedSdMap = {};
       Object.values(combinedMap).forEach(p => {
         if (p && p.name) {
-          const sKey = p.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+          const sanKey = p.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+          const sKey = sanKey.length > 0 ? sanKey : p.name.toLowerCase().trim();
           if (!dedupedSdMap[sKey]) {
             dedupedSdMap[sKey] = { name: p.name, horns: p.horns || 0, wins: p.wins || 0, total: p.total || 0 };
           } else {

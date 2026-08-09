@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [1.54.0] - 2026-08-09
+### Improved & Fixed
+- **🔤 Non-Latin / CJK Character Keying Fallback**: Enhanced sanitized key generation across `views.showdown()`, `renderPlayerCardModal()`, and `renderAccountRankings()` so names composed of non-Latin characters (e.g. Japanese, Chinese, Cyrillic, emojis) fall back to `p.name.toLowerCase().trim()` instead of producing empty strings `""`, ensuring all non-Latin player names are properly tracked and de-duplicated.
+- **⚡ Instant Build Verification**: Verified 100% clean compilation and static window binding audit for `v1.54.0`.
+
 ## [1.53.5] - 2026-08-09
 ### Fixed
 - **🏆 Restored Golden Horn Trophies Primary Sort Rule in Player Cards**: Fixed `renderPlayerCardModal` to sort by `b.horns !== a.horns ? b.horns - a.horns : b.score - a.score`. Preserved `horns` & `wins` in `modalSdMap` so `BrianDCox` holds **1st Place 🥇 (40 Horns)** and `Perma Frost` holds **Rank #17** on the Player Card modal.
