@@ -12465,22 +12465,45 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
         return;
       }
       
-      // Map each date to its column index
+      // Map each date to its column index and calculate dateObj
+      const todayDate = new Date();
+      todayDate.setHours(0, 0, 0, 0);
+      
       let days = [];
       for (let c = 0; c < data[dateRowIdx].length; c++) {
         let cell = data[dateRowIdx][c];
         if (typeof cell === 'string') {
           let formatted = '';
+          let dateObj = null;
           if (cell.match(/^\d{4}-\d{2}-\d{2}T/)) {
             let [year, month, day] = cell.split('T')[0].split('-');
-            let d = new Date(year, month - 1, day);
-            formatted = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-          } else if (cell.match(/\d{1,2}\/\d{1,2}/)) {
+            dateObj = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+            formatted = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+          } else if (cell.match(/(\d{1,2})\/(\d{1,2})/)) {
+            let m = cell.match(/(\d{1,2})\/(\d{1,2})/);
+            dateObj = new Date(todayDate.getFullYear(), parseInt(m[1]) - 1, parseInt(m[2]));
             formatted = cell.replace(/Today /ig, '').replace(/Tomorrow /ig, '').trim();
           }
           
           if (formatted) {
-            days.push({ dateStr: formatted, colIdx: c, categories: {} });
+            days.push({ dateStr: formatted, dateObj: dateObj, colIdx: c, categories: {} });
+          }
+        }
+      }
+
+      // Filter out past days so the 1st box is always TODAY (or the earliest active/upcoming day)
+      let futureOrTodayDays = days.filter(d => !d.dateObj || d.dateObj >= todayDate);
+      if (futureOrTodayDays.length > 0) {
+        days = futureOrTodayDays;
+      }
+      
+      // Ensure 1st box is labeled with Today if date is today
+      if (days.length > 0) {
+        const firstDayObj = days[0].dateObj;
+        if (!firstDayObj || firstDayObj.toDateString() === todayDate.toDateString()) {
+          days[0].isToday = true;
+          if (!days[0].dateStr.toLowerCase().includes('today')) {
+            days[0].dateStr = `Today • ${days[0].dateStr}`;
           }
         }
       }
@@ -12552,9 +12575,12 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
       html += `<div style="display:flex; flex-wrap:wrap; gap:20px;">`;
       
       days.forEach(day => {
-        html += `<div class="card" style="flex: 1; min-width: 250px; padding:0; overflow:hidden;">
-                   <div style="background:var(--accent); color:#fff; padding:15px; text-align:center; font-weight:bold; font-size:18px;">
-                     ${day.dateStr}
+        const isTodayHeader = day.isToday || day.dateStr.toLowerCase().includes('today');
+        const headerBg = isTodayHeader ? "linear-gradient(135deg, #10b981, #059669)" : "var(--accent)";
+        const badgeHtml = isTodayHeader ? `<span style="background:rgba(255,255,255,0.25); padding:2px 8px; border-radius:12px; font-size:12px; margin-right:6px;">⭐ TODAY</span> ` : "";
+        html += `<div class="card" style="flex: 1; min-width: 250px; padding:0; overflow:hidden; ${isTodayHeader ? 'border: 2px solid #10b981; box-shadow: 0 0 15px rgba(16,185,129,0.25);' : ''}">
+                   <div style="background:${headerBg}; color:#fff; padding:15px; text-align:center; font-weight:bold; font-size:18px;">
+                     ${badgeHtml}${day.dateStr}
                    </div>
                    <div style="padding:15px;">`;
                    

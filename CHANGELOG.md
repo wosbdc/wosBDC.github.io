@@ -1,3 +1,7 @@
+## [1.64.0] - 2026-08-09
+### Added & Updated
+- **📅 Calendar View Today Alignment**: Filtered out past days so that Box 1 in Calendar View is ALWAYS Today's date (`⭐ TODAY`), followed sequentially by upcoming days. Added a green highlight header and border badge to Box 1.
+
 ## [1.63.0] - 2026-08-09
 ### Reverted
 - **🔄 Reverted Schedule & Rewards Editor to Stable Baseline**: Completely reverted `main.js` back to the stable `v1.52.1` baseline prior to the schedule overhaul, restoring full stability to the Schedule view and editor.
