@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [1.57.2] - 2026-08-09
+### Improved & Added
+- **🧹 Cleaned Legacy Sync/Wipe Tools**: Removed obsolete `window.deleteAllShowdownArchives` and legacy Google Sheets history sync handlers to prevent accidental archive wipes or duplicate sync conflicts.
+- **📋 Fully Interactive Quick Paste Importer (`openShowdownPasteImporterModal`)**: Fixed the Quick Paste Scores button with a complete interactive modal supporting TSV/CSV/Excel multi-line text input, live score parsing (Day 1..Day 6), real-time score preview table, and destination selector (**`⚡ Live Tracker`** vs **`📁 Vault Archive`**).
+- **🔄 Multi-Stage Archival & Reset Pipeline (`showResetAndArchiveEventModal`)**: Unified event archiving and live reset into a multi-stage sequential execution pipeline. Vault archival **always runs 1st** before resetting live data to guarantee zero data loss, accompanied by a real-time progress indicator UI showing each execution stage live.
+- **⚡ Verified Clean Build**: Passed `check_window_bindings.cjs`, static feature tests, and production Vite compilation.
+
 ## [1.57.1] - 2026-08-09
 ### Reverted
 - **🔄 Restored Original Schedule Pages**: Reverted all schedule view changes from v1.55.0–v1.57.0. Restored `views.schedule()` and `openScheduleEditorModal()` to their original pre-v1.55.0 state (v1.54.1).

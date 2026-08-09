@@ -4413,134 +4413,242 @@ if (!window._autocompleteListenerAdded) {
     window._autocompleteListenerAdded = true;
 }
 
-window.archiveCurrentShowdownToFirebase = async () => {
-    const confirmed = await window.customConfirm("📁 Save a historical snapshot of current Showdown scores into All-Time History?");
-    if (!confirmed) return;
+window.showResetAndArchiveEventModal = async () => {
+    let existing = document.getElementById('sdResetPipelineModal');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'sdResetPipelineModal';
+    overlay.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px);
+        z-index: 10005; display: flex; justify-content: center; align-items: center;
+        padding: 20px; box-sizing: border-box; animation: fadeIn 0.2s ease;
+    `;
+
+    const currentDateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    let currentEnemyName = "[WWA] Whiteoutwarriors";
     try {
-        const liveSnap = await get(ref(db, 'showdown_live'));
-        let liveData = (liveSnap && liveSnap.exists() && liveSnap.val()) ? liveSnap.val() : {};
-       if (liveData && liveData.error) delete liveData.error;
-       
-       if (!liveData.Thadwarf || ((liveData.Thadwarf.d1||0) + (liveData.Thadwarf.d2||0) + (liveData.Thadwarf.d3||0) + (liveData.Thadwarf.d4||0) + (liveData.Thadwarf.d5||0) + (liveData.Thadwarf.d6||0)) < 100000) {
-           liveData.Thadwarf = { d1: 4559055, d2: 4210500, d3: 3890200, d4: 5120400, d5: 4890200, d6: 6845009 };
-       }
-        const timestamp = Date.now();
-        const dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-        
-        let pList = [];
-        for (const [pName, scores] of Object.entries(liveData)) {
-            if (!scores || typeof scores !== 'object') continue;
-            let pd1 = scores.d1 || 0;
-            let pd2 = scores.d2 || 0;
-            let pd3 = scores.d3 || 0;
-            let pd4 = scores.d4 || 0;
-            let pd5 = scores.d5 || 0;
-            let pd6 = scores.d6 || 0;
-            let pTotal = pd1 + pd2 + pd3 + pd4 + pd5 + pd6;
-            pList.push({ name: pName, d1: pd1, d2: pd2, d3: pd3, d4: pd4, d5: pd5, d6: pd6, total: pTotal });
+        const metaSnap = await get(ref(db, 'showdown_meta/enemyAlliance/name')).catch(() => null);
+        if (metaSnap && metaSnap.exists() && metaSnap.val()) currentEnemyName = metaSnap.val();
+    } catch(e) {}
+
+    overlay.innerHTML = `
+        <div style="background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; width: 100%; max-width: 650px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.6);">
+            <div style="padding: 18px 24px; background: rgba(255,255,255,0.03); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-size: 18px; font-weight: bold; color: #ef4444; display: flex; align-items: center; gap: 10px;">
+                    🔄 Showdown Archival & Reset Pipeline
+                </div>
+                <button id="sdPipelineCloseBtn" onclick="document.getElementById('sdResetPipelineModal').remove()" style="background: rgba(255,255,255,0.08); border: 1px solid var(--border); color: var(--text-main); font-size: 16px; font-weight: bold; cursor: pointer; padding: 4px 10px; border-radius: 8px; line-height: 1;">✕ Close</button>
+            </div>
+            
+            <div id="sdPipelineModalBody" style="padding: 24px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 18px;">
+                <div style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 12px; padding: 16px; color: var(--text-main); font-size: 13px; line-height: 1.5;">
+                    ⚠️ <b>Important Sequential Safeguard:</b><br>
+                    Current Showdown live scores will be <b>archived to Vault History FIRST</b>. Once safely saved to Vault history, the live tracker and enemy settings will be reset for the upcoming event cycle.
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 12px; background: rgba(255,255,255,0.02); padding: 16px; border-radius: 10px; border: 1px solid var(--border);">
+                    <div>
+                        <label style="display: block; font-size: 12px; font-weight: bold; color: var(--text-muted); margin-bottom: 4px;">Archive Event Date Label:</label>
+                        <input type="text" id="sdPipelineDateLabel" value="${currentDateStr}" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-main); box-sizing: border-box; font-weight: bold;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 12px; font-weight: bold; color: var(--text-muted); margin-bottom: 4px;">Enemy Alliance Name:</label>
+                        <input type="text" id="sdPipelineEnemyName" value="${escapeHTML(currentEnemyName)}" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-main); box-sizing: border-box; font-weight: bold;">
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 10px;">
+                    <button onclick="document.getElementById('sdResetPipelineModal').remove()" style="background: var(--bg-main); border: 1px solid var(--border); color: var(--text-main); padding: 10px 18px; border-radius: 8px; font-weight: bold; cursor: pointer;">Cancel</button>
+                    <button id="sdStartPipelineBtn" onclick="window.runSdResetPipeline()" style="background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none; padding: 10px 22px; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; box-shadow: 0 4px 15px rgba(239,68,68,0.3);">🚀 Start Sequential Pipeline</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    window.runSdResetPipeline = async () => {
+        const dateLabel = document.getElementById('sdPipelineDateLabel')?.value || currentDateStr;
+        const enemyName = document.getElementById('sdPipelineEnemyName')?.value || currentEnemyName;
+
+        const body = document.getElementById('sdPipelineModalBody');
+        const closeBtn = document.getElementById('sdPipelineCloseBtn');
+        if (closeBtn) closeBtn.style.display = 'none';
+
+        if (body) {
+            body.innerHTML = `
+                <div style="font-weight: bold; font-size: 14px; color: var(--text-main); margin-bottom: 10px;">
+                    ⚡ Execution Progress (<span id="sdPipelinePct">0%</span>)
+                </div>
+                
+                <div style="background: rgba(255,255,255,0.05); border-radius: 10px; height: 10px; overflow: hidden; margin-bottom: 20px; border: 1px solid var(--border);">
+                    <div id="sdPipelineBar" style="background: linear-gradient(90deg, var(--accent), #10b981); height: 100%; width: 0%; transition: width 0.4s ease;"></div>
+                </div>
+
+                <div id="sdPipelineSteps" style="display: flex; flex-direction: column; gap: 12px;">
+                    <div id="step1" style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02); padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border);">
+                        <div style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-main);">
+                            <span>📁 Stage 1: Fetching Live Scores & Formatting Archive</span>
+                        </div>
+                        <span id="step1_badge" style="background: rgba(255,255,255,0.08); color: var(--text-muted); padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: bold;">Pending</span>
+                    </div>
+
+                    <div id="step2" style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02); padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border);">
+                        <div style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-main);">
+                            <span>💾 Stage 2: Saving Snapshot to Vault History (Run 1st)</span>
+                        </div>
+                        <span id="step2_badge" style="background: rgba(255,255,255,0.08); color: var(--text-muted); padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: bold;">Pending</span>
+                    </div>
+
+                    <div id="step3" style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02); padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border);">
+                        <div style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-main);">
+                            <span>🔄 Stage 3: Clearing Live Player Scores</span>
+                        </div>
+                        <span id="step3_badge" style="background: rgba(255,255,255,0.08); color: var(--text-muted); padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: bold;">Pending</span>
+                    </div>
+
+                    <div id="step4" style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02); padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border);">
+                        <div style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-main);">
+                            <span>⚙️ Stage 4: Resetting Enemy Alliance Settings</span>
+                        </div>
+                        <span id="step4_badge" style="background: rgba(255,255,255,0.08); color: var(--text-muted); padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: bold;">Pending</span>
+                    </div>
+
+                    <div id="step5" style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02); padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border);">
+                        <div style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-main);">
+                            <span>📋 Stage 5: Logging Action & Refreshing Views</span>
+                        </div>
+                        <span id="step5_badge" style="background: rgba(255,255,255,0.08); color: var(--text-muted); padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: bold;">Pending</span>
+                    </div>
+                </div>
+
+                <div id="sdPipelineDoneArea" style="display: none; flex-direction: column; align-items: center; gap: 12px; margin-top: 15px;">
+                    <div style="background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.4); color: #10b981; padding: 12px 20px; border-radius: 12px; font-weight: bold; font-size: 14px; text-align: center; width: 100%; box-sizing: border-box;">
+                        🎉 Showdown Archival & Reset Pipeline Completed Successfully!
+                    </div>
+                    <button onclick="document.getElementById('sdResetPipelineModal').remove(); if(typeof views !== 'undefined' && views.showdownAdmin) views.showdownAdmin();" style="background: var(--success); color: white; border: none; padding: 12px 30px; border-radius: 8px; font-weight: bold; font-size: 15px; cursor: pointer; box-shadow: 0 4px 15px rgba(16,185,129,0.3);">Done</button>
+                </div>
+            `;
         }
-        pList.sort((a, b) => b.total - a.total);
-        
-        // 2D Array format for Google Sheets compatibility
-        const tableRows = [
-            ["", "Date:", dateStr, "", "", "", "", "", "", ""],
-            ["", "Ranking", "Member", "Day 1", "Day 2", "Day 3", "Day 4", "Day 5", "Day 6", "Total"],
-            ...pList.map((p, idx) => ["", idx + 1, p.name, p.d1, p.d2, p.d3, p.d4, p.d5, p.d6, p.total]),
-            ["", "", "", "", "", "", "", "", "", ""]
-        ];
 
-        const metaSnap = await get(ref(db, 'showdown_meta')).catch(() => null);
-        const metaVal = (metaSnap && metaSnap.exists()) ? metaSnap.val() : {};
+        const updateStep = (stepNum, status, text, pct) => {
+            const badge = document.getElementById(`step${stepNum}_badge`);
+            const container = document.getElementById(`step${stepNum}`);
+            const bar = document.getElementById('sdPipelineBar');
+            const pctSpan = document.getElementById('sdPipelinePct');
 
-        const archivePayload = {
-            date: dateStr,
-            timestamp: timestamp,
-            players: pList.map((p, idx) => ({
-                rank: idx + 1,
-                name: p.name,
-                d1: p.d1,
-                d2: p.d2,
-                d3: p.d3,
-                d4: p.d4,
-                d5: p.d5,
-                d6: p.d6,
-                total: p.total
-            })),
-            enemyAlliance: metaVal.enemyAlliance || { name: "[WWA] Whiteoutwarriors", scores: {} },
-            tableRows: tableRows
-        };
-        
-        // Save to permitted Firebase node
-        let savedSuccessfully = false;
-        try {
-            await set(ref(db, `showdown_meta/history/${timestamp}`), archivePayload);
-            savedSuccessfully = true;
-        } catch(metaErr) {
-            console.warn("Could not write to showdown_meta/history, trying showdown_history...", metaErr);
-        }
+            if (bar) bar.style.width = pct + '%';
+            if (pctSpan) pctSpan.textContent = pct + '%';
 
-        if (!savedSuccessfully) {
-            try {
-                await set(ref(db, `showdown_history/${timestamp}`), archivePayload);
-                savedSuccessfully = true;
-            } catch(hErr) {
-                console.warn("Could not write to showdown_history, trying activity_history_archives...", hErr);
-                await set(ref(db, `activity_history_archives/showdown_${timestamp}`), archivePayload);
-                savedSuccessfully = true;
+            if (badge) {
+                badge.textContent = text;
+                if (status === 'running') {
+                    badge.style.background = 'rgba(6,182,212,0.2)';
+                    badge.style.color = 'var(--accent)';
+                    badge.style.border = '1px solid rgba(6,182,212,0.4)';
+                    if (container) container.style.borderColor = 'var(--accent)';
+                } else if (status === 'done') {
+                    badge.style.background = 'rgba(16,185,129,0.2)';
+                    badge.style.color = '#10b981';
+                    badge.style.border = '1px solid rgba(16,185,129,0.4)';
+                    if (container) container.style.borderColor = 'rgba(16,185,129,0.4)';
+                } else if (status === 'error') {
+                    badge.style.background = 'rgba(239,68,68,0.2)';
+                    badge.style.color = '#ef4444';
+                    badge.style.border = '1px solid rgba(239,68,68,0.4)';
+                    if (container) container.style.borderColor = 'rgba(239,68,68,0.4)';
+                }
             }
-        }
+        };
 
-        if (window.logAdminAction) {
-            try {
-                window.logAdminAction("Showdown Event Archived", `Archived current Showdown scores (${pList.length} players) into History`);
-            } catch(e) {}
-        }
-        
-        // Ask user if they also want to reset live scores now
-        const resetNow = await window.customConfirm("✅ Showdown event successfully saved to History!\n\nDo you want to RESET the live tracker now for the next event?");
-        if (resetNow) {
+        const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+        try {
+            // Stage 1: Fetch live scores
+            updateStep(1, 'running', '🔄 Fetching...', 10);
+            await sleep(300);
+            const liveSnap = await get(ref(db, 'showdown_live'));
+            let liveData = (liveSnap && liveSnap.exists() && liveSnap.val()) ? liveSnap.val() : {};
+            if (liveData && liveData.error) delete liveData.error;
+
+            let pList = [];
+            for (const [pName, scores] of Object.entries(liveData)) {
+                if (!scores || typeof scores !== 'object') continue;
+                let pd1 = scores.d1 || 0; let pd2 = scores.d2 || 0; let pd3 = scores.d3 || 0;
+                let pd4 = scores.d4 || 0; let pd5 = scores.d5 || 0; let pd6 = scores.d6 || 0;
+                let pTotal = pd1 + pd2 + pd3 + pd4 + pd5 + pd6;
+                pList.push({ name: pName, d1: pd1, d2: pd2, d3: pd3, d4: pd4, d5: pd5, d6: pd6, total: pTotal });
+            }
+            pList.sort((a, b) => b.total - a.total);
+
+            const timestamp = Date.now();
+            const tableRows = [
+                ["", "Date:", dateLabel, "", "", "", "", "", "", ""],
+                ["", "Ranking", "Member", "Day 1", "Day 2", "Day 3", "Day 4", "Day 5", "Day 6", "Total"],
+                ...pList.map((p, idx) => ["", idx + 1, p.name, p.d1, p.d2, p.d3, p.d4, p.d5, p.d6, p.total]),
+                ["", "", "", "", "", "", "", "", "", ""]
+            ];
+
+            const archivePayload = {
+                date: dateLabel,
+                timestamp: timestamp,
+                players: pList.map((p, idx) => ({ rank: idx + 1, name: p.name, d1: p.d1, d2: p.d2, d3: p.d3, d4: p.d4, d5: p.d5, d6: p.d6, total: p.total })),
+                enemyAlliance: { name: enemyName, scores: {} },
+                tableRows: tableRows
+            };
+            updateStep(1, 'done', '✅ Done', 25);
+            await sleep(300);
+
+            // Stage 2: Save Vault Snapshot (MUST RUN FIRST!)
+            updateStep(2, 'running', '💾 Archiving...', 35);
+            await set(ref(db, `showdown_meta/history/${timestamp}`), archivePayload);
+            updateStep(2, 'done', '✅ Archived', 55);
+            await sleep(300);
+
+            // Stage 3: Clear Live Scores
+            updateStep(3, 'running', '🔄 Clearing...', 65);
             const liveKeys = Object.keys(liveData);
             if (liveKeys.length > 0) {
                 await Promise.all(liveKeys.map(k => set(ref(db, `showdown_live/${k}`), null).catch(() => null)));
             }
-            try {
-                await set(ref(db, 'showdown_meta/enemyAlliance'), { name: "[WWA] Whiteoutwarriors", scores: { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 } });
-            } catch(e) {}
-            if (window.showToast) window.showToast("Showdown archived to History AND live event reset!", "success");
-        } else {
-            if (window.showToast) window.showToast("Showdown archived to History (live tracker kept active)!", "success");
-        }
+            window._currentSdLiveData = {};
+            if (window.liveData && window.liveData['Showdown']) {
+                window.liveData['Showdown'] = [];
+            }
+            updateStep(3, 'done', '✅ Reset', 80);
+            await sleep(300);
 
-        if (typeof views !== 'undefined' && views.showdown) views.showdown(); else if (typeof views !== 'undefined' && views.showdownAdmin) views.showdownAdmin();
-    } catch(err) {
-        console.error("Error archiving showdown event:", err);
-        if (window.showToast) window.showToast("Error archiving event: " + err.message, "error");
-    }
+            // Stage 4: Reset Enemy Alliance Settings
+            updateStep(4, 'running', '⚙️ Resetting...', 88);
+            await set(ref(db, 'showdown_meta/enemyAlliance'), {
+                name: "[WWA] Whiteoutwarriors",
+                scores: { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 }
+            }).catch(() => null);
+            updateStep(4, 'done', '✅ Reset', 95);
+            await sleep(300);
+
+            // Stage 5: Log & Refresh
+            updateStep(5, 'running', '📋 Logging...', 98);
+            if (window.logAdminAction) {
+                window.logAdminAction("Showdown Pipeline Executed", `Archived '${dateLabel}' (${pList.length} players) and reset live scores.`);
+            }
+            updateStep(5, 'done', '✅ Completed', 100);
+
+            const doneArea = document.getElementById('sdPipelineDoneArea');
+            if (doneArea) doneArea.style.display = 'flex';
+
+        } catch(err) {
+            console.error("Pipeline error:", err);
+            if (window.showToast) window.showToast("Pipeline error: " + err.message, "error");
+        }
+    };
 };
 
-window.resetCurrentShowdown = async () => {
-    const confirmed = await window.customConfirm("Are you sure you want to RESET the current live Showdown scores? Make sure you have archived it first!");
-    if (!confirmed) return;
-    try {
-        const liveSnap = await get(ref(db, 'showdown_live'));
-        if (liveSnap.exists() && liveSnap.val()) {
-            const liveKeys = Object.keys(liveSnap.val());
-            await Promise.all(liveKeys.map(k => set(ref(db, `showdown_live/${k}`), null).catch(() => null)));
-        }
-        try {
-            await set(ref(db, 'showdown_meta/enemyAlliance'), { name: "[WWA] Whiteoutwarriors", scores: { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 } });
-        } catch(e) {}
-        if (window.logAdminAction) {
-            try {
-                window.logAdminAction("Showdown Live Reset", "Reset current live Showdown scores and enemy alliance data");
-            } catch(e) {}
-        }
-        if (window.showToast) window.showToast("Showdown live data has been reset!", "success");
-        if (typeof views !== 'undefined' && views.showdownAdmin) views.showdownAdmin();
-    } catch(err) {
-        if (window.showToast) window.showToast("Error resetting: " + err.message, "error");
-    }
-};
+window.archiveCurrentShowdownToFirebase = window.showResetAndArchiveEventModal;
+window.resetCurrentShowdown = window.showResetAndArchiveEventModal;
+window.showResetEventModal = window.showResetAndArchiveEventModal;
 
 
 
@@ -4969,45 +5077,6 @@ window.parseShowdownHistoryRows = (rows) => {
     return events;
 };
 
-window.syncGoogleSheetsHistoryToVault = async (btnEl = null) => {
-    window._isVaultWiped = false;
-    await set(ref(db, 'showdown_meta/isWiped'), false).catch(() => null);
-    let origText = btnEl ? btnEl.innerHTML : '';
-    if (btnEl) { btnEl.disabled = true; btnEl.innerHTML = '⏳ Syncing Sheets...'; }
-    try {
-        const fallbackToken = await getAuthToken();
-        const res = await fetch(`${API_BASE_URL}?api=${encodeURIComponent("Showdown History")}${fallbackToken ? '&token=' + encodeURIComponent(fallbackToken) : ''}`);
-        const text = await res.text();
-        const json = JSON.parse(text);
-        let sheetData = json.data || [];
-        
-        let rows = Array.isArray(sheetData) ? sheetData : (sheetData.data || []);
-        let parsedEvents = window.parseShowdownHistoryRows(rows);
-        
-        let eventCount = Object.keys(parsedEvents).length;
-        if (eventCount === 0) {
-            if (window.showToast) window.showToast("No historical blocks parsed from Google Sheets.", "warning");
-            if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = origText; }
-            return;
-        }
-
-        for (const [ts, ev] of Object.entries(parsedEvents)) {
-            await set(ref(db, `showdown_meta/history/${ts}`), ev).catch(() => null);
-        }
-
-        if (window._sdHistoryState) {
-            window._sdHistoryState.historyObj = parsedEvents;
-        }
-        if (window.showToast) window.showToast(`Successfully synced ${eventCount} event blocks from Google Sheets to Vault!`, "success");
-        if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = origText; }
-        if (window.openShowdownArchiveVaultModal) window.openShowdownArchiveVaultModal('all');
-    } catch(err) {
-        console.error("Error syncing Google Sheets history:", err);
-        if (window.showToast) window.showToast("Sync Error: " + err.message, "error");
-        if (btnEl) { btnEl.disabled = false; btnEl.innerHTML = origText; }
-    }
-};
-
 window.deleteShowdownArchive = async (archiveKey, dateStr) => {
     let confirmed = await window.customConfirm(`🗑️ Are you sure you want to DELETE the archive for "${dateStr}"?`);
     if (!confirmed) return;
@@ -5025,12 +5094,237 @@ window.deleteShowdownArchive = async (archiveKey, dateStr) => {
 };
 
 window.openShowdownPasteImporterModal = () => {
-    if (window.openQuickPasteModal) {
-        window.openQuickPasteModal();
-    } else if (window.showToast) {
-        window.showToast("Quick paste importer module opening...", "info");
-    }
+    let existing = document.getElementById('sdQuickPasteModal');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'sdQuickPasteModal';
+    overlay.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px);
+        z-index: 10005; display: flex; justify-content: center; align-items: center;
+        padding: 20px; box-sizing: border-box; animation: fadeIn 0.2s ease;
+    `;
+
+    overlay.innerHTML = `
+        <div style="background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; width: 100%; max-width: 850px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.6);">
+            <div style="padding: 18px 24px; background: rgba(255,255,255,0.03); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-size: 18px; font-weight: bold; color: #FFD700; display: flex; align-items: center; gap: 10px;">
+                    📋 Quick Paste Showdown Scores
+                </div>
+                <button onclick="document.getElementById('sdQuickPasteModal').remove()" style="background: rgba(255,255,255,0.08); border: 1px solid var(--border); color: var(--text-main); font-size: 16px; font-weight: bold; cursor: pointer; padding: 4px 10px; border-radius: 8px; line-height: 1;">✕ Close</button>
+            </div>
+            
+            <div style="padding: 24px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 16px;">
+                <div style="background: rgba(168,85,247,0.1); border: 1px solid rgba(168,85,247,0.3); border-radius: 10px; padding: 14px; color: var(--text-main); font-size: 13px; line-height: 1.5;">
+                    💡 <b>Instructions:</b> Copy score rows directly from Google Sheets or Excel and paste them below.<br>
+                    Format supported per line: <code>Player Name [tab or space or comma] Day1 Day2 Day3 Day4 Day5 Day6</code>
+                </div>
+
+                <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 240px;">
+                        <label style="display: block; font-weight: bold; font-size: 13px; color: var(--text-main); margin-bottom: 6px;">Target Destination:</label>
+                        <select id="sdPasteTarget" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--accent); background: var(--bg-main); color: var(--text-main); font-weight: bold; font-size: 14px;" onchange="window.toggleSdPasteTarget(this.value)">
+                            <option value="live" selected>⚡ Import to Live Tracker (showdown_live)</option>
+                            <option value="archive">📁 Import to Vault Archive (Historical Snapshot)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="sdPasteVaultOptions" style="display: none; flex-direction: column; gap: 10px; background: rgba(255,255,255,0.02); padding: 14px; border-radius: 10px; border: 1px solid var(--border);">
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                        <div style="flex: 1;">
+                            <label style="display: block; font-size: 12px; font-weight: bold; color: var(--text-muted); margin-bottom: 4px;">Archive Event Date Label:</label>
+                            <input type="text" id="sdPasteArchiveDate" value="${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}" style="width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-main); box-sizing: border-box;">
+                        </div>
+                        <div style="flex: 1;">
+                            <label style="display: block; font-size: 12px; font-weight: bold; color: var(--text-muted); margin-bottom: 4px;">Enemy Alliance Name:</label>
+                            <input type="text" id="sdPasteEnemyName" value="[WWA] Whiteoutwarriors" style="width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-main); box-sizing: border-box;">
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label style="display: block; font-weight: bold; font-size: 13px; color: var(--text-main); margin-bottom: 6px;">Paste Score Rows:</label>
+                    <textarea id="sdPasteTextarea" rows="8" placeholder="Perma Frost&#9;1250000&#9;2100000&#9;3400000&#9;4100000&#9;3800000&#9;5200000&#nThaDwarf&#9;4559055&#9;4210500&#9;3890200&#9;5120400&#9;4890200&#9;6845009" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-main); font-family: monospace; font-size: 13px; box-sizing: border-box; resize: vertical;" oninput="window.parseSdPastePreview()"></textarea>
+                </div>
+
+                <div id="sdPastePreviewContainer" style="display: none; flex-direction: column; gap: 8px;">
+                    <div style="font-weight: bold; font-size: 14px; color: var(--text-main); display: flex; justify-content: space-between; align-items: center;">
+                        <span>📊 Parsed Scores Preview (<span id="sdPasteParsedCount">0</span> players found)</span>
+                    </div>
+                    <div class="card-table-scroll" style="max-height: 220px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px;">
+                        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 12px;">
+                            <thead>
+                                <tr style="background: rgba(255,255,255,0.05); border-bottom: 1px solid var(--border);">
+                                    <th style="padding: 8px;">Player Name</th>
+                                    <th style="padding: 8px;">Day 1</th>
+                                    <th style="padding: 8px;">Day 2</th>
+                                    <th style="padding: 8px;">Day 3</th>
+                                    <th style="padding: 8px;">Day 4</th>
+                                    <th style="padding: 8px;">Day 5</th>
+                                    <th style="padding: 8px;">Day 6</th>
+                                    <th style="padding: 8px;">Total Score</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sdPastePreviewTbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div style="padding: 16px 24px; background: rgba(0,0,0,0.2); border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 12px;">
+                <button onclick="document.getElementById('sdQuickPasteModal').remove()" style="background: var(--bg-main); border: 1px solid var(--border); color: var(--text-main); padding: 10px 18px; border-radius: 8px; font-weight: bold; cursor: pointer;">Cancel</button>
+                <button id="sdSubmitPasteBtn" onclick="window.submitSdQuickPaste()" style="background: var(--success); color: white; border: none; padding: 10px 22px; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer;" disabled>💾 Import Scores to Database</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    window.toggleSdPasteTarget = (val) => {
+        const opts = document.getElementById('sdPasteVaultOptions');
+        if (opts) opts.style.display = (val === 'archive') ? 'flex' : 'none';
+    };
+
+    window._parsedSdPasteRows = [];
+
+    window.parseSdPastePreview = () => {
+        const text = (document.getElementById('sdPasteTextarea')?.value || '').trim();
+        const container = document.getElementById('sdPastePreviewContainer');
+        const tbody = document.getElementById('sdPastePreviewTbody');
+        const countSpan = document.getElementById('sdPasteParsedCount');
+        const submitBtn = document.getElementById('sdSubmitPasteBtn');
+
+        if (!text) {
+            if (container) container.style.display = 'none';
+            if (submitBtn) submitBtn.disabled = true;
+            window._parsedSdPasteRows = [];
+            return;
+        }
+
+        const lines = text.split(/\r?\n/);
+        const parsed = [];
+
+        lines.forEach(line => {
+            let l = line.trim();
+            if (!l) return;
+            let parts = l.split(/\t|,|\s{2,}/).map(p => p.trim()).filter(Boolean);
+            if (parts.length < 2) {
+                parts = l.split(/\s+/);
+            }
+            if (parts.length < 2) return;
+
+            let name = parts[0];
+            let scores = [];
+            for (let i = 1; i < parts.length; i++) {
+                let num = parseInt(parts[i].replace(/[^0-9]/g, ''));
+                if (!isNaN(num)) scores.push(num);
+            }
+
+            if (scores.length > 0) {
+                let d1 = scores[0] || 0;
+                let d2 = scores[1] || 0;
+                let d3 = scores[2] || 0;
+                let d4 = scores[3] || 0;
+                let d5 = scores[4] || 0;
+                let d6 = scores[5] || 0;
+                let total = d1 + d2 + d3 + d4 + d5 + d6;
+                parsed.push({ name, d1, d2, d3, d4, d5, d6, total });
+            }
+        });
+
+        window._parsedSdPasteRows = parsed;
+
+        if (parsed.length > 0) {
+            if (container) container.style.display = 'flex';
+            if (countSpan) countSpan.textContent = parsed.length;
+            if (tbody) {
+                tbody.innerHTML = parsed.map(p => `
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <td style="padding: 6px 8px; font-weight: bold; color: var(--text-main);">${escapeHTML(p.name)}</td>
+                        <td style="padding: 6px 8px; color: var(--text-muted);">${p.d1 > 0 ? p.d1.toLocaleString() : '-'}</td>
+                        <td style="padding: 6px 8px; color: var(--text-muted);">${p.d2 > 0 ? p.d2.toLocaleString() : '-'}</td>
+                        <td style="padding: 6px 8px; color: var(--text-muted);">${p.d3 > 0 ? p.d3.toLocaleString() : '-'}</td>
+                        <td style="padding: 6px 8px; color: var(--text-muted);">${p.d4 > 0 ? p.d4.toLocaleString() : '-'}</td>
+                        <td style="padding: 6px 8px; color: var(--text-muted);">${p.d5 > 0 ? p.d5.toLocaleString() : '-'}</td>
+                        <td style="padding: 6px 8px; color: var(--text-muted);">${p.d6 > 0 ? p.d6.toLocaleString() : '-'}</td>
+                        <td style="padding: 6px 8px; font-weight: bold; color: #FFD700;">${p.total.toLocaleString()}</td>
+                    </tr>
+                `).join('');
+            }
+            if (submitBtn) submitBtn.disabled = false;
+        } else {
+            if (container) container.style.display = 'none';
+            if (submitBtn) submitBtn.disabled = true;
+        }
+    };
+
+    window.submitSdQuickPaste = async () => {
+        const rows = window._parsedSdPasteRows || [];
+        if (rows.length === 0) return;
+
+        const btn = document.getElementById('sdSubmitPasteBtn');
+        if (btn) { btn.disabled = true; btn.innerHTML = 'Saving...'; }
+
+        const target = document.getElementById('sdPasteTarget')?.value || 'live';
+
+        try {
+            if (target === 'live') {
+                for (const p of rows) {
+                    await set(ref(db, `showdown_live/${p.name}`), {
+                        d1: p.d1, d2: p.d2, d3: p.d3, d4: p.d4, d5: p.d5, d6: p.d6
+                    });
+                    if (window._currentSdLiveData) {
+                        window._currentSdLiveData[p.name] = { d1: p.d1, d2: p.d2, d3: p.d3, d4: p.d4, d5: p.d5, d6: p.d6 };
+                    }
+                }
+                if (window.logAdminAction) {
+                    window.logAdminAction("Showdown Quick Paste Import", `Imported live scores for ${rows.length} players via Quick Paste`);
+                }
+                if (window.showToast) window.showToast(`Successfully updated live scores for ${rows.length} players!`, "success");
+                document.getElementById('sdQuickPasteModal')?.remove();
+                if (typeof views !== 'undefined' && views.showdownAdmin) views.showdownAdmin();
+            } else {
+                const dateLabel = document.getElementById('sdPasteArchiveDate')?.value || new Date().toLocaleDateString();
+                const enemyName = document.getElementById('sdPasteEnemyName')?.value || '[WWA] Whiteoutwarriors';
+                const timestamp = Date.now();
+
+                rows.sort((a, b) => b.total - a.total);
+
+                const tableRows = [
+                    ["", "Date:", dateLabel, "", "", "", "", "", "", ""],
+                    ["", "Ranking", "Member", "Day 1", "Day 2", "Day 3", "Day 4", "Day 5", "Day 6", "Total"],
+                    ...rows.map((p, idx) => ["", idx + 1, p.name, p.d1, p.d2, p.d3, p.d4, p.d5, p.d6, p.total]),
+                    ["", "", "", "", "", "", "", "", "", ""]
+                ];
+
+                const archivePayload = {
+                    date: dateLabel,
+                    timestamp: timestamp,
+                    players: rows.map((p, idx) => ({ rank: idx + 1, name: p.name, d1: p.d1, d2: p.d2, d3: p.d3, d4: p.d4, d5: p.d5, d6: p.d6, total: p.total })),
+                    enemyAlliance: { name: enemyName, scores: {} },
+                    tableRows: tableRows
+                };
+
+                await set(ref(db, `showdown_meta/history/${timestamp}`), archivePayload);
+
+                if (window.logAdminAction) {
+                    window.logAdminAction("Showdown Archive Created", `Created Vault Archive '${dateLabel}' with ${rows.length} players via Quick Paste`);
+                }
+                if (window.showToast) window.showToast(`Successfully created Vault Archive '${dateLabel}'!`, "success");
+                document.getElementById('sdQuickPasteModal')?.remove();
+                if (window.openShowdownArchiveVaultModal) window.openShowdownArchiveVaultModal('all', true);
+            }
+        } catch(err) {
+            console.error("Error saving quick paste scores:", err);
+            if (window.showToast) window.showToast("Import error: " + err.message, "error");
+            if (btn) { btn.disabled = false; btn.innerHTML = '💾 Import Scores to Database'; }
+        }
+    };
 };
+
+window.openQuickPasteModal = window.openShowdownPasteImporterModal;
 
 window.openEditShowdownArchiveModal = async (archiveKey, currentDate, currentEnemy) => {
     let newDate = await window.customPrompt("Enter new Date (e.g. Aug 1 - Aug 7, 2026):", currentDate);
@@ -5068,26 +5362,6 @@ window.openEditShowdownArchiveModal = async (archiveKey, currentDate, currentEne
         }
     } catch(err) {
         if (window.showToast) window.showToast("Error updating archive: " + err.message, "error");
-    }
-};
-
-window.deleteAllShowdownArchives = async () => {
-    let confirmed = await window.customConfirm("⚠️ Are you sure you want to WIPE all archives from the Showdown Vault?\n\nThis will clear all saved event history from Firebase.");
-    if (!confirmed) return;
-    try {
-        window._isVaultWiped = true;
-        await set(ref(db, 'showdown_meta/isWiped'), true).catch(() => null);
-        await remove(ref(db, 'showdown_meta/history')).catch(() => null);
-        await remove(ref(db, 'showdown_history')).catch(() => null);
-        await remove(ref(db, 'activity_history_archives')).catch(() => null);
-        if (window._sdHistoryState) {
-            window._sdHistoryState.historyObj = {};
-        }
-        if (window.showToast) window.showToast("All Showdown archives wiped cleanly!", "success");
-        if (window.openShowdownArchiveVaultModal) window.openShowdownArchiveVaultModal('all');
-    } catch(err) {
-        console.error("Error wiping archives:", err);
-        if (window.showToast) window.showToast("Wipe error: " + err.message, "error");
     }
 };
 
@@ -7784,11 +8058,8 @@ const views = {
                  <button onclick="window.openShowdownArchiveVaultModal('all', true)" style="background:linear-gradient(135deg, rgba(139,92,246,0.3) 0%, rgba(124,58,237,0.15) 100%); color:#a78bfa; border:1px solid rgba(139,92,246,0.5); padding:4px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:4px;">📂 Vault Manager</button>
                  <button onclick="window.openShowdownPasteImporterModal()" style="background:rgba(255,215,0,0.18); border:1px solid rgba(255,215,0,0.5); color:#FFD700; padding:4px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:4px;">📋 Quick Paste Scores</button>
                   <button onclick="window.showMissedDaysReportModal(this)" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--accent); padding:4px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:4px;">📋 Missed Days Report</button>
-                 <button onclick="window.archiveCurrentShowdownToFirebase()" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--success); padding:4px 8px; border-radius:6px; cursor:pointer; font-size:12px;">📁 Archive to History</button>
-                 <button onclick="window.syncGoogleSheetsHistoryToVault(this)" style="background:var(--accent); color:var(--bg-main); border:none; padding:4px 8px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer; box-shadow:0 2px 8px rgba(6,182,212,0.2);">⚡ Sync All Sheets History</button>
                  <button onclick="window.restoreLatestShowdownArchive()" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--accent); padding:4px 8px; border-radius:6px; cursor:pointer; font-size:12px;">↩️ Restore Choice</button>
-                 <button onclick="window.resetCurrentShowdown()" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--danger); padding:4px 8px; border-radius:6px; cursor:pointer; font-size:12px;">🔄 Reset Event</button>
-                 <button onclick="window.deleteAllShowdownArchives()" style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:4px 8px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">🗑️ Wipe All Archives</button>
+                 <button onclick="window.showResetEventModal()" style="background:linear-gradient(135deg, rgba(239,68,68,0.2) 0%, rgba(239,68,68,0.08) 100%); color:#ef4444; border:1px solid rgba(239,68,68,0.4); padding:4px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:4px;">🔄 Reset Event</button>
                </div>
            </div>
            <div style="background:rgba(255,255,255,0.02); padding:15px; border-radius:8px; border:1px solid var(--border); margin-bottom:10px;">
