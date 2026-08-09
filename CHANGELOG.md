@@ -1,3 +1,7 @@
+## [1.63.0] - 2026-08-09
+### Reverted
+- **🔄 Reverted Schedule & Rewards Editor to Stable Baseline**: Completely reverted `main.js` back to the stable `v1.52.1` baseline prior to the schedule overhaul, restoring full stability to the Schedule view and editor.
+
 ## [1.62.0] - 2026-08-09
 ### Updated
 - **🎯 Strictly Target `data` Tabs**: Removed `WhiteOut Survival` tab fallback from `fetchScheduleSheetData()`. Schedule and rewards data fetching now strictly targets `data`, `Data`, and `Schedule data` tabs.
