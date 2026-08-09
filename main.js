@@ -9903,12 +9903,18 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
         <h2 style="color:var(--text-main); margin-top:0; font-size:24px;">Account Hub</h2>
         
         <!-- Tab Navigation Bar -->
-        <div style="display:flex; justify-content:center; gap:10px; margin-bottom:24px; border-bottom:1px solid var(--border); padding-bottom:12px; flex-wrap:wrap;">
-          <button id="accTabBtnProfile" style="padding:10px 22px; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer; background:var(--accent); color:#fff; border:none; transition:0.2s; box-shadow:0 4px 12px rgba(14,165,233,0.3);">
-            🆔 Account Profile
+        <div style="display:flex; justify-content:center; gap:8px; margin-bottom:24px; border-bottom:1px solid var(--border); padding-bottom:12px; flex-wrap:wrap;">
+          <button id="accTabBtnProfile" style="padding:9px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; background:var(--accent); color:#fff; border:none; transition:0.2s; box-shadow:0 4px 12px rgba(14,165,233,0.3);">
+            🆔 Profile
           </button>
-          <button id="accTabBtnRankings" style="padding:10px 22px; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer; background:var(--bg-main); color:var(--text-muted); border:1px solid var(--border); transition:0.2s;">
-            🏆 My Event Rankings
+          <button id="accTabBtnRankings" style="padding:9px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; background:var(--bg-main); color:var(--text-muted); border:1px solid var(--border); transition:0.2s;">
+            🏆 Event Rankings
+          </button>
+          <button id="accTabBtnAlts" style="padding:9px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; background:var(--bg-main); color:var(--text-muted); border:1px solid var(--border); transition:0.2s;">
+            🔗 Linked Alts (${links.length})
+          </button>
+          <button id="accTabBtnActivity" style="padding:9px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; background:var(--bg-main); color:var(--text-muted); border:1px solid var(--border); transition:0.2s;">
+            📅 Activity Log
           </button>
         </div>
 
@@ -9964,24 +9970,30 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
           </div>
           
           <input type="file" id="avatarUploadInput" accept="image/png, image/jpeg, image/webp" style="display:none;">
-              ${staffProfileHtml}
-              ${linkedHtml}
-              
-              <!-- Personal Activity Log Card -->
-              <div class="card" style="margin-top:20px; text-align:left;">
-                <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
-                  <span>📅 Today's Personal Activity Log</span>
-                  <span style="font-size:12px; color:var(--text-muted); font-weight:normal;">Filtered for ${escapeHTML(currentChiefName)}</span>
-                </div>
-                <div id="userPersonalLogContainer" style="margin-top:12px;">
-                  <div style="text-align:center; color:var(--text-muted); padding:15px; font-size:13px;">Loading today's activity...</div>
-                </div>
-              </div>
+          ${staffProfileHtml}
         </div>
 
         <!-- Section 2: My Event Rankings Tab -->
         <div id="accTabSectionRankings" style="display:none; text-align:left;">
           <div id="accRankingsContainer"></div>
+        </div>
+
+        <!-- Section 3: Linked Alt Accounts Tab -->
+        <div id="accTabSectionAlts" style="display:none; text-align:left;">
+          ${linkedHtml}
+        </div>
+
+        <!-- Section 4: Personal Activity Log Tab -->
+        <div id="accTabSectionActivity" style="display:none; text-align:left;">
+          <div class="card" style="text-align:left;">
+            <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
+              <span>📅 Today's Personal Activity Log</span>
+              <span style="font-size:12px; color:var(--text-muted); font-weight:normal;">Filtered for ${escapeHTML(currentChiefName)}</span>
+            </div>
+            <div id="userPersonalLogContainer" style="margin-top:12px;">
+              <div style="text-align:center; color:var(--text-muted); padding:15px; font-size:13px;">Loading today's activity...</div>
+            </div>
+          </div>
         </div>
       </div>
     `;
@@ -10110,43 +10122,38 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
 
     renderAccountRankings(currentChiefName);
 
-    // Tab Switcher Listeners
-    const tabBtnProfile = document.getElementById('accTabBtnProfile');
-    const tabBtnRankings = document.getElementById('accTabBtnRankings');
-    const tabSecProfile = document.getElementById('accTabSectionProfile');
-    const tabSecRankings = document.getElementById('accTabSectionRankings');
+    // 4-Way Tab Switcher Listeners
+    const accTabs = [
+      { id: 'Profile', btn: document.getElementById('accTabBtnProfile'), sec: document.getElementById('accTabSectionProfile') },
+      { id: 'Rankings', btn: document.getElementById('accTabBtnRankings'), sec: document.getElementById('accTabSectionRankings') },
+      { id: 'Alts', btn: document.getElementById('accTabBtnAlts'), sec: document.getElementById('accTabSectionAlts') },
+      { id: 'Activity', btn: document.getElementById('accTabBtnActivity'), sec: document.getElementById('accTabSectionActivity') }
+    ];
 
-    if (tabBtnProfile && tabBtnRankings && tabSecProfile && tabSecRankings) {
-      tabBtnProfile.addEventListener('click', () => {
-        tabBtnProfile.style.background = 'var(--accent)';
-        tabBtnProfile.style.color = '#fff';
-        tabBtnProfile.style.border = 'none';
-        tabBtnProfile.style.boxShadow = '0 4px 12px rgba(14,165,233,0.3)';
-
-        tabBtnRankings.style.background = 'var(--bg-main)';
-        tabBtnRankings.style.color = 'var(--text-muted)';
-        tabBtnRankings.style.border = '1px solid var(--border)';
-        tabBtnRankings.style.boxShadow = 'none';
-
-        tabSecProfile.style.display = 'block';
-        tabSecRankings.style.display = 'none';
+    const switchAccountHubTab = (activeId) => {
+      accTabs.forEach(t => {
+        if (!t.btn || !t.sec) return;
+        if (t.id === activeId) {
+          t.btn.style.background = 'var(--accent)';
+          t.btn.style.color = '#fff';
+          t.btn.style.border = 'none';
+          t.btn.style.boxShadow = '0 4px 12px rgba(14,165,233,0.3)';
+          t.sec.style.display = 'block';
+        } else {
+          t.btn.style.background = 'var(--bg-main)';
+          t.btn.style.color = 'var(--text-muted)';
+          t.btn.style.border = '1px solid var(--border)';
+          t.btn.style.boxShadow = 'none';
+          t.sec.style.display = 'none';
+        }
       });
+    };
 
-      tabBtnRankings.addEventListener('click', () => {
-        tabBtnRankings.style.background = 'var(--accent)';
-        tabBtnRankings.style.color = '#fff';
-        tabBtnRankings.style.border = 'none';
-        tabBtnRankings.style.boxShadow = '0 4px 12px rgba(14,165,233,0.3)';
-
-        tabBtnProfile.style.background = 'var(--bg-main)';
-        tabBtnProfile.style.color = 'var(--text-muted)';
-        tabBtnProfile.style.border = '1px solid var(--border)';
-        tabBtnProfile.style.boxShadow = 'none';
-
-        tabSecRankings.style.display = 'block';
-        tabSecProfile.style.display = 'none';
-      });
-    }
+    accTabs.forEach(t => {
+      if (t.btn) {
+        t.btn.addEventListener('click', () => switchAccountHubTab(t.id));
+      }
+    });
     
     
     if (accLevel) {

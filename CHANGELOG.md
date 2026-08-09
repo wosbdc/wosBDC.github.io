@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [1.68.0] - 2026-08-09
+### Added
+- **📂 4-Way Sub-Tab System in Account Hub**: Reorganized `views.account()` into 4 clean, dedicated sub-tabs: `🆔 Profile`, `🏆 Event Rankings`, `🔗 Linked Alts`, and `📅 Activity Log`.
+- **⚡ Clean UI Navigation**: Replaced long vertical scroll page in Account Hub with instant, smooth sub-tab navigation (<10ms).
+
 ## [1.67.0] - 2026-08-09
 ### Added
 - **🏆 Dedicated 'My Event Rankings' Tab in Player Account Hub**: Added a dedicated sub-navigation tab inside `views.account()` allowing logged-in chiefs to view their personal event medals (🥇 Gold, 🥈 Silver, 🥉 Bronze), Bear Trap wins, donation stats, and all event leaderboard ranks.
