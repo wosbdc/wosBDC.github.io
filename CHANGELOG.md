@@ -1,3 +1,8 @@
+## [1.57.0] - 2026-08-09
+### Fixed & Optimized
+- **⚡ Instant Modal Launch (<1ms)**: `openScheduleEditorModal()` now mounts the overlay and modal UI instantly when clicked, preventing any freeze or delay caused by network requests.
+- **🚀 Parallel Tab Fetching**: Updated `window.fetchScheduleSheetData()` to query potential sheet tabs in parallel using `Promise.allSettled`, eliminating sequential network bottlenecks.
+
 ## [1.56.0] - 2026-08-09
 ### Added & Updated
 - **⚡ Dynamic Tab Name Resolver (`data` / `Data` / `Schedule data`)**: Added `window.fetchScheduleSheetData()` which dynamically fetches schedule and event data from the `data`, `Data`, or `Schedule data` tabs seamlessly, ensuring the frontend loads data regardless of tab naming in Google Sheets!

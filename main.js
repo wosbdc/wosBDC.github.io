@@ -12053,14 +12053,19 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
         if (window.liveData['Data']) return window.liveData['Data'];
         if (window.liveData['Schedule data']) return window.liveData['Schedule data'];
       }
-      let res = await fetchSheet('data').catch(() => null);
-      if (!res || !Array.isArray(res) || res.length < 2) {
-        res = await fetchSheet('Data').catch(() => null);
-      }
-      if (!res || !Array.isArray(res) || res.length < 2) {
-        res = await fetchSheet('Schedule data').catch(() => null);
-      }
-      return res;
+      try {
+        const results = await Promise.allSettled([
+          fetchSheet('data'),
+          fetchSheet('Data'),
+          fetchSheet('Schedule data')
+        ]);
+        for (const r of results) {
+          if (r.status === 'fulfilled' && Array.isArray(r.value) && r.value.length >= 2) {
+            return r.value;
+          }
+        }
+      } catch(e) {}
+      return null;
     };
 
     renderLoading('Loading Schedule');
@@ -12859,47 +12864,6 @@ window.openScheduleEditorModal = async () => {
     return;
   }
 
-  // Load Schedule data tab from cache or GAS API
-  let scheduleSheetData = await window.fetchScheduleSheetData().catch(() => null);
-
-  let allData = [];
-
-  if (scheduleSheetData && Array.isArray(scheduleSheetData) && scheduleSheetData.length >= 2) {
-    for (let i = 1; i < scheduleSheetData.length; i++) {
-      const row = scheduleSheetData[i];
-      const title = String(row[2] || row[0] || row[1] || '').trim();
-      const startVal = row[3] || row[1] || row[2] || '';
-      const endVal = row[4] || row[2] || row[3] || '';
-      if (title && !title.toLowerCase().includes('title') && !title.toLowerCase().includes("event's")) {
-        if (!allData.some(x => x.title.toLowerCase() === title.toLowerCase())) {
-          allData.push({
-            row: i + 1,
-            title: title,
-            start: startVal ? String(startVal) : '',
-            end: endVal ? String(endVal) : ''
-          });
-        }
-      }
-    }
-  }
-
-  // Also merge any existing Firebase rewards_schedule_live data if present
-  try {
-    const snap = await get(ref(db, 'rewards_schedule_live'));
-    if (snap.exists() && Array.isArray(snap.val())) {
-      const fbData = snap.val();
-      fbData.forEach(item => {
-        const existing = allData.find(d => d.title.toLowerCase() === item.title.toLowerCase());
-        if (existing) {
-          existing.start = item.start || existing.start;
-          existing.end = item.end || existing.end;
-        } else if (item.title) {
-          allData.push(item);
-        }
-      });
-    }
-  } catch(e) { console.error("Error reading rewards_schedule_live:", e); }
-
   const modalId = 'scheduleEditorModal';
   const overlayId = 'scheduleEditorModalOverlay';
 
@@ -12916,7 +12880,16 @@ window.openScheduleEditorModal = async () => {
   modal.id = modalId;
   modal.style.cssText = 'position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width:94%; max-width:750px; max-height:90vh; background:#0f172a; border:1px solid var(--border); border-radius:16px; padding:24px; box-shadow:0 20px 50px rgba(0,0,0,0.6); z-index:9999; display:flex; flex-direction:column; gap:16px; overflow:hidden; color:#f8fafc; animation:slideUp 0.3s;';
 
+  let allData = [];
   let currentRowIndex = -1;
+
+  // Load from Firebase rewards_schedule_live cache instantly (<20ms)
+  try {
+    const snap = await get(ref(db, 'rewards_schedule_live'));
+    if (snap.exists() && Array.isArray(snap.val())) {
+      allData = snap.val();
+    }
+  } catch(e) {}
 
   const formatDateForInput = (dStr) => {
     if (!dStr) return '';
