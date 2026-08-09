@@ -10046,8 +10046,23 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
       const bearWinsCount = (fbWins && fbWins[chiefNameTarget.toLowerCase().trim()]) ? (fbWins[chiefNameTarget.toLowerCase().trim()].wins || 0) : (bearAllTime ? (bearAllTime.score || 0) : 0);
       
       const fbDonObj = (fbDonations && fbDonations[chiefNameTarget.toLowerCase().trim()]) ? fbDonations[chiefNameTarget.toLowerCase().trim()] : {};
-      const currentDonVal = fbDonObj.current !== undefined ? fbDonObj.current : (btDonationsCurrent ? btDonationsCurrent.score : 0);
-      const allTimeDonVal = fbDonObj.allTime !== undefined ? fbDonObj.allTime : (btDonationsAllTime ? btDonationsAllTime.score : 0);
+      
+      const parseNumVal = (v) => {
+        if (v === null || v === undefined || v === '') return 0;
+        if (typeof v === 'number') return isNaN(v) ? 0 : v;
+        if (typeof v === 'string') {
+          const cleaned = v.replace(/,/g, '').trim();
+          const n = Number(cleaned);
+          return isNaN(n) ? 0 : n;
+        }
+        return 0;
+      };
+
+      const rawCurVal = fbDonObj.current !== undefined ? fbDonObj.current : (fbDonObj.amount !== undefined ? fbDonObj.amount : (btDonationsCurrent ? btDonationsCurrent.score : 0));
+      const rawAllVal = fbDonObj.allTime !== undefined ? fbDonObj.allTime : (btDonationsAllTime ? btDonationsAllTime.score : 0);
+
+      const currentDonNum = parseNumVal(rawCurVal);
+      const allTimeDonNum = parseNumVal(rawAllVal);
 
       let rankingsHtml = `
         <!-- Account Switcher Bar -->
@@ -10079,7 +10094,7 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
           </div>
           <div style="background:linear-gradient(135deg, rgba(16,185,129,0.15), rgba(16,185,129,0.05)); border:1px solid rgba(16,185,129,0.3); border-radius:12px; padding:14px; text-align:center;">
             <div style="font-size:24px; margin-bottom:4px;">🗡️</div>
-            <div style="font-size:20px; font-weight:bold; color:#10b981;">${Number(allTimeDonVal || 0).toLocaleString()}</div>
+            <div style="font-size:20px; font-weight:bold; color:#10b981;">${allTimeDonNum.toLocaleString()}</div>
             <div style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">All-Time Spears Donated</div>
           </div>
         </div>
@@ -10104,11 +10119,11 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
             </div>
             <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:8px; padding:12px;">
               <div style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Current Spears Donated</div>
-              <div style="font-size:15px; font-weight:bold; color:#eab308; margin-top:4px;">${btDonationsCurrent ? `${window.formatRankBadgeHtml(btDonationsCurrent.rank)} ` : ''}${Number(currentDonVal || 0).toLocaleString()} 🗡️</div>
+              <div style="font-size:15px; font-weight:bold; color:#eab308; margin-top:4px;">${btDonationsCurrent ? `${window.formatRankBadgeHtml(btDonationsCurrent.rank)} ` : ''}${currentDonNum.toLocaleString()} 🗡️</div>
             </div>
             <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:8px; padding:12px;">
               <div style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">All-Time Spears Donated</div>
-              <div style="font-size:15px; font-weight:bold; color:#10b981; margin-top:4px;">${btDonationsAllTime ? `${window.formatRankBadgeHtml(btDonationsAllTime.rank)} ` : ''}${Number(allTimeDonVal || 0).toLocaleString()} 🗡️</div>
+              <div style="font-size:15px; font-weight:bold; color:#10b981; margin-top:4px;">${btDonationsAllTime ? `${window.formatRankBadgeHtml(btDonationsAllTime.rank)} ` : ''}${allTimeDonNum.toLocaleString()} 🗡️</div>
             </div>
           </div>
         </div>

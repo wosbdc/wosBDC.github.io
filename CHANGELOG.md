@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.68.4] - 2026-08-09
+### Fixed
+- **🐛 Fixed NaN Donation Values**: Added robust `parseNumVal` sanitizer to handle formatted string numbers (e.g. `"1,250"`) and prevent `NaN` from rendering in All-Time and Current Spears Donated boxes.
+
 ## [1.68.3] - 2026-08-09
 ### Changed
 - **🗡️ Spear Icon Branding**: Updated All-Time Trap Donations hero card and donation breakdown boxes in `views.account()` Event Rankings tab with the Spear icon `🗡️` and explicit labels (`All-Time Spears Donated` / `Current Spears Donated`).
