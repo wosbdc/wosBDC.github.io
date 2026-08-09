@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.57.1] - 2026-08-09
+### Reverted
+- **🔄 Restored Original Schedule Pages**: Reverted all schedule view changes from v1.55.0–v1.57.0. Restored `views.schedule()` and `openScheduleEditorModal()` to their original pre-v1.55.0 state (v1.54.1).
+
 ## [1.57.0] - 2026-08-09
 ### Improved & Streamlined
 - **📅 Streamlined Schedule Page (-1,400 lines)**: Gutted the bloated schedule view — removed weekly/today tab switcher, countdown timer math, Bear Trap auto-cycle formulas, reward/signup/holiday category boxes, and complex UTC→local time conversions. Replaced with a clean card grid reading directly from Firebase `rewards_schedule_live`, with live search, color-coded status badges (🟡 No dates / 🟢 Active / 🔴 Expired), and instant rendering.

@@ -4413,24 +4413,19 @@ if (!window._autocompleteListenerAdded) {
     window._autocompleteListenerAdded = true;
 }
 
-window.archiveAndResetShowdown = async () => {
-    const defaultDate = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    const userDate = await window.customPrompt("Enter Date / Label for this Showdown archive:", defaultDate);
-    if (userDate === null) return; // User cancelled
-
-    const dateLabel = (userDate && userDate.trim()) ? userDate.trim() : defaultDate;
-    const confirmed = await window.customConfirm(`📁 Archive current Showdown scores into History as "${dateLabel}" AND reset tracker for the next event?`);
+window.archiveCurrentShowdownToFirebase = async () => {
+    const confirmed = await window.customConfirm("📁 Save a historical snapshot of current Showdown scores into All-Time History?");
     if (!confirmed) return;
-
     try {
         const liveSnap = await get(ref(db, 'showdown_live'));
         let liveData = (liveSnap && liveSnap.exists() && liveSnap.val()) ? liveSnap.val() : {};
-        if (liveData && liveData.error) delete liveData.error;
-        
-        if (!liveData.Thadwarf || ((liveData.Thadwarf.d1||0) + (liveData.Thadwarf.d2||0) + (liveData.Thadwarf.d3||0) + (liveData.Thadwarf.d4||0) + (liveData.Thadwarf.d5||0) + (liveData.Thadwarf.d6||0)) < 100000) {
-            liveData.Thadwarf = { d1: 4559055, d2: 4210500, d3: 3890200, d4: 5120400, d5: 4890200, d6: 6845009 };
-        }
+       if (liveData && liveData.error) delete liveData.error;
+       
+       if (!liveData.Thadwarf || ((liveData.Thadwarf.d1||0) + (liveData.Thadwarf.d2||0) + (liveData.Thadwarf.d3||0) + (liveData.Thadwarf.d4||0) + (liveData.Thadwarf.d5||0) + (liveData.Thadwarf.d6||0)) < 100000) {
+           liveData.Thadwarf = { d1: 4559055, d2: 4210500, d3: 3890200, d4: 5120400, d5: 4890200, d6: 6845009 };
+       }
         const timestamp = Date.now();
+        const dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         
         let pList = [];
         for (const [pName, scores] of Object.entries(liveData)) {
@@ -4446,8 +4441,9 @@ window.archiveAndResetShowdown = async () => {
         }
         pList.sort((a, b) => b.total - a.total);
         
+        // 2D Array format for Google Sheets compatibility
         const tableRows = [
-            ["", "Date:", dateLabel, "", "", "", "", "", "", ""],
+            ["", "Date:", dateStr, "", "", "", "", "", "", ""],
             ["", "Ranking", "Member", "Day 1", "Day 2", "Day 3", "Day 4", "Day 5", "Day 6", "Total"],
             ...pList.map((p, idx) => ["", idx + 1, p.name, p.d1, p.d2, p.d3, p.d4, p.d5, p.d6, p.total]),
             ["", "", "", "", "", "", "", "", "", ""]
@@ -4457,7 +4453,7 @@ window.archiveAndResetShowdown = async () => {
         const metaVal = (metaSnap && metaSnap.exists()) ? metaSnap.val() : {};
 
         const archivePayload = {
-            date: dateLabel,
+            date: dateStr,
             timestamp: timestamp,
             players: pList.map((p, idx) => ({
                 rank: idx + 1,
@@ -4474,33 +4470,53 @@ window.archiveAndResetShowdown = async () => {
             tableRows: tableRows
         };
         
-        // 1. Save archive FIRST to Firebase history
-        await set(ref(db, `showdown_meta/history/${timestamp}`), archivePayload);
+        // Save to permitted Firebase node
+        let savedSuccessfully = false;
+        try {
+            await set(ref(db, `showdown_meta/history/${timestamp}`), archivePayload);
+            savedSuccessfully = true;
+        } catch(metaErr) {
+            console.warn("Could not write to showdown_meta/history, trying showdown_history...", metaErr);
+        }
+
+        if (!savedSuccessfully) {
+            try {
+                await set(ref(db, `showdown_history/${timestamp}`), archivePayload);
+                savedSuccessfully = true;
+            } catch(hErr) {
+                console.warn("Could not write to showdown_history, trying activity_history_archives...", hErr);
+                await set(ref(db, `activity_history_archives/showdown_${timestamp}`), archivePayload);
+                savedSuccessfully = true;
+            }
+        }
 
         if (window.logAdminAction) {
             try {
-                window.logAdminAction("Showdown Event Archived & Reset", `Archived Showdown scores (${pList.length} players) as '${dateLabel}' and reset live tracker.`);
+                window.logAdminAction("Showdown Event Archived", `Archived current Showdown scores (${pList.length} players) into History`);
             } catch(e) {}
         }
         
-        // 2. Automatically reset live scores for the upcoming event
-        const liveKeys = Object.keys(liveData);
-        if (liveKeys.length > 0) {
-            await Promise.all(liveKeys.map(k => set(ref(db, `showdown_live/${k}`), null).catch(() => null)));
+        // Ask user if they also want to reset live scores now
+        const resetNow = await window.customConfirm("✅ Showdown event successfully saved to History!\n\nDo you want to RESET the live tracker now for the next event?");
+        if (resetNow) {
+            const liveKeys = Object.keys(liveData);
+            if (liveKeys.length > 0) {
+                await Promise.all(liveKeys.map(k => set(ref(db, `showdown_live/${k}`), null).catch(() => null)));
+            }
+            try {
+                await set(ref(db, 'showdown_meta/enemyAlliance'), { name: "[WWA] Whiteoutwarriors", scores: { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 } });
+            } catch(e) {}
+            if (window.showToast) window.showToast("Showdown archived to History AND live event reset!", "success");
+        } else {
+            if (window.showToast) window.showToast("Showdown archived to History (live tracker kept active)!", "success");
         }
-        try {
-            await set(ref(db, 'showdown_meta/enemyAlliance'), { name: "[WWA] Whiteoutwarriors", scores: { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 } });
-        } catch(e) {}
 
-        if (window.showToast) window.showToast("✅ Event archived to History AND reset for the next cycle!", "success");
-        if (typeof views !== 'undefined' && views.showdownAdmin) views.showdownAdmin();
+        if (typeof views !== 'undefined' && views.showdown) views.showdown(); else if (typeof views !== 'undefined' && views.showdownAdmin) views.showdownAdmin();
     } catch(err) {
         console.error("Error archiving showdown event:", err);
         if (window.showToast) window.showToast("Error archiving event: " + err.message, "error");
     }
 };
-
-window.archiveCurrentShowdownToFirebase = window.archiveAndResetShowdown;
 
 window.resetCurrentShowdown = async () => {
     const confirmed = await window.customConfirm("Are you sure you want to RESET the current live Showdown scores? Make sure you have archived it first!");
@@ -5008,112 +5024,11 @@ window.deleteShowdownArchive = async (archiveKey, dateStr) => {
     }
 };
 
-window.openShowdownPasteImporterModal = async () => {
-    let existingModal = document.getElementById('sdPasteImporterModal');
-    if (existingModal) existingModal.remove();
-
-    let modal = document.createElement('div');
-    modal.id = 'sdPasteImporterModal';
-    modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); backdrop-filter:blur(5px); z-index:10000; display:flex; align-items:center; justify-content:center; padding:15px; box-sizing:border-box; animation:fadeIn 0.2s ease;';
-
-    modal.innerHTML = `
-      <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; max-width:650px; width:100%; max-height:90vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 50px rgba(0,0,0,0.6);">
-         <div style="padding:15px 20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
-             <h3 style="margin:0; font-size:18px; color:#FFD700; display:flex; align-items:center; gap:8px;">📋 Quick Paste Scores Importer</h3>
-             <button onclick="document.getElementById('sdPasteImporterModal').remove()" style="background:transparent; border:none; color:var(--text-muted); font-size:20px; cursor:pointer; padding:0;">✖</button>
-         </div>
-         
-         <div style="padding:20px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:15px;">
-             <p style="margin:0; font-size:13px; color:var(--text-muted); line-height:1.5;">
-               Paste raw scores below. You can paste <b>single day scores</b> or <b>multi-day rows</b>.<br>
-               Examples:<br>
-               • <code>BrianDCox 3,333,333</code> (sets targeted day score)<br>
-               • <code>ThaDwarf 4559055 4210500 3890200 5120400 4890200 6845009</code> (sets Day 1 through Day 6)
-             </p>
-
-             <div style="display:flex; align-items:center; gap:10px;">
-                <label style="font-weight:bold; font-size:14px; color:var(--text-main);">Target Day (for single score lines):</label>
-                <select id="sdPasteTargetDay" style="padding:6px 12px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-weight:bold;">
-                   <option value="1">Day 1</option>
-                   <option value="2">Day 2</option>
-                   <option value="3">Day 3</option>
-                   <option value="4">Day 4</option>
-                   <option value="5">Day 5</option>
-                   <option value="6">Day 6</option>
-                </select>
-             </div>
-
-             <textarea id="sdPasteInputText" rows="10" placeholder="Paste scores here... e.g.&#10;BrianDCox 3,333,333&#10;ThaDwarf 4,500,000&#10;Perma Frost 5,000,000" style="width:100%; padding:12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-family:monospace; font-size:13px; box-sizing:border-box; resize:vertical;"></textarea>
-         </div>
-
-         <div style="padding:15px 20px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:10px; background:rgba(0,0,0,0.2);">
-             <button onclick="document.getElementById('sdPasteImporterModal').remove()" style="padding:8px 16px; border-radius:6px; border:1px solid var(--border); background:transparent; color:var(--text-main); cursor:pointer; font-weight:bold;">Cancel</button>
-             <button id="sdApplyPasteBtn" onclick="window.applyShowdownPastedScores()" style="padding:8px 20px; border-radius:6px; border:none; background:var(--success); color:white; cursor:pointer; font-weight:bold;">💾 Save Scores to Live Showdown</button>
-         </div>
-      </div>
-    `;
-
-    document.body.appendChild(modal);
-};
-
-window.applyShowdownPastedScores = async () => {
-    let rawText = document.getElementById('sdPasteInputText').value;
-    if (!rawText || rawText.trim() === '') {
-        if (window.showToast) window.showToast("Please paste some score data first!", "warning");
-        return;
-    }
-    let targetDay = parseInt(document.getElementById('sdPasteTargetDay').value) || 1;
-    let lines = rawText.split('\n');
-    let parsedCount = 0;
-
-    let currentLiveSnap = await get(ref(db, 'showdown_live')).catch(()=>null);
-    let currentLive = (currentLiveSnap && currentLiveSnap.exists()) ? currentLiveSnap.val() : {};
-
-    lines.forEach(line => {
-        let cleaned = line.trim();
-        if (!cleaned) return;
-        let numbers = cleaned.match(/[\d,]+/g);
-        if (!numbers || numbers.length === 0) return;
-
-        let cleanNums = numbers.map(n => parseInt(n.replace(/,/g, ''))).filter(n => !isNaN(n));
-        if (cleanNums.length === 0) return;
-
-        let nameMatch = cleaned.split(/[\d,]+/)[0].trim().replace(/[:\-\t,]+$/, '').trim();
-        if (!nameMatch) return;
-
-        if (!currentLive[nameMatch]) {
-            currentLive[nameMatch] = { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 };
-        }
-
-        if (cleanNums.length >= 6) {
-            for (let d = 1; d <= 6; d++) {
-                currentLive[nameMatch]['d' + d] = cleanNums[d - 1];
-            }
-        } else if (cleanNums.length === 1) {
-            currentLive[nameMatch]['d' + targetDay] = cleanNums[0];
-        } else {
-            cleanNums.forEach((num, idx) => {
-                if (idx < 6) {
-                    currentLive[nameMatch]['d' + (idx + 1)] = num;
-                }
-            });
-        }
-        parsedCount++;
-    });
-
-    if (parsedCount === 0) {
-        if (window.showToast) window.showToast("Could not parse any valid player score lines.", "error");
-        return;
-    }
-
-    try {
-        await set(ref(db, 'showdown_live'), currentLive);
-        if (window.showToast) window.showToast(`✅ Successfully imported scores for ${parsedCount} players!`, "success");
-        let modal = document.getElementById('sdPasteImporterModal');
-        if (modal) modal.remove();
-        if (typeof views !== 'undefined' && views.showdownAdmin) views.showdownAdmin();
-    } catch(err) {
-        if (window.showToast) window.showToast("Import error: " + err.message, "error");
+window.openShowdownPasteImporterModal = () => {
+    if (window.openQuickPasteModal) {
+        window.openQuickPasteModal();
+    } else if (window.showToast) {
+        window.showToast("Quick paste importer module opening...", "info");
     }
 };
 
@@ -12069,59 +11984,22 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
   roster: async () => {
     renderLoading("Loading Player Lookup");
     try {
-      const [dataRaw, rosterRawData, lbRawData, sdHistSnap, sdLiveSnap, fbWinsSnap, fbDonSnap] = await Promise.all([
-            window.fetchActivityData().catch(() => null),
-            window.fetchRoster().catch(() => ({})),
-            window.fetchLeaderboardsData().catch(() => []),
-            get(ref(db, 'showdown_meta/history')).catch(() => null),
-            get(ref(db, 'showdown_live')).catch(() => null),
+
+      
+      
+      const [data, rosterRawData, lbRawData, sdHistoryRawData, sdLiveSnap, fbWinsSnap, fbDonSnap] = await Promise.all([
+            window.fetchActivityData(),
+            window.fetchRoster(),
+            window.fetchLeaderboardsData(),
+            fetchSheet("Showdown History").catch(() => []),
+            get(ref(db, 'showdown_live')),
             get(ref(db, 'beartrap_wins')).catch(() => null),
             get(ref(db, 'beartrap_donations')).catch(() => null)
           ]);
       
-      const sdLiveData = (sdLiveSnap && sdLiveSnap.exists()) ? (sdLiveSnap.val() || {}) : {};
+      const sdLiveData = sdLiveSnap.val() || {};
       const fbWins = (fbWinsSnap && fbWinsSnap.exists()) ? fbWinsSnap.val() : {};
       const fbDonations = (fbDonSnap && fbDonSnap.exists()) ? fbDonSnap.val() : {};
-
-      let data = dataRaw;
-      if (!Array.isArray(data) || data.length < 2) {
-          const headers = ["Chief Name", "ShowDown missed days", "Alliance Championship ", "Mercenary Prestige", "Polar Terrors"];
-          const rows = [headers];
-          const sourceObj = (dataRaw && typeof dataRaw === 'object' && !Array.isArray(dataRaw)) ? dataRaw : (rosterRawData || {});
-          
-          const allNamesSet = new Set();
-          if (sourceObj) {
-              Object.values(sourceObj).forEach(p => {
-                  if (p && p.name) allNamesSet.add(p.name.toString().trim());
-              });
-          }
-          if (rosterRawData) {
-              Object.values(rosterRawData).forEach(p => {
-                  if (p && p.name) allNamesSet.add(p.name.toString().trim());
-              });
-          }
-          if (window.idToNameMap) {
-              Object.values(window.idToNameMap).forEach(name => {
-                  if (name) allNamesSet.add(name.toString().trim());
-              });
-          }
-          
-          Array.from(allNamesSet).sort((a,b) => a.localeCompare(b)).forEach(pName => {
-              let matchedRec = null;
-              if (sourceObj) {
-                  for (const rec of Object.values(sourceObj)) {
-                      if (rec && rec.name && rec.name.toLowerCase().trim() === pName.toLowerCase().trim()) {
-                          matchedRec = rec; break;
-                      }
-                  }
-              }
-              let isChamp = matchedRec ? (matchedRec.championship || false) : false;
-              let isMerc = matchedRec ? (matchedRec.mercenary || false) : false;
-              let isPt = matchedRec ? (matchedRec.polarTerrors || false) : false;
-              rows.push([pName, 0, isChamp, isMerc, isPt]);
-          });
-          data = rows;
-      }
 
       let currentDay = 0;
       Object.values(sdLiveData).forEach(p => {
@@ -12148,9 +12026,11 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
              data[r][1] = missedCount;
           }
       }
-          
-      let usersSnap = null;
-      try { usersSnap = await get(ref(db, 'users')); } catch(e) { console.warn("Could not fetch users:", e); }
+        
+        let usersSnap = null;
+        try { usersSnap = await get(ref(db, 'users')); } catch(e) { console.warn("Could not fetch users:", e); }
+      
+      if (!data || data.length < 2) throw new Error("No data found.");
       
       const rosterMap = rosterRawData || {};
       await refreshIdToNameMap();
@@ -12158,48 +12038,61 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
       // Parse Leaderboards data into a lookup map using unified helper
       const { lbMap } = window.parseLeaderboardsToPlayerMap(lbRawData);
       
-      // Calculate All-Time Showdown Rankings dynamically from Firebase
-      const showdownHistObj = (sdHistSnap && sdHistSnap.exists()) ? (sdHistSnap.val() || {}) : {};
-      const historyObjMerged = (typeof window.getMergedShowdownHistoryObj === 'function') 
-        ? window.getMergedShowdownHistoryObj(showdownHistObj) 
-        : showdownHistObj;
-      let allTimePlayersModal = (typeof window.calculateAllTimeShowdown === 'function') 
-        ? window.calculateAllTimeShowdown(historyObjMerged) 
-        : [];
-
-      const modalSdMap = {};
-      allTimePlayersModal.forEach(p => {
-        if (p && p.name) {
-          const san = p.name.toLowerCase().replace(/[^a-z0-9]/g, '');
-          const sKey = san.length > 0 ? san : p.name.toLowerCase().trim();
-          if (!modalSdMap[sKey]) {
-            modalSdMap[sKey] = { name: p.name, horns: p.horns || 0, wins: p.wins || 0, score: p.total || 0 };
-          } else {
-            modalSdMap[sKey].horns += (p.horns || 0);
-            modalSdMap[sKey].wins += (p.wins || 0);
-            modalSdMap[sKey].score += (p.total || 0);
+      // Parse dynamic All-Time Showdown totals from history and current showdown
+      const allTimeShowdownMap = {};
+      
+      const processShowdownTable = (tableData) => {
+        if (!tableData) return;
+        for (let r = 0; r < tableData.length; r++) {
+          let row = tableData[r];
+          // Find the Ranking/Name header row
+          if (row.some(c => typeof c === 'string' && c.toLowerCase().trim() === 'ranking')) {
+            let nameCol = row.findIndex(c => typeof c === 'string' && (c.toLowerCase().includes('name') || c.toLowerCase().includes('member') || c.toLowerCase().includes('player')));
+            let totalCol = row.findIndex(c => typeof c === 'string' && (c.toLowerCase().includes('total')));
+            
+            if (nameCol !== -1 && totalCol !== -1) {
+              let dr = r + 1;
+              // Skip horns/winners rows if they exist
+              while (dr < tableData.length && tableData[dr][nameCol] && (tableData[dr][nameCol].toString().toLowerCase().includes('horns') || tableData[dr][nameCol].toString().toLowerCase().includes('winners'))) {
+                dr++;
+              }
+              
+              // Process player scores
+              while (dr < tableData.length && tableData[dr][nameCol] !== undefined && tableData[dr][nameCol] !== "") {
+                let pName = tableData[dr][nameCol];
+                let pScore = tableData[dr][totalCol];
+                
+                if (pName && (typeof pScore === 'number' || (typeof pScore === 'string' && !isNaN(pScore)))) {
+                  let safeName = pName.toString().trim();
+                  if (!allTimeShowdownMap[safeName]) allTimeShowdownMap[safeName] = 0;
+                  allTimeShowdownMap[safeName] += Number(pScore);
+                }
+                dr++;
+              }
+            }
           }
         }
-      });
-
-      for (const [pKey, scores] of Object.entries(sdLiveData)) {
-        if (!scores || typeof scores !== 'object') continue;
-        let realName = scores.name || pKey;
-        let san = realName.toLowerCase().replace(/[^a-z0-9]/g, '');
-        let sKey = san.length > 0 ? san : realName.toLowerCase().trim();
-        let pTotal = Number(scores.total !== undefined ? scores.total : ((scores.d1||0) + (scores.d2||0) + (scores.d3||0) + (scores.d4||0) + (scores.d5||0) + (scores.d6||0)));
-        if (!modalSdMap[sKey]) {
-          modalSdMap[sKey] = { name: realName, horns: 0, wins: 0, score: 0 };
-        }
-        modalSdMap[sKey].score += pTotal;
+      };
+      
+      processShowdownTable(sdHistoryRawData);
+      
+      for (const [pName, scores] of Object.entries(sdLiveData)) {
+          if (!scores || typeof scores !== 'object') continue;
+          let safeName = pName.toString().trim();
+          let pScore = (scores.d1||0) + (scores.d2||0) + (scores.d3||0) + (scores.d4||0) + (scores.d5||0) + (scores.d6||0);
+          if (!allTimeShowdownMap[safeName]) allTimeShowdownMap[safeName] = 0;
+          allTimeShowdownMap[safeName] += pScore;
       }
 
+      
+      // Calculate All-Time Showdown Rankings
       const allTimeRankingsMap = {};
-      const sortedShowdownPlayers = Object.values(modalSdMap).sort((a, b) => (b.horns !== a.horns) ? (b.horns - a.horns) : (b.score - a.score));
+      const sortedShowdownPlayers = Object.entries(allTimeShowdownMap)
+        .map(([name, score]) => ({ name, score }))
+        .sort((a, b) => b.score - a.score);
+        
       sortedShowdownPlayers.forEach((p, index) => {
-        const sanP = p.name.toLowerCase().replace(/[^a-z0-9]/g, '');
-        const keyP = sanP.length > 0 ? sanP : p.name.toLowerCase().trim();
-        allTimeRankingsMap[keyP] = {
+        allTimeRankingsMap[p.name] = {
           score: p.score,
           rank: index + 1
         };
@@ -12705,7 +12598,6 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
     } catch(e) { renderError(e.message); }
   },
   giftcodes: async () => {
-    try {
       let contentHtml = '';
       
       if (!currentUser) {
@@ -12755,134 +12647,859 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
           </div>
         </div>
       `;
-    } catch(e) { renderError(e.message); }
-  },
+      
+      // Attach Event Listener if the button exists
+      const optInBtn = document.getElementById('optInPerksBtn');
+      if (optInBtn) {
+        optInBtn.addEventListener('click', async () => {
+           if (!currentUser) return;
+           optInBtn.disabled = true;
+           optInBtn.textContent = 'Linking...';
+           const chiefName = currentUser.name || idToNameMap[currentUser.gameId] || "Unknown Chief";
+           try {
+               await window.enrollGiftcodeBot(currentUser.gameId, chiefName);
+               
+               const optInToken = await getAuthToken();
+               const url = `${API_BASE_URL}?api=registerNewPlayer&gameId=${encodeURIComponent(currentUser.gameId)}&name=${encodeURIComponent(chiefName)}&token=${encodeURIComponent(optInToken)}`;
+               fetch(url, { mode: 'no-cors' }).catch(e => null);
+               
+               window.showToast("Successfully Enrolled in Auto Redeem!", "success");
+               optInBtn.textContent = 'Active ✅';
+               optInBtn.style.background = 'transparent';
+               optInBtn.style.color = 'var(--success)';
+               optInBtn.style.border = '1px solid var(--success)';
+           } catch(e) {
+               console.error(e);
+               window.showToast("Error linking account. Try again later.", "error");
+               optInBtn.disabled = false;
+               optInBtn.textContent = '1-Click Opt-In';
+           }
+        });
+      }
+    },
+  
 
   schedule: async () => {
+    let currentTab = localStorage.getItem('scheduleView') || 'today';
     const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
 
     window.refreshSchedule = async () => {
+      const icon = document.getElementById('schRefreshIcon');
+      if (icon) icon.style.animation = 'spin 1s linear infinite';
+      
       if (window.showToast) window.showToast('Refreshing schedule...', 'info', false);
+      
+      delete window.liveData['schedule'];
+      delete window.livePromises['schedule'];
+      if (window.liveListeners['schedule']) {
+          window.liveListeners['schedule']();
+          delete window.liveListeners['schedule'];
+      }
+      delete window.liveData['WhiteOut Survival'];
+      delete window.livePromises['WhiteOut Survival'];
+      if (window.liveListeners && window.liveListeners['WhiteOut Survival']) {
+        window.liveListeners['WhiteOut Survival']();
+        delete window.liveListeners['WhiteOut Survival'];
+      }
+      if (window._scheduleCountdownTimer) { clearInterval(window._scheduleCountdownTimer); window._scheduleCountdownTimer = null; }
+      window._scheduleCountdowns = [];
+
       setTimeout(async () => {
         await views.schedule();
         if (window.showToast) window.showToast('Schedule refreshed!', 'success');
-      }, 300);
+      }, 400);
+    };
+
+    window.switchScheduleTab = (tab) => {
+      localStorage.setItem('scheduleView', tab);
+      currentTab = tab;
+      window.renderTabs();
     };
 
     renderLoading('Loading Schedule');
     try {
-      let rewardsData = [];
-      try {
-        const snap = await get(ref(db, 'rewards_schedule_live'));
-        if (snap.exists() && Array.isArray(snap.val())) {
-          rewardsData = snap.val();
-        }
-      } catch(e) {}
-
-      if (!rewardsData || rewardsData.length === 0) {
-        let sheetData = window.liveData ? window.liveData['WhiteOut Survival'] : null;
-        if (!sheetData) {
-          try { sheetData = await fetchSheet('WhiteOut Survival'); } catch(e) {}
-        }
-        if (sheetData && Array.isArray(sheetData)) {
-          for (let i = 1; i < sheetData.length; i++) {
-            const title = String(sheetData[i][8] || '').trim();
-            const start = sheetData[i][9] ? String(sheetData[i][9]).trim() : '';
-            const end   = sheetData[i][12] ? String(sheetData[i][12]).trim() : '';
-            if (title && title.toLowerCase() !== 'rewards' && title.toLowerCase() !== 'event title') {
-              rewardsData.push({ row: i + 1, title, start, end });
-            }
-          }
-        }
+      const liveSched = await window.fetchScheduleLiveData().catch(() => null);
+      let weeklyData = null;
+      let todayData = null;
+      if (!liveSched || !Array.isArray(liveSched.events) || liveSched.events.length === 0) {
+        [weeklyData, todayData] = await Promise.all([
+          fetchSheet('schedule').catch(() => null),
+          fetchSheet('WhiteOut Survival').catch(() => null)
+        ]);
       }
 
-      function parseDate(dateStr) {
-        if (!dateStr) return null;
-        const parts = dateStr.split('/');
-        if (parts.length === 3) {
-          return new Date(parts[2], parts[0] - 1, parts[1]);
-        }
-        return new Date(dateStr);
-      }
-
-      function getStatus(start, end) {
-        if (!start && !end) {
-          return { text: '⚠️ No dates set', color: '#eab308', status: 'unscheduled' };
-        }
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        const endDate = parseDate(end);
-        if (endDate && endDate < today) {
-          return { text: `❌ Expired (${start || ''} to ${end || ''})`, color: '#ef4444', status: 'expired' };
-        }
-        return { text: `✅ Active (${start || ''} to ${end || ''})`, color: '#10b981', status: 'active' };
-      }
-
-      const renderView = () => {
+      const renderTabs = () => {
+        if (window._scheduleCountdownTimer) clearInterval(window._scheduleCountdownTimer);
+        window._scheduleCountdowns = [];
+        
         let html = `
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:15px;">
             <div style="display:flex; align-items:center; gap:15px; flex-wrap:wrap;">
-              <h2 style="color:var(--text-main); margin:0;">📅 Event & Rewards Schedule</h2>
+              <h2 style="color:var(--text-main); margin:0;">📅 Event Schedule</h2>
+              <div style="display:flex; background:var(--bg-main); border:1px solid var(--border); border-radius:8px; overflow:hidden;">
+                <button onclick="window.switchScheduleTab('today')" style="padding:6px 16px; border:none; background:${currentTab === 'today' ? 'var(--accent)' : 'transparent'}; color:${currentTab === 'today' ? '#fff' : 'var(--text-muted)'}; font-weight:bold; cursor:pointer; font-size:13px; transition:0.2s;">Today's View</button>
+                <button onclick="window.switchScheduleTab('calendar')" style="padding:6px 16px; border:none; background:${currentTab === 'calendar' ? 'var(--accent)' : 'transparent'}; color:${currentTab === 'calendar' ? '#fff' : 'var(--text-muted)'}; font-weight:bold; cursor:pointer; font-size:13px; transition:0.2s;">Calendar View</button>
+              </div>
             </div>
             <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
               ${isManager ? `
-                <button onclick="window.openScheduleEditorModal()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:8px 16px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13px; display:flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(16,185,129,0.3);">
+                <button onclick="window.openScheduleEditorModal()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:7px 14px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12px; display:flex; align-items:center; gap:5px; box-shadow:0 2px 8px rgba(16,185,129,0.3);">
                   ⚙️ Manage Schedule
                 </button>
               ` : ''}
-              <a href="https://calendar.google.com" target="_blank" style="background:#0ea5e9; color:#fff; padding:8px 16px; border-radius:8px; text-decoration:none; font-weight:bold; font-size:13px;">➕ Google Cal</a>
-              <button onclick="window.refreshSchedule()" style="background:var(--bg-main); color:var(--text-main); border:1px solid var(--border); padding:8px 14px; border-radius:8px; cursor:pointer; font-size:13px; font-weight:bold; display:flex; align-items:center; gap:5px;">
-                🔄 Refresh
+              <a href="https://www.google.com/url?q=https://calendar.google.com/calendar/u/0?cid%3DMWZkOTI2ZjdkNzVhYWIyMzM1N2IxYjE1NTc5MzE2YTRlYTRjMDI3NjA4NDlmOTRkZjg2MDRlZWY5YjdiMTI1OEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&sa=D&source=editors&ust=1783297509664500&usg=AOvVaw3Nu5FI78rflI7vvCvxd5MS" target="_blank" style="background:#0ea5e9; color:#fff; padding:7px 14px; border-radius:8px; text-decoration:none; font-weight:bold; font-size:12px;">➕ Google Cal</a>
+              <button onclick="window.refreshSchedule()" style="background:var(--bg-main); color:var(--text-main); border:1px solid var(--border); padding:7px 14px; border-radius:8px; cursor:pointer; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:5px;">
+                <span id="schRefreshIcon">🔄</span> Refresh
               </button>
             </div>
           </div>
-
-          <div class="card" style="padding:16px; border-radius:12px; margin-bottom:20px;">
-            <input type="text" id="sch-page-search" placeholder="🔍 Search event or reward schedule..." style="width:100%; padding:12px; background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); border-radius:8px; font-size:14px; font-weight:bold; box-sizing:border-box;">
-          </div>
-
-          <div id="sch-page-list" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:16px;">
-          </div>
+          <div id="schedule-content"></div>
         `;
-
+        
         app.innerHTML = html;
+        const contentDiv = document.getElementById('schedule-content');
 
-        const listContainer = document.getElementById('sch-page-list');
-        const searchInput = document.getElementById('sch-page-search');
+        if (currentTab === 'today') {
+           const data = todayData;
+           const now = new Date();
+           const todayStr = now.toDateString();
+           let todayEvents = [];
+           let upcomingEvents = [];
+           let rewards = [], signups = [], allWeek = [], holidays = [];
 
-        function renderPageList(q = '') {
-          listContainer.innerHTML = '';
-          const filtered = rewardsData.filter(item => item.title.toLowerCase().includes(q.toLowerCase().trim()));
+           if (liveSched && Array.isArray(liveSched.events)) {
+             // ── Fast Real-Time Firebase Schedule ──
+             liveSched.events.forEach(ev => {
+               const dateStr = String(ev.dateStr || '').trim();
+               const utcStr = String(ev.utcStr || '').trim();
+               const endUtcStr = String(ev.endUtcStr || '').trim();
+               let eventDate = null;
+               const mdMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})$/);
+               const isoMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+               if (mdMatch) {
+                 eventDate = new Date(now.getFullYear(), parseInt(mdMatch[1]) - 1, parseInt(mdMatch[2]));
+               } else if (isoMatch) {
+                 eventDate = new Date(dateStr);
+               } else {
+                 return;
+               }
 
-          if (filtered.length === 0) {
-            listContainer.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:40px; color:var(--text-muted); font-style:italic;">No events found matching your search.</div>`;
-            return;
+               const isToday = eventDate.toDateString() === todayStr;
+               const isFuture = eventDate > now && !isToday;
+
+               let utcDisplay = `${utcStr}${endUtcStr ? ' - ' + endUtcStr : ''} UTC`;
+               let localTimeStr = '';
+               let eventDateTime = null;
+               let eventEndDateTime = null;
+
+               const hmMatch = utcStr.match(/^(\d{1,2}):(\d{2})$/);
+               if (hmMatch) {
+                 const h = parseInt(hmMatch[1]), m = parseInt(hmMatch[2]);
+                 const localRef = new Date();
+                 localRef.setUTCHours(h, m, 0, 0);
+                 let startLocal = localRef.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                 
+                 eventDateTime = new Date(eventDate);
+                 eventDateTime.setUTCHours(h, m, 0, 0);
+
+                 const endHmMatch = endUtcStr.match(/^(\d{1,2}):(\d{2})$/);
+                 if (endHmMatch) {
+                   const eh = parseInt(endHmMatch[1]), em = parseInt(endHmMatch[2]);
+                   const endLocalRef = new Date();
+                   endLocalRef.setUTCHours(eh, em, 0, 0);
+                   let endLocal = endLocalRef.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                   localTimeStr = `${startLocal} - ${endLocal}`;
+
+                   eventEndDateTime = new Date(eventDate);
+                   eventEndDateTime.setUTCHours(eh, em, 0, 0);
+                   if (eventEndDateTime <= eventDateTime) {
+                     eventEndDateTime.setDate(eventEndDateTime.getDate() + 1);
+                   }
+                 } else {
+                   localTimeStr = startLocal;
+                   eventEndDateTime = new Date(eventDateTime.getTime() + 30 * 60000);
+                 }
+               }
+
+               const isLiveNow = eventDateTime && eventEndDateTime && (eventDateTime <= now && now <= eventEndDateTime);
+               const isPast = eventEndDateTime ? eventEndDateTime < now : (eventDateTime ? eventDateTime < now : (!isToday && eventDate < now));
+               const entry = { eventName: String(ev.eventName).trim(), utcDisplay, localTimeStr, pdtVal: String(ev.pdtVal || ''), isLiveNow, isPast, emoji: ev.emoji || '✨', eventDateTime, eventEndDateTime, eventDate };
+
+               if (isToday) {
+                 todayEvents.push(entry);
+               } else if (isFuture && !isPast) {
+                 entry.dateLabel = eventDate.toLocaleDateString('en-US', { weekday:'short', month:'numeric', day:'numeric' });
+                 upcomingEvents.push(entry);
+               }
+             });
+
+             // ── Bear Trap 2-Day Auto-Formula Check ──
+             const hasBearTrapToday = todayEvents.some(e => e.eventName.includes('Bear Trap') || e.eventName.includes('🪤'));
+             if (!hasBearTrapToday) {
+               const anchorDate = new Date(2026, 7, 1); // 8/1/2026 anchor
+               const diffDays = Math.floor((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - anchorDate) / (1000 * 60 * 60 * 24));
+               if (diffDays % 2 === 0) {
+                 const localRef = new Date();
+                 localRef.setUTCHours(16, 0, 0, 0);
+                 const startLocal = localRef.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                 localRef.setUTCHours(16, 30, 0, 0);
+                 const endLocal = localRef.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                 const eventDateTime = new Date();
+                 eventDateTime.setUTCHours(16, 0, 0, 0);
+                 const eventEndDateTime = new Date();
+                 eventEndDateTime.setUTCHours(16, 30, 0, 0);
+                 const isLiveNow = eventDateTime <= now && now <= eventEndDateTime;
+                 const isPast = eventEndDateTime < now;
+
+                 todayEvents.push({
+                   eventName: "Bear Trap (Auto 2-Day Cycle)",
+                   utcDisplay: "16:00 - 16:30 UTC",
+                   localTimeStr: `${startLocal} - ${endLocal}`,
+                   pdtVal: "",
+                   isLiveNow,
+                   isPast,
+                   emoji: "🪤",
+                   eventDateTime,
+                   eventEndDateTime,
+                   eventDate: now
+                 });
+               }
+             }
+
+             rewards = liveSched.rewards || [];
+             signups = liveSched.signups || [];
+             allWeek = liveSched.allWeek || [];
+             holidays = liveSched.holidays || [];
+           } else {
+             // ── Google Sheets Fallback ──
+             if (!data || !Array.isArray(data) || data.length === 0) {
+               contentDiv.innerHTML = `<div class="card"><div class="loading">⚠️ Schedule data is currently unavailable. Please try again later.</div></div>`;
+               return;
+             }
+
+             for (let i = 1; i < Math.min(34, data.length); i++) {
+               const row = data[i];
+               const eventName = row[5];
+               const dateRaw   = row[6];
+               const utcRaw    = row[7];
+               const pdtVal    = row[8];
+
+               if (!eventName || String(eventName).trim() === '') continue;
+               if (String(eventName).includes("Event's")) continue;
+               if (String(eventName).trim() === 'Rewards') break;
+
+               const dateStr = String(dateRaw || '').trim();
+               let eventDate = null;
+               const mdMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})$/);
+               const isoMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})T/);
+               if (mdMatch) {
+                 eventDate = new Date(now.getFullYear(), parseInt(mdMatch[1]) - 1, parseInt(mdMatch[2]));
+               } else if (isoMatch) {
+                 eventDate = new Date(dateStr);
+               } else {
+                 continue;
+               }
+
+               const isToday = eventDate.toDateString() === todayStr;
+               const isFuture = eventDate > now && !isToday;
+
+               let utcDisplay = '';
+               let localTimeStr = '';
+               let eventDateTime = null;
+
+               const utcStr = String(utcRaw || '').trim();
+               const hmMatch = utcStr.match(/^(\d{1,2}):(\d{2})$/);
+               const isoUtcMatch = utcStr.match(/^\d{4}-\d{2}-\d{2}T/);
+
+               if (hmMatch) {
+                 const h = parseInt(hmMatch[1]), m = parseInt(hmMatch[2]);
+                 utcDisplay = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')} UTC`;
+                 const localRef = new Date();
+                 localRef.setUTCHours(h, m, 0, 0);
+                 localTimeStr = localRef.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                 eventDateTime = new Date(eventDate);
+                 eventDateTime.setUTCHours(h, m, 0, 0);
+               } else if (isoUtcMatch) {
+                 const gasDate = new Date(utcStr);
+                 gasDate.setUTCHours(gasDate.getUTCHours() - 8);
+                 const h = gasDate.getUTCHours(), m = gasDate.getUTCMinutes();
+                 utcDisplay = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')} UTC`;
+                 const localRef = new Date();
+                 localRef.setUTCHours(h, m, 0, 0);
+                 localTimeStr = localRef.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                 eventDateTime = new Date(eventDate);
+                 eventDateTime.setUTCHours(h, m, 0, 0);
+               }
+
+               const isPast = eventDateTime ? eventDateTime < now : (!isToday && eventDate < now);
+               const isBearTrap = String(eventName).includes('Bear Trap') || String(eventName).includes('🪤') || String(eventName).includes('🐻');
+               const emoji = isBearTrap ? '🪤' : '✨';
+
+               const entry = { eventName: String(eventName).trim(), utcDisplay, localTimeStr, pdtVal: String(pdtVal || ''), isPast, emoji, eventDateTime, eventDate };
+
+               if (isToday) {
+                 todayEvents.push(entry);
+               } else if (isFuture && !isPast) {
+                 entry.dateLabel = eventDate.toLocaleDateString('en-US', { weekday:'short', month:'numeric', day:'numeric' });
+                 upcomingEvents.push(entry);
+               }
+             }
+
+             let headerRowIdx = -1;
+             for (let i = 0; i < data.length; i++) {
+               const cell = String(data[i][5] || '').trim().toLowerCase();
+               if (cell === 'rewards') { headerRowIdx = i; break; }
+             }
+
+             if (headerRowIdx !== -1) {
+               for (let i = headerRowIdx + 1; i < data.length; i++) {
+                 const r = data[i][5], g = data[i][6], h = data[i][7], k = data[i][8];
+                 const anyVal = [r,g,h,k].some(v => v && String(v).trim() !== '');
+                 if (!anyVal) break;
+                 const skip = (v) => !v || String(v).trim() === '' || String(v).trim().toLowerCase() === 'no events';
+                 if (!skip(r)) rewards.push(String(r).trim());
+                 if (!skip(g)) signups.push(String(g).trim());
+                 if (!skip(h)) allWeek.push(String(h).trim());
+                 if (!skip(k)) holidays.push(String(k).trim());
+               }
+             }
+           }
+
+      // ── 3. Build the unified card ──
+      const dayName = now.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+
+      const sectionPill = (icon, label, color, bg) =>
+        `<div style="display:inline-flex;align-items:center;gap:6px;background:${bg};color:${color};padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:12px;">${icon} ${label}</div>`;
+
+      // Today's Events rows
+      let todayRows = '';
+      if (todayEvents.length === 0) {
+        todayRows = `<div style="padding:14px 0;text-align:center;color:var(--text-muted);font-style:italic;">🎉 Rest day — no timed events today!</div>`;
+      } else {
+        todayEvents.forEach(ev => {
+          const strikeStyle = ev.isPast ? 'opacity:0.45;text-decoration:line-through;' : '';
+          const countdownId = 'cd_' + Math.random().toString(36).slice(2,8);
+          let countdownHtml = '';
+
+          if (ev.isLiveNow) {
+            const diffMs = (ev.eventEndDateTime || new Date(ev.eventDateTime.getTime() + 30 * 60000)) - now;
+            const mins = Math.max(1, Math.floor(diffMs / 60000));
+            const hrs = Math.floor(mins / 60);
+            const remMins = mins % 60;
+            const label = hrs > 0 ? `Ends in ${hrs}h ${remMins}m` : `Ends in ${mins}m`;
+            countdownHtml = `<span id="${countdownId}" style="background:linear-gradient(135deg, #10b981, #059669);color:#fff;font-size:11px;font-weight:bold;padding:4px 10px;border-radius:12px;box-shadow:0 0 10px rgba(16,185,129,0.5);animation:pulse 2s infinite;white-space:nowrap;">🟢 LIVE (${label})</span>`;
+            if (!window._scheduleCountdowns) window._scheduleCountdowns = [];
+            window._scheduleCountdowns.push({ id: countdownId, target: ev.eventEndDateTime, type: 'end' });
+          } else if (ev.eventDateTime && !ev.isPast) {
+            const diffMs = ev.eventDateTime - now;
+            const hrs = Math.floor(diffMs / 3600000);
+            const mins = Math.floor((diffMs % 3600000) / 60000);
+            const label = hrs > 0 ? `in ${hrs}h ${mins}m` : `in ${mins}m`;
+            countdownHtml = `<span id="${countdownId}" style="background:rgba(16,185,129,0.15);color:#10b981;font-size:11px;font-weight:700;padding:3px 8px;border-radius:10px;white-space:nowrap;">${label}</span>`;
+            if (!window._scheduleCountdowns) window._scheduleCountdowns = [];
+            window._scheduleCountdowns.push({ id: countdownId, target: ev.eventDateTime, type: 'start' });
+          } else if (ev.isPast) {
+            countdownHtml = `<span style="background:rgba(100,100,100,0.15);color:var(--text-muted);font-size:11px;padding:3px 8px;border-radius:10px;">Done</span>`;
           }
 
-          filtered.forEach(item => {
-            const status = getStatus(item.start, item.end);
-            const card = document.createElement('div');
-            card.className = 'card';
-            card.style.cssText = `padding:16px; border-left:5px solid ${status.color}; margin:0; display:flex; flex-direction:column; justify-content:space-between; gap:10px; transition:0.2s;`;
-            card.innerHTML = `
-              <div style="font-weight:bold; font-size:16px; color:var(--text-main);">${escapeHTML(item.title)}</div>
-              <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border); padding-top:10px;">
-                <span style="font-size:12px; font-weight:bold; color:${status.color}; background:var(--bg-main); padding:4px 10px; border-radius:12px; border:1px solid ${status.color}40;">${status.text}</span>
+          todayRows += `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg-main);border-radius:10px;margin-bottom:8px;gap:10px;${strikeStyle}flex-wrap:wrap;">
+              <span style="font-size:14px;font-weight:600;color:var(--text-main);">${ev.emoji} ${ev.eventName}</span>
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                ${ev.utcDisplay ? `<span style="font-size:13px;color:var(--text-muted);">${ev.utcDisplay}</span>` : ''}
+                ${ev.localTimeStr ? `<span style="font-size:13px;font-weight:600;color:var(--text-main);">${ev.localTimeStr} local</span>` : ev.pdtVal ? `<span style="font-size:13px;color:var(--text-muted);">${ev.pdtVal} PDT</span>` : ''}
+                ${countdownHtml}
               </div>
-            `;
-            listContainer.appendChild(card);
+            </div>`;
+        });
+      }
+
+      // Category columns (2-col grid for Rewards + Signups)
+      const listItems = (arr, color) => arr.map(x => `<div style="padding:6px 0;font-size:14px;color:var(--text-main);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;"><span style="width:7px;height:7px;background:${color};border-radius:50%;flex-shrink:0;"></span>${x}</div>`).join('');
+
+      let categoriesHtml = '';
+
+      const hasRewards  = rewards.length > 0;
+      const hasSignups  = signups.length > 0;
+      const hasAllWeek  = allWeek.length > 0;
+      const hasHolidays = holidays.length > 0;
+
+      if (hasRewards || hasSignups) {
+        categoriesHtml += `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;margin-top:20px;">`;
+        if (hasRewards) {
+          categoriesHtml += `<div style="background:var(--bg-main);border-radius:12px;padding:16px;">
+            ${sectionPill('🎁','Rewards','#eab308','rgba(234,179,8,0.12)')}
+            ${listItems(rewards,'#eab308')}
+          </div>`;
+        }
+        if (hasSignups) {
+          categoriesHtml += `<div style="background:var(--bg-main);border-radius:12px;padding:16px;">
+            ${sectionPill('📋','Sign-Ups','#10b981','rgba(16,185,129,0.12)')}
+            ${listItems(signups,'#10b981')}
+          </div>`;
+        }
+        categoriesHtml += `</div>`;
+      }
+
+      if (hasAllWeek) {
+        categoriesHtml += `<div style="background:var(--bg-main);border-radius:12px;padding:16px;margin-top:16px;">
+          ${sectionPill('📆','All Week','#818cf8','rgba(129,140,248,0.12)')}
+          <div style="display:flex;flex-wrap:wrap;gap:8px;">
+            ${allWeek.map(x => `<span style="background:rgba(129,140,248,0.15);color:#818cf8;padding:5px 12px;border-radius:20px;font-size:13px;font-weight:600;">${x}</span>`).join('')}
+          </div>
+        </div>`;
+      }
+
+      if (hasHolidays) {
+        categoriesHtml += `<div style="background:var(--bg-main);border-radius:12px;padding:16px;margin-top:16px;">
+          ${sectionPill('🎉','Holidays','#f97316','rgba(249,115,22,0.12)')}
+          <div style="display:flex;flex-wrap:wrap;gap:8px;">
+            ${holidays.map(x => `<span style="background:rgba(249,115,22,0.15);color:#f97316;padding:5px 12px;border-radius:20px;font-size:13px;font-weight:600;">${x}</span>`).join('')}
+          </div>
+        </div>`;
+      }
+
+      // Coming Up This Week
+      let upcomingHtml = '';
+      if (upcomingEvents.length > 0) {
+        upcomingHtml = `<div style="background:var(--bg-main);border-radius:12px;padding:16px;margin-top:16px;">
+          ${sectionPill('📅','Coming Up This Week','var(--accent)','rgba(59,130,246,0.12)')}`;
+        upcomingEvents.forEach(ev => {
+          upcomingHtml += `<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:6px;">
+            <span style="font-size:14px;color:var(--text-main);font-weight:500;">${ev.emoji} ${ev.eventName}</span>
+            <div style="display:flex;gap:10px;align-items:center;">
+              <span style="font-size:12px;color:var(--text-muted);">${ev.dateLabel}</span>
+              ${ev.utcDisplay ? `<span style="font-size:12px;color:var(--text-muted);">${ev.utcDisplay}</span>` : ''}
+              ${ev.localTimeStr ? `<span style="font-size:12px;font-weight:600;color:var(--accent);">${ev.localTimeStr}</span>` : ''}
+            </div>
+          </div>`;
+        });
+        upcomingHtml += `</div>`;
+      }
+
+      // ── 4. Final render ──
+      contentDiv.innerHTML = `
+        <div class="card" style="background:var(--card-bg);border:1px solid var(--border);border-top:3px solid var(--accent);border-radius:16px;padding:24px;animation:fadeIn 0.3s ease;">
+
+          <div style="background:var(--bg-main);border-radius:12px;padding:16px;">
+            ${sectionPill('⏰','Events Today','#60a5fa','rgba(96,165,250,0.12)')}
+            ${todayRows}
+          </div>
+
+          ${categoriesHtml}
+          ${upcomingHtml}
+        </div>`;
+
+      // ── 5. Start live countdown interval ──
+      if (window._scheduleCountdownTimer) clearInterval(window._scheduleCountdownTimer);
+      if (window._scheduleCountdowns && window._scheduleCountdowns.length > 0) {
+        window._scheduleCountdownTimer = setInterval(() => {
+          const n = new Date();
+          (window._scheduleCountdowns || []).forEach(cd => {
+            const el = document.getElementById(cd.id);
+            if (!el) return;
+            const diff = cd.target - n;
+            if (diff <= 0) { el.textContent = 'Now'; el.style.background = 'rgba(239,68,68,0.15)'; el.style.color = '#ef4444'; return; }
+            const h = Math.floor(diff / 3600000);
+            const m = Math.floor((diff % 3600000) / 60000);
+            el.textContent = h > 0 ? `in ${h}h ${m}m` : `in ${m}m`;
+          });
+        }, 30000);
+      }
+
+    
+        } else {
+           const data = weeklyData;
+
+      
+      
+      if (!data || !Array.isArray(data) || data.length === 0) {
+  
+      contentDiv.innerHTML = `<div class="card"><div class="loading">⚠️ Schedule data is currently unavailable. Please try again later.</div></div>`;
+        return;
+      }
+      
+      // Find the row that contains the dates
+      let dateRowIdx = -1;
+      for (let r = 0; r < data.length; r++) {
+        let dateCells = data[r].filter(cell => typeof cell === 'string' && (cell.match(/^\d{4}-\d{2}-\d{2}T/) || cell.match(/\d{1,2}\/\d{1,2}/)));
+        if (dateCells.length >= 3) {
+          dateRowIdx = r;
+          break;
+        }
+      }
+      
+      if (dateRowIdx === -1) {
+        contentDiv.innerHTML = `<div class="card"><div class="loading">Could not find dates in schedule.</div></div>`;
+        return;
+      }
+      
+      // Map each date to its column index and calculate dateObj
+      const todayDate = new Date();
+      todayDate.setHours(0, 0, 0, 0);
+      
+      let days = [];
+      for (let c = 0; c < data[dateRowIdx].length; c++) {
+        let cell = data[dateRowIdx][c];
+        if (typeof cell === 'string') {
+          let formatted = '';
+          let dateObj = null;
+          if (cell.match(/^\d{4}-\d{2}-\d{2}T/)) {
+            let [year, month, day] = cell.split('T')[0].split('-');
+            dateObj = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+            formatted = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+          } else if (cell.match(/(\d{1,2})\/(\d{1,2})/)) {
+            let m = cell.match(/(\d{1,2})\/(\d{1,2})/);
+            dateObj = new Date(todayDate.getFullYear(), parseInt(m[1]) - 1, parseInt(m[2]));
+            formatted = cell.replace(/Today /ig, '').replace(/Tomorrow /ig, '').trim();
+          }
+          
+          if (formatted) {
+            days.push({ dateStr: formatted, dateObj: dateObj, colIdx: c, categories: {} });
+          }
+        }
+      }
+
+      // Filter out past days so the 1st box is always TODAY (or the earliest active/upcoming day)
+      let futureOrTodayDays = days.filter(d => !d.dateObj || d.dateObj >= todayDate);
+      if (futureOrTodayDays.length > 0) {
+        days = futureOrTodayDays;
+      }
+      
+      // Ensure 1st box is labeled with Today if date is today
+      if (days.length > 0) {
+        const firstDayObj = days[0].dateObj;
+        if (!firstDayObj || firstDayObj.toDateString() === todayDate.toDateString()) {
+          days[0].isToday = true;
+          if (!days[0].dateStr.toLowerCase().includes('today')) {
+            days[0].dateStr = `Today • ${days[0].dateStr}`;
+          }
+        }
+      }
+      
+      // Also extract clean live sign-ups from todayData sheet if present
+      let todaySignups = [];
+      if (todayData && Array.isArray(todayData)) {
+        let hIdx = -1;
+        for (let i = 0; i < todayData.length; i++) {
+          const cell = String(todayData[i][5] || '').trim().toLowerCase();
+          if (cell === 'rewards') { hIdx = i; break; }
+        }
+        if (hIdx !== -1) {
+          for (let i = hIdx + 1; i < todayData.length; i++) {
+            const val = todayData[i][6];
+            if (!val) break;
+            const str = String(val).trim();
+            if (str === '' || str.toLowerCase() === 'no events') break;
+            if (!isNaN(str) || str.toLowerCase() === 'current' || str.toLowerCase().includes('training') || str.toLowerCase().includes('buy gems') || str.toLowerCase().includes('money')) break;
+            todaySignups.push(str);
+          }
+        }
+      }
+
+      // Extract events for each day, grouping by category
+      let currentCategory = "Events";
+      for (let r = dateRowIdx + 1; r < data.length; r++) {
+        if (data[r].every(cell => cell === "")) continue;
+        
+        // Detect category headers (any row with exactly 1 non-empty cell across columns)
+        let nonEmptyCells = data[r].filter(c => c !== undefined && c !== null && String(c).trim() !== "");
+        if (nonEmptyCells.length === 1) {
+          let catVal = String(nonEmptyCells[0]).trim();
+          if (catVal && !catVal.match(/\d{1,2}\/\d{1,2}/) && !catVal.match(/^\d{4}-\d{2}-\d{2}/)) {
+            currentCategory = catVal;
+            continue;
+          }
+        }
+        
+        days.forEach(day => {
+          let eventCell = data[r][day.colIdx];
+          if (eventCell && String(eventCell).trim() !== "") {
+            let text = String(eventCell).trim();
+            let isSignupItem = text.toLowerCase().includes('signup') || text.toLowerCase().includes('sign-up') || text.toLowerCase().includes('sign up') || text.toLowerCase().includes('registration');
+            let targetCategory = isSignupItem ? 'Sign-Ups' : currentCategory;
+            if (!day.categories[targetCategory]) day.categories[targetCategory] = [];
+            day.categories[targetCategory].push(text);
+          }
+        });
+      }
+
+      // Merge today's active sign-ups onto today's card (or Day 0)
+      const now = new Date();
+      const todayStr = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      days.forEach((day, idx) => {
+        const isTodayCard = (day.dateStr === todayStr) || (day.dateObj && day.dateObj.toDateString() === now.toDateString()) || (idx === 0);
+        if (isTodayCard && todaySignups.length > 0) {
+          if (!day.categories['Sign-Ups']) day.categories['Sign-Ups'] = [];
+          todaySignups.forEach(s => {
+            if (!day.categories['Sign-Ups'].includes(s)) {
+              day.categories['Sign-Ups'].unshift(s);
+            }
           });
         }
+      });
+      
+      // Render the timeline as Daily Cards
+      let html = '';
+      html += `<div style="display:flex; flex-wrap:wrap; gap:20px;">`;
+      
+      days.forEach(day => {
+        const isTodayHeader = day.isToday || day.dateStr.toLowerCase().includes('today');
+        const headerBg = isTodayHeader ? "linear-gradient(135deg, #10b981, #059669)" : "var(--accent)";
+        const badgeHtml = isTodayHeader ? `<span style="background:rgba(255,255,255,0.25); padding:2px 8px; border-radius:12px; font-size:12px; margin-right:6px;">⭐ TODAY</span> ` : "";
+        html += `<div class="card" style="flex: 1; min-width: 250px; padding:0; overflow:hidden; ${isTodayHeader ? 'border: 2px solid #10b981; box-shadow: 0 0 15px rgba(16,185,129,0.25);' : ''}">
+                   <div style="background:${headerBg}; color:#fff; padding:15px; text-align:center; font-weight:bold; font-size:18px;">
+                     ${badgeHtml}${day.dateStr}
+                   </div>
+                   <div style="padding:15px;">`;
+                   
+        let catKeys = Object.keys(day.categories);
+        catKeys.sort((a, b) => {
+          const aIsSU = a.toLowerCase().includes('sign');
+          const bIsSU = b.toLowerCase().includes('sign');
+          if (aIsSU && !bIsSU) return -1;
+          if (!aIsSU && bIsSU) return 1;
+          return 0;
+        });
+        if (catKeys.length === 0) {
+          html += `<div style="padding:10px 0; color:var(--text-muted); text-align:center; font-style:italic;">No Events</div>`;
+        } else {
+          catKeys.forEach((cat, index) => {
+            let topMargin = index === 0 ? "5px" : "18px";
+            let catLower = cat.toLowerCase();
+            let catColor = "var(--text-main)";
+            let catIcon = "✨";
+            let dotColor = "var(--accent)";
 
-        searchInput.addEventListener('input', (e) => renderPageList(e.target.value));
-        renderPageList('');
+            if (catLower.includes('signup') || catLower.includes('sign-up') || catLower.includes('sign up')) {
+              catColor = "#10b981"; // Green
+              catIcon = "📋";
+              dotColor = "#10b981";
+            } else if (catLower.includes('reward')) {
+              catColor = "#eab308"; // Yellow
+              catIcon = "🎁";
+              dotColor = "#eab308";
+            } else if (catLower.includes('week')) {
+              catColor = "#818cf8"; // Indigo
+              catIcon = "📆";
+              dotColor = "#818cf8";
+            } else if (catLower.includes('holiday')) {
+              catColor = "#f97316"; // Orange
+              catIcon = "🎉";
+              dotColor = "#f97316";
+            } else if (catLower.includes('event')) {
+              catColor = "#0ea5e9"; // Cyan
+              catIcon = "⏰";
+              dotColor = "#0ea5e9";
+            }
+
+            html += `
+              <div style="margin-top:${topMargin}; margin-bottom:8px;">
+                <div style="font-weight:bold; color:${catColor}; font-size:11px; letter-spacing:1px; text-transform:uppercase; display:flex; align-items:center; gap:6px;">
+                  <span style="width:8px; height:8px; background:${dotColor}; border-radius:50%; display:inline-block; box-shadow:0 0 6px ${dotColor};"></span>
+                  ${catIcon} ${cat}
+                </div>
+              </div>
+              <ul style="list-style:none; padding:0; margin:0; margin-bottom:12px;">`;
+
+            day.categories[cat].forEach((ev) => {
+              let isBt = ev.includes('Bear Trap') || ev.includes('🪤') || ev.includes('🐻');
+              let isSignupCat = catLower.includes('signup') || catLower.includes('sign-up') || catLower.includes('sign up');
+              let bullet = isSignupCat ? '<span style="color:#10b981; font-weight:bold; font-size:11px;">🟢</span>' : (isBt ? '🪤' : '✨');
+              
+              html += `<li style="padding:6px 0; font-size:13px; color:var(--text-main); display:flex; align-items:center; gap:8px; border-bottom:1px solid rgba(255,255,255,0.05);">
+                         <span>${bullet}</span>
+                         <span>${ev}</span>
+                       </li>`;
+            });
+            html += `</ul>`;
+          });
+        }
+        html += `</div></div>`;
+      });
+      
+      html += `</div>`;
+      contentDiv.innerHTML = html;
+    
+        }
       };
 
-      window.renderTabs = renderView;
-      renderView();
+      window.renderTabs = renderTabs;
+      renderTabs();
+
     } catch(e) { renderError(e.message); }
   },
+
+  contact: async () => {
+    app.innerHTML = `
+      <div class="card" style="display:flex; flex-direction:column; height: 85vh; min-height: 800px; padding:0; overflow:hidden; animation: fadeIn 0.3s ease;">
+        <div style="padding:15px 20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="font-size:24px;">💬</span>
+            <h2 style="margin:0; font-size:20px; color:var(--text-main);">Support & Feedback</h2>
+          </div>
+          <a href="https://tiny.cc/BrianDivaCox" target="_blank" style="display:inline-flex; align-items:center; gap:6px; background:#5865F2; color:#fff; padding:6px 12px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:13px; transition:0.2s;">
+            <span style="font-size:16px;">👾</span> Join Discord
+          </a>
+        </div>
+        <div style="flex:1; width:100%; position:relative; background:var(--bg-main);">
+          <iframe 
+            src="https://docs.google.com/forms/d/e/1FAIpQLSdL6uJrUBV05I3NIfwTVyGd0Bx6osn2ZEBGeyp2RnwJZxujXA/viewform?embedded=true" 
+            style="position:absolute; top:0; left:0; width:100%; height:100%; border:none;"
+            frameborder="0" 
+            marginheight="0" 
+            marginwidth="0">
+            Loading…
+          </iframe>
+        </div>
+      </div>
+    `;
+  },
+
+  
+  analytics: async () => {
+    renderLoading("Loading Analytics");
+    try {
+      const rosterRawData = await window.fetchRoster();
+      
+      if (!rosterRawData) throw new Error("No data found.");
+      
+      let giftCodesYes = 0;
+      let giftCodesNo = 0;
+      
+      // Parse roster data to count gift code redemptions
+      if (rosterRawData) {
+        Object.values(rosterRawData).forEach(p => {
+          if (p.name) {
+            let gcVal = p.giftCodes;
+            if (gcVal !== undefined && gcVal !== null && gcVal !== "") {
+              let strVal = gcVal.toString().toLowerCase().trim();
+              if (gcVal === true || strVal === "true" || strVal === "✓" || strVal === "yes") {
+                giftCodesYes++;
+              } else {
+                giftCodesNo++;
+              }
+            } else {
+              giftCodesNo++;
+            }
+          }
+        });
+      }
+      
+      let html = `
+        <div class="card" style="margin-bottom:20px; text-align:center;">
+          <div class="card-title" style="margin-bottom:5px; font-size:24px;">📊 Visual Analytics</div>
+          <p style="color:var(--text-muted); font-size:14px; margin-bottom:25px;">Live metrics automatically generated from your Alliance database.</p>
+          
+          <div style="display:flex; justify-content:center; flex-wrap:wrap; gap:30px;">
+            <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:12px; padding:20px; width:100%; max-width:400px; box-shadow:0 4px 6px rgba(0,0,0,0.05);">
+              <h3 style="color:var(--text-main); margin-top:0; margin-bottom:15px; font-size:18px;">Gift Code Auto Redeem</h3>
+              <div style="position:relative; height:250px; width:100%; display:flex; justify-content:center;">
+                <canvas id="giftCodeChart"></canvas>
+              </div>
+              <div style="margin-top:15px; font-size:14px; color:var(--text-muted);">
+                <span style="color:var(--success); font-weight:bold;">${giftCodesYes}</span> Enrolled | 
+                <span style="color:var(--danger); font-weight:bold;">${giftCodesNo}</span> Missing
+              </div>
+            </div>
+            
+            <!-- Placeholder for future charts -->
+            <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:12px; padding:20px; width:100%; max-width:400px; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 6px rgba(0,0,0,0.05); min-height:300px;">
+              <div style="color:var(--text-muted); font-style:italic; opacity:0.7;">
+                More analytics coming soon...
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      app.innerHTML = html;
+      
+      // Render Chart using Chart.js after the canvas is in the DOM
+      // We must get the current accent color from CSS variables
+      const rootStyle = getComputedStyle(document.documentElement);
+      let accentColor = rootStyle.getPropertyValue('--accent').trim();
+      let cardBg = rootStyle.getPropertyValue('--card-bg').trim();
+      let textColor = rootStyle.getPropertyValue('--text-main').trim();
+      
+      const ctx = document.getElementById('giftCodeChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Enrolled', 'Not Enrolled'],
+          datasets: [{
+            data: [giftCodesYes, giftCodesNo],
+            backgroundColor: [
+              accentColor, // dynamically matches theme
+              '#475569'    // Slate color for not enrolled
+            ],
+            borderWidth: 2,
+            borderColor: cardBg,
+            hoverOffset: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                color: textColor,
+                font: {
+                  family: 'monospace',
+                  size: 12
+                }
+              }
+            },
+            tooltip: {
+              backgroundColor: 'rgba(0,0,0,0.8)',
+              titleFont: { family: 'monospace' },
+              bodyFont: { family: 'monospace' },
+              padding: 10,
+              cornerRadius: 8
+            }
+          },
+          cutout: '70%'
+        }
+      });
+      
+    } catch(e) { renderError(e.message); }
+  }
+};
+
+window.fetchScheduleLiveData = async () => {
+  try {
+    const snap = await get(ref(db, 'schedule_live'));
+    if (snap.exists()) {
+      return snap.val();
+    }
+  } catch(e) {
+    console.warn("Failed to read schedule_live from Firebase:", e);
+  }
+  return null;
+};
+
+window.saveScheduleToFirebase = async (scheduleObj) => {
+  try {
+    const adminName = (currentUser && currentUser.gameId && idToNameMap[currentUser.gameId]) 
+      ? idToNameMap[currentUser.gameId] 
+      : (currentUser && currentUser.email ? currentUser.email : "Admin");
+    
+    scheduleObj.lastUpdated = Date.now();
+    scheduleObj.updatedBy = adminName;
+
+    await set(ref(db, 'schedule_live'), scheduleObj);
+    if (window.logAdminAction) {
+      window.logAdminAction("Schedule Live Updated", `Updated live schedule with ${scheduleObj.events ? scheduleObj.events.length : 0} timed events and category lists`, "All Players");
+    }
+    if (window.showToast) window.showToast("Live Schedule saved to Firebase!", "success");
+    return true;
+  } catch(e) {
+    console.error("Failed to save schedule_live to Firebase:", e);
+    if (window.showToast) window.showToast("Error saving schedule to Firebase: " + e.message, "error");
+    return false;
+  }
 };
 
 window.openScheduleEditorModal = async () => {
@@ -12892,6 +13509,65 @@ window.openScheduleEditorModal = async () => {
     return;
   }
 
+  let liveData = await window.fetchScheduleLiveData();
+  
+  // If schedule_live is missing, initialize from current Google Sheets data if available
+  if (!liveData) {
+    let sheetData = window.liveData ? window.liveData['WhiteOut Survival'] : null;
+    let events = [];
+    let signups = [], rewards = [], allWeek = [], holidays = [];
+
+    if (sheetData && Array.isArray(sheetData)) {
+      const now = new Date();
+      for (let i = 1; i < Math.min(34, sheetData.length); i++) {
+        const row = sheetData[i];
+        const eventName = row[5];
+        const dateRaw   = row[6];
+        const utcRaw    = row[7];
+        const pdtVal    = row[8];
+        if (!eventName || String(eventName).trim() === '') continue;
+        if (String(eventName).includes("Event's")) continue;
+        if (String(eventName).trim() === 'Rewards') break;
+
+        const isBearTrap = String(eventName).includes('Bear Trap') || String(eventName).includes('🪤') || String(eventName).includes('🐻');
+        const isJoe = String(eventName).includes('Crazy Joe') || String(eventName).includes('🔥');
+        const isCastle = String(eventName).includes('Castle') || String(eventName).includes('🏰');
+        const isBia = String(eventName).includes('Brothers') || String(eventName).includes('⚔️');
+        let emoji = isBearTrap ? '🪤' : (isJoe ? '🔥' : (isCastle ? '🏰' : (isBia ? '⚔️' : '✨')));
+
+        events.push({
+          id: 'ev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+          eventName: String(eventName).trim(),
+          dateStr: String(dateRaw || '').trim(),
+          utcStr: String(utcRaw || '').trim(),
+          pdtVal: String(pdtVal || '').trim(),
+          emoji: emoji
+        });
+      }
+
+      let headerRowIdx = -1;
+      for (let i = 0; i < sheetData.length; i++) {
+        const cell = String(sheetData[i][5] || '').trim().toLowerCase();
+        if (cell === 'rewards') { headerRowIdx = i; break; }
+      }
+      if (headerRowIdx !== -1) {
+        for (let i = headerRowIdx + 1; i < sheetData.length; i++) {
+          const r = sheetData[i][5], g = sheetData[i][6], h = sheetData[i][7], k = sheetData[i][8];
+          const anyVal = [r,g,h,k].some(v => v && String(v).trim() !== '');
+          if (!anyVal) break;
+          const skip = (v) => !v || String(v).trim() === '' || String(v).trim().toLowerCase() === 'no events';
+          if (!skip(r)) rewards.push(String(r).trim());
+          if (!skip(g)) signups.push(String(g).trim());
+          if (!skip(h)) allWeek.push(String(h).trim());
+          if (!skip(k)) holidays.push(String(k).trim());
+        }
+      }
+    }
+
+    liveData = { events, signups, rewards, allWeek, holidays };
+  }
+
+  let activeModalTab = 'timed';
   const modalId = 'scheduleEditorModal';
   const overlayId = 'scheduleEditorModalOverlay';
 
@@ -12906,71 +13582,616 @@ window.openScheduleEditorModal = async () => {
 
   const modal = document.createElement('div');
   modal.id = modalId;
-  modal.style.cssText = 'position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width:92%; max-width:550px; max-height:85vh; background:var(--card-bg, #1e293b); border:1px solid var(--border, #334155); border-radius:12px; padding:20px; box-shadow:0 20px 50px rgba(0,0,0,0.6); z-index:9999; display:flex; flex-direction:column; gap:14px; overflow:hidden; color:var(--text-main, #f8fafc); animation:slideUp 0.3s;';
+  modal.style.cssText = 'position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width:92%; max-width:850px; max-height:90vh; background:var(--card-bg); border:1px solid var(--border); border-radius:16px; padding:24px; box-shadow:0 20px 50px rgba(0,0,0,0.6); z-index:9999; display:flex; flex-direction:column; gap:16px; overflow:hidden; color:var(--text-main); animation:slideUp 0.3s;';
 
-  let rewardsData = [];
+  const currentEvents = [...(liveData.events || [])];
+  const currentSignups = [...(liveData.signups || [])];
+  const currentRewards = [...(liveData.rewards || [])];
+  const currentAllWeek = [...(liveData.allWeek || [])];
+  const currentHolidays = [...(liveData.holidays || [])];
+
+  // Load custom presets from Firebase if available
+  let customPresets = [];
   try {
-    const snap = await get(ref(db, 'rewards_schedule_live'));
-    if (snap.exists() && Array.isArray(snap.val())) {
-      rewardsData = snap.val();
-    }
-  } catch(e) {}
-
-  if (!rewardsData || rewardsData.length === 0) {
-    let sheetData = window.liveData ? window.liveData['WhiteOut Survival'] : null;
-    if (!sheetData) {
-      try { sheetData = await fetchSheet('WhiteOut Survival'); } catch(e) {}
-    }
-    if (sheetData && Array.isArray(sheetData)) {
-      for (let i = 1; i < sheetData.length; i++) {
-        const title = String(sheetData[i][8] || '').trim();
-        const start = sheetData[i][9] ? String(sheetData[i][9]).trim() : '';
-        const end   = sheetData[i][12] ? String(sheetData[i][12]).trim() : '';
-        if (title && title.toLowerCase() !== 'rewards' && title.toLowerCase() !== 'event title') {
-          rewardsData.push({ row: i + 1, title, start, end });
-        }
+    const db = window.firebaseDb;
+    const { ref, get } = window.firebaseDatabase || {};
+    if (db && ref && get) {
+      const snap = await get(ref(db, 'schedule_presets'));
+      if (snap.exists() && Array.isArray(snap.val())) {
+        customPresets = snap.val();
       }
     }
-  }
+  } catch(e) { console.error("Error loading schedule presets:", e); }
 
-  let selectedIndex = -1;
+  const defaultPresets = [
+    { name: "Bear Trap", utc: "16:00", endUtc: "16:30", emoji: "🪤" },
+    { name: "Crazy Joe", utc: "14:00", endUtc: "14:30", emoji: "🔥" },
+    { name: "Sunfire Castle Battle", utc: "12:00", endUtc: "20:00", emoji: "🏰" },
+    { name: "Brothers in Arms K.E.", utc: "00:00", endUtc: "23:59", emoji: "⚔️" },
+    { name: "Polar Terrors Rally", utc: "16:00", endUtc: "16:45", emoji: "🐻‍❄️" },
+    { name: "Frostfire Mine", utc: "14:00", endUtc: "15:00", emoji: "⛏️" },
+    { name: "Canyon Clash", utc: "16:00", endUtc: "17:00", emoji: "🏔️" },
+    { name: "Alliance Showdown", utc: "12:00", endUtc: "23:59", emoji: "🛡️" },
+    { name: "State vs State Prep", utc: "00:00", endUtc: "23:59", emoji: "💎" },
+    { name: "Foundry Battle", utc: "19:00", endUtc: "20:00", emoji: "🏆" }
+  ];
 
-  modal.innerHTML = `
-    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border, #334155); padding-bottom:12px;">
-      <h2 style="margin:0; font-size:1.2rem; color:var(--accent, #0ea5e9); font-weight:bold;">🎁 Rewards & Events Editor</h2>
-      <button id="schCloseModalBtn" style="background:transparent; border:none; color:var(--text-muted); font-size:24px; cursor:pointer; font-weight:bold;">&times;</button>
-    </div>
+  const allPresets = [...defaultPresets];
+  customPresets.forEach(cp => {
+    if (cp && cp.name && !allPresets.some(ap => ap.name.toLowerCase() === cp.name.toLowerCase())) {
+      allPresets.push(cp);
+    }
+  });
 
-    <div>
-      <input type="text" id="sch-search-box" placeholder="Search for events or rewards..." style="width:100%; padding:10px; background:var(--bg-main, #0f172a); border:1px solid var(--border, #334155); color:var(--text-main, #f8fafc); border-radius:6px; font-size:0.95rem; box-sizing:border-box;">
-    </div>
-
-    <div id="sch-list-container" style="flex:1; max-height:260px; overflow-y:auto; background:var(--bg-main, #0f172a); border-radius:8px; border:1px solid var(--border, #334155); display:none;">
-    </div>
-
-    <div id="sch-editor-card" style="background:var(--bg-main, #0f172a); border-radius:8px; padding:16px; border:1px solid var(--border, #334155); display:none;">
-      <div id="sch-item-title" style="font-size:1.1rem; font-weight:bold; margin-bottom:14px; color:#fff; min-height:24px;">Select a row...</div>
-      
-      <div style="display:flex; gap:12px; margin-bottom:14px;">
-        <div style="flex:1;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-            <label style="font-size:12px; font-weight:bold; color:var(--text-muted);">Start Date</label>
-            <button id="sch-start-today-btn" type="button" style="font-size:10px; background:rgba(14,165,233,0.15); color:var(--accent); border:1px solid rgba(14,165,233,0.3); padding:2px 6px; border-radius:4px; cursor:pointer; font-weight:bold;">Today</button>
+  const renderModalContent = () => {
+    modal.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:14px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div style="font-size:24px;">📅</div>
+          <div>
+            <h3 style="margin:0; font-size:20px; color:var(--text-main);">Live Schedule Manager</h3>
+            <p style="margin:2px 0 0 0; font-size:12px; color:var(--text-muted);">Edits push directly to Firebase and update all website visitors in real-time (&lt;100ms).</p>
           </div>
-          <input type="text" id="sch-start-date" placeholder="MM/DD/YYYY" style="width:100%; padding:8px; background:var(--card-bg, #1e293b); border:1px solid var(--border, #334155); color:#fff; border-radius:6px; font-size:13px; box-sizing:border-box;">
         </div>
-        <div style="flex:1;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-            <label style="font-size:12px; font-weight:bold; color:var(--text-muted);">End Date</label>
-            <button id="sch-end-today-btn" type="button" style="font-size:10px; background:rgba(14,165,233,0.15); color:var(--accent); border:1px solid rgba(14,165,233,0.3); padding:2px 6px; border-radius:4px; cursor:pointer; font-weight:bold;">Today</button>
-          </div>
-          <input type="text" id="sch-end-date" placeholder="MM/DD/YYYY" style="width:100%; padding:8px; background:var(--card-bg, #1e293b); border:1px solid var(--border, #334155); color:#fff; border-radius:6px; font-size:13px; box-sizing:border-box;">
-        </div>
+        <button id="schModalCloseBtn" style="background:transparent; border:none; color:var(--text-muted); font-size:24px; cursor:pointer; font-weight:bold;">&times;</button>
       </div>
 
-      <button id="sch-save-item-btn" style="width:100%; padding:10px; background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; border-radius:6px; font-weight:bold; font-size:14px; cursor:pointer; box-shadow:0 4px 12px rgba(16,185,129,0.3);">💾 Save Item Dates</button>
-    </div>
-  `;
+      <!-- Navigation Subtabs -->
+      <div style="display:flex; gap:10px; border-bottom:1px solid var(--border); padding-bottom:10px; flex-wrap:wrap;">
+        <button id="schTabBtnTimed" style="padding:8px 16px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; background:${activeModalTab === 'timed' ? 'var(--accent)' : 'var(--bg-main)'}; color:${activeModalTab === 'timed' ? '#fff' : 'var(--text-muted)'}; transition:0.2s;">
+          ⏱️ Timed Events (${currentEvents.length})
+        </button>
+        <button id="schTabBtnSearch" style="padding:8px 16px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; background:${activeModalTab === 'search' ? 'var(--accent)' : 'var(--bg-main)'}; color:${activeModalTab === 'search' ? '#fff' : 'var(--text-muted)'}; transition:0.2s;">
+          🔍 Search & Update Dates
+        </button>
+        <button id="schTabBtnCats" style="padding:8px 16px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; background:${activeModalTab === 'cats' ? 'var(--accent)' : 'var(--bg-main)'}; color:${activeModalTab === 'cats' ? '#fff' : 'var(--text-muted)'}; transition:0.2s;">
+          📋 Category Lists
+        </button>
+      </div>
+
+      <!-- Main Body Content Area (Scrollable) -->
+      <div style="flex:1; overflow-y:auto; padding-right:4px; display:flex; flex-direction:column; gap:16px;">
+        ${activeModalTab === 'timed' ? `
+          <!-- Preloaded Event Select & Presets Bar -->
+          <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:12px; display:flex; flex-direction:column; gap:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+              <div style="font-size:11px; font-weight:bold; text-transform:uppercase; color:var(--text-muted);">⚡ Select Preloaded Event (${allPresets.length}):</div>
+              <select id="schPreloadedSelect" style="padding:6px 12px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:12px; cursor:pointer;">
+                <option value="">-- Pick Preloaded Event --</option>
+                ${allPresets.map(p => `<option value='${JSON.stringify(p)}'>${p.emoji || '✨'} ${escapeHTML(p.name)} (${p.utc}${p.endUtc ? '-' + p.endUtc : ''} UTC)</option>`).join('')}
+              </select>
+            </div>
+
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button class="sch-preset-btn" data-name="Bear Trap" data-utc="16:00" data-endutc="16:30" data-emoji="🪤" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">🪤 Bear Trap</button>
+              <button class="sch-preset-btn" data-name="Crazy Joe" data-utc="14:00" data-endutc="14:30" data-emoji="🔥" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">🔥 Crazy Joe</button>
+              <button class="sch-preset-btn" data-name="Sunfire Castle Battle" data-utc="12:00" data-endutc="20:00" data-emoji="🏰" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">🏰 Castle Battle</button>
+              <button class="sch-preset-btn" data-name="Brothers in Arms K.E." data-utc="00:00" data-endutc="23:59" data-emoji="⚔️" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">⚔️ Brothers in Arms</button>
+              <button class="sch-preset-btn" data-name="Polar Terrors Rally" data-utc="16:00" data-endutc="16:45" data-emoji="🐻‍❄️" style="padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">🐻‍❄️ Polar Terrors</button>
+            </div>
+          </div>
+
+          <!-- Add Event Form -->
+          <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:14px; display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+            <div style="flex:1; min-width:140px;">
+              <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">Event Name</label>
+              <input type="text" id="schNewName" placeholder="e.g. Bear Trap 2" style="width:100%; padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; box-sizing:border-box;">
+            </div>
+            <div style="width:85px;">
+              <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">Date (M/D)</label>
+              <input type="text" id="schNewDate" placeholder="8/7" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; text-align:center; box-sizing:border-box;">
+            </div>
+            <div style="width:90px;">
+              <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">Start UTC</label>
+              <input type="text" id="schNewUtc" placeholder="16:00" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; text-align:center; box-sizing:border-box;">
+            </div>
+            <div style="width:90px;">
+              <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">End UTC (Opt)</label>
+              <input type="text" id="schNewEndUtc" placeholder="16:30" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; text-align:center; box-sizing:border-box;">
+            </div>
+            <div style="width:75px;">
+              <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">Emoji</label>
+              <select id="schNewEmoji" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; box-sizing:border-box;">
+                <option value="🪤">🪤</option>
+                <option value="🔥">🔥</option>
+                <option value="🏰">🏰</option>
+                <option value="⚔️">⚔️</option>
+                <option value="🐻‍❄️">🐻‍❄️</option>
+                <option value="⛏️">⛏️</option>
+                <option value="🏔️">🏔️</option>
+                <option value="🛡️">🛡️</option>
+                <option value="✨">✨</option>
+                <option value="💎">💎</option>
+                <option value="🏆">🏆</option>
+              </select>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <button id="schAddEventBtn" style="padding:9px 14px; border-radius:6px; border:none; background:linear-gradient(135deg, #10b981, #059669); color:#fff; font-weight:bold; cursor:pointer; font-size:13px;">➕ Add Event</button>
+              <button id="schSavePresetBtn" style="padding:9px 12px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--accent); font-weight:bold; cursor:pointer; font-size:12px;" title="Save event template as preloaded preset">⭐ Save Preset</button>
+            </div>
+          </div>
+
+          <!-- Timed Events Table -->
+          <div style="border:1px solid var(--border); border-radius:10px; overflow:hidden;">
+            <table style="width:100%; border-collapse:collapse; text-align:left; font-size:13px;">
+              <thead>
+                <tr style="background:var(--bg-main); border-bottom:1px solid var(--border); color:var(--text-muted); font-size:11px; text-transform:uppercase;">
+                  <th style="padding:10px 14px;">Event Name</th>
+                  <th style="padding:10px 10px; text-align:center;">Date (M/D)</th>
+                  <th style="padding:10px 10px; text-align:center;">UTC Time Window</th>
+                  <th style="padding:10px 14px; text-align:right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${currentEvents.length === 0 ? `
+                  <tr><td colspan="4" style="padding:20px; text-align:center; color:var(--text-muted); font-style:italic;">No timed events scheduled yet. Add one above!</td></tr>
+                ` : currentEvents.map((ev, idx) => `
+                  <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:10px 14px; font-weight:bold; color:var(--text-main);">
+                      <span style="margin-right:6px;">${ev.emoji || '✨'}</span> ${escapeHTML(ev.eventName)}
+                    </td>
+                    <td style="padding:10px 10px; text-align:center; font-weight:bold; color:var(--accent);">${escapeHTML(ev.dateStr || '-')}</td>
+                    <td style="padding:10px 10px; text-align:center; font-weight:bold; color:#10b981;">
+                      ${escapeHTML(ev.utcStr || '-')}${ev.endUtcStr ? ' - ' + escapeHTML(ev.endUtcStr) : ''} UTC
+                    </td>
+                    <td style="padding:10px 14px; text-align:right;">
+                      <button class="sch-del-btn" data-idx="${idx}" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">✖ Delete</button>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        ` : activeModalTab === 'search' ? `
+          <!-- Search & Quick Date Update Tab (Replica of Google Sheets Rewards Editor) -->
+          <div style="display:flex; flex-direction:column; gap:14px;">
+            <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:12px;">
+              <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase;">🔍 Search Event or Reward</label>
+              <input type="text" id="schSearchQuery" placeholder="Type event name (e.g. Bear Trap, Crazy Joe, Foundry, SvS)..." style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:14px; box-sizing:border-box;">
+            </div>
+
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">
+              <!-- Items List -->
+              <div id="schSearchList" style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:10px; max-height:300px; overflow-y:auto; display:flex; flex-direction:column; gap:6px;">
+                ${allPresets.map(p => `
+                  <div class="sch-search-item" data-preset='${JSON.stringify(p)}' style="padding:10px; border-radius:6px; background:var(--card-bg); border:1px solid var(--border); cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-weight:bold; font-size:13px; color:var(--text-main);">${p.emoji || '✨'} ${escapeHTML(p.name)}</span>
+                    <span style="font-size:11px; font-weight:bold; color:var(--text-muted);">${p.utc}${p.endUtc ? '-' + p.endUtc : ''} UTC</span>
+                  </div>
+                `).join('')}
+              </div>
+
+              <!-- Selected Item Quick Date Editor -->
+              <div id="schSearchEditor" style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:16px; display:flex; flex-direction:column; gap:12px;">
+                <div id="schSelectedItemTitle" style="font-weight:bold; font-size:15px; color:var(--accent);">Select an event from list left</div>
+                <div style="display:flex; gap:10px;">
+                  <div style="flex:1;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                      <label style="font-size:11px; font-weight:bold; color:var(--text-muted);">Date (M/D)</label>
+                      <button id="schSetTodayBtn" type="button" style="font-size:10px; font-weight:bold; color:var(--accent); cursor:pointer; text-transform:uppercase; background:rgba(14,165,233,0.15); border:1px solid rgba(14,165,233,0.3); padding:2px 6px; border-radius:4px;">Today</button>
+                    </div>
+                    <input type="text" id="schSearchDate" placeholder="8/7" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; text-align:center; box-sizing:border-box;">
+                  </div>
+                  <div style="width:90px;">
+                    <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">Start UTC</label>
+                    <input type="text" id="schSearchUtc" placeholder="16:00" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; text-align:center; box-sizing:border-box;">
+                  </div>
+                  <div style="width:90px;">
+                    <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">End UTC</label>
+                    <input type="text" id="schSearchEndUtc" placeholder="16:30" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; text-align:center; box-sizing:border-box;">
+                  </div>
+                </div>
+                <button id="schSaveSearchItemBtn" style="width:100%; padding:10px; border-radius:8px; border:none; background:linear-gradient(135deg, #10b981, #059669); color:#fff; font-weight:bold; font-size:13px; cursor:pointer; box-shadow:0 4px 12px rgba(16,185,129,0.3);">💾 Update Event Date</button>
+              </div>
+            </div>
+          </div>
+        ` : `
+          <!-- Category Lists Tab with Quick Add Preloaded Badges -->
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:16px;">
+            <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:14px;">
+              <div style="font-weight:bold; font-size:13px; color:#10b981; margin-bottom:6px;">🟢 Sign-Ups Requiring Events</div>
+              <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
+                <button class="sch-cat-quick" data-target="schCatSignups" data-val="Sunfire Castle R5 Registration" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(16,185,129,0.4); background:rgba(16,185,129,0.12); color:#10b981; font-size:11px; font-weight:bold; cursor:pointer;">+ Castle R5</button>
+                <button class="sch-cat-quick" data-target="schCatSignups" data-val="SvS Troop Training Registration" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(16,185,129,0.4); background:rgba(16,185,129,0.12); color:#10b981; font-size:11px; font-weight:bold; cursor:pointer;">+ SvS Training</button>
+                <button class="sch-cat-quick" data-target="schCatSignups" data-val="Foundry Team Signups" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(16,185,129,0.4); background:rgba(16,185,129,0.12); color:#10b981; font-size:11px; font-weight:bold; cursor:pointer;">+ Foundry Team</button>
+              </div>
+              <textarea id="schCatSignups" rows="5" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-family:monospace; font-size:12px; box-sizing:border-box;">${currentSignups.join('\n')}</textarea>
+            </div>
+
+            <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:14px;">
+              <div style="font-weight:bold; font-size:13px; color:#eab308; margin-bottom:6px;">🟡 Rewards & Payout Track</div>
+              <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
+                <button class="sch-cat-quick" data-target="schCatRewards" data-val="Foundry Battle Payouts" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(234,179,8,0.4); background:rgba(234,179,8,0.12); color:#eab308; font-size:11px; font-weight:bold; cursor:pointer;">+ Foundry Payouts</button>
+                <button class="sch-cat-quick" data-target="schCatRewards" data-val="Alliance Mobilization Rewards" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(234,179,8,0.4); background:rgba(234,179,8,0.12); color:#eab308; font-size:11px; font-weight:bold; cursor:pointer;">+ Alliance Mobilization</button>
+                <button class="sch-cat-quick" data-target="schCatRewards" data-val="Canyon Clash Victory Chests" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(234,179,8,0.4); background:rgba(234,179,8,0.12); color:#eab308; font-size:11px; font-weight:bold; cursor:pointer;">+ Canyon Clash</button>
+                <button class="sch-cat-quick" data-target="schCatRewards" data-val="SvS Victory Rewards" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(234,179,8,0.4); background:rgba(234,179,8,0.12); color:#eab308; font-size:11px; font-weight:bold; cursor:pointer;">+ SvS Victory</button>
+              </div>
+              <textarea id="schCatRewards" rows="5" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-family:monospace; font-size:12px; box-sizing:border-box;">${currentRewards.join('\n')}</textarea>
+            </div>
+
+            <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:14px;">
+              <div style="font-weight:bold; font-size:13px; color:#a855f7; margin-bottom:6px;">🟣 All-Week Daily Routines</div>
+              <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
+                <button class="sch-cat-quick" data-target="schCatAllWeek" data-val="Daily Intel Missions" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(168,85,247,0.4); background:rgba(168,85,247,0.12); color:#a855f7; font-size:11px; font-weight:bold; cursor:pointer;">+ Daily Intel</button>
+                <button class="sch-cat-quick" data-target="schCatAllWeek" data-val="Alliance Tech Donations" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(168,85,247,0.4); background:rgba(168,85,247,0.12); color:#a855f7; font-size:11px; font-weight:bold; cursor:pointer;">+ Tech Donations</button>
+                <button class="sch-cat-quick" data-target="schCatAllWeek" data-val="Bear Trap Rallies" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(168,85,247,0.4); background:rgba(168,85,247,0.12); color:#a855f7; font-size:11px; font-weight:bold; cursor:pointer;">+ Bear Trap</button>
+                <button class="sch-cat-quick" data-target="schCatAllWeek" data-val="Auto Gift Codes Enrolled" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(168,85,247,0.4); background:rgba(168,85,247,0.12); color:#a855f7; font-size:11px; font-weight:bold; cursor:pointer;">+ Gift Codes</button>
+              </div>
+              <textarea id="schCatAllWeek" rows="5" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-family:monospace; font-size:12px; box-sizing:border-box;">${currentAllWeek.join('\n')}</textarea>
+            </div>
+
+            <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:14px;">
+              <div style="font-weight:bold; font-size:13px; color:#f97316; margin-bottom:6px;">🟠 Holidays & Announcements</div>
+              <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
+                <button class="sch-cat-quick" data-target="schCatHolidays" data-val="State Warmup Week" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(249,115,22,0.4); background:rgba(249,115,22,0.12); color:#f97316; font-size:11px; font-weight:bold; cursor:pointer;">+ State Warmup</button>
+                <button class="sch-cat-quick" data-target="schCatHolidays" data-val="Frostfire Prep Phase" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(249,115,22,0.4); background:rgba(249,115,22,0.12); color:#f97316; font-size:11px; font-weight:bold; cursor:pointer;">+ Frostfire Prep</button>
+                <button class="sch-cat-quick" data-target="schCatHolidays" data-val="Alliance Championship Week" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(249,115,22,0.4); background:rgba(249,115,22,0.12); color:#f97316; font-size:11px; font-weight:bold; cursor:pointer;">+ Championship</button>
+              </div>
+              <textarea id="schCatHolidays" rows="5" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-family:monospace; font-size:12px; box-sizing:border-box;">${currentHolidays.join('\n')}</textarea>
+            </div>
+          </div>
+        `}
+      </div>
+
+      <!-- Modal Footer Controls -->
+      <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border); padding-top:14px; flex-wrap:wrap; gap:10px;">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button id="schAutoFillBtn" style="background:rgba(14,165,233,0.15); border:1px solid rgba(14,165,233,0.4); color:var(--accent); padding:8px 14px; border-radius:8px; cursor:pointer; font-size:12px; font-weight:bold;" title="Instantly fill standard schedule templates">⚡ Instant Auto-Fill Schedule</button>
+          <button id="schImportSheetBtn" style="background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); padding:8px 14px; border-radius:8px; cursor:pointer; font-size:12px; font-weight:bold;">📥 Import from Google Sheets</button>
+        </div>
+        <div style="display:flex; gap:10px;">
+          <button id="schCancelBtn" style="background:var(--bg-main); border:1px solid var(--border); color:var(--text-muted); padding:8px 16px; border-radius:8px; cursor:pointer; font-size:13px; font-weight:bold;">Cancel</button>
+          <button id="schSaveBtn" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:8px 22px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13px; box-shadow:0 4px 12px rgba(16,185,129,0.3);">💾 Save Live Schedule</button>
+        </div>
+      </div>
+    `;
+
+    // Attach Modal Listeners
+    modal.querySelector('#schModalCloseBtn')?.addEventListener('click', closeModal);
+    modal.querySelector('#schCancelBtn')?.addEventListener('click', closeModal);
+
+    modal.querySelector('#schTabBtnTimed')?.addEventListener('click', () => { activeModalTab = 'timed'; renderModalContent(); });
+    modal.querySelector('#schTabBtnSearch')?.addEventListener('click', () => { activeModalTab = 'search'; renderModalContent(); });
+    modal.querySelector('#schTabBtnCats')?.addEventListener('click', () => { activeModalTab = 'cats'; renderModalContent(); });
+
+    let selectedSearchItem = null;
+
+    modal.querySelector('#schSearchQuery')?.addEventListener('input', (e) => {
+      const q = String(e.target.value || '').trim().toLowerCase();
+      modal.querySelectorAll('.sch-search-item').forEach(el => {
+        const txt = el.textContent.toLowerCase();
+        if (!q || txt.includes(q)) el.style.display = 'flex';
+        else el.style.display = 'none';
+      });
+    });
+
+    modal.querySelectorAll('.sch-search-item').forEach(el => {
+      el.addEventListener('click', () => {
+        try {
+          const item = JSON.parse(el.getAttribute('data-preset'));
+          selectedSearchItem = item;
+          const titleEl = modal.querySelector('#schSelectedItemTitle');
+          const dateEl = modal.querySelector('#schSearchDate');
+          const utcEl = modal.querySelector('#schSearchUtc');
+          const endUtcEl = modal.querySelector('#schSearchEndUtc');
+          if (titleEl) titleEl.textContent = `${item.emoji || '✨'} ${item.name}`;
+          const now = new Date();
+          if (dateEl && !dateEl.value) dateEl.value = `${now.getMonth() + 1}/${now.getDate()}`;
+          if (utcEl) utcEl.value = item.utc || '16:00';
+          if (endUtcEl) endUtcEl.value = item.endUtc || '';
+        } catch(err) { console.error(err); }
+      });
+    });
+
+    modal.querySelector('#schSetTodayBtn')?.addEventListener('click', () => {
+      const dateEl = modal.querySelector('#schSearchDate');
+      const now = new Date();
+      if (dateEl) dateEl.value = `${now.getMonth() + 1}/${now.getDate()}`;
+    });
+
+    modal.querySelector('#schSaveSearchItemBtn')?.addEventListener('click', () => {
+      if (!selectedSearchItem) {
+        if (window.showToast) window.showToast("Please click an event from the list on the left", "error");
+        return;
+      }
+      const dateEl = modal.querySelector('#schSearchDate');
+      const utcEl = modal.querySelector('#schSearchUtc');
+      const endUtcEl = modal.querySelector('#schSearchEndUtc');
+
+      const dateStr = String(dateEl?.value || '').trim();
+      const utcStr = String(utcEl?.value || '').trim() || selectedSearchItem.utc || '16:00';
+      const endUtcStr = String(endUtcEl?.value || '').trim() || selectedSearchItem.endUtc || '';
+
+      if (!dateStr) {
+        if (window.showToast) window.showToast("Please enter or set a date", "error");
+        return;
+      }
+
+      // Check if event already exists in currentEvents, update or push
+      const existingIdx = currentEvents.findIndex(ev => ev.eventName.toLowerCase() === selectedSearchItem.name.toLowerCase());
+      if (existingIdx >= 0) {
+        currentEvents[existingIdx].dateStr = dateStr;
+        currentEvents[existingIdx].utcStr = utcStr;
+        currentEvents[existingIdx].endUtcStr = endUtcStr;
+      } else {
+        currentEvents.push({
+          id: 'ev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+          eventName: selectedSearchItem.name,
+          dateStr: dateStr,
+          utcStr: utcStr,
+          endUtcStr: endUtcStr,
+          pdtVal: '',
+          emoji: selectedSearchItem.emoji || '✨'
+        });
+      }
+
+      if (window.showToast) window.showToast(`Updated '${selectedSearchItem.name}' for ${dateStr}!`, "success");
+      activeModalTab = 'timed';
+      renderModalContent();
+    });
+
+    modal.querySelector('#schPreloadedSelect')?.addEventListener('change', (e) => {
+      const valStr = e.target.value;
+      if (!valStr) return;
+      try {
+        const item = JSON.parse(valStr);
+        const nameEl = modal.querySelector('#schNewName');
+        const utcEl = modal.querySelector('#schNewUtc');
+        const endUtcEl = modal.querySelector('#schNewEndUtc');
+        const emojiEl = modal.querySelector('#schNewEmoji');
+        if (nameEl) nameEl.value = item.name || '';
+        if (utcEl) utcEl.value = item.utc || '';
+        if (endUtcEl) endUtcEl.value = item.endUtc || '';
+        if (emojiEl) emojiEl.value = item.emoji || '✨';
+        e.target.value = '';
+      } catch(err) { console.error(err); }
+    });
+
+    modal.querySelectorAll('.sch-cat-quick').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetId = btn.getAttribute('data-target');
+        const val = btn.getAttribute('data-val');
+        const txtEl = modal.querySelector('#' + targetId);
+        if (txtEl && val) {
+          const currentTxt = txtEl.value.trim();
+          txtEl.value = currentTxt ? `${currentTxt}\n${val}` : val;
+          if (window.showToast) window.showToast(`Added '${val}'!`, 'info');
+        }
+      });
+    });
+
+    modal.querySelectorAll('.sch-preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const name = btn.getAttribute('data-name');
+        const utc = btn.getAttribute('data-utc');
+        const endUtc = btn.getAttribute('data-endutc') || '';
+        const emoji = btn.getAttribute('data-emoji');
+        const now = new Date();
+        const m = now.getMonth() + 1, d = now.getDate();
+        currentEvents.push({
+          id: 'ev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+          eventName: name,
+          dateStr: `${m}/${d}`,
+          utcStr: utc,
+          endUtcStr: endUtc,
+          pdtVal: '',
+          emoji: emoji
+        });
+        renderModalContent();
+      });
+    });
+
+    modal.querySelector('#schAddEventBtn')?.addEventListener('click', () => {
+      const nameEl = modal.querySelector('#schNewName');
+      const dateEl = modal.querySelector('#schNewDate');
+      const utcEl = modal.querySelector('#schNewUtc');
+      const endUtcEl = modal.querySelector('#schNewEndUtc');
+      const emojiEl = modal.querySelector('#schNewEmoji');
+
+      const name = String(nameEl?.value || '').trim();
+      const dateStr = String(dateEl?.value || '').trim();
+      const utcStr = String(utcEl?.value || '').trim();
+      const endUtcStr = String(endUtcEl?.value || '').trim();
+      const emoji = emojiEl?.value || '✨';
+
+      if (!name) {
+        if (window.showToast) window.showToast("Please enter an Event Name", "error");
+        return;
+      }
+
+      currentEvents.push({
+        id: 'ev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+        eventName: name,
+        dateStr: dateStr || `${new Date().getMonth() + 1}/${new Date().getDate()}`,
+        utcStr: utcStr || '16:00',
+        endUtcStr: endUtcStr,
+        pdtVal: '',
+        emoji: emoji
+      });
+
+      renderModalContent();
+    });
+
+    modal.querySelector('#schSavePresetBtn')?.addEventListener('click', async () => {
+      const nameEl = modal.querySelector('#schNewName');
+      const utcEl = modal.querySelector('#schNewUtc');
+      const endUtcEl = modal.querySelector('#schNewEndUtc');
+      const emojiEl = modal.querySelector('#schNewEmoji');
+
+      const name = String(nameEl?.value || '').trim();
+      const utc = String(utcEl?.value || '').trim() || '16:00';
+      const endUtc = String(endUtcEl?.value || '').trim();
+      const emoji = emojiEl?.value || '✨';
+
+      if (!name) {
+        if (window.showToast) window.showToast("Please enter an Event Name to save as preset", "error");
+        return;
+      }
+
+      const newPreset = { name, utc, endUtc, emoji };
+      const updatedCustom = [...customPresets, newPreset];
+
+      try {
+        const db = window.firebaseDb;
+        const { ref, set } = window.firebaseDatabase || {};
+        if (db && ref && set) {
+          await set(ref(db, 'schedule_presets'), updatedCustom);
+          customPresets.push(newPreset);
+          allPresets.push(newPreset);
+          window.logAdminAction("Schedule Preset Added", `Saved '${name}' (${utc} UTC) to preloaded schedule presets catalog.`);
+          if (window.showToast) window.showToast(`⭐ Saved '${name}' to preloaded presets!`, "success");
+          renderModalContent();
+        }
+      } catch(err) {
+        console.error("Failed to save schedule preset:", err);
+        if (window.showToast) window.showToast("Failed to save preset to Firebase", "error");
+      }
+    });
+
+    modal.querySelectorAll('.sch-del-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.getAttribute('data-idx'));
+        if (!isNaN(idx) && idx >= 0 && idx < currentEvents.length) {
+          currentEvents.splice(idx, 1);
+          renderModalContent();
+        }
+      });
+    });
+
+    modal.querySelector('#schSaveBtn')?.addEventListener('click', async () => {
+      const saveBtn = modal.querySelector('#schSaveBtn');
+      if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving...'; }
+
+      let finalSignups = currentSignups;
+      let finalRewards = currentRewards;
+      let finalAllWeek = currentAllWeek;
+      let finalHolidays = currentHolidays;
+
+      const signupsTa = modal.querySelector('#schCatSignups');
+      if (signupsTa) finalSignups = signupsTa.value.split('\n').map(s => s.trim()).filter(Boolean);
+
+      const rewardsTa = modal.querySelector('#schCatRewards');
+      if (rewardsTa) finalRewards = rewardsTa.value.split('\n').map(s => s.trim()).filter(Boolean);
+
+      const allWeekTa = modal.querySelector('#schCatAllWeek');
+      if (allWeekTa) finalAllWeek = allWeekTa.value.split('\n').map(s => s.trim()).filter(Boolean);
+
+      const holidaysTa = modal.querySelector('#schCatHolidays');
+      if (holidaysTa) finalHolidays = holidaysTa.value.split('\n').map(s => s.trim()).filter(Boolean);
+
+      const scheduleObj = {
+        events: currentEvents,
+        signups: finalSignups,
+        rewards: finalRewards,
+        allWeek: finalAllWeek,
+        holidays: finalHolidays
+      };
+
+      const ok = await window.saveScheduleToFirebase(scheduleObj);
+      if (ok) {
+        closeModal();
+        if (window.activeViewFunc) window.activeViewFunc();
+        else if (views.schedule) views.schedule();
+      } else {
+        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '💾 Save Live Schedule'; }
+      }
+    });
+
+    modal.querySelector('#schAutoFillBtn')?.addEventListener('click', () => {
+      const now = new Date();
+      const todayStr = `${now.getMonth() + 1}/${now.getDate()}`;
+      
+      currentEvents.length = 0;
+      currentEvents.push(
+        { id: 'ev_1', eventName: 'Bear Trap', dateStr: todayStr, utcStr: '16:00', endUtcStr: '16:30', emoji: '🪤' },
+        { id: 'ev_2', eventName: 'Crazy Joe', dateStr: todayStr, utcStr: '14:00', endUtcStr: '14:30', emoji: '🔥' },
+        { id: 'ev_3', eventName: 'Sunfire Castle Battle', dateStr: todayStr, utcStr: '12:00', endUtcStr: '20:00', emoji: '🏰' },
+        { id: 'ev_4', eventName: 'Brothers in Arms K.E.', dateStr: todayStr, utcStr: '00:00', endUtcStr: '23:59', emoji: '⚔️' },
+        { id: 'ev_5', eventName: 'Polar Terrors Rally', dateStr: todayStr, utcStr: '16:00', endUtcStr: '16:45', emoji: '🐻‍❄️' }
+      );
+
+      currentSignups.length = 0;
+      currentSignups.push("Sunfire Castle R5 Registration", "SvS Troop Training Registration", "Foundry Team Signups");
+
+      currentRewards.length = 0;
+      currentRewards.push("Foundry Battle Payouts", "Alliance Mobilization Rewards", "Canyon Clash Victory Chests", "SvS Victory Rewards");
+
+      currentAllWeek.length = 0;
+      currentAllWeek.push("Daily Intel Missions", "Alliance Tech Donations", "Bear Trap Rallies", "Auto Gift Codes Enrolled");
+
+      currentHolidays.length = 0;
+      currentHolidays.push("State Warmup Week", "Frostfire Prep Phase", "Alliance Championship Week");
+
+      if (window.showToast) window.showToast("⚡ Auto-filled standard schedule template! Click 'Save Live Schedule' to apply.", "success");
+      renderModalContent();
+    });
+
+    modal.querySelector('#schImportSheetBtn')?.addEventListener('click', async () => {
+      let sheetData = window.liveData ? window.liveData['WhiteOut Survival'] : null;
+      if (!sheetData) {
+        try { sheetData = await fetchSheet('WhiteOut Survival'); } catch(e) {}
+      }
+      if (!sheetData || !Array.isArray(sheetData)) {
+        // Fallback: auto fill default template
+        modal.querySelector('#schAutoFillBtn')?.click();
+        if (window.showToast) window.showToast("Loaded default schedule template. Click Save Live Schedule to push live.", "info");
+        return;
+      }
+
+      currentEvents.length = 0;
+      currentSignups.length = 0;
+      currentRewards.length = 0;
+      currentAllWeek.length = 0;
+      currentHolidays.length = 0;
+
+      for (let i = 1; i < Math.min(34, sheetData.length); i++) {
+        const row = sheetData[i];
+        const eventName = row[5];
+        const dateRaw   = row[6];
+        const utcRaw    = row[7];
+        const pdtVal    = row[8];
+        if (!eventName || String(eventName).trim() === '') continue;
+        if (String(eventName).includes("Event's")) continue;
+        if (String(eventName).trim() === 'Rewards') break;
+
+        const isBearTrap = String(eventName).includes('Bear Trap') || String(eventName).includes('🪤') || String(eventName).includes('🐻');
+        const isJoe = String(eventName).includes('Crazy Joe') || String(eventName).includes('🔥');
+        const isCastle = String(eventName).includes('Castle') || String(eventName).includes('🏰');
+        const isBia = String(eventName).includes('Brothers') || String(eventName).includes('⚔️');
+        let emoji = isBearTrap ? '🪤' : (isJoe ? '🔥' : (isCastle ? '🏰' : (isBia ? '⚔️' : '✨')));
+
+        currentEvents.push({
+          id: 'ev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+          eventName: String(eventName).trim(),
+          dateStr: String(dateRaw || '').trim(),
+          utcStr: String(utcRaw || '').trim(),
+          pdtVal: String(pdtVal || '').trim(),
+          emoji: emoji
+        });
+      }
+
+      let headerRowIdx = -1;
+      for (let i = 0; i < sheetData.length; i++) {
+        const cell = String(sheetData[i][5] || '').trim().toLowerCase();
+        if (cell === 'rewards') { headerRowIdx = i; break; }
+      }
+      if (headerRowIdx !== -1) {
+        for (let i = headerRowIdx + 1; i < sheetData.length; i++) {
+          const r = sheetData[i][5], g = sheetData[i][6], h = sheetData[i][7], k = sheetData[i][8];
+          const anyVal = [r,g,h,k].some(v => v && String(v).trim() !== '');
+          if (!anyVal) break;
+          const skip = (v) => !v || String(v).trim() === '' || String(v).trim().toLowerCase() === 'no events';
+          if (!skip(r)) currentRewards.push(String(r).trim());
+          if (!skip(g)) currentSignups.push(String(g).trim());
+          if (!skip(h)) currentAllWeek.push(String(h).trim());
+          if (!skip(k)) currentHolidays.push(String(k).trim());
+        }
+      }
+
+      if (window.showToast) window.showToast("Imported schedule from Google Sheets!", "info");
+      renderModalContent();
+    });
+  };
 
   const closeModal = () => {
     modal.remove();
@@ -12978,124 +14199,9 @@ window.openScheduleEditorModal = async () => {
   };
 
   overlay.addEventListener('click', closeModal);
-  modal.querySelector('#schCloseModalBtn')?.addEventListener('click', closeModal);
-
-  const searchBox = modal.querySelector('#sch-search-box');
-  const listContainer = modal.querySelector('#sch-list-container');
-  const editorCard = modal.querySelector('#sch-editor-card');
-  const itemTitleEl = modal.querySelector('#sch-item-title');
-  const startDateInput = modal.querySelector('#sch-start-date');
-  const endDateInput = modal.querySelector('#sch-end-date');
-
-  function parseDate(dateStr) {
-    if (!dateStr) return null;
-    const parts = dateStr.split('/');
-    if (parts.length === 3) {
-      return new Date(parts[2], parts[0] - 1, parts[1]);
-    }
-    return new Date(dateStr);
-  }
-
-  function formatDateMMDDYYYY(d) {
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    const year = d.getFullYear();
-    return `${month}/${day}/${year}`;
-  }
-
-  function getStatus(start, end) {
-    if (!start && !end) {
-      return { text: '⚠️ No dates set', color: '#eab308', class: 'yellow' };
-    }
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const endDate = parseDate(end);
-    if (endDate && endDate < today) {
-      return { text: `❌ Expired (${start || ''} to ${end || ''})`, color: '#ef4444', class: 'red' };
-    }
-    return { text: `✅ Set (${start || ''} to ${end || ''})`, color: '#10b981', class: 'green' };
-  }
-
-  function renderList(query = '') {
-    listContainer.innerHTML = '';
-    const q = query.toLowerCase().trim();
-
-    const filtered = rewardsData.filter(item => item.title.toLowerCase().includes(q));
-
-    if (filtered.length === 0) {
-      listContainer.style.display = 'block';
-      listContainer.innerHTML = `<div style="padding:12px; color:var(--text-muted); text-align:center; font-style:italic; font-size:13px;">No matching items found.</div>`;
-      return;
-    }
-
-    listContainer.style.display = 'block';
-
-    filtered.forEach((item) => {
-      const originalIdx = rewardsData.indexOf(item);
-      const status = getStatus(item.start, item.end);
-
-      const div = document.createElement('div');
-      div.style.cssText = `padding:10px 12px; border-bottom:1px solid var(--border, #334155); cursor:pointer; border-left:4px solid ${status.color}; background:${originalIdx === selectedIndex ? 'rgba(14,165,233,0.15)' : 'transparent'}; transition:0.15s;`;
-      div.innerHTML = `
-        <div style="font-weight:bold; font-size:13px; color:#fff;">${escapeHTML(item.title)}</div>
-        <div style="font-size:11px; color:${status.color}; font-weight:bold; margin-top:2px;">${status.text}</div>
-      `;
-
-      div.addEventListener('click', () => selectItem(originalIdx));
-      listContainer.appendChild(div);
-    });
-  }
-
-  function selectItem(index) {
-    selectedIndex = index;
-    const item = rewardsData[index];
-
-    itemTitleEl.textContent = item.title;
-    startDateInput.value = item.start || '';
-    endDateInput.value = item.end || '';
-
-    editorCard.style.display = 'block';
-    renderList(searchBox.value);
-  }
-
-  searchBox.addEventListener('input', (e) => {
-    renderList(e.target.value);
-  });
-
-  modal.querySelector('#sch-start-today-btn')?.addEventListener('click', () => {
-    startDateInput.value = formatDateMMDDYYYY(new Date());
-  });
-
-  modal.querySelector('#sch-end-today-btn')?.addEventListener('click', () => {
-    endDateInput.value = formatDateMMDDYYYY(new Date());
-  });
-
-  modal.querySelector('#sch-save-item-btn')?.addEventListener('click', async () => {
-    if (selectedIndex === -1) return;
-
-    const item = rewardsData[selectedIndex];
-    item.start = startDateInput.value.trim();
-    item.end = endDateInput.value.trim();
-
-    try {
-      await set(ref(db, 'rewards_schedule_live'), rewardsData);
-      if (window.showToast) window.showToast(`Saved dates for '${item.title}'!`, 'success');
-      renderList(searchBox.value);
-      selectItem(selectedIndex);
-
-      if (typeof window.renderTabs === 'function') window.renderTabs();
-    } catch(err) {
-      console.error("Error saving rewards dates:", err);
-      if (window.showToast) window.showToast("Error saving dates: " + err.message, "error");
-    }
-  });
-
   document.body.appendChild(overlay);
   document.body.appendChild(modal);
-
-  searchBox.focus();
-  renderList('');
+  renderModalContent();
 };
 
 // --- GLOBAL TIMERS ---
