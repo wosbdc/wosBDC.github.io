@@ -12180,7 +12180,6 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
         const contentDiv = document.getElementById('schedule-content');
 
         if (currentTab === 'today') {
-           const data = todayData;
            const now = new Date();
            const todayStr = now.toDateString();
            let todayEvents = [];
@@ -12608,8 +12607,9 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
         }
       }
       
-      // Also extract clean live sign-ups from todayData sheet if present
+      // Also extract clean live sign-ups from sheet data if present
       let todaySignups = [];
+      const todayData = schedSheetData;
       if (todayData && Array.isArray(todayData)) {
         let hIdx = -1;
         for (let i = 0; i < todayData.length; i++) {

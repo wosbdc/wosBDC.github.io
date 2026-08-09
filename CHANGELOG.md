@@ -1,3 +1,7 @@
+## [1.61.0] - 2026-08-09
+### Fixed
+- **🐛 Fixed `todayData is not defined` Runtime Error**: Removed legacy `todayData` variable reference in `views.schedule()`, resolving the Schedule tab runtime crash completely.
+
 ## [1.60.0] - 2026-08-09
 ### Added & Updated
 - **🎯 Exact `I4:O79` Range Parsing**: Created `parseRewardsI4O79()` helper to specifically extract event titles (Col I / Col 9 / index 8), start dates (Col J / Col 10 / index 9), and end dates (Col M / Col 13 / index 12) from rows 4 to 79 of the `WhiteOut Survival` Google Sheets tab.
