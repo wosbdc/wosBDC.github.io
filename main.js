@@ -12097,14 +12097,12 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
 
     window.fetchScheduleSheetData = async () => {
       if (window.liveData) {
-        if (window.liveData['WhiteOut Survival']) return window.liveData['WhiteOut Survival'];
         if (window.liveData['data']) return window.liveData['data'];
         if (window.liveData['Data']) return window.liveData['Data'];
         if (window.liveData['Schedule data']) return window.liveData['Schedule data'];
       }
       try {
         const results = await Promise.allSettled([
-          fetchSheet('WhiteOut Survival'),
           fetchSheet('data'),
           fetchSheet('Data'),
           fetchSheet('Schedule data')

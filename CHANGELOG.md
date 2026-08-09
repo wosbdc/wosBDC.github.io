@@ -1,3 +1,7 @@
+## [1.62.0] - 2026-08-09
+### Updated
+- **🎯 Strictly Target `data` Tabs**: Removed `WhiteOut Survival` tab fallback from `fetchScheduleSheetData()`. Schedule and rewards data fetching now strictly targets `data`, `Data`, and `Schedule data` tabs.
+
 ## [1.61.0] - 2026-08-09
 ### Fixed
 - **🐛 Fixed `todayData is not defined` Runtime Error**: Removed legacy `todayData` variable reference in `views.schedule()`, resolving the Schedule tab runtime crash completely.
