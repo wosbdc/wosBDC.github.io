@@ -12049,46 +12049,32 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
 
     renderLoading('Loading Schedule');
     try {
-      const [liveSched, sheetData, schedSheetData] = await Promise.all([
+      const [liveSched, schedSheetData] = await Promise.all([
         window.fetchScheduleLiveData().catch(() => null),
-        fetchSheet('WhiteOut Survival').catch(() => null),
         fetchSheet('Schedule data').catch(() => null)
       ]);
 
       const now = new Date();
       const todayStr = now.toDateString();
 
-      // Collect ALL Rewards & Challenges from WhiteOut Survival & Schedule data sheets
+      // Collect ALL Rewards & Challenges from Schedule data sheet
       let allRewardsAndChallenges = [];
 
-      // 1. Parse WhiteOut Survival sheet
-      if (sheetData && Array.isArray(sheetData) && sheetData.length >= 2) {
-        for (let i = 1; i < sheetData.length; i++) {
-          const title = String(sheetData[i][8] || '').trim(); // Col I
-          const startVal = sheetData[i][9] || '';              // Col J
-          const endVal = sheetData[i][12] || '';               // Col M
-          if (title && !title.includes("Event's")) {
-            allRewardsAndChallenges.push({
-              title,
-              start: startVal ? String(startVal) : '',
-              end: endVal ? String(endVal) : ''
-            });
-          }
-        }
-      }
-
-      // 2. Parse Schedule data sheet
+      // Parse Schedule data sheet
       if (schedSheetData && Array.isArray(schedSheetData) && schedSheetData.length >= 2) {
         for (let i = 1; i < schedSheetData.length; i++) {
-          const title = String(schedSheetData[i][2] || schedSheetData[i][0] || '').trim();
-          const startVal = schedSheetData[i][3] || schedSheetData[i][1] || '';
-          const endVal = schedSheetData[i][4] || schedSheetData[i][2] || '';
-          if (title && !title.toLowerCase().includes('title') && !allRewardsAndChallenges.some(r => r.title.toLowerCase() === title.toLowerCase())) {
-            allRewardsAndChallenges.push({
-              title,
-              start: startVal ? String(startVal) : '',
-              end: endVal ? String(endVal) : ''
-            });
+          const row = schedSheetData[i];
+          const title = String(row[2] || row[0] || row[1] || '').trim();
+          const startVal = row[3] || row[1] || row[2] || '';
+          const endVal = row[4] || row[2] || row[3] || '';
+          if (title && !title.toLowerCase().includes('title') && !title.toLowerCase().includes("event's")) {
+            if (!allRewardsAndChallenges.some(r => r.title.toLowerCase() === title.toLowerCase())) {
+              allRewardsAndChallenges.push({
+                title,
+                start: startVal ? String(startVal) : '',
+                end: endVal ? String(endVal) : ''
+              });
+            }
           }
         }
       }
@@ -12857,69 +12843,31 @@ window.openScheduleEditorModal = async () => {
     return;
   }
 
-  // Load all rewards/events rows from Google Sheets or Firebase cache
-  let sheetData = window.liveData ? window.liveData['WhiteOut Survival'] : null;
+  // Load Schedule data sheet from cache or GAS API
   let scheduleSheetData = window.liveData ? window.liveData['Schedule data'] : null;
-
-  if (!sheetData || !scheduleSheetData) {
+  if (!scheduleSheetData) {
     try {
-      const [wData, sData] = await Promise.all([
-        sheetData ? Promise.resolve(sheetData) : fetchSheet('WhiteOut Survival').catch(() => null),
-        scheduleSheetData ? Promise.resolve(scheduleSheetData) : fetchSheet('Schedule data').catch(() => null)
-      ]);
-      sheetData = wData;
-      scheduleSheetData = sData;
+      scheduleSheetData = await fetchSheet('Schedule data').catch(() => null);
     } catch(e) {}
   }
 
   let allData = [];
 
-  // 1. Load Column I (Col 8 = Rewards/Challenges) & Column F (Col 5 = Events) from WhiteOut Survival tab
-  if (sheetData && Array.isArray(sheetData) && sheetData.length >= 2) {
-    for (let i = 1; i < sheetData.length; i++) {
-      const titleColI = String(sheetData[i][8] || '').trim();
-      const startColJ = sheetData[i][9] || '';
-      const endColM = sheetData[i][12] || '';
-      if (titleColI && !titleColI.includes("Event's")) {
-        if (!allData.some(x => x.title.toLowerCase() === titleColI.toLowerCase())) {
-          allData.push({
-            row: i + 1,
-            title: titleColI,
-            start: startColJ ? String(startColJ) : '',
-            end: endColM ? String(endColM) : ''
-          });
-        }
-      }
-
-      const titleColF = String(sheetData[i][5] || '').trim();
-      const dateColG = sheetData[i][6] || '';
-      const utcColH = sheetData[i][7] || '';
-      if (titleColF && !titleColF.includes("Event's") && titleColF.toLowerCase() !== 'rewards') {
-        if (!allData.some(x => x.title.toLowerCase() === titleColF.toLowerCase())) {
-          allData.push({
-            row: i + 1,
-            title: titleColF,
-            start: dateColG ? String(dateColG) : '',
-            end: utcColH ? String(utcColH) : ''
-          });
-        }
-      }
-    }
-  }
-
-  // 2. Load rows from 'Schedule data' tab
   if (scheduleSheetData && Array.isArray(scheduleSheetData) && scheduleSheetData.length >= 2) {
     for (let i = 1; i < scheduleSheetData.length; i++) {
-      const title = String(scheduleSheetData[i][2] || scheduleSheetData[i][0] || '').trim();
-      const startVal = scheduleSheetData[i][3] || scheduleSheetData[i][1] || '';
-      const endVal = scheduleSheetData[i][4] || scheduleSheetData[i][2] || '';
-      if (title && !title.toLowerCase().includes('title') && !allData.some(x => x.title.toLowerCase() === title.toLowerCase())) {
-        allData.push({
-          row: 1000 + i,
-          title: title,
-          start: startVal ? String(startVal) : '',
-          end: endVal ? String(endVal) : ''
-        });
+      const row = scheduleSheetData[i];
+      const title = String(row[2] || row[0] || row[1] || '').trim();
+      const startVal = row[3] || row[1] || row[2] || '';
+      const endVal = row[4] || row[2] || row[3] || '';
+      if (title && !title.toLowerCase().includes('title') && !title.toLowerCase().includes("event's")) {
+        if (!allData.some(x => x.title.toLowerCase() === title.toLowerCase())) {
+          allData.push({
+            row: i + 1,
+            title: title,
+            start: startVal ? String(startVal) : '',
+            end: endVal ? String(endVal) : ''
+          });
+        }
       }
     }
   }

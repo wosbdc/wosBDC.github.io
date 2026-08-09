@@ -1,3 +1,7 @@
+## [1.55.0] - 2026-08-09
+### Changed & Streamlined
+- **🎯 Exclusive `Schedule data` Tab Integration**: Completely removed legacy `WhiteOut Survival` tab fetching from both `views.schedule()` and `openScheduleEditorModal()`. All events, rewards, signups, and challenges are now sourced directly from the single source of truth: the `Schedule data` tab and live Firebase nodes (`rewards_schedule_live` / `schedule_live`).
+
 ## [1.54.0] - 2026-08-09
 ### Added & Changed
 - **📊 Full Sheet Data Integration for Events, Rewards & Challenges**: Expanded data fetching across both Google Sheets (`WhiteOut Survival` and `Schedule data` tabs) and Firebase live nodes (`rewards_schedule_live` and `schedule_live`).
