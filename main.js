@@ -10233,20 +10233,54 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
         }
       });
 
-      // Ensure Showdown All-Time is included if player has Showdown history
+      // Calculate Current Live Showdown rank and score from Firebase showdown_live
+      let curSdStat = null;
+      const sdLiveObj = (sdFbLiveSnap && sdFbLiveSnap.exists() && sdFbLiveSnap.val()) ? sdFbLiveSnap.val() : {};
+      const liveSdPlayers = [];
+
+      for (const [pKey, pVal] of Object.entries(sdLiveObj)) {
+        if (!pVal || typeof pVal !== 'object') continue;
+        let pName = pVal.name || pKey;
+        let score = Number(pVal.total !== undefined ? pVal.total : ((pVal.d1||0) + (pVal.d2||0) + (pVal.d3||0) + (pVal.d4||0) + (pVal.d5||0) + (pVal.d6||0)));
+        if (score > 0) {
+          liveSdPlayers.push({ name: pName, key: pKey, score });
+        }
+      }
+
+      liveSdPlayers.sort((a, b) => b.score - a.score);
+
+      const targetSanitized = chiefNameTarget.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const curSdIndex = liveSdPlayers.findIndex(p => p.name.toLowerCase().replace(/[^a-z0-9]/g, '') === targetSanitized || p.key.toLowerCase().replace(/[^a-z0-9]/g, '') === targetSanitized);
+
+      if (curSdIndex !== -1) {
+        const pObj = liveSdPlayers[curSdIndex];
+        const formatRank = (num) => {
+          if (num === 1) return '🥇 1st';
+          if (num === 2) return '🥈 2nd';
+          if (num === 3) return '🥉 3rd';
+          return `#${num}`;
+        };
+        curSdStat = {
+          rank: formatRank(curSdIndex + 1),
+          score: pObj.score.toLocaleString()
+        };
+      }
+
+      // Ensure Showdown All-Time and Current are included if player has Showdown stats
       const targetLowerName = chiefNameTarget.toLowerCase().trim();
-      if (sdAllTimeMap[targetLowerName]) {
+      if (sdAllTimeMap[targetLowerName] || curSdStat) {
         const sdStat = sdAllTimeMap[targetLowerName];
         if (!eventGroups['Showdown']) {
           eventGroups['Showdown'] = {
             baseTitle: 'Showdown',
             emoji: '⚔️',
-            current: null,
-            allTime: { title: 'All-Time Showdown', rank: sdStat.rank, score: '' },
+            current: curSdStat ? { title: 'Current Showdown', rank: curSdStat.rank, score: curSdStat.score } : null,
+            allTime: sdStat ? { title: 'All-Time Showdown', rank: sdStat.rank, score: '' } : null,
             others: []
           };
-        } else if (!eventGroups['Showdown'].allTime) {
-          eventGroups['Showdown'].allTime = { title: 'All-Time Showdown', rank: sdStat.rank, score: '' };
+        } else {
+          if (curSdStat) eventGroups['Showdown'].current = { title: 'Current Showdown', rank: curSdStat.rank, score: curSdStat.score };
+          if (sdStat) eventGroups['Showdown'].allTime = { title: 'All-Time Showdown', rank: sdStat.rank, score: '' };
         }
       }
 

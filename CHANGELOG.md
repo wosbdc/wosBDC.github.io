@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.71.0] - 2026-08-09
+### Fixed
+- **⚔️ Live Current Showdown Rank & Score Integration**: Added live calculation of `Current Showdown` rank and score from Firebase `showdown_live` in `renderAccountRankings()`. The `⚔️ Showdown` card in Account Hub Event Rankings now displays both `CURRENT:` and `ALL-TIME:` stats live side-by-side.
+
 ## [1.70.9] - 2026-08-09
 ### Fixed
 - **🎯 Robust Firebase Live Stats & Outdated Card Filter**: Updated `computeLiveFirebasePlayerStats()` to process `beartrap_wins` and `beartrap_donations` using sanitized keys and fallback names, preventing un-named Firebase records from being ignored. Filtered out duplicate Bear Trap and Showdown Google Sheets rows in `renderAccountRankings()` so raw sheet dumps can no longer render outdated duplicate cards under Event Rankings.
