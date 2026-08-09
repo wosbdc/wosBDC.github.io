@@ -12047,11 +12047,27 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
       window.renderTabs();
     };
 
+    window.fetchScheduleSheetData = async () => {
+      if (window.liveData) {
+        if (window.liveData['data']) return window.liveData['data'];
+        if (window.liveData['Data']) return window.liveData['Data'];
+        if (window.liveData['Schedule data']) return window.liveData['Schedule data'];
+      }
+      let res = await fetchSheet('data').catch(() => null);
+      if (!res || !Array.isArray(res) || res.length < 2) {
+        res = await fetchSheet('Data').catch(() => null);
+      }
+      if (!res || !Array.isArray(res) || res.length < 2) {
+        res = await fetchSheet('Schedule data').catch(() => null);
+      }
+      return res;
+    };
+
     renderLoading('Loading Schedule');
     try {
       const [liveSched, schedSheetData] = await Promise.all([
         window.fetchScheduleLiveData().catch(() => null),
-        fetchSheet('Schedule data').catch(() => null)
+        window.fetchScheduleSheetData().catch(() => null)
       ]);
 
       const now = new Date();
@@ -12843,13 +12859,8 @@ window.openScheduleEditorModal = async () => {
     return;
   }
 
-  // Load Schedule data sheet from cache or GAS API
-  let scheduleSheetData = window.liveData ? window.liveData['Schedule data'] : null;
-  if (!scheduleSheetData) {
-    try {
-      scheduleSheetData = await fetchSheet('Schedule data').catch(() => null);
-    } catch(e) {}
-  }
+  // Load Schedule data tab from cache or GAS API
+  let scheduleSheetData = await window.fetchScheduleSheetData().catch(() => null);
 
   let allData = [];
 

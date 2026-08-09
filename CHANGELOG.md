@@ -1,3 +1,7 @@
+## [1.56.0] - 2026-08-09
+### Added & Updated
+- **⚡ Dynamic Tab Name Resolver (`data` / `Data` / `Schedule data`)**: Added `window.fetchScheduleSheetData()` which dynamically fetches schedule and event data from the `data`, `Data`, or `Schedule data` tabs seamlessly, ensuring the frontend loads data regardless of tab naming in Google Sheets!
+
 ## [1.55.0] - 2026-08-09
 ### Changed & Streamlined
 - **🎯 Exclusive `Schedule data` Tab Integration**: Completely removed legacy `WhiteOut Survival` tab fetching from both `views.schedule()` and `openScheduleEditorModal()`. All events, rewards, signups, and challenges are now sourced directly from the single source of truth: the `Schedule data` tab and live Firebase nodes (`rewards_schedule_live` / `schedule_live`).
