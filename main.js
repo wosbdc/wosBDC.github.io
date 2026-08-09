@@ -9826,7 +9826,15 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
       }
       
 
-      const rosterRawData = await window.fetchRoster();
+      const [rosterRawData, lbRawData, fbWinsSnap, fbDonSnap] = await Promise.all([
+          window.fetchRoster().catch(() => ({})),
+          window.fetchLeaderboardsData().catch(() => []),
+          get(ref(db, 'beartrap_wins')).catch(() => null),
+          get(ref(db, 'beartrap_donations')).catch(() => null)
+      ]);
+      const fbWins = (fbWinsSnap && fbWinsSnap.exists()) ? fbWinsSnap.val() : {};
+      const fbDonations = (fbDonSnap && fbDonSnap.exists()) ? fbDonSnap.val() : {};
+      
       if (rosterRawData) {
           const p = Object.values(rosterRawData).find(rp => rp.name && rp.name.toLowerCase() === currentChiefName.toLowerCase());
           if (p) {
@@ -9891,76 +9899,254 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
       }
     
     app.innerHTML = `
-      <div id="accountHubView" class="card" style="max-width:600px; margin:0 auto; text-align:center;">
-        <h2 style="color:var(--text-main); margin-top:0;">Account Hub</h2>
+      <div id="accountHubView" class="card" style="max-width:750px; margin:0 auto; text-align:center;">
+        <h2 style="color:var(--text-main); margin-top:0; font-size:24px;">Account Hub</h2>
         
-        <!-- Premium ID Card -->
-        <div class="id-card-container" style="position:relative; box-sizing:border-box; width:100%; max-width:400px; margin:0 auto 30px auto; background:linear-gradient(135deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95)); border:1px solid rgba(56,189,248,0.3); border-radius:16px; box-shadow:0 10px 40px rgba(0,0,0,0.5), inset 0 0 20px rgba(56,189,248,0.1); overflow:hidden; backdrop-filter:blur(10px); text-align:left;">
-            
-            <!-- Glowing accent line at top -->
-            <div style="position:absolute; top:0; left:0; width:100%; height:4px; background:var(--accent); box-shadow:0 0 10px var(--accent);"></div>
-            
-            <div class="id-card-header" style="display:flex; align-items:center; margin-bottom:15px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:15px; position:relative; z-index:2;">
-                <div class="id-card-avatar" style="border-radius:12px; overflow:hidden; border:2px solid var(--accent); box-shadow:0 4px 15px rgba(0,0,0,0.3); background:var(--bg-secondary); flex-shrink:0; cursor:pointer; position:relative;" onclick="window._uploadTargetId='${currentUser.gameId}'; document.getElementById('avatarUploadInput').click();" title="Change Profile Picture">
-                    <img id="accountHubAvatarImg" src="${avatarSrc}" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';" style="width:100%; height:100%; object-fit:cover;" />
-                    <div style="display:none; align-items:center; justify-content:center; width:100%; height:100%; font-size:32px; font-weight:bold; color:#fff;">${currentChiefName.charAt(0).toUpperCase()}</div>
-                    <div style="position:absolute; inset:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0'"><span style="font-size:24px;">✏️</span></div>
-                </div>
-                <div style="overflow:hidden;">
-                    <h2 class="id-card-name" style="margin:0 0 5px 0; color:#fff; letter-spacing:0.5px; text-shadow:0 2px 4px rgba(0,0,0,0.5); white-space:nowrap; text-overflow:ellipsis; overflow:hidden;">${window.escapeHTML(currentChiefName)}${adminBadgeHtml}</h2>
-                    <div style="display:inline-flex; align-items:center; gap:6px; background:rgba(0,0,0,0.3); padding:4px 10px; border-radius:20px; border:1px solid rgba(255,255,255,0.1);">
-                        <span style="color:var(--accent); font-size:12px; font-weight:bold;">ID:</span>
-                        <span style="color:var(--text-main); font-family:monospace; font-size:14px; letter-spacing:1px;">${currentUser.gameId}</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:15px; position:relative; z-index:2;">
-                <div class="id-card-stat-row" style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:8px;">
-                    <span style="color:var(--text-muted); font-size:13px; text-transform:uppercase; letter-spacing:1px;">Email</span>
-                    <span style="color:#fff; font-weight:bold; font-size:13px; text-align:right;">${currentUser.email}</span>
-                </div>
-                <div class="id-card-stat-row" style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:8px;">
-                    <span style="color:var(--text-muted); font-size:13px; text-transform:uppercase; letter-spacing:1px;">Joined Date</span>
-                    <span style="color:#fff; font-weight:bold; font-size:15px;">${joinedDateStr}</span>
-                </div>
-                <div class="id-card-stat-row" style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:8px;">
-                    <span style="color:var(--text-muted); font-size:13px; text-transform:uppercase; letter-spacing:1px;">Furnace Level</span>
-                    <span style="color:var(--text-main); font-weight:bold; font-size:20px; text-align:right; display:flex; align-items:center;">${window.getFurnaceIconHtml(furnaceLevelStr, 64)}</span>
-                </div>
-                
-                <div class="id-card-stat-row" style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:8px;">
-                    <span style="color:var(--text-muted); font-size:13px; text-transform:uppercase; letter-spacing:1px;">Time Active</span>
-                    <span style="color:var(--text-main); font-weight:bold; font-size:13px; text-align:right;">${timeActiveStr}</span>
-                </div>
-            </div>
-            
-            <div class="id-card-bot-status" style="text-align:center; margin-top:15px; padding-top:15px; border-top:1px solid rgba(255,255,255,0.05); position:relative; z-index:2;">
-                ${botStatusHtml}
-            </div>
-            
-            <!-- Watermark -->
-            <div style="position:absolute; bottom:-20px; right:-20px; font-size:120px; opacity:0.04; pointer-events:none; transform:rotate(-15deg); z-index:1;">&#x2744;&#xFE0F;</div>
+        <!-- Tab Navigation Bar -->
+        <div style="display:flex; justify-content:center; gap:10px; margin-bottom:24px; border-bottom:1px solid var(--border); padding-bottom:12px; flex-wrap:wrap;">
+          <button id="accTabBtnProfile" style="padding:10px 22px; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer; background:var(--accent); color:#fff; border:none; transition:0.2s; box-shadow:0 4px 12px rgba(14,165,233,0.3);">
+            🆔 Account Profile
+          </button>
+          <button id="accTabBtnRankings" style="padding:10px 22px; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer; background:var(--bg-main); color:var(--text-muted); border:1px solid var(--border); transition:0.2s;">
+            🏆 My Event Rankings
+          </button>
         </div>
-        
-        <input type="file" id="avatarUploadInput" accept="image/png, image/jpeg, image/webp" style="display:none;">
-            ${staffProfileHtml}
-            ${linkedHtml}
-            
-            <!-- Personal Activity Log Card -->
-            <div class="card" style="margin-top:20px; text-align:left;">
-              <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
-                <span>📅 Today's Personal Activity Log</span>
-                <span style="font-size:12px; color:var(--text-muted); font-weight:normal;">Filtered for ${escapeHTML(currentChiefName)}</span>
+
+        <!-- Section 1: Account Profile Tab -->
+        <div id="accTabSectionProfile">
+          <!-- Premium ID Card -->
+          <div class="id-card-container" style="position:relative; box-sizing:border-box; width:100%; max-width:400px; margin:0 auto 30px auto; background:linear-gradient(135deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95)); border:1px solid rgba(56,189,248,0.3); border-radius:16px; box-shadow:0 10px 40px rgba(0,0,0,0.5), inset 0 0 20px rgba(56,189,248,0.1); overflow:hidden; backdrop-filter:blur(10px); text-align:left;">
+              
+              <!-- Glowing accent line at top -->
+              <div style="position:absolute; top:0; left:0; width:100%; height:4px; background:var(--accent); box-shadow:0 0 10px var(--accent);"></div>
+              
+              <div class="id-card-header" style="display:flex; align-items:center; margin-bottom:15px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:15px; position:relative; z-index:2;">
+                  <div class="id-card-avatar" style="border-radius:12px; overflow:hidden; border:2px solid var(--accent); box-shadow:0 4px 15px rgba(0,0,0,0.3); background:var(--bg-secondary); flex-shrink:0; cursor:pointer; position:relative;" onclick="window._uploadTargetId='${currentUser.gameId}'; document.getElementById('avatarUploadInput').click();" title="Change Profile Picture">
+                      <img id="accountHubAvatarImg" src="${avatarSrc}" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';" style="width:100%; height:100%; object-fit:cover;" />
+                      <div style="display:none; align-items:center; justify-content:center; width:100%; height:100%; font-size:32px; font-weight:bold; color:#fff;">${currentChiefName.charAt(0).toUpperCase()}</div>
+                      <div style="position:absolute; inset:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0'"><span style="font-size:24px;">✏️</span></div>
+                  </div>
+                  <div style="overflow:hidden;">
+                      <h2 class="id-card-name" style="margin:0 0 5px 0; color:#fff; letter-spacing:0.5px; text-shadow:0 2px 4px rgba(0,0,0,0.5); white-space:nowrap; text-overflow:ellipsis; overflow:hidden;">${window.escapeHTML(currentChiefName)}${adminBadgeHtml}</h2>
+                      <div style="display:inline-flex; align-items:center; gap:6px; background:rgba(0,0,0,0.3); padding:4px 10px; border-radius:20px; border:1px solid rgba(255,255,255,0.1);">
+                          <span style="color:var(--accent); font-size:12px; font-weight:bold;">ID:</span>
+                          <span style="color:var(--text-main); font-family:monospace; font-size:14px; letter-spacing:1px;">${currentUser.gameId}</span>
+                      </div>
+                  </div>
               </div>
-              <div id="userPersonalLogContainer" style="margin-top:12px;">
-                <div style="text-align:center; color:var(--text-muted); padding:15px; font-size:13px;">Loading today's activity...</div>
+              
+              <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:15px; position:relative; z-index:2;">
+                  <div class="id-card-stat-row" style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:8px;">
+                      <span style="color:var(--text-muted); font-size:13px; text-transform:uppercase; letter-spacing:1px;">Email</span>
+                      <span style="color:#fff; font-weight:bold; font-size:13px; text-align:right;">${currentUser.email}</span>
+                  </div>
+                  <div class="id-card-stat-row" style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:8px;">
+                      <span style="color:var(--text-muted); font-size:13px; text-transform:uppercase; letter-spacing:1px;">Joined Date</span>
+                      <span style="color:#fff; font-weight:bold; font-size:15px;">${joinedDateStr}</span>
+                  </div>
+                  <div class="id-card-stat-row" style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:8px;">
+                      <span style="color:var(--text-muted); font-size:13px; text-transform:uppercase; letter-spacing:1px;">Furnace Level</span>
+                      <span style="color:var(--text-main); font-weight:bold; font-size:20px; text-align:right; display:flex; align-items:center;">${window.getFurnaceIconHtml(furnaceLevelStr, 64)}</span>
+                  </div>
+                  
+                  <div class="id-card-stat-row" style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:8px;">
+                      <span style="color:var(--text-muted); font-size:13px; text-transform:uppercase; letter-spacing:1px;">Time Active</span>
+                      <span style="color:var(--text-main); font-weight:bold; font-size:13px; text-align:right;">${timeActiveStr}</span>
+                  </div>
               </div>
-            </div>
+              
+              <div class="id-card-bot-status" style="text-align:center; margin-top:15px; padding-top:15px; border-top:1px solid rgba(255,255,255,0.05); position:relative; z-index:2;">
+                  ${botStatusHtml}
+              </div>
+              
+              <!-- Watermark -->
+              <div style="position:absolute; bottom:-20px; right:-20px; font-size:120px; opacity:0.04; pointer-events:none; transform:rotate(-15deg); z-index:1;">&#x2744;&#xFE0F;</div>
+          </div>
+          
+          <input type="file" id="avatarUploadInput" accept="image/png, image/jpeg, image/webp" style="display:none;">
+              ${staffProfileHtml}
+              ${linkedHtml}
+              
+              <!-- Personal Activity Log Card -->
+              <div class="card" style="margin-top:20px; text-align:left;">
+                <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
+                  <span>📅 Today's Personal Activity Log</span>
+                  <span style="font-size:12px; color:var(--text-muted); font-weight:normal;">Filtered for ${escapeHTML(currentChiefName)}</span>
+                </div>
+                <div id="userPersonalLogContainer" style="margin-top:12px;">
+                  <div style="text-align:center; color:var(--text-muted); padding:15px; font-size:13px;">Loading today's activity...</div>
+                </div>
+              </div>
+        </div>
+
+        <!-- Section 2: My Event Rankings Tab -->
+        <div id="accTabSectionRankings" style="display:none; text-align:left;">
+          <div id="accRankingsContainer"></div>
+        </div>
       </div>
     `;
     
     setTimeout(() => window.loadUserPersonalLog(currentChiefName), 100);
+
+    // Render Event Rankings Dashboard helper
+    const renderAccountRankings = (chiefNameTarget) => {
+      const rankingsContainer = document.getElementById('accRankingsContainer');
+      if (!rankingsContainer) return;
+
+      const liveStatsRes = window.computeLiveFirebasePlayerStats(chiefNameTarget, fbWins, fbDonations, lbRawData);
+      let { bearBoth, bear1, bear2, bearAllTime, btDonationsAllTime, btDonationsCurrent, otherLbs } = liveStatsRes;
+
+      let accountOptionsHtml = `<option value="${escapeHTML(currentChiefName)}">⭐ Main Chief: ${escapeHTML(currentChiefName)}</option>`;
+      if (links && links.length > 0) {
+        links.forEach(gid => {
+          let altName = idToNameMap[gid] || `Game ID: ${gid}`;
+          let isSelected = (altName.toLowerCase().trim() === chiefNameTarget.toLowerCase().trim()) ? 'selected' : '';
+          accountOptionsHtml += `<option value="${escapeHTML(altName)}" ${isSelected}>🔗 Alt: ${escapeHTML(altName)} (ID: ${gid})</option>`;
+        });
+      }
+
+      let goldMedals = 0, silverMedals = 0, bronzeMedals = 0;
+      const allStatsList = [bearBoth, bear1, bear2, bearAllTime, btDonationsAllTime, btDonationsCurrent, ...otherLbs].filter(Boolean);
+
+      allStatsList.forEach(lb => {
+        let r = lb.rank;
+        if (r === 1 || r === "1" || String(r).includes("1st")) goldMedals++;
+        else if (r === 2 || r === "2" || String(r).includes("2nd")) silverMedals++;
+        else if (r === 3 || r === "3" || String(r).includes("3rd")) bronzeMedals++;
+      });
+
+      const bearWinsCount = (fbWins && fbWins[chiefNameTarget.toLowerCase().trim()]) ? (fbWins[chiefNameTarget.toLowerCase().trim()].wins || 0) : (bearAllTime ? (bearAllTime.score || 0) : 0);
+      const bearDonationsVal = (fbDonations && fbDonations[chiefNameTarget.toLowerCase().trim()]) ? (fbDonations[chiefNameTarget.toLowerCase().trim()].amount || 0) : (btDonationsAllTime ? (btDonationsAllTime.score || 0) : 0);
+
+      let rankingsHtml = `
+        <!-- Account Switcher Bar -->
+        <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:12px; padding:12px 16px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+          <div style="font-weight:bold; font-size:14px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+            <span>👤 Select Account View:</span>
+          </div>
+          <select id="accRankingsAccountSelect" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; cursor:pointer;">
+            ${accountOptionsHtml}
+          </select>
+        </div>
+
+        <!-- Hero Medal Showcase Cards -->
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:12px; margin-bottom:20px;">
+          <div style="background:linear-gradient(135deg, rgba(234,179,8,0.15), rgba(234,179,8,0.05)); border:1px solid rgba(234,179,8,0.3); border-radius:12px; padding:14px; text-align:center;">
+            <div style="font-size:24px; margin-bottom:4px;">🥇</div>
+            <div style="font-size:20px; font-weight:bold; color:#FFD700;">${goldMedals}</div>
+            <div style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Gold Medals</div>
+          </div>
+          <div style="background:linear-gradient(135deg, rgba(148,163,184,0.15), rgba(148,163,184,0.05)); border:1px solid rgba(148,163,184,0.3); border-radius:12px; padding:14px; text-align:center;">
+            <div style="font-size:24px; margin-bottom:4px;">🥈</div>
+            <div style="font-size:20px; font-weight:bold; color:#C0C0C0;">${silverMedals}</div>
+            <div style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Silver Medals</div>
+          </div>
+          <div style="background:linear-gradient(135deg, rgba(205,127,50,0.15), rgba(205,127,50,0.05)); border:1px solid rgba(205,127,50,0.3); border-radius:12px; padding:14px; text-align:center;">
+            <div style="font-size:24px; margin-bottom:4px;">🥉</div>
+            <div style="font-size:20px; font-weight:bold; color:#CD7F32;">${bronzeMedals}</div>
+            <div style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Bronze Medals</div>
+          </div>
+          <div style="background:linear-gradient(135deg, rgba(16,185,129,0.15), rgba(16,185,129,0.05)); border:1px solid rgba(16,185,129,0.3); border-radius:12px; padding:14px; text-align:center;">
+            <div style="font-size:24px; margin-bottom:4px;">🪤</div>
+            <div style="font-size:20px; font-weight:bold; color:#10b981;">${bearWinsCount}</div>
+            <div style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Bear Trap Wins</div>
+          </div>
+        </div>
+
+        <!-- Bear Trap & Payout Performance Card -->
+        <div class="card" style="margin-bottom:20px; padding:16px;">
+          <div style="font-weight:bold; font-size:16px; color:var(--text-main); margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+            <span>🪤 Bear Trap & Donation Ranks</span>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px;">
+            <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:8px; padding:12px;">
+              <div style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Bear Trap 1</div>
+              <div style="font-size:16px; font-weight:bold; color:var(--accent); margin-top:2px;">${bear1 ? `${window.formatRankBadgeHtml(bear1.rank)} (${bear1.score ? bear1.score.toLocaleString() : 'N/A'})` : 'Unranked'}</div>
+            </div>
+            <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:8px; padding:12px;">
+              <div style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Bear Trap 2</div>
+              <div style="font-size:16px; font-weight:bold; color:var(--accent); margin-top:2px;">${bear2 ? `${window.formatRankBadgeHtml(bear2.rank)} (${bear2.score ? bear2.score.toLocaleString() : 'N/A'})` : 'Unranked'}</div>
+            </div>
+            <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:8px; padding:12px;">
+              <div style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Both Bear Traps</div>
+              <div style="font-size:16px; font-weight:bold; color:#10b981; margin-top:2px;">${bearBoth ? `${window.formatRankBadgeHtml(bearBoth.rank)} (${bearBoth.score ? bearBoth.score.toLocaleString() : 'N/A'})` : 'Unranked'}</div>
+            </div>
+            <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:8px; padding:12px;">
+              <div style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Trap Donations</div>
+              <div style="font-size:16px; font-weight:bold; color:#eab308; margin-top:2px;">${btDonationsAllTime ? `${window.formatRankBadgeHtml(btDonationsAllTime.rank)} (${bearDonationsVal ? bearDonationsVal.toLocaleString() : '0'})` : `${bearDonationsVal ? bearDonationsVal.toLocaleString() : '0'} Donated`}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- All Event Leaderboards Grid -->
+        <div class="card" style="padding:16px;">
+          <div style="font-weight:bold; font-size:16px; color:var(--text-main); margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+            <span>🏆 All Event Leaderboard Ranks (${otherLbs.length})</span>
+          </div>
+          ${otherLbs.length === 0 ? `
+            <div style="text-align:center; color:var(--text-muted); padding:20px; font-size:13px; font-style:italic;">No additional leaderboard ranks recorded yet for this chief.</div>
+          ` : `
+            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:10px;">
+              ${otherLbs.map(lb => `
+                <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:8px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
+                  <span style="font-size:12px; font-weight:bold; color:var(--text-main); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-right:8px;" title="${escapeHTML(lb.title)}">${escapeHTML(lb.title)}</span>
+                  <span style="font-size:12px; font-weight:bold; flex-shrink:0;">${window.formatRankBadgeHtml(lb.rank)}</span>
+                </div>
+              `).join('')}
+            </div>
+          `}
+        </div>
+      `;
+
+      rankingsContainer.innerHTML = rankingsHtml;
+
+      const selectEl = document.getElementById('accRankingsAccountSelect');
+      if (selectEl) {
+        selectEl.addEventListener('change', (e) => {
+          renderAccountRankings(e.target.value);
+        });
+      }
+    };
+
+    renderAccountRankings(currentChiefName);
+
+    // Tab Switcher Listeners
+    const tabBtnProfile = document.getElementById('accTabBtnProfile');
+    const tabBtnRankings = document.getElementById('accTabBtnRankings');
+    const tabSecProfile = document.getElementById('accTabSectionProfile');
+    const tabSecRankings = document.getElementById('accTabSectionRankings');
+
+    if (tabBtnProfile && tabBtnRankings && tabSecProfile && tabSecRankings) {
+      tabBtnProfile.addEventListener('click', () => {
+        tabBtnProfile.style.background = 'var(--accent)';
+        tabBtnProfile.style.color = '#fff';
+        tabBtnProfile.style.border = 'none';
+        tabBtnProfile.style.boxShadow = '0 4px 12px rgba(14,165,233,0.3)';
+
+        tabBtnRankings.style.background = 'var(--bg-main)';
+        tabBtnRankings.style.color = 'var(--text-muted)';
+        tabBtnRankings.style.border = '1px solid var(--border)';
+        tabBtnRankings.style.boxShadow = 'none';
+
+        tabSecProfile.style.display = 'block';
+        tabSecRankings.style.display = 'none';
+      });
+
+      tabBtnRankings.addEventListener('click', () => {
+        tabBtnRankings.style.background = 'var(--accent)';
+        tabBtnRankings.style.color = '#fff';
+        tabBtnRankings.style.border = 'none';
+        tabBtnRankings.style.boxShadow = '0 4px 12px rgba(14,165,233,0.3)';
+
+        tabBtnProfile.style.background = 'var(--bg-main)';
+        tabBtnProfile.style.color = 'var(--text-muted)';
+        tabBtnProfile.style.border = '1px solid var(--border)';
+        tabBtnProfile.style.boxShadow = 'none';
+
+        tabSecRankings.style.display = 'block';
+        tabSecProfile.style.display = 'none';
+      });
+    }
     
     
     if (accLevel) {

@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [1.67.0] - 2026-08-09
+### Added
+- **🏆 Dedicated 'My Event Rankings' Tab in Player Account Hub**: Added a dedicated sub-navigation tab inside `views.account()` allowing logged-in chiefs to view their personal event medals (🥇 Gold, 🥈 Silver, 🥉 Bronze), Bear Trap wins, donation stats, and all event leaderboard ranks.
+- **🔗 Main & Linked Alt Account Switcher**: Integrated an account dropdown selector inside the Rankings tab so players can instantly view event ranks across their main chief and linked alt accounts.
+
 ## [1.66.0] - 2026-08-09
 ### Added & Fixed
 - **🪤 Live Bear Trap & Donation Firebase Sync**: Connected live Firebase nodes `beartrap_wins` and `beartrap_donations` directly to player cards in Search and Roster views via `window.computeLiveFirebasePlayerStats()`. Real-time win counts and donation stats now display on player cards with <50ms latency without waiting on sheet recalculations.
