@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [1.68.1] - 2026-08-09
+### Fixed
+- **🐛 Event Rankings Tab Fix**: Exported `window.formatRankBadgeHtml` globally to resolve `TypeError: window.formatRankBadgeHtml is not a function` that prevented the Event Rankings tab from rendering and opening.
+- **🛡️ Safe Event Listener Binding**: Wrapped `renderAccountRankings()` in a try/catch block so sub-tab switching listeners always bind cleanly.
+
 ## [1.68.0] - 2026-08-09
 ### Added
 - **📂 4-Way Sub-Tab System in Account Hub**: Reorganized `views.account()` into 4 clean, dedicated sub-tabs: `🆔 Profile`, `🏆 Event Rankings`, `🔗 Linked Alts`, and `📅 Activity Log`.

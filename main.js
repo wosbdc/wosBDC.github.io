@@ -1266,6 +1266,22 @@ window.computeLiveFirebasePlayerStats = (targetName, fbWins = {}, fbDonations = 
     return result;
 };
 
+// Format rank badge with color-coded pills (Gold, Silver, Bronze, Accent)
+window.formatRankBadgeHtml = (rankVal) => {
+    if (rankVal === undefined || rankVal === null || rankVal === '') return 'Unranked';
+    let rStr = String(rankVal).trim();
+    if (rStr.includes('🥇') || rStr.includes('1st') || rStr === '1') {
+        return `<span style="color:#FFD700; background:rgba(255,215,0,0.15); border:1px solid rgba(255,215,0,0.3); padding:2px 8px; border-radius:12px; font-weight:bold;">🥇 1st</span>`;
+    }
+    if (rStr.includes('🥈') || rStr.includes('2nd') || rStr === '2') {
+        return `<span style="color:#C0C0C0; background:rgba(192,192,192,0.15); border:1px solid rgba(192,192,192,0.3); padding:2px 8px; border-radius:12px; font-weight:bold;">🥈 2nd</span>`;
+    }
+    if (rStr.includes('🥉') || rStr.includes('3rd') || rStr === '3') {
+        return `<span style="color:#CD7F32; background:rgba(205,127,50,0.15); border:1px solid rgba(205,127,50,0.3); padding:2px 8px; border-radius:12px; font-weight:bold;">🥉 3rd</span>`;
+    }
+    return `<span style="color:var(--accent); background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.2); padding:2px 8px; border-radius:12px; font-weight:bold;">${window.escapeHTML(rStr)}</span>`;
+};
+
 // Register Service Worker for Mobile PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -10120,7 +10136,11 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
       }
     };
 
-    renderAccountRankings(currentChiefName);
+    try {
+      renderAccountRankings(currentChiefName);
+    } catch(err) {
+      console.error("Account Hub Rankings render error:", err);
+    }
 
     // 4-Way Tab Switcher Listeners
     const accTabs = [
