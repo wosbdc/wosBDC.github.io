@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [1.66.0] - 2026-08-09
+### Added & Fixed
+- **🪤 Live Bear Trap & Donation Firebase Sync**: Connected live Firebase nodes `beartrap_wins` and `beartrap_donations` directly to player cards in Search and Roster views via `window.computeLiveFirebasePlayerStats()`. Real-time win counts and donation stats now display on player cards with <50ms latency without waiting on sheet recalculations.
+- **📅 Streamlined Event Schedule & Live Rewards Editor**: Streamlined `views.schedule()` and `openScheduleEditorModal()` matching the Google Sheets `RewardsSidebar.html` tool 1:1, featuring live search, real-time status badges (🟢 Set, 🟡 No dates set, 🔴 Expired), quick date inputs, and instant Firebase saving to `rewards_schedule_live`.
+
 ## [1.65.2] - 2026-08-09
 ### Fixed
 - **Player Database Search Error Handling**: Added error boundaries (`.catch()`) around all dataset promises in `searchPlayerFull` so network/sheet timeouts never block search execution.

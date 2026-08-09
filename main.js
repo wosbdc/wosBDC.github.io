@@ -1197,6 +1197,75 @@ window.parseLeaderboardsToPlayerMap = (lbData, targetNameFilter = null) => {
   return result;
 };
 
+// Compute live player ranks and scores directly from active Firebase nodes
+window.computeLiveFirebasePlayerStats = (targetName, fbWins = {}, fbDonations = {}, lbRawData = []) => {
+    let result = window.parseLeaderboardsToPlayerMap(lbRawData, targetName);
+
+    if (!targetName) return result;
+    const targetLower = targetName.toLowerCase().trim();
+    const formatRank = (num) => {
+        if (num === 1) return '🥇 1st';
+        if (num === 2) return '🥈 2nd';
+        if (num === 3) return '🥉 3rd';
+        return `#${num}`;
+    };
+
+    // 1. Calculate Bear Trap Wins live from Firebase beartrap_wins node
+    if (fbWins && typeof fbWins === 'object' && Object.keys(fbWins).length > 0) {
+        const winsList = Object.values(fbWins).filter(w => w && w.name);
+        
+        // Total Wins (bearAllTime & bearBoth)
+        const totalSorted = [...winsList].sort((a, b) => (b.total || 0) - (a.total || 0));
+        const totalIndex = totalSorted.findIndex(w => w.name && w.name.toLowerCase().trim() === targetLower);
+        if (totalIndex !== -1 && (totalSorted[totalIndex].total || 0) > 0) {
+            const pObj = totalSorted[totalIndex];
+            const rankStr = formatRank(totalIndex + 1);
+            const scoreStr = (pObj.total || 0).toLocaleString();
+            result.bearAllTime = { score: scoreStr, rank: rankStr };
+            result.bearBoth = { score: scoreStr, rank: rankStr };
+        }
+
+        // BT1 Wins (bear1)
+        const bt1Sorted = [...winsList].sort((a, b) => (b.bt1 || 0) - (a.bt1 || 0));
+        const bt1Index = bt1Sorted.findIndex(w => w.name && w.name.toLowerCase().trim() === targetLower);
+        if (bt1Index !== -1 && (bt1Sorted[bt1Index].bt1 || 0) > 0) {
+            const pObj = bt1Sorted[bt1Index];
+            result.bear1 = { score: (pObj.bt1 || 0).toLocaleString(), rank: formatRank(bt1Index + 1) };
+        }
+
+        // BT2 Wins (bear2)
+        const bt2Sorted = [...winsList].sort((a, b) => (b.bt2 || 0) - (a.bt2 || 0));
+        const bt2Index = bt2Sorted.findIndex(w => w.name && w.name.toLowerCase().trim() === targetLower);
+        if (bt2Index !== -1 && (bt2Sorted[bt2Index].bt2 || 0) > 0) {
+            const pObj = bt2Sorted[bt2Index];
+            result.bear2 = { score: (pObj.bt2 || 0).toLocaleString(), rank: formatRank(bt2Index + 1) };
+        }
+    }
+
+    // 2. Calculate Bear Trap Donations live from Firebase beartrap_donations node
+    if (fbDonations && typeof fbDonations === 'object' && Object.keys(fbDonations).length > 0) {
+        const donList = Object.values(fbDonations).filter(d => d && d.name);
+
+        // Current Donations
+        const curSorted = [...donList].sort((a, b) => (b.current || 0) - (a.current || 0));
+        const curIndex = curSorted.findIndex(d => d.name && d.name.toLowerCase().trim() === targetLower);
+        if (curIndex !== -1 && (curSorted[curIndex].current || 0) > 0) {
+            const pObj = curSorted[curIndex];
+            result.btDonationsCurrent = { score: (pObj.current || 0).toLocaleString(), rank: formatRank(curIndex + 1) };
+        }
+
+        // All-Time Donations
+        const allSorted = [...donList].sort((a, b) => (b.allTime || 0) - (a.allTime || 0));
+        const allIndex = allSorted.findIndex(d => d.name && d.name.toLowerCase().trim() === targetLower);
+        if (allIndex !== -1 && (allSorted[allIndex].allTime || 0) > 0) {
+            const pObj = allSorted[allIndex];
+            result.btDonationsAllTime = { score: (pObj.allTime || 0).toLocaleString(), rank: formatRank(allIndex + 1) };
+        }
+    }
+
+    return result;
+};
+
 // Register Service Worker for Mobile PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -2772,15 +2841,19 @@ window.searchPlayerFull = async (name) => {
   
   try {
     let sdLiveSnapshotPromise = window.fetchMergedShowdown();
-    const [data, rosterRawData, lbRawData, sdHistoryRawData, sdMergedDataRes] = await Promise.all([
+    const [data, rosterRawData, lbRawData, sdHistoryRawData, sdMergedDataRes, fbWinsSnap, fbDonSnap] = await Promise.all([
             window.fetchActivityData().catch(() => []),
             window.fetchRoster().catch(() => ({})),
             window.fetchLeaderboardsData().catch(() => []),
             fetchSheet("Showdown History").catch(() => []),
-            sdLiveSnapshotPromise.catch(() => ({ mergedData: [], sdLiveData: {} }))
+            sdLiveSnapshotPromise.catch(() => ({ mergedData: [], sdLiveData: {} })),
+            get(ref(db, 'beartrap_wins')).catch(() => null),
+            get(ref(db, 'beartrap_donations')).catch(() => null)
           ]);
     const sdCurrentRawData = (sdMergedDataRes && sdMergedDataRes.mergedData) ? sdMergedDataRes.mergedData : [];
     const sdLiveData = (sdMergedDataRes && sdMergedDataRes.sdLiveData) ? sdMergedDataRes.sdLiveData : {};
+    const fbWins = (fbWinsSnap && fbWinsSnap.exists()) ? fbWinsSnap.val() : {};
+    const fbDonations = (fbDonSnap && fbDonSnap.exists()) ? fbDonSnap.val() : {};
 
     let currentDay = 0;
     Object.values(sdLiveData).forEach(p => {
@@ -2815,7 +2888,7 @@ window.searchPlayerFull = async (name) => {
     
 
 
-    const parsedLbRes = window.parseLeaderboardsToPlayerMap(lbRawData, targetName);
+    const parsedLbRes = window.computeLiveFirebasePlayerStats(targetName, fbWins, fbDonations, lbRawData);
     let { btDonationsAllTime, btDonationsCurrent, bear1, bear2, bearBoth, bearAllTime, otherLbs, lbMap } = parsedLbRes;
     
     const allTimeShowdownMap = {};
@@ -11429,15 +11502,19 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
 
       
       
-      const [data, rosterRawData, lbRawData, sdHistoryRawData, sdLiveSnap] = await Promise.all([
+      const [data, rosterRawData, lbRawData, sdHistoryRawData, sdLiveSnap, fbWinsSnap, fbDonSnap] = await Promise.all([
             window.fetchActivityData(),
             window.fetchRoster(),
             window.fetchLeaderboardsData(),
-            fetchSheet("Showdown History"),
-            get(ref(db, 'showdown_live'))
+            fetchSheet("Showdown History").catch(() => []),
+            get(ref(db, 'showdown_live')),
+            get(ref(db, 'beartrap_wins')).catch(() => null),
+            get(ref(db, 'beartrap_donations')).catch(() => null)
           ]);
       
       const sdLiveData = sdLiveSnap.val() || {};
+      const fbWins = (fbWinsSnap && fbWinsSnap.exists()) ? fbWinsSnap.val() : {};
+      const fbDonations = (fbDonSnap && fbDonSnap.exists()) ? fbDonSnap.val() : {};
 
       let currentDay = 0;
       Object.values(sdLiveData).forEach(p => {
@@ -11734,21 +11811,9 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
             let matchedKey = Object.keys(lbMap).find(k => k.toLowerCase().trim() === lowerName);
             if (matchedKey) lbData = lbMap[matchedKey];
         }
-        let bearBoth = null, bear1 = null, bear2 = null, bearAllTime = null, btDonationsAllTime = null, btDonationsCurrent = null;
-        let otherLbs = [];
-        if (lbData) {
-            lbData.forEach(lb => {
-                if (lb.title.toLowerCase().includes('all-time showdown')) return;
-                let t = lb.title.toLowerCase();
-                if (t.includes('all-time bear trap')) bearAllTime = lb;
-                else if (t.includes('bear trap 1')) bear1 = lb;
-                else if (t.includes('bear trap 2')) bear2 = lb;
-                else if (t.includes('both bear trap')) bearBoth = lb;
-                else if (t.includes('all-time') && (t.includes('bear') || t.includes('bt')) && t.includes('donation')) btDonationsAllTime = lb;
-                else if ((t.includes('bear') || t.includes('bt')) && t.includes('donation')) btDonationsCurrent = lb;
-                else otherLbs.push(lb);
-            });
-        }
+        
+        const liveStatsRes = window.computeLiveFirebasePlayerStats(chiefName, fbWins, fbDonations, lbRawData);
+        let { bearBoth, bear1, bear2, bearAllTime, btDonationsAllTime, btDonationsCurrent, otherLbs } = liveStatsRes;
         let altAccounts = [];
         if (usersSnap && usersSnap.exists()) {
             const users = usersSnap.val();
