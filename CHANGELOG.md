@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.70.1] - 2026-08-09
+### Fixed
+- **🐛 Fixed Event Rankings Tab Crash**: Fixed an unhandled `ReferenceError: sdHistoryRawData is not defined` inside `renderAccountRankings()` by including `fetchSheet("Showdown History")` in `views.account()`'s `Promise.all` data loader and adding defensive safety checks so the `🏆 Event Rankings` tab renders cleanly without crashing.
+
 ## [1.70.0] - 2026-08-09
 ### Added
 - **⚔️ Streamlined Rewards & Events Editor**: Replicated the Google Sheets `RewardsSidebar.html` tool 1:1 on the website, replacing the old 6-tab modal with a sleek search-and-date editor (Title, Start Date, End Date) with live status badges (Yellow: No dates set, Green: Set, Red: Expired) pushing directly to Firebase node `rewards_schedule_live`.

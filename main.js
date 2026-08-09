@@ -9843,11 +9843,12 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
       }
       
 
-      const [rosterRawData, lbRawData, fbWinsSnap, fbDonSnap] = await Promise.all([
+      const [rosterRawData, lbRawData, fbWinsSnap, fbDonSnap, sdHistoryRawData] = await Promise.all([
           window.fetchRoster().catch(() => ({})),
           window.fetchLeaderboardsData().catch(() => []),
           get(ref(db, 'beartrap_wins')).catch(() => null),
-          get(ref(db, 'beartrap_donations')).catch(() => null)
+          get(ref(db, 'beartrap_donations')).catch(() => null),
+          fetchSheet("Showdown History").catch(() => [])
       ]);
       const fbWins = (fbWinsSnap && fbWinsSnap.exists()) ? fbWinsSnap.val() : {};
       const fbDonations = (fbDonSnap && fbDonSnap.exists()) ? fbDonSnap.val() : {};
@@ -10067,8 +10068,9 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
 
       // Build All-Time Showdown Map with Horns, Day Wins, and Total Score
       const sdAllTimeMap = {};
-      if (typeof window.calculateAllTimeShowdown === 'function' && sdHistoryRawData) {
-        let sdList = window.calculateAllTimeShowdown(sdHistoryRawData);
+      const safeSdHistory = (typeof sdHistoryRawData !== 'undefined' && Array.isArray(sdHistoryRawData)) ? sdHistoryRawData : [];
+      if (typeof window.calculateAllTimeShowdown === 'function' && safeSdHistory.length > 0) {
+        let sdList = window.calculateAllTimeShowdown(safeSdHistory);
         sdList.forEach((p, index) => {
           if (p && p.name) {
             let formatRank = (num) => {
