@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.70.9] - 2026-08-09
+### Fixed
+- **🎯 Robust Firebase Live Stats & Outdated Card Filter**: Updated `computeLiveFirebasePlayerStats()` to process `beartrap_wins` and `beartrap_donations` using sanitized keys and fallback names, preventing un-named Firebase records from being ignored. Filtered out duplicate Bear Trap and Showdown Google Sheets rows in `renderAccountRankings()` so raw sheet dumps can no longer render outdated duplicate cards under Event Rankings.
+
 ## [1.70.8] - 2026-08-09
 ### Fixed
 - **🔥 Decoupled Outdated Google Sheets Data**: Overhauled `fetchLeaderboardsData()` to query live Firebase `ref(db, 'leaderboards')` as top priority. Prevents outdated Google Sheets data from overriding live Firebase leaderboard data across player cards and Account Hub rankings.

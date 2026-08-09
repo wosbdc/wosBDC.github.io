@@ -1248,7 +1248,9 @@ window.computeLiveFirebasePlayerStats = (targetName, fbWins = {}, fbDonations = 
     let result = window.parseLeaderboardsToPlayerMap(lbRawData, targetName);
 
     if (!targetName) return result;
-    const targetLower = targetName.toLowerCase().trim();
+    
+    const sanitizeKey = (str) => String(str || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const targetSanitized = sanitizeKey(targetName);
     const formatRank = (num) => {
         if (num === 1) return '🥇 1st';
         if (num === 2) return '🥈 2nd';
@@ -1258,11 +1260,19 @@ window.computeLiveFirebasePlayerStats = (targetName, fbWins = {}, fbDonations = 
 
     // 1. Calculate Bear Trap Wins live from Firebase beartrap_wins node
     if (fbWins && typeof fbWins === 'object' && Object.keys(fbWins).length > 0) {
-        const winsList = Object.values(fbWins).filter(w => w && w.name);
+        const winsList = [];
+        for (const [key, val] of Object.entries(fbWins)) {
+            if (!val || typeof val !== 'object') continue;
+            let name = val.name || key;
+            let bt1 = Number(val.bt1 || 0);
+            let bt2 = Number(val.bt2 || 0);
+            let total = val.total !== undefined ? Number(val.total) : (bt1 + bt2);
+            winsList.push({ name, key, bt1, bt2, total });
+        }
         
         // Total Wins (bearAllTime & bearBoth)
         const totalSorted = [...winsList].sort((a, b) => (b.total || 0) - (a.total || 0));
-        const totalIndex = totalSorted.findIndex(w => w.name && w.name.toLowerCase().trim() === targetLower);
+        const totalIndex = totalSorted.findIndex(w => sanitizeKey(w.name) === targetSanitized || sanitizeKey(w.key) === targetSanitized);
         if (totalIndex !== -1 && (totalSorted[totalIndex].total || 0) > 0) {
             const pObj = totalSorted[totalIndex];
             const rankStr = formatRank(totalIndex + 1);
@@ -1273,7 +1283,7 @@ window.computeLiveFirebasePlayerStats = (targetName, fbWins = {}, fbDonations = 
 
         // BT1 Wins (bear1)
         const bt1Sorted = [...winsList].sort((a, b) => (b.bt1 || 0) - (a.bt1 || 0));
-        const bt1Index = bt1Sorted.findIndex(w => w.name && w.name.toLowerCase().trim() === targetLower);
+        const bt1Index = bt1Sorted.findIndex(w => sanitizeKey(w.name) === targetSanitized || sanitizeKey(w.key) === targetSanitized);
         if (bt1Index !== -1 && (bt1Sorted[bt1Index].bt1 || 0) > 0) {
             const pObj = bt1Sorted[bt1Index];
             result.bear1 = { score: (pObj.bt1 || 0).toLocaleString(), rank: formatRank(bt1Index + 1) };
@@ -1281,7 +1291,7 @@ window.computeLiveFirebasePlayerStats = (targetName, fbWins = {}, fbDonations = 
 
         // BT2 Wins (bear2)
         const bt2Sorted = [...winsList].sort((a, b) => (b.bt2 || 0) - (a.bt2 || 0));
-        const bt2Index = bt2Sorted.findIndex(w => w.name && w.name.toLowerCase().trim() === targetLower);
+        const bt2Index = bt2Sorted.findIndex(w => sanitizeKey(w.name) === targetSanitized || sanitizeKey(w.key) === targetSanitized);
         if (bt2Index !== -1 && (bt2Sorted[bt2Index].bt2 || 0) > 0) {
             const pObj = bt2Sorted[bt2Index];
             result.bear2 = { score: (pObj.bt2 || 0).toLocaleString(), rank: formatRank(bt2Index + 1) };
@@ -1290,11 +1300,18 @@ window.computeLiveFirebasePlayerStats = (targetName, fbWins = {}, fbDonations = 
 
     // 2. Calculate Bear Trap Donations live from Firebase beartrap_donations node
     if (fbDonations && typeof fbDonations === 'object' && Object.keys(fbDonations).length > 0) {
-        const donList = Object.values(fbDonations).filter(d => d && d.name);
+        const donList = [];
+        for (const [key, val] of Object.entries(fbDonations)) {
+            if (!val || typeof val !== 'object') continue;
+            let name = val.name || key;
+            let current = Number(val.current !== undefined ? val.current : (val.amount !== undefined ? val.amount : 0));
+            let allTime = Number(val.allTime !== undefined ? val.allTime : 0);
+            donList.push({ name, key, current, allTime });
+        }
 
         // Current Donations
         const curSorted = [...donList].sort((a, b) => (b.current || 0) - (a.current || 0));
-        const curIndex = curSorted.findIndex(d => d.name && d.name.toLowerCase().trim() === targetLower);
+        const curIndex = curSorted.findIndex(d => sanitizeKey(d.name) === targetSanitized || sanitizeKey(d.key) === targetSanitized);
         if (curIndex !== -1 && (curSorted[curIndex].current || 0) > 0) {
             const pObj = curSorted[curIndex];
             result.btDonationsCurrent = { score: (pObj.current || 0).toLocaleString(), rank: formatRank(curIndex + 1) };
@@ -1302,7 +1319,7 @@ window.computeLiveFirebasePlayerStats = (targetName, fbWins = {}, fbDonations = 
 
         // All-Time Donations
         const allSorted = [...donList].sort((a, b) => (b.allTime || 0) - (a.allTime || 0));
-        const allIndex = allSorted.findIndex(d => d.name && d.name.toLowerCase().trim() === targetLower);
+        const allIndex = allSorted.findIndex(d => sanitizeKey(d.name) === targetSanitized || sanitizeKey(d.key) === targetSanitized);
         if (allIndex !== -1 && (allSorted[allIndex].allTime || 0) > 0) {
             const pObj = allSorted[allIndex];
             result.btDonationsAllTime = { score: (pObj.allTime || 0).toLocaleString(), rank: formatRank(allIndex + 1) };
@@ -10183,9 +10200,14 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
         }
       });
 
-      // Group additional leaderboards by base event name
+      // Group additional leaderboards by base event name (filtering out Bear Trap & Showdown which are calculated 100% live from Firebase)
       const eventGroups = {};
       otherLbs.forEach(lb => {
+        let tLower = (lb.title || '').toLowerCase();
+        if (tLower.includes('bear') || tLower.includes('bt') || tLower.includes('donation') || tLower.includes('showdown')) {
+          return; // Skip raw sheet Bear Trap & Showdown rows to prevent outdated Google Sheets duplicates
+        }
+
         let baseTitle = lb.title.replace(/All-Time|All Time|Current|Overall/gi, '').trim();
         if (!baseTitle) baseTitle = lb.title;
 
