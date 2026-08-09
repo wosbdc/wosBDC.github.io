@@ -10092,11 +10092,6 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
             <div style="font-size:20px; font-weight:bold; color:#CD7F32;">${bronzeMedals}</div>
             <div style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Bronze Medals</div>
           </div>
-          <div style="background:linear-gradient(135deg, rgba(16,185,129,0.15), rgba(16,185,129,0.05)); border:1px solid rgba(16,185,129,0.3); border-radius:12px; padding:14px; text-align:center;">
-            <div style="font-size:24px; margin-bottom:4px;">🗡️</div>
-            <div style="font-size:20px; font-weight:bold; color:#10b981;">${allTimeDonNum.toLocaleString()}</div>
-            <div style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">All-Time Spears Donated</div>
-          </div>
         </div>
 
         <!-- Bear Trap & Payout Performance Card -->

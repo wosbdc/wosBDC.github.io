@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.68.5] - 2026-08-09
+### Removed
+- **🧹 Removed Duplicate Hero Card**: Removed the duplicate `All-Time Spears Donated` hero card next to Bronze Medals in `views.account()` Event Rankings tab, keeping top row exclusively for Gold, Silver, and Bronze Medals.
+
 ## [1.68.4] - 2026-08-09
 ### Fixed
 - **🐛 Fixed NaN Donation Values**: Added robust `parseNumVal` sanitizer to handle formatted string numbers (e.g. `"1,250"`) and prevent `NaN` from rendering in All-Time and Current Spears Donated boxes.
