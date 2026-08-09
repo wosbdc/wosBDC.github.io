@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.53.3] - 2026-08-09
+### Fixed
+- **🔤 Comprehensive Alphanumeric Player Keying**: Enhanced `safeKey` in `allTimeShowdownMap` to strip punctuation/spaces (`replace(/[^a-z0-9]/g, '')`), ensuring name variations like `Dwarf2` / `Dwarf 2` and `Perma Frost` / `perma frost` are 100% unified across all views.
+
 ## [1.53.2] - 2026-08-09
 ### Fixed
 - **🔤 Case-Insensitive Showdown Player Aggregation**: Updated `allTimeShowdownMap` keying to normalize player names (`toLowerCase()`) across all functions. Resolves name casing splits (e.g. `Perma Frost` vs `perma frost`) so all historical points are seamlessly merged into a single entry with 100% precise ranking.

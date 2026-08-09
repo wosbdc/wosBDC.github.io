@@ -2725,7 +2725,7 @@ window.getLivePlayerEventRow = async (chiefName, pRow, headers) => {
                 let pScore = tableData[dr][totalCol];
                 if (pName && (typeof pScore === 'number' || (typeof pScore === 'string' && !isNaN(pScore)))) {
                   let rawName = pName.toString().trim();
-                  let safeKey = rawName.toLowerCase();
+                  let safeKey = rawName.toLowerCase().replace(/[^a-z0-9]/g, '');
                   if (!allTimeShowdownMap[safeKey]) allTimeShowdownMap[safeKey] = { name: rawName, score: 0 };
                   allTimeShowdownMap[safeKey].score += Number(pScore);
                 }
@@ -2740,7 +2740,7 @@ window.getLivePlayerEventRow = async (chiefName, pRow, headers) => {
       for (const [pName, scores] of Object.entries(sdLiveData)) {
           if (!scores || typeof scores !== 'object') continue;
           let rawName = pName.toString().trim();
-          let safeKey = rawName.toLowerCase();
+          let safeKey = rawName.toLowerCase().replace(/[^a-z0-9]/g, '');
           let pScore = (scores.d1||0) + (scores.d2||0) + (scores.d3||0) + (scores.d4||0) + (scores.d5||0) + (scores.d6||0);
           if (!allTimeShowdownMap[safeKey]) allTimeShowdownMap[safeKey] = { name: rawName, score: 0 };
           allTimeShowdownMap[safeKey].score += pScore;
@@ -2924,7 +2924,7 @@ window.searchPlayerFull = async (name) => {
               let pScore = tableData[dr][totalCol];
               if (pName && (typeof pScore === 'number' || (typeof pScore === 'string' && !isNaN(pScore)))) {
                 let rawName = pName.toString().trim();
-                let safeKey = rawName.toLowerCase();
+                let safeKey = rawName.toLowerCase().replace(/[^a-z0-9]/g, '');
                 if (!allTimeShowdownMap[safeKey]) allTimeShowdownMap[safeKey] = { name: rawName, score: 0 };
                 allTimeShowdownMap[safeKey].score += Number(pScore);
               }
