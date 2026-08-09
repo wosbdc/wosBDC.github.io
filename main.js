@@ -2921,9 +2921,11 @@ window.searchPlayerFull = async (name) => {
       if (p && p.name) {
         const sKey = p.name.toLowerCase().replace(/[^a-z0-9]/g, '');
         if (!modalSdMap[sKey]) {
-          modalSdMap[sKey] = { name: p.name, score: p.total || 0 };
+          modalSdMap[sKey] = { name: p.name, horns: p.horns || 0, wins: p.wins || 0, score: p.total || 0 };
         } else {
           modalSdMap[sKey].score += (p.total || 0);
+          modalSdMap[sKey].horns += (p.horns || 0);
+          modalSdMap[sKey].wins += (p.wins || 0);
         }
       }
     });
@@ -2935,7 +2937,7 @@ window.searchPlayerFull = async (name) => {
         let sKey = realName.toLowerCase().replace(/[^a-z0-9]/g, '');
         let pTotal = Number(scores.total !== undefined ? scores.total : ((scores.d1||0) + (scores.d2||0) + (scores.d3||0) + (scores.d4||0) + (scores.d5||0) + (scores.d6||0)));
         if (!modalSdMap[sKey]) {
-          modalSdMap[sKey] = { name: realName, score: 0 };
+          modalSdMap[sKey] = { name: realName, horns: 0, wins: 0, score: 0 };
         }
         modalSdMap[sKey].score += pTotal;
       }
@@ -2943,7 +2945,7 @@ window.searchPlayerFull = async (name) => {
 
     let dynamicSD = null;
     const targetSanitizedKey = targetName.toLowerCase().replace(/[^a-z0-9]/g, '');
-    const sortedShowdownPlayers = Object.values(modalSdMap).sort((a, b) => b.score - a.score);
+    const sortedShowdownPlayers = Object.values(modalSdMap).sort((a, b) => (b.horns !== a.horns) ? (b.horns - a.horns) : (b.score - a.score));
     sortedShowdownPlayers.forEach((p, index) => {
       if (p.name.toLowerCase().replace(/[^a-z0-9]/g, '') === targetSanitizedKey) {
         dynamicSD = { score: p.score, rank: index + 1 };

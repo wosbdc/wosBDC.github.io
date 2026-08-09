@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.53.5] - 2026-08-09
+### Fixed
+- **🏆 Restored Golden Horn Trophies Primary Sort Rule in Player Cards**: Fixed `renderPlayerCardModal` to sort by `b.horns !== a.horns ? b.horns - a.horns : b.score - a.score`. Preserved `horns` & `wins` in `modalSdMap` so `BrianDCox` holds **1st Place 🥇 (40 Horns)** and `Perma Frost` holds **Rank #17** on the Player Card modal.
+
 ## [1.53.4] - 2026-08-09
 ### Fixed
 - **⚡ Live Firebase Showdown Player Card Ranks**: Updated `renderPlayerCardModal` to calculate Showdown ranks live from Firebase history & active cycle snapshots rather than falling back to stale static Google Sheets values.
