@@ -2725,7 +2725,8 @@ window.getLivePlayerEventRow = async (chiefName, pRow, headers) => {
                 let pScore = tableData[dr][totalCol];
                 if (pName && (typeof pScore === 'number' || (typeof pScore === 'string' && !isNaN(pScore)))) {
                   let rawName = pName.toString().trim();
-                  let safeKey = rawName.toLowerCase().replace(/[^a-z0-9]/g, '');
+                  let san = rawName.toLowerCase().replace(/[^a-z0-9]/g, '');
+                  let safeKey = san.length > 0 ? san : rawName.toLowerCase();
                   if (!allTimeShowdownMap[safeKey]) allTimeShowdownMap[safeKey] = { name: rawName, score: 0 };
                   allTimeShowdownMap[safeKey].score += Number(pScore);
                 }
@@ -2739,8 +2740,9 @@ window.getLivePlayerEventRow = async (chiefName, pRow, headers) => {
       
       for (const [pName, scores] of Object.entries(sdLiveData)) {
           if (!scores || typeof scores !== 'object') continue;
-          let rawName = pName.toString().trim();
-          let safeKey = rawName.toLowerCase().replace(/[^a-z0-9]/g, '');
+          let rawName = (scores.name || pName).toString().trim();
+          let san = rawName.toLowerCase().replace(/[^a-z0-9]/g, '');
+          let safeKey = san.length > 0 ? san : rawName.toLowerCase();
           let pScore = (scores.d1||0) + (scores.d2||0) + (scores.d3||0) + (scores.d4||0) + (scores.d5||0) + (scores.d6||0);
           if (!allTimeShowdownMap[safeKey]) allTimeShowdownMap[safeKey] = { name: rawName, score: 0 };
           allTimeShowdownMap[safeKey].score += pScore;
@@ -2919,7 +2921,8 @@ window.searchPlayerFull = async (name) => {
     const modalSdMap = {};
     allTimePlayersModal.forEach(p => {
       if (p && p.name) {
-        const sKey = p.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const san = p.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const sKey = san.length > 0 ? san : p.name.toLowerCase().trim();
         if (!modalSdMap[sKey]) {
           modalSdMap[sKey] = { name: p.name, horns: p.horns || 0, wins: p.wins || 0, score: p.total || 0 };
         } else {
@@ -2934,7 +2937,8 @@ window.searchPlayerFull = async (name) => {
       for (const [pKey, scores] of Object.entries(sdLiveData)) {
         if (!scores || typeof scores !== 'object') continue;
         let realName = scores.name || pKey;
-        let sKey = realName.toLowerCase().replace(/[^a-z0-9]/g, '');
+        let san = realName.toLowerCase().replace(/[^a-z0-9]/g, '');
+        let sKey = san.length > 0 ? san : realName.toLowerCase().trim();
         let pTotal = Number(scores.total !== undefined ? scores.total : ((scores.d1||0) + (scores.d2||0) + (scores.d3||0) + (scores.d4||0) + (scores.d5||0) + (scores.d6||0)));
         if (!modalSdMap[sKey]) {
           modalSdMap[sKey] = { name: realName, horns: 0, wins: 0, score: 0 };
@@ -2944,10 +2948,13 @@ window.searchPlayerFull = async (name) => {
     }
 
     let dynamicSD = null;
-    const targetSanitizedKey = targetName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const sanTarget = targetName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const targetSanitizedKey = sanTarget.length > 0 ? sanTarget : targetName.toLowerCase().trim();
     const sortedShowdownPlayers = Object.values(modalSdMap).sort((a, b) => (b.horns !== a.horns) ? (b.horns - a.horns) : (b.score - a.score));
     sortedShowdownPlayers.forEach((p, index) => {
-      if (p.name.toLowerCase().replace(/[^a-z0-9]/g, '') === targetSanitizedKey) {
+      const sanP = p.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const keyP = sanP.length > 0 ? sanP : p.name.toLowerCase().trim();
+      if (keyP === targetSanitizedKey) {
         dynamicSD = { score: p.score, rank: index + 1 };
       }
     });

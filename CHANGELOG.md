@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [1.54.1] - 2026-08-09
+### Improved & Fixed
+- **🔤 Complete Non-Latin / CJK Keying Alignment**: Updated `renderPlayerCardModal` to apply `san.length > 0 ? san : p.name.toLowerCase().trim()` across modal map initialization, live Firebase score merging, and target lookup. Completely eliminates empty string key collisions for non-Latin player names.
+- **⚡ Verified 100% Clean Production Build**: Verified zero syntax or binding errors across Vite compilation and dynamic modal rank calculation.
+
 ## [1.54.0] - 2026-08-09
 ### Improved & Fixed
 - **🔤 Non-Latin / CJK Character Keying Fallback**: Enhanced sanitized key generation across `views.showdown()`, `renderPlayerCardModal()`, and `renderAccountRankings()` so names composed of non-Latin characters (e.g. Japanese, Chinese, Cyrillic, emojis) fall back to `p.name.toLowerCase().trim()` instead of producing empty strings `""`, ensuring all non-Latin player names are properly tracked and de-duplicated.
