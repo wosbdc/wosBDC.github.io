@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [1.72.0] - 2026-08-09
+### Added & Streamlined
+- **📅 1:1 Google Sheets Rewards & Events Editor**: Replaced bloated schedule modal with a sleek, clean 1:1 replica of the Google Sheets `RewardsSidebar.html` tool (`WhiteOut Survival` Col I Title, Col J Start Date, Col M End Date). Features real-time search filtering, instant status badges (Yellow: No dates set, Red: Expired, Green: Active/Set), and quick date buttons (Today/Clear/Quick Pick). Instant Firebase live updates (<50ms).
+- **⚡ High-Speed Schedule View**: Streamlined `views.schedule()` to read live `rewards_schedule_live` Firebase node without blocking Google Sheets network calls, delivering instantaneous page loads and clean status badges across all scheduled alliance events.
+
 ## [1.71.0] - 2026-08-09
 ### Fixed
 - **⚔️ Live Current Showdown Rank & Score Integration**: Added live calculation of `Current Showdown` rank and score from Firebase `showdown_live` in `renderAccountRankings()`. The `⚔️ Showdown` card in Account Hub Event Rankings now displays both `CURRENT:` and `ALL-TIME:` stats live side-by-side.

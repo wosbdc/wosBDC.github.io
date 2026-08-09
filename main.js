@@ -9906,13 +9906,12 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
       }
       
 
-      const [rosterRawData, lbRawData, fbWinsSnap, fbDonSnap, sdHistoryRawData, sdFbHistorySnap, sdFbLiveSnap] = await Promise.all([
+      const [rosterRawData, lbRawData, fbWinsSnap, fbDonSnap, sdFbHistorySnap, sdFbLiveSnap] = await Promise.all([
           window.fetchRoster().catch(() => ({})),
           window.fetchLeaderboardsData().catch(() => []),
           get(ref(db, 'beartrap_wins')).catch(() => null),
           get(ref(db, 'beartrap_donations')).catch(() => null),
-          fetchSheet("Showdown History").catch(() => []),
-          get(ref(db, 'showdown_history')).catch(() => null),
+          get(ref(db, 'showdown_meta/history')).catch(() => null),
           get(ref(db, 'showdown_live')).catch(() => null)
       ]);
       const fbWins = (fbWinsSnap && fbWinsSnap.exists()) ? fbWinsSnap.val() : {};
@@ -10131,15 +10130,9 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
       const currentDonNum = parseNumVal(rawCurVal);
       const allTimeDonNum = parseNumVal(rawAllVal);
 
-      // Build All-Time Showdown Map using complete Showdown Vault merging algorithm (Firebase history, Firebase live, Sheets history, and DEFAULT_SD_HISTORY_BLOCKS)
+      // Build All-Time Showdown Map 100% from Firebase (showdown_meta/history & showdown_live)
       const sdAllTimeMap = {};
-      const safeSdHistory = (typeof sdHistoryRawData !== 'undefined' && Array.isArray(sdHistoryRawData)) ? sdHistoryRawData : [];
-      
       let fetchedHist = (sdFbHistorySnap && sdFbHistorySnap.exists() && sdFbHistorySnap.val()) ? sdFbHistorySnap.val() : {};
-      if (safeSdHistory.length > 0 && typeof window.parseShowdownHistoryRows === 'function') {
-        let parsedSheets = window.parseShowdownHistoryRows(safeSdHistory);
-        fetchedHist = Object.assign({}, parsedSheets, fetchedHist);
-      }
       
       const historyObj = (typeof window.getMergedShowdownHistoryObj === 'function') 
         ? window.getMergedShowdownHistoryObj(fetchedHist) 
@@ -10152,36 +10145,50 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
       let combinedMap = {};
       allTimePlayers.forEach(p => {
         if (p && p.name) {
-          combinedMap[p.name.toLowerCase().trim()] = { name: p.name, horns: p.horns || 0, wins: p.wins || 0, total: p.total || 0 };
+          const kTrim = p.name.toLowerCase().trim();
+          const kSan = p.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+          const entry = { name: p.name, horns: p.horns || 0, wins: p.wins || 0, total: p.total || 0 };
+          combinedMap[kTrim] = entry;
+          if (kSan) combinedMap[kSan] = entry;
         }
       });
 
       // Establish baseline historical floor for Guardian (2 Horns, 1 Day Win, 7,036,858 Total)
-      if (!combinedMap['guardian']) {
-        combinedMap['guardian'] = { name: 'Guardian', horns: 2, wins: 1, total: 7036858 };
+      const gKey = 'guardian';
+      if (!combinedMap[gKey]) {
+        combinedMap[gKey] = { name: 'Guardian', horns: 2, wins: 1, total: 7036858 };
       } else {
-        if (combinedMap['guardian'].total < 7036858) combinedMap['guardian'].total = 7036858;
-        if (combinedMap['guardian'].horns < 2) combinedMap['guardian'].horns = 2;
-        if (combinedMap['guardian'].wins < 1) combinedMap['guardian'].wins = 1;
+        if (combinedMap[gKey].total < 7036858) combinedMap[gKey].total = 7036858;
+        if (combinedMap[gKey].horns < 2) combinedMap[gKey].horns = 2;
+        if (combinedMap[gKey].wins < 1) combinedMap[gKey].wins = 1;
       }
 
       // Establish baseline historical floor for Dragon Frost (0 Horns, 0 Day Wins, 1,800,952 Total)
-      if (!combinedMap['dragon frost']) {
+      const dfKey = 'dragonfrost';
+      if (!combinedMap['dragon frost'] && !combinedMap[dfKey]) {
         combinedMap['dragon frost'] = { name: 'Dragon Frost', horns: 0, wins: 0, total: 1800952 };
-      } else {
-        if (combinedMap['dragon frost'].total < 1800952) combinedMap['dragon frost'].total = 1800952;
       }
 
       const sdLiveData = (sdFbLiveSnap && sdFbLiveSnap.exists() && sdFbLiveSnap.val()) ? sdFbLiveSnap.val() : {};
-      for (const [pName, scores] of Object.entries(sdLiveData)) {
+      for (const [pKey, scores] of Object.entries(sdLiveData)) {
         if (!scores || typeof scores !== 'object') continue;
-        let k = pName.toLowerCase().trim();
-        let pTotal = (scores.d1||0) + (scores.d2||0) + (scores.d3||0) + (scores.d4||0) + (scores.d5||0) + (scores.d6||0);
-        if (!combinedMap[k]) combinedMap[k] = { name: pName, horns: 0, wins: 0, total: 0 };
-        combinedMap[k].total += pTotal;
+        let realName = scores.name || pKey;
+        let kTrim = realName.toLowerCase().trim();
+        let kSan = realName.toLowerCase().replace(/[^a-z0-9]/g, '');
+        let pTotal = Number(scores.total !== undefined ? scores.total : ((scores.d1||0) + (scores.d2||0) + (scores.d3||0) + (scores.d4||0) + (scores.d5||0) + (scores.d6||0)));
+        
+        let targetEntry = combinedMap[kTrim] || combinedMap[kSan];
+        if (!targetEntry) {
+          targetEntry = { name: realName, horns: 0, wins: 0, total: 0 };
+          combinedMap[kTrim] = targetEntry;
+          if (kSan) combinedMap[kSan] = targetEntry;
+        }
+        targetEntry.total += pTotal;
       }
 
-      let sortedSdList = Object.values(combinedMap).sort((a, b) => (b.horns !== a.horns) ? (b.horns - a.horns) : (b.total - a.total));
+      // De-duplicate unique player objects before ranking
+      const uniquePlayers = Array.from(new Set(Object.values(combinedMap)));
+      let sortedSdList = uniquePlayers.sort((a, b) => (b.horns !== a.horns) ? (b.horns - a.horns) : (b.total - a.total));
 
       sortedSdList.forEach((p, index) => {
         if (p && p.name) {
@@ -10191,12 +10198,14 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
             if (num === 3) return '🥉 3rd';
             return `#${num}`;
           };
-          sdAllTimeMap[p.name.toLowerCase().trim()] = {
+          const statObj = {
             rank: formatRank(index + 1),
             horns: p.horns || 0,
             wins: p.wins || 0,
             total: p.total || 0
           };
+          sdAllTimeMap[p.name.toLowerCase().trim()] = statObj;
+          sdAllTimeMap[p.name.toLowerCase().replace(/[^a-z0-9]/g, '')] = statObj;
         }
       });
 
@@ -10268,8 +10277,8 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
 
       // Ensure Showdown All-Time and Current are included if player has Showdown stats
       const targetLowerName = chiefNameTarget.toLowerCase().trim();
-      if (sdAllTimeMap[targetLowerName] || curSdStat) {
-        const sdStat = sdAllTimeMap[targetLowerName];
+      const sdStat = sdAllTimeMap[targetLowerName] || sdAllTimeMap[targetSanitized];
+      if (sdStat || curSdStat) {
         if (!eventGroups['Showdown']) {
           eventGroups['Showdown'] = {
             baseTitle: 'Showdown',
