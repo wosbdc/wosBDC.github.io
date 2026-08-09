@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.69.0] - 2026-08-09
+### Added
+- **🏆 Grouped Event Leaderboard Cards**: Unified related events (like Showdown, Foundry, Frostfire, Spear Donations, and Bear Trap Wins) into side-by-side grouped cards displaying `CURRENT: rank | ALL-TIME: rank`, eliminating box repetition and making rankings clean and effortless to read.
+
 ## [1.68.5] - 2026-08-09
 ### Removed
 - **🧹 Removed Duplicate Hero Card**: Removed the duplicate `All-Time Spears Donated` hero card next to Bronze Medals in `views.account()` Event Rankings tab, keeping top row exclusively for Gold, Silver, and Bronze Medals.

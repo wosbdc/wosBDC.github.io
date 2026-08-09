@@ -10064,6 +10064,36 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
       const currentDonNum = parseNumVal(rawCurVal);
       const allTimeDonNum = parseNumVal(rawAllVal);
 
+      // Group additional leaderboards by base event name
+      const eventGroups = {};
+      otherLbs.forEach(lb => {
+        let baseTitle = lb.title.replace(/All-Time|All Time|Current|Overall/gi, '').trim();
+        if (!baseTitle) baseTitle = lb.title;
+
+        if (!eventGroups[baseTitle]) {
+          eventGroups[baseTitle] = {
+            baseTitle: baseTitle,
+            emoji: lb.emoji || '🏆',
+            current: null,
+            allTime: null,
+            others: []
+          };
+        }
+
+        const isAllTime = lb.title.toLowerCase().includes('all-time') || lb.title.toLowerCase().includes('all time');
+        if (isAllTime) {
+          eventGroups[baseTitle].allTime = lb;
+        } else {
+          if (!eventGroups[baseTitle].current) {
+            eventGroups[baseTitle].current = lb;
+          } else {
+            eventGroups[baseTitle].others.push(lb);
+          }
+        }
+      });
+
+      const groupedEventList = Object.values(eventGroups);
+
       let rankingsHtml = `
         <!-- Account Switcher Bar -->
         <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:12px; padding:12px 16px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
@@ -10075,7 +10105,7 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
           </select>
         </div>
 
-        <!-- Hero Medal & Stat Showcase Cards -->
+        <!-- Hero Medal Showcase Cards -->
         <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:12px; margin-bottom:20px;">
           <div style="background:linear-gradient(135deg, rgba(234,179,8,0.15), rgba(234,179,8,0.05)); border:1px solid rgba(234,179,8,0.3); border-radius:12px; padding:14px; text-align:center;">
             <div style="font-size:24px; margin-bottom:4px;">🥇</div>
@@ -10094,48 +10124,92 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
           </div>
         </div>
 
-        <!-- Bear Trap & Payout Performance Card -->
+        <!-- Bear Trap & Spear Donation Grouped Cards -->
         <div class="card" style="margin-bottom:20px; padding:16px;">
           <div style="font-weight:bold; font-size:16px; color:var(--text-main); margin-bottom:12px; display:flex; align-items:center; gap:8px;">
             <span>🪤 Bear Trap & Spear Donation Ranks</span>
           </div>
-          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px;">
-            <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:8px; padding:12px;">
-              <div style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Bear Trap 1</div>
-              <div style="font-size:15px; font-weight:bold; color:var(--accent); margin-top:4px;">${bear1 ? `${window.formatRankBadgeHtml(bear1.rank)} (${bear1.score ? bear1.score.toLocaleString() : 'N/A'})` : 'Unranked'}</div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:12px;">
+            
+            <!-- Spear Donations Box -->
+            <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:14px;">
+              <div style="font-size:12px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+                <span>🗡️ Spear Donations</span>
+              </div>
+              <div style="display:flex; flex-wrap:wrap; gap:14px; align-items:center;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <span style="font-size:11px; font-weight:bold; color:var(--text-muted);">CURRENT:</span>
+                  <span style="font-size:13px; font-weight:bold; color:#eab308;">${btDonationsCurrent ? `${window.formatRankBadgeHtml(btDonationsCurrent.rank)} ` : ''}${currentDonNum.toLocaleString()} 🗡️</span>
+                </div>
+                <div style="width:1px; height:18px; background:var(--border);"></div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <span style="font-size:11px; font-weight:bold; color:var(--text-muted);">ALL-TIME:</span>
+                  <span style="font-size:13px; font-weight:bold; color:#10b981;">${btDonationsAllTime ? `${window.formatRankBadgeHtml(btDonationsAllTime.rank)} ` : ''}${allTimeDonNum.toLocaleString()} 🗡️</span>
+                </div>
+              </div>
             </div>
-            <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:8px; padding:12px;">
-              <div style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Bear Trap 2</div>
-              <div style="font-size:15px; font-weight:bold; color:var(--accent); margin-top:4px;">${bear2 ? `${window.formatRankBadgeHtml(bear2.rank)} (${bear2.score ? bear2.score.toLocaleString() : 'N/A'})` : 'Unranked'}</div>
+
+            <!-- Bear Trap Wins Box -->
+            <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:14px;">
+              <div style="font-size:12px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+                <span>🪤 Bear Trap Wins</span>
+              </div>
+              <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <span style="font-size:11px; font-weight:bold; color:var(--text-muted);">TRAP 1:</span>
+                  <span style="font-size:13px; font-weight:bold;">${bear1 ? `${window.formatRankBadgeHtml(bear1.rank)}` : '<span style="color:var(--text-muted); font-size:12px;">Unranked</span>'}</span>
+                </div>
+                <div style="width:1px; height:18px; background:var(--border);"></div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <span style="font-size:11px; font-weight:bold; color:var(--text-muted);">TRAP 2:</span>
+                  <span style="font-size:13px; font-weight:bold;">${bear2 ? `${window.formatRankBadgeHtml(bear2.rank)}` : '<span style="color:var(--text-muted); font-size:12px;">Unranked</span>'}</span>
+                </div>
+                <div style="width:1px; height:18px; background:var(--border);"></div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <span style="font-size:11px; font-weight:bold; color:var(--text-muted);">BOTH:</span>
+                  <span style="font-size:13px; font-weight:bold; color:#10b981;">${bearBoth ? `${window.formatRankBadgeHtml(bearBoth.rank)}` : '<span style="color:var(--text-muted); font-size:12px;">Unranked</span>'}</span>
+                </div>
+              </div>
             </div>
-            <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:8px; padding:12px;">
-              <div style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Both Bear Traps</div>
-              <div style="font-size:15px; font-weight:bold; color:#10b981; margin-top:4px;">${bearBoth ? `${window.formatRankBadgeHtml(bearBoth.rank)} (${bearBoth.score ? bearBoth.score.toLocaleString() : 'N/A'})` : 'Unranked'}</div>
-            </div>
-            <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:8px; padding:12px;">
-              <div style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Current Spears Donated</div>
-              <div style="font-size:15px; font-weight:bold; color:#eab308; margin-top:4px;">${btDonationsCurrent ? `${window.formatRankBadgeHtml(btDonationsCurrent.rank)} ` : ''}${currentDonNum.toLocaleString()} 🗡️</div>
-            </div>
-            <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:8px; padding:12px;">
-              <div style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">All-Time Spears Donated</div>
-              <div style="font-size:15px; font-weight:bold; color:#10b981; margin-top:4px;">${btDonationsAllTime ? `${window.formatRankBadgeHtml(btDonationsAllTime.rank)} ` : ''}${allTimeDonNum.toLocaleString()} 🗡️</div>
-            </div>
+
           </div>
         </div>
 
-        <!-- All Event Leaderboards Grid -->
+        <!-- All Event Leaderboards Grid (Grouped by Event) -->
         <div class="card" style="padding:16px;">
           <div style="font-weight:bold; font-size:16px; color:var(--text-main); margin-bottom:12px; display:flex; align-items:center; gap:8px;">
-            <span>🏆 All Event Leaderboard Ranks (${otherLbs.length})</span>
+            <span>🏆 All Event Leaderboard Ranks (${groupedEventList.length})</span>
           </div>
-          ${otherLbs.length === 0 ? `
+          ${groupedEventList.length === 0 ? `
             <div style="text-align:center; color:var(--text-muted); padding:20px; font-size:13px; font-style:italic;">No additional leaderboard ranks recorded yet for this chief.</div>
           ` : `
-            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:10px;">
-              ${otherLbs.map(lb => `
-                <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:8px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
-                  <span style="font-size:12px; font-weight:bold; color:var(--text-main); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-right:8px;" title="${escapeHTML(lb.title)}">${escapeHTML(lb.title)}</span>
-                  <span style="font-size:12px; font-weight:bold; flex-shrink:0;">${window.formatRankBadgeHtml(lb.rank)}</span>
+            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:12px;">
+              ${groupedEventList.map(grp => `
+                <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:12px 14px;">
+                  <div style="font-size:13px; font-weight:bold; color:var(--text-main); margin-bottom:6px; display:flex; align-items:center; gap:6px;">
+                    <span>${grp.emoji} ${escapeHTML(grp.baseTitle)}</span>
+                  </div>
+                  <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
+                    ${grp.current ? `
+                      <div style="display:flex; align-items:center; gap:6px;">
+                        <span style="font-size:11px; font-weight:bold; color:var(--text-muted);">CURRENT:</span>
+                        <span style="font-size:13px; font-weight:bold;">${window.formatRankBadgeHtml(grp.current.rank)}${grp.current.score ? ` <span style="font-size:11px; color:var(--text-muted);">(${grp.current.score})</span>` : ''}</span>
+                      </div>
+                    ` : ''}
+                    ${grp.current && grp.allTime ? `<div style="width:1px; height:16px; background:var(--border);"></div>` : ''}
+                    ${grp.allTime ? `
+                      <div style="display:flex; align-items:center; gap:6px;">
+                        <span style="font-size:11px; font-weight:bold; color:var(--text-muted);">ALL-TIME:</span>
+                        <span style="font-size:13px; font-weight:bold;">${window.formatRankBadgeHtml(grp.allTime.rank)}${grp.allTime.score ? ` <span style="font-size:11px; color:var(--text-muted);">(${grp.allTime.score})</span>` : ''}</span>
+                      </div>
+                    ` : ''}
+                    ${!grp.current && !grp.allTime && grp.others.length > 0 ? grp.others.map(o => `
+                      <div style="display:flex; align-items:center; gap:6px;">
+                        <span style="font-size:11px; font-weight:bold; color:var(--text-muted);">${escapeHTML(o.title)}:</span>
+                        <span style="font-size:13px; font-weight:bold;">${window.formatRankBadgeHtml(o.rank)}</span>
+                      </div>
+                    `).join('') : ''}
+                  </div>
                 </div>
               `).join('')}
             </div>
