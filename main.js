@@ -11729,16 +11729,6 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
        
        const metaData = (metaSnap && metaSnap.exists() && metaSnap.val()) ? metaSnap.val() : {};
        let fetchedHist = (historySnap && historySnap.exists() && historySnap.val()) ? historySnap.val() : {};
-       try {
-           let sdRaw = await fetchSheet("Showdown History");
-           let rawHist = sdRaw;
-           if (rawHist && typeof rawHist === 'object' && rawHist.data) rawHist = rawHist.data;
-           let histRows = rawHist ? (Array.isArray(rawHist) ? rawHist : Object.values(rawHist)) : [];
-           if (histRows && histRows.length > 0) {
-               let parsedSheets = window.parseShowdownHistoryRows(histRows);
-               fetchedHist = Object.assign({}, parsedSheets, fetchedHist);
-           }
-       } catch (err) { console.warn("Failed to fetch Google Sheets history:", err); }
        const historyObj = window.getMergedShowdownHistoryObj(fetchedHist);
 
        let liveData = (liveSnap && liveSnap.exists() && liveSnap.val()) ? liveSnap.val() : {};

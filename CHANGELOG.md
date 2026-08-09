@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.53.1] - 2026-08-09
+### Improved & Streamlined
+- **⚡ Direct Firebase Showdown Vault & Rankings Data**: Streamlined `views.showdown()` and `openShowdownArchiveVaultModal()` to pull rankings and archived event history 100% directly from Firebase (`showdown_meta/history` and `showdown_live`), eliminating redundant Google Sheets fallback calls for instantaneous loading.
+
 ## [1.53.0] - 2026-08-09
 ### Added & Streamlined
 - **📅 1:1 Google Sheets Rewards & Events Editor**: Replaced bloated 6-tab modal with a sleek, 1:1 replica of the Google Sheets `RewardsSidebar.html` tool (`WhiteOut Survival` tab Col I Title, Col J Start Date, Col M End Date). Features real-time search filtering, instant status badges (🟡 Yellow: No dates set, 🔴 Red: Expired, 🟢 Green: Set/Active), and quick date buttons (Today/Clear). Pushes live updates directly to Firebase (`rewards_schedule_live`) in <50ms.
