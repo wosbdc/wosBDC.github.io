@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.70.7] - 2026-08-09
+### Fixed
+- **⚡ Live Firebase Leaderboards & Smart Score Column Parser**: Updated `fetchLeaderboardsData()` to read live Firebase `leaderboards` node directly with 2.5s timeout guard. Overhauled `parseLeaderboardsToPlayerMap()` with dynamic score column detection (scanning backwards for rightmost score value), fixing score column offsets across all player profile cards.
+
 ## [1.70.6] - 2026-08-09
 ### Fixed
 - **🛡️ Dragon Frost All-Time Showdown Score**: Updated Dragon Frost's All-Time Showdown stats to **1,800,952 Total Score** (#22) in both `leaderboards.json` and `main.js`.

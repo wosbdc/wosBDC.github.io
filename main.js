@@ -954,76 +954,95 @@ window.updateBearTrapDonationInline = async (gameId, newDonationStr) => {
 window.fetchLeaderboardsData = async () => {
     if (window.leaderboardsCache) return window.leaderboardsCache;
 
+    let rawSheet = null;
+
+    // 1. Try reading the live sheet 2D array pushed by Apps Script to Firebase ref(db, 'sheets/LeaderBoards')
     try {
-        const snap = await get(ref(db, 'leaderboards'));
+        const snap = await get(ref(db, 'sheets/LeaderBoards'));
         if (snap.exists() && snap.val() && Array.isArray(snap.val()) && snap.val().length > 0) {
-            window.leaderboardsCache = snap.val();
-            return window.leaderboardsCache;
+            rawSheet = snap.val();
         }
     } catch(e) {
-        console.warn("Firebase leaderboards read error:", e);
+        console.warn("Firebase sheets/LeaderBoards read error:", e);
+    }
+
+    // 2. Fallback to cached parsed boards ref(db, 'leaderboards') if live sheet node is unavailable
+    if (!rawSheet) {
+        try {
+            const snapOld = await get(ref(db, 'leaderboards'));
+            if (snapOld.exists() && snapOld.val() && Array.isArray(snapOld.val()) && snapOld.val().length > 0) {
+                window.leaderboardsCache = snapOld.val();
+                return window.leaderboardsCache;
+            }
+        } catch(e) {
+            console.warn("Firebase leaderboards fallback error:", e);
+        }
+    }
+
+    // 3. Fallback to direct fetchSheet call if Firebase is unavailable
+    if (!rawSheet) {
+        try {
+            rawSheet = await fetchSheet("LeaderBoards");
+        } catch(e) {
+            console.error("Leaderboards sheet fetch error:", e);
+        }
     }
 
     let parsedBoards = [];
-    try {
-        const rawSheet = await fetchSheet("LeaderBoards");
-        if (rawSheet && Array.isArray(rawSheet) && rawSheet.length > 0) {
-            for (let r = 0; r < rawSheet.length; r++) {
-                for (let c = 0; c < rawSheet[r].length; c++) {
-                    let cell = rawSheet[r][c];
-                    if (typeof cell === 'string' && cell.trim() !== '' && (
-                        cell.toLowerCase().includes('leaderboard') || 
-                        cell.toLowerCase().includes('ranking') || 
-                        cell.toLowerCase().includes('bear') || 
-                        cell.toLowerCase().includes('showdown') ||
-                        cell.toLowerCase().includes('championship') ||
-                        cell.toLowerCase().includes('mercenary') ||
-                        cell.toLowerCase().includes('polar')
-                    )) {
-                        let title = cell;
-                        let headers = [];
-                        let hc = c;
+    if (rawSheet && Array.isArray(rawSheet) && rawSheet.length > 0) {
+        for (let r = 0; r < rawSheet.length; r++) {
+            for (let c = 0; c < rawSheet[r].length; c++) {
+                let cell = rawSheet[r][c];
+                if (typeof cell === 'string' && cell.trim() !== '' && (
+                    cell.toLowerCase().includes('leaderboard') || 
+                    cell.toLowerCase().includes('ranking') || 
+                    cell.toLowerCase().includes('bear') || 
+                    cell.toLowerCase().includes('showdown') ||
+                    cell.toLowerCase().includes('championship') ||
+                    cell.toLowerCase().includes('mercenary') ||
+                    cell.toLowerCase().includes('polar')
+                )) {
+                    let title = cell;
+                    let headers = [];
+                    let hc = c;
+                    
+                    // Read headers on the next row
+                    if (r + 1 < rawSheet.length) {
+                        while (hc < rawSheet[r+1].length && rawSheet[r+1][hc] !== "") {
+                            headers.push(rawSheet[r+1][hc]);
+                            hc++;
+                        }
+                    }
+                    
+                    // Read data rows starting from 2 rows down
+                    let rows = [];
+                    let dr = r + 2;
+                    while (dr < rawSheet.length && rawSheet[dr][c] !== "") {
+                        let rowData = [];
+                        let hasPlayerData = false;
                         
-                        // Read headers on the next row
-                        if (r + 1 < rawSheet.length) {
-                            while (hc < rawSheet[r+1].length && rawSheet[r+1][hc] !== "") {
-                                headers.push(rawSheet[r+1][hc]);
-                                hc++;
+                        for (let i = 0; i < headers.length; i++) {
+                            let cellVal = rawSheet[dr][c + i];
+                            rowData.push(cellVal);
+                            if (i > 0 && cellVal !== "") {
+                                hasPlayerData = true;
                             }
                         }
                         
-                        // Read data rows starting from 2 rows down
-                        let rows = [];
-                        let dr = r + 2;
-                        while (dr < rawSheet.length && rawSheet[dr][c] !== "") {
-                            let rowData = [];
-                            let hasPlayerData = false;
-                            
-                            for (let i = 0; i < headers.length; i++) {
-                                let cellVal = rawSheet[dr][c + i];
-                                rowData.push(cellVal);
-                                if (i > 0 && cellVal !== "") {
-                                    hasPlayerData = true;
-                                }
-                            }
-                            
-                            if (hasPlayerData) {
-                                rows.push(rowData);
-                            }
-                            dr++;
+                        if (hasPlayerData) {
+                            rows.push(rowData);
                         }
-                        
-                        if (headers.length > 0) {
-                            parsedBoards.push({ title, headers, rows });
-                        }
+                        dr++;
+                    }
+                    
+                    if (headers.length > 0) {
+                        parsedBoards.push({ title, headers, rows });
                     }
                 }
             }
-
-            try { await set(ref(db, 'leaderboards'), parsedBoards); } catch(e) { console.error(e); }
         }
-    } catch(e) {
-        console.error("Leaderboards sheet fetch error:", e);
+
+        try { await set(ref(db, 'leaderboards'), parsedBoards); } catch(e) { console.error(e); }
     }
 
     window.leaderboardsCache = parsedBoards;
@@ -1055,14 +1074,6 @@ window.parseLeaderboardsToPlayerMap = (lbData, targetNameFilter = null) => {
       if (!title) title = "Leaderboard";
 
       let headers = board.headers || [];
-      let nameCol = headers.findIndex(h => typeof h === 'string' && (h.toLowerCase().includes('name') || h.toLowerCase().includes('member') || h.toLowerCase().includes('player') || h.toLowerCase().includes('chief')));
-      if (nameCol === -1) nameCol = 1;
-
-      let scoreCol = headers.length - 1;
-      if (scoreCol <= nameCol) scoreCol = nameCol + 1;
-
-      let rankCol = 0;
-
       let isAllTime = title.toLowerCase().includes("all-time") || title.toLowerCase().includes("all time");
       let isBear = title.toLowerCase().includes("bear") || title.toLowerCase().includes("bt");
 
@@ -1075,6 +1086,32 @@ window.parseLeaderboardsToPlayerMap = (lbData, targetNameFilter = null) => {
 
       (board.rows || []).forEach((row, rIdx) => {
         if (!row || !Array.isArray(row)) return;
+
+        // Dynamic Name Column finding
+        let nameCol = headers.findIndex(h => typeof h === 'string' && (h.toLowerCase().includes('name') || h.toLowerCase().includes('member') || h.toLowerCase().includes('player') || h.toLowerCase().includes('chief')));
+        if (nameCol === -1) {
+          nameCol = row.findIndex((val, idx) => idx > 0 && typeof val === 'string' && val.trim().length > 0 && isNaN(val));
+          if (nameCol === -1) nameCol = 1;
+        }
+
+        // Dynamic Rank Column finding
+        let rankCol = headers.findIndex(h => typeof h === 'string' && h.toLowerCase().includes('rank'));
+        if (rankCol === -1) {
+          rankCol = row.findIndex((val, idx) => idx >= 0 && val !== "" && (typeof val === 'number' || (!isNaN(val) && String(val).trim() !== "")));
+          if (rankCol === -1 || rankCol >= nameCol) rankCol = 0;
+        }
+
+        // Dynamic Score Column finding (scans backwards from end of row for rightmost score)
+        let scoreCol = -1;
+        for (let c = row.length - 1; c > nameCol; c--) {
+          let val = row[c];
+          if (val !== undefined && val !== null && val !== "" && (typeof val === 'number' || (!isNaN(val) && String(val).trim() !== ""))) {
+            scoreCol = c;
+            break;
+          }
+        }
+        if (scoreCol === -1) scoreCol = nameCol + 1;
+
         let pName = row[nameCol];
         let score = row[scoreCol];
         if (pName && score !== undefined && score !== null && score !== "") {
@@ -1091,10 +1128,11 @@ window.parseLeaderboardsToPlayerMap = (lbData, targetNameFilter = null) => {
              else rank = `#${numRank}`;
           }
 
+          let numScore = Number(score);
           let formattedScore = score;
-          if (typeof score === 'number') {
-             if (score >= 1000000) formattedScore = (score / 1000000).toFixed(1) + 'M';
-             else formattedScore = score.toLocaleString();
+          if (!isNaN(numScore) && typeof score !== 'string') {
+             if (numScore >= 1000000) formattedScore = (numScore / 1000000).toFixed(1) + 'M';
+             else formattedScore = numScore.toLocaleString();
           }
 
           let entry = { title, score: formattedScore, rank, emoji };
@@ -1143,6 +1181,16 @@ window.parseLeaderboardsToPlayerMap = (lbData, targetNameFilter = null) => {
         let hr = r + 2;
         while (hr < lbData.length && lbData[hr][c] && lbData[hr][c].toString().trim() !== "") {
           let pName = lbData[hr][c+1];
+          // Dynamically find rightmost score column in row
+          let scoreCol = c + 2;
+          for (let col = c + 10; col > c + 1; col--) {
+            let val = lbData[hr][col];
+            if (val !== undefined && val !== null && val !== "" && (typeof val === 'number' || (!isNaN(val) && String(val).trim() !== ""))) {
+              scoreCol = col;
+              break;
+            }
+          }
+
           let score = lbData[hr][scoreCol];
           if (pName && score !== undefined && score !== "") {
             let safeName = pName.toString().trim();
