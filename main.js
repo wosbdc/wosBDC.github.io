@@ -10044,7 +10044,10 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
       });
 
       const bearWinsCount = (fbWins && fbWins[chiefNameTarget.toLowerCase().trim()]) ? (fbWins[chiefNameTarget.toLowerCase().trim()].wins || 0) : (bearAllTime ? (bearAllTime.score || 0) : 0);
-      const bearDonationsVal = (fbDonations && fbDonations[chiefNameTarget.toLowerCase().trim()]) ? (fbDonations[chiefNameTarget.toLowerCase().trim()].amount || 0) : (btDonationsAllTime ? (btDonationsAllTime.score || 0) : 0);
+      
+      const fbDonObj = (fbDonations && fbDonations[chiefNameTarget.toLowerCase().trim()]) ? fbDonations[chiefNameTarget.toLowerCase().trim()] : {};
+      const currentDonVal = fbDonObj.current !== undefined ? fbDonObj.current : (btDonationsCurrent ? btDonationsCurrent.score : 0);
+      const allTimeDonVal = fbDonObj.allTime !== undefined ? fbDonObj.allTime : (btDonationsAllTime ? btDonationsAllTime.score : 0);
 
       let rankingsHtml = `
         <!-- Account Switcher Bar -->
@@ -10057,7 +10060,7 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
           </select>
         </div>
 
-        <!-- Hero Medal Showcase Cards -->
+        <!-- Hero Medal & Stat Showcase Cards -->
         <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:12px; margin-bottom:20px;">
           <div style="background:linear-gradient(135deg, rgba(234,179,8,0.15), rgba(234,179,8,0.05)); border:1px solid rgba(234,179,8,0.3); border-radius:12px; padding:14px; text-align:center;">
             <div style="font-size:24px; margin-bottom:4px;">🥇</div>
@@ -10075,9 +10078,9 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
             <div style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Bronze Medals</div>
           </div>
           <div style="background:linear-gradient(135deg, rgba(16,185,129,0.15), rgba(16,185,129,0.05)); border:1px solid rgba(16,185,129,0.3); border-radius:12px; padding:14px; text-align:center;">
-            <div style="font-size:24px; margin-bottom:4px;">🪤</div>
-            <div style="font-size:20px; font-weight:bold; color:#10b981;">${bearWinsCount}</div>
-            <div style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Bear Trap Wins</div>
+            <div style="font-size:24px; margin-bottom:4px;">💎</div>
+            <div style="font-size:20px; font-weight:bold; color:#10b981;">${Number(allTimeDonVal || 0).toLocaleString()}</div>
+            <div style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">All-Time Donations</div>
           </div>
         </div>
 
@@ -10086,22 +10089,26 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
           <div style="font-weight:bold; font-size:16px; color:var(--text-main); margin-bottom:12px; display:flex; align-items:center; gap:8px;">
             <span>🪤 Bear Trap & Donation Ranks</span>
           </div>
-          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px;">
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px;">
             <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:8px; padding:12px;">
               <div style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Bear Trap 1</div>
-              <div style="font-size:16px; font-weight:bold; color:var(--accent); margin-top:2px;">${bear1 ? `${window.formatRankBadgeHtml(bear1.rank)} (${bear1.score ? bear1.score.toLocaleString() : 'N/A'})` : 'Unranked'}</div>
+              <div style="font-size:15px; font-weight:bold; color:var(--accent); margin-top:4px;">${bear1 ? `${window.formatRankBadgeHtml(bear1.rank)} (${bear1.score ? bear1.score.toLocaleString() : 'N/A'})` : 'Unranked'}</div>
             </div>
             <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:8px; padding:12px;">
               <div style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Bear Trap 2</div>
-              <div style="font-size:16px; font-weight:bold; color:var(--accent); margin-top:2px;">${bear2 ? `${window.formatRankBadgeHtml(bear2.rank)} (${bear2.score ? bear2.score.toLocaleString() : 'N/A'})` : 'Unranked'}</div>
+              <div style="font-size:15px; font-weight:bold; color:var(--accent); margin-top:4px;">${bear2 ? `${window.formatRankBadgeHtml(bear2.rank)} (${bear2.score ? bear2.score.toLocaleString() : 'N/A'})` : 'Unranked'}</div>
             </div>
             <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:8px; padding:12px;">
               <div style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Both Bear Traps</div>
-              <div style="font-size:16px; font-weight:bold; color:#10b981; margin-top:2px;">${bearBoth ? `${window.formatRankBadgeHtml(bearBoth.rank)} (${bearBoth.score ? bearBoth.score.toLocaleString() : 'N/A'})` : 'Unranked'}</div>
+              <div style="font-size:15px; font-weight:bold; color:#10b981; margin-top:4px;">${bearBoth ? `${window.formatRankBadgeHtml(bearBoth.rank)} (${bearBoth.score ? bearBoth.score.toLocaleString() : 'N/A'})` : 'Unranked'}</div>
             </div>
             <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:8px; padding:12px;">
-              <div style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Trap Donations</div>
-              <div style="font-size:16px; font-weight:bold; color:#eab308; margin-top:2px;">${btDonationsAllTime ? `${window.formatRankBadgeHtml(btDonationsAllTime.rank)} (${bearDonationsVal ? bearDonationsVal.toLocaleString() : '0'})` : `${bearDonationsVal ? bearDonationsVal.toLocaleString() : '0'} Donated`}</div>
+              <div style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Current Trap Donations</div>
+              <div style="font-size:15px; font-weight:bold; color:#eab308; margin-top:4px;">${btDonationsCurrent ? `${window.formatRankBadgeHtml(btDonationsCurrent.rank)} ` : ''}${Number(currentDonVal || 0).toLocaleString()}</div>
+            </div>
+            <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:8px; padding:12px;">
+              <div style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">All-Time Trap Donations</div>
+              <div style="font-size:15px; font-weight:bold; color:#10b981; margin-top:4px;">${btDonationsAllTime ? `${window.formatRankBadgeHtml(btDonationsAllTime.rank)} ` : ''}${Number(allTimeDonVal || 0).toLocaleString()}</div>
             </div>
           </div>
         </div>

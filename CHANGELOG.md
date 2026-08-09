@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.68.2] - 2026-08-09
+### Added
+- **💎 All-Time Trap Donations Card**: Added dedicated `All-Time Trap Donations` stat card and rank breakdown box in `views.account()` Event Rankings tab, separating current week trap donations from all-time cumulative trap donations.
+
 ## [1.68.1] - 2026-08-09
 ### Fixed
 - **🐛 Event Rankings Tab Fix**: Exported `window.formatRankBadgeHtml` globally to resolve `TypeError: window.formatRankBadgeHtml is not a function` that prevented the Event Rankings tab from rendering and opening.
