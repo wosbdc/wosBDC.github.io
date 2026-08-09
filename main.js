@@ -2855,15 +2855,16 @@ window.searchPlayerFull = async (name) => {
   
   try {
     let sdLiveSnapshotPromise = window.fetchMergedShowdown();
-    const [data, rosterRawData, lbRawData, sdHistoryRawData, sdMergedDataRes, fbWinsSnap, fbDonSnap] = await Promise.all([
+    const [data, rosterRawData, lbRawData, sdHistSnap, sdMergedDataRes, fbWinsSnap, fbDonSnap] = await Promise.all([
             window.fetchActivityData().catch(() => []),
             window.fetchRoster().catch(() => ({})),
             window.fetchLeaderboardsData().catch(() => []),
-            fetchSheet("Showdown History").catch(() => []),
+            get(ref(db, 'showdown_meta/history')).catch(() => null),
             sdLiveSnapshotPromise.catch(() => ({ mergedData: [], sdLiveData: {} })),
             get(ref(db, 'beartrap_wins')).catch(() => null),
             get(ref(db, 'beartrap_donations')).catch(() => null)
           ]);
+    const sdHistoryRawData = (sdHistSnap && sdHistSnap.exists()) ? sdHistSnap.val() : [];
     const sdCurrentRawData = (sdMergedDataRes && sdMergedDataRes.mergedData) ? sdMergedDataRes.mergedData : [];
     const sdLiveData = (sdMergedDataRes && sdMergedDataRes.sdLiveData) ? sdMergedDataRes.sdLiveData : {};
     const fbWins = (fbWinsSnap && fbWinsSnap.exists()) ? fbWinsSnap.val() : {};
@@ -5099,21 +5100,14 @@ window.openShowdownArchiveVaultModal = async (initialKey = 'all', isAdminMode = 
     document.body.appendChild(modal);
 
     try {
-        const [histSnap, liveSnap, sdHistRaw] = await Promise.all([
+        const [histSnap, liveSnap] = await Promise.all([
             get(ref(db, 'showdown_meta/history')).catch(() => null),
-            get(ref(db, 'showdown_live')).catch(() => null),
-            (typeof sdHistoryData !== 'undefined' && sdHistoryData) ? Promise.resolve(sdHistoryData) : fetchSheet("Showdown History").catch(() => null)
+            get(ref(db, 'showdown_live')).catch(() => null)
         ]);
 
-        let rawHistory = sdHistRaw;
-        if (rawHistory && typeof rawHistory === 'object' && rawHistory.data) rawHistory = rawHistory.data;
-        const historyRows = rawHistory ? (Array.isArray(rawHistory) ? rawHistory : Object.values(rawHistory)) : [];
-
         let fetchedHist = (histSnap && histSnap.exists() && histSnap.val()) ? histSnap.val() : null;
-        if ((!fetchedHist || Object.keys(fetchedHist).length === 0) && historyRows && historyRows.length > 0) {
-            fetchedHist = window.parseShowdownHistoryRows(historyRows);
-        }
         const historyObj = window.getMergedShowdownHistoryObj(fetchedHist || {});
+        const historyRows = [];
         const liveData = (liveSnap && liveSnap.exists() && liveSnap.val()) ? liveSnap.val() : {};
         
         let livePlayers = [];
@@ -10965,7 +10959,6 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
       let sdHistoryData = null;
       if (filterString && filterString.toLowerCase() === 'showdown') {
          try {
-            sdHistoryData = await fetchSheet("Showdown History");
             const [histSnap, metaHistSnap, archiveSnap] = await Promise.all([
                get(ref(db, 'showdown_history')).catch(() => null),
                get(ref(db, 'showdown_meta/history')).catch(() => null),
