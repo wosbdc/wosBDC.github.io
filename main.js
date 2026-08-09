@@ -12490,30 +12490,72 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
 
     
         } else {
-           const data = weeklyData;
+          const data = schedSheetData || [];
 
-      
-      
-      if (!data || !Array.isArray(data) || data.length === 0) {
-  
-      contentDiv.innerHTML = `<div class="card"><div class="loading">⚠️ Schedule data is currently unavailable. Please try again later.</div></div>`;
-        return;
-      }
-      
-      // Find the row that contains the dates
-      let dateRowIdx = -1;
-      for (let r = 0; r < data.length; r++) {
-        let dateCells = data[r].filter(cell => typeof cell === 'string' && (cell.match(/^\d{4}-\d{2}-\d{2}T/) || cell.match(/\d{1,2}\/\d{1,2}/)));
-        if (dateCells.length >= 3) {
-          dateRowIdx = r;
-          break;
-        }
-      }
-      
-      if (dateRowIdx === -1) {
-        contentDiv.innerHTML = `<div class="card"><div class="loading">Could not find dates in schedule.</div></div>`;
-        return;
-      }
+          // Find the row that contains the dates (if grid table exists)
+          let dateRowIdx = -1;
+          if (Array.isArray(data) && data.length > 0) {
+            for (let r = 0; r < data.length; r++) {
+              let dateCells = data[r].filter(cell => typeof cell === 'string' && (cell.match(/^\d{4}-\d{2}-\d{2}T/) || cell.match(/\d{1,2}\/\d{1,2}/)));
+              if (dateCells.length >= 3) {
+                dateRowIdx = r;
+                break;
+              }
+            }
+          }
+
+          if (dateRowIdx === -1) {
+            // Render clean list/grid of all rewards & events schedule items
+            const todayStr = new Date().toISOString().split('T')[0];
+            if (!allRewardsAndChallenges || allRewardsAndChallenges.length === 0) {
+              contentDiv.innerHTML = `<div class="card"><div class="loading">⚠️ No schedule events found. Click ⚙️ Manage Schedule to set event dates!</div></div>`;
+              return;
+            }
+
+            let cardsHtml = `
+              <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:16px;">
+            `;
+
+            allRewardsAndChallenges.forEach(item => {
+              const s = item.start ? String(item.start) : '';
+              const e = item.end ? String(item.end) : '';
+              let statusColor = '#eab308';
+              let statusText = '⚠️ No Dates Set';
+
+              if (s || e) {
+                let isExpired = false;
+                if (e && e < todayStr) isExpired = true;
+                else if (!e && s && s < todayStr) isExpired = true;
+
+                if (isExpired) {
+                  statusColor = '#ef4444';
+                  statusText = `❌ Expired (${s || '?'} to ${e || '?'})`;
+                } else {
+                  statusColor = '#10b981';
+                  statusText = `✅ Set (${s || '?'} to ${e || '?'})`;
+                }
+              }
+
+              cardsHtml += `
+                <div class="card" style="border-left: 4px solid ${statusColor}; padding: 16px; margin: 0; background: var(--bg-surface); display:flex; flex-direction:column; justify-content:space-between;">
+                  <div>
+                    <h3 style="margin:0 0 8px 0; font-size:15px; color:var(--text-main); font-weight:bold;">${escapeHTML(item.title)}</h3>
+                    <div style="font-size:12px; color:var(--text-muted); margin-bottom:6px;">
+                      <div><strong>Start:</strong> ${s || 'Not Set'}</div>
+                      <div><strong>End:</strong> ${e || 'Not Set'}</div>
+                    </div>
+                  </div>
+                  <div style="font-size:11px; font-weight:bold; color:${statusColor}; margin-top:8px; padding:4px 8px; background:rgba(255,255,255,0.05); border-radius:4px; display:inline-block; width:fit-content;">
+                    ${statusText}
+                  </div>
+                </div>
+              `;
+            });
+
+            cardsHtml += `</div>`;
+            contentDiv.innerHTML = cardsHtml;
+            return;
+          }
       
       // Map each date to its column index
       let days = [];

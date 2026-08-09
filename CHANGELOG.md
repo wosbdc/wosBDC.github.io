@@ -1,3 +1,8 @@
+## [1.59.0] - 2026-08-09
+### Fixed
+- **🐛 Fixed `weeklyData is not defined` Error in Schedule View**: Replaced legacy `weeklyData` reference with `schedSheetData` in `views.schedule()`, resolving the Calendar View runtime crash.
+- **📅 Smart Event List Grid Fallback**: Added clean grid card rendering fallback for events and rewards in Calendar View if Google Sheets does not use a 7-column date grid structure.
+
 ## [1.58.0] - 2026-08-09
 ### Fixed & Restored
 - **🔍 Full Default Event List & Live Search Filtering**: Fixed the Schedule Editor modal search so all events are listed by default when opening, and typing in the search box filters events live in real time.
