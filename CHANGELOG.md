@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [1.70.6] - 2026-08-09
+### Fixed
+- **🛡️ Dragon Frost All-Time Showdown Score**: Updated Dragon Frost's All-Time Showdown stats to **1,800,952 Total Score** (#22) in both `leaderboards.json` and `main.js`.
+- **✨ Clean Badge Display**: Dynamically omitted `(0 Horns) (0 Day Wins)` text when a player has 0 Horns or 0 Day Wins, rendering clean `#22 (1.8M Total)` badges instead.
+
 ## [1.70.5] - 2026-08-09
 ### Improved
 - **⚡ Dynamic Live Score Accumulation**: Established baseline historical floor for Chief Guardian (`7,036,858` Total, `2` Horns, `1` Day Win) prior to live event map merging, ensuring live scores logged during active events add on top of Guardian's baseline dynamically.

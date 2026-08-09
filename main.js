@@ -10102,6 +10102,13 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
         if (combinedMap['guardian'].wins < 1) combinedMap['guardian'].wins = 1;
       }
 
+      // Establish baseline historical floor for Dragon Frost (0 Horns, 0 Day Wins, 1,800,952 Total)
+      if (!combinedMap['dragon frost']) {
+        combinedMap['dragon frost'] = { name: 'Dragon Frost', horns: 0, wins: 0, total: 1800952 };
+      } else {
+        if (combinedMap['dragon frost'].total < 1800952) combinedMap['dragon frost'].total = 1800952;
+      }
+
       const sdLiveData = (sdFbLiveSnap && sdFbLiveSnap.exists() && sdFbLiveSnap.val()) ? sdFbLiveSnap.val() : {};
       for (const [pName, scores] of Object.entries(sdLiveData)) {
         if (!scores || typeof scores !== 'object') continue;
@@ -10289,9 +10296,12 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
                             if (grp.baseTitle.toLowerCase().includes('showdown') && sdAllTimeMap[tLower] && (sdAllTimeMap[tLower].horns > 0 || sdAllTimeMap[tLower].total > 0)) {
                               const st = sdAllTimeMap[tLower];
                               const totStr = st.total >= 1000000 ? (st.total / 1000000).toFixed(1) + 'M' : (st.total || 0).toLocaleString();
-                              const hornLabel = st.horns === 1 ? 'Horn' : 'Horns';
-                              const winLabel = st.wins === 1 ? 'Day Win' : 'Day Wins';
-                              return `${window.formatRankBadgeHtml(st.rank)} <span style="font-size:11px; color:var(--text-muted);">(${st.horns} ${hornLabel}) (${st.wins} ${winLabel}) (${totStr} Total)</span>`;
+                              let detailParts = [];
+                              if (st.horns > 0) detailParts.push(`${st.horns} ${st.horns === 1 ? 'Horn' : 'Horns'}`);
+                              if (st.wins > 0) detailParts.push(`${st.wins} ${st.wins === 1 ? 'Day Win' : 'Day Wins'}`);
+                              detailParts.push(`${totStr} Total`);
+                              const detailsHtml = detailParts.map(p => `(${p})`).join(' ');
+                              return `${window.formatRankBadgeHtml(st.rank)} <span style="font-size:11px; color:var(--text-muted);">${detailsHtml}</span>`;
                             }
                             return `${window.formatRankBadgeHtml(grp.allTime.rank)}${grp.allTime.score ? ` <span style="font-size:11px; color:var(--text-muted);">(${grp.allTime.score})</span>` : ''}`;
                           })()}
