@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.57.6] - 2026-08-09
+### Fixed & Improved
+- **🏆 Account Hub Showdown Status Badge**: Updated the **Account Hub $\rightarrow$ Event Ranking $\rightarrow$ All Event Leaderboards Ranks** view. If the current Showdown event score is zero, unranked, or if no live data has been submitted yet, it now displays `⏳ Event hasn't started` under **Current Showdown** instead of hiding the row or showing missing rank data.
+
 ## [1.57.5] - 2026-08-09
 ### Fixed
 - **🕵️‍♂️ Fix Chief's Menu / Player Lookup Resilience**: Fixed an issue where the Chief's Player Lookup page crashed with "No data found" when Firebase `activity_live` returned non-array object structures or empty records. Added defensive `.catch()` wrappers to all async data fetches, implemented automatic matrix normalization and fallback roster auto-generation, and added fallback player profile card generation so any Chief can be searched and rendered cleanly without errors.

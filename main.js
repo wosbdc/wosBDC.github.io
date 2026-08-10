@@ -1331,6 +1331,9 @@ window.computeLiveFirebasePlayerStats = (targetName, fbWins = {}, fbDonations = 
 window.formatRankBadgeHtml = (rankVal) => {
     if (rankVal === undefined || rankVal === null || rankVal === '') return 'Unranked';
     let rStr = String(rankVal).trim();
+    if (rStr.toLowerCase().includes("hasn't started") || rStr.toLowerCase().includes("not started")) {
+        return `<span style="color:var(--text-muted); background:rgba(255,255,255,0.06); border:1px solid var(--border); padding:2px 8px; border-radius:12px; font-weight:bold; font-size:11px;">⏳ Event hasn't started</span>`;
+    }
     if (rStr.includes('🥇') || rStr.includes('1st') || rStr === '1') {
         return `<span style="color:#FFD700; background:rgba(255,215,0,0.15); border:1px solid rgba(255,215,0,0.3); padding:2px 8px; border-radius:12px; font-weight:bold;">🥇 1st</span>`;
     }
@@ -10562,24 +10565,28 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
           rank: formatRank(curSdIndex + 1),
           score: pObj.score.toLocaleString()
         };
+      } else {
+        curSdStat = {
+          rank: "Event hasn't started",
+          score: null
+        };
       }
 
-      // Ensure Showdown All-Time and Current are included if player has Showdown stats
+      // Ensure Showdown All-Time and Current are always included in Event Leaderboards Ranks
       const targetLowerName = chiefNameTarget.toLowerCase().trim();
       const sdStat = sdAllTimeMap[targetLowerName] || sdAllTimeMap[targetSanitized];
-      if (sdStat || curSdStat) {
-        if (!eventGroups['Showdown']) {
-          eventGroups['Showdown'] = {
-            baseTitle: 'Showdown',
-            emoji: '⚔️',
-            current: curSdStat ? { title: 'Current Showdown', rank: curSdStat.rank, score: curSdStat.score } : null,
-            allTime: sdStat ? { title: 'All-Time Showdown', rank: sdStat.rank, score: '' } : null,
-            others: []
-          };
-        } else {
-          if (curSdStat) eventGroups['Showdown'].current = { title: 'Current Showdown', rank: curSdStat.rank, score: curSdStat.score };
-          if (sdStat) eventGroups['Showdown'].allTime = { title: 'All-Time Showdown', rank: sdStat.rank, score: '' };
-        }
+      
+      if (!eventGroups['Showdown']) {
+        eventGroups['Showdown'] = {
+          baseTitle: 'Showdown',
+          emoji: '⚔️',
+          current: { title: 'Current Showdown', rank: curSdStat.rank, score: curSdStat.score },
+          allTime: sdStat ? { title: 'All-Time Showdown', rank: sdStat.rank, score: '' } : null,
+          others: []
+        };
+      } else {
+        eventGroups['Showdown'].current = { title: 'Current Showdown', rank: curSdStat.rank, score: curSdStat.score };
+        if (sdStat) eventGroups['Showdown'].allTime = { title: 'All-Time Showdown', rank: sdStat.rank, score: '' };
       }
 
       const groupedEventList = Object.values(eventGroups);
