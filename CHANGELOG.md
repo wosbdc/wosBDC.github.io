@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.57.5] - 2026-08-09
+### Fixed
+- **🕵️‍♂️ Fix Chief's Menu / Player Lookup Resilience**: Fixed an issue where the Chief's Player Lookup page crashed with "No data found" when Firebase `activity_live` returned non-array object structures or empty records. Added defensive `.catch()` wrappers to all async data fetches, implemented automatic matrix normalization and fallback roster auto-generation, and added fallback player profile card generation so any Chief can be searched and rendered cleanly without errors.
+
 ## [1.57.4] - 2026-08-09
 ### Removed
 - **📋 Removed Quick Paste Scores**: Removed the `📋 Quick Paste Scores` button from the Showdown Data Entry header toolbar as requested.

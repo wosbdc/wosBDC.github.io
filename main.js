@@ -2596,15 +2596,15 @@ window.getLivePlayerEventRow = async (chiefName, pRow, headers) => {
 
       
 
-      const [data, rosterRawData, lbRawData, sdHistoryRawData, sdLiveSnap] = await Promise.all([
-              window.fetchActivityData(),
-              window.fetchRoster(),
-              window.fetchLeaderboardsData(),
-              fetchSheet("Showdown History"),
-              get(ref(db, 'showdown_live'))
-            ]);
+      const [rawActivityData, rosterRawData, lbRawData, sdHistoryRawData, sdLiveSnap] = await Promise.all([
+        window.fetchActivityData().catch(() => []),
+        window.fetchRoster().catch(() => ({})),
+        window.fetchLeaderboardsData().catch(() => null),
+        fetchSheet("Showdown History").catch(() => []),
+        get(ref(db, 'showdown_live')).catch(() => null)
+      ]);
       
-      const sdLiveData = sdLiveSnap && sdLiveSnap.exists() ? sdLiveSnap.val() || {} : {};
+      const sdLiveData = (sdLiveSnap && sdLiveSnap.exists()) ? (sdLiveSnap.val() || {}) : {};
   
       let currentDay = 0;
       Object.values(sdLiveData).forEach(p => {
@@ -2616,6 +2616,38 @@ window.getLivePlayerEventRow = async (chiefName, pRow, headers) => {
          else if ((p.d2||0) > 0 && currentDay < 2) currentDay = 2;
          else if ((p.d1||0) > 0 && currentDay < 1) currentDay = 1;
       });
+
+      const lookupDefaultHeaders = ["Chief Name", "ShowDown missed days", "Alliance Championship ", "Mercenary Prestige", "Polar Terrors", "Voter"];
+      let data = [];
+
+      if (Array.isArray(rawActivityData) && rawActivityData.length > 0) {
+        data = rawActivityData;
+      } else if (rawActivityData && typeof rawActivityData === 'object') {
+        data = [lookupDefaultHeaders];
+        Object.values(rawActivityData).forEach(rec => {
+          if (rec && typeof rec === 'object' && rec.name) {
+            data.push([rec.name, 0, rec.championship || false, rec.mercenary || false, rec.polarTerrors || false, false]);
+          }
+        });
+      }
+
+      if (!Array.isArray(data) || data.length < 2) {
+        data = [lookupDefaultHeaders];
+        const knownNames = new Set();
+        if (rosterRawData && typeof rosterRawData === 'object') {
+          Object.values(rosterRawData).forEach(p => { if (p && p.name) knownNames.add(p.name.toString().trim()); });
+        }
+        if (typeof idToNameMap === 'object') {
+          Object.values(idToNameMap).forEach(n => { if (n) knownNames.add(n.toString().trim()); });
+        }
+        if (sdLiveData && typeof sdLiveData === 'object') {
+          Object.keys(sdLiveData).forEach(n => { if (n) knownNames.add(n.toString().trim()); });
+        }
+        Array.from(knownNames).sort((a, b) => a.localeCompare(b)).forEach(n => {
+          data.push([n, 0, false, false, false, false]);
+        });
+      }
+
       if (data && data.length > 1) {
           for (let r = 1; r < data.length; r++) {
              let pName = data[r][0];
@@ -2632,8 +2664,8 @@ window.getLivePlayerEventRow = async (chiefName, pRow, headers) => {
           }
       }
           
-          let usersSnap = null;
-          try { usersSnap = await get(ref(db, 'users')); } catch(e) { console.warn("Could not fetch users:", e); }
+      let usersSnap = null;
+      try { usersSnap = await get(ref(db, 'users')); } catch(e) { console.warn("Could not fetch users:", e); }
       
       // Parse Maps
       const rosterMap = rosterRawData || {};
@@ -2755,8 +2787,8 @@ window.getLivePlayerEventRow = async (chiefName, pRow, headers) => {
       if (p.name.toLowerCase() === targetName.toLowerCase()) dynamicSD = { score: p.score, rank: index + 1 };
     });
     
-    const defaultHeaders = ["Chief Name", "ShowDown missed days", "Alliance Championship ", "Mercenary Prestige", "Polar Terrors", "Voter"];
-    const headers = (data && data[0] && Array.isArray(data[0])) ? data[0] : defaultHeaders;
+    const lookupCardDefaultHeaders = ["Chief Name", "ShowDown missed days", "Alliance Championship ", "Mercenary Prestige", "Polar Terrors", "Voter"];
+    const headers = (data && data[0] && Array.isArray(data[0])) ? data[0] : lookupCardDefaultHeaders;
     let showdownActive = false;
     let colIsUpcoming = {};
     let dataRows = Array.isArray(data) ? data : (data && typeof data === 'object' ? Object.values(data).filter(v => Array.isArray(v)) : []);
@@ -12269,20 +12301,17 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
   roster: async () => {
     renderLoading("Loading Player Lookup");
     try {
-
-      
-      
-      const [data, rosterRawData, lbRawData, sdHistoryRawData, sdLiveSnap, fbWinsSnap, fbDonSnap] = await Promise.all([
-            window.fetchActivityData(),
-            window.fetchRoster(),
-            window.fetchLeaderboardsData(),
+      const [rawActivityData, rosterRawData, lbRawData, sdHistoryRawData, sdLiveSnap, fbWinsSnap, fbDonSnap] = await Promise.all([
+            window.fetchActivityData().catch(() => []),
+            window.fetchRoster().catch(() => ({})),
+            window.fetchLeaderboardsData().catch(() => null),
             fetchSheet("Showdown History").catch(() => []),
-            get(ref(db, 'showdown_live')),
+            get(ref(db, 'showdown_live')).catch(() => null),
             get(ref(db, 'beartrap_wins')).catch(() => null),
             get(ref(db, 'beartrap_donations')).catch(() => null)
           ]);
       
-      const sdLiveData = sdLiveSnap.val() || {};
+      const sdLiveData = (sdLiveSnap && sdLiveSnap.exists()) ? (sdLiveSnap.val() || {}) : {};
       const fbWins = (fbWinsSnap && fbWinsSnap.exists()) ? fbWinsSnap.val() : {};
       const fbDonations = (fbDonSnap && fbDonSnap.exists()) ? fbDonSnap.val() : {};
 
@@ -12296,6 +12325,38 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
          else if ((p.d2||0) > 0 && currentDay < 2) currentDay = 2;
          else if ((p.d1||0) > 0 && currentDay < 1) currentDay = 1;
       });
+
+      const rosterDefaultHeaders = ["Chief Name", "ShowDown missed days", "Alliance Championship ", "Mercenary Prestige", "Polar Terrors", "Voter"];
+      let data = [];
+
+      if (Array.isArray(rawActivityData) && rawActivityData.length > 0) {
+        data = rawActivityData;
+      } else if (rawActivityData && typeof rawActivityData === 'object') {
+        data = [rosterDefaultHeaders];
+        Object.values(rawActivityData).forEach(rec => {
+          if (rec && typeof rec === 'object' && rec.name) {
+            data.push([rec.name, 0, rec.championship || false, rec.mercenary || false, rec.polarTerrors || false, false]);
+          }
+        });
+      }
+
+      if (!Array.isArray(data) || data.length < 2) {
+        data = [rosterDefaultHeaders];
+        const knownNames = new Set();
+        if (rosterRawData && typeof rosterRawData === 'object') {
+          Object.values(rosterRawData).forEach(p => { if (p && p.name) knownNames.add(p.name.toString().trim()); });
+        }
+        if (typeof idToNameMap === 'object') {
+          Object.values(idToNameMap).forEach(n => { if (n) knownNames.add(n.toString().trim()); });
+        }
+        if (sdLiveData && typeof sdLiveData === 'object') {
+          Object.keys(sdLiveData).forEach(n => { if (n) knownNames.add(n.toString().trim()); });
+        }
+        Array.from(knownNames).sort((a, b) => a.localeCompare(b)).forEach(n => {
+          data.push([n, 0, false, false, false, false]);
+        });
+      }
+
       if (data && data.length > 1) {
           for (let r = 1; r < data.length; r++) {
              let pName = data[r][0];
@@ -12312,10 +12373,8 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
           }
       }
         
-        let usersSnap = null;
-        try { usersSnap = await get(ref(db, 'users')); } catch(e) { console.warn("Could not fetch users:", e); }
-      
-      if (!data || data.length < 2) throw new Error("No data found.");
+      let usersSnap = null;
+      try { usersSnap = await get(ref(db, 'users')); } catch(e) { console.warn("Could not fetch users:", e); }
       
       const rosterMap = rosterRawData || {};
       await refreshIdToNameMap();
@@ -12552,21 +12611,19 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
         
         let p = players.find(row => row && row[0] && row[0].toString().trim().toLowerCase() === chiefName.toLowerCase().trim());
         if (!p) {
-            let matchedChief = null;
             if (typeof idToNameMap === 'object') {
                 for (const [gid, name] of Object.entries(idToNameMap)) {
                     if (name && name.toLowerCase().trim() === chiefName.toLowerCase().trim()) {
-                        matchedChief = name; break;
+                        p = [name, 0, false, false, false, false, false];
+                        break;
                     }
                 }
             }
-            if (matchedChief) {
-                chiefName = matchedChief;
-                p = [chiefName, 0, false, false, false, false, false];
-            }
         }
-        if (!p) return;
-        chiefName = p[0].toString().trim();
+        if (!p) {
+            p = [chiefName, 0, false, false, false, false, false];
+        }
+        chiefName = (p[0] || chiefName).toString().trim();
         
         window.currentRosterChiefName = chiefName;
         
