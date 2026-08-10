@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.57.7] - 2026-08-10
+### Fixed
+- **🐻 Combined Player Name & Game ID in Multi BT Donations Search**: Updated `bindCustomAutocomplete` and `beartrapRosterDatalist` in the Admin Multi-BT Donations panel. Combined Player Name and Game ID into a single unified search result per player (`Player Name` + `ID: 12345678` badge) instead of rendering duplicate separate uncombined entries.
+
 ## [1.57.6] - 2026-08-09
 ### Fixed & Improved
 - **🏆 Account Hub Showdown Status Badge**: Updated the **Account Hub $\rightarrow$ Event Ranking $\rightarrow$ All Event Leaderboards Ranks** view. If the current Showdown event score is zero, unranked, or if no live data has been submitted yet, it now displays `⏳ Event hasn't started` under **Current Showdown** instead of hiding the row or showing missing rank data.

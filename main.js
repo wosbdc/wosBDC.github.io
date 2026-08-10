@@ -4388,23 +4388,47 @@ window.bindCustomAutocomplete = (inputEl) => {
         const query = inputEl.value.toLowerCase().trim();
         if (!query) { dropdown.style.display = 'none'; return; }
         
-        let players = Object.values(idToNameMap);
-        const rosterData = window.liveData ? window.liveData["Chief's List"] : null;
-        if (rosterData && rosterData.length > 1) {
-            players = [];
-            for(let i=1; i<rosterData.length; i++) {
-                if (rosterData[i][0]) players.push(rosterData[i][0].toString().trim());
+        const playerEntries = [];
+        const seenNames = new Set();
+
+        if (typeof idToNameMap === 'object') {
+            for (const [gid, pName] of Object.entries(idToNameMap)) {
+                if (!pName) continue;
+                const cleanName = pName.toString().trim();
+                const lower = cleanName.toLowerCase();
+                if (!seenNames.has(lower)) {
+                    seenNames.add(lower);
+                    playerEntries.push({ name: cleanName, id: gid ? gid.toString().trim() : '' });
+                }
             }
         }
-        
-        const matches = [...new Set(players)].filter(p => p.toLowerCase().includes(query)).sort((a,b) => a.localeCompare(b)).slice(0, 50);
-        
+
+        const rosterData = window.liveData ? window.liveData["Chief's List"] : null;
+        if (rosterData && rosterData.length > 1) {
+            for (let i = 1; i < rosterData.length; i++) {
+                if (rosterData[i] && rosterData[i][0]) {
+                    const cleanName = rosterData[i][0].toString().trim();
+                    const lower = cleanName.toLowerCase();
+                    if (!seenNames.has(lower)) {
+                        seenNames.add(lower);
+                        let gid = (typeof nameToIdMap === 'object' && nameToIdMap[cleanName]) ? nameToIdMap[cleanName] : '';
+                        playerEntries.push({ name: cleanName, id: gid ? gid.toString().trim() : '' });
+                    }
+                }
+            }
+        }
+
+        const matches = playerEntries.filter(item => 
+            item.name.toLowerCase().includes(query) || (item.id && item.id.toLowerCase().includes(query))
+        ).sort((a, b) => a.name.localeCompare(b.name)).slice(0, 50);
+
         if (matches.length === 0) {
             dropdown.innerHTML = `<div style="padding:10px; color:var(--text-muted); text-align:center; font-size:13px;">No matches</div>`;
         } else {
-            dropdown.innerHTML = matches.map(p => `
-                <div class="ac-item" data-val="${window.escapeHTML(p)}" style="padding:10px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.05); color:var(--text-main); font-weight:bold; font-size:14px; transition:0.2s;">
-                    ${window.escapeHTML(p)}
+            dropdown.innerHTML = matches.map(item => `
+                <div class="ac-item" data-val="${window.escapeHTML(item.name)}" style="padding:10px 12px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.05); color:var(--text-main); font-weight:bold; font-size:14px; display:flex; justify-content:space-between; align-items:center; transition:0.2s;">
+                    <span>${window.escapeHTML(item.name)}</span>
+                    ${item.id ? `<span style="font-size:11px; color:var(--text-muted); font-weight:normal; background:rgba(255,255,255,0.06); padding:2px 6px; border-radius:4px;">ID: ${window.escapeHTML(item.id)}</span>` : ''}
                 </div>
             `).join('');
             
@@ -9479,9 +9503,15 @@ html += `</select>
     });
     
     let datalistHtml = '<datalist id="beartrapRosterDatalist" style="display:none;">';
+    const seenDatalistNames = new Set();
     for (const [id, name] of Object.entries(idToNameMap)) {
-        datalistHtml += '<option value="' + id + '">' + name + '</option>';
-        datalistHtml += '<option value="' + name + '">' + name + '</option>';
+        if (!name) continue;
+        const cleanName = name.toString().trim();
+        const lower = cleanName.toLowerCase();
+        if (!seenDatalistNames.has(lower)) {
+            seenDatalistNames.add(lower);
+            datalistHtml += `<option value="${escapeHTML(cleanName)}">${escapeHTML(cleanName)} (${id})</option>`;
+        }
     }
     datalistHtml += '</datalist>';
     
@@ -9760,9 +9790,10 @@ window.resetBearTrapEvent = async () => {
          try {
            const addAmt = Number(entry.amount) || 0;
            
-           let finalName = entry.name;
-           if (!isNaN(entry.name) && entry.name.length >= 7) {
-               if (idToNameMap[entry.name]) finalName = idToNameMap[entry.name];
+           let rawInput = entry.name.replace(/\s*\(\d+\)$/, '').trim();
+           let finalName = rawInput;
+           if (!isNaN(rawInput) && rawInput.length >= 7) {
+               if (idToNameMap[rawInput]) finalName = idToNameMap[rawInput];
            }
 
            const donKey = finalName.toLowerCase().replace(/[^a-z0-9]/g, '_');
