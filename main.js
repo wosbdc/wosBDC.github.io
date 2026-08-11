@@ -10428,16 +10428,16 @@ window.resetBearTrapEvent = async () => {
            <!-- Individual player detail editor view -->
         </div>
 
-        <!-- Directory Accounts List View -->
-        <div id="playerDirectoryContainer" style="border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--bg-main);">
-            <div style="padding:12px 16px; background:var(--card-bg); border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-weight:bold; font-size:14px; color:var(--text-main);">Master Accounts Directory</span>
-                <span id="dirCountLabel" style="font-size:12px; color:var(--text-muted);">${totalAccounts} Accounts Loaded</span>
-            </div>
-            <div id="playerDirectoryList" style="max-height:500px; overflow-y:auto; padding:8px 0;">
+        <!-- Directory Accounts List View (Collapsible for clean search UI) -->
+        <details id="playerDirectoryDetails" style="border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--bg-main); margin-top:10px;">
+            <summary style="padding:12px 16px; background:var(--card-bg); cursor:pointer; font-weight:bold; font-size:14px; color:var(--text-main); display:flex; justify-content:space-between; align-items:center; user-select:none;">
+                <span style="display:flex; align-items:center; gap:8px;">📋 Browse Full Accounts Directory <span id="dirCountLabel" style="font-size:12px; color:var(--text-muted); font-weight:normal;">(${totalAccounts} Accounts)</span></span>
+                <span style="font-size:12px; color:var(--accent);">▼ Expand Directory</span>
+            </summary>
+            <div id="playerDirectoryList" style="max-height:450px; overflow-y:auto; padding:8px 0; border-top:1px solid var(--border);">
                 <!-- Populated dynamically -->
             </div>
-        </div>
+        </details>
       </div>
     `;
 
