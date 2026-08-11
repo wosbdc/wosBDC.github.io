@@ -2832,7 +2832,7 @@ window.adminFetchAltFurnace = async (gid, spanId) => {
             const flEl = document.getElementById(spanId);
             if (flEl) {
                 let flHtml = window.getFurnaceIconHtml ? window.getFurnaceIconHtml(data.stove_lv) : data.stove_lv;
-                flEl.innerHTML = typeof flHtml === 'string' ? flHtml.replace('🔥 ', '').replace('Lv ', '') : flHtml;
+                flEl.innerHTML = flHtml;
             }
         }
     } catch(e) { console.error(e); }
@@ -10950,7 +10950,7 @@ window.resetBearTrapEvent = async () => {
                       <div style="display:flex; align-items:center; gap:12px;">
                           <svg style="width:24px; height:24px; color:#f97316; flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z" /></svg>
                           <div style="display:flex; flex-direction:column;">
-                              <span id="${flSpanId}" style="font-size:18px; font-weight:bold; color:#ffffff; line-height:1; display:flex; align-items:center;">${(() => { const raw = window.getFurnaceIconHtml(flVal); return raw.startsWith('<img') ? raw : (flVal === 'N/A' ? 'N/A' : flVal); })()}</span>
+                              <span id="${flSpanId}" style="font-size:18px; font-weight:bold; color:#ffffff; line-height:1; display:flex; align-items:center;">${window.getFurnaceIconHtml(flVal)}</span>
                               <span style="font-size:11px; color:#94a3b8; margin-top:4px; text-transform:uppercase; letter-spacing:0.5px;">Furnace Level</span>
                           </div>
                       </div>
@@ -16198,7 +16198,7 @@ window.generatePlayerProfileHtml = (chiefName, p, headers, colIsUpcoming, roster
             let timerIcon = `<svg class="w-6 h-6 text-cyan-400" style="width:24px; height:24px; color:#06b6d4;" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`;
             
             let flSpanId = `admin-alt-fl-${gid}`;
-            let flDisplay = window.getFurnaceIconHtml && flVal !== 'N/A' ? window.getFurnaceIconHtml(flVal).replace('🔥 ', '').replace('Lv ', '') : flVal;
+            let flDisplay = window.getFurnaceIconHtml ? window.getFurnaceIconHtml(flVal) : flVal;
             
             if (flVal === 'N/A') {
                 flDisplay += `<img src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" onload="if(window.adminFetchAltFurnace) window.adminFetchAltFurnace('${gid}', '${flSpanId}')" style="display:none;">`;

@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.58.2] - 2026-08-11
+### Fixed
+- **✨ Full SVG Badge Rendering Fix**: Removed legacy `.startsWith('<img')` and `.replace('🔥 ', '')` string overrides in `main.js` that suppressed the Fire Crystal vector star badge HTML rendering across Account Hub and Alt Cards.
+
 ## [1.58.1] - 2026-08-11
 ### Design Upgrade
 - **💎 Modern 3D Fire Crystal Star Badges**: Enhanced `window.getFurnaceIconHtml` with 3D metallic gem faceting, glass sheen overlays, inner crystal glint lines, and glowing outer aura rims matching the premium UI mockups.
