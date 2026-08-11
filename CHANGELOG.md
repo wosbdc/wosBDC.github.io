@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.57.10] - 2026-08-11
+### Fixed
+- **📅 Real-Time Google Sheets Schedule Sync**: Fixed discrepancy where `syncAllSheets` saved schedule data to `schedule_cache` while `views.schedule()` read `schedule_live`. Updated `syncAllSheets` and `window.refreshSchedule()` to force-fetch fresh Google Sheets schedule data (`WhiteOut Survival`), parse events/signups/rewards, and update `schedule_live` in Firebase instantly.
+
 ## [1.57.9] - 2026-08-11
 ### Fixed & Improved
 - **👑 Fixed Admin/Staff Badge Assignment**: Fixed boolean check in `isAdminUser` calculation where regular non-staff users were evaluating to `true` when `getAdminLevel()` returned `false`. Staff badges (`👑 R5 Staff` / `⭐ R4 Staff`) are now strictly restricted to verified staff members.

@@ -2208,9 +2208,13 @@ window.syncAllSheetsToFirebase = async () => {
 
         // 6. Sync Event Schedule Sheet
         try {
-            const schedData = await fetchSheet("WhiteOut Survival");
-            if (schedData) {
+            const schedData = await fetchSheet("WhiteOut Survival", true);
+            if (schedData && Array.isArray(schedData)) {
                 await set(ref(db, 'schedule_cache'), { data: schedData, lastSynced: Date.now() });
+                const parsedLive = window.parseSheetToScheduleLiveData(schedData);
+                if (parsedLive && parsedLive.events.length > 0) {
+                    await set(ref(db, 'schedule_live'), parsedLive);
+                }
                 stats.schedule = Array.isArray(schedData) ? schedData.length : 1;
             }
         } catch(e) {
@@ -13226,27 +13230,34 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
       const icon = document.getElementById('schRefreshIcon');
       if (icon) icon.style.animation = 'spin 1s linear infinite';
       
-      if (window.showToast) window.showToast('Refreshing schedule...', 'info', false);
+      if (window.showToast) window.showToast('Syncing latest schedule from Google Sheets...', 'info', false);
       
       delete window.liveData['schedule'];
       delete window.livePromises['schedule'];
-      if (window.liveListeners['schedule']) {
-          window.liveListeners['schedule']();
-          delete window.liveListeners['schedule'];
-      }
       delete window.liveData['WhiteOut Survival'];
       delete window.livePromises['WhiteOut Survival'];
       if (window.liveListeners && window.liveListeners['WhiteOut Survival']) {
         window.liveListeners['WhiteOut Survival']();
         delete window.liveListeners['WhiteOut Survival'];
       }
+
+      try {
+        const freshSheetData = await fetchSheet("WhiteOut Survival", true);
+        if (freshSheetData && Array.isArray(freshSheetData)) {
+            const freshLiveData = window.parseSheetToScheduleLiveData(freshSheetData);
+            if (freshLiveData && freshLiveData.events && freshLiveData.events.length > 0) {
+                await set(ref(db, 'schedule_live'), freshLiveData);
+            }
+        }
+      } catch(e) {
+        console.warn("Failed to force refresh Google Sheet schedule:", e);
+      }
+
       if (window._scheduleCountdownTimer) { clearInterval(window._scheduleCountdownTimer); window._scheduleCountdownTimer = null; }
       window._scheduleCountdowns = [];
 
-      setTimeout(async () => {
-        await views.schedule();
-        if (window.showToast) window.showToast('Schedule refreshed!', 'success');
-      }, 400);
+      await views.schedule();
+      if (window.showToast) window.showToast('✅ Schedule synced & updated!', 'success');
     };
 
     window.switchScheduleTab = (tab) => {
@@ -14005,6 +14016,59 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
       
     } catch(e) { renderError(e.message); }
   }
+};
+
+window.parseSheetToScheduleLiveData = (sheetData) => {
+  let events = [];
+  let signups = [], rewards = [], allWeek = [], holidays = [];
+
+  if (sheetData && Array.isArray(sheetData)) {
+    for (let i = 1; i < Math.min(34, sheetData.length); i++) {
+      const row = sheetData[i];
+      const eventName = row[5];
+      const dateRaw   = row[6];
+      const utcRaw    = row[7];
+      const pdtVal    = row[8];
+      if (!eventName || String(eventName).trim() === '') continue;
+      if (String(eventName).includes("Event's")) continue;
+      if (String(eventName).trim() === 'Rewards') break;
+
+      const isBearTrap = String(eventName).includes('Bear Trap') || String(eventName).includes('🪤') || String(eventName).includes('🐻');
+      const isJoe = String(eventName).includes('Crazy Joe') || String(eventName).includes('🔥');
+      const isCastle = String(eventName).includes('Castle') || String(eventName).includes('🏰');
+      const isBia = String(eventName).includes('Brothers') || String(eventName).includes('⚔️');
+      let emoji = isBearTrap ? '🪤' : (isJoe ? '🔥' : (isCastle ? '🏰' : (isBia ? '⚔️' : '✨')));
+
+      events.push({
+        id: 'ev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+        eventName: String(eventName).trim(),
+        dateStr: String(dateRaw || '').trim(),
+        utcStr: String(utcRaw || '').trim(),
+        pdtVal: String(pdtVal || '').trim(),
+        emoji: emoji
+      });
+    }
+
+    let headerRowIdx = -1;
+    for (let i = 0; i < sheetData.length; i++) {
+      const cell = String(sheetData[i][5] || '').trim().toLowerCase();
+      if (cell === 'rewards') { headerRowIdx = i; break; }
+    }
+    if (headerRowIdx !== -1) {
+      for (let i = headerRowIdx + 1; i < sheetData.length; i++) {
+        const r = sheetData[i][5], g = sheetData[i][6], h = sheetData[i][7], k = sheetData[i][8];
+        const anyVal = [r,g,h,k].some(v => v && String(v).trim() !== '');
+        if (!anyVal) break;
+        const skip = (v) => !v || String(v).trim() === '' || String(v).trim().toLowerCase() === 'no events';
+        if (!skip(r)) rewards.push(String(r).trim());
+        if (!skip(g)) signups.push(String(g).trim());
+        if (!skip(h)) allWeek.push(String(h).trim());
+        if (!skip(k)) holidays.push(String(k).trim());
+      }
+    }
+  }
+
+  return { events, signups, rewards, allWeek, holidays, lastUpdated: Date.now() };
 };
 
 window.fetchScheduleLiveData = async () => {
