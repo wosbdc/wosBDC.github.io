@@ -3102,6 +3102,7 @@ window.getLivePlayerEventRow = async (chiefName, pRow, headers) => {
 };
 
 window.searchPlayerFull = async (name) => {
+  if (!currentUser) return window.renderMembersOnlyGuard("Player Profile Cards");
   let targetName = name ? name.replace(/^✅\s*/, '').trim() : '';
   window.activeViewFunc = () => window.searchPlayerFull(name);
   
@@ -4238,6 +4239,23 @@ const renderLoading = (message) => {
 
 const renderError = (err) => {
   app.innerHTML = `<div class="card"><div class="loading" style="color:var(--danger)">❌ Error: ${err}</div></div>`;
+};
+
+window.renderMembersOnlyGuard = (viewName = "this page") => {
+  const appEl = document.getElementById('app');
+  if (!appEl) return;
+  appEl.innerHTML = `
+    <div class="card" style="max-width:550px; margin:40px auto; text-align:center; padding:40px 25px; animation:fadeIn 0.3s ease; border:1px solid rgba(255,255,255,0.1); background:rgba(15,23,42,0.7); backdrop-filter:blur(16px); border-radius:20px; box-shadow:0 20px 50px rgba(0,0,0,0.5);">
+       <div style="font-size:56px; margin-bottom:15px; filter:drop-shadow(0 0 10px rgba(6,182,212,0.4));">🔒</div>
+       <h2 style="color:#ffffff; margin-bottom:12px; font-size:22px; font-weight:700;">Members-Only Area</h2>
+       <p style="color:#94a3b8; font-size:14px; line-height:1.6; margin-bottom:28px;">
+          Access to <strong>${window.escapeHTML(viewName)}</strong> is restricted to signed-in WOS Alliance members. Please sign in or create an account to view alliance roster details and stats.
+       </p>
+       <div style="display:flex; gap:12px; justify-content:center; max-width:340px; margin:0 auto;">
+          <button onclick="window.openAuthModal('login')" style="flex:1; background:linear-gradient(135deg, #06b6d4, #3b82f6); color:#fff; border:none; padding:12px 20px; border-radius:10px; font-weight:bold; font-size:14px; cursor:pointer; box-shadow:0 4px 14px rgba(6,182,212,0.3); transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">Sign In</button>
+          <button onclick="window.openAuthModal('register')" style="flex:1; background:rgba(255,255,255,0.05); color:#ffffff; border:1px solid rgba(255,255,255,0.2); padding:12px 20px; border-radius:10px; font-weight:bold; font-size:14px; cursor:pointer; transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">Create Account</button>
+       </div>
+    </div>`;
 };
 
 window.liveData = {};
@@ -6872,6 +6890,7 @@ window.clearShowdownCaches = () => {
 
 const views = {
   staff: async () => {
+    if (!currentUser) return window.renderMembersOnlyGuard("Staff & Officers");
     let r5Html = '';
     let r4Html = '';
 
@@ -11819,6 +11838,7 @@ window.resetBearTrapEvent = async () => {
 
 
   leaderboards: async (filterString) => {
+    if (!currentUser) return window.renderMembersOnlyGuard("Alliance Leaderboards");
     renderLoading("Loading Leaderboards");
     try {
       const allBoards = await window.fetchLeaderboardsData();
@@ -12890,6 +12910,7 @@ window.resetBearTrapEvent = async () => {
     } catch(e) { renderError(e.message); }
   },
   roster: async () => {
+    if (!currentUser) return window.renderMembersOnlyGuard("Alliance Roster");
     renderLoading("Loading Player Lookup");
     try {
       const [rawActivityData, rosterRawData, lbRawData, sdHistoryRawData, sdLiveSnap, fbWinsSnap, fbDonSnap] = await Promise.all([

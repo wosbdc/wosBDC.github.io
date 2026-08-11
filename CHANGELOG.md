@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.57.45] - 2026-08-11
+### Security Update
+- **🔒 Members-Only Access Lockdown**: Enforced members-only authentication checks across alliance roster, staff, leaderboards, and player profile search views. Guest visitors are presented with a clean login/register prompt.
+
 ## [1.57.44] - 2026-08-11
 ### Audit & Security
 - **🛡️ Authenticated Push Auth Upgrade**: Replaced legacy auth parameter in admin push notification handler with secure token verification (`getAuthToken()`). Verified zero hardcoded credentials across codebase.
