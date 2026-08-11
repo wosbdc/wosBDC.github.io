@@ -28,19 +28,16 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
           
       - name: Install dependencies
-        run: npm install
-        env:
-          NODE_OPTIONS: "--use-system-ca"
+        run: npm ci
 
       - name: Audit event bindings
         run: node tools/check_window_bindings.cjs
         
       - name: Build
         run: npm run build
-        env:
-          NODE_OPTIONS: "--use-system-ca"
         
       - name: Setup Pages
         uses: actions/configure-pages@v5

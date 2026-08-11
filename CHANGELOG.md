@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.57.50] - 2026-08-11
+### Fixed
+- **⚙️ Cleaned GitHub Actions Workflow**: Removed experimental `NODE_OPTIONS` flags and switched to `npm ci` with GitHub Actions npm caching in `.github/workflows/deploy.yml` for clean, reliable deployment runs.
+
 ## [1.57.49] - 2026-08-11
 ### Fixed
 - **⚙️ GitHub Actions Node 20/24 CA Cert Fix**: Added `NODE_OPTIONS: "--use-system-ca"` and pinned `node-version: '20'` in `.github/workflows/deploy.yml` to resolve Node.js SSL/TLS root certificate validation issues during automated GitHub Pages builds.
