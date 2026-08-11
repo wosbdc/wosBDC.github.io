@@ -2240,6 +2240,28 @@ window.syncAllSheetsToFirebase = async () => {
     }
 };
 
+window.saveScheduleLiveToFirebase = async (scheduleObj) => {
+    if (!scheduleObj) return false;
+    try {
+        await set(ref(db, 'schedule_live'), scheduleObj);
+        return true;
+    } catch(sdkErr) {
+        console.warn("Direct SDK set for schedule_live failed, trying REST secret API fallback...", sdkErr);
+        try {
+            const restUrl = "https://wos-dashboard-38d4c-default-rtdb.firebaseio.com/schedule_live.json?auth=n5fTnxcK5J5ddNsT77AhZIoQGTogW3ROpk4k03Sv";
+            const res = await fetch(restUrl, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(scheduleObj)
+            });
+            return res.ok;
+        } catch(restErr) {
+            console.error("Firebase REST fallback for schedule_live failed:", restErr);
+            throw restErr;
+        }
+    }
+};
+
 window.syncScheduleDirectly = async () => {
     if (window.showToast) window.showToast('📡 Syncing Schedule tab from Google Sheets...', 'info', false);
     try {
@@ -2257,7 +2279,7 @@ window.syncScheduleDirectly = async () => {
         if (freshSheetData && Array.isArray(freshSheetData)) {
             const freshLiveData = window.parseSheetToScheduleLiveData(freshSheetData);
             if (freshLiveData && freshLiveData.events && freshLiveData.events.length > 0) {
-                await set(ref(db, 'schedule_live'), freshLiveData);
+                await window.saveScheduleLiveToFirebase(freshLiveData);
                 if (window.logAdminAction) {
                     window.logAdminAction("Schedule Force Synced to Site", `Synced ${freshLiveData.events.length} schedule events from Google Sheets formula data directly to website.`);
                 }
@@ -13327,7 +13349,7 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
         if (freshSheetData && Array.isArray(freshSheetData)) {
             const freshLiveData = window.parseSheetToScheduleLiveData(freshSheetData);
             if (freshLiveData && freshLiveData.events && freshLiveData.events.length > 0) {
-                await set(ref(db, 'schedule_live'), freshLiveData);
+                await window.saveScheduleLiveToFirebase(freshLiveData);
             }
         }
       } catch(e) {
@@ -14281,7 +14303,7 @@ window.saveScheduleToFirebase = async (scheduleObj) => {
     scheduleObj.lastUpdated = Date.now();
     scheduleObj.updatedBy = adminName;
 
-    await set(ref(db, 'schedule_live'), scheduleObj);
+    await window.saveScheduleLiveToFirebase(scheduleObj);
     if (window.logAdminAction) {
       window.logAdminAction("Schedule Live Updated", `Updated live schedule with ${scheduleObj.events ? scheduleObj.events.length : 0} timed events and category lists`, "All Players");
     }
