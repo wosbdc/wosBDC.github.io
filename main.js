@@ -13426,19 +13426,14 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
                const dateStr = String(ev.dateStr || '').trim();
                const utcStr = String(ev.utcStr || '').trim();
                const endUtcStr = String(ev.endUtcStr || '').trim();
-               let eventDate = null;
-               const mdMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})$/);
-               const isoMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
-               if (mdMatch) {
-                 eventDate = new Date(now.getFullYear(), parseInt(mdMatch[1]) - 1, parseInt(mdMatch[2]));
-               } else if (isoMatch) {
-                 eventDate = new Date(dateStr);
-               } else {
+               let eventDate = window.parseScheduleEventDate(dateStr);
+               if (!eventDate) {
                  return;
                }
 
+               const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
                const isToday = eventDate.toDateString() === todayStr;
-               const isFuture = eventDate > now && !isToday;
+               const isFuture = eventDate >= todayDate && !isToday;
 
                let utcDisplay = `${utcStr}${endUtcStr ? ' - ' + endUtcStr : ''} UTC`;
                let localTimeStr = '';

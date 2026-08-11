@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.57.19] - 2026-08-11
+### Fixed
+- **📅 Today's View Upcoming Events Date Loop**: Replaced remaining strict regex (`^M/D$`) in Today's View loop (`main.js`) with `window.parseScheduleEventDate`. Resolves issue where date ranges (e.g. `8/14 - 8/16`, `8/15 - 8/17`) stopped rendering past 8/13.
+
 ## [1.57.18] - 2026-08-11
 ### Fixed
 - **📅 Firebase Write Permissions Fallback for Schedule**: Added `window.saveScheduleLiveToFirebase` helper with an automatic fallback to the authenticated Firebase REST Secret API (`auth=FIREBASE_SECRET`). Resolves `PERMISSION_DENIED` errors when saving or syncing schedule data.
