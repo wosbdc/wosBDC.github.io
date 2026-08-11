@@ -47,7 +47,7 @@ window.fetchRoster = async () => {
 };
 
 
-const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbxPlNaLMDn4LX7ZpbOc8O2VzQr055fnynJnyDinedM7stFe_PMdZWkpf8BMTrysH4U/exec';
+const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbwIsaSsdVCJt6zXnNWhiI2ztswMsKbEsm9zt3N4Ii0onwnjyY4f6b2avjkC6SoNLJc/exec';
 const VERIFY_PROXY_URL = 'https://wos-vercel-proxy.vercel.app/api/verify'; // Dedicated proxy for Century Games ID verification (bypasses Google quota limits)
 
 // Get a fresh Firebase ID token for the current user (replaces hardcoded APP_SECRET)
@@ -2266,17 +2266,29 @@ window.syncScheduleDirectly = async () => {
     if (window.showToast) window.showToast('📡 Syncing Schedule tab from Google Sheets...', 'info', false);
     try {
         let freshSheetData = null;
-        for (const tabName of ["WhiteOut Survival", "Schedule data", "Schedule", "Events"]) {
-            try {
-                const adminToken = await window.getAuthToken();
-                const res = await fetch(`${API_BASE_URL}?api=getSheetData&sheetName=${encodeURIComponent(tabName)}&token=${encodeURIComponent(adminToken || '')}`);
-                const json = await res.json();
-                if (json && json.success && json.data && Array.isArray(json.data) && json.data.length > 1) {
-                    freshSheetData = json.data;
-                    break;
+        try {
+            const res = await fetch(`${API_BASE_URL}?api=getScheduleData`);
+            const json = await res.json();
+            if (json && json.success && json.data && Array.isArray(json.data) && json.data.length > 1) {
+                freshSheetData = json.data;
+            }
+        } catch (e) {
+            console.warn("Public getScheduleData endpoint failed, falling back to tab loop:", e);
+        }
+
+        if (!freshSheetData) {
+            for (const tabName of ["WhiteOut Survival", "Schedule data", "Schedule", "Events"]) {
+                try {
+                    const adminToken = await window.getAuthToken();
+                    const res = await fetch(`${API_BASE_URL}?api=getSheetData&sheetName=${encodeURIComponent(tabName)}&token=${encodeURIComponent(adminToken || '')}`);
+                    const json = await res.json();
+                    if (json && json.success && json.data && Array.isArray(json.data) && json.data.length > 1) {
+                        freshSheetData = json.data;
+                        break;
+                    }
+                } catch(e) {
+                    console.warn("Direct fetch failed for tab:", tabName, e);
                 }
-            } catch(e) {
-                console.warn("Direct fetch failed for tab:", tabName, e);
             }
         }
         if (freshSheetData && Array.isArray(freshSheetData)) {

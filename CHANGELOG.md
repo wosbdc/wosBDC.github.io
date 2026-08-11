@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [1.57.23] - 2026-08-11
+### Fixed
+- **📅 Public Schedule API Endpoint & Fuzzy Tab Matcher**: Created `getScheduleData` public Apps Script API endpoint with fuzzy tab matching (`"Schedule data"`, `"WhiteOut Survival"`, `"Schedule"`, `"Events"`). Resolves `⚠️ Could not find valid schedule events in Google Sheets` warning during direct sync.
+- **🚀 Web App Deployment v130**: Deployed Apps Script Web App version 130 and updated `API_BASE_URL` in `main.js`.
+
 ## [1.57.22] - 2026-08-11
 ### Fixed & Improved
 - **📅 Multi-Column Event Scanner**: Upgraded `parseSheetToScheduleLiveData` to scan candidate column groups across each row, ensuring timed events added across different columns in Google Sheets are fully ingested.
