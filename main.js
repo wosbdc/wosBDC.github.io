@@ -13223,6 +13223,39 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
   
 
   schedule: async () => {
+    window.parseScheduleEventDate = (dateStr) => {
+      if (!dateStr) return null;
+      const s = String(dateStr).trim();
+      
+      const mdMatch = s.match(/(\d{1,2})\/(\d{1,2})/);
+      if (mdMatch) {
+        const now = new Date();
+        return new Date(now.getFullYear(), parseInt(mdMatch[1]) - 1, parseInt(mdMatch[2]));
+      }
+      
+      const isoMatch = s.match(/(\d{4})-(\d{2})-(\d{2})/);
+      if (isoMatch) {
+        return new Date(parseInt(isoMatch[1]), parseInt(isoMatch[2]) - 1, parseInt(isoMatch[3]));
+      }
+
+      const daysMap = { sunday:0, sun:0, monday:1, mon:1, tuesday:2, tue:2, wednesday:3, wed:3, thursday:4, thu:4, friday:5, fri:5, saturday:6, sat:6 };
+      const lower = s.toLowerCase();
+      for (const [dayName, dayNum] of Object.entries(daysMap)) {
+        if (lower.includes(dayName)) {
+          const now = new Date();
+          const currentDay = now.getDay();
+          let diff = dayNum - currentDay;
+          if (diff < 0) diff += 7;
+          const target = new Date(now);
+          target.setDate(now.getDate() + diff);
+          target.setHours(0, 0, 0, 0);
+          return target;
+        }
+      }
+
+      return null;
+    };
+
     let currentTab = localStorage.getItem('scheduleView') || 'today';
     const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
 
@@ -13669,135 +13702,160 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
 
     
         } else {
-           const data = weeklyData;
+          // ── Calendar View ──
+          const now = new Date();
+          const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          let days = [];
 
-      
-      
-      if (!data || !Array.isArray(data) || data.length === 0) {
-  
-      contentDiv.innerHTML = `<div class="card"><div class="loading">⚠️ Schedule data is currently unavailable. Please try again later.</div></div>`;
-        return;
-      }
-      
-      // Find the row that contains the dates
-      let dateRowIdx = -1;
-      for (let r = 0; r < data.length; r++) {
-        let dateCells = data[r].filter(cell => typeof cell === 'string' && (cell.match(/^\d{4}-\d{2}-\d{2}T/) || cell.match(/\d{1,2}\/\d{1,2}/)));
-        if (dateCells.length >= 3) {
-          dateRowIdx = r;
-          break;
-        }
-      }
-      
-      if (dateRowIdx === -1) {
-        contentDiv.innerHTML = `<div class="card"><div class="loading">Could not find dates in schedule.</div></div>`;
-        return;
-      }
-      
-      // Map each date to its column index and calculate dateObj
-      const todayDate = new Date();
-      todayDate.setHours(0, 0, 0, 0);
-      
-      let days = [];
-      for (let c = 0; c < data[dateRowIdx].length; c++) {
-        let cell = data[dateRowIdx][c];
-        if (typeof cell === 'string') {
-          let formatted = '';
-          let dateObj = null;
-          if (cell.match(/^\d{4}-\d{2}-\d{2}T/)) {
-            let [year, month, day] = cell.split('T')[0].split('-');
-            dateObj = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-            formatted = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-          } else if (cell.match(/(\d{1,2})\/(\d{1,2})/)) {
-            let m = cell.match(/(\d{1,2})\/(\d{1,2})/);
-            dateObj = new Date(todayDate.getFullYear(), parseInt(m[1]) - 1, parseInt(m[2]));
-            formatted = cell.replace(/Today /ig, '').replace(/Tomorrow /ig, '').trim();
-          }
-          
-          if (formatted) {
-            days.push({ dateStr: formatted, dateObj: dateObj, colIdx: c, categories: {} });
-          }
-        }
-      }
+          if (liveSched && Array.isArray(liveSched.events) && liveSched.events.length > 0) {
+            for (let d = 0; d < 7; d++) {
+              const dayObj = new Date(todayDate);
+              dayObj.setDate(todayDate.getDate() + d);
+              const dayStr = dayObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+              const isToday = d === 0;
+              const categories = {};
 
-      // Filter out past days so the 1st box is always TODAY (or the earliest active/upcoming day)
-      let futureOrTodayDays = days.filter(d => !d.dateObj || d.dateObj >= todayDate);
-      if (futureOrTodayDays.length > 0) {
-        days = futureOrTodayDays;
-      }
-      
-      // Ensure 1st box is labeled with Today if date is today
-      if (days.length > 0) {
-        const firstDayObj = days[0].dateObj;
-        if (!firstDayObj || firstDayObj.toDateString() === todayDate.toDateString()) {
-          days[0].isToday = true;
-          if (!days[0].dateStr.toLowerCase().includes('today')) {
-            days[0].dateStr = `Today • ${days[0].dateStr}`;
-          }
-        }
-      }
-      
-      // Also extract clean live sign-ups from todayData sheet if present
-      let todaySignups = [];
-      if (todayData && Array.isArray(todayData)) {
-        let hIdx = -1;
-        for (let i = 0; i < todayData.length; i++) {
-          const cell = String(todayData[i][5] || '').trim().toLowerCase();
-          if (cell === 'rewards') { hIdx = i; break; }
-        }
-        if (hIdx !== -1) {
-          for (let i = hIdx + 1; i < todayData.length; i++) {
-            const val = todayData[i][6];
-            if (!val) break;
-            const str = String(val).trim();
-            if (str === '' || str.toLowerCase() === 'no events') break;
-            if (!isNaN(str) || str.toLowerCase() === 'current' || str.toLowerCase().includes('training') || str.toLowerCase().includes('buy gems') || str.toLowerCase().includes('money')) break;
-            todaySignups.push(str);
-          }
-        }
-      }
+              const matchingEvents = liveSched.events.filter(ev => {
+                const evDate = window.parseScheduleEventDate(ev.dateStr);
+                if (!evDate) return false;
+                return evDate.toDateString() === dayObj.toDateString();
+              });
 
-      // Extract events for each day, grouping by category
-      let currentCategory = "Events";
-      for (let r = dateRowIdx + 1; r < data.length; r++) {
-        if (data[r].every(cell => cell === "")) continue;
-        
-        // Detect category headers (any row with exactly 1 non-empty cell across columns)
-        let nonEmptyCells = data[r].filter(c => c !== undefined && c !== null && String(c).trim() !== "");
-        if (nonEmptyCells.length === 1) {
-          let catVal = String(nonEmptyCells[0]).trim();
-          if (catVal && !catVal.match(/\d{1,2}\/\d{1,2}/) && !catVal.match(/^\d{4}-\d{2}-\d{2}/)) {
-            currentCategory = catVal;
-            continue;
-          }
-        }
-        
-        days.forEach(day => {
-          let eventCell = data[r][day.colIdx];
-          if (eventCell && String(eventCell).trim() !== "") {
-            let text = String(eventCell).trim();
-            let isSignupItem = text.toLowerCase().includes('signup') || text.toLowerCase().includes('sign-up') || text.toLowerCase().includes('sign up') || text.toLowerCase().includes('registration');
-            let targetCategory = isSignupItem ? 'Sign-Ups' : currentCategory;
-            if (!day.categories[targetCategory]) day.categories[targetCategory] = [];
-            day.categories[targetCategory].push(text);
-          }
-        });
-      }
+              if (matchingEvents.length > 0) {
+                categories['Events'] = matchingEvents.map(ev => {
+                  let tStr = ev.utcStr ? ` (${ev.utcStr} UTC)` : '';
+                  return `${ev.emoji || '✨'} ${ev.eventName}${tStr}`;
+                });
+              }
 
-      // Merge today's active sign-ups onto today's card (or Day 0)
-      const now = new Date();
-      const todayStr = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-      days.forEach((day, idx) => {
-        const isTodayCard = (day.dateStr === todayStr) || (day.dateObj && day.dateObj.toDateString() === now.toDateString()) || (idx === 0);
-        if (isTodayCard && todaySignups.length > 0) {
-          if (!day.categories['Sign-Ups']) day.categories['Sign-Ups'] = [];
-          todaySignups.forEach(s => {
-            if (!day.categories['Sign-Ups'].includes(s)) {
-              day.categories['Sign-Ups'].unshift(s);
+              if (isToday) {
+                if (liveSched.rewards && liveSched.rewards.length > 0) categories['Rewards'] = liveSched.rewards;
+                if (liveSched.signups && liveSched.signups.length > 0) categories['Sign-Ups'] = liveSched.signups;
+                if (liveSched.allWeek && liveSched.allWeek.length > 0) categories['All Week'] = liveSched.allWeek;
+                if (liveSched.holidays && liveSched.holidays.length > 0) categories['Holidays'] = liveSched.holidays;
+              }
+
+              days.push({
+                dateStr: isToday ? `Today • ${dayStr}` : dayStr,
+                dateObj: dayObj,
+                isToday: isToday,
+                categories: categories
+              });
             }
-          });
-        }
-      });
+          } else {
+            const data = weeklyData;
+            if (!data || !Array.isArray(data) || data.length === 0) {
+              contentDiv.innerHTML = `<div class="card"><div class="loading">⚠️ Schedule data is currently unavailable. Please try again later.</div></div>`;
+              return;
+            }
+            
+            let dateRowIdx = -1;
+            for (let r = 0; r < data.length; r++) {
+              let dateCells = data[r].filter(cell => typeof cell === 'string' && (cell.match(/^\d{4}-\d{2}-\d{2}T/) || cell.match(/\d{1,2}\/\d{1,2}/)));
+              if (dateCells.length >= 3) {
+                dateRowIdx = r;
+                break;
+              }
+            }
+            
+            if (dateRowIdx === -1) {
+              contentDiv.innerHTML = `<div class="card"><div class="loading">Could not find dates in schedule.</div></div>`;
+              return;
+            }
+            
+            for (let c = 0; c < data[dateRowIdx].length; c++) {
+              let cell = data[dateRowIdx][c];
+              if (typeof cell === 'string') {
+                let formatted = '';
+                let dateObj = null;
+                if (cell.match(/^\d{4}-\d{2}-\d{2}T/)) {
+                  let [year, month, day] = cell.split('T')[0].split('-');
+                  dateObj = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                  formatted = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                } else if (cell.match(/(\d{1,2})\/(\d{1,2})/)) {
+                  let m = cell.match(/(\d{1,2})\/(\d{1,2})/);
+                  dateObj = new Date(todayDate.getFullYear(), parseInt(m[1]) - 1, parseInt(m[2]));
+                  formatted = cell.replace(/Today /ig, '').replace(/Tomorrow /ig, '').trim();
+                }
+                
+                if (formatted) {
+                  days.push({ dateStr: formatted, dateObj: dateObj, colIdx: c, categories: {} });
+                }
+              }
+            }
+
+            let futureOrTodayDays = days.filter(d => !d.dateObj || d.dateObj >= todayDate);
+            if (futureOrTodayDays.length > 0) {
+              days = futureOrTodayDays;
+            }
+            
+            if (days.length > 0) {
+              const firstDayObj = days[0].dateObj;
+              if (!firstDayObj || firstDayObj.toDateString() === todayDate.toDateString()) {
+                days[0].isToday = true;
+                if (!days[0].dateStr.toLowerCase().includes('today')) {
+                  days[0].dateStr = `Today • ${days[0].dateStr}`;
+                }
+              }
+            }
+            
+            let todaySignups = [];
+            if (todayData && Array.isArray(todayData)) {
+              let hIdx = -1;
+              for (let i = 0; i < todayData.length; i++) {
+                const cell = String(todayData[i][5] || '').trim().toLowerCase();
+                if (cell === 'rewards') { hIdx = i; break; }
+              }
+              if (hIdx !== -1) {
+                for (let i = hIdx + 1; i < todayData.length; i++) {
+                  const val = todayData[i][6];
+                  if (!val) break;
+                  const str = String(val).trim();
+                  if (str === '' || str.toLowerCase() === 'no events') break;
+                  if (!isNaN(str) || str.toLowerCase() === 'current' || str.toLowerCase().includes('training') || str.toLowerCase().includes('buy gems') || str.toLowerCase().includes('money')) break;
+                  todaySignups.push(str);
+                }
+              }
+            }
+
+            let currentCategory = "Events";
+            for (let r = dateRowIdx + 1; r < data.length; r++) {
+              if (data[r].every(cell => cell === "")) continue;
+              
+              let nonEmptyCells = data[r].filter(c => c !== undefined && c !== null && String(c).trim() !== "");
+              if (nonEmptyCells.length === 1) {
+                let catVal = String(nonEmptyCells[0]).trim();
+                if (catVal && !catVal.match(/\d{1,2}\/\d{1,2}/) && !catVal.match(/^\d{4}-\d{2}-\d{2}/)) {
+                  currentCategory = catVal;
+                  continue;
+                }
+              }
+              
+              days.forEach(day => {
+                let eventCell = data[r][day.colIdx];
+                if (eventCell && String(eventCell).trim() !== "") {
+                  let text = String(eventCell).trim();
+                  let isSignupItem = text.toLowerCase().includes('signup') || text.toLowerCase().includes('sign-up') || text.toLowerCase().includes('sign up') || text.toLowerCase().includes('registration');
+                  let targetCategory = isSignupItem ? 'Sign-Ups' : currentCategory;
+                  if (!day.categories[targetCategory]) day.categories[targetCategory] = [];
+                  day.categories[targetCategory].push(text);
+                }
+              });
+            }
+
+            const todayStr = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+            days.forEach((day, idx) => {
+              const isTodayCard = (day.dateStr === todayStr) || (day.dateObj && day.dateObj.toDateString() === now.toDateString()) || (idx === 0);
+              if (isTodayCard && todaySignups.length > 0) {
+                if (!day.categories['Sign-Ups']) day.categories['Sign-Ups'] = [];
+                todaySignups.forEach(s => {
+                  if (!day.categories['Sign-Ups'].includes(s)) {
+                    day.categories['Sign-Ups'].unshift(s);
+                  }
+                });
+              }
+            });
+          }
       
       // Render the timeline as Daily Cards
       let html = '';

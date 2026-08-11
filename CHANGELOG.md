@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [1.57.13] - 2026-08-11
+### Fixed
+- **📅 Calendar View Saturday Card & Upcoming Events Date Parser**:
+  - **Date Range Support**: Unanchored date matching regex (`/(\d{1,2})\/(\d{1,2})/`) in `window.parseScheduleEventDate` so date ranges like `8/14 - 8/16`, `8/15 - 8/17`, `8/13 - 8/15` and day names (`Saturday`, `Sat`) parse cleanly.
+  - **Coming Up This Week**: Fixed issue where upcoming events stopped at 8/13 by preventing range dates from being skipped.
+  - **Calendar View Saturday Card**: Added 7-day live schedule grid generator for Calendar View, ensuring Saturday events accurately populate the `Sat` card.
+
 ## [1.57.12] - 2026-08-11
 ### Fixed & Improved
 - **📅 Custom Schedule data Layout Parser (Columns I-O & Row 25-52)**: Updated `parseSheetToScheduleLiveData` in `main.js` to match the exact `Schedule data` layout structure:
