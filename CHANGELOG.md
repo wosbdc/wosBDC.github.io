@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [1.59.1] - 2026-08-11
+### New Feature
+- **🔥 Admin Furnace / Fire Crystal Level Editor**: Added `window.openAdminEditFurnaceModal` allowing admins to set any player's Furnace or Fire Crystal level (FC 1 – 10). Accessible by:
+  1. **Clicking the 3D Furnace Badge directly** on player profile cards and directory items (with a hover pencil indicator `✏️`).
+  2. **Dropdown Actions Menu**: Added a dedicated `🔥 Set Furnace Level` button in the `⚙️ Actions` dropdown menu on player profile cards.
+  3. **Player Database Editor**: Added a `🔥 Level` button to every player entry in the player directory list.
+- **⚡ Dual Syncing**: Updates save instantly across Firebase (`roster_live`, `users/{uid}`) and GAS backend API, refreshing the active view immediately.
+
 ## [1.59.0] - 2026-08-11
 ### True Transparent Badges (No Black Square Backgrounds)
 - **💎 True Alpha Transparent PNG Badges**: Converted all 10 Fire Crystal 3D badge assets from JPGs to true alpha-channel transparent PNGs (`/badges/fc1.png` – `/badges/fc10.png`).

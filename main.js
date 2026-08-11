@@ -1894,14 +1894,140 @@ window.adminLinkAltAccountPromptByChief = async (chiefName) => {
 
 window.adminManageAltsPrompt = async (uid) => {
     try {
-        const snap = await get(ref(db, `users/${uid}`));
-        if (!snap || !snap.exists()) return;
-        const u = snap.val();
+        const uSnap = await get(ref(db, `users/${uid}`));
+        const u = uSnap.val();
+        if (!u) return;
         const cName = idToNameMap[u.gameId] || u.name || "Chief";
         await window.adminLinkAltAccountPromptByChief(cName);
     } catch(e) {
         if (window.showToast) window.showToast(e.message, "error");
     }
+};
+
+window.openAdminEditFurnaceModal = async (chiefName, gameId = '', currentFurnace = '30') => {
+  if (!window.isAdminUser(currentUser)) return;
+
+  const oldModal = document.getElementById('adminEditFurnaceModalOverlay');
+  if (oldModal && oldModal.parentNode) oldModal.parentNode.removeChild(oldModal);
+
+  const modalOverlay = document.createElement('div');
+  modalOverlay.id = 'adminEditFurnaceModalOverlay';
+  modalOverlay.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.85); backdrop-filter:blur(10px); z-index:99999; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease;';
+
+  const furnaceSelectHtml = window.renderFurnaceSelectHtml('adminEditFurnaceSelect', currentFurnace, 'margin-top:6px;');
+
+  modalOverlay.innerHTML = `
+    <div class="card" style="width:90%; max-width:480px; background:linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.9)); border:1px solid rgba(56,189,248,0.3); padding:28px; border-radius:20px; box-shadow:0 20px 50px rgba(0,0,0,0.6); text-align:left; animation:zoomIn 0.2s forwards;">
+       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:12px;">
+          <h3 style="margin:0; color:#fff; font-size:20px; font-weight:800; display:flex; align-items:center; gap:8px;">🔥 Set Furnace Level</h3>
+          <button id="closeAdminEditFurnaceBtn" style="background:none; border:none; color:var(--text-muted); font-size:28px; cursor:pointer; line-height:1;">&times;</button>
+       </div>
+
+       <div style="font-size:14px; color:#94a3b8; margin-bottom:16px;">
+          Editing Chief: <strong style="color:#fff;">${window.escapeHTML(chiefName)}</strong> ${gameId ? `<span style="font-family:monospace; font-size:12px; color:var(--accent);">(${gameId})</span>` : ''}
+       </div>
+
+       <div style="display:flex; flex-direction:column; gap:18px;">
+          <div>
+             <label style="display:block; font-size:12px; font-weight:bold; color:#cbd5e1; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">🔥 Select New Furnace / FC Level</label>
+             <div style="display:flex; gap:14px; align-items:center;">
+                <div style="flex:1;">
+                   ${furnaceSelectHtml}
+                </div>
+                <div id="adminEditBadgePreview" style="min-width:88px; height:88px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:14px; display:flex; align-items:center; justify-content:center; flex-shrink:0; padding:4px;">
+                   ${window.getFurnaceIconHtml(currentFurnace, 76)}
+                </div>
+             </div>
+          </div>
+
+          <div style="display:flex; gap:12px; margin-top:10px;">
+             <button id="cancelAdminEditFurnaceBtn" style="flex:1; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.2); color:#cbd5e1; padding:12px; border-radius:10px; cursor:pointer; font-weight:bold; font-size:15px;">Cancel</button>
+             <button id="saveAdminEditFurnaceBtn" style="flex:1; background:linear-gradient(135deg, #06b6d4, #3b82f6); color:#fff; border:none; padding:12px; border-radius:10px; cursor:pointer; font-weight:bold; font-size:15px; box-shadow:0 4px 15px rgba(6,182,212,0.4);">Save Level</button>
+          </div>
+       </div>
+    </div>`;
+
+  document.body.appendChild(modalOverlay);
+
+  const fSelect = document.getElementById('adminEditFurnaceSelect');
+  const bPreview = document.getElementById('adminEditBadgePreview');
+  if (fSelect && bPreview) {
+     fSelect.addEventListener('change', (e) => {
+        bPreview.innerHTML = window.getFurnaceIconHtml(e.target.value, 76);
+     });
+  }
+
+  const closeModal = () => { if (document.body.contains(modalOverlay)) document.body.removeChild(modalOverlay); };
+  const closeBtn = document.getElementById('closeAdminEditFurnaceBtn');
+  const cancelBtn = document.getElementById('cancelAdminEditFurnaceBtn');
+  if (closeBtn) closeBtn.onclick = closeModal;
+  if (cancelBtn) cancelBtn.onclick = closeModal;
+
+  const saveBtn = document.getElementById('saveAdminEditFurnaceBtn');
+  if (saveBtn) {
+     saveBtn.onclick = async () => {
+        const newFurnace = document.getElementById('adminEditFurnaceSelect').value || currentFurnace;
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+
+        try {
+           const cleanGid = (gameId || window.nameToIdMap[chiefName] || '').toString().trim();
+
+           // 1. Update roster_live in Firebase
+           if (cleanGid) {
+              await update(ref(db, `roster_live/${cleanGid}`), {
+                 furnaceLevel: newFurnace,
+                 stove_lv: newFurnace,
+                 updatedAt: Date.now()
+              }).catch(() => null);
+           }
+
+           // 2. Update users/ node if user account exists
+           try {
+              const usersSnap = await get(ref(db, 'users'));
+              if (usersSnap.exists()) {
+                 const allUsers = usersSnap.val();
+                 for (const [uid, uData] of Object.entries(allUsers)) {
+                    const uGid = (uData.gameId || '').toString().trim();
+                    const uName = (uData.name || uData.chiefName || '').toString().trim();
+                    if ((cleanGid && uGid === cleanGid) || (chiefName && uName.toLowerCase() === chiefName.toLowerCase())) {
+                       await update(ref(db, `users/${uid}`), {
+                          stove_lv: newFurnace,
+                          furnaceLevel: newFurnace,
+                          updatedAt: new Date().toISOString()
+                       });
+                       if (currentUser && currentUser.uid === uid) {
+                          currentUser.stove_lv = newFurnace;
+                          currentUser.furnaceLevel = newFurnace;
+                       }
+                       break;
+                    }
+                 }
+              }
+           } catch(e) { console.warn("Failed to update user node:", e); }
+
+           // 3. Ping GAS API
+           try {
+              const token = await getAuthToken();
+              const url = `${API_BASE_URL}?api=registerNewPlayer&gameId=${encodeURIComponent(cleanGid)}&name=${encodeURIComponent(chiefName)}&stove_lv=${encodeURIComponent(newFurnace)}&token=${encodeURIComponent(token)}`;
+              fetch(url, { mode: 'no-cors' }).catch(e => null);
+           } catch(e) {}
+
+           if (window.logAdminAction) {
+              window.logAdminAction("Set Furnace Level", `Updated ${chiefName} to ${newFurnace}`, chiefName);
+           }
+
+           if (window.showToast) window.showToast(`Updated ${chiefName}'s Furnace Level to ${newFurnace}!`, "success");
+           closeModal();
+           if (typeof window.activeViewFunc === 'function') window.activeViewFunc();
+        } catch(err) {
+           console.error("Save furnace error:", err);
+           if (window.showToast) window.showToast("Error updating level.", "error");
+           saveBtn.disabled = false;
+           saveBtn.textContent = 'Save Level';
+        }
+     };
+  }
 };
 
 
@@ -10737,9 +10863,12 @@ window.resetBearTrapEvent = async () => {
                         <span class="${/^[ -~]*$/.test(p.name) ? 'notranslate' : ''}">${window.escapeHTML(p.name)}</span>
                     </div>
                     ${p.gameId ? `<span style="font-family:monospace; font-size:12px; background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px; color:var(--text-muted);">ID: ${p.gameId}</span>` : ''}
-                    ${p.furnaceLevel ? `<span style="font-size:11px; background:rgba(99,102,241,0.1); color:#818cf8; padding:2px 6px; border-radius:4px;">FC ${p.furnaceLevel}</span>` : ''}
+                    <span onclick="event.stopPropagation(); window.openAdminEditFurnaceModal('${window.escapeHTML(p.name)}', '${p.gameId || ''}', '${p.furnaceLevel || ''}')" style="cursor:pointer; display:inline-flex; align-items:center;" title="Click to Edit Furnace Level">${window.getFurnaceIconHtml(p.furnaceLevel || '30', 36)}</span>
                 </div>
-                <button onclick="event.stopPropagation(); window.searchPlayerFull('${window.escapeHTML(p.name)}')" style="background:var(--accent); color:#fff; border:none; padding:5px 12px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">✏️ Edit</button>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <button onclick="event.stopPropagation(); window.openAdminEditFurnaceModal('${window.escapeHTML(p.name)}', '${p.gameId || ''}', '${p.furnaceLevel || ''}')" style="background:rgba(249,115,22,0.15); border:1px solid rgba(249,115,22,0.4); color:#f97316; padding:5px 12px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">🔥 Level</button>
+                    <button onclick="event.stopPropagation(); window.searchPlayerFull('${window.escapeHTML(p.name)}')" style="background:var(--accent); color:#fff; border:none; padding:5px 12px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">✏️ Edit</button>
+                </div>
             </div>
         `).join('');
     };
@@ -15890,7 +16019,13 @@ window.generatePlayerProfileHtml = (chiefName, p, headers, colIsUpcoming, roster
   if (rosterInfo) {
     let flVal = rosterInfo.furnaceLevel;
     if (flVal && flVal.toString().trim() !== "") {
-       headerBadgesHtml += '<span style="background:color-mix(in srgb, var(--accent) 15%, transparent); border:1px solid var(--accent); color:var(--text-main); padding:4px 10px; border-radius:12px; font-size:14px; font-weight:bold; display:inline-flex; align-items:center;">' + window.getFurnaceIconHtml(flVal, 48) + '</span>';
+       const isAdm = window.isAdminUser && window.isAdminUser(currentUser);
+       const pGid = (rosterInfo && rosterInfo.gameId) ? rosterInfo.gameId : (p ? p.gameId : '');
+       if (isAdm) {
+          headerBadgesHtml += `<span onclick="window.openAdminEditFurnaceModal('${chiefName.replace(/'/g, "\\'")}', '${pGid}', '${flVal}')" style="background:color-mix(in srgb, var(--accent) 15%, transparent); border:1px solid var(--accent); color:var(--text-main); padding:4px 10px; border-radius:12px; font-size:14px; font-weight:bold; display:inline-flex; align-items:center; cursor:pointer; position:relative;" title="Click to Edit Furnace Level (Admin)" onmouseover="this.style.borderColor='#f97316'" onmouseout="this.style.borderColor='var(--accent)'">${window.getFurnaceIconHtml(flVal, 48)} <span style="font-size:10px; color:#f97316; margin-left:4px;" title="Admin Edit">✏️</span></span>`;
+       } else {
+          headerBadgesHtml += `<span style="background:color-mix(in srgb, var(--accent) 15%, transparent); border:1px solid var(--accent); color:var(--text-main); padding:4px 10px; border-radius:12px; font-size:14px; font-weight:bold; display:inline-flex; align-items:center;">${window.getFurnaceIconHtml(flVal, 48)}</span>`;
+       }
     }
     let gcVal = rosterInfo.giftCodes;
     if (gcVal === true || gcVal === 'TRUE' || (typeof gcVal === 'string' && gcVal.toLowerCase().trim() === 'true')) {
@@ -16120,6 +16255,7 @@ window.generatePlayerProfileHtml = (chiefName, p, headers, colIsUpcoming, roster
           <button onclick="window.promptLogBearTrapWinner('${chiefName.replace(/'/g, "\\'")}')" style="background:rgba(255,215,0,0.1); color:#FFD700; border:1px solid rgba(255,215,0,0.3); padding:8px 12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:12px; text-align:left; transition: 0.2s;" onmouseover="this.style.background='rgba(255,215,0,0.2)'" onmouseout="this.style.background='rgba(255,215,0,0.1)'">👑 Crown Winner</button>
           <button onclick="window.promptBearTrap('${chiefName.replace(/'/g, "\\'")}')" style="background:rgba(46,204,113,0.1); color:var(--success); border:1px solid rgba(46,204,113,0.3); padding:8px 12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:12px; text-align:left; transition: 0.2s;" onmouseover="this.style.background='rgba(46,204,113,0.2)'" onmouseout="this.style.background='rgba(46,204,113,0.1)'">🥩 + Bear Donation</button>
           <button onclick="window.promptEditEvents('${chiefName.replace(/'/g, "\\'")}')" style="background:rgba(52,152,219,0.1); color:var(--accent); border:1px solid rgba(52,152,219,0.3); padding:8px 12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:12px; text-align:left; transition: 0.2s;" onmouseover="this.style.background='rgba(52,152,219,0.2)'" onmouseout="this.style.background='rgba(52,152,219,0.1)'">📝 Edit Events</button>
+          <button onclick="window.openAdminEditFurnaceModal('${chiefName.replace(/'/g, "\\'")}', '${playerGameId || ''}', '${rosterInfo && rosterInfo.furnaceLevel ? rosterInfo.furnaceLevel : '30'}')" style="background:rgba(249,115,22,0.12); color:#f97316; border:1px solid rgba(249,115,22,0.35); padding:8px 12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:12px; text-align:left; transition: 0.2s;" onmouseover="this.style.background='rgba(249,115,22,0.22)'" onmouseout="this.style.background='rgba(249,115,22,0.12)'">🔥 Set Furnace Level</button>
           <button onclick="window.adminLinkAltAccountPromptByChief('${chiefName.replace(/'/g, "\\'")}')" style="background:rgba(52,152,219,0.1); color:var(--accent); border:1px solid rgba(52,152,219,0.3); padding:8px 12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:12px; text-align:left; transition: 0.2s; margin-top:5px;" onmouseover="this.style.background='rgba(52,152,219,0.2)'" onmouseout="this.style.background='rgba(52,152,219,0.1)'">➕ Add Alt Account</button>
           <div style="height:1px; background:var(--border); margin:5px 0;"></div>
           ${playerGameId ? `<button onclick="window.adminSpoofPlayer('${playerGameId}')" style="background:rgba(236,72,153,0.1); color:var(--danger); border:1px solid rgba(236,72,153,0.3); padding:8px 12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:12px; text-align:left; transition: 0.2s;" onmouseover="this.style.background='rgba(236,72,153,0.2)'" onmouseout="this.style.background='rgba(236,72,153,0.1)'">🎭 Spoof Session</button>` : ''}
