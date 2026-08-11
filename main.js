@@ -13402,6 +13402,9 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
                 <button onclick="window.openScheduleEditorModal()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:7px 14px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12px; display:flex; align-items:center; gap:5px; box-shadow:0 2px 8px rgba(16,185,129,0.3);">
                   ⚙️ Manage Schedule
                 </button>
+                <button onclick="window.syncScheduleDirectly()" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#fff; border:none; padding:7px 14px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12px; display:flex; align-items:center; gap:5px; box-shadow:0 2px 8px rgba(59,130,246,0.3);" title="Sync schedule from Google Sheets formulas live to the website">
+                  ⚡ Sync to Site
+                </button>
               ` : ''}
               <a href="https://www.google.com/url?q=https://calendar.google.com/calendar/u/0?cid%3DMWZkOTI2ZjdkNzVhYWIyMzM1N2IxYjE1NTc5MzE2YTRlYTRjMDI3NjA4NDlmOTRkZjg2MDRlZWY5YjdiMTI1OEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&sa=D&source=editors&ust=1783297509664500&usg=AOvVaw3Nu5FI78rflI7vvCvxd5MS" target="_blank" style="background:#0ea5e9; color:#fff; padding:7px 14px; border-radius:8px; text-decoration:none; font-weight:bold; font-size:12px;">➕ Google Cal</a>
               <button onclick="window.refreshSchedule()" style="background:var(--bg-main); color:var(--text-main); border:1px solid var(--border); padding:7px 14px; border-radius:8px; cursor:pointer; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:5px;">
@@ -14183,69 +14186,62 @@ window.parseSheetToScheduleLiveData = (sheetData) => {
 
     // 1. Timed Events (Row 4 to wherever the Category list starts)
     const maxRow = headerRowIdx !== -1 ? headerRowIdx : Math.min(sheetData.length, 30);
+    const candidateCols = [8, 5, 2, 0, 11, 14, 17, 20, 23, 26];
+
     for (let i = 0; i < maxRow; i++) {
       const row = sheetData[i];
       if (!row || !Array.isArray(row)) continue;
-      
-      let eventName = '';
-      let dateRaw = '';
-      let utcRaw = '';
-      let pdtVal = '';
-      let endDateRaw = '';
-      let endUtcRaw = '';
-      let endPdtVal = '';
 
-      // Check Column I (8) first, then Column F (5), Column C (2), Column A (0)
-      if (row[8] && String(row[8]).trim() !== '') {
-        eventName  = row[8];
-        dateRaw    = row[9] || '';
-        utcRaw     = row[10] || '';
-        pdtVal     = row[11] || '';
-        endDateRaw = row[12] || '';
-        endUtcRaw  = row[13] || '';
-        endPdtVal  = row[14] || '';
-      } else if (row[5] && String(row[5]).trim() !== '' && !String(row[5]).includes("Event's")) {
-        eventName = row[5];
-        dateRaw   = row[6] || '';
-        utcRaw    = row[7] || '';
-        pdtVal    = row[8] || '';
-      } else if (row[2] && String(row[2]).trim() !== '' && i > 0 && String(row[2]).toLowerCase().trim() !== 'title' && String(row[2]).toLowerCase().trim() !== 'event') {
-        eventName = row[2];
-        dateRaw   = row[3] || row[1] || '';
-        utcRaw    = row[5] || row[4] || '';
-        pdtVal    = row[6] || '';
-      } else if (row[0] && String(row[0]).trim() !== '' && i > 0 && String(row[0]).toLowerCase().trim() !== 'title' && String(row[0]).toLowerCase().trim() !== 'event') {
-        eventName = row[0];
-        dateRaw   = row[1] || '';
-        utcRaw    = row[2] || '';
-        pdtVal    = row[3] || '';
+      for (const colIdx of candidateCols) {
+        if (colIdx >= row.length) continue;
+        const cellVal = row[colIdx];
+        if (!cellVal || String(cellVal).trim() === '') continue;
+
+        const cleanName = String(cellVal).trim();
+        const lowerName = cleanName.toLowerCase();
+
+        // Skip header titles, dates, or category labels
+        if (lowerName === 'events' || lowerName === 'title' || lowerName === 'event' || cleanName.includes("Event's") || lowerName.includes('start date')) continue;
+        if (lowerName.includes('rewards') || lowerName.includes('signups') || lowerName.includes('sign-up') || lowerName.includes('all week')) continue;
+        if (/^\d{1,2}\/\d{1,2}/.test(cleanName) || /^\d{4}-\d{2}/.test(cleanName) || /^\d{1,2}:\d{2}/.test(cleanName)) continue;
+
+        let dateRaw = '', utcRaw = '', pdtVal = '', endDateRaw = '', endUtcRaw = '', endPdtVal = '';
+
+        if (colIdx === 8) {
+          dateRaw    = row[9] || '';
+          utcRaw     = row[10] || '';
+          pdtVal     = row[11] || '';
+          endDateRaw = row[12] || '';
+          endUtcRaw  = row[13] || '';
+          endPdtVal  = row[14] || '';
+        } else {
+          dateRaw   = row[colIdx + 1] || '';
+          utcRaw    = row[colIdx + 2] || '';
+          pdtVal    = row[colIdx + 3] || '';
+        }
+
+        const isBearTrap = cleanName.includes('Bear Trap') || cleanName.includes('🪤') || cleanName.includes('🐻');
+        const isJoe = cleanName.includes('Crazy Joe') || cleanName.includes('🔥');
+        const isCastle = cleanName.includes('Castle') || cleanName.includes('🏰');
+        const isBia = cleanName.includes('Brothers') || cleanName.includes('⚔️');
+        let emoji = isBearTrap ? '🪤' : (isJoe ? '🔥' : (isCastle ? '🏰' : (isBia ? '⚔️' : '✨')));
+
+        // Avoid adding duplicate entries from overlapping column checks
+        const alreadyAdded = events.some(e => e.eventName === cleanName && e.dateStr === String(dateRaw || '').trim() && e.utcStr === String(utcRaw || '').trim());
+        if (!alreadyAdded) {
+          events.push({
+            id: 'ev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+            eventName: cleanName,
+            dateStr: String(dateRaw || '').trim(),
+            utcStr: String(utcRaw || '').trim(),
+            pdtVal: String(pdtVal || '').trim(),
+            endDateStr: String(endDateRaw || '').trim(),
+            endUtcStr: String(endUtcRaw || '').trim(),
+            endPdtVal: String(endPdtVal || '').trim(),
+            emoji: emoji
+          });
+        }
       }
-
-      if (!eventName || String(eventName).trim() === '') continue;
-      const cleanName = String(eventName).trim();
-      const lowerName = cleanName.toLowerCase();
-
-      // Skip header rows & section titles
-      if (lowerName === 'events' || lowerName === 'title' || lowerName === 'event' || cleanName.includes("Event's") || lowerName.includes('start date')) continue;
-      if (lowerName.includes('rewards') || lowerName.includes('signups') || lowerName.includes('all week')) break;
-
-      const isBearTrap = cleanName.includes('Bear Trap') || cleanName.includes('🪤') || cleanName.includes('🐻');
-      const isJoe = cleanName.includes('Crazy Joe') || cleanName.includes('🔥');
-      const isCastle = cleanName.includes('Castle') || cleanName.includes('🏰');
-      const isBia = cleanName.includes('Brothers') || cleanName.includes('⚔️');
-      let emoji = isBearTrap ? '🪤' : (isJoe ? '🔥' : (isCastle ? '🏰' : (isBia ? '⚔️' : '✨')));
-
-      events.push({
-        id: 'ev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-        eventName: cleanName,
-        dateStr: String(dateRaw || '').trim(),
-        utcStr: String(utcRaw || '').trim(),
-        pdtVal: String(pdtVal || '').trim(),
-        endDateStr: String(endDateRaw || '').trim(),
-        endUtcStr: String(endUtcRaw || '').trim(),
-        endPdtVal: String(endPdtVal || '').trim(),
-        emoji: emoji
-      });
     }
 
     // 2. Parse Rewards & Category Lists

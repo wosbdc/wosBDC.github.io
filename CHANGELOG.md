@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [1.57.22] - 2026-08-11
+### Fixed & Improved
+- **📅 Multi-Column Event Scanner**: Upgraded `parseSheetToScheduleLiveData` to scan candidate column groups across each row, ensuring timed events added across different columns in Google Sheets are fully ingested.
+- **📅 Chronological Upcoming Event Sorting**: Added chronological sorting by `eventDate` for all future events under `Coming up:` in Today's View.
+- **⚡ Schedule Header Sync Button**: Added a dedicated `⚡ Sync to Site` button directly to the Schedule page header for managers and R5 leaders.
+
 ## [1.57.21] - 2026-08-11
 ### Fixed
 - **📅 Force Sync Bypass for Formula-Driven Schedules**: Fixed the "Sync Schedule ➔ Site" admin button so it explicitly fetches live data from the Google Apps Script API endpoint (`?api=getSheetData`). Previously, it was loading from the Firebase `sheets/Schedule` node which could be stale if Google Sheets formula updates failed to trigger the `onEdit` automation.
