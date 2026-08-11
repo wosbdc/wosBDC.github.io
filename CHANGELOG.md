@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [1.58.7] - 2026-08-11
+### Bug Fix
+- **🔧 Profile Editor Changes Now Persist to Account Hub**: Fixed a critical bug where the Edit Profile modal saved data to Firebase (`users/{uid}`) but the Account Hub page only read from the roster, ignoring the saved values. Added Firebase RTDB hydration to `views.account()` so furnace level, joined date, time active, and bio all reflect saved edits immediately — both after saving and on page refresh.
+- **💬 Bio / Status Tagline Display**: Added a new "💬 Status" row to the Account Hub profile card that displays the user's custom bio/tagline when set.
+
 ## [1.58.6] - 2026-08-11
 ### Design Perfection
 - **💎 3D Gem Faceted Star Badges Restored**: Restored the 3D gem-faceted crystal star SVG renderer with glowing halo aura rings, glass sheen overlays, and inner facet glint lines matching your favorite showcase layout, while setting **FC 9** to high-contrast Electric Kryptonite Lime Green (`#84cc16`).

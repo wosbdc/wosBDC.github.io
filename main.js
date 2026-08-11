@@ -11011,6 +11011,18 @@ window.resetBearTrapEvent = async () => {
           adminBadgeHtml = `<span style="font-size:12px; color:${lvlColor}; background:${lvlBg}; border:1px solid ${lvlBg}; padding:2px 6px; border-radius:6px; font-weight:bold; display:inline-flex; align-items:center; gap:4px; margin-left:10px; vertical-align:middle; text-shadow:none;">👑 ${accLevel}</span>`;
       }
       
+      // Hydrate currentUser with saved Firebase profile data (stove_lv, joinedDate, bio)
+      try {
+          const profileSnap = await get(ref(db, `users/${currentUser.uid}`));
+          if (profileSnap.exists()) {
+              const profileData = profileSnap.val();
+              if (profileData.stove_lv) currentUser.stove_lv = profileData.stove_lv;
+              if (profileData.furnaceLevel) currentUser.furnaceLevel = profileData.furnaceLevel;
+              if (profileData.joinedDate) currentUser.joinedDate = profileData.joinedDate;
+              if (profileData.bio) currentUser.bio = profileData.bio;
+          }
+      } catch(e) { console.warn('Failed to load user profile:', e); }
+
       let isMainEnrolled = false;
       let joinedDateStr = "N/A";
       let timeActiveStr = "N/A";
@@ -11057,6 +11069,24 @@ window.resetBearTrapEvent = async () => {
               if (p.timeActive) timeActiveStr = window.formatTimeActiveShort(p.timeActive.toString());
           }
       }
+
+      // Override with Firebase user profile data (from Edit Profile modal saves)
+      if (currentUser.stove_lv && currentUser.stove_lv !== '30') {
+          furnaceLevelStr = currentUser.stove_lv.toString();
+      } else if (currentUser.furnaceLevel && currentUser.furnaceLevel !== '30') {
+          furnaceLevelStr = currentUser.furnaceLevel.toString();
+      }
+      if (currentUser.joinedDate) {
+          try {
+              const d = new Date(currentUser.joinedDate);
+              if (!isNaN(d.getTime())) {
+                  joinedDateStr = d.toLocaleDateString();
+                  timeActiveStr = window.formatTimeActiveShort(currentUser.joinedDate);
+              }
+          } catch(e) {}
+      }
+
+      const userBio = currentUser.bio || '';
 
       const avatarSrc = window.getAvatarUrl(currentUser.gameId, currentChiefName);
       const isEnrolled = isMainEnrolled || enrolledGameIds.has(currentUser.gameId.toString());
@@ -11168,6 +11198,10 @@ window.resetBearTrapEvent = async () => {
                       <span style="color:var(--text-muted); font-size:13px; text-transform:uppercase; letter-spacing:1px;">Time Active</span>
                       <span style="color:var(--text-main); font-weight:bold; font-size:13px; text-align:right;">${timeActiveStr}</span>
                   </div>
+                  ${userBio ? `<div class="id-card-stat-row" style="background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; margin-top:2px;">
+                      <div style="color:var(--text-muted); font-size:11px; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">💬 Status</div>
+                      <div style="color:#e2e8f0; font-size:14px; font-style:italic; line-height:1.4;">"${window.escapeHTML(userBio)}"</div>
+                  </div>` : ''}
               </div>
               
               <div class="id-card-bot-status" style="text-align:center; margin-top:15px; padding-top:15px; border-top:1px solid rgba(255,255,255,0.05); position:relative; z-index:2;">
