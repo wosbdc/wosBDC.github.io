@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.57.42] - 2026-08-11
+### Cleaned
+- **🧹 Cache Refresh**: Pushed clean changelog build to trigger immediate CDN cache invalidate.
+
 ## [1.57.41] - 2026-08-11
 ### Security Update
 - **🔒 Full Repository Security Sweep**: Sanitized documentation files (`ARCHITECTURE.md` and `CHANGELOG.md`) to remove raw deployment URLs and IDs. Enforced high-level changelog summaries.
@@ -13,8 +17,8 @@
 - **🧹 Memory Cache Purge & Non-existent Search Guard**: Purged `window.liveData` and `window.sheetCache` upon player deletion so in-memory Google Sheets caches cannot re-populate deleted players. Updated `searchPlayerFull` to display a clear `⚠️ Player Not Found` message when searching non-existent / deleted players instead of generating dummy blank cards.
 
 ## [1.57.38] - 2026-08-11
-### Deployed
-- **⚙️ Google Apps Script Web App Deployment**: Deployed Google Apps Script backend code and updated backend API bindings in main.js.
+### Updated
+- **⚙️ Backend Update**: Updated backend API communication bindings.
 
 ## [1.57.37] - 2026-08-11
 ### Redeployed
