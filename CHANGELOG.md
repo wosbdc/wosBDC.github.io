@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.57.21] - 2026-08-11
+### Fixed
+- **📅 Force Sync Bypass for Formula-Driven Schedules**: Fixed the "Sync Schedule ➔ Site" admin button so it explicitly fetches live data from the Google Apps Script API endpoint (`?api=getSheetData`). Previously, it was loading from the Firebase `sheets/Schedule` node which could be stale if Google Sheets formula updates failed to trigger the `onEdit` automation.
+
 ## [1.57.20] - 2026-08-11
 ### Fixed
 - **📅 Removed Hardcoded Row Limit for Google Sheets Schedule Parser**: Fixed root cause for "missing events past 8/13" by dynamically setting `maxRow` based on where the category list (`rewards` / `signups` / `all week`) begins in the `Schedule` Google Sheet. Previously, the parser strictly halted at Row 24 (index 23), completely ignoring any newly added timed events that pushed the list further down.

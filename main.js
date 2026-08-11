@@ -2268,13 +2268,16 @@ window.syncScheduleDirectly = async () => {
         let freshSheetData = null;
         for (const tabName of ["WhiteOut Survival", "Schedule data", "Schedule", "Events"]) {
             try {
-                delete window.liveData[tabName];
-                delete window.livePromises[tabName];
-                freshSheetData = await fetchSheet(tabName, true);
-                if (freshSheetData && Array.isArray(freshSheetData) && freshSheetData.length > 1) {
+                const adminToken = await window.getAuthToken();
+                const res = await fetch(`${API_BASE_URL}?api=getSheetData&sheetName=${encodeURIComponent(tabName)}&token=${encodeURIComponent(adminToken || '')}`);
+                const json = await res.json();
+                if (json && json.success && json.data && Array.isArray(json.data) && json.data.length > 1) {
+                    freshSheetData = json.data;
                     break;
                 }
-            } catch(e) {}
+            } catch(e) {
+                console.warn("Direct fetch failed for tab:", tabName, e);
+            }
         }
         if (freshSheetData && Array.isArray(freshSheetData)) {
             const freshLiveData = window.parseSheetToScheduleLiveData(freshSheetData);
