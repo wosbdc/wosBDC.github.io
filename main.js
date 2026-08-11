@@ -14033,7 +14033,9 @@ window.parseSheetToScheduleLiveData = (sheetData) => {
   let signups = [], rewards = [], allWeek = [], holidays = [];
 
   if (sheetData && Array.isArray(sheetData)) {
-    for (let i = 0; i < sheetData.length; i++) {
+    // 1. Timed Events (Row 4 to Row 23)
+    const maxRow = Math.min(sheetData.length, 55);
+    for (let i = 0; i < maxRow; i++) {
       const row = sheetData[i];
       if (!row || !Array.isArray(row)) continue;
       
@@ -14041,28 +14043,47 @@ window.parseSheetToScheduleLiveData = (sheetData) => {
       let dateRaw = '';
       let utcRaw = '';
       let pdtVal = '';
+      let endDateRaw = '';
+      let endUtcRaw = '';
+      let endPdtVal = '';
 
-      if (row[5] && String(row[5]).trim() !== '' && !String(row[5]).includes("Event's")) {
+      // Check Column I (8) first, then Column F (5), Column C (2), Column A (0)
+      if (row[8] && String(row[8]).trim() !== '') {
+        eventName  = row[8];
+        dateRaw    = row[9] || '';
+        utcRaw     = row[10] || '';
+        pdtVal     = row[11] || '';
+        endDateRaw = row[12] || '';
+        endUtcRaw  = row[13] || '';
+        endPdtVal  = row[14] || '';
+      } else if (row[5] && String(row[5]).trim() !== '' && !String(row[5]).includes("Event's")) {
         eventName = row[5];
-        dateRaw = row[6] || '';
-        utcRaw = row[7] || '';
-        pdtVal = row[8] || '';
+        dateRaw   = row[6] || '';
+        utcRaw    = row[7] || '';
+        pdtVal    = row[8] || '';
       } else if (row[2] && String(row[2]).trim() !== '' && i > 0 && String(row[2]).toLowerCase().trim() !== 'title' && String(row[2]).toLowerCase().trim() !== 'event') {
         eventName = row[2];
-        dateRaw = row[3] || row[1] || '';
-        utcRaw = row[5] || row[4] || '';
-        pdtVal = row[6] || '';
+        dateRaw   = row[3] || row[1] || '';
+        utcRaw    = row[5] || row[4] || '';
+        pdtVal    = row[6] || '';
       } else if (row[0] && String(row[0]).trim() !== '' && i > 0 && String(row[0]).toLowerCase().trim() !== 'title' && String(row[0]).toLowerCase().trim() !== 'event') {
         eventName = row[0];
-        dateRaw = row[1] || '';
-        utcRaw = row[2] || '';
-        pdtVal = row[3] || '';
+        dateRaw   = row[1] || '';
+        utcRaw    = row[2] || '';
+        pdtVal    = row[3] || '';
       }
 
       if (!eventName || String(eventName).trim() === '') continue;
       const cleanName = String(eventName).trim();
-      if (cleanName.toLowerCase() === 'rewards') break;
-      if (cleanName.toLowerCase() === 'title' || cleanName.toLowerCase() === 'event' || cleanName.includes("Event's")) continue;
+      const lowerName = cleanName.toLowerCase();
+
+      // Skip header rows
+      if (lowerName === 'events' || lowerName === 'title' || lowerName === 'event' || cleanName.includes("Event's")) continue;
+
+      // Stop timed events if we hit rewards header after row 20
+      if (i >= 20 && (lowerName.includes('rewards') || lowerName.includes('signups') || lowerName.includes('all week'))) {
+        break;
+      }
 
       const isBearTrap = cleanName.includes('Bear Trap') || cleanName.includes('🪤') || cleanName.includes('🐻');
       const isJoe = cleanName.includes('Crazy Joe') || cleanName.includes('🔥');
@@ -14076,21 +14097,45 @@ window.parseSheetToScheduleLiveData = (sheetData) => {
         dateStr: String(dateRaw || '').trim(),
         utcStr: String(utcRaw || '').trim(),
         pdtVal: String(pdtVal || '').trim(),
+        endDateStr: String(endDateRaw || '').trim(),
+        endUtcStr: String(endUtcRaw || '').trim(),
+        endPdtVal: String(endPdtVal || '').trim(),
         emoji: emoji
       });
     }
 
-    let headerRowIdx = -1;
-    for (let i = 0; i < sheetData.length; i++) {
-      const cell = String(sheetData[i][5] || sheetData[i][0] || '').trim().toLowerCase();
-      if (cell === 'rewards') { headerRowIdx = i; break; }
+    // 2. Parse Rewards & Category Lists (Row 25 to Row 52)
+    let startCategoryRow = -1;
+    for (let i = 20; i < sheetData.length; i++) {
+      if (!sheetData[i]) continue;
+      const cellI = String(sheetData[i][8] || '').trim().toLowerCase();
+      const cellF = String(sheetData[i][5] || '').trim().toLowerCase();
+      const cellA = String(sheetData[i][0] || '').trim().toLowerCase();
+      if (cellI.includes('reward') || cellF.includes('reward') || cellA.includes('reward')) {
+        startCategoryRow = i + 1;
+        break;
+      }
     }
-    if (headerRowIdx !== -1) {
-      for (let i = headerRowIdx + 1; i < sheetData.length; i++) {
-        const r = sheetData[i][5] || sheetData[i][0], g = sheetData[i][6] || sheetData[i][1], h = sheetData[i][7] || sheetData[i][2], k = sheetData[i][8] || sheetData[i][3];
+
+    if (startCategoryRow === -1 && sheetData.length > 24) {
+      startCategoryRow = 24; // Fallback to Row 25
+    }
+
+    if (startCategoryRow !== -1) {
+      const endCategoryRow = Math.min(sheetData.length, 55);
+      for (let i = startCategoryRow; i < endCategoryRow; i++) {
+        const row = sheetData[i];
+        if (!row || !Array.isArray(row)) continue;
+
+        let r = row[8] || row[5] || row[0];
+        let g = row[9] || row[6] || row[1];
+        let h = row[10] || row[7] || row[2];
+        let k = row[11] || row[8] || row[3];
+
         const anyVal = [r,g,h,k].some(v => v && String(v).trim() !== '');
-        if (!anyVal) break;
-        const skip = (v) => !v || String(v).trim() === '' || String(v).trim().toLowerCase() === 'no events';
+        if (!anyVal) continue;
+
+        const skip = (v) => !v || String(v).trim() === '' || String(v).trim().toLowerCase() === 'no events' || String(v).trim().toLowerCase().includes('rewards');
         if (!skip(r)) rewards.push(String(r).trim());
         if (!skip(g)) signups.push(String(g).trim());
         if (!skip(h)) allWeek.push(String(h).trim());

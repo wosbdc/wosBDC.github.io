@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [1.57.12] - 2026-08-11
+### Fixed & Improved
+- **📅 Custom Schedule data Layout Parser (Columns I-O & Row 25-52)**: Updated `parseSheetToScheduleLiveData` in `main.js` to match the exact `Schedule data` layout structure:
+  - **Timed Events**: Row 4 to Row 23 (Headers in Row 3: `I3` Events, `J3` Start Date, `K3` Start UTC, `L3` Start PDT, `M3` End Date, `N3` End UTC, `O3` End PDT).
+  - **Event Rewards & Categories**: Headers starting in Row 25 (`I25:O52`).
+
 ## [1.57.11] - 2026-08-11
 ### Improved
 - **📅 Multi-Tab Schedule Sheet Auto-Detection**: Upgraded `window.refreshSchedule` and `parseSheetToScheduleLiveData` to automatically scan all common Google Sheet tab names (`WhiteOut Survival`, `Schedule data`, `Schedule`, `Events`) and dynamically detect column layouts (Columns F/G/H/I, C/D/E/F, or A/B/C/D), ensuring any schedule changes in Google Sheets update the website immediately.
