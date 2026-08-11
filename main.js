@@ -1973,7 +1973,17 @@ window.openAdminEditFurnaceModal = async (chiefName, gameId = '', currentFurnace
         try {
            const cleanGid = (gameId || window.nameToIdMap[chiefName] || '').toString().trim();
 
-           // 1. Update roster_live in Firebase
+           // 0. Invalidate in-memory roster cache so next fetchRoster gets fresh data
+           window.rosterCache = null;
+
+           // 1. Update roster_live in Firebase by Chief Name & Game ID
+           if (chiefName) {
+              await update(ref(db, `roster_live/${chiefName}`), {
+                 furnaceLevel: newFurnace,
+                 stove_lv: newFurnace,
+                 updatedAt: Date.now()
+              }).catch(() => null);
+           }
            if (cleanGid) {
               await update(ref(db, `roster_live/${cleanGid}`), {
                  furnaceLevel: newFurnace,
@@ -3256,8 +3266,31 @@ window.getLivePlayerEventRow = async (chiefName, pRow, headers) => {
         }
     }
     
+    let resolvedRosterInfo = (rosterMap && (rosterMap[targetName] || rosterMap[Object.keys(rosterMap).find(k => k.toLowerCase() === targetName.toLowerCase())])) || {};
+    if (!resolvedRosterInfo.furnaceLevel && viewedGameId && rosterMap && rosterMap[viewedGameId]) {
+       resolvedRosterInfo = { ...resolvedRosterInfo, ...rosterMap[viewedGameId] };
+    }
+    if (usersSnap && usersSnap.exists()) {
+       const users = usersSnap.val();
+       for (const u of Object.values(users)) {
+          const uGid = u.gameId ? u.gameId.toString().trim() : '';
+          const uName = (u.name || u.chiefName || '').toString().trim();
+          if ((viewedGameId && uGid === viewedGameId.toString().trim()) || (targetName && uName.toLowerCase() === targetName.toLowerCase())) {
+             if (u.stove_lv || u.furnaceLevel) {
+                resolvedRosterInfo = {
+                   ...resolvedRosterInfo,
+                   furnaceLevel: u.stove_lv || u.furnaceLevel,
+                   stove_lv: u.stove_lv || u.furnaceLevel
+                };
+             }
+             break;
+          }
+       }
+    }
+    if (!resolvedRosterInfo.gameId && viewedGameId) resolvedRosterInfo.gameId = viewedGameId;
+    
     const isUnlocked = await window.isGoogleAuthVerified();
-    let html = window.generatePlayerProfileHtml(targetName, pRow, headers, colIsUpcoming, rosterMap[targetName], null, dynamicSD, showdownActive, bearBoth, bear1, bear2, bearAllTime, btDonationsAllTime, btDonationsCurrent, otherLbs, isUnlocked, altAccounts, true);
+    let html = window.generatePlayerProfileHtml(targetName, pRow, headers, colIsUpcoming, resolvedRosterInfo, null, dynamicSD, showdownActive, bearBoth, bear1, bear2, bearAllTime, btDonationsAllTime, btDonationsCurrent, otherLbs, isUnlocked, altAccounts, true);
     
     resDiv.innerHTML = html;
     
@@ -10709,7 +10742,7 @@ window.resetBearTrapEvent = async () => {
                 isRegistered: true,
                 email: u.email || "",
                 role: u.role || "Member",
-                furnaceLevel: u.furnaceLevel || ""
+                furnaceLevel: u.stove_lv || u.furnaceLevel || ""
             });
         }
     });
@@ -10728,7 +10761,7 @@ window.resetBearTrapEvent = async () => {
                     isRegistered: existing.isRegistered || (gid ? registeredGameIds.has(gid) : false),
                     email: existing.email || "",
                     role: p.rank || existing.role || "Member",
-                    furnaceLevel: p.furnaceLevel || existing.furnaceLevel || ""
+                    furnaceLevel: existing.furnaceLevel || p.furnaceLevel || p.stove_lv || ""
                 });
             }
         });

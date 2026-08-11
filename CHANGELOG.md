@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [1.59.2] - 2026-08-11
+### Sync Fix
+- **🔄 Live Synchronization Across All Views**:
+  1. **Player Profile Cards (`searchPlayerFull`)**: Resolved `resolvedRosterInfo` to read live `stove_lv` and `furnaceLevel` updates from Firebase `users/` and `roster_live`, ensuring newly set levels reflect immediately on player lookup cards.
+  2. **Player Database Editor (`playerEditor`)**: Fixed data aggregation order so recent Firebase furnace level updates override static sheet data.
+  3. **In-Memory Cache Invalidation**: `openAdminEditFurnaceModal` now clears `window.rosterCache` on save and writes updates by both Chief Name and Game ID keys in Firebase.
+
 ## [1.59.1] - 2026-08-11
 ### New Feature
 - **🔥 Admin Furnace / Fire Crystal Level Editor**: Added `window.openAdminEditFurnaceModal` allowing admins to set any player's Furnace or Fire Crystal level (FC 1 – 10). Accessible by:
