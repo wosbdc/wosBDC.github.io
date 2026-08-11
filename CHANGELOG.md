@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.58.4] - 2026-08-11
+### Color Palette Upgrade
+- **🎨 High-Contrast Distinct Color Spectrum**: Updated FC 9 to high-contrast Electric Neon Lime Kryptonite (`#84cc16`), creating 10 instantly recognizable, non-overlapping color categories for FC 1 through FC 10.
+
 ## [1.58.3] - 2026-08-11
 ### Design Upgrade
 - **🎨 10 Unique Color Profiles for FC 1 – FC 10**: Assigned 10 completely unique, distinct crystal colors for each Fire Crystal level (Crimson Red, Vibrant Orange, Sunburst Yellow, Emerald Green, Aquamarine Cyan, Sapphire Blue, Amethyst Purple, Magenta Rose, Fuchsia Plasma, and Celestial Gold Diamond).

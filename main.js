@@ -89,16 +89,16 @@ window.getFurnaceIconHtml = (level, size = 36) => {
   if (fcNum && fcNum >= 1 && fcNum <= 10) {
      // 10 Unique Color Profiles (1 unique distinct color per Fire Crystal level)
      const fcColorMap = {
-       1:  { c1: '#ef4444', c2: '#dc2626', cLight: '#fca5a5', glow: 'rgba(239,68,68,0.7)' },   // FC 1: Crimson Red
-       2:  { c1: '#f97316', c2: '#ea580c', cLight: '#ffedd5', glow: 'rgba(249,115,22,0.7)' },  // FC 2: Vibrant Orange
-       3:  { c1: '#eab308', c2: '#ca8a04', cLight: '#fef08a', glow: 'rgba(234,179,8,0.7)' },   // FC 3: Sunburst Yellow
-       4:  { c1: '#10b981', c2: '#059669', cLight: '#a7f3d0', glow: 'rgba(16,185,129,0.7)' },  // FC 4: Emerald Green
-       5:  { c1: '#06b6d4', c2: '#0891b2', cLight: '#cffaff', glow: 'rgba(6,182,212,0.7)' },   // FC 5: Aquamarine Cyan
-       6:  { c1: '#3b82f6', c2: '#2563eb', cLight: '#bfdbfe', glow: 'rgba(59,130,246,0.7)' },  // FC 6: Sapphire Blue
-       7:  { c1: '#8b5cf6', c2: '#7c3aed', cLight: '#ddd6fe', glow: 'rgba(139,92,246,0.7)' },  // FC 7: Amethyst Purple
-       8:  { c1: '#ec4899', c2: '#db2777', cLight: '#fbcfe8', glow: 'rgba(236,72,153,0.7)' },  // FC 8: Magenta Rose
-       9:  { c1: '#d946ef', c2: '#c026d3', cLight: '#fae8ff', glow: 'rgba(217,70,239,0.7)' },  // FC 9: Fuchsia Plasma
-       10: { c1: '#ffd700', c2: '#f59e0b', cLight: '#fffbeb', glow: 'rgba(255,215,0,0.85)' }   // FC 10: Celestial Gold Diamond
+       1:  { c1: '#ef4444', c2: '#dc2626', cLight: '#fca5a5', glow: 'rgba(239,68,68,0.7)' },   // FC 1: Crimson Ruby Red
+       2:  { c1: '#f97316', c2: '#ea580c', cLight: '#ffedd5', glow: 'rgba(249,115,22,0.7)' },  // FC 2: Vibrant Flame Orange
+       3:  { c1: '#eab308', c2: '#ca8a04', cLight: '#fef08a', glow: 'rgba(234,179,8,0.7)' },   // FC 3: Sunburst Gold Yellow
+       4:  { c1: '#10b981', c2: '#059669', cLight: '#a7f3d0', glow: 'rgba(16,185,129,0.7)' },  // FC 4: Emerald Mint Green
+       5:  { c1: '#06b6d4', c2: '#0891b2', cLight: '#cffaff', glow: 'rgba(6,182,212,0.7)' },   // FC 5: Aquamarine Ice Cyan
+       6:  { c1: '#1d4ed8', c2: '#1e40af', cLight: '#93c5fd', glow: 'rgba(29,78,216,0.7)' },   // FC 6: Deep Royal Sapphire Blue
+       7:  { c1: '#7c3aed', c2: '#6d28d9', cLight: '#ddd6fe', glow: 'rgba(124,58,237,0.7)' },  // FC 7: Deep Amethyst Purple
+       8:  { c1: '#ec4899', c2: '#be185d', cLight: '#fbcfe8', glow: 'rgba(236,72,153,0.7)' },  // FC 8: Neon Magenta Rose
+       9:  { c1: '#84cc16', c2: '#4d7c0f', cLight: '#ecfccb', glow: 'rgba(132,204,22,0.85)' }, // FC 9: Electric Neon Kryptonite Lime
+       10: { c1: '#ffd700', c2: '#b45309', cLight: '#fffbeb', glow: 'rgba(255,215,0,0.85)' }   // FC 10: Celestial Imperial Gold
      };
 
      const pal = fcColorMap[fcNum] || fcColorMap[7];
