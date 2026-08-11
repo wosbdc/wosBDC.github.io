@@ -10162,7 +10162,7 @@ window.resetBearTrapEvent = async () => {
 
     window.loadBeartrapLog();
   },
-  
+
   playerEditor: async () => {
     if (!window.isAdminUser(currentUser)) {
       views.home();
@@ -10187,52 +10187,192 @@ window.resetBearTrapEvent = async () => {
       console.error("Failed to load data for player editor", e);
     }
     
+    await refreshIdToNameMap();
+    
     const users = usersSnap ? (usersSnap.val() || {}) : {};
     const registeredGameIds = new Set();
     Object.values(users).forEach(u => {
         if (u.gameId) registeredGameIds.add(u.gameId.toString().trim());
     });
     
-    const players = [];
-    if (rosterRawData) { Object.values(rosterRawData).forEach(p => { if (p.name) players.push(p.name); }); }
-    
-    await refreshIdToNameMap();
-    players.sort((a, b) => a.localeCompare(b));
-    
-    let dropdownItems = [];
-    players.forEach((p) => {
-      let name = p.toString().trim();
-      let gid = window.nameToIdMap[name];
-      let isRegistered = gid ? window.enrolledGameIds.has(gid.toString().trim()) : false;
-      dropdownItems.push({ name: name, isReg: isRegistered, nt: /^[ -~]*$/.test(name) ? 'notranslate' : '' });
+    // Comprehensive player compilation across all data sources
+    const playerMap = new Map();
+
+    // 1. Add Firebase Registered Users
+    Object.values(users).forEach(u => {
+        let gid = u.gameId ? u.gameId.toString().trim() : "";
+        let name = (u.name || u.chiefName || (gid ? window.idToNameMap[gid] : "") || "").toString().trim();
+        if (name && !/^\d+$/.test(name)) {
+            let key = name.toLowerCase();
+            playerMap.set(key, {
+                name: name,
+                gameId: gid,
+                isRegistered: true,
+                email: u.email || "",
+                role: u.role || "Member",
+                furnaceLevel: u.furnaceLevel || ""
+            });
+        }
     });
 
+    // 2. Add Alliance Roster Sheet
+    if (rosterRawData) {
+        Object.values(rosterRawData).forEach(p => {
+            if (p.name && !/^\d+$/.test(p.name.toString().trim())) {
+                let name = p.name.toString().trim();
+                let key = name.toLowerCase();
+                let existing = playerMap.get(key) || {};
+                let gid = (p.gameId || existing.gameId || window.nameToIdMap[name] || "").toString().trim();
+                playerMap.set(key, {
+                    name: name,
+                    gameId: gid,
+                    isRegistered: existing.isRegistered || (gid ? registeredGameIds.has(gid) : false),
+                    email: existing.email || "",
+                    role: p.rank || existing.role || "Member",
+                    furnaceLevel: p.furnaceLevel || existing.furnaceLevel || ""
+                });
+            }
+        });
+    }
+
+    // 3. Add Master Name-to-ID mappings (giftcodebot / roster_live)
+    if (window.nameToIdMap) {
+        Object.keys(window.nameToIdMap).forEach(name => {
+            let cleanName = name.toString().trim();
+            if (cleanName && !/^\d+$/.test(cleanName)) {
+                let key = cleanName.toLowerCase();
+                if (!playerMap.has(key)) {
+                    let gid = window.nameToIdMap[cleanName].toString().trim();
+                    playerMap.set(key, {
+                        name: cleanName,
+                        gameId: gid,
+                        isRegistered: registeredGameIds.has(gid),
+                        email: "",
+                        role: "Member",
+                        furnaceLevel: ""
+                    });
+                }
+            }
+        });
+    }
+
+    const allPlayers = Array.from(playerMap.values());
+    allPlayers.sort((a, b) => a.name.localeCompare(b.name));
+
+    const totalAccounts = allPlayers.length;
+    const registeredCount = allPlayers.filter(p => p.isRegistered).length;
+    
+    let dropdownItems = allPlayers.map(p => ({
+        name: p.name,
+        gameId: p.gameId,
+        isReg: p.isRegistered,
+        nt: /^[ -~]*$/.test(p.name) ? 'notranslate' : ''
+    }));
+
     app.innerHTML = `
-      <div class="card" style="max-width:800px; margin:0 auto; animation: fadeIn 0.3s ease; position:relative; min-height: 80vh;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid var(--border); padding-bottom:10px;">
-          <h2 style="color:var(--accent); margin:0; display:flex; align-items:center; gap:10px;">
-            👤 Player Database Editor
-          </h2>
+      <div class="card" style="max-width:1000px; margin:0 auto; animation: fadeIn 0.3s ease; position:relative; min-height: 80vh;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid var(--border); padding-bottom:12px; flex-wrap:wrap; gap:10px;">
+          <div>
+            <h2 style="color:var(--accent); margin:0; display:flex; align-items:center; gap:10px;">
+              👤 Player Database Editor
+            </h2>
+            <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">
+              Total Accounts: <strong style="color:var(--text-main);">${totalAccounts}</strong> | 
+              Registered: <strong style="color:var(--success);">${registeredCount}</strong>
+            </div>
+          </div>
           <div style="display:flex; gap:10px; align-items:center;">
             <button onclick="window.openAddPlayerModal()" style="background:var(--success); color:white; border:none; padding:8px 14px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:13px; box-shadow:0 2px 8px rgba(16,185,129,0.3);">➕ Add New Player</button>
             <button onclick="views.admin()" style="background:var(--bg-main); color:var(--text-main); border:1px solid var(--border); padding:8px 12px; border-radius:6px; cursor:pointer; font-weight:bold;">◀ Back</button>
           </div>
         </div>
         
-        <div style="display:flex; gap:10px; margin-bottom:20px;">
+        <div style="display:flex; gap:10px; margin-bottom:15px;">
           <div style="position:relative; flex:1; display:flex; align-items:center;">
-            <input type="text" id="uniSearchInput" placeholder="Search Chief Name..." autocomplete="off" style="width:100%; padding:14px 40px 14px 16px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:16px; font-weight:bold; cursor:text; box-sizing:border-box; position:relative; z-index:101;">
-            <button onclick="document.getElementById('uniSearchInput').value=''; window.searchPlayerFull(''); document.getElementById('uniSearchInput').focus();" style="position:absolute; right:12px; background:transparent; border:none; color:var(--danger); font-size:20px; cursor:pointer; font-weight:bold; display:flex; align-items:center; justify-content:center; width:30px; height:30px; padding:0; border-radius:50%; z-index:102;" onmouseover="this.style.background='rgba(239,68,68,0.1)'" onmouseout="this.style.background='transparent'">✖</button>
+            <input type="text" id="uniSearchInput" placeholder="Search Chief Name or Game ID..." autocomplete="off" style="width:100%; padding:14px 40px 14px 16px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:16px; font-weight:bold; cursor:text; box-sizing:border-box; position:relative; z-index:101;">
+            <button onclick="document.getElementById('uniSearchInput').value=''; window.filterPlayerDirectory(''); document.getElementById('uniSearchInput').focus();" style="position:absolute; right:12px; background:transparent; border:none; color:var(--danger); font-size:20px; cursor:pointer; font-weight:bold; display:flex; align-items:center; justify-content:center; width:30px; height:30px; padding:0; border-radius:50%; z-index:102;" onmouseover="this.style.background='rgba(239,68,68,0.1)'" onmouseout="this.style.background='transparent'">✖</button>
             <div id="uniSearchCustomDropdown" style="display:none; position:absolute; top:calc(100% - 8px); left:0; width:100%; max-height:300px; overflow-y:auto; background:var(--card-bg); border:1px solid var(--border); border-radius:0 0 8px 8px; z-index:100; box-shadow:0 10px 30px rgba(0,0,0,0.6); flex-direction:column; padding-top:8px;"></div>
           </div>
           <button onclick="window.searchPlayerFull(document.getElementById('uniSearchInput').value)" style="background:var(--accent); color:#fff; border:none; padding:0 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px;">Search</button>
         </div>
+
+        <div style="display:flex; gap:8px; margin-bottom:15px; flex-wrap:wrap;">
+            <button id="filterAllBtn" onclick="window.setDirectoryFilter('all')" style="padding:6px 12px; border-radius:20px; border:1px solid var(--accent); background:var(--accent); color:#fff; font-size:12px; font-weight:bold; cursor:pointer;">All Accounts (${totalAccounts})</button>
+            <button id="filterRegBtn" onclick="window.setDirectoryFilter('reg')" style="padding:6px 12px; border-radius:20px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">✅ Registered (${registeredCount})</button>
+            <button id="filterUnregBtn" onclick="window.setDirectoryFilter('unreg')" style="padding:6px 12px; border-radius:20px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">Unregistered (${totalAccounts - registeredCount})</button>
+        </div>
         
-        <div id="uniEditorRes" style="display:none; flex-direction:column; gap:16px; border-top:1px solid var(--border); padding-top:20px;">
-           <!-- Populated by JS -->
+        <div id="uniEditorRes" style="display:none; flex-direction:column; gap:16px; border-top:1px solid var(--border); padding-top:20px; margin-bottom:20px;">
+           <!-- Individual player detail editor view -->
+        </div>
+
+        <!-- Directory Accounts List View -->
+        <div id="playerDirectoryContainer" style="border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--bg-main);">
+            <div style="padding:12px 16px; background:var(--card-bg); border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-weight:bold; font-size:14px; color:var(--text-main);">Master Accounts Directory</span>
+                <span id="dirCountLabel" style="font-size:12px; color:var(--text-muted);">${totalAccounts} Accounts Loaded</span>
+            </div>
+            <div id="playerDirectoryList" style="max-height:500px; overflow-y:auto; padding:8px 0;">
+                <!-- Populated dynamically -->
+            </div>
         </div>
       </div>
     `;
+
+    // Global filtering helper for the directory list
+    let currentFilterType = 'all';
+    window.setDirectoryFilter = (type) => {
+        currentFilterType = type;
+        const bAll = document.getElementById('filterAllBtn');
+        const bReg = document.getElementById('filterRegBtn');
+        const bUnreg = document.getElementById('filterUnregBtn');
+        if (bAll) { bAll.style.background = type === 'all' ? 'var(--accent)' : 'var(--bg-main)'; bAll.style.color = type === 'all' ? '#fff' : 'var(--text-main)'; }
+        if (bReg) { bReg.style.background = type === 'reg' ? 'var(--accent)' : 'var(--bg-main)'; bReg.style.color = type === 'reg' ? '#fff' : 'var(--text-main)'; }
+        if (bUnreg) { bUnreg.style.background = type === 'unreg' ? 'var(--accent)' : 'var(--bg-main)'; bUnreg.style.color = type === 'unreg' ? '#fff' : 'var(--text-main)'; }
+        window.filterPlayerDirectory(document.getElementById('uniSearchInput').value);
+    };
+
+    window.filterPlayerDirectory = (queryStr) => {
+        const q = (queryStr || '').toLowerCase().trim();
+        const listDiv = document.getElementById('playerDirectoryList');
+        const countLabel = document.getElementById('dirCountLabel');
+        if (!listDiv) return;
+
+        let filtered = allPlayers.filter(p => {
+            if (currentFilterType === 'reg' && !p.isRegistered) return false;
+            if (currentFilterType === 'unreg' && p.isRegistered) return false;
+            if (q) {
+                const matchName = p.name.toLowerCase().includes(q);
+                const matchGid = p.gameId && p.gameId.includes(q);
+                return matchName || matchGid;
+            }
+            return true;
+        });
+
+        if (countLabel) countLabel.textContent = `${filtered.length} of ${totalAccounts} Accounts`;
+
+        if (filtered.length === 0) {
+            listDiv.innerHTML = `<div style="padding:30px; text-align:center; color:var(--text-muted);">No matching accounts found.</div>`;
+            return;
+        }
+
+        listDiv.innerHTML = filtered.map(p => `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 16px; border-bottom:1px solid rgba(255,255,255,0.05); transition:0.2s; cursor:pointer;" onmouseover="this.style.background='var(--card-bg)'" onmouseout="this.style.background='transparent'" onclick="window.searchPlayerFull('${window.escapeHTML(p.name)}')">
+                <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                    <div style="font-weight:bold; font-size:15px; color:var(--text-main); display:flex; align-items:center; gap:6px;">
+                        ${p.isRegistered ? '<span style="color:var(--success); font-size:13px;" title="Registered Account">✅</span>' : '<span style="color:var(--text-muted); font-size:13px;" title="Roster Only">📋</span>'}
+                        <span class="${/^[ -~]*$/.test(p.name) ? 'notranslate' : ''}">${window.escapeHTML(p.name)}</span>
+                    </div>
+                    ${p.gameId ? `<span style="font-family:monospace; font-size:12px; background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px; color:var(--text-muted);">ID: ${p.gameId}</span>` : ''}
+                    ${p.furnaceLevel ? `<span style="font-size:11px; background:rgba(99,102,241,0.1); color:#818cf8; padding:2px 6px; border-radius:4px;">FC ${p.furnaceLevel}</span>` : ''}
+                </div>
+                <button onclick="event.stopPropagation(); window.searchPlayerFull('${window.escapeHTML(p.name)}')" style="background:var(--accent); color:#fff; border:none; padding:5px 12px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">✏️ Edit</button>
+            </div>
+        `).join('');
+    };
+
+    // Render initial directory list
+    window.filterPlayerDirectory('');
     
     // Hide navbar on mobile for a clean, full-screen editor experience
     if (window.innerWidth <= 768) {
@@ -10246,19 +10386,21 @@ window.resetBearTrapEvent = async () => {
     
     const filterAndShowDropdown = () => {
         const query = searchInput.value.toLowerCase().trim();
+        window.filterPlayerDirectory(query);
+
         if (!query) {
             dropdown.style.display = 'none';
             return;
         }
         
-        const matches = dropdownItems.filter(item => item.name.toLowerCase().includes(query)).slice(0, 50);
+        const matches = dropdownItems.filter(item => item.name.toLowerCase().includes(query) || (item.gameId && item.gameId.includes(query))).slice(0, 50);
         
         if (matches.length === 0) {
             dropdown.innerHTML = `<div style="padding:12px; color:var(--text-muted); text-align:center; font-size:14px;">No matches found.</div>`;
         } else {
             dropdown.innerHTML = matches.map(item => `
                 <div class="uni-dropdown-item ${item.nt}" data-value="${item.name}" style="padding:12px 15px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.05); color:var(--text-main); font-weight:bold; font-size:15px; display:flex; align-items:center; gap:8px; transition:0.2s;">
-                    ${item.isReg ? '<span style="color:var(--success); font-size:12px;">✅</span> ' : ''}${window.escapeHTML(item.name)}
+                    ${item.isReg ? '<span style="color:var(--success); font-size:12px;">✅</span> ' : ''}${window.escapeHTML(item.name)} ${item.gameId ? `<span style="font-size:12px; color:var(--text-muted); font-weight:normal;">(${item.gameId})</span>` : ''}
                 </div>
             `).join('');
             
@@ -10275,10 +10417,9 @@ window.resetBearTrapEvent = async () => {
         }
         dropdown.style.display = 'flex';
     };
-    
     searchInput.addEventListener('input', filterAndShowDropdown);
     searchInput.addEventListener('focus', filterAndShowDropdown);
-searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.display = 'none', 150); });
+    searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.display = 'none', 150); });
     searchInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
         dropdown.style.display = 'none';

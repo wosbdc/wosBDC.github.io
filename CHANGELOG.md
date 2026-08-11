@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.57.30] - 2026-08-11
+### Fixed & Redesigned
+- **👥 Complete Multi-Database Player Compilation & Accounts Directory View**: Redesigned `views.playerEditor()` to compile accounts across ALL sources (Firebase `users` database table, static Alliance Roster Sheet, `giftcodebot`, and `nameToIdMap`/`idToNameMap`). Added an instant-load **Master Accounts Directory** list view by default with filter tabs (`All Accounts`, `Registered Only`, `Unregistered`) and 1-click edit buttons for every account.
+
 ## [1.57.29] - 2026-08-11
 ### Enforced Policy
 - **🚫 Rejection Policy for Matching Chief Name & Game ID**: Implemented strict frontend & backend policy enforcement across registration forms and Apps Script Web App v133 (`registerNewPlayer` endpoint). Directly rejects any submission where the Chief Name matches the Game ID or is purely numeric.
