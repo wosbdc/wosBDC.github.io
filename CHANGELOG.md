@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [1.57.9] - 2026-08-11
+### Fixed & Improved
+- **👑 Fixed Admin/Staff Badge Assignment**: Fixed boolean check in `isAdminUser` calculation where regular non-staff users were evaluating to `true` when `getAdminLevel()` returned `false`. Staff badges (`👑 R5 Staff` / `⭐ R4 Staff`) are now strictly restricted to verified staff members.
+- **⚡ One-Click Staff Management**: Added direct `+ Staff` (grant) and `👑 Revoke Staff` action buttons to the Registered Users table rows so R5 admins can manage staff roles with a single click.
+
 ## [1.57.8] - 2026-08-11
 ### Improved & Added
 - **👥 Redesigned Registered Users Table**: Upgraded the Admin Users Database view with a live search bar (`🔍 Search Name, Game ID, or Email`), category filter tab pills (`👥 All Users`, `🆕 New Signups`, `🔗 Has Alts`, `🎁 Enrolled`), vibrant `🆕 NEW` badges for recent signups (last 7 days), newest-first sorting, and a clean, organized column layout.

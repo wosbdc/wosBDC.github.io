@@ -7645,7 +7645,8 @@ const views = {
         const hasAvatar = avatarMap[u.gameId] ? true : false;
         const avatarSrc = window.getAvatarUrl(u.gameId, cName);
         const hasAlts = (u.linkedGameIds && Array.isArray(u.linkedGameIds) && u.linkedGameIds.length > 0);
-        const isAdminUser = (u.role === 'admin' || u.role === 'R5' || window.getAdminLevel(u) !== 'User');
+        const adminLvl = window.getAdminLevel(u);
+        const isAdminUser = (u.role === 'admin' || u.role === 'R5' || (adminLvl !== false && adminLvl !== 'User'));
         
         let rosterInfoHtml = '';
         let isEnrolled = false;
@@ -7688,7 +7689,7 @@ const views = {
                   <div style="font-weight:bold; font-size:14px; color:var(--text-main); display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
                     <span>${escapeHTML(cName)}</span>
                     ${isNew ? `<span style="background:rgba(16,185,129,0.18); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:2px 8px; border-radius:12px; font-size:10px; font-weight:bold; letter-spacing:0.5px;">🆕 NEW</span>` : ''}
-                    ${isAdminUser ? `<span style="background:rgba(234,179,8,0.15); color:#eab308; border:1px solid rgba(234,179,8,0.3); padding:2px 6px; border-radius:10px; font-size:10px; font-weight:bold;">👑 Staff</span>` : ''}
+                    ${isAdminUser ? `<span style="background:rgba(234,179,8,0.15); color:#eab308; border:1px solid rgba(234,179,8,0.3); padding:2px 6px; border-radius:10px; font-size:10px; font-weight:bold;">👑 ${adminLvl === 'R5' ? 'R5 Staff' : 'R4 Staff'}</span>` : ''}
                   </div>
                   <div style="font-family:monospace; font-size:12px; color:var(--accent); font-weight:bold;">
                     ID: ${escapeHTML(u.gameId || '')}
@@ -7714,6 +7715,7 @@ const views = {
             <td style="padding:12px 10px; text-align:right;">
               <div style="display:flex; gap:6px; justify-content:flex-end; flex-wrap:wrap;">
                 <button onclick="window.adminManageAltsPrompt('${uid}')" style="background:rgba(59,130,246,0.12); color:#3b82f6; border:1px solid rgba(59,130,246,0.3); padding:5px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">🔗 Alts</button>
+                ${isAdminUser && u.gameId != 318843189 ? `<button onclick="window.revokeAdmin('${u.gameId}')" style="background:rgba(234,179,8,0.12); color:#eab308; border:1px solid rgba(234,179,8,0.3); padding:5px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">👑 Revoke Staff</button>` : (!isAdminUser && u.gameId ? `<button onclick="window.grantAdmin('${u.gameId}', 'R4')" style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:5px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">+ Staff</button>` : '')}
                 ${hasAvatar ? `<button class="delete-avatar-btn" data-id="${u.gameId}" style="background:transparent; border:1px solid var(--danger); color:var(--danger); padding:5px 10px; border-radius:6px; font-size:12px; cursor:pointer;">Delete Avatar</button>` : ``}
                 <button onclick="window.adminDeleteUserRow('${uid}', '${cName.replace(/'/g, "\\'")}')" style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); color:var(--danger); padding:5px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">🗑️ Delete</button>
               </div>
