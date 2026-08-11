@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.57.44] - 2026-08-11
+### Audit & Security
+- **🛡️ Authenticated Push Auth Upgrade**: Replaced legacy auth parameter in admin push notification handler with secure token verification (`getAuthToken()`). Verified zero hardcoded credentials across codebase.
+
 ## [1.57.43] - 2026-08-11
 ### Improved
 - **⚡ Bypass Browser Fetch Cache for Changelog**: Forced `cache: 'no-store'` on changelog modal fetch requests.

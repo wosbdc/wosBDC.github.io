@@ -7162,9 +7162,10 @@ const views = {
         statusEl.style.color = "var(--text-muted)";
         
         try {
+          const pushToken = await getAuthToken();
           const res = await fetch(API_BASE_URL, {
             method: 'POST',
-            body: JSON.stringify({ api: 'sendPush', title: title, body: body, secret: APP_SECRET }),
+            body: JSON.stringify({ api: 'sendPush', title: title, body: body, token: pushToken }),
             headers: { 'Content-Type': 'text/plain;charset=utf-8' }
           }).then(r => r.json());
           
