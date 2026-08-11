@@ -62,13 +62,64 @@ const getAuthToken = async () => {
 
 
 window.getFurnaceIconHtml = (level, size = 36) => {
-    if (!level || level === "N/A") return '🔥 ' + level;
-    let lv = parseInt(level, 10);
-    if (isNaN(lv)) return '🔥 ' + level;
-    if (lv <= 30) return `🔥 Lv ${lv}`;
-    let n = Math.floor((lv - 30) / 5);
-    let url = `https://gof-formal-avatar.akamaized.net/img/icon/stove_lv_${n}.png`;
-    return `<img src="${url}" style="width:${size}px; height:${size}px; vertical-align:middle; margin-right:4px; object-fit:contain; image-rendering:-webkit-optimize-contrast;" />`;
+  if (!level || level === "N/A") return `<span style="color:var(--text-muted); font-size:13px; font-weight:bold;">🔥 N/A</span>`;
+  
+  const rawStr = level.toString().trim().toUpperCase();
+  let fcNum = null;
+  let furnaceNum = null;
+  
+  // Detect Fire Crystal (FC 1 to 10)
+  const fcMatch = rawStr.match(/^FC\s*(\d+)$/i);
+  if (fcMatch) {
+     fcNum = parseInt(fcMatch[1], 10);
+  } else {
+     const numVal = parseInt(rawStr.replace(/[^0-9]/g, ''), 10);
+     if (!isNaN(numVal)) {
+        if (numVal > 30) { // Legacy numeric offset (e.g. 35 -> FC 1, 37 -> FC 7)
+           fcNum = Math.min(10, Math.max(1, numVal - 30));
+        } else if (rawStr.includes('FC')) {
+           fcNum = Math.min(10, Math.max(1, numVal));
+        } else {
+           furnaceNum = numVal;
+        }
+     }
+  }
+
+  // Render Fire Crystal 6-Pointed Star Badge if fcNum is valid (FC 1 - 10)
+  if (fcNum && fcNum >= 1 && fcNum <= 10) {
+     let c1 = '#ec4899', c2 = '#f43f5e', glow = 'rgba(236,72,153,0.6)';
+     if (fcNum <= 2) {
+        c1 = '#f59e0b'; c2 = '#ef4444'; glow = 'rgba(245,158,11,0.5)';
+     } else if (fcNum <= 4) {
+        c1 = '#a855f7'; c2 = '#ec4899'; glow = 'rgba(168,85,247,0.5)';
+     } else if (fcNum <= 6) {
+        c1 = '#06b6d4'; c2 = '#3b82f6'; glow = 'rgba(6,182,212,0.5)';
+     } else if (fcNum <= 8) {
+        c1 = '#ec4899'; c2 = '#f43f5e'; glow = 'rgba(236,72,153,0.6)';
+     } else {
+        c1 = '#eab308'; c2 = '#f97316'; glow = 'rgba(234,179,8,0.7)';
+     }
+
+     const svgId = `fc-grad-${fcNum}-${Math.floor(Math.random()*10000)}`;
+
+     return `<div class="fc-star-badge-wrapper" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="display:inline-flex; align-items:center; justify-content:center; vertical-align:middle; position:relative; width:${size}px; height:${size}px; filter:drop-shadow(0 0 ${Math.round(size/6)}px ${glow});">
+       <svg viewBox="0 0 100 100" style="width:100%; height:100%; overflow:visible;">
+         <defs>
+           <linearGradient id="${svgId}" x1="0%" y1="0%" x2="100%" y2="100%">
+             <stop offset="0%" stop-color="${c1}" />
+             <stop offset="100%" stop-color="${c2}" />
+           </linearGradient>
+         </defs>
+         <path d="M50 5 L61 30 L89 25 L73 48 L95 68 L68 68 L50 95 L32 68 L5 68 L27 48 L11 25 L39 30 Z" fill="url(#${svgId})" stroke="#ffffff" stroke-width="3.5" stroke-linejoin="round" />
+         <polygon points="50,22 74,36 74,64 50,78 26,64 26,36" fill="rgba(15,23,42,0.85)" stroke="${c1}" stroke-width="2.5" />
+         <text x="50" y="52" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-weight="900" font-size="34" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" style="text-shadow:0 2px 4px rgba(0,0,0,0.8);">${fcNum}</text>
+       </svg>
+     </div>`;
+  }
+
+  // Render Standard Furnace Badge (Furnace 1 to 30)
+  const fn = furnaceNum || parseInt(rawStr, 10) || 30;
+  return `<span class="furnace-level-badge" style="display:inline-flex; align-items:center; gap:4px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); padding:3px 8px; border-radius:10px; font-weight:bold; font-size:${Math.max(12, Math.round(size*0.38))}px; color:var(--text-main); white-space:nowrap; vertical-align:middle;">🔥 Furnace ${fn}</span>`;
 };
 
 window.renderFurnaceSelectHtml = (id = 'manualFurnaceLevel', selectedVal = '', extraStyles = '') => {
@@ -6908,6 +6959,154 @@ window.clearShowdownCaches = () => {
     window.rosterCache = null;
 };
 
+window.openEditProfileModal = async () => {
+  if (!currentUser) return;
+  
+  let currentFurnace = '30';
+  let currentJoinedDate = '';
+  let currentBio = '';
+  
+  try {
+    const snap = await get(ref(db, `users/${currentUser.uid}`));
+    if (snap.exists()) {
+      const uData = snap.val();
+      if (uData.stove_lv || uData.furnaceLevel) currentFurnace = (uData.stove_lv || uData.furnaceLevel).toString();
+      if (uData.joinedDate) currentJoinedDate = uData.joinedDate;
+      if (uData.bio) currentBio = uData.bio;
+    }
+  } catch(e) { console.error("Firebase fetch error in edit profile:", e); }
+  
+  if (currentFurnace === '30' || !currentJoinedDate) {
+    const rosterData = window.liveData["Chief's List"];
+    if (rosterData && rosterData.length > 1) {
+       const chiefName = idToNameMap[currentUser.gameId] || currentUser.name || '';
+       const p = Object.values(rosterData).find(rp => rp[1] && rp[1].toString().trim() === currentUser.gameId.toString().trim() || (rp[0] && rp[0].toString().toLowerCase() === chiefName.toLowerCase()));
+       if (p) {
+          if (p[2] && currentFurnace === '30') currentFurnace = p[2].toString();
+          if (p[5] && !currentJoinedDate) currentJoinedDate = p[5].toString();
+       }
+    }
+  }
+
+  let isoDate = '';
+  if (currentJoinedDate) {
+     try {
+       const d = new Date(currentJoinedDate);
+       if (!isNaN(d.getTime())) isoDate = d.toISOString().split('T')[0];
+     } catch(e) {}
+  }
+
+  const oldModal = document.getElementById('editProfileModalOverlay');
+  if (oldModal && oldModal.parentNode) oldModal.parentNode.removeChild(oldModal);
+
+  const modalOverlay = document.createElement('div');
+  modalOverlay.id = 'editProfileModalOverlay';
+  modalOverlay.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.85); backdrop-filter:blur(10px); z-index:99999; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease;';
+
+  const furnaceSelectHtml = window.renderFurnaceSelectHtml('editProfileFurnaceSelect', currentFurnace, 'margin-top:6px;');
+
+  modalOverlay.innerHTML = `
+    <div class="card" style="width:90%; max-width:520px; background:linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.9)); border:1px solid rgba(56,189,248,0.3); padding:30px; border-radius:20px; box-shadow:0 20px 50px rgba(0,0,0,0.6); text-align:left; animation:zoomIn 0.2s forwards;">
+       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:12px;">
+          <h3 style="margin:0; color:#fff; font-size:22px; font-weight:800; display:flex; align-items:center; gap:8px;">✏️ Edit Member Profile</h3>
+          <button id="closeEditProfileBtn" style="background:none; border:none; color:var(--text-muted); font-size:28px; cursor:pointer; line-height:1;">&times;</button>
+       </div>
+
+       <div style="display:flex; flex-direction:column; gap:18px;">
+          <div>
+             <label style="display:block; font-size:13px; font-weight:bold; color:#cbd5e1; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">📅 Date You Started Playing</label>
+             <div style="display:flex; gap:8px; align-items:center;">
+                <input type="date" id="editProfileJoinedDateInput" value="${isoDate}" onclick="try{this.showPicker();}catch(e){}" style="flex:1; padding:12px; border-radius:10px; border:1px solid rgba(255,255,255,0.15); background:rgba(15,23,42,0.7); color:#fff; font-size:15px; font-weight:bold; box-sizing:border-box;">
+                <button type="button" onclick="try{document.getElementById('editProfileJoinedDateInput').showPicker();}catch(e){}" style="background:rgba(6,182,212,0.15); border:1px solid rgba(6,182,212,0.4); color:var(--accent); border-radius:10px; padding:12px 14px; cursor:pointer; font-size:18px;">📅</button>
+             </div>
+          </div>
+
+          <div>
+             <label style="display:block; font-size:13px; font-weight:bold; color:#cbd5e1; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">🔥 Furnace Level</label>
+             <div style="display:flex; gap:14px; align-items:center;">
+                <div style="flex:1;">
+                   ${furnaceSelectHtml}
+                </div>
+                <div id="editProfileBadgePreview" style="min-width:64px; height:64px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; padding:4px;">
+                   ${window.getFurnaceIconHtml(currentFurnace, 52)}
+                </div>
+             </div>
+          </div>
+
+          <div>
+             <label style="display:block; font-size:13px; font-weight:bold; color:#cbd5e1; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">💬 Status Tagline / Motto</label>
+             <textarea id="editProfileBioInput" placeholder="Enter your custom motto..." style="width:100%; padding:12px; border-radius:10px; border:1px solid rgba(255,255,255,0.15); background:rgba(15,23,42,0.7); color:#fff; font-size:14px; box-sizing:border-box; resize:vertical; min-height:70px;">${window.escapeHTML(currentBio)}</textarea>
+          </div>
+
+          <div style="display:flex; gap:12px; margin-top:10px;">
+             <button id="cancelEditProfileBtn" style="flex:1; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.2); color:#cbd5e1; padding:12px; border-radius:10px; cursor:pointer; font-weight:bold; font-size:15px;">Cancel</button>
+             <button id="saveEditProfileBtn" style="flex:1; background:linear-gradient(135deg, #06b6d4, #3b82f6); color:#fff; border:none; padding:12px; border-radius:10px; cursor:pointer; font-weight:bold; font-size:15px; box-shadow:0 4px 15px rgba(6,182,212,0.4);">Save Changes</button>
+          </div>
+       </div>
+    </div>`;
+
+  document.body.appendChild(modalOverlay);
+
+  const fSelect = document.getElementById('editProfileFurnaceSelect');
+  const bPreview = document.getElementById('editProfileBadgePreview');
+  if (fSelect && bPreview) {
+     fSelect.addEventListener('change', (e) => {
+        bPreview.innerHTML = window.getFurnaceIconHtml(e.target.value, 52);
+     });
+  }
+
+  const closeBtn = document.getElementById('closeEditProfileBtn');
+  const cancelBtn = document.getElementById('cancelEditProfileBtn');
+  const closeModal = () => { if (document.body.contains(modalOverlay)) document.body.removeChild(modalOverlay); };
+  if (closeBtn) closeBtn.onclick = closeModal;
+  if (cancelBtn) cancelBtn.onclick = closeModal;
+
+  const saveBtn = document.getElementById('saveEditProfileBtn');
+  if (saveBtn) {
+     saveBtn.onclick = async () => {
+        const newJoinedDate = document.getElementById('editProfileJoinedDateInput').value;
+        const newFurnace = document.getElementById('editProfileFurnaceSelect').value || currentFurnace;
+        const newBio = document.getElementById('editProfileBioInput').value.trim();
+
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+
+        try {
+           const userRef = ref(db, `users/${currentUser.uid}`);
+           await set(userRef, {
+              ...currentUser,
+              stove_lv: newFurnace,
+              furnaceLevel: newFurnace,
+              joinedDate: newJoinedDate,
+              bio: newBio,
+              updatedAt: new Date().toISOString()
+           });
+
+           currentUser.stove_lv = newFurnace;
+           currentUser.furnaceLevel = newFurnace;
+           currentUser.joinedDate = newJoinedDate;
+           currentUser.bio = newBio;
+
+           try {
+              const token = await getAuthToken();
+              const chiefName = idToNameMap[currentUser.gameId] || currentUser.name || '';
+              const url = `${API_BASE_URL}?api=registerNewPlayer&gameId=${encodeURIComponent(currentUser.gameId)}&name=${encodeURIComponent(chiefName)}&stove_lv=${encodeURIComponent(newFurnace)}&dateStarted=${encodeURIComponent(newJoinedDate)}&token=${encodeURIComponent(token)}`;
+              fetch(url, { mode: 'no-cors' }).catch(e => null);
+           } catch(e) {}
+
+           window.showToast("Profile updated successfully!", "success");
+           closeModal();
+           views.account();
+        } catch(e) {
+           console.error("Save profile error:", e);
+           window.showToast("Error saving profile. Try again.", "error");
+           saveBtn.disabled = false;
+           saveBtn.textContent = 'Save Changes';
+        }
+     };
+  }
+};
+
 const views = {
   staff: async () => {
     if (!currentUser) return window.renderMembersOnlyGuard("Staff & Officers");
@@ -10939,6 +11138,12 @@ window.resetBearTrapEvent = async () => {
               <div style="position:absolute; bottom:-20px; right:-20px; font-size:120px; opacity:0.04; pointer-events:none; transform:rotate(-15deg); z-index:1;">&#x2744;&#xFE0F;</div>
           </div>
           
+          <div style="display:flex; gap:12px; justify-content:center; margin-top:20px; margin-bottom:20px; flex-wrap:wrap;">
+              <button id="openUserEditProfileBtn" onclick="window.openEditProfileModal()" style="background:linear-gradient(135deg, #06b6d4, #3b82f6); color:#fff; border:none; padding:12px 24px; border-radius:10px; font-weight:bold; font-size:15px; cursor:pointer; box-shadow:0 4px 15px rgba(6,182,212,0.35); transition:transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                  ✏️ Edit Profile
+              </button>
+          </div>
+
           <input type="file" id="avatarUploadInput" accept="image/png, image/jpeg, image/webp" style="display:none;">
           ${staffProfileHtml}
         </div>

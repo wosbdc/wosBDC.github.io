@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [1.58.0] - 2026-08-11
+### Major Feature Addition
+- **🔥 Dynamic Fire Crystal 6-Pointed Star Badges (FC 1 – 10)**: Upgraded `window.getFurnaceIconHtml` to render vector 6-pointed Fire Crystal star badges matching in-game designs with tier-specific color gradients (Ruby Amber, Violet Rose, Sapphire Cyan, Magenta Rose, Celestial Gold) and centered numbers.
+- **✏️ User Profile Self-Editor Modal**: Added **"✏️ Edit Profile"** button in Account Hub. Members can update their **Date Started Playing** (with live Time Active recalculation), **Furnace Level** (with live instant badge preview), and **Custom Status Tagline**.
+- **🔄 Multi-Database Sync**: Instant real-time updates across Firebase `users/{uid}` and Google Sheets backend without requiring page reloads.
+
 ## [1.57.51] - 2026-08-11
 ### Fixed
 - **👁️ Atomic Total Views Increment Fix**: Fixed static 113 total views counter by upgrading Firebase Database security rules (`newData.val() >= data.val()`) and switching `src/firebase.js` to atomic `increment(1)`.
