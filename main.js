@@ -1782,6 +1782,18 @@ window.adminLinkAltAccountPromptByChief = async (chiefName) => {
     }
 };
 
+window.adminManageAltsPrompt = async (uid) => {
+    try {
+        const snap = await get(ref(db, `users/${uid}`));
+        if (!snap || !snap.exists()) return;
+        const u = snap.val();
+        const cName = idToNameMap[u.gameId] || u.name || "Chief";
+        await window.adminLinkAltAccountPromptByChief(cName);
+    } catch(e) {
+        if (window.showToast) window.showToast(e.message, "error");
+    }
+};
+
 
 window.getAdminLevel = (user) => {
     if (!user || !user.gameId) return false;
@@ -6715,6 +6727,68 @@ const views = {
     const targetTab = initialTab || window._lastAdminTab || 'tab-tools';
     window._lastAdminTab = targetTab;
 
+    window.currentAdminUserFilter = 'all';
+    window.setAdminUserFilter = (filterType, btnEl) => {
+        window.currentAdminUserFilter = filterType;
+        document.querySelectorAll('.admin-user-filter-pill').forEach(b => {
+            b.classList.remove('active');
+            b.style.background = 'var(--card-bg)';
+            b.style.color = 'var(--text-main)';
+            b.style.border = '1px solid var(--border)';
+        });
+        if (btnEl) {
+            btnEl.classList.add('active');
+            if (filterType === 'new') {
+                btnEl.style.background = '#10b981';
+                btnEl.style.color = '#fff';
+                btnEl.style.border = 'none';
+            } else if (filterType === 'alts') {
+                btnEl.style.background = '#3b82f6';
+                btnEl.style.color = '#fff';
+                btnEl.style.border = 'none';
+            } else if (filterType === 'enrolled') {
+                btnEl.style.background = '#a855f7';
+                btnEl.style.color = '#fff';
+                btnEl.style.border = 'none';
+            } else {
+                btnEl.style.background = 'var(--accent)';
+                btnEl.style.color = '#fff';
+                btnEl.style.border = 'none';
+            }
+        }
+        window.filterAdminUsersList();
+    };
+
+    window.filterAdminUsersList = () => {
+        const searchVal = (document.getElementById('adminUserSearchInput')?.value || '').toLowerCase().trim();
+        const activeFilter = window.currentAdminUserFilter || 'all';
+
+        const rows = document.querySelectorAll('.admin-user-row');
+        rows.forEach(row => {
+            const name = row.getAttribute('data-name') || '';
+            const gid = row.getAttribute('data-gid') || '';
+            const email = row.getAttribute('data-email') || '';
+            const isNew = row.getAttribute('data-is-new') === 'true';
+            const isAdmin = row.getAttribute('data-is-admin') === 'true';
+            const hasAlts = row.getAttribute('data-has-alts') === 'true';
+            const isEnrolled = row.getAttribute('data-is-enrolled') === 'true';
+
+            const matchesSearch = !searchVal || name.includes(searchVal) || gid.includes(searchVal) || email.includes(searchVal);
+
+            let matchesCategory = true;
+            if (activeFilter === 'new') matchesCategory = isNew;
+            else if (activeFilter === 'admin') matchesCategory = isAdmin;
+            else if (activeFilter === 'alts') matchesCategory = hasAlts;
+            else if (activeFilter === 'enrolled') matchesCategory = isEnrolled;
+
+            if (matchesSearch && matchesCategory) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    };
+
     window.refreshAdminUsers = async () => {
         if (window.showToast) window.showToast("Refreshing user database...", "info");
         const icon = document.getElementById('adminRefreshIcon');
@@ -7503,65 +7577,148 @@ const views = {
               </div>
             </div>
           
-          <div style="background:var(--bg-main); padding:15px; border-radius:12px; border:1px solid var(--border);">
+          <!-- Registered Users Table Section -->
+          <div style="background:var(--bg-main); padding:18px; border-radius:14px; border:1px solid var(--border); margin-bottom:20px;">
+            
+            <!-- Search & Filter Controls Bar -->
+            <div style="display:flex; flex-direction:column; gap:14px; margin-bottom:18px; background:var(--card-bg); padding:16px; border-radius:12px; border:1px solid var(--border);">
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                <div style="font-weight:bold; font-size:16px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+                  👥 Registered Users Database <span style="font-size:13px; color:var(--text-muted); font-weight:normal;">(${Object.keys(users).length} total)</span>
+                </div>
+                <div style="position:relative; width:100%; max-width:340px;">
+                  <input type="text" id="adminUserSearchInput" oninput="window.filterAdminUsersList()" placeholder="🔍 Search Name, Game ID, or Email..." style="width:100%; padding:10px 32px 10px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; font-weight:bold; box-sizing:border-box;">
+                  <button onclick="let i=document.getElementById('adminUserSearchInput'); if(i){i.value=''; window.filterAdminUsersList(); i.focus();}" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text-muted); cursor:pointer; font-weight:bold; font-size:14px;">✕</button>
+                </div>
+              </div>
+
+              <!-- Filter Tab Pills -->
+              <div id="adminUserFilterPills" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                <button class="admin-user-filter-pill active" data-filter="all" onclick="window.setAdminUserFilter('all', this)" style="background:var(--accent); color:#fff; border:none; padding:6px 14px; border-radius:20px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+                  👥 All Users (${Object.keys(users).length})
+                </button>
+                <button class="admin-user-filter-pill" data-filter="new" onclick="window.setAdminUserFilter('new', this)" style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:6px 14px; border-radius:20px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+                  🆕 New Signups (${Object.values(users).filter(u => {
+                    let ms = u.createdAt ? new Date(u.createdAt).getTime() : (u.timestamp ? Number(u.timestamp) : 0);
+                    return ms > 0 && (Date.now() - ms) <= (7 * 24 * 60 * 60 * 1000);
+                  }).length})
+                </button>
+                <button class="admin-user-filter-pill" data-filter="alts" onclick="window.setAdminUserFilter('alts', this)" style="background:rgba(59,130,246,0.12); color:#3b82f6; border:1px solid rgba(59,130,246,0.3); padding:6px 14px; border-radius:20px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+                  🔗 Has Linked Alts (${Object.values(users).filter(u => u.linkedGameIds && Array.isArray(u.linkedGameIds) && u.linkedGameIds.length > 0).length})
+                </button>
+                <button class="admin-user-filter-pill" data-filter="enrolled" onclick="window.setAdminUserFilter('enrolled', this)" style="background:rgba(168,85,247,0.12); color:#a855f7; border:1px solid rgba(168,85,247,0.3); padding:6px 14px; border-radius:20px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+                  🎁 Gift Codes Enrolled
+                </button>
+              </div>
+            </div>
+
             <div style="overflow-x:auto;">
               <table style="width:100%; border-collapse:collapse; text-align:left;">
                 <thead>
-                  <tr style="border-bottom:2px solid var(--border); color:var(--text-muted);">
-                    <th style="padding:10px;">Game ID</th>
-                    <th style="padding:10px;">Chief Name</th>
-                    <th style="padding:10px;">Email</th>
-                    <th style="padding:10px;">Avatar</th>
-                    <th style="padding:10px;">Actions</th>
+                  <tr style="border-bottom:2px solid var(--border); color:var(--text-muted); font-size:12px; text-transform:uppercase;">
+                    <th style="padding:12px 10px;">Chief & ID</th>
+                    <th style="padding:12px 10px;">Roster & Alts</th>
+                    <th style="padding:12px 10px;">Email & Signup Date</th>
+                    <th style="padding:12px 10px; text-align:right;">Actions</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody id="adminUsersTbody">
       `;
       
-      for (const [uid, u] of Object.entries(users)) {
+      const userEntries = Object.entries(users).map(([uid, u]) => {
+        let createdMs = 0;
+        if (u.createdAt) {
+          createdMs = new Date(u.createdAt).getTime();
+        } else if (u.timestamp) {
+          createdMs = Number(u.timestamp);
+        }
+        const isNew = createdMs > 0 && (Date.now() - createdMs) <= (7 * 24 * 60 * 60 * 1000);
+        return { uid, u, createdMs, isNew };
+      });
+
+      // Sort newest signups first
+      userEntries.sort((a, b) => b.createdMs - a.createdMs);
+
+      for (const item of userEntries) {
+        const { uid, u, createdMs, isNew } = item;
         const cName = idToNameMap[u.gameId] || "Not Found";
         const hasAvatar = avatarMap[u.gameId] ? true : false;
         const avatarSrc = window.getAvatarUrl(u.gameId, cName);
-        
         const hasAlts = (u.linkedGameIds && Array.isArray(u.linkedGameIds) && u.linkedGameIds.length > 0);
+        const isAdminUser = (u.role === 'admin' || u.role === 'R5' || window.getAdminLevel(u) !== 'User');
         
         let rosterInfoHtml = '';
+        let isEnrolled = false;
         if (rosterRawData) {
             const p = Object.values(rosterRawData).find(rp => rp.name && rp.name.toLowerCase() === cName.toLowerCase());
             if (p) {
                 let flVal = p.furnaceLevel;
                 let gcVal = p.giftCodes;
                 let taVal = p.timeActive;
-                let isEnrolled = (gcVal === true || gcVal === 'TRUE' || (typeof gcVal === 'string' && gcVal.toLowerCase().trim() === 'true'));
+                isEnrolled = (gcVal === true || gcVal === 'TRUE' || (typeof gcVal === 'string' && gcVal.toLowerCase().trim() === 'true'));
                 
-                if (flVal) rosterInfoHtml += `<span style="background:rgba(255,255,255,0.1); border:1px solid var(--border); color:var(--text-main); padding:2px 6px; border-radius:10px; font-size:10px; margin-left:5px; display:inline-flex; align-items:center;">${window.getFurnaceIconHtml(flVal)}</span>`;
-                if (isEnrolled) rosterInfoHtml += `<span style="background:rgba(16,185,129,0.1); color:var(--success); border:1px solid var(--success); padding:2px 6px; border-radius:10px; font-size:10px; margin-left:5px;">&#x2705; Enrolled</span>`;
-                if (taVal) rosterInfoHtml += `<span style="background:rgba(255,255,255,0.1); border:1px solid var(--border); color:var(--text-main); padding:2px 6px; border-radius:10px; font-size:10px; margin-left:5px;">⏱️ ${taVal}</span>`;
+                if (flVal) rosterInfoHtml += `<span style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); padding:3px 8px; border-radius:10px; font-size:11px; display:inline-flex; align-items:center;">${window.getFurnaceIconHtml(flVal)}</span>`;
+                if (isEnrolled) rosterInfoHtml += `<span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:3px 8px; border-radius:10px; font-size:11px; font-weight:bold;">✅ Enrolled</span>`;
+                if (taVal) rosterInfoHtml += `<span style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-muted); padding:3px 8px; border-radius:10px; font-size:11px;">⏱️ ${escapeHTML(taVal)}</span>`;
             }
+        }
+
+        let dateDisplay = 'Unknown';
+        if (createdMs > 0) {
+            dateDisplay = new Date(createdMs).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         }
         
         html += `
-          <tr style="border-bottom:1px solid var(--border); background:var(--card-bg);">
-            <td style="padding:10px; font-family:monospace; color:var(--accent); display:flex; align-items:center; gap:5px;">
-              ${u.gameId}
+          <tr class="admin-user-row" 
+              data-name="${escapeHTML(cName.toLowerCase())}" 
+              data-gid="${escapeHTML((u.gameId || '').toString().toLowerCase())}" 
+              data-email="${escapeHTML((u.email || '').toString().toLowerCase())}" 
+              data-is-new="${isNew ? 'true' : 'false'}" 
+              data-is-admin="${isAdminUser ? 'true' : 'false'}" 
+              data-has-alts="${hasAlts ? 'true' : 'false'}" 
+              data-is-enrolled="${isEnrolled ? 'true' : 'false'}" 
+              style="border-bottom:1px solid var(--border); background:var(--card-bg);">
+            
+            <td style="padding:12px 10px;">
+              <div style="display:flex; align-items:center; gap:12px;">
+                <div style="width:40px; height:40px; border-radius:50%; overflow:hidden; background:var(--accent); flex-shrink:0; border:2px solid var(--border);">
+                  <img src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(cName)}&background=06b6d4&color=fff&bold=true&size=128';">
+                </div>
+                <div style="display:flex; flex-direction:column; gap:2px;">
+                  <div style="font-weight:bold; font-size:14px; color:var(--text-main); display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                    <span>${escapeHTML(cName)}</span>
+                    ${isNew ? `<span style="background:rgba(16,185,129,0.18); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:2px 8px; border-radius:12px; font-size:10px; font-weight:bold; letter-spacing:0.5px;">🆕 NEW</span>` : ''}
+                    ${isAdminUser ? `<span style="background:rgba(234,179,8,0.15); color:#eab308; border:1px solid rgba(234,179,8,0.3); padding:2px 6px; border-radius:10px; font-size:10px; font-weight:bold;">👑 Staff</span>` : ''}
+                  </div>
+                  <div style="font-family:monospace; font-size:12px; color:var(--accent); font-weight:bold;">
+                    ID: ${escapeHTML(u.gameId || '')}
+                  </div>
+                </div>
+              </div>
             </td>
-            <td style="padding:10px; font-weight:bold; color:var(--text-main);">
-              <div style="display:flex; align-items:center; flex-wrap:wrap; gap:5px;">
-                ${cName} 
-                ${hasAlts ? `<span style="background:rgba(52,152,219,0.1); color:var(--accent); border:1px solid var(--accent); padding:2px 6px; border-radius:10px; font-size:10px; margin-left:5px;">${u.linkedGameIds.length} Alt(s)</span>` : ''}
+
+            <td style="padding:12px 10px;">
+              <div style="display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
+                ${hasAlts ? `<button onclick="window.adminManageAltsPrompt('${uid}')" style="background:rgba(59,130,246,0.12); color:#3b82f6; border:1px solid rgba(59,130,246,0.3); padding:3px 8px; border-radius:10px; font-size:11px; font-weight:bold; cursor:pointer;">🔗 ${u.linkedGameIds.length} Alt(s)</button>` : ''}
                 ${rosterInfoHtml}
               </div>
             </td>
-            <td style="padding:10px; color:var(--text-muted); font-size:12px;">${u.email}</td>
-            <td style="padding:10px;">
-              <div style="width:30px; height:30px; border-radius:50%; overflow:hidden; background:var(--accent);">
-                <img src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(cName)}&background=06b6d4&color=fff&bold=true&size=128';">
+
+            <td style="padding:12px 10px;">
+              <div style="display:flex; flex-direction:column; gap:2px;">
+                <div style="color:var(--text-muted); font-size:12px; font-weight:bold;">${escapeHTML(u.email || 'No email')}</div>
+                <div style="color:var(--text-muted); font-size:11px; opacity:0.8;">Registered: ${dateDisplay}</div>
               </div>
             </td>
-            <td style="padding:10px; display:flex; gap:5px; flex-wrap:wrap;">
-              ${hasAvatar ? `<button class="delete-avatar-btn" data-id="${u.gameId}" style="background:transparent; border:1px solid var(--danger); color:var(--danger); padding:4px 8px; border-radius:4px; font-size:12px; cursor:pointer;">Delete Avatar</button>` : ``}
-              <button onclick="window.adminDeleteUserRow('${uid}', '${cName.replace(/'/g, "\\'")}')" style="background:transparent; border:1px solid var(--danger); color:var(--danger); padding:4px 8px; border-radius:4px; font-size:12px; cursor:pointer;">Delete Account</button>
+
+            <td style="padding:12px 10px; text-align:right;">
+              <div style="display:flex; gap:6px; justify-content:flex-end; flex-wrap:wrap;">
+                <button onclick="window.adminManageAltsPrompt('${uid}')" style="background:rgba(59,130,246,0.12); color:#3b82f6; border:1px solid rgba(59,130,246,0.3); padding:5px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">🔗 Alts</button>
+                ${hasAvatar ? `<button class="delete-avatar-btn" data-id="${u.gameId}" style="background:transparent; border:1px solid var(--danger); color:var(--danger); padding:5px 10px; border-radius:6px; font-size:12px; cursor:pointer;">Delete Avatar</button>` : ``}
+                <button onclick="window.adminDeleteUserRow('${uid}', '${cName.replace(/'/g, "\\'")}')" style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); color:var(--danger); padding:5px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">🗑️ Delete</button>
+              </div>
             </td>
+
           </tr>
         `;
       }

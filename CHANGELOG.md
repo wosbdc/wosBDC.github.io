@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.57.8] - 2026-08-11
+### Improved & Added
+- **👥 Redesigned Registered Users Table**: Upgraded the Admin Users Database view with a live search bar (`🔍 Search Name, Game ID, or Email`), category filter tab pills (`👥 All Users`, `🆕 New Signups`, `🔗 Has Alts`, `🎁 Enrolled`), vibrant `🆕 NEW` badges for recent signups (last 7 days), newest-first sorting, and a clean, organized column layout.
+
 ## [1.57.7] - 2026-08-10
 ### Fixed
 - **🐻 Combined Player Name & Game ID in Multi BT Donations Search**: Updated `bindCustomAutocomplete` and `beartrapRosterDatalist` in the Admin Multi-BT Donations panel. Combined Player Name and Game ID into a single unified search result per player (`Player Name` + `ID: 12345678` badge) instead of rendering duplicate separate uncombined entries.
