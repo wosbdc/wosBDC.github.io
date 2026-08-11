@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.57.41] - 2026-08-11
+### Security Update
+- **🔒 Full Repository Security Sweep**: Sanitized documentation files (`ARCHITECTURE.md` and `CHANGELOG.md`) to remove raw deployment URLs and IDs. Enforced high-level changelog summaries.
+
 ## [1.57.40] - 2026-08-11
 ### Security Fix
 - **🔒 Security & Privacy Sanitation**: Sanitized `CHANGELOG.md` to remove deployment identifiers and internal backend credentials.

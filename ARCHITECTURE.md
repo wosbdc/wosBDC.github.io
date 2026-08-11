@@ -88,9 +88,9 @@ GAS can read and write anything in Firebase using this secret. Route any admin w
 
 ## Google Apps Script (GAS) API
 
-**Deployed URL (v1.24.26+):**
+**Deployed URL:**
 ```
-https://script.google.com/macros/s/AKfycbzYCigf08Z5uAyd_YtTfbrNgA5rEDjyZDNJISaRJr_6XwsYks3hR-KpL9erL9w-bVI/exec
+https://script.google.com/macros/s/<DEPLOYMENT_ID>/exec
 ```
 
 **Stored in `main.js` as:** `API_BASE_URL` (line ~5)
@@ -170,7 +170,7 @@ GitHub Pages auto-deploys from `main` branch.
 ```
 cd wos/
 npx @google/clasp push
-npx @google/clasp deploy -i AKfycbzYCigf08Z5uAyd_YtTfbrNgA5rEDjyZDNJISaRJr_6XwsYks3hR-KpL9erL9w-bVI -d "vX.X.X - description"
+npx @google/clasp deploy -i <DEPLOYMENT_ID> -d "vX.X.X - description"
 ```
 
 `clasp push` updates the editor. The live Web App URL does NOT change until you run `clasp deploy`.
