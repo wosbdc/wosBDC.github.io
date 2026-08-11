@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.57.16] - 2026-08-11
+### Changed
+- **📅 Schedule Section Pill Label**: Renamed section pill title from `Coming Up This Week` to `Coming up:` on Today's View in `main.js`.
+
 ## [1.57.15] - 2026-08-11
 ### Improved
 - **📅 Whole Week Events in Coming Up This Week**: Prominently featured **Whole Week / Ongoing Events** (`allWeek`) at the top of the **Coming Up This Week** section in Today's View, ensuring ongoing weekly events (e.g. Polar Terrors, Sunken Treasury, Frostfire Mine) are highlighted alongside upcoming timed events.

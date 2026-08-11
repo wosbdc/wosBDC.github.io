@@ -13690,11 +13690,11 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
         </div>`;
       }
 
-      // Coming Up This Week
+      // Coming up:
       let upcomingHtml = '';
       if (upcomingEvents.length > 0 || allWeek.length > 0) {
         upcomingHtml = `<div style="background:var(--bg-main);border-radius:12px;padding:16px;margin-top:16px;">
-          ${sectionPill('📅','Coming Up This Week','var(--accent)','rgba(59,130,246,0.12)')}`;
+          ${sectionPill('📅','Coming up:','var(--accent)','rgba(59,130,246,0.12)')}`;
           
         if (allWeek.length > 0) {
           upcomingHtml += `
