@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.57.43] - 2026-08-11
+### Improved
+- **⚡ Bypass Browser Fetch Cache for Changelog**: Forced `cache: 'no-store'` on changelog modal fetch requests.
+
 ## [1.57.42] - 2026-08-11
 ### Cleaned
 - **🧹 Cache Refresh**: Pushed clean changelog build to trigger immediate CDN cache invalidate.
