@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.57.32] - 2026-08-11
+### Extended
+- **🪵 Full Standard Furnace Range (1 - 30)**: Extended the Standard Furnace dropdown options in `window.renderFurnaceSelectHtml` to individually list every single furnace level from **Furnace 30 down to Furnace 1**.
+
 ## [1.57.31] - 2026-08-11
 ### Improved
 - **🔥 Categorized Furnace Level Dropdown Component**: Replaced ambiguous single-number inputs with a categorized Furnace Level dropdown component (`window.renderFurnaceSelectHtml`). Clearly distinguishes **Fire Crystal Levels (FC 1 - FC 10)** from **Standard Furnace Levels (1 - 30)** across the registration modal and roster player management forms.

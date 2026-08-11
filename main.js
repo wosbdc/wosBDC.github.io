@@ -90,12 +90,11 @@ window.renderFurnaceSelectHtml = (id = 'manualFurnaceLevel', selectedVal = '', e
     <optgroup label="🪵 Standard Furnace Levels">
   `;
   
-  for (let lv = 30; lv >= 15; lv--) {
+  for (let lv = 30; lv >= 1; lv--) {
     const val = `${lv}`;
     const isSel = (norm === val || norm === `F${lv}` || norm === `F ${lv}` || norm === `FURNACE ${lv}`);
     options += `<option value="${val}" ${isSel ? 'selected' : ''}>Furnace ${lv}</option>`;
   }
-  options += `<option value="1-14" ${norm === '1-14' || norm === 'BELOW 15' ? 'selected' : ''}>Below Level 15</option>`;
   options += `</optgroup>`;
 
   return `<select id="${id}" style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:15px; box-sizing:border-box; ${extraStyles}">${options}</select>`;
