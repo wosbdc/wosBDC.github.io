@@ -61,7 +61,7 @@ const getAuthToken = async () => {
 };
 
 
-window.getFurnaceIconHtml = (level, size = 36) => {
+window.getFurnaceIconHtml = (level, size = 48) => {
   if (!level || level === "N/A") return `<span style="color:var(--text-muted); font-size:13px; font-weight:bold;">🔥 N/A</span>`;
   
   const rawStr = level.toString().trim().toUpperCase();
@@ -88,19 +88,19 @@ window.getFurnaceIconHtml = (level, size = 36) => {
   // Render 3D Gem Faceted Fire Crystal Star Badge if fcNum is valid (FC 1 - 10)
   if (fcNum && fcNum >= 1 && fcNum <= 10) {
      const fcGlowMap = {
-       1: 'rgba(239,68,68,0.6)',    // Crimson Red
-       2: 'rgba(249,115,22,0.6)',   // Flame Orange
-       3: 'rgba(234,179,8,0.6)',    // Sunburst Yellow
-       4: 'rgba(16,185,129,0.6)',   // Emerald Green
-       5: 'rgba(6,182,212,0.6)',    // Ice Cyan
-       6: 'rgba(59,130,246,0.6)',   // Sapphire Blue
-       7: 'rgba(139,92,246,0.6)',   // Amethyst Purple
-       8: 'rgba(236,72,153,0.6)',   // Magenta Rose
-       9: 'rgba(132,204,22,0.7)',   // Kryptonite Lime
-       10: 'rgba(255,215,0,0.65)'   // Imperial Gold
+       1: 'rgba(239,68,68,0.85)',    // Crimson Red
+       2: 'rgba(249,115,22,0.85)',   // Flame Orange
+       3: 'rgba(234,179,8,0.85)',    // Sunburst Yellow
+       4: 'rgba(16,185,129,0.85)',   // Emerald Green
+       5: 'rgba(6,182,212,0.85)',    // Ice Cyan
+       6: 'rgba(59,130,246,0.85)',   // Sapphire Blue
+       7: 'rgba(139,92,246,0.85)',   // Amethyst Purple
+       8: 'rgba(236,72,153,0.85)',   // Magenta Rose
+       9: 'rgba(132,204,22,0.95)',   // Kryptonite Lime
+       10: 'rgba(255,215,0,0.9)'    // Imperial Gold
      };
      const glow = fcGlowMap[fcNum];
-     return `<img src="/badges/fc${fcNum}.jpg" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(3, Math.round(size/6))}px ${glow}); vertical-align:middle; transition:transform 0.2s; border-radius:4px;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'" loading="lazy">`;
+     return `<img src="/badges/fc${fcNum}.jpg" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; mix-blend-mode:screen; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.15)'" onmouseout="this.style.transform='scale(1)'" loading="lazy">`;
   }
 
   // Render Modern Standard Furnace Badge (Furnace 1 to 30)
@@ -7015,8 +7015,8 @@ window.openEditProfileModal = async () => {
                 <div style="flex:1;">
                    ${furnaceSelectHtml}
                 </div>
-                <div id="editProfileBadgePreview" style="min-width:64px; height:64px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; padding:4px;">
-                   ${window.getFurnaceIconHtml(currentFurnace, 52)}
+                <div id="editProfileBadgePreview" style="min-width:76px; height:76px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; padding:4px;">
+                   ${window.getFurnaceIconHtml(currentFurnace, 76)}
                 </div>
              </div>
           </div>
@@ -11139,7 +11139,7 @@ window.resetBearTrapEvent = async () => {
                   </div>
                   <div class="id-card-stat-row" style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:8px;">
                       <span style="color:var(--text-muted); font-size:13px; text-transform:uppercase; letter-spacing:1px;">Furnace Level</span>
-                      <span style="color:var(--text-main); font-weight:bold; font-size:20px; text-align:right; display:flex; align-items:center;">${window.getFurnaceIconHtml(furnaceLevelStr, 64)}</span>
+                      <span style="color:var(--text-main); font-weight:bold; font-size:20px; text-align:right; display:flex; align-items:center;">${window.getFurnaceIconHtml(furnaceLevelStr, 80)}</span>
                   </div>
                   
                   <div class="id-card-stat-row" style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:8px;">

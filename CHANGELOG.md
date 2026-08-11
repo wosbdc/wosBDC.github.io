@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [1.58.9] - 2026-08-11
+### Visual Perfection & Transparency Fix
+- **✨ Transparent Fire Crystal Badges**: Applied `mix-blend-mode: screen` and removed square borders, completely stripping away the black square backgrounds so only the glowing 3D gem Fire Crystals render seamlessly on dark themes.
+- **🔍 Enlarged Badge Scaling**: Boosted default Fire Crystal badge render size from 36px to 48px, Account Hub profile card badge size to 80px, and modal preview size to 76px to showcase the full detail and glow of all 10 badges.
+
 ## [1.58.8] - 2026-08-11
 ### Major Visual Upgrade
 - **🔥 Photorealistic 3D Crystal Badge Images**: Replaced all inline SVG badge rendering with 10 photorealistic pre-rendered 3D gem-faceted crystal star badge images (`/badges/fc1.jpg` through `/badges/fc10.jpg`). Each badge features glass reflections, metallic gradients, inner facet glint lines, dark hexagonal center shields, and glowing neon halo aura rings — matching the premium mockup quality.
