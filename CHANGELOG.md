@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [1.57.48] - 2026-08-11
+### Redesigned & Updated
+- **✨ Essential Alliance Member Portal UI**: Redesigned the members-only guard screen into the rich **Essential Alliance Member Portal** hero card featuring 1-click **✨ Claim / Create Account** and **🔑 Sign In** action buttons.
+- **🔒 Complete Multi-Route Lockdown**: Applied members-only guard checks across all sub-view routes (`views.showdown`, `views.mercenary`, `views.schedule`, `views.account`, `views.giftcodes`).
+
 ## [1.57.47] - 2026-08-11
 ### Security Update
 - **🔒 Total Site Lockdown**: Applied members-only authentication check directly to the Home landing page (`views.home`). The entire dashboard (Schedule, Events, News, Roster, Staff, Leaderboards) is now 100% locked down for signed-in members only.

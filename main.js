@@ -4257,19 +4257,23 @@ const renderError = (err) => {
   app.innerHTML = `<div class="card"><div class="loading" style="color:var(--danger)">❌ Error: ${err}</div></div>`;
 };
 
-window.renderMembersOnlyGuard = (viewName = "this page") => {
+window.renderMembersOnlyGuard = (viewName = "Alliance Portal") => {
   const appEl = document.getElementById('app');
   if (!appEl) return;
   appEl.innerHTML = `
-    <div class="card" style="max-width:550px; margin:40px auto; text-align:center; padding:40px 25px; animation:fadeIn 0.3s ease; border:1px solid rgba(255,255,255,0.1); background:rgba(15,23,42,0.7); backdrop-filter:blur(16px); border-radius:20px; box-shadow:0 20px 50px rgba(0,0,0,0.5);">
-       <div style="font-size:56px; margin-bottom:15px; filter:drop-shadow(0 0 10px rgba(6,182,212,0.4));">🔒</div>
-       <h2 style="color:#ffffff; margin-bottom:12px; font-size:22px; font-weight:700;">Members-Only Area</h2>
-       <p style="color:#94a3b8; font-size:14px; line-height:1.6; margin-bottom:28px;">
-          Access to <strong>${window.escapeHTML(viewName)}</strong> is restricted to signed-in WOS Alliance members. Please sign in or create an account to view alliance roster details and stats.
+    <div class="card" style="max-width:650px; margin:40px auto; text-align:center; padding:45px 30px; animation:fadeIn 0.3s ease; border:1px solid rgba(255,255,255,0.12); background:linear-gradient(145deg, rgba(15,23,42,0.85), rgba(30,41,59,0.75)); backdrop-filter:blur(20px); border-radius:24px; box-shadow:0 25px 60px rgba(0,0,0,0.6);">
+       <div style="display:inline-block; background:rgba(6,182,212,0.15); color:var(--accent); border:1px solid rgba(6,182,212,0.3); padding:6px 16px; border-radius:20px; font-size:13px; font-weight:bold; margin-bottom:18px; text-transform:uppercase; letter-spacing:1px;">
+          ✨ Essential Alliance Member Portal
+       </div>
+       <h2 style="color:#ffffff; margin-bottom:14px; font-size:26px; font-weight:800; line-height:1.3;">
+          🔥 Claim Your Chief Profile & Unlock Your Live Stats!
+       </h2>
+       <p style="color:#94a3b8; font-size:15px; line-height:1.7; margin-bottom:32px; max-width:540px; margin-left:auto; margin-right:auto;">
+          Already an alliance member? Link your email to claim your profile! Instantly track your live Bear Trap donations, Showdown rankings, alliance event scores, and personal activity logs—all in real time!
        </p>
-       <div style="display:flex; gap:12px; justify-content:center; max-width:340px; margin:0 auto;">
-          <button onclick="window.openAuthModal('login')" style="flex:1; background:linear-gradient(135deg, #06b6d4, #3b82f6); color:#fff; border:none; padding:12px 20px; border-radius:10px; font-weight:bold; font-size:14px; cursor:pointer; box-shadow:0 4px 14px rgba(6,182,212,0.3); transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">Sign In</button>
-          <button onclick="window.openAuthModal('register')" style="flex:1; background:rgba(255,255,255,0.05); color:#ffffff; border:1px solid rgba(255,255,255,0.2); padding:12px 20px; border-radius:10px; font-weight:bold; font-size:14px; cursor:pointer; transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">Create Account</button>
+       <div style="display:flex; gap:14px; justify-content:center; flex-wrap:wrap; max-width:420px; margin:0 auto;">
+          <button onclick="window.openAuthModal('register')" style="flex:1; min-width:180px; background:linear-gradient(135deg, #06b6d4, #3b82f6); color:#fff; border:none; padding:14px 24px; border-radius:12px; font-weight:bold; font-size:15px; cursor:pointer; box-shadow:0 6px 20px rgba(6,182,212,0.35); transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.04)'" onmouseout="this.style.transform='scale(1)'">✨ Claim / Create Account</button>
+          <button onclick="window.openAuthModal('login')" style="flex:1; min-width:140px; background:rgba(255,255,255,0.06); color:#ffffff; border:1px solid rgba(255,255,255,0.2); padding:14px 24px; border-radius:12px; font-weight:bold; font-size:15px; cursor:pointer; transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">🔑 Sign In</button>
        </div>
     </div>`;
 };
@@ -10611,10 +10615,7 @@ window.resetBearTrapEvent = async () => {
   },
 
   account: async () => {
-    if (!currentUser) {
-      views.home();
-      return;
-    }
+    if (!currentUser) return window.renderMembersOnlyGuard("User Account Hub");
     
     let linkedHtml = '';
     let links = currentUser.linkedGameIds || [];
@@ -12688,6 +12689,7 @@ window.resetBearTrapEvent = async () => {
 
 
   showdown: async () => {
+    if (!currentUser) return window.renderMembersOnlyGuard("Showdown Leaderboards");
     if (window.clearShowdownCaches) window.clearShowdownCaches();
     if (window.ensureShowdownDataSeeded) await window.ensureShowdownDataSeeded();
     // ensureJuly20BlockInHistory checked on init only
@@ -13312,6 +13314,7 @@ window.resetBearTrapEvent = async () => {
     } catch(e) { renderError(e.message); }
   },
   mercenary: async () => {
+    if (!currentUser) return window.renderMembersOnlyGuard("Mercenary Prestige");
     renderLoading("Loading Mercenary Prestige...");
     const app = document.getElementById('app');
     if (!app) return;
@@ -13651,6 +13654,7 @@ window.resetBearTrapEvent = async () => {
   
 
   schedule: async () => {
+    if (!currentUser) return window.renderMembersOnlyGuard("State Schedule & Events");
     window.parseScheduleEventDate = (dateStr) => {
       if (!dateStr) return null;
       const s = String(dateStr).trim();
