@@ -11604,6 +11604,7 @@ window.resetBearTrapEvent = async () => {
   },
 
   home: async () => {
+    if (!currentUser) return window.renderMembersOnlyGuard("WOS Alliance Dashboard & Schedule");
     // Restore navbar if it was hidden by full screen views
     const navbar = document.querySelector('.navbar');
     if (navbar) navbar.style.display = 'flex';

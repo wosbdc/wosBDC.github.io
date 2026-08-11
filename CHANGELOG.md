@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.57.47] - 2026-08-11
+### Security Update
+- **🔒 Total Site Lockdown**: Applied members-only authentication check directly to the Home landing page (`views.home`). The entire dashboard (Schedule, Events, News, Roster, Staff, Leaderboards) is now 100% locked down for signed-in members only.
+
 ## [1.57.46] - 2026-08-11
 ### Fixed
 - **🛠️ Attached window.openAuthModal Handler**: Attached `window.openAuthModal` to window scope with tab switching support (`login`/`register`). Passed repository audit script (`check_window_bindings.cjs`).
