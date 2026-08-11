@@ -2572,6 +2572,25 @@ window._executeLogBearTrapWinner = async (name, trap) => {
         if (window.nameToIdMap) delete window.nameToIdMap[name];
         if (window.rosterCache) delete window.rosterCache[name];
 
+        // Purge global liveData and sheetCache of this player
+        if (window.liveData) {
+            for (const key of Object.keys(window.liveData)) {
+                if (Array.isArray(window.liveData[key])) {
+                    window.liveData[key] = window.liveData[key].filter(row => {
+                        if (!row || !Array.isArray(row)) return true;
+                        const rName = (row[0] || row[1] || '').toString().trim().toLowerCase();
+                        const rId = (row[1] || row[2] || '').toString().trim();
+                        return rName !== normTargetName && (targetGid ? rId !== String(targetGid) : true);
+                    });
+                }
+            }
+        }
+        if (window.sheetCache) {
+            for (const key of Object.keys(window.sheetCache)) {
+                delete window.sheetCache[key];
+            }
+        }
+
         // 6. Refresh ID maps from remaining database nodes
         await refreshIdToNameMap();
 
@@ -3259,7 +3278,12 @@ window.searchPlayerFull = async (name) => {
     }
     
     if (!pRow) {
-      pRow = [targetName, 0, false, false, false, false, false];
+      resDiv.innerHTML = `
+        <div style="padding:24px; text-align:center; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:12px; color:var(--danger); margin-top:15px; animation:fadeIn 0.3s ease;">
+            <h3 style="margin:0 0 8px 0; font-size:18px; display:flex; align-items:center; justify-content:center; gap:8px;">⚠️ Player Not Found</h3>
+            <p style="margin:0; font-size:14px; color:var(--text-muted);">Player <strong>"${window.escapeHTML(targetName)}"</strong> does not exist in any database or has been deleted.</p>
+        </div>`;
+      return;
     }
 
     pRow = await window.getLivePlayerEventRow(targetName, pRow, headers);

@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.57.39] - 2026-08-11
+### Fixed
+- **🧹 Memory Cache Purge & Non-existent Search Guard**: Purged `window.liveData` and `window.sheetCache` upon player deletion so in-memory Google Sheets caches cannot re-populate deleted players. Updated `searchPlayerFull` to display a clear `⚠️ Player Not Found` message when searching non-existent / deleted players instead of generating dummy blank cards.
+
 ## [1.57.38] - 2026-08-11
 ### Deployed
 - **⚙️ Google Apps Script Web App Deployment v135**: Deployed Google Apps Script code to live Web App version **135** (`AKfycbyWC4qYgIkbk47eYjiYMxr1Ml9-zefoBU6-cdM9mnw24LMS5s2KDCshMJ4H1weebIY`) and updated `API_BASE_URL` in `main.js`.
