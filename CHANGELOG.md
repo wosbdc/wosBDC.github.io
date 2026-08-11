@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.57.33] - 2026-08-11
+### Improved
+- **📅 Interactive Calendar Trigger & Button**: Added prominent 📅 Calendar Icon buttons inside date picker fields and bound full-box click handlers (`showPicker()`) so clicking anywhere on the date box or calendar icon immediately launches the datepicker modal.
+
 ## [1.57.32] - 2026-08-11
 ### Extended
 - **🪵 Full Standard Furnace Range (1 - 30)**: Extended the Standard Furnace dropdown options in `window.renderFurnaceSelectHtml` to individually list every single furnace level from **Furnace 30 down to Furnace 1**.

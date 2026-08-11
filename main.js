@@ -1618,7 +1618,10 @@ window.openAddPlayerModal = () => {
 
           <div>
             <label style="display:block; margin-bottom:4px; font-size:12px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Date Joined</label>
-            <input type="date" id="newPlayerDate" value="${todayStr}" style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:15px;">
+            <div style="position:relative; width:100%; display:flex; align-items:stretch;">
+              <input type="date" id="newPlayerDate" value="${todayStr}" onclick="try{this.showPicker();}catch(e){}" style="flex:1; padding:10px 40px 10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:15px; cursor:pointer;">
+              <button type="button" onclick="try{document.getElementById('newPlayerDate').showPicker();}catch(e){}" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--accent); font-size:18px; cursor:pointer; padding:4px;" title="Open Calendar">📅</button>
+            </div>
           </div>
 
           <div id="addPlayerStatus" style="font-size:13px; font-weight:bold; text-align:center;"></div>
