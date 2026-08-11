@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.57.34] - 2026-08-11
+### Fixed
+- **👤 Real-time Firebase Name Mapping for New Members**: Fixed `refreshIdToNameMap()` to query Firebase `users` and `giftcode_bot` database nodes in addition to Google Sheets. Added immediate in-memory map seeding on registration so brand new signups (not yet on `Chief's List` sheet) display their typed Chief Name immediately instead of showing "not found" or "Unknown Chief".
+
 ## [1.57.33] - 2026-08-11
 ### Improved
 - **📅 Interactive Calendar Trigger & Button**: Added prominent 📅 Calendar Icon buttons inside date picker fields and bound full-box click handlers (`showPicker()`) so clicking anywhere on the date box or calendar icon immediately launches the datepicker modal.

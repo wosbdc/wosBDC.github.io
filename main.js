@@ -264,11 +264,44 @@ export let enrolledGameIds = new Set();
 
 export const refreshIdToNameMap = async () => {
     try {
-        const [rosterRawData, giftcodebotData] = await Promise.all([
+        const [rosterRawData, giftcodebotData, usersSnap, gcBotSnap] = await Promise.all([
             window.fetchRoster().catch(() => null),
-            fetchSheet("giftcodebot").catch(() => null)
+            fetchSheet("giftcodebot").catch(() => null),
+            get(ref(db, 'users')).catch(() => null),
+            get(ref(db, 'giftcode_bot')).catch(() => null)
         ]);
         
+        // 1. Map Firebase Registered Users (Highest Priority for newly registered members)
+        if (usersSnap && usersSnap.exists()) {
+            const users = usersSnap.val() || {};
+            Object.values(users).forEach(u => {
+                if (u && u.gameId) {
+                    const gStr = u.gameId.toString().trim();
+                    const nStr = (u.name || u.chiefName || "").toString().trim();
+                    if (nStr && !/^\d+$/.test(nStr) && nStr !== gStr) {
+                        idToNameMap[gStr] = nStr;
+                        nameToIdMap[nStr] = gStr;
+                    }
+                }
+            });
+        }
+
+        // 2. Map Firebase Giftcode Bot Enrollments
+        if (gcBotSnap && gcBotSnap.exists()) {
+            const gcData = gcBotSnap.val() || {};
+            Object.values(gcData).forEach(u => {
+                if (u && u.gameId) {
+                    const gStr = u.gameId.toString().trim();
+                    const nStr = (u.name || "").toString().trim();
+                    if (nStr && !/^\d+$/.test(nStr) && nStr !== gStr) {
+                        idToNameMap[gStr] = nStr;
+                        nameToIdMap[nStr] = gStr;
+                    }
+                }
+            });
+        }
+
+        // 3. Map Roster Sheet
         if (rosterRawData) {
             Object.values(rosterRawData).forEach(p => {
                 if (p.name && p.gameId) {
@@ -282,6 +315,7 @@ export const refreshIdToNameMap = async () => {
             });
         }
         
+        // 4. Map Giftcodebot Sheet
         if (giftcodebotData && giftcodebotData.length > 1) {
             for (let i = 1; i < giftcodebotData.length; i++) {
                 let name = giftcodebotData[i][1]; 
@@ -296,10 +330,7 @@ export const refreshIdToNameMap = async () => {
                 }
             }
         }
-        // *** CRITICAL: Expose maps on window so inline onclick handlers can access them ***
-        // main.js is an ES module. Variables declared with `export let` are NOT automatically
-        // on window. Any inline onclick="..." that calls window.nameToIdMap or window.idToNameMap
-        // will get undefined unless we explicitly assign them here.
+
         window.nameToIdMap = nameToIdMap;
         window.idToNameMap = idToNameMap;
         window.enrolledGameIds = enrolledGameIds;
@@ -3793,9 +3824,16 @@ if(authSubmitBtn) authSubmitBtn.addEventListener('click', async () => {
       
       await registerUser(email, password, gameId, chiefName);
       
+      // Immediately seed in-memory maps so site never displays 'not found'
+      idToNameMap[gameId] = chiefName;
+      nameToIdMap[chiefName] = gameId;
+      window.idToNameMap[gameId] = chiefName;
+      window.nameToIdMap[chiefName] = gameId;
+      
       // Auto-enroll in Firebase giftcode_bot & ping backend API
       try {
           await window.enrollGiftcodeBot(gameId, chiefName);
+          await refreshIdToNameMap();
           const regToken = await getAuthToken();
           const url = `${API_BASE_URL}?api=registerNewPlayer&gameId=${encodeURIComponent(gameId)}&name=${encodeURIComponent(chiefName)}&dateStarted=${encodeURIComponent(dateStarted)}&level=${encodeURIComponent(furnaceLevel)}${regToken ? '&token=' + encodeURIComponent(regToken) : ''}`;
           fetch(url, { mode: 'no-cors' }).catch(e => console.warn("Failed to ping GAS for registration", e));
@@ -10609,7 +10647,9 @@ window.resetBearTrapEvent = async () => {
       
       linkedHtml += `</div>`;
       
-      let currentChiefName = idToNameMap[currentUser.gameId] || `Unknown Chief`;
+      let currentChiefName = (idToNameMap[currentUser.gameId] && !/^\d+$/.test(idToNameMap[currentUser.gameId])) 
+          ? idToNameMap[currentUser.gameId] 
+          : (currentUser.name || currentUser.chiefName || currentUser.displayName || `Chief ${currentUser.gameId}`);
       
       let adminBadgeHtml = '';
       let accLevel = window.getAdminLevel(currentUser);
