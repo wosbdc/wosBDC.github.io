@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [1.59.0] - 2026-08-11
+### True Transparent Badges (No Black Square Backgrounds)
+- **💎 True Alpha Transparent PNG Badges**: Converted all 10 Fire Crystal 3D badge assets from JPGs to true alpha-channel transparent PNGs (`/badges/fc1.png` – `/badges/fc10.png`).
+- **🚫 Zero Black Borders**: Removed reliance on CSS blend modes by embedding native transparent PNGs. Black square backgrounds are now 100% eliminated on all themes and backgrounds.
+
 ## [1.58.9] - 2026-08-11
 ### Visual Perfection & Transparency Fix
 - **✨ Transparent Fire Crystal Badges**: Applied `mix-blend-mode: screen` and removed square borders, completely stripping away the black square backgrounds so only the glowing 3D gem Fire Crystals render seamlessly on dark themes.
