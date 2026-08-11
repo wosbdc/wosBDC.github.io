@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.57.25] - 2026-08-11
+### Fixed
+- **👤 Registration Game ID Verification Name Fallback**: Fixed Game ID verification in `Create Account / Claim Profile` modal, `Player Editor`, and `Link Alt` forms. Filtered out numeric Game IDs incorrectly treated as Chief Names so the verification modal seamlessly queries official Century Games servers (`VERIFY_PROXY_URL`) to fetch the player's real in-game nickname instead of displaying `Is your Chief Name: [Game ID]?`.
+
 ## [1.57.24] - 2026-08-11
 ### Fixed & Redesigned
 - **📅 Single Master Sheet ("data") Parser & Vertical Section State Machine**: Redesigned `parseSheetToScheduleLiveData` in `main.js` to parse the `data` Google Sheet tab based on the exact stacked section layout (Columns I–O). Accurately ingests `Edit: Schedule (no sort)` / `Event's`, `Rewards Events`, `Signups`, `Holidays`, and `NEW Year Prelude`.

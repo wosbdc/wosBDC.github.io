@@ -243,8 +243,12 @@ export const refreshIdToNameMap = async () => {
         if (rosterRawData) {
             Object.values(rosterRawData).forEach(p => {
                 if (p.name && p.gameId) {
-                    idToNameMap[p.gameId.toString().trim()] = p.name.toString().trim();
-                    nameToIdMap[p.name.toString().trim()] = p.gameId.toString().trim();
+                    const nStr = p.name.toString().trim();
+                    const gStr = p.gameId.toString().trim();
+                    if (nStr && !/^\d+$/.test(nStr) && nStr !== gStr) {
+                        idToNameMap[gStr] = nStr;
+                        nameToIdMap[nStr] = gStr;
+                    }
                 }
             });
         }
@@ -254,9 +258,13 @@ export const refreshIdToNameMap = async () => {
                 let name = giftcodebotData[i][1]; 
                 let id = giftcodebotData[i][2]; 
                 if (name && id) {
-                    idToNameMap[id] = name.toString().trim();
-                      nameToIdMap[name.toString().trim()] = id.toString().trim();
-                  }
+                    const nStr = name.toString().trim();
+                    const gStr = id.toString().trim();
+                    if (nStr && !/^\d+$/.test(nStr) && nStr !== gStr) {
+                        idToNameMap[gStr] = nStr;
+                        nameToIdMap[nStr] = gStr;
+                    }
+                }
             }
         }
         // *** CRITICAL: Expose maps on window so inline onclick handlers can access them ***
@@ -3566,17 +3574,21 @@ if (authVerifyGameIdBtn && authChiefConfirm) {
          let rosterData = await window.fetchRoster();
          
          let matchedName = window.idToNameMap[val] || null;
+         if (matchedName && /^\d+$/.test(matchedName.toString().trim())) matchedName = null;
          let matchedFurnace = "";
          
          if (rosterData) {
             const foundEntry = Object.values(rosterData).find(p => p.gameId && p.gameId.toString().trim() === val.toString().trim());
-            if (foundEntry) {
-                matchedName = foundEntry.name;
-                matchedFurnace = foundEntry.furnaceLevel || "";
+            if (foundEntry && foundEntry.name) {
+                const candidateName = foundEntry.name.toString().trim();
+                if (!/^\d+$/.test(candidateName) && candidateName !== val.toString().trim()) {
+                    matchedName = candidateName;
+                    matchedFurnace = foundEntry.furnaceLevel || "";
+                }
             }
          }
          
-         if (matchedName) {
+         if (matchedName && !/^\d+$/.test(String(matchedName).trim()) && String(matchedName).trim() !== val.toString().trim()) {
              if (lookupId !== currentWosLookupId) return;
              authChiefConfirm.innerHTML = `Is your Chief Name: <strong style="color:var(--success)">${window.escapeHTML(matchedName)}</strong>? <span style="font-size:11px; color:#10b981; display:block; margin-top:4px;">✅ Verified from Alliance Database!</span>`;
              verifiedChiefName = matchedName;
@@ -11114,8 +11126,9 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
                   return;
               }
               altChiefConfirm.style.display = 'block';
-              if (idToNameMap[val]) {
-                  altChiefConfirm.innerHTML = `Is your Chief Name: <strong style="color:var(--success)">${idToNameMap[val]}</strong>?`;
+              const candidate = idToNameMap[val];
+              if (candidate && !/^\d+$/.test(String(candidate).trim()) && String(candidate).trim() !== val) {
+                  altChiefConfirm.innerHTML = `Is your Chief Name: <strong style="color:var(--success)">${window.escapeHTML(candidate)}</strong>?`;
               } else {
                   altChiefConfirm.innerHTML = `<span style="color:var(--danger)">Game ID not found in master database.</span>`;
               }
