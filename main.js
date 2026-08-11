@@ -87,72 +87,20 @@ window.getFurnaceIconHtml = (level, size = 36) => {
 
   // Render 3D Gem Faceted Fire Crystal Star Badge if fcNum is valid (FC 1 - 10)
   if (fcNum && fcNum >= 1 && fcNum <= 10) {
-     const fcColorMap = {
-       1:  { c1: '#ef4444', c2: '#dc2626', cLight: '#fca5a5', glow: 'rgba(239,68,68,0.75)' },   // FC 1: Crimson Red
-       2:  { c1: '#f97316', c2: '#ea580c', cLight: '#ffedd5', glow: 'rgba(249,115,22,0.75)' },  // FC 2: Flame Orange
-       3:  { c1: '#eab308', c2: '#ca8a04', cLight: '#fef08a', glow: 'rgba(234,179,8,0.75)' },   // FC 3: Sunburst Yellow
-       4:  { c1: '#10b981', c2: '#059669', cLight: '#a7f3d0', glow: 'rgba(16,185,129,0.75)' },  // FC 4: Emerald Green
-       5:  { c1: '#06b6d4', c2: '#0891b2', cLight: '#cffaff', glow: 'rgba(6,182,212,0.75)' },   // FC 5: Ice Cyan
-       6:  { c1: '#3b82f6', c2: '#2563eb', cLight: '#bfdbfe', glow: 'rgba(59,130,246,0.75)' },  // FC 6: Sapphire Blue
-       7:  { c1: '#8b5cf6', c2: '#7c3aed', cLight: '#ddd6fe', glow: 'rgba(139,92,246,0.75)' },  // FC 7: Amethyst Purple
-       8:  { c1: '#ec4899', c2: '#db2777', cLight: '#fbcfe8', glow: 'rgba(236,72,153,0.75)' },  // FC 8: Magenta Rose
-       9:  { c1: '#84cc16', c2: '#4d7c0f', cLight: '#ecfccb', glow: 'rgba(132,204,22,0.9)' },  // FC 9: Electric Kryptonite Lime!
-       10: { c1: '#ffd700', c2: '#b45309', cLight: '#fffbeb', glow: 'rgba(255,215,0,0.85)' }   // FC 10: Celestial Imperial Gold
+     const fcGlowMap = {
+       1: 'rgba(239,68,68,0.6)',    // Crimson Red
+       2: 'rgba(249,115,22,0.6)',   // Flame Orange
+       3: 'rgba(234,179,8,0.6)',    // Sunburst Yellow
+       4: 'rgba(16,185,129,0.6)',   // Emerald Green
+       5: 'rgba(6,182,212,0.6)',    // Ice Cyan
+       6: 'rgba(59,130,246,0.6)',   // Sapphire Blue
+       7: 'rgba(139,92,246,0.6)',   // Amethyst Purple
+       8: 'rgba(236,72,153,0.6)',   // Magenta Rose
+       9: 'rgba(132,204,22,0.7)',   // Kryptonite Lime
+       10: 'rgba(255,215,0,0.65)'   // Imperial Gold
      };
-
-     const pal = fcColorMap[fcNum] || fcColorMap[7];
-     const { c1, c2, cLight, glow } = pal;
-
-     const uId = Math.floor(Math.random() * 100000);
-     const gradId = `fc-star-grad-${fcNum}-${uId}`;
-     const innerGradId = `fc-star-inner-${fcNum}-${uId}`;
-     const glassId = `fc-star-glass-${fcNum}-${uId}`;
-
-     return `<div class="fc-star-badge-wrapper" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="display:inline-flex; align-items:center; justify-content:center; vertical-align:middle; position:relative; width:${size}px; height:${size}px; filter:drop-shadow(0 0 ${Math.max(4, Math.round(size/5))}px ${glow}); transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">
-       <svg viewBox="0 0 100 100" style="width:100%; height:100%; overflow:visible;">
-         <defs>
-           <!-- Outer Star 3D Metal Gradient -->
-           <linearGradient id="${gradId}" x1="0%" y1="0%" x2="100%" y2="100%">
-             <stop offset="0%" stop-color="${cLight}" />
-             <stop offset="45%" stop-color="${c1}" />
-             <stop offset="100%" stop-color="${c2}" />
-           </linearGradient>
-           
-           <!-- Inner Gem Facet Gradient -->
-           <radialGradient id="${innerGradId}" cx="50%" cy="30%" r="70%">
-             <stop offset="0%" stop-color="rgba(30,41,59,0.95)" />
-             <stop offset="70%" stop-color="rgba(15,23,42,0.98)" />
-             <stop offset="100%" stop-color="${c2}" />
-           </radialGradient>
-
-           <!-- Glossy Glass Sheen -->
-           <linearGradient id="${glassId}" x1="0%" y1="0%" x2="100%" y2="100%">
-             <stop offset="0%" stop-color="#ffffff" stop-opacity="0.55" />
-             <stop offset="50%" stop-color="#ffffff" stop-opacity="0.15" />
-             <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
-           </linearGradient>
-         </defs>
-
-         <!-- Outer Glowing Ring Halo -->
-         <circle cx="50" cy="50" r="46" fill="none" stroke="${cLight}" stroke-width="1.5" opacity="0.35" stroke-dasharray="4 2" />
-         <circle cx="50" cy="50" r="42" fill="none" stroke="url(#${gradId})" stroke-width="2" opacity="0.75" />
-
-         <!-- 3D 6-Pointed Gem Star Outer Body -->
-         <path d="M50 3 L63 28 L94 22 L77 48 L98 72 L68 70 L50 97 L32 70 L2 72 L23 48 L6 22 L37 28 Z" fill="url(#${gradId})" stroke="${cLight}" stroke-width="2" stroke-linejoin="round" />
-         
-         <!-- Inner 3D Star Facets (Glint Lines) -->
-         <path d="M50 3 L50 50 M94 22 L50 50 M98 72 L50 50 M50 97 L50 50 M2 72 L50 50 M6 22 L50 50" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" />
-         
-         <!-- Center Hexagonal Gem Shield -->
-         <polygon points="50,18 76,34 76,66 50,82 24,66 24,34" fill="url(#${innerGradId})" stroke="${cLight}" stroke-width="2.5" stroke-linejoin="round" />
-         
-         <!-- Top Glass Reflection Overlay -->
-         <polygon points="50,20 74,35 50,50 26,35" fill="url(#${glassId})" />
-
-         <!-- Embossed FC Tier Number -->
-         <text x="50" y="53" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-weight="900" font-size="34" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" style="text-shadow: 0 0 10px ${c1}, 0 2px 5px #000000, 0 0 2px #000000; letter-spacing:-1px;">${fcNum}</text>
-       </svg>
-     </div>`;
+     const glow = fcGlowMap[fcNum];
+     return `<img src="/badges/fc${fcNum}.jpg" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(3, Math.round(size/6))}px ${glow}); vertical-align:middle; transition:transform 0.2s; border-radius:4px;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'" loading="lazy">`;
   }
 
   // Render Modern Standard Furnace Badge (Furnace 1 to 30)

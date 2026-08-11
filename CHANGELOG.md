@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.58.8] - 2026-08-11
+### Major Visual Upgrade
+- **🔥 Photorealistic 3D Crystal Badge Images**: Replaced all inline SVG badge rendering with 10 photorealistic pre-rendered 3D gem-faceted crystal star badge images (`/badges/fc1.jpg` through `/badges/fc10.jpg`). Each badge features glass reflections, metallic gradients, inner facet glint lines, dark hexagonal center shields, and glowing neon halo aura rings — matching the premium mockup quality.
+
 ## [1.58.7] - 2026-08-11
 ### Bug Fix
 - **🔧 Profile Editor Changes Now Persist to Account Hub**: Fixed a critical bug where the Edit Profile modal saved data to Firebase (`users/{uid}`) but the Account Hub page only read from the roster, ignoring the saved values. Added Firebase RTDB hydration to `views.account()` so furnace level, joined date, time active, and bio all reflect saved edits immediately — both after saving and on page refresh.
