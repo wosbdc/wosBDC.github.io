@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.58.6] - 2026-08-11
+### Design Perfection
+- **💎 3D Gem Faceted Star Badges Restored**: Restored the 3D gem-faceted crystal star SVG renderer with glowing halo aura rings, glass sheen overlays, and inner facet glint lines matching your favorite showcase layout, while setting **FC 9** to high-contrast Electric Kryptonite Lime Green (`#84cc16`).
+
 ## [1.58.5] - 2026-08-11
 ### Design Restoration
 - **🌟 Original 6-Pointed Neon Star Badge Style Restored**: Restored the original 6-pointed neon star vector geometry in `window.getFurnaceIconHtml` while preserving all 10 high-contrast, distinct level colors (FC 1 Red to FC 10 Gold).
