@@ -14144,8 +14144,8 @@ window.parseSheetToScheduleLiveData = (sheetData) => {
   let signups = [], rewards = [], allWeek = [], holidays = [];
 
   if (sheetData && Array.isArray(sheetData)) {
-    // 1. Timed Events (Row 4 to Row 23)
-    const maxRow = Math.min(sheetData.length, 55);
+    // 1. Timed Events (Row 4 to Row 23; indices 3 to 22)
+    const maxRow = Math.min(sheetData.length, 24);
     for (let i = 0; i < maxRow; i++) {
       const row = sheetData[i];
       if (!row || !Array.isArray(row)) continue;
@@ -14188,13 +14188,9 @@ window.parseSheetToScheduleLiveData = (sheetData) => {
       const cleanName = String(eventName).trim();
       const lowerName = cleanName.toLowerCase();
 
-      // Skip header rows
-      if (lowerName === 'events' || lowerName === 'title' || lowerName === 'event' || cleanName.includes("Event's")) continue;
-
-      // Stop timed events if we hit rewards header after row 20
-      if (i >= 20 && (lowerName.includes('rewards') || lowerName.includes('signups') || lowerName.includes('all week'))) {
-        break;
-      }
+      // Skip header rows & section titles
+      if (lowerName === 'events' || lowerName === 'title' || lowerName === 'event' || cleanName.includes("Event's") || lowerName.includes('start date')) continue;
+      if (i >= 20 && (lowerName.includes('rewards') || lowerName.includes('signups') || lowerName.includes('all week'))) break;
 
       const isBearTrap = cleanName.includes('Bear Trap') || cleanName.includes('🪤') || cleanName.includes('🐻');
       const isJoe = cleanName.includes('Crazy Joe') || cleanName.includes('🔥');
@@ -14215,42 +14211,48 @@ window.parseSheetToScheduleLiveData = (sheetData) => {
       });
     }
 
-    // 2. Parse Rewards & Category Lists (Row 25 to Row 52)
-    let startCategoryRow = -1;
-    for (let i = 20; i < sheetData.length; i++) {
-      if (!sheetData[i]) continue;
-      const cellI = String(sheetData[i][8] || '').trim().toLowerCase();
-      const cellF = String(sheetData[i][5] || '').trim().toLowerCase();
-      const cellA = String(sheetData[i][0] || '').trim().toLowerCase();
-      if (cellI.includes('reward') || cellF.includes('reward') || cellA.includes('reward')) {
-        startCategoryRow = i + 1;
-        break;
+    // 2. Parse Rewards & Category Lists (Row 25 to Row 55)
+    let headerRowIdx = -1;
+    let rewardsCol = -1, signupsCol = -1, allWeekCol = -1, holidaysCol = -1;
+
+    for (let i = 20; i < Math.min(sheetData.length, 30); i++) {
+      const row = sheetData[i];
+      if (!row || !Array.isArray(row)) continue;
+      
+      for (let c = 0; c < row.length; c++) {
+        const val = String(row[c] || '').trim().toLowerCase();
+        if (val.includes('reward')) { headerRowIdx = i; rewardsCol = c; }
+        else if (val.includes('signup') || val.includes('sign-up')) { signupsCol = c; }
+        else if (val.includes('all week') || val.includes('whole week') || val.includes('weekly')) { allWeekCol = c; }
+        else if (val.includes('holiday') || val.includes('special')) { holidaysCol = c; }
       }
+      if (headerRowIdx !== -1) break;
     }
 
-    if (startCategoryRow === -1 && sheetData.length > 24) {
-      startCategoryRow = 24; // Fallback to Row 25
-    }
+    const startRow = headerRowIdx !== -1 ? headerRowIdx + 1 : 24;
+    const endRow = Math.min(sheetData.length, 55);
 
-    if (startCategoryRow !== -1) {
-      const endCategoryRow = Math.min(sheetData.length, 55);
-      for (let i = startCategoryRow; i < endCategoryRow; i++) {
-        const row = sheetData[i];
-        if (!row || !Array.isArray(row)) continue;
+    const skip = (v) => {
+      if (!v) return true;
+      const s = String(v).trim().toLowerCase();
+      return s === '' || s === 'no events' || s.includes('rewards') || s.includes('signups') || s.includes('sign-ups') || s.includes('all week') || s.includes('whole week') || s.includes('events');
+    };
 
-        let r = row[8] || row[5] || row[0];
-        let g = row[9] || row[6] || row[1];
-        let h = row[10] || row[7] || row[2];
-        let k = row[11] || row[8] || row[3];
+    for (let i = startRow; i < endRow; i++) {
+      const row = sheetData[i];
+      if (!row || !Array.isArray(row)) continue;
 
-        const anyVal = [r,g,h,k].some(v => v && String(v).trim() !== '');
-        if (!anyVal) continue;
+      if (rewardsCol !== -1 && rewardsCol < row.length && !skip(row[rewardsCol])) rewards.push(String(row[rewardsCol]).trim());
+      if (signupsCol !== -1 && signupsCol < row.length && !skip(row[signupsCol])) signups.push(String(row[signupsCol]).trim());
+      if (allWeekCol !== -1 && allWeekCol < row.length && !skip(row[allWeekCol])) allWeek.push(String(row[allWeekCol]).trim());
+      if (holidaysCol !== -1 && holidaysCol < row.length && !skip(row[holidaysCol])) holidays.push(String(row[holidaysCol]).trim());
 
-        const skip = (v) => !v || String(v).trim() === '' || String(v).trim().toLowerCase() === 'no events' || String(v).trim().toLowerCase().includes('rewards');
-        if (!skip(r)) rewards.push(String(r).trim());
-        if (!skip(g)) signups.push(String(g).trim());
-        if (!skip(h)) allWeek.push(String(h).trim());
-        if (!skip(k)) holidays.push(String(k).trim());
+      for (let c = 0; c < row.length; c++) {
+        if (c === rewardsCol || c === signupsCol) continue;
+        const item = String(row[c] || '').trim();
+        if (!skip(item) && !rewards.includes(item) && !signups.includes(item) && !allWeek.includes(item) && !holidays.includes(item)) {
+          allWeek.push(item);
+        }
       }
     }
   }

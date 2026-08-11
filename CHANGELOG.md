@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.57.17] - 2026-08-11
+### Fixed
+- **📅 Dynamic Category Header & Column Scanner**: Fixed root cause where `allWeek` items were skipped if Whole Week events were placed in Column K, L, M, N, or O in `Schedule data`. Added dynamic header detection and broad column scanning across all category rows in `parseSheetToScheduleLiveData`.
+
 ## [1.57.16] - 2026-08-11
 ### Changed
 - **📅 Schedule Section Pill Label**: Renamed section pill title from `Coming Up This Week` to `Coming up:` on Today's View in `main.js`.
