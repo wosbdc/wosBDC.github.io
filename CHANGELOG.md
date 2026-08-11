@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.57.37] - 2026-08-11
+### Redeployed
+- **🚀 Verified Deployment Push**: Re-synced and forced fresh deployment build to GitHub Pages and Google Apps Script backend.
+
 ## [1.57.36] - 2026-08-11
 ### Improved
 - **📋 Collapsible Directory Drawer in Player Editor**: Converted the large Master Accounts Directory list into a clean, collapsible accordion (`<details>`). Keeps the **Player Database Editor** screen clean, focused, and uncluttered on initial load while allowing admins to expand the full 100+ account list on demand.
