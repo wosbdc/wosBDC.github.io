@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.58.1] - 2026-08-11
+### Design Upgrade
+- **💎 Modern 3D Fire Crystal Star Badges**: Enhanced `window.getFurnaceIconHtml` with 3D metallic gem faceting, glass sheen overlays, inner crystal glint lines, and glowing outer aura rims matching the premium UI mockups.
+
 ## [1.58.0] - 2026-08-11
 ### Major Feature Addition
 - **🔥 Dynamic Fire Crystal 6-Pointed Star Badges (FC 1 – 10)**: Upgraded `window.getFurnaceIconHtml` to render vector 6-pointed Fire Crystal star badges matching in-game designs with tier-specific color gradients (Ruby Amber, Violet Rose, Sapphire Cyan, Magenta Rose, Celestial Gold) and centered numbers.

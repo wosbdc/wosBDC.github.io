@@ -85,41 +85,74 @@ window.getFurnaceIconHtml = (level, size = 36) => {
      }
   }
 
-  // Render Fire Crystal 6-Pointed Star Badge if fcNum is valid (FC 1 - 10)
+  // Render Modern 3D Fire Crystal 6-Pointed Star Gem Badge if fcNum is valid (FC 1 - 10)
   if (fcNum && fcNum >= 1 && fcNum <= 10) {
-     let c1 = '#ec4899', c2 = '#f43f5e', glow = 'rgba(236,72,153,0.6)';
+     let c1 = '#ec4899', c2 = '#f43f5e', cLight = '#f472b6', glow = 'rgba(236,72,153,0.7)';
      if (fcNum <= 2) {
-        c1 = '#f59e0b'; c2 = '#ef4444'; glow = 'rgba(245,158,11,0.5)';
+        c1 = '#f59e0b'; c2 = '#ef4444'; cLight = '#fde047'; glow = 'rgba(245,158,11,0.6)';
      } else if (fcNum <= 4) {
-        c1 = '#a855f7'; c2 = '#ec4899'; glow = 'rgba(168,85,247,0.5)';
+        c1 = '#8b5cf6'; c2 = '#d946ef'; cLight = '#c084fc'; glow = 'rgba(139,92,246,0.6)';
      } else if (fcNum <= 6) {
-        c1 = '#06b6d4'; c2 = '#3b82f6'; glow = 'rgba(6,182,212,0.5)';
+        c1 = '#06b6d4'; c2 = '#3b82f6'; cLight = '#67e8f9'; glow = 'rgba(6,182,212,0.6)';
      } else if (fcNum <= 8) {
-        c1 = '#ec4899'; c2 = '#f43f5e'; glow = 'rgba(236,72,153,0.6)';
+        c1 = '#ec4899'; c2 = '#f43f5e'; cLight = '#f472b6'; glow = 'rgba(236,72,153,0.7)';
      } else {
-        c1 = '#eab308'; c2 = '#f97316'; glow = 'rgba(234,179,8,0.7)';
+        c1 = '#f59e0b'; c2 = '#eab308'; cLight = '#fef08a'; glow = 'rgba(234,179,8,0.8)';
      }
 
-     const svgId = `fc-grad-${fcNum}-${Math.floor(Math.random()*10000)}`;
+     const uId = Math.floor(Math.random() * 100000);
+     const gradId = `fc-star-grad-${fcNum}-${uId}`;
+     const innerGradId = `fc-star-inner-${fcNum}-${uId}`;
+     const glassId = `fc-star-glass-${fcNum}-${uId}`;
 
-     return `<div class="fc-star-badge-wrapper" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="display:inline-flex; align-items:center; justify-content:center; vertical-align:middle; position:relative; width:${size}px; height:${size}px; filter:drop-shadow(0 0 ${Math.round(size/6)}px ${glow});">
+     return `<div class="fc-star-badge-wrapper" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="display:inline-flex; align-items:center; justify-content:center; vertical-align:middle; position:relative; width:${size}px; height:${size}px; filter:drop-shadow(0 0 ${Math.max(4, Math.round(size/5))}px ${glow}); transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">
        <svg viewBox="0 0 100 100" style="width:100%; height:100%; overflow:visible;">
          <defs>
-           <linearGradient id="${svgId}" x1="0%" y1="0%" x2="100%" y2="100%">
-             <stop offset="0%" stop-color="${c1}" />
+           <!-- Outer Star 3D Metal Gradient -->
+           <linearGradient id="${gradId}" x1="0%" y1="0%" x2="100%" y2="100%">
+             <stop offset="0%" stop-color="${cLight}" />
+             <stop offset="45%" stop-color="${c1}" />
              <stop offset="100%" stop-color="${c2}" />
            </linearGradient>
+           
+           <!-- Inner Gem Facet Gradient -->
+           <radialGradient id="${innerGradId}" cx="50%" cy="30%" r="70%">
+             <stop offset="0%" stop-color="rgba(30,41,59,0.95)" />
+             <stop offset="70%" stop-color="rgba(15,23,42,0.98)" />
+             <stop offset="100%" stop-color="${c2}" />
+           </radialGradient>
+
+           <!-- Glossy Glass Sheen -->
+           <linearGradient id="${glassId}" x1="0%" y1="0%" x2="100%" y2="100%">
+             <stop offset="0%" stop-color="#ffffff" stop-opacity="0.5" />
+             <stop offset="50%" stop-color="#ffffff" stop-opacity="0.1" />
+             <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
+           </linearGradient>
          </defs>
-         <path d="M50 5 L61 30 L89 25 L73 48 L95 68 L68 68 L50 95 L32 68 L5 68 L27 48 L11 25 L39 30 Z" fill="url(#${svgId})" stroke="#ffffff" stroke-width="3.5" stroke-linejoin="round" />
-         <polygon points="50,22 74,36 74,64 50,78 26,64 26,36" fill="rgba(15,23,42,0.85)" stroke="${c1}" stroke-width="2.5" />
-         <text x="50" y="52" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-weight="900" font-size="34" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" style="text-shadow:0 2px 4px rgba(0,0,0,0.8);">${fcNum}</text>
+
+         <!-- Outer Glowing Aura Rim -->
+         <path d="M50 2 L63 28 L94 22 L77 48 L98 72 L68 70 L50 98 L32 70 L2 72 L23 48 L6 22 L37 28 Z" fill="url(#${gradId})" stroke="${cLight}" stroke-width="2.5" stroke-linejoin="round" />
+         
+         <!-- Inner 3D Star Facets (Glint Lines) -->
+         <path d="M50 2 L50 50 M94 22 L50 50 M98 72 L50 50 M50 98 L50 50 M2 72 L50 50 M6 22 L50 50" stroke="rgba(255,255,255,0.3)" stroke-width="1.5" />
+         
+         <!-- Center Hexagonal Gem Shield -->
+         <polygon points="50,18 78,34 78,66 50,82 22,66 22,34" fill="url(#${innerGradId})" stroke="${cLight}" stroke-width="3" stroke-linejoin="round" />
+         
+         <!-- Top Glass Reflection Overlay -->
+         <polygon points="50,20 76,35 50,50 24,35" fill="url(#${glassId})" />
+
+         <!-- Embossed FC Tier Number -->
+         <text x="50" y="53" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-weight="900" font-size="34" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" style="text-shadow: 0 0 10px ${c1}, 0 2px 5px #000000, 0 0 2px #000000; letter-spacing:-1px;">${fcNum}</text>
        </svg>
      </div>`;
   }
 
-  // Render Standard Furnace Badge (Furnace 1 to 30)
+  // Render Modern Standard Furnace Badge (Furnace 1 to 30)
   const fn = furnaceNum || parseInt(rawStr, 10) || 30;
-  return `<span class="furnace-level-badge" style="display:inline-flex; align-items:center; gap:4px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); padding:3px 8px; border-radius:10px; font-weight:bold; font-size:${Math.max(12, Math.round(size*0.38))}px; color:var(--text-main); white-space:nowrap; vertical-align:middle;">🔥 Furnace ${fn}</span>`;
+  return `<span class="furnace-level-badge" title="Furnace Level ${fn}" style="display:inline-flex; align-items:center; gap:6px; background:linear-gradient(135deg, rgba(30,41,59,0.8), rgba(15,23,42,0.9)); border:1px solid rgba(249,115,22,0.4); padding:4px 10px; border-radius:12px; font-weight:800; font-size:${Math.max(12, Math.round(size*0.38))}px; color:#ffffff; box-shadow:0 4px 12px rgba(249,115,22,0.15); white-space:nowrap; vertical-align:middle;">
+    <span style="filter:drop-shadow(0 0 4px #f97316);">🔥</span> Lv ${fn}
+  </span>`;
 };
 
 window.renderFurnaceSelectHtml = (id = 'manualFurnaceLevel', selectedVal = '', extraStyles = '') => {
