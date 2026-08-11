@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.57.29] - 2026-08-11
+### Enforced Policy
+- **🚫 Rejection Policy for Matching Chief Name & Game ID**: Implemented strict frontend & backend policy enforcement across registration forms and Apps Script Web App v133 (`registerNewPlayer` endpoint). Directly rejects any submission where the Chief Name matches the Game ID or is purely numeric.
+
 ## [1.57.28] - 2026-08-11
 ### Added & Improved
 - **🛡️ Strict Chief Name Field Separation & Validation**: Explicitly labeled `Game ID (Numbers Only)` vs `In-game Chief Name (Character Name, NOT ID)` in registration modal. Added real-time warning feedback (`⚠️ Please enter your text Chief Name, not your numeric Game ID`) and form submit guards so users can never accidentally submit numeric Game IDs as Chief Names.
