@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.57.14] - 2026-08-11
+### Added
+- **📅 Admin "Sync Schedule ➔ Site" Action**: Added `window.syncScheduleDirectly` function and a 1-click **`📅 Sync Schedule ➔ Site`** action button in the Admin Menu (`views.admin()`). Allows admins to force-sync formula-based Google Sheets schedule updates to the website instantly.
+
 ## [1.57.13] - 2026-08-11
 ### Fixed
 - **📅 Calendar View Saturday Card & Upcoming Events Date Parser**:

@@ -2240,6 +2240,43 @@ window.syncAllSheetsToFirebase = async () => {
     }
 };
 
+window.syncScheduleDirectly = async () => {
+    if (window.showToast) window.showToast('📡 Syncing Schedule tab from Google Sheets...', 'info', false);
+    try {
+        let freshSheetData = null;
+        for (const tabName of ["WhiteOut Survival", "Schedule data", "Schedule", "Events"]) {
+            try {
+                delete window.liveData[tabName];
+                delete window.livePromises[tabName];
+                freshSheetData = await fetchSheet(tabName, true);
+                if (freshSheetData && Array.isArray(freshSheetData) && freshSheetData.length > 1) {
+                    break;
+                }
+            } catch(e) {}
+        }
+        if (freshSheetData && Array.isArray(freshSheetData)) {
+            const freshLiveData = window.parseSheetToScheduleLiveData(freshSheetData);
+            if (freshLiveData && freshLiveData.events && freshLiveData.events.length > 0) {
+                await set(ref(db, 'schedule_live'), freshLiveData);
+                if (window.logAdminAction) {
+                    window.logAdminAction("Schedule Force Synced to Site", `Synced ${freshLiveData.events.length} schedule events from Google Sheets formula data directly to website.`);
+                }
+                if (window.showToast) window.showToast(`✅ Schedule Synced to Site! Loaded ${freshLiveData.events.length} events from Google Sheets!`, 'success');
+                if (window.currentView === 'schedule') {
+                    await views.schedule();
+                }
+                return true;
+            }
+        }
+        if (window.showToast) window.showToast("⚠️ Could not find valid schedule events in Google Sheets.", "warning");
+        return false;
+    } catch(e) {
+        console.error("Error in syncScheduleDirectly:", e);
+        if (window.showToast) window.showToast("Error syncing schedule: " + e.message, "error");
+        return false;
+    }
+};
+
 window.logAdminAction = async (actionType, details, targetPlayer = '') => {
     try {
         const adminName = (currentUser && currentUser.gameId && idToNameMap[currentUser.gameId]) 
@@ -7525,6 +7562,7 @@ const views = {
                 <button onclick="views.playerEditor()" style="background:linear-gradient(135deg, #6366f1, #4f46e5); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(99,102,241,0.3);">👤 Open Player Database Editor</button>
                 ${isR5 ? `<button onclick="window.openBroadcastPushModal()" style="background:linear-gradient(135deg, #ec4899, #be185d); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(236,72,153,0.3);">🚀 Broadcast Push Notification</button>` : ''}
                 <button id="syncAllSheetsBtn" onclick="window.syncAllSheetsToFirebase()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(16,185,129,0.3);">⚡ Master Sync Sheets ➔ Firebase</button>
+                <button onclick="window.syncScheduleDirectly()" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(59,130,246,0.3);">📅 Sync Schedule ➔ Site</button>
               </div>
             </div>
 
