@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.58.5] - 2026-08-11
+### Design Restoration
+- **🌟 Original 6-Pointed Neon Star Badge Style Restored**: Restored the original 6-pointed neon star vector geometry in `window.getFurnaceIconHtml` while preserving all 10 high-contrast, distinct level colors (FC 1 Red to FC 10 Gold).
+
 ## [1.58.4] - 2026-08-11
 ### Color Palette Upgrade
 - **🎨 High-Contrast Distinct Color Spectrum**: Updated FC 9 to high-contrast Electric Neon Lime Kryptonite (`#84cc16`), creating 10 instantly recognizable, non-overlapping color categories for FC 1 through FC 10.
