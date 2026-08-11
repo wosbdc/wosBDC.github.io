@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.57.20] - 2026-08-11
+### Fixed
+- **📅 Removed Hardcoded Row Limit for Google Sheets Schedule Parser**: Fixed root cause for "missing events past 8/13" by dynamically setting `maxRow` based on where the category list (`rewards` / `signups` / `all week`) begins in the `Schedule` Google Sheet. Previously, the parser strictly halted at Row 24 (index 23), completely ignoring any newly added timed events that pushed the list further down.
+
 ## [1.57.19] - 2026-08-11
 ### Fixed
 - **📅 Today's View Upcoming Events Date Loop**: Replaced remaining strict regex (`^M/D$`) in Today's View loop (`main.js`) with `window.parseScheduleEventDate`. Resolves issue where date ranges (e.g. `8/14 - 8/16`, `8/15 - 8/17`) stopped rendering past 8/13.
