@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.57.31] - 2026-08-11
+### Improved
+- **🔥 Categorized Furnace Level Dropdown Component**: Replaced ambiguous single-number inputs with a categorized Furnace Level dropdown component (`window.renderFurnaceSelectHtml`). Clearly distinguishes **Fire Crystal Levels (FC 1 - FC 10)** from **Standard Furnace Levels (1 - 30)** across the registration modal and roster player management forms.
+
 ## [1.57.30] - 2026-08-11
 ### Fixed & Redesigned
 - **👥 Complete Multi-Database Player Compilation & Accounts Directory View**: Redesigned `views.playerEditor()` to compile accounts across ALL sources (Firebase `users` database table, static Alliance Roster Sheet, `giftcodebot`, and `nameToIdMap`/`idToNameMap`). Added an instant-load **Master Accounts Directory** list view by default with filter tabs (`All Accounts`, `Registered Only`, `Unregistered`) and 1-click edit buttons for every account.

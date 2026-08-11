@@ -71,6 +71,36 @@ window.getFurnaceIconHtml = (level, size = 36) => {
     return `<img src="${url}" style="width:${size}px; height:${size}px; vertical-align:middle; margin-right:4px; object-fit:contain; image-rendering:-webkit-optimize-contrast;" />`;
 };
 
+window.renderFurnaceSelectHtml = (id = 'manualFurnaceLevel', selectedVal = '', extraStyles = '') => {
+  const norm = (selectedVal || '').toString().trim().toUpperCase();
+  
+  let options = `
+    <option value="" ${!norm ? 'selected' : ''}>Select Furnace Level (Optional)</option>
+    <optgroup label="🔥 Fire Crystal (FC) Levels">
+  `;
+  
+  for (let fc = 10; fc >= 1; fc--) {
+    const val = `FC ${fc}`;
+    const isSel = (norm === val || norm === `FC${fc}` || norm === `FC ${fc}`);
+    options += `<option value="${val}" ${isSel ? 'selected' : ''}>FC ${fc} (Fire Crystal ${fc})</option>`;
+  }
+  
+  options += `
+    </optgroup>
+    <optgroup label="🪵 Standard Furnace Levels">
+  `;
+  
+  for (let lv = 30; lv >= 15; lv--) {
+    const val = `${lv}`;
+    const isSel = (norm === val || norm === `F${lv}` || norm === `F ${lv}` || norm === `FURNACE ${lv}`);
+    options += `<option value="${val}" ${isSel ? 'selected' : ''}>Furnace ${lv}</option>`;
+  }
+  options += `<option value="1-14" ${norm === '1-14' || norm === 'BELOW 15' ? 'selected' : ''}>Below Level 15</option>`;
+  options += `</optgroup>`;
+
+  return `<select id="${id}" style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:15px; box-sizing:border-box; ${extraStyles}">${options}</select>`;
+};
+
 // --- Security Helpers ---
 window.escapeHTML = (str) => {
   if (typeof str !== 'string') str = String(str || '');
@@ -1584,7 +1614,7 @@ window.openAddPlayerModal = () => {
 
           <div>
             <label style="display:block; margin-bottom:4px; font-size:12px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Furnace Level</label>
-            <input type="text" id="newPlayerFurnace" placeholder="e.g. F30, FC1, FC2..." value="F30" style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:15px;">
+            ${window.renderFurnaceSelectHtml('newPlayerFurnace', '30')}
           </div>
 
           <div>
@@ -3627,7 +3657,7 @@ if (authVerifyGameIdBtn && authChiefConfirm) {
             <input type="text" id="manualChiefName" placeholder="e.g. BrianDCox" style="width:100%; padding:10px; border-radius:6px; margin-bottom:4px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
             <div id="manualNameWarning" style="font-size:11px; color:var(--danger); display:none; margin-bottom:8px;">⚠️ Please enter your text Chief Name (e.g. BrianDCox), not your numeric Game ID.</div>
             <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;">Furnace Level (optional):</label>
-            <input type="number" id="manualFurnaceLevel" placeholder="e.g. 30" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
+            ${window.renderFurnaceSelectHtml('manualFurnaceLevel', verifiedFurnaceLevel, 'margin-bottom:6px;')}
         </div>`;
       
       const mNameEl = document.getElementById('manualChiefName');
