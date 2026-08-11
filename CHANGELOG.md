@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.57.46] - 2026-08-11
+### Fixed
+- **🛠️ Attached window.openAuthModal Handler**: Attached `window.openAuthModal` to window scope with tab switching support (`login`/`register`). Passed repository audit script (`check_window_bindings.cjs`).
+
 ## [1.57.45] - 2026-08-11
 ### Security Update
 - **🔒 Members-Only Access Lockdown**: Enforced members-only authentication checks across alliance roster, staff, leaderboards, and player profile search views. Guest visitors are presented with a clean login/register prompt.

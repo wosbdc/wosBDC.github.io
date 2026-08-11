@@ -3560,11 +3560,27 @@ window.switchSpoofUser = () => {
     }, 100);
 };
 
-const openAuthModal = () => {
-  authErrorMsg.style.display = 'none';
-  authModal.style.display = 'block';
-  authModalOverlay.classList.add('active');
+window.openAuthModal = (tab = 'login') => {
+  if (authErrorMsg) authErrorMsg.style.display = 'none';
+  if (authModal) authModal.style.display = 'block';
+  if (authModalOverlay) authModalOverlay.classList.add('active');
+  const loginTabBtn = document.getElementById('loginTabBtn');
+  const registerTabBtn = document.getElementById('registerTabBtn');
+  const loginForm = document.getElementById('loginForm');
+  const registerForm = document.getElementById('registerForm');
+  if (tab === 'register' && registerTabBtn && registerForm) {
+     if (loginTabBtn) loginTabBtn.classList.remove('active');
+     registerTabBtn.classList.add('active');
+     if (loginForm) loginForm.style.display = 'none';
+     registerForm.style.display = 'block';
+  } else if (loginTabBtn && loginForm) {
+     if (registerTabBtn) registerTabBtn.classList.remove('active');
+     loginTabBtn.classList.add('active');
+     if (registerForm) registerForm.style.display = 'none';
+     loginForm.style.display = 'block';
+  }
 };
+const openAuthModal = window.openAuthModal;
 const closeAuthModal = () => {
   authModal.style.display = 'none';
   authModalOverlay.classList.remove('active');
