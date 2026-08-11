@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.57.35] - 2026-08-11
+### Fixed & Improved
+- **🗑️ Deep Multi-Database Player & Account Purge**: Overhauled `adminDeletePlayer` and `adminDeleteUserRow` to thoroughly purge player data across all Firebase database nodes (including `users`, `giftcode_bot`, `roster_live`, `avatars`, `beartrap`, `beartrap_donations`, and `staffProfiles`), clear in-memory maps, and instantly re-render the **Player Database Editor** directory list view.
+
 ## [1.57.34] - 2026-08-11
 ### Fixed
 - **👤 Real-time Firebase Name Mapping for New Members**: Fixed `refreshIdToNameMap()` to query Firebase `users` and `giftcode_bot` database nodes in addition to Google Sheets. Added immediate in-memory map seeding on registration so brand new signups (not yet on `Chief's List` sheet) display their typed Chief Name immediately instead of showing "not found" or "Unknown Chief".

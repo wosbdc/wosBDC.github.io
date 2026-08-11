@@ -2473,24 +2473,38 @@ window._executeLogBearTrapWinner = async (name, trap) => {
       
       window.showToast("Deleting Account...", "danger");
       try {
+          // Fetch user data first to get gameId for giftcode_bot purge
+          const uSnap = await get(ref(db, `users/${uid}`));
+          if (uSnap.exists()) {
+              const u = uSnap.val();
+              const gid = u.gameId ? u.gameId.toString().trim() : "";
+              if (gid) {
+                  await remove(ref(db, `giftcode_bot/${gid}`)).catch(() => null);
+                  delete idToNameMap[gid];
+                  if (window.idToNameMap) delete window.idToNameMap[gid];
+              }
+          }
           await remove(ref(db, `users/${uid}`));
+          await refreshIdToNameMap();
           window.showToast(`Successfully deleted account.`, "success");
-          if (document.getElementById('adminHubView')) views.admin();
+          if (document.getElementById('playerDirectoryList')) views.playerEditor();
+          else if (document.getElementById('adminHubView')) views.admin();
       } catch (e) {
           if (window.showToast) window.showToast(e.message, "error");
       }
   };
 
   window.adminDeletePlayer = async (name) => {
-    let confirmDelete = await window.customConfirm(`⚠️ WARNING ⚠️\n\nAre you sure you want to COMPLETELY DELETE ${name}?\n\nThis will remove them from the database, wipe their ghost rows, AND permanently delete their Firebase account profile.\n\nThis action cannot be undone.`);
+    let confirmDelete = await window.customConfirm(`⚠️ WARNING ⚠️\n\nAre you sure you want to COMPLETELY DELETE ${name}?\n\nThis will remove them from the database, wipe their player cards, AND permanently delete their Firebase account profile & giftcode enrollment.\n\nThis action cannot be undone.`);
     if (!confirmDelete) return;
     
-    window.showToast("Deleting Player...", "danger");
+    window.showToast("Deleting Player & Purging Account...", "danger");
     try {
+        const normTargetName = (name || "").trim().toLowerCase();
         let targetGid = window.nameToIdMap ? window.nameToIdMap[name] : null;
         if (!targetGid && typeof idToNameMap !== 'undefined') {
             for (const [gid, pName] of Object.entries(idToNameMap)) {
-                if (pName && pName.toLowerCase() === name.toLowerCase()) {
+                if (pName && pName.toString().trim().toLowerCase() === normTargetName) {
                     targetGid = gid;
                     break;
                 }
@@ -2498,32 +2512,70 @@ window._executeLogBearTrapWinner = async (name, trap) => {
         }
         
         // 1. Purge from Firebase roster_live node directly by name
-        await remove(ref(db, `roster_live/${name}`)).catch(() => null);
-        await remove(ref(db, `roster_live/${encodeURIComponent(name)}`)).catch(() => null);
+        await Promise.all([
+            remove(ref(db, `roster_live/${name}`)).catch(() => null),
+            remove(ref(db, `roster_live/${encodeURIComponent(name)}`)).catch(() => null)
+        ]);
         
-        // 2. Search Firebase users node directly and purge
+        // 2. Search Firebase users node directly and purge matching accounts
         const usersSnap = await get(ref(db, 'users')).catch(() => null);
         if (usersSnap && usersSnap.exists()) {
             const users = usersSnap.val() || {};
             for (const [uid, u] of Object.entries(users)) {
-                if (u && ((u.name && u.name.toLowerCase() === name.toLowerCase()) || (targetGid && String(u.gameId) === String(targetGid)))) {
-                    await remove(ref(db, `users/${uid}`)).catch(() => null);
-                    if (!targetGid && u.gameId) targetGid = u.gameId;
+                if (u) {
+                    const uName = (u.name || u.chiefName || u.displayName || "").toString().trim().toLowerCase();
+                    const uGid = u.gameId ? u.gameId.toString().trim() : "";
+                    if ((uName && uName === normTargetName) || (targetGid && uGid === String(targetGid))) {
+                        await remove(ref(db, `users/${uid}`)).catch(() => null);
+                        if (!targetGid && uGid) targetGid = uGid;
+                    }
                 }
             }
         }
 
-        // 3. Clean up all related Firebase nodes for this player ID
+        // 3. Search Firebase giftcode_bot node directly and purge matching enrollments
+        if (targetGid) {
+            await remove(ref(db, `giftcode_bot/${targetGid}`)).catch(() => null);
+        }
+        const gcSnap = await get(ref(db, 'giftcode_bot')).catch(() => null);
+        if (gcSnap && gcSnap.exists()) {
+            const gcData = gcSnap.val() || {};
+            for (const [gId, gObj] of Object.entries(gcData)) {
+                if (gObj) {
+                    const gcName = (gObj.name || "").toString().trim().toLowerCase();
+                    const gcGid = gObj.gameId ? gObj.gameId.toString().trim() : gId;
+                    if ((gcName && gcName === normTargetName) || (targetGid && gcGid === String(targetGid))) {
+                        await remove(ref(db, `giftcode_bot/${gId}`)).catch(() => null);
+                    }
+                }
+            }
+        }
+
+        // 4. Clean up all related Firebase nodes for this player ID & name
+        const donKey = normTargetName.replace(/[^a-z0-9]/g, '_');
         if (targetGid) {
             await Promise.all([
                 remove(ref(db, `avatars/${targetGid}`)).catch(() => null),
                 remove(ref(db, `beartrap/${targetGid}`)).catch(() => null),
                 remove(ref(db, `beartrap_donations/${targetGid}`)).catch(() => null),
+                remove(ref(db, `beartrap_donations/${donKey}`)).catch(() => null),
                 remove(ref(db, `staffProfiles/${targetGid}`)).catch(() => null)
             ]);
         }
 
-        // 4. Non-blocking backend delete request to Google Sheets (4-second timeout so page NEVER hangs)
+        // 5. Instantly clear from local in-memory maps & caches
+        if (targetGid) {
+            delete idToNameMap[targetGid];
+            if (window.idToNameMap) delete window.idToNameMap[targetGid];
+        }
+        delete nameToIdMap[name];
+        if (window.nameToIdMap) delete window.nameToIdMap[name];
+        if (window.rosterCache) delete window.rosterCache[name];
+
+        // 6. Refresh ID maps from remaining database nodes
+        await refreshIdToNameMap();
+
+        // 7. Non-blocking backend delete request to Google Sheets
         try {
             const token = await getAuthToken();
             const url = `${API_BASE_URL}?api=delete_player&name=${encodeURIComponent(name)}&token=${encodeURIComponent(token)}`;
@@ -2532,21 +2584,21 @@ window._executeLogBearTrapWinner = async (name, trap) => {
             fetch(url, { signal: controller.signal }).catch(() => null).finally(() => clearTimeout(timeoutId));
         } catch(e) {}
         
-        // 5. Instantly clear from local caches and refresh UI
-        if (window.rosterCache) {
-            delete window.rosterCache[name];
-        }
-        if (typeof globalData !== 'undefined' && globalData && globalData.chiefsList) {
-            globalData.chiefsList = globalData.chiefsList.filter(row => String(row[0]).trim().toLowerCase() !== String(name).trim().toLowerCase());
-        }
+        window.showToast(`🗑️ Successfully deleted ${name} & purged account data.`, "success");
+
+        // 8. Refresh UI
+        const resDiv = document.getElementById('uniEditorRes');
+        if (resDiv) resDiv.style.display = 'none';
         
-        window.showToast(`🗑️ Successfully deleted ${name}.`, "success");
-        if (document.querySelector('.admin-tab-content')) views.admin();
-        else if (window.location.hash.includes('admin') || (typeof views !== 'undefined' && views.admin)) views.admin();
+        if (document.getElementById('playerDirectoryList')) {
+            await views.playerEditor();
+        } else if (document.querySelector('.admin-tab-content')) {
+            views.admin();
+        }
     } catch (e) {
         window.showToast(`Error deleting player: ${e.message}`, "error");
     }
-};
+  };
 
 window.promptLogBearTrapWinner = async (name) => {
     let trapNum = await window.customPrompt(`Log Bear Trap Win for ${name}!\n\nWhich event did they win?\nEnter '1' for Bear Trap 1, or '2' for Bear Trap 2:`);
