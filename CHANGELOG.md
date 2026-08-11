@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.57.26] - 2026-08-11
+### Fixed & Streamlined
+- **👤 Clean Registration Chief Name Input Flow**: Streamlined the Game ID lookup flow during user signup. If an entered Game ID is not matched with a text Chief Name in the local Alliance Database, it cleanly prompts the user to enter their in-game Chief Name and optional Furnace Level without displaying failing game server API error messages.
+
 ## [1.57.25] - 2026-08-11
 ### Fixed
 - **👤 Registration Game ID Verification Name Fallback**: Fixed Game ID verification in `Create Account / Claim Profile` modal, `Player Editor`, and `Link Alt` forms. Filtered out numeric Game IDs incorrectly treated as Chief Names so the verification modal seamlessly queries official Century Games servers (`VERIFY_PROXY_URL`) to fetch the player's real in-game nickname instead of displaying `Is your Chief Name: [Game ID]?`.

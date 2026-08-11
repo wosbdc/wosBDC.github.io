@@ -3601,46 +3601,20 @@ if (authVerifyGameIdBtn && authChiefConfirm) {
          console.warn("Database lookup fallback error:", e);
       }
       
-      // 2. If not found in local database, query official Century Games servers
-      try {
-        const response = await fetch(`${VERIFY_PROXY_URL}?id=${encodeURIComponent(val)}`);
-        const data = await response.json();
-        
-        if (lookupId !== currentWosLookupId) return; // Ignore stale responses
-        
-        if (data.success && data.nickname) {
-          authChiefConfirm.innerHTML = `Is your Chief Name: <strong style="color:var(--success)">${window.escapeHTML(data.nickname)}</strong>? <span style="font-size:11px; color:#60a5fa; display:block; margin-top:4px;">🌐 Verified from Game Servers!</span>`;
-          verifiedChiefName = data.nickname;
-          verifiedFurnaceLevel = data.stove_lv || "";
-        } else {
-          authChiefConfirm.innerHTML = `
-            <span style="color:var(--danger)">ID Not Found on Game Servers.</span>
-            <div style="margin-top:10px; text-align:left;">
-                <input type="text" id="manualChiefName" placeholder="Enter Chief Name manually" style="width:100%; padding:10px; border-radius:6px; margin-bottom:10px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
-                <input type="number" id="manualFurnaceLevel" placeholder="Enter Furnace Level (optional)" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
-                <div style="font-size:12px; color:var(--text-muted); text-align:center;">Please verify your Game ID is correct before submitting.</div>
-            </div>`;
-          verifiedChiefName = "";
-          verifiedFurnaceLevel = "";
-        }
-      } catch (err) {
-        if (lookupId !== currentWosLookupId) return; // Ignore stale responses
-        authChiefConfirm.innerHTML = `
-            <span style="color:var(--danger)">Error connecting to game servers.</span>
-            <div style="margin-top:10px; text-align:left;">
-                <input type="text" id="manualChiefName" placeholder="Enter Chief Name manually" style="width:100%; padding:10px; border-radius:6px; margin-bottom:10px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
-                <input type="number" id="manualFurnaceLevel" placeholder="Enter Furnace Level (optional)" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
-                <div style="font-size:12px; color:var(--text-muted); text-align:center;">Please verify your Game ID is correct before submitting.</div>
-            </div>`;
-        verifiedChiefName = "";
-        verifiedFurnaceLevel = "";
-      } finally {
-        if (lookupId === currentWosLookupId) {
-            authVerifyGameIdBtn.disabled = false;
-            authVerifyGameIdBtn.textContent = 'Verify';
-        }
+      authChiefConfirm.innerHTML = `
+        <div style="margin-top:10px; text-align:left;">
+            <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;">In-game Chief Name:</label>
+            <input type="text" id="manualChiefName" placeholder="Enter your Chief Name" style="width:100%; padding:10px; border-radius:6px; margin-bottom:10px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
+            <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;">Furnace Level (optional):</label>
+            <input type="number" id="manualFurnaceLevel" placeholder="e.g. 30" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
+        </div>`;
+      verifiedChiefName = "";
+      verifiedFurnaceLevel = "";
+      if (lookupId === currentWosLookupId) {
+          authVerifyGameIdBtn.disabled = false;
+          authVerifyGameIdBtn.textContent = 'Verify';
       }
-    }, 100); // 100ms debounce just to be safe
+    }, 100);
   });
 }
 const showPasswordBtn = document.getElementById('showPasswordBtn');
