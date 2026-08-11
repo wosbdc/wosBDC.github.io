@@ -13692,19 +13692,34 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
 
       // Coming Up This Week
       let upcomingHtml = '';
-      if (upcomingEvents.length > 0) {
+      if (upcomingEvents.length > 0 || allWeek.length > 0) {
         upcomingHtml = `<div style="background:var(--bg-main);border-radius:12px;padding:16px;margin-top:16px;">
           ${sectionPill('📅','Coming Up This Week','var(--accent)','rgba(59,130,246,0.12)')}`;
-        upcomingEvents.forEach(ev => {
-          upcomingHtml += `<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:6px;">
-            <span style="font-size:14px;color:var(--text-main);font-weight:500;">${ev.emoji} ${ev.eventName}</span>
-            <div style="display:flex;gap:10px;align-items:center;">
-              <span style="font-size:12px;color:var(--text-muted);">${ev.dateLabel}</span>
-              ${ev.utcDisplay ? `<span style="font-size:12px;color:var(--text-muted);">${ev.utcDisplay}</span>` : ''}
-              ${ev.localTimeStr ? `<span style="font-size:12px;font-weight:600;color:var(--accent);">${ev.localTimeStr}</span>` : ''}
-            </div>
-          </div>`;
-        });
+          
+        if (allWeek.length > 0) {
+          upcomingHtml += `
+            <div style="background:rgba(129,140,248,0.08); border:1px solid rgba(129,140,248,0.25); border-radius:10px; padding:12px 14px; margin-bottom:14px;">
+              <div style="font-size:12px; font-weight:bold; color:#818cf8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+                📆 Whole Week / Ongoing Events
+              </div>
+              <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                ${allWeek.map(x => `<span style="background:rgba(129,140,248,0.2); color:#818cf8; padding:5px 12px; border-radius:20px; font-size:13px; font-weight:600;">✨ ${x}</span>`).join('')}
+              </div>
+            </div>`;
+        }
+
+        if (upcomingEvents.length > 0) {
+          upcomingEvents.forEach(ev => {
+            upcomingHtml += `<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:6px;">
+              <span style="font-size:14px;color:var(--text-main);font-weight:500;">${ev.emoji} ${ev.eventName}</span>
+              <div style="display:flex;gap:10px;align-items:center;">
+                <span style="font-size:12px;color:var(--text-muted);">${ev.dateLabel}</span>
+                ${ev.utcDisplay ? `<span style="font-size:12px;color:var(--text-muted);">${ev.utcDisplay}</span>` : ''}
+                ${ev.localTimeStr ? `<span style="font-size:12px;font-weight:600;color:var(--accent);">${ev.localTimeStr}</span>` : ''}
+              </div>
+            </div>`;
+          });
+        }
         upcomingHtml += `</div>`;
       }
 

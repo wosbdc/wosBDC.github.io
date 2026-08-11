@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.57.15] - 2026-08-11
+### Improved
+- **📅 Whole Week Events in Coming Up This Week**: Prominently featured **Whole Week / Ongoing Events** (`allWeek`) at the top of the **Coming Up This Week** section in Today's View, ensuring ongoing weekly events (e.g. Polar Terrors, Sunken Treasury, Frostfire Mine) are highlighted alongside upcoming timed events.
+
 ## [1.57.14] - 2026-08-11
 ### Added
 - **📅 Admin "Sync Schedule ➔ Site" Action**: Added `window.syncScheduleDirectly` function and a 1-click **`📅 Sync Schedule ➔ Site`** action button in the Admin Menu (`views.admin()`). Allows admins to force-sync formula-based Google Sheets schedule updates to the website instantly.
