@@ -47,7 +47,7 @@ window.fetchRoster = async () => {
 };
 
 
-const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbwIsaSsdVCJt6zXnNWhiI2ztswMsKbEsm9zt3N4Ii0onwnjyY4f6b2avjkC6SoNLJc/exec';
+const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbw9lu-n1_bsIgLrX2Ko_WZ57rWZxoFUsupfPp4bL8nQErZXpXdFt2KkW3h72lKjFw/exec';
 const VERIFY_PROXY_URL = 'https://wos-vercel-proxy.vercel.app/api/verify'; // Dedicated proxy for Century Games ID verification (bypasses Google quota limits)
 
 // Get a fresh Firebase ID token for the current user (replaces hardcoded APP_SECRET)
@@ -14179,72 +14179,80 @@ window.parseSheetToScheduleLiveData = (sheetData) => {
   let signups = [], rewards = [], allWeek = [], holidays = [];
 
   if (sheetData && Array.isArray(sheetData)) {
-    let headerRowIdx = -1;
-    let rewardsCol = -1, signupsCol = -1, allWeekCol = -1, holidaysCol = -1;
+    let currentMode = 'TIMED'; // Modes: 'TIMED', 'REWARDS', 'SIGNUPS', 'HOLIDAYS', 'SPECIAL'
 
-    for (let i = 0; i < Math.min(sheetData.length, 60); i++) {
+    for (let i = 0; i < sheetData.length; i++) {
       const row = sheetData[i];
       if (!row || !Array.isArray(row)) continue;
-      
-      for (let c = 0; c < row.length; c++) {
-        const val = String(row[c] || '').trim().toLowerCase();
-        if (val === 'rewards' || val.includes('reward')) { headerRowIdx = i; rewardsCol = c; }
-        else if (val === 'signups' || val.includes('signup') || val.includes('sign-up')) { signupsCol = c; }
-        else if (val.includes('all week') || val.includes('whole week') || val.includes('weekly')) { allWeekCol = c; }
-        else if (val.includes('holiday') || val.includes('special')) { holidaysCol = c; }
+
+      // Primary Title Column: check Column I (8) first, then Column F (5), Column C (2), Column A (0)
+      let colIdx = -1;
+      if (row[8] && String(row[8]).trim() !== '') colIdx = 8;
+      else if (row[5] && String(row[5]).trim() !== '') colIdx = 5;
+      else if (row[2] && String(row[2]).trim() !== '') colIdx = 2;
+      else if (row[0] && String(row[0]).trim() !== '') colIdx = 0;
+
+      if (colIdx === -1) continue;
+
+      const titleRaw = String(row[colIdx]).trim();
+      const lowerTitle = titleRaw.toLowerCase();
+
+      // Section Header Transitions
+      if (lowerTitle.includes('rewards event') || lowerTitle === 'rewards' || lowerTitle.includes('reward events')) {
+        currentMode = 'REWARDS';
+        continue;
       }
-      if (headerRowIdx !== -1) break;
-    }
+      if (lowerTitle.includes('signup') || lowerTitle === 'signups') {
+        currentMode = 'SIGNUPS';
+        continue;
+      }
+      if (lowerTitle.includes('holiday') || lowerTitle === 'holidays') {
+        currentMode = 'HOLIDAYS';
+        continue;
+      }
+      if (lowerTitle.includes('prelude') || lowerTitle.includes('all week') || lowerTitle.includes('whole week')) {
+        currentMode = 'SPECIAL';
+        continue;
+      }
+      if (lowerTitle.includes('edit: schedule') || lowerTitle.includes("event's") || lowerTitle === 'title' || lowerTitle === 'event' || lowerTitle === 'events') {
+        if (i < 5) currentMode = 'TIMED';
+        continue;
+      }
 
-    // 1. Timed Events (Row 4 to wherever the Category list starts)
-    const maxRow = headerRowIdx !== -1 ? headerRowIdx : Math.min(sheetData.length, 30);
-    const candidateCols = [8, 5, 2, 0, 11, 14, 17, 20, 23, 26];
+      // Skip sub-header row labels
+      if (lowerTitle === 'start date' || lowerTitle === 'utc' || lowerTitle === 'pdt' || lowerTitle === 'end date') continue;
 
-    for (let i = 0; i < maxRow; i++) {
-      const row = sheetData[i];
-      if (!row || !Array.isArray(row)) continue;
+      // Extract date and time values
+      let dateRaw = '', utcRaw = '', pdtVal = '', endDateRaw = '', endUtcRaw = '', endPdtVal = '';
+      if (colIdx === 8) {
+        dateRaw    = row[9] || '';
+        utcRaw     = row[10] || '';
+        pdtVal     = row[11] || '';
+        endDateRaw = row[12] || '';
+        endUtcRaw  = row[13] || '';
+        endPdtVal  = row[14] || '';
+      } else {
+        dateRaw   = row[colIdx + 1] || '';
+        utcRaw    = row[colIdx + 2] || '';
+        pdtVal    = row[colIdx + 3] || '';
+      }
 
-      for (const colIdx of candidateCols) {
-        if (colIdx >= row.length) continue;
-        const cellVal = row[colIdx];
-        if (!cellVal || String(cellVal).trim() === '') continue;
+      const dateStr = String(dateRaw || '').trim();
+      const hasDate = dateStr !== '' && window.parseScheduleEventDate(dateStr) !== null;
 
-        const cleanName = String(cellVal).trim();
-        const lowerName = cleanName.toLowerCase();
-
-        // Skip header titles, dates, or category labels
-        if (lowerName === 'events' || lowerName === 'title' || lowerName === 'event' || cleanName.includes("Event's") || lowerName.includes('start date')) continue;
-        if (lowerName.includes('rewards') || lowerName.includes('signups') || lowerName.includes('sign-up') || lowerName.includes('all week')) continue;
-        if (/^\d{1,2}\/\d{1,2}/.test(cleanName) || /^\d{4}-\d{2}/.test(cleanName) || /^\d{1,2}:\d{2}/.test(cleanName)) continue;
-
-        let dateRaw = '', utcRaw = '', pdtVal = '', endDateRaw = '', endUtcRaw = '', endPdtVal = '';
-
-        if (colIdx === 8) {
-          dateRaw    = row[9] || '';
-          utcRaw     = row[10] || '';
-          pdtVal     = row[11] || '';
-          endDateRaw = row[12] || '';
-          endUtcRaw  = row[13] || '';
-          endPdtVal  = row[14] || '';
-        } else {
-          dateRaw   = row[colIdx + 1] || '';
-          utcRaw    = row[colIdx + 2] || '';
-          pdtVal    = row[colIdx + 3] || '';
-        }
-
-        const isBearTrap = cleanName.includes('Bear Trap') || cleanName.includes('🪤') || cleanName.includes('🐻');
-        const isJoe = cleanName.includes('Crazy Joe') || cleanName.includes('🔥');
-        const isCastle = cleanName.includes('Castle') || cleanName.includes('🏰');
-        const isBia = cleanName.includes('Brothers') || cleanName.includes('⚔️');
+      if (currentMode === 'TIMED' || hasDate) {
+        const isBearTrap = titleRaw.includes('Bear Trap') || titleRaw.includes('🪤') || titleRaw.includes('🐻');
+        const isJoe = titleRaw.includes('Crazy Joe') || titleRaw.includes('🔥');
+        const isCastle = titleRaw.includes('Castle') || titleRaw.includes('🏰');
+        const isBia = titleRaw.includes('Brothers') || titleRaw.includes('⚔️');
         let emoji = isBearTrap ? '🪤' : (isJoe ? '🔥' : (isCastle ? '🏰' : (isBia ? '⚔️' : '✨')));
 
-        // Avoid adding duplicate entries from overlapping column checks
-        const alreadyAdded = events.some(e => e.eventName === cleanName && e.dateStr === String(dateRaw || '').trim() && e.utcStr === String(utcRaw || '').trim());
-        if (!alreadyAdded) {
+        const alreadyAdded = events.some(e => e.eventName === titleRaw && e.dateStr === dateStr);
+        if (!alreadyAdded && dateStr !== '') {
           events.push({
             id: 'ev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-            eventName: cleanName,
-            dateStr: String(dateRaw || '').trim(),
+            eventName: titleRaw,
+            dateStr: dateStr,
             utcStr: String(utcRaw || '').trim(),
             pdtVal: String(pdtVal || '').trim(),
             endDateStr: String(endDateRaw || '').trim(),
@@ -14253,34 +14261,14 @@ window.parseSheetToScheduleLiveData = (sheetData) => {
             emoji: emoji
           });
         }
-      }
-    }
-
-    // 2. Parse Rewards & Category Lists
-    const startRow = headerRowIdx !== -1 ? headerRowIdx + 1 : 24;
-    const endRow = Math.min(sheetData.length, 60);
-
-    const skip = (v) => {
-      if (!v) return true;
-      const s = String(v).trim().toLowerCase();
-      return s === '' || s === 'no events' || s.includes('rewards') || s.includes('signups') || s.includes('sign-ups') || s.includes('all week') || s.includes('whole week') || s.includes('events');
-    };
-
-    for (let i = startRow; i < endRow; i++) {
-      const row = sheetData[i];
-      if (!row || !Array.isArray(row)) continue;
-
-      if (rewardsCol !== -1 && rewardsCol < row.length && !skip(row[rewardsCol])) rewards.push(String(row[rewardsCol]).trim());
-      if (signupsCol !== -1 && signupsCol < row.length && !skip(row[signupsCol])) signups.push(String(row[signupsCol]).trim());
-      if (allWeekCol !== -1 && allWeekCol < row.length && !skip(row[allWeekCol])) allWeek.push(String(row[allWeekCol]).trim());
-      if (holidaysCol !== -1 && holidaysCol < row.length && !skip(row[holidaysCol])) holidays.push(String(row[holidaysCol]).trim());
-
-      for (let c = 0; c < row.length; c++) {
-        if (c === rewardsCol || c === signupsCol) continue;
-        const item = String(row[c] || '').trim();
-        if (!skip(item) && !rewards.includes(item) && !signups.includes(item) && !allWeek.includes(item) && !holidays.includes(item)) {
-          allWeek.push(item);
-        }
+      } else if (currentMode === 'REWARDS') {
+        if (!rewards.includes(titleRaw)) rewards.push(titleRaw);
+      } else if (currentMode === 'SIGNUPS') {
+        if (!signups.includes(titleRaw)) signups.push(titleRaw);
+      } else if (currentMode === 'HOLIDAYS') {
+        if (!holidays.includes(titleRaw)) holidays.push(titleRaw);
+      } else if (currentMode === 'SPECIAL') {
+        if (!allWeek.includes(titleRaw)) allWeek.push(titleRaw);
       }
     }
   }

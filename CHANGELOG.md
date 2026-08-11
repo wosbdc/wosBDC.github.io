@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [1.57.24] - 2026-08-11
+### Fixed & Redesigned
+- **📅 Single Master Sheet ("data") Parser & Vertical Section State Machine**: Redesigned `parseSheetToScheduleLiveData` in `main.js` to parse the `data` Google Sheet tab based on the exact stacked section layout (Columns I–O). Accurately ingests `Edit: Schedule (no sort)` / `Event's`, `Rewards Events`, `Signups`, `Holidays`, and `NEW Year Prelude`.
+- **🚀 Web App Deployment v131**: Deployed Apps Script Web App version 131 and updated `API_BASE_URL` in `main.js`.
+
 ## [1.57.23] - 2026-08-11
 ### Fixed
 - **📅 Public Schedule API Endpoint & Fuzzy Tab Matcher**: Created `getScheduleData` public Apps Script API endpoint with fuzzy tab matching (`"Schedule data"`, `"WhiteOut Survival"`, `"Schedule"`, `"Events"`). Resolves `⚠️ Could not find valid schedule events in Google Sheets` warning during direct sync.
