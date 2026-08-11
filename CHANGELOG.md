@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.57.51] - 2026-08-11
+### Fixed
+- **👁️ Atomic Total Views Increment Fix**: Fixed static 113 total views counter by upgrading Firebase Database security rules (`newData.val() >= data.val()`) and switching `src/firebase.js` to atomic `increment(1)`.
+
 ## [1.57.50] - 2026-08-11
 ### Fixed
 - **⚙️ Cleaned GitHub Actions Workflow**: Removed experimental `NODE_OPTIONS` flags and switched to `npm ci` with GitHub Actions npm caching in `.github/workflows/deploy.yml` for clean, reliable deployment runs.

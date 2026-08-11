@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getDatabase, ref, onValue, onDisconnect, set, push, runTransaction, get } from "firebase/database";
+import { getDatabase, ref, onValue, onDisconnect, set, push, runTransaction, get, increment } from "firebase/database";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail } from "firebase/auth";
 import { getMessaging, getToken, onMessage } from "firebase/messaging";
 const firebaseConfig = {
@@ -43,12 +43,12 @@ export function initPresence() {
 
   // 2. Manage "Total Views"
   const viewsRef = ref(db, 'stats/totalViews');
-  runTransaction(viewsRef, (currentViews) => {
-    return (currentViews || 0) + 1;
+  set(viewsRef, increment(1)).catch(() => {
+    runTransaction(viewsRef, (currentViews) => (currentViews || 0) + 1);
   });
 
   onValue(viewsRef, (snapshot) => {
-    viewsEl.textContent = snapshot.val() || 0;
+    viewsEl.textContent = (snapshot.val() || 0).toLocaleString();
   });
 }
 

@@ -65,7 +65,7 @@
     "stats": {
       "totalViews": {
         ".read": true,
-        ".write": "newData.isNumber() && (!data.exists() || newData.val() == data.val() + 1)"
+        ".write": "newData.isNumber() && (!data.exists() || newData.val() >= data.val())"
       }
     },
     "avatars": {
