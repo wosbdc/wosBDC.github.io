@@ -306,9 +306,12 @@
         <label for="authDateStarted" style="display:block; font-size:13px; color:var(--text-muted); margin-bottom:6px;">Date You Started Playing</label>
         <input type="date" id="authDateStarted" title="Date Started" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
       </div>
-      <div id="authGameIdWrapper" style="display:none; margin-bottom:20px; align-items:stretch;">
-          <input type="text" inputmode="numeric" pattern="[0-9]*" id="authGameId" placeholder="Game ID (Found in Player Profile)" style="flex:1; padding:10px; border-radius:6px 0 0 6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
-          <button id="authVerifyGameIdBtn" style="padding:0 15px; background:var(--card-bg); color:var(--text-main); border:1px solid var(--border); border-left:none; border-radius:0 6px 6px 0; cursor:pointer; font-weight:bold;">Verify</button>
+      <div id="authGameIdWrapper" style="display:none; margin-bottom:20px; align-items:stretch; flex-direction:column; gap:6px;">
+          <label style="font-size:12px; color:var(--text-muted); text-align:left;">Game ID (Numbers Only):</label>
+          <div style="display:flex; align-items:stretch; width:100%;">
+              <input type="text" inputmode="numeric" pattern="[0-9]*" id="authGameId" placeholder="Numeric Game ID (e.g. 319875650)" style="flex:1; padding:10px; border-radius:6px 0 0 6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
+              <button id="authVerifyGameIdBtn" style="padding:0 15px; background:var(--card-bg); color:var(--text-main); border:1px solid var(--border); border-left:none; border-radius:0 6px 6px 0; cursor:pointer; font-weight:bold;">Verify</button>
+          </div>
       </div>
       <div id="authChiefConfirm" style="display:none; font-size:13px; margin-bottom:15px; margin-top:-10px; text-align:center;"></div>
       

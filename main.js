@@ -3623,11 +3623,26 @@ if (authVerifyGameIdBtn && authChiefConfirm) {
       // 3. Fallback to manual Chief Name input if not verified
       authChiefConfirm.innerHTML = `
         <div style="margin-top:10px; text-align:left;">
-            <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;">In-game Chief Name:</label>
-            <input type="text" id="manualChiefName" placeholder="Enter your Chief Name" style="width:100%; padding:10px; border-radius:6px; margin-bottom:10px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
+            <label style="font-size:12px; color:var(--accent); font-weight:bold; display:block; margin-bottom:4px;">In-game Chief Name (Character Name, NOT ID):</label>
+            <input type="text" id="manualChiefName" placeholder="e.g. BrianDCox" style="width:100%; padding:10px; border-radius:6px; margin-bottom:4px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
+            <div id="manualNameWarning" style="font-size:11px; color:var(--danger); display:none; margin-bottom:8px;">⚠️ Please enter your text Chief Name (e.g. BrianDCox), not your numeric Game ID.</div>
             <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;">Furnace Level (optional):</label>
             <input type="number" id="manualFurnaceLevel" placeholder="e.g. 30" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
         </div>`;
+      
+      const mNameEl = document.getElementById('manualChiefName');
+      const mWarnEl = document.getElementById('manualNameWarning');
+      if (mNameEl && mWarnEl) {
+          mNameEl.addEventListener('input', () => {
+              const v = mNameEl.value.trim();
+              if (v && (/^\d+$/.test(v) || v === val)) {
+                  mWarnEl.style.display = 'block';
+              } else {
+                  mWarnEl.style.display = 'none';
+              }
+          });
+      }
+
       verifiedChiefName = "";
       verifiedFurnaceLevel = "";
       if (lookupId === currentWosLookupId) {
@@ -3740,6 +3755,9 @@ if(authSubmitBtn) authSubmitBtn.addEventListener('click', async () => {
     if (isRegistering) {
       if (!gameId) throw new Error('Game ID is required.');
       if (!chiefName) throw new Error('You must verify your Game ID or manually enter your Chief Name.');
+      if (/^\d+$/.test(chiefName.toString().trim()) || chiefName.toString().trim() === gameId.toString().trim()) {
+        throw new Error('Chief Name must be your text character name (e.g. BrianDCox), NOT your numeric Game ID.');
+      }
       
       await registerUser(email, password, gameId, chiefName);
       
