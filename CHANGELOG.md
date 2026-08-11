@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.57.27] - 2026-08-11
+### Improved
+- **🌐 Dual-Tier Verification (Alliance DB + Century Games API)**: Configured signup Game ID verification to query local Alliance Database first, then official Century Games API (`VERIFY_PROXY_URL`). Displays `🌐 Verified from Game Servers!` whenever Century Games API returns the nickname, with seamless fallback to manual entry if Century Games anti-bot rate-limits the query.
+
 ## [1.57.26] - 2026-08-11
 ### Fixed & Streamlined
 - **👤 Clean Registration Chief Name Input Flow**: Streamlined the Game ID lookup flow during user signup. If an entered Game ID is not matched with a text Chief Name in the local Alliance Database, it cleanly prompts the user to enter their in-game Chief Name and optional Furnace Level without displaying failing game server API error messages.

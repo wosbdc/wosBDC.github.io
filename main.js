@@ -3601,6 +3601,26 @@ if (authVerifyGameIdBtn && authChiefConfirm) {
          console.warn("Database lookup fallback error:", e);
       }
       
+      // 2. Query official Century Games servers
+      try {
+        const response = await fetch(`${VERIFY_PROXY_URL}?id=${encodeURIComponent(val)}`);
+        const data = await response.json();
+        
+        if (lookupId !== currentWosLookupId) return;
+        
+        if (data && data.success && data.nickname && !/^\d+$/.test(String(data.nickname).trim())) {
+          authChiefConfirm.innerHTML = `Is your Chief Name: <strong style="color:var(--success)">${window.escapeHTML(data.nickname)}</strong>? <span style="font-size:11px; color:#60a5fa; display:block; margin-top:4px;">🌐 Verified from Game Servers!</span>`;
+          verifiedChiefName = data.nickname;
+          verifiedFurnaceLevel = data.stove_lv || "";
+          authVerifyGameIdBtn.disabled = false;
+          authVerifyGameIdBtn.textContent = 'Verify';
+          return;
+        }
+      } catch (err) {
+        console.warn("Century Games API lookup error:", err);
+      }
+
+      // 3. Fallback to manual Chief Name input if not verified
       authChiefConfirm.innerHTML = `
         <div style="margin-top:10px; text-align:left;">
             <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;">In-game Chief Name:</label>
