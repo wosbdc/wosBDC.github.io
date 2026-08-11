@@ -13242,7 +13242,17 @@ searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.dis
       }
 
       try {
-        const freshSheetData = await fetchSheet("WhiteOut Survival", true);
+        let freshSheetData = null;
+        for (const tabName of ["WhiteOut Survival", "Schedule data", "Schedule", "Events"]) {
+            try {
+                delete window.liveData[tabName];
+                delete window.livePromises[tabName];
+                freshSheetData = await fetchSheet(tabName, true);
+                if (freshSheetData && Array.isArray(freshSheetData) && freshSheetData.length > 1) {
+                    break;
+                }
+            } catch(e) {}
+        }
         if (freshSheetData && Array.isArray(freshSheetData)) {
             const freshLiveData = window.parseSheetToScheduleLiveData(freshSheetData);
             if (freshLiveData && freshLiveData.events && freshLiveData.events.length > 0) {
@@ -14023,25 +14033,46 @@ window.parseSheetToScheduleLiveData = (sheetData) => {
   let signups = [], rewards = [], allWeek = [], holidays = [];
 
   if (sheetData && Array.isArray(sheetData)) {
-    for (let i = 1; i < Math.min(34, sheetData.length); i++) {
+    for (let i = 0; i < sheetData.length; i++) {
       const row = sheetData[i];
-      const eventName = row[5];
-      const dateRaw   = row[6];
-      const utcRaw    = row[7];
-      const pdtVal    = row[8];
-      if (!eventName || String(eventName).trim() === '') continue;
-      if (String(eventName).includes("Event's")) continue;
-      if (String(eventName).trim() === 'Rewards') break;
+      if (!row || !Array.isArray(row)) continue;
+      
+      let eventName = '';
+      let dateRaw = '';
+      let utcRaw = '';
+      let pdtVal = '';
 
-      const isBearTrap = String(eventName).includes('Bear Trap') || String(eventName).includes('🪤') || String(eventName).includes('🐻');
-      const isJoe = String(eventName).includes('Crazy Joe') || String(eventName).includes('🔥');
-      const isCastle = String(eventName).includes('Castle') || String(eventName).includes('🏰');
-      const isBia = String(eventName).includes('Brothers') || String(eventName).includes('⚔️');
+      if (row[5] && String(row[5]).trim() !== '' && !String(row[5]).includes("Event's")) {
+        eventName = row[5];
+        dateRaw = row[6] || '';
+        utcRaw = row[7] || '';
+        pdtVal = row[8] || '';
+      } else if (row[2] && String(row[2]).trim() !== '' && i > 0 && String(row[2]).toLowerCase().trim() !== 'title' && String(row[2]).toLowerCase().trim() !== 'event') {
+        eventName = row[2];
+        dateRaw = row[3] || row[1] || '';
+        utcRaw = row[5] || row[4] || '';
+        pdtVal = row[6] || '';
+      } else if (row[0] && String(row[0]).trim() !== '' && i > 0 && String(row[0]).toLowerCase().trim() !== 'title' && String(row[0]).toLowerCase().trim() !== 'event') {
+        eventName = row[0];
+        dateRaw = row[1] || '';
+        utcRaw = row[2] || '';
+        pdtVal = row[3] || '';
+      }
+
+      if (!eventName || String(eventName).trim() === '') continue;
+      const cleanName = String(eventName).trim();
+      if (cleanName.toLowerCase() === 'rewards') break;
+      if (cleanName.toLowerCase() === 'title' || cleanName.toLowerCase() === 'event' || cleanName.includes("Event's")) continue;
+
+      const isBearTrap = cleanName.includes('Bear Trap') || cleanName.includes('🪤') || cleanName.includes('🐻');
+      const isJoe = cleanName.includes('Crazy Joe') || cleanName.includes('🔥');
+      const isCastle = cleanName.includes('Castle') || cleanName.includes('🏰');
+      const isBia = cleanName.includes('Brothers') || cleanName.includes('⚔️');
       let emoji = isBearTrap ? '🪤' : (isJoe ? '🔥' : (isCastle ? '🏰' : (isBia ? '⚔️' : '✨')));
 
       events.push({
         id: 'ev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-        eventName: String(eventName).trim(),
+        eventName: cleanName,
         dateStr: String(dateRaw || '').trim(),
         utcStr: String(utcRaw || '').trim(),
         pdtVal: String(pdtVal || '').trim(),
@@ -14051,12 +14082,12 @@ window.parseSheetToScheduleLiveData = (sheetData) => {
 
     let headerRowIdx = -1;
     for (let i = 0; i < sheetData.length; i++) {
-      const cell = String(sheetData[i][5] || '').trim().toLowerCase();
+      const cell = String(sheetData[i][5] || sheetData[i][0] || '').trim().toLowerCase();
       if (cell === 'rewards') { headerRowIdx = i; break; }
     }
     if (headerRowIdx !== -1) {
       for (let i = headerRowIdx + 1; i < sheetData.length; i++) {
-        const r = sheetData[i][5], g = sheetData[i][6], h = sheetData[i][7], k = sheetData[i][8];
+        const r = sheetData[i][5] || sheetData[i][0], g = sheetData[i][6] || sheetData[i][1], h = sheetData[i][7] || sheetData[i][2], k = sheetData[i][8] || sheetData[i][3];
         const anyVal = [r,g,h,k].some(v => v && String(v).trim() !== '');
         if (!anyVal) break;
         const skip = (v) => !v || String(v).trim() === '' || String(v).trim().toLowerCase() === 'no events';

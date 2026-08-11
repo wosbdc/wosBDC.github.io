@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.57.11] - 2026-08-11
+### Improved
+- **📅 Multi-Tab Schedule Sheet Auto-Detection**: Upgraded `window.refreshSchedule` and `parseSheetToScheduleLiveData` to automatically scan all common Google Sheet tab names (`WhiteOut Survival`, `Schedule data`, `Schedule`, `Events`) and dynamically detect column layouts (Columns F/G/H/I, C/D/E/F, or A/B/C/D), ensuring any schedule changes in Google Sheets update the website immediately.
+
 ## [1.57.10] - 2026-08-11
 ### Fixed
 - **📅 Real-Time Google Sheets Schedule Sync**: Fixed discrepancy where `syncAllSheets` saved schedule data to `schedule_cache` while `views.schedule()` read `schedule_live`. Updated `syncAllSheets` and `window.refreshSchedule()` to force-fetch fresh Google Sheets schedule data (`WhiteOut Survival`), parse events/signups/rewards, and update `schedule_live` in Firebase instantly.
