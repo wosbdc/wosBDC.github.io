@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.57.38] - 2026-08-11
+### Deployed
+- **⚙️ Google Apps Script Web App Deployment v135**: Deployed Google Apps Script code to live Web App version **135** (`AKfycbyWC4qYgIkbk47eYjiYMxr1Ml9-zefoBU6-cdM9mnw24LMS5s2KDCshMJ4H1weebIY`) and updated `API_BASE_URL` in `main.js`.
+
 ## [1.57.37] - 2026-08-11
 ### Redeployed
 - **🚀 Verified Deployment Push**: Re-synced and forced fresh deployment build to GitHub Pages and Google Apps Script backend.

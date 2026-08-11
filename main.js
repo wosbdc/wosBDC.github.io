@@ -47,7 +47,7 @@ window.fetchRoster = async () => {
 };
 
 
-const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbyRSXLklfiwVQrgrpjU9ky1JIzcmylaMcuSKZttvrFti4WI2IWX2eTjwJs0K4GXKLc/exec';
+const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbyWC4qYgIkbk47eYjiYMxr1Ml9-zefoBU6-cdM9mnw24LMS5s2KDCshMJ4H1weebIY/exec';
 const VERIFY_PROXY_URL = 'https://wos-vercel-proxy.vercel.app/api/verify'; // Dedicated proxy for Century Games ID verification (bypasses Google quota limits)
 
 // Get a fresh Firebase ID token for the current user (replaces hardcoded APP_SECRET)
