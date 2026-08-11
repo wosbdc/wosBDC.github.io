@@ -87,18 +87,22 @@ window.getFurnaceIconHtml = (level, size = 36) => {
 
   // Render Modern 3D Fire Crystal 6-Pointed Star Gem Badge if fcNum is valid (FC 1 - 10)
   if (fcNum && fcNum >= 1 && fcNum <= 10) {
-     let c1 = '#ec4899', c2 = '#f43f5e', cLight = '#f472b6', glow = 'rgba(236,72,153,0.7)';
-     if (fcNum <= 2) {
-        c1 = '#f59e0b'; c2 = '#ef4444'; cLight = '#fde047'; glow = 'rgba(245,158,11,0.6)';
-     } else if (fcNum <= 4) {
-        c1 = '#8b5cf6'; c2 = '#d946ef'; cLight = '#c084fc'; glow = 'rgba(139,92,246,0.6)';
-     } else if (fcNum <= 6) {
-        c1 = '#06b6d4'; c2 = '#3b82f6'; cLight = '#67e8f9'; glow = 'rgba(6,182,212,0.6)';
-     } else if (fcNum <= 8) {
-        c1 = '#ec4899'; c2 = '#f43f5e'; cLight = '#f472b6'; glow = 'rgba(236,72,153,0.7)';
-     } else {
-        c1 = '#f59e0b'; c2 = '#eab308'; cLight = '#fef08a'; glow = 'rgba(234,179,8,0.8)';
-     }
+     // 10 Unique Color Profiles (1 unique distinct color per Fire Crystal level)
+     const fcColorMap = {
+       1:  { c1: '#ef4444', c2: '#dc2626', cLight: '#fca5a5', glow: 'rgba(239,68,68,0.7)' },   // FC 1: Crimson Red
+       2:  { c1: '#f97316', c2: '#ea580c', cLight: '#ffedd5', glow: 'rgba(249,115,22,0.7)' },  // FC 2: Vibrant Orange
+       3:  { c1: '#eab308', c2: '#ca8a04', cLight: '#fef08a', glow: 'rgba(234,179,8,0.7)' },   // FC 3: Sunburst Yellow
+       4:  { c1: '#10b981', c2: '#059669', cLight: '#a7f3d0', glow: 'rgba(16,185,129,0.7)' },  // FC 4: Emerald Green
+       5:  { c1: '#06b6d4', c2: '#0891b2', cLight: '#cffaff', glow: 'rgba(6,182,212,0.7)' },   // FC 5: Aquamarine Cyan
+       6:  { c1: '#3b82f6', c2: '#2563eb', cLight: '#bfdbfe', glow: 'rgba(59,130,246,0.7)' },  // FC 6: Sapphire Blue
+       7:  { c1: '#8b5cf6', c2: '#7c3aed', cLight: '#ddd6fe', glow: 'rgba(139,92,246,0.7)' },  // FC 7: Amethyst Purple
+       8:  { c1: '#ec4899', c2: '#db2777', cLight: '#fbcfe8', glow: 'rgba(236,72,153,0.7)' },  // FC 8: Magenta Rose
+       9:  { c1: '#d946ef', c2: '#c026d3', cLight: '#fae8ff', glow: 'rgba(217,70,239,0.7)' },  // FC 9: Fuchsia Plasma
+       10: { c1: '#ffd700', c2: '#f59e0b', cLight: '#fffbeb', glow: 'rgba(255,215,0,0.85)' }   // FC 10: Celestial Gold Diamond
+     };
+
+     const pal = fcColorMap[fcNum] || fcColorMap[7];
+     const { c1, c2, cLight, glow } = pal;
 
      const uId = Math.floor(Math.random() * 100000);
      const gradId = `fc-star-grad-${fcNum}-${uId}`;

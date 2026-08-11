@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.58.3] - 2026-08-11
+### Design Upgrade
+- **🎨 10 Unique Color Profiles for FC 1 – FC 10**: Assigned 10 completely unique, distinct crystal colors for each Fire Crystal level (Crimson Red, Vibrant Orange, Sunburst Yellow, Emerald Green, Aquamarine Cyan, Sapphire Blue, Amethyst Purple, Magenta Rose, Fuchsia Plasma, and Celestial Gold Diamond).
+
 ## [1.58.2] - 2026-08-11
 ### Fixed
 - **✨ Full SVG Badge Rendering Fix**: Removed legacy `.startsWith('<img')` and `.replace('🔥 ', '')` string overrides in `main.js` that suppressed the Fire Crystal vector star badge HTML rendering across Account Hub and Alt Cards.
