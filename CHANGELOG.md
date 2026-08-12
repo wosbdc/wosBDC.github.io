@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [1.77.0] - 2026-08-12
+### Smartphone Haptic Vibration Feedback & 3D Tactile Spring Tap
+- **📳 Haptic Vibration Touch Feedback (`navigator.vibrate`)**:
+  - Tapping any FC badge on a smartphone triggers a double-pulse tactile vibration (`[18ms, 30ms, 22ms]`) simulating physical fire ignition.
+- **🎯 3D Tactile Spring Tap Compression**:
+  - On touch, the badge compresses inward (`scale(0.93)` & 3D tilt) under the finger before springing back out as 3D flame wisps erupt upward.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.77.0`) in `window.getFurnaceIconHtml`.
+
 ## [1.76.0] - 2026-08-12
 ### 3D Solar Fire Wisps Particle Flame Animation
 - **🔥 Live 3D Solar Fire Wisps Particle Engine**:

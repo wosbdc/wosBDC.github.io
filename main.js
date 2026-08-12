@@ -109,7 +109,7 @@ window.getFurnaceIconHtml = (level, size = 48) => {
      const canvasOffset = Math.round((canvasSize - size) / 2);
      return `<span class="fc-badge-stage" data-fc="${fcNum}" style="display:inline-flex; align-items:center; justify-content:center; position:relative; vertical-align:middle; cursor:pointer; width:${size}px; height:${size}px; user-select:none; -webkit-user-select:none;">
        <canvas class="fc-flame-canvas" width="${canvasSize}" height="${canvasSize}" style="position:absolute; top:-${canvasOffset}px; left:-${canvasOffset}px; width:${canvasSize}px; height:${canvasSize}px; pointer-events:none; z-index:3;"></canvas>
-       <img src="/badges/fc${fcNum}.png?v=1.76.0" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
+       <img src="/badges/fc${fcNum}.png?v=1.77.0" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
      </span>`;
   }
 
@@ -17550,6 +17550,14 @@ window.closeMobileNavModal = () => {
       }
     }
 
+    function triggerHaptic() {
+      if (navigator.vibrate) {
+        try {
+          navigator.vibrate([18, 30, 22]);
+        } catch (e) {}
+      }
+    }
+
     function start() {
       isActive = true;
       if (img) img.style.transform = 'perspective(600px) rotateX(8deg) scale(1.12)';
@@ -17562,8 +17570,15 @@ window.closeMobileNavModal = () => {
     }
 
     function burst() {
+      triggerHaptic();
       start();
-      for (let i = 0; i < 15; i++) {
+      if (img) {
+        img.style.transform = 'perspective(600px) rotateX(-10deg) scale(0.93)';
+        setTimeout(() => {
+          if (img && isActive) img.style.transform = 'perspective(600px) rotateX(8deg) scale(1.12)';
+        }, 140);
+      }
+      for (let i = 0; i < 18; i++) {
         wisps.push(new FlameWisp(cx, cy, radius, colors));
       }
     }
