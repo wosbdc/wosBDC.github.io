@@ -194,6 +194,9 @@
       <!-- Section 3: Preferences & Appearance -->
       <div class="sidebar-section" style="margin-bottom:20px; background:var(--bg-main); padding:15px; border-radius:8px; border:1px solid var(--border); display:flex; flex-direction:column; gap:10px;">
         <h3 style="margin-top:0; margin-bottom:5px; font-size:15px; color:var(--text-main); border-bottom:1px solid var(--border); padding-bottom:6px;">📱 Preferences</h3>
+        <button onclick="window.showIosInstallGuide && window.showIosInstallGuide()" class="sidebar-action-btn" style="background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 140, 0, 0.15)); border: 1px solid #ffd700; color: #ffd700; font-weight: bold;">
+          📲 Install App on iPhone / iPad
+        </button>
         <button onclick="window.openMobileNavModal && window.openMobileNavModal()" class="sidebar-action-btn">
           📱 Mobile Navigation
         </button>
@@ -459,6 +462,12 @@
         </button>
         <button class="hand-opt-btn" onclick="window.setHandOrientation('right'); document.getElementById('mobileNavModal').style.display='none'; document.getElementById('mobileNavModalOverlay').style.display='none';" data-hand="right" style="flex:1; padding:12px 10px; font-size:13px; font-weight:bold; border:none; border-radius:8px; background:var(--accent); color:#fff; cursor:pointer; transition:0.2s; display:flex; align-items:center; justify-content:center; gap:6px;">
           ✋ Right-Handed
+        </button>
+      </div>
+
+      <div style="margin-top:20px; border-top:1px solid var(--border); padding-top:16px;">
+        <button onclick="document.getElementById('mobileNavModal').style.display='none'; document.getElementById('mobileNavModalOverlay').style.display='none'; window.showIosInstallGuide && window.showIosInstallGuide();" style="width:100%; padding:14px; border-radius:12px; background:linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 140, 0, 0.2)); border:1px solid #ffd700; color:#ffd700; font-weight:800; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 4px 15px rgba(255, 215, 0, 0.2);">
+          📲 Install WebApp on iPhone / iPad (Safari)
         </button>
       </div>
     </div>

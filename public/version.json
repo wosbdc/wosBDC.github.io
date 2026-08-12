@@ -1,10 +1,10 @@
 {
-  "version": "1.81.0",
+  "version": "1.82.0",
   "releaseDate": "2026-08-12",
-  "title": "🚀 Fixed Update Alert Persistence & Session Dismissal",
+  "title": "📱 iPhone & iPad WebApp Settings Install Menu Integration",
   "notes": [
-    "Fixed update alert persistence loop by matching build version strings",
-    "Added session-based dismissal memory so 'Later' cleanly hides the prompt",
-    "Enhanced force-reload cache invalidation logic"
+    "Added '📲 Install App on iPhone / iPad' option to Settings Sidebar and Mobile Nav Modal",
+    "Added step-by-step 4-step iOS Safari visual installation tutorial modal",
+    "Optimized Apple touch meta tags and standalone PWA display settings"
   ]
 }

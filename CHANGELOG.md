@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [1.82.0] - 2026-08-12
+### iPhone & iPad WebApp Settings Install Menu Integration
+- **📱 Settings Sidebar & Mobile Nav Integration**:
+  - Added dedicated **"📲 Install App on iPhone / iPad"** buttons under Settings Preferences & Mobile Navigation Modal.
+- **✨ 4-Step Visual iOS Install Tutorial**:
+  - Clicking the install option opens a interactive 4-step visual guide detailing Safari Share 📤 -> Add to Home Screen ➕ -> Add.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.82.0`) in `window.getFurnaceIconHtml`.
+
 ## [1.81.0] - 2026-08-12
 ### Fixed Update Alert Persistence Loop & Added Session Dismissal
 - **🐛 Fixed Update Banner Persistence**:
