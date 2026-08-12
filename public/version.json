@@ -1,9 +1,9 @@
 {
-  "version": "1.93.1",
+  "version": "1.93.2",
   "releaseDate": "2026-08-12",
-  "title": "🎯 Fixed Edit Profile Button Onclick Handler",
+  "title": "🛡️ Fixed Staff Profile Modal Close & Save Buttons",
   "notes": [
-    "Fixed the actual onclick handler on the Edit Profile button to call openEditProfileHubModal() instead of openEditProfileModal()",
-    "Previous edit attempts failed silently due to template literal quote escaping"
+    "Added inline onclick to close (×) button on Staff Profile modal",
+    "Added inline onclick to Save Profile button to call saveStaffProfileFromModal()"
   ]
 }

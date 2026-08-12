@@ -11828,7 +11828,7 @@ window.resetBearTrapEvent = async () => {
               <div class="modal-content card" style="width:90%; max-width:500px; background:var(--bg-main); border:1px solid rgba(56,189,248,0.3); padding:25px; border-radius:12px; box-shadow:0 10px 40px rgba(0,0,0,0.5); text-align:left;">
                   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                       <h3 style="margin:0; color:var(--text-main); font-size:20px; font-weight:bold;">🛡️ Staff Profile</h3>
-                      <button id="closeStaffProfileBtn" style="background:none; border:none; color:var(--text-muted); font-size:28px; cursor:pointer; line-height:1; transition:color 0.2s;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-muted)'">&times;</button>
+                      <button id="closeStaffProfileBtn" onclick="document.getElementById('staffProfileModal').style.display='none'" style="background:none; border:none; color:var(--text-muted); font-size:28px; cursor:pointer; line-height:1; transition:color 0.2s;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-muted)'">&times;</button>
                   </div>
                   <p style="font-size:13px; color:var(--text-muted); margin-bottom:20px;">This information will be displayed publicly on the Staff page.</p>
                   
@@ -11849,7 +11849,7 @@ window.resetBearTrapEvent = async () => {
                           <label style="display:block; font-size:13px; font-weight:bold; color:var(--text-main); margin-bottom:6px;">Bio / Tagline</label>
                           <textarea id="staffBioInput" placeholder="A short fun quote..." style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-secondary); color:var(--text-main); font-size:14px; box-sizing:border-box; resize:vertical; min-height:80px;">${window.escapeHTML(p.bio || '')}</textarea>
                       </div>
-                      <button id="saveStaffProfileBtn" style="background:var(--accent); color:#fff; border:none; padding:12px; border-radius:6px; cursor:pointer; font-weight:bold; margin-top:10px; font-size:15px; transition:0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Save Profile</button>
+                      <button id="saveStaffProfileBtn" onclick="window.saveStaffProfileFromModal()" style="background:var(--accent); color:#fff; border:none; padding:12px; border-radius:6px; cursor:pointer; font-weight:bold; margin-top:10px; font-size:15px; transition:0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Save Profile</button>
                   </div>
               </div>
           </div>

@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [1.93.2] - 2026-08-12
+### 🛡️ Fixed Staff Profile Modal Close & Save Buttons
+- **🐛 Close Button Fix**: Added inline `onclick` to the `×` close button on the Staff Profile modal — its event listener was removed in v1.93.0 cleanup.
+- **🐛 Save Button Fix**: Added inline `onclick="window.saveStaffProfileFromModal()"` to the Save Profile button — same issue.
+
 ## [1.93.1] - 2026-08-12
 ### 🎯 Fixed Edit Profile Button Onclick Handler (For Real This Time)
 - **🐛 Root Cause Fix**: The `✏️ Edit Profile` button's HTML template on line 11935 still had `onclick="window.openEditProfileModal()"` — previous edit attempts failed silently due to template literal quote escaping. Now correctly calls `window.openEditProfileHubModal()`.
