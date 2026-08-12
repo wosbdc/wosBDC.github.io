@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [1.95.0] - 2026-08-12
+### ⚠️ Unclaimed Roster Members Tracking & Copy-Link System
+- **⚠️ Unclaimed Roster Filter Pill**: Added dedicated `⚠️ Unclaimed Roster` and `✅ Claimed Roster` filter pills to the Registered Users Database dashboard with live counts.
+- **📋 1-Click Copy Unclaimed List**: Added a `📋 Copy Unclaimed List` button to instantly copy all unclaimed Chief names to clipboard formatted for Discord/Alliance Chat.
+- **🔗 Individual Claim Links**: Added a `📋 Copy Claim Link` action to each unclaimed member row to send direct personal profile claim links.
+
 ## [1.94.2] - 2026-08-12
 ### 🥩 Multi-Source Grouped Bear Trap Donation Log Extractor
 - **🥩 Grouped Donation Extraction**: When Bear Trap donations are entered as part of a multi-player batch, `loadUserPersonalLog` now automatically parses out the player's specific portion (e.g. `+1,000 donation points (New Total: 10,000)`) and displays it neatly on Today's log.

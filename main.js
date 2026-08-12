@@ -109,7 +109,7 @@ window.getFurnaceIconHtml = (level, size = 48) => {
      const canvasOffset = Math.round((canvasSize - size) / 2);
      return `<span class="fc-badge-stage" data-fc="${fcNum}" style="display:inline-flex; align-items:center; justify-content:center; position:relative; vertical-align:middle; cursor:pointer; width:${size}px; height:${size}px; user-select:none; -webkit-user-select:none;">
        <canvas class="fc-flame-canvas" width="${canvasSize}" height="${canvasSize}" style="position:absolute; top:-${canvasOffset}px; left:-${canvasOffset}px; width:${canvasSize}px; height:${canvasSize}px; pointer-events:none; z-index:3;"></canvas>
-       <img src="/badges/fc${fcNum}.png?v=1.94.2" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
+       <img src="/badges/fc${fcNum}.png?v=1.95.0" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
      </span>`;
   }
 
@@ -7919,6 +7919,49 @@ const views = {
     const targetTab = initialTab || window._lastAdminTab || 'tab-tools';
     window._lastAdminTab = targetTab;
 
+    window.copyUnclaimedRosterList = () => {
+        const unclaimedRows = document.querySelectorAll('.admin-user-row[data-is-claimed="false"]');
+        if (!unclaimedRows || unclaimedRows.length === 0) {
+            if (window.showToast) window.showToast("All alliance roster members have claimed their accounts! 🎉", "success");
+            return;
+        }
+        
+        let listText = `⚠️ Unclaimed Alliance Roster Members (${unclaimedRows.length}):\n`;
+        unclaimedRows.forEach(row => {
+            const name = row.getAttribute('data-name-raw') || row.getAttribute('data-name') || '';
+            const gid = row.getAttribute('data-gid') || '';
+            listText += `• ${name}${gid ? ` (ID: ${gid})` : ''}\n`;
+        });
+        const siteUrl = window.location.origin || 'https://wosbdc.github.io';
+        listText += `\nPlease register on our website to claim your profile: ${siteUrl}/`;
+        
+        navigator.clipboard.writeText(listText).then(() => {
+            if (window.showToast) window.showToast(`📋 Copied ${unclaimedRows.length} unclaimed roster members to clipboard!`, "success");
+        }).catch(err => {
+            console.error("Copy failed:", err);
+            if (window.showToast) window.showToast("Failed to copy unclaimed list.", "danger");
+        });
+    };
+
+    window.copyPlayerClaimLink = (gameId, chiefName) => {
+        const siteUrl = window.location.origin || 'https://wosbdc.github.io';
+        const claimMsg = `Hi ${chiefName}! Claim your Whiteout Survival profile on our website here: ${siteUrl}/`;
+        navigator.clipboard.writeText(claimMsg).then(() => {
+            if (window.showToast) window.showToast(`📋 Copied claim link message for ${chiefName}!`, "success");
+        }).catch(err => {
+            console.error("Copy claim link failed:", err);
+            if (window.showToast) window.showToast("Failed to copy claim link.", "danger");
+        });
+    };
+
+    window.openEditRosterMemberModal = (chiefName) => {
+        if (window.openAdminEditFurnaceModal) {
+            window.openAdminEditFurnaceModal(chiefName);
+        } else if (window.showToast) {
+            window.showToast(`Editing roster member ${chiefName}...`, "info");
+        }
+    };
+
     window.currentAdminUserFilter = 'all';
     window.setAdminUserFilter = (filterType, btnEl) => {
         window.currentAdminUserFilter = filterType;
@@ -7930,7 +7973,15 @@ const views = {
         });
         if (btnEl) {
             btnEl.classList.add('active');
-            if (filterType === 'new') {
+            if (filterType === 'unclaimed') {
+                btnEl.style.background = '#ef4444';
+                btnEl.style.color = '#fff';
+                btnEl.style.border = 'none';
+            } else if (filterType === 'claimed') {
+                btnEl.style.background = '#10b981';
+                btnEl.style.color = '#fff';
+                btnEl.style.border = 'none';
+            } else if (filterType === 'new') {
                 btnEl.style.background = '#10b981';
                 btnEl.style.color = '#fff';
                 btnEl.style.border = 'none';
@@ -7964,11 +8015,14 @@ const views = {
             const isAdmin = row.getAttribute('data-is-admin') === 'true';
             const hasAlts = row.getAttribute('data-has-alts') === 'true';
             const isEnrolled = row.getAttribute('data-is-enrolled') === 'true';
+            const isClaimed = row.getAttribute('data-is-claimed') === 'true';
 
             const matchesSearch = !searchVal || name.includes(searchVal) || gid.includes(searchVal) || email.includes(searchVal);
 
             let matchesCategory = true;
-            if (activeFilter === 'new') matchesCategory = isNew;
+            if (activeFilter === 'unclaimed') matchesCategory = !isClaimed;
+            else if (activeFilter === 'claimed') matchesCategory = isClaimed;
+            else if (activeFilter === 'new') matchesCategory = isNew;
             else if (activeFilter === 'admin') matchesCategory = isAdmin;
             else if (activeFilter === 'alts') matchesCategory = hasAlts;
             else if (activeFilter === 'enrolled') matchesCategory = isEnrolled;
@@ -8853,28 +8907,51 @@ const views = {
                   <h3 style="margin:0; color:var(--text-main);">Global Chief List Filter</h3>
                   <p style="margin:5px 0 0 0; font-size:12px; color:var(--text-muted);">Permanently hide unregistered users from the Player Lookup list for everyone.</p>
                 </div>
-                <button onclick="window.toggleRosterFilter()" style="background:${globalRosterRegisteredOnly ? 'var(--success)' : 'var(--bg-main)'}; color:${globalRosterRegisteredOnly ? '#fff' : 'var(--text-main)'}; border:1px solid ${globalRosterRegisteredOnly ? 'transparent' : 'var(--border)'}; padding:8px 16px; border-radius:6px; cursor:pointer; font-weight:bold; min-width:100px;">
-                  ${globalRosterRegisteredOnly ? 'ON' : 'OFF'}
-                </button>
-              </div>
-            <div style="background:var(--bg-main); padding:15px; border-radius:12px; border:1px solid var(--accent); margin-bottom:20px;">
-              <div style="margin-bottom:15px;">
-                <h3 style="margin:0; color:var(--accent);">👑 Staff Roles (Admins)</h3>
-                <p style="margin:5px 0 0 0; font-size:12px; color:var(--text-muted);">List of players who currently have Admin Dashboard access. You can grant admin access directly from a player's profile card.</p>
-              </div>
-              <div id="adminStaffListContainer" style="display:flex; flex-direction:column; gap:8px;">
-                 <!-- Rendered by window.renderStaffRoles -->
-              </div>
-            </div>
-          
-          <!-- Registered Users Table Section -->
+                <button onclick="window.toggleRosterFilter()" style="background:${globalRosterRegisteredOnly ? 'var(--success)' : 'var(--bg-main)'}; color:${globalRosterRegisteredOnly ? '#fff' : 'var(--text-main)'};           <!-- Registered Users Table Section -->
           <div style="background:var(--bg-main); padding:18px; border-radius:14px; border:1px solid var(--border); margin-bottom:20px;">
             
+            ${(() => {
+              // Calculate claimed vs unclaimed roster members
+              const registeredGids = new Set();
+              Object.values(users).forEach(u => {
+                if (u.gameId) registeredGids.add(String(u.gameId).trim().toLowerCase());
+                if (u.linkedGameIds && Array.isArray(u.linkedGameIds)) {
+                  u.linkedGameIds.forEach(id => registeredGids.add(String(id).trim().toLowerCase()));
+                }
+              });
+
+              window._currentUnclaimedRosterList = [];
+              const claimedRosterGids = new Set();
+
+              if (rosterRawData) {
+                Object.values(rosterRawData).forEach(p => {
+                  if (!p || !p.name) return;
+                  const pGid = String(p.id || p.gameId || p.gid || '').trim().toLowerCase();
+                  const pNameLower = p.name.trim().toLowerCase();
+                  
+                  let isClaimed = (pGid && registeredGids.has(pGid));
+                  if (!isClaimed) {
+                    isClaimed = Object.values(users).some(u => {
+                      const uName = (idToNameMap[u.gameId] || '').trim().toLowerCase();
+                      return uName && uName === pNameLower;
+                    });
+                  }
+                  
+                  if (isClaimed) {
+                    claimedRosterGids.add(pGid || pNameLower);
+                  } else {
+                    window._currentUnclaimedRosterList.push(p);
+                  }
+                });
+              }
+              return '';
+            })()}
+
             <!-- Search & Filter Controls Bar -->
             <div style="display:flex; flex-direction:column; gap:14px; margin-bottom:18px; background:var(--card-bg); padding:16px; border-radius:12px; border:1px solid var(--border);">
               <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
                 <div style="font-weight:bold; font-size:16px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
-                  👥 Registered Users Database <span style="font-size:13px; color:var(--text-muted); font-weight:normal;">(${Object.keys(users).length} total)</span>
+                  👥 Registered Users Database <span style="font-size:13px; color:var(--text-muted); font-weight:normal;">(${Object.keys(users).length} registered account(s), ${(window._currentUnclaimedRosterList || []).length} unclaimed roster member(s))</span>
                 </div>
                 <div style="position:relative; width:100%; max-width:340px;">
                   <input type="text" id="adminUserSearchInput" oninput="window.filterAdminUsersList()" placeholder="🔍 Search Name, Game ID, or Email..." style="width:100%; padding:10px 32px 10px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; font-weight:bold; box-sizing:border-box;">
@@ -8885,7 +8962,13 @@ const views = {
               <!-- Filter Tab Pills -->
               <div id="adminUserFilterPills" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
                 <button class="admin-user-filter-pill active" data-filter="all" onclick="window.setAdminUserFilter('all', this)" style="background:var(--accent); color:#fff; border:none; padding:6px 14px; border-radius:20px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
-                  👥 All Users (${Object.keys(users).length})
+                  👥 All Members (${Object.keys(users).length + (window._currentUnclaimedRosterList || []).length})
+                </button>
+                <button class="admin-user-filter-pill" data-filter="unclaimed" onclick="window.setAdminUserFilter('unclaimed', this)" style="background:rgba(239,68,68,0.12); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:6px 14px; border-radius:20px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+                  ⚠️ Unclaimed Roster (${(window._currentUnclaimedRosterList || []).length})
+                </button>
+                <button class="admin-user-filter-pill" data-filter="claimed" onclick="window.setAdminUserFilter('claimed', this)" style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:6px 14px; border-radius:20px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+                  ✅ Claimed Roster (${Object.keys(users).length})
                 </button>
                 <button class="admin-user-filter-pill" data-filter="new" onclick="window.setAdminUserFilter('new', this)" style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:6px 14px; border-radius:20px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
                   🆕 New Signups (${Object.values(users).filter(u => {
@@ -8898,6 +8981,9 @@ const views = {
                 </button>
                 <button class="admin-user-filter-pill" data-filter="enrolled" onclick="window.setAdminUserFilter('enrolled', this)" style="background:rgba(168,85,247,0.12); color:#a855f7; border:1px solid rgba(168,85,247,0.3); padding:6px 14px; border-radius:20px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
                   🎁 Gift Codes Enrolled
+                </button>
+                <button onclick="window.copyUnclaimedRosterList()" style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.4); padding:6px 14px; border-radius:20px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.25)'" onmouseout="this.style.background='rgba(239,68,68,0.15)'">
+                  📋 Copy Unclaimed List
                 </button>
               </div>
             </div>
@@ -8962,12 +9048,14 @@ const views = {
         html += `
           <tr class="admin-user-row" 
               data-name="${escapeHTML(cName.toLowerCase())}" 
+              data-name-raw="${escapeHTML(cName)}"
               data-gid="${escapeHTML((u.gameId || '').toString().toLowerCase())}" 
               data-email="${escapeHTML((u.email || '').toString().toLowerCase())}" 
               data-is-new="${isNew ? 'true' : 'false'}" 
               data-is-admin="${isAdminUser ? 'true' : 'false'}" 
               data-has-alts="${hasAlts ? 'true' : 'false'}" 
               data-is-enrolled="${isEnrolled ? 'true' : 'false'}" 
+              data-is-claimed="true"
               style="border-bottom:1px solid var(--border); background:var(--card-bg);">
             
             <td style="padding:12px 10px;">
@@ -8978,6 +9066,7 @@ const views = {
                 <div style="display:flex; flex-direction:column; gap:2px;">
                   <div style="font-weight:bold; font-size:14px; color:var(--text-main); display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
                     <span>${escapeHTML(cName)}</span>
+                    <span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:2px 8px; border-radius:12px; font-size:10px; font-weight:bold;">✅ CLAIMED</span>
                     ${isNew ? `<span style="background:rgba(16,185,129,0.18); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:2px 8px; border-radius:12px; font-size:10px; font-weight:bold; letter-spacing:0.5px;">🆕 NEW</span>` : ''}
                     ${isAdminUser ? `<span style="background:rgba(234,179,8,0.15); color:#eab308; border:1px solid rgba(234,179,8,0.3); padding:2px 6px; border-radius:10px; font-size:10px; font-weight:bold;">👑 ${adminLvl === 'R5' ? 'R5 Staff' : 'R4 Staff'}</span>` : ''}
                   </div>
@@ -9013,6 +9102,75 @@ const views = {
 
           </tr>
         `;
+      }
+
+      // Render Unclaimed Alliance Roster Members
+      if (window._currentUnclaimedRosterList && window._currentUnclaimedRosterList.length > 0) {
+        for (const p of window._currentUnclaimedRosterList) {
+          const uName = p.name || "Unknown Member";
+          const uGid = p.id || p.gameId || p.gid || '';
+          const flVal = p.furnaceLevel;
+          const gcVal = p.giftCodes;
+          const isEnrolled = (gcVal === true || gcVal === 'TRUE' || (typeof gcVal === 'string' && gcVal.toLowerCase().trim() === 'true'));
+          const avatarSrc = window.getAvatarUrl(uGid, uName);
+          
+          let rosterInfoHtml = '';
+          if (flVal) rosterInfoHtml += `<span style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); padding:3px 8px; border-radius:10px; font-size:11px; display:inline-flex; align-items:center;">${window.getFurnaceIconHtml(flVal)}</span>`;
+          if (isEnrolled) rosterInfoHtml += `<span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:3px 8px; border-radius:10px; font-size:11px; font-weight:bold;">✅ Enrolled</span>`;
+
+          html += `
+            <tr class="admin-user-row" 
+                data-name="${escapeHTML(uName.toLowerCase())}" 
+                data-name-raw="${escapeHTML(uName)}"
+                data-gid="${escapeHTML(uGid.toString().toLowerCase())}" 
+                data-email="unclaimed" 
+                data-is-new="false" 
+                data-is-admin="false" 
+                data-has-alts="false" 
+                data-is-enrolled="${isEnrolled ? 'true' : 'false'}" 
+                data-is-claimed="false"
+                style="border-bottom:1px solid var(--border); background:rgba(239,68,68,0.02);">
+              
+              <td style="padding:12px 10px;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                  <div style="width:40px; height:40px; border-radius:50%; overflow:hidden; background:rgba(239,68,68,0.15); flex-shrink:0; border:2px solid rgba(239,68,68,0.3); display:flex; align-items:center; justify-content:center;">
+                    <img src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(uName)}&background=ef4444&color=fff&bold=true&size=128';">
+                  </div>
+                  <div style="display:flex; flex-direction:column; gap:2px;">
+                    <div style="font-weight:bold; font-size:14px; color:var(--text-main); display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                      <span>${escapeHTML(uName)}</span>
+                      <span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.4); padding:2px 8px; border-radius:12px; font-size:10px; font-weight:bold; letter-spacing:0.5px;">⚠️ UNCLAIMED ROSTER</span>
+                    </div>
+                    <div style="font-family:monospace; font-size:12px; color:var(--text-muted); font-weight:bold;">
+                      ID: ${escapeHTML(uGid || 'N/A')}
+                    </div>
+                  </div>
+                </div>
+              </td>
+
+              <td style="padding:12px 10px;">
+                <div style="display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
+                  ${rosterInfoHtml}
+                </div>
+              </td>
+
+              <td style="padding:12px 10px;">
+                <div style="display:flex; flex-direction:column; gap:2px;">
+                  <div style="color:#ef4444; font-size:12px; font-weight:bold;">⚠️ Not Registered Yet</div>
+                  <div style="color:var(--text-muted); font-size:11px; opacity:0.8;">On Alliance Roster</div>
+                </div>
+              </td>
+
+              <td style="padding:12px 10px; text-align:right;">
+                <div style="display:flex; gap:6px; justify-content:flex-end; flex-wrap:wrap;">
+                  <button onclick="window.copyPlayerClaimLink('${escapeHTML(uGid)}', '${escapeHTML(uName.replace(/'/g, "\\'"))}')" style="background:rgba(239,68,68,0.12); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:5px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📋 Copy Claim Link</button>
+                  <button onclick="window.openEditRosterMemberModal('${escapeHTML(uName.replace(/'/g, "\\'"))}')" style="background:rgba(59,130,246,0.12); color:#3b82f6; border:1px solid rgba(59,130,246,0.3); padding:5px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">✏️ Edit Roster</button>
+                </div>
+              </td>
+
+            </tr>
+          `;
+        }
       }
       
       html += `</tbody></table></div></div>
