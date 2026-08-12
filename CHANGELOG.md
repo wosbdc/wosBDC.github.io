@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## [1.75.0] - 2026-08-12
+### 3D Flame Specular Highlights & Depth Shadows (FC7 to FC10 Focus)
+- **🔥 Focused Enhancements on FC7 to FC10**:
+  - Maintained FC1 through FC6 as 100% finished master designs as requested.
+  - Re-rendered FC7 (Amethyst Purple), FC8 (Magenta Rose), FC9 (Kryptonite Lime), and FC10 (Imperial Gold) with mathematical 2D hexagon boundary bounds (`240 < r_hex < 380`).
+  - Added 3D white-hot specular flame highlights on crests, deep ambient occlusion shadows in valleys, and soft inner bevel drop shadows.
+  - Guaranteed 100% pure titanium metal frame borders and gold inner bevels with zero color bleeding.
+- **🔄 Group Showcase Wallpaper Updated**:
+  - Re-rendered and deployed `all_10_fc_shields_group_showcase.jpg` with the updated FC7–FC10 badges.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.75.0`) in `window.getFurnaceIconHtml`.
+
 ## [1.73.0] - 2026-08-12
 ### Pure Solid High-Definition 3D Flame Badges (FC7 to FC10)
 - **🔥 100% Solid Pure Flame Quality Restoration**:
