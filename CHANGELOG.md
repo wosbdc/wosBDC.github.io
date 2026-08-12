@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## [1.73.0] - 2026-08-12
+### Pure Solid High-Definition 3D Flame Badges (FC7 to FC10)
+- **🔥 100% Solid Pure Flame Quality Restoration**:
+  - Re-processed FC7 (Amethyst Purple), FC8 (Magenta Rose), FC9 (Kryptonite Lime), and FC10 (Imperial Gold) with pure solid elemental flame color mapping.
+  - Eliminated all dual-tone color bleeding, purple/blue blending, and center number alignment issues.
+  - Preserved 100% of the high-definition 3D flame textures, titanium brushed metal bevelled frames, and gold inner bevels across all 10 badges.
+- **🔄 Group Showcase Wallpaper Updated**:
+  - Re-rendered and deployed `all_10_fc_shields_group_showcase.jpg` with the updated pure solid FC7–FC10 badges.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.73.0`) in `window.getFurnaceIconHtml`.
+
 ## [1.72.0] - 2026-08-12
 ### Complete Set of Heavy 3D Metallic Hexagon Shield Badges (FC1 to FC10)
 - **🛡️ Full 10-Level Metallic Hexagon Shield Badges**:
