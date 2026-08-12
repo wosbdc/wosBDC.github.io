@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [1.85.0] - 2026-08-12
+### 📲 iPhone Native Web Share Sheet Direct Trigger
+- **📲 Direct iOS Share Sheet Trigger**:
+  - Integrated `navigator.share()` into the **`⚡ Add App to iPhone Home Screen Now`** button inside the 4-step modal.
+  - Tapping the button on an iPhone automatically opens Apple's native iOS Share Sheet immediately on screen so users don't have to look for the Share icon manually.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.85.0`) in `window.getFurnaceIconHtml`.
+
 ## [1.84.0] - 2026-08-12
 ### ⚡ 1-Click Auto-Install Action Button & Dual PWA Install Modes
 - **⚡ Dual PWA Install System**:

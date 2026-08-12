@@ -1,10 +1,10 @@
 {
-  "version": "1.84.0",
+  "version": "1.85.0",
   "releaseDate": "2026-08-12",
-  "title": "⚡ 1-Click Auto-Install Action Button & Both PWA Install Modes",
+  "title": "📲 iPhone Web Share Sheet Auto-Trigger for 1-Tap Home Screen Addition",
   "notes": [
-    "Combined automatic 1-click install button and step-by-step iOS tutorial",
-    "Added ⚡ Auto-Install App Now button across settings, mobile nav, and popup banners",
-    "Added animated pulsing Share arrow for iOS Safari users"
+    "Integrated Web Share API (navigator.share) on iPhone to automatically launch iOS Share Sheet upon button tap",
+    "Eliminated manual Safari Share button searching for Apple device users",
+    "Updated iOS 4-Step tutorial modal with instant Web Share trigger button"
   ]
 }

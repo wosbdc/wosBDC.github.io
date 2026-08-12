@@ -109,7 +109,7 @@ window.getFurnaceIconHtml = (level, size = 48) => {
      const canvasOffset = Math.round((canvasSize - size) / 2);
      return `<span class="fc-badge-stage" data-fc="${fcNum}" style="display:inline-flex; align-items:center; justify-content:center; position:relative; vertical-align:middle; cursor:pointer; width:${size}px; height:${size}px; user-select:none; -webkit-user-select:none;">
        <canvas class="fc-flame-canvas" width="${canvasSize}" height="${canvasSize}" style="position:absolute; top:-${canvasOffset}px; left:-${canvasOffset}px; width:${canvasSize}px; height:${canvasSize}px; pointer-events:none; z-index:3;"></canvas>
-       <img src="/badges/fc${fcNum}.png?v=1.84.0" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
+       <img src="/badges/fc${fcNum}.png?v=1.85.0" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
      </span>`;
   }
 
@@ -17760,7 +17760,7 @@ window.closeMobileNavModal = () => {
 })();
 
 // ============================================================================
-// IPHONE SAFARI NATIVE PWA INSTALL GUIDE SYSTEM (v1.84.0)
+// IPHONE SAFARI NATIVE PWA INSTALL GUIDE SYSTEM (v1.85.0)
 // ============================================================================
 window.showIosInstallGuide = function() {
   if (document.getElementById('ios-pwa-install-modal')) return;
@@ -17783,14 +17783,14 @@ window.showIosInstallGuide = function() {
     <div style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.98)); border: 1px solid rgba(255, 215, 0, 0.6); box-shadow: 0 25px 60px rgba(0,0,0,0.9), 0 0 30px rgba(255, 215, 0, 0.25); border-radius: 24px; padding: 25px; max-width: 460px; width: 100%; color: #f1f5f9; position: relative;">
       <button id="close-ios-install-modal" style="position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.1); border: none; color: #94a3b8; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 1.1rem; font-weight: bold;">✕</button>
       
-      <div style="text-align: center; margin-bottom: 20px;">
+      <div style="text-align: center; margin-bottom: 18px;">
         <div style="font-size: 3rem; margin-bottom: 8px;">📱</div>
         <h2 style="color: #ffd700; font-size: 1.4rem; margin-bottom: 6px;">Install App on iPhone / iPad</h2>
         <p style="color: #94a3b8; font-size: 0.88rem; line-height: 1.4;">Add WOS Dashboard to your Home Screen for a full-screen app experience!</p>
       </div>
 
-      <button id="btn-modal-auto-install" style="width: 100%; background: linear-gradient(135deg, #ffd700, #ff8c00); border: none; color: #0f172a; font-weight: 800; font-size: 1.05rem; padding: 14px; border-radius: 16px; cursor: pointer; box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4); margin-bottom: 18px; display:flex; align-items:center; justify-content:center; gap:8px;">
-        ⚡ Tap Here to Auto-Install App Now
+      <button id="btn-modal-auto-install" style="width: 100%; background: linear-gradient(135deg, #ffd700, #ff8c00); border: none; color: #0f172a; font-weight: 800; font-size: 1.02rem; padding: 14px; border-radius: 16px; cursor: pointer; box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4); margin-bottom: 18px; display:flex; align-items:center; justify-content:center; gap:8px;">
+        📲 Tap to Open iOS Share & Add to Home Screen
       </button>
 
       <div style="background: rgba(0,0,0,0.3); border-radius: 16px; padding: 16px; margin-bottom: 18px; border: 1px solid rgba(255,255,255,0.06); display:flex; flex-direction:column; gap:12px;">
@@ -17826,6 +17826,13 @@ window.showIosInstallGuide = function() {
   document.getElementById('btn-gotit-ios-install').addEventListener('click', closeFn);
   document.getElementById('btn-modal-auto-install').addEventListener('click', () => {
     modal.remove();
+    if (navigator.share) {
+      navigator.share({
+        title: 'WOS Dashboard',
+        text: 'WOS Dashboard App',
+        url: window.location.href
+      }).catch(() => {});
+    }
     window.triggerAutoPwaInstall();
   });
 };
