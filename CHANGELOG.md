@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [1.71.0] - 2026-08-12
+### Heavy Metallic 3D Hexagon Shield Badge Design (FC1 Test)
+- **🛡️ New Heavy 3D Metallic Hexagon Shield Design**:
+  - Generated FC1 (`fc1.png`) in the exact style of the user's reference image: heavy bevelled titanium brushed metal outer hexagon frame with chiseled 3D edges, gold-trimmed inner bevel, glowing crimson red flame core aura, and dark brushed steel center plate displaying glowing white number 1.
+  - Floating 3D metallic shield badge with 100% true alpha transparency.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.71.0`) in `window.getFurnaceIconHtml`.
+
 ## [1.70.0] - 2026-08-12
 ### Pure No-Halo 3D Multi-Layered Fire Crystal Star Badge (FC1 Test)
 - **💎 Pure Ringless 3D Star Gem**:
