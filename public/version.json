@@ -1,9 +1,9 @@
 {
-  "version": "1.89.7",
+  "version": "1.89.8",
   "releaseDate": "2026-08-12",
-  "title": "📱 Chrome for iOS 'View More' Step & Share SVG Icon Update",
+  "title": "🧭 Safari iPhone (...) and iPad Share Icon Guidance Update",
   "notes": [
-    "Updated Chrome for iOS guide with exact Share SVG icon and explicit 'View More' ➔ 'Add to Home Screen' step",
-    "Unified Apple iOS Safari and Chrome iOS visual install paths"
+    "Updated Safari iPhone & iPad install card to reference both Share SVG icon and iPhone address bar (...) menu",
+    "Ensured comprehensive coverage across all iPhone, iPad, Safari, and Chrome mobile devices"
   ]
 }

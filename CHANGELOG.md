@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [1.89.8] - 2026-08-12
+### 🧭 Safari iPhone (...) and iPad Share Icon Guidance Update
+- **🧭 Safari iPhone & iPad Instructions Update**:
+  - Updated Safari instruction card to explicitly reference both the Share SVG icon and iPhone's `(...)` menu button.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.89.8`) in `window.getFurnaceIconHtml`.
+
 ## [1.89.7] - 2026-08-12
 ### 🌐 Chrome for iOS 'View More' Step & Share SVG Icon Update
 - **🌐 Chrome for iOS Instructions Update**:
