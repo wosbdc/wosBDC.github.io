@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [1.62.0] - 2026-08-11
+### Action Category Filter Tabs for Admin Audit Logs
+- **🏷️ Interactive Category Pills**:
+  - Added 1-click Category Filter Pills above the Admin Audit Log table:
+    `[⚡ All Actions]`, `[📋 Signups & Attendance]`, `[🔥 Furnace & Profiles]`, `[🐻 Bear Trap & Events]`, `[⚙️ System & Syncs]`.
+- **🎯 Dynamic Multi-Criteria Filtering**:
+  - Updated `window.filterAdminLogs(categoryVal)` to seamlessly filter logs across Category, Date Range (Today/Yesterday/7 Days), Admin, and Search terms simultaneously.
+
 ## [1.61.0] - 2026-08-11
 ### Smart Batch Grouping in Admin Action Audit Logs
 - **⚡ Intelligent Log Condensing**:

@@ -8905,6 +8905,15 @@ const views = {
                     <input type="text" id="adminLogSearch" placeholder="Search logs..." onkeyup="window.filterAdminLogs()" style="padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); width:180px;">
                   </div>
                 </div>
+
+                <!-- Action Category Filter Pills -->
+                <div style="display:flex; gap:8px; flex-wrap:wrap; border-bottom:1px solid var(--border); padding-bottom:12px;">
+                   <button class="log-cat-pill active" data-cat="all" onclick="window.filterAdminLogs('all')" style="background:var(--accent); color:#ffffff; border:1px solid var(--accent); border-radius:20px; padding:5px 14px; font-size:12px; font-weight:bold; cursor:pointer; transition:all 0.2s;">⚡ All Actions</button>
+                   <button class="log-cat-pill" data-cat="signups" onclick="window.filterAdminLogs('signups')" style="background:rgba(255,255,255,0.05); color:var(--text-muted); border:1px solid var(--border); border-radius:20px; padding:5px 14px; font-size:12px; font-weight:bold; cursor:pointer; transition:all 0.2s;">📋 Signups & Attendance</button>
+                   <button class="log-cat-pill" data-cat="furnace" onclick="window.filterAdminLogs('furnace')" style="background:rgba(255,255,255,0.05); color:var(--text-muted); border:1px solid var(--border); border-radius:20px; padding:5px 14px; font-size:12px; font-weight:bold; cursor:pointer; transition:all 0.2s;">🔥 Furnace & Profiles</button>
+                   <button class="log-cat-pill" data-cat="events" onclick="window.filterAdminLogs('events')" style="background:rgba(255,255,255,0.05); color:var(--text-muted); border:1px solid var(--border); border-radius:20px; padding:5px 14px; font-size:12px; font-weight:bold; cursor:pointer; transition:all 0.2s;">🐻 Bear Trap & Events</button>
+                   <button class="log-cat-pill" data-cat="system" onclick="window.filterAdminLogs('system')" style="background:rgba(255,255,255,0.05); color:var(--text-muted); border:1px solid var(--border); border-radius:20px; padding:5px 14px; font-size:12px; font-weight:bold; cursor:pointer; transition:all 0.2s;">⚙️ System & Syncs</button>
+                </div>
                 <div style="overflow-x:auto;">
                   <table style="width:100%; border-collapse:collapse; text-align:left;">
                     <thead>
@@ -9253,18 +9262,38 @@ const views = {
         });
       });
       
-      window.filterAdminLogs = () => {
-         const search = document.getElementById('adminLogSearch').value.toLowerCase();
-         const adminFilter = document.getElementById('adminLogFilter').value.toLowerCase();
-         const dateFilter = document.getElementById('adminLogDateFilter').value;
-         
+      window.filterAdminLogs = (categoryVal) => {
+         const search = (document.getElementById('adminLogSearch')?.value || '').toLowerCase();
+         const adminFilter = (document.getElementById('adminLogFilter')?.value || '').toLowerCase();
+         const dateFilter = document.getElementById('adminLogDateFilter')?.value || 'all';
+
+         if (categoryVal !== undefined) {
+            window._selectedLogCategory = categoryVal;
+         }
+         const catFilter = (window._selectedLogCategory || 'all').toLowerCase();
+
+         // Update category pill active styles
+         document.querySelectorAll('.log-cat-pill').forEach(pill => {
+            const val = (pill.getAttribute('data-cat') || 'all').toLowerCase();
+            if (val === catFilter) {
+               pill.style.background = 'var(--accent)';
+               pill.style.color = '#ffffff';
+               pill.style.borderColor = 'var(--accent)';
+            } else {
+               pill.style.background = 'rgba(255,255,255,0.05)';
+               pill.style.color = 'var(--text-muted)';
+               pill.style.borderColor = 'var(--border)';
+            }
+         });
+
          const now = new Date();
          const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
          const yesterdayStart = todayStart - (24 * 60 * 60 * 1000);
          const sevenDaysStart = todayStart - (7 * 24 * 60 * 60 * 1000);
-         
+
          document.querySelectorAll('.admin-log-row').forEach(row => {
-            const matchesSearch = row.innerText.toLowerCase().includes(search);
+            const rowText = row.innerText.toLowerCase();
+            const matchesSearch = !search || rowText.includes(search);
             const matchesAdmin = adminFilter === '' || row.getAttribute('data-admin') === adminFilter;
             
             let matchesDate = true;
@@ -9277,9 +9306,29 @@ const views = {
             } else if (dateFilter === '7days') {
                matchesDate = rowTime >= sevenDaysStart;
             }
-            
-            if (matchesSearch && matchesAdmin && matchesDate) {
-               row.style.display = '';
+
+            let matchesCat = true;
+            if (catFilter !== 'all') {
+               if (catFilter === 'signups') {
+                  matchesCat = rowText.includes('signup') || rowText.includes('championship') || rowText.includes('mercenary') || rowText.includes('polar') || rowText.includes('bear trap toggle');
+               } else if (catFilter === 'furnace') {
+                  matchesCat = rowText.includes('furnace') || rowText.includes('profile') || rowText.includes('stove') || rowText.includes('alt profile');
+               } else if (catFilter === 'events') {
+                  matchesCat = rowText.includes('bear trap') || rowText.includes('beartrap') || rowText.includes('showdown') || rowText.includes('donation') || rowText.includes('crowned') || rowText.includes('cycle');
+               } else if (catFilter === 'system') {
+                  matchesCat = rowText.includes('sync') || rowText.includes('schedule') || rowText.includes('pipeline') || rowText.includes('roster member');
+               }
+            }
+
+            if (matchesSearch && matchesAdmin && matchesDate && matchesCat) {
+               if (row.classList.contains('batch-subrow')) {
+                  const parentBatchId = Array.from(row.classList).find(c => c.startsWith('batch-subrow-'))?.replace('batch-subrow-', '');
+                  const parentBtn = document.getElementById(`batch-btn-${parentBatchId}`);
+                  const isExpanded = parentBtn && parentBtn.innerHTML.includes('Collapse');
+                  row.style.display = isExpanded ? '' : 'none';
+               } else {
+                  row.style.display = '';
+               }
             } else {
                row.style.display = 'none';
             }
