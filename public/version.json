@@ -1,10 +1,9 @@
 {
-  "version": "1.95.0",
+  "version": "1.95.1",
   "releaseDate": "2026-08-12",
-  "title": "⚠️ Unclaimed Roster Members Tracking & Copy-Link System",
+  "title": "👥 Registered Users Dashboard Layout Correction",
   "notes": [
-    "Added ⚠️ Unclaimed Roster Members filter pill & live badge counter to Registered Users Database",
-    "Added 📋 Copy Unclaimed List button to easily copy formatted unclaimed roster names for Discord/Chat",
-    "Added 📋 Copy Claim Link action on each unclaimed roster member row with direct claim link generation"
+    "Cleaned up Admin Dashboard Users tab HTML structure",
+    "Ensured Registered Users Database and Unclaimed Roster Member tracking belong strictly inside the Users tab"
   ]
 }

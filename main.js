@@ -109,7 +109,7 @@ window.getFurnaceIconHtml = (level, size = 48) => {
      const canvasOffset = Math.round((canvasSize - size) / 2);
      return `<span class="fc-badge-stage" data-fc="${fcNum}" style="display:inline-flex; align-items:center; justify-content:center; position:relative; vertical-align:middle; cursor:pointer; width:${size}px; height:${size}px; user-select:none; -webkit-user-select:none;">
        <canvas class="fc-flame-canvas" width="${canvasSize}" height="${canvasSize}" style="position:absolute; top:-${canvasOffset}px; left:-${canvasOffset}px; width:${canvasSize}px; height:${canvasSize}px; pointer-events:none; z-index:3;"></canvas>
-       <img src="/badges/fc${fcNum}.png?v=1.95.0" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
+       <img src="/badges/fc${fcNum}.png?v=1.95.1" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
      </span>`;
   }
 
@@ -8907,7 +8907,22 @@ const views = {
                   <h3 style="margin:0; color:var(--text-main);">Global Chief List Filter</h3>
                   <p style="margin:5px 0 0 0; font-size:12px; color:var(--text-muted);">Permanently hide unregistered users from the Player Lookup list for everyone.</p>
                 </div>
-                <button onclick="window.toggleRosterFilter()" style="background:${globalRosterRegisteredOnly ? 'var(--success)' : 'var(--bg-main)'}; color:${globalRosterRegisteredOnly ? '#fff' : 'var(--text-main)'};           <!-- Registered Users Table Section -->
+                <button onclick="window.toggleRosterFilter()" style="background:${globalRosterRegisteredOnly ? 'var(--success)' : 'var(--bg-main)'}; color:${globalRosterRegisteredOnly ? '#fff' : 'var(--text-main)'}; border:1px solid ${globalRosterRegisteredOnly ? 'transparent' : 'var(--border)'}; padding:8px 16px; border-radius:6px; cursor:pointer; font-weight:bold; min-width:100px;">
+                  ${globalRosterRegisteredOnly ? 'ON' : 'OFF'}
+                </button>
+              </div>
+
+              <div style="background:var(--bg-main); padding:15px; border-radius:12px; border:1px solid var(--accent); margin-bottom:20px;">
+                <div style="margin-bottom:15px;">
+                  <h3 style="margin:0; color:var(--accent);">👑 Staff Roles (Admins)</h3>
+                  <p style="margin:5px 0 0 0; font-size:12px; color:var(--text-muted);">List of players who currently have Admin Dashboard access. You can grant admin access directly from a player's profile card.</p>
+                </div>
+                <div id="adminStaffListContainer" style="display:flex; flex-direction:column; gap:8px;">
+                   <!-- Rendered by window.renderStaffRoles -->
+                </div>
+              </div>
+          
+          <!-- Registered Users Table Section -->
           <div style="background:var(--bg-main); padding:18px; border-radius:14px; border:1px solid var(--border); margin-bottom:20px;">
             
             ${(() => {

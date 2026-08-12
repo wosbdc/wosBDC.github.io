@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.95.1] - 2026-08-12
+### 👥 Registered Users Dashboard Layout Correction
+- **🧹 Dashboard Tab Layout Cleanup**: Cleaned up the Admin Dashboard tab markup to ensure the Registered Users Database and Unclaimed Roster Member tracking remain strictly inside the **👥 Users** tab (and kept out of the Daily Tools tab).
+
 ## [1.95.0] - 2026-08-12
 ### ⚠️ Unclaimed Roster Members Tracking & Copy-Link System
 - **⚠️ Unclaimed Roster Filter Pill**: Added dedicated `⚠️ Unclaimed Roster` and `✅ Claimed Roster` filter pills to the Registered Users Database dashboard with live counts.
