@@ -1,10 +1,10 @@
 {
-  "version": "1.87.0",
+  "version": "1.87.1",
   "releaseDate": "2026-08-12",
-  "title": "⚡ Automated Package Version Sync & SW Cache Purge",
+  "title": "🏷️ SemVer Semantic Versioning Standard Enforcement",
   "notes": [
-    "Tied CURRENT_BUILD_VERSION directly to pkg.version to eliminate hardcoded version desynchronization",
-    "Updated PWA ServiceWorker cache key to v1.87.0 and bypassed version.json caching",
-    "Completely eliminated false positive App Update Available prompts"
+    "Formalized strict Semantic Versioning (MAJOR.MINOR.PATCH) for all future commits",
+    "Bug Fixes & Patch Tweaks -> Increment PATCH (x.y.Z+1)",
+    "New Features & Enhancements -> Increment MINOR (x.Y+1.0)"
   ]
 }

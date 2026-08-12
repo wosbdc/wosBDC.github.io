@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [1.87.1] - 2026-08-12
+### 🏷️ SemVer Versioning Standard Formalization
+- **🏷️ Strict SemVer (MAJOR.MINOR.PATCH) Formatting**:
+  - **Bug Fixes & Patch Tweaks** $\rightarrow$ Increment **PATCH** (`x.y.Z+1`) (e.g. `v1.87.0` $\rightarrow$ `v1.87.1`).
+  - **New Features & Enhancements** $\rightarrow$ Increment **MINOR** (`x.Y+1.0`) (e.g. `v1.87.0` $\rightarrow$ `v1.88.0`).
+  - **Major Architectural Overhauls** $\rightarrow$ Increment **MAJOR** (`X+1.0.0`) (e.g. `v1.87.0` $\rightarrow$ `v2.0.0`).
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.87.1`) in `window.getFurnaceIconHtml`.
+
 ## [1.87.0] - 2026-08-12
 ### ⚡ Automated Package Version Sync & SW Cache Purge
 - **⚡ Automated Version Synchronization**:
