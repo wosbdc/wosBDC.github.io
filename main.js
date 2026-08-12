@@ -2094,7 +2094,7 @@ window.openAdminEditFurnaceModal = async (chiefName, gameId = '', currentFurnace
            } catch(e) {}
 
            if (window.logAdminAction) {
-              window.logAdminAction("Set Furnace Level", `Updated ${chiefName} to ${newFurnace}`, chiefName);
+              window.logAdminAction("Set Furnace Level", `Updated '${chiefName}' (ID: ${cleanGid}) furnace level to ${newFurnace}`, chiefName);
            }
 
            if (window.showToast) window.showToast(`Updated ${chiefName}'s Furnace Level to ${newFurnace}!`, "success");
@@ -7549,6 +7549,15 @@ window.openEditAltProfileModal = async (gameId, chiefName) => {
                   timeActive: calculatedTimeActive,
                   updatedAt: Date.now()
                };
+
+               // 5. Log Admin / Profile action with target Alt details
+               if (window.logAdminAction) {
+                  window.logAdminAction(
+                     "Alt Profile Update", 
+                     `Updated Alt account '${chiefName}' (ID: ${cleanGid}) Furnace to ${newFurnace}${newJoinedDate ? `, Start Date to ${newJoinedDate}` : ''}`, 
+                     chiefName
+                  );
+               }
 
                await set(ref(db, 'roster_live'), rosterObj);
                window.rosterCache = rosterObj;

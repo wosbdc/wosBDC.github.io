@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [1.60.2] - 2026-08-11
+### Admin Log Explicit Alt Account Audit Tracking
+- **📋 Explicit Alt Logging**: Integrated `window.logAdminAction("Alt Profile Update", ...)` into `openEditAltProfileModal`, ensuring the admin log explicitly logs the target Alt account name, game ID, updated furnace level, and start date.
+- **🏷️ Target Name Clarity**: Refined furnace level edit log messages across all modals so target player names and game IDs are highlighted cleanly in admin action logs.
+
 ## [1.60.1] - 2026-08-11
 ### Alt Profile Modal Alignment & Multi-Node Persistence Fix
 - **🎨 Layout Realignment**: Fixed preview box badge container overflow (`min-width: 60px`) preventing standard furnace badges (`🔥 Lv 21`) from overlapping chief names.
