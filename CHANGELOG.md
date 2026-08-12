@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [1.64.0] - 2026-08-11
+### Pristine 3D Fire Crystal Badge Artwork Restoration
+- **👑 Full Pristine Artwork Restoration**:
+  - Restored the complete, unclipped original 3D Fire Crystal star assets (`fc1.png` – `fc10.png`) with their glowing neon halo rings, multi-layered crystal star points, and sparkling depth intact.
+  - Reverted polygon clipping to ensure center numbers, secondary star points, and 3D lighting remain 100% intact without any visual distortion.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.64.0`) in `window.getFurnaceIconHtml`.
+
 ## [1.63.2] - 2026-08-11
 ### Fire Crystal Badge Image Cache Invalidation
 - **🔄 Forced Browser Cache Refresh**:
