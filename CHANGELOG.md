@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## [1.89.2] - 2026-08-12
+### 🎯 Smart Browser Pointer Arrow & Dual-Browser Instructions
+- **🎯 Smart Browser Alignment**:
+  - Automatically detects Chrome browser vs Safari browser.
+  - Chrome: Displays top-right bouncing banner (`↗️`) pointing at Chrome's 3 dots (`⋮`).
+  - Safari: Displays bottom-center bouncing banner (`👇`) pointing at Safari's Share button (`📤`).
+- **📖 Enhanced Directions Modals**:
+  - Updated step-by-step guides for both Android Chrome and iPhone Safari with clear browser-specific icon instructions.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.89.2`) in `window.getFurnaceIconHtml`.
+
 ## [1.89.1] - 2026-08-12
 ### 💻 Fixed Desktop & Mac PWA App Update Alerts
 - **💻 Desktop/Mac Update Alert Fix**:

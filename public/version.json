@@ -1,10 +1,10 @@
 {
-  "version": "1.89.1",
+  "version": "1.89.2",
   "releaseDate": "2026-08-12",
-  "title": "💻 Fixed Desktop & Mac PWA App Update Alerts",
+  "title": "🎯 Smart Browser Pointer Arrow & Dual-Browser Instructions",
   "notes": [
-    "Fixed version check bug suppressing update alerts on Desktop/Mac/PC browsers",
-    "Ensured Desktop & Mac users reliably get App Update Available popups on new releases",
-    "Preserved 1-click update cache clearing and page reload"
+    "Smart-aligned pointer arrow: points top-right (↗️) for Chrome 3 dots (⋮) and bottom-center (👇) for Safari Share (📤)",
+    "Added clear browser-aware directions in PWA install guides for both Chrome and Safari",
+    "Enhanced alignment precision across Android Chrome, iOS Safari, and Mobile Chrome"
   ]
 }
