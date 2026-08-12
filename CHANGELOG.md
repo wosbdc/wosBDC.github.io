@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.59.6] - 2026-08-11
+### Badge Parsing & Image Match Fix
+- **💎 Precise Fire Crystal Badge Resolution**: Fixed a critical string-parsing bug in `getFurnaceIconHtml` where levels formatted as `"FC 5 (Fire Crystal 5)"` concatenated digits into `"55"` and defaulted to the `FC 10` image. Updated regex matching to cleanly extract single Fire Crystal level integers (1 – 10) and Century Games API offsets (31 – 40).
+
 ## [1.59.5] - 2026-08-11
 ### UI Refinement
 - **🎴 Player Lookup Card Clean Display**: Removed direct click-to-edit trigger from the header furnace badge on Chief Player Lookup Cards (`generatePlayerProfileHtml`), restoring a clean badge display. Admins can still edit levels via the `🔥 Set Furnace Level` button in the `⚙️ Actions` menu and in the Player Database Editor.

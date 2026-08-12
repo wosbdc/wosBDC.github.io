@@ -62,24 +62,29 @@ const getAuthToken = async () => {
 
 
 window.getFurnaceIconHtml = (level, size = 48) => {
-  if (!level || level === "N/A") return `<span style="color:var(--text-muted); font-size:13px; font-weight:bold;">🔥 N/A</span>`;
+  if (!level || level === "N/A" || level === "") return `<span style="color:var(--text-muted); font-size:13px; font-weight:bold;">🔥 N/A</span>`;
   
   const rawStr = level.toString().trim().toUpperCase();
   let fcNum = null;
   let furnaceNum = null;
   
-  // Detect Fire Crystal (FC 1 to 10)
-  const fcMatch = rawStr.match(/^FC\s*(\d+)$/i);
+  // 1. Check for explicit "FC" or "FIRE CRYSTAL" prefix followed by number 1-10
+  const fcMatch = rawStr.match(/(?:FC|FIRE\s*CRYSTAL)\s*[\.-]?\s*(\d+)/i);
   if (fcMatch) {
-     fcNum = parseInt(fcMatch[1], 10);
+     const parsedFc = parseInt(fcMatch[1], 10);
+     if (parsedFc >= 1 && parsedFc <= 10) {
+        fcNum = parsedFc;
+     } else if (parsedFc > 30 && parsedFc <= 40) {
+        fcNum = parsedFc - 30;
+     }
   } else {
-     const numVal = parseInt(rawStr.replace(/[^0-9]/g, ''), 10);
-     if (!isNaN(numVal)) {
-        if (numVal > 30) { // Legacy numeric offset (e.g. 35 -> FC 1, 37 -> FC 7)
-           fcNum = Math.min(10, Math.max(1, numVal - 30));
-        } else if (rawStr.includes('FC')) {
-           fcNum = Math.min(10, Math.max(1, numVal));
-        } else {
+     // 2. If no explicit FC prefix, extract the FIRST number in the string
+     const firstNumMatch = rawStr.match(/(\d+)/);
+     if (firstNumMatch) {
+        const numVal = parseInt(firstNumMatch[1], 10);
+        if (numVal > 30 && numVal <= 40) { // Century Games API stove_lv (31=FC1 ... 40=FC10)
+           fcNum = numVal - 30;
+        } else if (numVal >= 1 && numVal <= 30) {
            furnaceNum = numVal;
         }
      }
@@ -104,7 +109,7 @@ window.getFurnaceIconHtml = (level, size = 48) => {
   }
 
   // Render Modern Standard Furnace Badge (Furnace 1 to 30)
-  const fn = furnaceNum || parseInt(rawStr, 10) || 30;
+  const fn = furnaceNum || 30;
   return `<span class="furnace-level-badge" title="Furnace Level ${fn}" style="display:inline-flex; align-items:center; gap:6px; background:linear-gradient(135deg, rgba(30,41,59,0.8), rgba(15,23,42,0.9)); border:1px solid rgba(249,115,22,0.4); padding:4px 10px; border-radius:12px; font-weight:800; font-size:${Math.max(12, Math.round(size*0.38))}px; color:#ffffff; box-shadow:0 4px 12px rgba(249,115,22,0.15); white-space:nowrap; vertical-align:middle;">
     <span style="filter:drop-shadow(0 0 4px #f97316);">🔥</span> Lv ${fn}
   </span>`;
@@ -112,15 +117,31 @@ window.getFurnaceIconHtml = (level, size = 48) => {
 
 window.renderFurnaceSelectHtml = (id = 'manualFurnaceLevel', selectedVal = '', extraStyles = '') => {
   const norm = (selectedVal || '').toString().trim().toUpperCase();
+  let selFc = null;
+  let selLv = null;
+
+  const fcMatch = norm.match(/(?:FC|FIRE\s*CRYSTAL)\s*[\.-]?\s*(\d+)/i);
+  if (fcMatch) {
+     const pFc = parseInt(fcMatch[1], 10);
+     if (pFc >= 1 && pFc <= 10) selFc = pFc;
+     else if (pFc > 30 && pFc <= 40) selFc = pFc - 30;
+  } else {
+     const firstNumMatch = norm.match(/(\d+)/);
+     if (firstNumMatch) {
+        const numVal = parseInt(firstNumMatch[1], 10);
+        if (numVal > 30 && numVal <= 40) selFc = numVal - 30;
+        else if (numVal >= 1 && numVal <= 30) selLv = numVal;
+     }
+  }
   
   let options = `
-    <option value="" ${!norm ? 'selected' : ''}>Select Furnace Level (Optional)</option>
+    <option value="" ${(!selFc && !selLv) ? 'selected' : ''}>Select Furnace Level (Optional)</option>
     <optgroup label="🔥 Fire Crystal (FC) Levels">
   `;
   
   for (let fc = 10; fc >= 1; fc--) {
     const val = `FC ${fc}`;
-    const isSel = (norm === val || norm === `FC${fc}` || norm === `FC ${fc}`);
+    const isSel = (selFc === fc);
     options += `<option value="${val}" ${isSel ? 'selected' : ''}>FC ${fc} (Fire Crystal ${fc})</option>`;
   }
   
@@ -131,7 +152,7 @@ window.renderFurnaceSelectHtml = (id = 'manualFurnaceLevel', selectedVal = '', e
   
   for (let lv = 30; lv >= 1; lv--) {
     const val = `${lv}`;
-    const isSel = (norm === val || norm === `F${lv}` || norm === `F ${lv}` || norm === `FURNACE ${lv}`);
+    const isSel = (!selFc && selLv === lv);
     options += `<option value="${val}" ${isSel ? 'selected' : ''}>Furnace ${lv}</option>`;
   }
   options += `</optgroup>`;
