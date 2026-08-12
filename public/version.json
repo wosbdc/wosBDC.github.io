@@ -1,10 +1,10 @@
 {
-  "version": "1.89.0",
+  "version": "1.89.1",
   "releaseDate": "2026-08-12",
-  "title": "🍎 iPhone & iPad Dedicated Smart PWA Auto-Install Banner System",
+  "title": "💻 Fixed Desktop & Mac PWA App Update Alerts",
   "notes": [
-    "Built dedicated OS-detecting smart banner tailored specifically for iPhone/iPad Safari users",
-    "iPhone banner highlights 🍎 Install wosBDC on iPhone with direct link to Safari Share (📤) guide & bouncing arrow",
-    "Preserved native 1-click Android Chrome install prompt banner for Android users"
+    "Fixed version check bug suppressing update alerts on Desktop/Mac/PC browsers",
+    "Ensured Desktop & Mac users reliably get App Update Available popups on new releases",
+    "Preserved 1-click update cache clearing and page reload"
   ]
 }

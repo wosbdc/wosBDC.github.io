@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [1.89.1] - 2026-08-12
+### 💻 Fixed Desktop & Mac PWA App Update Alerts
+- **💻 Desktop/Mac Update Alert Fix**:
+  - Resolved race condition bug where `localStorage.setItem('wos_app_version')` was overwriting current version before `checkAppVersion()` ran, suppressing update alerts on Desktop/Mac/PC.
+  - Ensured Desktop, Mac, Windows, iOS, and Android all receive real-time `🚀 App Update Available!` popups when a new release is pushed.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.89.1`) in `window.getFurnaceIconHtml`.
+
 ## [1.89.0] - 2026-08-12
 ### 🍎 iPhone & iPad Dedicated Smart PWA Auto-Install Banner System
 - **🍎 Dedicated iOS Smart Banner**:
