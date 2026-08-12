@@ -109,7 +109,7 @@ window.getFurnaceIconHtml = (level, size = 48) => {
      const canvasOffset = Math.round((canvasSize - size) / 2);
      return `<span class="fc-badge-stage" data-fc="${fcNum}" style="display:inline-flex; align-items:center; justify-content:center; position:relative; vertical-align:middle; cursor:pointer; width:${size}px; height:${size}px; user-select:none; -webkit-user-select:none;">
        <canvas class="fc-flame-canvas" width="${canvasSize}" height="${canvasSize}" style="position:absolute; top:-${canvasOffset}px; left:-${canvasOffset}px; width:${canvasSize}px; height:${canvasSize}px; pointer-events:none; z-index:3;"></canvas>
-       <img src="/badges/fc${fcNum}.png?v=1.82.0" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
+       <img src="/badges/fc${fcNum}.png?v=1.83.0" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
      </span>`;
   }
 
@@ -17553,11 +17553,34 @@ window.closeMobileNavModal = () => {
     let roarTimeout = null;
 
     function triggerHaptic() {
-      if (navigator.vibrate) {
+      // 1. Android & Native Vibration
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
         try {
           navigator.vibrate([18, 30, 22]);
         } catch (e) {}
       }
+      // 2. Apple iOS Taptic Haptic Engine (Web Audio Impulse Click)
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) {
+          if (!window._appleHapticCtx) {
+            window._appleHapticCtx = new AudioCtx();
+          }
+          const ctx = window._appleHapticCtx;
+          if (ctx.state === 'suspended') ctx.resume();
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(160, ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.025);
+          gain.gain.setValueAtTime(0.35, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.025);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.025);
+        }
+      } catch (e) {}
     }
 
     function start() {
@@ -17804,5 +17827,104 @@ window.showIosInstallGuide = function() {
   document.getElementById('close-ios-install-modal').addEventListener('click', closeFn);
   document.getElementById('btn-gotit-ios-install').addEventListener('click', closeFn);
 };
+
+// ============================================================================
+// AUTOMATED PWA 1-CLICK INSTALL & SMART PROMPT ENGINE (v1.83.0)
+// ============================================================================
+(function() {
+  let deferredPrompt = null;
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    window.deferredPwaPrompt = e;
+    showAutoInstallBanner();
+  });
+
+  window.triggerAutoPwaInstall = function() {
+    if (window.deferredPwaPrompt) {
+      window.deferredPwaPrompt.prompt();
+      window.deferredPwaPrompt.userChoice.then((choiceResult) => {
+        if (choiceResult.outcome === 'accepted') {
+          const banner = document.getElementById('auto-pwa-install-banner');
+          if (banner) banner.remove();
+        }
+        window.deferredPwaPrompt = null;
+      });
+    } else {
+      window.showIosInstallGuide();
+    }
+  };
+
+  function showAutoInstallBanner() {
+    if (document.getElementById('auto-pwa-install-banner')) return;
+    if (sessionStorage.getItem('wos_dismissed_pwa_install')) return;
+    if (window.matchMedia('(display-mode: standalone)').matches) return;
+
+    const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+    const banner = document.createElement('div');
+    banner.id = 'auto-pwa-install-banner';
+    banner.style.cssText = `
+      position: fixed;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-150%);
+      width: calc(100% - 32px);
+      max-width: 440px;
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.98));
+      border: 1px solid rgba(255, 215, 0, 0.6);
+      box-shadow: 0 15px 40px rgba(0,0,0,0.8), 0 0 25px rgba(255, 215, 0, 0.2);
+      border-radius: 20px;
+      padding: 14px 18px;
+      z-index: 999999;
+      color: #f1f5f9;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      backdrop-filter: blur(16px);
+      transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    `;
+
+    banner.innerHTML = `
+      <div style="display:flex; align-items:center; gap: 12px;">
+        <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #ffd700, #ff8c00); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; box-shadow: 0 4px 12px rgba(255,215,0,0.4); flex-shrink:0;">📱</div>
+        <div>
+          <div style="font-weight: 800; font-size: 0.95rem; color: #ffd700;">Install WOS App</div>
+          <div style="font-size: 0.78rem; color: #94a3b8;">${isIos ? 'Add to iPhone Home Screen' : '1-Click App Installation'}</div>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap: 8px;">
+        <button id="btn-pwa-install-now" style="background: linear-gradient(135deg, #ffd700, #ff8c00); border: none; color: #0f172a; font-weight: 800; font-size: 0.85rem; padding: 9px 15px; border-radius: 12px; cursor: pointer; box-shadow: 0 3px 10px rgba(255,215,0,0.3); white-space:nowrap;">
+          Install
+        </button>
+        <button id="btn-pwa-install-dismiss" style="background: rgba(255,255,255,0.08); border: none; color: #94a3b8; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; font-size: 1rem; font-weight: bold; display:flex; align-items:center; justify-content:center;">✕</button>
+      </div>
+    `;
+
+    document.body.appendChild(banner);
+    setTimeout(() => {
+      banner.style.transform = 'translateX(-50%) translateY(0)';
+    }, 300);
+
+    document.getElementById('btn-pwa-install-now').addEventListener('click', () => {
+      window.triggerAutoPwaInstall();
+    });
+
+    document.getElementById('btn-pwa-install-dismiss').addEventListener('click', () => {
+      sessionStorage.setItem('wos_dismissed_pwa_install', 'true');
+      banner.style.transform = 'translateX(-50%) translateY(-150%)';
+      setTimeout(() => banner.remove(), 400);
+    });
+  }
+
+  window.addEventListener('load', () => {
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (isMobile) {
+      setTimeout(showAutoInstallBanner, 4000);
+    }
+  });
+})();
 
 

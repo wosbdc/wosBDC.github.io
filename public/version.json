@@ -1,10 +1,10 @@
 {
-  "version": "1.82.0",
+  "version": "1.83.0",
   "releaseDate": "2026-08-12",
-  "title": "📱 iPhone & iPad WebApp Settings Install Menu Integration",
+  "title": "🍎 iOS Apple Taptic Haptic Engine & Automated PWA Install Prompt",
   "notes": [
-    "Added '📲 Install App on iPhone / iPad' option to Settings Sidebar and Mobile Nav Modal",
-    "Added step-by-step 4-step iOS Safari visual installation tutorial modal",
-    "Optimized Apple touch meta tags and standalone PWA display settings"
+    "Implemented Web Audio transient pulse synthesizer for authentic iOS Apple Taptic Engine haptic feedback on iPhones",
+    "Added automatic PWA install engine (1-click native install for Android/Chrome)",
+    "Added automated floating PWA install prompt banner with iOS Safari pointer arrow"
   ]
 }

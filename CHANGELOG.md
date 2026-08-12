@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## [1.83.0] - 2026-08-12
+### iOS Apple Taptic Haptic Engine & Automated PWA Install System
+- **🍎 Apple iOS Haptic Feedback Engine**:
+  - Synthesized Web Audio physical transient impulse bursts to give authentic Apple Taptic Engine feedback when tapping FC profile badges on iPhones.
+- **🤖 Automatic PWA Install Prompt**:
+  - Automatically captures `beforeinstallprompt` event for 1-click native app installation on Android/Chrome.
+  - Automatically displays a smart floating **"Add WOS App to Home Screen"** bottom banner for mobile visitors.
+  - Features an animated pointer arrow guiding iOS Safari users directly to the 📤 Share button.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.83.0`) in `window.getFurnaceIconHtml`.
+
 ## [1.82.0] - 2026-08-12
 ### iPhone & iPad WebApp Settings Install Menu Integration
 - **📱 Settings Sidebar & Mobile Nav Integration**:
