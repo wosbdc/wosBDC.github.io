@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## [1.79.0] - 2026-08-12
+### Automatic Real-App Update Notification System
+- **🚀 Native-App Style Update System**:
+  - Implemented background version polling every 60 seconds and on tab focus.
+  - Displays a glassmorphic "App Update Available" notification banner when a newer version is deployed.
+  - 1-Click **`⚡ Update App Now`** button automatically clears browser cache and reloads the app to the latest version.
+  - Endpoint `/version.json` tracks real-time deployed version, release date, and feature release notes.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.79.0`) in `window.getFurnaceIconHtml`.
+
 ## [1.78.0] - 2026-08-12
 ### Smart Tap-Roar Flame Engine & Rapid Tap Stacking
 - **🔥 Fixed Smartphone Tap Interaction (Zero Dead Clicks)**:

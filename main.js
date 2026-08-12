@@ -109,7 +109,7 @@ window.getFurnaceIconHtml = (level, size = 48) => {
      const canvasOffset = Math.round((canvasSize - size) / 2);
      return `<span class="fc-badge-stage" data-fc="${fcNum}" style="display:inline-flex; align-items:center; justify-content:center; position:relative; vertical-align:middle; cursor:pointer; width:${size}px; height:${size}px; user-select:none; -webkit-user-select:none;">
        <canvas class="fc-flame-canvas" width="${canvasSize}" height="${canvasSize}" style="position:absolute; top:-${canvasOffset}px; left:-${canvasOffset}px; width:${canvasSize}px; height:${canvasSize}px; pointer-events:none; z-index:3;"></canvas>
-       <img src="/badges/fc${fcNum}.png?v=1.78.0" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
+       <img src="/badges/fc${fcNum}.png?v=1.79.0" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
      </span>`;
   }
 
@@ -17615,5 +17615,122 @@ window.closeMobileNavModal = () => {
       if (inst) inst.burst();
     }
   }, { passive: true });
+})();
+
+// ============================================================================
+// AUTOMATIC REAL-APP UPDATE NOTIFICATION SYSTEM (v1.79.0)
+// ============================================================================
+(function() {
+  const CURRENT_BUILD_VERSION = "1.79.0";
+
+  function isVersionOutdated(localVer, serverVer) {
+    if (!localVer || !serverVer) return false;
+    const lParts = localVer.split('.').map(n => parseInt(n, 10) || 0);
+    const sParts = serverVer.split('.').map(n => parseInt(n, 10) || 0);
+    for (let i = 0; i < Math.max(lParts.length, sParts.length); i++) {
+      const l = lParts[i] || 0;
+      const s = sParts[i] || 0;
+      if (s > l) return true;
+      if (s < l) return false;
+    }
+    return false;
+  }
+
+  function showUpdateBanner(updateData) {
+    if (document.getElementById('app-update-modal-banner')) return;
+
+    const banner = document.createElement('div');
+    banner.id = 'app-update-modal-banner';
+    banner.style.cssText = `
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(120%);
+      width: calc(100% - 32px);
+      max-width: 480px;
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.98));
+      border: 1px solid rgba(255, 215, 0, 0.6);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(255, 215, 0, 0.25);
+      border-radius: 20px;
+      padding: 20px;
+      z-index: 999999;
+      color: #f1f5f9;
+      font-family: system-ui, -apple-system, sans-serif;
+      backdrop-filter: blur(16px);
+      transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    `;
+
+    const notesList = (updateData.notes || [])
+      .map(n => `<li style="margin-bottom: 4px; font-size: 0.86rem; color: #cbd5e1;">✨ ${n}</li>`)
+      .join('');
+
+    banner.innerHTML = `
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 12px;">
+        <div style="display:flex; align-items:center; gap: 10px;">
+          <span style="font-size: 1.5rem; filter: drop-shadow(0 0 8px #ffd700);">🚀</span>
+          <div>
+            <div style="font-weight: 800; font-size: 1.05rem; color: #ffd700;">App Update Available!</div>
+            <div style="font-size: 0.8rem; color: #94a3b8;">New Version v${updateData.version} is ready</div>
+          </div>
+        </div>
+        <span style="background: rgba(255, 215, 0, 0.15); border: 1px solid #ffd700; color: #ffd700; font-size: 0.78rem; font-weight: 700; padding: 3px 10px; border-radius: 12px;">v${updateData.version}</span>
+      </div>
+      <div style="margin-bottom: 16px; background: rgba(0,0,0,0.25); padding: 10px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06);">
+        <ul style="list-style: none; margin: 0; padding: 0;">${notesList}</ul>
+      </div>
+      <div style="display:flex; gap: 10px;">
+        <button id="btn-force-update-app" style="flex: 2; background: linear-gradient(135deg, #ffd700, #ff8c00); border: none; color: #0f172a; font-weight: 800; font-size: 0.95rem; padding: 12px; border-radius: 14px; cursor: pointer; box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4); transition: transform 0.2s;">
+          ⚡ Update App Now
+        </button>
+        <button id="btn-dismiss-update-app" style="flex: 1; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #cbd5e1; font-weight: 600; font-size: 0.9rem; padding: 12px; border-radius: 14px; cursor: pointer;">
+          Later
+        </button>
+      </div>
+    `;
+
+    document.body.appendChild(banner);
+    setTimeout(() => {
+      banner.style.transform = 'translateX(-50%) translateY(0)';
+    }, 100);
+
+    document.getElementById('btn-force-update-app').addEventListener('click', () => {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(regs => {
+          regs.forEach(r => r.unregister());
+        });
+      }
+      localStorage.setItem('wos_app_version', updateData.version);
+      window.location.reload(true);
+    });
+
+    document.getElementById('btn-dismiss-update-app').addEventListener('click', () => {
+      banner.style.transform = 'translateX(-50%) translateY(120%)';
+      setTimeout(() => banner.remove(), 400);
+    });
+  }
+
+  async function checkAppVersion() {
+    try {
+      const res = await fetch(`/version.json?t=${Date.now()}`, { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data && data.version && isVersionOutdated(CURRENT_BUILD_VERSION, data.version)) {
+        showUpdateBanner(data);
+      }
+    } catch (err) {}
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    localStorage.setItem('wos_app_version', CURRENT_BUILD_VERSION);
+    setTimeout(checkAppVersion, 3000);
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      checkAppVersion();
+    }
+  });
+
+  setInterval(checkAppVersion, 60000);
 })();
 
