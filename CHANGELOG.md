@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [1.88.2] - 2026-08-12
+### 🎨 Theme-Matched 'Install WOS App' Button Styling
+- **🎨 Native Theme Styling**:
+  - Replaced custom yellow background on Install WOS App button with standard theme styling (`class="sidebar-action-btn"`).
+  - Cleaned text label to `📱 Install WOS App` in both Sidebar Preferences and Mobile Navigation overlay.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.88.2`) in `window.getFurnaceIconHtml`.
+
 ## [1.88.1] - 2026-08-12
 ### ⚙️ Settings & Mobile Nav App Installer Synchronization
 - **⚙️ Settings & Navigation Menu Update**:

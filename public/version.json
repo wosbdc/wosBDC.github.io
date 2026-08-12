@@ -1,9 +1,9 @@
 {
-  "version": "1.88.1",
+  "version": "1.88.2",
   "releaseDate": "2026-08-12",
-  "title": "⚙️ Settings & Mobile Nav App Installer Synchronization",
+  "title": "🎨 Theme-Matched 'Install WOS App' Button Styling",
   "notes": [
-    "Updated Settings/Preferences and Mobile Navigation install buttons to launch the new Dual-OS App Install Selector",
-    "Unified all app installation entry points across the entire application"
+    "Styled Install WOS App button to match native theme styling (sidebar-action-btn and var(--card-bg))",
+    "Cleaned button text to '📱 Install WOS App' across Preferences and Mobile Navigation"
   ]
 }
