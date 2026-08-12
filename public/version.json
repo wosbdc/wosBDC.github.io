@@ -1,10 +1,10 @@
 {
-  "version": "1.94.0",
+  "version": "1.94.1",
   "releaseDate": "2026-08-12",
-  "title": "🐻 Comprehensive Account Hub Bear Trap & Personal Activity Log System",
+  "title": "📅 Restored Today Only Default View for Personal Activity Log",
   "notes": [
-    "Fixed missing Bear Trap logs in Account Hub by expanding query to include all recent historical logs, batch expand entries, and global event logs",
-    "Enhanced log matching with sanitized name comparison, rich activity icons (🥩 Bear Trap, 👑 Crown, 🪤 Reset, 🎯 Showdown, 🛡️ Staff)",
-    "Added automatic log refresh when switching accounts in the Account Hub selector"
+    "Default personal activity log view restored to Today Only for clean and easy reading",
+    "Added toggle buttons ([📅 Today Only] & [📜 All History]) to switch modes easily",
+    "Added quick 'View Past Log History' button when today has no activity entries"
   ]
 }

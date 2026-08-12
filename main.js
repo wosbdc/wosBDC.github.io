@@ -109,7 +109,7 @@ window.getFurnaceIconHtml = (level, size = 48) => {
      const canvasOffset = Math.round((canvasSize - size) / 2);
      return `<span class="fc-badge-stage" data-fc="${fcNum}" style="display:inline-flex; align-items:center; justify-content:center; position:relative; vertical-align:middle; cursor:pointer; width:${size}px; height:${size}px; user-select:none; -webkit-user-select:none;">
        <canvas class="fc-flame-canvas" width="${canvasSize}" height="${canvasSize}" style="position:absolute; top:-${canvasOffset}px; left:-${canvasOffset}px; width:${canvasSize}px; height:${canvasSize}px; pointer-events:none; z-index:3;"></canvas>
-       <img src="/badges/fc${fcNum}.png?v=1.94.0" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
+       <img src="/badges/fc${fcNum}.png?v=1.94.1" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
      </span>`;
   }
 
@@ -7007,7 +7007,7 @@ function calculateAllTimeShowdown(historyData) {
 }
 window.calculateAllTimeShowdown = calculateAllTimeShowdown;
 
-window.loadUserPersonalLog = async (chiefName) => {
+window.loadUserPersonalLog = async (chiefName, filterMode = 'today') => {
     const cont = document.getElementById('userPersonalLogContainer');
     if (!cont) return;
     
@@ -7084,18 +7084,55 @@ window.loadUserPersonalLog = async (chiefName) => {
         });
         const sortedLogs = Object.values(logMap).sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
         
-        if (sortedLogs.length === 0) {
-            cont.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:15px; background:rgba(255,255,255,0.02); border-radius:10px; font-size:13px;">No administrative or Bear Trap activity logged for ${escapeHTML(rawName)} yet.</div>`;
+        const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        const todayStr = now.toDateString();
+
+        let displayLogs = sortedLogs;
+        if (filterMode === 'today') {
+            displayLogs = sortedLogs.filter(log => {
+                if (log.timestamp) return log.timestamp >= todayStart;
+                if (log.dateStr) {
+                    const d = new Date(log.dateStr);
+                    return !isNaN(d.getTime()) && d.toDateString() === todayStr;
+                }
+                return false;
+            });
+        }
+        
+        // Mode toggle header bar
+        let toggleHeaderHtml = `
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.06); gap:10px; flex-wrap:wrap;">
+            <div style="font-size:12px; color:var(--text-muted);">
+              Showing <strong style="color:var(--text-main);">${filterMode === 'today' ? "Today's Activity" : "Full Log History"}</strong> for <strong style="color:var(--accent);">${escapeHTML(rawName)}</strong>
+            </div>
+            <div style="display:inline-flex; background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:8px; padding:2px;">
+              <button onclick="window.loadUserPersonalLog('${escapeHTML(rawName)}', 'today')" style="padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; border:none; transition:0.2s; ${filterMode === 'today' ? 'background:var(--accent); color:#fff; shadow:0 2px 6px rgba(14,165,233,0.3);' : 'background:none; color:var(--text-muted);'}">📅 Today Only (${displayLogs.length})</button>
+              <button onclick="window.loadUserPersonalLog('${escapeHTML(rawName)}', 'all')" style="padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; border:none; transition:0.2s; ${filterMode === 'all' ? 'background:var(--accent); color:#fff; shadow:0 2px 6px rgba(14,165,233,0.3);' : 'background:none; color:var(--text-muted);'}">📜 All History (${sortedLogs.length})</button>
+            </div>
+          </div>
+        `;
+
+        if (displayLogs.length === 0) {
+            if (filterMode === 'today') {
+                cont.innerHTML = toggleHeaderHtml + `
+                  <div style="text-align:center; color:var(--text-muted); padding:20px 15px; background:rgba(255,255,255,0.02); border-radius:10px; font-size:13px;">
+                    <div>No administrative or Bear Trap activity logged for <strong>${escapeHTML(rawName)}</strong> today.</div>
+                    ${sortedLogs.length > 0 ? `
+                      <div style="margin-top:10px;">
+                        <button onclick="window.loadUserPersonalLog('${escapeHTML(rawName)}', 'all')" style="background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.3); color:#60a5fa; padding:6px 14px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;" onmouseover="this.style.background='rgba(59,130,246,0.25)'" onmouseout="this.style.background='rgba(59,130,246,0.15)'">📜 View Past Log History (${sortedLogs.length})</button>
+                      </div>
+                    ` : ''}
+                  </div>
+                `;
+            } else {
+                cont.innerHTML = toggleHeaderHtml + `<div style="text-align:center; color:var(--text-muted); padding:15px; background:rgba(255,255,255,0.02); border-radius:10px; font-size:13px;">No administrative or Bear Trap activity logged for ${escapeHTML(rawName)} yet.</div>`;
+            }
             return;
         }
         
-        // Display top 30 recent logs
-        const displayLogs = sortedLogs.slice(0, 30);
-        const now = new Date();
-        const todayStr = now.toDateString();
-        
-        let html = `<div style="display:flex; flex-direction:column; gap:8px; max-height:300px; overflow-y:auto; padding-right:4px;">`;
-        displayLogs.forEach(log => {
+        let html = toggleHeaderHtml + `<div style="display:flex; flex-direction:column; gap:8px; max-height:280px; overflow-y:auto; padding-right:4px;">`;
+        displayLogs.slice(0, 30).forEach(log => {
             let icon = "📋";
             let badgeBg = "rgba(59,130,246,0.15)";
             let badgeBorder = "rgba(59,130,246,0.3)";

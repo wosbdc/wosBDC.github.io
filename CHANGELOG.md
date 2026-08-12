@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [1.94.1] - 2026-08-12
+### 📅 Restored Today Only Default View for Personal Activity Log
+- **✨ Restored Today Only Default**: Personal Activity Log defaults to **Today Only** for a clean, uncluttered, easy-to-read view.
+- **🔄 View Mode Toggle**: Added `[📅 Today Only]` and `[📜 All History]` toggle buttons in the log section header.
+- **📜 Past History Quick Action**: When today has no new activity entries, displays a quick `📜 View Past History` button to view previous Bear Trap logs.
+
 ## [1.94.0] - 2026-08-12
 ### 🐻 Comprehensive Account Hub Bear Trap & Personal Activity Log System
 - **🐻 Bear Trap Log Expansion**:
