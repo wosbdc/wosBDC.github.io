@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## [1.91.0] - 2026-08-12
+### ✏️ Unified Profile Edit Hub & Staff Selector Popup
+- **✏️ Account Hub Consolidation**:
+  - Replaced duplicate Edit Profile buttons in Account Hub with a single unified `✏️ Edit Profile` button.
+  - Added `window.openEditProfileHubModal()` featuring a glassmorphic selector popup for Staff members to pick between:
+    - 👤 **Chief Member Profile** (Furnace, FC Badges, Play Start Date, Status Quote & Custom Avatar)
+    - 🛡️ **Staff Directory Profile** (Department, Timezone, Location & Public Staff Bio)
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.91.0`) in `window.getFurnaceIconHtml`.
+
 ## [1.90.0] - 2026-08-12
 ### 🎨 Fixed Top Blue Status Bar Theme Color Bug
 - **🎨 Mobile Status Bar Fix**:

@@ -1,10 +1,10 @@
 {
-  "version": "1.90.0",
+  "version": "1.91.0",
   "releaseDate": "2026-08-12",
-  "title": "🎨 Fixed iOS & Android Top Blue Status Bar Theme Color",
+  "title": "✏️ Unified Profile Edit Hub & Staff Selector Popup",
   "notes": [
-    "Fixed blue status bar issue on iPhone and mobile web app PWA by updating theme-color meta tag from #3b82f6 to dark #0f172a",
-    "Updated PWA manifest.json theme_color and background_color",
-    "Added dynamic theme-color meta tag sync in main.js to match active theme"
+    "Consolidated double Edit Profile buttons in Account Hub into a single elegant button",
+    "Created glassmorphic Edit Profile Hub modal for Staff to easily choose between Chief Profile and Staff Directory Profile",
+    "Streamlined UX for both regular alliance members and staff leadership"
   ]
 }

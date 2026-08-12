@@ -7158,6 +7158,67 @@ window.clearShowdownCaches = () => {
     window.rosterCache = null;
 };
 
+window.openStaffProfileModal = () => {
+  const modal = document.getElementById('staffProfileModal');
+  if (modal) modal.style.display = 'flex';
+};
+
+window.openEditProfileHubModal = () => {
+  if (!currentUser) return;
+  
+  // If not staff, directly open standard Edit Profile modal
+  if (!accLevel) {
+    window.openEditProfileModal();
+    return;
+  }
+  
+  // Clean up any existing hub modal
+  const oldHub = document.getElementById('editProfileHubModalOverlay');
+  if (oldHub && oldHub.parentNode) oldHub.parentNode.removeChild(oldHub);
+  
+  const modalOverlay = document.createElement('div');
+  modalOverlay.id = 'editProfileHubModalOverlay';
+  modalOverlay.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.85); backdrop-filter:blur(10px); z-index:99999; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease;';
+  
+  modalOverlay.innerHTML = `
+    <div class="card" style="width:90%; max-width:480px; background:linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.92)); border:1px solid rgba(56,189,248,0.3); padding:28px; border-radius:20px; box-shadow:0 20px 50px rgba(0,0,0,0.6); text-align:left; animation:zoomIn 0.2s forwards;">
+       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:12px;">
+          <h3 style="margin:0; color:#fff; font-size:22px; font-weight:800; display:flex; align-items:center; gap:8px;">✏️ Edit Profile Options</h3>
+          <button onclick="document.getElementById('editProfileHubModalOverlay').remove()" style="background:none; border:none; color:var(--text-muted); font-size:28px; cursor:pointer; line-height:1;">&times;</button>
+       </div>
+       <p style="font-size:13px; color:#cbd5e1; margin-bottom:20px; line-height:1.4;">Select which section of your profile you would like to edit:</p>
+       
+       <div style="display:flex; flex-direction:column; gap:14px;">
+          <!-- Option 1: Chief Profile -->
+          <div onclick="document.getElementById('editProfileHubModalOverlay').remove(); window.openEditProfileModal();" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.12); border-radius:14px; padding:16px; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; gap:16px;" onmouseover="this.style.background='rgba(6,182,212,0.12)'; this.style.borderColor='rgba(6,182,212,0.4)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='rgba(255,255,255,0.12)'; this.style.transform='translateY(0)';">
+             <div style="width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg, #06b6d4, #3b82f6); display:flex; align-items:center; justify-content:center; font-size:24px; flex-shrink:0; box-shadow:0 4px 12px rgba(6,182,212,0.3);">
+                👤
+             </div>
+             <div style="flex:1;">
+                <div style="font-weight:800; font-size:15px; color:#fff; margin-bottom:3px;">Chief Member Profile</div>
+                <div style="font-size:12px; color:#94a3b8; line-height:1.3;">Furnace Level, FC Badges, Play Start Date, Status Quote & Custom Avatar</div>
+             </div>
+             <div style="color:var(--accent); font-size:18px; font-weight:bold;">➔</div>
+          </div>
+          
+          <!-- Option 2: Staff Directory Profile -->
+          <div onclick="document.getElementById('editProfileHubModalOverlay').remove(); window.openStaffProfileModal();" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.12); border-radius:14px; padding:16px; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; gap:16px;" onmouseover="this.style.background='rgba(168,85,247,0.12)'; this.style.borderColor='rgba(168,85,247,0.4)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='rgba(255,255,255,0.12)'; this.style.transform='translateY(0)';">
+             <div style="width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg, #a855f7, #0284c7); display:flex; align-items:center; justify-content:center; font-size:24px; flex-shrink:0; box-shadow:0 4px 12px rgba(168,85,247,0.3);">
+                🛡️
+             </div>
+             <div style="flex:1;">
+                <div style="font-weight:800; font-size:15px; color:#fff; margin-bottom:3px;">Staff Directory Profile</div>
+                <div style="font-size:12px; color:#94a3b8; line-height:1.3;">Department / Specialty, Timezone, Location & Public Staff Bio</div>
+             </div>
+             <div style="color:var(--accent); font-size:18px; font-weight:bold;">➔</div>
+          </div>
+       </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modalOverlay);
+};
+
 window.openEditProfileModal = async () => {
   if (!currentUser) return;
   
@@ -11701,12 +11762,6 @@ window.resetBearTrapEvent = async () => {
       if (accLevel) { // Only show to admins
           let p = window.staffProfilesMap && window.staffProfilesMap[currentUser.gameId] ? window.staffProfilesMap[currentUser.gameId] : {department:'', timezone:'', bio:''};
           staffProfileHtml = `
-          <div style="margin-bottom:20px;">
-              <button id="openStaffProfileBtn" style="background:linear-gradient(90deg, var(--accent), #0284c7); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:15px; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 15px rgba(6,182,212,0.3); transition:transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(6,182,212,0.5)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(6,182,212,0.3)'">
-                  🛡️ Edit Staff Profile
-              </button>
-          </div>
-          
           <div id="staffProfileModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.9); backdrop-filter:blur(10px); z-index:99999; align-items:center; justify-content:center;">
               <div class="modal-content card" style="width:90%; max-width:500px; background:var(--bg-main); border:1px solid rgba(56,189,248,0.3); padding:25px; border-radius:12px; box-shadow:0 10px 40px rgba(0,0,0,0.5); text-align:left;">
                   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
