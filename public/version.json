@@ -1,10 +1,9 @@
 {
-  "version": "1.88.0",
+  "version": "1.88.1",
   "releaseDate": "2026-08-12",
-  "title": "📱 Dual-OS App Install Selector (Android vs Apple iOS)",
+  "title": "⚙️ Settings & Mobile Nav App Installer Synchronization",
   "notes": [
-    "Added Dual-OS device selection modal allowing users to choose Android or Apple iOS",
-    "Android Card -> Triggers 1-Click native installation prompt",
-    "Apple iOS Card -> Opens interactive 4-step iOS guide with native Web Share trigger"
+    "Updated Settings/Preferences and Mobile Navigation install buttons to launch the new Dual-OS App Install Selector",
+    "Unified all app installation entry points across the entire application"
   ]
 }

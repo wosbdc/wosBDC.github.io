@@ -109,7 +109,7 @@ window.getFurnaceIconHtml = (level, size = 48) => {
      const canvasOffset = Math.round((canvasSize - size) / 2);
      return `<span class="fc-badge-stage" data-fc="${fcNum}" style="display:inline-flex; align-items:center; justify-content:center; position:relative; vertical-align:middle; cursor:pointer; width:${size}px; height:${size}px; user-select:none; -webkit-user-select:none;">
        <canvas class="fc-flame-canvas" width="${canvasSize}" height="${canvasSize}" style="position:absolute; top:-${canvasOffset}px; left:-${canvasOffset}px; width:${canvasSize}px; height:${canvasSize}px; pointer-events:none; z-index:3;"></canvas>
-       <img src="/badges/fc${fcNum}.png?v=1.88.0" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
+       <img src="/badges/fc${fcNum}.png?v=1.88.1" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
      </span>`;
   }
 
@@ -1569,25 +1569,14 @@ window.showPWAInstallBanner = () => {
 };
 
 window.triggerPWAInstall = async () => {
-  if (!deferredInstallPrompt) {
-    if (window.showToast) window.showToast("Tap browser menu ➔ 'Add to Home Screen' to install!", "info");
-    return;
+  if (window.showAppInstallSelector) {
+    window.showAppInstallSelector();
   }
-  deferredInstallPrompt.prompt();
-  const { outcome } = await deferredInstallPrompt.userChoice;
-  if (outcome === 'accepted') {
-    if (window.showToast) window.showToast("App installed successfully!", "success");
-    const banner = document.getElementById('pwaInstallBanner');
-    if (banner) banner.remove();
-  }
-  deferredInstallPrompt = null;
 };
 
 window.showIOSPWAInstructions = () => {
-  if (window.customAlert) {
-    window.customAlert("📱 To install on iOS:\n\n1. Tap the Share button at the bottom of Safari.\n2. Scroll down and tap 'Add to Home Screen'.\n3. Tap 'Add' in the top right!");
-  } else {
-    alert("📱 To install on iOS:\n\n1. Tap the Share button at the bottom of Safari.\n2. Scroll down and tap 'Add to Home Screen'.\n3. Tap 'Add' in the top right!");
+  if (window.showAppInstallSelector) {
+    window.showAppInstallSelector();
   }
 };
 

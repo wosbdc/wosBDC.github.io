@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [1.88.1] - 2026-08-12
+### ⚙️ Settings & Mobile Nav App Installer Synchronization
+- **⚙️ Settings & Navigation Menu Update**:
+  - Updated Sidebar Settings/Preferences button to launch `window.showAppInstallSelector()` with title `📲 Install WOS App (Android 🤖 & Apple 🍎)`.
+  - Updated Mobile Navigation Modal button to open `window.showAppInstallSelector()` directly.
+  - Routed legacy `triggerPWAInstall` and `showIOSPWAInstructions` functions to `window.showAppInstallSelector()`.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.88.1`) in `window.getFurnaceIconHtml`.
+
 ## [1.88.0] - 2026-08-12
 ### 📱 Dual-OS App Install Selector (Android 🤖 vs Apple iOS 🍎)
 - **📱 Dual-OS Device Installer Selector**:
