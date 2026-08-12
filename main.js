@@ -11167,9 +11167,12 @@ window.resetBearTrapEvent = async () => {
       const fbDonations = (fbDonSnap && fbDonSnap.exists()) ? fbDonSnap.val() : {};
       
       if (rosterRawData) {
-          const p = Object.values(rosterRawData).find(rp => rp.name && rp.name.toLowerCase() === currentChiefName.toLowerCase());
+          const p = Object.values(rosterRawData).find(rp => 
+              (rp.name && rp.name.toLowerCase() === currentChiefName.toLowerCase()) ||
+              (rp.gameId && rp.gameId.toString().trim() === (currentUser.gameId || '').toString().trim())
+          );
           if (p) {
-              if (p.furnaceLevel) furnaceLevelStr = p.furnaceLevel.toString();
+              if (p.furnaceLevel || p.stove_lv) furnaceLevelStr = (p.furnaceLevel || p.stove_lv).toString();
               if (p.joinedDate) {
                   try {
                       const d = new Date(p.joinedDate);
@@ -11180,11 +11183,10 @@ window.resetBearTrapEvent = async () => {
           }
       }
 
-      // Override with Firebase user profile data (from Edit Profile modal saves)
-      if (currentUser.stove_lv && currentUser.stove_lv !== '30') {
-          furnaceLevelStr = currentUser.stove_lv.toString();
-      } else if (currentUser.furnaceLevel && currentUser.furnaceLevel !== '30') {
-          furnaceLevelStr = currentUser.furnaceLevel.toString();
+      // Override with Firebase user profile data (from Edit Profile / Admin saves)
+      const userFurnace = currentUser.stove_lv || currentUser.furnaceLevel;
+      if (userFurnace) {
+          furnaceLevelStr = userFurnace.toString();
       }
       if (currentUser.joinedDate) {
           try {

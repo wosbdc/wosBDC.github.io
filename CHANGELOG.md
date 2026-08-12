@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.59.3] - 2026-08-11
+### Account Hub Furnace Sync Fix
+- **🏠 Account Hub Sync**: Fixed `views.account` profile card rendering logic to check both `stove_lv` and `furnaceLevel` from Firebase, matching Game ID and Chief Name. Removed legacy condition that was filtering out updated level values.
+
 ## [1.59.2] - 2026-08-11
 ### Sync Fix
 - **🔄 Live Synchronization Across All Views**:
