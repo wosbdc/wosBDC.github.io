@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [1.89.3] - 2026-08-12
+### 🎨 Distinct OS Theme Colors: Green (Android) & Yellow (Apple)
+- **🎨 Platform-Specific Theme Colors**:
+  - Android 🤖: Emerald Green (`#22c55e` / `#4ade80`) for all Android banners, cards, and modal guides.
+  - Apple 🍎: Golden Yellow (`#ffd700` / `#ff8c00`) for all iPhone/iPad/Mac banners, cards, and modal guides.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.89.3`) in `window.getFurnaceIconHtml`.
+
 ## [1.89.2] - 2026-08-12
 ### 🎯 Smart Browser Pointer Arrow & Dual-Browser Instructions
 - **🎯 Smart Browser Alignment**:

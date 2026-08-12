@@ -1,10 +1,10 @@
 {
-  "version": "1.89.2",
+  "version": "1.89.3",
   "releaseDate": "2026-08-12",
-  "title": "🎯 Smart Browser Pointer Arrow & Dual-Browser Instructions",
+  "title": "🎨 Distinct OS Theme Colors: Green (Android) & Yellow (Apple)",
   "notes": [
-    "Smart-aligned pointer arrow: points top-right (↗️) for Chrome 3 dots (⋮) and bottom-center (👇) for Safari Share (📤)",
-    "Added clear browser-aware directions in PWA install guides for both Chrome and Safari",
-    "Enhanced alignment precision across Android Chrome, iOS Safari, and Mobile Chrome"
+    "Strictly enforced Green (#22c55e / #4ade80) theme for all Android install alerts & guides",
+    "Strictly enforced Golden Yellow (#ffd700 / #ff8c00) theme for all Apple (iOS/iPhone/iPad/Mac) install alerts & guides",
+    "Unified visual identity across auto-install banners and PWA modals"
   ]
 }
