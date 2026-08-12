@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [1.89.6] - 2026-08-12
+### 📱 Rendered Exact Apple iOS Safari Share SVG Icon
+- **📱 Exact Safari Share SVG Icon**:
+  - Embedded exact pixel-perfect Apple iOS Share SVG icon (square box with upward arrow) matching the native iOS Safari Share button image inside the install modal.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.89.6`) in `window.getFurnaceIconHtml`.
+
 ## [1.89.5] - 2026-08-12
 ### 🧭 Dual Safari & Chrome Visual Install Cards
 - **🧭 Safari & Chrome Visual Install Cards**:

@@ -1,10 +1,9 @@
 {
-  "version": "1.89.5",
+  "version": "1.89.6",
   "releaseDate": "2026-08-12",
-  "title": "🧭 Dual Safari & Chrome Visual Install Cards",
+  "title": "📱 Rendered Exact Apple iOS Safari Share SVG Icon",
   "notes": [
-    "Clarified why iOS Web Share hides programmatic Add to Home Screen due to Apple security limits",
-    "Added side-by-side visual instructions for Safari Share (📤) and Chrome Menu (⋮ / Share ➕)",
-    "Ensured seamless 100% install clarity across all iOS and mobile browser configurations"
+    "Embedded exact pixel-perfect Apple iOS Share SVG icon (square box with upward arrow) inside the PWA install guide",
+    "Enhanced visual recognition for Safari and Chrome mobile users"
   ]
 }
