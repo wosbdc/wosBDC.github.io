@@ -1,10 +1,10 @@
 {
-  "version": "1.94.1",
+  "version": "1.94.2",
   "releaseDate": "2026-08-12",
-  "title": "📅 Restored Today Only Default View for Personal Activity Log",
+  "title": "🥩 Multi-Source Grouped Bear Trap Donation Log Extractor",
   "notes": [
-    "Default personal activity log view restored to Today Only for clean and easy reading",
-    "Added toggle buttons ([📅 Today Only] & [📜 All History]) to switch modes easily",
-    "Added quick 'View Past Log History' button when today has no activity entries"
+    "Fixed missing grouped Bear Trap donations in Account Hub by parsing individual player amounts out of multi-player batch summaries",
+    "Added direct query to live Firebase beartrap_donations node timestamps for instant personal activity matching",
+    "Unconditionally merged Sheets API Admin Log rows so individual batch donations always show up on Today's log"
   ]
 }

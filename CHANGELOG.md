@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [1.94.2] - 2026-08-12
+### 🥩 Multi-Source Grouped Bear Trap Donation Log Extractor
+- **🥩 Grouped Donation Extraction**: When Bear Trap donations are entered as part of a multi-player batch, `loadUserPersonalLog` now automatically parses out the player's specific portion (e.g. `+1,000 donation points (New Total: 10,000)`) and displays it neatly on Today's log.
+- **⚡ Direct Firebase `beartrap_donations` Node Sync**: Checks the player's live `beartrap_donations` timestamp so today's active donations are immediately rendered even if logged in bulk.
+- **📊 Unconditional Sheets API Admin Log Merge**: Merges individual donation rows recorded via API batch calls without skipping.
+
 ## [1.94.1] - 2026-08-12
 ### 📅 Restored Today Only Default View for Personal Activity Log
 - **✨ Restored Today Only Default**: Personal Activity Log defaults to **Today Only** for a clean, uncluttered, easy-to-read view.

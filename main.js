@@ -109,7 +109,7 @@ window.getFurnaceIconHtml = (level, size = 48) => {
      const canvasOffset = Math.round((canvasSize - size) / 2);
      return `<span class="fc-badge-stage" data-fc="${fcNum}" style="display:inline-flex; align-items:center; justify-content:center; position:relative; vertical-align:middle; cursor:pointer; width:${size}px; height:${size}px; user-select:none; -webkit-user-select:none;">
        <canvas class="fc-flame-canvas" width="${canvasSize}" height="${canvasSize}" style="position:absolute; top:-${canvasOffset}px; left:-${canvasOffset}px; width:${canvasSize}px; height:${canvasSize}px; pointer-events:none; z-index:3;"></canvas>
-       <img src="/badges/fc${fcNum}.png?v=1.94.1" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
+       <img src="/badges/fc${fcNum}.png?v=1.94.2" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
      </span>`;
   }
 
@@ -7017,12 +7017,13 @@ window.loadUserPersonalLog = async (chiefName, filterMode = 'today') => {
         let nameLower = rawName.toLowerCase();
         let nameClean = nameLower.replace(/[^a-z0-9]/g, '');
         
+        // 1. Firebase admin_logs query with batch summary parser
         try {
             const snap = await get(ref(db, 'admin_logs'));
             if (snap.exists()) {
                 const allLogs = Object.values(snap.val() || {});
-                userLogs = allLogs.filter(log => {
-                    if (!log) return false;
+                allLogs.forEach(log => {
+                    if (!log) return;
                     const t = (log.target || '').toLowerCase();
                     const d = (log.details || '').toLowerCase();
                     const a = (log.action || '').toLowerCase();
@@ -7035,46 +7036,78 @@ window.loadUserPersonalLog = async (chiefName, filterMode = 'today') => {
                     const matchesDetails = (nameLower && d.includes(nameLower)) || 
                                            (nameClean && nameClean.length >= 2 && dClean.includes(nameClean));
                     
-                    // Also include Bear Trap logs if log target is "All Players" or "Multiple Members"
                     const isGlobalBearTrapLog = (t.includes('all players') || t.includes('multiple members')) && 
                                                 (a.includes('bear trap') || a.includes('beartrap') || d.includes('bear trap'));
                     
-                    return matchesTarget || matchesDetails || isGlobalBearTrapLog;
+                    if (matchesTarget || matchesDetails || isGlobalBearTrapLog) {
+                        let finalLog = { ...log };
+                        // If log target is a multi-player batch string containing this player, extract player's personal detail
+                        if (log.target && log.target.toLowerCase().includes(nameLower)) {
+                            const parts = log.target.split(/,\s*/);
+                            const playerPart = parts.find(p => p.toLowerCase().includes(nameLower));
+                            if (playerPart) {
+                                finalLog.details = `Batch Donation: ${playerPart}`;
+                            }
+                        }
+                        userLogs.push(finalLog);
+                    }
                 });
             }
         } catch(e) {
             console.warn("Firebase personal log query failed or denied", e);
         }
         
-        // Fetch from Sheets API as fallback if log count is low
-        if (userLogs.length < 5) {
-            try {
-                const token = await getAuthToken();
-                const res = await fetch(`${API_BASE_URL}?api=getSheetData&sheetName=Admin Log&token=${encodeURIComponent(token)}`).then(r => r.json());
-                if (res && res.success && res.data && res.data.length > 1) {
-                    for (let i = 1; i < res.data.length; i++) {
-                        let row = res.data[i];
-                        if (row && row[2]) {
-                            let targetStr = row[2].toString().toLowerCase();
-                            let targetClean = targetStr.replace(/[^a-z0-9]/g, '');
-                            if (targetStr.includes(nameLower) || (nameClean && targetClean.includes(nameClean))) {
-                                let d = new Date(row[0]);
-                                userLogs.push({
-                                    id: 'sheets_' + i,
-                                    admin: row[1] || 'Admin',
-                                    action: 'Donation Recorded',
-                                    target: row[2],
-                                    details: `Added +${row[3] || 0} Bear Trap donation points (New Total: ${row[4] || 0})`,
-                                    timestamp: isNaN(d.getTime()) ? Date.now() : d.getTime(),
-                                    dateStr: isNaN(d.getTime()) ? 'Past Record' : d.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}),
-                                    timeStr: isNaN(d.getTime()) ? '' : d.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'})
-                                });
-                            }
+        // 2. Direct Firebase beartrap_donations node check
+        try {
+            const donKey = rawName.toLowerCase().replace(/[^a-z0-9]/g, '_');
+            const donSnap = await get(ref(db, `beartrap_donations/${donKey}`));
+            if (donSnap.exists() && donSnap.val()) {
+                const donData = donSnap.val();
+                if (donData && donData.lastUpdated) {
+                    const dDate = new Date(donData.lastUpdated);
+                    userLogs.push({
+                        id: `bt_node_${donKey}_${donData.lastUpdated}`,
+                        admin: 'R4/R5 Manager',
+                        action: 'Bear Trap Donation Active',
+                        target: rawName,
+                        details: `Active Donation: +${(donData.current || 0).toLocaleString()} points (All-Time: ${(donData.allTime || 0).toLocaleString()})`,
+                        timestamp: donData.lastUpdated,
+                        dateStr: dDate.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}),
+                        timeStr: dDate.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'})
+                    });
+                }
+            }
+        } catch(e) {
+            console.warn("Firebase beartrap_donations query error:", e);
+        }
+        
+        // 3. Unconditional Sheets API Admin Log Query
+        try {
+            const token = await getAuthToken();
+            const res = await fetch(`${API_BASE_URL}?api=getSheetData&sheetName=Admin Log&token=${encodeURIComponent(token)}`).then(r => r.json());
+            if (res && res.success && res.data && res.data.length > 1) {
+                for (let i = 1; i < res.data.length; i++) {
+                    let row = res.data[i];
+                    if (row && row[2]) {
+                        let targetStr = row[2].toString().toLowerCase();
+                        let targetClean = targetStr.replace(/[^a-z0-9]/g, '');
+                        if (targetStr.includes(nameLower) || (nameClean && targetClean.includes(nameClean))) {
+                            let d = new Date(row[0]);
+                            userLogs.push({
+                                id: 'sheets_' + i,
+                                admin: row[1] || 'Admin',
+                                action: 'Bear Trap Donation Recorded',
+                                target: row[2],
+                                details: `Added +${row[3] || 0} Bear Trap donation points (New Total: ${row[4] || 0})`,
+                                timestamp: isNaN(d.getTime()) ? Date.now() : d.getTime(),
+                                dateStr: isNaN(d.getTime()) ? 'Past Record' : d.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}),
+                                timeStr: isNaN(d.getTime()) ? '' : d.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'})
+                            });
                         }
                     }
                 }
-            } catch(e) { console.error(e); }
-        }
+            }
+        } catch(e) { console.warn("Sheets log error:", e); }
 
         // Deduplicate logs
         const logMap = {};
