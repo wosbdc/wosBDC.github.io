@@ -16076,13 +16076,7 @@ window.generatePlayerProfileHtml = (chiefName, p, headers, colIsUpcoming, roster
   if (rosterInfo) {
     let flVal = rosterInfo.furnaceLevel;
     if (flVal && flVal.toString().trim() !== "") {
-       const isAdm = window.isAdminUser && window.isAdminUser(currentUser);
-       const pGid = (rosterInfo && rosterInfo.gameId) ? rosterInfo.gameId : (p ? p.gameId : '');
-       if (isAdm) {
-          headerBadgesHtml += `<span onclick="window.openAdminEditFurnaceModal('${chiefName.replace(/'/g, "\\'")}', '${pGid}', '${flVal}')" style="background:color-mix(in srgb, var(--accent) 15%, transparent); border:1px solid var(--accent); color:var(--text-main); padding:4px 10px; border-radius:12px; font-size:14px; font-weight:bold; display:inline-flex; align-items:center; cursor:pointer; position:relative;" title="Click to Edit Furnace Level (Admin)" onmouseover="this.style.borderColor='#f97316'" onmouseout="this.style.borderColor='var(--accent)'">${window.getFurnaceIconHtml(flVal, 48)} <span style="font-size:10px; color:#f97316; margin-left:4px;" title="Admin Edit">✏️</span></span>`;
-       } else {
-          headerBadgesHtml += `<span style="background:color-mix(in srgb, var(--accent) 15%, transparent); border:1px solid var(--accent); color:var(--text-main); padding:4px 10px; border-radius:12px; font-size:14px; font-weight:bold; display:inline-flex; align-items:center;">${window.getFurnaceIconHtml(flVal, 48)}</span>`;
-       }
+       headerBadgesHtml += `<span style="background:color-mix(in srgb, var(--accent) 15%, transparent); border:1px solid var(--accent); color:var(--text-main); padding:4px 10px; border-radius:12px; font-size:14px; font-weight:bold; display:inline-flex; align-items:center;">${window.getFurnaceIconHtml(flVal, 48)}</span>`;
     }
     let gcVal = rosterInfo.giftCodes;
     if (gcVal === true || gcVal === 'TRUE' || (typeof gcVal === 'string' && gcVal.toLowerCase().trim() === 'true')) {

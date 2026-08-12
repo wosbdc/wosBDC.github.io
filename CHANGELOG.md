@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.59.5] - 2026-08-11
+### UI Refinement
+- **🎴 Player Lookup Card Clean Display**: Removed direct click-to-edit trigger from the header furnace badge on Chief Player Lookup Cards (`generatePlayerProfileHtml`), restoring a clean badge display. Admins can still edit levels via the `🔥 Set Furnace Level` button in the `⚙️ Actions` menu and in the Player Database Editor.
+
 ## [1.59.4] - 2026-08-11
 ### Universal Sync Fix
 - **🔄 Complete User-Edit & Admin-Edit Sync**:
