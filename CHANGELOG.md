@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [1.61.0] - 2026-08-11
+### Smart Batch Grouping in Admin Action Audit Logs
+- **⚡ Intelligent Log Condensing**:
+  - Implemented automatic batch grouping for consecutive admin actions of the same type within a 10-minute window.
+  - Replaced repetitive log lists (e.g. 13 signup toggles in 2 minutes) with ONE clean summary row:
+    `⚡ Championship Signup Batch (13 Players) | 12 set to NO (❌), 1 set to YES (✅) | Aug 11 (05:12 PM – 05:14 PM)`
+- **📂 Expandable / Collapsible Details**:
+  - Added `window.toggleLogBatch(batchId)` and interactive `[▼ Expand 13 Logs]` buttons to smoothly toggle nested sub-rows showing exact player-by-player actions and timestamps.
+
 ## [1.60.2] - 2026-08-11
 ### Admin Log Explicit Alt Account Audit Tracking
 - **📋 Explicit Alt Logging**: Integrated `window.logAdminAction("Alt Profile Update", ...)` into `openEditAltProfileModal`, ensuring the admin log explicitly logs the target Alt account name, game ID, updated furnace level, and start date.

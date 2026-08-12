@@ -7927,6 +7927,22 @@ const views = {
         }
       });
 
+      window.toggleLogBatch = (batchId) => {
+   const btn = document.getElementById(`batch-btn-${batchId}`);
+   const subrows = document.querySelectorAll(`.batch-subrow-${batchId}`);
+   if (!subrows || subrows.length === 0) return;
+
+   const isHidden = subrows[0].style.display === 'none';
+   subrows.forEach(r => r.style.display = isHidden ? 'table-row' : 'none');
+
+   if (btn) {
+      btn.innerHTML = isHidden ? `[▲ Collapse Batch]` : `[▼ Expand ${subrows.length} Logs]`;
+      btn.style.background = isHidden ? 'rgba(239,68,68,0.15)' : 'rgba(59,130,246,0.15)';
+      btn.style.borderColor = isHidden ? '#ef4444' : '#3b82f6';
+      btn.style.color = isHidden ? '#f87171' : '#60a5fa';
+   }
+};
+
       // Global function to fetch real-time Admin Logs from Firebase with fallback to Sheets API
       window.fetchAdminLog = async () => {
         const tb = document.getElementById('adminLogsTableBody');
@@ -7977,24 +7993,104 @@ const views = {
 
         logItems.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 
+        // Smart Batch Grouping: Group consecutive actions by same admin + action within 10-min window
+        let groupedLogs = [];
+        let currentBatch = [];
+
+        logItems.forEach(log => {
+           if (currentBatch.length === 0) {
+              currentBatch.push(log);
+           } else {
+              const last = currentBatch[currentBatch.length - 1];
+              const sameAdmin = (log.admin || '').toLowerCase() === (last.admin || '').toLowerCase();
+              const sameAction = (log.action || '').toLowerCase() === (last.action || '').toLowerCase();
+              const timeDiff = Math.abs((last.timestamp || 0) - (log.timestamp || 0));
+
+              if (sameAdmin && sameAction && timeDiff <= 600000) {
+                 currentBatch.push(log);
+              } else {
+                 groupedLogs.push(currentBatch);
+                 currentBatch = [log];
+              }
+           }
+        });
+        if (currentBatch.length > 0) groupedLogs.push(currentBatch);
+
         let tbodyHtml = '';
         let uniqueAdmins = new Set();
-        
-        logItems.forEach(log => {
-           let adminName = log.admin || 'Admin';
+        let batchCounter = 0;
+
+        groupedLogs.forEach(group => {
+           batchCounter++;
+           const firstLog = group[0];
+           const lastLog = group[group.length - 1];
+           const adminName = firstLog.admin || 'Admin';
            uniqueAdmins.add(adminName);
-           let dateDisplay = log.dateStr ? `${log.dateStr} ${log.timeStr || ''}` : new Date(log.timestamp).toLocaleString();
-           let actionBadge = `<span style="background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.3); color:#60a5fa; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:bold;">${escapeHTML(log.action || 'Admin Action')}</span>`;
-           
-           tbodyHtml += `
-             <tr class="admin-log-row" data-admin="${adminName.toLowerCase()}" data-timestamp="${log.timestamp || 0}" style="border-bottom:1px solid var(--border);">
-               <td style="padding:10px; font-size:12px; color:var(--text-muted); white-space:nowrap;">${dateDisplay}</td>
-               <td style="padding:10px; font-weight:bold; color:var(--accent);">${escapeHTML(adminName)}</td>
-               <td style="padding:10px;">${actionBadge}</td>
-               <td style="padding:10px; font-weight:bold; color:var(--text-main);">${escapeHTML(log.target || '-')}</td>
-               <td style="padding:10px; font-size:13px; color:var(--text-main);">${escapeHTML(log.details || '-')}</td>
-             </tr>
-           `;
+
+           if (group.length === 1) {
+              const dateDisplay = firstLog.dateStr ? `${firstLog.dateStr} ${firstLog.timeStr || ''}` : new Date(firstLog.timestamp).toLocaleString();
+              const actionBadge = `<span style="background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.3); color:#60a5fa; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:bold;">${escapeHTML(firstLog.action || 'Admin Action')}</span>`;
+              
+              tbodyHtml += `
+                <tr class="admin-log-row" data-admin="${adminName.toLowerCase()}" data-timestamp="${firstLog.timestamp || 0}" style="border-bottom:1px solid var(--border);">
+                  <td style="padding:10px; font-size:12px; color:var(--text-muted); white-space:nowrap;">${dateDisplay}</td>
+                  <td style="padding:10px; font-weight:bold; color:var(--accent);">${escapeHTML(adminName)}</td>
+                  <td style="padding:10px;">${actionBadge}</td>
+                  <td style="padding:10px; font-weight:bold; color:var(--text-main);">${escapeHTML(firstLog.target || '-')}</td>
+                  <td style="padding:10px; font-size:13px; color:var(--text-main);">${escapeHTML(firstLog.details || '-')}</td>
+                </tr>
+              `;
+           } else {
+              const batchId = `b_${batchCounter}_${Date.now()}`;
+              const startTimeStr = lastLog.timeStr || new Date(lastLog.timestamp).toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'});
+              const endTimeStr = firstLog.timeStr || new Date(firstLog.timestamp).toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'});
+              const dateStr = firstLog.dateStr || new Date(firstLog.timestamp).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+              const dateRangeDisplay = `${dateStr} (${startTimeStr} – ${endTimeStr})`;
+
+              let yesCount = 0;
+              let noCount = 0;
+              group.forEach(l => {
+                 const det = (l.details || '').toLowerCase();
+                 if (det.includes('yes') || det.includes('✅')) yesCount++;
+                 if (det.includes('no') || det.includes('❌')) noCount++;
+              });
+
+              let summaryDetails = `${group.length} actions batched`;
+              if (yesCount > 0 || noCount > 0) {
+                 let parts = [];
+                 if (noCount > 0) parts.push(`${noCount} set to NO (❌)`);
+                 if (yesCount > 0) parts.push(`${yesCount} set to YES (✅)`);
+                 summaryDetails = parts.join(', ');
+              }
+
+              const actionBadge = `<span style="background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.3); color:#34d399; padding:3px 10px; border-radius:12px; font-size:11px; font-weight:bold;">⚡ ${escapeHTML(firstLog.action || 'Batch Action')} (${group.length})</span>`;
+
+              tbodyHtml += `
+                <tr class="admin-log-row batch-header-row" data-batchid="${batchId}" data-admin="${adminName.toLowerCase()}" data-timestamp="${firstLog.timestamp || 0}" style="border-bottom:1px solid var(--border); background:rgba(6,182,212,0.06);">
+                  <td style="padding:10px; font-size:12px; color:var(--text-muted); white-space:nowrap;">${dateRangeDisplay}</td>
+                  <td style="padding:10px; font-weight:bold; color:var(--accent);">${escapeHTML(adminName)}</td>
+                  <td style="padding:10px;">${actionBadge}</td>
+                  <td style="padding:10px; font-weight:bold; color:#f59e0b;">Multiple Members (${group.length})</td>
+                  <td style="padding:10px; font-size:13px; color:var(--text-main); display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+                    <span>${summaryDetails}</span>
+                    <button id="batch-btn-${batchId}" onclick="window.toggleLogBatch('${batchId}')" style="background:rgba(59,130,246,0.15); border:1px solid #3b82f6; color:#60a5fa; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; transition:all 0.2s;">[▼ Expand ${group.length} Logs]</button>
+                  </td>
+                </tr>
+              `;
+
+              group.forEach(subLog => {
+                 const subTime = subLog.timeStr || (subLog.timestamp ? new Date(subLog.timestamp).toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'}) : '');
+                 tbodyHtml += `
+                   <tr class="admin-log-row batch-subrow batch-subrow-${batchId}" data-admin="${adminName.toLowerCase()}" data-timestamp="${subLog.timestamp || 0}" style="display:none; border-bottom:1px dashed rgba(255,255,255,0.06); background:rgba(15,23,42,0.4);">
+                     <td style="padding:8px 10px 8px 24px; font-size:11px; color:var(--text-muted); font-style:italic;">└ ${subTime}</td>
+                     <td style="padding:8px 10px; font-size:12px; color:var(--text-muted);">${escapeHTML(adminName)}</td>
+                     <td style="padding:8px 10px; font-size:11px; color:var(--text-muted);">${escapeHTML(subLog.action || '')}</td>
+                     <td style="padding:8px 10px; font-weight:bold; color:var(--accent); font-size:12px;">${escapeHTML(subLog.target || '-')}</td>
+                     <td style="padding:8px 10px; font-size:12px; color:var(--text-main);">${escapeHTML(subLog.details || '-')}</td>
+                   </tr>
+                 `;
+              });
+           }
         });
 
         if (tbodyHtml === '') tbodyHtml = `<tr><td colspan="5" style="padding:15px; text-align:center; color:var(--text-muted);">No admin logs recorded yet.</td></tr>`;
