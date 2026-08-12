@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [1.88.5] - 2026-08-12
+### 📱 Resolved Banner Overlap & Expanded PWA Auto-Install Banner Visibility
+- **📱 PWA Banner Visibility & Collision Prevention**:
+  - Prevented banner collision between "App Update Available" top notification and bottom PWA Install banner.
+  - Reduced load delay from 4 seconds down to 1.5 seconds so uninstalled users see the banner immediately.
+  - Removed strict mobile user-agent filter so PWA Install banner triggers reliably on all non-standalone browsers.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.88.5`) in `window.getFurnaceIconHtml`.
+
 ## [1.88.4] - 2026-08-12
 ### ⚡ Restored Android 1-Click Bottom Install Prompt Engine
 - **⚡ Unified Single PWA Listener**:

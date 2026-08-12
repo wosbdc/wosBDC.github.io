@@ -1,10 +1,10 @@
 {
-  "version": "1.88.4",
+  "version": "1.88.5",
   "releaseDate": "2026-08-12",
-  "title": "⚡ Restored Android 1-Click Bottom Install Prompt Engine",
+  "title": "📱 Resolved Banner Overlap & Expanded PWA Auto-Install Banner Visibility",
   "notes": [
-    "Unified single PWA beforeinstallprompt global event listener to prevent duplicate event listener override",
-    "Restored direct 1-click native Android Chrome install prompt on banner tap",
-    "Smart OS detection: Android triggers 1-click install prompt immediately, iOS shows bottom Safari share arrow"
+    "Fixed banner collision between App Update notification and PWA Install banner",
+    "Expanded PWA install banner to trigger across all non-standalone browsers after 1.5s load time",
+    "Exposed global window.showAutoInstallBanner for instant manual trigger from settings"
   ]
 }
