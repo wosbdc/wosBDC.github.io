@@ -1,10 +1,10 @@
 {
-  "version": "1.89.9",
+  "version": "1.90.0",
   "releaseDate": "2026-08-12",
-  "title": "📱 Perfected iOS Safari & Chrome Specific Install Guidance",
+  "title": "🎨 Fixed iOS & Android Top Blue Status Bar Theme Color",
   "notes": [
-    "Refined Safari guidance: top Share icon or fallback '...' in address bar",
-    "Refined Chrome iOS guidance: top address bar Share icon ➔ View More ➔ Add to Home Screen",
-    "Eliminated confusion regarding Chrome iOS '...' menu toolbar variations"
+    "Fixed blue status bar issue on iPhone and mobile web app PWA by updating theme-color meta tag from #3b82f6 to dark #0f172a",
+    "Updated PWA manifest.json theme_color and background_color",
+    "Added dynamic theme-color meta tag sync in main.js to match active theme"
   ]
 }

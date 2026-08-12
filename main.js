@@ -109,7 +109,7 @@ window.getFurnaceIconHtml = (level, size = 48) => {
      const canvasOffset = Math.round((canvasSize - size) / 2);
      return `<span class="fc-badge-stage" data-fc="${fcNum}" style="display:inline-flex; align-items:center; justify-content:center; position:relative; vertical-align:middle; cursor:pointer; width:${size}px; height:${size}px; user-select:none; -webkit-user-select:none;">
        <canvas class="fc-flame-canvas" width="${canvasSize}" height="${canvasSize}" style="position:absolute; top:-${canvasOffset}px; left:-${canvasOffset}px; width:${canvasSize}px; height:${canvasSize}px; pointer-events:none; z-index:3;"></canvas>
-       <img src="/badges/fc${fcNum}.png?v=1.89.9" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
+       <img src="/badges/fc${fcNum}.png?v=1.90.0" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
      </span>`;
   }
 
@@ -272,9 +272,23 @@ if(mobileMenuBtn) {
 }
 
 // --- Theme Logic ---
+const updateMetaThemeColor = (theme) => {
+  let metaTheme = document.querySelector('meta[name="theme-color"]');
+  if (!metaTheme) {
+    metaTheme = document.createElement('meta');
+    metaTheme.name = 'theme-color';
+    document.head.appendChild(metaTheme);
+  }
+  let color = '#0f172a'; // midnight / default
+  if (theme === 'ombre') color = '#0b051a'; // diva dark purple
+  else if (theme === 'light') color = '#ffffff';
+  metaTheme.setAttribute('content', color);
+};
+
 const initTheme = () => {
   const savedTheme = localStorage.getItem('theme') || 'midnight';
   document.documentElement.setAttribute('data-theme', savedTheme);
+  updateMetaThemeColor(savedTheme);
   
   // Highlight the active card
   document.querySelectorAll('.theme-card').forEach(card => {
@@ -293,6 +307,7 @@ document.querySelectorAll('.theme-card').forEach(card => {
     const theme = card.getAttribute('data-theme');
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
+    updateMetaThemeColor(theme);
     
     // Update active card
     document.querySelectorAll('.theme-card').forEach(c => c.classList.remove('active'));

@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [1.90.0] - 2026-08-12
+### 🎨 Fixed Top Blue Status Bar Theme Color Bug
+- **🎨 Mobile Status Bar Fix**:
+  - Removed legacy `#3b82f6` bright blue theme color from `index.html` and `public/manifest.json`.
+  - Set default theme color to dark `#0f172a` (matching top header navbar).
+  - Added dynamic theme-color meta sync in `main.js` (`updateMetaThemeColor`) so top status bar seamlessly matches selected theme (Midnight `#0f172a`, Diva `#0b051a`, Light `#ffffff`).
+
 ## [1.89.9] - 2026-08-12
 ### 📱 Perfected iOS Safari & Chrome Specific Install Guidance
 - **📱 Detailed Safari & Chrome Guidance**:
