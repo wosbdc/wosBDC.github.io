@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [1.63.2] - 2026-08-11
+### Fire Crystal Badge Image Cache Invalidation
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster query parameter (`?v=1.63.2`) to badge image URLs in `window.getFurnaceIconHtml`.
+  - Ensures browsers bypass old cached versions of `fc1.png` – `fc10.png` and immediately display the updated ringless 3D Fire Crystal star badges.
+
 ## [1.63.1] - 2026-08-11
 ### Preserved Original 3D Star Point Geometry Badge Cleanup
 - **💎 Exact Original Star Preservation**:
