@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [1.86.0] - 2026-08-12
+### 🛠️ Permanent Fix for Update Available Banner Loop
+- **🛠️ Update Banner Loop Resolution**:
+  - Added full `CacheStorage.delete()` and ServiceWorker unregistration when clicking **Update App Now**.
+  - Forced hard page reload with a timestamp cache-busting query parameter (`?v=TIMESTAMP`).
+  - Switched update dismissal and version tracking to persistent `localStorage` to permanently stop duplicate pop-ups.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.86.0`) in `window.getFurnaceIconHtml`.
+
 ## [1.85.0] - 2026-08-12
 ### 📲 iPhone Native Web Share Sheet Direct Trigger
 - **📲 Direct iOS Share Sheet Trigger**:

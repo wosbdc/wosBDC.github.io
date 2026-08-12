@@ -1,10 +1,10 @@
 {
-  "version": "1.85.0",
+  "version": "1.86.0",
   "releaseDate": "2026-08-12",
-  "title": "📲 iPhone Web Share Sheet Auto-Trigger for 1-Tap Home Screen Addition",
+  "title": "🛠️ Permanent Fix for Recurring Update Banner Loop",
   "notes": [
-    "Integrated Web Share API (navigator.share) on iPhone to automatically launch iOS Share Sheet upon button tap",
-    "Eliminated manual Safari Share button searching for Apple device users",
-    "Updated iOS 4-Step tutorial modal with instant Web Share trigger button"
+    "Fixed recurring update banner bug by purging ServiceWorker & CacheStorage on update",
+    "Added localStorage version tracking to prevent duplicate prompts",
+    "Added cache-busting query parameter reload on update confirmation"
   ]
 }

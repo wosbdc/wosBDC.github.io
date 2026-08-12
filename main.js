@@ -109,7 +109,7 @@ window.getFurnaceIconHtml = (level, size = 48) => {
      const canvasOffset = Math.round((canvasSize - size) / 2);
      return `<span class="fc-badge-stage" data-fc="${fcNum}" style="display:inline-flex; align-items:center; justify-content:center; position:relative; vertical-align:middle; cursor:pointer; width:${size}px; height:${size}px; user-select:none; -webkit-user-select:none;">
        <canvas class="fc-flame-canvas" width="${canvasSize}" height="${canvasSize}" style="position:absolute; top:-${canvasOffset}px; left:-${canvasOffset}px; width:${canvasSize}px; height:${canvasSize}px; pointer-events:none; z-index:3;"></canvas>
-       <img src="/badges/fc${fcNum}.png?v=1.85.0" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
+       <img src="/badges/fc${fcNum}.png?v=1.86.0" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
      </span>`;
   }
 
@@ -17661,7 +17661,8 @@ window.closeMobileNavModal = () => {
 
   function showUpdateBanner(updateData) {
     if (document.getElementById('app-update-modal-banner')) return;
-    if (sessionStorage.getItem('wos_dismissed_update') === updateData.version) return;
+    if (localStorage.getItem('wos_dismissed_update') === updateData.version) return;
+    if (localStorage.getItem('wos_app_version') === updateData.version) return;
 
     const banner = document.createElement('div');
     banner.id = 'app-update-modal-banner';
@@ -17717,18 +17718,25 @@ window.closeMobileNavModal = () => {
       banner.style.transform = 'translateX(-50%) translateY(0)';
     }, 100);
 
-    document.getElementById('btn-force-update-app').addEventListener('click', () => {
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(regs => {
-          regs.forEach(r => r.unregister());
-        });
-      }
+    document.getElementById('btn-force-update-app').addEventListener('click', async () => {
       localStorage.setItem('wos_app_version', updateData.version);
-      window.location.reload(true);
+      if ('serviceWorker' in navigator) {
+        try {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          for (let r of regs) await r.unregister();
+        } catch (e) {}
+      }
+      if ('caches' in window) {
+        try {
+          const keys = await caches.keys();
+          for (let k of keys) await caches.delete(k);
+        } catch (e) {}
+      }
+      window.location.href = window.location.pathname + '?v=' + Date.now() + window.location.hash;
     });
 
     document.getElementById('btn-dismiss-update-app').addEventListener('click', () => {
-      sessionStorage.setItem('wos_dismissed_update', updateData.version);
+      localStorage.setItem('wos_dismissed_update', updateData.version);
       banner.style.transform = 'translateX(-50%) translateY(120%)';
       setTimeout(() => banner.remove(), 400);
     });
@@ -17739,8 +17747,11 @@ window.closeMobileNavModal = () => {
       const res = await fetch(`/version.json?t=${Date.now()}`, { cache: 'no-store' });
       if (!res.ok) return;
       const data = await res.json();
-      if (data && data.version && isVersionOutdated(CURRENT_BUILD_VERSION, data.version)) {
-        showUpdateBanner(data);
+      if (data && data.version) {
+        if (localStorage.getItem('wos_app_version') === data.version) return;
+        if (isVersionOutdated(CURRENT_BUILD_VERSION, data.version)) {
+          showUpdateBanner(data);
+        }
       }
     } catch (err) {}
   }
