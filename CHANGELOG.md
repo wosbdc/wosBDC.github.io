@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [1.72.0] - 2026-08-12
+### Complete Set of Heavy 3D Metallic Hexagon Shield Badges (FC1 to FC10)
+- **🛡️ Full 10-Level Metallic Hexagon Shield Badges**:
+  - Generated and deployed the complete suite of heavy 3D metallic hexagon shield badges for FC1 through FC10 (`fc1.png` – `fc10.png`).
+  - Features titanium brushed metal bevelled frames with chiseled edges, gold-trimmed inner bevels, level-matched elemental flame core auras, dark brushed carbon hexagon plates, and glowing white numbers 1–10.
+  - 100% true alpha transparency with zero background clutter.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.72.0`) in `window.getFurnaceIconHtml`.
+
 ## [1.71.0] - 2026-08-12
 ### Heavy Metallic 3D Hexagon Shield Badge Design (FC1 Test)
 - **🛡️ New Heavy 3D Metallic Hexagon Shield Design**:
