@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [1.89.9] - 2026-08-12
+### 📱 Perfected iOS Safari & Chrome Specific Install Guidance
+- **📱 Detailed Safari & Chrome Guidance**:
+  - Added Safari fallback note: top Share SVG icon or `...` menu in address bar.
+  - Clarified Chrome iOS address bar Share SVG icon ➔ **View More** ➔ **Add to Home Screen**.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.89.9`) in `window.getFurnaceIconHtml`.
+
 ## [1.89.8] - 2026-08-12
 ### 🧭 Safari iPhone (...) and iPad Share Icon Guidance Update
 - **🧭 Safari iPhone & iPad Instructions Update**:

@@ -1,9 +1,10 @@
 {
-  "version": "1.89.8",
+  "version": "1.89.9",
   "releaseDate": "2026-08-12",
-  "title": "🧭 Safari iPhone (...) and iPad Share Icon Guidance Update",
+  "title": "📱 Perfected iOS Safari & Chrome Specific Install Guidance",
   "notes": [
-    "Updated Safari iPhone & iPad install card to reference both Share SVG icon and iPhone address bar (...) menu",
-    "Ensured comprehensive coverage across all iPhone, iPad, Safari, and Chrome mobile devices"
+    "Refined Safari guidance: top Share icon or fallback '...' in address bar",
+    "Refined Chrome iOS guidance: top address bar Share icon ➔ View More ➔ Add to Home Screen",
+    "Eliminated confusion regarding Chrome iOS '...' menu toolbar variations"
   ]
 }
