@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [1.65.0] - 2026-08-11
+### Dimmed Ambient Halo Ring 3D Fire Crystal Star Badges
+- **✨ Dimmed Ambient Background Halo**:
+  - Softened and dimmed the background neon circle ring across all Fire Crystal badges (`fc1.png` – `fc10.png`) to 35% opacity ambient glow.
+  - Keeps 100% of the original 3D crystal star points, multi-layered facets, metallic hexagon frames, and numbers at full 100% maximum brightness and sharpness so the 3D crystal star pops forward dramatically.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.65.0`) in `window.getFurnaceIconHtml`.
+
 ## [1.64.0] - 2026-08-11
 ### Pristine 3D Fire Crystal Badge Artwork Restoration
 - **👑 Full Pristine Artwork Restoration**:
