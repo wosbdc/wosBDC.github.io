@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.59.9] - 2026-08-11
+### Firebase Roster Write Stability & Instant Sync
+- **🔥 Safe Firebase Roster Mutation**: Rewrote `openAdminEditFurnaceModal` and `saveEditProfileBtn` to update `roster_live` via safe root object matching (`set(ref(db, 'roster_live'), rosterObj)`), preventing key character errors and guaranteeing immediate database persistence and zero-refresh UI updates.
+
 ## [1.59.8] - 2026-08-11
 ### Player Database Editor & Account Hub Live Sync
 - **⚡ Zero-Refresh Live Updates**: Registered `window.activeViewFunc = () => views.playerEditor()` and `window.activeViewFunc = () => views.account()` so saving furnace level edits in the Player Database Editor or Account Hub immediately triggers a seamless UI re-render without requiring a manual page refresh.

@@ -1994,24 +1994,33 @@ window.openAdminEditFurnaceModal = async (chiefName, gameId = '', currentFurnace
         try {
            const cleanGid = (gameId || window.nameToIdMap[chiefName] || '').toString().trim();
 
-           // 0. Invalidate in-memory roster cache so next fetchRoster gets fresh data
-           window.rosterCache = null;
+           // 1. Read & update roster_live in Firebase safely
+           try {
+              const rosterSnap = await get(ref(db, 'roster_live')).catch(() => null);
+              let rosterObj = (rosterSnap && rosterSnap.exists()) ? rosterSnap.val() : {};
 
-           // 1. Update roster_live in Firebase by Chief Name & Game ID
-           if (chiefName) {
-              await update(ref(db, `roster_live/${chiefName}`), {
+              let foundKey = null;
+              for (const [rk, rv] of Object.entries(rosterObj)) {
+                 if (rk.toLowerCase() === chiefName.toLowerCase() ||
+                    (rv && rv.name && rv.name.toLowerCase() === chiefName.toLowerCase()) ||
+                    (cleanGid && rv && rv.gameId && rv.gameId.toString().trim() === cleanGid)) {
+                    foundKey = rk;
+                    break;
+                 }
+              }
+              const saveKey = foundKey || chiefName;
+              rosterObj[saveKey] = {
+                 ...(rosterObj[saveKey] || {}),
+                 name: chiefName,
+                 gameId: cleanGid,
                  furnaceLevel: newFurnace,
                  stove_lv: newFurnace,
                  updatedAt: Date.now()
-              }).catch(() => null);
-           }
-           if (cleanGid) {
-              await update(ref(db, `roster_live/${cleanGid}`), {
-                 furnaceLevel: newFurnace,
-                 stove_lv: newFurnace,
-                 updatedAt: Date.now()
-              }).catch(() => null);
-           }
+              };
+
+              await set(ref(db, 'roster_live'), rosterObj);
+              window.rosterCache = rosterObj;
+           } catch(e) { console.warn("roster_live save error:", e); }
 
            // 2. Update users/ node if user account exists
            try {
@@ -7258,20 +7267,32 @@ window.openEditProfileModal = async () => {
            });
 
            // 2. Update roster_live in Firebase by Chief Name & Game ID
-           if (chiefName) {
-              await update(ref(db, `roster_live/${chiefName}`), {
+           try {
+              const rosterSnap = await get(ref(db, 'roster_live')).catch(() => null);
+              let rosterObj = (rosterSnap && rosterSnap.exists()) ? rosterSnap.val() : {};
+
+              let foundKey = null;
+              for (const [rk, rv] of Object.entries(rosterObj)) {
+                 if (rk.toLowerCase() === chiefName.toLowerCase() ||
+                    (rv && rv.name && rv.name.toLowerCase() === chiefName.toLowerCase()) ||
+                    (cleanGid && rv && rv.gameId && rv.gameId.toString().trim() === cleanGid)) {
+                    foundKey = rk;
+                    break;
+                 }
+              }
+              const saveKey = foundKey || chiefName;
+              rosterObj[saveKey] = {
+                 ...(rosterObj[saveKey] || {}),
+                 name: chiefName,
+                 gameId: cleanGid,
                  furnaceLevel: newFurnace,
                  stove_lv: newFurnace,
                  updatedAt: Date.now()
-              }).catch(() => null);
-           }
-           if (cleanGid) {
-              await update(ref(db, `roster_live/${cleanGid}`), {
-                 furnaceLevel: newFurnace,
-                 stove_lv: newFurnace,
-                 updatedAt: Date.now()
-              }).catch(() => null);
-           }
+              };
+
+              await set(ref(db, 'roster_live'), rosterObj);
+              window.rosterCache = rosterObj;
+           } catch(e) { console.warn("roster_live profile save error:", e); }
 
            currentUser.stove_lv = newFurnace;
            currentUser.furnaceLevel = newFurnace;
