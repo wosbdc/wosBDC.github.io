@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [1.91.1] - 2026-08-12
+### 🐛 Fixed Edit Profile Options Popup Scope Issue
+- **🐛 Bug Fix**:
+  - Resolved `accLevel` ReferenceError in `window.openEditProfileHubModal()` by resolving `window.getAdminLevel(currentUser)`.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.91.1`) in `window.getFurnaceIconHtml`.
+
 ## [1.91.0] - 2026-08-12
 ### ✏️ Unified Profile Edit Hub & Staff Selector Popup
 - **✏️ Account Hub Consolidation**:

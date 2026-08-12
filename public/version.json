@@ -1,10 +1,9 @@
 {
-  "version": "1.91.0",
+  "version": "1.91.1",
   "releaseDate": "2026-08-12",
-  "title": "✏️ Unified Profile Edit Hub & Staff Selector Popup",
+  "title": "🐛 Fixed Edit Profile Options Popup Scope Issue",
   "notes": [
-    "Consolidated double Edit Profile buttons in Account Hub into a single elegant button",
-    "Created glassmorphic Edit Profile Hub modal for Staff to easily choose between Chief Profile and Staff Directory Profile",
-    "Streamlined UX for both regular alliance members and staff leadership"
+    "Fixed ReferenceError for accLevel in window.openEditProfileHubModal() by properly resolving staff level via window.getAdminLevel(currentUser)",
+    "Ensured Edit Profile Hub modal opens flawlessly for staff members"
   ]
 }
