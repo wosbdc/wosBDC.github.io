@@ -1,9 +1,9 @@
 {
-  "version": "1.88.2",
+  "version": "1.88.3",
   "releaseDate": "2026-08-12",
-  "title": "🎨 Theme-Matched 'Install WOS App' Button Styling",
+  "title": "📱 Hardened Android 1-Click & iPhone Safari Install Engine",
   "notes": [
-    "Styled Install WOS App button to match native theme styling (sidebar-action-btn and var(--card-bg))",
-    "Cleaned button text to '📱 Install WOS App' across Preferences and Mobile Navigation"
+    "Replaced URL Share sheet on iOS with direct Safari bottom Share bar pointer arrow for Add to Home Screen",
+    "Added interactive 3-step Android Chrome guide fallback when native prompt isn't ready"
   ]
 }

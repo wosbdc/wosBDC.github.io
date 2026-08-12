@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## [1.88.3] - 2026-08-12
+### 📱 Hardened Android 1-Click & iPhone Safari Install Engine
+- **🍎 Apple iOS Share Fix**:
+  - Removed `navigator.share()` from iOS modal button (which previously opened generic URL sharing without "Add to Home Screen").
+  - Tapping iOS action button now directly triggers the bouncing **Safari Bottom Bar Pointer Arrow (`👇`)** pointing at the native 📤 Share button.
+- **🤖 Android Install Fallback**:
+  - Added dedicated Android Chrome 3-Step Guide fallback with instant retry trigger if `beforeinstallprompt` is pending.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.88.3`) in `window.getFurnaceIconHtml`.
+
 ## [1.88.2] - 2026-08-12
 ### 🎨 Theme-Matched 'Install WOS App' Button Styling
 - **🎨 Native Theme Styling**:
