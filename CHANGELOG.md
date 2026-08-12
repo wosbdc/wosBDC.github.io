@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## [1.93.0] - 2026-08-12
+### 🎯 Guaranteed Edit Profile Options Selector Popup
+- **🎯 Major Fix & Refactor**:
+  - Removed null `openStaffProfileBtn` event listener that was causing a JavaScript TypeError crash in `renderAccountHub()`.
+  - Removed restrictive permission guards in `openEditProfileHubModal()` so tapping `✏️ Edit Profile` ALWAYS pops up the chooser modal.
+  - Added dynamic creation for `#staffProfileModal` inside `window.openStaffProfileModal()`.
+  - Added global `window.saveStaffProfileFromModal()`.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.93.0`) in `window.getFurnaceIconHtml`.
+
+## [1.92.1] - 2026-08-12
+### 🎯 Fixed Onclick Handler Binding for openEditProfileHubModal
+- **🎯 Critical Fix**:
+  - Replaced legacy `onclick="window.openEditProfileModal()"` in `renderAccountHub()` HTML with `onclick="window.openEditProfileHubModal()"`.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.92.1`) in `window.getFurnaceIconHtml`.
+
 ## [1.92.0] - 2026-08-12
 ### 👑 Comprehensive Staff & Root Admin Permission Recognition
 - **👑 Root Admin & Staff Detection**:

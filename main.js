@@ -7158,31 +7158,81 @@ window.clearShowdownCaches = () => {
     window.rosterCache = null;
 };
 
+window.saveStaffProfileFromModal = async () => {
+  const user = currentUser || realUser;
+  if (!user || !user.gameId) return;
+  const dept = document.getElementById('staffDeptInput')?.value.trim() || '';
+  const tz = document.getElementById('staffTzInput')?.value.trim() || '';
+  const loc = document.getElementById('staffLocInput')?.value.trim() || '';
+  const bio = document.getElementById('staffBioInput')?.value.trim() || '';
+  const btn = document.getElementById('saveStaffProfileBtn');
+  if (btn) { btn.textContent = 'Saving...'; btn.disabled = true; }
+  try {
+      await set(ref(db, `staffProfiles/${user.gameId}`), {
+          department: dept,
+          timezone: tz,
+          location: loc,
+          bio: bio
+      });
+      window.showToast("Staff Profile saved successfully!", "success");
+      if (btn) { btn.textContent = 'Save Profile'; btn.disabled = false; }
+      const modal = document.getElementById('staffProfileModal');
+      if (modal) modal.style.display = 'none';
+  } catch (err) {
+      console.error(err);
+      window.showToast("Failed to save profile.", "error");
+      if (btn) { btn.textContent = 'Save Profile'; btn.disabled = false; }
+  }
+};
+
 window.openStaffProfileModal = () => {
-  const modal = document.getElementById('staffProfileModal');
-  if (modal) modal.style.display = 'flex';
+  let modal = document.getElementById('staffProfileModal');
+  if (!modal) {
+    const user = currentUser || realUser;
+    const gid = user ? user.gameId : '';
+    let p = (window.staffProfilesMap && gid && window.staffProfilesMap[gid]) 
+        ? window.staffProfilesMap[gid] 
+        : {department:'', timezone:'', bio:''};
+    const div = document.createElement('div');
+    div.id = 'staffProfileModal';
+    div.style.cssText = 'display:flex; position:fixed; inset:0; background:rgba(15,23,42,0.9); backdrop-filter:blur(10px); z-index:99999; align-items:center; justify-content:center;';
+    div.innerHTML = `
+      <div class="modal-content card" style="width:90%; max-width:500px; background:var(--bg-main); border:1px solid rgba(56,189,248,0.3); padding:25px; border-radius:12px; box-shadow:0 10px 40px rgba(0,0,0,0.5); text-align:left;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+              <h3 style="margin:0; color:var(--text-main); font-size:20px; font-weight:bold;">🛡️ Staff Directory Profile</h3>
+              <button onclick="document.getElementById('staffProfileModal').style.display='none'" style="background:none; border:none; color:var(--text-muted); font-size:28px; cursor:pointer; line-height:1;">&times;</button>
+          </div>
+          <p style="font-size:13px; color:var(--text-muted); margin-bottom:20px;">This information will be displayed publicly on the Staff page.</p>
+          
+          <div style="display:flex; flex-direction:column; gap:15px;">
+              <div>
+                  <label style="display:block; font-size:13px; font-weight:bold; color:var(--text-main); margin-bottom:6px;">Department / Specialty</label>
+                  <textarea id="staffDeptInput" placeholder="e.g. Event Coordinator, Bear Trap Manager" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-secondary); color:var(--text-main); font-size:14px; box-sizing:border-box; resize:vertical; min-height:50px;">${window.escapeHTML(p.department || '')}</textarea>
+              </div>
+              <div>
+                  <label style="display:block; font-size:13px; font-weight:bold; color:var(--text-main); margin-bottom:6px;">Timezone</label>
+                  <input type="text" id="staffTzInput" placeholder="e.g. EST" value="${window.escapeHTML(p.timezone || '')}" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-secondary); color:var(--text-main); font-size:14px; box-sizing:border-box;">
+              </div>
+              <div>
+                  <label style="display:block; font-size:13px; font-weight:bold; color:var(--text-main); margin-bottom:6px;">Location</label>
+                  <input type="text" id="staffLocInput" placeholder="e.g. Texas, USA" value="${window.escapeHTML(p.location || '')}" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-secondary); color:var(--text-main); font-size:14px; box-sizing:border-box;">
+              </div>
+              <div>
+                  <label style="display:block; font-size:13px; font-weight:bold; color:var(--text-main); margin-bottom:6px;">Bio / Tagline</label>
+                  <textarea id="staffBioInput" placeholder="A short fun quote..." style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-secondary); color:var(--text-main); font-size:14px; box-sizing:border-box; resize:vertical; min-height:80px;">${window.escapeHTML(p.bio || '')}</textarea>
+              </div>
+              <button id="saveStaffProfileBtn" onclick="window.saveStaffProfileFromModal()" style="background:var(--accent); color:#fff; border:none; padding:12px; border-radius:6px; cursor:pointer; font-weight:bold; margin-top:10px; font-size:15px; transition:0.2s;">Save Profile</button>
+          </div>
+      </div>`;
+    document.body.appendChild(div);
+  } else {
+    modal.style.display = 'flex';
+  }
 };
 
 window.openEditProfileHubModal = () => {
   const activeUser = currentUser || realUser;
   if (!activeUser) return;
-  
-  // Robust Staff/Admin & Root Admin Check:
-  // 1. Check if staffProfileModal is already in the DOM (rendered by renderAccountHub)
-  // 2. Check if activeUser or realUser is Root Admin (318843189)
-  // 3. Check getAdminLevel / isAdminUser / staffProfilesMap
-  const hasStaffModal = !!document.getElementById('staffProfileModal');
-  const isRootAdmin = (activeUser.gameId && Number(activeUser.gameId) === 318843189) || (realUser && realUser.gameId && Number(realUser.gameId) === 318843189);
-  const isAdmin = (window.getAdminLevel && (window.getAdminLevel(activeUser) || (realUser && window.getAdminLevel(realUser))));
-  const isStaffMap = (activeUser.gameId && window.staffProfilesMap && window.staffProfilesMap[activeUser.gameId]) || (realUser && realUser.gameId && window.staffProfilesMap && window.staffProfilesMap[realUser.gameId]);
-
-  const isStaffOrAdmin = hasStaffModal || isRootAdmin || isAdmin || isStaffMap;
-  
-  // If not staff/admin, directly open standard Edit Profile modal
-  if (!isStaffOrAdmin) {
-    window.openEditProfileModal();
-    return;
-  }
   
   // Clean up any existing hub modal
   const oldHub = document.getElementById('editProfileHubModalOverlay');
@@ -12346,43 +12396,7 @@ window.resetBearTrapEvent = async () => {
     });
     
     
-    if (accLevel) {
-        document.getElementById('openStaffProfileBtn').addEventListener('click', () => {
-            document.getElementById('staffProfileModal').style.display = 'flex';
-        });
-        document.getElementById('closeStaffProfileBtn').addEventListener('click', () => {
-            document.getElementById('staffProfileModal').style.display = 'none';
-        });
-        
-        document.getElementById('saveStaffProfileBtn').addEventListener('click', async () => {
-            const dept = document.getElementById('staffDeptInput').value.trim();
-            const tz = document.getElementById('staffTzInput').value.trim();
-            const loc = document.getElementById('staffLocInput').value.trim();
-            const bio = document.getElementById('staffBioInput').value.trim();
-            const btn = document.getElementById('saveStaffProfileBtn');
-            btn.textContent = 'Saving...';
-            btn.disabled = true;
-            try {
-                await set(ref(db, `staffProfiles/${currentUser.gameId}`), {
-                    department: dept,
-                    timezone: tz,
-                    location: loc,
-                    bio: bio
-                });
-                window.showToast("Staff Profile saved successfully!", "success");
-                btn.textContent = 'Save Profile';
-                btn.disabled = false;
-                setTimeout(() => {
-                    document.getElementById('staffProfileModal').style.display = 'none';
-                }, 500);
-            } catch (err) {
-                console.error(err);
-                window.showToast("Failed to save profile.", "error");
-                btn.textContent = 'Save Profile';
-                btn.disabled = false;
-            }
-        });
-    }
+
     
     
       const openLinkAltBtn = document.getElementById('openLinkAltBtn');

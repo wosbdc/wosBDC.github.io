@@ -1,10 +1,10 @@
 {
-  "version": "1.92.0",
+  "version": "1.93.0",
   "releaseDate": "2026-08-12",
-  "title": "👑 Comprehensive Staff & Root Admin Permission Recognition",
+  "title": "🎯 Guaranteed Edit Profile Options Selector Popup",
   "notes": [
-    "Expanded openEditProfileHubModal permission detection to check root admin ID (318843189), realUser session, admin levels, staff directory maps, and DOM elements",
-    "Guaranteed 100% reliable Edit Profile Options popup execution for Root Admins, R5, R4, and Staff members",
-    "Bypassed Service Worker caching by updating PWA cache key to v1.92.0"
+    "Fixed null element reference for openStaffProfileBtn in renderAccountHub()",
+    "Removed restrictive permission guards so Edit Profile button always opens the glassmorphic selector popup",
+    "Added dynamic auto-rendering for Staff Profile modal and global window.saveStaffProfileFromModal()"
   ]
 }
