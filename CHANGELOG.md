@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [1.76.0] - 2026-08-12
+### 3D Solar Fire Wisps Particle Flame Animation
+- **🔥 Live 3D Solar Fire Wisps Particle Engine**:
+  - Integrated dynamic 3D Solar Fire Wisps particle engine across all Fire Crystal Badges (FC1 to FC10).
+  - Hovering on desktop or tapping on smartphones roars custom color-matched fire wisps, fire tongues, and glowing embers.
+  - Automatic event delegation (`.fc-badge-stage`) seamlessly animates FC badges anywhere on the dashboard.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.76.0`) in `window.getFurnaceIconHtml`.
+
 ## [1.75.0] - 2026-08-12
 ### 3D Flame Specular Highlights & Depth Shadows (FC7 to FC10 Focus)
 - **🔥 Focused Enhancements on FC7 to FC10**:
