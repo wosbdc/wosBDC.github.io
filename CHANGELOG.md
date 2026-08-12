@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## [1.60.0] - 2026-08-11
+### Linked Alt Accounts Profile & Start Date Editor
+- **🔗 Linked Alt Account Editing Modal**:
+  - Added an **`✏️ Edit`** button to every card under **Account Hub ➔ 🔗 Linked Alt Accounts**.
+  - Created `window.openEditAltProfileModal(gid, altName)` allowing users to set/update their Alt's **Furnace / Fire Crystal Level** and **Account Start Date**.
+- **⏱️ Automatic Live Time Active Calculation**:
+  - Implemented `window.calculateTimeActive(dateInput)` which automatically computes exact years, months, and days active from the Alt's start date (e.g. `1y 3m 10d`).
+  - Shows live 3D Fire Crystal badge and Time Active preview inside the modal as values change.
+  - Persists data to Firebase (`users_alts/${gid}` and `roster_live`), updating the Account Hub, Player Lookup, and Database Editor instantly.
+
 ## [1.59.9] - 2026-08-11
 ### Firebase Roster Write Stability & Instant Sync
 - **🔥 Safe Firebase Roster Mutation**: Rewrote `openAdminEditFurnaceModal` and `saveEditProfileBtn` to update `roster_live` via safe root object matching (`set(ref(db, 'roster_live'), rosterObj)`), preventing key character errors and guaranteeing immediate database persistence and zero-refresh UI updates.

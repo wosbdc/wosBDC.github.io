@@ -185,6 +185,36 @@ window.formatTimeActiveShort = (str) => {
     return filtered === '' ? '0d' : filtered;
 };
 
+window.calculateTimeActive = (dateInput) => {
+   if (!dateInput) return 'Unknown';
+   const startDate = new Date(dateInput);
+   if (isNaN(startDate.getTime())) return window.formatTimeActiveShort(dateInput.toString());
+   
+   const now = new Date();
+   let years = now.getFullYear() - startDate.getFullYear();
+   let months = now.getMonth() - startDate.getMonth();
+   let days = now.getDate() - startDate.getDate();
+   
+   if (days < 0) {
+      months--;
+      const prevMonthLastDay = new Date(now.getFullYear(), now.getMonth(), 0).getDate();
+      days += prevMonthLastDay;
+   }
+   if (months < 0) {
+      years--;
+      months += 12;
+   }
+   
+   if (years < 0) return '0d';
+   
+   let parts = [];
+   if (years > 0) parts.push(`${years}y`);
+   if (months > 0) parts.push(`${months}m`);
+   if (days > 0 || parts.length === 0) parts.push(`${days}d`);
+   
+   return parts.join(' ');
+};
+
 
 // --- Settings Sidebar Logic ---
 const settingsBtn = document.getElementById('settingsBtn');
@@ -7318,6 +7348,186 @@ window.openEditProfileModal = async () => {
   }
 };
 
+window.openEditAltProfileModal = async (gameId, chiefName) => {
+   if (!currentUser) return;
+   const cleanGid = (gameId || '').toString().trim();
+
+   let currentFurnace = '';
+   let currentJoinedDate = '';
+
+   try {
+      const altSnap = await get(ref(db, `users_alts/${cleanGid}`));
+      if (altSnap.exists()) {
+         const altData = altSnap.val();
+         currentFurnace = altData.stove_lv || altData.furnaceLevel || '';
+         currentJoinedDate = altData.joinedDate || '';
+      }
+   } catch(e) {}
+
+   if (!currentFurnace || !currentJoinedDate) {
+      try {
+         const rosterSnap = await get(ref(db, 'roster_live'));
+         if (rosterSnap.exists()) {
+            const roster = rosterSnap.val() || {};
+            const rItem = roster[cleanGid] || roster[chiefName] || Object.values(roster).find(r => r.gameId === cleanGid || (r.name && r.name.toLowerCase() === chiefName.toLowerCase()));
+            if (rItem) {
+               if (!currentFurnace) currentFurnace = rItem.furnaceLevel || rItem.stove_lv || '';
+               if (!currentJoinedDate) currentJoinedDate = rItem.joinedDate || '';
+            }
+         }
+      } catch(e) {}
+   }
+
+   const initialTimeActive = currentJoinedDate ? window.calculateTimeActive(currentJoinedDate) : 'Unknown';
+
+   const modalOverlay = document.createElement('div');
+   modalOverlay.id = 'editAltProfileModalOverlay';
+   modalOverlay.style.cssText = 'position:fixed; inset:0; z-index:999999; background:rgba(0,0,0,0.75); backdrop-filter:blur(8px); display:flex; align-items:center; justify-content:center; padding:20px; animation:fadeIn 0.2s ease;';
+
+   const furnaceSelectHtml = window.renderFurnaceSelectHtml('editAltFurnaceSelect', currentFurnace, 'margin-top:6px;');
+
+   modalOverlay.innerHTML = `
+     <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:20px; width:100%; max-width:480px; padding:28px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.7); position:relative;">
+        <button id="closeEditAltProfileBtn" style="position:absolute; top:18px; right:18px; background:transparent; border:none; color:var(--text-muted); font-size:20px; cursor:pointer; font-weight:bold; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center;">✕</button>
+
+        <h3 style="margin:0 0 6px 0; color:var(--text-main); font-size:20px; font-weight:bold; display:flex; align-items:center; gap:8px;">
+           ✏️ Edit Alt Profile: <span style="color:var(--accent);">${window.escapeHTML(chiefName)}</span>
+        </h3>
+        <div style="font-size:13px; color:var(--text-muted); margin-bottom:20px;">Game ID: ${cleanGid}</div>
+
+        <div style="display:flex; flex-direction:column; gap:18px;">
+           
+           <!-- Preview Card -->
+           <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:16px; display:flex; align-items:center; justify-content:space-between;">
+              <div style="display:flex; align-items:center; gap:12px;">
+                 <div id="editAltBadgePreview" style="width:52px; height:52px; display:flex; align-items:center; justify-content:center;">
+                    ${window.getFurnaceIconHtml(currentFurnace, 52)}
+                 </div>
+                 <div style="display:flex; flex-direction:column;">
+                    <span style="font-size:14px; font-weight:bold; color:#fff;">${window.escapeHTML(chiefName)}</span>
+                    <span id="editAltTimeActivePreview" style="font-size:12px; color:#06b6d4; font-weight:bold; margin-top:2px;">⏱️ ${initialTimeActive}</span>
+                 </div>
+              </div>
+           </div>
+
+           <!-- Furnace Level Input -->
+           <div>
+              <label style="font-size:13px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">🔥 Furnace / Fire Crystal Level</label>
+              ${furnaceSelectHtml}
+           </div>
+
+           <!-- Start Date Input -->
+           <div>
+              <label style="font-size:13px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">📅 Account Start Date (Joined Date)</label>
+              <input type="date" id="editAltJoinedDateInput" value="${currentJoinedDate}" style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:15px; margin-top:6px; box-sizing:border-box;">
+              <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Setting the start date automatically computes your Alt's exact Time Active.</div>
+           </div>
+
+           <div style="display:flex; gap:12px; margin-top:10px;">
+              <button id="cancelEditAltProfileBtn" style="flex:1; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.2); color:#cbd5e1; padding:12px; border-radius:10px; cursor:pointer; font-weight:bold; font-size:15px;">Cancel</button>
+              <button id="saveEditAltProfileBtn" style="flex:1; background:linear-gradient(135deg, #06b6d4, #3b82f6); color:#fff; border:none; padding:12px; border-radius:10px; cursor:pointer; font-weight:bold; font-size:15px; box-shadow:0 4px 15px rgba(6,182,212,0.4);">Save Changes</button>
+           </div>
+        </div>
+     </div>`;
+
+   document.body.appendChild(modalOverlay);
+
+   const fSelect = document.getElementById('editAltFurnaceSelect');
+   const dInput = document.getElementById('editAltJoinedDateInput');
+   const bPreview = document.getElementById('editAltBadgePreview');
+   const taPreview = document.getElementById('editAltTimeActivePreview');
+
+   const updatePreviews = () => {
+      if (fSelect && bPreview) {
+         bPreview.innerHTML = window.getFurnaceIconHtml(fSelect.value, 52);
+      }
+      if (dInput && taPreview) {
+         const calculated = window.calculateTimeActive(dInput.value);
+         taPreview.textContent = `⏱️ ${calculated}`;
+      }
+   };
+
+   if (fSelect) fSelect.addEventListener('change', updatePreviews);
+   if (dInput) dInput.addEventListener('input', updatePreviews);
+
+   const closeModal = () => { if (document.body.contains(modalOverlay)) document.body.removeChild(modalOverlay); };
+   const closeBtn = document.getElementById('closeEditAltProfileBtn');
+   const cancelBtn = document.getElementById('cancelEditAltProfileBtn');
+   if (closeBtn) closeBtn.onclick = closeModal;
+   if (cancelBtn) cancelBtn.onclick = closeModal;
+
+   const saveBtn = document.getElementById('saveEditAltProfileBtn');
+   if (saveBtn) {
+      saveBtn.onclick = async () => {
+         const newFurnace = fSelect ? fSelect.value : currentFurnace;
+         const newJoinedDate = dInput ? dInput.value : currentJoinedDate;
+         const calculatedTimeActive = window.calculateTimeActive(newJoinedDate);
+
+         saveBtn.disabled = true;
+         saveBtn.textContent = 'Saving...';
+
+         try {
+            // 1. Save to users_alts/${cleanGid} in Firebase
+            await set(ref(db, `users_alts/${cleanGid}`), {
+               gameId: cleanGid,
+               name: chiefName,
+               stove_lv: newFurnace,
+               furnaceLevel: newFurnace,
+               joinedDate: newJoinedDate,
+               timeActive: calculatedTimeActive,
+               updatedAt: new Date().toISOString()
+            });
+
+            // 2. Update roster_live in Firebase safely
+            try {
+               const rosterSnap = await get(ref(db, 'roster_live')).catch(() => null);
+               let rosterObj = (rosterSnap && rosterSnap.exists()) ? rosterSnap.val() : {};
+
+               let foundKey = null;
+               for (const [rk, rv] of Object.entries(rosterObj)) {
+                  if (rk.toLowerCase() === chiefName.toLowerCase() ||
+                     (rv && rv.name && rv.name.toLowerCase() === chiefName.toLowerCase()) ||
+                     (cleanGid && rv && rv.gameId && rv.gameId.toString().trim() === cleanGid)) {
+                     foundKey = rk;
+                     break;
+                  }
+               }
+               const saveKey = foundKey || cleanGid;
+               rosterObj[saveKey] = {
+                  ...(rosterObj[saveKey] || {}),
+                  name: chiefName,
+                  gameId: cleanGid,
+                  furnaceLevel: newFurnace,
+                  stove_lv: newFurnace,
+                  joinedDate: newJoinedDate,
+                  timeActive: calculatedTimeActive,
+                  updatedAt: Date.now()
+               };
+
+               await set(ref(db, 'roster_live'), rosterObj);
+               window.rosterCache = rosterObj;
+            } catch(e) { console.warn("roster_live alt save error:", e); }
+
+            // 3. Ping backend API
+            try {
+               const token = await getAuthToken();
+               const url = `${API_BASE_URL}?api=registerNewPlayer&gameId=${encodeURIComponent(cleanGid)}&name=${encodeURIComponent(chiefName)}&stove_lv=${encodeURIComponent(newFurnace)}&dateStarted=${encodeURIComponent(newJoinedDate)}&token=${encodeURIComponent(token)}`;
+               fetch(url, { mode: 'no-cors' }).catch(e => null);
+            } catch(e) {}
+
+            window.showToast(`Updated alt profile for ${chiefName}!`, "success");
+            closeModal();
+            views.account();
+         } catch(e) {
+            console.error("Save alt profile error:", e);
+            window.showToast("Error updating alt profile.", "error");
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Save Changes';
+         }
+      };
+   }
+};
+
 const views = {
   staff: async () => {
     if (!currentUser) return window.renderMembersOnlyGuard("Staff & Officers");
@@ -11032,6 +11242,12 @@ window.resetBearTrapEvent = async () => {
     if (!currentUser) return window.renderMembersOnlyGuard("User Account Hub");
     window.activeViewFunc = () => views.account();
     
+    let altProfilesMap = {};
+    try {
+        const altsSnap = await get(ref(db, 'users_alts')).catch(() => null);
+        if (altsSnap && altsSnap.exists()) altProfilesMap = altsSnap.val() || {};
+    } catch(e) {}
+
     let linkedHtml = '';
     let links = currentUser.linkedGameIds || [];
       
@@ -11052,27 +11268,47 @@ window.resetBearTrapEvent = async () => {
              </style>`;
          
     if (links.length > 0) {
-        linkedHtml += `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:16px; margin-top:15px; margin-bottom:15px; cursor:default;">`;
+        linkedHtml += `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap:16px; margin-top:15px; margin-bottom:15px; cursor:default;">`;
         links.forEach(gid => {
               let altName = idToNameMap[gid] || `Game ID: ${gid}`;
-              let flVal = 'N/A';
-              let timeActiveVal = 'Unknown';
+              let altSaved = altProfilesMap[gid] || {};
+
+              let flVal = altSaved.stove_lv || altSaved.furnaceLevel || 'N/A';
+              let joinedDateVal = altSaved.joinedDate || '';
+              let timeActiveVal = joinedDateVal ? window.calculateTimeActive(joinedDateVal) : 'Unknown';
+
               const rosterData = window.liveData["Chief's List"];
               let foundInRoster = false;
               if (rosterData && rosterData.length > 1) {
                   for (let i = 1; i < rosterData.length; i++) {
                       if (rosterData[i][1] && rosterData[i][1].toString().trim() === gid.toString().trim()) {
                           foundInRoster = true;
-                          flVal = rosterData[i][2] || 'N/A';
-                          timeActiveVal = rosterData[i][5] ? window.formatTimeActiveShort(rosterData[i][5].toString()) : 'Unknown';
+                          if (flVal === 'N/A' && rosterData[i][2]) flVal = rosterData[i][2];
+                          if (!joinedDateVal && rosterData[i][4]) {
+                              joinedDateVal = rosterData[i][4];
+                              timeActiveVal = window.calculateTimeActive(joinedDateVal);
+                          } else if (timeActiveVal === 'Unknown' && rosterData[i][5]) {
+                              timeActiveVal = window.formatTimeActiveShort(rosterData[i][5].toString());
+                          }
                           break;
+                      }
+                  }
+              }
+
+              if (flVal === 'N/A' && window.rosterCache) {
+                  const rItem = window.rosterCache[gid] || window.rosterCache[altName];
+                  if (rItem) {
+                      if (rItem.furnaceLevel || rItem.stove_lv) flVal = rItem.furnaceLevel || rItem.stove_lv;
+                      if (!joinedDateVal && rItem.joinedDate) {
+                          joinedDateVal = rItem.joinedDate;
+                          timeActiveVal = window.calculateTimeActive(joinedDateVal);
                       }
                   }
               }
               
               let flSpanId = `alt-fl-${gid}`;
               
-              if (!foundInRoster) {
+              if (!foundInRoster && flVal === 'N/A') {
                   setTimeout(async () => {
                       try {
                           const res = await fetch(`${VERIFY_PROXY_URL}?id=${encodeURIComponent(gid)}`);
@@ -11089,20 +11325,20 @@ window.resetBearTrapEvent = async () => {
               <div style="background:rgba(15,23,42,0.6); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.1); border-radius:24px; padding:24px; box-shadow:0 10px 30px -10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1); display:flex; flex-direction:column; justify-content:space-between;">
                   
                   <!-- Top row: avatar + name + action buttons -->
-                  <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                      <div style="display:flex; gap:16px; align-items:center;">
+                  <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+                      <div style="display:flex; gap:14px; align-items:center;">
                           <!-- Avatar (clickable to upload) -->
-                          <div style="width:70px; height:70px; border-radius:50%; border:2px solid #06b6d4; box-shadow:0 0 15px rgba(6,182,212,0.5); overflow:hidden; background:var(--bg-secondary); position:relative; cursor:pointer; flex-shrink:0;" onclick="window._uploadTargetId='${gid}'; document.getElementById('avatarUploadInput').click();" title="Change Alt Avatar">
+                          <div style="width:64px; height:64px; border-radius:50%; border:2px solid #06b6d4; box-shadow:0 0 15px rgba(6,182,212,0.5); overflow:hidden; background:var(--bg-secondary); position:relative; cursor:pointer; flex-shrink:0;" onclick="window._uploadTargetId='${gid}'; document.getElementById('avatarUploadInput').click();" title="Change Alt Avatar">
                               <img id="altAvatarImg-${gid}" src="${window.getAvatarUrl(gid, altName)}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(altName)}&background=06b6d4&color=fff&bold=true&size=128';">
                               <div id="altAvatarFallback-${gid}" style="display:none; align-items:center; justify-content:center; width:100%; height:100%; font-size:24px; font-weight:bold; color:#fff;">${altName.charAt(0).toUpperCase()}</div>
                               <div style="position:absolute; inset:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0'"><span style="font-size:18px;">✏️</span></div>
                           </div>
                           <div style="display:flex; flex-direction:column; justify-content:center;">
-                              <span style="font-size:18px; font-weight:600; color:#ffffff; line-height:1.2;">${altName}</span>
-                              <span style="font-size:13px; color:#94a3b8; margin-top:4px;">ID: ${gid}</span>
+                              <span style="font-size:17px; font-weight:600; color:#ffffff; line-height:1.2;">${altName}</span>
+                              <span style="font-size:12px; color:#94a3b8; margin-top:4px;">ID: ${gid}</span>
                           </div>
                       </div>
-                      <!-- Action buttons (enroll/unlink) -->
+                      <!-- Action buttons (edit/enroll/unlink) -->
                       ${ (() => {
           let isAltEnrolled = false;
           const gcb = window.liveData['giftcodebot'];
@@ -11116,13 +11352,19 @@ window.resetBearTrapEvent = async () => {
           }
           if (isAltEnrolled || enrolledGameIds.has(gid.toString())) {
               return `<div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end; flex-shrink:0;">
-                  <span style="border:1px solid #10b981; color:#10b981; background:rgba(16,185,129,0.1); border-radius:9999px; padding:4px 12px; font-size:12px; font-weight:500; display:inline-flex; align-items:center; gap:6px;">&#x2705; Enrolled</span>
-                  <button onclick="window.unlinkAltAccountPrompt('${gid}')" style="border:1px solid #f87171; color:#f87171; border-radius:8px; padding:6px 12px; font-size:12px; font-weight:600; cursor:pointer; background:transparent; transition:background 0.2s;" onmouseover="this.style.background='rgba(248,113,113,0.1)'" onmouseout="this.style.background='transparent'">UNLINK</button>
+                  <span style="border:1px solid #10b981; color:#10b981; background:rgba(16,185,129,0.1); border-radius:9999px; padding:3px 10px; font-size:11px; font-weight:500; display:inline-flex; align-items:center; gap:4px;">&#x2705; Enrolled</span>
+                  <div style="display:flex; gap:6px;">
+                      <button onclick="window.openEditAltProfileModal('${gid}', '${altName.replace(/'/g, "\\'")}')" style="background:rgba(6,182,212,0.15); border:1px solid #06b6d4; color:#06b6d4; border-radius:8px; padding:5px 10px; font-size:12px; font-weight:600; cursor:pointer; transition:background 0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.25)'" onmouseout="this.style.background='rgba(6,182,212,0.15)'">✏️ Edit</button>
+                      <button onclick="window.unlinkAltAccountPrompt('${gid}')" style="border:1px solid #f87171; color:#f87171; border-radius:8px; padding:5px 10px; font-size:12px; font-weight:600; cursor:pointer; background:transparent; transition:background 0.2s;" onmouseover="this.style.background='rgba(248,113,113,0.1)'" onmouseout="this.style.background='transparent'">UNLINK</button>
+                  </div>
               </div>`;
           } else {
               return `<div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end; flex-shrink:0;">
-                  <button onclick="window.openAltPerksModal('${gid}', '${altName.replace(/'/g, "\\'")}')" style="background:rgba(16,185,129,0.15); border:1px solid #10b981; color:#10b981; border-radius:8px; padding:6px 12px; font-size:12px; font-weight:600; cursor:pointer; transition:background 0.2s;" onmouseover="this.style.background='rgba(16,185,129,0.25)'" onmouseout="this.style.background='rgba(16,185,129,0.15)'">&#x1F381; Enable Perks</button>
-                  <button onclick="window.unlinkAltAccountPrompt('${gid}')" style="border:1px solid #f87171; color:#f87171; border-radius:8px; padding:6px 12px; font-size:12px; font-weight:600; cursor:pointer; background:transparent; transition:background 0.2s;" onmouseover="this.style.background='rgba(248,113,113,0.1)'" onmouseout="this.style.background='transparent'">UNLINK</button>
+                  <button onclick="window.openAltPerksModal('${gid}', '${altName.replace(/'/g, "\\'")}')" style="background:rgba(16,185,129,0.15); border:1px solid #10b981; color:#10b981; border-radius:8px; padding:5px 10px; font-size:12px; font-weight:600; cursor:pointer; transition:background 0.2s;" onmouseover="this.style.background='rgba(16,185,129,0.25)'" onmouseout="this.style.background='rgba(16,185,129,0.15)'">&#x1F381; Enable Perks</button>
+                  <div style="display:flex; gap:6px;">
+                      <button onclick="window.openEditAltProfileModal('${gid}', '${altName.replace(/'/g, "\\'")}')" style="background:rgba(6,182,212,0.15); border:1px solid #06b6d4; color:#06b6d4; border-radius:8px; padding:5px 10px; font-size:12px; font-weight:600; cursor:pointer; transition:background 0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.25)'" onmouseout="this.style.background='rgba(6,182,212,0.15)'">✏️ Edit</button>
+                      <button onclick="window.unlinkAltAccountPrompt('${gid}')" style="border:1px solid #f87171; color:#f87171; border-radius:8px; padding:5px 10px; font-size:12px; font-weight:600; cursor:pointer; background:transparent; transition:background 0.2s;" onmouseover="this.style.background='rgba(248,113,113,0.1)'" onmouseout="this.style.background='transparent'">UNLINK</button>
+                  </div>
               </div>`;
           }
         })() }
