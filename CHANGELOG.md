@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [1.70.0] - 2026-08-12
+### Pure No-Halo 3D Multi-Layered Fire Crystal Star Badge (FC1 Test)
+- **💎 Pure Ringless 3D Star Gem**:
+  - Generated FC1 (`fc1.png`) completely without any neon halo ring or circle frame!
+  - Features long primary ruby star points (0°) with smaller secondary star points (~65% scale, 30°) poking out between them, floating directly on a 100% transparent background.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.70.0`) in `window.getFurnaceIconHtml`.
+
 ## [1.69.0] - 2026-08-12
 ### FC1 Badge with Smaller Secondary Star Points Proportions
 - **💎 Refined Multi-Layered Star Proportions**:
