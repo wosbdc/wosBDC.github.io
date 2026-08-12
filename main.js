@@ -109,7 +109,7 @@ window.getFurnaceIconHtml = (level, size = 48) => {
      const canvasOffset = Math.round((canvasSize - size) / 2);
      return `<span class="fc-badge-stage" data-fc="${fcNum}" style="display:inline-flex; align-items:center; justify-content:center; position:relative; vertical-align:middle; cursor:pointer; width:${size}px; height:${size}px; user-select:none; -webkit-user-select:none;">
        <canvas class="fc-flame-canvas" width="${canvasSize}" height="${canvasSize}" style="position:absolute; top:-${canvasOffset}px; left:-${canvasOffset}px; width:${canvasSize}px; height:${canvasSize}px; pointer-events:none; z-index:3;"></canvas>
-       <img src="/badges/fc${fcNum}.png?v=1.89.6" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
+       <img src="/badges/fc${fcNum}.png?v=1.89.7" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
      </span>`;
   }
 
@@ -17938,12 +17938,12 @@ window.showIosInstallGuide = function() {
         <!-- Chrome Mobile -->
         <div style="background: rgba(34, 197, 94, 0.08); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 14px; padding: 14px;">
           <div style="font-weight: 800; font-size: 0.92rem; color: #4ade80; margin-bottom: 6px; display:flex; align-items:center; gap:6px;">
-            <span>🌐</span> If using Chrome:
+            <span>🌐</span> If using Chrome on iOS / Mobile:
           </div>
-          <div style="font-size: 0.85rem; color: #cbd5e1; line-height: 1.45;">
-            1. Tap Chrome's <strong style="color:#4ade80;">Menu (⋮)</strong> or <strong style="color:#4ade80;">Share</strong>.<br>
-            2. Tap <strong style="color:#4ade80;">"Install App" 📲</strong> or <strong style="color:#4ade80;">"Add to Home Screen" ➕</strong>.<br>
-            3. Tap <strong style="color:#4ade80;">"Install"</strong> to confirm!
+          <div style="font-size: 0.85rem; color: #cbd5e1; line-height: 1.5;">
+            1. Tap Chrome's <strong style="color:#4ade80; display:inline-flex; align-items:center; gap:4px; vertical-align:middle;">Share <span style="display:inline-flex; align-items:center; justify-content:center; background:rgba(34,197,94,0.18); border:1px solid rgba(34,197,94,0.5); border-radius:6px; padding:2px 5px; vertical-align:middle;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg></span></strong> icon or <strong style="color:#4ade80;">Menu (⋮)</strong>.<br>
+            2. Tap <strong style="color:#4ade80;">"View More"</strong> (or scroll down menu).<br>
+            3. Tap <strong style="color:#4ade80;">"Add to Home Screen" ➕</strong> & tap <strong style="color:#4ade80;">"Add"</strong>!
           </div>
         </div>
       </div>

@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [1.89.7] - 2026-08-12
+### 🌐 Chrome for iOS 'View More' Step & Share SVG Icon Update
+- **🌐 Chrome for iOS Instructions Update**:
+  - Rendered green Share SVG icon for Chrome for iOS.
+  - Added explicit step 2: tap **"View More"** (or scroll down menu) ➔ **"Add to Home Screen" ➕**.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.89.7`) in `window.getFurnaceIconHtml`.
+
 ## [1.89.6] - 2026-08-12
 ### 📱 Rendered Exact Apple iOS Safari Share SVG Icon
 - **📱 Exact Safari Share SVG Icon**:

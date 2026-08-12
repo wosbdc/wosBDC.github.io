@@ -1,9 +1,9 @@
 {
-  "version": "1.89.6",
+  "version": "1.89.7",
   "releaseDate": "2026-08-12",
-  "title": "📱 Rendered Exact Apple iOS Safari Share SVG Icon",
+  "title": "📱 Chrome for iOS 'View More' Step & Share SVG Icon Update",
   "notes": [
-    "Embedded exact pixel-perfect Apple iOS Share SVG icon (square box with upward arrow) inside the PWA install guide",
-    "Enhanced visual recognition for Safari and Chrome mobile users"
+    "Updated Chrome for iOS guide with exact Share SVG icon and explicit 'View More' ➔ 'Add to Home Screen' step",
+    "Unified Apple iOS Safari and Chrome iOS visual install paths"
   ]
 }
