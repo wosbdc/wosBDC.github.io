@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [1.95.2] - 2026-08-12
+### 🔥 Signup & Claim Profile Furnace Level Integration
+- **🏰 Signup Furnace Level Selector**: Added Furnace Level selection dropdown to the account registration and profile claim modal (`#authFurnaceWrapper`).
+- **🤖 Auto-Verification & Persistence**: Game ID verification auto-populates the user's verified Furnace Level (`stove_lv` or roster level) and persists it directly into Firebase `users/${uid}/furnaceLevel` and the Google Sheets backend.
+
 ## [1.95.1] - 2026-08-12
 ### 👥 Registered Users Dashboard Layout Correction
 - **🧹 Dashboard Tab Layout Cleanup**: Cleaned up the Admin Dashboard tab markup to ensure the Registered Users Database and Unclaimed Roster Member tracking remain strictly inside the **👥 Users** tab (and kept out of the Daily Tools tab).

@@ -84,17 +84,22 @@ export async function unlinkAltAccount(uid, gameIdToRemove, currentLinks = []) {
   await set(ref(db, `users/${uid}/linkedGameIds`), updatedLinks);
 }
 
-export async function registerUser(email, password, gameId, chiefName) {
+export async function registerUser(email, password, gameId, chiefName, furnaceLevel = '') {
   const userCredential = await createUserWithEmailAndPassword(auth, email, password);
   const user = userCredential.user;
   
-  // Save user profile in Realtime Database mapped by UID
-  await set(ref(db, `users/${user.uid}`), {
+  const userData = {
     email: user.email,
     gameId: gameId,
     name: chiefName,
     createdAt: new Date().toISOString()
-  });
+  };
+  if (furnaceLevel) {
+    userData.furnaceLevel = furnaceLevel;
+  }
+  
+  // Save user profile in Realtime Database mapped by UID
+  await set(ref(db, `users/${user.uid}`), userData);
   
   return user;
 }

@@ -1,9 +1,10 @@
 {
-  "version": "1.95.1",
+  "version": "1.95.2",
   "releaseDate": "2026-08-12",
-  "title": "👥 Registered Users Dashboard Layout Correction",
+  "title": "🔥 Signup & Claim Profile Furnace Level Integration",
   "notes": [
-    "Cleaned up Admin Dashboard Users tab HTML structure",
-    "Ensured Registered Users Database and Unclaimed Roster Member tracking belong strictly inside the Users tab"
+    "Added Furnace Level selection dropdown to account registration & profile claiming modal",
+    "Auto-populates verified Furnace Level (FC 1-10 or Furnace 1-30) from Century Games API and alliance roster lookup",
+    "Persists Furnace Level to Firebase user profile and backend Google Sheets API"
   ]
 }

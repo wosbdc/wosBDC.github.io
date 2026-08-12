@@ -109,7 +109,7 @@ window.getFurnaceIconHtml = (level, size = 48) => {
      const canvasOffset = Math.round((canvasSize - size) / 2);
      return `<span class="fc-badge-stage" data-fc="${fcNum}" style="display:inline-flex; align-items:center; justify-content:center; position:relative; vertical-align:middle; cursor:pointer; width:${size}px; height:${size}px; user-select:none; -webkit-user-select:none;">
        <canvas class="fc-flame-canvas" width="${canvasSize}" height="${canvasSize}" style="position:absolute; top:-${canvasOffset}px; left:-${canvasOffset}px; width:${canvasSize}px; height:${canvasSize}px; pointer-events:none; z-index:3;"></canvas>
-       <img src="/badges/fc${fcNum}.png?v=1.95.1" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
+       <img src="/badges/fc${fcNum}.png?v=1.95.2" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
      </span>`;
   }
 
@@ -3871,13 +3871,25 @@ if(signOutSidebarBtn) signOutSidebarBtn.addEventListener('click', (e) => {
 if(closeAuthBtn) closeAuthBtn.addEventListener('click', closeAuthModal);
 if(authModalOverlay) authModalOverlay.addEventListener('click', closeAuthModal);
 
+window.updateAuthFurnaceDropdown = (selectedVal = '') => {
+  const container = document.getElementById('authFurnaceSelectContainer');
+  if (container) {
+    container.innerHTML = window.renderFurnaceSelectHtml('authFurnaceLevel', selectedVal || '30');
+  }
+};
+
 if(authToggleBtn) authToggleBtn.addEventListener('click', (e) => {
   e.preventDefault();
   isRegistering = !isRegistering;
   authErrorMsg.style.display = 'none';
+  const authFurnaceWrapper = document.getElementById('authFurnaceWrapper');
   if (isRegistering) {
     authModalTitle.textContent = 'Create Account';
     authGameIdWrapper.style.display = 'flex';
+    if (authFurnaceWrapper) {
+      authFurnaceWrapper.style.display = 'block';
+      window.updateAuthFurnaceDropdown(verifiedFurnaceLevel || '30');
+    }
     const authForgotPwWrapper = document.getElementById('authForgotPwWrapper');
     if (authForgotPwWrapper) authForgotPwWrapper.style.display = 'none';
     const authDateWrapper = document.getElementById('authDateWrapper');
@@ -3890,6 +3902,7 @@ if(authToggleBtn) authToggleBtn.addEventListener('click', (e) => {
   } else {
     authModalTitle.textContent = 'Sign In';
     authGameIdWrapper.style.display = 'none';
+    if (authFurnaceWrapper) authFurnaceWrapper.style.display = 'none';
     const authForgotPwWrapper = document.getElementById('authForgotPwWrapper');
     if (authForgotPwWrapper) authForgotPwWrapper.style.display = 'block';
     const authDateWrapper = document.getElementById('authDateWrapper');
@@ -3906,6 +3919,8 @@ window.openLoginModal = () => {
   if (authErrorMsg) authErrorMsg.style.display = 'none';
   if (authModalTitle) authModalTitle.textContent = 'Sign In';
   if (authGameIdWrapper) authGameIdWrapper.style.display = 'none';
+  const authFurnaceWrapper = document.getElementById('authFurnaceWrapper');
+  if (authFurnaceWrapper) authFurnaceWrapper.style.display = 'none';
   const authForgotPwWrapper = document.getElementById('authForgotPwWrapper');
   if (authForgotPwWrapper) authForgotPwWrapper.style.display = 'block';
   const authDateWrapper = document.getElementById('authDateWrapper');
@@ -3923,6 +3938,11 @@ window.openRegisterModal = () => {
   if (authErrorMsg) authErrorMsg.style.display = 'none';
   if (authModalTitle) authModalTitle.textContent = 'Create Account / Claim Profile';
   if (authGameIdWrapper) authGameIdWrapper.style.display = 'flex';
+  const authFurnaceWrapper = document.getElementById('authFurnaceWrapper');
+  if (authFurnaceWrapper) {
+    authFurnaceWrapper.style.display = 'block';
+    window.updateAuthFurnaceDropdown(verifiedFurnaceLevel || '30');
+  }
   const authForgotPwWrapper = document.getElementById('authForgotPwWrapper');
   if (authForgotPwWrapper) authForgotPwWrapper.style.display = 'none';
   const authDateWrapper = document.getElementById('authDateWrapper');
@@ -3996,9 +4016,10 @@ if (authVerifyGameIdBtn && authChiefConfirm) {
          
          if (matchedName && !/^\d+$/.test(String(matchedName).trim()) && String(matchedName).trim() !== val.toString().trim()) {
              if (lookupId !== currentWosLookupId) return;
-             authChiefConfirm.innerHTML = `Is your Chief Name: <strong style="color:var(--success)">${window.escapeHTML(matchedName)}</strong>? <span style="font-size:11px; color:#10b981; display:block; margin-top:4px;">✅ Verified from Alliance Database!</span>`;
+             authChiefConfirm.innerHTML = `Is your Chief Name: <strong style="color:var(--success)">${window.escapeHTML(matchedName)}</strong>? ${matchedFurnace ? `<br><span style="color:var(--accent); font-weight:bold; font-size:12px;">Furnace Level: ${window.escapeHTML(matchedFurnace)}</span>` : ''} <span style="font-size:11px; color:#10b981; display:block; margin-top:4px;">✅ Verified from Alliance Database!</span>`;
              verifiedChiefName = matchedName;
              verifiedFurnaceLevel = matchedFurnace;
+             window.updateAuthFurnaceDropdown(verifiedFurnaceLevel);
              authVerifyGameIdBtn.disabled = false;
              authVerifyGameIdBtn.textContent = 'Verify';
              return;
@@ -4015,9 +4036,10 @@ if (authVerifyGameIdBtn && authChiefConfirm) {
         if (lookupId !== currentWosLookupId) return;
         
         if (data && data.success && data.nickname && !/^\d+$/.test(String(data.nickname).trim())) {
-          authChiefConfirm.innerHTML = `Is your Chief Name: <strong style="color:var(--success)">${window.escapeHTML(data.nickname)}</strong>? <span style="font-size:11px; color:#60a5fa; display:block; margin-top:4px;">🌐 Verified from Game Servers!</span>`;
           verifiedChiefName = data.nickname;
           verifiedFurnaceLevel = data.stove_lv || "";
+          authChiefConfirm.innerHTML = `Is your Chief Name: <strong style="color:var(--success)">${window.escapeHTML(data.nickname)}</strong>? ${verifiedFurnaceLevel ? `<br><span style="color:var(--accent); font-weight:bold; font-size:12px;">Furnace Level: ${window.escapeHTML(verifiedFurnaceLevel)}</span>` : ''} <span style="font-size:11px; color:#60a5fa; display:block; margin-top:4px;">🌐 Verified from Game Servers!</span>`;
+          window.updateAuthFurnaceDropdown(verifiedFurnaceLevel);
           authVerifyGameIdBtn.disabled = false;
           authVerifyGameIdBtn.textContent = 'Verify';
           return;
@@ -4142,11 +4164,14 @@ if(authSubmitBtn) authSubmitBtn.addEventListener('click', async () => {
   // Check for manual overrides if API failed
   const manualChiefNameEl = document.getElementById('manualChiefName');
   const manualFurnaceLevelEl = document.getElementById('manualFurnaceLevel');
+  const authFurnaceLevelEl = document.getElementById('authFurnaceLevel');
+  
   const manualChiefName = manualChiefNameEl ? manualChiefNameEl.value.trim() : "";
   const manualFurnaceLevel = manualFurnaceLevelEl ? manualFurnaceLevelEl.value.trim() : "";
+  const selectedFurnaceLevel = authFurnaceLevelEl ? authFurnaceLevelEl.value.trim() : "";
   
   const chiefName = verifiedChiefName || manualChiefName;
-  const furnaceLevel = verifiedFurnaceLevel || manualFurnaceLevel;
+  const furnaceLevel = verifiedFurnaceLevel || selectedFurnaceLevel || manualFurnaceLevel || "30";
   
   if (!email || !password) {
     authErrorMsg.textContent = 'Email and password required.';
@@ -4165,7 +4190,7 @@ if(authSubmitBtn) authSubmitBtn.addEventListener('click', async () => {
         throw new Error('Chief Name must be your text character name (e.g. BrianDCox), NOT your numeric Game ID.');
       }
       
-      await registerUser(email, password, gameId, chiefName);
+      await registerUser(email, password, gameId, chiefName, furnaceLevel);
       
       // Immediately seed in-memory maps so site never displays 'not found'
       idToNameMap[gameId] = chiefName;
