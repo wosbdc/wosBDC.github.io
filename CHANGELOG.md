@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.93.1] - 2026-08-12
+### 🎯 Fixed Edit Profile Button Onclick Handler (For Real This Time)
+- **🐛 Root Cause Fix**: The `✏️ Edit Profile` button's HTML template on line 11935 still had `onclick="window.openEditProfileModal()"` — previous edit attempts failed silently due to template literal quote escaping. Now correctly calls `window.openEditProfileHubModal()`.
+
 ## [1.93.0] - 2026-08-12
 ### 🎯 Guaranteed Edit Profile Options Selector Popup
 - **🎯 Major Fix & Refactor**:
