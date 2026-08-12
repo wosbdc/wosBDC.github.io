@@ -109,7 +109,7 @@ window.getFurnaceIconHtml = (level, size = 48) => {
      const canvasOffset = Math.round((canvasSize - size) / 2);
      return `<span class="fc-badge-stage" data-fc="${fcNum}" style="display:inline-flex; align-items:center; justify-content:center; position:relative; vertical-align:middle; cursor:pointer; width:${size}px; height:${size}px; user-select:none; -webkit-user-select:none;">
        <canvas class="fc-flame-canvas" width="${canvasSize}" height="${canvasSize}" style="position:absolute; top:-${canvasOffset}px; left:-${canvasOffset}px; width:${canvasSize}px; height:${canvasSize}px; pointer-events:none; z-index:3;"></canvas>
-       <img src="/badges/fc${fcNum}.png?v=1.88.5" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
+       <img src="/badges/fc${fcNum}.png?v=1.88.6" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
      </span>`;
   }
 
@@ -17758,8 +17758,8 @@ window.showAppInstallSelector = function() {
       
       <div style="text-align: center; margin-bottom: 22px;">
         <div style="font-size: 3rem; margin-bottom: 8px;">📲</div>
-        <h2 style="color: #ffd700; font-size: 1.45rem; margin-bottom: 6px; font-weight: 800;">Install WOS App</h2>
-        <p style="color: #94a3b8; font-size: 0.88rem; line-height: 1.4;">Select your device type to install the WOS App on your phone or tablet:</p>
+        <h2 style="color: #ffd700; font-size: 1.45rem; margin-bottom: 6px; font-weight: 800;">Install wosBDC App</h2>
+        <p style="color: #94a3b8; font-size: 0.88rem; line-height: 1.4;">Select your device type to install the wosBDC App on your phone or tablet:</p>
       </div>
 
       <div style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px;">
@@ -18071,7 +18071,7 @@ window.showIosInstallGuide = function() {
       <div style="display:flex; align-items:center; gap: 12px;">
         <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #ffd700, #ff8c00); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; box-shadow: 0 4px 12px rgba(255,215,0,0.4); flex-shrink:0;">📱</div>
         <div>
-          <div style="font-weight: 800; font-size: 0.95rem; color: #ffd700;">Install WOS App</div>
+          <div style="font-weight: 800; font-size: 0.95rem; color: #ffd700;">Install wosBDC App</div>
           <div style="font-size: 0.78rem; color: #94a3b8;">Add to Home Screen for 1-Tap Access</div>
         </div>
       </div>

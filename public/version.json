@@ -1,10 +1,9 @@
 {
-  "version": "1.88.5",
+  "version": "1.88.6",
   "releaseDate": "2026-08-12",
-  "title": "📱 Resolved Banner Overlap & Expanded PWA Auto-Install Banner Visibility",
+  "title": "🏷️ Branding Update: wosBDC App",
   "notes": [
-    "Fixed banner collision between App Update notification and PWA Install banner",
-    "Expanded PWA install banner to trigger across all non-standalone browsers after 1.5s load time",
-    "Exposed global window.showAutoInstallBanner for instant manual trigger from settings"
+    "Updated App Install button and PWA modal titles to 'Install wosBDC App'",
+    "Unified branding consistency across index.html and main.js"
   ]
 }

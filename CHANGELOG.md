@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [1.88.6] - 2026-08-12
+### 🏷️ Branding Update: wosBDC App
+- **🏷️ Branding Consistency**:
+  - Updated PWA install buttons and modal headers across `index.html` and `main.js` to `📱 Install wosBDC App`.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.88.6`) in `window.getFurnaceIconHtml`.
+
 ## [1.88.5] - 2026-08-12
 ### 📱 Resolved Banner Overlap & Expanded PWA Auto-Install Banner Visibility
 - **📱 PWA Banner Visibility & Collision Prevention**:
