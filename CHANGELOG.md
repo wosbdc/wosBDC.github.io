@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [1.60.1] - 2026-08-11
+### Alt Profile Modal Alignment & Multi-Node Persistence Fix
+- **🎨 Layout Realignment**: Fixed preview box badge container overflow (`min-width: 60px`) preventing standard furnace badges (`🔥 Lv 21`) from overlapping chief names.
+- **📅 HTML5 Date Value Parsing**: Added `window.formatDateForInput(dateStr)` converting all date formats to `YYYY-MM-DD` so date pickers populate properly and calculate Time Active reliably.
+- **💾 Multi-Node Storage**: Updated save handler to persist alt profile data to `users/${uid}/linkedAltsData/${gid}`, `users_alts/${gid}`, and `roster_live`.
+
 ## [1.60.0] - 2026-08-11
 ### Linked Alt Accounts Profile & Start Date Editor
 - **🔗 Linked Alt Account Editing Modal**:

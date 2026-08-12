@@ -215,6 +215,16 @@ window.calculateTimeActive = (dateInput) => {
    return parts.join(' ');
 };
 
+window.formatDateForInput = (dateStr) => {
+   if (!dateStr) return '';
+   const d = new Date(dateStr);
+   if (isNaN(d.getTime())) return '';
+   const year = d.getFullYear();
+   const month = String(d.getMonth() + 1).padStart(2, '0');
+   const day = String(d.getDate()).padStart(2, '0');
+   return `${year}-${month}-${day}`;
+};
+
 
 // --- Settings Sidebar Logic ---
 const settingsBtn = document.getElementById('settingsBtn');
@@ -7355,15 +7365,26 @@ window.openEditAltProfileModal = async (gameId, chiefName) => {
    let currentFurnace = '';
    let currentJoinedDate = '';
 
-   try {
-      const altSnap = await get(ref(db, `users_alts/${cleanGid}`));
-      if (altSnap.exists()) {
-         const altData = altSnap.val();
-         currentFurnace = altData.stove_lv || altData.furnaceLevel || '';
-         currentJoinedDate = altData.joinedDate || '';
-      }
-   } catch(e) {}
+   // 1. Check currentUser.linkedAltsData first
+   if (currentUser.linkedAltsData && currentUser.linkedAltsData[cleanGid]) {
+      const savedAlt = currentUser.linkedAltsData[cleanGid];
+      currentFurnace = savedAlt.stove_lv || savedAlt.furnaceLevel || '';
+      currentJoinedDate = savedAlt.joinedDate || '';
+   }
 
+   // 2. Fallback to users_alts
+   if (!currentFurnace || !currentJoinedDate) {
+      try {
+         const altSnap = await get(ref(db, `users_alts/${cleanGid}`));
+         if (altSnap.exists()) {
+            const altData = altSnap.val();
+            if (!currentFurnace) currentFurnace = altData.stove_lv || altData.furnaceLevel || '';
+            if (!currentJoinedDate) currentJoinedDate = altData.joinedDate || '';
+         }
+      } catch(e) {}
+   }
+
+   // 3. Fallback to roster_live
    if (!currentFurnace || !currentJoinedDate) {
       try {
          const rosterSnap = await get(ref(db, 'roster_live'));
@@ -7379,6 +7400,7 @@ window.openEditAltProfileModal = async (gameId, chiefName) => {
    }
 
    const initialTimeActive = currentJoinedDate ? window.calculateTimeActive(currentJoinedDate) : 'Unknown';
+   const formattedInputDate = window.formatDateForInput(currentJoinedDate);
 
    const modalOverlay = document.createElement('div');
    modalOverlay.id = 'editAltProfileModalOverlay';
@@ -7398,15 +7420,13 @@ window.openEditAltProfileModal = async (gameId, chiefName) => {
         <div style="display:flex; flex-direction:column; gap:18px;">
            
            <!-- Preview Card -->
-           <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:16px; display:flex; align-items:center; justify-content:space-between;">
-              <div style="display:flex; align-items:center; gap:12px;">
-                 <div id="editAltBadgePreview" style="width:52px; height:52px; display:flex; align-items:center; justify-content:center;">
-                    ${window.getFurnaceIconHtml(currentFurnace, 52)}
-                 </div>
-                 <div style="display:flex; flex-direction:column;">
-                    <span style="font-size:14px; font-weight:bold; color:#fff;">${window.escapeHTML(chiefName)}</span>
-                    <span id="editAltTimeActivePreview" style="font-size:12px; color:#06b6d4; font-weight:bold; margin-top:2px;">⏱️ ${initialTimeActive}</span>
-                 </div>
+           <div style="background:rgba(15,23,42,0.7); border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:16px 20px; display:flex; align-items:center; justify-content:flex-start; gap:20px;">
+              <div id="editAltBadgePreview" style="min-width:60px; height:52px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">
+                 ${window.getFurnaceIconHtml(currentFurnace, 52)}
+              </div>
+              <div style="display:flex; flex-direction:column; min-width:0;">
+                 <span style="font-size:16px; font-weight:bold; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${window.escapeHTML(chiefName)}</span>
+                 <span id="editAltTimeActivePreview" style="font-size:13px; color:#06b6d4; font-weight:bold; margin-top:4px; display:flex; align-items:center; gap:4px;">⏱️ ${initialTimeActive}</span>
               </div>
            </div>
 
@@ -7419,7 +7439,7 @@ window.openEditAltProfileModal = async (gameId, chiefName) => {
            <!-- Start Date Input -->
            <div>
               <label style="font-size:13px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">📅 Account Start Date (Joined Date)</label>
-              <input type="date" id="editAltJoinedDateInput" value="${currentJoinedDate}" style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:15px; margin-top:6px; box-sizing:border-box;">
+              <input type="date" id="editAltJoinedDateInput" value="${formattedInputDate}" style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:15px; margin-top:6px; box-sizing:border-box;">
               <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Setting the start date automatically computes your Alt's exact Time Active.</div>
            </div>
 
@@ -7448,7 +7468,10 @@ window.openEditAltProfileModal = async (gameId, chiefName) => {
    };
 
    if (fSelect) fSelect.addEventListener('change', updatePreviews);
-   if (dInput) dInput.addEventListener('input', updatePreviews);
+   if (dInput) {
+      dInput.addEventListener('input', updatePreviews);
+      dInput.addEventListener('change', updatePreviews);
+   }
 
    const closeModal = () => { if (document.body.contains(modalOverlay)) document.body.removeChild(modalOverlay); };
    const closeBtn = document.getElementById('closeEditAltProfileBtn');
@@ -7467,7 +7490,30 @@ window.openEditAltProfileModal = async (gameId, chiefName) => {
          saveBtn.textContent = 'Saving...';
 
          try {
-            // 1. Save to users_alts/${cleanGid} in Firebase
+            // 1. Save to users/${currentUser.uid}/linkedAltsData/${cleanGid} in Firebase
+            if (currentUser && currentUser.uid) {
+               await update(ref(db, `users/${currentUser.uid}/linkedAltsData/${cleanGid}`), {
+                  gameId: cleanGid,
+                  name: chiefName,
+                  stove_lv: newFurnace,
+                  furnaceLevel: newFurnace,
+                  joinedDate: newJoinedDate,
+                  timeActive: calculatedTimeActive,
+                  updatedAt: new Date().toISOString()
+               }).catch(e => console.warn("linkedAltsData save error:", e));
+
+               currentUser.linkedAltsData = currentUser.linkedAltsData || {};
+               currentUser.linkedAltsData[cleanGid] = {
+                  gameId: cleanGid,
+                  name: chiefName,
+                  stove_lv: newFurnace,
+                  furnaceLevel: newFurnace,
+                  joinedDate: newJoinedDate,
+                  timeActive: calculatedTimeActive
+               };
+            }
+
+            // 2. Save to users_alts/${cleanGid} in Firebase
             await set(ref(db, `users_alts/${cleanGid}`), {
                gameId: cleanGid,
                name: chiefName,
@@ -7476,9 +7522,9 @@ window.openEditAltProfileModal = async (gameId, chiefName) => {
                joinedDate: newJoinedDate,
                timeActive: calculatedTimeActive,
                updatedAt: new Date().toISOString()
-            });
+            }).catch(e => console.warn("users_alts save error:", e));
 
-            // 2. Update roster_live in Firebase safely
+            // 3. Save to roster_live in Firebase safely
             try {
                const rosterSnap = await get(ref(db, 'roster_live')).catch(() => null);
                let rosterObj = (rosterSnap && rosterSnap.exists()) ? rosterSnap.val() : {};
@@ -7508,7 +7554,7 @@ window.openEditAltProfileModal = async (gameId, chiefName) => {
                window.rosterCache = rosterObj;
             } catch(e) { console.warn("roster_live alt save error:", e); }
 
-            // 3. Ping backend API
+            // 4. Ping backend API
             try {
                const token = await getAuthToken();
                const url = `${API_BASE_URL}?api=registerNewPlayer&gameId=${encodeURIComponent(cleanGid)}&name=${encodeURIComponent(chiefName)}&stove_lv=${encodeURIComponent(newFurnace)}&dateStarted=${encodeURIComponent(newJoinedDate)}&token=${encodeURIComponent(token)}`;
