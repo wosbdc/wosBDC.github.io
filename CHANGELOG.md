@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.59.8] - 2026-08-11
+### Player Database Editor & Account Hub Live Sync
+- **⚡ Zero-Refresh Live Updates**: Registered `window.activeViewFunc = () => views.playerEditor()` and `window.activeViewFunc = () => views.account()` so saving furnace level edits in the Player Database Editor or Account Hub immediately triggers a seamless UI re-render without requiring a manual page refresh.
+
 ## [1.59.7] - 2026-08-11
 ### Chiefs Menu Player Lookup Live Refresh Fix
 - **⚡ Instant Profile Re-rendering Without Refresh**:

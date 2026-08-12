@@ -10743,6 +10743,7 @@ window.resetBearTrapEvent = async () => {
       views.home();
       return;
     }
+    window.activeViewFunc = () => views.playerEditor();
     const isUnlocked = await window.isGoogleAuthVerified();
     if (!isUnlocked) {
         views.admin();
@@ -11008,6 +11009,7 @@ window.resetBearTrapEvent = async () => {
 
   account: async () => {
     if (!currentUser) return window.renderMembersOnlyGuard("User Account Hub");
+    window.activeViewFunc = () => views.account();
     
     let linkedHtml = '';
     let links = currentUser.linkedGameIds || [];
