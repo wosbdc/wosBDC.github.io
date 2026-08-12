@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## [1.89.0] - 2026-08-12
+### 🍎 iPhone & iPad Dedicated Smart PWA Auto-Install Banner System
+- **🍎 Dedicated iOS Smart Banner**:
+  - Automatically detects iPhone/iPad Safari browser mode (`navigator.standalone === false`).
+  - Displays bespoke iPhone banner: `🍎 Install wosBDC on iPhone` with subtext `Tap Share 📤 ➔ Add to Home Screen`.
+  - Tapping banner opens the 4-step iOS modal and launches the glowing bottom pointer arrow (`👇`) directly above Safari's Share button.
+- **🤖 Dedicated Android Smart Banner**:
+  - Preserved native 1-click Chrome install prompt for Android users.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.89.0`) in `window.getFurnaceIconHtml`.
+
 ## [1.88.6] - 2026-08-12
 ### 🏷️ Branding Update: wosBDC App
 - **🏷️ Branding Consistency**:

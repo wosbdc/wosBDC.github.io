@@ -109,7 +109,7 @@ window.getFurnaceIconHtml = (level, size = 48) => {
      const canvasOffset = Math.round((canvasSize - size) / 2);
      return `<span class="fc-badge-stage" data-fc="${fcNum}" style="display:inline-flex; align-items:center; justify-content:center; position:relative; vertical-align:middle; cursor:pointer; width:${size}px; height:${size}px; user-select:none; -webkit-user-select:none;">
        <canvas class="fc-flame-canvas" width="${canvasSize}" height="${canvasSize}" style="position:absolute; top:-${canvasOffset}px; left:-${canvasOffset}px; width:${canvasSize}px; height:${canvasSize}px; pointer-events:none; z-index:3;"></canvas>
-       <img src="/badges/fc${fcNum}.png?v=1.88.6" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
+       <img src="/badges/fc${fcNum}.png?v=1.89.0" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
      </span>`;
   }
 
@@ -18035,7 +18035,11 @@ window.showIosInstallGuide = function() {
   window.showAutoInstallBanner = function(ignoreDismissed = false) {
     if (document.getElementById('auto-pwa-install-banner')) return;
     if (!ignoreDismissed && sessionStorage.getItem('wos_dismissed_pwa_install')) return;
-    if (window.matchMedia('(display-mode: standalone)').matches) return;
+    
+    const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isIosStandalone = isIos && (window.navigator.standalone === true);
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || isIosStandalone;
+    if (isStandalone) return;
 
     // If an update banner is already shown at top, delay PWA banner so they don't collide
     if (document.getElementById('wos-version-update-banner')) {
@@ -18053,8 +18057,8 @@ window.showIosInstallGuide = function() {
       width: calc(100% - 32px);
       max-width: 440px;
       background: linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.98));
-      border: 1px solid rgba(255, 215, 0, 0.6);
-      box-shadow: 0 15px 40px rgba(0,0,0,0.8), 0 0 25px rgba(255, 215, 0, 0.2);
+      border: 1px solid ${isIos ? 'rgba(255, 215, 0, 0.7)' : 'rgba(34, 197, 94, 0.7)'};
+      box-shadow: 0 15px 40px rgba(0,0,0,0.8), 0 0 25px ${isIos ? 'rgba(255, 215, 0, 0.25)' : 'rgba(34, 197, 94, 0.25)'};
       border-radius: 20px;
       padding: 14px 18px;
       z-index: 999999;
@@ -18069,15 +18073,15 @@ window.showIosInstallGuide = function() {
 
     banner.innerHTML = `
       <div style="display:flex; align-items:center; gap: 12px;">
-        <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #ffd700, #ff8c00); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; box-shadow: 0 4px 12px rgba(255,215,0,0.4); flex-shrink:0;">📱</div>
+        <div style="width: 42px; height: 42px; background: ${isIos ? 'linear-gradient(135deg, #ffd700, #ff8c00)' : 'linear-gradient(135deg, #22c55e, #10b981)'}; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; box-shadow: 0 4px 12px ${isIos ? 'rgba(255,215,0,0.4)' : 'rgba(34,197,94,0.4)'}; flex-shrink:0;">${isIos ? '🍎' : '📱'}</div>
         <div>
-          <div style="font-weight: 800; font-size: 0.95rem; color: #ffd700;">Install wosBDC App</div>
-          <div style="font-size: 0.78rem; color: #94a3b8;">Add to Home Screen for 1-Tap Access</div>
+          <div style="font-weight: 800; font-size: 0.95rem; color: ${isIos ? '#ffd700' : '#4ade80'};">${isIos ? 'Install wosBDC on iPhone' : 'Install wosBDC App'}</div>
+          <div style="font-size: 0.78rem; color: #94a3b8;">${isIos ? 'Tap Share 📤 ➔ Add to Home Screen' : 'Add to Home Screen for 1-Tap Access'}</div>
         </div>
       </div>
       <div style="display:flex; align-items:center; gap: 8px;">
-        <button id="btn-pwa-install-now" style="background: linear-gradient(135deg, #ffd700, #ff8c00); border: none; color: #0f172a; font-weight: 800; font-size: 0.85rem; padding: 9px 15px; border-radius: 12px; cursor: pointer; box-shadow: 0 3px 10px rgba(255,215,0,0.3); white-space:nowrap;">
-          ⚡ Install App
+        <button id="btn-pwa-install-now" style="background: ${isIos ? 'linear-gradient(135deg, #ffd700, #ff8c00)' : 'linear-gradient(135deg, #22c55e, #10b981)'}; border: none; color: #0f172a; font-weight: 800; font-size: 0.85rem; padding: 9px 15px; border-radius: 12px; cursor: pointer; box-shadow: 0 3px 10px ${isIos ? 'rgba(255,215,0,0.3)' : 'rgba(34,197,94,0.3)'}; white-space:nowrap;">
+          ${isIos ? '📲 How to Add' : '⚡ Install App'}
         </button>
         <button id="btn-pwa-install-dismiss" style="background: rgba(255,255,255,0.08); border: none; color: #94a3b8; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; font-size: 1rem; font-weight: bold; display:flex; align-items:center; justify-content:center;">✕</button>
       </div>
@@ -18089,7 +18093,12 @@ window.showIosInstallGuide = function() {
     }, 300);
 
     document.getElementById('btn-pwa-install-now').addEventListener('click', () => {
-      window.triggerAutoPwaInstall();
+      if (isIos) {
+        banner.remove();
+        window.showIosInstallGuide();
+      } else {
+        window.triggerAutoPwaInstall();
+      }
     });
 
     document.getElementById('btn-pwa-install-dismiss').addEventListener('click', () => {

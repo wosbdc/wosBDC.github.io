@@ -1,9 +1,10 @@
 {
-  "version": "1.88.6",
+  "version": "1.89.0",
   "releaseDate": "2026-08-12",
-  "title": "🏷️ Branding Update: wosBDC App",
+  "title": "🍎 iPhone & iPad Dedicated Smart PWA Auto-Install Banner System",
   "notes": [
-    "Updated App Install button and PWA modal titles to 'Install wosBDC App'",
-    "Unified branding consistency across index.html and main.js"
+    "Built dedicated OS-detecting smart banner tailored specifically for iPhone/iPad Safari users",
+    "iPhone banner highlights 🍎 Install wosBDC on iPhone with direct link to Safari Share (📤) guide & bouncing arrow",
+    "Preserved native 1-click Android Chrome install prompt banner for Android users"
   ]
 }
