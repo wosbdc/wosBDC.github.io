@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [1.63.1] - 2026-08-11
+### Preserved Original 3D Star Point Geometry Badge Cleanup
+- **💎 Exact Original Star Preservation**:
+  - Restored the original 3D Fire Crystal star gem art assets (`fc1.png` – `fc10.png`) and applied precision 12-vertex star clipping.
+  - Preserved 100% of the original sharp pointing star tips, crystal facets, and center hexagon numbers while cleanly removing only the surrounding background circle ring.
+
 ## [1.63.0] - 2026-08-11
 ### Ringless 3D Faceted Fire Crystal Star Badges
 - **💎 Pure 3D Fire Crystal Star Design**:
