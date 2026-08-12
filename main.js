@@ -109,7 +109,7 @@ window.getFurnaceIconHtml = (level, size = 48) => {
      const canvasOffset = Math.round((canvasSize - size) / 2);
      return `<span class="fc-badge-stage" data-fc="${fcNum}" style="display:inline-flex; align-items:center; justify-content:center; position:relative; vertical-align:middle; cursor:pointer; width:${size}px; height:${size}px; user-select:none; -webkit-user-select:none;">
        <canvas class="fc-flame-canvas" width="${canvasSize}" height="${canvasSize}" style="position:absolute; top:-${canvasOffset}px; left:-${canvasOffset}px; width:${canvasSize}px; height:${canvasSize}px; pointer-events:none; z-index:3;"></canvas>
-       <img src="/badges/fc${fcNum}.png?v=1.79.0" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
+       <img src="/badges/fc${fcNum}.png?v=1.80.0" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
      </span>`;
   }
 
@@ -17733,4 +17733,60 @@ window.closeMobileNavModal = () => {
 
   setInterval(checkAppVersion, 60000);
 })();
+
+// ============================================================================
+// IPHONE SAFARI NATIVE PWA INSTALL GUIDE SYSTEM (v1.80.0)
+// ============================================================================
+window.showIosInstallGuide = function() {
+  if (document.getElementById('ios-pwa-install-modal')) return;
+
+  const modal = document.createElement('div');
+  modal.id = 'ios-pwa-install-modal';
+  modal.style.cssText = `
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(9, 13, 22, 0.85);
+    backdrop-filter: blur(12px);
+    z-index: 9999999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  `;
+
+  modal.innerHTML = `
+    <div style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.98)); border: 1px solid rgba(255, 215, 0, 0.6); box-shadow: 0 25px 60px rgba(0,0,0,0.9), 0 0 30px rgba(255, 215, 0, 0.25); border-radius: 24px; padding: 25px; max-width: 440px; width: 100%; color: #f1f5f9; position: relative;">
+      <button id="close-ios-install-modal" style="position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.1); border: none; color: #94a3b8; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 1.1rem; font-weight: bold;">✕</button>
+      
+      <div style="text-align: center; margin-bottom: 20px;">
+        <div style="font-size: 3rem; margin-bottom: 8px;">📱</div>
+        <h2 style="color: #ffd700; font-size: 1.4rem; margin-bottom: 6px;">Install App on iPhone</h2>
+        <p style="color: #94a3b8; font-size: 0.9rem;">Add WOS Dashboard to your iPhone Home Screen for a full-screen native app experience!</p>
+      </div>
+
+      <div style="background: rgba(0,0,0,0.3); border-radius: 16px; padding: 16px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.06);">
+        <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 14px;">
+          <div style="background: rgba(255, 215, 0, 0.15); border: 1px solid #ffd700; color: #ffd700; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; flex-shrink: 0;">1</div>
+          <div style="font-size: 0.9rem; color: #e2e8f0;">Tap the <strong style="color: #ffd700;">Share Button 📤</strong> at the bottom of Safari on your iPhone.</div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <div style="background: rgba(255, 215, 0, 0.15); border: 1px solid #ffd700; color: #ffd700; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; flex-shrink: 0;">2</div>
+          <div style="font-size: 0.9rem; color: #e2e8f0;">Scroll down and tap <strong style="color: #ffd700;">Add to Home Screen ➕</strong>.</div>
+        </div>
+      </div>
+
+      <button id="btn-gotit-ios-install" style="width: 100%; background: linear-gradient(135deg, #ffd700, #ff8c00); border: none; color: #0f172a; font-weight: 800; font-size: 1rem; padding: 14px; border-radius: 16px; cursor: pointer; box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);">
+        Got It!
+      </button>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  const closeFn = () => modal.remove();
+  document.getElementById('close-ios-install-modal').addEventListener('click', closeFn);
+  document.getElementById('btn-gotit-ios-install').addEventListener('click', closeFn);
+};
+
 

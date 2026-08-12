@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [1.80.0] - 2026-08-12
+### iPhone Safari Native PWA WebApp Support & 1-Click Install Guide
+- **📱 iPhone Safari Native PWA Integration**:
+  - Full iOS Safari PWA support for installing to iPhone Home Screen as a native app.
+  - Added `window.showIosInstallGuide()` helper & visual banner explaining 2-step **Share 📤 -> Add to Home Screen ➕** installation.
+  - Full-screen standalone iOS web app mode (`black-translucent` status bar).
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.80.0`) in `window.getFurnaceIconHtml`.
+
 ## [1.79.0] - 2026-08-12
 ### Automatic Real-App Update Notification System
 - **🚀 Native-App Style Update System**:
