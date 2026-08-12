@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [1.66.0] - 2026-08-11
+### Smooth Continuous Halo Ring 3D Fire Crystal Star Badges
+- **✨ Clean Continuous Halo Ring Restoration**:
+  - Re-processed all 10 Fire Crystal badges (`fc1.png` – `fc10.png`) directly from high-resolution source assets.
+  - Eliminated all dark wedges, black marks, and edge artifacts to restore a smooth, seamless, continuous glowing neon halo ring.
+  - Preserved 100% of the 3D crystal star points, sparkling facets, and central number hexagons at full vibrancy.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.66.0`) in `window.getFurnaceIconHtml`.
+
 ## [1.65.0] - 2026-08-11
 ### Dimmed Ambient Halo Ring 3D Fire Crystal Star Badges
 - **✨ Dimmed Ambient Background Halo**:
