@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [1.68.0] - 2026-08-12
+### AI-Generated FC8 Test Badge with Soft Subtle Ambient Halo
+- **💎 Single FC8 Test Badge Update**:
+  - Updated `fc8.png` with multi-layered magenta rose crystal star points, metallic center texture, and glowing white number 8.
+  - Features 100% full brightness 3D star gem that pops forward with maximum power, while the background neon halo is natively dimmed into a soft ambient line without any dark marks or wedges.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.68.0`) in `window.getFurnaceIconHtml`.
+
 ## [1.67.0] - 2026-08-12
 ### AI-Generated FC1 Test Badge with Soft Subtle Ambient Halo
 - **💎 Single FC1 Test Badge Update**:
