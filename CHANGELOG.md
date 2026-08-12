@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [1.59.7] - 2026-08-11
+### Chiefs Menu Player Lookup Live Refresh Fix
+- **⚡ Instant Profile Re-rendering Without Refresh**:
+  - Registered `window.activeViewFunc = () => renderCardForChief(chiefName)` inside `views.lookup` / Chiefs Player Lookup.
+  - Dynamically resolves live Firebase `users/` and `roster_live` Furnace level updates when rendering cards.
+  - When an admin saves a new furnace level from the `⚙️ Actions ▾` menu, the profile card re-renders automatically without needing a browser refresh.
+
 ## [1.59.6] - 2026-08-11
 ### Badge Parsing & Image Match Fix
 - **💎 Precise Fire Crystal Badge Resolution**: Fixed a critical string-parsing bug in `getFurnaceIconHtml` where levels formatted as `"FC 5 (Fire Crystal 5)"` concatenated digits into `"55"` and defaulted to the `FC 10` image. Updated regex matching to cleanly extract single Fire Crystal level integers (1 – 10) and Century Games API offsets (31 – 40).

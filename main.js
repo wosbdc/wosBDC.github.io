@@ -13691,6 +13691,7 @@ window.resetBearTrapEvent = async () => {
         chiefName = (p[0] || chiefName).toString().trim();
         
         window.currentRosterChiefName = chiefName;
+        window.activeViewFunc = () => renderCardForChief(chiefName);
         
         let dynamicSD = null;
         if (allTimeRankingsMap[chiefName]) {
@@ -13707,19 +13708,23 @@ window.resetBearTrapEvent = async () => {
         const liveStatsRes = window.computeLiveFirebasePlayerStats(chiefName, fbWins, fbDonations, lbRawData);
         let { bearBoth, bear1, bear2, bearAllTime, btDonationsAllTime, btDonationsCurrent, otherLbs } = liveStatsRes;
         let altAccounts = [];
-        if (usersSnap && usersSnap.exists()) {
-            const users = usersSnap.val();
-            let targetGameId = nameToIdMap[chiefName];
-            if (targetGameId) {
-                for (const u of Object.values(users)) {
-                    if (Number(u.gameId) === Number(targetGameId)) {
-                        if (u.linkedGameIds && Array.isArray(u.linkedGameIds)) {
-                            altAccounts = [...new Set([...altAccounts, ...u.linkedGameIds])];
+        let targetGameId = nameToIdMap[chiefName];
+
+        try {
+            const freshUsersSnap = await get(ref(db, 'users'));
+            if (freshUsersSnap.exists()) {
+                const users = freshUsersSnap.val();
+                if (targetGameId) {
+                    for (const u of Object.values(users)) {
+                        if (Number(u.gameId) === Number(targetGameId)) {
+                            if (u.linkedGameIds && Array.isArray(u.linkedGameIds)) {
+                                altAccounts = [...new Set([...altAccounts, ...u.linkedGameIds])];
+                            }
                         }
                     }
                 }
             }
-        }
+        } catch(e) {}
         
         select.addEventListener('keypress', (e) => {
           if (e.key === 'Enter') {
@@ -13729,7 +13734,35 @@ window.resetBearTrapEvent = async () => {
         });
         
         p = await window.getLivePlayerEventRow(chiefName, p, headers);
-        let html = window.generatePlayerProfileHtml(chiefName, p, headers, colIsUpcoming, rosterMap[chiefName], lbData, dynamicSD, showdownActive, bearBoth, bear1, bear2, bearAllTime, btDonationsAllTime, btDonationsCurrent, otherLbs, false, altAccounts);
+
+        // Resolve live roster info for Furnace / Fire Crystal level from Firebase
+        let resolvedRosterInfo = (rosterMap && (rosterMap[chiefName] || rosterMap[Object.keys(rosterMap).find(k => k.toLowerCase() === chiefName.toLowerCase())])) || {};
+        if (!resolvedRosterInfo.furnaceLevel && targetGameId && rosterMap && rosterMap[targetGameId]) {
+           resolvedRosterInfo = { ...resolvedRosterInfo, ...rosterMap[targetGameId] };
+        }
+        try {
+           const usersSnapFresh = await get(ref(db, 'users'));
+           if (usersSnapFresh.exists()) {
+              const users = usersSnapFresh.val();
+              for (const u of Object.values(users)) {
+                 const uGid = u.gameId ? u.gameId.toString().trim() : '';
+                 const uName = (u.name || u.chiefName || '').toString().trim();
+                 if ((targetGameId && uGid === targetGameId.toString().trim()) || (chiefName && uName.toLowerCase() === chiefName.toLowerCase())) {
+                    if (u.stove_lv || u.furnaceLevel) {
+                       resolvedRosterInfo = {
+                          ...resolvedRosterInfo,
+                          furnaceLevel: u.stove_lv || u.furnaceLevel,
+                          stove_lv: u.stove_lv || u.furnaceLevel
+                       };
+                    }
+                    break;
+                 }
+              }
+           }
+        } catch(e) {}
+        if (!resolvedRosterInfo.gameId && targetGameId) resolvedRosterInfo.gameId = targetGameId;
+
+        let html = window.generatePlayerProfileHtml(chiefName, p, headers, colIsUpcoming, resolvedRosterInfo, lbData, dynamicSD, showdownActive, bearBoth, bear1, bear2, bearAllTime, btDonationsAllTime, btDonationsCurrent, otherLbs, false, altAccounts);
         container.innerHTML = html;
       };
       
