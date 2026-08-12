@@ -7219,6 +7219,13 @@ window.openEditProfileModal = async () => {
         saveBtn.textContent = 'Saving...';
 
         try {
+           const chiefName = (idToNameMap[currentUser.gameId] || currentUser.name || currentUser.chiefName || '').toString().trim();
+           const cleanGid = (currentUser.gameId || '').toString().trim();
+
+           // 0. Invalidate in-memory roster cache
+           window.rosterCache = null;
+
+           // 1. Update user node in Firebase
            const userRef = ref(db, `users/${currentUser.uid}`);
            await set(userRef, {
               ...currentUser,
@@ -7229,6 +7236,22 @@ window.openEditProfileModal = async () => {
               updatedAt: new Date().toISOString()
            });
 
+           // 2. Update roster_live in Firebase by Chief Name & Game ID
+           if (chiefName) {
+              await update(ref(db, `roster_live/${chiefName}`), {
+                 furnaceLevel: newFurnace,
+                 stove_lv: newFurnace,
+                 updatedAt: Date.now()
+              }).catch(() => null);
+           }
+           if (cleanGid) {
+              await update(ref(db, `roster_live/${cleanGid}`), {
+                 furnaceLevel: newFurnace,
+                 stove_lv: newFurnace,
+                 updatedAt: Date.now()
+              }).catch(() => null);
+           }
+
            currentUser.stove_lv = newFurnace;
            currentUser.furnaceLevel = newFurnace;
            currentUser.joinedDate = newJoinedDate;
@@ -7236,8 +7259,7 @@ window.openEditProfileModal = async () => {
 
            try {
               const token = await getAuthToken();
-              const chiefName = idToNameMap[currentUser.gameId] || currentUser.name || '';
-              const url = `${API_BASE_URL}?api=registerNewPlayer&gameId=${encodeURIComponent(currentUser.gameId)}&name=${encodeURIComponent(chiefName)}&stove_lv=${encodeURIComponent(newFurnace)}&dateStarted=${encodeURIComponent(newJoinedDate)}&token=${encodeURIComponent(token)}`;
+              const url = `${API_BASE_URL}?api=registerNewPlayer&gameId=${encodeURIComponent(cleanGid)}&name=${encodeURIComponent(chiefName)}&stove_lv=${encodeURIComponent(newFurnace)}&dateStarted=${encodeURIComponent(newJoinedDate)}&token=${encodeURIComponent(token)}`;
               fetch(url, { mode: 'no-cors' }).catch(e => null);
            } catch(e) {}
 

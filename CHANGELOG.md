@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [1.59.4] - 2026-08-11
+### Universal Sync Fix
+- **🔄 Complete User-Edit & Admin-Edit Sync**:
+  - Updated `saveEditProfileBtn` in the Edit Profile modal so that when a user updates their own Furnace Level, it invalidates `window.rosterCache` and syncs the update to both `roster_live/${chiefName}` and `roster_live/${gameId}` in Firebase.
+  - Ensures changes made by users or admins instantly sync across **Player Lookup Cards (`searchPlayerFull`)**, **Account Hub**, and the **Player Database Editor (`playerEditor`)**.
+
 ## [1.59.3] - 2026-08-11
 ### Account Hub Furnace Sync Fix
 - **🏠 Account Hub Sync**: Fixed `views.account` profile card rendering logic to check both `stove_lv` and `furnaceLevel` from Firebase, matching Game ID and Chief Name. Removed legacy condition that was filtering out updated level values.
