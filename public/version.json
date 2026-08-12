@@ -1,10 +1,10 @@
 {
-  "version": "1.89.3",
+  "version": "1.89.4",
   "releaseDate": "2026-08-12",
-  "title": "🎨 Distinct OS Theme Colors: Green (Android) & Yellow (Apple)",
+  "title": "📤 Native Web Share Sheet & Removed Floating Pointer Arrow",
   "notes": [
-    "Strictly enforced Green (#22c55e / #4ade80) theme for all Android install alerts & guides",
-    "Strictly enforced Golden Yellow (#ffd700 / #ff8c00) theme for all Apple (iOS/iPhone/iPad/Mac) install alerts & guides",
-    "Unified visual identity across auto-install banners and PWA modals"
+    "Removed floating screen arrow to accommodate custom browser toolbar layouts",
+    "Added 1-Tap '📤 Open Share Menu' button using Web Share API to trigger native iOS Share Sheet instantly",
+    "Streamlined step-by-step PWA install cards inside iOS/Apple modal"
   ]
 }

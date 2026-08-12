@@ -109,7 +109,7 @@ window.getFurnaceIconHtml = (level, size = 48) => {
      const canvasOffset = Math.round((canvasSize - size) / 2);
      return `<span class="fc-badge-stage" data-fc="${fcNum}" style="display:inline-flex; align-items:center; justify-content:center; position:relative; vertical-align:middle; cursor:pointer; width:${size}px; height:${size}px; user-select:none; -webkit-user-select:none;">
        <canvas class="fc-flame-canvas" width="${canvasSize}" height="${canvasSize}" style="position:absolute; top:-${canvasOffset}px; left:-${canvasOffset}px; width:${canvasSize}px; height:${canvasSize}px; pointer-events:none; z-index:3;"></canvas>
-       <img src="/badges/fc${fcNum}.png?v=1.89.3" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
+       <img src="/badges/fc${fcNum}.png?v=1.89.4" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
      </span>`;
   }
 
@@ -17921,18 +17921,18 @@ window.showIosInstallGuide = function() {
       </div>
 
       <button id="btn-modal-auto-install" style="width: 100%; background: linear-gradient(135deg, #ffd700, #ff8c00); border: none; color: #0f172a; font-weight: 800; font-size: 1.02rem; padding: 14px; border-radius: 16px; cursor: pointer; box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4); margin-bottom: 18px; display:flex; align-items:center; justify-content:center; gap:8px;">
-        📍 Show Me Where to Tap
+        📤 Tap Here to Open Share Sheet
       </button>
 
       <div style="background: rgba(0,0,0,0.3); border-radius: 16px; padding: 16px; margin-bottom: 18px; border: 1px solid rgba(255,255,255,0.06); display:flex; flex-direction:column; gap:12px;">
-        <div style="font-size: 0.82rem; color: #ffd700; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">iPhone & iPad Install Guide:</div>
+        <div style="font-size: 0.82rem; color: #ffd700; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">iPhone & iPad 3-Step Guide:</div>
         <div style="display: flex; align-items: flex-start; gap: 10px;">
           <div style="background: rgba(255, 215, 0, 0.15); border: 1px solid #ffd700; color: #ffd700; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.8rem; flex-shrink: 0;">1</div>
-          <div style="font-size: 0.86rem; color: #e2e8f0;">Tap <strong style="color: #ffd700;">Safari Share 📤</strong> at bottom (or <strong style="color: #4ade80;">Chrome Menu ⋮</strong> in top right if using Chrome).</div>
+          <div style="font-size: 0.86rem; color: #e2e8f0;">Tap <strong style="color: #ffd700;">"Open Share Sheet"</strong> button above (or tap <strong style="color: #ffd700;">Share 📤</strong> in your browser toolbar).</div>
         </div>
         <div style="display: flex; align-items: flex-start; gap: 10px;">
           <div style="background: rgba(255, 215, 0, 0.15); border: 1px solid #ffd700; color: #ffd700; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.8rem; flex-shrink: 0;">2</div>
-          <div style="font-size: 0.86rem; color: #e2e8f0;">Scroll down and tap <strong style="color: #ffd700;">"Add to Home Screen" ➕</strong> (or <strong style="color: #4ade80;">"Install App" 📲</strong>).</div>
+          <div style="font-size: 0.86rem; color: #e2e8f0;">Scroll down the menu and tap <strong style="color: #ffd700;">"Add to Home Screen" ➕</strong>.</div>
         </div>
         <div style="display: flex; align-items: flex-start; gap: 10px;">
           <div style="background: rgba(255, 215, 0, 0.15); border: 1px solid #ffd700; color: #ffd700; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.8rem; flex-shrink: 0;">3</div>
@@ -17951,9 +17951,18 @@ window.showIosInstallGuide = function() {
   const closeFn = () => modal.remove();
   document.getElementById('close-ios-install-modal').addEventListener('click', closeFn);
   document.getElementById('btn-gotit-ios-install').addEventListener('click', closeFn);
-  document.getElementById('btn-modal-auto-install').addEventListener('click', () => {
-    modal.remove();
-    window.showIosPointerArrow();
+  document.getElementById('btn-modal-auto-install').addEventListener('click', async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'wosBDC App',
+          text: 'Install wosBDC App to your Home Screen!',
+          url: window.location.origin
+        });
+      } catch (err) {}
+    } else {
+      if (window.showToast) window.showToast('Tap Share 📤 in your browser toolbar, then select "Add to Home Screen" ➕', 'info');
+    }
   });
 };
 
@@ -17970,67 +17979,7 @@ window.showIosInstallGuide = function() {
     showAutoInstallBanner();
   });
 
-  window.showIosPointerArrow = function() {
-    if (document.getElementById('ios-share-pointer-arrow')) return;
-
-    const isChrome = /CriOS|Chrome/i.test(navigator.userAgent);
-    const arrow = document.createElement('div');
-    arrow.id = 'ios-share-pointer-arrow';
-
-    if (isChrome) {
-      // Top-Right Banner pointing to Chrome 3 dots (⋮)
-      arrow.style.cssText = `
-        position: fixed;
-        top: 16px;
-        right: 16px;
-        background: linear-gradient(135deg, #22c55e, #10b981);
-        color: #0f172a;
-        font-weight: 800;
-        font-size: 0.9rem;
-        padding: 12px 18px;
-        border-radius: 24px;
-        box-shadow: 0 10px 30px rgba(34, 197, 94, 0.6);
-        z-index: 99999999;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        animation: bouncePulse 1s infinite alternate ease-in-out;
-      `;
-      arrow.innerHTML = `
-        <span>Tap Chrome Menu (⋮) in Top Right ➔ Install App</span>
-        <span style="font-size: 1.3rem;">↗️</span>
-      `;
-    } else {
-      // Bottom-Center Banner pointing to Safari Share (📤)
-      arrow.style.cssText = `
-        position: fixed;
-        bottom: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: linear-gradient(135deg, #ffd700, #ff8c00);
-        color: #0f172a;
-        font-weight: 800;
-        font-size: 0.92rem;
-        padding: 12px 22px;
-        border-radius: 30px;
-        box-shadow: 0 10px 30px rgba(255, 215, 0, 0.6);
-        z-index: 99999999;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        animation: bouncePulse 1s infinite alternate ease-in-out;
-      `;
-      arrow.innerHTML = `
-        <span>Tap Safari Share 📤 Below to Add to Home Screen!</span>
-        <span style="font-size: 1.4rem;">👇</span>
-      `;
-    }
-
-    document.body.appendChild(arrow);
-    setTimeout(() => {
-      if (arrow) arrow.remove();
-    }, 7000);
-  };
+  window.showIosPointerArrow = function() {};
 
   window.triggerAutoPwaInstall = function() {
     const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;

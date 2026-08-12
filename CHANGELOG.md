@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [1.89.4] - 2026-08-12
+### 📤 Native Web Share Sheet Integration & Pointer Arrow Removal
+- **📤 Native Web Share Integration**:
+  - Replaced floating screen arrow with a 1-tap `📤 Open Share Menu` button in the iOS/Apple install guide.
+  - Tapping `📤 Open Share Menu` invokes `navigator.share()`, automatically popping open Safari's system Share Sheet directly on the screen.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.89.4`) in `window.getFurnaceIconHtml`.
+
 ## [1.89.3] - 2026-08-12
 ### 🎨 Distinct OS Theme Colors: Green (Android) & Yellow (Apple)
 - **🎨 Platform-Specific Theme Colors**:
