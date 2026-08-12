@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## [1.78.0] - 2026-08-12
+### Smart Tap-Roar Flame Engine & Rapid Tap Stacking
+- **🔥 Fixed Smartphone Tap Interaction (Zero Dead Clicks)**:
+  - Removed premature `touchend` flame killing so every tap on mobile roars fire cleanly.
+  - Implemented 3.5-second Auto-Extend Active Roar Timer. Every tap (1st, 2nd, 3rd, 10th) resets and extends the fire roar.
+- **⚡ Rapid Tap Inferno Stacking & Continuous Haptics**:
+  - Rapid taps on smartphones stack additional 3D flame wisps into a roaring inferno with repeated haptic vibration pulses.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.78.0`) in `window.getFurnaceIconHtml`.
+
 ## [1.77.0] - 2026-08-12
 ### Smartphone Haptic Vibration Feedback & 3D Tactile Spring Tap
 - **📳 Haptic Vibration Touch Feedback (`navigator.vibrate`)**:
