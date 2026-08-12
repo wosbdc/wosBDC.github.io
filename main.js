@@ -109,7 +109,7 @@ window.getFurnaceIconHtml = (level, size = 48) => {
      const canvasOffset = Math.round((canvasSize - size) / 2);
      return `<span class="fc-badge-stage" data-fc="${fcNum}" style="display:inline-flex; align-items:center; justify-content:center; position:relative; vertical-align:middle; cursor:pointer; width:${size}px; height:${size}px; user-select:none; -webkit-user-select:none;">
        <canvas class="fc-flame-canvas" width="${canvasSize}" height="${canvasSize}" style="position:absolute; top:-${canvasOffset}px; left:-${canvasOffset}px; width:${canvasSize}px; height:${canvasSize}px; pointer-events:none; z-index:3;"></canvas>
-       <img src="/badges/fc${fcNum}.png?v=1.91.1" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
+       <img src="/badges/fc${fcNum}.png?v=1.92.0" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
      </span>`;
   }
 
@@ -7164,12 +7164,22 @@ window.openStaffProfileModal = () => {
 };
 
 window.openEditProfileHubModal = () => {
-  if (!currentUser) return;
+  const activeUser = currentUser || realUser;
+  if (!activeUser) return;
   
-  const staffLvl = window.getAdminLevel ? window.getAdminLevel(currentUser) : null;
+  // Robust Staff/Admin & Root Admin Check:
+  // 1. Check if staffProfileModal is already in the DOM (rendered by renderAccountHub)
+  // 2. Check if activeUser or realUser is Root Admin (318843189)
+  // 3. Check getAdminLevel / isAdminUser / staffProfilesMap
+  const hasStaffModal = !!document.getElementById('staffProfileModal');
+  const isRootAdmin = (activeUser.gameId && Number(activeUser.gameId) === 318843189) || (realUser && realUser.gameId && Number(realUser.gameId) === 318843189);
+  const isAdmin = (window.getAdminLevel && (window.getAdminLevel(activeUser) || (realUser && window.getAdminLevel(realUser))));
+  const isStaffMap = (activeUser.gameId && window.staffProfilesMap && window.staffProfilesMap[activeUser.gameId]) || (realUser && realUser.gameId && window.staffProfilesMap && window.staffProfilesMap[realUser.gameId]);
+
+  const isStaffOrAdmin = hasStaffModal || isRootAdmin || isAdmin || isStaffMap;
   
-  // If not staff, directly open standard Edit Profile modal
-  if (!staffLvl) {
+  // If not staff/admin, directly open standard Edit Profile modal
+  if (!isStaffOrAdmin) {
     window.openEditProfileModal();
     return;
   }

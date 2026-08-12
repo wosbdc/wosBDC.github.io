@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [1.92.0] - 2026-08-12
+### 👑 Comprehensive Staff & Root Admin Permission Recognition
+- **👑 Root Admin & Staff Detection**:
+  - Expanded `openEditProfileHubModal` permission checks to verify Root Admin Game ID (`318843189`), `realUser` session state, DOM `#staffProfileModal` presence, `systemAdmins`, and `staffProfilesMap`.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.92.0`) in `window.getFurnaceIconHtml`.
+
 ## [1.91.1] - 2026-08-12
 ### 🐛 Fixed Edit Profile Options Popup Scope Issue
 - **🐛 Bug Fix**:
