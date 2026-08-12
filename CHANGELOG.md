@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [1.89.5] - 2026-08-12
+### 🧭 Dual Safari & Chrome Visual Install Cards
+- **🧭 Safari & Chrome Visual Install Cards**:
+  - Explained Apple iOS security design choice hiding "Add to Home Screen" inside programmatic `navigator.share()`.
+  - Added dedicated visual instruction cards for Safari (Share 📤 ➔ Add to Home Screen ➕) and Chrome (Menu ⋮ / Share ➔ Add to Home Screen / Install App 📲).
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.89.5`) in `window.getFurnaceIconHtml`.
+
 ## [1.89.4] - 2026-08-12
 ### 📤 Native Web Share Sheet Integration & Pointer Arrow Removal
 - **📤 Native Web Share Integration**:

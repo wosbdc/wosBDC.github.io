@@ -1,10 +1,10 @@
 {
-  "version": "1.89.4",
+  "version": "1.89.5",
   "releaseDate": "2026-08-12",
-  "title": "📤 Native Web Share Sheet & Removed Floating Pointer Arrow",
+  "title": "🧭 Dual Safari & Chrome Visual Install Cards",
   "notes": [
-    "Removed floating screen arrow to accommodate custom browser toolbar layouts",
-    "Added 1-Tap '📤 Open Share Menu' button using Web Share API to trigger native iOS Share Sheet instantly",
-    "Streamlined step-by-step PWA install cards inside iOS/Apple modal"
+    "Clarified why iOS Web Share hides programmatic Add to Home Screen due to Apple security limits",
+    "Added side-by-side visual instructions for Safari Share (📤) and Chrome Menu (⋮ / Share ➕)",
+    "Ensured seamless 100% install clarity across all iOS and mobile browser configurations"
   ]
 }
