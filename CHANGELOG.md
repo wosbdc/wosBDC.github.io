@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [1.69.0] - 2026-08-12
+### FC1 Badge with Smaller Secondary Star Points Proportions
+- **💎 Refined Multi-Layered Star Proportions**:
+  - Generated FC1 (`fc1.png`) following the exact reference example proportions: prominent primary 6-pointed ruby crystal star at 0° with smaller secondary star points (~65% scale, 30° rotation) poking out subtly between the main points.
+  - Soft glowing neon circle halo ring set behind the primary points.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.69.0`) in `window.getFurnaceIconHtml`.
+
 ## [1.68.0] - 2026-08-12
 ### AI-Generated FC8 Test Badge with Soft Subtle Ambient Halo
 - **💎 Single FC8 Test Badge Update**:
