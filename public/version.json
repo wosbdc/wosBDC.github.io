@@ -1,10 +1,10 @@
 {
-  "version": "1.80.0",
+  "version": "1.81.0",
   "releaseDate": "2026-08-12",
-  "title": "📱 iPhone Safari Native PWA WebApp Support & Install Guide",
+  "title": "🚀 Fixed Update Alert Persistence & Session Dismissal",
   "notes": [
-    "Added 1-click iOS Safari 'Add to Home Screen' Native App Install Guide",
-    "Optimized Apple touch icons & status bar meta tags for full-screen iPhone PWA experience",
-    "Enhanced Real-App Update Checker with iOS Safari PWA support"
+    "Fixed update alert persistence loop by matching build version strings",
+    "Added session-based dismissal memory so 'Later' cleanly hides the prompt",
+    "Enhanced force-reload cache invalidation logic"
   ]
 }

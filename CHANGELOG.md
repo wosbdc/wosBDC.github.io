@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [1.81.0] - 2026-08-12
+### Fixed Update Alert Persistence Loop & Added Session Dismissal
+- **🐛 Fixed Update Banner Persistence**:
+  - Synchronized `CURRENT_BUILD_VERSION` (`"1.81.0"`) across `main.js`, `package.json`, and `version.json` to prevent update loop.
+- **🙈 Session Dismissal Memory**:
+  - Tapping **"Later"** stores `sessionStorage.setItem('wos_dismissed_update', version)` so the banner stays hidden for the rest of the user's session.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.81.0`) in `window.getFurnaceIconHtml`.
+
 ## [1.80.0] - 2026-08-12
 ### iPhone Safari Native PWA WebApp Support & 1-Click Install Guide
 - **📱 iPhone Safari Native PWA Integration**:
