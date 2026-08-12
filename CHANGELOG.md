@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [1.63.0] - 2026-08-11
+### Ringless 3D Faceted Fire Crystal Star Badges
+- **💎 Pure 3D Fire Crystal Star Design**:
+  - Removed the background circular ring and dark halo from all Fire Crystal badges (`fc1.png` – `fc10.png`).
+  - Now renders exclusively the 3D faceted 6-pointed crystal star and glowing center hexagon, giving the Fire Crystal badges maximum power, sharp geometric edges, and zero visual clutter across all profile cards, lookups, and editors.
+
 ## [1.62.0] - 2026-08-11
 ### Action Category Filter Tabs for Admin Audit Logs
 - **🏷️ Interactive Category Pills**:
