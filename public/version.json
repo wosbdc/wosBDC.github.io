@@ -1,9 +1,10 @@
 {
-  "version": "1.93.2",
+  "version": "1.94.0",
   "releaseDate": "2026-08-12",
-  "title": "🛡️ Fixed Staff Profile Modal Close & Save Buttons",
+  "title": "🐻 Comprehensive Account Hub Bear Trap & Personal Activity Log System",
   "notes": [
-    "Added inline onclick to close (×) button on Staff Profile modal",
-    "Added inline onclick to Save Profile button to call saveStaffProfileFromModal()"
+    "Fixed missing Bear Trap logs in Account Hub by expanding query to include all recent historical logs, batch expand entries, and global event logs",
+    "Enhanced log matching with sanitized name comparison, rich activity icons (🥩 Bear Trap, 👑 Crown, 🪤 Reset, 🎯 Showdown, 🛡️ Staff)",
+    "Added automatic log refresh when switching accounts in the Account Hub selector"
   ]
 }

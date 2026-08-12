@@ -109,7 +109,7 @@ window.getFurnaceIconHtml = (level, size = 48) => {
      const canvasOffset = Math.round((canvasSize - size) / 2);
      return `<span class="fc-badge-stage" data-fc="${fcNum}" style="display:inline-flex; align-items:center; justify-content:center; position:relative; vertical-align:middle; cursor:pointer; width:${size}px; height:${size}px; user-select:none; -webkit-user-select:none;">
        <canvas class="fc-flame-canvas" width="${canvasSize}" height="${canvasSize}" style="position:absolute; top:-${canvasOffset}px; left:-${canvasOffset}px; width:${canvasSize}px; height:${canvasSize}px; pointer-events:none; z-index:3;"></canvas>
-       <img src="/badges/fc${fcNum}.png?v=1.93.1" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
+       <img src="/badges/fc${fcNum}.png?v=1.94.0" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
      </span>`;
   }
 
@@ -7013,94 +7013,149 @@ window.loadUserPersonalLog = async (chiefName) => {
     
     try {
         let userLogs = [];
-        let nameLower = (chiefName || '').toLowerCase();
+        let rawName = (chiefName || '').trim();
+        let nameLower = rawName.toLowerCase();
+        let nameClean = nameLower.replace(/[^a-z0-9]/g, '');
         
         try {
             const snap = await get(ref(db, 'admin_logs'));
             if (snap.exists()) {
                 const allLogs = Object.values(snap.val() || {});
                 userLogs = allLogs.filter(log => {
+                    if (!log) return false;
                     const t = (log.target || '').toLowerCase();
                     const d = (log.details || '').toLowerCase();
-                    return t === nameLower || (nameLower && t.includes(nameLower)) || (nameLower && d.includes(nameLower));
+                    const a = (log.action || '').toLowerCase();
+                    const tClean = t.replace(/[^a-z0-9]/g, '');
+                    const dClean = d.replace(/[^a-z0-9]/g, '');
+                    
+                    const matchesTarget = (t === nameLower) || 
+                                          (nameLower && t.includes(nameLower)) || 
+                                          (nameClean && tClean.length >= 2 && tClean.includes(nameClean));
+                    const matchesDetails = (nameLower && d.includes(nameLower)) || 
+                                           (nameClean && nameClean.length >= 2 && dClean.includes(nameClean));
+                    
+                    // Also include Bear Trap logs if log target is "All Players" or "Multiple Members"
+                    const isGlobalBearTrapLog = (t.includes('all players') || t.includes('multiple members')) && 
+                                                (a.includes('bear trap') || a.includes('beartrap') || d.includes('bear trap'));
+                    
+                    return matchesTarget || matchesDetails || isGlobalBearTrapLog;
                 });
             }
         } catch(e) {
             console.warn("Firebase personal log query failed or denied", e);
         }
         
-        if (userLogs.length === 0) {
+        // Fetch from Sheets API as fallback if log count is low
+        if (userLogs.length < 5) {
             try {
                 const token = await getAuthToken();
                 const res = await fetch(`${API_BASE_URL}?api=getSheetData&sheetName=Admin Log&token=${encodeURIComponent(token)}`).then(r => r.json());
                 if (res && res.success && res.data && res.data.length > 1) {
                     for (let i = 1; i < res.data.length; i++) {
                         let row = res.data[i];
-                        if (row && row[2] && row[2].toString().toLowerCase() === nameLower) {
-                            let d = new Date(row[0]);
-                            userLogs.push({
-                                id: 'sheets_' + i,
-                                admin: row[1] || 'Admin',
-                                action: 'Donation Recorded',
-                                target: row[2],
-                                details: `Added +${row[3] || 0} Bear Trap donation points (New Total: ${row[4] || 0})`,
-                                timestamp: isNaN(d.getTime()) ? Date.now() : d.getTime(),
-                                dateStr: isNaN(d.getTime()) ? 'Past Record' : d.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}),
-                                timeStr: isNaN(d.getTime()) ? '' : d.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'})
-                            });
+                        if (row && row[2]) {
+                            let targetStr = row[2].toString().toLowerCase();
+                            let targetClean = targetStr.replace(/[^a-z0-9]/g, '');
+                            if (targetStr.includes(nameLower) || (nameClean && targetClean.includes(nameClean))) {
+                                let d = new Date(row[0]);
+                                userLogs.push({
+                                    id: 'sheets_' + i,
+                                    admin: row[1] || 'Admin',
+                                    action: 'Donation Recorded',
+                                    target: row[2],
+                                    details: `Added +${row[3] || 0} Bear Trap donation points (New Total: ${row[4] || 0})`,
+                                    timestamp: isNaN(d.getTime()) ? Date.now() : d.getTime(),
+                                    dateStr: isNaN(d.getTime()) ? 'Past Record' : d.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}),
+                                    timeStr: isNaN(d.getTime()) ? '' : d.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'})
+                                });
+                            }
                         }
                     }
                 }
             } catch(e) { console.error(e); }
         }
 
-        // Filter ONLY for today's entries
-        const now = new Date();
-        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-        
-        const todaysLogs = userLogs.filter(log => {
-            if (log.timestamp) {
-                return log.timestamp >= todayStart;
-            }
-            if (log.dateStr) {
-                const d = new Date(log.dateStr);
-                return !isNaN(d.getTime()) && d.toDateString() === now.toDateString();
-            }
-            return false;
+        // Deduplicate logs
+        const logMap = {};
+        userLogs.forEach(l => {
+            const key = l.id || `${l.timestamp}_${l.action}_${l.details}`;
+            if (!logMap[key]) logMap[key] = l;
         });
+        const sortedLogs = Object.values(logMap).sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
         
-        todaysLogs.sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
-        
-        if (todaysLogs.length === 0) {
-            cont.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:15px; background:rgba(255,255,255,0.02); border-radius:10px; font-size:13px;">No administrative activity logged for your account today.</div>`;
+        if (sortedLogs.length === 0) {
+            cont.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:15px; background:rgba(255,255,255,0.02); border-radius:10px; font-size:13px;">No administrative or Bear Trap activity logged for ${escapeHTML(rawName)} yet.</div>`;
             return;
         }
         
-        let html = `<div style="display:flex; flex-direction:column; gap:8px; max-height:240px; overflow-y:auto; padding-right:4px;">`;
-        todaysLogs.forEach(log => {
+        // Display top 30 recent logs
+        const displayLogs = sortedLogs.slice(0, 30);
+        const now = new Date();
+        const todayStr = now.toDateString();
+        
+        let html = `<div style="display:flex; flex-direction:column; gap:8px; max-height:300px; overflow-y:auto; padding-right:4px;">`;
+        displayLogs.forEach(log => {
             let icon = "📋";
-            let actLower = (log.action || '').toLowerCase();
-            if (actLower.includes('donation')) icon = "🥩";
-            else if (actLower.includes('champion') || actLower.includes('crown')) icon = "👑";
-            else if (actLower.includes('showdown') || actLower.includes('score')) icon = "🎯";
-            else if (actLower.includes('role') || actLower.includes('staff')) icon = "🛡️";
+            let badgeBg = "rgba(59,130,246,0.15)";
+            let badgeBorder = "rgba(59,130,246,0.3)";
             
-            let timeDisp = log.timeStr || (log.timestamp ? new Date(log.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : 'Today');
+            let actLower = (log.action || '').toLowerCase();
+            let detLower = (log.details || '').toLowerCase();
+            
+            if (actLower.includes('bear trap') || actLower.includes('beartrap') || actLower.includes('donation') || detLower.includes('bear trap') || detLower.includes('donation')) {
+                if (actLower.includes('champion') || actLower.includes('crown') || detLower.includes('champion') || detLower.includes('crowned')) {
+                    icon = "👑";
+                    badgeBg = "rgba(234,179,8,0.2)";
+                    badgeBorder = "rgba(234,179,8,0.5)";
+                } else if (actLower.includes('reset') || actLower.includes('wipe')) {
+                    icon = "🪤";
+                    badgeBg = "rgba(239,68,68,0.15)";
+                    badgeBorder = "rgba(239,68,68,0.3)";
+                } else {
+                    icon = "🥩";
+                    badgeBg = "rgba(16,185,129,0.15)";
+                    badgeBorder = "rgba(16,185,129,0.3)";
+                }
+            } else if (actLower.includes('showdown') || actLower.includes('score')) {
+                icon = "🎯";
+                badgeBg = "rgba(168,85,247,0.15)";
+                badgeBorder = "rgba(168,85,247,0.3)";
+            } else if (actLower.includes('role') || actLower.includes('staff')) {
+                icon = "🛡️";
+                badgeBg = "rgba(6,182,212,0.15)";
+                badgeBorder = "rgba(6,182,212,0.3)";
+            }
+            
+            let dateObj = log.timestamp ? new Date(log.timestamp) : (log.dateStr ? new Date(log.dateStr) : null);
+            let timeDisp = '';
+            if (dateObj && !isNaN(dateObj.getTime())) {
+                if (dateObj.toDateString() === todayStr) {
+                    timeDisp = `Today, ${dateObj.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
+                } else {
+                    timeDisp = `${dateObj.toLocaleDateString('en-US', {month:'short', day:'numeric'})}, ${dateObj.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
+                }
+            } else {
+                timeDisp = log.dateStr ? `${log.dateStr} ${log.timeStr || ''}` : 'Past Record';
+            }
             
             html += `
-              <div style="display:flex; align-items:center; gap:10px; padding:8px 12px; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:8px;">
-                <div style="width:30px; height:30px; border-radius:50%; background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.3); display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0;">${icon}</div>
+              <div style="display:flex; align-items:center; gap:10px; padding:10px 12px; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:10px; transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='rgba(255,255,255,0.03)'">
+                <div style="width:34px; height:34px; border-radius:50%; background:${badgeBg}; border:1px solid ${badgeBorder}; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0;">${icon}</div>
                 <div style="flex:1; min-width:0;">
-                  <div style="font-weight:bold; color:var(--text-main); font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHTML(log.action || 'Activity Recorded')}</div>
-                  <div style="color:var(--text-muted); font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHTML(log.details || '')} (by <span style="color:var(--accent); font-weight:bold;">${escapeHTML(log.admin || 'Admin')}</span>)</div>
+                  <div style="display:flex; align-items:center; justify-content:space-between; gap:6px;">
+                    <div style="font-weight:bold; color:var(--text-main); font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHTML(log.action || 'Activity Recorded')}</div>
+                    <div style="font-size:11px; color:var(--text-muted); flex-shrink:0; white-space:nowrap;">${timeDisp}</div>
+                  </div>
+                  <div style="color:var(--text-muted); font-size:12px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHTML(log.details || '')} <span style="font-size:11px; opacity:0.8;">(by <strong style="color:var(--accent);">${escapeHTML(log.admin || 'Admin')}</strong>)</span></div>
                 </div>
-                <div style="font-size:11px; color:var(--text-muted); text-align:right; flex-shrink:0; white-space:nowrap;">${timeDisp}</div>
               </div>
             `;
         });
         html += `</div>`;
         cont.innerHTML = html;
     } catch(err) {
+        console.error("Personal log error:", err);
         cont.innerHTML = `<div style="text-align:center; color:var(--danger); padding:15px;">Failed to load personal logs.</div>`;
     }
 };
@@ -11955,7 +12010,7 @@ window.resetBearTrapEvent = async () => {
         <div id="accTabSectionActivity" style="display:none; text-align:left;">
           <div class="card" style="text-align:left;">
             <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
-              <span>📅 Today's Personal Activity Log</span>
+              <span>📅 Personal Activity & Bear Trap Log</span>
               <span style="font-size:12px; color:var(--text-muted); font-weight:normal;">Filtered for ${escapeHTML(currentChiefName)}</span>
             </div>
             <div id="userPersonalLogContainer" style="margin-top:12px;">
@@ -12352,6 +12407,7 @@ window.resetBearTrapEvent = async () => {
       if (selectEl) {
         selectEl.addEventListener('change', (e) => {
           renderAccountRankings(e.target.value);
+          window.loadUserPersonalLog(e.target.value);
         });
       }
     };

@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## [1.94.0] - 2026-08-12
+### 🐻 Comprehensive Account Hub Bear Trap & Personal Activity Log System
+- **🐻 Bear Trap Log Expansion**:
+  - Removed strict "today only" filter in Account Hub personal logs so all recent Bear Trap donation records, crownings, and resets are displayed.
+  - Added smart sanitized matching for player targets, details, and global Bear Trap logs.
+  - Added rich activity badges (🥩 Bear Trap Donations, 👑 Crownings, 🪤 Resets, 🎯 Showdown, 🛡️ Staff).
+  - Synced Account Hub dropdown selector so switching to Linked Alt accounts immediately refreshes personal logs for that alt.
+- **🔄 Forced Cache Refresh**:
+  - Appended version cache-buster (`?v=1.94.0`) in `window.getFurnaceIconHtml`.
+
 ## [1.93.2] - 2026-08-12
 ### 🛡️ Fixed Staff Profile Modal Close & Save Buttons
 - **🐛 Close Button Fix**: Added inline `onclick` to the `×` close button on the Staff Profile modal — its event listener was removed in v1.93.0 cleanup.
