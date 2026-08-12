@@ -109,7 +109,7 @@ window.getFurnaceIconHtml = (level, size = 48) => {
      const canvasOffset = Math.round((canvasSize - size) / 2);
      return `<span class="fc-badge-stage" data-fc="${fcNum}" style="display:inline-flex; align-items:center; justify-content:center; position:relative; vertical-align:middle; cursor:pointer; width:${size}px; height:${size}px; user-select:none; -webkit-user-select:none;">
        <canvas class="fc-flame-canvas" width="${canvasSize}" height="${canvasSize}" style="position:absolute; top:-${canvasOffset}px; left:-${canvasOffset}px; width:${canvasSize}px; height:${canvasSize}px; pointer-events:none; z-index:3;"></canvas>
-       <img src="/badges/fc${fcNum}.png?v=1.87.1" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
+       <img src="/badges/fc${fcNum}.png?v=1.88.0" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
      </span>`;
   }
 
@@ -17771,7 +17771,92 @@ window.closeMobileNavModal = () => {
 })();
 
 // ============================================================================
-// IPHONE SAFARI NATIVE PWA INSTALL GUIDE SYSTEM (v1.85.0)
+// DUAL-OS APP INSTALL SELECTOR MODAL (v1.88.0)
+// ============================================================================
+window.showAppInstallSelector = function() {
+  if (document.getElementById('app-os-selector-modal')) return;
+
+  const modal = document.createElement('div');
+  modal.id = 'app-os-selector-modal';
+  modal.style.cssText = `
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(9, 13, 22, 0.88);
+    backdrop-filter: blur(14px);
+    z-index: 9999999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  `;
+
+  modal.innerHTML = `
+    <div style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.98)); border: 1px solid rgba(255, 215, 0, 0.6); box-shadow: 0 25px 60px rgba(0,0,0,0.9), 0 0 35px rgba(255, 215, 0, 0.25); border-radius: 24px; padding: 26px; max-width: 480px; width: 100%; color: #f1f5f9; position: relative;">
+      <button id="close-os-selector-modal" style="position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.1); border: none; color: #94a3b8; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 1.1rem; font-weight: bold;">✕</button>
+      
+      <div style="text-align: center; margin-bottom: 22px;">
+        <div style="font-size: 3rem; margin-bottom: 8px;">📲</div>
+        <h2 style="color: #ffd700; font-size: 1.45rem; margin-bottom: 6px; font-weight: 800;">Install WOS App</h2>
+        <p style="color: #94a3b8; font-size: 0.88rem; line-height: 1.4;">Select your device type to install the WOS App on your phone or tablet:</p>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px;">
+        <!-- Android Card -->
+        <button id="btn-select-android" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(16, 185, 129, 0.08)); border: 1.5px solid rgba(34, 197, 94, 0.6); border-radius: 18px; padding: 16px; cursor: pointer; text-align: left; transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); display: flex; align-items: center; justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #22c55e, #10b981); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4); flex-shrink: 0;">🤖</div>
+            <div>
+              <div style="font-weight: 800; font-size: 1.05rem; color: #4ade80;">Android Phone / Tablet</div>
+              <div style="font-size: 0.8rem; color: #94a3b8;">1-Click Automatic App Installation</div>
+            </div>
+          </div>
+          <span style="font-size: 1.2rem; color: #4ade80;">➔</span>
+        </button>
+
+        <!-- Apple iOS Card -->
+        <button id="btn-select-apple" style="background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(245, 158, 11, 0.08)); border: 1.5px solid rgba(255, 215, 0, 0.6); border-radius: 18px; padding: 16px; cursor: pointer; text-align: left; transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); display: flex; align-items: center; justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #ffd700, #ff8c00); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4); flex-shrink: 0;">🍎</div>
+            <div>
+              <div style="font-weight: 800; font-size: 1.05rem; color: #ffd700;">Apple iPhone / iPad</div>
+              <div style="font-size: 0.8rem; color: #94a3b8;">4-Step Safari Guide & Auto-Share Button</div>
+            </div>
+          </div>
+          <span style="font-size: 1.2rem; color: #ffd700;">➔</span>
+        </button>
+      </div>
+
+      <button id="btn-close-os-selector" style="width: 100%; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #cbd5e1; font-weight: 600; font-size: 0.9rem; padding: 12px; border-radius: 14px; cursor: pointer;">
+        Close
+      </button>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  const closeFn = () => modal.remove();
+  document.getElementById('close-os-selector-modal').addEventListener('click', closeFn);
+  document.getElementById('btn-close-os-selector').addEventListener('click', closeFn);
+
+  // Android Click -> Trigger 1-Click PWA Install
+  document.getElementById('btn-select-android').addEventListener('click', () => {
+    modal.remove();
+    if (window.deferredPwaPrompt) {
+      window.deferredPwaPrompt.prompt();
+    } else {
+      alert("🤖 Android App Install: Tap Chrome menu (⋮) -> 'Add to Home screen' or 'Install app'.");
+    }
+  });
+
+  // Apple iOS Click -> Open 4-Step iOS Guide Modal with Auto-Share button
+  document.getElementById('btn-select-apple').addEventListener('click', () => {
+    modal.remove();
+    window.showIosInstallGuide();
+  });
+};
+
+// ============================================================================
+// IPHONE SAFARI NATIVE PWA INSTALL GUIDE SYSTEM (v1.88.0)
 // ============================================================================
 window.showIosInstallGuide = function() {
   if (document.getElementById('ios-pwa-install-modal')) return;
@@ -17795,7 +17880,7 @@ window.showIosInstallGuide = function() {
       <button id="close-ios-install-modal" style="position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.1); border: none; color: #94a3b8; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 1.1rem; font-weight: bold;">✕</button>
       
       <div style="text-align: center; margin-bottom: 18px;">
-        <div style="font-size: 3rem; margin-bottom: 8px;">📱</div>
+        <div style="font-size: 3rem; margin-bottom: 8px;">🍎</div>
         <h2 style="color: #ffd700; font-size: 1.4rem; margin-bottom: 6px;">Install App on iPhone / iPad</h2>
         <p style="color: #94a3b8; font-size: 0.88rem; line-height: 1.4;">Add WOS Dashboard to your Home Screen for a full-screen app experience!</p>
       </div>
@@ -17844,12 +17929,12 @@ window.showIosInstallGuide = function() {
         url: window.location.href
       }).catch(() => {});
     }
-    window.triggerAutoPwaInstall();
+    window.showIosPointerArrow();
   });
 };
 
 // ============================================================================
-// AUTOMATED PWA 1-CLICK INSTALL & SMART PROMPT ENGINE (v1.84.0)
+// AUTOMATED PWA 1-CLICK INSTALL & SMART PROMPT ENGINE (v1.88.0)
 // ============================================================================
 (function() {
   let deferredPrompt = null;
@@ -17897,31 +17982,13 @@ window.showIosInstallGuide = function() {
   };
 
   window.triggerAutoPwaInstall = function() {
-    if (window.deferredPwaPrompt) {
-      window.deferredPwaPrompt.prompt();
-      window.deferredPwaPrompt.userChoice.then((choiceResult) => {
-        if (choiceResult.outcome === 'accepted') {
-          const banner = document.getElementById('auto-pwa-install-banner');
-          if (banner) banner.remove();
-        }
-        window.deferredPwaPrompt = null;
-      });
-    } else {
-      const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-      if (isIos) {
-        window.showIosPointerArrow();
-      } else {
-        window.showIosInstallGuide();
-      }
-    }
+    window.showAppInstallSelector();
   };
 
   function showAutoInstallBanner() {
     if (document.getElementById('auto-pwa-install-banner')) return;
     if (sessionStorage.getItem('wos_dismissed_pwa_install')) return;
     if (window.matchMedia('(display-mode: standalone)').matches) return;
-
-    const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
     const banner = document.createElement('div');
     banner.id = 'auto-pwa-install-banner';
@@ -17952,12 +18019,12 @@ window.showIosInstallGuide = function() {
         <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #ffd700, #ff8c00); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; box-shadow: 0 4px 12px rgba(255,215,0,0.4); flex-shrink:0;">📱</div>
         <div>
           <div style="font-weight: 800; font-size: 0.95rem; color: #ffd700;">Install WOS App</div>
-          <div style="font-size: 0.78rem; color: #94a3b8;">${isIos ? 'Add to iPhone Home Screen' : '1-Click App Installation'}</div>
+          <div style="font-size: 0.78rem; color: #94a3b8;">Android 🤖 or Apple iOS 🍎</div>
         </div>
       </div>
       <div style="display:flex; align-items:center; gap: 8px;">
         <button id="btn-pwa-install-now" style="background: linear-gradient(135deg, #ffd700, #ff8c00); border: none; color: #0f172a; font-weight: 800; font-size: 0.85rem; padding: 9px 15px; border-radius: 12px; cursor: pointer; box-shadow: 0 3px 10px rgba(255,215,0,0.3); white-space:nowrap;">
-          ⚡ Auto-Install
+          ⚡ Install App
         </button>
         <button id="btn-pwa-install-dismiss" style="background: rgba(255,255,255,0.08); border: none; color: #94a3b8; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; font-size: 1rem; font-weight: bold; display:flex; align-items:center; justify-content:center;">✕</button>
       </div>
@@ -17969,7 +18036,7 @@ window.showIosInstallGuide = function() {
     }, 300);
 
     document.getElementById('btn-pwa-install-now').addEventListener('click', () => {
-      window.triggerAutoPwaInstall();
+      window.showAppInstallSelector();
     });
 
     document.getElementById('btn-pwa-install-dismiss').addEventListener('click', () => {

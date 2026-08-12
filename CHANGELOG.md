@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [1.88.0] - 2026-08-12
+### 📱 Dual-OS App Install Selector (Android 🤖 vs Apple iOS 🍎)
+- **📱 Dual-OS Device Installer Selector**:
+  - Built interactive device selection modal (`window.showAppInstallSelector`).
+  - **Android 🤖 Choice**: Immediately triggers 1-Click native app installation.
+  - **Apple iOS 🍎 Choice**: Opens 4-step iOS Safari installation guide with native Web Share trigger.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.88.0`) in `window.getFurnaceIconHtml`.
+
 ## [1.87.1] - 2026-08-12
 ### 🏷️ SemVer Versioning Standard Formalization
 - **🏷️ Strict SemVer (MAJOR.MINOR.PATCH) Formatting**:

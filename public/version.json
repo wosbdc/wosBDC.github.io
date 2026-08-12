@@ -1,10 +1,10 @@
 {
-  "version": "1.87.1",
+  "version": "1.88.0",
   "releaseDate": "2026-08-12",
-  "title": "🏷️ SemVer Semantic Versioning Standard Enforcement",
+  "title": "📱 Dual-OS App Install Selector (Android vs Apple iOS)",
   "notes": [
-    "Formalized strict Semantic Versioning (MAJOR.MINOR.PATCH) for all future commits",
-    "Bug Fixes & Patch Tweaks -> Increment PATCH (x.y.Z+1)",
-    "New Features & Enhancements -> Increment MINOR (x.Y+1.0)"
+    "Added Dual-OS device selection modal allowing users to choose Android or Apple iOS",
+    "Android Card -> Triggers 1-Click native installation prompt",
+    "Apple iOS Card -> Opens interactive 4-step iOS guide with native Web Share trigger"
   ]
 }
