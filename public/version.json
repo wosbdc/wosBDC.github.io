@@ -1,9 +1,10 @@
 {
-  "version": "1.88.3",
+  "version": "1.88.4",
   "releaseDate": "2026-08-12",
-  "title": "📱 Hardened Android 1-Click & iPhone Safari Install Engine",
+  "title": "⚡ Restored Android 1-Click Bottom Install Prompt Engine",
   "notes": [
-    "Replaced URL Share sheet on iOS with direct Safari bottom Share bar pointer arrow for Add to Home Screen",
-    "Added interactive 3-step Android Chrome guide fallback when native prompt isn't ready"
+    "Unified single PWA beforeinstallprompt global event listener to prevent duplicate event listener override",
+    "Restored direct 1-click native Android Chrome install prompt on banner tap",
+    "Smart OS detection: Android triggers 1-click install prompt immediately, iOS shows bottom Safari share arrow"
   ]
 }

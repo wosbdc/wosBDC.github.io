@@ -109,7 +109,7 @@ window.getFurnaceIconHtml = (level, size = 48) => {
      const canvasOffset = Math.round((canvasSize - size) / 2);
      return `<span class="fc-badge-stage" data-fc="${fcNum}" style="display:inline-flex; align-items:center; justify-content:center; position:relative; vertical-align:middle; cursor:pointer; width:${size}px; height:${size}px; user-select:none; -webkit-user-select:none;">
        <canvas class="fc-flame-canvas" width="${canvasSize}" height="${canvasSize}" style="position:absolute; top:-${canvasOffset}px; left:-${canvasOffset}px; width:${canvasSize}px; height:${canvasSize}px; pointer-events:none; z-index:3;"></canvas>
-       <img src="/badges/fc${fcNum}.png?v=1.88.3" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
+       <img src="/badges/fc${fcNum}.png?v=1.88.4" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
      </span>`;
   }
 
@@ -1531,45 +1531,18 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// PWA Install Prompt Handler & UI Banner
-let deferredInstallPrompt = null;
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
-  deferredInstallPrompt = e;
-  window.showPWAInstallBanner();
-});
-
+// Global PWA Install Helper Methods
 window.showPWAInstallBanner = () => {
-  if (document.getElementById('pwaInstallBanner')) return;
-  if (sessionStorage.getItem('pwaBannerDismissed')) return;
-
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-
-  const bannerHtml = `
-    <div id="pwaInstallBanner" style="position:fixed; bottom:20px; left:50%; transform:translateX(-50%); width:90%; max-width:440px; background:var(--card-bg); border:1px solid var(--accent); border-radius:16px; padding:16px 20px; box-shadow:0 12px 40px rgba(0,0,0,0.8); z-index:99999; display:flex; align-items:center; justify-content:space-between; gap:12px; animation:slideUp 0.3s ease;">
-      <div style="display:flex; align-items:center; gap:12px;">
-        <div style="width:44px; height:44px; background:var(--accent); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:24px;">📱</div>
-        <div>
-          <div style="font-weight:bold; color:var(--text-main); font-size:14px;">Install WOS BDC App</div>
-          <div style="font-size:11px; color:var(--text-muted);">Add to Home Screen for fast 1-tap access!</div>
-        </div>
-      </div>
-      <div style="display:flex; gap:8px; align-items:center;">
-        ${isIOS ? `
-          <button onclick="window.showIOSPWAInstructions()" style="background:var(--accent); color:white; border:none; padding:8px 14px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer;">How to Add</button>
-        ` : `
-          <button onclick="window.triggerPWAInstall()" style="background:var(--accent); color:white; border:none; padding:8px 14px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer;">Install</button>
-        `}
-        <button onclick="document.getElementById('pwaInstallBanner').remove(); sessionStorage.setItem('pwaBannerDismissed', 'true');" style="background:transparent; border:none; color:var(--text-muted); font-size:18px; cursor:pointer; padding:0 4px;">✕</button>
-      </div>
-    </div>
-  `;
-
-  document.body.insertAdjacentHTML('beforeend', bannerHtml);
+  if (typeof showAutoInstallBanner === 'function') {
+    showAutoInstallBanner();
+  }
 };
 
+// PWA Install Prompt Global Handler
 window.triggerPWAInstall = async () => {
-  if (window.showAppInstallSelector) {
+  if (window.triggerAutoPwaInstall) {
+    window.triggerAutoPwaInstall();
+  } else if (window.showAppInstallSelector) {
     window.showAppInstallSelector();
   }
 };
@@ -18036,7 +18009,27 @@ window.showIosInstallGuide = function() {
   };
 
   window.triggerAutoPwaInstall = function() {
-    window.showAppInstallSelector();
+    const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isAndroid = /Android/i.test(navigator.userAgent);
+
+    if (isAndroid || window.deferredPwaPrompt) {
+      if (window.deferredPwaPrompt) {
+        window.deferredPwaPrompt.prompt();
+        window.deferredPwaPrompt.userChoice.then((choiceResult) => {
+          if (choiceResult.outcome === 'accepted') {
+            const banner = document.getElementById('auto-pwa-install-banner');
+            if (banner) banner.remove();
+          }
+          window.deferredPwaPrompt = null;
+        });
+      } else {
+        window.showAndroidInstallGuide();
+      }
+    } else if (isIos) {
+      window.showIosInstallGuide();
+    } else {
+      window.showAppInstallSelector();
+    }
   };
 
   function showAutoInstallBanner() {
@@ -18048,9 +18041,9 @@ window.showIosInstallGuide = function() {
     banner.id = 'auto-pwa-install-banner';
     banner.style.cssText = `
       position: fixed;
-      top: 16px;
+      bottom: 20px;
       left: 50%;
-      transform: translateX(-50%) translateY(-150%);
+      transform: translateX(-50%) translateY(150%);
       width: calc(100% - 32px);
       max-width: 440px;
       background: linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.98));
@@ -18073,7 +18066,7 @@ window.showIosInstallGuide = function() {
         <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #ffd700, #ff8c00); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; box-shadow: 0 4px 12px rgba(255,215,0,0.4); flex-shrink:0;">📱</div>
         <div>
           <div style="font-weight: 800; font-size: 0.95rem; color: #ffd700;">Install WOS App</div>
-          <div style="font-size: 0.78rem; color: #94a3b8;">Android 🤖 or Apple iOS 🍎</div>
+          <div style="font-size: 0.78rem; color: #94a3b8;">Add to Home Screen for 1-Tap Access</div>
         </div>
       </div>
       <div style="display:flex; align-items:center; gap: 8px;">
@@ -18090,12 +18083,12 @@ window.showIosInstallGuide = function() {
     }, 300);
 
     document.getElementById('btn-pwa-install-now').addEventListener('click', () => {
-      window.showAppInstallSelector();
+      window.triggerAutoPwaInstall();
     });
 
     document.getElementById('btn-pwa-install-dismiss').addEventListener('click', () => {
       sessionStorage.setItem('wos_dismissed_pwa_install', 'true');
-      banner.style.transform = 'translateX(-50%) translateY(-150%)';
+      banner.style.transform = 'translateX(-50%) translateY(150%)';
       setTimeout(() => banner.remove(), 400);
     });
   }

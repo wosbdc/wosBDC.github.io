@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## [1.88.4] - 2026-08-12
+### ⚡ Restored Android 1-Click Bottom Install Prompt Engine
+- **⚡ Unified Single PWA Listener**:
+  - Removed duplicate competing `beforeinstallprompt` event listeners in `main.js`.
+  - Unified single event handler storing `window.deferredPwaPrompt`.
+- **🤖 Restored Direct 1-Click Android Install**:
+  - Tapping "Install App" on Android now DIRECTLY launches Chrome's native 1-click install prompt dialog box instantly (without forcing Android users through a second OS selection modal).
+  - Restored bottom floating PWA install banner for Android Chrome users.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.88.4`) in `window.getFurnaceIconHtml`.
+
 ## [1.88.3] - 2026-08-12
 ### 📱 Hardened Android 1-Click & iPhone Safari Install Engine
 - **🍎 Apple iOS Share Fix**:
