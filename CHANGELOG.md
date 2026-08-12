@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [1.87.0] - 2026-08-12
+### ⚡ Automated Package Version Sync & SW Cache Purge
+- **⚡ Automated Version Synchronization**:
+  - Replaced hardcoded version string in `main.js` with `pkg.version` (dynamically imported from `package.json`).
+  - Updated PWA ServiceWorker cache key in `sw.js` to `wos-bdc-pwa-v1.87.0`.
+  - Bypassed caching on `version.json` to prevent stale version comparison loops.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.87.0`) in `window.getFurnaceIconHtml`.
+
 ## [1.86.0] - 2026-08-12
 ### 🛠️ Permanent Fix for Update Available Banner Loop
 - **🛠️ Update Banner Loop Resolution**:

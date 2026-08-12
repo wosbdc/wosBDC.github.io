@@ -1,10 +1,10 @@
 {
-  "version": "1.86.0",
+  "version": "1.87.0",
   "releaseDate": "2026-08-12",
-  "title": "🛠️ Permanent Fix for Recurring Update Banner Loop",
+  "title": "⚡ Automated Package Version Sync & SW Cache Purge",
   "notes": [
-    "Fixed recurring update banner bug by purging ServiceWorker & CacheStorage on update",
-    "Added localStorage version tracking to prevent duplicate prompts",
-    "Added cache-busting query parameter reload on update confirmation"
+    "Tied CURRENT_BUILD_VERSION directly to pkg.version to eliminate hardcoded version desynchronization",
+    "Updated PWA ServiceWorker cache key to v1.87.0 and bypassed version.json caching",
+    "Completely eliminated false positive App Update Available prompts"
   ]
 }
