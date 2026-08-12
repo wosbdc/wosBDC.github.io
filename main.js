@@ -105,7 +105,7 @@ window.getFurnaceIconHtml = (level, size = 48) => {
        10: 'rgba(255,215,0,0.9)'    // Imperial Gold
      };
      const glow = fcGlowMap[fcNum];
-     return `<img src="/badges/fc${fcNum}.png?v=1.66.0" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.15)'" onmouseout="this.style.transform='scale(1)'" loading="lazy">`;
+     return `<img src="/badges/fc${fcNum}.png?v=1.67.0" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.15)'" onmouseout="this.style.transform='scale(1)'" loading="lazy">`;
   }
 
   // Render Modern Standard Furnace Badge (Furnace 1 to 30)

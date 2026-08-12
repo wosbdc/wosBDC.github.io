@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [1.67.0] - 2026-08-12
+### AI-Generated FC1 Test Badge with Soft Subtle Ambient Halo
+- **💎 Single FC1 Test Badge Update**:
+  - Tested Option 3 specifically on `fc1.png` only (leaving FC2–FC10 untouched as requested).
+  - Created a brand new 3D ruby Fire Crystal star gem where the 3D crystal facets, metallic center texture, and glowing number 1 pop forward with maximum brilliance, while the background neon halo is natively dimmed into a soft ambient line.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.67.0`) in `window.getFurnaceIconHtml`.
+
 ## [1.66.0] - 2026-08-11
 ### Smooth Continuous Halo Ring 3D Fire Crystal Star Badges
 - **✨ Clean Continuous Halo Ring Restoration**:
