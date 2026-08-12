@@ -1,10 +1,10 @@
 {
-  "version": "1.83.0",
+  "version": "1.84.0",
   "releaseDate": "2026-08-12",
-  "title": "🍎 iOS Apple Taptic Haptic Engine & Automated PWA Install Prompt",
+  "title": "⚡ 1-Click Auto-Install Action Button & Both PWA Install Modes",
   "notes": [
-    "Implemented Web Audio transient pulse synthesizer for authentic iOS Apple Taptic Engine haptic feedback on iPhones",
-    "Added automatic PWA install engine (1-click native install for Android/Chrome)",
-    "Added automated floating PWA install prompt banner with iOS Safari pointer arrow"
+    "Combined automatic 1-click install button and step-by-step iOS tutorial",
+    "Added ⚡ Auto-Install App Now button across settings, mobile nav, and popup banners",
+    "Added animated pulsing Share arrow for iOS Safari users"
   ]
 }

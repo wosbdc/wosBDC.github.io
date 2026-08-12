@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [1.84.0] - 2026-08-12
+### ⚡ 1-Click Auto-Install Action Button & Dual PWA Install Modes
+- **⚡ Dual PWA Install System**:
+  - Combined the automatic top prompt banner, settings menu buttons, and visual tutorial into one unified system.
+  - Added **`⚡ Auto-Install App Now`** action button that triggers 1-click native browser install on Android/Chrome.
+  - Added an animated bottom pulse pointer pointing to Safari's Share button 📤 on iPhones.
+- **🔄 Forced Browser Cache Refresh**:
+  - Appended version cache-buster (`?v=1.84.0`) in `window.getFurnaceIconHtml`.
+
 ## [1.83.0] - 2026-08-12
 ### iOS Apple Taptic Haptic Engine & Automated PWA Install System
 - **🍎 Apple iOS Haptic Feedback Engine**:
