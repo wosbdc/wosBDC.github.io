@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [1.98.2] - 2026-08-13
+### ⚡ Duplicate Notification Prevention Fix
+- **⚡ Service Worker Duplicate Prevention**: Updated `public/firebase-messaging-sw.js` so `onBackgroundMessage` skips manual `showNotification()` calls when standard FCM `notification` payloads arrive. Browsers automatically render native popups for `notification` objects, eliminating double notifications on client screens.
+- **🧹 Backend Token Deduplication**: Deduplicated FCM device tokens in `PushNotifications.js` so each unique device token is targeted exactly once per broadcast.
+- **⚡ Google Apps Script Live Deployment**: Pushed and deployed Apps Script backend update to version `@146`.
+
 ## [1.98.1] - 2026-08-13
 ### 🐛 Fix Cache Variable Reference Error in verifyFirebaseToken
 - **🐛 Declared Missing `cache` Variable**: Added `var cache = CacheService.getScriptCache();` inside `verifyFirebaseToken` in `Sidebars_and_Tools.js`. This eliminates the `doGet Crash: cache is not defined` crash when authenticating real Firebase User ID Tokens from active browser sessions.

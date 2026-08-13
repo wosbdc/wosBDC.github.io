@@ -16,12 +16,14 @@ const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
   console.log('[firebase-messaging-sw.js] Received background message ', payload);
-  
-  const notificationTitle = payload.notification?.title || 'BDC Dashboard';
-  const notificationOptions = {
-    body: payload.notification?.body,
-    icon: '/favicon.svg'
-  };
-
-  self.registration.showNotification(notificationTitle, notificationOptions);
+  // FCM automatically displays notifications when the payload contains a 'notification' object.
+  // We only call showNotification if custom payload data is sent without a notification object.
+  if (payload.data && !payload.notification) {
+    const notificationTitle = payload.data.title || 'BDC Dashboard';
+    const notificationOptions = {
+      body: payload.data.body || '',
+      icon: './favicon.svg'
+    };
+    self.registration.showNotification(notificationTitle, notificationOptions);
+  }
 });
