@@ -7532,14 +7532,31 @@ window.updateNewMemberBadge = async () => {
   const recent = await window.getRecentNewMembers();
   const lastSeen = Number(localStorage.getItem('last_seen_new_member_timestamp') || '0');
   const unreadCount = recent.filter(m => m.createdMs > lastSeen).length;
-  const totalRecent = recent.length;
 
-  // Target the sidebar admin button
+  // 1. Badge on the ⚙️ Settings button in the top navbar (ALWAYS VISIBLE)
+  const settingsBtn = document.getElementById('settingsBtn');
+  if (settingsBtn) {
+    let badge = settingsBtn.querySelector('.new-member-badge');
+    if (unreadCount > 0) {
+      settingsBtn.style.position = 'relative';
+      settingsBtn.style.overflow = 'visible';
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'new-member-badge';
+        badge.style.cssText = 'position:absolute; top:-4px; right:-4px; min-width:18px; height:18px; background:#ef4444; color:#fff; font-size:10px; font-weight:bold; padding:0 4px; border-radius:9px; animation:pulse 2s infinite; box-shadow:0 0 8px rgba(239,68,68,0.7); z-index:10; pointer-events:none; display:flex; align-items:center; justify-content:center; line-height:1;';
+        settingsBtn.appendChild(badge);
+      }
+      badge.textContent = `${unreadCount}`;
+    } else if (badge) {
+      badge.remove();
+    }
+  }
+
+  // 2. Badge on the 🛡️ Admin Menu button inside the sidebar
   const adminBtn = document.getElementById('adminSidebarBtn');
   if (adminBtn) {
     let badge = adminBtn.querySelector('.new-member-badge');
     if (unreadCount > 0) {
-      // Ensure the button is positioned so badge can overlay
       adminBtn.style.position = 'relative';
       adminBtn.style.overflow = 'visible';
       if (!badge) {
@@ -7548,16 +7565,16 @@ window.updateNewMemberBadge = async () => {
         badge.style.cssText = 'position:absolute; top:-8px; right:-8px; background:#ef4444; color:#fff; font-size:11px; font-weight:bold; padding:3px 8px; border-radius:12px; animation:pulse 2s infinite; box-shadow:0 0 10px rgba(239,68,68,0.7); z-index:10; pointer-events:none; white-space:nowrap;';
         adminBtn.appendChild(badge);
       }
-      badge.textContent = `🔔 ${unreadCount}`;
+      badge.textContent = `🔔 ${unreadCount} New`;
     } else if (badge) {
       badge.remove();
     }
   }
 
-  // Also target any other admin nav buttons (bottom bar, etc.)
+  // 3. Any other admin nav buttons
   const otherBtns = document.querySelectorAll('.nav-admin-btn, [onclick*="views.admin"]');
   otherBtns.forEach(btn => {
-    if (btn.id === 'adminSidebarBtn') return; // already handled
+    if (btn.id === 'adminSidebarBtn' || btn.id === 'settingsBtn') return;
     let badge = btn.querySelector('.new-member-badge');
     if (unreadCount > 0) {
       btn.style.position = 'relative';

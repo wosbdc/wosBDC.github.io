@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [1.97.6] - 2026-08-13
+### 🔔 Navbar & Sidebar Red Badge Dual Notification
+- **🔔 Top Navbar Badge Added**: Added the red pulsing unread count badge directly to the **⚙️ Settings button** (`#settingsBtn`) in the top navigation bar so staff members can see unread member signups instantly on the main screen without having to open the slide-out sidebar menu.
+- **🛡️ Sidebar Admin Button Overlay**: Maintained the red pulsing badge on the **🛡️ Admin Menu** button inside the sidebar for full visibility when the menu is open.
+
 ## [1.97.5] - 2026-08-13
 ### 🔔 Red Badge Visibility Fix on Admin Sidebar Button
 - **🔔 Absolute Positioned Badge**: The `🔔 N` unread count badge was invisible because the sidebar button used `display:flex; justify-content:center` which swallowed the inline badge child. Rewrote badge rendering to use `position:absolute; top:-8px; right:-8px` so it floats as a red pulsing overlay on the top-right corner of the **🛡️ Admin Menu** button.

@@ -1,9 +1,8 @@
 {
-  "version": "1.97.5",
+  "version": "1.97.6",
   "releaseDate": "2026-08-13",
-  "title": "🔔 Red Badge Visibility Fix on Admin Sidebar Button",
+  "title": "🔔 Navbar & Sidebar Red Badge Dual Notification",
   "notes": [
-    "Fixed badge not rendering by switching from inline display to absolute positioned overlay on the Admin sidebar button",
-    "Badge now floats above the top-right corner of the 🛡️ Admin Menu button with red pulsing glow"
+    "Red unread signup badge now attaches to both the top navbar ⚙️ Settings button (always visible) and the 🛡️ Admin Menu button"
   ]
 }
