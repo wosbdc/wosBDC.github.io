@@ -1,9 +1,8 @@
 {
-  "version": "1.96.3",
+  "version": "1.96.4",
   "releaseDate": "2026-08-13",
-  "title": "🛡️ Firebase Security Rule Permission Fix for Discord Alert Settings",
+  "title": "🚀 GitHub Pages Deployment Re-trigger",
   "notes": [
-    "Migrated Discord Webhook settings node from system_settings to authorized config/discordAlerts node",
-    "Resolves PERMISSION_DENIED error when saving Discord alert settings"
+    "Re-triggered GitHub Actions Pages deployment pipeline following temporary GitHub HTTP 502 server gateway hiccup"
   ]
 }

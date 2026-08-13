@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.96.4] - 2026-08-13
+### 🚀 GitHub Pages Deployment Re-trigger
+- **🚀 Re-triggered Deployment**: Automated fresh release push to clear temporary GitHub Pages 502 server deployment outage.
+
 ## [1.96.3] - 2026-08-13
 ### 🛡️ Firebase Security Rule Permission Fix for Discord Alert Settings
 - **🛡️ Authorized Firebase Path**: Migrated storage path from `system_settings` to `config/discordAlerts`. In Firebase Realtime Database Security Rules, administrative configurations are explicitly authorized under `config/` (alongside `config/admins`, `config/maintenanceMode`, and `config/rosterRegisteredOnly`), resolving the `PERMISSION_DENIED` exception.
