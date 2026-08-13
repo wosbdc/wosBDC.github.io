@@ -1,9 +1,9 @@
 {
-  "version": "1.97.4",
+  "version": "1.97.5",
   "releaseDate": "2026-08-13",
-  "title": "⚡ Dual Matching for Registered Users Roster Info",
+  "title": "🔔 Red Badge Visibility Fix on Admin Sidebar Button",
   "notes": [
-    "Registered user database rows now match roster entries by both Game ID and Chief Name",
-    "Ensures registered users accurately show their Furnace Level, Enrolled status, and Roster info"
+    "Fixed badge not rendering by switching from inline display to absolute positioned overlay on the Admin sidebar button",
+    "Badge now floats above the top-right corner of the 🛡️ Admin Menu button with red pulsing glow"
   ]
 }

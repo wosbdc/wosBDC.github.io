@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [1.97.5] - 2026-08-13
+### 🔔 Red Badge Visibility Fix on Admin Sidebar Button
+- **🔔 Absolute Positioned Badge**: The `🔔 N` unread count badge was invisible because the sidebar button used `display:flex; justify-content:center` which swallowed the inline badge child. Rewrote badge rendering to use `position:absolute; top:-8px; right:-8px` so it floats as a red pulsing overlay on the top-right corner of the **🛡️ Admin Menu** button.
+- **🔧 Overflow Fix**: Set `overflow:visible` and `position:relative` on the button container so the badge is never clipped.
+
 ## [1.97.4] - 2026-08-13
 ### ⚡ Dual Matching for Registered Users Roster Info
 - **⚡ Roster Information Mapping Fix**: Upgraded registered user rendering in `views.admin()` to cross-reference roster records by both **Game ID** (`uGidStr === rpGid`) and **Name** (`cName === rpName`). Registered users now consistently display their **Furnace Level**, **Enrolled Status**, and roster badges.

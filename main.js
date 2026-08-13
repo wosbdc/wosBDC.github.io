@@ -7532,18 +7532,43 @@ window.updateNewMemberBadge = async () => {
   const recent = await window.getRecentNewMembers();
   const lastSeen = Number(localStorage.getItem('last_seen_new_member_timestamp') || '0');
   const unreadCount = recent.filter(m => m.createdMs > lastSeen).length;
+  const totalRecent = recent.length;
 
-  const adminNavBtns = document.querySelectorAll('#adminSidebarBtn, .nav-admin-btn, [onclick*="views.admin"]');
-  adminNavBtns.forEach(btn => {
-    let badge = btn.querySelector('.new-member-badge');
+  // Target the sidebar admin button
+  const adminBtn = document.getElementById('adminSidebarBtn');
+  if (adminBtn) {
+    let badge = adminBtn.querySelector('.new-member-badge');
     if (unreadCount > 0) {
+      // Ensure the button is positioned so badge can overlay
+      adminBtn.style.position = 'relative';
+      adminBtn.style.overflow = 'visible';
       if (!badge) {
         badge = document.createElement('span');
         badge.className = 'new-member-badge';
-        badge.style.cssText = 'background:#ef4444; color:#fff; font-size:11px; font-weight:bold; padding:2px 7px; border-radius:10px; margin-left:6px; animation:pulse 2s infinite; box-shadow:0 0 8px rgba(239,68,68,0.6); display:inline-block; vertical-align:middle;';
+        badge.style.cssText = 'position:absolute; top:-8px; right:-8px; background:#ef4444; color:#fff; font-size:11px; font-weight:bold; padding:3px 8px; border-radius:12px; animation:pulse 2s infinite; box-shadow:0 0 10px rgba(239,68,68,0.7); z-index:10; pointer-events:none; white-space:nowrap;';
+        adminBtn.appendChild(badge);
+      }
+      badge.textContent = `🔔 ${unreadCount}`;
+    } else if (badge) {
+      badge.remove();
+    }
+  }
+
+  // Also target any other admin nav buttons (bottom bar, etc.)
+  const otherBtns = document.querySelectorAll('.nav-admin-btn, [onclick*="views.admin"]');
+  otherBtns.forEach(btn => {
+    if (btn.id === 'adminSidebarBtn') return; // already handled
+    let badge = btn.querySelector('.new-member-badge');
+    if (unreadCount > 0) {
+      btn.style.position = 'relative';
+      btn.style.overflow = 'visible';
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'new-member-badge';
+        badge.style.cssText = 'position:absolute; top:-6px; right:-6px; background:#ef4444; color:#fff; font-size:10px; font-weight:bold; padding:2px 6px; border-radius:10px; animation:pulse 2s infinite; box-shadow:0 0 8px rgba(239,68,68,0.6); z-index:10; pointer-events:none; white-space:nowrap;';
         btn.appendChild(badge);
       }
-      badge.textContent = `🔔 ${unreadCount} New`;
+      badge.textContent = `${unreadCount}`;
     } else if (badge) {
       badge.remove();
     }
