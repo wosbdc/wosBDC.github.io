@@ -7339,6 +7339,10 @@ window.saveStaffProfileFromModal = async () => {
 };
 
 window.openStaffProfileModal = () => {
+  if (!window.isAdminUser(currentUser)) {
+    if (window.showToast) window.showToast("Access Denied: Staff permissions required.", "error");
+    return;
+  }
   let modal = document.getElementById('staffProfileModal');
   if (!modal) {
     const user = currentUser || realUser;
@@ -7386,6 +7390,12 @@ window.openStaffProfileModal = () => {
 window.openEditProfileHubModal = () => {
   const activeUser = currentUser || realUser;
   if (!activeUser) return;
+
+  // Non-staff members skip the hub selector and directly open their Chief Member Profile
+  if (!window.isAdminUser(activeUser)) {
+    window.openEditProfileModal();
+    return;
+  }
   
   // Clean up any existing hub modal
   const oldHub = document.getElementById('editProfileHubModalOverlay');

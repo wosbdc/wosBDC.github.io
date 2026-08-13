@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [1.95.5] - 2026-08-12
+### 🔒 Account Hub Edit Profile Staff Filter Fix
+- **🛡️ Staff Option Hidden for Regular Members**: Updated `openEditProfileHubModal` so regular non-staff members bypass the hub selector and open their **Chief Member Profile** editor directly.
+- **🚫 Staff Profile Modal Guarded**: Added strict `window.isAdminUser` check to `openStaffProfileModal` so non-staff members cannot access or open the Staff Directory editor under any circumstances.
+
 ## [1.95.4] - 2026-08-12
 ### 🔒 Staff Profile Editor Security Guard Fix
 - **🛡️ Strict Staff Security Enforcement**: Fixed permission check in player card modal (`generatePlayerProfileHtml`) so the **`⚙️ Actions`** dropdown menu and **`🔥 Set Furnace Level`** editor are strictly hidden from non-staff (non-R4/R5) accounts even if signed in via Google.

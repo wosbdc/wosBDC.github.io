@@ -1,9 +1,9 @@
 {
-  "version": "1.95.4",
+  "version": "1.95.5",
   "releaseDate": "2026-08-12",
-  "title": "🔒 Staff Profile Editor Security Guard Fix",
+  "title": "🔒 Account Hub Edit Profile Staff Filter Fix",
   "notes": [
-    "Strictly enforced R4/R5 Staff permission checks on player profile card modals and furnace editor",
-    "Prevented regular non-staff Google users from seeing or opening the Staff Actions menu and Furnace Editor"
+    "Prevented non-staff accounts from seeing or opening the Staff Directory Profile editor in Account Hub",
+    "Regular members now bypass the staff hub selector and directly open their Chief Member Profile"
   ]
 }
