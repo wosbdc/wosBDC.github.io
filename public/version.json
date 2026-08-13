@@ -1,9 +1,9 @@
 {
-  "version": "1.96.1",
+  "version": "1.96.2",
   "releaseDate": "2026-08-13",
-  "title": "🔒 Privacy Update for Discord New Member Alerts",
+  "title": "⚡ Firebase Storage Fix for Discord Webhook Settings",
   "notes": [
-    "Removed email address field from real-time Discord Webhook alert embeds",
-    "Streamlined Discord notification fields to Chief Name, Game ID, Furnace Level, and Registration Timestamp"
+    "Fixed saveDiscordAlertSettings to use set instead of update when initializing system_settings node",
+    "Added detailed error reporting for Discord Webhook configuration saves"
   ]
 }

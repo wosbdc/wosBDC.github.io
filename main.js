@@ -7642,14 +7642,18 @@ window.saveDiscordAlertSettings = async () => {
   const enabled = document.getElementById('discordAlertsEnabledCheckbox')?.checked !== false;
 
   try {
-    await update(ref(db, 'system_settings'), {
+    const snap = await get(ref(db, 'system_settings')).catch(() => null);
+    const existing = (snap && snap.exists()) ? snap.val() : {};
+    await set(ref(db, 'system_settings'), {
+      ...existing,
       discordWebhookUrl: url,
       discordAlertsEnabled: enabled,
       updatedAt: new Date().toISOString()
     });
     if (window.showToast) window.showToast("🔔 Discord Alert Settings saved!", "success");
   } catch(e) {
-    if (window.showToast) window.showToast("Failed to save alert settings.", "error");
+    console.error("Save Discord Alert Settings error:", e);
+    if (window.showToast) window.showToast("Failed to save alert settings: " + (e.message || e), "error");
   }
 };
 

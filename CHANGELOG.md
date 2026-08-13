@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [1.96.2] - 2026-08-13
+### ⚡ Firebase Storage Fix for Discord Webhook Settings
+- **⚡ System Settings Initialization Fix**: Replaced Firebase `update` with safe `set` in `saveDiscordAlertSettings` so settings persist reliably even if `system_settings` node doesn't exist yet.
+- **🔍 Enhanced Error Toasting**: Added explicit error message toasts if Firebase write fails.
+
 ## [1.96.1] - 2026-08-13
 ### 🔒 Privacy Update for Discord New Member Alerts
 - **🔒 Removed Email Address**: Removed the email field from real-time Discord Webhook embeds. Discord alerts now display strictly **Chief Name**, **Game ID**, **Furnace Level**, and **Registration Timestamp**.
