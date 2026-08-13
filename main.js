@@ -8627,22 +8627,26 @@ const views = {
           const pushToken = await getAuthToken();
           const res = await fetch(API_BASE_URL, {
             method: 'POST',
-            body: JSON.stringify({ api: 'sendPush', title: title, body: body, token: pushToken }),
+            body: JSON.stringify({ api: 'sendPush', title: title, body: body, secret: pushToken, token: pushToken }),
             headers: { 'Content-Type': 'text/plain;charset=utf-8' }
           }).then(r => r.json());
           
           if (res.success) {
-            statusEl.textContent = res.message;
+            statusEl.textContent = "🚀 " + res.message;
             statusEl.style.color = "var(--success)";
+            if (window.showToast) window.showToast("🚀 Broadcast Notification Sent!", "success");
             document.getElementById('adminPushTitle').value = "";
             document.getElementById('adminPushBody').value = "";
           } else {
-            statusEl.textContent = "Error: " + res.message;
+            statusEl.textContent = "Error: " + (res.message || "Failed to send broadcast");
             statusEl.style.color = "var(--danger)";
+            if (window.showToast) window.showToast("Push failed: " + (res.message || "Error"), "error");
           }
         } catch(e) {
-          statusEl.textContent = "Network Error: " + e.message;
+          console.error("Broadcast push error:", e);
+          statusEl.textContent = "Network Error: " + (e.message || e);
           statusEl.style.color = "var(--danger)";
+          if (window.showToast) window.showToast("Network Error: " + (e.message || e), "error");
         }
       };
       

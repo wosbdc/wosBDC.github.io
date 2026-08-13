@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [1.97.7] - 2026-08-13
+### 🚀 Broadcast Push Notification Authentication Fix
+- **🚀 Authentication Mismatch Fix**: Resolved `Unauthorized access: invalid secret key` error on Broadcast Push Notifications. The frontend payload now passes both `secret` and `token` properties matching the Apps Script `PushNotifications.js` backend validator.
+- **⚡ Google Apps Script Deployed**: Pushed and deployed updated `PushNotifications.js` Web App backend to version `@140`.
+
 ## [1.97.6] - 2026-08-13
 ### 🔔 Navbar & Sidebar Red Badge Dual Notification
 - **🔔 Top Navbar Badge Added**: Added the red pulsing unread count badge directly to the **⚙️ Settings button** (`#settingsBtn`) in the top navigation bar so staff members can see unread member signups instantly on the main screen without having to open the slide-out sidebar menu.

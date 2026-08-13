@@ -1,8 +1,9 @@
 {
-  "version": "1.97.6",
+  "version": "1.97.7",
   "releaseDate": "2026-08-13",
-  "title": "🔔 Navbar & Sidebar Red Badge Dual Notification",
+  "title": "🚀 Broadcast Push Notification Authentication Fix",
   "notes": [
-    "Red unread signup badge now attaches to both the top navbar ⚙️ Settings button (always visible) and the 🛡️ Admin Menu button"
+    "Fixed Broadcast Push Notification authorization mismatch between frontend payload (token) and backend validator (secret)",
+    "Pushed & deployed Google Apps Script backend update (@140)"
   ]
 }
