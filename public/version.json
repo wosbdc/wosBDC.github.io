@@ -1,9 +1,9 @@
 {
-  "version": "1.98.6",
+  "version": "1.98.7",
   "releaseDate": "2026-08-13",
-  "title": "🧹 Single Unified Navbar Bell Alert Badge",
+  "title": "🧹 Cleaned Sidebar Settings Menu",
   "notes": [
-    "Removed duplicate red badge labels overlaying sidebar buttons for a cleaner UI",
-    "Restricted red unread alert badge exclusively to the header navbar 🔔 Staff Bell button"
+    "Removed recent signups button from sidebar settings menu",
+    "Restricted recent signups access strictly to Admin Hub and top navbar staff bell button"
   ]
 }

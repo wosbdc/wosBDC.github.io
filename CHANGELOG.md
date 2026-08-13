@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [1.98.7] - 2026-08-13
+### 🧹 Cleaned Sidebar Settings Menu
+- **🧹 Removed Sidebar Recent Signups Button**: Removed `#newMembersSidebarBtn` from the slide-out settings menu (`index.html`).
+- **🛡️ Strictly Admin Menu Access**: Kept recent signups access strictly inside the Admin Hub (`views.admin()`) and top navbar staff bell (`🔔`).
+
 ## [1.98.6] - 2026-08-13
 ### 🧹 Single Unified Navbar Bell Alert Badge
 - **🧹 Cleaned Admin Buttons**: Removed extra red badge labels from `🛡️ Admin Menu` and `🔔 Recent Signups` sidebar buttons to keep all admin buttons clean and uncluttered.

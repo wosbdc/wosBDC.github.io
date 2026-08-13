@@ -3801,16 +3801,13 @@ listenToAuth((user) => {
         setTimeout(() => window.showWelcomePop(name), 600);
     }
     if(authSidebarBtn) authSidebarBtn.innerHTML = window._spoofedUser ? `🎭 Spoofing: ${name}` : `👤 ${name}'s Profile`;
-    const newMembersSidebarBtn = document.getElementById('newMembersSidebarBtn');
     const adminAlertsNavBtn = document.getElementById('adminAlertsNavBtn');
     if(adminSidebarBtn && window.isAdminUser(currentUser)) {
       adminSidebarBtn.style.display = 'block';
-      if (newMembersSidebarBtn) newMembersSidebarBtn.style.display = 'flex';
       if (adminAlertsNavBtn) adminAlertsNavBtn.style.display = 'flex';
       if (window.updateNewMemberBadge) window.updateNewMemberBadge();
     } else if (adminSidebarBtn) {
       adminSidebarBtn.style.display = 'none';
-      if (newMembersSidebarBtn) newMembersSidebarBtn.style.display = 'none';
       if (adminAlertsNavBtn) adminAlertsNavBtn.style.display = 'none';
     }
     if(signOutSidebarBtn) signOutSidebarBtn.style.display = 'block';
