@@ -3800,6 +3800,7 @@ listenToAuth((user) => {
     if(authSidebarBtn) authSidebarBtn.innerHTML = window._spoofedUser ? `🎭 Spoofing: ${name}` : `👤 ${name}'s Profile`;
     if(adminSidebarBtn && window.isAdminUser(currentUser)) {
       adminSidebarBtn.style.display = 'block';
+      if (window.updateNewMemberBadge) window.updateNewMemberBadge();
     } else if (adminSidebarBtn) {
       adminSidebarBtn.style.display = 'none';
     }
@@ -4322,6 +4323,10 @@ if(authSubmitBtn) authSubmitBtn.addEventListener('click', async () => {
           fetch(url, { mode: 'no-cors' }).catch(e => console.warn("Failed to ping GAS for registration", e));
       } catch(e) { console.error(e); }
 
+      if (window.triggerNewMemberAlerts) {
+          window.triggerNewMemberAlerts({ gameId, chiefName, furnaceLevel, email, createdAt: new Date().toISOString() });
+      }
+
       window.showToast("Account created & signed in!", "success");
     } else {
       await loginUser(email, password);
@@ -4418,7 +4423,11 @@ if (authGoogleBtn) authGoogleBtn.addEventListener('click', async () => {
                 const url = `${API_BASE_URL}?api=registerNewPlayer&gameId=${encodeURIComponent(gameId.trim())}&name=${encodeURIComponent(chiefName.trim())}&dateStarted=${encodeURIComponent(dateStarted)}&level=${encodeURIComponent(furnaceLevel)}&token=${encodeURIComponent(token)}`;
                 fetch(url, { mode: 'no-cors' }).catch(e => console.warn("Failed to ping GAS for registration", e));
             } catch(e) { console.error(e); }
-            
+
+            if (window.triggerNewMemberAlerts) {
+                window.triggerNewMemberAlerts({ gameId: gameId.trim(), chiefName: chiefName.trim(), furnaceLevel: furnaceLevel, email: user.email, createdAt: new Date().toISOString() });
+            }
+
             window.showToast("Account created & signed in with Google!", "success");
             closeAuthModal();
         }
@@ -7423,6 +7432,265 @@ window.clearShowdownCaches = () => {
     window.rosterCache = null;
 };
 
+// --- NEW MEMBER ALERT & DISCORD WEBHOOK SYSTEM ---
+window.triggerNewMemberAlerts = async (memberRecord) => {
+  if (!memberRecord) return;
+  const name = memberRecord.chiefName || memberRecord.name || 'New Member';
+  const gid = memberRecord.gameId || 'N/A';
+  const level = memberRecord.furnaceLevel || memberRecord.stove_lv || 'FC 1';
+  const email = memberRecord.email || 'N/A';
+  const timeStr = memberRecord.createdAt ? new Date(memberRecord.createdAt).toLocaleString('en-US') : new Date().toLocaleString('en-US');
+
+  // Invalidate cache so unread badges update in UI
+  window._recentNewMembersCache = null;
+  if (typeof window.updateNewMemberBadge === 'function') window.updateNewMemberBadge();
+
+  // Fetch System Settings from Firebase to check Discord Webhook configuration
+  try {
+    const settingsSnap = await get(ref(db, 'system_settings')).catch(() => null);
+    const settings = (settingsSnap && settingsSnap.exists()) ? settingsSnap.val() : {};
+
+    const webhookUrl = settings.discordWebhookUrl ? settings.discordWebhookUrl.trim() : '';
+    const alertsEnabled = settings.discordAlertsEnabled !== false;
+
+    if (webhookUrl && alertsEnabled && webhookUrl.startsWith('http')) {
+      const siteUrl = window.location.origin || 'https://wosbdc.github.io';
+      const embedPayload = {
+        username: "WOS Alliance Bot 🛡️",
+        avatar_url: `${siteUrl}/favicon.svg`,
+        embeds: [{
+          title: "🎉 NEW MEMBER REGISTERED!",
+          description: `Chief **${name}** has just registered on the alliance website!`,
+          color: 4242388, // Cyan Accent (#06b6d4)
+          fields: [
+            { name: "👤 Chief Name", value: `**${name}**`, inline: true },
+            { name: "🆔 Game ID", value: `\`${gid}\``, inline: true },
+            { name: "🔥 Furnace Level", value: `\`${level}\``, inline: true },
+            { name: "✉️ Email", value: email !== 'N/A' ? `\`${email}\`` : '_None_', inline: true },
+            { name: "📅 Date & Time", value: timeStr, inline: true }
+          ],
+          footer: {
+            text: "Whiteout Survival Alliance Dashboard • New Member Alert System",
+            icon_url: `${siteUrl}/favicon.svg`
+          },
+          timestamp: new Date().toISOString()
+        }]
+      };
+
+      await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(embedPayload)
+      }).catch(e => console.warn("Failed to dispatch Discord webhook:", e));
+    }
+  } catch(e) {
+    console.warn("Error sending new member alerts:", e);
+  }
+};
+
+window.getRecentNewMembers = async () => {
+  try {
+    const snap = await get(ref(db, 'users')).catch(() => null);
+    if (!snap || !snap.exists()) return [];
+    const users = snap.val() || {};
+    const recent = [];
+    const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+
+    for (const [uid, u] of Object.entries(users)) {
+      if (!u) continue;
+      let createdMs = 0;
+      if (u.createdAt) createdMs = new Date(u.createdAt).getTime();
+      else if (u.timestamp) createdMs = Number(u.timestamp);
+
+      if (createdMs > 0 && createdMs >= sevenDaysAgo) {
+        const cName = u.name || u.chiefName || (window.idToNameMap && window.idToNameMap[u.gameId]) || 'New Member';
+        recent.push({
+          uid,
+          gameId: u.gameId || '',
+          name: cName,
+          email: u.email || '',
+          furnaceLevel: u.stove_lv || u.furnaceLevel || '',
+          role: u.role || 'Member',
+          createdMs,
+          createdStr: new Date(createdMs).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+        });
+      }
+    }
+
+    recent.sort((a, b) => b.createdMs - a.createdMs);
+    return recent;
+  } catch(e) {
+    console.warn("Error fetching recent members:", e);
+    return [];
+  }
+};
+
+window.updateNewMemberBadge = async () => {
+  if (!currentUser || !window.isAdminUser(currentUser)) return;
+  const recent = await window.getRecentNewMembers();
+  const lastSeen = Number(localStorage.getItem('last_seen_new_member_timestamp') || '0');
+  const unreadCount = recent.filter(m => m.createdMs > lastSeen).length;
+
+  const adminNavBtns = document.querySelectorAll('.nav-admin-btn, [onclick*="views.admin"]');
+  adminNavBtns.forEach(btn => {
+    let badge = btn.querySelector('.new-member-badge');
+    if (unreadCount > 0) {
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'new-member-badge';
+        badge.style.cssText = 'background:#ef4444; color:#fff; font-size:11px; font-weight:bold; padding:2px 7px; border-radius:10px; margin-left:6px; animation:pulse 2s infinite; box-shadow:0 0 8px rgba(239,68,68,0.6); display:inline-block; vertical-align:middle;';
+        btn.appendChild(badge);
+      }
+      badge.textContent = `🔔 ${unreadCount} New`;
+    } else if (badge) {
+      badge.remove();
+    }
+  });
+};
+
+window.openNewMembersModal = async () => {
+  if (!window.isAdminUser(currentUser)) {
+    if (window.showToast) window.showToast("Access Denied: Staff permissions required.", "error");
+    return;
+  }
+  const recent = await window.getRecentNewMembers();
+
+  // Mark all as read
+  if (recent.length > 0) {
+    localStorage.setItem('last_seen_new_member_timestamp', String(Date.now()));
+    window.updateNewMemberBadge();
+  }
+
+  let existing = document.getElementById('newMembersModalOverlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'newMembersModalOverlay';
+  overlay.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.85); backdrop-filter:blur(10px); z-index:99999; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease;';
+
+  let listHtml = '';
+  if (recent.length === 0) {
+    listHtml = `<div style="text-align:center; padding:30px; color:var(--text-muted);">No new member signups in the past 7 days.</div>`;
+  } else {
+    listHtml = recent.map(m => `
+      <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:12px; padding:14px 16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div style="width:42px; height:42px; border-radius:50%; background:rgba(6,182,212,0.15); border:1px solid rgba(6,182,212,0.3); display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0;">👤</div>
+          <div>
+            <div style="font-weight:bold; font-size:15px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+              <span>${window.escapeHTML(m.name)}</span>
+              <span style="font-size:11px; background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:2px 8px; border-radius:10px; font-weight:bold;">NEW</span>
+            </div>
+            <div style="font-size:12px; color:var(--text-muted); font-family:monospace; margin-top:2px;">
+              ID: ${m.gameId || 'N/A'} • Joined: ${m.createdStr}
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button onclick="window.copyWelcomeMessage('${window.escapeHTML(m.name)}')" style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:6px 12px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📋 Copy Welcome</button>
+          <button onclick="document.getElementById('newMembersModalOverlay').remove(); window.searchPlayerFull('${window.escapeHTML(m.name)}');" style="background:var(--accent); color:#fff; border:none; padding:6px 12px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">👁️ Profile</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  overlay.innerHTML = `
+    <div class="card" style="width:90%; max-width:580px; background:linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.92)); border:1px solid rgba(56,189,248,0.3); padding:26px; border-radius:20px; box-shadow:0 20px 50px rgba(0,0,0,0.6); text-align:left; animation:zoomIn 0.2s forwards;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:12px;">
+        <h3 style="margin:0; color:#fff; font-size:20px; font-weight:800; display:flex; align-items:center; gap:8px;">🔔 Recent Member Signups (${recent.length})</h3>
+        <button onclick="document.getElementById('newMembersModalOverlay').remove()" style="background:none; border:none; color:var(--text-muted); font-size:26px; cursor:pointer; line-height:1;">&times;</button>
+      </div>
+
+      <div style="max-height:400px; overflow-y:auto; display:flex; flex-direction:column; gap:10px; margin-bottom:16px;">
+        ${listHtml}
+      </div>
+
+      <div style="display:flex; justify-content:flex-end;">
+        <button onclick="document.getElementById('newMembersModalOverlay').remove()" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.2); color:#cbd5e1; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px;">Close</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+};
+
+window.copyWelcomeMessage = (chiefName) => {
+  const siteUrl = window.location.origin || 'https://wosbdc.github.io';
+  const msg = `Welcome to the Whiteout Survival alliance dashboard, Chief ${chiefName}! Your profile is ready: ${siteUrl}/`;
+  navigator.clipboard.writeText(msg).then(() => {
+    if (window.showToast) window.showToast(`📋 Welcome message for ${chiefName} copied to clipboard!`, "success");
+  }).catch(() => {
+    if (window.showToast) window.showToast("Failed to copy welcome message.", "error");
+  });
+};
+
+window.loadDiscordAlertSettings = async () => {
+  try {
+    const snap = await get(ref(db, 'system_settings')).catch(() => null);
+    if (snap && snap.exists()) {
+      const s = snap.val() || {};
+      const urlInput = document.getElementById('discordWebhookUrlInput');
+      const enabledBox = document.getElementById('discordAlertsEnabledCheckbox');
+      if (urlInput && s.discordWebhookUrl) urlInput.value = s.discordWebhookUrl;
+      if (enabledBox && s.discordAlertsEnabled !== undefined) enabledBox.checked = s.discordAlertsEnabled;
+    }
+  } catch(e) { console.warn("Error loading discord alert settings:", e); }
+};
+
+window.saveDiscordAlertSettings = async () => {
+  const url = (document.getElementById('discordWebhookUrlInput')?.value || '').trim();
+  const enabled = document.getElementById('discordAlertsEnabledCheckbox')?.checked !== false;
+
+  try {
+    await update(ref(db, 'system_settings'), {
+      discordWebhookUrl: url,
+      discordAlertsEnabled: enabled,
+      updatedAt: new Date().toISOString()
+    });
+    if (window.showToast) window.showToast("🔔 Discord Alert Settings saved!", "success");
+  } catch(e) {
+    if (window.showToast) window.showToast("Failed to save alert settings.", "error");
+  }
+};
+
+window.testDiscordWebhook = async () => {
+  const url = (document.getElementById('discordWebhookUrlInput')?.value || '').trim();
+  if (!url || !url.startsWith('http')) {
+    if (window.showToast) window.showToast("Please enter a valid Discord Webhook URL first.", "error");
+    return;
+  }
+
+  try {
+    const siteUrl = window.location.origin || 'https://wosbdc.github.io';
+    const payload = {
+      username: "WOS Alliance Bot 🛡️",
+      avatar_url: `${siteUrl}/favicon.svg`,
+      embeds: [{
+        title: "🧪 DISCORD WEBHOOK TEST SUCCESSFUL!",
+        description: "Your Whiteout Survival website alert system is now connected to Discord!",
+        color: 1097650, // Green (#10b981)
+        fields: [
+          { name: "⚙️ System", value: "New Member Notification System", inline: true },
+          { name: "✅ Status", value: "Active & Connected", inline: true }
+        ],
+        footer: { text: "Whiteout Survival Alliance Dashboard" },
+        timestamp: new Date().toISOString()
+      }]
+    };
+
+    await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (window.showToast) window.showToast("🧪 Test webhook sent! Check your Discord channel.", "success");
+  } catch(e) {
+    if (window.showToast) window.showToast("Webhook test failed: " + e.message, "error");
+  }
+};
+
 window.saveStaffProfileFromModal = async () => {
   const user = currentUser || realUser;
   if (!user || !user.gameId) return;
@@ -9021,6 +9289,7 @@ const views = {
               <p style="margin:0 0 15px 0; font-size:12px; color:var(--text-muted); text-align:left;">Manage Chief names, Game IDs, push alerts, and master database sync.</p>
               
               <div style="display:flex; flex-direction:column; gap:12px; align-items:center;">
+                <button onclick="window.openNewMembersModal()" style="background:linear-gradient(135deg, #06b6d4, #3b82f6); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(6,182,212,0.3);">🔔 View Recent Member Signups</button>
                 <button onclick="views.playerEditor()" style="background:linear-gradient(135deg, #6366f1, #4f46e5); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(99,102,241,0.3);">👤 Open Player Database Editor</button>
                 ${isR5 ? `<button onclick="window.openBroadcastPushModal()" style="background:linear-gradient(135deg, #ec4899, #be185d); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(236,72,153,0.3);">🚀 Broadcast Push Notification</button>` : ''}
                 <button id="syncAllSheetsBtn" onclick="window.syncAllSheetsToFirebase()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(16,185,129,0.3);">⚡ Master Sync Sheets ➔ Firebase</button>
@@ -9388,6 +9657,36 @@ const views = {
               </label>
             </div>
             
+            <div style="background:var(--bg-main); padding:20px; border-radius:12px; border:1px solid var(--accent); margin-bottom:20px; text-align:left;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:10px;">
+                <h3 style="margin:0; color:var(--text-main); font-size:16px; display:flex; align-items:center; gap:8px;">
+                  🔔 Discord & New Member Alert System
+                </h3>
+                <button onclick="window.saveDiscordAlertSettings()" style="background:var(--accent); color:#fff; border:none; padding:8px 16px; border-radius:6px; font-weight:bold; font-size:13px; cursor:pointer; box-shadow:0 2px 8px rgba(6,182,212,0.3);">Save Alert Settings</button>
+              </div>
+              <p style="margin:0 0 16px 0; font-size:12px; color:var(--text-muted); line-height:1.4;">
+                Automatically alert your R4/R5 Staff team on Discord whenever new players sign up on the website or claim their profile.
+              </p>
+
+              <div style="display:flex; flex-direction:column; gap:14px;">
+                <div>
+                  <label style="display:block; font-size:12px; font-weight:bold; color:var(--text-main); margin-bottom:6px;">💬 Discord Webhook URL</label>
+                  <input type="text" id="discordWebhookUrlInput" placeholder="https://discord.com/api/webhooks/..." style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-main); font-size:13px; font-family:monospace; box-sizing:border-box;">
+                </div>
+
+                <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+                  <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; font-weight:bold; color:var(--text-main);">
+                    <input type="checkbox" id="discordAlertsEnabledCheckbox" checked style="width:18px; height:18px; accent-color:var(--accent);">
+                    <span>Enable Real-Time Discord Webhook Notifications</span>
+                  </label>
+
+                  <button onclick="window.testDiscordWebhook()" style="background:rgba(16,185,129,0.15); color:var(--success); border:1px solid rgba(16,185,129,0.3); padding:8px 14px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">
+                    🧪 Test Webhook Alert
+                  </button>
+                </div>
+              </div>
+            </div>
+
             <div style="background:var(--bg-main); padding:15px; border-radius:12px; border:1px solid var(--accent); margin-bottom:20px;">
               <h3 style="margin:0; color:var(--text-main); margin-bottom:10px;">🔄 Live Database Sync Status</h3>
               <p style="margin:0 0 15px 0; font-size:12px; color:var(--text-muted);">Shows the exact timestamp of when each master sheet was last pushed to Firebase.</p>
@@ -9578,6 +9877,7 @@ const views = {
         </div>`;
       app.innerHTML = html;
       if (window.renderStaffRoles) window.renderStaffRoles();
+      if (window.loadDiscordAlertSettings) window.loadDiscordAlertSettings();
       
       // Bind Admin Tabs
       document.querySelectorAll('.admin-tab-btn').forEach(btn => {

@@ -1,10 +1,10 @@
 {
-  "version": "1.95.7",
+  "version": "1.96.0",
   "releaseDate": "2026-08-13",
-  "title": "🧹 Database & UI Player Deduplication Fix",
+  "title": "🔔 New Member Alert System & Discord Webhook Integration",
   "notes": [
-    "Implemented window.deduplicateRosterLive to clean up and merge duplicate player records in Firebase roster_live",
-    "Added strict dual-key (Name & Game ID) deduplication across Player Database Editor, Activity Matrix, and Registered Users tab",
-    "Stopped multi-key cloning when saving furnace levels to prevent future duplicates"
+    "Integrated real-time Discord Webhook notifications whenever new members register or claim their profiles",
+    "Added in-app unread member badge and drawer for R4/R5 Staff",
+    "Added Discord Webhook configuration and live test tool in Admin Hub Settings tab"
   ]
 }

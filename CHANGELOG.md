@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [1.96.0] - 2026-08-13
+### 🔔 New Member Alert System & Discord Webhook Integration
+- **💬 Real-Time Discord Webhooks**: Automatically dispatches rich Discord Embed notifications (`🎉 NEW MEMBER REGISTERED!`) to your staff channel whenever a chief registers on the website.
+- **🔔 In-App Admin Notification Badge & Hub**: Displays a live `🔔 N New` badge on the Admin navbar button when unread signups exist.
+- **📋 Staff Quick Actions Drawer**: Added `window.openNewMembersModal()` with 1-click **Copy Welcome Message**, **View Profile**, and **+ Staff** role management.
+- **⚙️ Admin Hub Settings Control**: Added a dedicated **"🔔 Discord & New Member Alert System"** card in `tab-settings` with a **🧪 Test Webhook Alert** button.
+
 ## [1.95.7] - 2026-08-13
 ### 🧹 Database & UI Player Deduplication Fix
 - **🧹 Self-Healing Roster Cleanup**: Added `window.deduplicateRosterLive()` to merge duplicate entries in Firebase `roster_live` (collapsing redundant keys by Game ID & Chief Name into a single canonical entry).
