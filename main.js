@@ -7533,7 +7533,7 @@ window.updateNewMemberBadge = async () => {
   const lastSeen = Number(localStorage.getItem('last_seen_new_member_timestamp') || '0');
   const unreadCount = recent.filter(m => m.createdMs > lastSeen).length;
 
-  const adminNavBtns = document.querySelectorAll('.nav-admin-btn, [onclick*="views.admin"]');
+  const adminNavBtns = document.querySelectorAll('#adminSidebarBtn, .nav-admin-btn, [onclick*="views.admin"]');
   adminNavBtns.forEach(btn => {
     let badge = btn.querySelector('.new-member-badge');
     if (unreadCount > 0) {

@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.97.2] - 2026-08-13
+### 🔔 Staff Admin Sidebar Badge Selector Fix
+- **🔔 Targeted Sidebar Button**: Updated `updateNewMemberBadge` selector to target `#adminSidebarBtn` directly. The red pulsing `🔔 1 New` badge now attaches right to the **🛡️ Admin Menu** button in the left sidebar whenever unread signups exist.
+
 ## [1.97.1] - 2026-08-13
 ### 🛡️ Discord Webhook Bot Branding Update
 - **🛡️ Renamed Bot Identity**: Updated Discord Webhook bot username to **`Alliance Gatekeeper 🛡️`** for all real-time alerts and webhook test pings.

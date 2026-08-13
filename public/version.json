@@ -1,8 +1,8 @@
 {
-  "version": "1.97.1",
+  "version": "1.97.2",
   "releaseDate": "2026-08-13",
-  "title": "🛡️ Discord Webhook Bot Branding Update",
+  "title": "🔔 Staff Admin Sidebar Badge Selector Fix",
   "notes": [
-    "Updated Discord Webhook bot username to Alliance Gatekeeper 🛡️"
+    "Explicitly targeted #adminSidebarBtn in updateNewMemberBadge so unread signups pill displays directly on the Admin Menu button"
   ]
 }
