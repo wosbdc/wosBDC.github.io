@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.97.0] - 2026-08-13
+### 🔔 Admin Add Player Discord Webhook Integration
+- **💬 Admin Manual Add Alert Trigger**: Connected `submitAddPlayerForm` in the Admin Menu to `window.triggerNewMemberAlerts`. Manually adding players to the roster now instantly fires the **WOS Alliance Bot** Discord notification and updates the in-app staff badge.
+
 ## [1.96.5] - 2026-08-13
 ### ⚡ GitHub Actions Runner Upgrade & Deployment Stabilization
 - **⚡ Upgraded Node.js to 22 LTS**: Updated `.github/workflows/deploy.yml` `actions/setup-node@v4` from Node 20 to Node 22 LTS to eliminate deprecation warnings on GitHub Actions runners.

@@ -1928,6 +1928,9 @@ window.submitAddPlayerForm = async (e) => {
 
   try {
     await window.addNewChiefToRoster(gameId, name, furnaceLevel, dateStarted);
+    if (window.triggerNewMemberAlerts) {
+        window.triggerNewMemberAlerts({ gameId, chiefName: name, furnaceLevel, createdAt: new Date().toISOString() });
+    }
     if (window.showToast) window.showToast(`Added ${name} (${gameId}) to Roster!`, "success");
     document.getElementById('addPlayerModal').remove();
     if (typeof window.activeViewFunc === 'function') window.activeViewFunc();

@@ -1,9 +1,9 @@
 {
-  "version": "1.96.5",
+  "version": "1.97.0",
   "releaseDate": "2026-08-13",
-  "title": "⚡ GitHub Actions Runner Upgrade & Deployment Stabilization",
+  "title": "🔔 Admin Add Player Discord Webhook Integration",
   "notes": [
-    "Upgraded GitHub Actions deploy workflow to Node.js 22 LTS runner to eliminate deprecation warnings",
-    "Clean build and deployment pipeline execution"
+    "Connected Add New Player to Roster admin action to real-time Discord Webhook alert bot",
+    "Adding players manually from Admin Menu now dispatches real-time Discord & In-App notifications instantly"
   ]
 }
