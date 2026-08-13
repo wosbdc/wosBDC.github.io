@@ -6,6 +6,71 @@ import pkg from './package.json'
 
 // adminDeletePlayer is defined below at line ~1703 (single canonical definition)
 
+window.deduplicateRosterLive = async () => {
+    try {
+        const snap = await get(ref(db, 'roster_live')).catch(() => null);
+        if (!snap || !snap.exists()) return;
+
+        const rosterObj = snap.val() || {};
+        const cleanedObj = {};
+        const seenGameIds = new Set();
+        const seenNames = new Set();
+        let removedCount = 0;
+
+        for (const [key, p] of Object.entries(rosterObj)) {
+            if (!p || typeof p !== 'object' || key === 'Chief Name' || key === 'chief name') continue;
+
+            const gid = p.gameId ? p.gameId.toString().trim() : '';
+            const name = (p.name || p.chiefName || key).toString().trim();
+            const normName = name.toLowerCase();
+
+            if (!name && !gid) continue;
+
+            let isDuplicate = false;
+            if (gid && seenGameIds.has(gid)) {
+                isDuplicate = true;
+            } else if (normName && seenNames.has(normName)) {
+                isDuplicate = true;
+            }
+
+            if (isDuplicate) {
+                const existingKey = Object.keys(cleanedObj).find(k => {
+                    const item = cleanedObj[k];
+                    return (gid && item.gameId && item.gameId.toString().trim() === gid) ||
+                           (normName && item.name && item.name.toString().toLowerCase().trim() === normName);
+                });
+
+                if (existingKey) {
+                    cleanedObj[existingKey] = {
+                        ...p,
+                        ...cleanedObj[existingKey],
+                        furnaceLevel: cleanedObj[existingKey].furnaceLevel || p.furnaceLevel || p.stove_lv || '',
+                        stove_lv: cleanedObj[existingKey].stove_lv || p.stove_lv || p.furnaceLevel || ''
+                    };
+                }
+                removedCount++;
+            } else {
+                const canonicalKey = (!/^\d+$/.test(key) && key.trim() !== '') ? key : (name || gid);
+                cleanedObj[canonicalKey] = {
+                    ...p,
+                    name: name,
+                    gameId: gid
+                };
+                if (gid) seenGameIds.add(gid);
+                if (normName) seenNames.add(normName);
+            }
+        }
+
+        if (removedCount > 0) {
+            await set(ref(db, 'roster_live'), cleanedObj);
+            window.rosterCache = cleanedObj;
+            console.log(`[Deduplication] Cleaned up ${removedCount} duplicate entries in roster_live.`);
+        }
+    } catch(e) {
+        console.warn("[Deduplication] Error cleaning roster_live:", e);
+    }
+};
+
 window.fetchRoster = async () => {
    if (window.rosterCache) return window.rosterCache;
    try {
@@ -14,15 +79,35 @@ window.fetchRoster = async () => {
            let cached = snap.val() || {};
            delete cached['Chief Name'];
            delete cached['chief name'];
-           window.rosterCache = cached;
+
+           // Filter out duplicate entries by name/gameId in memory
+           const deduplicated = {};
+           const seenGids = new Set();
+           const seenNames = new Set();
+
+           for (const [k, p] of Object.entries(cached)) {
+               if (!p || typeof p !== 'object') continue;
+               const gid = p.gameId ? p.gameId.toString().trim() : '';
+               const name = (p.name || p.chiefName || k).toString().trim();
+               const normName = name.toLowerCase();
+
+               if (gid && seenGids.has(gid)) continue;
+               if (normName && seenNames.has(normName)) continue;
+
+               if (gid) seenGids.add(gid);
+               if (normName) seenNames.add(normName);
+
+               deduplicated[k] = { ...p, name, gameId: gid };
+           }
+
+           window.rosterCache = deduplicated;
            return window.rosterCache;
        }
    } catch(e) { console.warn('Firebase read error:', e); }
-   
+
    const rosterRaw = await fetchSheet("Chief's List");
    let newRoster = {};
    if (rosterRaw && rosterRaw.length > 1) {
-       // Rows 0-2 on Chief's List are title and table header labels ("Chief Name", "Game ID")
        for (let i = 3; i < rosterRaw.length; i++) {
            const name = rosterRaw[i][0] ? rosterRaw[i][0].toString().trim() : '';
            const gameId = rosterRaw[i][1] ? rosterRaw[i][1].toString().trim() : '';
@@ -2048,12 +2133,6 @@ window.openAdminEditFurnaceModal = async (chiefName, gameId = '', currentFurnace
               };
 
               rosterObj[saveKey] = updatedEntry;
-              if (chiefName && saveKey.toLowerCase() !== chiefName.toLowerCase()) {
-                 rosterObj[chiefName] = updatedEntry;
-              }
-              if (cleanGid && !rosterObj[cleanGid]) {
-                 rosterObj[cleanGid] = updatedEntry;
-              }
 
               await set(ref(db, 'roster_live'), rosterObj);
               window.rosterCache = rosterObj;
@@ -8161,6 +8240,7 @@ const views = {
       const users = usersSnap.val() || {};
       
       await refreshIdToNameMap();
+      if (window.deduplicateRosterLive) window.deduplicateRosterLive().catch(() => null);
 
       
       window.openBroadcastPushModal = function() {
@@ -8647,10 +8727,19 @@ const views = {
           const donObj = (donSnap && donSnap.exists()) ? donSnap.val() : {};
 
           let playersList = [];
+          const seenGids = new Set();
+          const seenNames = new Set();
+
           if (rosterData) {
              Object.values(rosterData).forEach(p => {
-                if (p.name && p.gameId) {
-                   const gIdStr = p.gameId.toString().trim();
+                if (p.name) {
+                   const gIdStr = p.gameId ? p.gameId.toString().trim() : '';
+                   const normName = p.name.toString().toLowerCase().trim();
+
+                   if ((gIdStr && seenGids.has(gIdStr)) || (normName && seenNames.has(normName))) return;
+                   if (gIdStr) seenGids.add(gIdStr);
+                   if (normName) seenNames.add(normName);
+
                    const actRec = actObj[gIdStr] || {};
                    const champRec = champObj[gIdStr] || {};
                    const mercRec = mercObj[gIdStr] || {};
@@ -9008,6 +9097,7 @@ const views = {
 
               window._currentUnclaimedRosterList = [];
               const claimedRosterGids = new Set();
+              const seenUnclaimedKeys = new Set();
 
               if (rosterRawData) {
                 Object.values(rosterRawData).forEach(p => {
@@ -9026,7 +9116,11 @@ const views = {
                   if (isClaimed) {
                     claimedRosterGids.add(pGid || pNameLower);
                   } else {
-                    window._currentUnclaimedRosterList.push(p);
+                    if (!seenUnclaimedKeys.has(pNameLower) && (!pGid || !seenUnclaimedKeys.has(pGid))) {
+                      seenUnclaimedKeys.add(pNameLower);
+                      if (pGid) seenUnclaimedKeys.add(pGid);
+                      window._currentUnclaimedRosterList.push(p);
+                    }
                   }
                 });
               }
@@ -11677,8 +11771,18 @@ window.resetBearTrapEvent = async () => {
         if (u.gameId) registeredGameIds.add(u.gameId.toString().trim());
     });
     
-    // Comprehensive player compilation across all data sources
+    // Comprehensive player compilation across all data sources (Deduplicated)
     const playerMap = new Map();
+
+    const findExistingPlayerKey = (nameStr, gidStr) => {
+        const cleanN = (nameStr || '').toString().toLowerCase().trim();
+        const cleanG = (gidStr || '').toString().trim();
+        for (const [k, p] of playerMap.entries()) {
+            if (cleanN && p.name && p.name.toString().toLowerCase().trim() === cleanN) return k;
+            if (cleanG && p.gameId && p.gameId.toString().trim() === cleanG) return k;
+        }
+        return null;
+    };
 
     // 1. Add Firebase Registered Users
     Object.values(users).forEach(u => {
@@ -11702,12 +11806,14 @@ window.resetBearTrapEvent = async () => {
         Object.values(rosterRawData).forEach(p => {
             if (p.name && !/^\d+$/.test(p.name.toString().trim())) {
                 let name = p.name.toString().trim();
-                let key = name.toLowerCase();
-                let existing = playerMap.get(key) || {};
+                let existingKey = findExistingPlayerKey(name, p.gameId);
+                let existing = existingKey ? playerMap.get(existingKey) : {};
                 let gid = (p.gameId || existing.gameId || window.nameToIdMap[name] || "").toString().trim();
-                playerMap.set(key, {
-                    name: name,
-                    gameId: gid,
+                let targetKey = existingKey || name.toLowerCase();
+
+                playerMap.set(targetKey, {
+                    name: existing.name || name,
+                    gameId: gid || existing.gameId || "",
                     isRegistered: existing.isRegistered || (gid ? registeredGameIds.has(gid) : false),
                     email: existing.email || "",
                     role: p.rank || existing.role || "Member",
@@ -11722,10 +11828,10 @@ window.resetBearTrapEvent = async () => {
         Object.keys(window.nameToIdMap).forEach(name => {
             let cleanName = name.toString().trim();
             if (cleanName && !/^\d+$/.test(cleanName)) {
-                let key = cleanName.toLowerCase();
-                if (!playerMap.has(key)) {
-                    let gid = window.nameToIdMap[cleanName].toString().trim();
-                    playerMap.set(key, {
+                let gid = window.nameToIdMap[cleanName].toString().trim();
+                let existingKey = findExistingPlayerKey(cleanName, gid);
+                if (!existingKey) {
+                    playerMap.set(cleanName.toLowerCase(), {
                         name: cleanName,
                         gameId: gid,
                         isRegistered: registeredGameIds.has(gid),

@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [1.95.7] - 2026-08-13
+### 🧹 Database & UI Player Deduplication Fix
+- **🧹 Self-Healing Roster Cleanup**: Added `window.deduplicateRosterLive()` to merge duplicate entries in Firebase `roster_live` (collapsing redundant keys by Game ID & Chief Name into a single canonical entry).
+- **🛡️ Multi-Source UI Deduplication**: Enforced dual-key matching (`findExistingPlayerKey`) across **Player Database Editor** (`views.playerEditor`), **Activity Matrix**, and **Registered Users Tab** so double names never render in UI lists.
+- **🔒 Prevented Future Duplicates**: Removed multi-key cloning in `openAdminEditFurnaceModal` so updates save strictly to single canonical keys.
+
 ## [1.95.6] - 2026-08-12
 ### 🔥 Player Card Furnace Level Resolution & Realtime Refresh Fix
 - **🔍 Deep Roster Matching**: Upgraded `searchPlayerFull` so `resolvedRosterInfo` checks direct keys, case-insensitive keys, and nested object values (`v.name`, `v.chiefName`, `v.gameId`). This fixes furnace level resolution for players like `Rayjh0083`.
