@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.96.1] - 2026-08-13
+### 🔒 Privacy Update for Discord New Member Alerts
+- **🔒 Removed Email Address**: Removed the email field from real-time Discord Webhook embeds. Discord alerts now display strictly **Chief Name**, **Game ID**, **Furnace Level**, and **Registration Timestamp**.
+
 ## [1.96.0] - 2026-08-13
 ### 🔔 New Member Alert System & Discord Webhook Integration
 - **💬 Real-Time Discord Webhooks**: Automatically dispatches rich Discord Embed notifications (`🎉 NEW MEMBER REGISTERED!`) to your staff channel whenever a chief registers on the website.

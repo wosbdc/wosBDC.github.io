@@ -1,10 +1,9 @@
 {
-  "version": "1.96.0",
+  "version": "1.96.1",
   "releaseDate": "2026-08-13",
-  "title": "🔔 New Member Alert System & Discord Webhook Integration",
+  "title": "🔒 Privacy Update for Discord New Member Alerts",
   "notes": [
-    "Integrated real-time Discord Webhook notifications whenever new members register or claim their profiles",
-    "Added in-app unread member badge and drawer for R4/R5 Staff",
-    "Added Discord Webhook configuration and live test tool in Admin Hub Settings tab"
+    "Removed email address field from real-time Discord Webhook alert embeds",
+    "Streamlined Discord notification fields to Chief Name, Game ID, Furnace Level, and Registration Timestamp"
   ]
 }

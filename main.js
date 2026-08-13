@@ -7466,7 +7466,6 @@ window.triggerNewMemberAlerts = async (memberRecord) => {
             { name: "👤 Chief Name", value: `**${name}**`, inline: true },
             { name: "🆔 Game ID", value: `\`${gid}\``, inline: true },
             { name: "🔥 Furnace Level", value: `\`${level}\``, inline: true },
-            { name: "✉️ Email", value: email !== 'N/A' ? `\`${email}\`` : '_None_', inline: true },
             { name: "📅 Date & Time", value: timeStr, inline: true }
           ],
           footer: {
