@@ -1,9 +1,10 @@
 {
-  "version": "1.98.4",
+  "version": "1.98.5",
   "releaseDate": "2026-08-13",
-  "title": "🔒 Restrict Unread Badges Strictly to Admin-Only Controls",
+  "title": "🔔 Staff-Only Alert Bell Button in Header Navbar",
   "notes": [
-    "Removed red unread signup badge from public ⚙️ Settings button for security and privacy",
-    "Restricted red unread signup badges strictly to staff-only controls (🛡️ Admin Menu & 🔔 Recent Signups)"
+    "Added dedicated 🔔 Staff Alert Bell button to top header bar to the left of the ☰ hamburger menu for staff users",
+    "Renders glowing red unread count badge overlay when new member signups arrive",
+    "Hidden from non-staff/guest users for security and privacy"
   ]
 }

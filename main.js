@@ -3802,13 +3802,16 @@ listenToAuth((user) => {
     }
     if(authSidebarBtn) authSidebarBtn.innerHTML = window._spoofedUser ? `🎭 Spoofing: ${name}` : `👤 ${name}'s Profile`;
     const newMembersSidebarBtn = document.getElementById('newMembersSidebarBtn');
+    const adminAlertsNavBtn = document.getElementById('adminAlertsNavBtn');
     if(adminSidebarBtn && window.isAdminUser(currentUser)) {
       adminSidebarBtn.style.display = 'block';
       if (newMembersSidebarBtn) newMembersSidebarBtn.style.display = 'flex';
+      if (adminAlertsNavBtn) adminAlertsNavBtn.style.display = 'flex';
       if (window.updateNewMemberBadge) window.updateNewMemberBadge();
     } else if (adminSidebarBtn) {
       adminSidebarBtn.style.display = 'none';
       if (newMembersSidebarBtn) newMembersSidebarBtn.style.display = 'none';
+      if (adminAlertsNavBtn) adminAlertsNavBtn.style.display = 'none';
     }
     if(signOutSidebarBtn) signOutSidebarBtn.style.display = 'block';
     
@@ -7543,9 +7546,36 @@ window.updateNewMemberBadge = async () => {
   const lastSeen = Number(localStorage.getItem('last_seen_new_member_timestamp') || '0');
   const unreadCount = recent.filter(m => m.createdMs > lastSeen).length;
 
-  // 1. Badge strictly on admin-only buttons in sidebar (🛡️ Admin Menu & 🔔 Recent Signups)
+  // 1. Badge strictly on admin-only buttons (Navbar 🔔 Bell, Sidebar 🛡️ Admin Menu & 🔔 Recent Signups)
+  const adminAlertsNavBtn = document.getElementById('adminAlertsNavBtn');
   const adminBtn = document.getElementById('adminSidebarBtn');
   const newMembersBtn = document.getElementById('newMembersSidebarBtn');
+
+  if (adminAlertsNavBtn) {
+    let badge = adminAlertsNavBtn.querySelector('.new-member-badge');
+    if (unreadCount > 0) {
+      adminAlertsNavBtn.style.position = 'relative';
+      adminAlertsNavBtn.style.overflow = 'visible';
+      adminAlertsNavBtn.style.background = 'rgba(239,68,68,0.2)';
+      adminAlertsNavBtn.style.borderColor = '#ef4444';
+      adminAlertsNavBtn.style.color = '#ef4444';
+      adminAlertsNavBtn.style.animation = 'pulse 2s infinite';
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'new-member-badge';
+        badge.style.cssText = 'position:absolute; top:-6px; right:-6px; min-width:18px; height:18px; background:#ef4444; color:#fff; font-size:10px; font-weight:bold; padding:0 4px; border-radius:9px; box-shadow:0 0 8px rgba(239,68,68,0.7); z-index:10; pointer-events:none; display:flex; align-items:center; justify-content:center; line-height:1;';
+        adminAlertsNavBtn.appendChild(badge);
+      }
+      badge.textContent = `${unreadCount}`;
+    } else {
+      if (badge) badge.remove();
+      adminAlertsNavBtn.style.background = 'rgba(6,182,212,0.15)';
+      adminAlertsNavBtn.style.borderColor = 'rgba(6,182,212,0.4)';
+      adminAlertsNavBtn.style.color = '#06b6d4';
+      adminAlertsNavBtn.style.animation = 'none';
+    }
+  }
+
   [adminBtn, newMembersBtn].forEach(btn => {
     if (!btn) return;
     let badge = btn.querySelector('.new-member-badge');

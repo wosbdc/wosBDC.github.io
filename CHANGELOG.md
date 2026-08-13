@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [1.98.5] - 2026-08-13
+### 🔔 Staff-Only Alert Bell Button in Header Navbar
+- **🔔 Header Navbar Staff Bell**: Added `#adminAlertsNavBtn` directly to the top navbar `.nav-controls` (to the left of `☰` hamburger menu where requested).
+- **🔴 Red Pulsing Unread Badge**: Renders a glowing red pulsing count badge when unread new member signups exist.
+- **🔒 Staff-Only Visibility**: Completely hidden for standard users/guests (`display: none`).
+
 ## [1.98.4] - 2026-08-13
 ### 🔒 Restrict Unread Badges Strictly to Admin-Only Controls
 - **🔒 Removed Public Settings Badge**: Removed red unread badge from the public **⚙️ Settings** gear button to maintain privacy and prevent non-admin users from seeing staff indicators.
