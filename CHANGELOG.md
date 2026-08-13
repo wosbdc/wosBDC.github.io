@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.97.1] - 2026-08-13
+### 🛡️ Discord Webhook Bot Branding Update
+- **🛡️ Renamed Bot Identity**: Updated Discord Webhook bot username to **`Alliance Gatekeeper 🛡️`** for all real-time alerts and webhook test pings.
+
 ## [1.97.0] - 2026-08-13
 ### 🔔 Admin Add Player Discord Webhook Integration
 - **💬 Admin Manual Add Alert Trigger**: Connected `submitAddPlayerForm` in the Admin Menu to `window.triggerNewMemberAlerts`. Manually adding players to the roster now instantly fires the **WOS Alliance Bot** Discord notification and updates the in-app staff badge.

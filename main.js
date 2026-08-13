@@ -7459,7 +7459,7 @@ window.triggerNewMemberAlerts = async (memberRecord) => {
     if (webhookUrl && alertsEnabled && webhookUrl.startsWith('http')) {
       const siteUrl = window.location.origin || 'https://wosbdc.github.io';
       const embedPayload = {
-        username: "WOS Alliance Bot 🛡️",
+        username: "Alliance Gatekeeper 🛡️",
         avatar_url: `${siteUrl}/favicon.svg`,
         embeds: [{
           title: "🎉 NEW MEMBER REGISTERED!",
@@ -7667,7 +7667,7 @@ window.testDiscordWebhook = async () => {
   try {
     const siteUrl = window.location.origin || 'https://wosbdc.github.io';
     const payload = {
-      username: "WOS Alliance Bot 🛡️",
+      username: "Alliance Gatekeeper 🛡️",
       avatar_url: `${siteUrl}/favicon.svg`,
       embeds: [{
         title: "🧪 DISCORD WEBHOOK TEST SUCCESSFUL!",

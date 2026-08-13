@@ -1,9 +1,8 @@
 {
-  "version": "1.97.0",
+  "version": "1.97.1",
   "releaseDate": "2026-08-13",
-  "title": "🔔 Admin Add Player Discord Webhook Integration",
+  "title": "🛡️ Discord Webhook Bot Branding Update",
   "notes": [
-    "Connected Add New Player to Roster admin action to real-time Discord Webhook alert bot",
-    "Adding players manually from Admin Menu now dispatches real-time Discord & In-App notifications instantly"
+    "Updated Discord Webhook bot username to Alliance Gatekeeper 🛡️"
   ]
 }
