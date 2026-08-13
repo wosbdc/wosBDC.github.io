@@ -9373,9 +9373,27 @@ const views = {
 
               if (rosterRawData) {
                 Object.values(rosterRawData).forEach(p => {
-                  if (!p || !p.name) return;
-                  const pGid = String(p.id || p.gameId || p.gid || '').trim().toLowerCase();
-                  const pNameLower = p.name.trim().toLowerCase();
+                  if (!p) return;
+                  let rawGid = String(p.id || p.gameId || p.gid || '').trim();
+                  let rawName = String(p.chiefName || p.name || '').trim();
+
+                  if (!rawGid && /^\d{6,}$/.test(rawName)) {
+                    rawGid = rawName;
+                    rawName = (p.chiefName && !/^\d+$/.test(p.chiefName) ? p.chiefName : '') || idToNameMap[rawGid] || '';
+                  } else if (/^\d{6,}$/.test(rawName)) {
+                    const mappedName = idToNameMap[rawGid] || idToNameMap[rawName];
+                    if (mappedName) rawName = mappedName;
+                  }
+
+                  if (!rawName || /^\d{6,}$/.test(rawName)) {
+                    if (rawGid && idToNameMap[rawGid]) rawName = idToNameMap[rawGid];
+                    else if (rawGid) rawName = `Chief ${rawGid}`;
+                  }
+
+                  if (!rawName && !rawGid) return;
+
+                  const pGid = rawGid.toLowerCase();
+                  const pNameLower = rawName.toLowerCase();
                   
                   let isClaimed = (pGid && registeredGids.has(pGid));
                   if (!isClaimed) {
@@ -9386,12 +9404,17 @@ const views = {
                   }
                   
                   if (isClaimed) {
-                    claimedRosterGids.add(pGid || pNameLower);
+                    if (pGid) claimedRosterGids.add(pGid);
+                    if (pNameLower) claimedRosterGids.add(pNameLower);
                   } else {
                     if (!seenUnclaimedKeys.has(pNameLower) && (!pGid || !seenUnclaimedKeys.has(pGid))) {
-                      seenUnclaimedKeys.add(pNameLower);
+                      if (pNameLower) seenUnclaimedKeys.add(pNameLower);
                       if (pGid) seenUnclaimedKeys.add(pGid);
-                      window._currentUnclaimedRosterList.push(p);
+                      window._currentUnclaimedRosterList.push({
+                        ...p,
+                        name: rawName,
+                        gameId: rawGid || p.gameId || p.id || ''
+                      });
                     }
                   }
                 });
@@ -9559,8 +9582,19 @@ const views = {
       // Render Unclaimed Alliance Roster Members
       if (window._currentUnclaimedRosterList && window._currentUnclaimedRosterList.length > 0) {
         for (const p of window._currentUnclaimedRosterList) {
-          const uName = p.name || "Unknown Member";
-          const uGid = p.id || p.gameId || p.gid || '';
+          let uGid = String(p.id || p.gameId || p.gid || '').trim();
+          let uName = String(p.chiefName || p.name || '').trim();
+
+          if (!uGid && /^\d{6,}$/.test(uName)) {
+            uGid = uName;
+            uName = idToNameMap[uGid] || (p.chiefName && !/^\d+$/.test(p.chiefName) ? p.chiefName : '') || `Chief ${uGid}`;
+          } else if (/^\d{6,}$/.test(uName)) {
+            const mapped = idToNameMap[uGid] || idToNameMap[uName];
+            if (mapped) uName = mapped;
+            else if (uGid) uName = `Chief ${uGid}`;
+          }
+
+          if (!uName) uName = "Unknown Member";
           const flVal = p.furnaceLevel;
           const gcVal = p.giftCodes;
           const isEnrolled = (gcVal === true || gcVal === 'TRUE' || (typeof gcVal === 'string' && gcVal.toLowerCase().trim() === 'true'));

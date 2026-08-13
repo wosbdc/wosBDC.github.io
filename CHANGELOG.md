@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.97.3] - 2026-08-13
+### 🧹 Unclaimed Roster Member Numeric Name Resolution
+- **🧹 Smart Name & ID Resolution**: Resolved unclaimed roster entries where the `name` property contained numeric Game IDs (e.g. `318843189`). Numeric strings are automatically assigned as the **Game ID** and mapped to their true **Chief Name** via `idToNameMap`.
+
 ## [1.97.2] - 2026-08-13
 ### 🔔 Staff Admin Sidebar Badge Selector Fix
 - **🔔 Targeted Sidebar Button**: Updated `updateNewMemberBadge` selector to target `#adminSidebarBtn` directly. The red pulsing `🔔 1 New` badge now attaches right to the **🛡️ Admin Menu** button in the left sidebar whenever unread signups exist.

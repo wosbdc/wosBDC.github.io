@@ -1,8 +1,9 @@
 {
-  "version": "1.97.2",
+  "version": "1.97.3",
   "releaseDate": "2026-08-13",
-  "title": "🔔 Staff Admin Sidebar Badge Selector Fix",
+  "title": "🧹 Unclaimed Roster Member Numeric Name Resolution",
   "notes": [
-    "Explicitly targeted #adminSidebarBtn in updateNewMemberBadge so unread signups pill displays directly on the Admin Menu button"
+    "Added smart resolution for numeric chief names in unclaimed roster database filter",
+    "Numeric strings are automatically resolved into Game IDs and mapped to true Chief Names"
   ]
 }
