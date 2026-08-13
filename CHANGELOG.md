@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [1.98.6] - 2026-08-13
+### 🧹 Single Unified Navbar Bell Alert Badge
+- **🧹 Cleaned Admin Buttons**: Removed extra red badge labels from `🛡️ Admin Menu` and `🔔 Recent Signups` sidebar buttons to keep all admin buttons clean and uncluttered.
+- **🔔 Single Unified Alert Bell**: The red unread signup badge now lives exclusively on the top navbar **`🔔` Staff Alert Bell button** (next to `☰`).
+
 ## [1.98.5] - 2026-08-13
 ### 🔔 Staff-Only Alert Bell Button in Header Navbar
 - **🔔 Header Navbar Staff Bell**: Added `#adminAlertsNavBtn` directly to the top navbar `.nav-controls` (to the left of `☰` hamburger menu where requested).
