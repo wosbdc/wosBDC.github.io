@@ -1,8 +1,9 @@
 {
-  "version": "1.96.4",
+  "version": "1.96.5",
   "releaseDate": "2026-08-13",
-  "title": "🚀 GitHub Pages Deployment Re-trigger",
+  "title": "⚡ GitHub Actions Runner Upgrade & Deployment Stabilization",
   "notes": [
-    "Re-triggered GitHub Actions Pages deployment pipeline following temporary GitHub HTTP 502 server gateway hiccup"
+    "Upgraded GitHub Actions deploy workflow to Node.js 22 LTS runner to eliminate deprecation warnings",
+    "Clean build and deployment pipeline execution"
   ]
 }

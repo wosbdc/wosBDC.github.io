@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.96.5] - 2026-08-13
+### ⚡ GitHub Actions Runner Upgrade & Deployment Stabilization
+- **⚡ Upgraded Node.js to 22 LTS**: Updated `.github/workflows/deploy.yml` `actions/setup-node@v4` from Node 20 to Node 22 LTS to eliminate deprecation warnings on GitHub Actions runners.
+
 ## [1.96.4] - 2026-08-13
 ### 🚀 GitHub Pages Deployment Re-trigger
 - **🚀 Re-triggered Deployment**: Automated fresh release push to clear temporary GitHub Pages 502 server deployment outage.
