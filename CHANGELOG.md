@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [1.98.1] - 2026-08-13
+### 🐛 Fix Cache Variable Reference Error in verifyFirebaseToken
+- **🐛 Declared Missing `cache` Variable**: Added `var cache = CacheService.getScriptCache();` inside `verifyFirebaseToken` in `Sidebars_and_Tools.js`. This eliminates the `doGet Crash: cache is not defined` crash when authenticating real Firebase User ID Tokens from active browser sessions.
+- **⚡ Google Apps Script Live Deployment**: Pushed and deployed Google Apps Script backend update to version `@145`.
+
 ## [1.98.0] - 2026-08-13
 ### 🚀 Verified Broadcast Push Notification Architecture
 - **🚀 Unified API Endpoint Handler**: Added missing `sendPush` handler inside `Sidebars_and_Tools.js` `doGet` router so `api=sendPush` executes `sendPushNotifications(title, body)`.
