@@ -1,9 +1,10 @@
 {
-  "version": "1.97.8",
+  "version": "1.98.0",
   "releaseDate": "2026-08-13",
-  "title": "🚀 Push Notification Backend Error Resolution & RTDB Secret Fix",
+  "title": "🚀 Verified Broadcast Push Notification Architecture",
   "notes": [
-    "Defined APP_SECRET and authentications in Apps Script backend PushNotifications.js",
-    "Switch RTDB fetch to use FIREBASE_SECRET to ensure full permission to read device tokens and return crystal-clear status messages"
+    "Empirically tested and verified end-to-end Broadcast Push Notification delivery",
+    "Added sendPush endpoint handler to Sidebars_and_Tools.js Apps Script router",
+    "Authorized root admin and master secret tokens in verifyFirebaseToken & isVerifiedAdmin"
   ]
 }

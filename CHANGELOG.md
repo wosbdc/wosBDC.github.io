@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [1.98.0] - 2026-08-13
+### 🚀 Verified Broadcast Push Notification Architecture
+- **🚀 Unified API Endpoint Handler**: Added missing `sendPush` handler inside `Sidebars_and_Tools.js` `doGet` router so `api=sendPush` executes `sendPushNotifications(title, body)`.
+- **🔑 Authorized Master Secret & Root Admin**: Updated `verifyFirebaseToken` & `isVerifiedAdmin` in Apps Script to recognize `FIREBASE_SECRET` and `ROOT_ADMIN_GAME_ID` (318843189).
+- **🧪 Empirical End-to-End Verification**: Verified API delivery via automated test script with response `{"success":true,"message":"Sent 1 notification(s) successfully. (Failed/Expired: 0)"}`.
+- **⚡ Apps Script Live Deployment**: Deployed Google Apps Script backend update to version `@144`.
+
 ## [1.97.8] - 2026-08-13
 ### 🚀 Push Notification Backend Error Resolution & RTDB Secret Fix
 - **🚀 Declared Missing Variable**: Fixed `ReferenceError: APP_SECRET is not defined` in `PushNotifications.js` Apps Script backend by defining `APP_SECRET` falling back to `FIREBASE_SECRET`.
