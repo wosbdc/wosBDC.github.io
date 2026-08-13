@@ -2074,7 +2074,7 @@ window.openAdminEditFurnaceModal = async (chiefName, gameId = '', currentFurnace
            // 3. Ping GAS API
            try {
               const token = await getAuthToken();
-              const url = `${API_BASE_URL}?api=registerNewPlayer&gameId=${encodeURIComponent(cleanGid)}&name=${encodeURIComponent(chiefName)}&stove_lv=${encodeURIComponent(newFurnace)}&token=${encodeURIComponent(token)}`;
+              const url = `${API_BASE_URL}?api=registerNewPlayer&gameId=${encodeURIComponent(cleanGid)}&name=${encodeURIComponent(chiefName)}&level=${encodeURIComponent(newFurnace)}&stove_lv=${encodeURIComponent(newFurnace)}&token=${encodeURIComponent(token)}`;
               fetch(url, { mode: 'no-cors' }).catch(e => null);
            } catch(e) {}
 
