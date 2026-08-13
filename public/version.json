@@ -1,9 +1,8 @@
 {
-  "version": "1.98.7",
+  "version": "1.98.8",
   "releaseDate": "2026-08-13",
-  "title": "🧹 Cleaned Sidebar Settings Menu",
+  "title": "🎨 Translucent Glass-Morphism Styling for Sidebar Action Buttons",
   "notes": [
-    "Removed recent signups button from sidebar settings menu",
-    "Restricted recent signups access strictly to Admin Hub and top navbar staff bell button"
+    "Replaced harsh solid block button backgrounds in slide-out menu with modern translucent glass-morphism borders & glowing hover states"
   ]
 }

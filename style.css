@@ -777,20 +777,22 @@ tr:hover td {
   border-color: var(--accent);
 }
 .sidebar-action-btn.primary {
-  background: var(--accent);
-  color: #ffffff;
-  border: none;
+  background: rgba(168, 85, 247, 0.12);
+  color: var(--accent);
+  border: 1px solid rgba(168, 85, 247, 0.35);
 }
 .sidebar-action-btn.primary:hover {
-  filter: brightness(1.1);
+  background: rgba(168, 85, 247, 0.22);
+  border-color: var(--accent);
 }
 .sidebar-action-btn.danger {
-  background: var(--danger);
-  color: #ffffff;
-  border: none;
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--danger);
+  border: 1px solid rgba(239, 68, 68, 0.35);
 }
 .sidebar-action-btn.danger:hover {
-  filter: brightness(1.1);
+  background: rgba(239, 68, 68, 0.22);
+  border-color: var(--danger);
 }
 
 /* --- Handedness Mobile Top Navbar & Hamburger Rules --- */

@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.98.8] - 2026-08-13
+### 🎨 Translucent Glass-Morphism Styling for Sidebar Action Buttons
+- **🎨 Glass-Morphism Buttons**: Replaced harsh solid block button fills (`primary` and `danger`) in the slide-out menu with sleek, modern translucent glass backgrounds (`rgba(...)`) and glowing accent borders matching the rest of the dark theme design system.
+
 ## [1.98.7] - 2026-08-13
 ### 🧹 Cleaned Sidebar Settings Menu
 - **🧹 Removed Sidebar Recent Signups Button**: Removed `#newMembersSidebarBtn` from the slide-out settings menu (`index.html`).
