@@ -1,9 +1,9 @@
 {
-  "version": "1.97.7",
+  "version": "1.97.8",
   "releaseDate": "2026-08-13",
-  "title": "🚀 Broadcast Push Notification Authentication Fix",
+  "title": "🚀 Push Notification Backend Error Resolution & RTDB Secret Fix",
   "notes": [
-    "Fixed Broadcast Push Notification authorization mismatch between frontend payload (token) and backend validator (secret)",
-    "Pushed & deployed Google Apps Script backend update (@140)"
+    "Defined APP_SECRET and authentications in Apps Script backend PushNotifications.js",
+    "Switch RTDB fetch to use FIREBASE_SECRET to ensure full permission to read device tokens and return crystal-clear status messages"
   ]
 }

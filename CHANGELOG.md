@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [1.97.8] - 2026-08-13
+### 🚀 Push Notification Backend Error Resolution & RTDB Secret Fix
+- **🚀 Declared Missing Variable**: Fixed `ReferenceError: APP_SECRET is not defined` in `PushNotifications.js` Apps Script backend by defining `APP_SECRET` falling back to `FIREBASE_SECRET`.
+- **🔑 Authorized RTDB Token Access**: Updated `sendPushNotifications` to read `fcmTokens` from Realtime Database using `FIREBASE_SECRET` authorization (`auth=FIREBASE_SECRET`).
+- **⚡ Google Apps Script Live Push & Deployment**: Deployed Google Apps Script backend update to version `@141`.
+
 ## [1.97.7] - 2026-08-13
 ### 🚀 Broadcast Push Notification Authentication Fix
 - **🚀 Authentication Mismatch Fix**: Resolved `Unauthorized access: invalid secret key` error on Broadcast Push Notifications. The frontend payload now passes both `secret` and `token` properties matching the Apps Script `PushNotifications.js` backend validator.
