@@ -1,9 +1,9 @@
 {
-  "version": "1.98.3",
+  "version": "1.98.4",
   "releaseDate": "2026-08-13",
-  "title": "🔔 Dedicated Recent Member Signups Sidebar Button & Navigation",
+  "title": "🔒 Restrict Unread Badges Strictly to Admin-Only Controls",
   "notes": [
-    "Added dedicated 🔔 Recent Signups button to sidebar for instant 1-tap access to new member alerts",
-    "Detailed guide on exact 4 places new member alerts appear on website & Discord"
+    "Removed red unread signup badge from public ⚙️ Settings button for security and privacy",
+    "Restricted red unread signup badges strictly to staff-only controls (🛡️ Admin Menu & 🔔 Recent Signups)"
   ]
 }

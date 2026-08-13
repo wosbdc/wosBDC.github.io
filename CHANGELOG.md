@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [1.98.4] - 2026-08-13
+### 🔒 Restrict Unread Badges Strictly to Admin-Only Controls
+- **🔒 Removed Public Settings Badge**: Removed red unread badge from the public **⚙️ Settings** gear button to maintain privacy and prevent non-admin users from seeing staff indicators.
+- **🛡️ Admin-Only Badging**: Unread red badges now only appear on staff-only controls (`🛡️ Admin Menu` & `🔔 Recent Signups` buttons inside the sidebar, which are hidden from non-admin users).
+
 ## [1.98.3] - 2026-08-13
 ### 🔔 Dedicated Recent Member Signups Sidebar Button & Navigation
 - **🔔 Dedicated Sidebar Button**: Added a dedicated `🔔 Recent Signups` button directly in the slide-out sidebar for logged-in staff users (`#newMembersSidebarBtn`).
