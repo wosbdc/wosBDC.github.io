@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [1.95.6] - 2026-08-12
+### 🔥 Player Card Furnace Level Resolution & Realtime Refresh Fix
+- **🔍 Deep Roster Matching**: Upgraded `searchPlayerFull` so `resolvedRosterInfo` checks direct keys, case-insensitive keys, and nested object values (`v.name`, `v.chiefName`, `v.gameId`). This fixes furnace level resolution for players like `Rayjh0083`.
+- **⚡ Instant Profile Card Re-render**: Updated `openAdminEditFurnaceModal` to invalidate stale memory caches (`window.rosterCache = null`) and immediately refresh the opened profile card modal upon saving.
+- **🔑 Multi-Key Database Writing**: Ensured `roster_live` updates save under Chief Name, Game ID, and original keys simultaneously for instant lookups across all views.
+
 ## [1.95.5] - 2026-08-12
 ### 🔒 Account Hub Edit Profile Staff Filter Fix
 - **🛡️ Staff Option Hidden for Regular Members**: Updated `openEditProfileHubModal` so regular non-staff members bypass the hub selector and open their **Chief Member Profile** editor directly.

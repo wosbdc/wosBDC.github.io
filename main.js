@@ -2017,24 +2017,28 @@ window.openAdminEditFurnaceModal = async (chiefName, gameId = '', currentFurnace
         saveBtn.textContent = 'Saving...';
 
         try {
-           const cleanGid = (gameId || window.nameToIdMap[chiefName] || '').toString().trim();
+           const cleanGid = (gameId || window.nameToIdMap[chiefName.toLowerCase()] || window.nameToIdMap[chiefName] || '').toString().trim();
 
-           // 1. Read & update roster_live in Firebase safely
+           // 1. Invalidate rosterCache so any future query pulls fresh data
+           window.rosterCache = null;
+
+           // 2. Read & update roster_live in Firebase safely
            try {
               const rosterSnap = await get(ref(db, 'roster_live')).catch(() => null);
               let rosterObj = (rosterSnap && rosterSnap.exists()) ? rosterSnap.val() : {};
 
               let foundKey = null;
               for (const [rk, rv] of Object.entries(rosterObj)) {
-                 if (rk.toLowerCase() === chiefName.toLowerCase() ||
-                    (rv && rv.name && rv.name.toLowerCase() === chiefName.toLowerCase()) ||
+                 if (rk.toLowerCase().trim() === chiefName.toLowerCase().trim() ||
+                    (rv && rv.name && rv.name.toLowerCase().trim() === chiefName.toLowerCase().trim()) ||
+                    (rv && rv.chiefName && rv.chiefName.toLowerCase().trim() === chiefName.toLowerCase().trim()) ||
                     (cleanGid && rv && rv.gameId && rv.gameId.toString().trim() === cleanGid)) {
                     foundKey = rk;
                     break;
                  }
               }
               const saveKey = foundKey || chiefName;
-              rosterObj[saveKey] = {
+              const updatedEntry = {
                  ...(rosterObj[saveKey] || {}),
                  name: chiefName,
                  gameId: cleanGid,
@@ -2043,11 +2047,19 @@ window.openAdminEditFurnaceModal = async (chiefName, gameId = '', currentFurnace
                  updatedAt: Date.now()
               };
 
+              rosterObj[saveKey] = updatedEntry;
+              if (chiefName && saveKey.toLowerCase() !== chiefName.toLowerCase()) {
+                 rosterObj[chiefName] = updatedEntry;
+              }
+              if (cleanGid && !rosterObj[cleanGid]) {
+                 rosterObj[cleanGid] = updatedEntry;
+              }
+
               await set(ref(db, 'roster_live'), rosterObj);
               window.rosterCache = rosterObj;
            } catch(e) { console.warn("roster_live save error:", e); }
 
-           // 2. Update users/ node if user account exists
+           // 3. Update users/ node if user account exists
            try {
               const usersSnap = await get(ref(db, 'users'));
               if (usersSnap.exists()) {
@@ -2071,7 +2083,7 @@ window.openAdminEditFurnaceModal = async (chiefName, gameId = '', currentFurnace
               }
            } catch(e) { console.warn("Failed to update user node:", e); }
 
-           // 3. Ping GAS API
+           // 4. Ping GAS API
            try {
               const token = await getAuthToken();
               const url = `${API_BASE_URL}?api=registerNewPlayer&gameId=${encodeURIComponent(cleanGid)}&name=${encodeURIComponent(chiefName)}&level=${encodeURIComponent(newFurnace)}&stove_lv=${encodeURIComponent(newFurnace)}&token=${encodeURIComponent(token)}`;
@@ -2084,7 +2096,13 @@ window.openAdminEditFurnaceModal = async (chiefName, gameId = '', currentFurnace
 
            if (window.showToast) window.showToast(`Updated ${chiefName}'s Furnace Level to ${newFurnace}!`, "success");
            closeModal();
-           if (typeof window.activeViewFunc === 'function') window.activeViewFunc();
+
+           // 5. Instantly refresh the player card modal if it's open on screen!
+           if (document.getElementById('rosterLookupResult')) {
+              window.searchPlayerFull(chiefName).catch(() => null);
+           } else if (typeof window.activeViewFunc === 'function') {
+              window.activeViewFunc();
+           }
         } catch(err) {
            console.error("Save furnace error:", err);
            if (window.showToast) window.showToast("Error updating level.", "error");
@@ -3321,7 +3339,22 @@ window.getLivePlayerEventRow = async (chiefName, pRow, headers) => {
         }
     }
     
-    let resolvedRosterInfo = (rosterMap && (rosterMap[targetName] || rosterMap[Object.keys(rosterMap).find(k => k.toLowerCase() === targetName.toLowerCase())])) || {};
+    let resolvedRosterInfo = {};
+    if (rosterMap && typeof rosterMap === 'object') {
+       const directKey = Object.keys(rosterMap).find(k => k.toLowerCase().trim() === targetName.toLowerCase().trim());
+       if (directKey) {
+          resolvedRosterInfo = { ...rosterMap[directKey] };
+       } else {
+          const valMatch = Object.values(rosterMap).find(v => 
+             v && typeof v === 'object' && (
+                (v.name && v.name.toString().toLowerCase().trim() === targetName.toLowerCase().trim()) ||
+                (v.chiefName && v.chiefName.toString().toLowerCase().trim() === targetName.toLowerCase().trim()) ||
+                (viewedGameId && v.gameId && v.gameId.toString().trim() === viewedGameId.toString().trim())
+             )
+          );
+          if (valMatch) resolvedRosterInfo = { ...valMatch };
+       }
+    }
     if (!resolvedRosterInfo.furnaceLevel && viewedGameId && rosterMap && rosterMap[viewedGameId]) {
        resolvedRosterInfo = { ...resolvedRosterInfo, ...rosterMap[viewedGameId] };
     }

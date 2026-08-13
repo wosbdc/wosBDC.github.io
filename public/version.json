@@ -1,9 +1,10 @@
 {
-  "version": "1.95.5",
+  "version": "1.95.6",
   "releaseDate": "2026-08-12",
-  "title": "🔒 Account Hub Edit Profile Staff Filter Fix",
+  "title": "🔥 Player Card Furnace Level Resolution & Realtime Refresh Fix",
   "notes": [
-    "Prevented non-staff accounts from seeing or opening the Staff Directory Profile editor in Account Hub",
-    "Regular members now bypass the staff hub selector and directly open their Chief Member Profile"
+    "Upgraded searchPlayerFull to resolve furnace levels across direct keys, case-insensitive keys, and object property values",
+    "Enabled instant live re-render of player profile cards when staff updates a furnace level",
+    "Multi-keyed Firebase roster_live entries to guarantee immediate lookup for all players"
   ]
 }
