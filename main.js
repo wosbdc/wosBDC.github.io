@@ -3801,11 +3801,14 @@ listenToAuth((user) => {
         setTimeout(() => window.showWelcomePop(name), 600);
     }
     if(authSidebarBtn) authSidebarBtn.innerHTML = window._spoofedUser ? `🎭 Spoofing: ${name}` : `👤 ${name}'s Profile`;
+    const newMembersSidebarBtn = document.getElementById('newMembersSidebarBtn');
     if(adminSidebarBtn && window.isAdminUser(currentUser)) {
       adminSidebarBtn.style.display = 'block';
+      if (newMembersSidebarBtn) newMembersSidebarBtn.style.display = 'flex';
       if (window.updateNewMemberBadge) window.updateNewMemberBadge();
     } else if (adminSidebarBtn) {
       adminSidebarBtn.style.display = 'none';
+      if (newMembersSidebarBtn) newMembersSidebarBtn.style.display = 'none';
     }
     if(signOutSidebarBtn) signOutSidebarBtn.style.display = 'block';
     
@@ -7552,24 +7555,26 @@ window.updateNewMemberBadge = async () => {
     }
   }
 
-  // 2. Badge on the 🛡️ Admin Menu button inside the sidebar
+  // 2. Badge on the 🛡️ Admin Menu button & 🔔 Recent Signups button in sidebar
   const adminBtn = document.getElementById('adminSidebarBtn');
-  if (adminBtn) {
-    let badge = adminBtn.querySelector('.new-member-badge');
+  const newMembersBtn = document.getElementById('newMembersSidebarBtn');
+  [adminBtn, newMembersBtn].forEach(btn => {
+    if (!btn) return;
+    let badge = btn.querySelector('.new-member-badge');
     if (unreadCount > 0) {
-      adminBtn.style.position = 'relative';
-      adminBtn.style.overflow = 'visible';
+      btn.style.position = 'relative';
+      btn.style.overflow = 'visible';
       if (!badge) {
         badge = document.createElement('span');
         badge.className = 'new-member-badge';
         badge.style.cssText = 'position:absolute; top:-8px; right:-8px; background:#ef4444; color:#fff; font-size:11px; font-weight:bold; padding:3px 8px; border-radius:12px; animation:pulse 2s infinite; box-shadow:0 0 10px rgba(239,68,68,0.7); z-index:10; pointer-events:none; white-space:nowrap;';
-        adminBtn.appendChild(badge);
+        btn.appendChild(badge);
       }
       badge.textContent = `🔔 ${unreadCount} New`;
     } else if (badge) {
       badge.remove();
     }
-  }
+  });
 
   // 3. Any other admin nav buttons
   const otherBtns = document.querySelectorAll('.nav-admin-btn, [onclick*="views.admin"]');

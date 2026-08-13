@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [1.98.3] - 2026-08-13
+### 🔔 Dedicated Recent Member Signups Sidebar Button & Navigation
+- **🔔 Dedicated Sidebar Button**: Added a dedicated `🔔 Recent Signups` button directly in the slide-out sidebar for logged-in staff users (`#newMembersSidebarBtn`).
+- **🔴 Red Badge Integration**: Red unread badge overlays on `#settingsBtn` (top navbar), `#adminSidebarBtn`, and `#newMembersSidebarBtn` simultaneously.
+
 ## [1.98.2] - 2026-08-13
 ### ⚡ Duplicate Notification Prevention Fix
 - **⚡ Service Worker Duplicate Prevention**: Updated `public/firebase-messaging-sw.js` so `onBackgroundMessage` skips manual `showNotification()` calls when standard FCM `notification` payloads arrive. Browsers automatically render native popups for `notification` objects, eliminating double notifications on client screens.

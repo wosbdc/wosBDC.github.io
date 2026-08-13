@@ -1,9 +1,9 @@
 {
-  "version": "1.98.2",
+  "version": "1.98.3",
   "releaseDate": "2026-08-13",
-  "title": "⚡ Duplicate Notification Prevention Fix",
+  "title": "🔔 Dedicated Recent Member Signups Sidebar Button & Navigation",
   "notes": [
-    "Prevented double notification display in firebase-messaging-sw.js when FCM automatically renders notification payloads",
-    "Added unique token deduplication in Apps Script PushNotifications.js backend (@146)"
+    "Added dedicated 🔔 Recent Signups button to sidebar for instant 1-tap access to new member alerts",
+    "Detailed guide on exact 4 places new member alerts appear on website & Discord"
   ]
 }
