@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [1.95.3] - 2026-08-12
+### ⚡ Google Sheets & Backend Furnace Level Tracking Fix
+- **📊 Google Sheets Column Realignment**: Fixed `updateChiefsListCheckboxes` trigger in Google Apps Script (`Triggers.js`) to target **Column D (GiftCodes)** for checkboxes while keeping **Column C (Level)** free for Furnace Level values (e.g. `FC 5`, `Furnace 30`, `69`).
+- **🚀 Live Apps Script Deployment**: Pushed and deployed backend Google Apps Script version `@137` live.
+
 ## [1.95.2] - 2026-08-12
 ### 🔥 Signup & Claim Profile Furnace Level Integration
 - **🏰 Signup Furnace Level Selector**: Added Furnace Level selection dropdown to the account registration and profile claim modal (`#authFurnaceWrapper`).
