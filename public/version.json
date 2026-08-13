@@ -1,9 +1,9 @@
 {
-  "version": "1.95.3",
+  "version": "1.95.4",
   "releaseDate": "2026-08-12",
-  "title": "⚡ Google Sheets & Backend Furnace Level Tracking Fix",
+  "title": "🔒 Staff Profile Editor Security Guard Fix",
   "notes": [
-    "Fixed Chief's List column data validation in Google Sheets (re-aligned Column C to Furnace Level text and Column D to GiftCodes Checkboxes)",
-    "Pushed & deployed Google Apps Script backend update live (version @137)"
+    "Strictly enforced R4/R5 Staff permission checks on player profile card modals and furnace editor",
+    "Prevented regular non-staff Google users from seeing or opening the Staff Actions menu and Furnace Editor"
   ]
 }

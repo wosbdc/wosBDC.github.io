@@ -1948,7 +1948,10 @@ window.adminManageAltsPrompt = async (uid) => {
 };
 
 window.openAdminEditFurnaceModal = async (chiefName, gameId = '', currentFurnace = '30') => {
-  if (!window.isAdminUser(currentUser)) return;
+  if (!window.isAdminUser(currentUser)) {
+    if (window.showToast) window.showToast("Access Denied: Staff permissions required.", "error");
+    return;
+  }
 
   const oldModal = document.getElementById('adminEditFurnaceModalOverlay');
   if (oldModal && oldModal.parentNode) oldModal.parentNode.removeChild(oldModal);
@@ -3341,8 +3344,8 @@ window.getLivePlayerEventRow = async (chiefName, pRow, headers) => {
     }
     if (!resolvedRosterInfo.gameId && viewedGameId) resolvedRosterInfo.gameId = viewedGameId;
     
-    const isUnlocked = await window.isGoogleAuthVerified();
-    let html = window.generatePlayerProfileHtml(targetName, pRow, headers, colIsUpcoming, resolvedRosterInfo, null, dynamicSD, showdownActive, bearBoth, bear1, bear2, bearAllTime, btDonationsAllTime, btDonationsCurrent, otherLbs, isUnlocked, altAccounts, true);
+    const isUserAdmin = window.isAdminUser(currentUser);
+    let html = window.generatePlayerProfileHtml(targetName, pRow, headers, colIsUpcoming, resolvedRosterInfo, null, dynamicSD, showdownActive, bearBoth, bear1, bear2, bearAllTime, btDonationsAllTime, btDonationsCurrent, otherLbs, isUserAdmin, altAccounts, isUserAdmin);
     
     resDiv.innerHTML = html;
     
@@ -3564,8 +3567,8 @@ window.searchPlayerFull = async (name) => {
         }
     }
     
-    const isUnlocked = await window.isGoogleAuthVerified();
-    let html = window.generatePlayerProfileHtml(targetName, pRow, headers, colIsUpcoming, rosterMap[targetName], null, dynamicSD, showdownActive, bearBoth, bear1, bear2, bearAllTime, btDonationsAllTime, btDonationsCurrent, otherLbs, isUnlocked, altAccounts, true);
+    const isUserAdmin = window.isAdminUser(currentUser);
+    let html = window.generatePlayerProfileHtml(targetName, pRow, headers, colIsUpcoming, rosterMap[targetName], null, dynamicSD, showdownActive, bearBoth, bear1, bear2, bearAllTime, btDonationsAllTime, btDonationsCurrent, otherLbs, isUserAdmin, altAccounts, isUserAdmin);
     
     resDiv.innerHTML = html;
     
@@ -11599,6 +11602,7 @@ window.resetBearTrapEvent = async () => {
 
   playerEditor: async () => {
     if (!window.isAdminUser(currentUser)) {
+      if (window.showToast) window.showToast("Access Denied: Staff permissions required.", "error");
       views.home();
       return;
     }
@@ -11799,11 +11803,11 @@ window.resetBearTrapEvent = async () => {
                         <span class="${/^[ -~]*$/.test(p.name) ? 'notranslate' : ''}">${window.escapeHTML(p.name)}</span>
                     </div>
                     ${p.gameId ? `<span style="font-family:monospace; font-size:12px; background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px; color:var(--text-muted);">ID: ${p.gameId}</span>` : ''}
-                    <span onclick="event.stopPropagation(); window.openAdminEditFurnaceModal('${window.escapeHTML(p.name)}', '${p.gameId || ''}', '${p.furnaceLevel || ''}')" style="cursor:pointer; display:inline-flex; align-items:center;" title="Click to Edit Furnace Level">${window.getFurnaceIconHtml(p.furnaceLevel || '30', 36)}</span>
+                    <span onclick="event.stopPropagation(); if(window.isAdminUser(currentUser)){ window.openAdminEditFurnaceModal('${window.escapeHTML(p.name)}', '${p.gameId || ''}', '${p.furnaceLevel || ''}'); }else{ window.searchPlayerFull('${window.escapeHTML(p.name)}'); }" style="cursor:pointer; display:inline-flex; align-items:center;" title="${window.isAdminUser(currentUser) ? 'Click to Edit Furnace Level' : 'Furnace Level'}">${window.getFurnaceIconHtml(p.furnaceLevel || '30', 36)}</span>
                 </div>
                 <div style="display:flex; gap:8px; align-items:center;">
-                    <button onclick="event.stopPropagation(); window.openAdminEditFurnaceModal('${window.escapeHTML(p.name)}', '${p.gameId || ''}', '${p.furnaceLevel || ''}')" style="background:rgba(249,115,22,0.15); border:1px solid rgba(249,115,22,0.4); color:#f97316; padding:5px 12px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">🔥 Level</button>
-                    <button onclick="event.stopPropagation(); window.searchPlayerFull('${window.escapeHTML(p.name)}')" style="background:var(--accent); color:#fff; border:none; padding:5px 12px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">✏️ Edit</button>
+                    ${window.isAdminUser(currentUser) ? `<button onclick="event.stopPropagation(); window.openAdminEditFurnaceModal('${window.escapeHTML(p.name)}', '${p.gameId || ''}', '${p.furnaceLevel || ''}')" style="background:rgba(249,115,22,0.15); border:1px solid rgba(249,115,22,0.4); color:#f97316; padding:5px 12px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">🔥 Level</button>` : ''}
+                    <button onclick="event.stopPropagation(); window.searchPlayerFull('${window.escapeHTML(p.name)}')" style="background:var(--accent); color:#fff; border:none; padding:5px 12px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">👁️ View Profile</button>
                 </div>
             </div>
         `).join('');

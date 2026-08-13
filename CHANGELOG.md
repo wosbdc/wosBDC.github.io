@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [1.95.4] - 2026-08-12
+### 🔒 Staff Profile Editor Security Guard Fix
+- **🛡️ Strict Staff Security Enforcement**: Fixed permission check in player card modal (`generatePlayerProfileHtml`) so the **`⚙️ Actions`** dropdown menu and **`🔥 Set Furnace Level`** editor are strictly hidden from non-staff (non-R4/R5) accounts even if signed in via Google.
+- **🚫 Staff Modals Access Guard**: Guarded `openAdminEditFurnaceModal` and `views.playerEditor` to explicitly show a toast `"Access Denied: Staff permissions required"` and redirect unauthorized users.
+
 ## [1.95.3] - 2026-08-12
 ### ⚡ Google Sheets & Backend Furnace Level Tracking Fix
 - **📊 Google Sheets Column Realignment**: Fixed `updateChiefsListCheckboxes` trigger in Google Apps Script (`Triggers.js`) to target **Column D (GiftCodes)** for checkboxes while keeping **Column C (Level)** free for Furnace Level values (e.g. `FC 5`, `Furnace 30`, `69`).
