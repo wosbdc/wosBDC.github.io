@@ -9492,7 +9492,24 @@ const views = {
 
       for (const item of userEntries) {
         const { uid, u, createdMs, isNew } = item;
-        const cName = idToNameMap[u.gameId] || "Not Found";
+        const uGidStr = String(u.gameId || '').trim();
+        let cName = idToNameMap[uGidStr] || u.chiefName || u.name || '';
+        
+        let p = null;
+        if (rosterRawData) {
+          p = Object.values(rosterRawData).find(rp => {
+            if (!rp) return false;
+            const rpGid = String(rp.gameId || rp.id || rp.gid || '').trim();
+            const rpName = String(rp.chiefName || rp.name || '').trim().toLowerCase();
+            if (uGidStr && rpGid && rpGid === uGidStr) return true;
+            if (cName && rpName && rpName === cName.toLowerCase()) return true;
+            return false;
+          });
+        }
+
+        if ((!cName || cName === "Not Found") && p) cName = p.name || p.chiefName || uGidStr;
+        if (!cName || cName === "Not Found") cName = uGidStr ? `Chief ${uGidStr}` : "Registered User";
+
         const hasAvatar = avatarMap[u.gameId] ? true : false;
         const avatarSrc = window.getAvatarUrl(u.gameId, cName);
         const hasAlts = (u.linkedGameIds && Array.isArray(u.linkedGameIds) && u.linkedGameIds.length > 0);
@@ -9501,18 +9518,15 @@ const views = {
         
         let rosterInfoHtml = '';
         let isEnrolled = false;
-        if (rosterRawData) {
-            const p = Object.values(rosterRawData).find(rp => rp.name && rp.name.toLowerCase() === cName.toLowerCase());
-            if (p) {
-                let flVal = p.furnaceLevel;
-                let gcVal = p.giftCodes;
-                let taVal = p.timeActive;
-                isEnrolled = (gcVal === true || gcVal === 'TRUE' || (typeof gcVal === 'string' && gcVal.toLowerCase().trim() === 'true'));
-                
-                if (flVal) rosterInfoHtml += `<span style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); padding:3px 8px; border-radius:10px; font-size:11px; display:inline-flex; align-items:center;">${window.getFurnaceIconHtml(flVal)}</span>`;
-                if (isEnrolled) rosterInfoHtml += `<span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:3px 8px; border-radius:10px; font-size:11px; font-weight:bold;">✅ Enrolled</span>`;
-                if (taVal) rosterInfoHtml += `<span style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-muted); padding:3px 8px; border-radius:10px; font-size:11px;">⏱️ ${escapeHTML(taVal)}</span>`;
-            }
+        if (p) {
+            let flVal = p.furnaceLevel || p.stove_lv;
+            let gcVal = p.giftCodes;
+            let taVal = p.timeActive;
+            isEnrolled = (gcVal === true || gcVal === 'TRUE' || (typeof gcVal === 'string' && gcVal.toLowerCase().trim() === 'true'));
+            
+            if (flVal) rosterInfoHtml += `<span style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); padding:3px 8px; border-radius:10px; font-size:11px; display:inline-flex; align-items:center;">${window.getFurnaceIconHtml(flVal)}</span>`;
+            if (isEnrolled) rosterInfoHtml += `<span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:3px 8px; border-radius:10px; font-size:11px; font-weight:bold;">✅ Enrolled</span>`;
+            if (taVal) rosterInfoHtml += `<span style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-muted); padding:3px 8px; border-radius:10px; font-size:11px;">⏱️ ${escapeHTML(taVal)}</span>`;
         }
 
         let dateDisplay = 'Unknown';

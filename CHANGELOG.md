@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.97.4] - 2026-08-13
+### ⚡ Dual Matching for Registered Users Roster Info
+- **⚡ Roster Information Mapping Fix**: Upgraded registered user rendering in `views.admin()` to cross-reference roster records by both **Game ID** (`uGidStr === rpGid`) and **Name** (`cName === rpName`). Registered users now consistently display their **Furnace Level**, **Enrolled Status**, and roster badges.
+
 ## [1.97.3] - 2026-08-13
 ### 🧹 Unclaimed Roster Member Numeric Name Resolution
 - **🧹 Smart Name & ID Resolution**: Resolved unclaimed roster entries where the `name` property contained numeric Game IDs (e.g. `318843189`). Numeric strings are automatically assigned as the **Game ID** and mapped to their true **Chief Name** via `idToNameMap`.

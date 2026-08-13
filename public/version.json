@@ -1,9 +1,9 @@
 {
-  "version": "1.97.3",
+  "version": "1.97.4",
   "releaseDate": "2026-08-13",
-  "title": "🧹 Unclaimed Roster Member Numeric Name Resolution",
+  "title": "⚡ Dual Matching for Registered Users Roster Info",
   "notes": [
-    "Added smart resolution for numeric chief names in unclaimed roster database filter",
-    "Numeric strings are automatically resolved into Game IDs and mapped to true Chief Names"
+    "Registered user database rows now match roster entries by both Game ID and Chief Name",
+    "Ensures registered users accurately show their Furnace Level, Enrolled status, and Roster info"
   ]
 }
