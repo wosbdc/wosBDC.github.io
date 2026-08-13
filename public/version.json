@@ -1,9 +1,9 @@
 {
-  "version": "1.96.2",
+  "version": "1.96.3",
   "releaseDate": "2026-08-13",
-  "title": "⚡ Firebase Storage Fix for Discord Webhook Settings",
+  "title": "🛡️ Firebase Security Rule Permission Fix for Discord Alert Settings",
   "notes": [
-    "Fixed saveDiscordAlertSettings to use set instead of update when initializing system_settings node",
-    "Added detailed error reporting for Discord Webhook configuration saves"
+    "Migrated Discord Webhook settings node from system_settings to authorized config/discordAlerts node",
+    "Resolves PERMISSION_DENIED error when saving Discord alert settings"
   ]
 }

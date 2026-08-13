@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.96.3] - 2026-08-13
+### 🛡️ Firebase Security Rule Permission Fix for Discord Alert Settings
+- **🛡️ Authorized Firebase Path**: Migrated storage path from `system_settings` to `config/discordAlerts`. In Firebase Realtime Database Security Rules, administrative configurations are explicitly authorized under `config/` (alongside `config/admins`, `config/maintenanceMode`, and `config/rosterRegisteredOnly`), resolving the `PERMISSION_DENIED` exception.
+
 ## [1.96.2] - 2026-08-13
 ### ⚡ Firebase Storage Fix for Discord Webhook Settings
 - **⚡ System Settings Initialization Fix**: Replaced Firebase `update` with safe `set` in `saveDiscordAlertSettings` so settings persist reliably even if `system_settings` node doesn't exist yet.

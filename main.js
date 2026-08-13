@@ -7447,7 +7447,7 @@ window.triggerNewMemberAlerts = async (memberRecord) => {
 
   // Fetch System Settings from Firebase to check Discord Webhook configuration
   try {
-    const settingsSnap = await get(ref(db, 'system_settings')).catch(() => null);
+    const settingsSnap = await get(ref(db, 'config/discordAlerts')).catch(() => null);
     const settings = (settingsSnap && settingsSnap.exists()) ? settingsSnap.val() : {};
 
     const webhookUrl = settings.discordWebhookUrl ? settings.discordWebhookUrl.trim() : '';
@@ -7626,7 +7626,7 @@ window.copyWelcomeMessage = (chiefName) => {
 
 window.loadDiscordAlertSettings = async () => {
   try {
-    const snap = await get(ref(db, 'system_settings')).catch(() => null);
+    const snap = await get(ref(db, 'config/discordAlerts')).catch(() => null);
     if (snap && snap.exists()) {
       const s = snap.val() || {};
       const urlInput = document.getElementById('discordWebhookUrlInput');
@@ -7642,10 +7642,7 @@ window.saveDiscordAlertSettings = async () => {
   const enabled = document.getElementById('discordAlertsEnabledCheckbox')?.checked !== false;
 
   try {
-    const snap = await get(ref(db, 'system_settings')).catch(() => null);
-    const existing = (snap && snap.exists()) ? snap.val() : {};
-    await set(ref(db, 'system_settings'), {
-      ...existing,
+    await set(ref(db, 'config/discordAlerts'), {
       discordWebhookUrl: url,
       discordAlertsEnabled: enabled,
       updatedAt: new Date().toISOString()
