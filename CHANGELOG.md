@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [2.5.7] - 2026-08-14
+### ✨ Fix Navbar Alert Bell Modal Binding
+- **🔧 Disambiguated Modal Handlers**:
+  - Resolved function name collision between the Settings **Push Notifications** modal (`openPushNotificationsModal`) and the Top Navbar **Alliance Alerts & 30-Day Token Hub** (`openAllianceAlertsModal`).
+  - Clicking the 🔔 Bell in the navbar now reliably opens the **Alliance Notifications & Alerts** modal with active 30-day token days remaining, 1-click renewal, and gift code status.
+
 ## [2.5.6] - 2026-08-14
 ### ✨ Update In-Game Token Labels to '30-Day Sync Token'
 - **🏷️ Simplified User-Facing Token Nomenclature**:

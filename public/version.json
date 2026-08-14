@@ -1,9 +1,9 @@
 {
-  "version": "2.5.6",
+  "version": "2.5.7",
   "releaseDate": "2026-08-14",
-  "title": "✨ Update In-Game Token Labels to '30-Day Sync Token'",
+  "title": "✨ Fix Navbar Alert Bell Modal Binding",
   "notes": [
-    "Cleaned user-facing labels across notification hub and profile ID cards to clearly display '30-Day Sync Token'",
-    "Streamlined renewal action buttons and status descriptions for seamless user understanding"
+    "Resolved function name collision between Browser Push Notifications and Alliance Notifications & Alerts Hub",
+    "Navbar bell now accurately opens the 30-Day Token Status and Alliance Alerts modal"
   ]
 }

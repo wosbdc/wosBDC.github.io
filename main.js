@@ -8072,7 +8072,7 @@ window.updateNewMemberBadge = async () => {
   }
 };
 
-window.openNotificationsModal = async () => {
+window.openAllianceAlertsModal = async () => {
   if (!currentUser) {
     if (window.openLoginModal) window.openLoginModal();
     return;
@@ -8219,7 +8219,8 @@ window.openNotificationsModal = async () => {
   document.body.appendChild(overlay);
 };
 
-window.openNewMembersModal = window.openNotificationsModal;
+window.openNewMembersModal = window.openAllianceAlertsModal;
+window.openNotificationsModal = window.openAllianceAlertsModal;
 
 window.copyWelcomeMessage = (chiefName) => {
   const siteUrl = window.location.origin || 'https://wosbdc.github.io';
@@ -19085,7 +19086,7 @@ const styleEl = document.createElement('style'); styleEl.textContent = `/* --- H
 `; document.head.appendChild(styleEl);
 
 // --- Settings Modal Helpers ---
-window.openNotificationsModal = () => {
+window.openPushNotificationsModal = () => {
   const modal = document.getElementById('notificationsModal');
   const overlay = document.getElementById('notificationsModalOverlay');
   if (modal) modal.style.display = 'block';
