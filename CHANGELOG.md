@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.5.16] - 2026-08-14
+- Streamlined Registered Users Database with consolidated Segmented Switcher and Attribute dropdowns.
+- Added 30-day sync token tracking and countdown badges for main characters and linked alts.
+
 ## [2.5.15] - 2026-08-14
 - Configured Alliance Gatekeeper Discord integration to maintain a single live-updating 7-day member roster card.
 

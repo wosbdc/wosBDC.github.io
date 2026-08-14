@@ -9906,49 +9906,38 @@ const views = {
         }
     };
 
-    window.currentAdminUserFilter = 'all';
-    window.setAdminUserFilter = (filterType, btnEl) => {
-        window.currentAdminUserFilter = filterType;
-        document.querySelectorAll('.admin-user-filter-pill').forEach(b => {
+    window.currentAdminUserPopulationTab = 'all';
+    window.setAdminUserPopulationTab = (tabName, btnEl) => {
+        window.currentAdminUserPopulationTab = tabName;
+        document.querySelectorAll('.admin-user-filter-tab').forEach(b => {
             b.classList.remove('active');
-            b.style.background = 'var(--card-bg)';
-            b.style.color = 'var(--text-main)';
-            b.style.border = '1px solid var(--border)';
+            b.style.background = 'transparent';
+            b.style.color = 'var(--text-muted)';
         });
         if (btnEl) {
             btnEl.classList.add('active');
-            if (filterType === 'unclaimed') {
+            if (tabName === 'unclaimed') {
                 btnEl.style.background = '#ef4444';
                 btnEl.style.color = '#fff';
-                btnEl.style.border = 'none';
-            } else if (filterType === 'claimed') {
+            } else if (tabName === 'claimed') {
                 btnEl.style.background = '#10b981';
                 btnEl.style.color = '#fff';
-                btnEl.style.border = 'none';
-            } else if (filterType === 'new') {
-                btnEl.style.background = '#10b981';
-                btnEl.style.color = '#fff';
-                btnEl.style.border = 'none';
-            } else if (filterType === 'alts') {
-                btnEl.style.background = '#3b82f6';
-                btnEl.style.color = '#fff';
-                btnEl.style.border = 'none';
-            } else if (filterType === 'enrolled') {
-                btnEl.style.background = '#a855f7';
-                btnEl.style.color = '#fff';
-                btnEl.style.border = 'none';
             } else {
                 btnEl.style.background = 'var(--accent)';
                 btnEl.style.color = '#fff';
-                btnEl.style.border = 'none';
             }
         }
         window.filterAdminUsersList();
     };
 
+    // Backward-compatibility alias
+    window.setAdminUserFilter = (f, btn) => window.setAdminUserPopulationTab(f, btn);
+
     window.filterAdminUsersList = () => {
         const searchVal = (document.getElementById('adminUserSearchInput')?.value || '').toLowerCase().trim();
-        const activeFilter = window.currentAdminUserFilter || 'all';
+        const activeTab = window.currentAdminUserPopulationTab || 'all';
+        const tokenFilter = document.getElementById('adminUserTokenFilter')?.value || 'all';
+        const attrFilter = document.getElementById('adminUserAttrFilter')?.value || 'all';
 
         const rows = document.querySelectorAll('.admin-user-row');
         rows.forEach(row => {
@@ -9960,18 +9949,26 @@ const views = {
             const hasAlts = row.getAttribute('data-has-alts') === 'true';
             const isEnrolled = row.getAttribute('data-is-enrolled') === 'true';
             const isClaimed = row.getAttribute('data-is-claimed') === 'true';
+            const tokenStatus = row.getAttribute('data-token-status') || 'unverified';
 
             const matchesSearch = !searchVal || name.includes(searchVal) || gid.includes(searchVal) || email.includes(searchVal);
 
-            let matchesCategory = true;
-            if (activeFilter === 'unclaimed') matchesCategory = !isClaimed;
-            else if (activeFilter === 'claimed') matchesCategory = isClaimed;
-            else if (activeFilter === 'new') matchesCategory = isNew;
-            else if (activeFilter === 'admin') matchesCategory = isAdmin;
-            else if (activeFilter === 'alts') matchesCategory = hasAlts;
-            else if (activeFilter === 'enrolled') matchesCategory = isEnrolled;
+            let matchesTab = true;
+            if (activeTab === 'unclaimed') matchesTab = !isClaimed;
+            else if (activeTab === 'claimed') matchesTab = isClaimed;
 
-            if (matchesSearch && matchesCategory) {
+            let matchesToken = true;
+            if (tokenFilter !== 'all') {
+                matchesToken = (tokenStatus === tokenFilter);
+            }
+
+            let matchesAttr = true;
+            if (attrFilter === 'new') matchesAttr = isNew;
+            else if (attrFilter === 'alts') matchesAttr = hasAlts;
+            else if (attrFilter === 'enrolled') matchesAttr = isEnrolled;
+            else if (attrFilter === 'staff') matchesAttr = isAdmin;
+
+            if (matchesSearch && matchesTab && matchesToken && matchesAttr) {
                 row.style.display = '';
             } else {
                 row.style.display = 'none';
@@ -10951,42 +10948,57 @@ const views = {
             })()}
 
             <!-- Search & Filter Controls Bar -->
-            <div style="display:flex; flex-direction:column; gap:14px; margin-bottom:18px; background:var(--card-bg); padding:16px; border-radius:12px; border:1px solid var(--border);">
+            <div style="display:flex; flex-direction:column; gap:14px; margin-bottom:18px; background:var(--card-bg); padding:16px; border-radius:14px; border:1px solid var(--border);">
+              
+              <!-- Top Row: Title & Primary Segmented View Switcher -->
               <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
                 <div style="font-weight:bold; font-size:16px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
-                  👥 Registered Users Database <span style="font-size:13px; color:var(--text-muted); font-weight:normal;">(${Object.keys(users).length} registered account(s), ${(window._currentUnclaimedRosterList || []).length} unclaimed roster member(s))</span>
+                  👥 Registered Users Database <span style="font-size:13px; color:var(--text-muted); font-weight:normal;">(${Object.keys(users).length} registered, ${(window._currentUnclaimedRosterList || []).length} unclaimed)</span>
                 </div>
-                <div style="position:relative; width:100%; max-width:340px;">
-                  <input type="text" id="adminUserSearchInput" oninput="window.filterAdminUsersList()" placeholder="🔍 Search Name, Game ID, or Email..." style="width:100%; padding:10px 32px 10px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; font-weight:bold; box-sizing:border-box;">
-                  <button onclick="let i=document.getElementById('adminUserSearchInput'); if(i){i.value=''; window.filterAdminUsersList(); i.focus();}" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text-muted); cursor:pointer; font-weight:bold; font-size:14px;">✕</button>
+
+                <!-- Primary Segmented Switcher -->
+                <div style="display:inline-flex; background:var(--bg-main); padding:3px; border-radius:10px; border:1px solid var(--border); gap:4px;">
+                  <button class="admin-user-filter-tab active" data-tab="all" onclick="window.setAdminUserPopulationTab('all', this)" style="background:var(--accent); color:#fff; border:none; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+                    👥 All (${Object.keys(users).length + (window._currentUnclaimedRosterList || []).length})
+                  </button>
+                  <button class="admin-user-filter-tab" data-tab="claimed" onclick="window.setAdminUserPopulationTab('claimed', this)" style="background:transparent; color:var(--text-muted); border:none; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+                    ✅ Claimed (${Object.keys(users).length})
+                  </button>
+                  <button class="admin-user-filter-tab" data-tab="unclaimed" onclick="window.setAdminUserPopulationTab('unclaimed', this)" style="background:transparent; color:var(--text-muted); border:none; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+                    ⚠️ Unclaimed (${(window._currentUnclaimedRosterList || []).length})
+                  </button>
                 </div>
               </div>
 
-              <!-- Filter Tab Pills -->
-              <div id="adminUserFilterPills" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-                <button class="admin-user-filter-pill active" data-filter="all" onclick="window.setAdminUserFilter('all', this)" style="background:var(--accent); color:#fff; border:none; padding:6px 14px; border-radius:20px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
-                  👥 All Members (${Object.keys(users).length + (window._currentUnclaimedRosterList || []).length})
-                </button>
-                <button class="admin-user-filter-pill" data-filter="unclaimed" onclick="window.setAdminUserFilter('unclaimed', this)" style="background:rgba(239,68,68,0.12); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:6px 14px; border-radius:20px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
-                  ⚠️ Unclaimed Roster (${(window._currentUnclaimedRosterList || []).length})
-                </button>
-                <button class="admin-user-filter-pill" data-filter="claimed" onclick="window.setAdminUserFilter('claimed', this)" style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:6px 14px; border-radius:20px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
-                  ✅ Claimed Roster (${Object.keys(users).length})
-                </button>
-                <button class="admin-user-filter-pill" data-filter="new" onclick="window.setAdminUserFilter('new', this)" style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:6px 14px; border-radius:20px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
-                  🆕 New Signups (${Object.values(users).filter(u => {
-                    let ms = u.createdAt ? new Date(u.createdAt).getTime() : (u.timestamp ? Number(u.timestamp) : 0);
-                    return ms > 0 && (Date.now() - ms) <= (7 * 24 * 60 * 60 * 1000);
-                  }).length})
-                </button>
-                <button class="admin-user-filter-pill" data-filter="alts" onclick="window.setAdminUserFilter('alts', this)" style="background:rgba(59,130,246,0.12); color:#3b82f6; border:1px solid rgba(59,130,246,0.3); padding:6px 14px; border-radius:20px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
-                  🔗 Has Linked Alts (${Object.values(users).filter(u => u.linkedGameIds && Array.isArray(u.linkedGameIds) && u.linkedGameIds.length > 0).length})
-                </button>
-                <button class="admin-user-filter-pill" data-filter="enrolled" onclick="window.setAdminUserFilter('enrolled', this)" style="background:rgba(168,85,247,0.12); color:#a855f7; border:1px solid rgba(168,85,247,0.3); padding:6px 14px; border-radius:20px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
-                  🎁 Gift Codes Enrolled
-                </button>
-                <button onclick="window.copyUnclaimedRosterList()" style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.4); padding:6px 14px; border-radius:20px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.25)'" onmouseout="this.style.background='rgba(239,68,68,0.15)'">
-                  📋 Copy Unclaimed List
+              <!-- Bottom Row: Search + 30-Day Token Dropdown + Attributes Dropdown + Copy Action Button -->
+              <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                <!-- Search Input -->
+                <div style="position:relative; flex:1; min-width:220px;">
+                  <input type="text" id="adminUserSearchInput" oninput="window.filterAdminUsersList()" placeholder="🔍 Search Name, Game ID, or Email..." style="width:100%; padding:9px 30px 9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; font-weight:bold; box-sizing:border-box;">
+                  <button onclick="let i=document.getElementById('adminUserSearchInput'); if(i){i.value=''; window.filterAdminUsersList(); i.focus();}" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text-muted); cursor:pointer; font-weight:bold; font-size:14px;">✕</button>
+                </div>
+
+                <!-- 30-Day Token Status Selector -->
+                <select id="adminUserTokenFilter" onchange="window.filterAdminUsersList()" style="padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer; outline:none; min-width:180px;">
+                  <option value="all">🛡️ 30-Day Token: All States</option>
+                  <option value="active">🟢 Active Sync (6–30d left)</option>
+                  <option value="expiring">🟠 Expiring Soon (≤5d left)</option>
+                  <option value="expired">🔴 Expired Sync (0d left)</option>
+                  <option value="unverified">⚪ Unverified / No Token</option>
+                </select>
+
+                <!-- Feature Attributes Selector -->
+                <select id="adminUserAttrFilter" onchange="window.filterAdminUsersList()" style="padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer; outline:none; min-width:170px;">
+                  <option value="all">🏷️ Filter Attributes: All</option>
+                  <option value="new">🆕 New Signups (Past 7d)</option>
+                  <option value="alts">🔗 Has Linked Alts</option>
+                  <option value="enrolled">🎁 Gift Codes Enrolled</option>
+                  <option value="staff">👑 R4/R5 Staff Members</option>
+                </select>
+
+                <!-- Copy Unclaimed Button -->
+                <button onclick="window.copyUnclaimedRosterList()" style="background:rgba(239,68,68,0.12); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:9px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s; white-space:nowrap;" onmouseover="this.style.background='rgba(239,68,68,0.2)'" onmouseout="this.style.background='rgba(239,68,68,0.12)'">
+                  📋 Copy Unclaimed
                 </button>
               </div>
             </div>
@@ -10996,7 +11008,7 @@ const views = {
                 <thead>
                   <tr style="border-bottom:2px solid var(--border); color:var(--text-muted); font-size:12px; text-transform:uppercase;">
                     <th style="padding:12px 10px;">Chief & ID</th>
-                    <th style="padding:12px 10px;">Roster & Alts</th>
+                    <th style="padding:12px 10px;">Roster & 30d Sync</th>
                     <th style="padding:12px 10px;">Email & Signup Date</th>
                     <th style="padding:12px 10px; text-align:right;">Actions</th>
                   </tr>
@@ -11044,6 +11056,43 @@ const views = {
         const adminLvl = window.getAdminLevel(u);
         const isAdminUser = (u.role === 'admin' || u.role === 'R5' || (adminLvl !== false && adminLvl !== 'User'));
         
+        // 30-Day Token Status Calculation
+        const tokenStatus = window.getMemberTokenStatus(u);
+        let tokenPillHtml = '';
+        if (tokenStatus.status === 'active') {
+          tokenPillHtml = `<span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold; display:inline-flex; align-items:center; gap:4px;" title="30-day token active (${tokenStatus.daysLeft}d left). Auto-syncing stats.">🟢 ${tokenStatus.daysLeft}d Sync</span>`;
+        } else if (tokenStatus.status === 'expiring') {
+          tokenPillHtml = `<span style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold; display:inline-flex; align-items:center; gap:4px;" title="Expiring soon: ${tokenStatus.daysLeft} days remaining. Needs mailbox code refresh.">🟠 ${tokenStatus.daysLeft}d Sync</span>`;
+        } else if (tokenStatus.status === 'expired') {
+          tokenPillHtml = `<span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.4); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold; display:inline-flex; align-items:center; gap:4px;" title="30-day token expired. Needs in-game verification code.">🔴 Expired Sync</span>`;
+        } else {
+          tokenPillHtml = `<span style="background:rgba(255,255,255,0.06); color:var(--text-muted); border:1px solid var(--border); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:normal;" title="Character not verified with in-game code yet.">⚪ Unverified Sync</span>`;
+        }
+
+        // Linked Alts Token Calculation
+        let altTokensSyncedCount = 0;
+        let totalAlts = (u.linkedGameIds && Array.isArray(u.linkedGameIds)) ? u.linkedGameIds.length : 0;
+        if (totalAlts > 0 && u.altTokens) {
+          u.linkedGameIds.forEach(agid => {
+            const aTok = u.altTokens[agid];
+            if (aTok) {
+              const aVerified = (typeof aTok === 'object' && aTok.verifiedAt) ? new Date(aTok.verifiedAt) : null;
+              if (aVerified && !isNaN(aVerified.getTime())) {
+                const elapsed = Math.floor((Date.now() - aVerified.getTime()) / (1000 * 60 * 60 * 24));
+                if (elapsed < 30) altTokensSyncedCount++;
+              }
+            }
+          });
+        }
+        let altPillHtml = '';
+        if (totalAlts > 0) {
+          const altAllSynced = (altTokensSyncedCount === totalAlts);
+          const altColor = altAllSynced ? '#38bdf8' : (altTokensSyncedCount > 0 ? '#f59e0b' : 'var(--text-muted)');
+          const altBg = altAllSynced ? 'rgba(56,189,248,0.12)' : (altTokensSyncedCount > 0 ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.06)');
+          const altBorder = altAllSynced ? 'rgba(56,189,248,0.3)' : (altTokensSyncedCount > 0 ? 'rgba(245,158,11,0.3)' : 'var(--border)');
+          altPillHtml = `<button onclick="window.adminManageAltsPrompt('${uid}')" style="background:${altBg}; color:${altColor}; border:1px solid ${altBorder}; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px;" title="${altTokensSyncedCount} of ${totalAlts} alts have active 30d sync tokens">🔗 ${altTokensSyncedCount}/${totalAlts} Alts</button>`;
+        }
+
         let rosterInfoHtml = '';
         let isEnrolled = false;
         if (p) {
@@ -11053,7 +11102,7 @@ const views = {
             isEnrolled = (gcVal === true || gcVal === 'TRUE' || (typeof gcVal === 'string' && gcVal.toLowerCase().trim() === 'true'));
             
             if (flVal) rosterInfoHtml += `<span style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); padding:3px 8px; border-radius:10px; font-size:11px; display:inline-flex; align-items:center;">${window.getFurnaceIconHtml(flVal)}</span>`;
-            if (isEnrolled) rosterInfoHtml += `<span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:3px 8px; border-radius:10px; font-size:11px; font-weight:bold;">✅ Enrolled</span>`;
+            if (isEnrolled) rosterInfoHtml += `<span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:3px 8px; border-radius:10px; font-size:11px; font-weight:bold;">🎁 Enrolled</span>`;
             if (taVal) rosterInfoHtml += `<span style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-muted); padding:3px 8px; border-radius:10px; font-size:11px;">⏱️ ${escapeHTML(taVal)}</span>`;
         }
 
@@ -11072,6 +11121,7 @@ const views = {
               data-is-admin="${isAdminUser ? 'true' : 'false'}" 
               data-has-alts="${hasAlts ? 'true' : 'false'}" 
               data-is-enrolled="${isEnrolled ? 'true' : 'false'}" 
+              data-token-status="${tokenStatus.status}"
               data-is-claimed="true"
               style="border-bottom:1px solid var(--border); background:var(--card-bg);">
             
@@ -11096,7 +11146,8 @@ const views = {
 
             <td style="padding:12px 10px;">
               <div style="display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
-                ${hasAlts ? `<button onclick="window.adminManageAltsPrompt('${uid}')" style="background:rgba(59,130,246,0.12); color:#3b82f6; border:1px solid rgba(59,130,246,0.3); padding:3px 8px; border-radius:10px; font-size:11px; font-weight:bold; cursor:pointer;">🔗 ${u.linkedGameIds.length} Alt(s)</button>` : ''}
+                ${tokenPillHtml}
+                ${altPillHtml}
                 ${rosterInfoHtml}
               </div>
             </td>
@@ -11156,6 +11207,7 @@ const views = {
                 data-is-admin="false" 
                 data-has-alts="false" 
                 data-is-enrolled="${isEnrolled ? 'true' : 'false'}" 
+                data-token-status="unverified"
                 data-is-claimed="false"
                 style="border-bottom:1px solid var(--border); background:rgba(239,68,68,0.02);">
               

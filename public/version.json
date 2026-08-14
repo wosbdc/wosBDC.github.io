@@ -1,8 +1,8 @@
 {
-  "version": "2.5.15",
+  "version": "2.5.16",
   "releaseDate": "2026-08-14",
-  "title": "🛡️ Alliance Gatekeeper 7-Day Live Roster Card",
+  "title": "🛡️ Streamlined User Database & 30-Day Token Tracker",
   "notes": [
-    "Updated Alliance Gatekeeper Discord integration to maintain a single live-updating 7-day member roster card"
+    "Streamlined Registered Users Database with consolidated Segmented Switcher, 30-Day Token dropdown, and real-time token status pills for main and alt accounts"
   ]
 }
