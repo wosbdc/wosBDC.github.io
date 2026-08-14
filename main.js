@@ -9112,6 +9112,359 @@ window.openAccountHubVerifyModal = () => {
   }
 };
 
+window.handleSyncAltProfile = async (gid, btnEl = null) => {
+  if (!currentUser) return;
+  const cleanGid = (gid || '').toString().trim();
+  const altTokens = currentUser.altTokens || {};
+  const tokenData = altTokens[cleanGid];
+  const token = typeof tokenData === 'string' ? tokenData : (tokenData?.token || '');
+
+  if (!token) {
+    window.openAltVerifyModal(cleanGid);
+    return;
+  }
+
+  let originalText = '';
+  if (btnEl) {
+    originalText = btnEl.innerHTML;
+    btnEl.disabled = true;
+    btnEl.innerHTML = '🔄 Syncing...';
+  }
+
+  try {
+    const res = await fetch(`${API_BASE_URL}?api=syncProfileWithToken&id=${encodeURIComponent(cleanGid)}&cgToken=${encodeURIComponent(token)}`);
+    const data = await res.json();
+
+    if (data && data.success) {
+      const updates = {
+        stove_lv: data.stove_lv || "",
+        section: data.section || "2089",
+        lastSyncedAt: new Date().toISOString(),
+        centuryGamesVerified: true
+      };
+      if (data.avatar_image) {
+        updates.avatar_image = data.avatar_image;
+        try {
+          await uploadAvatar(cleanGid, data.avatar_image);
+          avatarMap[cleanGid] = data.avatar_image;
+        } catch(e) {}
+      }
+      if (data.nickname && !/^\d+$/.test(data.nickname)) {
+        updates.name = data.nickname;
+      }
+
+      await update(ref(db, `users_alts/${cleanGid}`), updates);
+      await update(ref(db, `users/${currentUser.uid}/altTokens/${cleanGid}`), {
+        ...((typeof tokenData === 'object') ? tokenData : {}),
+        token: token,
+        stove_lv: updates.stove_lv,
+        nickname: updates.name || "",
+        avatar_image: data.avatar_image || "",
+        lastSyncedAt: updates.lastSyncedAt
+      });
+
+      if (!currentUser.altTokens) currentUser.altTokens = {};
+      currentUser.altTokens[cleanGid] = {
+        ...((typeof tokenData === 'object') ? tokenData : {}),
+        token: token,
+        stove_lv: updates.stove_lv,
+        nickname: updates.name || "",
+        avatar_image: data.avatar_image || "",
+        lastSyncedAt: updates.lastSyncedAt
+      };
+
+      window.showToast(`✨ Alt ${data.nickname || cleanGid} stats & avatar synced!`, 'success');
+      if (views.account) views.account();
+    } else if (data && data.expired) {
+      window.showToast(`30-day token expired for ID ${cleanGid}. Please enter in-game code to renew.`, 'warning');
+      window.openAltVerifyModal(cleanGid);
+    } else {
+      throw new Error(data.message || 'Failed to sync alt stats.');
+    }
+  } catch (err) {
+    console.error('Sync alt error:', err);
+    window.showToast(window.translateWosApiError(err.message || 'Failed to sync with game servers.'), 'error');
+  } finally {
+    if (btnEl) {
+      btnEl.disabled = false;
+      btnEl.innerHTML = originalText;
+    }
+  }
+};
+
+window.handleSyncAllCharacters = async (btnEl = null) => {
+  if (!currentUser) return;
+  let originalText = '';
+  if (btnEl) {
+    originalText = btnEl.innerHTML;
+    btnEl.disabled = true;
+    btnEl.innerHTML = '🔄 Syncing All...';
+  }
+
+  let successCount = 0;
+  let attemptedCount = 0;
+  const links = currentUser.linkedGameIds || [];
+
+  // 1. Sync Main Character
+  if (currentUser.wos_cg_token) {
+    attemptedCount++;
+    try {
+      const res = await fetch(`${API_BASE_URL}?api=syncProfileWithToken&id=${encodeURIComponent(currentUser.gameId)}&cgToken=${encodeURIComponent(currentUser.wos_cg_token)}`);
+      const data = await res.json();
+      if (data && data.success) {
+        const updates = {
+          stove_lv: data.stove_lv || currentUser.stove_lv || "",
+          section: data.section || currentUser.section || "2089",
+          lastSyncedAt: new Date().toISOString(),
+          centuryGamesVerified: true
+        };
+        if (data.avatar_image) {
+          updates.avatar_image = data.avatar_image;
+          if (currentUser.avatarPreference !== 'custom') {
+            try {
+              await uploadAvatar(currentUser.gameId, data.avatar_image);
+              avatarMap[currentUser.gameId] = data.avatar_image;
+            } catch(e) {}
+          }
+        }
+        if (data.nickname && !/^\d+$/.test(data.nickname)) updates.name = data.nickname;
+        await update(ref(db, `users/${currentUser.uid}`), updates);
+        currentUser.stove_lv = updates.stove_lv;
+        currentUser.section = updates.section;
+        currentUser.centuryGamesVerified = true;
+        successCount++;
+      }
+    } catch(e) {
+      console.warn("Main sync error:", e);
+    }
+  }
+
+  // 2. Sync All Linked Alts
+  const altTokens = currentUser.altTokens || {};
+  for (const gid of links) {
+    const tokenData = altTokens[gid];
+    const token = typeof tokenData === 'string' ? tokenData : (tokenData?.token || '');
+    if (token) {
+      attemptedCount++;
+      try {
+        const res = await fetch(`${API_BASE_URL}?api=syncProfileWithToken&id=${encodeURIComponent(gid)}&cgToken=${encodeURIComponent(token)}`);
+        const data = await res.json();
+        if (data && data.success) {
+          const updates = {
+            stove_lv: data.stove_lv || "",
+            section: data.section || "2089",
+            lastSyncedAt: new Date().toISOString(),
+            centuryGamesVerified: true
+          };
+          if (data.avatar_image) {
+            updates.avatar_image = data.avatar_image;
+            try {
+              await uploadAvatar(gid, data.avatar_image);
+              avatarMap[gid] = data.avatar_image;
+            } catch(e) {}
+          }
+          if (data.nickname && !/^\d+$/.test(data.nickname)) updates.name = data.nickname;
+          await update(ref(db, `users_alts/${gid}`), updates);
+          await update(ref(db, `users/${currentUser.uid}/altTokens/${gid}`), {
+            ...((typeof tokenData === 'object') ? tokenData : {}),
+            token: token,
+            stove_lv: updates.stove_lv,
+            nickname: updates.name || "",
+            avatar_image: data.avatar_image || "",
+            lastSyncedAt: updates.lastSyncedAt
+          });
+          successCount++;
+        }
+      } catch(e) {
+        console.warn(`Alt ${gid} sync error:`, e);
+      }
+    }
+  }
+
+  if (btnEl) {
+    btnEl.disabled = false;
+    btnEl.innerHTML = originalText;
+  }
+
+  if (attemptedCount === 0) {
+    window.showToast("No active 30-day tokens found. Please bind your tokens first.", "warning");
+  } else {
+    window.showToast(`✨ Refreshed ${successCount} of ${attemptedCount} characters!`, successCount > 0 ? 'success' : 'warning');
+  }
+  if (views.account) views.account();
+};
+
+window.openAltVerifyModal = (gid, altName = '') => {
+  if (!currentUser) return;
+  const cleanGid = (gid || '').toString().trim();
+  const cleanName = altName || `Alt ID ${cleanGid}`;
+
+  const oldModal = document.getElementById('altVerifyModalOverlay');
+  if (oldModal && oldModal.parentNode) oldModal.parentNode.removeChild(oldModal);
+
+  const modalOverlay = document.createElement('div');
+  modalOverlay.id = 'altVerifyModalOverlay';
+  modalOverlay.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.85); backdrop-filter:blur(10px); z-index:99999; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease;';
+
+  modalOverlay.innerHTML = `
+    <div class="card" style="width:92%; max-width:440px; background:linear-gradient(145deg, rgba(15,23,42,0.96), rgba(30,41,59,0.94)); border:1px solid rgba(56,189,248,0.35); padding:24px; border-radius:20px; box-shadow:0 25px 60px rgba(0,0,0,0.7); text-align:left; animation:zoomIn 0.2s forwards; color:var(--text-main);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:12px;">
+        <h3 style="margin:0; color:#fff; font-size:18px; font-weight:bold; display:flex; align-items:center; gap:8px;">
+          🛡️ 30-Day Sync for ${window.escapeHTML(cleanName)}
+        </h3>
+        <button onclick="document.getElementById('altVerifyModalOverlay').remove()" style="background:none; border:none; color:var(--text-muted); font-size:26px; cursor:pointer; line-height:1;">&times;</button>
+      </div>
+
+      <p style="font-size:13px; color:var(--text-muted); margin:0 0 16px 0; line-height:1.5;">
+        Send a verification code to <strong>${window.escapeHTML(cleanName)}</strong> (Game ID: <strong>${window.escapeHTML(cleanGid)}</strong>) to bind a <strong>30-day automatic sync token</strong> for stats and in-game avatars.
+      </p>
+
+      <div style="text-align:center; margin-bottom:16px;">
+        <button id="sendAltCodeBtn" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer; box-shadow:0 2px 10px rgba(14,165,233,0.3);">
+          📩 Send Code to In-Game Mail
+        </button>
+      </div>
+
+      <div id="altVerifyCodeSection" style="display:none; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px; padding:14px; margin-bottom:14px;">
+        <label style="display:block; font-size:12px; font-weight:bold; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase;">
+          Enter 6-Digit In-Game Code
+        </label>
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="altCaptchaInput" maxlength="8" placeholder="e.g. 123456" style="flex:1; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:#fff; font-size:15px; font-family:monospace; letter-spacing:2px; text-align:center;">
+          <button id="submitAltCodeBtn" style="background:var(--accent); color:#fff; border:none; padding:9px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer;">
+            Verify & Bind
+          </button>
+        </div>
+        <div id="altVerifyFeedback" style="font-size:12px; margin-top:8px; display:none;"></div>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end;">
+        <button onclick="document.getElementById('altVerifyModalOverlay').remove()" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:#cbd5e1; padding:8px 16px; border-radius:8px; cursor:pointer; font-size:13px;">
+          Cancel
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modalOverlay);
+
+  const sendBtn = document.getElementById('sendAltCodeBtn');
+  const codeSection = document.getElementById('altVerifyCodeSection');
+  const submitCodeBtn = document.getElementById('submitAltCodeBtn');
+  const codeInput = document.getElementById('altCaptchaInput');
+  const feedback = document.getElementById('altVerifyFeedback');
+
+  if (sendBtn) {
+    sendBtn.addEventListener('click', async () => {
+      sendBtn.disabled = true;
+      sendBtn.textContent = 'Sending Code...';
+      try {
+        const res = await fetch(`${API_BASE_URL}?api=sendGameCaptcha&id=${encodeURIComponent(cleanGid)}`);
+        const data = await res.json();
+        if (data && data.success) {
+          sendBtn.textContent = '🔄 Resend Code';
+          sendBtn.disabled = false;
+          if (codeSection) codeSection.style.display = 'block';
+          if (feedback) {
+            feedback.style.display = 'block';
+            feedback.style.color = '#38bdf8';
+            feedback.textContent = 'Code dispatched! Check your Whiteout Survival system mail.';
+          }
+          if (codeInput) setTimeout(() => codeInput.focus(), 60);
+        } else {
+          throw new Error(data.message || 'Failed to dispatch in-game code.');
+        }
+      } catch (err) {
+        sendBtn.disabled = false;
+        sendBtn.textContent = '📩 Send Code to In-Game Mail';
+        if (feedback) {
+          feedback.style.display = 'block';
+          feedback.style.color = 'var(--danger)';
+          feedback.textContent = window.translateWosApiError(err.message || 'Error communicating with game servers.');
+        }
+      }
+    });
+  }
+
+  if (submitCodeBtn && codeInput) {
+    const handleVerify = async () => {
+      const code = codeInput.value.trim();
+      if (!code || code.length < 4) {
+        if (feedback) {
+          feedback.style.display = 'block';
+          feedback.style.color = 'var(--danger)';
+          feedback.textContent = 'Please enter valid 6-digit code.';
+        }
+        return;
+      }
+
+      submitCodeBtn.disabled = true;
+      submitCodeBtn.textContent = 'Verifying...';
+      if (feedback) feedback.style.display = 'none';
+
+      try {
+        const res = await fetch(`${API_BASE_URL}?api=verifyGameCaptcha&id=${encodeURIComponent(cleanGid)}&code=${encodeURIComponent(code)}`);
+        const data = await res.json();
+
+        if (data && data.success && data.token) {
+          const nowIso = new Date().toISOString();
+          const altTokenObj = {
+            token: data.token,
+            section: data.section || "2089",
+            stove_lv: data.stove_lv || "",
+            nickname: data.nickname || cleanName,
+            avatar_image: data.avatar_image || "",
+            verifiedAt: nowIso,
+            centuryGamesVerified: true
+          };
+
+          await update(ref(db, `users/${currentUser.uid}/altTokens/${cleanGid}`), altTokenObj);
+          if (!currentUser.altTokens) currentUser.altTokens = {};
+          currentUser.altTokens[cleanGid] = altTokenObj;
+
+          const altUpdates = {
+            stove_lv: data.stove_lv || "",
+            section: data.section || "2089",
+            lastSyncedAt: nowIso,
+            centuryGamesVerified: true
+          };
+          if (data.avatar_image) {
+            altUpdates.avatar_image = data.avatar_image;
+            try {
+              await uploadAvatar(cleanGid, data.avatar_image);
+              avatarMap[cleanGid] = data.avatar_image;
+            } catch(e) {}
+          }
+          if (data.nickname && !/^\d+$/.test(data.nickname)) altUpdates.name = data.nickname;
+          await update(ref(db, `users_alts/${cleanGid}`), altUpdates);
+
+          modalOverlay.remove();
+          window.showToast(`🎉 30-Day sync token bound for ${data.nickname || cleanGid}!`, 'success');
+          if (views.account) views.account();
+        } else {
+          throw new Error(data.message || 'Invalid or expired code.');
+        }
+      } catch (err) {
+        submitCodeBtn.disabled = false;
+        submitCodeBtn.textContent = 'Verify & Bind';
+        if (feedback) {
+          feedback.style.display = 'block';
+          feedback.style.color = 'var(--danger)';
+          feedback.textContent = window.translateWosApiError(err.message || 'Verification failed.');
+        }
+      }
+    };
+
+    submitCodeBtn.addEventListener('click', handleVerify);
+    codeInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleVerify();
+      }
+    });
+  }
+};
+
 window.openEditAltProfileModal = async (gameId, chiefName) => {
    if (!currentUser) return;
    const cleanGid = (gameId || '').toString().trim();
@@ -13550,8 +13903,23 @@ window.resetBearTrapEvent = async () => {
     
     let altProfilesMap = {};
     try {
-        const altsSnap = await get(ref(db, 'users_alts')).catch(() => null);
+        const [altsSnap, profileSnap] = await Promise.all([
+            get(ref(db, 'users_alts')).catch(() => null),
+            get(ref(db, `users/${currentUser.uid}`)).catch(() => null)
+        ]);
         if (altsSnap && altsSnap.exists()) altProfilesMap = altsSnap.val() || {};
+        if (profileSnap && profileSnap.exists()) {
+            const profileData = profileSnap.val();
+            if (profileData.stove_lv) currentUser.stove_lv = profileData.stove_lv;
+            if (profileData.furnaceLevel) currentUser.furnaceLevel = profileData.furnaceLevel;
+            if (profileData.joinedDate) currentUser.joinedDate = profileData.joinedDate;
+            if (profileData.bio) currentUser.bio = profileData.bio;
+            if (profileData.wos_cg_token) currentUser.wos_cg_token = profileData.wos_cg_token;
+            if (profileData.section) currentUser.section = profileData.section;
+            if (profileData.centuryGamesVerified) currentUser.centuryGamesVerified = profileData.centuryGamesVerified;
+            if (profileData.altTokens) currentUser.altTokens = profileData.altTokens;
+            if (profileData.linkedGameIds) currentUser.linkedGameIds = profileData.linkedGameIds;
+        }
     } catch(e) {}
 
     let linkedHtml = '';
@@ -13560,11 +13928,16 @@ window.resetBearTrapEvent = async () => {
     linkedHtml += `
       <div style="text-align:left; border-top:1px solid var(--border); padding-top:20px; margin-top:20px;">
          <details style="background:rgba(255,255,255,0.02); border-radius:12px; border:1px solid var(--border); padding:10px; cursor:pointer;" class="alt-accounts-details">
-             <summary style="font-weight:bold; font-size:18px; color:var(--text-main); outline:none; display:flex; align-items:center; justify-content:space-between;">
+             <summary style="font-weight:bold; font-size:18px; color:var(--text-main); outline:none; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
                  <div style="display:flex; align-items:center; gap:8px;">
                      🔗 Linked Alt Accounts <span style="font-size:14px; color:var(--text-muted); font-weight:normal;">(${links.length})</span>
                  </div>
-                 <span class="alt-accounts-arrow" style="font-size:14px; transition:transform 0.3s ease;">▼</span>
+                 <div style="display:flex; align-items:center; gap:10px;">
+                     <button id="syncAllCharsBtn" onclick="event.stopPropagation(); window.handleSyncAllCharacters(this);" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 10px rgba(14,165,233,0.3); transition:0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                         🔄 Sync All (${links.length + 1} Chars)
+                     </button>
+                     <span class="alt-accounts-arrow" style="font-size:14px; transition:transform 0.3s ease;">▼</span>
+                 </div>
              </summary>
              
              <style>
@@ -13626,6 +13999,18 @@ window.resetBearTrapEvent = async () => {
                       } catch(e) { console.error(e); }
                   }, 100);
               }
+
+              const altTokenData = (currentUser.altTokens && currentUser.altTokens[gid]) ? currentUser.altTokens[gid] : null;
+              const altToken = (typeof altTokenData === 'string') ? altTokenData : (altTokenData?.token || '');
+              let altTokenDaysRemaining = 0;
+              let isAltTokenActive = false;
+              if (altToken) {
+                  const verifiedDate = (typeof altTokenData === 'object' && altTokenData.verifiedAt) ? new Date(altTokenData.verifiedAt) : new Date();
+                  const now = new Date();
+                  const elapsedDays = Math.floor((now - verifiedDate) / (1000 * 60 * 60 * 24));
+                  altTokenDaysRemaining = Math.max(0, 30 - elapsedDays);
+                  isAltTokenActive = altTokenDaysRemaining > 0;
+              }
               
               linkedHtml += `
               <div style="background:rgba(15,23,42,0.6); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.1); border-radius:24px; padding:24px; box-shadow:0 10px 30px -10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1); display:flex; flex-direction:column; justify-content:space-between;">
@@ -13656,23 +14041,26 @@ window.resetBearTrapEvent = async () => {
                   }
               }
           }
-          if (isAltEnrolled || enrolledGameIds.has(gid.toString())) {
-              return `<div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end; flex-shrink:0;">
-                  <span style="border:1px solid #10b981; color:#10b981; background:rgba(16,185,129,0.1); border-radius:9999px; padding:3px 10px; font-size:11px; font-weight:500; display:inline-flex; align-items:center; gap:4px;">&#x2705; Enrolled</span>
-                  <div style="display:flex; gap:6px;">
-                      <button onclick="window.openEditAltProfileModal('${gid}', '${altName.replace(/'/g, "\\'")}')" style="background:rgba(6,182,212,0.15); border:1px solid #06b6d4; color:#06b6d4; border-radius:8px; padding:5px 10px; font-size:12px; font-weight:600; cursor:pointer; transition:background 0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.25)'" onmouseout="this.style.background='rgba(6,182,212,0.15)'">✏️ Edit</button>
-                      <button onclick="window.unlinkAltAccountPrompt('${gid}')" style="border:1px solid #f87171; color:#f87171; border-radius:8px; padding:5px 10px; font-size:12px; font-weight:600; cursor:pointer; background:transparent; transition:background 0.2s;" onmouseover="this.style.background='rgba(248,113,113,0.1)'" onmouseout="this.style.background='transparent'">UNLINK</button>
-                  </div>
-              </div>`;
-          } else {
-              return `<div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end; flex-shrink:0;">
-                  <button onclick="window.openAltPerksModal('${gid}', '${altName.replace(/'/g, "\\'")}')" style="background:rgba(16,185,129,0.15); border:1px solid #10b981; color:#10b981; border-radius:8px; padding:5px 10px; font-size:12px; font-weight:600; cursor:pointer; transition:background 0.2s;" onmouseover="this.style.background='rgba(16,185,129,0.25)'" onmouseout="this.style.background='rgba(16,185,129,0.15)'">&#x1F381; Enable Perks</button>
-                  <div style="display:flex; gap:6px;">
-                      <button onclick="window.openEditAltProfileModal('${gid}', '${altName.replace(/'/g, "\\'")}')" style="background:rgba(6,182,212,0.15); border:1px solid #06b6d4; color:#06b6d4; border-radius:8px; padding:5px 10px; font-size:12px; font-weight:600; cursor:pointer; transition:background 0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.25)'" onmouseout="this.style.background='rgba(6,182,212,0.15)'">✏️ Edit</button>
-                      <button onclick="window.unlinkAltAccountPrompt('${gid}')" style="border:1px solid #f87171; color:#f87171; border-radius:8px; padding:5px 10px; font-size:12px; font-weight:600; cursor:pointer; background:transparent; transition:background 0.2s;" onmouseover="this.style.background='rgba(248,113,113,0.1)'" onmouseout="this.style.background='transparent'">UNLINK</button>
-                  </div>
-              </div>`;
-          }
+          return `<div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end; flex-shrink:0;">
+              <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
+                  ${ (isAltEnrolled || enrolledGameIds.has(gid.toString())) 
+                      ? `<span style="border:1px solid #10b981; color:#10b981; background:rgba(16,185,129,0.1); border-radius:9999px; padding:3px 10px; font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:4px;">&#x2705; Enrolled</span>`
+                      : `<button onclick="window.openAltPerksModal('${gid}', '${altName.replace(/'/g, "\\'")}')" style="background:rgba(16,185,129,0.15); border:1px solid #10b981; color:#10b981; border-radius:8px; padding:4px 10px; font-size:11px; font-weight:600; cursor:pointer; transition:background 0.2s;" onmouseover="this.style.background='rgba(16,185,129,0.25)'" onmouseout="this.style.background='rgba(16,185,129,0.15)'">&#x1F381; Enable Perks</button>`
+                  }
+                  ${ isAltTokenActive
+                      ? `<span style="border:1px solid #0284c7; color:#38bdf8; background:rgba(56,189,248,0.12); border-radius:9999px; padding:3px 10px; font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:4px;" title="30-day token active">🛡️ ${altTokenDaysRemaining}d Token</span>`
+                      : `<button onclick="window.openAltVerifyModal('${gid}', '${altName.replace(/'/g, "\\'")}')" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); border:none; color:#fff; border-radius:8px; padding:4px 10px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px; box-shadow:0 2px 8px rgba(14,165,233,0.3);" title="Send in-game code to bind 30-day token">🛡️ Bind 30d Sync</button>`
+                  }
+              </div>
+              <div style="display:flex; gap:6px;">
+                  ${ isAltTokenActive
+                      ? `<button onclick="window.handleSyncAltProfile('${gid}', this)" style="background:rgba(56,189,248,0.15); border:1px solid #38bdf8; color:#38bdf8; border-radius:8px; padding:5px 10px; font-size:12px; font-weight:600; cursor:pointer; transition:0.2s; display:inline-flex; align-items:center; gap:4px;" title="Sync stats & avatar">🔄 Sync</button>`
+                      : ''
+                  }
+                  <button onclick="window.openEditAltProfileModal('${gid}', '${altName.replace(/'/g, "\\'")}')" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); border-radius:8px; padding:5px 10px; font-size:12px; font-weight:600; cursor:pointer; transition:0.2s;">✏️ Edit</button>
+                  <button onclick="window.unlinkAltAccountPrompt('${gid}')" style="border:1px solid #f87171; color:#f87171; border-radius:8px; padding:5px 10px; font-size:12px; font-weight:600; cursor:pointer; background:transparent; transition:background 0.2s;" onmouseover="this.style.background='rgba(248,113,113,0.1)'" onmouseout="this.style.background='transparent'">UNLINK</button>
+              </div>
+          </div>`;
         })() }
                   </div>
 
@@ -13710,13 +14098,50 @@ window.resetBearTrapEvent = async () => {
       datalistHtml += `</datalist>`;
 
       linkedHtml += `
-      <div id="linkAltForm" style="display:none; background:var(--card-bg); padding:15px; border-radius:8px; border:1px solid var(--border); margin-bottom:15px;">
-          <input type="text" id="altGameIdInput" list="rosterAltDatalist" placeholder="Search Alt Name or Game ID..." style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); margin-bottom:10px;">
-          ${datalistHtml}
-          <div id="altChiefConfirm" style="font-size:13px; margin-bottom:10px; display:none;"></div>
-          <div style="display:flex; gap:10px;">
-              <button id="cancelAltBtn" style="flex:1; background:transparent; border:1px solid var(--border); color:var(--text-muted); padding:8px; border-radius:6px; cursor:pointer;">Cancel</button>
-              <button id="submitAltBtn" style="flex:1; background:var(--accent); color:#fff; border:none; padding:8px; border-radius:6px; cursor:pointer; font-weight:bold;">Confirm Link</button>
+      <div id="linkAltForm" style="display:none; background:var(--card-bg); padding:18px; border-radius:12px; border:1px solid var(--border); margin-bottom:15px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:8px;">
+              <strong style="color:var(--text-main); font-size:14px;">🔗 Link New Alt Account</strong>
+              <div style="display:flex; gap:6px;">
+                  <button type="button" id="toggleAltLinkAutoBtn" style="padding:4px 10px; font-size:11px; border-radius:6px; font-weight:bold; border:none; background:var(--accent); color:#fff; cursor:pointer;">🎮 30-Day Auto-Sync</button>
+                  <button type="button" id="toggleAltLinkManualBtn" style="padding:4px 10px; font-size:11px; border-radius:6px; font-weight:bold; border:1px solid var(--border); background:transparent; color:var(--text-muted); cursor:pointer;">✏️ Manual</button>
+              </div>
+          </div>
+
+          <!-- Mode A: Auto-Sync via In-Game Mail (Default) -->
+          <div id="altLinkAutoPanel">
+              <p style="font-size:12px; color:var(--text-muted); margin:0 0 10px 0; line-height:1.4;">
+                Enter your alt's numeric Game ID to automatically verify your character, sync its avatar, and bind a 30-day session token:
+              </p>
+              <div style="display:flex; gap:8px; margin-bottom:10px;">
+                  <input type="text" inputmode="numeric" pattern="[0-9]*" id="altAutoGameIdInput" list="rosterAltDatalist" placeholder="Numeric Game ID (e.g. 319875650)..." style="flex:1; padding:10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:14px; box-sizing:border-box;">
+                  <button type="button" id="altAutoSendCodeBtn" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:0 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; flex-shrink:0;">Verify ID</button>
+              </div>
+
+              <!-- Step 2 of Auto-Link: In-game code input -->
+              <div id="altAutoCodeBox" style="display:none; background:rgba(56,189,248,0.06); border:1px solid rgba(56,189,248,0.3); border-radius:10px; padding:12px; margin-bottom:12px;">
+                  <div style="font-size:12px; color:#38bdf8; font-weight:bold; margin-bottom:6px;">📩 Verification Code Sent to Alt Mailbox!</div>
+                  <div style="display:flex; gap:8px; align-items:center;">
+                      <input type="text" id="altAutoCodeInput" maxlength="8" placeholder="6-digit code" style="flex:1; max-width:140px; padding:8px 12px; border-radius:8px; border:1px solid rgba(56,189,248,0.5); background:var(--bg-main); color:#fff; font-size:15px; font-family:monospace; letter-spacing:2px; text-align:center;">
+                      <button type="button" id="altAutoConfirmCodeBtn" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer;">Confirm & Link</button>
+                  </div>
+                  <div id="altAutoFeedback" style="font-size:11.5px; margin-top:6px; display:none;"></div>
+              </div>
+          </div>
+
+          <!-- Mode B: Quick Manual Link -->
+          <div id="altLinkManualPanel" style="display:none;">
+              <p style="font-size:12px; color:var(--text-muted); margin:0 0 10px 0; line-height:1.4;">
+                Select from alliance roster or enter Game ID:
+              </p>
+              <input type="text" id="altGameIdInput" list="rosterAltDatalist" placeholder="Search Alt Name or Game ID..." style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); margin-bottom:10px; box-sizing:border-box;">
+              <div id="altChiefConfirm" style="font-size:13px; margin-bottom:10px; display:none;"></div>
+              <div style="display:flex; gap:10px;">
+                  <button id="submitAltBtn" style="flex:1; background:var(--accent); color:#fff; border:none; padding:10px; border-radius:8px; cursor:pointer; font-weight:bold;">Confirm Manual Link</button>
+              </div>
+          </div>
+
+          <div style="display:flex; justify-content:flex-end; margin-top:10px;">
+              <button id="cancelAltBtn" style="background:transparent; border:1px solid var(--border); color:var(--text-muted); padding:6px 14px; border-radius:6px; cursor:pointer; font-size:12px;">Cancel</button>
           </div>
       </div>
       <button id="openLinkAltBtn" style="background:rgba(52,152,219,0.1); color:var(--accent); border:1px dashed var(--accent); padding:10px; border-radius:8px; cursor:pointer; font-weight:bold; width:100%; transition:0.2s;" onmouseover="this.style.background='rgba(52,152,219,0.2)'" onmouseout="this.style.background='rgba(52,152,219,0.1)'">+ Link ${links.length > 0 ? 'Another' : 'Alt'} Account</button>`;
@@ -13735,20 +14160,7 @@ window.resetBearTrapEvent = async () => {
           adminBadgeHtml = `<span style="font-size:12px; color:${lvlColor}; background:${lvlBg}; border:1px solid ${lvlBg}; padding:2px 6px; border-radius:6px; font-weight:bold; display:inline-flex; align-items:center; gap:4px; margin-left:10px; vertical-align:middle; text-shadow:none;">👑 ${accLevel}</span>`;
       }
       
-      // Hydrate currentUser with saved Firebase profile data (stove_lv, joinedDate, bio, wos_cg_token, section)
-      try {
-          const profileSnap = await get(ref(db, `users/${currentUser.uid}`));
-          if (profileSnap.exists()) {
-              const profileData = profileSnap.val();
-              if (profileData.stove_lv) currentUser.stove_lv = profileData.stove_lv;
-              if (profileData.furnaceLevel) currentUser.furnaceLevel = profileData.furnaceLevel;
-              if (profileData.joinedDate) currentUser.joinedDate = profileData.joinedDate;
-              if (profileData.bio) currentUser.bio = profileData.bio;
-              if (profileData.wos_cg_token) currentUser.wos_cg_token = profileData.wos_cg_token;
-              if (profileData.section) currentUser.section = profileData.section;
-              if (profileData.centuryGamesVerified) currentUser.centuryGamesVerified = profileData.centuryGamesVerified;
-          }
-      } catch(e) { console.warn('Failed to load user profile:', e); }
+
 
       let isMainEnrolled = false;
       let joinedDateStr = "N/A";
@@ -14426,54 +14838,232 @@ window.resetBearTrapEvent = async () => {
     
       const openLinkAltBtn = document.getElementById('openLinkAltBtn');
       const linkAltForm = document.getElementById('linkAltForm');
+      const cancelAltBtn = document.getElementById('cancelAltBtn');
+
+      const toggleAltLinkAutoBtn = document.getElementById('toggleAltLinkAutoBtn');
+      const toggleAltLinkManualBtn = document.getElementById('toggleAltLinkManualBtn');
+      const altLinkAutoPanel = document.getElementById('altLinkAutoPanel');
+      const altLinkManualPanel = document.getElementById('altLinkManualPanel');
+
+      const altAutoGameIdInput = document.getElementById('altAutoGameIdInput');
+      const altAutoSendCodeBtn = document.getElementById('altAutoSendCodeBtn');
+      const altAutoCodeBox = document.getElementById('altAutoCodeBox');
+      const altAutoCodeInput = document.getElementById('altAutoCodeInput');
+      const altAutoConfirmCodeBtn = document.getElementById('altAutoConfirmCodeBtn');
+      const altAutoFeedback = document.getElementById('altAutoFeedback');
+
       const altGameIdInput = document.getElementById('altGameIdInput');
       const altChiefConfirm = document.getElementById('altChiefConfirm');
-      const cancelAltBtn = document.getElementById('cancelAltBtn');
       const submitAltBtn = document.getElementById('submitAltBtn');
-      
-      if (openLinkAltBtn) {
+
+      if (openLinkAltBtn && linkAltForm) {
           openLinkAltBtn.addEventListener('click', () => {
               openLinkAltBtn.style.display = 'none';
               linkAltForm.style.display = 'block';
-              altGameIdInput.value = '';
-              altChiefConfirm.style.display = 'none';
+              if (altAutoGameIdInput) altAutoGameIdInput.value = '';
+              if (altAutoCodeInput) altAutoCodeInput.value = '';
+              if (altAutoCodeBox) altAutoCodeBox.style.display = 'none';
+              if (altAutoFeedback) altAutoFeedback.style.display = 'none';
+              if (altGameIdInput) altGameIdInput.value = '';
+              if (altChiefConfirm) altChiefConfirm.style.display = 'none';
           });
+
+          if (cancelAltBtn) {
+              cancelAltBtn.addEventListener('click', () => {
+                  openLinkAltBtn.style.display = 'block';
+                  linkAltForm.style.display = 'none';
+              });
+          }
+
+          // Mode toggle listeners
+          if (toggleAltLinkAutoBtn && toggleAltLinkManualBtn) {
+              toggleAltLinkAutoBtn.addEventListener('click', () => {
+                  toggleAltLinkAutoBtn.style.background = 'var(--accent)';
+                  toggleAltLinkAutoBtn.style.color = '#fff';
+                  toggleAltLinkAutoBtn.style.border = 'none';
+                  toggleAltLinkManualBtn.style.background = 'transparent';
+                  toggleAltLinkManualBtn.style.color = 'var(--text-muted)';
+                  toggleAltLinkManualBtn.style.border = '1px solid var(--border)';
+                  if (altLinkAutoPanel) altLinkAutoPanel.style.display = 'block';
+                  if (altLinkManualPanel) altLinkManualPanel.style.display = 'none';
+              });
+
+              toggleAltLinkManualBtn.addEventListener('click', () => {
+                  toggleAltLinkManualBtn.style.background = 'var(--accent)';
+                  toggleAltLinkManualBtn.style.color = '#fff';
+                  toggleAltLinkManualBtn.style.border = 'none';
+                  toggleAltLinkAutoBtn.style.background = 'transparent';
+                  toggleAltLinkAutoBtn.style.color = 'var(--text-muted)';
+                  toggleAltLinkAutoBtn.style.border = '1px solid var(--border)';
+                  if (altLinkManualPanel) altLinkManualPanel.style.display = 'block';
+                  if (altLinkAutoPanel) altLinkAutoPanel.style.display = 'none';
+              });
+          }
+
+          // Auto-Link Step 1: Send verification code
+          if (altAutoSendCodeBtn && altAutoGameIdInput) {
+              altAutoSendCodeBtn.addEventListener('click', async () => {
+                  const gid = altAutoGameIdInput.value.trim();
+                  if (!gid) {
+                      window.showToast("Please enter numeric Game ID.", "warning");
+                      return;
+                  }
+                  if (currentUser.gameId && gid === currentUser.gameId.toString()) {
+                      window.showToast("This is already your Main character!", "warning");
+                      return;
+                  }
+                  if (currentUser.linkedGameIds && currentUser.linkedGameIds.includes(gid)) {
+                      window.showToast("This alt is already linked!", "warning");
+                      return;
+                  }
+
+                  altAutoSendCodeBtn.disabled = true;
+                  altAutoSendCodeBtn.textContent = "Sending...";
+                  if (altAutoFeedback) altAutoFeedback.style.display = 'none';
+
+                  try {
+                      const res = await fetch(`${API_BASE_URL}?api=sendGameCaptcha&id=${encodeURIComponent(gid)}`);
+                      const data = await res.json();
+                      if (data && data.success) {
+                          altAutoSendCodeBtn.textContent = "Resend";
+                          altAutoSendCodeBtn.disabled = false;
+                          if (altAutoCodeBox) altAutoCodeBox.style.display = 'block';
+                          if (altAutoFeedback) {
+                              altAutoFeedback.style.display = 'block';
+                              altAutoFeedback.style.color = '#38bdf8';
+                              altAutoFeedback.textContent = "Code sent! Check your alt's in-game system mail.";
+                          }
+                          if (altAutoCodeInput) setTimeout(() => altAutoCodeInput.focus(), 60);
+                      } else {
+                          throw new Error(data.message || "Failed to dispatch code.");
+                      }
+                  } catch(err) {
+                      altAutoSendCodeBtn.disabled = false;
+                      altAutoSendCodeBtn.textContent = "Verify ID";
+                      if (altAutoFeedback) {
+                          altAutoFeedback.style.display = 'block';
+                          altAutoFeedback.style.color = 'var(--danger)';
+                          altAutoFeedback.textContent = window.translateWosApiError(err.message || "Failed to contact game servers.");
+                      }
+                  }
+              });
+          }
+
+          // Auto-Link Step 2: Confirm code & Link
+          if (altAutoConfirmCodeBtn && altAutoCodeInput) {
+              const handleAutoConfirm = async () => {
+                  const gid = altAutoGameIdInput.value.trim();
+                  const code = altAutoCodeInput.value.trim();
+                  if (!code || code.length < 4) {
+                      if (altAutoFeedback) {
+                          altAutoFeedback.style.display = 'block';
+                          altAutoFeedback.style.color = 'var(--danger)';
+                          altAutoFeedback.textContent = "Please enter valid 6-digit code.";
+                      }
+                      return;
+                  }
+
+                  altAutoConfirmCodeBtn.disabled = true;
+                  altAutoConfirmCodeBtn.textContent = "Linking...";
+                  if (altAutoFeedback) altAutoFeedback.style.display = 'none';
+
+                  try {
+                      const res = await fetch(`${API_BASE_URL}?api=verifyGameCaptcha&id=${encodeURIComponent(gid)}&code=${encodeURIComponent(code)}`);
+                      const data = await res.json();
+
+                      if (data && data.success && data.token) {
+                          const nowIso = new Date().toISOString();
+                          const altTokenObj = {
+                              token: data.token,
+                              section: data.section || "2089",
+                              stove_lv: data.stove_lv || "",
+                              nickname: data.nickname || `Alt ${gid}`,
+                              avatar_image: data.avatar_image || "",
+                              verifiedAt: nowIso,
+                              centuryGamesVerified: true
+                          };
+
+                          await linkAltAccount(currentUser.uid, gid, currentUser.linkedGameIds || []);
+                          await update(ref(db, `users/${currentUser.uid}/altTokens/${gid}`), altTokenObj);
+                          if (!currentUser.altTokens) currentUser.altTokens = {};
+                          currentUser.altTokens[gid] = altTokenObj;
+
+                          const altUpdates = {
+                              stove_lv: data.stove_lv || "",
+                              section: data.section || "2089",
+                              lastSyncedAt: nowIso,
+                              centuryGamesVerified: true
+                          };
+                          if (data.avatar_image) {
+                              altUpdates.avatar_image = data.avatar_image;
+                              try {
+                                  await uploadAvatar(gid, data.avatar_image);
+                                  avatarMap[gid] = data.avatar_image;
+                              } catch(e) {}
+                          }
+                          if (data.nickname && !/^\d+$/.test(data.nickname)) altUpdates.name = data.nickname;
+                          await update(ref(db, `users_alts/${gid}`), altUpdates);
+
+                          window.showToast(`🎉 Linked & verified ${data.nickname || gid} with 30-day token!`, "success");
+                          if (views.account) views.account();
+                      } else {
+                          throw new Error(data.message || "Invalid or expired code.");
+                      }
+                  } catch(err) {
+                      altAutoConfirmCodeBtn.disabled = false;
+                      altAutoConfirmCodeBtn.textContent = "Confirm & Link";
+                      if (altAutoFeedback) {
+                          altAutoFeedback.style.display = 'block';
+                          altAutoFeedback.style.color = 'var(--danger)';
+                          altAutoFeedback.textContent = window.translateWosApiError(err.message || "Verification failed.");
+                      }
+                  }
+              };
+
+              altAutoConfirmCodeBtn.addEventListener('click', handleAutoConfirm);
+              altAutoCodeInput.addEventListener('keypress', (e) => {
+                  if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAutoConfirm();
+                  }
+              });
+          }
+
+          // Manual link listeners
+          if (altGameIdInput) {
+              altGameIdInput.addEventListener('input', () => {
+                  const val = altGameIdInput.value.trim();
+                  if (!val) {
+                      if (altChiefConfirm) altChiefConfirm.style.display = 'none';
+                      return;
+                  }
+                  if (altChiefConfirm) altChiefConfirm.style.display = 'block';
+                  const candidate = idToNameMap[val];
+                  if (candidate && !/^\d+$/.test(String(candidate).trim()) && String(candidate).trim() !== val) {
+                      altChiefConfirm.innerHTML = `Is your Chief Name: <strong style="color:var(--success)">${window.escapeHTML(candidate)}</strong>?`;
+                  } else {
+                      altChiefConfirm.innerHTML = `<span style="color:var(--danger)">Game ID not found in master database.</span>`;
+                  }
+              });
+          }
           
-          cancelAltBtn.addEventListener('click', () => {
-              openLinkAltBtn.style.display = 'block';
-              linkAltForm.style.display = 'none';
-          });
-          
-          altGameIdInput.addEventListener('input', () => {
-              const val = altGameIdInput.value.trim();
-              if (!val) {
-                  altChiefConfirm.style.display = 'none';
-                  return;
-              }
-              altChiefConfirm.style.display = 'block';
-              const candidate = idToNameMap[val];
-              if (candidate && !/^\d+$/.test(String(candidate).trim()) && String(candidate).trim() !== val) {
-                  altChiefConfirm.innerHTML = `Is your Chief Name: <strong style="color:var(--success)">${window.escapeHTML(candidate)}</strong>?`;
-              } else {
-                  altChiefConfirm.innerHTML = `<span style="color:var(--danger)">Game ID not found in master database.</span>`;
-              }
-          });
-          
-          submitAltBtn.addEventListener('click', async () => {
-              const val = altGameIdInput.value.trim();
-              if (!val) return;
-              try {
-                  submitAltBtn.textContent = "Linking...";
-                  submitAltBtn.disabled = true;
-                  await linkAltAccount(currentUser.uid, val, currentUser.linkedGameIds || []);
-                  if(window.showToast) window.showToast("Alt account linked!", "success");
-              } catch(e) {
-                  if(window.showToast) window.showToast(e.message, "error");
-                  else window.showToast(e.message, "error");
-                  submitAltBtn.textContent = "Confirm Link";
-                  submitAltBtn.disabled = false;
-              }
-          });
+          if (submitAltBtn) {
+              submitAltBtn.addEventListener('click', async () => {
+                  const val = altGameIdInput ? altGameIdInput.value.trim() : '';
+                  if (!val) return;
+                  try {
+                      submitAltBtn.textContent = "Linking...";
+                      submitAltBtn.disabled = true;
+                      await linkAltAccount(currentUser.uid, val, currentUser.linkedGameIds || []);
+                      if(window.showToast) window.showToast("Alt account linked!", "success");
+                      if (views.account) views.account();
+                  } catch(e) {
+                      if(window.showToast) window.showToast(e.message, "error");
+                      submitAltBtn.textContent = "Confirm Manual Link";
+                      submitAltBtn.disabled = false;
+                  }
+              });
+          }
       }
       
       const uploadInput = document.getElementById('avatarUploadInput');

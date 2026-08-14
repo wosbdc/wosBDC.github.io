@@ -82,6 +82,7 @@ export async function linkAltAccount(uid, newGameId, currentLinks = []) {
 export async function unlinkAltAccount(uid, gameIdToRemove, currentLinks = []) {
   const updatedLinks = currentLinks.filter(id => id !== gameIdToRemove);
   await set(ref(db, `users/${uid}/linkedGameIds`), updatedLinks);
+  await set(ref(db, `users/${uid}/altTokens/${gameIdToRemove}`), null);
 }
 
 export async function registerUser(email, password, gameId, chiefName, furnaceLevel = '') {

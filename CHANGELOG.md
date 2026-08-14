@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## [2.5.11] - 2026-08-14
+### 🔗 Linked Alt Accounts 30-Day Sync & Verification System
+- **🛡️ Per-Alt 30-Day Token Binding**:
+  - Added dedicated 30-day session token support for each linked alt account stored in Firebase `users/${uid}/altTokens/${gid}`.
+  - Alt cards display real-time token status pills (e.g. `🛡️ 30d Token (29d left)`) and `🔄 Sync` quick-action buttons.
+  - Included interactive modal `window.openAltVerifyModal(gid, name)` allowing members to dispatch a 6-digit confirmation code to their alt's in-game mailbox at any time to bind or renew a 30-day token.
+- **🔄 1-Click Sync & "Sync All Characters" Batch Refresh**:
+  - `🔄 Sync` on any active alt card immediately pulls their latest furnace level, section, and in-game avatar into the database without requiring daily captcha codes.
+  - Added **`🔄 Sync All (Main + Alts)`** master button in the Account Hub Linked Alts header to concurrently refresh the main character and all linked alts in one click.
+- **✨ Upgraded "+ Link Alt Account" Flow**:
+  - Introduced dual linking options:
+    - **🎮 30-Day Auto-Sync (Recommended)**: Dispatches a verification code to the alt's game mailbox, automatically verifying game ID, locking in Chief Name, pulling the avatar, and binding the 30-day token in a single step.
+    - **✏️ Manual Link**: Quick link fallback for alts without instant game access.
+
 ## [2.5.10] - 2026-08-14
 ### 🌐 Translate Century Games API Error Responses into English
 - **💬 Auto-Translation of Game Server Responses**:
