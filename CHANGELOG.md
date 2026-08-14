@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [1.99.1] - 2026-08-13
+### 🛡️ Single Updating Discord Roster Post & Header Timestamp Placement
+- **🛡️ Single Updating Discord Post**: Replaced individual clutter posts with a single updating **Alliance Gatekeeper 🛡️** Discord roster card. The system stores the message ID in Firebase (`config/discordAlerts/lastDiscordMessageId`) and edits the post in-place using HTTP `PATCH` whenever a new member registers.
+- **🕒 Header Timestamp Placement**: Positioned the latest registration timestamp right at the top header of the embed card and on every member row for optimal visual flow.
+
 ## [1.99.0] - 2026-08-13
 ### 💎 Recent Signups Drawer Name Resolution & Staff Actions Upgrade
 - **🔤 Chief Name Resolution**: Updated `getRecentNewMembers` to resolve raw numeric Game IDs (e.g. `319875650`) into actual registered Chief Names via roster lookup.

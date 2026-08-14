@@ -7440,18 +7440,10 @@ window.clearShowdownCaches = () => {
 
 // --- NEW MEMBER ALERT & DISCORD WEBHOOK SYSTEM ---
 window.triggerNewMemberAlerts = async (memberRecord) => {
-  if (!memberRecord) return;
-  const name = memberRecord.chiefName || memberRecord.name || 'New Member';
-  const gid = memberRecord.gameId || 'N/A';
-  const level = memberRecord.furnaceLevel || memberRecord.stove_lv || 'FC 1';
-  const email = memberRecord.email || 'N/A';
-  const timeStr = memberRecord.createdAt ? new Date(memberRecord.createdAt).toLocaleString('en-US') : new Date().toLocaleString('en-US');
-
   // Invalidate cache so unread badges update in UI
   window._recentNewMembersCache = null;
   if (typeof window.updateNewMemberBadge === 'function') window.updateNewMemberBadge();
 
-  // Fetch System Settings from Firebase to check Discord Webhook configuration
   try {
     const settingsSnap = await get(ref(db, 'config/discordAlerts')).catch(() => null);
     const settings = (settingsSnap && settingsSnap.exists()) ? settingsSnap.val() : {};
@@ -7461,32 +7453,76 @@ window.triggerNewMemberAlerts = async (memberRecord) => {
 
     if (webhookUrl && alertsEnabled && webhookUrl.startsWith('http')) {
       const siteUrl = window.location.origin || 'https://wosbdc.github.io';
+      const recentMembers = await window.getRecentNewMembers();
+      
+      const latestMember = recentMembers.length > 0 ? recentMembers[0] : (memberRecord || {});
+      const latestName = latestMember.name || memberRecord?.chiefName || memberRecord?.name || 'New Member';
+      const latestTime = latestMember.createdStr || new Date().toLocaleString('en-US');
+
+      const rosterFields = recentMembers.slice(0, 10).map((m, idx) => {
+        const numPrefix = `${idx + 1}.`;
+        const fLvl = m.furnaceLevel ? ` • 🔥 FC ${String(m.furnaceLevel).replace(/^FC\s*/i, '')}` : '';
+        return {
+          name: `${numPrefix} Chief ${m.name}`,
+          value: `🆔 \`${m.gameId || 'N/A'}\`${fLvl} • 🕒 Joined: **${m.createdStr}**`,
+          inline: false
+        };
+      });
+
       const embedPayload = {
         username: "Alliance Gatekeeper 🛡️",
         avatar_url: `${siteUrl}/favicon.svg`,
         embeds: [{
-          title: "🎉 NEW MEMBER REGISTERED!",
-          description: `Chief **${name}** has just registered on the alliance website!`,
+          title: "🛡️ ALLIANCE GATEKEEPER — RECENT NEW MEMBERS ROSTER",
+          description: `✨ **Latest Member Registered**: Chief **${latestName}** at **${latestTime}**!\n\n📋 **Active Signups List (Past 7 Days)**:`,
           color: 4242388, // Cyan Accent (#06b6d4)
-          fields: [
-            { name: "👤 Chief Name", value: `**${name}**`, inline: true },
-            { name: "🆔 Game ID", value: `\`${gid}\``, inline: true },
-            { name: "🔥 Furnace Level", value: `\`${level}\``, inline: true },
-            { name: "📅 Date & Time", value: timeStr, inline: true }
-          ],
+          fields: rosterFields.length > 0 ? rosterFields : [{ name: "Status", value: "No active signups in the past 7 days.", inline: false }],
           footer: {
-            text: "Whiteout Survival Alliance Dashboard • New Member Alert System",
+            text: `Whiteout Survival Alliance Dashboard • Total Recent Signups: ${recentMembers.length}`,
             icon_url: `${siteUrl}/favicon.svg`
           },
           timestamp: new Date().toISOString()
         }]
       };
 
-      await fetch(webhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(embedPayload)
-      }).catch(e => console.warn("Failed to dispatch Discord webhook:", e));
+      const cleanUrl = webhookUrl.split('?')[0].replace(/\/+$/, '');
+      const lastMsgId = settings.lastDiscordMessageId || '';
+      let updated = false;
+
+      // Try editing existing message in-place
+      if (lastMsgId) {
+        try {
+          const patchRes = await fetch(`${cleanUrl}/messages/${lastMsgId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(embedPayload)
+          });
+          if (patchRes.ok) {
+            updated = true;
+          }
+        } catch(pe) {
+          console.warn("Failed to patch existing Discord message:", pe);
+        }
+      }
+
+      // If no existing message or PATCH failed/deleted, create new post and save message ID
+      if (!updated) {
+        try {
+          const postRes = await fetch(`${cleanUrl}?wait=true`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(embedPayload)
+          });
+          if (postRes.ok) {
+            const data = await postRes.json();
+            if (data && data.id) {
+              await set(ref(db, 'config/discordAlerts/lastDiscordMessageId'), data.id);
+            }
+          }
+        } catch(postErr) {
+          console.warn("Failed to create Discord webhook post:", postErr);
+        }
+      }
     }
   } catch(e) {
     console.warn("Error sending new member alerts:", e);

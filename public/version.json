@@ -1,9 +1,10 @@
 {
-  "version": "1.99.0",
+  "version": "1.99.1",
   "releaseDate": "2026-08-13",
-  "title": "💎 Recent Signups Drawer Name Resolution & Staff Actions Upgrade",
+  "title": "🛡️ Single Updating Discord Roster Post & Header Timestamp Placement",
   "notes": [
-    "Resolved raw numeric Game IDs in recent signups list into real Chief Names via roster lookup",
-    "Added Furnace Level badges, Staff Badges, and 1-click + Staff role management inside Recent Member Signups drawer"
+    "Converted Alliance Gatekeeper 🛡️ Discord webhook alerts into a single updating roster embed using HTTP PATCH",
+    "Eliminated duplicate/messy individual Discord posts for new member signups",
+    "Positioned registration timestamp directly at the top right header of the Discord roster card"
   ]
 }
