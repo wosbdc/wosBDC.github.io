@@ -1,10 +1,9 @@
 # CHANGELOG
 
-## [2.5.7] - 2026-08-14
-### ✨ Fix Navbar Alert Bell Modal Binding
-- **🔧 Disambiguated Modal Handlers**:
-  - Resolved function name collision between the Settings **Push Notifications** modal (`openPushNotificationsModal`) and the Top Navbar **Alliance Alerts & 30-Day Token Hub** (`openAllianceAlertsModal`).
-  - Clicking the 🔔 Bell in the navbar now reliably opens the **Alliance Notifications & Alerts** modal with active 30-day token days remaining, 1-click renewal, and gift code status.
+## [2.5.8] - 2026-08-14
+### 🏷️ Synchronize Version Display across Discord Webhook & Web UI
+- **🏷️ Discord Embed Version Tag**: Added explicit version number (`v2.5.8`) to the Discord webhook roster embed footer.
+- **🏷️ Header Version Badge**: Updated `index.html` and `main.js` to ensure `v2.5.8` is immediately rendered on page load and inside the changelog modal.
 
 ## [2.5.6] - 2026-08-14
 ### ✨ Update In-Game Token Labels to '30-Day Sync Token'

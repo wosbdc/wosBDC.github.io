@@ -7860,7 +7860,7 @@ window.triggerNewMemberAlerts = async (memberRecord) => {
           color: 4242388, // Cyan Accent (#06b6d4)
           fields: rosterFields.length > 0 ? rosterFields : [{ name: "Status", value: "No active signups in the past 7 days.", inline: false }],
           footer: {
-            text: `Whiteout Survival Alliance Dashboard • Total Recent Signups: ${recentMembers.length}`
+            text: `Whiteout Survival Alliance Dashboard v${pkg.version || '2.0.1'} • Total Recent Signups: ${recentMembers.length}`
           },
           timestamp: new Date().toISOString()
         }]

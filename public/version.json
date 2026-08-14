@@ -1,9 +1,9 @@
 {
-  "version": "2.5.7",
+  "version": "2.5.8",
   "releaseDate": "2026-08-14",
-  "title": "✨ Fix Navbar Alert Bell Modal Binding",
+  "title": "🏷️ Synchronized v2.5.8 Display across Discord Webhook & Web UI",
   "notes": [
-    "Resolved function name collision between Browser Push Notifications and Alliance Notifications & Alerts Hub",
-    "Navbar bell now accurately opens the 30-Day Token Status and Alliance Alerts modal"
+    "Added explicit v2.5.8 version badge to Discord webhook roster embed footer",
+    "Updated fallback header version badge in index.html to ensure v2.5.8 is always immediately visible on page load"
   ]
 }
