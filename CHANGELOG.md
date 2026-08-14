@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [1.99.9] - 2026-08-13
+### 🛡️ Ironclad Chief Name Validation & Automatic Century Games API Verification
+- **🤖 Century Games Auto-Verify**: Added automated background querying of Century Games API across Google sign-in and manual registration flows to lock in real in-game character names and furnace levels automatically.
+- **🚫 Zero Numeric Name Guarantee**: Enforced strict input validation across all account creation flows that rejects pure numeric Game IDs from being entered as character names.
+
 ## [1.99.8] - 2026-08-13
 ### 📋 Chief: <name> Discord Formatting Standardization
 - **📋 Format Standardization**: Formatted member titles on the Discord roster card as `Chief: <name>` (e.g. `1. Chief: Testing Agent`, `2. Chief: wosrewards`).

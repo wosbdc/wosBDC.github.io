@@ -1,9 +1,9 @@
 {
-  "version": "1.99.8",
+  "version": "1.99.9",
   "releaseDate": "2026-08-13",
-  "title": "📋 Chief: <name> Discord Formatting Standardization",
+  "title": "🛡️ Ironclad Chief Name Validation & Automatic Century Games API Verification",
   "notes": [
-    "Updated Discord roster embed to format member titles with colon as Chief: <name>",
-    "Patched live Discord roster post in real-time"
+    "Implemented automated Century Games API verification across all login & registration methods",
+    "Strictly enforced that Chief Name must be a text character name, preventing numeric Game IDs from ever entering the database as names"
   ]
 }

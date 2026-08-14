@@ -4407,9 +4407,28 @@ if (authGoogleBtn) authGoogleBtn.addEventListener('click', async () => {
                 }
             }
             
-            if (!chiefName) {
-                chiefName = await window.customPrompt("We couldn't find your Game ID on the roster. Please enter your Chief Name exactly as it appears in-game:");
+            if (!chiefName || /^\d+$/.test(chiefName.toString().trim()) || chiefName.toString().trim() === gameId.toString().trim()) {
+                // 1. Try querying Century Games API to auto-fetch real character nickname
+                try {
+                    const verifyRes = await fetch(`${VERIFY_PROXY_URL}?id=${encodeURIComponent(gameId.trim())}`);
+                    const verifyData = await verifyRes.json();
+                    if (verifyData && verifyData.success && verifyData.nickname && !/^\d+$/.test(String(verifyData.nickname).trim())) {
+                        chiefName = verifyData.nickname;
+                        if (verifyData.stove_lv) furnaceLevel = verifyData.stove_lv;
+                    }
+                } catch(ve) {
+                    console.warn("Century Games auto-verify error:", ve);
+                }
+            }
+            
+            // 2. If still unverified, prompt user with strict rejection of pure numeric IDs
+            while (!chiefName || /^\d+$/.test(chiefName.toString().trim()) || chiefName.toString().trim() === gameId.toString().trim()) {
+                chiefName = await window.customPrompt("We couldn't auto-verify your name. Please enter your in-game Character / Chief Name (e.g. BrianDCox), NOT your numeric Game ID:");
                 if (!chiefName) throw new Error("Chief Name is required.");
+                if (/^\d+$/.test(chiefName.toString().trim()) || chiefName.toString().trim() === gameId.toString().trim()) {
+                    if (window.showToast) window.showToast("⚠️ Chief Name cannot be a number. Please enter your text character name.", "error");
+                    chiefName = null;
+                }
             }
             
             const dateStarted = await window.customPrompt("One last thing! What date did you start playing Whiteout Survival? (e.g., MM/DD/YYYY)") || "";
@@ -4419,6 +4438,9 @@ if (authGoogleBtn) authGoogleBtn.addEventListener('click', async () => {
                 email: user.email,
                 gameId: gameId.trim(),
                 name: chiefName.trim(),
+                chiefName: chiefName.trim(),
+                stove_lv: furnaceLevel || "30",
+                furnaceLevel: furnaceLevel || "30",
                 createdAt: new Date().toISOString(),
                 authProvider: 'google'
             });
