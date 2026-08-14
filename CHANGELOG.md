@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## [2.1.0] - 2026-08-14
+## [2.1.1] - 2026-08-14
 ### 🛡️ Chief Verification System
 - **📩 Chief Verification System**: Added in-game code verification and 1-click profile sync in Account Hub.
 

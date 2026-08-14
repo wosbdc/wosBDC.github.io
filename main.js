@@ -4207,7 +4207,7 @@ if (authVerifyGameIdBtn && authChiefConfirm) {
                           <div style="background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.4); border-radius:12px; padding:14px; margin-top:10px;">
                               <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
                                   <div>
-                                      <div style="font-size:12px; color:#10b981; font-weight:bold;">✅ Character Verified from Game Servers!</div>
+                                      <div style="font-size:12px; color:#10b981; font-weight:bold;">✅ Character Verified!</div>
                                       <div style="font-size:16px; font-weight:800; color:#fff; margin-top:2px;">
                                           ${window.escapeHTML(data.nickname)}
                                           <span style="font-size:11px; color:#38bdf8; font-weight:bold; background:rgba(56,189,248,0.15); padding:2px 6px; border-radius:4px; margin-left:6px;">State #${window.escapeHTML(data.section || '2089')}</span>
@@ -8213,7 +8213,7 @@ window.handleSyncCenturyGamesProfile = async () => {
       currentUser.section = updates.section;
       currentUser.centuryGamesVerified = true;
 
-      window.showToast("Profile synced with Century Games servers!", "success");
+      window.showToast("Profile synced successfully!", "success");
       if (views.account) views.account();
     } else if (data && data.expired) {
       window.showToast("30-day session token expired. Please enter new in-game code to refresh.", "warning");
@@ -8246,13 +8246,13 @@ window.openAccountHubVerifyModal = () => {
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:12px;">
             <div style="display:flex; align-items:center; gap:8px;">
                 <span style="font-size:20px;">🛡️</span>
-                <h3 style="margin:0; color:#fff; font-size:18px; font-weight:800;">Century Games Verification</h3>
+                <h3 style="margin:0; color:#fff; font-size:18px; font-weight:800;">Chief Verification</h3>
             </div>
             <button id="closeAccHubVerifyBtn" style="background:none; border:none; color:var(--text-muted); font-size:24px; cursor:pointer; line-height:1;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-muted)'">&times;</button>
         </div>
 
         <p style="font-size:13px; color:var(--text-muted); line-height:1.5; margin:0 0 16px 0;">
-            Verify Game ID <strong style="color:var(--text-main); font-family:monospace;">${currentUser.gameId}</strong> to link your character directly to official Century Games servers for <strong>30-day automatic stats syncing</strong>.
+            Verify Game ID <strong style="color:var(--text-main); font-family:monospace;">${currentUser.gameId}</strong> to link your character directly to our database for <strong>30-day automatic stats syncing</strong>.
         </p>
 
         <div id="accVerifyStepContainer">
