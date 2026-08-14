@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.5.25] - 2026-08-14
+- Streamlined Alliance Notifications modal with compact Main Character Token Status card.
+- Implemented collapsible `🔗 Alt Accounts Un-Sync Status (X)` accordion banner with 1-click `[ ⚡ Setup / Renew ]` for un-synced alts.
+- Implemented collapsible `🛡️ Staff Alerts: Recent Signups (X)` banner with counter badge and expandable member list to prevent scrollbar clutter.
+
 ## [2.5.24] - 2026-08-14
 - Added live 30-day token countdown to the Chief ID card badge in Account Hub (`🛡️ 30-Day Sync Active (X days left) (#State)`).
 - Added live 30-day token sync countdown pill to linked alt account cards.

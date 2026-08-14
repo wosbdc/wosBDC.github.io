@@ -1,8 +1,8 @@
 {
-  "version": "2.5.24",
+  "version": "2.5.25",
   "releaseDate": "2026-08-14",
-  "title": "🛡️ 30-Day Token Countdown in Account Hub",
+  "title": "🔔 Streamlined Notification Bell with Collapsible Banners",
   "notes": [
-    "Added live 30-day token countdown to Chief profile badge and alt account cards in Account Hub"
+    "Streamlined Alerts modal with collapsible Alt Un-Sync Status banner and Staff Recent Signups banner"
   ]
 }
