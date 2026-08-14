@@ -191,7 +191,7 @@ img, svg, video, canvas {
   display: block;
 }
 
-.settings-btn {
+.settings-btn, .alerts-nav-btn {
   background: transparent;
   border: 1px solid var(--border);
   color: var(--text-main);
@@ -204,7 +204,7 @@ img, svg, video, canvas {
   align-items: center;
   justify-content: center;
 }
-.settings-btn:hover { background: rgba(168, 85, 247, 0.1); border-color: var(--accent); }
+.settings-btn:hover, .alerts-nav-btn:hover { background: rgba(168, 85, 247, 0.1); border-color: var(--accent); }
 
 /* Settings Sidebar */
 .sidebar-overlay {

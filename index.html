@@ -73,13 +73,14 @@
             </div>
 
             <a href="#" class="nav-link" data-target="schedule">Schedule</a>
+            <a href="#" class="nav-link mobile-only-link" id="mobileAlertsBtn" onclick="window.openAllianceAlertsModal && window.openAllianceAlertsModal(); return false;">🔔 Alerts</a>
             <a href="#" class="nav-link mobile-only-link" id="mobileSettingsBtn">⚙️ Settings</a>
           </div>
 
         </div>
         
         <div class="nav-controls">
-          <button id="adminAlertsNavBtn" onclick="window.openAllianceAlertsModal && window.openAllianceAlertsModal()" class="settings-btn" style="display:none; position:relative; background:rgba(6,182,212,0.15); border:1px solid rgba(6,182,212,0.4); color:#06b6d4; cursor:pointer;" title="Alliance Alerts & Notifications">🔔</button>
+          <button id="adminAlertsNavBtn" onclick="window.openAllianceAlertsModal && window.openAllianceAlertsModal()" class="alerts-nav-btn" style="display:none; position:relative; background:rgba(6,182,212,0.15); border:1px solid rgba(6,182,212,0.4); color:#06b6d4; cursor:pointer;" title="Alliance Alerts & Notifications">🔔</button>
           <button id="mobileMenuBtn" class="mobile-menu-btn">☰</button>
           <button id="settingsBtn" class="settings-btn" title="Settings">⚙️</button>
         </div>

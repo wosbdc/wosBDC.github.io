@@ -1,8 +1,8 @@
 {
-  "version": "2.5.21",
+  "version": "2.5.22",
   "releaseDate": "2026-08-14",
-  "title": "📱 Universal Smartphone & Screen Size Responsive Polish",
+  "title": "🔔 Instant Notification Bell & Mobile Alerts Fix",
   "notes": [
-    "Added fluid container scaling, safe-area viewport insets, iOS input auto-zoom safeguards, and universal table swiping"
+    "Fixed Notification Bell so alerts modal opens instantly with zero network lag and added mobile menu alerts shortcut"
   ]
 }

@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.5.22] - 2026-08-14
+- Fixed Notification Bell so the Alliance Alerts modal renders instantly with 0ms delay.
+- Fixed mobile navbar hiding the bell and added a dedicated `🔔 Alerts` link to the mobile drawer.
+
 ## [2.5.21] - 2026-08-14
 - Implemented Universal Smartphone & Screen Size responsive optimizations with fluid `clamp()` spacing, notch safe areas (`viewport-fit=cover`), iOS input auto-zoom fixes, and fluid modal clamping.
 
