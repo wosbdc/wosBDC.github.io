@@ -5132,8 +5132,8 @@ window.renderMembersOnlyGuard = (viewName = "Alliance Portal") => {
           Already an alliance member? Link your email to claim your profile! Instantly track your live Bear Trap donations, Showdown rankings, alliance event scores, and personal activity logs—all in real time!
        </p>
        <div style="display:flex; gap:14px; justify-content:center; flex-wrap:wrap; max-width:420px; margin:0 auto;">
-          <button onclick="window.openAuthModal('register')" style="flex:1; min-width:180px; background:linear-gradient(135deg, #06b6d4, #3b82f6); color:#fff; border:none; padding:14px 24px; border-radius:12px; font-weight:bold; font-size:15px; cursor:pointer; box-shadow:0 6px 20px rgba(6,182,212,0.35); transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.04)'" onmouseout="this.style.transform='scale(1)'">✨ Claim / Create Account</button>
-          <button onclick="window.openAuthModal('login')" style="flex:1; min-width:140px; background:rgba(255,255,255,0.06); color:#ffffff; border:1px solid rgba(255,255,255,0.2); padding:14px 24px; border-radius:12px; font-weight:bold; font-size:15px; cursor:pointer; transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">🔑 Sign In</button>
+          <button onclick="window.openAuthModal('register')" class="btn-auth-primary" style="flex:1; min-width:180px; padding:14px 24px; border-radius:12px; font-size:15px;">✨ Claim / Create Account</button>
+          <button onclick="window.openAuthModal('login')" class="btn-auth-secondary" style="flex:1; min-width:140px; padding:14px 24px; border-radius:12px; font-size:15px;">🔑 Sign In</button>
        </div>
     </div>`;
 };
@@ -10072,10 +10072,10 @@ const views = {
             </div>
             
             <div style="display:flex; gap:12px;">
-              <button id="authPageSignInBackBtn" type="button" style="flex:1; padding:14px; background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); border-radius:10px; font-weight:bold; font-size:14px; cursor:pointer; transition:0.2s;">
+              <button id="authPageSignInBackBtn" type="button" class="btn-auth-secondary" style="flex:1; padding:13px 18px; border-radius:10px; font-size:14px;">
                 ← Back
               </button>
-              <button id="authPageSubmitSignInBtn" type="button" style="flex:2; padding:14px; background:linear-gradient(135deg, #3b82f6, #2563eb); color:#fff; border:none; border-radius:10px; font-weight:bold; font-size:15px; cursor:pointer; box-shadow:0 4px 15px rgba(37,99,235,0.4); transition:0.2s;">
+              <button id="authPageSubmitSignInBtn" type="button" class="btn-auth-primary" style="flex:2; padding:13px 18px; border-radius:10px; font-size:15px;">
                 🔑 Sign In
               </button>
             </div>
@@ -10154,10 +10154,10 @@ const views = {
             </div>
 
             <div style="display:flex; gap:12px;">
-              <button id="authPageStep2BackBtn" type="button" style="flex:1; padding:14px; background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); border-radius:10px; font-weight:bold; font-size:14px; cursor:pointer; transition:0.2s;">
+              <button id="authPageStep2BackBtn" type="button" class="btn-auth-secondary" style="flex:1; padding:13px 18px; border-radius:10px; font-size:14px;">
                 ← Back
               </button>
-              <button id="authPageNextToStep3Btn" type="button" style="flex:2; padding:14px; background:linear-gradient(135deg, #3b82f6, #2563eb); color:#fff; border:none; border-radius:10px; font-weight:bold; font-size:15px; cursor:pointer; box-shadow:0 4px 15px rgba(37,99,235,0.4); transition:0.2s;">
+              <button id="authPageNextToStep3Btn" type="button" class="btn-auth-primary" style="flex:2; padding:13px 18px; border-radius:10px; font-size:15px;">
                 Next: Verify Chief ➔
               </button>
             </div>
@@ -10173,7 +10173,7 @@ const views = {
               <label style="font-size:13px; color:var(--text-muted); font-weight:600;">Game ID (Numbers Only): <span style="color:var(--danger);">*</span></label>
               <div style="display:flex; align-items:stretch; width:100%;">
                 <input type="text" inputmode="numeric" pattern="[0-9]*" id="authPageGameId" value="${window.escapeHTML(tempGameId)}" placeholder="e.g. 319875650" style="flex:1; padding:13px 14px; border-radius:10px 0 0 10px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:16px; box-sizing:border-box;">
-                <button id="authPageVerifyGidBtn" type="button" style="padding:0 22px; background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; border-radius:0 10px 10px 0; cursor:pointer; font-weight:bold; font-size:14px; transition:0.2s; white-space:nowrap;">
+                <button id="authPageVerifyGidBtn" type="button" class="btn-auth-primary" style="padding:0 22px; border-radius:0 10px 10px 0; font-size:14px; white-space:nowrap;">
                   ${verifiedChiefName ? 'Verified ✅' : '📩 Verify ID'}
                 </button>
               </div>
@@ -10182,10 +10182,10 @@ const views = {
             <div id="authPageChiefVerificationArea" style="margin-bottom:20px;"></div>
 
             <div style="display:flex; gap:12px; margin-top:20px;">
-              <button id="authPageStep3BackBtn" type="button" style="flex:1; padding:14px; background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); border-radius:10px; font-weight:bold; font-size:14px; cursor:pointer; transition:0.2s;">
+              <button id="authPageStep3BackBtn" type="button" class="btn-auth-secondary" style="flex:1; padding:13px 18px; border-radius:10px; font-size:14px;">
                 ← Back
               </button>
-              <button id="authPageCompleteRegBtn" type="button" style="flex:2; padding:14px; background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; border-radius:10px; font-weight:bold; font-size:15px; cursor:pointer; box-shadow:0 4px 15px rgba(16,185,129,0.35); transition:0.2s;">
+              <button id="authPageCompleteRegBtn" type="button" class="btn-auth-success" style="flex:2; padding:13px 18px; border-radius:10px; font-size:15px;">
                 ✨ Complete Registration
               </button>
             </div>
@@ -10212,11 +10212,11 @@ const views = {
             </div>
 
             <!-- Segmented Mode Switcher -->
-            <div style="display:flex; background:rgba(0,0,0,0.35); padding:5px; border-radius:14px; border:1px solid rgba(255,255,255,0.06); margin-bottom:26px;">
-              <button id="authPageTabLogin" type="button" style="flex:1; padding:11px; border-radius:10px; border:none; font-weight:bold; font-size:14px; cursor:pointer; transition:all 0.2s; background:${!isReg ? 'var(--accent)' : 'transparent'}; color:${!isReg ? '#fff' : 'var(--text-muted)'}; box-shadow:${!isReg ? '0 4px 12px rgba(14,165,233,0.3)' : 'none'};">
+            <div style="display:flex; background:rgba(0,0,0,0.35); padding:6px; border-radius:16px; border:1px solid rgba(255,255,255,0.08); margin-bottom:26px; gap:8px;">
+              <button id="authPageTabLogin" type="button" class="btn-auth-tab ${!isReg ? 'active-login' : 'inactive'}">
                 🔑 Sign In
               </button>
-              <button id="authPageTabRegister" type="button" style="flex:1; padding:11px; border-radius:10px; border:none; font-weight:bold; font-size:14px; cursor:pointer; transition:all 0.2s; background:${isReg ? 'linear-gradient(135deg, #06b6d4, #3b82f6)' : 'transparent'}; color:${isReg ? '#fff' : 'var(--text-muted)'}; box-shadow:${isReg ? '0 4px 12px rgba(6,182,212,0.3)' : 'none'};">
+              <button id="authPageTabRegister" type="button" class="btn-auth-tab ${isReg ? 'active-register' : 'inactive'}">
                 ✨ Claim / Register
               </button>
             </div>
@@ -16493,10 +16493,10 @@ window.resetBearTrapEvent = async () => {
             </div>
 
             <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-              <button onclick="window.openRegisterModal()" style="background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; border: none; padding: 12px 22px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(37,99,235,0.4); transition: 0.2s;">
+              <button onclick="window.openRegisterModal()" class="btn-auth-primary" style="padding: 12px 22px; border-radius: 10px; font-size: 14.5px;">
                 ✨ Claim / Create Account
               </button>
-              <button onclick="window.openLoginModal()" style="background: rgba(255,255,255,0.08); color: var(--text-main); border: 1px solid var(--border); padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s;">
+              <button onclick="window.openLoginModal()" class="btn-auth-secondary" style="padding: 12px 22px; border-radius: 10px; font-size: 14.5px;">
                 🔑 Sign In
               </button>
             </div>

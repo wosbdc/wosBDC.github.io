@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.5.34] - 2026-08-14
+- Unified button styling and interactive visual effects (FX) across all Sign In, Claim / Register, and action buttons.
+- Added smooth scale transitions (`scale(1.03)` on hover, `scale(0.98)` on active press), gradient glows, and glassmorphism borders for all secondary and mode toggle buttons.
+
 ## [2.5.33] - 2026-08-14
 - Converted the Sign In and 3-Step Chief Registration wizard from a floating modal popup into a first-class, full-page view (`views.auth`).
 - Routed all navbar, sidebar, and member guard actions directly to the full-page experience, eliminating all backdrop clipping and accidental closure.

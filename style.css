@@ -1074,6 +1074,130 @@ tr:hover td {
   transform: translateX(3px);
 }
 
+/* --- Unified Auth & CTA Action Button FX --- */
+.btn-auth-primary {
+  background: linear-gradient(135deg, #06b6d4, #3b82f6) !important;
+  color: #ffffff !important;
+  border: none !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  box-shadow: 0 4px 15px rgba(6, 182, 212, 0.35) !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+}
+
+.btn-auth-primary:hover {
+  transform: translateY(-2px) scale(1.03) !important;
+  box-shadow: 0 8px 25px rgba(6, 182, 212, 0.5) !important;
+  filter: brightness(1.08) !important;
+}
+
+.btn-auth-primary:active {
+  transform: translateY(0) scale(0.98) !important;
+  box-shadow: 0 2px 10px rgba(6, 182, 212, 0.3) !important;
+}
+
+.btn-auth-secondary {
+  background: rgba(255, 255, 255, 0.07) !important;
+  color: var(--text-main) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+.btn-auth-secondary:hover {
+  background: rgba(255, 255, 255, 0.14) !important;
+  border-color: rgba(6, 182, 212, 0.5) !important;
+  color: #ffffff !important;
+  transform: translateY(-2px) scale(1.03) !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3) !important;
+}
+
+.btn-auth-secondary:active {
+  transform: translateY(0) scale(0.98) !important;
+}
+
+.btn-auth-success {
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+  color: #ffffff !important;
+  border: none !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.35) !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+}
+
+.btn-auth-success:hover {
+  transform: translateY(-2px) scale(1.03) !important;
+  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.5) !important;
+  filter: brightness(1.08) !important;
+}
+
+.btn-auth-success:active {
+  transform: translateY(0) scale(0.98) !important;
+}
+
+/* Segmented Tab FX */
+.btn-auth-tab {
+  flex: 1;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: none;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.btn-auth-tab:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.1);
+}
+
+.btn-auth-tab:active {
+  transform: scale(0.98);
+}
+
+.btn-auth-tab.active-login {
+  background: linear-gradient(135deg, #0ea5e9, #2563eb);
+  color: #ffffff;
+  box-shadow: 0 4px 15px rgba(14, 165, 233, 0.4);
+}
+
+.btn-auth-tab.active-register {
+  background: linear-gradient(135deg, #06b6d4, #3b82f6);
+  color: #ffffff;
+  box-shadow: 0 4px 15px rgba(6, 182, 212, 0.4);
+}
+
+.btn-auth-tab.inactive {
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.btn-auth-tab.inactive:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-main);
+}
+
+
 /* --- Universal Smartphone & Cross-Device Responsive Rules --- */
 @media (max-width: 768px) {
   /* Prevent iOS Safari auto-zoom on input focus */

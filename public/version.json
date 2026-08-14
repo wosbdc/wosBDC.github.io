@@ -1,10 +1,8 @@
 {
-  "version": "2.5.33",
+  "version": "2.5.34",
   "releaseDate": "2026-08-14",
-  "title": "🛡️ Full-Page Chief Registration & Sign In Experience",
+  "title": "✨ Unified Button FX & Micro-Animations",
   "notes": [
-    "Converted popup modal auth flow into a dedicated, spacious full-page view inside the main layout",
-    "Preserved 3-step registration wizard with Google 1-click login and Whiteout Survival in-game character verification",
-    "Eliminated all modal clipping and accidental background dismissals"
+    "Unified hover scale, cyan-to-blue glow, and active press visual effects (FX) across all Sign In, Claim / Register, and action buttons"
   ]
 }
