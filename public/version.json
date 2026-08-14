@@ -1,10 +1,9 @@
 {
-  "version": "2.5.5",
+  "version": "2.5.6",
   "releaseDate": "2026-08-14",
-  "title": "✨ Add Navbar Notification Bell & 30-Day Game Token Expiration Alerts",
+  "title": "✨ Update In-Game Token Labels to '30-Day Sync Token'",
   "notes": [
-    "Added universal navbar notification bell with proactive 30-day token expiration badges",
-    "Created rich Notifications & Alerts modal with 1-click token renewal and auto-redeem status",
-    "Preserved staff new member signup alerts integrated into the notifications hub"
+    "Cleaned user-facing labels across notification hub and profile ID cards to clearly display '30-Day Sync Token'",
+    "Streamlined renewal action buttons and status descriptions for seamless user understanding"
   ]
 }

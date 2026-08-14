@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [2.5.6] - 2026-08-14
+### ✨ Update In-Game Token Labels to '30-Day Sync Token'
+- **🏷️ Simplified User-Facing Token Nomenclature**:
+  - Replaced technical "Century Games" references in UI badges, modal descriptions, and buttons with clear and friendly **"30-Day Sync Token"** text.
+  - Updated status cards to show `🛡️ 30-Day Sync Active`, `⏳ Token Expires in X Days`, and `🚨 30-Day Sync Token Expired`.
+
 ## [2.5.5] - 2026-08-14
 ### ✨ Add Navbar Notification Bell & 30-Day Game Token Expiration Alerts
 - **🔔 Universal Navbar Notification Bell**:

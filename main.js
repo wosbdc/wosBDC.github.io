@@ -7978,7 +7978,7 @@ window.getMemberTokenStatus = (user) => {
     return {
       status: 'active',
       label: 'In-Game Sync Active',
-      desc: 'Your character is verified with Century Games servers for automatic sync.',
+      desc: 'Your 30-day sync token is verified and active for automatic stats syncing.',
       daysLeft: 30,
       alert: false,
       color: '#10b981',
@@ -7993,7 +7993,7 @@ window.getMemberTokenStatus = (user) => {
   if (daysLeft <= 0) {
     return {
       status: 'expired',
-      label: 'In-Game Sync Token Expired',
+      label: '30-Day Sync Token Expired',
       desc: 'Your 30-day token has expired. Enter a new in-game code to keep stats auto-syncing.',
       daysLeft: 0,
       alert: true,
@@ -8004,7 +8004,7 @@ window.getMemberTokenStatus = (user) => {
     return {
       status: 'expiring_soon',
       label: `Token Expires in ${daysLeft} Day${daysLeft === 1 ? '' : 's'}`,
-      desc: `Your 30-day game connection token will expire in ${daysLeft} day${daysLeft === 1 ? '' : 's'}. Renew early to avoid sync interruption.`,
+      desc: `Your 30-day sync token will expire in ${daysLeft} day${daysLeft === 1 ? '' : 's'}. Renew early to avoid sync interruption.`,
       daysLeft: daysLeft,
       alert: true,
       color: '#f59e0b',
@@ -8013,8 +8013,8 @@ window.getMemberTokenStatus = (user) => {
   } else {
     return {
       status: 'active',
-      label: `In-Game Sync Active (${daysLeft} Days Left)`,
-      desc: `Your 30-day connection is verified and syncing normally.`,
+      label: `30-Day Sync Active (${daysLeft} Days Left)`,
+      desc: `Your 30-day sync token is verified and syncing normally.`,
       daysLeft: daysLeft,
       alert: false,
       color: '#10b981',
@@ -8166,7 +8166,7 @@ window.openNotificationsModal = async () => {
             <span style="font-size:20px;">${tokenStatus.icon}</span>
             <div>
               <div style="font-weight:bold; font-size:15px; color:${tokenStatus.color};">${tokenStatus.label}</div>
-              <div style="font-size:11px; color:var(--text-muted);">30-Day Game Server Connection</div>
+              <div style="font-size:11px; color:var(--text-muted);">30-Day Sync Token</div>
             </div>
           </div>
           <span style="font-size:11px; font-weight:bold; padding:3px 10px; border-radius:12px; background:${tokenStatus.color}22; color:${tokenStatus.color}; border:1px solid ${tokenStatus.color}44;">
@@ -13600,11 +13600,11 @@ window.resetBearTrapEvent = async () => {
                           </div>
                           ${ (currentUser.wos_cg_token || currentUser.centuryGamesVerified) ? `
                               <div style="display:inline-flex; align-items:center; gap:4px; background:rgba(16,185,129,0.15); border:1px solid #10b981; padding:3px 8px; border-radius:20px; font-size:11px; font-weight:bold; color:#10b981;">
-                                  🛡️ Verified ${currentUser.section ? `(#${currentUser.section})` : ''}
+                                  🛡️ 30-Day Sync Active ${currentUser.section ? `(#${currentUser.section})` : ''}
                               </div>
                           ` : `
                               <div style="display:inline-flex; align-items:center; gap:4px; background:rgba(245,158,11,0.15); border:1px solid #f59e0b; padding:3px 8px; border-radius:20px; font-size:11px; font-weight:bold; color:#f59e0b; cursor:pointer;" onclick="window.openAccountHubVerifyModal()" title="Click to verify character with in-game code">
-                                  ⚠️ Unverified
+                                  ⚠️ 30-Day Token Expired
                               </div>
                           `}
                       </div>
@@ -13635,7 +13635,7 @@ window.resetBearTrapEvent = async () => {
                   </div>` : ''}
               </div>
               
-              <div class="id-card-bot-status" style="text-align:center; margin-top:15px; padding-top:15px; border-top:1px solid rgba(255,255,255,0.05); position:relative; z-index:2;">
+              <div class="id-card-bot-status" style="text-align:center; margin-top:15px; padding-top:15px; border-top:1px solid rgba(255,255,20.05); position:relative; z-index:2;">
                   ${botStatusHtml}
               </div>
               
@@ -13653,7 +13653,7 @@ window.resetBearTrapEvent = async () => {
                   </button>
               ` : `
                   <button id="btnVerifyCgProfile" onclick="window.openAccountHubVerifyModal()" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:12px 20px; border-radius:10px; font-weight:bold; font-size:15px; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 15px rgba(14,165,233,0.35); transition:transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
-                      🛡️ Verify Character in Game
+                      🛡️ Renew 30-Day Sync Token
                   </button>
               `}
           </div>
