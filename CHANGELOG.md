@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.5.29] - 2026-08-14
+- Fixed JavaScript syntax error caused by unescaped character names in inline HTML `onclick` handlers for alt token verification.
+- Added explicit error banners and real-time toast alerts for all token dispatch, token verification, and profile sync actions.
+- Clarified button labeling between active character sync (`🔄 Sync Stats`) and unverified/expired token binding (`⚡ Setup 30d Sync`).
+
 ## [2.5.28] - 2026-08-14
 - Removed redundant nested `<details>` accordion and dropdown arrow from the Account Hub Linked Alts tab.
 - Created dedicated header bar with separated `[ ➕ Link Alt Account ]` and `[ 🔄 Sync All ]` buttons to prevent accidental clicks.

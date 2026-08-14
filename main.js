@@ -8270,7 +8270,7 @@ window.openAllianceAlertsModal = async () => {
       const bannerSubtitle = `${unSyncedAltsCount} of ${rawAlts.length} alts need setup/renewal • Tap to view & setup`;
 
       const altRowsHtml = processedAlts.filter(alt => alt.aStatus !== 'active').map(alt => {
-        const actionBtn = `<button onclick="document.getElementById('notificationsModalOverlay').remove(); window.openAltVerifyModal('${alt.agid}', '${alt.aName.replace(/'/g, "\\'")}');" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; border-radius:6px; padding:4px 10px; font-size:11.5px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px; box-shadow:0 2px 6px rgba(14,165,233,0.3);" title="Send in-game mailbox verification code">⚡ Setup / Renew</button>`;
+        const actionBtn = `<button onclick="document.getElementById('notificationsModalOverlay').remove(); window.openAltVerifyModal('${alt.agid}');" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; border-radius:6px; padding:4px 10px; font-size:11.5px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px; box-shadow:0 2px 6px rgba(14,165,233,0.3);" title="Send in-game mailbox verification code">⚡ Setup / Renew</button>`;
 
         return `
           <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:9px 12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
@@ -9149,7 +9149,6 @@ window.openAccountHubVerifyModal = () => {
   modalOverlay.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.85); backdrop-filter:blur(10px); z-index:99999; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease;';
 
   modalOverlay.innerHTML = `
-    <div class="card" style="width:90%; max-width:460px; background:linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.92)); border:1px solid rgba(56,189,248,0.4); box-shadow:0 20px 60px rgba(0,0,0,0.6); padding:24px; border-radius:16px; text-align:left;">
     <div class="card" style="width:92%; max-width:440px; background:linear-gradient(145deg, rgba(15,23,42,0.96), rgba(30,41,59,0.94)); border:1px solid rgba(56,189,248,0.35); padding:24px; border-radius:20px; box-shadow:0 25px 60px rgba(0,0,0,0.7); text-align:left; animation:zoomIn 0.2s forwards; color:var(--text-main);">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:12px;">
         <h3 style="margin:0; color:#fff; font-size:18px; font-weight:bold; display:flex; align-items:center; gap:8px;">
@@ -9213,17 +9212,21 @@ window.openAccountHubVerifyModal = () => {
             feedback.style.color = '#38bdf8';
             feedback.textContent = 'Code dispatched! Check your Whiteout Survival system mail.';
           }
+          window.showToast("📩 Verification code sent to your in-game mailbox!", "info");
+          if (codeInput) setTimeout(() => codeInput.focus(), 60);
         } else {
           throw new Error(data.message || 'Failed to dispatch in-game code.');
         }
       } catch (err) {
         sendBtn.disabled = false;
         sendBtn.textContent = '📩 Send Code to In-Game Mail';
+        const msg = window.translateWosApiError(err.message || 'Error communicating with game servers.');
         if (feedback) {
           feedback.style.display = 'block';
           feedback.style.color = 'var(--danger)';
-          feedback.textContent = window.translateWosApiError(err.message || 'Error communicating with game servers.');
+          feedback.textContent = msg;
         }
+        window.showToast(msg, 'error');
       }
     });
   }
@@ -9274,7 +9277,7 @@ window.openAccountHubVerifyModal = () => {
           currentUser.centuryGamesVerified = true;
 
           modalOverlay.remove();
-          window.showToast("Character verified & 30-day sync token bound!", "success");
+          window.showToast("🎉 Character verified & 30-day sync token bound!", "success");
           if (views.account) views.account();
         } else {
           throw new Error(data.message || 'Invalid or expired code.');
@@ -9282,11 +9285,13 @@ window.openAccountHubVerifyModal = () => {
       } catch (err) {
         submitCodeBtn.disabled = false;
         submitCodeBtn.textContent = 'Verify & Bind';
+        const msg = window.translateWosApiError(err.message || 'Verification failed.');
         if (feedback) {
           feedback.style.display = 'block';
           feedback.style.color = 'var(--danger)';
-          feedback.textContent = window.translateWosApiError(err.message || 'Verification failed.');
+          feedback.textContent = msg;
         }
+        window.showToast(msg, 'error');
       }
     };
 
@@ -9303,11 +9308,13 @@ window.openAccountHubVerifyModal = () => {
 window.handleSyncAltProfile = async (gid, btnEl = null) => {
   if (!currentUser) return;
   const cleanGid = (gid || '').toString().trim();
+  const cleanName = (window.idToNameMap && window.idToNameMap[cleanGid]) || (currentUser.altTokens && currentUser.altTokens[cleanGid]?.nickname) || `Alt ${cleanGid}`;
   const altTokens = currentUser.altTokens || {};
   const tokenData = altTokens[cleanGid];
   const token = typeof tokenData === 'string' ? tokenData : (tokenData?.token || '');
 
   if (!token) {
+    window.showToast(`Alt ${cleanName} does not have a 30-day sync token yet. Please enter in-game code to verify.`, 'info');
     window.openAltVerifyModal(cleanGid);
     return;
   }
@@ -9361,10 +9368,10 @@ window.handleSyncAltProfile = async (gid, btnEl = null) => {
         lastSyncedAt: updates.lastSyncedAt
       };
 
-      window.showToast(`✨ Alt ${data.nickname || cleanGid} stats & avatar synced!`, 'success');
+      window.showToast(`✨ Alt ${data.nickname || cleanName} stats & avatar synced!`, 'success');
       if (views.account) views.account();
     } else if (data && data.expired) {
-      window.showToast(`30-day token expired for ID ${cleanGid}. Please enter in-game code to renew.`, 'warning');
+      window.showToast(`30-day token expired for ${cleanName}. Please enter in-game code to renew.`, 'warning');
       window.openAltVerifyModal(cleanGid);
     } else {
       throw new Error(data.message || 'Failed to sync alt stats.');
@@ -9461,10 +9468,18 @@ window.handleSyncAllCharacters = async (btnEl = null) => {
             avatar_image: data.avatar_image || "",
             lastSyncedAt: updates.lastSyncedAt
           });
+          currentUser.altTokens[gid] = {
+            ...((typeof tokenData === 'object') ? tokenData : {}),
+            token: token,
+            stove_lv: updates.stove_lv,
+            nickname: updates.name || "",
+            avatar_image: data.avatar_image || "",
+            lastSyncedAt: updates.lastSyncedAt
+          };
           successCount++;
         }
       } catch(e) {
-        console.warn(`Alt ${gid} sync error:`, e);
+        console.warn("Alt sync error:", e);
       }
     }
   }
@@ -9475,7 +9490,7 @@ window.handleSyncAllCharacters = async (btnEl = null) => {
   }
 
   if (attemptedCount === 0) {
-    window.showToast("No active 30-day tokens found. Please bind your tokens first.", "warning");
+    window.showToast("No active 30-day tokens found to sync. Please verify characters first.", "info");
   } else {
     window.showToast(`✨ Refreshed ${successCount} of ${attemptedCount} characters!`, successCount > 0 ? 'success' : 'warning');
   }
@@ -9485,7 +9500,9 @@ window.handleSyncAllCharacters = async (btnEl = null) => {
 window.openAltVerifyModal = (gid, altName = '') => {
   if (!currentUser) return;
   const cleanGid = (gid || '').toString().trim();
-  const cleanName = altName || `Alt ID ${cleanGid}`;
+  const cleanName = (altName && !altName.startsWith('Game ID:')) 
+    ? altName 
+    : ((window.idToNameMap && window.idToNameMap[cleanGid]) || (currentUser.altTokens && currentUser.altTokens[cleanGid]?.nickname) || `Alt Chief (${cleanGid})`);
 
   const oldModal = document.getElementById('altVerifyModalOverlay');
   if (oldModal && oldModal.parentNode) oldModal.parentNode.removeChild(oldModal);
@@ -9558,6 +9575,7 @@ window.openAltVerifyModal = (gid, altName = '') => {
             feedback.style.color = '#38bdf8';
             feedback.textContent = 'Code dispatched! Check your Whiteout Survival system mail.';
           }
+          window.showToast(`📩 Verification code sent to ${cleanName}'s mail!`, 'info');
           if (codeInput) setTimeout(() => codeInput.focus(), 60);
         } else {
           throw new Error(data.message || 'Failed to dispatch in-game code.');
@@ -9565,11 +9583,13 @@ window.openAltVerifyModal = (gid, altName = '') => {
       } catch (err) {
         sendBtn.disabled = false;
         sendBtn.textContent = '📩 Send Code to In-Game Mail';
+        const msg = window.translateWosApiError(err.message || 'Error communicating with game servers.');
         if (feedback) {
           feedback.style.display = 'block';
           feedback.style.color = 'var(--danger)';
-          feedback.textContent = window.translateWosApiError(err.message || 'Error communicating with game servers.');
+          feedback.textContent = msg;
         }
+        window.showToast(msg, 'error');
       }
     });
   }
@@ -9627,7 +9647,7 @@ window.openAltVerifyModal = (gid, altName = '') => {
           await update(ref(db, `users_alts/${cleanGid}`), altUpdates);
 
           modalOverlay.remove();
-          window.showToast(`🎉 30-Day sync token bound for ${data.nickname || cleanGid}!`, 'success');
+          window.showToast(`🎉 30-Day sync token bound for ${data.nickname || cleanName}!`, 'success');
           if (views.account) views.account();
         } else {
           throw new Error(data.message || 'Invalid or expired code.');
@@ -9635,11 +9655,13 @@ window.openAltVerifyModal = (gid, altName = '') => {
       } catch (err) {
         submitCodeBtn.disabled = false;
         submitCodeBtn.textContent = 'Verify & Bind';
+        const msg = window.translateWosApiError(err.message || 'Verification failed.');
         if (feedback) {
           feedback.style.display = 'block';
           feedback.style.color = 'var(--danger)';
-          feedback.textContent = window.translateWosApiError(err.message || 'Verification failed.');
+          feedback.textContent = msg;
         }
+        window.showToast(msg, 'error');
       }
     };
 
@@ -14384,8 +14406,8 @@ window.resetBearTrapEvent = async () => {
                                       ID: ${gid}
                                   </span>
                                   ${ isAltTokenActive
-                                      ? `<span style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:1px 6px; border-radius:6px; font-size:10.5px; font-weight:bold; cursor:pointer;" onclick="window.openAltVerifyModal('${gid}', '${altName.replace(/'/g, "\\'")}')" title="30-Day Token Active (${altTokenDaysRemaining}d remaining). Click to renew early.">🛡️ 30d Sync (${altTokenDaysRemaining}d)</span>`
-                                      : `<span style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); padding:1px 6px; border-radius:6px; font-size:10.5px; font-weight:bold; cursor:pointer;" onclick="window.openAltVerifyModal('${gid}', '${altName.replace(/'/g, "\\'")}')" title="Unverified or expired token. Click to verify in game.">⚠️ 30-Day Sync</span>`
+                                      ? `<span style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:1px 6px; border-radius:6px; font-size:10.5px; font-weight:bold; cursor:pointer;" onclick="window.openAltVerifyModal('${gid}')" title="30-Day Token Active (${altTokenDaysRemaining}d remaining). Click to renew early.">🛡️ 30d Sync (${altTokenDaysRemaining}d)</span>`
+                                      : `<span style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); padding:1px 6px; border-radius:6px; font-size:10.5px; font-weight:bold; cursor:pointer;" onclick="window.openAltVerifyModal('${gid}')" title="Unverified or expired token. Click to verify in game.">⚠️ 30-Day Sync</span>`
                                   }
                               </div>
                           </div>
@@ -14394,7 +14416,7 @@ window.resetBearTrapEvent = async () => {
                       <div style="flex-shrink:0;">
                           ${ (isAltEnrolled || enrolledGameIds.has(gid.toString())) 
                               ? `<span style="border:1px solid #10b981; color:#10b981; background:rgba(16,185,129,0.1); border-radius:8px; padding:3px 8px; font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:3px;">✅ Enrolled</span>`
-                              : `<button onclick="window.openAltPerksModal('${gid}', '${altName.replace(/'/g, "\\'")}')" style="background:rgba(16,185,129,0.15); border:1px solid #10b981; color:#10b981; border-radius:8px; padding:3px 8px; font-size:11px; font-weight:600; cursor:pointer; transition:background 0.2s;" onmouseover="this.style.background='rgba(16,185,129,0.25)'" onmouseout="this.style.background='rgba(16,185,129,0.15)'">🎁 Perks</button>`
+                              : `<button onclick="window.openAltPerksModal('${gid}')" style="background:rgba(16,185,129,0.15); border:1px solid #10b981; color:#10b981; border-radius:8px; padding:3px 8px; font-size:11px; font-weight:600; cursor:pointer; transition:background 0.2s;" onmouseover="this.style.background='rgba(16,185,129,0.25)'" onmouseout="this.style.background='rgba(16,185,129,0.15)'">🎁 Perks</button>`
                           }
                       </div>
                   </div>
@@ -14417,10 +14439,10 @@ window.resetBearTrapEvent = async () => {
                   <!-- Bottom Row: Unified, Perfectly Aligned Action Buttons -->
                   <div style="display:flex; gap:6px; align-items:center; border-top:1px solid rgba(255,255,255,0.05); padding-top:12px;">
                       ${ isAltTokenActive
-                          ? `<button onclick="window.handleSyncAltProfile('${gid}', this)" style="flex:1; background:rgba(6,182,212,0.15); border:1px solid #06b6d4; color:#06b6d4; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px; transition:0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.25)'" onmouseout="this.style.background='rgba(6,182,212,0.15)'" title="Token active (${altTokenDaysRemaining}d remaining). Click to sync.">🔄 Sync</button>`
-                          : `<button onclick="window.openAltVerifyModal('${gid}', '${altName.replace(/'/g, "\\'")}')" style="flex:1; background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px; box-shadow:0 2px 8px rgba(14,165,233,0.3);" title="Verify via in-game mail to bind 30-day auto-sync token">⚡ Sync Token</button>`
+                          ? `<button onclick="window.handleSyncAltProfile('${gid}', this)" style="flex:1; background:rgba(6,182,212,0.15); border:1px solid #06b6d4; color:#06b6d4; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px; transition:0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.25)'" onmouseout="this.style.background='rgba(6,182,212,0.15)'" title="Token active (${altTokenDaysRemaining}d remaining). Click to sync.">🔄 Sync Stats</button>`
+                          : `<button onclick="window.openAltVerifyModal('${gid}')" style="flex:1; background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px; box-shadow:0 2px 8px rgba(14,165,233,0.3);" title="Verify via in-game mail to bind 30-day auto-sync token">⚡ Setup 30d Sync</button>`
                       }
-                      <button onclick="window.openEditAltProfileModal('${gid}', '${altName.replace(/'/g, "\\'")}')" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:var(--text-main); border-radius:8px; padding:6px 12px; font-size:12px; font-weight:600; cursor:pointer; transition:0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">
+                      <button onclick="window.openEditAltProfileModal('${gid}')" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:var(--text-main); border-radius:8px; padding:6px 12px; font-size:12px; font-weight:600; cursor:pointer; transition:0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">
                           ✏️ Edit
                       </button>
                       <button onclick="window.unlinkAltAccountPrompt('${gid}')" style="border:1px solid rgba(239,68,68,0.4); color:#ef4444; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:600; cursor:pointer; background:rgba(239,68,68,0.06); transition:0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.15)'" onmouseout="this.style.background='rgba(239,68,68,0.06)'" title="Unlink Alt Character">

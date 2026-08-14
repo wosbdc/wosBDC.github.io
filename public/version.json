@@ -1,8 +1,8 @@
 {
-  "version": "2.5.28",
+  "version": "2.5.29",
   "releaseDate": "2026-08-14",
-  "title": "✨ Redesigned & Perfectly Aligned Linked Alts Tab",
+  "title": "⚡ Fixed Sync Token Verification & Error Display",
   "notes": [
-    "Removed redundant dropdown arrow, eliminated accidental sync clicks, and redesigned alt cards with unified horizontal button alignment"
+    "Fixed inline attribute string escaping on token verification buttons and added explicit feedback & toast errors for token sync operations"
   ]
 }
