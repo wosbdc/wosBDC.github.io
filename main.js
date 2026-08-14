@@ -4211,43 +4211,11 @@ if(authToggleBtn) authToggleBtn.addEventListener('click', (e) => {
 });
 
 window.openLoginModal = () => {
-  isRegistering = false;
-  isGoogleRegistration = false;
-  pendingGoogleUser = null;
-  if (authErrorMsg) authErrorMsg.style.display = 'none';
-  if (authModalTitle) authModalTitle.textContent = 'Sign In';
-  if (authToggleText) authToggleText.textContent = 'Need an account?';
-  if (authToggleBtn) authToggleBtn.textContent = 'Register';
-  const authSignInMethodPanel = document.getElementById('authSignInMethodPanel');
-  const authSignInFormPanel = document.getElementById('authSignInFormPanel');
-  if (authSignInMethodPanel) authSignInMethodPanel.style.display = 'block';
-  if (authSignInFormPanel) authSignInFormPanel.style.display = 'none';
-  setAuthStep(1);
-  if (document.getElementById('authModal')) document.getElementById('authModal').style.display = 'block';
-  if (document.getElementById('authModalOverlay')) {
-    document.getElementById('authModalOverlay').style.display = 'block';
-    document.getElementById('authModalOverlay').classList.add('active');
-  }
+  if (views.auth) views.auth('login', 1);
 };
 
 window.openRegisterModal = () => {
-  isRegistering = true;
-  isGoogleRegistration = false;
-  pendingGoogleUser = null;
-  if (authErrorMsg) authErrorMsg.style.display = 'none';
-  if (authModalTitle) authModalTitle.textContent = '✨ Claim Profile & Register';
-  if (authToggleText) authToggleText.textContent = 'Already have an account?';
-  if (authToggleBtn) authToggleBtn.textContent = 'Sign In';
-  if (authGameId) authGameId.value = '';
-  if (authChiefConfirm) authChiefConfirm.style.display = 'none';
-  const authFurnaceWrapper = document.getElementById('authFurnaceWrapper');
-  if (authFurnaceWrapper) authFurnaceWrapper.style.display = 'none';
-  setAuthStep(1);
-  if (document.getElementById('authModal')) document.getElementById('authModal').style.display = 'block';
-  if (document.getElementById('authModalOverlay')) {
-    document.getElementById('authModalOverlay').style.display = 'block';
-    document.getElementById('authModalOverlay').classList.add('active');
-  }
+  if (views.auth) views.auth('register', 1);
 };
 
 window.openClaimProfileModal = window.openRegisterModal;
@@ -9998,6 +9966,823 @@ window.parseScheduleEventTime = (timeStr, pdtVal) => {
 };
 
 const views = {
+  login: async () => views.auth('login', 1),
+  register: async () => views.auth('register', 1),
+  auth: async (initialMode = 'register', initialStep = 1) => {
+    if (currentUser) return views.account();
+
+    // De-activate all navbar tabs
+    document.querySelectorAll('.nav-link, .sub-link').forEach(l => l.classList.remove('active'));
+
+    let mode = (initialMode === 'login') ? 'login' : 'register';
+    let step = initialStep || 1;
+    let isGoogleAuth = false;
+    let googleUserData = null;
+    let verifiedChiefName = "";
+    let verifiedFurnaceLevel = "";
+    let verifiedCgToken = "";
+    let verifiedStateKid = "";
+    let verifiedAvatarUrl = "";
+    let tempEmail = "";
+    let tempPassword = "";
+    let tempDateStarted = "";
+    let tempGameId = "";
+    let isManualFallback = false;
+    let manualChiefName = "";
+    let manualFurnaceLevel = "F30";
+
+    window.activeViewFunc = () => views.auth(mode, step);
+
+    const render = () => {
+      const isReg = (mode === 'register');
+      const appEl = document.getElementById('app');
+      if (!appEl) return;
+
+      let stepIndicatorHtml = '';
+      if (isReg) {
+        stepIndicatorHtml = `
+          <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:24px; flex-wrap:wrap;">
+            <div style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:${step === 1 ? 'var(--accent)' : (step > 1 ? '#10b981' : 'var(--text-muted)')}; background:${step === 1 ? 'color-mix(in srgb, var(--accent) 15%, transparent)' : (step > 1 ? 'rgba(16,185,129,0.15)' : 'var(--bg-main)')}; padding:6px 14px; border-radius:20px; border:1px solid ${step === 1 ? 'var(--accent)' : (step > 1 ? '#10b981' : 'var(--border)')}; transition:all 0.3s;">
+              <span style="background:${step === 1 ? 'var(--accent)' : (step > 1 ? '#10b981' : 'var(--border)')}; color:#fff; width:18px; height:18px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:11px;">${step > 1 ? '✓' : '1'}</span> Method
+            </div>
+            <div style="width:20px; height:2px; background:${step > 1 ? '#10b981' : 'var(--border)'};"></div>
+            <div style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:${step === 2 ? 'var(--accent)' : (step > 2 ? '#10b981' : 'var(--text-muted)')}; background:${step === 2 ? 'color-mix(in srgb, var(--accent) 15%, transparent)' : (step > 2 ? 'rgba(16,185,129,0.15)' : 'var(--bg-main)')}; padding:6px 14px; border-radius:20px; border:1px solid ${step === 2 ? 'var(--accent)' : (step > 2 ? '#10b981' : 'var(--border)')}; transition:all 0.3s;">
+              <span style="background:${step === 2 ? 'var(--accent)' : (step > 2 ? '#10b981' : 'var(--border)')}; color:#fff; width:18px; height:18px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:11px;">${step > 2 ? '✓' : '2'}</span> Details & Date
+            </div>
+            <div style="width:20px; height:2px; background:${step > 2 ? '#10b981' : 'var(--border)'};"></div>
+            <div style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:${step === 3 ? 'var(--accent)' : 'var(--text-muted)'}; background:${step === 3 ? 'color-mix(in srgb, var(--accent) 15%, transparent)' : 'var(--bg-main)'}; padding:6px 14px; border-radius:20px; border:1px solid ${step === 3 ? 'var(--accent)' : 'var(--border)'}; transition:all 0.3s;">
+              <span style="background:${step === 3 ? 'var(--accent)' : 'var(--border)'}; color:#fff; width:18px; height:18px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:11px;">3</span> Verify Chief
+            </div>
+          </div>
+        `;
+      }
+
+      let contentHtml = '';
+
+      // --- SIGN IN MODE ---
+      if (!isReg) {
+        if (step === 1) {
+          contentHtml = `
+            <p style="font-size:14px; color:var(--text-muted); margin:0 0 20px 0; line-height:1.5; text-align:center;">
+              Choose how you would like to sign in to your alliance account:
+            </p>
+
+            <div style="display:flex; flex-direction:column; gap:14px; margin-bottom:20px;">
+              <button id="authPageSignInEmailBtn" type="button" class="auth-method-btn email-method" style="padding:16px 20px;">
+                <span style="display:flex; align-items:center; gap:14px;">
+                  <span style="font-size:24px;">📧</span>
+                  <span>
+                    <span class="method-title" style="font-size:15px;">Email & Password</span>
+                    <span class="method-desc">Sign in with your registered email</span>
+                  </span>
+                </span>
+                <span class="method-arrow">➔</span>
+              </button>
+
+              <button id="authPageSignInGoogleBtn" type="button" class="auth-method-btn google-method" style="padding:16px 20px;">
+                <span style="display:flex; align-items:center; gap:14px;">
+                  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width:24px; height:24px;" alt="Google">
+                  <span>
+                    <span class="method-title" style="font-size:15px;">Continue with Google</span>
+                    <span class="method-desc">Instant 1-click authentication</span>
+                  </span>
+                </span>
+                <span class="method-arrow">➔</span>
+              </button>
+            </div>
+          `;
+        } else {
+          // Sign In Step 2: Email & Password Form
+          contentHtml = `
+            <div style="margin-bottom:16px; text-align:left;">
+              <label style="display:block; font-size:13px; color:var(--text-muted); margin-bottom:6px; font-weight:600;">Email Address:</label>
+              <input type="email" id="authPageLoginEmail" value="${window.escapeHTML(tempEmail)}" placeholder="yourname@example.com" style="width:100%; padding:13px 14px; border-radius:10px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:15px; box-sizing:border-box;">
+            </div>
+            
+            <div style="position:relative; width:100%; margin-bottom:16px; text-align:left;">
+              <label style="display:block; font-size:13px; color:var(--text-muted); margin-bottom:6px; font-weight:600;">Password:</label>
+              <div style="position:relative; width:100%;">
+                <input type="password" id="authPageLoginPassword" placeholder="Your password" style="width:100%; padding:13px 14px; padding-right:44px; border-radius:10px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:15px; box-sizing:border-box;">
+                <button id="authPageShowLoginPwBtn" type="button" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:18px;">👁️</button>
+              </div>
+            </div>
+            
+            <div style="text-align:right; margin-top:-6px; margin-bottom:20px;">
+              <a href="#" id="authPageForgotPwBtn" style="color:var(--accent); text-decoration:none; font-size:13px; font-weight:600;">Forgot Password?</a>
+            </div>
+            
+            <div style="display:flex; gap:12px;">
+              <button id="authPageSignInBackBtn" type="button" style="flex:1; padding:14px; background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); border-radius:10px; font-weight:bold; font-size:14px; cursor:pointer; transition:0.2s;">
+                ← Back
+              </button>
+              <button id="authPageSubmitSignInBtn" type="button" style="flex:2; padding:14px; background:linear-gradient(135deg, #3b82f6, #2563eb); color:#fff; border:none; border-radius:10px; font-weight:bold; font-size:15px; cursor:pointer; box-shadow:0 4px 15px rgba(37,99,235,0.4); transition:0.2s;">
+                🔑 Sign In
+              </button>
+            </div>
+          `;
+        }
+      }
+
+      // --- REGISTER MODE ---
+      if (isReg) {
+        if (step === 1) {
+          contentHtml = `
+            <p style="font-size:14px; color:var(--text-muted); margin:0 0 20px 0; line-height:1.5; text-align:center;">
+              Select how you would like to register your alliance Chief account:
+            </p>
+
+            <div style="display:flex; flex-direction:column; gap:14px; margin-bottom:20px;">
+              <button id="authPageChooseEmailBtn" type="button" class="auth-method-btn email-method" style="padding:16px 20px;">
+                <span style="display:flex; align-items:center; gap:14px;">
+                  <span style="font-size:24px;">📧</span>
+                  <span>
+                    <span class="method-title" style="font-size:15px;">Email & Password</span>
+                    <span class="method-desc">Create a dedicated login with your email</span>
+                  </span>
+                </span>
+                <span class="method-arrow">➔</span>
+              </button>
+
+              <button id="authPageChooseGoogleBtn" type="button" class="auth-method-btn google-method" style="padding:16px 20px;">
+                <span style="display:flex; align-items:center; gap:14px;">
+                  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width:24px; height:24px;" alt="Google">
+                  <span>
+                    <span class="method-title" style="font-size:15px;">Continue with Google</span>
+                    <span class="method-desc">Fast 1-click authentication</span>
+                  </span>
+                </span>
+                <span class="method-arrow">➔</span>
+              </button>
+            </div>
+          `;
+        } else if (step === 2) {
+          // Register Step 2: Details & Date Started
+          contentHtml = `
+            ${isGoogleAuth && googleUserData ? `
+              <div style="margin-bottom:20px; padding:14px 16px; background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); border-radius:12px; text-align:left;">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width:18px; height:18px;" alt="Google">
+                  <strong style="color:#22c55e; font-size:13px;">Google Account Connected</strong>
+                </div>
+                <div style="font-size:14px; color:#fff; font-weight:bold; word-break:break-all;">${window.escapeHTML(googleUserData.email || '')}</div>
+                <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">✓ Verified by Google — no password needed</div>
+              </div>
+            ` : `
+              <div style="margin-bottom:16px; text-align:left;">
+                <label style="display:block; font-size:13px; color:var(--text-muted); margin-bottom:6px; font-weight:600;">Email Address: <span style="color:var(--danger); font-weight:bold;">*</span></label>
+                <input type="email" id="authPageEmail" value="${window.escapeHTML(tempEmail)}" placeholder="yourname@example.com" style="width:100%; padding:13px 14px; border-radius:10px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:15px; box-sizing:border-box;">
+              </div>
+              
+              <div style="position:relative; width:100%; margin-bottom:16px; text-align:left;">
+                <label style="display:block; font-size:13px; color:var(--text-muted); margin-bottom:6px; font-weight:600;">Password (Min 6 Characters): <span style="color:var(--danger); font-weight:bold;">*</span></label>
+                <div style="position:relative; width:100%;">
+                  <input type="password" id="authPagePassword" value="${window.escapeHTML(tempPassword)}" placeholder="Create a secure password" style="width:100%; padding:13px 14px; padding-right:44px; border-radius:10px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:15px; box-sizing:border-box;">
+                  <button id="authPageShowPwBtn" type="button" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:18px;">👁️</button>
+                </div>
+              </div>
+            `}
+
+            <div style="margin-bottom:24px; text-align:left;">
+              <label for="authPageDateStarted" style="display:block; font-size:13px; color:var(--text-muted); margin-bottom:6px; font-weight:600;">Date You Started Playing Whiteout Survival: <span style="color:var(--danger); font-weight:bold;">*</span></label>
+              <div style="position:relative; width:100%; display:flex; align-items:stretch;">
+                <input type="date" id="authPageDateStarted" value="${window.escapeHTML(tempDateStarted)}" required style="flex:1; padding:13px 44px 13px 14px; border-radius:10px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:15px; box-sizing:border-box; cursor:pointer;">
+                <button type="button" onclick="try{document.getElementById('authPageDateStarted').showPicker();}catch(e){}" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--accent); font-size:20px; cursor:pointer; padding:4px;" title="Open Calendar">📅</button>
+              </div>
+              <div id="authPageDatePreview" style="font-size:12px; color:var(--accent); margin-top:6px; font-weight:600;">
+                ${tempDateStarted ? `⏱️ Active for ${window.calculateTimeActive(tempDateStarted)}` : 'This determines your exact Chief active service time on leaderboards.'}
+              </div>
+            </div>
+
+            <div style="display:flex; gap:12px;">
+              <button id="authPageStep2BackBtn" type="button" style="flex:1; padding:14px; background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); border-radius:10px; font-weight:bold; font-size:14px; cursor:pointer; transition:0.2s;">
+                ← Back
+              </button>
+              <button id="authPageNextToStep3Btn" type="button" style="flex:2; padding:14px; background:linear-gradient(135deg, #3b82f6, #2563eb); color:#fff; border:none; border-radius:10px; font-weight:bold; font-size:15px; cursor:pointer; box-shadow:0 4px 15px rgba(37,99,235,0.4); transition:0.2s;">
+                Next: Verify Chief ➔
+              </button>
+            </div>
+          `;
+        } else if (step === 3) {
+          // Register Step 3: Link & Verify In-Game Chief
+          contentHtml = `
+            <p style="font-size:14px; color:var(--text-muted); margin:0 0 18px 0; line-height:1.5; text-align:left;">
+              Enter your numeric <strong>Game ID</strong> (found in your Whiteout Survival Chief profile) to sync your in-game stats & avatar:
+            </p>
+
+            <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:16px; text-align:left;">
+              <label style="font-size:13px; color:var(--text-muted); font-weight:600;">Game ID (Numbers Only): <span style="color:var(--danger);">*</span></label>
+              <div style="display:flex; align-items:stretch; width:100%;">
+                <input type="text" inputmode="numeric" pattern="[0-9]*" id="authPageGameId" value="${window.escapeHTML(tempGameId)}" placeholder="e.g. 319875650" style="flex:1; padding:13px 14px; border-radius:10px 0 0 10px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:16px; box-sizing:border-box;">
+                <button id="authPageVerifyGidBtn" type="button" style="padding:0 22px; background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; border-radius:0 10px 10px 0; cursor:pointer; font-weight:bold; font-size:14px; transition:0.2s; white-space:nowrap;">
+                  ${verifiedChiefName ? 'Verified ✅' : '📩 Verify ID'}
+                </button>
+              </div>
+            </div>
+
+            <div id="authPageChiefVerificationArea" style="margin-bottom:20px;"></div>
+
+            <div style="display:flex; gap:12px; margin-top:20px;">
+              <button id="authPageStep3BackBtn" type="button" style="flex:1; padding:14px; background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); border-radius:10px; font-weight:bold; font-size:14px; cursor:pointer; transition:0.2s;">
+                ← Back
+              </button>
+              <button id="authPageCompleteRegBtn" type="button" style="flex:2; padding:14px; background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; border-radius:10px; font-weight:bold; font-size:15px; cursor:pointer; box-shadow:0 4px 15px rgba(16,185,129,0.35); transition:0.2s;">
+                ✨ Complete Registration
+              </button>
+            </div>
+          `;
+        }
+      }
+
+      appEl.innerHTML = `
+        <div class="auth-page-container" style="max-width:620px; margin:30px auto; padding:0 16px; animation:fadeIn 0.3s ease;">
+          
+          <div class="card" style="background:linear-gradient(145deg, rgba(15,23,42,0.96), rgba(30,41,59,0.92)); border:1px solid var(--border); border-radius:24px; padding:clamp(24px, 5vw, 40px); box-shadow:0 25px 60px rgba(0,0,0,0.6); position:relative;">
+            
+            <!-- Branding Header -->
+            <div style="text-align:center; margin-bottom:24px;">
+              <div style="display:inline-flex; align-items:center; justify-content:center; width:68px; height:68px; border-radius:22px; background:rgba(6,182,212,0.12); border:1px solid rgba(6,182,212,0.3); margin-bottom:14px; font-size:34px; box-shadow:0 0 20px rgba(6,182,212,0.2);">
+                🛡️
+              </div>
+              <h1 style="margin:0; font-size:clamp(22px, 4vw, 28px); font-weight:800; color:#fff; letter-spacing:-0.5px;">
+                ${isReg ? '✨ Claim Chief Profile & Register' : '🔑 Alliance Chief Sign In'}
+              </h1>
+              <p style="color:var(--text-muted); font-size:14px; margin:8px 0 0 0; line-height:1.5;">
+                ${isReg ? 'Link your Whiteout Survival character to claim your stats, gift code perks & personal logs.' : 'Sign in to access your alliance dashboard, event countdowns, and leaderboards.'}
+              </p>
+            </div>
+
+            <!-- Segmented Mode Switcher -->
+            <div style="display:flex; background:rgba(0,0,0,0.35); padding:5px; border-radius:14px; border:1px solid rgba(255,255,255,0.06); margin-bottom:26px;">
+              <button id="authPageTabLogin" type="button" style="flex:1; padding:11px; border-radius:10px; border:none; font-weight:bold; font-size:14px; cursor:pointer; transition:all 0.2s; background:${!isReg ? 'var(--accent)' : 'transparent'}; color:${!isReg ? '#fff' : 'var(--text-muted)'}; box-shadow:${!isReg ? '0 4px 12px rgba(14,165,233,0.3)' : 'none'};">
+                🔑 Sign In
+              </button>
+              <button id="authPageTabRegister" type="button" style="flex:1; padding:11px; border-radius:10px; border:none; font-weight:bold; font-size:14px; cursor:pointer; transition:all 0.2s; background:${isReg ? 'linear-gradient(135deg, #06b6d4, #3b82f6)' : 'transparent'}; color:${isReg ? '#fff' : 'var(--text-muted)'}; box-shadow:${isReg ? '0 4px 12px rgba(6,182,212,0.3)' : 'none'};">
+                ✨ Claim / Register
+              </button>
+            </div>
+
+            ${stepIndicatorHtml}
+
+            <div id="authPageErrorBox" style="color:var(--danger); font-size:13px; margin-bottom:18px; display:none; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); padding:10px 14px; border-radius:10px; text-align:left;"></div>
+
+            ${contentHtml}
+
+            <!-- Bottom Mode Footer -->
+            <div style="text-align:center; margin-top:24px; font-size:13.5px; color:var(--text-muted); border-top:1px solid rgba(255,255,255,0.06); padding-top:16px;">
+              ${isReg ? `
+                Already have an account? <a href="#" id="authPageFooterToggleBtn" style="color:var(--accent); text-decoration:none; font-weight:bold;">Sign In here</a>
+              ` : `
+                New to the alliance? <a href="#" id="authPageFooterToggleBtn" style="color:var(--accent); text-decoration:none; font-weight:bold;">Claim your profile & Register</a>
+              `}
+            </div>
+
+          </div>
+
+        </div>
+      `;
+
+      const showError = (msg) => {
+        const errBox = document.getElementById('authPageErrorBox');
+        if (errBox) {
+          errBox.style.display = 'block';
+          errBox.textContent = msg;
+        }
+      };
+
+      const hideError = () => {
+        const errBox = document.getElementById('authPageErrorBox');
+        if (errBox) errBox.style.display = 'none';
+      };
+
+      // Wire Tab Mode Switcher
+      const tabLogin = document.getElementById('authPageTabLogin');
+      const tabReg = document.getElementById('authPageTabRegister');
+      const footerToggle = document.getElementById('authPageFooterToggleBtn');
+
+      if (tabLogin) tabLogin.addEventListener('click', () => { mode = 'login'; step = 1; render(); });
+      if (tabReg) tabReg.addEventListener('click', () => { mode = 'register'; step = 1; render(); });
+      if (footerToggle) footerToggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        mode = (mode === 'register') ? 'login' : 'register';
+        step = 1;
+        render();
+      });
+
+      // Wire Sign In Handlers
+      if (!isReg) {
+        if (step === 1) {
+          const btnEmail = document.getElementById('authPageSignInEmailBtn');
+          const btnGoogle = document.getElementById('authPageSignInGoogleBtn');
+          if (btnEmail) btnEmail.addEventListener('click', () => { step = 2; render(); });
+          if (btnGoogle) btnGoogle.addEventListener('click', async () => {
+            try {
+              btnGoogle.disabled = true;
+              btnGoogle.innerHTML = 'Connecting with Google...';
+              const userCred = await loginWithGoogle();
+              const u = userCred.user;
+              const uSnap = await get(ref(db, `users/${u.uid}`)).catch(() => null);
+              if (uSnap && uSnap.exists()) {
+                window.showToast("Successfully signed in with Google!", "success");
+                views.account();
+              } else {
+                window.showToast("Google connected! Please complete your Chief registration.", "info");
+                mode = 'register';
+                step = 2;
+                isGoogleAuth = true;
+                googleUserData = u;
+                render();
+              }
+            } catch(e) {
+              btnGoogle.disabled = false;
+              btnGoogle.innerHTML = `<span style="display:flex; align-items:center; gap:14px;"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width:24px; height:24px;" alt="Google"><span><span class="method-title" style="font-size:15px;">Continue with Google</span><span class="method-desc">Instant 1-click authentication</span></span></span><span class="method-arrow">➔</span>`;
+              showError(e.message || "Google sign-in failed.");
+            }
+          });
+        } else {
+          // Sign In Step 2 Form
+          const emailEl = document.getElementById('authPageLoginEmail');
+          const pwEl = document.getElementById('authPageLoginPassword');
+          const showPwBtn = document.getElementById('authPageShowLoginPwBtn');
+          const forgotBtn = document.getElementById('authPageForgotPwBtn');
+          const backBtn = document.getElementById('authPageSignInBackBtn');
+          const submitBtn = document.getElementById('authPageSubmitSignInBtn');
+
+          if (backBtn) backBtn.addEventListener('click', () => { step = 1; render(); });
+          if (showPwBtn && pwEl) {
+            showPwBtn.addEventListener('click', () => {
+              if (pwEl.type === 'password') {
+                pwEl.type = 'text';
+                showPwBtn.textContent = '🙈';
+              } else {
+                pwEl.type = 'password';
+                showPwBtn.textContent = '👁️';
+              }
+            });
+          }
+          if (forgotBtn) {
+            forgotBtn.addEventListener('click', async (e) => {
+              e.preventDefault();
+              const val = emailEl ? emailEl.value.trim() : tempEmail;
+              const inputEmail = await window.customPrompt("Enter your email address to receive a password reset link:", val);
+              if (inputEmail) {
+                try {
+                  await resetPassword(inputEmail.trim());
+                  window.showToast("Password reset link sent to your email!", "success");
+                } catch(err) {
+                  window.showToast(err.message || "Failed to send reset link.", "error");
+                }
+              }
+            });
+          }
+          const handleLoginSubmit = async () => {
+            const email = emailEl ? emailEl.value.trim().toLowerCase() : "";
+            const pw = pwEl ? pwEl.value : "";
+            if (!email || !pw) {
+              showError("Email and password are required.");
+              return;
+            }
+            hideError();
+            submitBtn.disabled = true;
+            submitBtn.textContent = "Signing In...";
+            try {
+              await loginUser(email, pw);
+              window.showToast("Successfully signed in!", "success");
+              views.account();
+            } catch(err) {
+              submitBtn.disabled = false;
+              submitBtn.textContent = "🔑 Sign In";
+              showError(err.message || "Sign in failed. Please verify credentials.");
+            }
+          };
+          if (submitBtn) submitBtn.addEventListener('click', handleLoginSubmit);
+          if (pwEl) pwEl.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleLoginSubmit(); });
+          if (emailEl) emailEl.addEventListener('keypress', (e) => { if (e.key === 'Enter' && pwEl) pwEl.focus(); });
+          setTimeout(() => { if (emailEl) emailEl.focus(); }, 60);
+        }
+      }
+
+      // Wire Register Handlers
+      if (isReg) {
+        if (step === 1) {
+          const btnEmail = document.getElementById('authPageChooseEmailBtn');
+          const btnGoogle = document.getElementById('authPageChooseGoogleBtn');
+          if (btnEmail) btnEmail.addEventListener('click', () => { isGoogleAuth = false; googleUserData = null; step = 2; render(); });
+          if (btnGoogle) btnGoogle.addEventListener('click', async () => {
+            try {
+              btnGoogle.disabled = true;
+              btnGoogle.innerHTML = 'Connecting with Google...';
+              const userCred = await loginWithGoogle();
+              const u = userCred.user;
+              const uSnap = await get(ref(db, `users/${u.uid}`)).catch(() => null);
+              if (uSnap && uSnap.exists()) {
+                window.showToast("Google account already registered! Welcome back.", "success");
+                views.account();
+              } else {
+                isGoogleAuth = true;
+                googleUserData = u;
+                step = 2;
+                render();
+              }
+            } catch(e) {
+              btnGoogle.disabled = false;
+              btnGoogle.innerHTML = `<span style="display:flex; align-items:center; gap:14px;"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width:24px; height:24px;" alt="Google"><span><span class="method-title" style="font-size:15px;">Continue with Google</span><span class="method-desc">Fast 1-click authentication</span></span></span><span class="method-arrow">➔</span>`;
+              showError(e.message || "Google registration failed.");
+            }
+          });
+        } else if (step === 2) {
+          const emailEl = document.getElementById('authPageEmail');
+          const pwEl = document.getElementById('authPagePassword');
+          const showPwBtn = document.getElementById('authPageShowPwBtn');
+          const dateEl = document.getElementById('authPageDateStarted');
+          const datePrev = document.getElementById('authPageDatePreview');
+          const backBtn = document.getElementById('authPageStep2BackBtn');
+          const nextBtn = document.getElementById('authPageNextToStep3Btn');
+
+          if (backBtn) backBtn.addEventListener('click', () => { step = 1; render(); });
+          if (showPwBtn && pwEl) {
+            showPwBtn.addEventListener('click', () => {
+              if (pwEl.type === 'password') {
+                pwEl.type = 'text';
+                showPwBtn.textContent = '🙈';
+              } else {
+                pwEl.type = 'password';
+                showPwBtn.textContent = '👁️';
+              }
+            });
+          }
+          if (dateEl) {
+            const updateDatePreview = () => {
+              tempDateStarted = dateEl.value;
+              if (datePrev) {
+                datePrev.textContent = tempDateStarted 
+                  ? `⏱️ Active for ${window.calculateTimeActive(tempDateStarted)}`
+                  : 'This determines your exact Chief active service time on leaderboards.';
+              }
+            };
+            dateEl.addEventListener('input', updateDatePreview);
+            dateEl.addEventListener('change', updateDatePreview);
+          }
+          if (nextBtn) {
+            nextBtn.addEventListener('click', () => {
+              hideError();
+              if (!isGoogleAuth) {
+                const em = emailEl ? emailEl.value.trim().toLowerCase() : "";
+                const pw = pwEl ? pwEl.value : "";
+                if (!em || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) {
+                  showError("Please enter a valid email address.");
+                  if (emailEl) emailEl.focus();
+                  return;
+                }
+                if (!pw || pw.length < 6) {
+                  showError("Password must be at least 6 characters.");
+                  if (pwEl) pwEl.focus();
+                  return;
+                }
+                tempEmail = em;
+                tempPassword = pw;
+              }
+              const dStarted = dateEl ? dateEl.value : "";
+              if (!dStarted) {
+                showError("Please select the date you started playing Whiteout Survival.");
+                if (dateEl) {
+                  dateEl.focus();
+                  try { dateEl.showPicker(); } catch(e) {}
+                }
+                return;
+              }
+              tempDateStarted = dStarted;
+              step = 3;
+              render();
+            });
+          }
+        } else if (step === 3) {
+          const gidEl = document.getElementById('authPageGameId');
+          const verifyBtn = document.getElementById('authPageVerifyGidBtn');
+          const verificationArea = document.getElementById('authPageChiefVerificationArea');
+          const backBtn = document.getElementById('authPageStep3BackBtn');
+          const completeBtn = document.getElementById('authPageCompleteRegBtn');
+
+          if (backBtn) backBtn.addEventListener('click', () => { step = 2; render(); });
+
+          const renderManualForm = () => {
+            isManualFallback = true;
+            if (!verificationArea) return;
+            verificationArea.innerHTML = `
+              <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:14px; padding:16px; margin-top:10px; text-align:left;">
+                <div style="font-size:13px; font-weight:bold; color:#38bdf8; margin-bottom:12px; display:flex; align-items:center; gap:6px;">
+                  ✏️ Manual Character Entry
+                </div>
+                <div style="margin-bottom:14px;">
+                  <label style="font-size:12px; color:var(--text-muted); font-weight:bold; display:block; margin-bottom:6px;">In-Game Chief Name (NOT numeric ID): <span style="color:var(--danger);">*</span></label>
+                  <input type="text" id="authPageManualChiefName" value="${window.escapeHTML(manualChiefName)}" placeholder="e.g. BrianDCox" style="width:100%; padding:11px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:14px; box-sizing:border-box;">
+                  <div id="authPageManualNameWarn" style="font-size:11px; color:var(--danger); display:none; margin-top:4px;">⚠️ Enter your text Chief Name (e.g. BrianDCox), NOT numeric Game ID.</div>
+                </div>
+                <div>
+                  <label style="font-size:12px; color:var(--text-muted); font-weight:bold; display:block; margin-bottom:6px;">Furnace Level:</label>
+                  ${window.renderFurnaceSelectHtml('authPageManualFurnaceSelect', manualFurnaceLevel, '')}
+                </div>
+              </div>
+            `;
+            const mNameInput = document.getElementById('authPageManualChiefName');
+            const mWarn = document.getElementById('authPageManualNameWarn');
+            const gidVal = gidEl ? gidEl.value.trim() : tempGameId;
+            if (mNameInput && mWarn) {
+              mNameInput.addEventListener('input', () => {
+                manualChiefName = mNameInput.value.trim();
+                if (manualChiefName && (/^\d+$/.test(manualChiefName) || manualChiefName === gidVal)) {
+                  mWarn.style.display = 'block';
+                } else {
+                  mWarn.style.display = 'none';
+                }
+              });
+            }
+          };
+
+          const renderInGameCodeBox = (val) => {
+            if (!verificationArea) return;
+            verificationArea.innerHTML = `
+              <div style="background:rgba(15,23,42,0.95); border:1px solid rgba(56,189,248,0.4); border-radius:14px; padding:16px; margin-top:10px; box-shadow:0 4px 20px rgba(0,0,0,0.4); text-align:left;">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+                  <span style="font-size:18px;">📩</span>
+                  <strong style="color:#38bdf8; font-size:14px;">In-Game Verification Code Sent!</strong>
+                </div>
+                <p style="font-size:12.5px; color:var(--text-muted); margin:0 0 12px 0; line-height:1.4;">
+                  A 6-digit confirmation code was sent to your in-game mailbox in <em>Whiteout Survival</em> for ID <strong>${window.escapeHTML(val)}</strong>.
+                </p>
+                <div style="display:flex; gap:8px; align-items:center;">
+                  <input type="text" id="authPageCodeInput" maxlength="6" placeholder="000000" style="flex:1; max-width:140px; text-align:center; font-size:18px; font-weight:800; letter-spacing:3px; padding:10px 12px; border-radius:8px; border:1px solid rgba(56,189,248,0.5); background:var(--bg-main); color:#fff; box-sizing:border-box;">
+                  <button type="button" id="authPageConfirmCodeBtn" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; border-radius:8px; padding:11px 18px; font-size:13px; font-weight:bold; cursor:pointer; flex-shrink:0;">Confirm</button>
+                </div>
+                <div id="authPageCodeFeedback" style="font-size:12px; margin-top:8px; display:none;"></div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px; border-top:1px solid rgba(255,255,255,0.08); padding-top:8px; font-size:11px;">
+                  <button type="button" id="authPageResendCodeBtn" style="background:transparent; border:none; color:#38bdf8; cursor:pointer; padding:0; text-decoration:underline;">🔄 Resend Code</button>
+                  <button type="button" id="authPageFallbackManualBtn" style="background:transparent; border:none; color:var(--text-muted); cursor:pointer; padding:0; text-decoration:underline;">Don't have game open? Enter manually</button>
+                </div>
+              </div>
+            `;
+
+            const codeInput = document.getElementById('authPageCodeInput');
+            const confirmBtn = document.getElementById('authPageConfirmCodeBtn');
+            const feedback = document.getElementById('authPageCodeFeedback');
+            const resendBtn = document.getElementById('authPageResendCodeBtn');
+            const fallbackBtn = document.getElementById('authPageFallbackManualBtn');
+
+            if (fallbackBtn) fallbackBtn.addEventListener('click', renderManualForm);
+            if (resendBtn) {
+              resendBtn.addEventListener('click', async () => {
+                resendBtn.disabled = true;
+                resendBtn.textContent = 'Sending...';
+                try {
+                  await fetch(`${API_BASE_URL}?api=sendGameCaptcha&id=${encodeURIComponent(val)}`);
+                  if (feedback) {
+                    feedback.style.display = 'block';
+                    feedback.style.color = '#38bdf8';
+                    feedback.textContent = 'Fresh verification code dispatched to your in-game mailbox!';
+                  }
+                } catch(e) {}
+                resendBtn.disabled = false;
+                resendBtn.textContent = '🔄 Resend Code';
+              });
+            }
+            if (confirmBtn && codeInput) {
+              const handleVerify = async () => {
+                const code = codeInput.value.trim();
+                if (!code || code.length < 4) {
+                  if (feedback) {
+                    feedback.style.display = 'block';
+                    feedback.style.color = 'var(--danger)';
+                    feedback.textContent = 'Please enter the 6-digit code from your game mail.';
+                  }
+                  return;
+                }
+                confirmBtn.disabled = true;
+                confirmBtn.textContent = 'Verifying...';
+                if (feedback) feedback.style.display = 'none';
+
+                try {
+                  const res = await fetch(`${API_BASE_URL}?api=verifyGameCaptcha&id=${encodeURIComponent(val)}&code=${encodeURIComponent(code)}`);
+                  const data = await res.json();
+
+                  if (data && data.success && data.nickname) {
+                    verifiedChiefName = data.nickname;
+                    verifiedFurnaceLevel = data.stove_lv || "";
+                    verifiedCgToken = data.token || "";
+                    verifiedStateKid = data.section || "";
+                    verifiedAvatarUrl = data.avatar_image || "";
+                    isManualFallback = false;
+
+                    verificationArea.innerHTML = `
+                      <div style="background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.4); border-radius:12px; padding:14px; margin-top:10px;">
+                        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                          <div style="display:flex; align-items:center; gap:10px;">
+                            ${data.avatar_image ? `
+                              <div style="width:44px; height:44px; border-radius:50%; overflow:hidden; border:2px solid #10b981; flex-shrink:0; background:rgba(0,0,0,0.3);">
+                                <img src="${data.avatar_image}" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none';" />
+                              </div>
+                            ` : ''}
+                            <div>
+                              <div style="font-size:12px; color:#10b981; font-weight:bold;">✅ Character Verified!</div>
+                              <div style="font-size:15px; font-weight:800; color:#fff; margin-top:2px;">
+                                ${window.escapeHTML(data.nickname)}
+                                <span style="font-size:11px; color:#38bdf8; font-weight:bold; background:rgba(56,189,248,0.15); padding:2px 6px; border-radius:4px; margin-left:6px;">State #${window.escapeHTML(data.section || '2089')}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div style="display:flex; align-items:center; flex-shrink:0;">
+                            ${window.getFurnaceIconHtml(data.stove_lv, 42)}
+                          </div>
+                        </div>
+                        ${data.avatar_image ? `
+                          <div style="margin-top:10px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.08); font-size:12px; color:var(--text-muted); display:flex; align-items:center; gap:8px;">
+                            <input type="checkbox" id="authPageUseWosAvatar" checked style="accent-color:#10b981; cursor:pointer;" />
+                            <label for="authPageUseWosAvatar" style="cursor:pointer; color:#e2e8f0;">Use in-game Whiteout Survival avatar as site profile picture</label>
+                          </div>
+                        ` : ''}
+                      </div>
+                    `;
+                    if (verifyBtn) {
+                      verifyBtn.disabled = false;
+                      verifyBtn.textContent = 'Verified ✅';
+                    }
+                  } else {
+                    throw new Error(window.translateWosApiError(data.message || 'Invalid or expired code.', data.code));
+                  }
+                } catch(err) {
+                  confirmBtn.disabled = false;
+                  confirmBtn.textContent = 'Confirm';
+                  if (feedback) {
+                    feedback.style.display = 'block';
+                    feedback.style.color = 'var(--danger)';
+                    feedback.textContent = window.translateWosApiError(err.message || 'Verification failed. Please check code.');
+                  }
+                }
+              };
+              confirmBtn.addEventListener('click', handleVerify);
+              codeInput.addEventListener('keypress', (ev) => { if (ev.key === 'Enter') handleVerify(); });
+              setTimeout(() => codeInput.focus(), 60);
+            }
+          };
+
+          if (verifyBtn && gidEl) {
+            verifyBtn.addEventListener('click', async () => {
+              const val = gidEl.value.trim();
+              if (!val || !/^\d{6,14}$/.test(val)) {
+                showError("Please enter a valid numeric Game ID (e.g. 319875650).");
+                return;
+              }
+              hideError();
+              tempGameId = val;
+              verifyBtn.disabled = true;
+              verifyBtn.textContent = "Sending...";
+              if (verificationArea) {
+                verificationArea.innerHTML = `<div style="color:#38bdf8; font-size:12.5px; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.3); padding:10px 14px; border-radius:10px; margin-top:8px;">📩 Sending verification code to in-game mailbox in Whiteout Survival...</div>`;
+              }
+              try {
+                const sendRes = await fetch(`${API_BASE_URL}?api=sendGameCaptcha&id=${encodeURIComponent(val)}`);
+                const sendData = await sendRes.json();
+                verifyBtn.disabled = false;
+                verifyBtn.textContent = "📩 Verify ID";
+                if (sendData && sendData.success) {
+                  renderInGameCodeBox(val);
+                } else {
+                  const translatedMsg = window.translateWosApiError(sendData.message || "Could not send in-game code. Check Game ID.", sendData.code);
+                  if (verificationArea) {
+                    verificationArea.innerHTML = `
+                      <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:12px; margin-top:8px; font-size:12.5px; color:#f87171; text-align:left;">
+                        ⚠️ ${window.escapeHTML(translatedMsg)}
+                        <div style="margin-top:8px;">
+                          <button type="button" id="authPageFallbackBtn2" style="background:var(--accent); color:#fff; border:none; padding:6px 14px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">Enter Chief Name Manually ➔</button>
+                        </div>
+                      </div>
+                    `;
+                    const fb = document.getElementById('authPageFallbackBtn2');
+                    if (fb) fb.addEventListener('click', renderManualForm);
+                  }
+                }
+              } catch(err) {
+                verifyBtn.disabled = false;
+                verifyBtn.textContent = "📩 Verify ID";
+                if (verificationArea) {
+                  verificationArea.innerHTML = `
+                    <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:12px; margin-top:8px; font-size:12.5px; color:#f87171; text-align:left;">
+                      ⚠️ Network error connecting to game servers.
+                      <div style="margin-top:8px;">
+                        <button type="button" id="authPageFallbackBtn3" style="background:var(--accent); color:#fff; border:none; padding:6px 14px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">Enter Chief Name Manually ➔</button>
+                      </div>
+                    </div>
+                  `;
+                  const fb3 = document.getElementById('authPageFallbackBtn3');
+                  if (fb3) fb3.addEventListener('click', renderManualForm);
+                }
+              }
+            });
+          }
+
+          if (completeBtn) {
+            completeBtn.addEventListener('click', async () => {
+              const gid = gidEl ? gidEl.value.trim() : tempGameId;
+              if (!gid) {
+                showError("Game ID is required.");
+                return;
+              }
+              const manualNameEl = document.getElementById('authPageManualChiefName');
+              const manualFurnaceEl = document.getElementById('authPageManualFurnaceSelect');
+              const finalChiefName = verifiedChiefName || (manualNameEl ? manualNameEl.value.trim() : manualChiefName);
+              const finalFurnace = verifiedFurnaceLevel || (manualFurnaceEl ? manualFurnaceEl.value : manualFurnaceLevel) || "F30";
+
+              if (!finalChiefName) {
+                renderManualForm();
+                showError("Please verify your in-game mailbox code or enter your Chief Name manually.");
+                return;
+              }
+              if (/^\d+$/.test(finalChiefName) || finalChiefName === gid) {
+                showError("Chief Name must be your character name (e.g. BrianDCox), NOT your numeric Game ID.");
+                return;
+              }
+
+              hideError();
+              completeBtn.disabled = true;
+              completeBtn.textContent = "Creating Account...";
+
+              try {
+                const useWosAvatar = document.getElementById('authPageUseWosAvatar')?.checked !== false;
+                const avatarUrlToUse = (useWosAvatar && verifiedAvatarUrl) ? verifiedAvatarUrl : (googleUserData ? googleUserData.photoURL : "");
+
+                if (isGoogleAuth && googleUserData) {
+                  await set(ref(db, `users/${googleUserData.uid}`), {
+                    email: googleUserData.email,
+                    gameId: gid,
+                    name: finalChiefName,
+                    chiefName: finalChiefName,
+                    stove_lv: finalFurnace,
+                    furnaceLevel: finalFurnace,
+                    section: verifiedStateKid || "2089",
+                    avatar_image: verifiedAvatarUrl || (googleUserData.photoURL || ""),
+                    avatarPreference: useWosAvatar ? 'wos' : (googleUserData.photoURL ? 'custom' : 'initials'),
+                    wos_cg_token: verifiedCgToken || "",
+                    dateStarted: tempDateStarted,
+                    verifiedAt: new Date().toISOString(),
+                    centuryGamesVerified: !!verifiedCgToken,
+                    createdAt: new Date().toISOString(),
+                    authProvider: 'google'
+                  });
+                } else {
+                  await registerUser(tempEmail, tempPassword, gid, finalChiefName, finalFurnace);
+                  if (auth && auth.currentUser) {
+                    try {
+                      await update(ref(db, `users/${auth.currentUser.uid}`), {
+                        wos_cg_token: verifiedCgToken || "",
+                        section: verifiedStateKid || "2089",
+                        stove_lv: finalFurnace,
+                        avatar_image: verifiedAvatarUrl || "",
+                        avatarPreference: useWosAvatar ? 'wos' : 'initials',
+                        dateStarted: tempDateStarted,
+                        verifiedAt: new Date().toISOString(),
+                        centuryGamesVerified: !!verifiedCgToken
+                      });
+                    } catch(e) {}
+                  }
+                }
+
+                if (avatarUrlToUse) {
+                  try {
+                    await uploadAvatar(gid, avatarUrlToUse);
+                    avatarMap[gid] = avatarUrlToUse;
+                  } catch(e) {}
+                }
+
+                idToNameMap[gid] = finalChiefName;
+                nameToIdMap[finalChiefName] = gid;
+                window.idToNameMap[gid] = finalChiefName;
+                window.nameToIdMap[finalChiefName] = gid;
+
+                try {
+                  await window.enrollGiftcodeBot(gid, finalChiefName);
+                  await refreshIdToNameMap();
+                  const regToken = await getAuthToken();
+                  const url = `${API_BASE_URL}?api=registerNewPlayer&gameId=${encodeURIComponent(gid)}&name=${encodeURIComponent(finalChiefName)}&dateStarted=${encodeURIComponent(tempDateStarted)}&level=${encodeURIComponent(finalFurnace)}${regToken ? '&token=' + encodeURIComponent(regToken) : ''}`;
+                  fetch(url, { mode: 'no-cors' }).catch(() => null);
+                } catch(e) {}
+
+                if (window.triggerNewMemberAlerts) {
+                  window.triggerNewMemberAlerts({ gameId: gid, chiefName: finalChiefName, furnaceLevel: finalFurnace, email: isGoogleAuth ? googleUserData.email : tempEmail, createdAt: new Date().toISOString() });
+                }
+
+                window.showToast(`🎉 Welcome, Chief ${finalChiefName}! Account registered.`, "success");
+                views.account();
+              } catch(err) {
+                completeBtn.disabled = false;
+                completeBtn.textContent = "✨ Complete Registration";
+                showError(err.message || "Failed to complete registration.");
+              }
+            });
+          }
+        }
+      }
+    };
+
+    render();
+  },
   staff: async () => {
     if (!currentUser) return window.renderMembersOnlyGuard("Staff & Officers");
     let r5Html = '';

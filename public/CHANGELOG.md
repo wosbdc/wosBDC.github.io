@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.5.33] - 2026-08-14
+- Converted the Sign In and 3-Step Chief Registration wizard from a floating modal popup into a first-class, full-page view (`views.auth`).
+- Routed all navbar, sidebar, and member guard actions directly to the full-page experience, eliminating all backdrop clipping and accidental closure.
+- Preserved full 1-click Google authentication, interactive calendar start-date picker, and Whiteout Survival mailbox verification code workflow.
+
 ## [2.5.32] - 2026-08-14
 - Enlarged and enhanced the Sign In & Multi-Step Registration modal dimensions with fluid responsive padding and max-width.
 - Prevented accidental dismissal of the signup modal on side backdrop clicks so in-progress registrations are never lost.

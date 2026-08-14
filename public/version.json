@@ -1,8 +1,10 @@
 {
-  "version": "2.5.32",
+  "version": "2.5.33",
   "releaseDate": "2026-08-14",
-  "title": "✨ Expanded Signup Modal & Protected Backdrop",
+  "title": "🛡️ Full-Page Chief Registration & Sign In Experience",
   "notes": [
-    "Expanded the signup window dimensions and prevented accidental closing on backdrop clicks to protect form progress"
+    "Converted popup modal auth flow into a dedicated, spacious full-page view inside the main layout",
+    "Preserved 3-step registration wizard with Google 1-click login and Whiteout Survival in-game character verification",
+    "Eliminated all modal clipping and accidental background dismissals"
   ]
 }
