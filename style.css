@@ -915,3 +915,72 @@ tr:hover td {
         max-height: unset;
     }
 }
+
+/* Auth Method Cards (Theme Adaptive for Midnight, Light, and Ombre) */
+.auth-method-btn {
+  width: 100%;
+  padding: 14px 18px;
+  background: var(--bg-main);
+  border: 1px solid var(--border);
+  color: var(--text-main);
+  border-radius: 12px;
+  font-weight: bold;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-sizing: border-box;
+  text-align: left;
+}
+
+.auth-method-btn:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+  box-shadow: 0 4px 15px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.auth-method-btn.email-method {
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg-main));
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+}
+
+.auth-method-btn.email-method:hover {
+  background: color-mix(in srgb, var(--accent) 18%, var(--bg-main));
+}
+
+.auth-method-btn.google-method {
+  background: var(--bg-main);
+  border-color: var(--border);
+}
+
+.auth-method-btn.google-method:hover {
+  background: color-mix(in srgb, var(--text-main) 6%, var(--bg-main));
+}
+
+.auth-method-btn .method-title {
+  display: block;
+  font-size: 14px;
+  color: var(--text-main);
+  font-weight: 700;
+}
+
+.auth-method-btn .method-desc {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: normal;
+  margin-top: 2px;
+}
+
+.auth-method-btn .method-arrow {
+  color: var(--text-muted);
+  font-size: 18px;
+  transition: transform 0.2s, color 0.2s;
+}
+
+.auth-method-btn:hover .method-arrow {
+  color: var(--accent);
+  transform: translateX(3px);
+}

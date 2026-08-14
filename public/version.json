@@ -1,10 +1,10 @@
 {
-  "version": "2.5.0",
+  "version": "2.5.1",
   "releaseDate": "2026-08-14",
-  "title": "✨ Unified Method Selection for Registration & Sign In",
+  "title": "✨ Theme-Adaptive Auth Method Cards (Midnight, Light, Ombre)",
   "notes": [
-    "Clean Sign In method picker: Choose between Email & Password or Google",
-    "Streamlined transitions with back navigation and dedicated login inputs",
-    "Unified aesthetic matching the 3-step registration wizard"
+    "Theme-adaptive Google and Email action cards dynamically matching Midnight, Light, and Ombre themes",
+    "Polished hover lift states, accent borders, and animated navigation arrows",
+    "Consistent styling across both Registration and Sign In modals"
   ]
 }

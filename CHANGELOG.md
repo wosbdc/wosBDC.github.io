@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [2.5.1] - 2026-08-14
+### ✨ Theme-Adaptive Auth Method Cards (Midnight, Light, Ombre)
+- **🎨 Multi-Theme Google & Email Action Cards**:
+  - Transformed the hardcoded white Google buttons into dynamic theme-adaptive cards.
+  - Automatically matches **Midnight** (dark navy glass), **Light** (clean soft slate), and **Ombre** (neon magenta/obsidian).
+  - Added smooth hover lift effects, responsive accent glow, and animated transition arrows.
+
 ## [2.5.0] - 2026-08-14
 ### ✨ Unified Method Selection for Registration & Sign In
 - **🔑 Streamlined Sign-In Method Picker**: Added matching initial method selection for Sign In:

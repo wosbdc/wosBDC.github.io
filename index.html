@@ -321,26 +321,26 @@
           </p>
 
           <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:14px;">
-            <button id="authSignInChooseEmailBtn" type="button" style="width:100%; padding:14px 18px; background:linear-gradient(135deg, rgba(59,130,246,0.15), rgba(37,99,235,0.25)); border:1px solid rgba(59,130,246,0.5); color:#fff; border-radius:12px; font-weight:bold; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
-              <span style="display:flex; align-items:center; gap:10px;">
-                <span style="font-size:20px;">📧</span>
-                <span style="text-align:left;">
-                  <span style="display:block; font-size:14px; color:#fff;">Email & Password</span>
-                  <span style="display:block; font-size:11px; color:#93c5fd; font-weight:normal;">Sign in with your password</span>
+            <button id="authSignInChooseEmailBtn" type="button" class="auth-method-btn email-method">
+              <span style="display:flex; align-items:center; gap:12px;">
+                <span style="font-size:22px;">📧</span>
+                <span>
+                  <span class="method-title">Email & Password</span>
+                  <span class="method-desc">Sign in with your password</span>
                 </span>
               </span>
-              <span style="color:#93c5fd; font-size:18px;">➔</span>
+              <span class="method-arrow">➔</span>
             </button>
 
-            <button id="authSignInChooseGoogleBtn" type="button" style="width:100%; padding:14px 18px; background:#fff; color:#333; border:1px solid #ddd; border-radius:12px; font-weight:bold; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; transition:all 0.2s;" onmouseover="this.style.background='#f8fafc'; this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#fff'; this.style.transform='translateY(0)'">
-              <span style="display:flex; align-items:center; gap:10px;">
+            <button id="authSignInChooseGoogleBtn" type="button" class="auth-method-btn google-method">
+              <span style="display:flex; align-items:center; gap:12px;">
                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width:20px; height:20px;" alt="Google">
-                <span style="text-align:left;">
-                  <span style="display:block; font-size:14px; color:#333;">Continue with Google</span>
-                  <span style="display:block; font-size:11px; color:#666; font-weight:normal;">Instant 1-click sign in</span>
+                <span>
+                  <span class="method-title">Continue with Google</span>
+                  <span class="method-desc">Instant 1-click sign in</span>
                 </span>
               </span>
-              <span style="color:#666; font-size:18px;">➔</span>
+              <span class="method-arrow">➔</span>
             </button>
           </div>
         </div>
@@ -382,26 +382,26 @@
         </p>
 
         <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:14px;">
-          <button id="authChooseEmailBtn" type="button" style="width:100%; padding:14px 18px; background:linear-gradient(135deg, rgba(59,130,246,0.15), rgba(37,99,235,0.25)); border:1px solid rgba(59,130,246,0.5); color:#fff; border-radius:12px; font-weight:bold; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
-            <span style="display:flex; align-items:center; gap:10px;">
-              <span style="font-size:20px;">📧</span>
-              <span style="text-align:left;">
-                <span style="display:block; font-size:14px; color:#fff;">Email & Password</span>
-                <span style="display:block; font-size:11px; color:#93c5fd; font-weight:normal;">Create a dedicated password</span>
+          <button id="authChooseEmailBtn" type="button" class="auth-method-btn email-method">
+            <span style="display:flex; align-items:center; gap:12px;">
+              <span style="font-size:22px;">📧</span>
+              <span>
+                <span class="method-title">Email & Password</span>
+                <span class="method-desc">Create a dedicated password</span>
               </span>
             </span>
-            <span style="color:#93c5fd; font-size:18px;">➔</span>
+            <span class="method-arrow">➔</span>
           </button>
 
-          <button id="authChooseGoogleBtn" type="button" style="width:100%; padding:14px 18px; background:#fff; color:#333; border:1px solid #ddd; border-radius:12px; font-weight:bold; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; transition:all 0.2s;" onmouseover="this.style.background='#f8fafc'; this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#fff'; this.style.transform='translateY(0)'">
-            <span style="display:flex; align-items:center; gap:10px;">
+          <button id="authChooseGoogleBtn" type="button" class="auth-method-btn google-method">
+            <span style="display:flex; align-items:center; gap:12px;">
               <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width:20px; height:20px;" alt="Google">
-              <span style="text-align:left;">
-                <span style="display:block; font-size:14px; color:#333;">Continue with Google</span>
-                <span style="display:block; font-size:11px; color:#666; font-weight:normal;">Fast 1-click authentication</span>
+              <span>
+                <span class="method-title">Continue with Google</span>
+                <span class="method-desc">Fast 1-click authentication</span>
               </span>
             </span>
-            <span style="color:#666; font-size:18px;">➔</span>
+            <span class="method-arrow">➔</span>
           </button>
         </div>
       </div>
