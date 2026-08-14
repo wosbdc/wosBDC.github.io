@@ -262,24 +262,49 @@ window.escapeHTML = (str) => {
   }[tag]));
 };
 
-window.translateWosApiError = (msg) => {
-  if (!msg || typeof msg !== 'string') return "An error occurred communicating with the game server.";
+window.translateWosApiError = (msg, code = null) => {
+  if (typeof msg === 'object' && msg !== null) {
+    if (msg.code !== undefined) code = msg.code;
+    msg = msg.message || msg.rawMsg || JSON.stringify(msg);
+  }
+  const codeNum = typeof code === 'number' ? code : (code ? parseInt(code, 10) : null);
+  const codeBadge = codeNum ? `[Code ${codeNum}] ` : '';
+
+  if (codeNum === 101031008 || codeNum === 15006) {
+    return `${codeBadge}30-Day session token expired. Please enter a fresh in-game code to renew.`;
+  }
+  if (codeNum === 101031005) {
+    return `${codeBadge}Daily verification code limit reached for this Game ID. Please wait a while or enter Chief Name manually.`;
+  }
+  if (codeNum === 101031002) {
+    return `${codeBadge}Invalid or expired verification code. Please check your latest in-game mailbox.`;
+  }
+  if (codeNum === 101031001) {
+    return `${codeBadge}Player ID not found. Please double-check your numeric Game ID in Whiteout Survival.`;
+  }
+  if (codeNum === 40001 || codeNum === 40003) {
+    return `${codeBadge}Rate limit exceeded. Please wait 30 seconds before trying again.`;
+  }
+
+  if (!msg || typeof msg !== 'string') return `${codeBadge}An error occurred communicating with the game server.`;
+
   if (msg.includes("验证码发送次数已达上限") || msg.includes("次数已达上限") || msg.includes("上限")) {
-    return "Verification code limit reached for this Game ID today. Please wait a while before requesting another code, or enter your Chief Name manually below.";
+    return `${codeBadge}Verification code limit reached for this Game ID today. Please wait a while before requesting another code, or enter your Chief Name manually below.`;
   }
   if (msg.includes("验证码错误") || msg.includes("验证码无效") || msg.includes("验证码已过期")) {
-    return "Invalid or expired verification code. Please check your in-game mailbox or request a new code.";
+    return `${codeBadge}Invalid or expired verification code. Please check your in-game mailbox or request a new code.`;
   }
   if (msg.includes("角色不存在") || msg.includes("用户不存在") || msg.includes("未找到")) {
-    return "Player ID not found. Please double check your numeric Game ID in Whiteout Survival.";
+    return `${codeBadge}Player ID not found. Please double check your numeric Game ID in Whiteout Survival.`;
   }
   if (msg.includes("频繁") || msg.includes("稍后再试")) {
-    return "Too many requests. Please wait a moment and try again.";
+    return `${codeBadge}Too many requests. Please wait a moment and try again.`;
   }
   if (msg.includes("登录态已失效") || msg.includes("已失效")) {
-    return "30-day sync token expired. Please enter a fresh in-game code to renew.";
+    return `${codeBadge}30-day sync token expired. Please enter a fresh in-game code to renew.`;
   }
-  return msg;
+
+  return codeBadge ? `${codeBadge}${msg}` : msg;
 };
 
 window.formatTimeActiveShort = (str) => {
@@ -9123,10 +9148,11 @@ window.handleSyncCenturyGamesProfile = async () => {
       window.showToast("Profile synced successfully!", "success");
       if (views.account) views.account();
     } else if (data && data.expired) {
-      window.showToast("30-day session token expired. Please enter new in-game code to refresh.", "warning");
+      window.showToast(window.translateWosApiError(data.message || "30-day session token expired. Please enter new in-game code to refresh.", data.code), "warning");
       window.openAccountHubVerifyModal();
     } else {
-      throw new Error(data.message || "Failed to sync character stats.");
+      const errMsg = window.translateWosApiError(data.message || "Failed to sync character stats.", data.code);
+      throw new Error(errMsg);
     }
   } catch (err) {
     console.error("Sync profile error:", err);
@@ -9215,7 +9241,7 @@ window.openAccountHubVerifyModal = () => {
           window.showToast("📩 Verification code sent to your in-game mailbox!", "info");
           if (codeInput) setTimeout(() => codeInput.focus(), 60);
         } else {
-          throw new Error(data.message || 'Failed to dispatch in-game code.');
+          throw new Error(window.translateWosApiError(data.message || 'Failed to dispatch in-game code.', data.code));
         }
       } catch (err) {
         sendBtn.disabled = false;
@@ -9280,7 +9306,7 @@ window.openAccountHubVerifyModal = () => {
           window.showToast("🎉 Character verified & 30-day sync token bound!", "success");
           if (views.account) views.account();
         } else {
-          throw new Error(data.message || 'Invalid or expired code.');
+          throw new Error(window.translateWosApiError(data.message || 'Invalid or expired code.', data.code));
         }
       } catch (err) {
         submitCodeBtn.disabled = false;
@@ -9371,14 +9397,15 @@ window.handleSyncAltProfile = async (gid, btnEl = null) => {
       window.showToast(`✨ Alt ${data.nickname || cleanName} stats & avatar synced!`, 'success');
       if (views.account) views.account();
     } else if (data && data.expired) {
-      window.showToast(`30-day token expired for ${cleanName}. Please enter in-game code to renew.`, 'warning');
+      window.showToast(window.translateWosApiError(data.message || `30-day token expired for ${cleanName}. Please enter in-game code to renew.`, data.code), 'warning');
       window.openAltVerifyModal(cleanGid);
     } else {
-      throw new Error(data.message || 'Failed to sync alt stats.');
+      const errMsg = window.translateWosApiError(data.message || 'Failed to sync alt stats.', data.code);
+      throw new Error(errMsg);
     }
   } catch (err) {
     console.error('Sync alt error:', err);
-    window.showToast(window.translateWosApiError(err.message || 'Failed to sync with game servers.'), 'error');
+    window.showToast(err.message || 'Failed to sync with game servers.', 'error');
   } finally {
     if (btnEl) {
       btnEl.disabled = false;
@@ -9578,7 +9605,7 @@ window.openAltVerifyModal = (gid, altName = '') => {
           window.showToast(`📩 Verification code sent to ${cleanName}'s mail!`, 'info');
           if (codeInput) setTimeout(() => codeInput.focus(), 60);
         } else {
-          throw new Error(data.message || 'Failed to dispatch in-game code.');
+          throw new Error(window.translateWosApiError(data.message || 'Failed to dispatch in-game code.', data.code));
         }
       } catch (err) {
         sendBtn.disabled = false;
@@ -9650,7 +9677,7 @@ window.openAltVerifyModal = (gid, altName = '') => {
           window.showToast(`🎉 30-Day sync token bound for ${data.nickname || cleanName}!`, 'success');
           if (views.account) views.account();
         } else {
-          throw new Error(data.message || 'Invalid or expired code.');
+          throw new Error(window.translateWosApiError(data.message || 'Invalid or expired code.', data.code));
         }
       } catch (err) {
         submitCodeBtn.disabled = false;
@@ -15276,7 +15303,7 @@ window.resetBearTrapEvent = async () => {
                           }
                           if (altAutoCodeInput) setTimeout(() => altAutoCodeInput.focus(), 60);
                       } else {
-                          throw new Error(data.message || "Failed to dispatch code.");
+                          throw new Error(window.translateWosApiError(data.message || "Failed to dispatch code.", data.code));
                       }
                   } catch(err) {
                       altAutoSendCodeBtn.disabled = false;
@@ -15348,7 +15375,7 @@ window.resetBearTrapEvent = async () => {
                           window.showToast(`🎉 Linked & verified ${data.nickname || gid} with 30-day token!`, "success");
                           if (views.account) views.account();
                       } else {
-                          throw new Error(data.message || "Invalid or expired code.");
+                          throw new Error(window.translateWosApiError(data.message || "Invalid or expired code.", data.code));
                       }
                   } catch(err) {
                       altAutoConfirmCodeBtn.disabled = false;
