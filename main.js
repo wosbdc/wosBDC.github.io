@@ -7469,18 +7469,14 @@ window.triggerNewMemberAlerts = async (memberRecord) => {
         };
       });
 
-      const avatarUrl = 'https://raw.githubusercontent.com/wosbdc/wosBDC.github.io/main/public/gatekeeper.png';
       const embedPayload = {
-        username: "Alliance Gatekeeper 🛡️",
-        avatar_url: avatarUrl,
         embeds: [{
           title: "🛡️ ALLIANCE GATEKEEPER — RECENT NEW MEMBERS ROSTER",
           description: `📋 **Active Signups List (Past 7 Days)**:`,
           color: 4242388, // Cyan Accent (#06b6d4)
           fields: rosterFields.length > 0 ? rosterFields : [{ name: "Status", value: "No active signups in the past 7 days.", inline: false }],
           footer: {
-            text: `Whiteout Survival Alliance Dashboard • Total Recent Signups: ${recentMembers.length}`,
-            icon_url: avatarUrl
+            text: `Whiteout Survival Alliance Dashboard • Total Recent Signups: ${recentMembers.length}`
           },
           timestamp: new Date().toISOString()
         }]

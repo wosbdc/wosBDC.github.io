@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.99.6] - 2026-08-13
+### 🛡️ Discord Webhook Pure Native Avatar Integration
+- **🛡️ Pure Webhook Avatar**: Stripped all payload avatar overrides so Discord displays the exact profile picture and username that you uploaded directly to your Webhook in Discord Channel Settings.
+
 ## [1.99.5] - 2026-08-13
 ### 🛡️ Direct Raw GitHub Frost Warrior Avatar for Webhook 1537465776750203060
 - **🛡️ Custom Webhook Avatar Binding**: Configured direct raw GitHub PNG avatar URL (`https://raw.githubusercontent.com/wosbdc/wosBDC.github.io/main/public/gatekeeper.png`) for Webhook ID `1537465776750203060`, ensuring your custom Frost Knight Lion Warrior picture renders on every notification.
