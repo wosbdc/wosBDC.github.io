@@ -1,10 +1,10 @@
 {
-  "version": "2.5.4",
+  "version": "2.5.5",
   "releaseDate": "2026-08-14",
-  "title": "✨ Fix Sheet Schedule Column Resolution & Home Event Countdown",
+  "title": "✨ Add Navbar Notification Bell & 30-Day Game Token Expiration Alerts",
   "notes": [
-    "Fixed schedule parser to strictly target event columns F through I, eliminating personal data cross-contamination",
-    "Restored rich 7-day weekly schedule matrix in Calendar View",
-    "Synced Home view upcoming event countdown accurately with live schedule (Bear Trap at 16:00 UTC)"
+    "Added universal navbar notification bell with proactive 30-day token expiration badges",
+    "Created rich Notifications & Alerts modal with 1-click token renewal and auto-redeem status",
+    "Preserved staff new member signup alerts integrated into the notifications hub"
   ]
 }

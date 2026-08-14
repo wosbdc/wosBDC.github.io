@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## [2.5.5] - 2026-08-14
+### ✨ Add Navbar Notification Bell & 30-Day Game Token Expiration Alerts
+- **🔔 Universal Navbar Notification Bell**:
+  - Activated the 🔔 Bell icon in the top navbar for all logged-in alliance members.
+  - Added proactive 30-day Century Games sync token tracking (`getMemberTokenStatus`):
+    - **Active**: Green badge with days remaining.
+    - **Expiring Soon (≤ 5 days)**: Orange pulsing badge alerting the chief to renew early.
+    - **Expired / Unverified**: Red pulsing badge with 1-click in-game mailbox renewal modal (`openAccountHubVerifyModal`).
+  - Integrated **Gift Code Auto-Redeem Bot** status and **Staff New Member Signups** into the unified notifications center.
+
 ## [2.5.4] - 2026-08-14
 ### ✨ Fix Sheet Schedule Column Resolution & Home Event Countdown
 - **📅 Accurate Schedule Data Parsing**:
