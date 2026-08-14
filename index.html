@@ -38,7 +38,7 @@
               👁️ <span id="views-counter">...</span>
             </span>
             <span id="versionBadge" title="Click to view Changelog" style="background: rgba(168, 85, 247, 0.2); color: #a855f7; padding: 2px 6px; border-radius: 10px; font-weight: bold; display:flex; align-items:center; gap:4px; cursor:pointer;">
-              v2.5.31
+              v2.5.32
             </span>
             <span id="navbar-user-indicator" onclick="if(window.views && window.views.account) window.views.account();" title="Click to open Chief Profile" style="display:none; background: rgba(59, 130, 246, 0.18); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa; padding: 2px 8px; border-radius: 10px; font-weight: bold; align-items:center; gap:4px; max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer;">
             </span>
@@ -290,10 +290,10 @@
     </div>
     <!-- Auth Modals -->
     <div id="authModalOverlay" class="sidebar-overlay"></div>
-    <div id="authModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:var(--card-bg); padding:28px 24px; border-radius:16px; border:1px solid var(--border); box-shadow:0 15px 35px rgba(0,0,0,0.6); z-index:1001; width:92%; max-width:420px; box-sizing:border-box;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-        <h2 id="authModalTitle" style="margin:0; color:var(--text-main); font-size:1.3rem;">Sign In</h2>
-        <button id="closeAuthBtn" class="close-btn">&times;</button>
+    <div id="authModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:var(--card-bg); padding:clamp(24px, 4vw, 34px) clamp(20px, 4vw, 30px); border-radius:20px; border:1px solid var(--border); box-shadow:0 25px 60px rgba(0,0,0,0.7); z-index:1001; width:95%; max-width:520px; max-height:92vh; overflow-y:auto; box-sizing:border-box;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:12px;">
+        <h2 id="authModalTitle" style="margin:0; color:var(--text-main); font-size:1.35rem; font-weight:800;">Sign In</h2>
+        <button id="closeAuthBtn" class="close-btn" style="font-size:26px; cursor:pointer;" title="Close Window">&times;</button>
       </div>
       
       <!-- Step Indicator (Only shown during multi-step registration) -->

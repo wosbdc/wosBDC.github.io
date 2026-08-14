@@ -1,8 +1,8 @@
 {
-  "version": "2.5.31",
+  "version": "2.5.32",
   "releaseDate": "2026-08-14",
-  "title": "🔗 Account Hub Tab Persistence for Alt Account Workflows",
+  "title": "✨ Expanded Signup Modal & Protected Backdrop",
   "notes": [
-    "Retain the active Linked Alts tab across all binding, verification, editing, and syncing actions to streamline adding multiple accounts"
+    "Expanded the signup window dimensions and prevented accidental closing on backdrop clicks to protect form progress"
   ]
 }

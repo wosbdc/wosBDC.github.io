@@ -4001,7 +4001,7 @@ if(signOutSidebarBtn) signOutSidebarBtn.addEventListener('click', (e) => {
 });
 
 if(closeAuthBtn) closeAuthBtn.addEventListener('click', closeAuthModal);
-if(authModalOverlay) authModalOverlay.addEventListener('click', closeAuthModal);
+// Note: Intentionally do NOT close on backdrop click to prevent accidental dismissal during multi-step registration
 
 window.updateAuthFurnaceDropdown = (selectedVal = '') => {
   const container = document.getElementById('authFurnaceSelectContainer');

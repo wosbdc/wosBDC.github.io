@@ -1105,12 +1105,12 @@ tr:hover td {
   #altManagerModalOverlay .card,
   #discordAlertsModalOverlay .card,
   #editMemberModalOverlay .card,
-  #authModalOverlay .card {
+  #authModalOverlay .card,
+  #authModal {
     width: 95% !important;
     max-width: 95vw !important;
-    padding: clamp(14px, 4vw, 22px) !important;
-    margin: 10px auto !important;
-    border-radius: 16px !important;
+    padding: clamp(16px, 4vw, 26px) !important;
+    border-radius: 18px !important;
   }
 
   /* Universal Table Swipe Container */

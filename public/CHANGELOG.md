@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.5.32] - 2026-08-14
+- Enlarged and enhanced the Sign In & Multi-Step Registration modal dimensions with fluid responsive padding and max-width.
+- Prevented accidental dismissal of the signup modal on side backdrop clicks so in-progress registrations are never lost.
+
 ## [2.5.31] - 2026-08-14
 - Implemented persistent tab state management for Account Hub (`views.account(defaultTab)`).
 - Bound all Alt operations (30-day token binding, code verification, manual linking, profile editing, syncing, and perks enrollment) to retain the **🔗 Linked Alts** tab automatically without jumping back to the Main Profile tab.
