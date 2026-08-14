@@ -1,10 +1,10 @@
 {
-  "version": "2.3.0",
+  "version": "2.4.0",
   "releaseDate": "2026-08-14",
-  "title": "✨ 3-Step Chief Registration & Verification Wizard",
+  "title": "✨ Streamlined Google Sign-Up in 3-Step Wizard",
   "notes": [
-    "Step 1: Choose Signup Method (Email & Password or Google)",
-    "Step 2: Enter Account Credentials & Mandatory Playing Start Date",
-    "Step 3: In-Game Chief Verification with Live Stats & Character Locking"
+    "Seamless 1-click Google registration integration in 3-step wizard",
+    "Auto-displays verified Google account badge in Step 2 without asking for email/password",
+    "Only asks for mandatory start date and in-game character verification"
   ]
 }

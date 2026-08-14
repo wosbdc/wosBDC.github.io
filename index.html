@@ -380,16 +380,28 @@
       
       <!-- STEP 2 (Registration): Account Credentials & Date -->
       <div id="authStep2Panel" style="display:none;">
-        <div style="margin-bottom:14px; text-align:left;">
-          <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Email Address: <span style="color:var(--danger); font-weight:bold;">*</span></label>
-          <input type="email" id="authEmail" placeholder="yourname@example.com" style="width:100%; padding:11px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
+        <!-- Google Connected Banner (shown only when registering with Google) -->
+        <div id="authGoogleConnectedBanner" style="display:none; margin-bottom:16px; padding:12px 14px; background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); border-radius:10px; text-align:left;">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width:16px; height:16px;" alt="Google">
+            <strong style="color:#22c55e; font-size:12px;">Google Account Connected</strong>
+          </div>
+          <div id="authGoogleEmailDisplay" style="font-size:13px; color:#fff; font-weight:bold; word-break:break-all;"></div>
+          <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">✓ Verified by Google — no password needed</div>
         </div>
-        
-        <div style="position:relative; width:100%; margin-bottom:14px; text-align:left;">
-          <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Password: <span style="color:var(--danger); font-weight:bold;">*</span></label>
-          <div style="position:relative; width:100%;">
-            <input type="password" id="authPassword" placeholder="Minimum 6 characters" style="width:100%; padding:11px; padding-right:40px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
-            <button id="showPasswordBtn" type="button" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:16px;">👁️</button>
+
+        <div id="authEmailPwFields">
+          <div style="margin-bottom:14px; text-align:left;">
+            <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Email Address: <span style="color:var(--danger); font-weight:bold;">*</span></label>
+            <input type="email" id="authEmail" placeholder="yourname@example.com" style="width:100%; padding:11px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
+          </div>
+          
+          <div style="position:relative; width:100%; margin-bottom:14px; text-align:left;">
+            <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Password: <span style="color:var(--danger); font-weight:bold;">*</span></label>
+            <div style="position:relative; width:100%;">
+              <input type="password" id="authPassword" placeholder="Minimum 6 characters" style="width:100%; padding:11px; padding-right:40px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
+              <button id="showPasswordBtn" type="button" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:16px;">👁️</button>
+            </div>
           </div>
         </div>
         

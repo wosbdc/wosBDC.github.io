@@ -3941,8 +3941,10 @@ window.openAuthModal = (tab = 'login') => {
 };
 const openAuthModal = window.openAuthModal;
 const closeAuthModal = () => {
-  authModal.style.display = 'none';
-  authModalOverlay.classList.remove('active');
+  if (authModal) authModal.style.display = 'none';
+  if (authModalOverlay) authModalOverlay.classList.remove('active');
+  isGoogleRegistration = false;
+  pendingGoogleUser = null;
 };
 
 if(authSidebarBtn) authSidebarBtn.addEventListener('click', (e) => {
@@ -3988,6 +3990,8 @@ window.updateAuthFurnaceDropdown = (selectedVal = '') => {
 };
 
 let authCurrentStep = 1;
+export let isGoogleRegistration = false;
+export let pendingGoogleUser = null;
 
 function setAuthStep(step) {
   authCurrentStep = step;
@@ -4005,6 +4009,9 @@ function setAuthStep(step) {
   const authStep3Icon = document.getElementById('authStep3Icon');
   const authStepLine1 = document.getElementById('authStepLine1');
   const authStepLine2 = document.getElementById('authStepLine2');
+
+  const authGoogleConnectedBanner = document.getElementById('authGoogleConnectedBanner');
+  const authEmailPwFields = document.getElementById('authEmailPwFields');
 
   if (isRegistering) {
     if (authSignInPanel) authSignInPanel.style.display = 'none';
@@ -4057,6 +4064,14 @@ function setAuthStep(step) {
       if (authStep2Panel) authStep2Panel.style.display = 'block';
       if (authStep3Panel) authStep3Panel.style.display = 'none';
 
+      if (isGoogleRegistration && pendingGoogleUser) {
+        if (authGoogleConnectedBanner) authGoogleConnectedBanner.style.display = 'block';
+        if (authEmailPwFields) authEmailPwFields.style.display = 'none';
+      } else {
+        if (authGoogleConnectedBanner) authGoogleConnectedBanner.style.display = 'none';
+        if (authEmailPwFields) authEmailPwFields.style.display = 'block';
+      }
+
       // Step 1 Done
       if (authStep1Badge) {
         authStep1Badge.style.color = '#10b981';
@@ -4095,7 +4110,11 @@ function setAuthStep(step) {
         authStep3Icon.textContent = '3';
       }
 
-      if (authEmail) setTimeout(() => authEmail.focus(), 60);
+      if (isGoogleRegistration) {
+        if (authDateStarted) setTimeout(() => authDateStarted.focus(), 60);
+      } else {
+        if (authEmail) setTimeout(() => authEmail.focus(), 60);
+      }
     } else if (step === 3) {
       if (authStep1Panel) authStep1Panel.style.display = 'none';
       if (authStep2Panel) authStep2Panel.style.display = 'none';
@@ -4164,6 +4183,8 @@ if(authToggleBtn) authToggleBtn.addEventListener('click', (e) => {
 
 window.openLoginModal = () => {
   isRegistering = false;
+  isGoogleRegistration = false;
+  pendingGoogleUser = null;
   if (authErrorMsg) authErrorMsg.style.display = 'none';
   if (authModalTitle) authModalTitle.textContent = 'Sign In';
   if (authToggleText) authToggleText.textContent = 'Need an account?';
@@ -4178,6 +4199,8 @@ window.openLoginModal = () => {
 
 window.openRegisterModal = () => {
   isRegistering = true;
+  isGoogleRegistration = false;
+  pendingGoogleUser = null;
   if (authErrorMsg) authErrorMsg.style.display = 'none';
   if (authModalTitle) authModalTitle.textContent = '✨ Claim Profile & Register';
   if (authToggleText) authToggleText.textContent = 'Already have an account?';
@@ -4208,41 +4231,42 @@ const showLoginPasswordBtn = document.getElementById('showLoginPasswordBtn');
 if (authChooseEmailBtn) {
   authChooseEmailBtn.addEventListener('click', () => {
     authErrorMsg.style.display = 'none';
+    isGoogleRegistration = false;
+    pendingGoogleUser = null;
     setAuthStep(2);
-  });
-}
-
-if (authChooseGoogleBtn) {
-  authChooseGoogleBtn.addEventListener('click', () => {
-    const origGoogleBtn = document.getElementById('authGoogleBtn');
-    if (origGoogleBtn) origGoogleBtn.click();
   });
 }
 
 if (authBackToStep1Btn) {
   authBackToStep1Btn.addEventListener('click', () => {
     authErrorMsg.style.display = 'none';
+    isGoogleRegistration = false;
+    pendingGoogleUser = null;
     setAuthStep(1);
   });
 }
 
 if (authNextToStep3Btn) {
   authNextToStep3Btn.addEventListener('click', () => {
-    const email = authEmail.value.trim().toLowerCase();
-    const password = authPassword.value;
+    const email = authEmail ? authEmail.value.trim().toLowerCase() : "";
+    const password = authPassword ? authPassword.value : "";
     const dateStarted = authDateStarted ? authDateStarted.value : "";
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      authErrorMsg.textContent = 'Please enter a valid email address.';
-      authErrorMsg.style.display = 'block';
-      authEmail.focus();
-      return;
+    
+    if (!isGoogleRegistration) {
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        authErrorMsg.textContent = 'Please enter a valid email address.';
+        authErrorMsg.style.display = 'block';
+        if (authEmail) authEmail.focus();
+        return;
+      }
+      if (!password || password.length < 6) {
+        authErrorMsg.textContent = 'Password must be at least 6 characters.';
+        authErrorMsg.style.display = 'block';
+        if (authPassword) authPassword.focus();
+        return;
+      }
     }
-    if (!password || password.length < 6) {
-      authErrorMsg.textContent = 'Password must be at least 6 characters.';
-      authErrorMsg.style.display = 'block';
-      authPassword.focus();
-      return;
-    }
+
     if (!dateStarted) {
       authErrorMsg.textContent = 'Please select the date you started playing.';
       authErrorMsg.style.display = 'block';
@@ -4621,9 +4645,9 @@ if (forgotPwSubmitBtn) {
 
 if(authSubmitBtn) authSubmitBtn.addEventListener('click', async () => {
   authErrorMsg.style.color = 'var(--danger)'; // Reset color to red for login errors
-  const email = authEmail.value.trim().toLowerCase();
-  const password = authPassword.value;
-  const gameId = authGameId.value.trim();
+  const email = isGoogleRegistration && pendingGoogleUser ? pendingGoogleUser.email : (authEmail ? authEmail.value.trim().toLowerCase() : "");
+  const password = authPassword ? authPassword.value : "";
+  const gameId = authGameId ? authGameId.value.trim() : "";
   const dateStarted = authDateStarted ? authDateStarted.value : "";
   
   // Check for manual overrides if API failed
@@ -4638,7 +4662,7 @@ if(authSubmitBtn) authSubmitBtn.addEventListener('click', async () => {
   const chiefName = verifiedChiefName || manualChiefName;
   const furnaceLevel = verifiedFurnaceLevel || manualFurnaceLevel || selectedFurnaceLevel || "30";
   
-  if (!email || !password) {
+  if (!isGoogleRegistration && (!email || !password)) {
     authErrorMsg.textContent = 'Email and password required.';
     authErrorMsg.style.display = 'block';
     return;
@@ -4654,21 +4678,42 @@ if(authSubmitBtn) authSubmitBtn.addEventListener('click', async () => {
       if (/^\d+$/.test(chiefName.toString().trim()) || chiefName.toString().trim() === gameId.toString().trim()) {
         throw new Error('Chief Name must be your text character name (e.g. BrianDCox), NOT your numeric Game ID.');
       }
+      if (!dateStarted) throw new Error('Date You Started Playing is required.');
       
-      await registerUser(email, password, gameId, chiefName, furnaceLevel);
-      
-      // Persist Century Games verification token and state
-      if (window.verifiedCgToken && auth && auth.currentUser) {
-          try {
-              await update(ref(db, `users/${auth.currentUser.uid}`), {
-                  wos_cg_token: window.verifiedCgToken,
-                  section: window.verifiedStateKid || "2089",
-                  stove_lv: furnaceLevel,
-                  avatar_image: window.verifiedAvatarUrl || "",
-                  verifiedAt: new Date().toISOString(),
-                  centuryGamesVerified: true
-              });
-          } catch(e) { console.warn("Failed to persist CG token:", e); }
+      if (isGoogleRegistration && pendingGoogleUser) {
+        // Save Google User directly to Firebase Realtime Database
+        await set(ref(db, `users/${pendingGoogleUser.uid}`), {
+          email: pendingGoogleUser.email,
+          gameId: gameId,
+          name: chiefName,
+          chiefName: chiefName,
+          stove_lv: furnaceLevel,
+          furnaceLevel: furnaceLevel,
+          section: window.verifiedStateKid || "2089",
+          avatar_image: window.verifiedAvatarUrl || (pendingGoogleUser.photoURL || ""),
+          wos_cg_token: window.verifiedCgToken || "",
+          dateStarted: dateStarted,
+          verifiedAt: new Date().toISOString(),
+          centuryGamesVerified: !!window.verifiedCgToken,
+          createdAt: new Date().toISOString(),
+          authProvider: 'google'
+        });
+      } else {
+        await registerUser(email, password, gameId, chiefName, furnaceLevel);
+        
+        // Persist Century Games verification token and state
+        if (window.verifiedCgToken && auth && auth.currentUser) {
+            try {
+                await update(ref(db, `users/${auth.currentUser.uid}`), {
+                    wos_cg_token: window.verifiedCgToken,
+                    section: window.verifiedStateKid || "2089",
+                    stove_lv: furnaceLevel,
+                    avatar_image: window.verifiedAvatarUrl || "",
+                    verifiedAt: new Date().toISOString(),
+                    centuryGamesVerified: true
+                });
+            } catch(e) { console.warn("Failed to persist CG token:", e); }
+        }
       }
 
       // Immediately seed in-memory maps so site never displays 'not found'
@@ -4690,7 +4735,7 @@ if(authSubmitBtn) authSubmitBtn.addEventListener('click', async () => {
           window.triggerNewMemberAlerts({ gameId, chiefName, furnaceLevel, email, createdAt: new Date().toISOString() });
       }
 
-      window.showToast("Account created & signed in!", "success");
+      window.showToast("Account created & character linked!", "success");
     } else {
       await loginUser(email, password);
       window.showToast("Successfully signed in!", "success");
@@ -4699,7 +4744,7 @@ if(authSubmitBtn) authSubmitBtn.addEventListener('click', async () => {
     closeAuthModal();
     const onboardingEl = document.getElementById('essentialOnboardingBanner');
     if (onboardingEl) onboardingEl.remove();
-    let uName = (currentUser && currentUser.gameId && idToNameMap[currentUser.gameId]) ? idToNameMap[currentUser.gameId] : (currentUser ? (currentUser.displayName || 'Chief') : 'Chief');
+    let uName = chiefName || (currentUser && currentUser.gameId && idToNameMap[currentUser.gameId]) ? idToNameMap[currentUser.gameId] : (currentUser ? (currentUser.displayName || 'Chief') : 'Chief');
     if (window.showWelcomePop) window.showWelcomePop(uName);
     if (typeof window.activeViewFunc === 'function') window.activeViewFunc();
     else views.home();
@@ -4708,16 +4753,14 @@ if(authSubmitBtn) authSubmitBtn.addEventListener('click', async () => {
     authErrorMsg.style.display = 'block';
   } finally {
     authSubmitBtn.disabled = false;
-    authSubmitBtn.textContent = isRegistering ? 'Create Account' : 'Sign In';
+    authSubmitBtn.textContent = isRegistering ? '✨ Create Account' : 'Sign In';
   }
 });
 
-const authGoogleBtn = document.getElementById('authGoogleBtn');
-if (authGoogleBtn) authGoogleBtn.addEventListener('click', async () => {
+async function handleGoogleAuth() {
     try {
-        authGoogleBtn.disabled = true;
-        const originalHtml = authGoogleBtn.innerHTML;
-        authGoogleBtn.innerHTML = "Loading...";
+        if (authChooseGoogleBtn) authChooseGoogleBtn.disabled = true;
+        if (authLoginGoogleBtn) authLoginGoogleBtn.disabled = true;
         
         const userCredential = await loginWithGoogle();
         const user = userCredential.user;
@@ -4738,96 +4781,40 @@ if (authGoogleBtn) authGoogleBtn.addEventListener('click', async () => {
             if (typeof window.activeViewFunc === 'function') window.activeViewFunc();
             else views.home();
         } else {
-            // New user! They signed in with Google but we don't have their WOS Game ID
-            // We need to ask for it.
-            const gameId = await window.customPrompt("Welcome! To complete your registration, please enter your WOS Game ID (found in your Player Profile):");
-            if (!gameId || gameId.trim() === '') {
-                throw new Error("Game ID is required to register.");
-            }
+            // New user registering with Google!
+            isRegistering = true;
+            isGoogleRegistration = true;
+            pendingGoogleUser = user;
             
-            // Check for deduplication locally first
-            const existingGid = Object.values(window.nameToIdMap || {}).includes(parseInt(gameId));
-            if (existingGid) {
-                // If they enter an ID that's already registered, they should just link it or it's a dupe.
-                // But let backend handle it or just allow it.
-            }
+            const authGoogleConnectedBanner = document.getElementById('authGoogleConnectedBanner');
+            const authGoogleEmailDisplay = document.getElementById('authGoogleEmailDisplay');
+            const authEmailPwFields = document.getElementById('authEmailPwFields');
+            if (authGoogleEmailDisplay) authGoogleEmailDisplay.textContent = user.email || user.displayName || 'Google Account';
+            if (authGoogleConnectedBanner) authGoogleConnectedBanner.style.display = 'block';
+            if (authEmailPwFields) authEmailPwFields.style.display = 'none';
             
-            // For a new Google user, we don't know their chiefName, so we should look it up from the roster.
-            let chiefName = "";
-            let furnaceLevel = "";
-            const roster = window.liveData ? window.liveData["Chief's List"] : null;
-            if (roster) {
-                const row = roster.find(r => String(r[1]).trim() === String(gameId).trim());
-                if (row) {
-                    chiefName = String(row[0]).trim();
-                    furnaceLevel = String(row[4] || "").trim(); // Assuming col E is Furnace
-                }
-            }
+            if (authModalTitle) authModalTitle.textContent = '✨ Claim Profile & Register';
+            if (authToggleText) authToggleText.textContent = 'Already have an account?';
+            if (authToggleBtn) authToggleBtn.textContent = 'Sign In';
             
-            if (!chiefName || /^\d+$/.test(chiefName.toString().trim()) || chiefName.toString().trim() === gameId.toString().trim()) {
-                // 1. Try querying Century Games API to auto-fetch real character nickname
-                try {
-                    const verifyRes = await fetch(`${VERIFY_PROXY_URL}?id=${encodeURIComponent(gameId.trim())}`);
-                    const verifyData = await verifyRes.json();
-                    if (verifyData && verifyData.success && verifyData.nickname && !/^\d+$/.test(String(verifyData.nickname).trim())) {
-                        chiefName = verifyData.nickname;
-                        if (verifyData.stove_lv) furnaceLevel = verifyData.stove_lv;
-                    }
-                } catch(ve) {
-                    console.warn("Century Games auto-verify error:", ve);
-                }
-            }
-            
-            // 2. If still unverified, prompt user with strict rejection of pure numeric IDs
-            while (!chiefName || /^\d+$/.test(chiefName.toString().trim()) || chiefName.toString().trim() === gameId.toString().trim()) {
-                chiefName = await window.customPrompt("We couldn't auto-verify your name. Please enter your in-game Character / Chief Name (e.g. BrianDCox), NOT your numeric Game ID:");
-                if (!chiefName) throw new Error("Chief Name is required.");
-                if (/^\d+$/.test(chiefName.toString().trim()) || chiefName.toString().trim() === gameId.toString().trim()) {
-                    if (window.showToast) window.showToast("⚠️ Chief Name cannot be a number. Please enter your text character name.", "error");
-                    chiefName = null;
-                }
-            }
-            
-            const dateStarted = await window.customPrompt("One last thing! What date did you start playing Whiteout Survival? (e.g., MM/DD/YYYY)") || "";
-            
-            // Save to Firebase Realtime Database
-            await set(ref(db, `users/${user.uid}`), {
-                email: user.email,
-                gameId: gameId.trim(),
-                name: chiefName.trim(),
-                chiefName: chiefName.trim(),
-                stove_lv: furnaceLevel || "30",
-                furnaceLevel: furnaceLevel || "30",
-                createdAt: new Date().toISOString(),
-                authProvider: 'google'
-            });
-            
-            // Auto-post to giftcodebot Google Sheet via backend API
-            try {
-                const token = await user.getIdToken();
-                const url = `${API_BASE_URL}?api=registerNewPlayer&gameId=${encodeURIComponent(gameId.trim())}&name=${encodeURIComponent(chiefName.trim())}&dateStarted=${encodeURIComponent(dateStarted)}&level=${encodeURIComponent(furnaceLevel)}&token=${encodeURIComponent(token)}`;
-                fetch(url, { mode: 'no-cors' }).catch(e => console.warn("Failed to ping GAS for registration", e));
-            } catch(e) { console.error(e); }
-
-            if (window.triggerNewMemberAlerts) {
-                window.triggerNewMemberAlerts({ gameId: gameId.trim(), chiefName: chiefName.trim(), furnaceLevel: furnaceLevel, email: user.email, createdAt: new Date().toISOString() });
-            }
-
-            window.showToast("Account created & signed in with Google!", "success");
-            closeAuthModal();
+            authErrorMsg.style.display = 'none';
+            setAuthStep(2);
         }
     } catch(err) {
         if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
-            authErrorMsg.textContent = err.message;
+            authErrorMsg.textContent = err.message || 'Google sign-in error';
             authErrorMsg.style.display = 'block';
         }
     } finally {
-        if (authGoogleBtn) {
-            authGoogleBtn.disabled = false;
-            authGoogleBtn.innerHTML = `<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width:18px; height:18px;" alt="Google"> Continue with Google`;
-        }
+        if (authChooseGoogleBtn) authChooseGoogleBtn.disabled = false;
+        if (authLoginGoogleBtn) authLoginGoogleBtn.disabled = false;
     }
-});
+}
+
+const authGoogleBtn = document.getElementById('authGoogleBtn');
+if (authChooseGoogleBtn) authChooseGoogleBtn.addEventListener('click', handleGoogleAuth);
+if (authLoginGoogleBtn) authLoginGoogleBtn.addEventListener('click', handleGoogleAuth);
+if (authGoogleBtn) authGoogleBtn.addEventListener('click', handleGoogleAuth);
 
 
 // --- Changelog Modal ---

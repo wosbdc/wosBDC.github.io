@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [2.4.0] - 2026-08-14
+### ✨ Streamlined Google Sign-Up in 3-Step Wizard
+- **🌐 1-Click Google Sign-Up Wizard Integration**:
+  - Selecting "Continue with Google" securely retrieves verified email from Google OAuth.
+  - Automatically displays a verified Google badge in Step 2 without prompting for email or password.
+  - Smoothly requests only the mandatory playing start date in Step 2, then advances to Step 3 for in-game Whiteout Survival character verification.
+
 ## [2.3.0] - 2026-08-14
 ### ✨ 3-Step Chief Registration & Verification Wizard
 - **✨ 3-Step Registration Wizard**: Designed full 3-step registration flow:
