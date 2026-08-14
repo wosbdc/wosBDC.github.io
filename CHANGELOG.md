@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [2.5.15] - 2026-08-14
+- Configured Alliance Gatekeeper Discord integration to maintain a single live-updating 7-day member roster card.
+
 ## [2.5.14] - 2026-08-14
 - Restored individual notification cards for Alliance Gatekeeper Discord webhooks on new member signups.
 

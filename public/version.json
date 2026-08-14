@@ -1,8 +1,8 @@
 {
-  "version": "2.5.14",
+  "version": "2.5.15",
   "releaseDate": "2026-08-14",
-  "title": "🛡️ Restore Individual Gatekeeper Discord Alerts",
+  "title": "🛡️ Alliance Gatekeeper 7-Day Live Roster Card",
   "notes": [
-    "Restored rich individual notification cards for Alliance Gatekeeper Discord webhooks on new member signups"
+    "Updated Alliance Gatekeeper Discord integration to maintain a single live-updating 7-day member roster card"
   ]
 }
