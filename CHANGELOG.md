@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.2.0] - 2026-08-14
+### ✨ 2-Step Chief Registration & Verification Wizard
+- **✨ Multi-Step Registration Wizard**: Split account creation into a clean 2-step wizard. Step 1 handles Email & Password with validation, and Step 2 handles Game ID & in-game mailbox verification with live character locking.
+
 ## [2.1.6] - 2026-08-14
 ### 🛡️ Chief Verification System & Registration Flow Polish
 - **📩 Chief Verification System**: Structured modal so Game ID verification displays prominently at the top when clicking Claim / Create Account, with seamless tab toggles and clean validation.

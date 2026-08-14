@@ -3987,6 +3987,99 @@ window.updateAuthFurnaceDropdown = (selectedVal = '') => {
   }
 };
 
+let authCurrentStep = 1;
+
+function setAuthStep(step) {
+  authCurrentStep = step;
+  const authStepIndicator = document.getElementById('authStepIndicator');
+  const authStep1Panel = document.getElementById('authStep1Panel');
+  const authStep2Panel = document.getElementById('authStep2Panel');
+  const authStep1Badge = document.getElementById('authStep1Badge');
+  const authStep2Badge = document.getElementById('authStep2Badge');
+  const authStep1Icon = document.getElementById('authStep1Icon');
+  const authStep2Icon = document.getElementById('authStep2Icon');
+  const authStepLine = document.getElementById('authStepLine');
+  const authNextStepBtn = document.getElementById('authNextStepBtn');
+  const authSignInBtn = document.getElementById('authSignInBtn');
+  const authDateWrapper = document.getElementById('authDateWrapper');
+  const authForgotPwWrapper = document.getElementById('authForgotPwWrapper');
+  const authOrDivider = document.getElementById('authOrDivider');
+  const authGoogleBtn = document.getElementById('authGoogleBtn');
+
+  if (isRegistering) {
+    if (authStepIndicator) authStepIndicator.style.display = 'flex';
+    if (authForgotPwWrapper) authForgotPwWrapper.style.display = 'none';
+
+    if (step === 1) {
+      if (authStep1Panel) authStep1Panel.style.display = 'block';
+      if (authStep2Panel) authStep2Panel.style.display = 'none';
+      if (authNextStepBtn) authNextStepBtn.style.display = 'block';
+      if (authSignInBtn) authSignInBtn.style.display = 'none';
+      if (authDateWrapper) authDateWrapper.style.display = 'block';
+      if (authOrDivider) authOrDivider.style.display = 'flex';
+      if (authGoogleBtn) authGoogleBtn.style.display = 'flex';
+
+      if (authStep1Badge) {
+        authStep1Badge.style.color = 'var(--accent)';
+        authStep1Badge.style.background = 'color-mix(in srgb, var(--accent) 15%, transparent)';
+        authStep1Badge.style.borderColor = 'var(--accent)';
+      }
+      if (authStep1Icon) {
+        authStep1Icon.style.background = 'var(--accent)';
+        authStep1Icon.style.color = '#fff';
+        authStep1Icon.textContent = '1';
+      }
+      if (authStep2Badge) {
+        authStep2Badge.style.color = 'var(--text-muted)';
+        authStep2Badge.style.background = 'var(--bg-main)';
+        authStep2Badge.style.borderColor = 'var(--border)';
+      }
+      if (authStep2Icon) {
+        authStep2Icon.style.background = 'var(--border)';
+        authStep2Icon.style.color = 'var(--text-muted)';
+      }
+      if (authStepLine) authStepLine.style.background = 'var(--border)';
+    } else if (step === 2) {
+      if (authStep1Panel) authStep1Panel.style.display = 'none';
+      if (authStep2Panel) authStep2Panel.style.display = 'block';
+      
+      if (authStep1Badge) {
+        authStep1Badge.style.color = '#10b981';
+        authStep1Badge.style.background = 'rgba(16,185,129,0.12)';
+        authStep1Badge.style.borderColor = '#10b981';
+      }
+      if (authStep1Icon) {
+        authStep1Icon.style.background = '#10b981';
+        authStep1Icon.style.color = '#fff';
+        authStep1Icon.textContent = '✓';
+      }
+      if (authStep2Badge) {
+        authStep2Badge.style.color = 'var(--accent)';
+        authStep2Badge.style.background = 'color-mix(in srgb, var(--accent) 15%, transparent)';
+        authStep2Badge.style.borderColor = 'var(--accent)';
+      }
+      if (authStep2Icon) {
+        authStep2Icon.style.background = 'var(--accent)';
+        authStep2Icon.style.color = '#fff';
+      }
+      if (authStepLine) authStepLine.style.background = '#10b981';
+      
+      if (authGameId) setTimeout(() => authGameId.focus(), 60);
+    }
+  } else {
+    // Sign In Mode
+    if (authStepIndicator) authStepIndicator.style.display = 'none';
+    if (authStep1Panel) authStep1Panel.style.display = 'block';
+    if (authStep2Panel) authStep2Panel.style.display = 'none';
+    if (authNextStepBtn) authNextStepBtn.style.display = 'none';
+    if (authSignInBtn) authSignInBtn.style.display = 'block';
+    if (authDateWrapper) authDateWrapper.style.display = 'none';
+    if (authForgotPwWrapper) authForgotPwWrapper.style.display = 'block';
+    if (authOrDivider) authOrDivider.style.display = 'flex';
+    if (authGoogleBtn) authGoogleBtn.style.display = 'flex';
+  }
+}
+
 if(authToggleBtn) authToggleBtn.addEventListener('click', (e) => {
   e.preventDefault();
   if (isRegistering) {
@@ -4000,17 +4093,9 @@ window.openLoginModal = () => {
   isRegistering = false;
   if (authErrorMsg) authErrorMsg.style.display = 'none';
   if (authModalTitle) authModalTitle.textContent = 'Sign In';
-  if (authGameIdWrapper) authGameIdWrapper.style.display = 'none';
-  const authFurnaceWrapper = document.getElementById('authFurnaceWrapper');
-  if (authFurnaceWrapper) authFurnaceWrapper.style.display = 'none';
-  const authForgotPwWrapper = document.getElementById('authForgotPwWrapper');
-  if (authForgotPwWrapper) authForgotPwWrapper.style.display = 'block';
-  const authDateWrapper = document.getElementById('authDateWrapper');
-  if (authDateWrapper) authDateWrapper.style.display = 'none';
-  if (authChiefConfirm) authChiefConfirm.style.display = 'none';
-  if (authSubmitBtn) authSubmitBtn.textContent = 'Sign In';
   if (authToggleText) authToggleText.textContent = 'Need an account?';
   if (authToggleBtn) authToggleBtn.textContent = 'Register';
+  setAuthStep(1);
   if (document.getElementById('authModal')) document.getElementById('authModal').style.display = 'block';
   if (document.getElementById('authModalOverlay')) {
     document.getElementById('authModalOverlay').style.display = 'block';
@@ -4022,18 +4107,13 @@ window.openRegisterModal = () => {
   isRegistering = true;
   if (authErrorMsg) authErrorMsg.style.display = 'none';
   if (authModalTitle) authModalTitle.textContent = '✨ Claim Profile & Register';
-  if (authGameIdWrapper) authGameIdWrapper.style.display = 'flex';
-  const authFurnaceWrapper = document.getElementById('authFurnaceWrapper');
-  if (authFurnaceWrapper) authFurnaceWrapper.style.display = 'none';
-  const authForgotPwWrapper = document.getElementById('authForgotPwWrapper');
-  if (authForgotPwWrapper) authForgotPwWrapper.style.display = 'none';
-  const authDateWrapper = document.getElementById('authDateWrapper');
-  if (authDateWrapper) authDateWrapper.style.display = 'block';
-  if (authGameId) authGameId.value = '';
-  if (authChiefConfirm) authChiefConfirm.style.display = 'none';
-  if (authSubmitBtn) authSubmitBtn.textContent = '✨ Create Account';
   if (authToggleText) authToggleText.textContent = 'Already have an account?';
   if (authToggleBtn) authToggleBtn.textContent = 'Sign In';
+  if (authGameId) authGameId.value = '';
+  if (authChiefConfirm) authChiefConfirm.style.display = 'none';
+  const authFurnaceWrapper = document.getElementById('authFurnaceWrapper');
+  if (authFurnaceWrapper) authFurnaceWrapper.style.display = 'none';
+  setAuthStep(1);
   if (document.getElementById('authModal')) document.getElementById('authModal').style.display = 'block';
   if (document.getElementById('authModalOverlay')) {
     document.getElementById('authModalOverlay').style.display = 'block';
@@ -4042,6 +4122,86 @@ window.openRegisterModal = () => {
 };
 
 window.openClaimProfileModal = window.openRegisterModal;
+
+const authNextStepBtn = document.getElementById('authNextStepBtn');
+const authBackStepBtn = document.getElementById('authBackStepBtn');
+const authSignInBtn = document.getElementById('authSignInBtn');
+
+if (authNextStepBtn) {
+  authNextStepBtn.addEventListener('click', () => {
+    const email = authEmail.value.trim().toLowerCase();
+    const password = authPassword.value;
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      authErrorMsg.textContent = 'Please enter a valid email address.';
+      authErrorMsg.style.display = 'block';
+      authEmail.focus();
+      return;
+    }
+    if (!password || password.length < 6) {
+      authErrorMsg.textContent = 'Password must be at least 6 characters.';
+      authErrorMsg.style.display = 'block';
+      authPassword.focus();
+      return;
+    }
+    authErrorMsg.style.display = 'none';
+    setAuthStep(2);
+  });
+}
+
+if (authBackStepBtn) {
+  authBackStepBtn.addEventListener('click', () => {
+    authErrorMsg.style.display = 'none';
+    setAuthStep(1);
+  });
+}
+
+if (authSignInBtn) {
+  authSignInBtn.addEventListener('click', async () => {
+    authErrorMsg.style.color = 'var(--danger)';
+    const email = authEmail.value.trim().toLowerCase();
+    const password = authPassword.value;
+    if (!email || !password) {
+      authErrorMsg.textContent = 'Email and password required.';
+      authErrorMsg.style.display = 'block';
+      return;
+    }
+    authSignInBtn.disabled = true;
+    authSignInBtn.textContent = 'Signing In...';
+    try {
+      await loginUser(email, password);
+      window.showToast("Successfully signed in!", "success");
+      closeAuthModal();
+    } catch(err) {
+      authErrorMsg.textContent = err.message || 'Login failed. Please check credentials.';
+      authErrorMsg.style.display = 'block';
+    } finally {
+      authSignInBtn.disabled = false;
+      authSignInBtn.textContent = 'Sign In';
+    }
+  });
+}
+
+if (authEmail) {
+  authEmail.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (authPassword) authPassword.focus();
+    }
+  });
+}
+
+if (authPassword) {
+  authPassword.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (isRegistering) {
+        if (authNextStepBtn) authNextStepBtn.click();
+      } else {
+        if (authSignInBtn) authSignInBtn.click();
+      }
+    }
+  });
+}
 
 const authChiefConfirm = document.getElementById('authChiefConfirm');
 let wosLookupTimeout = null;

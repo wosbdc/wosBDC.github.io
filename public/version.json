@@ -1,10 +1,10 @@
 {
-  "version": "2.1.6",
+  "version": "2.2.0",
   "releaseDate": "2026-08-14",
-  "title": "🛡️ Chief Verification System",
+  "title": "✨ 2-Step Chief Registration & Verification Wizard",
   "notes": [
-    "Added in-game code verification during member signup and registration",
-    "Accurate Fire Crystal 1–10 furnace level mapping",
-    "1-click profile sync in Account Hub with real-time furnace level updates"
+    "Clean 2-step registration flow: Step 1 Account Credentials & Step 2 In-Game Chief Verification",
+    "Animated step indicators with clear back/next navigation and focused validation",
+    "Seamless in-game verification with real-time level and character locking"
   ]
 }
