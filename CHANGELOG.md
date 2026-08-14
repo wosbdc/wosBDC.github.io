@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.1.6] - 2026-08-14
+### 🛡️ Chief Verification System & Registration Flow Polish
+- **📩 Chief Verification System**: Structured modal so Game ID verification displays prominently at the top when clicking Claim / Create Account, with seamless tab toggles and clean validation.
+
 ## [2.1.5] - 2026-08-14
 ### 🛡️ Chief Verification System & Clean Registration UI
 - **📩 Chief Verification System**: Added in-game code verification with automated level detection. Removed standalone furnace selector from signup so manual level selection only appears when using manual fallback entry.

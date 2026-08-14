@@ -3933,23 +3933,10 @@ window.switchSpoofUser = () => {
 };
 
 window.openAuthModal = (tab = 'login') => {
-  if (authErrorMsg) authErrorMsg.style.display = 'none';
-  if (authModal) authModal.style.display = 'block';
-  if (authModalOverlay) authModalOverlay.classList.add('active');
-  const loginTabBtn = document.getElementById('loginTabBtn');
-  const registerTabBtn = document.getElementById('registerTabBtn');
-  const loginForm = document.getElementById('loginForm');
-  const registerForm = document.getElementById('registerForm');
-  if (tab === 'register' && registerTabBtn && registerForm) {
-     if (loginTabBtn) loginTabBtn.classList.remove('active');
-     registerTabBtn.classList.add('active');
-     if (loginForm) loginForm.style.display = 'none';
-     registerForm.style.display = 'block';
-  } else if (loginTabBtn && loginForm) {
-     if (registerTabBtn) registerTabBtn.classList.remove('active');
-     loginTabBtn.classList.add('active');
-     if (registerForm) registerForm.style.display = 'none';
-     loginForm.style.display = 'block';
+  if (tab === 'register') {
+    window.openRegisterModal();
+  } else {
+    window.openLoginModal();
   }
 };
 const openAuthModal = window.openAuthModal;
@@ -4002,34 +3989,10 @@ window.updateAuthFurnaceDropdown = (selectedVal = '') => {
 
 if(authToggleBtn) authToggleBtn.addEventListener('click', (e) => {
   e.preventDefault();
-  isRegistering = !isRegistering;
-  authErrorMsg.style.display = 'none';
-  const authFurnaceWrapper = document.getElementById('authFurnaceWrapper');
   if (isRegistering) {
-    authModalTitle.textContent = 'Create Account';
-    authGameIdWrapper.style.display = 'flex';
-    if (authFurnaceWrapper) authFurnaceWrapper.style.display = 'none';
-    const authForgotPwWrapper = document.getElementById('authForgotPwWrapper');
-    if (authForgotPwWrapper) authForgotPwWrapper.style.display = 'none';
-    const authDateWrapper = document.getElementById('authDateWrapper');
-    if (authDateWrapper) authDateWrapper.style.display = 'block';
-    authGameId.value = '';
-    if(authChiefConfirm) authChiefConfirm.style.display = 'none';
-    authSubmitBtn.textContent = 'Create Account';
-    authToggleText.textContent = 'Already have an account?';
-    authToggleBtn.textContent = 'Sign In';
+    window.openLoginModal();
   } else {
-    authModalTitle.textContent = 'Sign In';
-    authGameIdWrapper.style.display = 'none';
-    if (authFurnaceWrapper) authFurnaceWrapper.style.display = 'none';
-    const authForgotPwWrapper = document.getElementById('authForgotPwWrapper');
-    if (authForgotPwWrapper) authForgotPwWrapper.style.display = 'block';
-    const authDateWrapper = document.getElementById('authDateWrapper');
-    if (authDateWrapper) authDateWrapper.style.display = 'none';
-    if(authChiefConfirm) authChiefConfirm.style.display = 'none';
-    authSubmitBtn.textContent = 'Sign In';
-    authToggleText.textContent = 'Need an account?';
-    authToggleBtn.textContent = 'Register';
+    window.openRegisterModal();
   }
 });
 
@@ -4049,13 +4012,16 @@ window.openLoginModal = () => {
   if (authToggleText) authToggleText.textContent = 'Need an account?';
   if (authToggleBtn) authToggleBtn.textContent = 'Register';
   if (document.getElementById('authModal')) document.getElementById('authModal').style.display = 'block';
-  if (document.getElementById('authModalOverlay')) document.getElementById('authModalOverlay').style.display = 'block';
+  if (document.getElementById('authModalOverlay')) {
+    document.getElementById('authModalOverlay').style.display = 'block';
+    document.getElementById('authModalOverlay').classList.add('active');
+  }
 };
 
 window.openRegisterModal = () => {
   isRegistering = true;
   if (authErrorMsg) authErrorMsg.style.display = 'none';
-  if (authModalTitle) authModalTitle.textContent = 'Create Account / Claim Profile';
+  if (authModalTitle) authModalTitle.textContent = '✨ Claim Profile & Register';
   if (authGameIdWrapper) authGameIdWrapper.style.display = 'flex';
   const authFurnaceWrapper = document.getElementById('authFurnaceWrapper');
   if (authFurnaceWrapper) authFurnaceWrapper.style.display = 'none';
@@ -4065,11 +4031,14 @@ window.openRegisterModal = () => {
   if (authDateWrapper) authDateWrapper.style.display = 'block';
   if (authGameId) authGameId.value = '';
   if (authChiefConfirm) authChiefConfirm.style.display = 'none';
-  if (authSubmitBtn) authSubmitBtn.textContent = 'Create Account';
+  if (authSubmitBtn) authSubmitBtn.textContent = '✨ Create Account';
   if (authToggleText) authToggleText.textContent = 'Already have an account?';
   if (authToggleBtn) authToggleBtn.textContent = 'Sign In';
   if (document.getElementById('authModal')) document.getElementById('authModal').style.display = 'block';
-  if (document.getElementById('authModalOverlay')) document.getElementById('authModalOverlay').style.display = 'block';
+  if (document.getElementById('authModalOverlay')) {
+    document.getElementById('authModalOverlay').style.display = 'block';
+    document.getElementById('authModalOverlay').classList.add('active');
+  }
 };
 
 window.openClaimProfileModal = window.openRegisterModal;
