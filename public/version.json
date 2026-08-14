@@ -1,9 +1,9 @@
 {
-  "version": "1.99.2",
+  "version": "1.99.3",
   "releaseDate": "2026-08-13",
-  "title": "🧹 Streamlined Discord Webhook Roster Description",
+  "title": "🛡️ Alliance Gatekeeper Dedicated High-Res PNG Avatar",
   "notes": [
-    "Removed redundant Latest Member Registered header line from Discord embed description for a cleaner roster layout",
-    "Patched live Discord webhook post in real-time"
+    "Created public/gatekeeper.png high-res 512x512 PNG shield avatar",
+    "Replaced SVG URL with PNG format for Discord Webhook avatar_url compatibility"
   ]
 }

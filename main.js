@@ -7471,7 +7471,7 @@ window.triggerNewMemberAlerts = async (memberRecord) => {
 
       const embedPayload = {
         username: "Alliance Gatekeeper 🛡️",
-        avatar_url: `${siteUrl}/favicon.svg`,
+        avatar_url: `${siteUrl}/gatekeeper.png`,
         embeds: [{
           title: "🛡️ ALLIANCE GATEKEEPER — RECENT NEW MEMBERS ROSTER",
           description: `📋 **Active Signups List (Past 7 Days)**:`,
@@ -7479,7 +7479,7 @@ window.triggerNewMemberAlerts = async (memberRecord) => {
           fields: rosterFields.length > 0 ? rosterFields : [{ name: "Status", value: "No active signups in the past 7 days.", inline: false }],
           footer: {
             text: `Whiteout Survival Alliance Dashboard • Total Recent Signups: ${recentMembers.length}`,
-            icon_url: `${siteUrl}/favicon.svg`
+            icon_url: `${siteUrl}/gatekeeper.png`
           },
           timestamp: new Date().toISOString()
         }]
