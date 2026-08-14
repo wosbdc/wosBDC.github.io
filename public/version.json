@@ -1,8 +1,8 @@
 {
-  "version": "2.5.26",
+  "version": "2.5.27",
   "releaseDate": "2026-08-14",
-  "title": "🟢 Quiet Active Tokens & True Alert Triggering",
+  "title": "🎉 Clean Alerts & Hidden Active Tokens",
   "notes": [
-    "Refined notification bell badge and modal to only trigger for true alerts (expiring or expired tokens)"
+    "Completely hides active 30-day tokens from notifications modal; only shows action-required alerts"
   ]
 }

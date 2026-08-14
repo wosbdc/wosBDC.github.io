@@ -8262,20 +8262,15 @@ window.openAllianceAlertsModal = async () => {
       return { agid, aName, formattedLevel, aStatus, aDays, aBadge };
     });
 
-    if (rawAlts.length > 0) {
-      const isUnsynced = unSyncedAltsCount > 0;
-      const bannerBorder = isUnsynced ? 'rgba(245,158,11,0.35)' : 'rgba(16,185,129,0.3)';
-      const bannerBg = isUnsynced ? 'rgba(245,158,11,0.06)' : 'rgba(16,185,129,0.05)';
-      const bannerColor = isUnsynced ? '#f59e0b' : '#10b981';
-      const bannerTitle = isUnsynced ? `🔗 Alt Accounts Un-Sync Status (${unSyncedAltsCount})` : `🔗 Linked Alt Accounts (${rawAlts.length}) - All Synced 🟢`;
-      const bannerSubtitle = isUnsynced 
-        ? `${unSyncedAltsCount} of ${rawAlts.length} alts need setup/renewal • Tap to view` 
-        : `All ${rawAlts.length} alts active with 30-day tokens • Tap to view`;
+    if (rawAlts.length > 0 && unSyncedAltsCount > 0) {
+      const bannerBorder = 'rgba(245,158,11,0.35)';
+      const bannerBg = 'rgba(245,158,11,0.06)';
+      const bannerColor = '#f59e0b';
+      const bannerTitle = `🔗 Alt Accounts Un-Sync Status (${unSyncedAltsCount})`;
+      const bannerSubtitle = `${unSyncedAltsCount} of ${rawAlts.length} alts need setup/renewal • Tap to view & setup`;
 
-      const altRowsHtml = processedAlts.map(alt => {
-        const actionBtn = (alt.aStatus === 'active')
-          ? `<button onclick="window.handleSyncAltProfile('${alt.agid}', this)" style="background:rgba(6,182,212,0.15); border:1px solid #06b6d4; color:#06b6d4; border-radius:6px; padding:4px 9px; font-size:11.5px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px;" title="Sync Character Stats">🔄 Sync</button>`
-          : `<button onclick="document.getElementById('notificationsModalOverlay').remove(); window.openAltVerifyModal('${alt.agid}', '${alt.aName.replace(/'/g, "\\'")}');" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; border-radius:6px; padding:4px 10px; font-size:11.5px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px; box-shadow:0 2px 6px rgba(14,165,233,0.3);" title="Send in-game mailbox verification code">⚡ Setup / Renew</button>`;
+      const altRowsHtml = processedAlts.filter(alt => alt.aStatus !== 'active').map(alt => {
+        const actionBtn = `<button onclick="document.getElementById('notificationsModalOverlay').remove(); window.openAltVerifyModal('${alt.agid}', '${alt.aName.replace(/'/g, "\\'")}');" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; border-radius:6px; padding:4px 10px; font-size:11.5px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px; box-shadow:0 2px 6px rgba(14,165,233,0.3);" title="Send in-game mailbox verification code">⚡ Setup / Renew</button>`;
 
         return `
           <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:9px 12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
@@ -8353,7 +8348,7 @@ window.openAllianceAlertsModal = async () => {
       `;
     }
 
-    // Main Character Card HTML: Only show prominent alert when actually needed (expiring or expired)
+    // Main Character Card HTML: ONLY show when action is required (expiring soon <=5d or expired)
     let mainTokenHtml = '';
     if (tokenStatus.alert) {
       mainTokenHtml = `
@@ -8379,32 +8374,18 @@ window.openAllianceAlertsModal = async () => {
           </div>
         </div>
       `;
-    } else {
-      mainTokenHtml = `
-        <div style="background:rgba(16,185,129,0.06); border:1px solid rgba(16,185,129,0.25); border-radius:14px; padding:12px 16px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-          <div style="display:flex; align-items:center; gap:10px;">
-            <span style="font-size:20px;">🟢</span>
-            <div>
-              <div style="font-weight:bold; font-size:13.5px; color:#10b981; display:flex; align-items:center; gap:6px;">
-                <span>Main Chief: 30-Day Sync Active (${tokenStatus.daysLeft}d left)</span>
-                ${currentUser.section ? `<span style="font-size:11px; opacity:0.8;">(#${currentUser.section})</span>` : ''}
-              </div>
-              <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
-                Auto-syncing character stats and avatars smoothly
-              </div>
-            </div>
-          </div>
-          <div style="display:flex; gap:6px; align-items:center;">
-            <button onclick="document.getElementById('notificationsModalOverlay').remove(); window.handleSyncCenturyGamesProfile();" style="background:rgba(16,185,129,0.15); border:1px solid #10b981; color:#10b981; padding:5px 10px; border-radius:6px; font-weight:bold; font-size:11.5px; cursor:pointer; display:flex; align-items:center; gap:4px;">
-              🔄 Sync
-            </button>
-            <button onclick="document.getElementById('notificationsModalOverlay').remove(); window.openAccountHubVerifyModal();" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:var(--text-muted); padding:5px 10px; border-radius:6px; font-weight:bold; font-size:11.5px; cursor:pointer;" title="Click to renew early">
-              🔑 Renew
-            </button>
-          </div>
-        </div>
-      `;
     }
+
+    const hasImmediateAlerts = Boolean(tokenStatus.alert || (rawAlts.length > 0 && unSyncedAltsCount > 0));
+    let allCaughtUpHtml = (!hasImmediateAlerts && !isStaff) ? `
+      <div id="allCaughtUpNotice" style="text-align:center; padding:28px 16px; background:rgba(16,185,129,0.05); border:1px dashed rgba(16,185,129,0.3); border-radius:14px; margin-bottom:12px;">
+        <div style="font-size:32px; margin-bottom:6px;">🎉</div>
+        <div style="font-size:15px; font-weight:bold; color:#10b981; margin-bottom:4px;">All Caught Up!</div>
+        <div style="font-size:12.5px; color:var(--text-muted); line-height:1.4;">
+          You have no pending alerts or expired tokens right now.
+        </div>
+      </div>
+    ` : '';
 
     overlay.innerHTML = `
       <div class="card" style="width:94%; max-width:540px; max-height:88vh; background:linear-gradient(145deg, rgba(15,23,42,0.96), rgba(30,41,59,0.94)); border:1px solid rgba(56,189,248,0.35); padding:20px; border-radius:18px; box-shadow:0 25px 60px rgba(0,0,0,0.7); text-align:left; animation:zoomIn 0.2s forwards; overflow-y:auto; color:var(--text-main);">
@@ -8420,16 +8401,22 @@ window.openAllianceAlertsModal = async () => {
           <button onclick="document.getElementById('notificationsModalOverlay').remove()" style="background:none; border:none; color:var(--text-muted); font-size:24px; cursor:pointer; line-height:1;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-muted)'">&times;</button>
         </div>
 
-        <!-- Main Character Status Card -->
+        <!-- All Caught Up (if no alerts) -->
+        ${allCaughtUpHtml}
+
+        <!-- Main Character Status Card (Only if Action Required) -->
         ${mainTokenHtml}
 
-        <!-- Collapsible Linked Alts Section -->
+        <!-- Collapsible Linked Alts Section (Only if un-synced) -->
         ${altsSectionHtml}
 
-        <!-- Collapsible Staff Section -->
+        <!-- Collapsible Staff Section (For Staff) -->
         ${staffPlaceholderHtml}
 
-        <div style="display:flex; justify-content:flex-end; margin-top:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; flex-wrap:wrap; gap:8px;">
+          <button onclick="document.getElementById('notificationsModalOverlay').remove(); if(window.views && window.views.account) window.views.account();" style="background:transparent; border:none; color:var(--accent); font-size:12px; cursor:pointer; padding:0; text-decoration:underline;">
+            👤 View Full Account Hub & Token Status
+          </button>
           <button onclick="document.getElementById('notificationsModalOverlay').remove()" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#cbd5e1; padding:8px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12.5px;">
             Close
           </button>

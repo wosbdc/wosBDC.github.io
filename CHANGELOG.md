@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.5.27] - 2026-08-14
+- Completely hidden active Main Character 30-day token card and healthy alts from the Alliance Notifications modal.
+- Added clean "🎉 All Caught Up!" empty state when there are 0 pending alerts or expired tokens.
+
 ## [2.5.26] - 2026-08-14
 - Replaced prominent warning box with a quiet green status bar for active 30-day tokens in Alliance Alerts modal.
 - Adjusted notification bell trigger so active tokens and manually linked alts do not set off red alert alarms.
