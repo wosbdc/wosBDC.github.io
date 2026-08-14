@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [2.5.10] - 2026-08-14
+### 🌐 Translate Century Games API Error Responses into English
+- **💬 Auto-Translation of Game Server Responses**:
+  - Raw Chinese error messages from Century Games (e.g. `验证码发送次数已达上限，请稍后再试`) are now automatically translated into clear English: *"Verification code limit reached for this Game ID today. Please wait a while before requesting another code, or enter your Chief Name manually below."*
+  - Added comprehensive translation mapping for invalid codes, expired sessions, and player not found errors across both Apps Script backend and frontend interfaces.
+
 ## [2.5.9] - 2026-08-14
 ### ✨ Polish Registration Step 3 Layout & Character Verification UX
 - **🛡️ Clean Step 3 Layout & Manual Fallback**:

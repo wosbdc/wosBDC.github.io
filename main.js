@@ -132,7 +132,7 @@ window.fetchRoster = async () => {
 };
 
 
-const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbyDCs28zyWhdbXbv03jLJhWbcxKegr0jPUltjdIbzPmxHNh0Ex8GYE_WDB0ZFB1VPE/exec';
+const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbz5xAvh0XLhrf8ixqFES9Pbcr1Zkzsamfc9MjEGzILdZd1tb6gb4LyGInhBUdBYeFI/exec';
 const VERIFY_PROXY_URL = 'https://wos-vercel-proxy.vercel.app/api/verify'; // Fallback / secondary proxy
 
 // Get a fresh Firebase ID token for the current user (replaces hardcoded APP_SECRET)
@@ -260,6 +260,26 @@ window.escapeHTML = (str) => {
       "'": '&#39;',
       '"': '&quot;'
   }[tag]));
+};
+
+window.translateWosApiError = (msg) => {
+  if (!msg || typeof msg !== 'string') return "An error occurred communicating with the game server.";
+  if (msg.includes("验证码发送次数已达上限") || msg.includes("次数已达上限") || msg.includes("上限")) {
+    return "Verification code limit reached for this Game ID today. Please wait a while before requesting another code, or enter your Chief Name manually below.";
+  }
+  if (msg.includes("验证码错误") || msg.includes("验证码无效") || msg.includes("验证码已过期")) {
+    return "Invalid or expired verification code. Please check your in-game mailbox or request a new code.";
+  }
+  if (msg.includes("角色不存在") || msg.includes("用户不存在") || msg.includes("未找到")) {
+    return "Player ID not found. Please double check your numeric Game ID in Whiteout Survival.";
+  }
+  if (msg.includes("频繁") || msg.includes("稍后再试")) {
+    return "Too many requests. Please wait a moment and try again.";
+  }
+  if (msg.includes("登录态已失效") || msg.includes("已失效")) {
+    return "30-day sync token expired. Please enter a fresh in-game code to renew.";
+  }
+  return msg;
 };
 
 window.formatTimeActiveShort = (str) => {
@@ -4587,7 +4607,7 @@ if (authVerifyGameIdBtn && authChiefConfirm) {
                     if (feedback) {
                         feedback.style.display = 'block';
                         feedback.style.color = 'var(--danger)';
-                        feedback.textContent = err.message || 'Verification failed. Please check code.';
+                        feedback.textContent = window.translateWosApiError(err.message || 'Verification failed. Please check code.');
                     }
                 }
             };
@@ -4614,9 +4634,10 @@ if (authVerifyGameIdBtn && authChiefConfirm) {
             renderVerificationBox();
         } else {
             console.warn("Send captcha notice:", sendData);
+            const translatedMsg = window.translateWosApiError(sendData.message || 'Could not send in-game code. Please check your Game ID.');
             authChiefConfirm.innerHTML = `
               <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:12px; margin-top:8px; font-size:12.5px; color:#f87171; text-align:left;">
-                ⚠️ ${window.escapeHTML(sendData.message || 'Could not send in-game code. Please check your Game ID.')}
+                ⚠️ ${window.escapeHTML(translatedMsg)}
                 <div style="margin-top:8px;">
                   <button type="button" onclick="window.renderManualFallback()" style="background:var(--accent); color:#fff; border:none; padding:6px 14px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">Enter Chief Name Manually ➔</button>
                 </div>
@@ -9013,7 +9034,7 @@ window.openAccountHubVerifyModal = () => {
         if (feedback) {
           feedback.style.display = 'block';
           feedback.style.color = 'var(--danger)';
-          feedback.textContent = err.message || 'Error communicating with game servers.';
+          feedback.textContent = window.translateWosApiError(err.message || 'Error communicating with game servers.');
         }
       }
     });
@@ -9076,7 +9097,7 @@ window.openAccountHubVerifyModal = () => {
         if (feedback) {
           feedback.style.display = 'block';
           feedback.style.color = 'var(--danger)';
-          feedback.textContent = err.message || 'Verification failed.';
+          feedback.textContent = window.translateWosApiError(err.message || 'Verification failed.');
         }
       }
     };

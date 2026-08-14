@@ -1,9 +1,9 @@
 {
-  "version": "2.5.9",
+  "version": "2.5.10",
   "releaseDate": "2026-08-14",
-  "title": "✨ Polish Registration Step 3 Layout & Character Verification UX",
+  "title": "🌐 Translate Century Games API Error Responses into English",
   "notes": [
-    "Cleaned Step 3 Chief Verification layout to prevent cluttered manual fallback text from displaying prematurely",
-    "Enhanced error prompts and added friendly manual entry fallback toggles for members without instant game access"
+    "Automatically translated raw Chinese API responses (such as rate limits and expired code notices) into friendly, actionable English messages",
+    "Enhanced error dialogs with direct manual fallback options"
   ]
 }
