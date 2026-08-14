@@ -1,8 +1,8 @@
 # CHANGELOG
 
-## [2.1.1] - 2026-08-14
+## [2.1.2] - 2026-08-14
 ### 🛡️ Chief Verification System
-- **📩 Chief Verification System**: Added in-game code verification and 1-click profile sync in Account Hub.
+- **📩 Chief Verification System**: Added in-game code verification, accurate Fire Crystal 1–10 furnace level mapping, and 1-click profile sync in Account Hub.
 
 ## [2.0.0] - 2026-08-13
 ### 🎉 Milestone Release: Clean Member Drawer & Production-Grade Roster Architecture
