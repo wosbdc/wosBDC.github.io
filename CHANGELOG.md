@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [2.5.9] - 2026-08-14
+### ✨ Polish Registration Step 3 Layout & Character Verification UX
+- **🛡️ Clean Step 3 Layout & Manual Fallback**:
+  - Removed duplicate furnace select containers from the HTML template to prevent text overlapping and cluttered options.
+  - Added clean guide card with an interactive toggle: *"💡 Tap Verify to send a 6-digit confirmation code to your in-game mailbox in Whiteout Survival, or enter details manually."*
+  - Improved error messages for invalid/empty Game IDs with instant manual fallback options so players without active game mail access are never blocked from completing registration.
+
 ## [2.5.8] - 2026-08-14
 ### ✨ Whiteout Survival In-Game Avatar Sync & Avatar Management Hub
 - **🎮 In-Game Avatar Sync During Account Creation**:

@@ -4157,6 +4157,16 @@ function setAuthStep(step) {
         authStep3Icon.textContent = '3';
       }
 
+      if (authChiefConfirm && !verifiedChiefName) {
+        authChiefConfirm.style.display = 'block';
+        authChiefConfirm.innerHTML = `
+          <div style="background:rgba(56,189,248,0.06); border:1px solid rgba(56,189,248,0.25); border-radius:12px; padding:12px 14px; margin-top:6px; font-size:12.5px; color:var(--text-muted); line-height:1.5; text-align:left;">
+            💡 Tap <strong>Verify</strong> to send a 6-digit confirmation code to your in-game mailbox in Whiteout Survival, or <a href="#" id="authStep3ManualToggle" style="color:#38bdf8; text-decoration:underline; font-weight:bold; cursor:pointer;">enter details manually</a>.
+          </div>`;
+        const manualToggle = document.getElementById('authStep3ManualToggle');
+        if (manualToggle) manualToggle.addEventListener('click', (e) => { e.preventDefault(); if (window.renderManualFallback) window.renderManualFallback(); });
+      }
+
       if (authGameId) setTimeout(() => authGameId.focus(), 60);
     }
   } else {
@@ -4404,13 +4414,46 @@ let wosLookupTimeout = null;
 export let verifiedFurnaceLevel = ""; // Save furnace level to send during registration
 export let verifiedChiefName = ""; // Save verified chief name
 let currentWosLookupId = 0;
+
+window.renderManualFallback = () => {
+    if (!authChiefConfirm) return;
+    authChiefConfirm.style.display = 'block';
+    authChiefConfirm.innerHTML = `
+      <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px; padding:16px; margin-top:10px; text-align:left;">
+          <div style="font-size:13px; font-weight:bold; color:#38bdf8; margin-bottom:12px; display:flex; align-items:center; gap:6px;">
+              ✏️ Manual Character Entry
+          </div>
+          <div style="margin-bottom:14px;">
+              <label style="font-size:12px; color:var(--text-muted); font-weight:bold; display:block; margin-bottom:6px;">In-Game Chief Name (Character Name, NOT ID): <span style="color:var(--danger);">*</span></label>
+              <input type="text" id="manualChiefName" placeholder="e.g. BrianDCox" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:14px; box-sizing:border-box;">
+              <div id="manualNameWarning" style="font-size:11px; color:var(--danger); display:none; margin-top:4px;">⚠️ Please enter your text Chief Name (e.g. BrianDCox), not your numeric Game ID.</div>
+          </div>
+          <div>
+              <label style="font-size:12px; color:var(--text-muted); font-weight:bold; display:block; margin-bottom:6px;">Furnace Level (Optional):</label>
+              ${window.renderFurnaceSelectHtml('manualFurnaceLevel', verifiedFurnaceLevel, '')}
+          </div>
+      </div>`;
+    const mNameEl = document.getElementById('manualChiefName');
+    const mWarnEl = document.getElementById('manualNameWarning');
+    const val = authGameId ? authGameId.value.trim() : '';
+    if (mNameEl && mWarnEl) {
+        mNameEl.addEventListener('input', () => {
+            const v = mNameEl.value.trim();
+            if (v && (/^\d+$/.test(v) || v === val)) mWarnEl.style.display = 'block';
+            else mWarnEl.style.display = 'none';
+        });
+        setTimeout(() => mNameEl.focus(), 60);
+    }
+};
+
 if (authVerifyGameIdBtn && authChiefConfirm) {
   authVerifyGameIdBtn.addEventListener('click', async (e) => {
     e.preventDefault();
     if (!isRegistering) return;
     const val = authGameId.value.trim();
     if (!val) {
-      authChiefConfirm.style.display = 'none';
+      authChiefConfirm.style.display = 'block';
+      authChiefConfirm.innerHTML = `<div style="color:var(--danger); font-size:12.5px; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); padding:8px 12px; border-radius:8px; margin-top:8px;">⚠️ Please enter your numeric Game ID (found in game profile).</div>`;
       verifiedFurnaceLevel = "";
       verifiedChiefName = "";
       return;
@@ -4418,40 +4461,20 @@ if (authVerifyGameIdBtn && authChiefConfirm) {
     
     authChiefConfirm.style.display = 'block';
     
-    if (!/^\d{7,12}$/.test(val)) {
-        authChiefConfirm.innerHTML = `<span style="color:var(--danger)">Please enter a valid Game ID (7-12 digits).</span>`;
+    if (!/^\d{6,14}$/.test(val)) {
+        authChiefConfirm.innerHTML = `<div style="color:var(--danger); font-size:12.5px; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); padding:8px 12px; border-radius:8px; margin-top:8px;">⚠️ Please enter a valid numeric Game ID (e.g. 319875650).</div>`;
         verifiedFurnaceLevel = "";
         verifiedChiefName = "";
         return;
     }
     
-    authChiefConfirm.innerHTML = `<span style="color:var(--accent); font-weight:bold;">📩 Sending verification code to in-game mailbox...</span>`;
+    authChiefConfirm.innerHTML = `<div style="color:#38bdf8; font-size:12.5px; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.3); padding:8px 12px; border-radius:8px; margin-top:8px;">📩 Sending verification code to in-game mailbox in Whiteout Survival...</div>`;
     authVerifyGameIdBtn.disabled = true;
-    authVerifyGameIdBtn.textContent = '...';
-    
-    const renderManualFallback = () => {
-        authChiefConfirm.innerHTML = `
-          <div style="margin-top:10px; text-align:left;">
-              <label style="font-size:12px; color:var(--accent); font-weight:bold; display:block; margin-bottom:4px;">In-game Chief Name (Character Name, NOT ID):</label>
-              <input type="text" id="manualChiefName" placeholder="e.g. BrianDCox" style="width:100%; padding:10px; border-radius:6px; margin-bottom:4px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
-              <div id="manualNameWarning" style="font-size:11px; color:var(--danger); display:none; margin-bottom:8px;">⚠️ Please enter your text Chief Name (e.g. BrianDCox), not your numeric Game ID.</div>
-              <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;">Furnace Level (optional):</label>
-              ${window.renderFurnaceSelectHtml('manualFurnaceLevel', verifiedFurnaceLevel, 'margin-bottom:6px;')}
-          </div>`;
-        const mNameEl = document.getElementById('manualChiefName');
-        const mWarnEl = document.getElementById('manualNameWarning');
-        if (mNameEl && mWarnEl) {
-            mNameEl.addEventListener('input', () => {
-                const v = mNameEl.value.trim();
-                if (v && (/^\d+$/.test(v) || v === val)) mWarnEl.style.display = 'block';
-                else mWarnEl.style.display = 'none';
-            });
-        }
-    };
+    authVerifyGameIdBtn.textContent = 'Sending...';
 
     const renderVerificationBox = () => {
         authChiefConfirm.innerHTML = `
-          <div id="wosVerificationCard" style="background: rgba(15,23,42,0.9); border: 1px solid rgba(56,189,248,0.4); border-radius: 14px; padding: 16px; margin-top: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); text-align:left;">
+          <div id="wosVerificationCard" style="background: rgba(15,23,42,0.95); border: 1px solid rgba(56,189,248,0.4); border-radius: 14px; padding: 16px; margin-top: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); text-align:left;">
               <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
                   <span style="font-size:18px;">📩</span>
                   <strong style="color:#38bdf8; font-size:14px;">In-Game Verification Code Sent!</strong>
@@ -4465,7 +4488,7 @@ if (authVerifyGameIdBtn && authChiefConfirm) {
               </div>
               <div id="wosCodeFeedback" style="font-size:12px; margin-top:8px; display:none;"></div>
               <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px; border-top:1px solid rgba(255,255,255,0.08); padding-top:8px; font-size:11px;">
-                  <button type="button" id="wosResendCodeBtn" style="background:transparent; border:none; color:#38bdf8; cursor:pointer; padding:0; text-decoration:underline;">🔄 Resend</button>
+                  <button type="button" id="wosResendCodeBtn" style="background:transparent; border:none; color:#38bdf8; cursor:pointer; padding:0; text-decoration:underline;">🔄 Resend Code</button>
                   <button type="button" id="wosFallbackManualBtn" style="background:transparent; border:none; color:var(--text-muted); cursor:pointer; padding:0; text-decoration:underline;">Don't have game open? Enter manually</button>
               </div>
           </div>`;
@@ -4476,7 +4499,7 @@ if (authVerifyGameIdBtn && authChiefConfirm) {
         const resendBtn = document.getElementById('wosResendCodeBtn');
         const fallbackBtn = document.getElementById('wosFallbackManualBtn');
 
-        if (fallbackBtn) fallbackBtn.addEventListener('click', renderManualFallback);
+        if (fallbackBtn) fallbackBtn.addEventListener('click', window.renderManualFallback);
 
         if (resendBtn) {
             resendBtn.addEventListener('click', async () => {
@@ -4491,7 +4514,7 @@ if (authVerifyGameIdBtn && authChiefConfirm) {
                     }
                 } catch(e) {}
                 resendBtn.disabled = false;
-                resendBtn.textContent = '🔄 Resend';
+                resendBtn.textContent = '🔄 Resend Code';
             });
         }
 
@@ -4576,6 +4599,7 @@ if (authVerifyGameIdBtn && authChiefConfirm) {
                     handleVerify();
                 }
             });
+            setTimeout(() => codeInput.focus(), 60);
         }
     };
 
@@ -4590,13 +4614,25 @@ if (authVerifyGameIdBtn && authChiefConfirm) {
             renderVerificationBox();
         } else {
             console.warn("Send captcha notice:", sendData);
-            renderManualFallback();
+            authChiefConfirm.innerHTML = `
+              <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:12px; margin-top:8px; font-size:12.5px; color:#f87171; text-align:left;">
+                ⚠️ ${window.escapeHTML(sendData.message || 'Could not send in-game code. Please check your Game ID.')}
+                <div style="margin-top:8px;">
+                  <button type="button" onclick="window.renderManualFallback()" style="background:var(--accent); color:#fff; border:none; padding:6px 14px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">Enter Chief Name Manually ➔</button>
+                </div>
+              </div>`;
         }
     } catch (err) {
         console.warn("Century Games API send error:", err);
         authVerifyGameIdBtn.disabled = false;
         authVerifyGameIdBtn.textContent = 'Verify';
-        renderManualFallback();
+        authChiefConfirm.innerHTML = `
+          <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:12px; margin-top:8px; font-size:12.5px; color:#f87171; text-align:left;">
+            ⚠️ Network error connecting to game servers.
+            <div style="margin-top:8px;">
+              <button type="button" onclick="window.renderManualFallback()" style="background:var(--accent); color:#fff; border:none; padding:6px 14px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">Enter Chief Name Manually ➔</button>
+            </div>
+          </div>`;
     }
   });
 }
@@ -4705,7 +4741,10 @@ if(authSubmitBtn) authSubmitBtn.addEventListener('click', async () => {
     
     if (isRegistering) {
       if (!gameId) throw new Error('Game ID is required.');
-      if (!chiefName) throw new Error('You must verify your Game ID or manually enter your Chief Name.');
+      if (!chiefName) {
+        window.renderManualFallback();
+        throw new Error('Please click Verify to check your in-game code, or enter your Chief Name below.');
+      }
       if (/^\d+$/.test(chiefName.toString().trim()) || chiefName.toString().trim() === gameId.toString().trim()) {
         throw new Error('Chief Name must be your text character name (e.g. BrianDCox), NOT your numeric Game ID.');
       }

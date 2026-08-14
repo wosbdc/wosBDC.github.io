@@ -1,10 +1,9 @@
 {
-  "version": "2.5.8",
+  "version": "2.5.9",
   "releaseDate": "2026-08-14",
-  "title": "✨ Whiteout Survival In-Game Avatar Sync & Avatar Management Hub",
+  "title": "✨ Polish Registration Step 3 Layout & Character Verification UX",
   "notes": [
-    "Added live in-game WOS avatar preview and choice during account registration",
-    "Introduced Profile Picture & Avatar modal in Account Hub with 1-click in-game avatar syncing, custom photo uploading, and initials reset",
-    "Linked alts now support interactive in-game avatar syncing and management"
+    "Cleaned Step 3 Chief Verification layout to prevent cluttered manual fallback text from displaying prematurely",
+    "Enhanced error prompts and added friendly manual entry fallback toggles for members without instant game access"
   ]
 }
