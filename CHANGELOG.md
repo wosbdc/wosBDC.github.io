@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.1.5] - 2026-08-14
+### 🛡️ Chief Verification System & Clean Registration UI
+- **📩 Chief Verification System**: Added in-game code verification with automated level detection. Removed standalone furnace selector from signup so manual level selection only appears when using manual fallback entry.
+
 ## [2.1.4] - 2026-08-14
 ### 🛡️ Chief Verification System & Robust Character Data Handling
 - **📩 Chief Verification System**: Added in-game code verification, robust rank/level payload safety checks, accurate Fire Crystal 1–10 furnace level mapping, 1-click profile sync in Account Hub, and site-wide update alert checks on every page navigation.

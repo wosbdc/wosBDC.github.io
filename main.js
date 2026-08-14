@@ -4008,10 +4008,7 @@ if(authToggleBtn) authToggleBtn.addEventListener('click', (e) => {
   if (isRegistering) {
     authModalTitle.textContent = 'Create Account';
     authGameIdWrapper.style.display = 'flex';
-    if (authFurnaceWrapper) {
-      authFurnaceWrapper.style.display = 'block';
-      window.updateAuthFurnaceDropdown(verifiedFurnaceLevel || '30');
-    }
+    if (authFurnaceWrapper) authFurnaceWrapper.style.display = 'none';
     const authForgotPwWrapper = document.getElementById('authForgotPwWrapper');
     if (authForgotPwWrapper) authForgotPwWrapper.style.display = 'none';
     const authDateWrapper = document.getElementById('authDateWrapper');
@@ -4061,10 +4058,7 @@ window.openRegisterModal = () => {
   if (authModalTitle) authModalTitle.textContent = 'Create Account / Claim Profile';
   if (authGameIdWrapper) authGameIdWrapper.style.display = 'flex';
   const authFurnaceWrapper = document.getElementById('authFurnaceWrapper');
-  if (authFurnaceWrapper) {
-    authFurnaceWrapper.style.display = 'block';
-    window.updateAuthFurnaceDropdown(verifiedFurnaceLevel || '30');
-  }
+  if (authFurnaceWrapper) authFurnaceWrapper.style.display = 'none';
   const authForgotPwWrapper = document.getElementById('authForgotPwWrapper');
   if (authForgotPwWrapper) authForgotPwWrapper.style.display = 'none';
   const authDateWrapper = document.getElementById('authDateWrapper');
@@ -4359,7 +4353,7 @@ if(authSubmitBtn) authSubmitBtn.addEventListener('click', async () => {
   const selectedFurnaceLevel = authFurnaceLevelEl ? authFurnaceLevelEl.value.trim() : "";
   
   const chiefName = verifiedChiefName || manualChiefName;
-  const furnaceLevel = verifiedFurnaceLevel || selectedFurnaceLevel || manualFurnaceLevel || "30";
+  const furnaceLevel = verifiedFurnaceLevel || manualFurnaceLevel || selectedFurnaceLevel || "30";
   
   if (!email || !password) {
     authErrorMsg.textContent = 'Email and password required.';
