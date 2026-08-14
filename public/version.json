@@ -1,10 +1,10 @@
 {
-  "version": "2.4.0",
+  "version": "2.5.0",
   "releaseDate": "2026-08-14",
-  "title": "✨ Streamlined Google Sign-Up in 3-Step Wizard",
+  "title": "✨ Unified Method Selection for Registration & Sign In",
   "notes": [
-    "Seamless 1-click Google registration integration in 3-step wizard",
-    "Auto-displays verified Google account badge in Step 2 without asking for email/password",
-    "Only asks for mandatory start date and in-game character verification"
+    "Clean Sign In method picker: Choose between Email & Password or Google",
+    "Streamlined transitions with back navigation and dedicated login inputs",
+    "Unified aesthetic matching the 3-step registration wizard"
   ]
 }

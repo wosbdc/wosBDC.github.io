@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [2.5.0] - 2026-08-14
+### ✨ Unified Method Selection for Registration & Sign In
+- **🔑 Streamlined Sign-In Method Picker**: Added matching initial method selection for Sign In:
+  - Option 1: **Email & Password** (advances to clean email & password login form with back button).
+  - Option 2: **Continue with Google** (instant 1-click authentication).
+  - Full consistency between Registration and Sign-In flows.
+
 ## [2.4.0] - 2026-08-14
 ### ✨ Streamlined Google Sign-Up in 3-Step Wizard
 - **🌐 1-Click Google Sign-Up Wizard Integration**:

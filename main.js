@@ -4167,8 +4167,6 @@ function setAuthStep(step) {
     if (authStep1Panel) authStep1Panel.style.display = 'none';
     if (authStep2Panel) authStep2Panel.style.display = 'none';
     if (authStep3Panel) authStep3Panel.style.display = 'none';
-    const authLoginEmail = document.getElementById('authLoginEmail');
-    if (authLoginEmail) setTimeout(() => authLoginEmail.focus(), 60);
   }
 }
 
@@ -4189,6 +4187,10 @@ window.openLoginModal = () => {
   if (authModalTitle) authModalTitle.textContent = 'Sign In';
   if (authToggleText) authToggleText.textContent = 'Need an account?';
   if (authToggleBtn) authToggleBtn.textContent = 'Register';
+  const authSignInMethodPanel = document.getElementById('authSignInMethodPanel');
+  const authSignInFormPanel = document.getElementById('authSignInFormPanel');
+  if (authSignInMethodPanel) authSignInMethodPanel.style.display = 'block';
+  if (authSignInFormPanel) authSignInFormPanel.style.display = 'none';
   setAuthStep(1);
   if (document.getElementById('authModal')) document.getElementById('authModal').style.display = 'block';
   if (document.getElementById('authModalOverlay')) {
@@ -4225,8 +4227,32 @@ const authBackToStep1Btn = document.getElementById('authBackToStep1Btn');
 const authNextToStep3Btn = document.getElementById('authNextToStep3Btn');
 const authBackToStep2Btn = document.getElementById('authBackToStep2Btn');
 const authSignInBtn = document.getElementById('authSignInBtn');
-const authLoginGoogleBtn = document.getElementById('authLoginGoogleBtn');
+const authSignInChooseEmailBtn = document.getElementById('authSignInChooseEmailBtn');
+const authSignInChooseGoogleBtn = document.getElementById('authSignInChooseGoogleBtn');
+const authSignInBackBtn = document.getElementById('authSignInBackBtn');
 const showLoginPasswordBtn = document.getElementById('showLoginPasswordBtn');
+
+if (authSignInChooseEmailBtn) {
+  authSignInChooseEmailBtn.addEventListener('click', () => {
+    authErrorMsg.style.display = 'none';
+    const authSignInMethodPanel = document.getElementById('authSignInMethodPanel');
+    const authSignInFormPanel = document.getElementById('authSignInFormPanel');
+    if (authSignInMethodPanel) authSignInMethodPanel.style.display = 'none';
+    if (authSignInFormPanel) authSignInFormPanel.style.display = 'block';
+    const authLoginEmail = document.getElementById('authLoginEmail');
+    if (authLoginEmail) setTimeout(() => authLoginEmail.focus(), 60);
+  });
+}
+
+if (authSignInBackBtn) {
+  authSignInBackBtn.addEventListener('click', () => {
+    authErrorMsg.style.display = 'none';
+    const authSignInMethodPanel = document.getElementById('authSignInMethodPanel');
+    const authSignInFormPanel = document.getElementById('authSignInFormPanel');
+    if (authSignInMethodPanel) authSignInMethodPanel.style.display = 'block';
+    if (authSignInFormPanel) authSignInFormPanel.style.display = 'none';
+  });
+}
 
 if (authChooseEmailBtn) {
   authChooseEmailBtn.addEventListener('click', () => {
@@ -4813,6 +4839,7 @@ async function handleGoogleAuth() {
 
 const authGoogleBtn = document.getElementById('authGoogleBtn');
 if (authChooseGoogleBtn) authChooseGoogleBtn.addEventListener('click', handleGoogleAuth);
+if (authSignInChooseGoogleBtn) authSignInChooseGoogleBtn.addEventListener('click', handleGoogleAuth);
 if (authLoginGoogleBtn) authLoginGoogleBtn.addEventListener('click', handleGoogleAuth);
 if (authGoogleBtn) authGoogleBtn.addEventListener('click', handleGoogleAuth);
 
