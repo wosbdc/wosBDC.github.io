@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.5.19] - 2026-08-14
+- Enabled the `👥 Users` tab in the Admin Menu for all Alliance Managers and R4 Officers.
+- Allowed managers to access the Global Chief List filter, Staff Roles overview, and Registered/Unclaimed member rosters.
+
 ## [2.5.18] - 2026-08-14
 - Upgraded Alert Toaster with Universal Fluid Sizing (92vw width scaling, 15px font, and glassmorphism) for smartphones.
 

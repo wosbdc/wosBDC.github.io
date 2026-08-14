@@ -1,8 +1,9 @@
 {
-  "version": "2.5.18",
+  "version": "2.5.19",
   "releaseDate": "2026-08-14",
-  "title": "📱 Universal Fluid Alert Toaster for Mobile & Desktop",
+  "title": "👥 Enable Users Tab in Admin Menu for All Alliance Managers",
   "notes": [
-    "Upgraded Alert Toaster with Universal Fluid Sizing (92vw width scaling, 15px font, and glassmorphism) for smartphones"
+    "Unlocked the Users tab in Admin Menu for all R4 Officers and Alliance Managers",
+    "Enabled access to Global Chief List Filter, Staff Roles overview, and Registered/Unclaimed Roster members"
   ]
 }
