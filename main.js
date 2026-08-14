@@ -1781,7 +1781,8 @@ window.unlinkAltAccountPrompt = async (gid) => {
     try {
         await unlinkAltAccount(currentUser.uid, gid.toString().trim(), currentUser.linkedGameIds || []);
         if(window.showToast) window.showToast("Account unlinked.", "success");
-        if (typeof window.activeViewFunc === 'function') window.activeViewFunc();
+        if (views.account) views.account('Alts');
+        else if (typeof window.activeViewFunc === 'function') window.activeViewFunc();
     } catch(e) {
         if(window.showToast) window.showToast(e.message, "error");
         else window.showToast(e.message, "error");
@@ -9395,7 +9396,7 @@ window.handleSyncAltProfile = async (gid, btnEl = null) => {
       };
 
       window.showToast(`✨ Alt ${data.nickname || cleanName} stats & avatar synced!`, 'success');
-      if (views.account) views.account();
+      if (views.account) views.account('Alts');
     } else if (data && data.expired) {
       window.showToast(window.translateWosApiError(data.message || `30-day token expired for ${cleanName}. Please enter in-game code to renew.`, data.code), 'warning');
       window.openAltVerifyModal(cleanGid);
@@ -9521,7 +9522,7 @@ window.handleSyncAllCharacters = async (btnEl = null) => {
   } else {
     window.showToast(`✨ Refreshed ${successCount} of ${attemptedCount} characters!`, successCount > 0 ? 'success' : 'warning');
   }
-  if (views.account) views.account();
+  if (views.account) views.account('Alts');
 };
 
 window.openAltVerifyModal = (gid, altName = '') => {
@@ -9675,7 +9676,7 @@ window.openAltVerifyModal = (gid, altName = '') => {
 
           modalOverlay.remove();
           window.showToast(`🎉 30-Day sync token bound for ${data.nickname || cleanName}!`, 'success');
-          if (views.account) views.account();
+          if (views.account) views.account('Alts');
         } else {
           throw new Error(window.translateWosApiError(data.message || 'Invalid or expired code.', data.code));
         }
@@ -9916,7 +9917,7 @@ window.openEditAltProfileModal = async (gameId, chiefName) => {
 
             window.showToast(`Updated alt profile for ${chiefName}!`, "success");
             closeModal();
-            views.account();
+            if (views.account) views.account('Alts');
          } catch(e) {
             console.error("Save alt profile error:", e);
             window.showToast("Error updating alt profile.", "error");
@@ -14234,9 +14235,11 @@ window.resetBearTrapEvent = async () => {
     });
   },
 
-  account: async () => {
+  account: async (defaultTab = null) => {
     if (!currentUser) return window.renderMembersOnlyGuard("User Account Hub");
-    window.activeViewFunc = () => views.account();
+    const targetTab = defaultTab || window.currentAccountHubTab || 'Profile';
+    window.currentAccountHubTab = targetTab;
+    window.activeViewFunc = () => views.account(window.currentAccountHubTab);
     
     let altProfilesMap = {};
     try {
@@ -15178,6 +15181,7 @@ window.resetBearTrapEvent = async () => {
     ];
 
     const switchAccountHubTab = (activeId) => {
+      window.currentAccountHubTab = activeId;
       accTabs.forEach(t => {
         if (!t.btn || !t.sec) return;
         if (t.id === activeId) {
@@ -15201,6 +15205,8 @@ window.resetBearTrapEvent = async () => {
         t.btn.addEventListener('click', () => switchAccountHubTab(t.id));
       }
     });
+
+    switchAccountHubTab(targetTab);
     
     
 
@@ -15373,7 +15379,7 @@ window.resetBearTrapEvent = async () => {
                           await update(ref(db, `users_alts/${gid}`), altUpdates);
 
                           window.showToast(`🎉 Linked & verified ${data.nickname || gid} with 30-day token!`, "success");
-                          if (views.account) views.account();
+                          if (views.account) views.account('Alts');
                       } else {
                           throw new Error(window.translateWosApiError(data.message || "Invalid or expired code.", data.code));
                       }
@@ -15424,7 +15430,7 @@ window.resetBearTrapEvent = async () => {
                       submitAltBtn.disabled = true;
                       await linkAltAccount(currentUser.uid, val, currentUser.linkedGameIds || []);
                       if(window.showToast) window.showToast("Alt account linked!", "success");
-                      if (views.account) views.account();
+                      if (views.account) views.account('Alts');
                   } catch(e) {
                       if(window.showToast) window.showToast(e.message, "error");
                       submitAltBtn.textContent = "Confirm Manual Link";
@@ -20223,6 +20229,7 @@ window.openAltPerksModal = (gameId, altName) => {
                 }
                 document.getElementById('altPerksModal').style.display = 'none';
                 document.getElementById('altPerksModalOverlay').style.display = 'none';
+                if (views.account) views.account('Alts');
             } else {
                 throw new Error("Backend error");
             }

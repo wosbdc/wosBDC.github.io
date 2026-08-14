@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.5.31] - 2026-08-14
+- Implemented persistent tab state management for Account Hub (`views.account(defaultTab)`).
+- Bound all Alt operations (30-day token binding, code verification, manual linking, profile editing, syncing, and perks enrollment) to retain the **🔗 Linked Alts** tab automatically without jumping back to the Main Profile tab.
+
 ## [2.5.30] - 2026-08-14
 - Implemented full game server error code propagation from the Google Apps Script backend (`WosApi.js`) down to the frontend UI.
 - Enhanced `window.translateWosApiError` to map official Century Games codes (e.g. `101031008` session expired, `101031005` daily rate limit, `101031002` invalid captcha, `101031001` player not found, `40001`/`40003` rate limits) with explicit `[Code XXXXX]` badges.

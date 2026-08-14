@@ -1,8 +1,8 @@
 {
-  "version": "2.5.30",
+  "version": "2.5.31",
   "releaseDate": "2026-08-14",
-  "title": "🔍 Game Server Error Code Propagation & Display",
+  "title": "🔗 Account Hub Tab Persistence for Alt Account Workflows",
   "notes": [
-    "Propagate official Century Games server error codes directly to users and staff for clear and instantaneous diagnostics"
+    "Retain the active Linked Alts tab across all binding, verification, editing, and syncing actions to streamline adding multiple accounts"
   ]
 }
