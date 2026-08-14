@@ -1,8 +1,8 @@
 {
-  "version": "2.5.16",
+  "version": "2.5.17",
   "releaseDate": "2026-08-14",
-  "title": "🛡️ Streamlined User Database & 30-Day Token Tracker",
+  "title": "🏷️ Real-Time Filter Attribute Counters & Layout Polish",
   "notes": [
-    "Streamlined Registered Users Database with consolidated Segmented Switcher, 30-Day Token dropdown, and real-time token status pills for main and alt accounts"
+    "Added live member counts inside Token Status and Attribute filter menus and polished header bar responsiveness"
   ]
 }

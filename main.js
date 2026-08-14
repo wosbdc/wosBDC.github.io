@@ -10947,61 +10947,111 @@ const views = {
               return '';
             })()}
 
-            <!-- Search & Filter Controls Bar -->
-            <div style="display:flex; flex-direction:column; gap:14px; margin-bottom:18px; background:var(--card-bg); padding:16px; border-radius:14px; border:1px solid var(--border);">
-              
-              <!-- Top Row: Title & Primary Segmented View Switcher -->
-              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-                <div style="font-weight:bold; font-size:16px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
-                  👥 Registered Users Database <span style="font-size:13px; color:var(--text-muted); font-weight:normal;">(${Object.keys(users).length} registered, ${(window._currentUnclaimedRosterList || []).length} unclaimed)</span>
+            ${(() => {
+              // Calculate attribute and token counters
+              const totalUsersCount = Object.keys(users).length;
+              const unclaimedCount = (window._currentUnclaimedRosterList || []).length;
+              const totalMembersCount = totalUsersCount + unclaimedCount;
+
+              let tokenActiveCount = 0;
+              let tokenExpiringCount = 0;
+              let tokenExpiredCount = 0;
+              let tokenUnverifiedCount = unclaimedCount;
+
+              let newSignupsCount = 0;
+              let hasAltsCount = 0;
+              let giftCodesCount = 0;
+              let staffCount = 0;
+
+              Object.values(users).forEach(u => {
+                const tStat = window.getMemberTokenStatus(u);
+                if (tStat.status === 'active') tokenActiveCount++;
+                else if (tStat.status === 'expiring') tokenExpiringCount++;
+                else if (tStat.status === 'expired') tokenExpiredCount++;
+                else tokenUnverifiedCount++;
+
+                let ms = u.createdAt ? new Date(u.createdAt).getTime() : (u.timestamp ? Number(u.timestamp) : 0);
+                if (ms > 0 && (Date.now() - ms) <= (7 * 24 * 60 * 60 * 1000)) newSignupsCount++;
+
+                if (u.linkedGameIds && Array.isArray(u.linkedGameIds) && u.linkedGameIds.length > 0) hasAltsCount++;
+
+                const adminLvl = window.getAdminLevel(u);
+                if (u.role === 'admin' || u.role === 'R5' || (adminLvl !== false && adminLvl !== 'User')) staffCount++;
+              });
+
+              if (rosterRawData) {
+                Object.values(rosterRawData).forEach(rp => {
+                  if (!rp) return;
+                  const gcVal = rp.giftCodes;
+                  if (gcVal === true || gcVal === 'TRUE' || (typeof gcVal === 'string' && gcVal.toLowerCase().trim() === 'true')) {
+                    giftCodesCount++;
+                  }
+                });
+              }
+
+              return `
+                <!-- Search & Filter Controls Bar -->
+                <div style="display:flex; flex-direction:column; gap:14px; margin-bottom:18px; background:var(--card-bg); padding:16px; border-radius:14px; border:1px solid var(--border);">
+                  
+                  <!-- Top Row: Title & Primary Segmented View Switcher -->
+                  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                    <div>
+                      <div style="font-weight:bold; font-size:16px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+                        👥 Registered Users Database
+                      </div>
+                      <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">
+                        ${totalUsersCount} registered account(s) • ${unclaimedCount} unclaimed roster member(s)
+                      </div>
+                    </div>
+
+                    <!-- Primary Segmented Switcher -->
+                    <div style="display:inline-flex; background:var(--bg-main); padding:3px; border-radius:10px; border:1px solid var(--border); gap:4px;">
+                      <button class="admin-user-filter-tab active" data-tab="all" onclick="window.setAdminUserPopulationTab('all', this)" style="background:var(--accent); color:#fff; border:none; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+                        👥 All (${totalMembersCount})
+                      </button>
+                      <button class="admin-user-filter-tab" data-tab="claimed" onclick="window.setAdminUserPopulationTab('claimed', this)" style="background:transparent; color:var(--text-muted); border:none; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+                        ✅ Claimed (${totalUsersCount})
+                      </button>
+                      <button class="admin-user-filter-tab" data-tab="unclaimed" onclick="window.setAdminUserPopulationTab('unclaimed', this)" style="background:transparent; color:var(--text-muted); border:none; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+                        ⚠️ Unclaimed (${unclaimedCount})
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Bottom Row: Search + 30-Day Token Dropdown + Attributes Dropdown + Copy Action Button -->
+                  <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                    <!-- Search Input -->
+                    <div style="position:relative; flex:1 1 200px; min-width:180px;">
+                      <input type="text" id="adminUserSearchInput" oninput="window.filterAdminUsersList()" placeholder="🔍 Search Name, Game ID, or Email..." style="width:100%; padding:9px 30px 9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; font-weight:bold; box-sizing:border-box;">
+                      <button onclick="let i=document.getElementById('adminUserSearchInput'); if(i){i.value=''; window.filterAdminUsersList(); i.focus();}" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text-muted); cursor:pointer; font-weight:bold; font-size:14px;">✕</button>
+                    </div>
+
+                    <!-- 30-Day Token Status Selector with Live Counters -->
+                    <select id="adminUserTokenFilter" onchange="window.filterAdminUsersList()" style="flex:1 1 170px; min-width:160px; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer; outline:none; box-sizing:border-box;">
+                      <option value="all">🛡️ Token: All (${totalMembersCount})</option>
+                      <option value="active">🟢 Active Sync (${tokenActiveCount})</option>
+                      <option value="expiring">🟠 Expiring Soon (${tokenExpiringCount})</option>
+                      <option value="expired">🔴 Expired Sync (${tokenExpiredCount})</option>
+                      <option value="unverified">⚪ Unverified (${tokenUnverifiedCount})</option>
+                    </select>
+
+                    <!-- Feature Attributes Selector with Live Counters -->
+                    <select id="adminUserAttrFilter" onchange="window.filterAdminUsersList()" style="flex:1 1 170px; min-width:160px; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer; outline:none; box-sizing:border-box;">
+                      <option value="all">🏷️ Attributes: All (${totalMembersCount})</option>
+                      <option value="new">🆕 New Signups (${newSignupsCount})</option>
+                      <option value="alts">🔗 Has Linked Alts (${hasAltsCount})</option>
+                      <option value="enrolled">🎁 Gift Codes (${giftCodesCount})</option>
+                      <option value="staff">👑 R4/R5 Staff (${staffCount})</option>
+                    </select>
+
+                    <!-- Copy Unclaimed Button -->
+                    <button onclick="window.copyUnclaimedRosterList()" style="background:rgba(239,68,68,0.12); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:9px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s; white-space:nowrap; flex-shrink:0;" onmouseover="this.style.background='rgba(239,68,68,0.2)'" onmouseout="this.style.background='rgba(239,68,68,0.12)'">
+                      📋 Copy Unclaimed (${unclaimedCount})
+                    </button>
+                  </div>
                 </div>
-
-                <!-- Primary Segmented Switcher -->
-                <div style="display:inline-flex; background:var(--bg-main); padding:3px; border-radius:10px; border:1px solid var(--border); gap:4px;">
-                  <button class="admin-user-filter-tab active" data-tab="all" onclick="window.setAdminUserPopulationTab('all', this)" style="background:var(--accent); color:#fff; border:none; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
-                    👥 All (${Object.keys(users).length + (window._currentUnclaimedRosterList || []).length})
-                  </button>
-                  <button class="admin-user-filter-tab" data-tab="claimed" onclick="window.setAdminUserPopulationTab('claimed', this)" style="background:transparent; color:var(--text-muted); border:none; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
-                    ✅ Claimed (${Object.keys(users).length})
-                  </button>
-                  <button class="admin-user-filter-tab" data-tab="unclaimed" onclick="window.setAdminUserPopulationTab('unclaimed', this)" style="background:transparent; color:var(--text-muted); border:none; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
-                    ⚠️ Unclaimed (${(window._currentUnclaimedRosterList || []).length})
-                  </button>
-                </div>
-              </div>
-
-              <!-- Bottom Row: Search + 30-Day Token Dropdown + Attributes Dropdown + Copy Action Button -->
-              <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-                <!-- Search Input -->
-                <div style="position:relative; flex:1; min-width:220px;">
-                  <input type="text" id="adminUserSearchInput" oninput="window.filterAdminUsersList()" placeholder="🔍 Search Name, Game ID, or Email..." style="width:100%; padding:9px 30px 9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; font-weight:bold; box-sizing:border-box;">
-                  <button onclick="let i=document.getElementById('adminUserSearchInput'); if(i){i.value=''; window.filterAdminUsersList(); i.focus();}" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text-muted); cursor:pointer; font-weight:bold; font-size:14px;">✕</button>
-                </div>
-
-                <!-- 30-Day Token Status Selector -->
-                <select id="adminUserTokenFilter" onchange="window.filterAdminUsersList()" style="padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer; outline:none; min-width:180px;">
-                  <option value="all">🛡️ 30-Day Token: All States</option>
-                  <option value="active">🟢 Active Sync (6–30d left)</option>
-                  <option value="expiring">🟠 Expiring Soon (≤5d left)</option>
-                  <option value="expired">🔴 Expired Sync (0d left)</option>
-                  <option value="unverified">⚪ Unverified / No Token</option>
-                </select>
-
-                <!-- Feature Attributes Selector -->
-                <select id="adminUserAttrFilter" onchange="window.filterAdminUsersList()" style="padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer; outline:none; min-width:170px;">
-                  <option value="all">🏷️ Filter Attributes: All</option>
-                  <option value="new">🆕 New Signups (Past 7d)</option>
-                  <option value="alts">🔗 Has Linked Alts</option>
-                  <option value="enrolled">🎁 Gift Codes Enrolled</option>
-                  <option value="staff">👑 R4/R5 Staff Members</option>
-                </select>
-
-                <!-- Copy Unclaimed Button -->
-                <button onclick="window.copyUnclaimedRosterList()" style="background:rgba(239,68,68,0.12); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:9px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s; white-space:nowrap;" onmouseover="this.style.background='rgba(239,68,68,0.2)'" onmouseout="this.style.background='rgba(239,68,68,0.12)'">
-                  📋 Copy Unclaimed
-                </button>
-              </div>
-            </div>
+              `;
+            })()}
 
             <div style="overflow-x:auto;">
               <table style="width:100%; border-collapse:collapse; text-align:left;">

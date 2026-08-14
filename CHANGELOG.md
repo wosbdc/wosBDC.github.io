@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.5.17] - 2026-08-14
+- Added live member count badges to all Token Status and Attribute filter options.
+- Polished control bar layout alignment to prevent wrapping and eliminate empty spacing.
+
 ## [2.5.16] - 2026-08-14
 - Streamlined Registered Users Database with consolidated Segmented Switcher and Attribute dropdowns.
 - Added 30-day sync token tracking and countdown badges for main characters and linked alts.
