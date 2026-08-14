@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.0.0] - 2026-08-13
+### 🎉 Milestone Release: Clean Member Drawer & Production-Grade Roster Architecture
+- **🧹 Streamlined Recent Signups Drawer**: Removed admin-only `+ Staff` management buttons and tags from the Recent Member Signups drawer to keep it clean, lightweight, and focused purely on welcoming new members.
+- **🔬 Century Games Server Architecture Research**: Completed reverse-engineering analysis of Century Games' verification code flow and deployed the automated 3-tier master roster architecture.
+
 ## [1.99.9] - 2026-08-13
 ### 🛡️ Ironclad Chief Name Validation & Automatic Century Games API Verification
 - **🤖 Century Games Auto-Verify**: Added automated background querying of Century Games API across Google sign-in and manual registration flows to lock in real in-game character names and furnace levels automatically.

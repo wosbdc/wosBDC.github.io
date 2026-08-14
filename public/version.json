@@ -1,9 +1,9 @@
 {
-  "version": "1.99.9",
+  "version": "2.0.0",
   "releaseDate": "2026-08-13",
-  "title": "🛡️ Ironclad Chief Name Validation & Automatic Century Games API Verification",
+  "title": "🎉 Milestone Release: Clean Member Drawer & Production-Grade Roster Architecture",
   "notes": [
-    "Implemented automated Century Games API verification across all login & registration methods",
-    "Strictly enforced that Chief Name must be a text character name, preventing numeric Game IDs from ever entering the database as names"
+    "Cleaned up Recent Member Signups Drawer removing admin-only controls for a streamlined member view",
+    "Completed Century Games reverse engineering diagnostics and deployed 3-tier master roster sync architecture"
   ]
 }

@@ -7660,7 +7660,6 @@ window.openNewMembersModal = async () => {
     listHtml = `<div style="text-align:center; padding:30px; color:var(--text-muted);">No new member signups in the past 7 days.</div>`;
   } else {
     listHtml = recent.map(m => {
-      const isStaffRole = m.role === 'admin' || m.role === 'R4' || m.role === 'R5';
       const fLvl = m.furnaceLevel ? String(m.furnaceLevel).replace(/^FC\s*/i, '') : '';
       return `
       <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:12px; padding:14px 16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
@@ -7671,7 +7670,6 @@ window.openNewMembersModal = async () => {
               <span>${window.escapeHTML(m.name)}</span>
               <span style="font-size:11px; background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:2px 8px; border-radius:10px; font-weight:bold;">NEW</span>
               ${fLvl ? `<span style="font-size:11px; background:rgba(249,115,22,0.15); color:#f97316; border:1px solid rgba(249,115,22,0.4); padding:2px 8px; border-radius:10px; font-weight:bold;">🔥 FC ${window.escapeHTML(fLvl)}</span>` : ''}
-              ${isStaffRole ? `<span style="font-size:10px; background:rgba(234,179,8,0.15); color:#eab308; border:1px solid rgba(234,179,8,0.4); padding:2px 6px; border-radius:10px; font-weight:bold;">👑 Staff</span>` : ''}
             </div>
             <div style="font-size:12px; color:var(--text-muted); font-family:monospace; margin-top:3px;">
               ID: ${m.gameId || 'N/A'} • Joined: ${m.createdStr}
@@ -7682,7 +7680,6 @@ window.openNewMembersModal = async () => {
         <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
           <button onclick="window.copyWelcomeMessage('${window.escapeHTML(m.name)}')" style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:6px 12px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📋 Copy Welcome</button>
           <button onclick="document.getElementById('newMembersModalOverlay').remove(); window.searchPlayerFull('${window.escapeHTML(m.name)}');" style="background:var(--accent); color:#fff; border:none; padding:6px 12px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">👁️ Profile</button>
-          ${!isStaffRole && m.gameId ? `<button onclick="window.grantAdmin('${m.gameId}', 'R4')" style="background:rgba(234,179,8,0.12); color:#eab308; border:1px solid rgba(234,179,8,0.3); padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">+ Staff</button>` : ''}
         </div>
       </div>
     `;
