@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [1.99.2] - 2026-08-13
+### 🧹 Streamlined Discord Webhook Roster Description
+- **🧹 Removed Redundant Sub-Header**: Removed the `Latest Member Registered` sub-header line from the Discord embed card description.
+- **⚡ Real-Time Discord Live Patch**: Dispatched an instant `PATCH` to update the existing live Discord message ID (`1537687110801293365`).
+
 ## [1.99.1] - 2026-08-13
 ### 🛡️ Single Updating Discord Roster Post & Header Timestamp Placement
 - **🛡️ Single Updating Discord Post**: Replaced individual clutter posts with a single updating **Alliance Gatekeeper 🛡️** Discord roster card. The system stores the message ID in Firebase (`config/discordAlerts/lastDiscordMessageId`) and edits the post in-place using HTTP `PATCH` whenever a new member registers.

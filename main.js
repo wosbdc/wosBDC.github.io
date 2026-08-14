@@ -7474,7 +7474,7 @@ window.triggerNewMemberAlerts = async (memberRecord) => {
         avatar_url: `${siteUrl}/favicon.svg`,
         embeds: [{
           title: "🛡️ ALLIANCE GATEKEEPER — RECENT NEW MEMBERS ROSTER",
-          description: `✨ **Latest Member Registered**: Chief **${latestName}** at **${latestTime}**!\n\n📋 **Active Signups List (Past 7 Days)**:`,
+          description: `📋 **Active Signups List (Past 7 Days)**:`,
           color: 4242388, // Cyan Accent (#06b6d4)
           fields: rosterFields.length > 0 ? rosterFields : [{ name: "Status", value: "No active signups in the past 7 days.", inline: false }],
           footer: {

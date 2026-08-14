@@ -1,10 +1,9 @@
 {
-  "version": "1.99.1",
+  "version": "1.99.2",
   "releaseDate": "2026-08-13",
-  "title": "🛡️ Single Updating Discord Roster Post & Header Timestamp Placement",
+  "title": "🧹 Streamlined Discord Webhook Roster Description",
   "notes": [
-    "Converted Alliance Gatekeeper 🛡️ Discord webhook alerts into a single updating roster embed using HTTP PATCH",
-    "Eliminated duplicate/messy individual Discord posts for new member signups",
-    "Positioned registration timestamp directly at the top right header of the Discord roster card"
+    "Removed redundant Latest Member Registered header line from Discord embed description for a cleaner roster layout",
+    "Patched live Discord webhook post in real-time"
   ]
 }
