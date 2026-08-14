@@ -559,6 +559,9 @@ export const refreshIdToNameMap = async () => {
         window.nameToIdMap = nameToIdMap;
         window.idToNameMap = idToNameMap;
         window.enrolledGameIds = enrolledGameIds;
+        if (typeof window.updateNavbarUserIndicator === 'function' && currentUser) {
+            window.updateNavbarUserIndicator(currentUser);
+        }
     } catch(e) { console.error("Error refreshing ID map:", e); }
 };
 
@@ -3745,65 +3748,59 @@ onValue(ref(db, 'config/maintenanceMode'), (snapshot) => {
   checkMaintenanceAccess();
 });
 
-// Welcome Popup Banner
-window.showWelcomePop = (userName) => {
-    let existing = document.getElementById('welcomePopModal');
-    if (existing) existing.remove();
+// Welcome Popup Banner (Disabled per clean login design)
+window.showWelcomePop = () => {};
+
+// Dedicated Chief Navbar Indicator Updater
+window.updateNavbarUserIndicator = (user = currentUser) => {
+    const navIndicator = document.getElementById('navbar-user-indicator');
+    if (!navIndicator) return;
     
-    const displayName = userName && userName.trim() ? userName.trim() : 'Chief';
+    if (!user) {
+        navIndicator.style.display = 'none';
+        navIndicator.innerHTML = '';
+        return;
+    }
     
-    const pop = document.createElement('div');
-    pop.id = 'welcomePopModal';
-    pop.style.cssText = `
-        position: fixed;
-        top: 25px;
-        left: 50%;
-        transform: translateX(-50%) translateY(-25px);
-        z-index: 10000;
-        background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.98));
-        border: 1px solid rgba(234, 179, 8, 0.5);
-        box-shadow: 0 12px 35px rgba(0, 0, 0, 0.6), 0 0 25px rgba(234, 179, 8, 0.25);
-        border-radius: 16px;
-        padding: 16px 28px;
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        color: #fff;
-        backdrop-filter: blur(12px);
-        opacity: 0;
-        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        pointer-events: none;
-    `;
+    const isSpoofing = Boolean(window._spoofedUser);
+    const gId = user.gameId ? String(user.gameId).trim() : '';
+    let name = '';
     
-    pop.innerHTML = `
-        <div style="font-size:32px; line-height:1; filter: drop-shadow(0 0 10px rgba(234,179,8,0.7));">👋</div>
-        <div>
-            <div style="font-size:18px; font-weight:800; background: linear-gradient(135deg, #fef08a, #eab308); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-                Welcome, ${escapeHTML(displayName)}!
-            </div>
-            <div style="font-size:12px; color: var(--text-muted, #94a3b8); margin-top:2px; font-weight:500;">
-                Successfully logged in to WOS Alliance Hub
-            </div>
-        </div>
-    `;
+    if (gId && window.idToNameMap && window.idToNameMap[gId] && !/^\d+$/.test(window.idToNameMap[gId])) {
+        name = window.idToNameMap[gId];
+    } else if (gId && typeof idToNameMap !== 'undefined' && idToNameMap[gId] && !/^\d+$/.test(idToNameMap[gId])) {
+        name = idToNameMap[gId];
+    } else if (user.name && String(user.name).trim() && !/^\d+$/.test(String(user.name).trim())) {
+        name = String(user.name).trim();
+    } else if (user.chiefName && String(user.chiefName).trim() && !/^\d+$/.test(String(user.chiefName).trim())) {
+        name = String(user.chiefName).trim();
+    } else if (user.displayName && String(user.displayName).trim()) {
+        name = String(user.displayName).trim();
+    } else if (user.email && user.email.includes('@')) {
+        name = user.email.split('@')[0];
+    } else {
+        name = 'Chief';
+    }
     
-    document.body.appendChild(pop);
-    
-    requestAnimationFrame(() => {
-        pop.style.opacity = '1';
-        pop.style.transform = 'translateX(-50%) translateY(0)';
-    });
-    
-    setTimeout(() => {
-        pop.style.opacity = '0';
-        pop.style.transform = 'translateX(-50%) translateY(-25px)';
-        setTimeout(() => pop.remove(), 400);
-    }, 4500);
+    if (isSpoofing) {
+        navIndicator.innerHTML = `🎭 Spoofing: ${window.escapeHTML(name)}`;
+        navIndicator.style.display = 'flex';
+        navIndicator.style.color = '#ef4444';
+        navIndicator.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+        navIndicator.style.background = 'rgba(239, 68, 68, 0.15)';
+    } else {
+        const isStaff = (typeof window.isAdminUser === 'function') && window.isAdminUser(user);
+        const icon = isStaff ? '👑' : '👤';
+        navIndicator.innerHTML = `${icon} ${window.escapeHTML(name)}`;
+        navIndicator.style.display = 'flex';
+        navIndicator.style.color = '#60a5fa';
+        navIndicator.style.borderColor = 'rgba(59, 130, 246, 0.4)';
+        navIndicator.style.background = 'rgba(59, 130, 246, 0.18)';
+    }
 };
 
 // Listen to Auth State
 let realUser = null; // Store the actual logged in user so we can revert from spoofing
-let hasShownSessionWelcome = false;
 
 listenToAuth((user) => {
   if (!window._spoofedUser) {
@@ -3811,15 +3808,11 @@ listenToAuth((user) => {
   }
   realUser = user;
   
-  const navIndicator = document.getElementById('navbar-user-indicator');
-  const adminMasterKeySection = document.getElementById('adminMasterKeySection');
-  
   if (currentUser) {
-    let name = (currentUser.gameId && idToNameMap[currentUser.gameId]) ? idToNameMap[currentUser.gameId] : (currentUser.displayName || 'Chief');
-    if (!hasShownSessionWelcome && !window._spoofedUser) {
-        hasShownSessionWelcome = true;
-        setTimeout(() => window.showWelcomePop(name), 600);
-    }
+    let name = (currentUser.gameId && window.idToNameMap && window.idToNameMap[currentUser.gameId]) 
+      ? window.idToNameMap[currentUser.gameId] 
+      : (currentUser.name || currentUser.chiefName || currentUser.displayName || 'Chief');
+      
     if(authSidebarBtn) authSidebarBtn.innerHTML = window._spoofedUser ? `🎭 Spoofing: ${name}` : `👤 ${name}'s Profile`;
     const adminAlertsNavBtn = document.getElementById('adminAlertsNavBtn');
     if (adminAlertsNavBtn) adminAlertsNavBtn.style.display = 'flex';
@@ -3831,15 +3824,7 @@ listenToAuth((user) => {
     }
     if(signOutSidebarBtn) signOutSidebarBtn.style.display = 'block';
     
-    if (navIndicator) {
-      navIndicator.innerHTML = window._spoofedUser ? `🎭 Spoofing: ${name}` : `👤 ${name}`;
-      navIndicator.style.display = 'flex';
-      if (window._spoofedUser) {
-          navIndicator.style.color = 'var(--danger)'; // Warning color so admin knows they are spoofing
-      } else {
-          navIndicator.style.color = '';
-      }
-    }
+    window.updateNavbarUserIndicator(currentUser);
     
     // Automatically remove onboarding banner and refresh views on sign-in
     const onboardingEl = document.getElementById('essentialOnboardingBanner');
@@ -3848,11 +3833,10 @@ listenToAuth((user) => {
     if (app.querySelector('#accountHubView')) views.account(); // Refresh account view if open
     else if (typeof window.activeViewFunc === 'function') window.activeViewFunc();
   } else {
-    hasShownSessionWelcome = false;
     if(authSidebarBtn) authSidebarBtn.innerHTML = `👤 Sign In / Register`;
     if(adminSidebarBtn) adminSidebarBtn.style.display = 'none';
     if(signOutSidebarBtn) signOutSidebarBtn.style.display = 'none';
-    if (navIndicator) navIndicator.style.display = 'none';
+    window.updateNavbarUserIndicator(null);
     
     if (app.querySelector('#accountHubView') || app.querySelector('#adminHubView')) views.home(); // Kick to home
   }
@@ -3908,13 +3892,9 @@ window.adminSpoofPlayer = async (spoofId) => {
     listenToAuth.fakeUpdate ? listenToAuth.fakeUpdate(currentUser) : null;
     
     // Brute force redraw
-    const navIndicator = document.getElementById('navbar-user-indicator');
-    let name = idToNameMap[currentUser.gameId] || 'Unknown';
+    window.updateNavbarUserIndicator(currentUser);
+    let name = (currentUser && currentUser.gameId && idToNameMap[currentUser.gameId]) || 'Unknown';
     if(authSidebarBtn) authSidebarBtn.innerHTML = `🎭 Spoofing: ${name}`;
-    if (navIndicator) {
-        navIndicator.innerHTML = `🎭 Spoofing: ${name}`;
-        navIndicator.style.color = 'var(--danger)';
-    }
     
     if (app.querySelector('#accountHubView')) views.account();
 };
@@ -3930,13 +3910,9 @@ window.clearSpoof = () => {
     if (clearBtn) clearBtn.style.display = 'none';
     
     // Brute force redraw
-    const navIndicator = document.getElementById('navbar-user-indicator');
-    let name = currentUser ? (idToNameMap[currentUser.gameId] || 'Account') : 'Unknown';
+    window.updateNavbarUserIndicator(currentUser);
+    let name = currentUser ? ((currentUser.gameId && idToNameMap[currentUser.gameId]) || currentUser.name || 'Account') : 'Unknown';
     if(authSidebarBtn) authSidebarBtn.innerHTML = `👤 ${name}'s Profile`;
-    if (navIndicator) {
-        navIndicator.innerHTML = `👤 ${name}`;
-        navIndicator.style.color = '';
-    }
     
     // Trigger fake auth update to restore real state
     listenToAuth.fakeUpdate ? listenToAuth.fakeUpdate(currentUser) : null;
@@ -4847,8 +4823,6 @@ if(authSubmitBtn) authSubmitBtn.addEventListener('click', async () => {
     closeAuthModal();
     const onboardingEl = document.getElementById('essentialOnboardingBanner');
     if (onboardingEl) onboardingEl.remove();
-    let uName = chiefName || (currentUser && currentUser.gameId && idToNameMap[currentUser.gameId]) ? idToNameMap[currentUser.gameId] : (currentUser ? (currentUser.displayName || 'Chief') : 'Chief');
-    if (window.showWelcomePop) window.showWelcomePop(uName);
     if (typeof window.activeViewFunc === 'function') window.activeViewFunc();
     else views.home();
   } catch(err) {
@@ -4877,10 +4851,6 @@ async function handleGoogleAuth() {
             closeAuthModal();
             const onboardingEl = document.getElementById('essentialOnboardingBanner');
             if (onboardingEl) onboardingEl.remove();
-            
-            const uData = snapshot.val() || {};
-            let uName = uData.name || (uData.gameId && idToNameMap[uData.gameId]) || user.displayName || 'Chief';
-            if (window.showWelcomePop) window.showWelcomePop(uName);
             if (typeof window.activeViewFunc === 'function') window.activeViewFunc();
             else views.home();
         } else {

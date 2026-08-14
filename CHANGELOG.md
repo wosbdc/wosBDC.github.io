@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.5.23] - 2026-08-14
+- Live Chief name indicator next to the version badge in the top navbar with interactive Account Hub shortcut.
+- Clean sign-in experience: removed disruptive login pop-up banner.
+
 ## [2.5.22] - 2026-08-14
 - Fixed Notification Bell so the Alliance Alerts modal renders instantly with 0ms delay.
 - Fixed mobile navbar hiding the bell and added a dedicated `🔔 Alerts` link to the mobile drawer.

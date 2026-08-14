@@ -1,8 +1,8 @@
 {
-  "version": "2.5.22",
+  "version": "2.5.23",
   "releaseDate": "2026-08-14",
-  "title": "🔔 Instant Notification Bell & Mobile Alerts Fix",
+  "title": "👤 Live Chief Navbar Indicator & Clean Sign-In",
   "notes": [
-    "Fixed Notification Bell so alerts modal opens instantly with zero network lag and added mobile menu alerts shortcut"
+    "Displays the active Chief's name next to the version badge in the top navbar and removed disruptive login pop-up"
   ]
 }
