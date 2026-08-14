@@ -13933,8 +13933,8 @@ window.resetBearTrapEvent = async () => {
                      🔗 Linked Alt Accounts <span style="font-size:14px; color:var(--text-muted); font-weight:normal;">(${links.length})</span>
                  </div>
                  <div style="display:flex; align-items:center; gap:10px;">
-                     <button id="syncAllCharsBtn" onclick="event.stopPropagation(); window.handleSyncAllCharacters(this);" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 10px rgba(14,165,233,0.3); transition:0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
-                         🔄 Sync All (${links.length + 1} Chars)
+                     <button id="syncAllCharsBtn" onclick="event.stopPropagation(); window.handleSyncAllCharacters(this);" style="background:rgba(6,182,212,0.15); border:1px solid #06b6d4; color:#06b6d4; padding:5px 12px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.25)'" onmouseout="this.style.background='rgba(6,182,212,0.15)'">
+                         🔄 Sync All (${links.length + 1})
                      </button>
                      <span class="alt-accounts-arrow" style="font-size:14px; transition:transform 0.3s ease;">▼</span>
                  </div>
@@ -14041,23 +14041,17 @@ window.resetBearTrapEvent = async () => {
                   }
               }
           }
-          return `<div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end; flex-shrink:0;">
-              <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
-                  ${ (isAltEnrolled || enrolledGameIds.has(gid.toString())) 
-                      ? `<span style="border:1px solid #10b981; color:#10b981; background:rgba(16,185,129,0.1); border-radius:9999px; padding:3px 10px; font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:4px;">&#x2705; Enrolled</span>`
-                      : `<button onclick="window.openAltPerksModal('${gid}', '${altName.replace(/'/g, "\\'")}')" style="background:rgba(16,185,129,0.15); border:1px solid #10b981; color:#10b981; border-radius:8px; padding:4px 10px; font-size:11px; font-weight:600; cursor:pointer; transition:background 0.2s;" onmouseover="this.style.background='rgba(16,185,129,0.25)'" onmouseout="this.style.background='rgba(16,185,129,0.15)'">&#x1F381; Enable Perks</button>`
-                  }
+          return `<div style="display:flex; flex-direction:column; gap:8px; align-items:flex-end; flex-shrink:0;">
+              ${ (isAltEnrolled || enrolledGameIds.has(gid.toString())) 
+                  ? `<span style="border:1px solid #10b981; color:#10b981; background:rgba(16,185,129,0.1); border-radius:9999px; padding:3px 10px; font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:4px;">&#x2705; Enrolled</span>`
+                  : `<button onclick="window.openAltPerksModal('${gid}', '${altName.replace(/'/g, "\\'")}')" style="background:rgba(16,185,129,0.15); border:1px solid #10b981; color:#10b981; border-radius:8px; padding:4px 10px; font-size:11px; font-weight:600; cursor:pointer; transition:background 0.2s;" onmouseover="this.style.background='rgba(16,185,129,0.25)'" onmouseout="this.style.background='rgba(16,185,129,0.15)'">&#x1F381; Enable Perks</button>`
+              }
+              <div style="display:flex; gap:6px; align-items:center;">
                   ${ isAltTokenActive
-                      ? `<span style="border:1px solid #0284c7; color:#38bdf8; background:rgba(56,189,248,0.12); border-radius:9999px; padding:3px 10px; font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:4px;" title="30-day token active">🛡️ ${altTokenDaysRemaining}d Token</span>`
-                      : `<button onclick="window.openAltVerifyModal('${gid}', '${altName.replace(/'/g, "\\'")}')" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); border:none; color:#fff; border-radius:8px; padding:4px 10px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px; box-shadow:0 2px 8px rgba(14,165,233,0.3);" title="Send in-game code to bind 30-day token">🛡️ Bind 30d Sync</button>`
+                      ? `<button onclick="window.handleSyncAltProfile('${gid}', this)" style="background:rgba(6,182,212,0.15); border:1px solid #06b6d4; color:#06b6d4; border-radius:8px; padding:5px 10px; font-size:12px; font-weight:600; cursor:pointer; transition:background 0.2s; display:inline-flex; align-items:center; gap:4px;" onmouseover="this.style.background='rgba(6,182,212,0.25)'" onmouseout="this.style.background='rgba(6,182,212,0.15)'" title="Token active (${altTokenDaysRemaining}d left). Click to sync.">🔄 Sync</button>`
+                      : `<button onclick="window.openAltVerifyModal('${gid}', '${altName.replace(/'/g, "\\'")}')" style="background:rgba(6,182,212,0.15); border:1px solid #06b6d4; color:#06b6d4; border-radius:8px; padding:5px 10px; font-size:12px; font-weight:600; cursor:pointer; transition:background 0.2s; display:inline-flex; align-items:center; gap:4px;" onmouseover="this.style.background='rgba(6,182,212,0.25)'" onmouseout="this.style.background='rgba(6,182,212,0.15)'" title="Verify via in-game mail to bind 30-day auto-sync token">⚡ Sync</button>`
                   }
-              </div>
-              <div style="display:flex; gap:6px;">
-                  ${ isAltTokenActive
-                      ? `<button onclick="window.handleSyncAltProfile('${gid}', this)" style="background:rgba(56,189,248,0.15); border:1px solid #38bdf8; color:#38bdf8; border-radius:8px; padding:5px 10px; font-size:12px; font-weight:600; cursor:pointer; transition:0.2s; display:inline-flex; align-items:center; gap:4px;" title="Sync stats & avatar">🔄 Sync</button>`
-                      : ''
-                  }
-                  <button onclick="window.openEditAltProfileModal('${gid}', '${altName.replace(/'/g, "\\'")}')" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); border-radius:8px; padding:5px 10px; font-size:12px; font-weight:600; cursor:pointer; transition:0.2s;">✏️ Edit</button>
+                  <button onclick="window.openEditAltProfileModal('${gid}', '${altName.replace(/'/g, "\\'")}')" style="background:rgba(6,182,212,0.15); border:1px solid #06b6d4; color:#06b6d4; border-radius:8px; padding:5px 10px; font-size:12px; font-weight:600; cursor:pointer; transition:background 0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.25)'" onmouseout="this.style.background='rgba(6,182,212,0.15)'">✏️ Edit</button>
                   <button onclick="window.unlinkAltAccountPrompt('${gid}')" style="border:1px solid #f87171; color:#f87171; border-radius:8px; padding:5px 10px; font-size:12px; font-weight:600; cursor:pointer; background:transparent; transition:background 0.2s;" onmouseover="this.style.background='rgba(248,113,113,0.1)'" onmouseout="this.style.background='transparent'">UNLINK</button>
               </div>
           </div>`;

@@ -1,11 +1,9 @@
 {
-  "version": "2.5.11",
+  "version": "2.5.12",
   "releaseDate": "2026-08-14",
-  "title": "🔗 Linked Alt Accounts 30-Day Sync & Verification System",
+  "title": "✨ Streamline Alt Card Sync Layout & Action Controls",
   "notes": [
-    "Added per-alt 30-day session token binding and token status indicators",
-    "Added 1-click alt stats and avatar synchronization",
-    "Added 'Sync All Characters' master button in Account Hub to refresh Main and all linked alts concurrently",
-    "Enhanced '+ Link Alt Account' modal with automatic in-game mail verification and stat importing"
+    "Replaced standalone token pills with unified, clean [🔄 Sync] and [⚡ Sync] quick-action buttons on alt cards",
+    "Streamlined action button alignment with consistent heights, padding, and cyan theme highlights"
   ]
 }

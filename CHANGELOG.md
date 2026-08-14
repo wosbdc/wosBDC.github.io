@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [2.5.12] - 2026-08-14
+### ✨ Streamline Alt Card Sync Layout & Action Controls
+- **🎨 Clean & Unified Action Buttons**:
+  - Replaced bulky status alert pills with clean, uniform **`[🔄 Sync]`** (active token) and **`[⚡ Sync]`** (unbound/expired token) action buttons on each Alt Card.
+  - Aligned all alt action buttons (`Sync`, `Edit`, `UNLINK`) into a single, perfectly spaced row with consistent sizing, padding, and hover transitions.
+  - Added real-time token remaining days directly into hover tooltips to keep the card interface clean and uncluttered.
+
 ## [2.5.11] - 2026-08-14
 ### 🔗 Linked Alt Accounts 30-Day Sync & Verification System
 - **🛡️ Per-Alt 30-Day Token Binding**:
