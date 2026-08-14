@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.5.2] - 2026-08-14
+### ✨ Fix Auth Button Reference & Strengthen Scope Testing
+- **🛡️ Resolved Reference Bug**: Cleaned up legacy variable references for Google auth buttons in [main.js](file:///c:/Users/Brian/.gemini/antigravity/scratch/wos-public-website/main.js) that caused script halts on initial load.
+- **⚡ Automated Static Scope Guard**: Added automated build-time scanner in `tools/test_all_features.cjs` to audit all conditional checks and guarantee zero undeclared identifier bugs.
+
 ## [2.5.1] - 2026-08-14
 ### ✨ Theme-Adaptive Auth Method Cards (Midnight, Light, Ombre)
 - **🎨 Multi-Theme Google & Email Action Cards**:

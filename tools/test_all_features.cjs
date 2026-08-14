@@ -27,7 +27,23 @@ function testAllFeatures() {
         });
     }
 
-    // 2. Audit window export functions
+    // 2. Audit top-level 'if (varName)' and 'if(varName)' checks for existence of declaration
+    const ifChecks = c.match(/if\s*\(\s*([a-zA-Z0-9_$]+)\s*\)/g) || [];
+    const builtins = new Set(['window', 'document', 'navigator', 'history', 'location', 'console', 'isRegistering', 'isGoogleRegistration', 'pendingGoogleUser', 'currentUser', 'verifiedChiefName', 'verifiedFurnaceLevel', 'auth', 'db']);
+    ifChecks.forEach(match => {
+        const idMatch = match.match(/if\s*\(\s*([a-zA-Z0-9_$]+)\s*\)/);
+        if (idMatch && idMatch[1]) {
+            const varName = idMatch[1];
+            if (!builtins.has(varName)) {
+                const declRegex = new RegExp(`\\b(let|const|var|function|class)\\s+${varName}\\b|\\(${varName}\\b|\\(\\s*.*?,\\s*${varName}\\s*[,\\)]|\\b${varName}\\s*=>|import\\s+.*\\b${varName}\\b|\\bcatch\\s*\\(\\s*${varName}\\s*\\)|\\bfor\\s*\\([^;]*\\b${varName}\\b`);
+                if (!declRegex.test(c)) {
+                    errors.push(`Undeclared identifier in conditional check: '${varName}' (${match})!`);
+                }
+            }
+        }
+    });
+
+    // 3. Audit window export functions
     const windowExportMatches = c.match(/window\.([a-zA-Z0-9_]+)\s*=/g) || [];
     console.log(`✓ Audited ${windowExportMatches.length} window exported functions.`);
 
@@ -41,3 +57,4 @@ function testAllFeatures() {
 }
 
 testAllFeatures();
+

@@ -4358,13 +4358,6 @@ if (authSignInBtn) {
   });
 }
 
-if (authLoginGoogleBtn) {
-  authLoginGoogleBtn.addEventListener('click', () => {
-    const origGoogleBtn = document.getElementById('authGoogleBtn');
-    if (origGoogleBtn) origGoogleBtn.click();
-  });
-}
-
 const authLoginEmail = document.getElementById('authLoginEmail');
 const authLoginPassword = document.getElementById('authLoginPassword');
 
@@ -4786,7 +4779,7 @@ if(authSubmitBtn) authSubmitBtn.addEventListener('click', async () => {
 async function handleGoogleAuth() {
     try {
         if (authChooseGoogleBtn) authChooseGoogleBtn.disabled = true;
-        if (authLoginGoogleBtn) authLoginGoogleBtn.disabled = true;
+        if (authSignInChooseGoogleBtn) authSignInChooseGoogleBtn.disabled = true;
         
         const userCredential = await loginWithGoogle();
         const user = userCredential.user;
@@ -4833,14 +4826,13 @@ async function handleGoogleAuth() {
         }
     } finally {
         if (authChooseGoogleBtn) authChooseGoogleBtn.disabled = false;
-        if (authLoginGoogleBtn) authLoginGoogleBtn.disabled = false;
+        if (authSignInChooseGoogleBtn) authSignInChooseGoogleBtn.disabled = false;
     }
 }
 
 const authGoogleBtn = document.getElementById('authGoogleBtn');
 if (authChooseGoogleBtn) authChooseGoogleBtn.addEventListener('click', handleGoogleAuth);
 if (authSignInChooseGoogleBtn) authSignInChooseGoogleBtn.addEventListener('click', handleGoogleAuth);
-if (authLoginGoogleBtn) authLoginGoogleBtn.addEventListener('click', handleGoogleAuth);
 if (authGoogleBtn) authGoogleBtn.addEventListener('click', handleGoogleAuth);
 
 

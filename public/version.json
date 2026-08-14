@@ -1,10 +1,10 @@
 {
-  "version": "2.5.1",
+  "version": "2.5.2",
   "releaseDate": "2026-08-14",
-  "title": "✨ Theme-Adaptive Auth Method Cards (Midnight, Light, Ombre)",
+  "title": "✨ Fix Auth Button Reference & Strengthen Scope Testing",
   "notes": [
-    "Theme-adaptive Google and Email action cards dynamically matching Midnight, Light, and Ombre themes",
-    "Polished hover lift states, accent borders, and animated navigation arrows",
-    "Consistent styling across both Registration and Sign In modals"
+    "Cleaned up legacy auth button references to ensure seamless runtime initialization",
+    "Enhanced static scope test suite to automatically prevent undeclared identifiers in conditionals",
+    "Verified all view transitions and auth modal event bindings"
   ]
 }
