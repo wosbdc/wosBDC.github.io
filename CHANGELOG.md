@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [1.99.8] - 2026-08-13
+### 📋 Chief: <name> Discord Formatting Standardization
+- **📋 Format Standardization**: Formatted member titles on the Discord roster card as `Chief: <name>` (e.g. `1. Chief: Testing Agent`, `2. Chief: wosrewards`).
+- **⚡ Real-Time Discord Live Patch**: Patched the live Discord roster post to apply the updated `Chief: <name>` styling instantly.
+
 ## [1.99.7] - 2026-08-13
 ### 🔤 Clean Chief Name Resolution & Unclaimed Fallback Protection
 - **🔤 Eliminated Numeric Chief Names**: Prevented raw numeric Game IDs (e.g. `319875650`) from ever being displayed as Chief Names in Discord alerts and member drawers.

@@ -7463,7 +7463,7 @@ window.triggerNewMemberAlerts = async (memberRecord) => {
         const numPrefix = `${idx + 1}.`;
         const fLvl = m.furnaceLevel ? ` • 🔥 FC ${String(m.furnaceLevel).replace(/^FC\s*/i, '')}` : '';
         return {
-          name: `${numPrefix} Chief ${m.name}`,
+          name: `${numPrefix} Chief: ${m.name}`,
           value: `🆔 \`${m.gameId || 'N/A'}\`${fLvl} • 🕒 Joined: **${m.createdStr}**`,
           inline: false
         };
