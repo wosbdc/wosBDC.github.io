@@ -1,9 +1,8 @@
 {
-  "version": "2.5.12",
+  "version": "2.5.13",
   "releaseDate": "2026-08-14",
-  "title": "✨ Streamline Alt Card Sync Layout & Action Controls",
+  "title": "📜 Simplified & Streamlined Changelog",
   "notes": [
-    "Replaced standalone token pills with unified, clean [🔄 Sync] and [⚡ Sync] quick-action buttons on alt cards",
-    "Streamlined action button alignment with consistent heights, padding, and cyan theme highlights"
+    "Streamlined changelog into concise, easy-to-read release highlights"
   ]
 }
