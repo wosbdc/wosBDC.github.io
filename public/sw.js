@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wos-bdc-pwa-v2.5.19';
+const CACHE_NAME = 'wos-bdc-pwa-v2.5.31';
 const ASSETS_TO_CACHE = [
   './manifest.json',
   './favicon.svg',
@@ -36,7 +36,7 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   const url = event.request.url;
 
-  if (url.includes('firebaseio.com') || url.includes('script.google.com') || url.includes('googleapis.com')) {
+  if (url.includes('CHANGELOG.md') || url.includes('version.json') || url.includes('firebaseio.com') || url.includes('script.google.com') || url.includes('googleapis.com')) {
     return;
   }
 
