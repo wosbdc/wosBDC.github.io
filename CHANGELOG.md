@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.5.28] - 2026-08-14
+- Removed redundant nested `<details>` accordion and dropdown arrow from the Account Hub Linked Alts tab.
+- Created dedicated header bar with separated `[ ➕ Link Alt Account ]` and `[ 🔄 Sync All ]` buttons to prevent accidental clicks.
+- Redesigned alt cards with 3 distinct, perfectly aligned vertical zones (Header, Stats strip, Bottom action bar).
+
 ## [2.5.27] - 2026-08-14
 - Completely hidden active Main Character 30-day token card and healthy alts from the Alliance Notifications modal.
 - Added clean "🎉 All Caught Up!" empty state when there are 0 pending alerts or expired tokens.

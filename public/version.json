@@ -1,8 +1,8 @@
 {
-  "version": "2.5.27",
+  "version": "2.5.28",
   "releaseDate": "2026-08-14",
-  "title": "🎉 Clean Alerts & Hidden Active Tokens",
+  "title": "✨ Redesigned & Perfectly Aligned Linked Alts Tab",
   "notes": [
-    "Completely hides active 30-day tokens from notifications modal; only shows action-required alerts"
+    "Removed redundant dropdown arrow, eliminated accidental sync clicks, and redesigned alt cards with unified horizontal button alignment"
   ]
 }

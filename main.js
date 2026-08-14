@@ -14214,28 +14214,79 @@ window.resetBearTrapEvent = async () => {
     let links = currentUser.linkedGameIds || [];
       
     linkedHtml += `
-      <div style="text-align:left; border-top:1px solid var(--border); padding-top:20px; margin-top:20px;">
-         <details style="background:rgba(255,255,255,0.02); border-radius:12px; border:1px solid var(--border); padding:10px; cursor:pointer;" class="alt-accounts-details">
-             <summary style="font-weight:bold; font-size:18px; color:var(--text-main); outline:none; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
-                 <div style="display:flex; align-items:center; gap:8px;">
-                     🔗 Linked Alt Accounts <span style="font-size:14px; color:var(--text-muted); font-weight:normal;">(${links.length})</span>
-                 </div>
-                 <div style="display:flex; align-items:center; gap:10px;">
-                     <button id="syncAllCharsBtn" onclick="event.stopPropagation(); window.handleSyncAllCharacters(this);" style="background:rgba(6,182,212,0.15); border:1px solid #06b6d4; color:#06b6d4; padding:5px 12px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.25)'" onmouseout="this.style.background='rgba(6,182,212,0.15)'">
-                         🔄 Sync All (${links.length + 1})
-                     </button>
-                     <span class="alt-accounts-arrow" style="font-size:14px; transition:transform 0.3s ease;">▼</span>
-                 </div>
-             </summary>
-             
-             <style>
-                 .alt-accounts-details[open] .alt-accounts-arrow {
-                     transform: rotate(180deg);
-                 }
-             </style>`;
+      <div style="text-align:left; padding-top:4px;">
+        <!-- Clean Tab Header -->
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:18px; padding-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.08);">
+            <div>
+                <h3 style="margin:0; font-size:18px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+                    <span>🔗 Linked Alt Accounts</span>
+                    <span style="font-size:12px; background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:2px 8px; border-radius:10px; font-weight:bold;">${links.length}</span>
+                </h3>
+                <div style="font-size:12px; color:var(--text-muted); margin-top:3px;">
+                    Manage secondary characters, 30-day token status, and gift code perks.
+                </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <button id="openLinkAltBtn" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:7px 14px; border-radius:8px; font-size:12.5px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:5px; box-shadow:0 2px 8px rgba(14,165,233,0.3); transition:transform 0.2s;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'">
+                    ➕ Link Alt Account
+                </button>
+                <button id="syncAllCharsBtn" onclick="window.handleSyncAllCharacters(this);" style="background:rgba(6,182,212,0.15); border:1px solid #06b6d4; color:#06b6d4; padding:7px 14px; border-radius:8px; font-size:12.5px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.25)'" onmouseout="this.style.background='rgba(6,182,212,0.15)'" title="Sync stats for main and all linked alt characters">
+                    🔄 Sync All (${links.length + 1})
+                </button>
+            </div>
+        </div>
+
+        <!-- Inline Link Alt Account Form -->
+        <div id="linkAltForm" style="display:none; background:rgba(15,23,42,0.85); backdrop-filter:blur(10px); padding:18px; border-radius:14px; border:1px solid rgba(56,189,248,0.35); box-shadow:0 8px 30px rgba(0,0,0,0.5); margin-bottom:20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:8px;">
+                <strong style="color:#fff; font-size:14.5px;">🔗 Link New Alt Character</strong>
+                <div style="display:flex; gap:6px;">
+                    <button type="button" id="toggleAltLinkAutoBtn" style="padding:4px 10px; font-size:11.5px; border-radius:6px; font-weight:bold; border:none; background:var(--accent); color:#fff; cursor:pointer;">🎮 30-Day Auto-Sync</button>
+                    <button type="button" id="toggleAltLinkManualBtn" style="padding:4px 10px; font-size:11.5px; border-radius:6px; font-weight:bold; border:1px solid var(--border); background:transparent; color:var(--text-muted); cursor:pointer;">✏️ Manual</button>
+                </div>
+            </div>
+
+            <!-- Mode A: Auto-Sync via In-Game Mail (Default) -->
+            <div id="altLinkAutoPanel">
+                <p style="font-size:12px; color:var(--text-muted); margin:0 0 10px 0; line-height:1.4;">
+                  Enter your alt's numeric Game ID to dispatch a verification code to their in-game mailbox:
+                </p>
+                <div style="display:flex; gap:8px; margin-bottom:10px;">
+                    <input type="text" inputmode="numeric" pattern="[0-9]*" id="altAutoGameIdInput" list="rosterAltDatalist" placeholder="Numeric Game ID (e.g. 319875650)..." style="flex:1; padding:10px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:14px; box-sizing:border-box;">
+                    <button type="button" id="altAutoSendCodeBtn" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:0 18px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; flex-shrink:0;">Verify ID</button>
+                </div>
+
+                <!-- Step 2 of Auto-Link: In-game code input -->
+                <div id="altAutoCodeBox" style="display:none; background:rgba(56,189,248,0.06); border:1px solid rgba(56,189,248,0.3); border-radius:10px; padding:12px; margin-bottom:12px;">
+                    <div style="font-size:12px; color:#38bdf8; font-weight:bold; margin-bottom:6px;">📩 Code Sent to Alt's In-Game Mailbox!</div>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <input type="text" id="altAutoCodeInput" maxlength="8" placeholder="6-digit code" style="flex:1; max-width:140px; padding:8px 12px; border-radius:8px; border:1px solid rgba(56,189,248,0.5); background:var(--bg-main); color:#fff; font-size:15px; font-family:monospace; letter-spacing:2px; text-align:center;">
+                        <button type="button" id="altAutoConfirmCodeBtn" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer;">Confirm & Link</button>
+                    </div>
+                    <div id="altAutoFeedback" style="font-size:11.5px; margin-top:6px; display:none;"></div>
+                </div>
+            </div>
+
+            <!-- Mode B: Quick Manual Link -->
+            <div id="altLinkManualPanel" style="display:none;">
+                <p style="font-size:12px; color:var(--text-muted); margin:0 0 10px 0; line-height:1.4;">
+                  Select from alliance roster or enter Game ID:
+                </p>
+                <input type="text" id="altGameIdInput" list="rosterAltDatalist" placeholder="Search Alt Name or Game ID..." style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); margin-bottom:10px; box-sizing:border-box;">
+                <div id="altChiefConfirm" style="font-size:13px; margin-bottom:10px; display:none;"></div>
+                <div style="display:flex; gap:10px;">
+                    <button id="submitAltBtn" style="flex:1; background:var(--accent); color:#fff; border:none; padding:10px; border-radius:8px; cursor:pointer; font-weight:bold;">Confirm Manual Link</button>
+                </div>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; margin-top:10px;">
+                <button id="cancelAltBtn" style="background:transparent; border:1px solid var(--border); color:var(--text-muted); padding:6px 14px; border-radius:6px; cursor:pointer; font-size:12px;">Cancel</button>
+            </div>
+        </div>
+    `;
          
     if (links.length > 0) {
-        linkedHtml += `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap:16px; margin-top:15px; margin-bottom:15px; cursor:default;">`;
+        linkedHtml += `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap:16px; margin-bottom:15px; cursor:default;">`;
         links.forEach(gid => {
               let altName = idToNameMap[gid] || `Game ID: ${gid}`;
               let altSaved = altProfilesMap[gid] || {};
@@ -14282,7 +14333,7 @@ window.resetBearTrapEvent = async () => {
                           const data = await res.json();
                           if (data.success && data.stove_lv) {
                               const flEl = document.getElementById(flSpanId);
-                              if (flEl) flEl.innerHTML = window.getFurnaceIconHtml(data.stove_lv);
+                              if (flEl) flEl.innerHTML = window.getFurnaceIconHtml(data.stove_lv, 50);
                           }
                       } catch(e) { console.error(e); }
                   }, 100);
@@ -14299,77 +14350,100 @@ window.resetBearTrapEvent = async () => {
                   altTokenDaysRemaining = Math.max(0, 30 - elapsedDays);
                   isAltTokenActive = altTokenDaysRemaining > 0;
               }
+
+              let isAltEnrolled = false;
+              const gcb = window.liveData['giftcodebot'];
+              if (gcb && gcb.length > 1) {
+                  for (let i = 1; i < gcb.length; i++) {
+                      if (gcb[i] && gcb[i][2] && gcb[i][2].toString().trim() === gid.toString().trim()) {
+                          isAltEnrolled = true;
+                          break;
+                      }
+                  }
+              }
               
               linkedHtml += `
-              <div style="background:rgba(15,23,42,0.6); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.1); border-radius:24px; padding:24px; box-shadow:0 10px 30px -10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1); display:flex; flex-direction:column; justify-content:space-between;">
+              <div style="background:rgba(15,23,42,0.7); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.09); border-radius:18px; padding:18px; box-shadow:0 8px 24px rgba(0,0,0,0.4); display:flex; flex-direction:column; justify-content:space-between; gap:14px;">
                   
-                  <!-- Top row: avatar + name + action buttons -->
-                  <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
-                      <div style="display:flex; gap:14px; align-items:center;">
-                          <!-- Avatar (clickable to manage) -->
-                          <div style="width:64px; height:64px; border-radius:50%; border:2px solid #06b6d4; box-shadow:0 0 15px rgba(6,182,212,0.5); overflow:hidden; background:var(--bg-secondary); position:relative; cursor:pointer; flex-shrink:0;" onclick="window.openAvatarManagerModal('${gid}', '${window.escapeHTML(altName)}')" title="Change or Sync Alt Avatar">
+                  <!-- Top Row: Avatar + Name/ID/Token Badge + Perks Badge -->
+                  <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+                      <div style="display:flex; gap:12px; align-items:center; min-width:0;">
+                          <!-- Avatar -->
+                          <div style="width:52px; height:52px; border-radius:14px; border:2px solid #0ea5e9; box-shadow:0 0 12px rgba(14,165,233,0.3); overflow:hidden; background:var(--bg-secondary); position:relative; cursor:pointer; flex-shrink:0;" onclick="window.openAvatarManagerModal('${gid}', '${window.escapeHTML(altName)}')" title="Change or Sync Alt Avatar">
                               <img id="altAvatarImg-${gid}" src="${window.getAvatarUrl(gid, altName)}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(altName)}&background=06b6d4&color=fff&bold=true&size=128';">
-                              <div id="altAvatarFallback-${gid}" style="display:none; align-items:center; justify-content:center; width:100%; height:100%; font-size:24px; font-weight:bold; color:#fff;">${altName.charAt(0).toUpperCase()}</div>
-                              <div style="position:absolute; inset:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0'"><span style="font-size:18px;">✏️</span></div>
+                              <div id="altAvatarFallback-${gid}" style="display:none; align-items:center; justify-content:center; width:100%; height:100%; font-size:22px; font-weight:bold; color:#fff;">${altName.charAt(0).toUpperCase()}</div>
+                              <div style="position:absolute; inset:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0'"><span style="font-size:16px;">✏️</span></div>
                           </div>
-                          <div style="display:flex; flex-direction:column; justify-content:center;">
-                              <span style="font-size:17px; font-weight:600; color:#ffffff; line-height:1.2;">${altName}</span>
-                              <span style="font-size:12px; color:#94a3b8; margin-top:4px;">ID: ${gid}</span>
-                          </div>
-                      </div>
-                      <!-- Action buttons (edit/enroll/unlink) -->
-                      ${ (() => {
-          let isAltEnrolled = false;
-          const gcb = window.liveData['giftcodebot'];
-          if (gcb && gcb.length > 1) {
-              for (let i = 1; i < gcb.length; i++) {
-                  if (gcb[i] && gcb[i][2] && gcb[i][2].toString().trim() === gid.toString().trim()) {
-                      isAltEnrolled = true;
-                      break;
-                  }
-              }
-          }
-          return `<div style="display:flex; flex-direction:column; gap:8px; align-items:flex-end; flex-shrink:0;">
-              ${ (isAltEnrolled || enrolledGameIds.has(gid.toString())) 
-                  ? `<span style="border:1px solid #10b981; color:#10b981; background:rgba(16,185,129,0.1); border-radius:9999px; padding:3px 10px; font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:4px;">&#x2705; Enrolled</span>`
-                  : `<button onclick="window.openAltPerksModal('${gid}', '${altName.replace(/'/g, "\\'")}')" style="background:rgba(16,185,129,0.15); border:1px solid #10b981; color:#10b981; border-radius:8px; padding:4px 10px; font-size:11px; font-weight:600; cursor:pointer; transition:background 0.2s;" onmouseover="this.style.background='rgba(16,185,129,0.25)'" onmouseout="this.style.background='rgba(16,185,129,0.15)'">&#x1F381; Enable Perks</button>`
-              }
-              <div style="display:flex; gap:6px; align-items:center;">
-                  ${ isAltTokenActive
-                      ? `<button onclick="window.handleSyncAltProfile('${gid}', this)" style="background:rgba(6,182,212,0.15); border:1px solid #06b6d4; color:#06b6d4; border-radius:8px; padding:5px 10px; font-size:12px; font-weight:600; cursor:pointer; transition:background 0.2s; display:inline-flex; align-items:center; gap:4px;" onmouseover="this.style.background='rgba(6,182,212,0.25)'" onmouseout="this.style.background='rgba(6,182,212,0.15)'" title="Token active (${altTokenDaysRemaining}d left). Click to sync.">🔄 Sync</button>`
-                      : `<button onclick="window.openAltVerifyModal('${gid}', '${altName.replace(/'/g, "\\'")}')" style="background:rgba(6,182,212,0.15); border:1px solid #06b6d4; color:#06b6d4; border-radius:8px; padding:5px 10px; font-size:12px; font-weight:600; cursor:pointer; transition:background 0.2s; display:inline-flex; align-items:center; gap:4px;" onmouseover="this.style.background='rgba(6,182,212,0.25)'" onmouseout="this.style.background='rgba(6,182,212,0.15)'" title="Verify via in-game mail to bind 30-day auto-sync token">⚡ Sync</button>`
-                  }
-                  <button onclick="window.openEditAltProfileModal('${gid}', '${altName.replace(/'/g, "\\'")}')" style="background:rgba(6,182,212,0.15); border:1px solid #06b6d4; color:#06b6d4; border-radius:8px; padding:5px 10px; font-size:12px; font-weight:600; cursor:pointer; transition:background 0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.25)'" onmouseout="this.style.background='rgba(6,182,212,0.15)'">✏️ Edit</button>
-                  <button onclick="window.unlinkAltAccountPrompt('${gid}')" style="border:1px solid #f87171; color:#f87171; border-radius:8px; padding:5px 10px; font-size:12px; font-weight:600; cursor:pointer; background:transparent; transition:background 0.2s;" onmouseover="this.style.background='rgba(248,113,113,0.1)'" onmouseout="this.style.background='transparent'">UNLINK</button>
-              </div>
-          </div>`;
-        })() }
-                  </div>
-
-                  <!-- Bottom stats row: Furnace Level + Time Active -->
-                  <div style="margin-top:20px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.05); border-radius:16px; padding:16px; display:flex; justify-content:space-between; align-items:center;">
-                      <div style="display:flex; align-items:center; gap:12px;">
-                          <svg style="width:24px; height:24px; color:#f97316; flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z" /></svg>
-                          <div style="display:flex; flex-direction:column;">
-                              <span id="${flSpanId}" style="font-size:18px; font-weight:bold; color:#ffffff; line-height:1; display:flex; align-items:center;">${window.getFurnaceIconHtml(flVal)}</span>
-                              <span style="font-size:11px; color:#94a3b8; margin-top:4px; text-transform:uppercase; letter-spacing:0.5px;">Furnace Level</span>
+                          <!-- Name & Token Status -->
+                          <div style="min-width:0; overflow:hidden;">
+                              <div style="font-size:15.5px; font-weight:bold; color:#ffffff; white-space:nowrap; text-overflow:ellipsis; overflow:hidden;" title="${window.escapeHTML(altName)}">
+                                  ${window.escapeHTML(altName)}
+                              </div>
+                              <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:3px;">
+                                  <span style="font-size:11px; color:#94a3b8; font-family:monospace; background:rgba(255,255,255,0.05); padding:1px 6px; border-radius:6px; border:1px solid rgba(255,255,255,0.08);">
+                                      ID: ${gid}
+                                  </span>
+                                  ${ isAltTokenActive
+                                      ? `<span style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:1px 6px; border-radius:6px; font-size:10.5px; font-weight:bold; cursor:pointer;" onclick="window.openAltVerifyModal('${gid}', '${altName.replace(/'/g, "\\'")}')" title="30-Day Token Active (${altTokenDaysRemaining}d remaining). Click to renew early.">🛡️ 30d Sync (${altTokenDaysRemaining}d)</span>`
+                                      : `<span style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); padding:1px 6px; border-radius:6px; font-size:10.5px; font-weight:bold; cursor:pointer;" onclick="window.openAltVerifyModal('${gid}', '${altName.replace(/'/g, "\\'")}')" title="Unverified or expired token. Click to verify in game.">⚠️ 30-Day Sync</span>`
+                                  }
+                              </div>
                           </div>
                       </div>
-                      <div style="display:flex; align-items:center; gap:12px;">
-                          <svg style="width:24px; height:24px; color:#06b6d4; flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                          <div style="display:flex; flex-direction:column;">
-                              <span style="font-size:16px; font-weight:bold; color:#ffffff; line-height:1;">${timeActiveVal}</span>
-                              <span style="font-size:11px; color:#94a3b8; margin-top:4px; text-transform:uppercase; letter-spacing:0.5px;">Time Active</span>
-                          </div>
+                      <!-- Perks Status -->
+                      <div style="flex-shrink:0;">
+                          ${ (isAltEnrolled || enrolledGameIds.has(gid.toString())) 
+                              ? `<span style="border:1px solid #10b981; color:#10b981; background:rgba(16,185,129,0.1); border-radius:8px; padding:3px 8px; font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:3px;">✅ Enrolled</span>`
+                              : `<button onclick="window.openAltPerksModal('${gid}', '${altName.replace(/'/g, "\\'")}')" style="background:rgba(16,185,129,0.15); border:1px solid #10b981; color:#10b981; border-radius:8px; padding:3px 8px; font-size:11px; font-weight:600; cursor:pointer; transition:background 0.2s;" onmouseover="this.style.background='rgba(16,185,129,0.25)'" onmouseout="this.style.background='rgba(16,185,129,0.15)'">🎁 Perks</button>`
+                          }
                       </div>
                   </div>
 
+                  <!-- Middle Row: Furnace Level + Time Active (Sleek Stats Strip) -->
+                  <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center;">
+                      <div style="display:flex; align-items:center; gap:8px;">
+                          <span style="font-size:14px;">🔥</span>
+                          <div>
+                              <span id="${flSpanId}" style="font-size:14px; font-weight:bold; color:#ffffff; line-height:1; display:flex; align-items:center;">${window.getFurnaceIconHtml(flVal, 50)}</span>
+                              <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; margin-top:2px;">Furnace</div>
+                          </div>
+                      </div>
+                      <div style="text-align:right;">
+                          <div style="font-size:13px; font-weight:bold; color:#ffffff; line-height:1;">${timeActiveVal}</div>
+                          <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; margin-top:2px;">Time Active</div>
+                      </div>
+                  </div>
+
+                  <!-- Bottom Row: Unified, Perfectly Aligned Action Buttons -->
+                  <div style="display:flex; gap:6px; align-items:center; border-top:1px solid rgba(255,255,255,0.05); padding-top:12px;">
+                      ${ isAltTokenActive
+                          ? `<button onclick="window.handleSyncAltProfile('${gid}', this)" style="flex:1; background:rgba(6,182,212,0.15); border:1px solid #06b6d4; color:#06b6d4; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px; transition:0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.25)'" onmouseout="this.style.background='rgba(6,182,212,0.15)'" title="Token active (${altTokenDaysRemaining}d remaining). Click to sync.">🔄 Sync</button>`
+                          : `<button onclick="window.openAltVerifyModal('${gid}', '${altName.replace(/'/g, "\\'")}')" style="flex:1; background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px; box-shadow:0 2px 8px rgba(14,165,233,0.3);" title="Verify via in-game mail to bind 30-day auto-sync token">⚡ Sync Token</button>`
+                      }
+                      <button onclick="window.openEditAltProfileModal('${gid}', '${altName.replace(/'/g, "\\'")}')" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:var(--text-main); border-radius:8px; padding:6px 12px; font-size:12px; font-weight:600; cursor:pointer; transition:0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">
+                          ✏️ Edit
+                      </button>
+                      <button onclick="window.unlinkAltAccountPrompt('${gid}')" style="border:1px solid rgba(239,68,68,0.4); color:#ef4444; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:600; cursor:pointer; background:rgba(239,68,68,0.06); transition:0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.15)'" onmouseout="this.style.background='rgba(239,68,68,0.06)'" title="Unlink Alt Character">
+                          🗑️
+                      </button>
+                  </div>
               </div>`;
           });
           linkedHtml += `</div>`;
+      } else {
+          linkedHtml += `
+            <div style="background:rgba(15,23,42,0.6); border:1px dashed rgba(56,189,248,0.3); border-radius:18px; padding:32px 20px; text-align:center; margin-top:15px; margin-bottom:15px;">
+                <div style="font-size:36px; margin-bottom:8px;">🔗</div>
+                <div style="font-size:16px; font-weight:bold; color:#fff; margin-bottom:4px;">No Alt Accounts Linked Yet</div>
+                <div style="font-size:12.5px; color:var(--text-muted); max-width:400px; margin:0 auto 16px auto; line-height:1.4;">
+                    Link your secondary farm or combat accounts to manage 30-day auto-sync and redeem gift code perks in 1 click.
+                </div>
+                <button onclick="document.getElementById('openLinkAltBtn').click();" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:8px 18px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer;">
+                    ➕ Link Your First Alt Account
+                </button>
+            </div>
+          `;
       }
-      
-      linkedHtml += `</details></div>`;
       
       let datalistHtml = `<datalist id="rosterAltDatalist" style="display:none;">`;
       for (const [id, name] of Object.entries(idToNameMap)) {
@@ -14378,55 +14452,7 @@ window.resetBearTrapEvent = async () => {
           }
       }
       datalistHtml += `</datalist>`;
-
-      linkedHtml += `
-      <div id="linkAltForm" style="display:none; background:var(--card-bg); padding:18px; border-radius:12px; border:1px solid var(--border); margin-bottom:15px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:8px;">
-              <strong style="color:var(--text-main); font-size:14px;">🔗 Link New Alt Account</strong>
-              <div style="display:flex; gap:6px;">
-                  <button type="button" id="toggleAltLinkAutoBtn" style="padding:4px 10px; font-size:11px; border-radius:6px; font-weight:bold; border:none; background:var(--accent); color:#fff; cursor:pointer;">🎮 30-Day Auto-Sync</button>
-                  <button type="button" id="toggleAltLinkManualBtn" style="padding:4px 10px; font-size:11px; border-radius:6px; font-weight:bold; border:1px solid var(--border); background:transparent; color:var(--text-muted); cursor:pointer;">✏️ Manual</button>
-              </div>
-          </div>
-
-          <!-- Mode A: Auto-Sync via In-Game Mail (Default) -->
-          <div id="altLinkAutoPanel">
-              <p style="font-size:12px; color:var(--text-muted); margin:0 0 10px 0; line-height:1.4;">
-                Enter your alt's numeric Game ID to automatically verify your character, sync its avatar, and bind a 30-day session token:
-              </p>
-              <div style="display:flex; gap:8px; margin-bottom:10px;">
-                  <input type="text" inputmode="numeric" pattern="[0-9]*" id="altAutoGameIdInput" list="rosterAltDatalist" placeholder="Numeric Game ID (e.g. 319875650)..." style="flex:1; padding:10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:14px; box-sizing:border-box;">
-                  <button type="button" id="altAutoSendCodeBtn" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:0 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; flex-shrink:0;">Verify ID</button>
-              </div>
-
-              <!-- Step 2 of Auto-Link: In-game code input -->
-              <div id="altAutoCodeBox" style="display:none; background:rgba(56,189,248,0.06); border:1px solid rgba(56,189,248,0.3); border-radius:10px; padding:12px; margin-bottom:12px;">
-                  <div style="font-size:12px; color:#38bdf8; font-weight:bold; margin-bottom:6px;">📩 Verification Code Sent to Alt Mailbox!</div>
-                  <div style="display:flex; gap:8px; align-items:center;">
-                      <input type="text" id="altAutoCodeInput" maxlength="8" placeholder="6-digit code" style="flex:1; max-width:140px; padding:8px 12px; border-radius:8px; border:1px solid rgba(56,189,248,0.5); background:var(--bg-main); color:#fff; font-size:15px; font-family:monospace; letter-spacing:2px; text-align:center;">
-                      <button type="button" id="altAutoConfirmCodeBtn" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer;">Confirm & Link</button>
-                  </div>
-                  <div id="altAutoFeedback" style="font-size:11.5px; margin-top:6px; display:none;"></div>
-              </div>
-          </div>
-
-          <!-- Mode B: Quick Manual Link -->
-          <div id="altLinkManualPanel" style="display:none;">
-              <p style="font-size:12px; color:var(--text-muted); margin:0 0 10px 0; line-height:1.4;">
-                Select from alliance roster or enter Game ID:
-              </p>
-              <input type="text" id="altGameIdInput" list="rosterAltDatalist" placeholder="Search Alt Name or Game ID..." style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); margin-bottom:10px; box-sizing:border-box;">
-              <div id="altChiefConfirm" style="font-size:13px; margin-bottom:10px; display:none;"></div>
-              <div style="display:flex; gap:10px;">
-                  <button id="submitAltBtn" style="flex:1; background:var(--accent); color:#fff; border:none; padding:10px; border-radius:8px; cursor:pointer; font-weight:bold;">Confirm Manual Link</button>
-              </div>
-          </div>
-
-          <div style="display:flex; justify-content:flex-end; margin-top:10px;">
-              <button id="cancelAltBtn" style="background:transparent; border:1px solid var(--border); color:var(--text-muted); padding:6px 14px; border-radius:6px; cursor:pointer; font-size:12px;">Cancel</button>
-          </div>
-      </div>
-      <button id="openLinkAltBtn" style="background:rgba(52,152,219,0.1); color:var(--accent); border:1px dashed var(--accent); padding:10px; border-radius:8px; cursor:pointer; font-weight:bold; width:100%; transition:0.2s;" onmouseover="this.style.background='rgba(52,152,219,0.2)'" onmouseout="this.style.background='rgba(52,152,219,0.1)'">+ Link ${links.length > 0 ? 'Another' : 'Alt'} Account</button>`;
+      linkedHtml += datalistHtml;
       
       linkedHtml += `</div>`;
       
@@ -15163,12 +15189,10 @@ window.resetBearTrapEvent = async () => {
               if (altChiefConfirm) altChiefConfirm.style.display = 'none';
           });
 
-          if (cancelAltBtn) {
               cancelAltBtn.addEventListener('click', () => {
-                  openLinkAltBtn.style.display = 'block';
+                  openLinkAltBtn.style.display = 'inline-flex';
                   linkAltForm.style.display = 'none';
               });
-          }
 
           // Mode toggle listeners
           if (toggleAltLinkAutoBtn && toggleAltLinkManualBtn) {
