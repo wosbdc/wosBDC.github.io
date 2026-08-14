@@ -1,8 +1,8 @@
 {
-  "version": "2.5.25",
+  "version": "2.5.26",
   "releaseDate": "2026-08-14",
-  "title": "🔔 Streamlined Notification Bell with Collapsible Banners",
+  "title": "🟢 Quiet Active Tokens & True Alert Triggering",
   "notes": [
-    "Streamlined Alerts modal with collapsible Alt Un-Sync Status banner and Staff Recent Signups banner"
+    "Refined notification bell badge and modal to only trigger for true alerts (expiring or expired tokens)"
   ]
 }

@@ -8108,11 +8108,11 @@ window.updateNewMemberBadge = async () => {
   }
   if (adminAlertsNavBtn) adminAlertsNavBtn.style.display = 'flex';
 
-  // 1. Check main character token status
+  // 1. Check main character token status (only alert if expired or expiring soon)
   const tokenStatus = window.getMemberTokenStatus(currentUser);
-  let mainAlert = tokenStatus.alert ? 1 : 0;
+  let mainAlert = (tokenStatus.status === 'expired' || tokenStatus.status === 'expiring_soon' || tokenStatus.status === 'unverified') ? 1 : 0;
 
-  // 2. Check linked alts token status
+  // 2. Check linked alts token status (only alert if previously verified and expired or expiring soon)
   let altAlertsCount = 0;
   let hasExpiredAlt = false;
   let hasExpiringAlt = false;
@@ -8120,15 +8120,9 @@ window.updateNewMemberBadge = async () => {
   if (currentUser.linkedGameIds && Array.isArray(currentUser.linkedGameIds) && currentUser.linkedGameIds.length > 0) {
     currentUser.linkedGameIds.forEach(agid => {
       const aTok = currentUser.altTokens ? currentUser.altTokens[agid] : null;
-      if (!aTok) {
-        altAlertsCount++;
-        hasExpiredAlt = true;
-      } else {
+      if (aTok) {
         const aDate = (typeof aTok === 'object' && aTok.verifiedAt) ? new Date(aTok.verifiedAt) : null;
-        if (!aDate || isNaN(aDate.getTime())) {
-          altAlertsCount++;
-          hasExpiredAlt = true;
-        } else {
+        if (aDate && !isNaN(aDate.getTime())) {
           const elapsed = Math.floor((Date.now() - aDate.getTime()) / (1000 * 60 * 60 * 24));
           const daysLeft = Math.max(0, 30 - elapsed);
           if (daysLeft <= 0) {
@@ -8359,6 +8353,59 @@ window.openAllianceAlertsModal = async () => {
       `;
     }
 
+    // Main Character Card HTML: Only show prominent alert when actually needed (expiring or expired)
+    let mainTokenHtml = '';
+    if (tokenStatus.alert) {
+      mainTokenHtml = `
+        <div style="background:${tokenStatus.status === 'expired' ? 'rgba(239,68,68,0.08)' : 'rgba(245,158,11,0.08)'}; border:1px solid ${tokenStatus.status === 'expired' ? 'rgba(239,68,68,0.35)' : 'rgba(245,158,11,0.35)'}; border-radius:14px; padding:12px 15px; margin-bottom:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="font-size:22px;">${tokenStatus.icon || '⚠️'}</span>
+              <div>
+                <div style="font-weight:bold; font-size:14px; color:${tokenStatus.color || '#f59e0b'}; display:flex; align-items:center; gap:6px;">
+                  <span>${tokenStatus.label || '30-Day Sync Expiring'}</span>
+                  ${currentUser.section ? `<span style="font-size:11px; opacity:0.8;">(#${currentUser.section})</span>` : ''}
+                </div>
+                <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
+                  ${tokenStatus.status === 'expired' ? 'Token expired • Verify in game to restore 30-day sync' : `Expires in ${tokenStatus.daysLeft}d • Renew in game (10s)`}
+                </div>
+              </div>
+            </div>
+            <div>
+              <button onclick="document.getElementById('notificationsModalOverlay').remove(); window.openAccountHubVerifyModal();" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:7px 13px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; box-shadow:0 2px 8px rgba(14,165,233,0.3); display:flex; align-items:center; gap:5px;">
+                🛡️ Verify in Game (10s)
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    } else {
+      mainTokenHtml = `
+        <div style="background:rgba(16,185,129,0.06); border:1px solid rgba(16,185,129,0.25); border-radius:14px; padding:12px 16px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="font-size:20px;">🟢</span>
+            <div>
+              <div style="font-weight:bold; font-size:13.5px; color:#10b981; display:flex; align-items:center; gap:6px;">
+                <span>Main Chief: 30-Day Sync Active (${tokenStatus.daysLeft}d left)</span>
+                ${currentUser.section ? `<span style="font-size:11px; opacity:0.8;">(#${currentUser.section})</span>` : ''}
+              </div>
+              <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
+                Auto-syncing character stats and avatars smoothly
+              </div>
+            </div>
+          </div>
+          <div style="display:flex; gap:6px; align-items:center;">
+            <button onclick="document.getElementById('notificationsModalOverlay').remove(); window.handleSyncCenturyGamesProfile();" style="background:rgba(16,185,129,0.15); border:1px solid #10b981; color:#10b981; padding:5px 10px; border-radius:6px; font-weight:bold; font-size:11.5px; cursor:pointer; display:flex; align-items:center; gap:4px;">
+              🔄 Sync
+            </button>
+            <button onclick="document.getElementById('notificationsModalOverlay').remove(); window.openAccountHubVerifyModal();" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:var(--text-muted); padding:5px 10px; border-radius:6px; font-weight:bold; font-size:11.5px; cursor:pointer;" title="Click to renew early">
+              🔑 Renew
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
     overlay.innerHTML = `
       <div class="card" style="width:94%; max-width:540px; max-height:88vh; background:linear-gradient(145deg, rgba(15,23,42,0.96), rgba(30,41,59,0.94)); border:1px solid rgba(56,189,248,0.35); padding:20px; border-radius:18px; box-shadow:0 25px 60px rgba(0,0,0,0.7); text-align:left; animation:zoomIn 0.2s forwards; overflow-y:auto; color:var(--text-main);">
         
@@ -8373,37 +8420,8 @@ window.openAllianceAlertsModal = async () => {
           <button onclick="document.getElementById('notificationsModalOverlay').remove()" style="background:none; border:none; color:var(--text-muted); font-size:24px; cursor:pointer; line-height:1;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-muted)'">&times;</button>
         </div>
 
-        <!-- Slim Main Character Token Sync Card -->
-        <div style="background:${tokenStatus.status === 'expired' ? 'rgba(239,68,68,0.08)' : (tokenStatus.status === 'expiring_soon' ? 'rgba(245,158,11,0.08)' : (tokenStatus.status === 'unverified' ? 'rgba(245,158,11,0.08)' : 'rgba(16,185,129,0.08)'))}; border:1px solid ${tokenStatus.status === 'expired' ? 'rgba(239,68,68,0.35)' : (tokenStatus.status === 'expiring_soon' ? 'rgba(245,158,11,0.35)' : (tokenStatus.status === 'unverified' ? 'rgba(245,158,11,0.35)' : 'rgba(16,185,129,0.35)'))}; border-radius:14px; padding:12px 15px; margin-bottom:12px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-            <div style="display:flex; align-items:center; gap:10px;">
-              <span style="font-size:22px;">${tokenStatus.icon || '🛡️'}</span>
-              <div>
-                <div style="font-weight:bold; font-size:14px; color:${tokenStatus.color || '#10b981'}; display:flex; align-items:center; gap:6px;">
-                  <span>${tokenStatus.label || '30-Day Sync Active'}</span>
-                  ${currentUser.section ? `<span style="font-size:11px; opacity:0.8;">(#${currentUser.section})</span>` : ''}
-                </div>
-                <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
-                  ${tokenStatus.status === 'active' ? `Main character auto-sync active • ${tokenStatus.daysLeft}d left` : (tokenStatus.status === 'expiring_soon' ? `Expires in ${tokenStatus.daysLeft}d • Renew in game (10s)` : 'Token expired • Verify in game to restore sync')}
-                </div>
-              </div>
-            </div>
-            <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
-              ${tokenStatus.alert ? `
-                <button onclick="document.getElementById('notificationsModalOverlay').remove(); window.openAccountHubVerifyModal();" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:7px 13px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; box-shadow:0 2px 8px rgba(14,165,233,0.3); display:flex; align-items:center; gap:5px;">
-                  🛡️ Verify (10s)
-                </button>
-              ` : `
-                <button onclick="document.getElementById('notificationsModalOverlay').remove(); window.handleSyncCenturyGamesProfile();" style="background:rgba(16,185,129,0.15); border:1px solid #10b981; color:#10b981; padding:6px 11px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:flex; align-items:center; gap:4px;">
-                  🔄 Sync Stats
-                </button>
-                <button onclick="document.getElementById('notificationsModalOverlay').remove(); window.openAccountHubVerifyModal();" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:var(--text-muted); padding:6px 11px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer;" title="Click to renew early">
-                  🔑 Renew
-                </button>
-              `}
-            </div>
-          </div>
-        </div>
+        <!-- Main Character Status Card -->
+        ${mainTokenHtml}
 
         <!-- Collapsible Linked Alts Section -->
         ${altsSectionHtml}

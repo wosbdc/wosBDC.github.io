@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.5.26] - 2026-08-14
+- Replaced prominent warning box with a quiet green status bar for active 30-day tokens in Alliance Alerts modal.
+- Adjusted notification bell trigger so active tokens and manually linked alts do not set off red alert alarms.
+
 ## [2.5.25] - 2026-08-14
 - Streamlined Alliance Notifications modal with compact Main Character Token Status card.
 - Implemented collapsible `🔗 Alt Accounts Un-Sync Status (X)` accordion banner with 1-click `[ ⚡ Setup / Renew ]` for un-synced alts.
