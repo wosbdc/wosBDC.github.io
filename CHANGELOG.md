@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [2.5.4] - 2026-08-14
+### ✨ Fix Sheet Schedule Column Resolution & Home Event Countdown
+- **📅 Accurate Schedule Data Parsing**:
+  - Restructured `window.parseSheetToScheduleLiveData` to strictly read Columns F through I (indices 5, 6, 7, 8) for timed events and categories, preventing personal player stats from leaking into schedule lists.
+  - Restored full 7-day calendar matrix parsing from `sheets/schedule` in `Calendar View`.
+  - Synced Home page upcoming event countdown with live schedule data (`🐻 Bear Trap 🪤` at `16:00 UTC` / `9:00 AM PDT`).
+
 ## [2.5.3] - 2026-08-14
 ### ✨ Fix Today & Calendar Schedule Views with Universal Time Parser
 - **📅 Fixed Both Schedule Tabs (`Today's View` & `Calendar View`)**:

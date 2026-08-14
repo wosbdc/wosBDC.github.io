@@ -14144,15 +14144,14 @@ window.resetBearTrapEvent = async () => {
 
     renderLoading('Loading Home & News');
     try {
-      const data = await fetchSheet('News').catch(() => null);
-      const liveSched = await window.fetchScheduleLiveData().catch(() => null);
+      const [data, sheetWos] = await Promise.all([
+        fetchSheet('News').catch(() => null),
+        fetchSheet('WhiteOut Survival').catch(() => null)
+      ]);
       
-      let scheduleData = null;
-      if (!liveSched || !Array.isArray(liveSched.events) || liveSched.events.length === 0) {
-        try {
-          scheduleData = await fetchSheet('WhiteOut Survival');
-        } catch(e) { console.error('Failed to load schedule for countdown', e); }
-      }
+      const liveSched = (sheetWos && Array.isArray(sheetWos) && sheetWos.length > 0)
+        ? window.parseSheetToScheduleLiveData(sheetWos)
+        : await window.fetchScheduleLiveData().catch(() => null);
       
       let nextEvents = [];
       let nextEventTime = null;
@@ -14175,28 +14174,22 @@ window.resetBearTrapEvent = async () => {
             });
           }
         });
-      } else if (scheduleData && Array.isArray(scheduleData) && scheduleData.length > 0) {
-        for (let i = 1; i < Math.min(34, scheduleData.length); i++) {
-          let row = scheduleData[i];
-          let eventName = row[5];
-          let dateRaw = row[6];
-          let utcRaw = row[7];
-          let pdtVal = row[8];
-          
-          if (!eventName || String(eventName).trim() === "" || String(eventName).includes("Event's")) continue;
-          if (String(eventName).trim() === 'Rewards') break;
-          
-          const eventDate = window.parseScheduleEventDate(dateRaw);
-          if (!eventDate) continue;
-          const startT = window.parseScheduleEventTime(utcRaw, pdtVal);
-          if (!startT) continue;
-          const exactEventDate = new Date(eventDate);
-          exactEventDate.setUTCHours(startT.h, startT.m, 0, 0);
-          if (exactEventDate > now) {
+      }
+
+      // 2-day auto Bear Trap fallback if none today
+      const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const hasTodayEvent = upcomingEvents.some(e => e.exactDate.toDateString() === todayDate.toDateString());
+      if (!hasTodayEvent) {
+        const anchorDate = new Date(2026, 7, 1);
+        const diffDays = Math.floor((todayDate - anchorDate) / (1000 * 60 * 60 * 24));
+        if (diffDays % 2 === 0) {
+          const btTime = new Date(todayDate);
+          btTime.setUTCHours(16, 0, 0, 0);
+          if (btTime > now) {
             upcomingEvents.push({
-              name: String(eventName).trim(),
-              exactDate: exactEventDate,
-              emoji: '✨'
+              name: "Bear Trap (Auto 2-Day Cycle)",
+              exactDate: btTime,
+              emoji: "🪤"
             });
           }
         }
@@ -16263,15 +16256,13 @@ window.resetBearTrapEvent = async () => {
 
     renderLoading('Loading Schedule');
     try {
-      const liveSched = await window.fetchScheduleLiveData().catch(() => null);
-      let weeklyData = null;
-      let todayData = null;
-      if (!liveSched || !Array.isArray(liveSched.events) || liveSched.events.length === 0) {
-        [weeklyData, todayData] = await Promise.all([
-          fetchSheet('schedule').catch(() => null),
-          fetchSheet('WhiteOut Survival').catch(() => null)
-        ]);
-      }
+      const [weeklyData, todayData] = await Promise.all([
+        fetchSheet('schedule').catch(() => null),
+        fetchSheet('WhiteOut Survival').catch(() => null)
+      ]);
+      const liveSched = (todayData && Array.isArray(todayData) && todayData.length > 0)
+        ? window.parseSheetToScheduleLiveData(todayData)
+        : await window.fetchScheduleLiveData().catch(() => null);
 
       const renderTabs = () => {
         if (window._scheduleCountdownTimer) clearInterval(window._scheduleCountdownTimer);
@@ -16669,7 +16660,82 @@ window.resetBearTrapEvent = async () => {
           const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
           let days = [];
 
-          if (liveSched && Array.isArray(liveSched.events) && liveSched.events.length > 0) {
+          const data = weeklyData;
+          if (data && Array.isArray(data) && data.length > 0) {
+            let dateRowIdx = -1;
+            for (let r = 0; r < data.length; r++) {
+              let dateCells = data[r].filter(cell => typeof cell === 'string' && (cell.match(/^\d{4}-\d{2}-\d{2}T/) || cell.match(/\d{1,2}\/\d{1,2}/)));
+              if (dateCells.length >= 3) {
+                dateRowIdx = r;
+                break;
+              }
+            }
+            
+            if (dateRowIdx !== -1) {
+              for (let c = 0; c < data[dateRowIdx].length; c++) {
+                let cell = data[dateRowIdx][c];
+                if (typeof cell === 'string') {
+                  let formatted = '';
+                  let dateObj = null;
+                  if (cell.match(/^\d{4}-\d{2}-\d{2}T/)) {
+                    let [year, month, day] = cell.split('T')[0].split('-');
+                    dateObj = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                    formatted = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                  } else if (cell.match(/(\d{1,2})\/(\d{1,2})/)) {
+                    let m = cell.match(/(\d{1,2})\/(\d{1,2})/);
+                    dateObj = new Date(todayDate.getFullYear(), parseInt(m[1]) - 1, parseInt(m[2]));
+                    formatted = cell.replace(/Today /ig, '').replace(/Tomorrow /ig, '').trim();
+                  }
+                  
+                  if (formatted) {
+                    days.push({ dateStr: formatted, dateObj: dateObj, colIdx: c, categories: {} });
+                  }
+                }
+              }
+
+              let futureOrTodayDays = days.filter(d => !d.dateObj || d.dateObj >= todayDate);
+              if (futureOrTodayDays.length > 0) {
+                days = futureOrTodayDays;
+              }
+              
+              if (days.length > 0) {
+                const firstDayObj = days[0].dateObj;
+                if (!firstDayObj || firstDayObj.toDateString() === todayDate.toDateString()) {
+                  days[0].isToday = true;
+                  if (!days[0].dateStr.toLowerCase().includes('today')) {
+                    days[0].dateStr = `Today • ${days[0].dateStr}`;
+                  }
+                }
+              }
+
+              let currentCategory = "Events";
+              for (let r = dateRowIdx + 1; r < data.length; r++) {
+                if (data[r].every(cell => cell === "")) continue;
+                
+                let nonEmptyCells = data[r].filter(c => c !== undefined && c !== null && String(c).trim() !== "");
+                if (nonEmptyCells.length === 1) {
+                  let catVal = String(nonEmptyCells[0]).trim();
+                  if (catVal && !catVal.match(/\d{1,2}\/\d{1,2}/) && !catVal.match(/^\d{4}-\d{2}-\d{2}/)) {
+                    currentCategory = catVal;
+                    continue;
+                  }
+                }
+                
+                days.forEach(day => {
+                  let eventCell = data[r][day.colIdx];
+                  if (eventCell && String(eventCell).trim() !== "") {
+                    let text = String(eventCell).trim();
+                    let isSignupItem = text.toLowerCase().includes('signup') || text.toLowerCase().includes('sign-up') || text.toLowerCase().includes('sign up') || text.toLowerCase().includes('registration');
+                    let targetCategory = isSignupItem ? 'Sign-Ups' : currentCategory;
+                    if (!day.categories[targetCategory]) day.categories[targetCategory] = [];
+                    day.categories[targetCategory].push(text);
+                  }
+                });
+              }
+            }
+          }
+
+          if (days.length === 0 && liveSched && Array.isArray(liveSched.events) && liveSched.events.length > 0) {
             for (let d = 0; d < 7; d++) {
               const dayObj = new Date(todayDate);
               dayObj.setDate(todayDate.getDate() + d);
@@ -16711,119 +16777,11 @@ window.resetBearTrapEvent = async () => {
                 categories: categories
               });
             }
-          } else {
-            const data = weeklyData;
-            if (!data || !Array.isArray(data) || data.length === 0) {
-              contentDiv.innerHTML = `<div class="card"><div class="loading">⚠️ Schedule data is currently unavailable. Please try again later.</div></div>`;
-              return;
-            }
-            
-            let dateRowIdx = -1;
-            for (let r = 0; r < data.length; r++) {
-              let dateCells = data[r].filter(cell => typeof cell === 'string' && (cell.match(/^\d{4}-\d{2}-\d{2}T/) || cell.match(/\d{1,2}\/\d{1,2}/)));
-              if (dateCells.length >= 3) {
-                dateRowIdx = r;
-                break;
-              }
-            }
-            
-            if (dateRowIdx === -1) {
-              contentDiv.innerHTML = `<div class="card"><div class="loading">Could not find dates in schedule.</div></div>`;
-              return;
-            }
-            
-            for (let c = 0; c < data[dateRowIdx].length; c++) {
-              let cell = data[dateRowIdx][c];
-              if (typeof cell === 'string') {
-                let formatted = '';
-                let dateObj = null;
-                if (cell.match(/^\d{4}-\d{2}-\d{2}T/)) {
-                  let [year, month, day] = cell.split('T')[0].split('-');
-                  dateObj = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-                  formatted = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-                } else if (cell.match(/(\d{1,2})\/(\d{1,2})/)) {
-                  let m = cell.match(/(\d{1,2})\/(\d{1,2})/);
-                  dateObj = new Date(todayDate.getFullYear(), parseInt(m[1]) - 1, parseInt(m[2]));
-                  formatted = cell.replace(/Today /ig, '').replace(/Tomorrow /ig, '').trim();
-                }
-                
-                if (formatted) {
-                  days.push({ dateStr: formatted, dateObj: dateObj, colIdx: c, categories: {} });
-                }
-              }
-            }
+          }
 
-            let futureOrTodayDays = days.filter(d => !d.dateObj || d.dateObj >= todayDate);
-            if (futureOrTodayDays.length > 0) {
-              days = futureOrTodayDays;
-            }
-            
-            if (days.length > 0) {
-              const firstDayObj = days[0].dateObj;
-              if (!firstDayObj || firstDayObj.toDateString() === todayDate.toDateString()) {
-                days[0].isToday = true;
-                if (!days[0].dateStr.toLowerCase().includes('today')) {
-                  days[0].dateStr = `Today • ${days[0].dateStr}`;
-                }
-              }
-            }
-            
-            let todaySignups = [];
-            if (todayData && Array.isArray(todayData)) {
-              let hIdx = -1;
-              for (let i = 0; i < todayData.length; i++) {
-                const cell = String(todayData[i][5] || '').trim().toLowerCase();
-                if (cell === 'rewards') { hIdx = i; break; }
-              }
-              if (hIdx !== -1) {
-                for (let i = hIdx + 1; i < todayData.length; i++) {
-                  const val = todayData[i][6];
-                  if (!val) break;
-                  const str = String(val).trim();
-                  if (str === '' || str.toLowerCase() === 'no events') break;
-                  if (!isNaN(str) || str.toLowerCase() === 'current' || str.toLowerCase().includes('training') || str.toLowerCase().includes('buy gems') || str.toLowerCase().includes('money')) break;
-                  todaySignups.push(str);
-                }
-              }
-            }
-
-            let currentCategory = "Events";
-            for (let r = dateRowIdx + 1; r < data.length; r++) {
-              if (data[r].every(cell => cell === "")) continue;
-              
-              let nonEmptyCells = data[r].filter(c => c !== undefined && c !== null && String(c).trim() !== "");
-              if (nonEmptyCells.length === 1) {
-                let catVal = String(nonEmptyCells[0]).trim();
-                if (catVal && !catVal.match(/\d{1,2}\/\d{1,2}/) && !catVal.match(/^\d{4}-\d{2}-\d{2}/)) {
-                  currentCategory = catVal;
-                  continue;
-                }
-              }
-              
-              days.forEach(day => {
-                let eventCell = data[r][day.colIdx];
-                if (eventCell && String(eventCell).trim() !== "") {
-                  let text = String(eventCell).trim();
-                  let isSignupItem = text.toLowerCase().includes('signup') || text.toLowerCase().includes('sign-up') || text.toLowerCase().includes('sign up') || text.toLowerCase().includes('registration');
-                  let targetCategory = isSignupItem ? 'Sign-Ups' : currentCategory;
-                  if (!day.categories[targetCategory]) day.categories[targetCategory] = [];
-                  day.categories[targetCategory].push(text);
-                }
-              });
-            }
-
-            const todayStr = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-            days.forEach((day, idx) => {
-              const isTodayCard = (day.dateStr === todayStr) || (day.dateObj && day.dateObj.toDateString() === now.toDateString()) || (idx === 0);
-              if (isTodayCard && todaySignups.length > 0) {
-                if (!day.categories['Sign-Ups']) day.categories['Sign-Ups'] = [];
-                todaySignups.forEach(s => {
-                  if (!day.categories['Sign-Ups'].includes(s)) {
-                    day.categories['Sign-Ups'].unshift(s);
-                  }
-                });
-              }
-            });
+          if (days.length === 0) {
+            contentDiv.innerHTML = `<div class="card"><div class="loading">⚠️ Schedule data is currently unavailable. Please try again later.</div></div>`;
+            return;
           }
       
       // Render the timeline as Daily Cards
@@ -17059,98 +17017,71 @@ window.parseSheetToScheduleLiveData = (sheetData) => {
   let events = [];
   let signups = [], rewards = [], allWeek = [], holidays = [];
 
-  if (sheetData && Array.isArray(sheetData)) {
-    let currentMode = 'TIMED'; // Modes: 'TIMED', 'REWARDS', 'SIGNUPS', 'HOLIDAYS', 'SPECIAL'
+  if (!sheetData || !Array.isArray(sheetData) || sheetData.length === 0) {
+    return { events, signups, rewards, allWeek, holidays, lastUpdated: Date.now() };
+  }
 
-    for (let i = 0; i < sheetData.length; i++) {
+  // 1. Parse Timed Events from Column F (5), G (6), H (7), I (8)
+  let rewardsRowIdx = -1;
+  for (let i = 0; i < sheetData.length; i++) {
+    const cellVal = String(sheetData[i][5] || '').trim().toLowerCase();
+    if (cellVal === 'rewards' || cellVal.includes('reward event')) {
+      rewardsRowIdx = i;
+      break;
+    }
+  }
+
+  const eventEndIdx = rewardsRowIdx !== -1 ? rewardsRowIdx : Math.min(34, sheetData.length);
+
+  for (let i = 1; i < eventEndIdx; i++) {
+    const row = sheetData[i];
+    if (!row || !Array.isArray(row)) continue;
+
+    const eventName = String(row[5] || '').trim();
+    const dateRaw   = String(row[6] || '').trim();
+    const utcRaw    = String(row[7] || '').trim();
+    const pdtVal    = String(row[8] || '').trim();
+
+    if (!eventName || eventName.toLowerCase().includes("event's") || eventName.toLowerCase() === 'event') continue;
+    if (dateRaw === '' && utcRaw === '' && pdtVal === '') continue;
+
+    const eventDate = window.parseScheduleEventDate(dateRaw);
+    if (!eventDate) continue;
+
+    const isBearTrap = eventName.includes('Bear Trap') || eventName.includes('🪤') || eventName.includes('🐻');
+    const isJoe = eventName.includes('Crazy Joe') || eventName.includes('🔥');
+    const isCastle = eventName.includes('Castle') || eventName.includes('🏰');
+    const isBia = eventName.includes('Brothers') || eventName.includes('⚔️');
+    let emoji = isBearTrap ? '🪤' : (isJoe ? '🔥' : (isCastle ? '🏰' : (isBia ? '⚔️' : '✨')));
+
+    events.push({
+      id: 'ev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+      eventName: eventName,
+      dateStr: dateRaw,
+      utcStr: utcRaw,
+      pdtVal: pdtVal,
+      emoji: emoji
+    });
+  }
+
+  // 2. Parse Category Lists (Rewards, Sign-Ups, All Week, Holidays)
+  if (rewardsRowIdx !== -1) {
+    for (let i = rewardsRowIdx + 1; i < sheetData.length; i++) {
       const row = sheetData[i];
       if (!row || !Array.isArray(row)) continue;
 
-      // Primary Title Column: check Column I (8) first, then Column F (5), Column C (2), Column A (0)
-      let colIdx = -1;
-      if (row[8] && String(row[8]).trim() !== '') colIdx = 8;
-      else if (row[5] && String(row[5]).trim() !== '') colIdx = 5;
-      else if (row[2] && String(row[2]).trim() !== '') colIdx = 2;
-      else if (row[0] && String(row[0]).trim() !== '') colIdx = 0;
+      const r = String(row[5] || '').trim(); // Column F: Rewards
+      const g = String(row[6] || '').trim(); // Column G: Sign-ups
+      const h = String(row[7] || '').trim(); // Column H: All Week
+      const k = String(row[8] || '').trim(); // Column I: Holidays
 
-      if (colIdx === -1) continue;
+      const isBlank = (val) => !val || val === '' || val.toLowerCase() === 'no events' || val.toLowerCase() === 'n/a';
+      if (isBlank(r) && isBlank(g) && isBlank(h) && isBlank(k)) break;
 
-      const titleRaw = String(row[colIdx]).trim();
-      const lowerTitle = titleRaw.toLowerCase();
-
-      // Section Header Transitions
-      if (lowerTitle.includes('rewards event') || lowerTitle === 'rewards' || lowerTitle.includes('reward events')) {
-        currentMode = 'REWARDS';
-        continue;
-      }
-      if (lowerTitle.includes('signup') || lowerTitle === 'signups') {
-        currentMode = 'SIGNUPS';
-        continue;
-      }
-      if (lowerTitle.includes('holiday') || lowerTitle === 'holidays') {
-        currentMode = 'HOLIDAYS';
-        continue;
-      }
-      if (lowerTitle.includes('prelude') || lowerTitle.includes('all week') || lowerTitle.includes('whole week')) {
-        currentMode = 'SPECIAL';
-        continue;
-      }
-      if (lowerTitle.includes('edit: schedule') || lowerTitle.includes("event's") || lowerTitle === 'title' || lowerTitle === 'event' || lowerTitle === 'events') {
-        if (i < 5) currentMode = 'TIMED';
-        continue;
-      }
-
-      // Skip sub-header row labels
-      if (lowerTitle === 'start date' || lowerTitle === 'utc' || lowerTitle === 'pdt' || lowerTitle === 'end date') continue;
-
-      // Extract date and time values
-      let dateRaw = '', utcRaw = '', pdtVal = '', endDateRaw = '', endUtcRaw = '', endPdtVal = '';
-      if (colIdx === 8) {
-        dateRaw    = row[9] || '';
-        utcRaw     = row[10] || '';
-        pdtVal     = row[11] || '';
-        endDateRaw = row[12] || '';
-        endUtcRaw  = row[13] || '';
-        endPdtVal  = row[14] || '';
-      } else {
-        dateRaw   = row[colIdx + 1] || '';
-        utcRaw    = row[colIdx + 2] || '';
-        pdtVal    = row[colIdx + 3] || '';
-      }
-
-      const dateStr = String(dateRaw || '').trim();
-      const hasDate = dateStr !== '' && window.parseScheduleEventDate(dateStr) !== null;
-
-      if (currentMode === 'TIMED' || hasDate) {
-        const isBearTrap = titleRaw.includes('Bear Trap') || titleRaw.includes('🪤') || titleRaw.includes('🐻');
-        const isJoe = titleRaw.includes('Crazy Joe') || titleRaw.includes('🔥');
-        const isCastle = titleRaw.includes('Castle') || titleRaw.includes('🏰');
-        const isBia = titleRaw.includes('Brothers') || titleRaw.includes('⚔️');
-        let emoji = isBearTrap ? '🪤' : (isJoe ? '🔥' : (isCastle ? '🏰' : (isBia ? '⚔️' : '✨')));
-
-        const alreadyAdded = events.some(e => e.eventName === titleRaw && e.dateStr === dateStr);
-        if (!alreadyAdded && dateStr !== '') {
-          events.push({
-            id: 'ev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-            eventName: titleRaw,
-            dateStr: dateStr,
-            utcStr: String(utcRaw || '').trim(),
-            pdtVal: String(pdtVal || '').trim(),
-            endDateStr: String(endDateRaw || '').trim(),
-            endUtcStr: String(endUtcRaw || '').trim(),
-            endPdtVal: String(endPdtVal || '').trim(),
-            emoji: emoji
-          });
-        }
-      } else if (currentMode === 'REWARDS') {
-        if (!rewards.includes(titleRaw)) rewards.push(titleRaw);
-      } else if (currentMode === 'SIGNUPS') {
-        if (!signups.includes(titleRaw)) signups.push(titleRaw);
-      } else if (currentMode === 'HOLIDAYS') {
-        if (!holidays.includes(titleRaw)) holidays.push(titleRaw);
-      } else if (currentMode === 'SPECIAL') {
-        if (!allWeek.includes(titleRaw)) allWeek.push(titleRaw);
-      }
+      if (!isBlank(r) && !rewards.includes(r)) rewards.push(r);
+      if (!isBlank(g) && !signups.includes(g)) signups.push(g);
+      if (!isBlank(h) && !allWeek.includes(h)) allWeek.push(h);
+      if (!isBlank(k) && !holidays.includes(k)) holidays.push(k);
     }
   }
 

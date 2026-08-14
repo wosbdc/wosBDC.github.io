@@ -1,10 +1,10 @@
 {
-  "version": "2.5.3",
+  "version": "2.5.4",
   "releaseDate": "2026-08-14",
-  "title": "✨ Fix Today & Calendar Schedule Views with Universal Time Parser",
+  "title": "✨ Fix Sheet Schedule Column Resolution & Home Event Countdown",
   "notes": [
-    "Fixed schedule loading in both Today's View and Calendar View",
-    "Added universal time parser supporting Google Sheets ISO time formats, PDT, and HH:mm",
-    "Synced Home view upcoming event countdown widget with live schedule"
+    "Fixed schedule parser to strictly target event columns F through I, eliminating personal data cross-contamination",
+    "Restored rich 7-day weekly schedule matrix in Calendar View",
+    "Synced Home view upcoming event countdown accurately with live schedule (Bear Trap at 16:00 UTC)"
   ]
 }
