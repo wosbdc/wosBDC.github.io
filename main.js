@@ -7508,10 +7508,16 @@ window.getRecentNewMembers = async () => {
       else if (u.timestamp) createdMs = Number(u.timestamp);
 
       if (createdMs > 0 && createdMs >= sevenDaysAgo) {
-        const cName = u.name || u.chiefName || (window.idToNameMap && window.idToNameMap[u.gameId]) || 'New Member';
+        let cName = u.name || u.chiefName || '';
+        const gidStr = String(u.gameId || uid || '').trim();
+        if ((!cName || /^\d+$/.test(cName)) && gidStr && window.idToNameMap && window.idToNameMap[gidStr] && !/^\d+$/.test(window.idToNameMap[gidStr])) {
+          cName = window.idToNameMap[gidStr];
+        }
+        if (!cName) cName = gidStr || 'New Member';
+
         recent.push({
           uid,
-          gameId: u.gameId || '',
+          gameId: gidStr,
           name: cName,
           email: u.email || '',
           furnaceLevel: u.stove_lv || u.furnaceLevel || '',
@@ -7591,37 +7597,44 @@ window.openNewMembersModal = async () => {
   if (recent.length === 0) {
     listHtml = `<div style="text-align:center; padding:30px; color:var(--text-muted);">No new member signups in the past 7 days.</div>`;
   } else {
-    listHtml = recent.map(m => `
+    listHtml = recent.map(m => {
+      const isStaffRole = m.role === 'admin' || m.role === 'R4' || m.role === 'R5';
+      const fLvl = m.furnaceLevel ? String(m.furnaceLevel).replace(/^FC\s*/i, '') : '';
+      return `
       <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:12px; padding:14px 16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
         <div style="display:flex; align-items:center; gap:12px;">
           <div style="width:42px; height:42px; border-radius:50%; background:rgba(6,182,212,0.15); border:1px solid rgba(6,182,212,0.3); display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0;">👤</div>
           <div>
-            <div style="font-weight:bold; font-size:15px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+            <div style="font-weight:bold; font-size:15px; color:var(--text-main); display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
               <span>${window.escapeHTML(m.name)}</span>
               <span style="font-size:11px; background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:2px 8px; border-radius:10px; font-weight:bold;">NEW</span>
+              ${fLvl ? `<span style="font-size:11px; background:rgba(249,115,22,0.15); color:#f97316; border:1px solid rgba(249,115,22,0.4); padding:2px 8px; border-radius:10px; font-weight:bold;">🔥 FC ${window.escapeHTML(fLvl)}</span>` : ''}
+              ${isStaffRole ? `<span style="font-size:10px; background:rgba(234,179,8,0.15); color:#eab308; border:1px solid rgba(234,179,8,0.4); padding:2px 6px; border-radius:10px; font-weight:bold;">👑 Staff</span>` : ''}
             </div>
-            <div style="font-size:12px; color:var(--text-muted); font-family:monospace; margin-top:2px;">
+            <div style="font-size:12px; color:var(--text-muted); font-family:monospace; margin-top:3px;">
               ID: ${m.gameId || 'N/A'} • Joined: ${m.createdStr}
             </div>
           </div>
         </div>
 
-        <div style="display:flex; gap:8px; align-items:center;">
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
           <button onclick="window.copyWelcomeMessage('${window.escapeHTML(m.name)}')" style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:6px 12px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📋 Copy Welcome</button>
           <button onclick="document.getElementById('newMembersModalOverlay').remove(); window.searchPlayerFull('${window.escapeHTML(m.name)}');" style="background:var(--accent); color:#fff; border:none; padding:6px 12px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">👁️ Profile</button>
+          ${!isStaffRole && m.gameId ? `<button onclick="window.grantAdmin('${m.gameId}', 'R4')" style="background:rgba(234,179,8,0.12); color:#eab308; border:1px solid rgba(234,179,8,0.3); padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">+ Staff</button>` : ''}
         </div>
       </div>
-    `).join('');
+    `;
+    }).join('');
   }
 
   overlay.innerHTML = `
-    <div class="card" style="width:90%; max-width:580px; background:linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.92)); border:1px solid rgba(56,189,248,0.3); padding:26px; border-radius:20px; box-shadow:0 20px 50px rgba(0,0,0,0.6); text-align:left; animation:zoomIn 0.2s forwards;">
+    <div class="card" style="width:90%; max-width:620px; background:linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.92)); border:1px solid rgba(56,189,248,0.3); padding:26px; border-radius:20px; box-shadow:0 20px 50px rgba(0,0,0,0.6); text-align:left; animation:zoomIn 0.2s forwards;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:12px;">
         <h3 style="margin:0; color:#fff; font-size:20px; font-weight:800; display:flex; align-items:center; gap:8px;">🔔 Recent Member Signups (${recent.length})</h3>
         <button onclick="document.getElementById('newMembersModalOverlay').remove()" style="background:none; border:none; color:var(--text-muted); font-size:26px; cursor:pointer; line-height:1;">&times;</button>
       </div>
 
-      <div style="max-height:400px; overflow-y:auto; display:flex; flex-direction:column; gap:10px; margin-bottom:16px;">
+      <div style="max-height:420px; overflow-y:auto; display:flex; flex-direction:column; gap:10px; margin-bottom:16px;">
         ${listHtml}
       </div>
 

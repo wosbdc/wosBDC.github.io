@@ -1,8 +1,9 @@
 {
-  "version": "1.98.8",
+  "version": "1.99.0",
   "releaseDate": "2026-08-13",
-  "title": "🎨 Translucent Glass-Morphism Styling for Sidebar Action Buttons",
+  "title": "💎 Recent Signups Drawer Name Resolution & Staff Actions Upgrade",
   "notes": [
-    "Replaced harsh solid block button backgrounds in slide-out menu with modern translucent glass-morphism borders & glowing hover states"
+    "Resolved raw numeric Game IDs in recent signups list into real Chief Names via roster lookup",
+    "Added Furnace Level badges, Staff Badges, and 1-click + Staff role management inside Recent Member Signups drawer"
   ]
 }

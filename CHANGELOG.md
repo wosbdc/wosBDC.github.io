@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [1.99.0] - 2026-08-13
+### 💎 Recent Signups Drawer Name Resolution & Staff Actions Upgrade
+- **🔤 Chief Name Resolution**: Updated `getRecentNewMembers` to resolve raw numeric Game IDs (e.g. `319875650`) into actual registered Chief Names via roster lookup.
+- **🔥 Furnace Level & Staff Badges**: Displays `🔥 FC XX` levels and `👑 Staff` tags directly inside the recent signups drawer.
+- **👑 1-Click + Staff Management**: Added a `+ Staff` action button for each new member so admins can grant staff permissions directly from the recent signups drawer.
+
 ## [1.98.8] - 2026-08-13
 ### 🎨 Translucent Glass-Morphism Styling for Sidebar Action Buttons
 - **🎨 Glass-Morphism Buttons**: Replaced harsh solid block button fills (`primary` and `danger`) in the slide-out menu with sleek, modern translucent glass backgrounds (`rgba(...)`) and glowing accent borders matching the rest of the dark theme design system.
