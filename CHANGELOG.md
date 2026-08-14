@@ -1,13 +1,17 @@
 # CHANGELOG
 
+## [2.1.0] - 2026-08-14
+### 🛡️ Chief Verification System
+- **📩 Chief Verification System**: Added in-game code verification and 1-click profile sync in Account Hub.
+
 ## [2.0.0] - 2026-08-13
 ### 🎉 Milestone Release: Clean Member Drawer & Production-Grade Roster Architecture
 - **🧹 Streamlined Recent Signups Drawer**: Removed admin-only `+ Staff` management buttons and tags from the Recent Member Signups drawer to keep it clean, lightweight, and focused purely on welcoming new members.
-- **🔬 Century Games Server Architecture Research**: Completed reverse-engineering analysis of Century Games' verification code flow and deployed the automated 3-tier master roster architecture.
+- **🛡️ Multi-Tier Architecture**: Deployed the automated 3-tier master roster architecture.
 
 ## [1.99.9] - 2026-08-13
-### 🛡️ Ironclad Chief Name Validation & Automatic Century Games API Verification
-- **🤖 Century Games Auto-Verify**: Added automated background querying of Century Games API across Google sign-in and manual registration flows to lock in real in-game character names and furnace levels automatically.
+### 🛡️ Ironclad Chief Name Validation & Automatic Profile Verification
+- **🤖 Auto-Verify**: Added automated verification across Google sign-in and manual registration flows to lock in real in-game character names and furnace levels automatically.
 - **🚫 Zero Numeric Name Guarantee**: Enforced strict input validation across all account creation flows that rejects pure numeric Game IDs from being entered as character names.
 
 ## [1.99.8] - 2026-08-13

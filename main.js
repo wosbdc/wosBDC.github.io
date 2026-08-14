@@ -132,8 +132,8 @@ window.fetchRoster = async () => {
 };
 
 
-const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbyWC4qYgIkbk47eYjiYMxr1Ml9-zefoBU6-cdM9mnw24LMS5s2KDCshMJ4H1weebIY/exec';
-const VERIFY_PROXY_URL = 'https://wos-vercel-proxy.vercel.app/api/verify'; // Dedicated proxy for Century Games ID verification (bypasses Google quota limits)
+const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbxIUjnh1EJ6KnPlFus9G-XuBFEAWiHr_uwdUuCCotfeHpkSTO89gYsLFJVrkvt4V8k/exec';
+const VERIFY_PROXY_URL = 'https://wos-vercel-proxy.vercel.app/api/verify'; // Fallback / secondary proxy
 
 // Get a fresh Firebase ID token for the current user (replaces hardcoded APP_SECRET)
 const getAuthToken = async () => {
@@ -4086,7 +4086,7 @@ export let verifiedFurnaceLevel = ""; // Save furnace level to send during regis
 export let verifiedChiefName = ""; // Save verified chief name
 let currentWosLookupId = 0;
 if (authVerifyGameIdBtn && authChiefConfirm) {
-  authVerifyGameIdBtn.addEventListener('click', (e) => {
+  authVerifyGameIdBtn.addEventListener('click', async (e) => {
     e.preventDefault();
     if (!isRegistering) return;
     const val = authGameId.value.trim();
@@ -4099,7 +4099,6 @@ if (authVerifyGameIdBtn && authChiefConfirm) {
     
     authChiefConfirm.style.display = 'block';
     
-    // Only ping Century Games if the ID is at least 7 digits (most are 8-11 digits) to prevent rate limit exhaustion
     if (!/^\d{7,12}$/.test(val)) {
         authChiefConfirm.innerHTML = `<span style="color:var(--danger)">Please enter a valid Game ID (7-12 digits).</span>`;
         verifiedFurnaceLevel = "";
@@ -4107,99 +4106,166 @@ if (authVerifyGameIdBtn && authChiefConfirm) {
         return;
     }
     
-    authChiefConfirm.innerHTML = `<span style="color:var(--text-muted)">Looking up Game ID on official servers...</span>`;
-    
+    authChiefConfirm.innerHTML = `<span style="color:var(--accent); font-weight:bold;">📩 Sending verification code to in-game mailbox...</span>`;
     authVerifyGameIdBtn.disabled = true;
     authVerifyGameIdBtn.textContent = '...';
     
-    clearTimeout(wosLookupTimeout);
-    wosLookupTimeout = setTimeout(async () => {
-      const lookupId = ++currentWosLookupId;
-      
-      // 1. Check local alliance database first!
-      try {
-         await refreshIdToNameMap();
-         let rosterData = await window.fetchRoster();
-         
-         let matchedName = window.idToNameMap[val] || null;
-         if (matchedName && /^\d+$/.test(matchedName.toString().trim())) matchedName = null;
-         let matchedFurnace = "";
-         
-         if (rosterData) {
-            const foundEntry = Object.values(rosterData).find(p => p.gameId && p.gameId.toString().trim() === val.toString().trim());
-            if (foundEntry && foundEntry.name) {
-                const candidateName = foundEntry.name.toString().trim();
-                if (!/^\d+$/.test(candidateName) && candidateName !== val.toString().trim()) {
-                    matchedName = candidateName;
-                    matchedFurnace = foundEntry.furnaceLevel || "";
-                }
-            }
-         }
-         
-         if (matchedName && !/^\d+$/.test(String(matchedName).trim()) && String(matchedName).trim() !== val.toString().trim()) {
-             if (lookupId !== currentWosLookupId) return;
-             authChiefConfirm.innerHTML = `Is your Chief Name: <strong style="color:var(--success)">${window.escapeHTML(matchedName)}</strong>? ${matchedFurnace ? `<br><span style="color:var(--accent); font-weight:bold; font-size:12px;">Furnace Level: ${window.escapeHTML(matchedFurnace)}</span>` : ''} <span style="font-size:11px; color:#10b981; display:block; margin-top:4px;">✅ Verified from Alliance Database!</span>`;
-             verifiedChiefName = matchedName;
-             verifiedFurnaceLevel = matchedFurnace;
-             window.updateAuthFurnaceDropdown(verifiedFurnaceLevel);
-             authVerifyGameIdBtn.disabled = false;
-             authVerifyGameIdBtn.textContent = 'Verify';
-             return;
-         }
-      } catch(e) {
-         console.warn("Database lookup fallback error:", e);
-      }
-      
-      // 2. Query official Century Games servers
-      try {
-        const response = await fetch(`${VERIFY_PROXY_URL}?id=${encodeURIComponent(val)}`);
-        const data = await response.json();
-        
-        if (lookupId !== currentWosLookupId) return;
-        
-        if (data && data.success && data.nickname && !/^\d+$/.test(String(data.nickname).trim())) {
-          verifiedChiefName = data.nickname;
-          verifiedFurnaceLevel = data.stove_lv || "";
-          authChiefConfirm.innerHTML = `Is your Chief Name: <strong style="color:var(--success)">${window.escapeHTML(data.nickname)}</strong>? ${verifiedFurnaceLevel ? `<br><span style="color:var(--accent); font-weight:bold; font-size:12px;">Furnace Level: ${window.escapeHTML(verifiedFurnaceLevel)}</span>` : ''} <span style="font-size:11px; color:#60a5fa; display:block; margin-top:4px;">🌐 Verified from Game Servers!</span>`;
-          window.updateAuthFurnaceDropdown(verifiedFurnaceLevel);
-          authVerifyGameIdBtn.disabled = false;
-          authVerifyGameIdBtn.textContent = 'Verify';
-          return;
+    const renderManualFallback = () => {
+        authChiefConfirm.innerHTML = `
+          <div style="margin-top:10px; text-align:left;">
+              <label style="font-size:12px; color:var(--accent); font-weight:bold; display:block; margin-bottom:4px;">In-game Chief Name (Character Name, NOT ID):</label>
+              <input type="text" id="manualChiefName" placeholder="e.g. BrianDCox" style="width:100%; padding:10px; border-radius:6px; margin-bottom:4px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
+              <div id="manualNameWarning" style="font-size:11px; color:var(--danger); display:none; margin-bottom:8px;">⚠️ Please enter your text Chief Name (e.g. BrianDCox), not your numeric Game ID.</div>
+              <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;">Furnace Level (optional):</label>
+              ${window.renderFurnaceSelectHtml('manualFurnaceLevel', verifiedFurnaceLevel, 'margin-bottom:6px;')}
+          </div>`;
+        const mNameEl = document.getElementById('manualChiefName');
+        const mWarnEl = document.getElementById('manualNameWarning');
+        if (mNameEl && mWarnEl) {
+            mNameEl.addEventListener('input', () => {
+                const v = mNameEl.value.trim();
+                if (v && (/^\d+$/.test(v) || v === val)) mWarnEl.style.display = 'block';
+                else mWarnEl.style.display = 'none';
+            });
         }
-      } catch (err) {
-        console.warn("Century Games API lookup error:", err);
-      }
+    };
 
-      // 3. Fallback to manual Chief Name input if not verified
-      authChiefConfirm.innerHTML = `
-        <div style="margin-top:10px; text-align:left;">
-            <label style="font-size:12px; color:var(--accent); font-weight:bold; display:block; margin-bottom:4px;">In-game Chief Name (Character Name, NOT ID):</label>
-            <input type="text" id="manualChiefName" placeholder="e.g. BrianDCox" style="width:100%; padding:10px; border-radius:6px; margin-bottom:4px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
-            <div id="manualNameWarning" style="font-size:11px; color:var(--danger); display:none; margin-bottom:8px;">⚠️ Please enter your text Chief Name (e.g. BrianDCox), not your numeric Game ID.</div>
-            <label style="font-size:12px; color:var(--text-muted); display:block; margin-bottom:4px;">Furnace Level (optional):</label>
-            ${window.renderFurnaceSelectHtml('manualFurnaceLevel', verifiedFurnaceLevel, 'margin-bottom:6px;')}
-        </div>`;
-      
-      const mNameEl = document.getElementById('manualChiefName');
-      const mWarnEl = document.getElementById('manualNameWarning');
-      if (mNameEl && mWarnEl) {
-          mNameEl.addEventListener('input', () => {
-              const v = mNameEl.value.trim();
-              if (v && (/^\d+$/.test(v) || v === val)) {
-                  mWarnEl.style.display = 'block';
-              } else {
-                  mWarnEl.style.display = 'none';
-              }
-          });
-      }
+    const renderVerificationBox = () => {
+        authChiefConfirm.innerHTML = `
+          <div id="wosVerificationCard" style="background: rgba(15,23,42,0.9); border: 1px solid rgba(56,189,248,0.4); border-radius: 14px; padding: 16px; margin-top: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); text-align:left;">
+              <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+                  <span style="font-size:18px;">📩</span>
+                  <strong style="color:#38bdf8; font-size:14px;">In-Game Verification Code Sent!</strong>
+              </div>
+              <p style="font-size:12px; color:var(--text-muted); margin:0 0 10px 0; line-height:1.4;">
+                  A 6-digit confirmation code was sent to your in-game mailbox in <em>Whiteout Survival</em> for ID <strong>${window.escapeHTML(val)}</strong>.
+              </p>
+              <div style="display:flex; gap:8px; align-items:center;">
+                  <input type="text" id="wosInGameCodeInput" maxlength="6" placeholder="000000" style="flex:1; max-width:140px; text-align:center; font-size:18px; font-weight:800; letter-spacing:3px; padding:8px 12px; border-radius:8px; border:1px solid rgba(56,189,248,0.5); background:var(--bg-main); color:#fff; box-sizing:border-box;">
+                  <button type="button" id="wosSubmitCodeBtn" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; border-radius:8px; padding:9px 16px; font-size:13px; font-weight:bold; cursor:pointer; flex-shrink:0;">Confirm</button>
+              </div>
+              <div id="wosCodeFeedback" style="font-size:12px; margin-top:8px; display:none;"></div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px; border-top:1px solid rgba(255,255,255,0.08); padding-top:8px; font-size:11px;">
+                  <button type="button" id="wosResendCodeBtn" style="background:transparent; border:none; color:#38bdf8; cursor:pointer; padding:0; text-decoration:underline;">🔄 Resend</button>
+                  <button type="button" id="wosFallbackManualBtn" style="background:transparent; border:none; color:var(--text-muted); cursor:pointer; padding:0; text-decoration:underline;">Don't have game open? Enter manually</button>
+              </div>
+          </div>`;
 
-      verifiedChiefName = "";
-      verifiedFurnaceLevel = "";
-      if (lookupId === currentWosLookupId) {
-          authVerifyGameIdBtn.disabled = false;
-          authVerifyGameIdBtn.textContent = 'Verify';
-      }
-    }, 100);
+        const codeInput = document.getElementById('wosInGameCodeInput');
+        const submitBtn = document.getElementById('wosSubmitCodeBtn');
+        const feedback = document.getElementById('wosCodeFeedback');
+        const resendBtn = document.getElementById('wosResendCodeBtn');
+        const fallbackBtn = document.getElementById('wosFallbackManualBtn');
+
+        if (fallbackBtn) fallbackBtn.addEventListener('click', renderManualFallback);
+
+        if (resendBtn) {
+            resendBtn.addEventListener('click', async () => {
+                resendBtn.disabled = true;
+                resendBtn.textContent = 'Sending...';
+                try {
+                    await fetch(`${API_BASE_URL}?api=sendGameCaptcha&id=${encodeURIComponent(val)}`);
+                    if (feedback) {
+                        feedback.style.display = 'block';
+                        feedback.style.color = '#38bdf8';
+                        feedback.textContent = 'Fresh verification code dispatched to your in-game mailbox!';
+                    }
+                } catch(e) {}
+                resendBtn.disabled = false;
+                resendBtn.textContent = '🔄 Resend';
+            });
+        }
+
+        if (submitBtn && codeInput) {
+            const handleVerify = async () => {
+                const code = codeInput.value.trim();
+                if (!code || code.length < 4) {
+                    if (feedback) {
+                        feedback.style.display = 'block';
+                        feedback.style.color = 'var(--danger)';
+                        feedback.textContent = 'Please enter the 6-digit code from your game mail.';
+                    }
+                    return;
+                }
+
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Verifying...';
+                if (feedback) feedback.style.display = 'none';
+
+                try {
+                    const res = await fetch(`${API_BASE_URL}?api=verifyGameCaptcha&id=${encodeURIComponent(val)}&code=${encodeURIComponent(code)}`);
+                    const data = await res.json();
+
+                    if (data && data.success && data.nickname) {
+                        verifiedChiefName = data.nickname;
+                        verifiedFurnaceLevel = data.stove_lv || "";
+                        window.verifiedCgToken = data.token || "";
+                        window.verifiedStateKid = data.section || "";
+                        window.verifiedAvatarUrl = data.avatar_image || "";
+
+                        authChiefConfirm.innerHTML = `
+                          <div style="background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.4); border-radius:12px; padding:14px; margin-top:10px;">
+                              <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                                  <div>
+                                      <div style="font-size:12px; color:#10b981; font-weight:bold;">✅ Character Verified from Game Servers!</div>
+                                      <div style="font-size:16px; font-weight:800; color:#fff; margin-top:2px;">
+                                          ${window.escapeHTML(data.nickname)}
+                                          <span style="font-size:11px; color:#38bdf8; font-weight:bold; background:rgba(56,189,248,0.15); padding:2px 6px; border-radius:4px; margin-left:6px;">State #${window.escapeHTML(data.section || '2089')}</span>
+                                      </div>
+                                  </div>
+                                  <div style="display:flex; align-items:center; flex-shrink:0;">
+                                      ${window.getFurnaceIconHtml(data.stove_lv, 40)}
+                                  </div>
+                              </div>
+                          </div>`;
+
+                        window.updateAuthFurnaceDropdown(verifiedFurnaceLevel);
+                        authVerifyGameIdBtn.disabled = false;
+                        authVerifyGameIdBtn.textContent = 'Verified ✅';
+                        return;
+                    } else {
+                        throw new Error(data.message || 'Invalid or expired code. Please try again.');
+                    }
+                } catch(err) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Confirm';
+                    if (feedback) {
+                        feedback.style.display = 'block';
+                        feedback.style.color = 'var(--danger)';
+                        feedback.textContent = err.message || 'Verification failed. Please check code.';
+                    }
+                }
+            };
+
+            submitBtn.addEventListener('click', handleVerify);
+            codeInput.addEventListener('keypress', (ev) => {
+                if (ev.key === 'Enter') {
+                    ev.preventDefault();
+                    handleVerify();
+                }
+            });
+        }
+    };
+
+    try {
+        const sendRes = await fetch(`${API_BASE_URL}?api=sendGameCaptcha&id=${encodeURIComponent(val)}`);
+        const sendData = await sendRes.json();
+        
+        authVerifyGameIdBtn.disabled = false;
+        authVerifyGameIdBtn.textContent = 'Verify';
+        
+        if (sendData && sendData.success) {
+            renderVerificationBox();
+        } else {
+            console.warn("Send captcha notice:", sendData);
+            renderManualFallback();
+        }
+    } catch (err) {
+        console.warn("Century Games API send error:", err);
+        authVerifyGameIdBtn.disabled = false;
+        authVerifyGameIdBtn.textContent = 'Verify';
+        renderManualFallback();
+    }
   });
 }
 const showPasswordBtn = document.getElementById('showPasswordBtn');
@@ -4314,6 +4380,20 @@ if(authSubmitBtn) authSubmitBtn.addEventListener('click', async () => {
       
       await registerUser(email, password, gameId, chiefName, furnaceLevel);
       
+      // Persist Century Games verification token and state
+      if (window.verifiedCgToken && auth && auth.currentUser) {
+          try {
+              await update(ref(db, `users/${auth.currentUser.uid}`), {
+                  wos_cg_token: window.verifiedCgToken,
+                  section: window.verifiedStateKid || "2089",
+                  stove_lv: furnaceLevel,
+                  avatar_image: window.verifiedAvatarUrl || "",
+                  verifiedAt: new Date().toISOString(),
+                  centuryGamesVerified: true
+              });
+          } catch(e) { console.warn("Failed to persist CG token:", e); }
+      }
+
       // Immediately seed in-memory maps so site never displays 'not found'
       idToNameMap[gameId] = chiefName;
       nameToIdMap[chiefName] = gameId;
@@ -8091,10 +8171,206 @@ window.openEditProfileModal = async () => {
         } catch(e) {
            console.error("Save profile error:", e);
            window.showToast("Error saving profile. Try again.", "error");
-           saveBtn.disabled = false;
            saveBtn.textContent = 'Save Changes';
         }
      };
+  }
+};
+
+window.handleSyncCenturyGamesProfile = async () => {
+  if (!currentUser) return;
+  const syncBtn = document.getElementById('btnSyncCgProfile');
+  if (syncBtn) {
+    syncBtn.disabled = true;
+    syncBtn.innerHTML = '🔄 Syncing...';
+  }
+
+  try {
+    const snap = await get(ref(db, `users/${currentUser.uid}`));
+    const uData = (snap && snap.exists()) ? snap.val() : {};
+    const token = uData.wos_cg_token || currentUser.wos_cg_token;
+
+    if (!token) {
+      window.openAccountHubVerifyModal();
+      return;
+    }
+
+    const res = await fetch(`${API_BASE_URL}?api=syncProfileWithToken&id=${encodeURIComponent(currentUser.gameId)}&cgToken=${encodeURIComponent(token)}`);
+    const data = await res.json();
+
+    if (data && data.success) {
+      const updates = {
+        stove_lv: data.stove_lv || currentUser.stove_lv || "",
+        section: data.section || currentUser.section || "2089",
+        lastSyncedAt: new Date().toISOString(),
+        centuryGamesVerified: true
+      };
+      if (data.avatar_image) updates.avatar_image = data.avatar_image;
+      if (data.nickname && !/^\d+$/.test(data.nickname)) updates.name = data.nickname;
+
+      await update(ref(db, `users/${currentUser.uid}`), updates);
+      currentUser.stove_lv = updates.stove_lv;
+      currentUser.section = updates.section;
+      currentUser.centuryGamesVerified = true;
+
+      window.showToast("Profile synced with Century Games servers!", "success");
+      if (views.account) views.account();
+    } else if (data && data.expired) {
+      window.showToast("30-day session token expired. Please enter new in-game code to refresh.", "warning");
+      window.openAccountHubVerifyModal();
+    } else {
+      throw new Error(data.message || "Failed to sync character stats.");
+    }
+  } catch (err) {
+    console.error("Sync profile error:", err);
+    window.showToast(err.message || "Failed to sync with game servers.", "error");
+  } finally {
+    if (syncBtn) {
+      syncBtn.disabled = false;
+      syncBtn.innerHTML = '🔄 Sync from Game';
+    }
+  }
+};
+
+window.openAccountHubVerifyModal = () => {
+  if (!currentUser) return;
+  const oldModal = document.getElementById('accountHubVerifyModalOverlay');
+  if (oldModal && oldModal.parentNode) oldModal.parentNode.removeChild(oldModal);
+
+  const modalOverlay = document.createElement('div');
+  modalOverlay.id = 'accountHubVerifyModalOverlay';
+  modalOverlay.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.85); backdrop-filter:blur(10px); z-index:99999; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease;';
+
+  modalOverlay.innerHTML = `
+    <div class="card" style="width:90%; max-width:460px; background:linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.92)); border:1px solid rgba(56,189,248,0.4); box-shadow:0 20px 60px rgba(0,0,0,0.6); padding:24px; border-radius:16px; text-align:left;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:12px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:20px;">🛡️</span>
+                <h3 style="margin:0; color:#fff; font-size:18px; font-weight:800;">Century Games Verification</h3>
+            </div>
+            <button id="closeAccHubVerifyBtn" style="background:none; border:none; color:var(--text-muted); font-size:24px; cursor:pointer; line-height:1;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-muted)'">&times;</button>
+        </div>
+
+        <p style="font-size:13px; color:var(--text-muted); line-height:1.5; margin:0 0 16px 0;">
+            Verify Game ID <strong style="color:var(--text-main); font-family:monospace;">${currentUser.gameId}</strong> to link your character directly to official Century Games servers for <strong>30-day automatic stats syncing</strong>.
+        </p>
+
+        <div id="accVerifyStepContainer">
+            <div style="background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.25); border-radius:12px; padding:14px; margin-bottom:16px;">
+                <div style="font-size:12px; color:#38bdf8; font-weight:bold; margin-bottom:4px;">📩 Step 1: Send In-Game Code</div>
+                <div style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">Click below to send a 6-digit confirmation code to your in-game mailbox in Whiteout Survival.</div>
+                <button id="accSendCodeBtn" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; border-radius:8px; padding:8px 16px; font-weight:bold; font-size:13px; cursor:pointer; width:100%;">📩 Send Code to Game Mailbox</button>
+            </div>
+
+            <div id="accCodeInputSection" style="display:none; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px; padding:14px;">
+                <div style="font-size:12px; color:var(--accent); font-weight:bold; margin-bottom:6px;">🔢 Step 2: Enter 6-Digit Code</div>
+                <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+                    <input type="text" id="accHubCodeInput" maxlength="6" placeholder="000000" style="flex:1; text-align:center; font-size:20px; font-weight:800; letter-spacing:4px; padding:8px 12px; border-radius:8px; border:1px solid rgba(56,189,248,0.5); background:var(--bg-main); color:#fff; box-sizing:border-box;">
+                    <button id="accHubSubmitCodeBtn" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; border-radius:8px; padding:10px 18px; font-weight:bold; font-size:14px; cursor:pointer; flex-shrink:0;">Verify & Bind</button>
+                </div>
+                <div id="accHubCodeFeedback" style="font-size:12px; margin-top:6px; display:none;"></div>
+            </div>
+        </div>
+    </div>
+  `;
+
+  document.body.appendChild(modalOverlay);
+
+  const closeBtn = document.getElementById('closeAccHubVerifyBtn');
+  if (closeBtn) closeBtn.addEventListener('click', () => modalOverlay.remove());
+  modalOverlay.addEventListener('click', (e) => {
+    if (e.target === modalOverlay) modalOverlay.remove();
+  });
+
+  const sendBtn = document.getElementById('accSendCodeBtn');
+  const codeSection = document.getElementById('accCodeInputSection');
+  const codeInput = document.getElementById('accHubCodeInput');
+  const submitCodeBtn = document.getElementById('accHubSubmitCodeBtn');
+  const feedback = document.getElementById('accHubCodeFeedback');
+
+  if (sendBtn) {
+    sendBtn.addEventListener('click', async () => {
+      sendBtn.disabled = true;
+      sendBtn.textContent = 'Sending...';
+      try {
+        const res = await fetch(`${API_BASE_URL}?api=sendGameCaptcha&id=${encodeURIComponent(currentUser.gameId)}`);
+        const data = await res.json();
+        if (data && data.success) {
+          sendBtn.textContent = '✅ Code Dispatched!';
+          if (codeSection) codeSection.style.display = 'block';
+          if (codeInput) codeInput.focus();
+        } else {
+          throw new Error(data.message || 'Failed to dispatch code.');
+        }
+      } catch (err) {
+        sendBtn.disabled = false;
+        sendBtn.textContent = '📩 Send Code to Game Mailbox';
+        alert(err.message || 'Failed to send code.');
+      }
+    });
+  }
+
+  if (submitCodeBtn && codeInput) {
+    const handleVerify = async () => {
+      const code = codeInput.value.trim();
+      if (!code || code.length < 4) {
+        if (feedback) {
+          feedback.style.display = 'block';
+          feedback.style.color = 'var(--danger)';
+          feedback.textContent = 'Please enter the 6-digit code.';
+        }
+        return;
+      }
+
+      submitCodeBtn.disabled = true;
+      submitCodeBtn.textContent = 'Verifying...';
+      if (feedback) feedback.style.display = 'none';
+
+      try {
+        const res = await fetch(`${API_BASE_URL}?api=verifyGameCaptcha&id=${encodeURIComponent(currentUser.gameId)}&code=${encodeURIComponent(code)}`);
+        const data = await res.json();
+
+        if (data && data.success && data.token) {
+          const updates = {
+            wos_cg_token: data.token,
+            section: data.section || currentUser.section || "2089",
+            stove_lv: data.stove_lv || currentUser.stove_lv || "",
+            verifiedAt: new Date().toISOString(),
+            centuryGamesVerified: true
+          };
+          if (data.avatar_image) updates.avatar_image = data.avatar_image;
+          if (data.nickname && !/^\d+$/.test(data.nickname)) updates.name = data.nickname;
+
+          await update(ref(db, `users/${currentUser.uid}`), updates);
+          currentUser.wos_cg_token = data.token;
+          currentUser.section = updates.section;
+          currentUser.stove_lv = updates.stove_lv;
+          currentUser.centuryGamesVerified = true;
+
+          modalOverlay.remove();
+          window.showToast("Character verified & 30-day sync token bound!", "success");
+          if (views.account) views.account();
+        } else {
+          throw new Error(data.message || 'Invalid or expired code.');
+        }
+      } catch (err) {
+        submitCodeBtn.disabled = false;
+        submitCodeBtn.textContent = 'Verify & Bind';
+        if (feedback) {
+          feedback.style.display = 'block';
+          feedback.style.color = 'var(--danger)';
+          feedback.textContent = err.message || 'Verification failed.';
+        }
+      }
+    };
+
+    submitCodeBtn.addEventListener('click', handleVerify);
+    codeInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleVerify();
+      }
+    });
   }
 };
 
@@ -12655,7 +12931,7 @@ window.resetBearTrapEvent = async () => {
           adminBadgeHtml = `<span style="font-size:12px; color:${lvlColor}; background:${lvlBg}; border:1px solid ${lvlBg}; padding:2px 6px; border-radius:6px; font-weight:bold; display:inline-flex; align-items:center; gap:4px; margin-left:10px; vertical-align:middle; text-shadow:none;">👑 ${accLevel}</span>`;
       }
       
-      // Hydrate currentUser with saved Firebase profile data (stove_lv, joinedDate, bio)
+      // Hydrate currentUser with saved Firebase profile data (stove_lv, joinedDate, bio, wos_cg_token, section)
       try {
           const profileSnap = await get(ref(db, `users/${currentUser.uid}`));
           if (profileSnap.exists()) {
@@ -12664,6 +12940,9 @@ window.resetBearTrapEvent = async () => {
               if (profileData.furnaceLevel) currentUser.furnaceLevel = profileData.furnaceLevel;
               if (profileData.joinedDate) currentUser.joinedDate = profileData.joinedDate;
               if (profileData.bio) currentUser.bio = profileData.bio;
+              if (profileData.wos_cg_token) currentUser.wos_cg_token = profileData.wos_cg_token;
+              if (profileData.section) currentUser.section = profileData.section;
+              if (profileData.centuryGamesVerified) currentUser.centuryGamesVerified = profileData.centuryGamesVerified;
           }
       } catch(e) { console.warn('Failed to load user profile:', e); }
 
@@ -12813,9 +13092,20 @@ window.resetBearTrapEvent = async () => {
                   </div>
                   <div style="overflow:hidden;">
                       <h2 class="id-card-name" style="margin:0 0 5px 0; color:#fff; letter-spacing:0.5px; text-shadow:0 2px 4px rgba(0,0,0,0.5); white-space:nowrap; text-overflow:ellipsis; overflow:hidden;">${window.escapeHTML(currentChiefName)}${adminBadgeHtml}</h2>
-                      <div style="display:inline-flex; align-items:center; gap:6px; background:rgba(0,0,0,0.3); padding:4px 10px; border-radius:20px; border:1px solid rgba(255,255,255,0.1);">
-                          <span style="color:var(--accent); font-size:12px; font-weight:bold;">ID:</span>
-                          <span style="color:var(--text-main); font-family:monospace; font-size:14px; letter-spacing:1px;">${currentUser.gameId}</span>
+                      <div style="display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:4px;">
+                          <div style="display:inline-flex; align-items:center; gap:6px; background:rgba(0,0,0,0.3); padding:4px 10px; border-radius:20px; border:1px solid rgba(255,255,255,0.1);">
+                              <span style="color:var(--accent); font-size:12px; font-weight:bold;">ID:</span>
+                              <span style="color:var(--text-main); font-family:monospace; font-size:14px; letter-spacing:1px;">${currentUser.gameId}</span>
+                          </div>
+                          ${ (currentUser.wos_cg_token || currentUser.centuryGamesVerified) ? `
+                              <div style="display:inline-flex; align-items:center; gap:4px; background:rgba(16,185,129,0.15); border:1px solid #10b981; padding:3px 8px; border-radius:20px; font-size:11px; font-weight:bold; color:#10b981;">
+                                  🛡️ Verified ${currentUser.section ? `(#${currentUser.section})` : ''}
+                              </div>
+                          ` : `
+                              <div style="display:inline-flex; align-items:center; gap:4px; background:rgba(245,158,11,0.15); border:1px solid #f59e0b; padding:3px 8px; border-radius:20px; font-size:11px; font-weight:bold; color:#f59e0b; cursor:pointer;" onclick="window.openAccountHubVerifyModal()" title="Click to verify character with in-game code">
+                                  ⚠️ Unverified
+                              </div>
+                          `}
                       </div>
                   </div>
               </div>
@@ -12856,6 +13146,15 @@ window.resetBearTrapEvent = async () => {
               <button id="openUserEditProfileBtn" onclick="window.openEditProfileHubModal()" style="background:linear-gradient(135deg, #06b6d4, #3b82f6); color:#fff; border:none; padding:12px 24px; border-radius:10px; font-weight:bold; font-size:15px; cursor:pointer; box-shadow:0 4px 15px rgba(6,182,212,0.35); transition:transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
                   ✏️ Edit Profile
               </button>
+              ${ (currentUser.wos_cg_token || currentUser.centuryGamesVerified) ? `
+                  <button id="btnSyncCgProfile" onclick="window.handleSyncCenturyGamesProfile()" style="background:rgba(56,189,248,0.15); border:1px solid #38bdf8; color:#38bdf8; padding:12px 20px; border-radius:10px; font-weight:bold; font-size:15px; cursor:pointer; display:inline-flex; align-items:center; gap:8px; transition:0.2s;" onmouseover="this.style.background='rgba(56,189,248,0.25)'" onmouseout="this.style.background='rgba(56,189,248,0.15)'">
+                      🔄 Sync from Game
+                  </button>
+              ` : `
+                  <button id="btnVerifyCgProfile" onclick="window.openAccountHubVerifyModal()" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:12px 20px; border-radius:10px; font-weight:bold; font-size:15px; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 15px rgba(14,165,233,0.35); transition:transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                      🛡️ Verify Character in Game
+                  </button>
+              `}
           </div>
 
           <input type="file" id="avatarUploadInput" accept="image/png, image/jpeg, image/webp" style="display:none;">
