@@ -4131,6 +4131,7 @@ if (authNextStepBtn) {
   authNextStepBtn.addEventListener('click', () => {
     const email = authEmail.value.trim().toLowerCase();
     const password = authPassword.value;
+    const dateStarted = authDateStarted ? authDateStarted.value : "";
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       authErrorMsg.textContent = 'Please enter a valid email address.';
       authErrorMsg.style.display = 'block';
@@ -4141,6 +4142,15 @@ if (authNextStepBtn) {
       authErrorMsg.textContent = 'Password must be at least 6 characters.';
       authErrorMsg.style.display = 'block';
       authPassword.focus();
+      return;
+    }
+    if (!dateStarted) {
+      authErrorMsg.textContent = 'Please select the date you started playing.';
+      authErrorMsg.style.display = 'block';
+      if (authDateStarted) {
+        authDateStarted.focus();
+        try { authDateStarted.showPicker(); } catch(e) {}
+      }
       return;
     }
     authErrorMsg.style.display = 'none';

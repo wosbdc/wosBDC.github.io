@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.2.1] - 2026-08-14
+### ✨ Mandatory Start Date in Registration Wizard
+- **📅 Mandatory Playing Start Date**: Made "Date You Started Playing" a required field in Step 1 of the registration wizard with instant validation and picker focus.
+
 ## [2.2.0] - 2026-08-14
 ### ✨ 2-Step Chief Registration & Verification Wizard
 - **✨ Multi-Step Registration Wizard**: Split account creation into a clean 2-step wizard. Step 1 handles Email & Password with validation, and Step 2 handles Game ID & in-game mailbox verification with live character locking.
