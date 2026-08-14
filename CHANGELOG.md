@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [2.5.21] - 2026-08-14
+- Implemented Universal Smartphone & Screen Size responsive optimizations with fluid `clamp()` spacing, notch safe areas (`viewport-fit=cover`), iOS input auto-zoom fixes, and fluid modal clamping.
+
 ## [2.5.20] - 2026-08-14
 - Streamlined Notification Bell badge to detect unverified, expiring (≤5d), and expired 30-day tokens across main and alt accounts.
 - Modernized Alliance Alerts modal by removing obsolete gift code card and keeping staff signup alerts.

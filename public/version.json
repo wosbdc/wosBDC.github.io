@@ -1,9 +1,8 @@
 {
-  "version": "2.5.20",
+  "version": "2.5.21",
   "releaseDate": "2026-08-14",
-  "title": "🔔 Streamlined 30-Day Token Notification Bell & Alerts",
+  "title": "📱 Universal Smartphone & Screen Size Responsive Polish",
   "notes": [
-    "Refactored Notification Bell to alert on unverified, expiring (≤5d), and expired 30-day tokens for main and alt accounts",
-    "Streamlined Alerts modal by removing obsolete gift code card and keeping staff signup alerts"
+    "Added fluid container scaling, safe-area viewport insets, iOS input auto-zoom safeguards, and universal table swiping"
   ]
 }

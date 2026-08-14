@@ -37,13 +37,33 @@
 
 
 
+html {
+  box-sizing: border-box;
+  -webkit-text-size-adjust: 100%;
+  touch-action: manipulation;
+  overflow-x: hidden;
+}
+
+*, *:before, *:after {
+  box-sizing: inherit;
+}
+
 body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   padding: 0;
   margin: 0;
   background-color: var(--bg-main);
   color: var(--text-main);
   transition: background-color 0.3s, color 0.3s;
+  overflow-x: hidden;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+img, svg, video, canvas {
+  max-width: 100%;
+  height: auto;
 }
 
 .navbar {
@@ -53,6 +73,7 @@ body {
   position: sticky;
   top: 0;
   z-index: 9990;
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 .nav-inner {
@@ -62,7 +83,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 15px 20px;
+  padding: 12px clamp(12px, 3.5vw, 20px);
   box-sizing: border-box;
 }
 
@@ -309,23 +330,27 @@ body {
 
 .container {
   max-width: 1200px;
-  margin: 40px auto;
-  padding: 0 20px;
+  margin: clamp(16px, 4vw, 36px) auto;
+  padding: 0 clamp(10px, 3.5vw, 20px);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .card {
   background: var(--card-bg);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 25px;
-  margin-bottom: 25px;
+  border-radius: clamp(10px, 2.5vw, 14px);
+  padding: clamp(14px, 3.5vw, 25px);
+  margin-bottom: clamp(14px, 3vw, 25px);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  box-sizing: border-box;
+  overflow-wrap: break-word;
 }
 
 .card-title {
-  font-size: 22px;
+  font-size: clamp(18px, 4.5vw, 22px);
   font-weight: bold;
-  margin-top: 20px;
+  margin-top: 16px;
   color: var(--text-main);
   border-bottom: 1px solid var(--border);
   padding-bottom: 10px;
@@ -345,7 +370,7 @@ table {
 }
 
 th, td {
-  padding: 12px 15px;
+  padding: clamp(9px, 2vw, 12px) clamp(8px, 2.5vw, 15px);
   text-align: left;
 }
 
@@ -353,7 +378,7 @@ th {
   color: var(--text-muted);
   font-weight: bold;
   text-transform: uppercase;
-  font-size: 12px;
+  font-size: 11.5px;
   letter-spacing: 0.5px;
 }
 
@@ -1047,4 +1072,69 @@ tr:hover td {
 .auth-method-btn:hover .method-arrow {
   color: var(--accent);
   transform: translateX(3px);
+}
+
+/* --- Universal Smartphone & Cross-Device Responsive Rules --- */
+@media (max-width: 768px) {
+  /* Prevent iOS Safari auto-zoom on input focus */
+  input[type="text"],
+  input[type="number"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  select,
+  textarea {
+    font-size: 16px !important;
+    min-height: 42px;
+    box-sizing: border-box;
+  }
+
+  /* Touch Target Safeguards */
+  button, 
+  .nav-link, 
+  .sub-link, 
+  .sidebar-action-btn, 
+  .admin-user-filter-tab {
+    min-height: 38px;
+    touch-action: manipulation;
+  }
+
+  /* Universal Modal Overlays on Phones */
+  #notificationsModalOverlay .card,
+  #accountHubVerifyModalOverlay .card,
+  #altManagerModalOverlay .card,
+  #discordAlertsModalOverlay .card,
+  #editMemberModalOverlay .card,
+  #authModalOverlay .card {
+    width: 95% !important;
+    max-width: 95vw !important;
+    padding: clamp(14px, 4vw, 22px) !important;
+    margin: 10px auto !important;
+    border-radius: 16px !important;
+  }
+
+  /* Universal Table Swipe Container */
+  .table-responsive,
+  .card-table-scroll {
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+}
+
+/* Extra Small Phones (iPhone SE, Galaxy Fold Cover Screen ≤ 380px) */
+@media (max-width: 380px) {
+  .nav-brand {
+    font-size: 17px !important;
+  }
+  .card {
+    padding: 12px !important;
+  }
+  .container {
+    padding: 0 8px !important;
+  }
+  th, td {
+    padding: 8px 6px !important;
+    font-size: 12px !important;
+  }
 }
