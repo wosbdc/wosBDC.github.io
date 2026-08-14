@@ -8138,27 +8138,64 @@ window.updateNewMemberBadge = async () => {
   }
   if (adminAlertsNavBtn) adminAlertsNavBtn.style.display = 'flex';
 
-  // 1. Check token status
+  // 1. Check main character token status
   const tokenStatus = window.getMemberTokenStatus(currentUser);
-  let totalAlerts = tokenStatus.alert ? 1 : 0;
+  let mainAlert = tokenStatus.alert ? 1 : 0;
 
-  // 2. Check staff signups if admin
+  // 2. Check linked alts token status
+  let altAlertsCount = 0;
+  let hasExpiredAlt = false;
+  let hasExpiringAlt = false;
+
+  if (currentUser.linkedGameIds && Array.isArray(currentUser.linkedGameIds) && currentUser.linkedGameIds.length > 0) {
+    currentUser.linkedGameIds.forEach(agid => {
+      const aTok = currentUser.altTokens ? currentUser.altTokens[agid] : null;
+      if (!aTok) {
+        altAlertsCount++;
+        hasExpiredAlt = true;
+      } else {
+        const aDate = (typeof aTok === 'object' && aTok.verifiedAt) ? new Date(aTok.verifiedAt) : null;
+        if (!aDate || isNaN(aDate.getTime())) {
+          altAlertsCount++;
+          hasExpiredAlt = true;
+        } else {
+          const elapsed = Math.floor((Date.now() - aDate.getTime()) / (1000 * 60 * 60 * 24));
+          const daysLeft = Math.max(0, 30 - elapsed);
+          if (daysLeft <= 0) {
+            altAlertsCount++;
+            hasExpiredAlt = true;
+          } else if (daysLeft <= 5) {
+            altAlertsCount++;
+            hasExpiringAlt = true;
+          }
+        }
+      }
+    });
+  }
+
+  // 3. Check staff signups if admin
   let staffUnreadCount = 0;
   if (window.isAdminUser(currentUser)) {
     const recent = await window.getRecentNewMembers();
     const lastSeen = Number(localStorage.getItem('last_seen_new_member_timestamp') || '0');
     staffUnreadCount = recent.filter(m => m.createdMs > lastSeen).length;
-    totalAlerts += staffUnreadCount;
   }
+
+  const totalAlerts = mainAlert + (altAlertsCount > 0 ? 1 : 0) + staffUnreadCount;
 
   if (adminAlertsNavBtn) {
     let badge = adminAlertsNavBtn.querySelector('.new-member-badge');
     if (totalAlerts > 0) {
+      const isCritical = (tokenStatus.status === 'expired' || hasExpiredAlt);
+      const isWarning = (tokenStatus.status === 'expiring_soon' || tokenStatus.status === 'unverified' || hasExpiringAlt);
+      const alertColor = isCritical ? '#ef4444' : (isWarning ? '#f59e0b' : '#06b6d4');
+      const alertBg = isCritical ? 'rgba(239,68,68,0.2)' : (isWarning ? 'rgba(245,158,11,0.2)' : 'rgba(6,182,212,0.2)');
+
       adminAlertsNavBtn.style.position = 'relative';
       adminAlertsNavBtn.style.overflow = 'visible';
-      adminAlertsNavBtn.style.background = tokenStatus.status === 'expired' ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.2)';
-      adminAlertsNavBtn.style.borderColor = tokenStatus.status === 'expired' ? '#ef4444' : '#f59e0b';
-      adminAlertsNavBtn.style.color = tokenStatus.status === 'expired' ? '#ef4444' : '#f59e0b';
+      adminAlertsNavBtn.style.background = alertBg;
+      adminAlertsNavBtn.style.borderColor = alertColor;
+      adminAlertsNavBtn.style.color = alertColor;
       adminAlertsNavBtn.style.animation = 'pulse 2s infinite';
       if (!badge) {
         badge = document.createElement('span');
@@ -8205,6 +8242,71 @@ window.openAllianceAlertsModal = async () => {
   overlay.id = 'notificationsModalOverlay';
   overlay.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.85); backdrop-filter:blur(10px); z-index:99999; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease;';
 
+  // Linked Alts Token Breakdown Section
+  let altsSectionHtml = '';
+  if (currentUser.linkedGameIds && Array.isArray(currentUser.linkedGameIds) && currentUser.linkedGameIds.length > 0) {
+    const altRows = currentUser.linkedGameIds.map(agid => {
+      const aTok = currentUser.altTokens ? currentUser.altTokens[agid] : null;
+      let aName = (typeof aTok === 'object' && aTok.nickname) ? aTok.nickname : (idToNameMap[agid] || `Alt Chief ${agid}`);
+      let aLevel = (typeof aTok === 'object' && aTok.stove_lv) ? aTok.stove_lv : '';
+      let formattedLevel = aLevel ? (String(aLevel).toUpperCase().startsWith('FC') ? aLevel : `FC ${aLevel}`) : '';
+
+      let aBadge = '<span style="background:rgba(255,255,255,0.06); color:var(--text-muted); border:1px solid var(--border); padding:2px 8px; border-radius:8px; font-size:11px;">⚪ Unverified</span>';
+
+      if (aTok) {
+        const aDate = (typeof aTok === 'object' && aTok.verifiedAt) ? new Date(aTok.verifiedAt) : null;
+        if (aDate && !isNaN(aDate.getTime())) {
+          const elapsed = Math.floor((Date.now() - aDate.getTime()) / (1000 * 60 * 60 * 24));
+          const aDays = Math.max(0, 30 - elapsed);
+          if (aDays <= 0) {
+            aBadge = '<span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.4); padding:2px 8px; border-radius:8px; font-size:11px; font-weight:bold;">🔴 Expired</span>';
+          } else if (aDays <= 5) {
+            aBadge = `<span style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); padding:2px 8px; border-radius:8px; font-size:11px; font-weight:bold;">🟠 ${aDays}d Left</span>`;
+          } else {
+            aBadge = `<span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:2px 8px; border-radius:8px; font-size:11px; font-weight:bold;">🟢 ${aDays}d Active</span>`;
+          }
+        }
+      }
+
+      return `
+        <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div style="width:32px; height:32px; border-radius:50%; background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.3); display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0;">🔗</div>
+            <div>
+              <div style="font-weight:bold; font-size:13.5px; color:var(--text-main); display:flex; align-items:center; gap:6px;">
+                <span>${window.escapeHTML(aName)}</span>
+                ${formattedLevel ? `<span style="font-size:10px; background:rgba(249,115,22,0.15); color:#f97316; border:1px solid rgba(249,115,22,0.4); padding:1px 6px; border-radius:8px; font-weight:bold;">🔥 ${window.escapeHTML(formattedLevel)}</span>` : ''}
+              </div>
+              <div style="font-size:11px; color:var(--text-muted); font-family:monospace; margin-top:2px;">
+                ID: ${agid}
+              </div>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            ${aBadge}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    altsSectionHtml = `
+      <div style="background:rgba(59,130,246,0.06); border:1px solid rgba(59,130,246,0.25); border-radius:14px; padding:16px; margin-bottom:14px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <div style="font-size:13px; font-weight:bold; color:#60a5fa; text-transform:uppercase; letter-spacing:0.5px; display:flex; align-items:center; gap:6px;">
+            🔗 Linked Alt Accounts 30d Sync Status (${currentUser.linkedGameIds.length})
+          </div>
+          <button onclick="document.getElementById('notificationsModalOverlay').remove(); window.openAltManagerModal();" style="background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.4); color:#60a5fa; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
+            ⚙️ Manage Alts
+          </button>
+        </div>
+        <div style="max-height:180px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">
+          ${altRows}
+        </div>
+      </div>
+    `;
+  }
+
+  // Staff Section
   let staffSectionHtml = '';
   if (isStaff) {
     let listHtml = '';
@@ -8264,18 +8366,18 @@ window.openAllianceAlertsModal = async () => {
         <button onclick="document.getElementById('notificationsModalOverlay').remove()" style="background:none; border:none; color:var(--text-muted); font-size:26px; cursor:pointer; line-height:1;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-muted)'">&times;</button>
       </div>
 
-      <!-- Token Sync Card -->
-      <div style="background:${tokenStatus.status === 'expired' ? 'rgba(239,68,68,0.08)' : (tokenStatus.status === 'expiring_soon' ? 'rgba(245,158,11,0.08)' : 'rgba(16,185,129,0.08)')}; border:1px solid ${tokenStatus.status === 'expired' ? 'rgba(239,68,68,0.35)' : (tokenStatus.status === 'expiring_soon' ? 'rgba(245,158,11,0.35)' : 'rgba(16,185,129,0.35)')}; border-radius:14px; padding:16px; margin-bottom:14px;">
+      <!-- Main Character Token Sync Card -->
+      <div style="background:${tokenStatus.status === 'expired' ? 'rgba(239,68,68,0.08)' : (tokenStatus.status === 'expiring_soon' ? 'rgba(245,158,11,0.08)' : (tokenStatus.status === 'unverified' ? 'rgba(245,158,11,0.08)' : 'rgba(16,185,129,0.08)'))}; border:1px solid ${tokenStatus.status === 'expired' ? 'rgba(239,68,68,0.35)' : (tokenStatus.status === 'expiring_soon' ? 'rgba(245,158,11,0.35)' : (tokenStatus.status === 'unverified' ? 'rgba(245,158,11,0.35)' : 'rgba(16,185,129,0.35)'))}; border-radius:14px; padding:16px; margin-bottom:14px;">
         <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:8px; flex-wrap:wrap;">
           <div style="display:flex; align-items:center; gap:8px;">
             <span style="font-size:20px;">${tokenStatus.icon}</span>
             <div>
               <div style="font-weight:bold; font-size:15px; color:${tokenStatus.color};">${tokenStatus.label}</div>
-              <div style="font-size:11px; color:var(--text-muted);">30-Day Sync Token</div>
+              <div style="font-size:11px; color:var(--text-muted);">Main Character 30-Day Token</div>
             </div>
           </div>
           <span style="font-size:11px; font-weight:bold; padding:3px 10px; border-radius:12px; background:${tokenStatus.color}22; color:${tokenStatus.color}; border:1px solid ${tokenStatus.color}44;">
-            ${tokenStatus.status === 'active' ? `${tokenStatus.daysLeft} Days Remaining` : (tokenStatus.status === 'expiring_soon' ? 'Expires Soon' : 'Action Required')}
+            ${tokenStatus.status === 'active' ? `${tokenStatus.daysLeft} Days Remaining` : (tokenStatus.status === 'expiring_soon' ? `${tokenStatus.daysLeft} Days Left (Renew Soon)` : 'Action Required')}
           </span>
         </div>
         <p style="font-size:12.5px; color:var(--text-muted); line-height:1.5; margin:0 0 12px 0;">
@@ -8284,7 +8386,7 @@ window.openAllianceAlertsModal = async () => {
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
           ${tokenStatus.alert ? `
             <button onclick="document.getElementById('notificationsModalOverlay').remove(); window.openAccountHubVerifyModal();" style="flex:1; background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:9px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; box-shadow:0 2px 10px rgba(14,165,233,0.3); display:flex; align-items:center; justify-content:center; gap:6px;">
-              🛡️ Renew Token in Game (10s)
+              🛡️ Verify / Renew Token in Game (10s)
             </button>
           ` : `
             <button onclick="document.getElementById('notificationsModalOverlay').remove(); window.handleSyncCenturyGamesProfile();" style="background:rgba(16,185,129,0.15); border:1px solid #10b981; color:#10b981; padding:8px 14px; border-radius:8px; font-weight:bold; font-size:12.5px; cursor:pointer; display:flex; align-items:center; gap:6px;">
@@ -8297,20 +8399,10 @@ window.openAllianceAlertsModal = async () => {
         </div>
       </div>
 
-      <!-- Gift Code Bot Status Card -->
-      <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:14px; padding:14px 16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-        <div style="display:flex; align-items:center; gap:10px;">
-          <span style="font-size:22px;">🎁</span>
-          <div>
-            <div style="font-weight:bold; font-size:14px; color:var(--text-main);">Gift Code Auto-Redeem Bot</div>
-            <div style="font-size:12px; color:var(--text-muted);">Automatically claims new developer gift codes for your Chief ID.</div>
-          </div>
-        </div>
-        <button onclick="document.getElementById('notificationsModalOverlay').remove(); views.giftcodes();" style="background:rgba(168,85,247,0.15); border:1px solid #a855f7; color:#c084fc; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer;">
-          🎁 View Bot Status
-        </button>
-      </div>
+      <!-- Linked Alts 30-Day Token Section -->
+      ${altsSectionHtml}
 
+      <!-- Staff Section -->
       ${staffSectionHtml}
 
       <div style="display:flex; justify-content:flex-end; margin-top:20px;">

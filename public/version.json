@@ -1,9 +1,9 @@
 {
-  "version": "2.5.19",
+  "version": "2.5.20",
   "releaseDate": "2026-08-14",
-  "title": "👥 Enable Users Tab in Admin Menu for All Alliance Managers",
+  "title": "🔔 Streamlined 30-Day Token Notification Bell & Alerts",
   "notes": [
-    "Unlocked the Users tab in Admin Menu for all R4 Officers and Alliance Managers",
-    "Enabled access to Global Chief List Filter, Staff Roles overview, and Registered/Unclaimed Roster members"
+    "Refactored Notification Bell to alert on unverified, expiring (≤5d), and expired 30-day tokens for main and alt accounts",
+    "Streamlined Alerts modal by removing obsolete gift code card and keeping staff signup alerts"
   ]
 }

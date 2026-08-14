@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.5.20] - 2026-08-14
+- Streamlined Notification Bell badge to detect unverified, expiring (≤5d), and expired 30-day tokens across main and alt accounts.
+- Modernized Alliance Alerts modal by removing obsolete gift code card and keeping staff signup alerts.
+
 ## [2.5.19] - 2026-08-14
 - Enabled the `👥 Users` tab in the Admin Menu for all Alliance Managers and R4 Officers.
 - Allowed managers to access the Global Chief List filter, Staff Roles overview, and Registered/Unclaimed member rosters.
