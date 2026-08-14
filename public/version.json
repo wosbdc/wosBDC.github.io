@@ -1,8 +1,9 @@
 {
-  "version": "1.99.6",
+  "version": "1.99.7",
   "releaseDate": "2026-08-13",
-  "title": "🛡️ Discord Webhook Pure Native Avatar Integration",
+  "title": "🔤 Clean Chief Name Resolution & Unclaimed Fallback Protection",
   "notes": [
-    "Removed all payload avatar_url overrides so Discord strictly displays the exact picture you uploaded to your Discord Webhook settings"
+    "Prevented raw numeric Game IDs from being displayed as Chief Names in Discord alerts and member drawers",
+    "Resolved numeric IDs via live roster lookup, email handle fallback, or [Unclaimed Chief] badge"
   ]
 }

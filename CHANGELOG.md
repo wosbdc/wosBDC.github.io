@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [1.99.7] - 2026-08-13
+### 🔤 Clean Chief Name Resolution & Unclaimed Fallback Protection
+- **🔤 Eliminated Numeric Chief Names**: Prevented raw numeric Game IDs (e.g. `319875650`) from ever being displayed as Chief Names in Discord alerts and member drawers.
+- **🛡️ Multi-Tier Resolution**: Uses live roster mapping (`window.idToNameMap`), clean email handle fallbacks, or `[Unclaimed Chief]` placeholders to ensure clean, professional formatting.
+
 ## [1.99.6] - 2026-08-13
 ### 🛡️ Discord Webhook Pure Native Avatar Integration
 - **🛡️ Pure Webhook Avatar**: Stripped all payload avatar overrides so Discord displays the exact profile picture and username that you uploaded directly to your Webhook in Discord Channel Settings.

@@ -7545,8 +7545,15 @@ window.getRecentNewMembers = async () => {
         const gidStr = String(u.gameId || uid || '').trim();
         if ((!cName || /^\d+$/.test(cName)) && gidStr && window.idToNameMap && window.idToNameMap[gidStr] && !/^\d+$/.test(window.idToNameMap[gidStr])) {
           cName = window.idToNameMap[gidStr];
+        } else if ((!cName || /^\d+$/.test(cName)) && u.email && u.email.includes('@')) {
+          const emailPrefix = u.email.split('@')[0];
+          if (!/^\d+$/.test(emailPrefix)) {
+            cName = emailPrefix;
+          }
         }
-        if (!cName) cName = gidStr || 'New Member';
+        if (!cName || /^\d+$/.test(cName)) {
+          cName = '[Unclaimed Chief]';
+        }
 
         recent.push({
           uid,
