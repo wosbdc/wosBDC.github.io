@@ -1,9 +1,10 @@
 {
   "version": "2.5.8",
   "releaseDate": "2026-08-14",
-  "title": "🏷️ Synchronized v2.5.8 Display across Discord Webhook & Web UI",
+  "title": "✨ Whiteout Survival In-Game Avatar Sync & Avatar Management Hub",
   "notes": [
-    "Added explicit v2.5.8 version badge to Discord webhook roster embed footer",
-    "Updated fallback header version badge in index.html to ensure v2.5.8 is always immediately visible on page load"
+    "Added live in-game WOS avatar preview and choice during account registration",
+    "Introduced Profile Picture & Avatar modal in Account Hub with 1-click in-game avatar syncing, custom photo uploading, and initials reset",
+    "Linked alts now support interactive in-game avatar syncing and management"
   ]
 }

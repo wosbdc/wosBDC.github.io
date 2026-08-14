@@ -1,9 +1,16 @@
 # CHANGELOG
 
 ## [2.5.8] - 2026-08-14
-### 🏷️ Synchronize Version Display across Discord Webhook & Web UI
-- **🏷️ Discord Embed Version Tag**: Added explicit version number (`v2.5.8`) to the Discord webhook roster embed footer.
-- **🏷️ Header Version Badge**: Updated `index.html` and `main.js` to ensure `v2.5.8` is immediately rendered on page load and inside the changelog modal.
+### ✨ Whiteout Survival In-Game Avatar Sync & Avatar Management Hub
+- **🎮 In-Game Avatar Sync During Account Creation**:
+  - Automatically fetches the user's official Whiteout Survival in-game character avatar upon verifying their 6-digit game mail code.
+  - Displays a live avatar preview with an option `[✓] Use in-game Whiteout Survival avatar as site profile picture`.
+- **📷 Interactive Profile Picture & Avatar Modal**:
+  - Clicking on the profile avatar (or selecting "Profile Picture & Avatar" in Edit Profile) opens a dedicated management hub:
+    - **Option 1 (🎮 Sync In-Game Avatar)**: 1-click syncs the latest avatar directly from the official game servers into the site database.
+    - **Option 2 (📁 Upload Custom Picture)**: Lets members upload, zoom, and crop custom profile photos.
+    - **Option 3 (🔤 Reset to Initials)**: Resets to clean colored initials badge.
+  - Full avatar sync and management support enabled for linked Alt accounts.
 
 ## [2.5.6] - 2026-08-14
 ### ✨ Update In-Game Token Labels to '30-Day Sync Token'

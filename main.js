@@ -4525,17 +4525,30 @@ if (authVerifyGameIdBtn && authChiefConfirm) {
                         authChiefConfirm.innerHTML = `
                           <div style="background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.4); border-radius:12px; padding:14px; margin-top:10px;">
                               <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-                                  <div>
-                                      <div style="font-size:12px; color:#10b981; font-weight:bold;">✅ Character Verified!</div>
-                                      <div style="font-size:16px; font-weight:800; color:#fff; margin-top:2px;">
-                                          ${window.escapeHTML(data.nickname)}
-                                          <span style="font-size:11px; color:#38bdf8; font-weight:bold; background:rgba(56,189,248,0.15); padding:2px 6px; border-radius:4px; margin-left:6px;">State #${window.escapeHTML(data.section || '2089')}</span>
+                                  <div style="display:flex; align-items:center; gap:10px;">
+                                      ${data.avatar_image ? `
+                                          <div style="width:42px; height:42px; border-radius:50%; overflow:hidden; border:2px solid #10b981; flex-shrink:0; background:rgba(0,0,0,0.3);">
+                                              <img src="${data.avatar_image}" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none';" />
+                                          </div>
+                                      ` : ''}
+                                      <div>
+                                          <div style="font-size:12px; color:#10b981; font-weight:bold;">✅ Character Verified!</div>
+                                          <div style="font-size:15px; font-weight:800; color:#fff; margin-top:2px;">
+                                              ${window.escapeHTML(data.nickname)}
+                                              <span style="font-size:11px; color:#38bdf8; font-weight:bold; background:rgba(56,189,248,0.15); padding:2px 6px; border-radius:4px; margin-left:6px;">State #${window.escapeHTML(data.section || '2089')}</span>
+                                          </div>
                                       </div>
                                   </div>
                                   <div style="display:flex; align-items:center; flex-shrink:0;">
                                       ${window.getFurnaceIconHtml(data.stove_lv, 40)}
                                   </div>
                               </div>
+                              ${data.avatar_image ? `
+                                  <div style="margin-top:10px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.08); font-size:12px; color:var(--text-muted); display:flex; align-items:center; gap:8px;">
+                                      <input type="checkbox" id="regUseWosAvatar" checked style="accent-color:#10b981; cursor:pointer;" />
+                                      <label for="regUseWosAvatar" style="cursor:pointer; color:#e2e8f0;">Use in-game Whiteout Survival avatar as site profile picture</label>
+                                  </div>
+                              ` : ''}
                           </div>`;
 
                         window.updateAuthFurnaceDropdown(verifiedFurnaceLevel);
@@ -4698,6 +4711,9 @@ if(authSubmitBtn) authSubmitBtn.addEventListener('click', async () => {
       }
       if (!dateStarted) throw new Error('Date You Started Playing is required.');
       
+      const useWosAvatar = document.getElementById('regUseWosAvatar')?.checked !== false;
+      const avatarUrlToUse = (useWosAvatar && window.verifiedAvatarUrl) ? window.verifiedAvatarUrl : (pendingGoogleUser ? pendingGoogleUser.photoURL : "");
+      
       if (isGoogleRegistration && pendingGoogleUser) {
         // Save Google User directly to Firebase Realtime Database
         await set(ref(db, `users/${pendingGoogleUser.uid}`), {
@@ -4709,6 +4725,7 @@ if(authSubmitBtn) authSubmitBtn.addEventListener('click', async () => {
           furnaceLevel: furnaceLevel,
           section: window.verifiedStateKid || "2089",
           avatar_image: window.verifiedAvatarUrl || (pendingGoogleUser.photoURL || ""),
+          avatarPreference: useWosAvatar ? 'wos' : (pendingGoogleUser.photoURL ? 'custom' : 'initials'),
           wos_cg_token: window.verifiedCgToken || "",
           dateStarted: dateStarted,
           verifiedAt: new Date().toISOString(),
@@ -4719,19 +4736,27 @@ if(authSubmitBtn) authSubmitBtn.addEventListener('click', async () => {
       } else {
         await registerUser(email, password, gameId, chiefName, furnaceLevel);
         
-        // Persist Century Games verification token and state
-        if (window.verifiedCgToken && auth && auth.currentUser) {
+        // Persist verification token and state
+        if (auth && auth.currentUser) {
             try {
                 await update(ref(db, `users/${auth.currentUser.uid}`), {
-                    wos_cg_token: window.verifiedCgToken,
+                    wos_cg_token: window.verifiedCgToken || "",
                     section: window.verifiedStateKid || "2089",
                     stove_lv: furnaceLevel,
                     avatar_image: window.verifiedAvatarUrl || "",
+                    avatarPreference: useWosAvatar ? 'wos' : 'initials',
                     verifiedAt: new Date().toISOString(),
-                    centuryGamesVerified: true
+                    centuryGamesVerified: !!window.verifiedCgToken
                 });
-            } catch(e) { console.warn("Failed to persist CG token:", e); }
+            } catch(e) { console.warn("Failed to persist token:", e); }
         }
+      }
+
+      if (avatarUrlToUse) {
+        try {
+          await uploadAvatar(gameId, avatarUrlToUse);
+          avatarMap[gameId] = avatarUrlToUse;
+        } catch(e) { console.warn("Failed to set avatar in DB:", e); }
       }
 
       // Immediately seed in-memory maps so site never displays 'not found'
@@ -8375,6 +8400,192 @@ window.openStaffProfileModal = () => {
   }
 };
 
+window.openAvatarManagerModal = async (targetGameId, chiefName) => {
+  const gid = targetGameId || (currentUser ? currentUser.gameId : '');
+  const cName = chiefName || (currentUser ? (idToNameMap[gid] || currentUser.name || 'Chief') : 'Chief');
+  if (!gid) return;
+
+  const currentAvatar = window.getAvatarUrl(gid, cName);
+  const inGameAvatarUrl = (currentUser && currentUser.gameId === gid && currentUser.avatar_image)
+    ? currentUser.avatar_image
+    : (window.verifiedAvatarUrl || (avatarMap && avatarMap[gid] && avatarMap[gid].startsWith('http') ? avatarMap[gid] : ''));
+
+  let existing = document.getElementById('avatarManagerModalOverlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'avatarManagerModalOverlay';
+  overlay.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.88); backdrop-filter:blur(10px); z-index:99999; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease;';
+
+  overlay.innerHTML = `
+    <div class="card" style="width:92%; max-width:480px; background:linear-gradient(145deg, rgba(15,23,42,0.96), rgba(30,41,59,0.94)); border:1px solid rgba(56,189,248,0.35); padding:24px; border-radius:20px; box-shadow:0 25px 60px rgba(0,0,0,0.7); text-align:left; animation:zoomIn 0.2s forwards; color:var(--text-main);">
+      
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:14px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:22px;">📷</span>
+          <div>
+            <h3 style="margin:0; color:#fff; font-size:19px; font-weight:800;">Profile Picture & Avatar</h3>
+            <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">Select avatar source for <strong>${window.escapeHTML(cName)}</strong> (ID: ${gid})</div>
+          </div>
+        </div>
+        <button onclick="document.getElementById('avatarManagerModalOverlay').remove()" style="background:none; border:none; color:var(--text-muted); font-size:26px; cursor:pointer; line-height:1;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-muted)'">&times;</button>
+      </div>
+
+      <!-- Current Profile Picture Preview -->
+      <div style="display:flex; align-items:center; gap:14px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); padding:14px 16px; border-radius:14px; margin-bottom:16px;">
+        <div style="width:60px; height:60px; border-radius:50%; overflow:hidden; border:2px solid var(--accent); box-shadow:0 4px 12px rgba(0,0,0,0.4); flex-shrink:0; background:var(--bg-secondary);">
+          <img id="avatarModalCurrentImg" src="${currentAvatar}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(cName)}&background=06b6d4&color=fff&bold=true&size=128';" />
+        </div>
+        <div>
+          <div style="font-weight:bold; font-size:15px; color:#fff;">${window.escapeHTML(cName)}</div>
+          <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">Current site profile picture</div>
+        </div>
+      </div>
+
+      <!-- Option 1: Whiteout Survival In-Game Avatar -->
+      <div style="background:rgba(14,165,233,0.08); border:1px solid rgba(14,165,233,0.3); border-radius:14px; padding:16px; margin-bottom:12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div style="width:46px; height:46px; border-radius:50%; overflow:hidden; border:2px solid #0ea5e9; flex-shrink:0; background:rgba(0,0,0,0.3);">
+              ${inGameAvatarUrl ? `<img src="${inGameAvatarUrl}" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none';" />` : `<div style="display:flex; align-items:center; justify-content:center; width:100%; height:100%; font-size:20px;">🎮</div>`}
+            </div>
+            <div>
+              <div style="font-weight:bold; font-size:14px; color:#38bdf8;">🎮 Whiteout Survival In-Game Avatar</div>
+              <div style="font-size:11.5px; color:var(--text-muted);">Sync directly from official game servers</div>
+            </div>
+          </div>
+          <button id="btnSetWosAvatar" onclick="window.applyInGameAvatar('${gid}')" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; font-size:12.5px; cursor:pointer; box-shadow:0 2px 8px rgba(14,165,233,0.3); transition:0.2s;">
+            Sync In-Game 🎮
+          </button>
+        </div>
+      </div>
+
+      <!-- Option 2: Upload Custom Picture -->
+      <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div style="width:46px; height:46px; border-radius:50%; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0;">
+              📁
+            </div>
+            <div>
+              <div style="font-weight:bold; font-size:14px; color:var(--text-main);">Upload Custom Photo</div>
+              <div style="font-size:11.5px; color:var(--text-muted);">Upload PNG, JPG or WEBP with cropping</div>
+            </div>
+          </div>
+          <button onclick="document.getElementById('avatarManagerModalOverlay').remove(); window._uploadTargetId='${gid}'; document.getElementById('avatarUploadInput').click();" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#fff; padding:8px 16px; border-radius:8px; font-weight:bold; font-size:12.5px; cursor:pointer; transition:0.2s;">
+            Upload File 📁
+          </button>
+        </div>
+      </div>
+
+      <!-- Option 3: Reset to Default Initials -->
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 4px 4px 4px;">
+        <span style="font-size:12px; color:var(--text-muted);">Prefer no photo?</span>
+        <button onclick="window.resetAvatarToInitials('${gid}', '${window.escapeHTML(cName)}')" style="background:none; border:none; color:#ef4444; font-size:12px; cursor:pointer; font-weight:bold; padding:4px 8px; border-radius:6px;" onmouseover="this.style.background='rgba(239,68,68,0.1)'" onmouseout="this.style.background='none'">
+          Reset to Initials 🔤
+        </button>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; margin-top:16px;">
+        <button onclick="document.getElementById('avatarManagerModalOverlay').remove()" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.2); color:#cbd5e1; padding:8px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13px;">
+          Close
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+};
+
+window.applyInGameAvatar = async (gameId) => {
+  const gid = gameId || (currentUser ? currentUser.gameId : '');
+  const btn = document.getElementById('btnSetWosAvatar');
+  if (btn) { btn.disabled = true; btn.textContent = 'Syncing...'; }
+
+  try {
+    let avatarUrl = (currentUser && currentUser.gameId === gid && currentUser.avatar_image) ? currentUser.avatar_image : '';
+    
+    if (!avatarUrl && currentUser && currentUser.wos_cg_token) {
+      const res = await fetch(`${API_BASE_URL}?api=syncProfileWithToken&id=${encodeURIComponent(gid)}&cgToken=${encodeURIComponent(currentUser.wos_cg_token)}`);
+      const data = await res.json();
+      if (data && data.success && data.avatar_image) {
+        avatarUrl = data.avatar_image;
+        if (currentUser.uid) {
+          await update(ref(db, `users/${currentUser.uid}`), { avatar_image: avatarUrl });
+          currentUser.avatar_image = avatarUrl;
+        }
+      }
+    }
+
+    if (!avatarUrl) {
+      if (window.showToast) window.showToast("30-Day sync token required to fetch latest avatar. Please verify in game.", "warning");
+      const overlay = document.getElementById('avatarManagerModalOverlay');
+      if (overlay) overlay.remove();
+      window.openAccountHubVerifyModal();
+      return;
+    }
+
+    await uploadAvatar(gid, avatarUrl);
+    avatarMap[gid] = avatarUrl;
+    
+    if (currentUser && currentUser.gameId === gid && currentUser.uid) {
+      await update(ref(db, `users/${currentUser.uid}`), {
+        avatar_image: avatarUrl,
+        avatarPreference: 'wos'
+      });
+      currentUser.avatarPreference = 'wos';
+    }
+
+    const hubImg = document.getElementById('accountHubAvatarImg');
+    if (hubImg) {
+      hubImg.src = avatarUrl;
+      hubImg.style.display = 'block';
+      if (hubImg.nextElementSibling) hubImg.nextElementSibling.style.display = 'none';
+    }
+    const altImg = document.getElementById(`altAvatarImg-${gid}`);
+    if (altImg) {
+      altImg.src = avatarUrl;
+      altImg.style.display = 'block';
+      if (altImg.nextElementSibling) altImg.nextElementSibling.style.display = 'none';
+    }
+
+    if (window.showToast) window.showToast("✅ In-game Whiteout Survival avatar synced successfully!", "success");
+    const overlay = document.getElementById('avatarManagerModalOverlay');
+    if (overlay) overlay.remove();
+  } catch(err) {
+    console.error("Apply in-game avatar error:", err);
+    if (window.showToast) window.showToast("Failed to sync in-game avatar: " + err.message, "error");
+    if (btn) { btn.disabled = false; btn.textContent = 'Sync In-Game 🎮'; }
+  }
+};
+
+window.resetAvatarToInitials = async (gameId, chiefName) => {
+  const gid = gameId || (currentUser ? currentUser.gameId : '');
+  try {
+    await deleteAvatar(gid);
+    delete avatarMap[gid];
+
+    if (currentUser && currentUser.gameId === gid && currentUser.uid) {
+      await update(ref(db, `users/${currentUser.uid}`), {
+        avatarPreference: 'initials'
+      });
+      currentUser.avatarPreference = 'initials';
+    }
+
+    const hubImg = document.getElementById('accountHubAvatarImg');
+    if (hubImg) {
+      hubImg.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(chiefName || 'Player')}&background=06b6d4&color=fff&bold=true&size=128`;
+    }
+
+    if (window.showToast) window.showToast("Profile picture reset to default initials.", "info");
+    const overlay = document.getElementById('avatarManagerModalOverlay');
+    if (overlay) overlay.remove();
+  } catch(e) {
+    console.error("Reset avatar error:", e);
+    if (window.showToast) window.showToast("Failed to reset profile picture.", "error");
+  }
+};
+
 window.openEditProfileHubModal = () => {
   const activeUser = currentUser || realUser;
   if (!activeUser) return;
@@ -8409,12 +8620,24 @@ window.openEditProfileHubModal = () => {
              </div>
              <div style="flex:1;">
                 <div style="font-weight:800; font-size:15px; color:#fff; margin-bottom:3px;">Chief Member Profile</div>
-                <div style="font-size:12px; color:#94a3b8; line-height:1.3;">Furnace Level, FC Badges, Play Start Date, Status Quote & Custom Avatar</div>
+                <div style="font-size:12px; color:#94a3b8; line-height:1.3;">Furnace Level, FC Badges, Play Start Date & Status Quote</div>
+             </div>
+             <div style="color:var(--accent); font-size:18px; font-weight:bold;">➔</div>
+          </div>
+
+          <!-- Option 2: Profile Picture & Avatar Manager -->
+          <div onclick="document.getElementById('editProfileHubModalOverlay').remove(); window.openAvatarManagerModal('${activeUser.gameId}', '${window.escapeHTML(activeUser.name || 'Chief')}');" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.12); border-radius:14px; padding:16px; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; gap:16px;" onmouseover="this.style.background='rgba(16,185,129,0.12)'; this.style.borderColor='rgba(16,185,129,0.4)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='rgba(255,255,255,0.12)'; this.style.transform='translateY(0)';">
+             <div style="width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg, #10b981, #059669); display:flex; align-items:center; justify-content:center; font-size:24px; flex-shrink:0; box-shadow:0 4px 12px rgba(16,185,129,0.3);">
+                📷
+             </div>
+             <div style="flex:1;">
+                <div style="font-weight:800; font-size:15px; color:#fff; margin-bottom:3px;">Profile Picture & Avatar</div>
+                <div style="font-size:12px; color:#94a3b8; line-height:1.3;">Sync Whiteout Survival in-game avatar or upload a custom picture</div>
              </div>
              <div style="color:var(--accent); font-size:18px; font-weight:bold;">➔</div>
           </div>
           
-          <!-- Option 2: Staff Directory Profile -->
+          <!-- Option 3: Staff Directory Profile -->
           <div onclick="document.getElementById('editProfileHubModalOverlay').remove(); window.openStaffProfileModal();" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.12); border-radius:14px; padding:16px; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; gap:16px;" onmouseover="this.style.background='rgba(168,85,247,0.12)'; this.style.borderColor='rgba(168,85,247,0.4)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='rgba(255,255,255,0.12)'; this.style.transform='translateY(0)';">
              <div style="width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg, #a855f7, #0284c7); display:flex; align-items:center; justify-content:center; font-size:24px; flex-shrink:0; box-shadow:0 4px 12px rgba(168,85,247,0.3);">
                 🛡️
@@ -8679,69 +8902,80 @@ window.openAccountHubVerifyModal = () => {
 
   modalOverlay.innerHTML = `
     <div class="card" style="width:90%; max-width:460px; background:linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.92)); border:1px solid rgba(56,189,248,0.4); box-shadow:0 20px 60px rgba(0,0,0,0.6); padding:24px; border-radius:16px; text-align:left;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:12px;">
-            <div style="display:flex; align-items:center; gap:8px;">
-                <span style="font-size:20px;">🛡️</span>
-                <h3 style="margin:0; color:#fff; font-size:18px; font-weight:800;">Chief Verification</h3>
-            </div>
-            <button id="closeAccHubVerifyBtn" style="background:none; border:none; color:var(--text-muted); font-size:24px; cursor:pointer; line-height:1;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-muted)'">&times;</button>
+    <div class="card" style="width:92%; max-width:440px; background:linear-gradient(145deg, rgba(15,23,42,0.96), rgba(30,41,59,0.94)); border:1px solid rgba(56,189,248,0.35); padding:24px; border-radius:20px; box-shadow:0 25px 60px rgba(0,0,0,0.7); text-align:left; animation:zoomIn 0.2s forwards; color:var(--text-main);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:12px;">
+        <h3 style="margin:0; color:#fff; font-size:18px; font-weight:bold; display:flex; align-items:center; gap:8px;">
+          🛡️ 30-Day Game Token Renewal
+        </h3>
+        <button onclick="document.getElementById('accountHubVerifyModalOverlay').remove()" style="background:none; border:none; color:var(--text-muted); font-size:26px; cursor:pointer; line-height:1;">&times;</button>
+      </div>
+
+      <p style="font-size:13px; color:var(--text-muted); margin:0 0 16px 0; line-height:1.5;">
+        Verify Game ID <strong>${currentUser.gameId}</strong> to link your character directly to our database for <strong>30-day automatic stats syncing</strong> and in-game avatar loading.
+      </p>
+
+      <div style="text-align:center; margin-bottom:16px;">
+        <button id="sendHubCodeBtn" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer; box-shadow:0 2px 10px rgba(14,165,233,0.3);">
+          📩 Send Code to In-Game Mail
+        </button>
+      </div>
+
+      <div id="hubVerifyCodeSection" style="display:none; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px; padding:14px; margin-bottom:14px;">
+        <label style="display:block; font-size:12px; font-weight:bold; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase;">
+          Enter 6-Digit In-Game Code
+        </label>
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="hubCaptchaInput" maxlength="8" placeholder="e.g. 123456" style="flex:1; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:#fff; font-size:15px; font-family:monospace; letter-spacing:2px; text-align:center;">
+          <button id="submitHubCodeBtn" style="background:var(--accent); color:#fff; border:none; padding:9px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer;">
+            Verify & Bind
+          </button>
         </div>
+        <div id="hubVerifyFeedback" style="font-size:12px; margin-top:8px; display:none;"></div>
+      </div>
 
-        <p style="font-size:13px; color:var(--text-muted); line-height:1.5; margin:0 0 16px 0;">
-            Verify Game ID <strong style="color:var(--text-main); font-family:monospace;">${currentUser.gameId}</strong> to link your character directly to our database for <strong>30-day automatic stats syncing</strong>.
-        </p>
-
-        <div id="accVerifyStepContainer">
-            <div style="background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.25); border-radius:12px; padding:14px; margin-bottom:16px;">
-                <div style="font-size:12px; color:#38bdf8; font-weight:bold; margin-bottom:4px;">📩 Step 1: Send In-Game Code</div>
-                <div style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">Click below to send a 6-digit confirmation code to your in-game mailbox in Whiteout Survival.</div>
-                <button id="accSendCodeBtn" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; border-radius:8px; padding:8px 16px; font-weight:bold; font-size:13px; cursor:pointer; width:100%;">📩 Send Code to Game Mailbox</button>
-            </div>
-
-            <div id="accCodeInputSection" style="display:none; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px; padding:14px;">
-                <div style="font-size:12px; color:var(--accent); font-weight:bold; margin-bottom:6px;">🔢 Step 2: Enter 6-Digit Code</div>
-                <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
-                    <input type="text" id="accHubCodeInput" maxlength="6" placeholder="000000" style="flex:1; text-align:center; font-size:20px; font-weight:800; letter-spacing:4px; padding:8px 12px; border-radius:8px; border:1px solid rgba(56,189,248,0.5); background:var(--bg-main); color:#fff; box-sizing:border-box;">
-                    <button id="accHubSubmitCodeBtn" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; border-radius:8px; padding:10px 18px; font-weight:bold; font-size:14px; cursor:pointer; flex-shrink:0;">Verify & Bind</button>
-                </div>
-                <div id="accHubCodeFeedback" style="font-size:12px; margin-top:6px; display:none;"></div>
-            </div>
-        </div>
+      <div style="display:flex; justify-content:flex-end;">
+        <button onclick="document.getElementById('accountHubVerifyModalOverlay').remove()" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:#cbd5e1; padding:8px 16px; border-radius:8px; cursor:pointer; font-size:13px;">
+          Cancel
+        </button>
+      </div>
     </div>
   `;
 
   document.body.appendChild(modalOverlay);
 
-  const closeBtn = document.getElementById('closeAccHubVerifyBtn');
-  if (closeBtn) closeBtn.addEventListener('click', () => modalOverlay.remove());
-  modalOverlay.addEventListener('click', (e) => {
-    if (e.target === modalOverlay) modalOverlay.remove();
-  });
-
-  const sendBtn = document.getElementById('accSendCodeBtn');
-  const codeSection = document.getElementById('accCodeInputSection');
-  const codeInput = document.getElementById('accHubCodeInput');
-  const submitCodeBtn = document.getElementById('accHubSubmitCodeBtn');
-  const feedback = document.getElementById('accHubCodeFeedback');
+  const sendBtn = document.getElementById('sendHubCodeBtn');
+  const codeSection = document.getElementById('hubVerifyCodeSection');
+  const submitCodeBtn = document.getElementById('submitHubCodeBtn');
+  const codeInput = document.getElementById('hubCaptchaInput');
+  const feedback = document.getElementById('hubVerifyFeedback');
 
   if (sendBtn) {
     sendBtn.addEventListener('click', async () => {
       sendBtn.disabled = true;
-      sendBtn.textContent = 'Sending...';
+      sendBtn.textContent = 'Sending Code...';
       try {
         const res = await fetch(`${API_BASE_URL}?api=sendGameCaptcha&id=${encodeURIComponent(currentUser.gameId)}`);
         const data = await res.json();
         if (data && data.success) {
-          sendBtn.textContent = '✅ Code Dispatched!';
+          sendBtn.textContent = '🔄 Resend Code';
+          sendBtn.disabled = false;
           if (codeSection) codeSection.style.display = 'block';
-          if (codeInput) codeInput.focus();
+          if (feedback) {
+            feedback.style.display = 'block';
+            feedback.style.color = '#38bdf8';
+            feedback.textContent = 'Code dispatched! Check your Whiteout Survival system mail.';
+          }
         } else {
-          throw new Error(data.message || 'Failed to dispatch code.');
+          throw new Error(data.message || 'Failed to dispatch in-game code.');
         }
       } catch (err) {
         sendBtn.disabled = false;
-        sendBtn.textContent = '📩 Send Code to Game Mailbox';
-        alert(err.message || 'Failed to send code.');
+        sendBtn.textContent = '📩 Send Code to In-Game Mail';
+        if (feedback) {
+          feedback.style.display = 'block';
+          feedback.style.color = 'var(--danger)';
+          feedback.textContent = err.message || 'Error communicating with game servers.';
+        }
       }
     });
   }
@@ -8753,7 +8987,7 @@ window.openAccountHubVerifyModal = () => {
         if (feedback) {
           feedback.style.display = 'block';
           feedback.style.color = 'var(--danger)';
-          feedback.textContent = 'Please enter the 6-digit code.';
+          feedback.textContent = 'Please enter valid 6-digit code.';
         }
         return;
       }
@@ -8774,7 +9008,15 @@ window.openAccountHubVerifyModal = () => {
             verifiedAt: new Date().toISOString(),
             centuryGamesVerified: true
           };
-          if (data.avatar_image) updates.avatar_image = data.avatar_image;
+          if (data.avatar_image) {
+            updates.avatar_image = data.avatar_image;
+            if (currentUser.avatarPreference !== 'custom') {
+              try {
+                await uploadAvatar(currentUser.gameId, data.avatar_image);
+                avatarMap[currentUser.gameId] = data.avatar_image;
+              } catch(e) { console.warn("Failed to auto-sync avatar:", e); }
+            }
+          }
           if (data.nickname && !/^\d+$/.test(data.nickname)) updates.name = data.nickname;
 
           await update(ref(db, `users/${currentUser.uid}`), updates);
@@ -13331,8 +13573,8 @@ window.resetBearTrapEvent = async () => {
                   <!-- Top row: avatar + name + action buttons -->
                   <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
                       <div style="display:flex; gap:14px; align-items:center;">
-                          <!-- Avatar (clickable to upload) -->
-                          <div style="width:64px; height:64px; border-radius:50%; border:2px solid #06b6d4; box-shadow:0 0 15px rgba(6,182,212,0.5); overflow:hidden; background:var(--bg-secondary); position:relative; cursor:pointer; flex-shrink:0;" onclick="window._uploadTargetId='${gid}'; document.getElementById('avatarUploadInput').click();" title="Change Alt Avatar">
+                          <!-- Avatar (clickable to manage) -->
+                          <div style="width:64px; height:64px; border-radius:50%; border:2px solid #06b6d4; box-shadow:0 0 15px rgba(6,182,212,0.5); overflow:hidden; background:var(--bg-secondary); position:relative; cursor:pointer; flex-shrink:0;" onclick="window.openAvatarManagerModal('${gid}', '${window.escapeHTML(altName)}')" title="Change or Sync Alt Avatar">
                               <img id="altAvatarImg-${gid}" src="${window.getAvatarUrl(gid, altName)}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(altName)}&background=06b6d4&color=fff&bold=true&size=128';">
                               <div id="altAvatarFallback-${gid}" style="display:none; align-items:center; justify-content:center; width:100%; height:100%; font-size:24px; font-weight:bold; color:#fff;">${altName.charAt(0).toUpperCase()}</div>
                               <div style="position:absolute; inset:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0'"><span style="font-size:18px;">✏️</span></div>
@@ -13587,7 +13829,7 @@ window.resetBearTrapEvent = async () => {
               <div style="position:absolute; top:0; left:0; width:100%; height:4px; background:var(--accent); box-shadow:0 0 10px var(--accent);"></div>
               
               <div class="id-card-header" style="display:flex; align-items:center; margin-bottom:15px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:15px; position:relative; z-index:2;">
-                  <div class="id-card-avatar" style="border-radius:12px; overflow:hidden; border:2px solid var(--accent); box-shadow:0 4px 15px rgba(0,0,0,0.3); background:var(--bg-secondary); flex-shrink:0; cursor:pointer; position:relative;" onclick="window._uploadTargetId='${currentUser.gameId}'; document.getElementById('avatarUploadInput').click();" title="Change Profile Picture">
+                  <div class="id-card-avatar" style="border-radius:12px; overflow:hidden; border:2px solid var(--accent); box-shadow:0 4px 15px rgba(0,0,0,0.3); background:var(--bg-secondary); flex-shrink:0; cursor:pointer; position:relative;" onclick="window.openAvatarManagerModal('${currentUser.gameId}', '${window.escapeHTML(currentChiefName)}')" title="Change or Sync Profile Picture">
                       <img id="accountHubAvatarImg" src="${avatarSrc}" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';" style="width:100%; height:100%; object-fit:cover;" />
                       <div style="display:none; align-items:center; justify-content:center; width:100%; height:100%; font-size:32px; font-weight:bold; color:#fff;">${currentChiefName.charAt(0).toUpperCase()}</div>
                       <div style="position:absolute; inset:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0'"><span style="font-size:24px;">✏️</span></div>
