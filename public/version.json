@@ -1,8 +1,8 @@
 {
-  "version": "2.5.17",
+  "version": "2.5.18",
   "releaseDate": "2026-08-14",
-  "title": "🏷️ Real-Time Filter Attribute Counters & Layout Polish",
+  "title": "📱 Universal Fluid Alert Toaster for Mobile & Desktop",
   "notes": [
-    "Added live member counts inside Token Status and Attribute filter menus and polished header bar responsiveness"
+    "Upgraded Alert Toaster with Universal Fluid Sizing (92vw width scaling, 15px font, and glassmorphism) for smartphones"
   ]
 }

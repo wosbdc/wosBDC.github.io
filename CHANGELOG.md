@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [2.5.18] - 2026-08-14
+- Upgraded Alert Toaster with Universal Fluid Sizing (92vw width scaling, 15px font, and glassmorphism) for smartphones.
+
 ## [2.5.17] - 2026-08-14
 - Added live member count badges to all Token Status and Attribute filter options.
 - Polished control bar layout alignment to prevent wrapping and eliminate empty spacing.

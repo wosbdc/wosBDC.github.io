@@ -5094,29 +5094,48 @@ window.showToast = (message, type = 'success', sticky = null) => {
   // Auto-sticky for errors - errors should not vanish before the user reads them.
   // Success/info/accent types auto-dismiss by default unless explicitly made sticky.
   if (sticky === null) {
-    sticky = (type === 'error');
+    sticky = (type === 'error' || type === 'danger');
   }
   
+  let icon = '';
+  if (type === 'success' && !message.includes('🎉') && !message.includes('✅') && !message.includes('🏆') && !message.includes('✨')) {
+    icon = '<span style="font-size:18px; flex-shrink:0;">✅</span>';
+  } else if ((type === 'error' || type === 'danger') && !message.includes('❌') && !message.includes('🚨') && !message.includes('⚠️')) {
+    icon = '<span style="font-size:18px; flex-shrink:0;">🚨</span>';
+  } else if (type === 'warning' && !message.includes('⚠️')) {
+    icon = '<span style="font-size:18px; flex-shrink:0;">⚠️</span>';
+  } else if ((type === 'info' || type === 'accent') && !message.includes('ℹ️') && !message.includes('⚡') && !message.includes('📡') && !message.includes('🔄')) {
+    icon = '<span style="font-size:18px; flex-shrink:0;">⚡</span>';
+  }
+
   if (sticky) {
     toast.classList.add('sticky');
     toast.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; gap:15px;">
-        <div>${message}</div>
-        <button class="toast-close" style="background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); cursor:pointer; font-size:16px; font-weight:bold; padding:2px 8px; border-radius:4px;">&times;</button>
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+        <div style="display:flex; align-items:center; gap:10px; flex:1;">
+          ${icon}
+          <div style="flex:1;">${message}</div>
+        </div>
+        <button class="toast-close-btn" aria-label="Close notification">&times;</button>
       </div>
     `;
-    toast.querySelector('.toast-close').addEventListener('click', () => {
-        toast.style.animation = 'fadeOutToast 0.3s ease forwards';
-        setTimeout(() => toast.remove(), 300);
+    toast.querySelector('.toast-close-btn').addEventListener('click', () => {
+        toast.style.animation = 'fadeOutToast 0.25s ease forwards';
+        setTimeout(() => toast.remove(), 250);
     });
   } else {
-    toast.innerHTML = message;
+    toast.innerHTML = `
+      <div style="display:flex; align-items:center; gap:10px;">
+        ${icon}
+        <div style="flex:1;">${message}</div>
+      </div>
+    `;
     setTimeout(() => {
       if (toast.parentElement) {
         toast.style.animation = 'fadeOutToast 0.3s ease forwards';
         setTimeout(() => toast.remove(), 300);
       }
-    }, 5000);
+    }, 4500);
   }
   
   container.appendChild(toast);
