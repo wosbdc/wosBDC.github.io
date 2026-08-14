@@ -17862,6 +17862,7 @@ allLinks.forEach(link => {
       else window.activeViewFunc = () => views[target](filter);
       
       views[target](filter);
+      if (window.checkAppVersion) window.checkAppVersion();
     }
   });
 });
@@ -17870,6 +17871,15 @@ allLinks.forEach(link => {
 window.activeViewFunc = () => views.home();
 views.home();
 initPresence();
+
+// Automatically trigger update checks across ALL pages and view transitions
+Object.keys(views).forEach(key => {
+  const orig = views[key];
+  views[key] = async function(...args) {
+    if (window.checkAppVersion) window.checkAppVersion();
+    return orig.apply(this, args);
+  };
+});
 
 window.views = views;
 
@@ -19037,8 +19047,12 @@ window.closeMobileNavModal = () => {
     } catch (err) {}
   }
 
+  window.checkAppVersion = checkAppVersion;
+
+  // Immediate check & DOMContentLoaded check
+  checkAppVersion();
   window.addEventListener('DOMContentLoaded', () => {
-    setTimeout(checkAppVersion, 2000);
+    setTimeout(checkAppVersion, 1000);
   });
 
   document.addEventListener('visibilitychange', () => {
@@ -19047,7 +19061,7 @@ window.closeMobileNavModal = () => {
     }
   });
 
-  setInterval(checkAppVersion, 60000);
+  setInterval(checkAppVersion, 30000);
 })();
 
 // ============================================================================

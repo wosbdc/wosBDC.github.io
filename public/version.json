@@ -1,9 +1,10 @@
 {
-  "version": "2.0.0",
-  "releaseDate": "2026-08-13",
-  "title": "🎉 Milestone Release: Clean Member Drawer & Production-Grade Roster Architecture",
+  "version": "2.1.3",
+  "releaseDate": "2026-08-14",
+  "title": "🛡️ Chief Verification System",
   "notes": [
-    "Cleaned up Recent Member Signups Drawer removing admin-only controls for a streamlined member view",
-    "Completed Century Games reverse engineering diagnostics and deployed 3-tier master roster sync architecture"
+    "Added in-game code verification during member signup and registration",
+    "Accurate Fire Crystal 1–10 furnace level mapping",
+    "1-click profile sync in Account Hub with real-time furnace level updates"
   ]
 }
