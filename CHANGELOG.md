@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.5.24] - 2026-08-14
+- Added live 30-day token countdown to the Chief ID card badge in Account Hub (`🛡️ 30-Day Sync Active (X days left) (#State)`).
+- Added live 30-day token sync countdown pill to linked alt account cards.
+
 ## [2.5.23] - 2026-08-14
 - Live Chief name indicator next to the version badge in the top navbar with interactive Account Hub shortcut.
 - Clean sign-in experience: removed disruptive login pop-up banner.

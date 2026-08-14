@@ -14361,7 +14361,9 @@ window.resetBearTrapEvent = async () => {
           adminBadgeHtml = `<span style="font-size:12px; color:${lvlColor}; background:${lvlBg}; border:1px solid ${lvlBg}; padding:2px 6px; border-radius:6px; font-weight:bold; display:inline-flex; align-items:center; gap:4px; margin-left:10px; vertical-align:middle; text-shadow:none;">👑 ${accLevel}</span>`;
       }
       
-
+      const tokenStatus = (typeof window.getMemberTokenStatus === 'function') 
+          ? window.getMemberTokenStatus(currentUser) 
+          : { status: 'active', daysLeft: 30, color: '#10b981', icon: '🛡️', label: '30-Day Sync Active' };
 
       let isMainEnrolled = false;
       let joinedDateStr = "N/A";
@@ -14514,15 +14516,23 @@ window.resetBearTrapEvent = async () => {
                               <span style="color:var(--accent); font-size:12px; font-weight:bold;">ID:</span>
                               <span style="color:var(--text-main); font-family:monospace; font-size:14px; letter-spacing:1px;">${currentUser.gameId}</span>
                           </div>
-                          ${ (currentUser.wos_cg_token || currentUser.centuryGamesVerified) ? `
-                              <div style="display:inline-flex; align-items:center; gap:4px; background:rgba(16,185,129,0.15); border:1px solid #10b981; padding:3px 8px; border-radius:20px; font-size:11px; font-weight:bold; color:#10b981;">
-                                  🛡️ 30-Day Sync Active ${currentUser.section ? `(#${currentUser.section})` : ''}
+                          ${ tokenStatus.status === 'active' ? `
+                              <div style="display:inline-flex; align-items:center; gap:4px; background:rgba(16,185,129,0.15); border:1px solid #10b981; padding:3px 8px; border-radius:20px; font-size:11px; font-weight:bold; color:#10b981; cursor:pointer;" onclick="window.openAccountHubVerifyModal()" title="30-Day Sync Active (${tokenStatus.daysLeft}d left) - Click to manage or renew early">
+                                  🛡️ 30-Day Sync Active (${tokenStatus.daysLeft}d left) ${currentUser.section ? `(#${currentUser.section})` : ''}
+                              </div>
+                          ` : (tokenStatus.status === 'expiring_soon' ? `
+                              <div style="display:inline-flex; align-items:center; gap:4px; background:rgba(245,158,11,0.15); border:1px solid #f59e0b; padding:3px 8px; border-radius:20px; font-size:11px; font-weight:bold; color:#f59e0b; cursor:pointer;" onclick="window.openAccountHubVerifyModal()" title="30-Day Token Expiring Soon (${tokenStatus.daysLeft}d left) - Click to renew">
+                                  ⏳ 30-Day Sync (${tokenStatus.daysLeft}d left) ${currentUser.section ? `(#${currentUser.section})` : ''}
+                              </div>
+                          ` : (tokenStatus.status === 'expired' ? `
+                              <div style="display:inline-flex; align-items:center; gap:4px; background:rgba(239,68,68,0.15); border:1px solid #ef4444; padding:3px 8px; border-radius:20px; font-size:11px; font-weight:bold; color:#ef4444; cursor:pointer;" onclick="window.openAccountHubVerifyModal()" title="30-Day Token Expired - Click to renew in game">
+                                  🚨 30-Day Token Expired ${currentUser.section ? `(#${currentUser.section})` : ''}
                               </div>
                           ` : `
-                              <div style="display:inline-flex; align-items:center; gap:4px; background:rgba(245,158,11,0.15); border:1px solid #f59e0b; padding:3px 8px; border-radius:20px; font-size:11px; font-weight:bold; color:#f59e0b; cursor:pointer;" onclick="window.openAccountHubVerifyModal()" title="Click to verify character with in-game code">
-                                  ⚠️ 30-Day Token Expired
+                              <div style="display:inline-flex; align-items:center; gap:4px; background:rgba(245,158,11,0.15); border:1px solid #f59e0b; padding:3px 8px; border-radius:20px; font-size:11px; font-weight:bold; color:#f59e0b; cursor:pointer;" onclick="window.openAccountHubVerifyModal()" title="Click to verify character with in-game mailbox code">
+                                  ⚠️ 30-Day Sync Unverified
                               </div>
-                          `}
+                          `))}
                       </div>
                   </div>
               </div>
@@ -14563,9 +14573,12 @@ window.resetBearTrapEvent = async () => {
               <button id="openUserEditProfileBtn" onclick="window.openEditProfileHubModal()" style="background:linear-gradient(135deg, #06b6d4, #3b82f6); color:#fff; border:none; padding:12px 24px; border-radius:10px; font-weight:bold; font-size:15px; cursor:pointer; box-shadow:0 4px 15px rgba(6,182,212,0.35); transition:transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
                   ✏️ Edit Profile
               </button>
-              ${ (currentUser.wos_cg_token || currentUser.centuryGamesVerified) ? `
+              ${ (tokenStatus.status === 'active' || tokenStatus.status === 'expiring_soon') ? `
                   <button id="btnSyncCgProfile" onclick="window.handleSyncCenturyGamesProfile()" style="background:rgba(56,189,248,0.15); border:1px solid #38bdf8; color:#38bdf8; padding:12px 20px; border-radius:10px; font-weight:bold; font-size:15px; cursor:pointer; display:inline-flex; align-items:center; gap:8px; transition:0.2s;" onmouseover="this.style.background='rgba(56,189,248,0.25)'" onmouseout="this.style.background='rgba(56,189,248,0.15)'">
                       🔄 Sync from Game
+                  </button>
+                  <button id="btnRenewCgToken" onclick="window.openAccountHubVerifyModal()" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.2); color:var(--text-main); padding:12px 18px; border-radius:10px; font-weight:bold; font-size:14px; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                      🔑 Renew Token
                   </button>
               ` : `
                   <button id="btnVerifyCgProfile" onclick="window.openAccountHubVerifyModal()" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:12px 20px; border-radius:10px; font-weight:bold; font-size:15px; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 15px rgba(14,165,233,0.35); transition:transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">

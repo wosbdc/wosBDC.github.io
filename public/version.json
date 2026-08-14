@@ -1,8 +1,8 @@
 {
-  "version": "2.5.23",
+  "version": "2.5.24",
   "releaseDate": "2026-08-14",
-  "title": "👤 Live Chief Navbar Indicator & Clean Sign-In",
+  "title": "🛡️ 30-Day Token Countdown in Account Hub",
   "notes": [
-    "Displays the active Chief's name next to the version badge in the top navbar and removed disruptive login pop-up"
+    "Added live 30-day token countdown to Chief profile badge and alt account cards in Account Hub"
   ]
 }
