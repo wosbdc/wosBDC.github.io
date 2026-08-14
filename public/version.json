@@ -1,10 +1,10 @@
 {
-  "version": "2.5.2",
+  "version": "2.5.3",
   "releaseDate": "2026-08-14",
-  "title": "✨ Fix Auth Button Reference & Strengthen Scope Testing",
+  "title": "✨ Fix Today & Calendar Schedule Views with Universal Time Parser",
   "notes": [
-    "Cleaned up legacy auth button references to ensure seamless runtime initialization",
-    "Enhanced static scope test suite to automatically prevent undeclared identifiers in conditionals",
-    "Verified all view transitions and auth modal event bindings"
+    "Fixed schedule loading in both Today's View and Calendar View",
+    "Added universal time parser supporting Google Sheets ISO time formats, PDT, and HH:mm",
+    "Synced Home view upcoming event countdown widget with live schedule"
   ]
 }

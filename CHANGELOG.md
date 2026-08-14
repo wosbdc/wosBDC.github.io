@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [2.5.3] - 2026-08-14
+### ✨ Fix Today & Calendar Schedule Views with Universal Time Parser
+- **📅 Fixed Both Schedule Tabs (`Today's View` & `Calendar View`)**:
+  - Implemented `window.parseScheduleEventTime` to parse ISO timestamps from Apps Script (e.g. `1899-12-30T20:00:00.000Z`), 12-hour AM/PM formats, and standard `HH:mm` strings.
+  - Formatted clean time badges in both Today and Calendar views (e.g. `20:00 - 01:00 UTC` and local timezone conversions).
+  - Synced Home view upcoming event countdown widget with live schedule data.
+
 ## [2.5.2] - 2026-08-14
 ### ✨ Fix Auth Button Reference & Strengthen Scope Testing
 - **🛡️ Resolved Reference Bug**: Cleaned up legacy variable references for Google auth buttons in [main.js](file:///c:/Users/Brian/.gemini/antigravity/scratch/wos-public-website/main.js) that caused script halts on initial load.

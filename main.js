@@ -8882,6 +8882,72 @@ window.openEditAltProfileModal = async (gameId, chiefName) => {
    }
 };
 
+window.parseScheduleEventDate = (dateStr) => {
+  if (!dateStr) return null;
+  const s = String(dateStr).trim();
+  
+  const mdMatch = s.match(/(\d{1,2})\/(\d{1,2})/);
+  if (mdMatch) {
+    const now = new Date();
+    return new Date(now.getFullYear(), parseInt(mdMatch[1]) - 1, parseInt(mdMatch[2]));
+  }
+  
+  const isoMatch = s.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    return new Date(parseInt(isoMatch[1]), parseInt(isoMatch[2]) - 1, parseInt(isoMatch[3]));
+  }
+
+  const daysMap = { sunday:0, sun:0, monday:1, mon:1, tuesday:2, tue:2, wednesday:3, wed:3, thursday:4, thu:4, friday:5, fri:5, saturday:6, sat:6 };
+  const lower = s.toLowerCase();
+  for (const [dayName, dayNum] of Object.entries(daysMap)) {
+    if (lower.includes(dayName)) {
+      const now = new Date();
+      const currentDay = now.getDay();
+      let diff = dayNum - currentDay;
+      if (diff < 0) diff += 7;
+      const target = new Date(now);
+      target.setDate(now.getDate() + diff);
+      target.setHours(0, 0, 0, 0);
+      return target;
+    }
+  }
+
+  return null;
+};
+
+window.parseScheduleEventTime = (timeStr, pdtVal) => {
+  if (!timeStr && !pdtVal) return null;
+  const s = String(timeStr || '').trim();
+  
+  // 1. Direct HH:mm
+  const hmMatch = s.match(/^(\d{1,2}):(\d{2})$/);
+  if (hmMatch) {
+    return { h: parseInt(hmMatch[1]), m: parseInt(hmMatch[2]) };
+  }
+
+  // 2. ISO timestamp from GAS: e.g. 1899-12-30T20:00:00.000Z
+  if (s.includes('T') && s.includes('Z')) {
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) {
+      return { h: d.getUTCHours(), m: d.getUTCMinutes() };
+    }
+  }
+
+  // 3. 12-hour format e.g. '5:00 AM', '9:30 PM'
+  const pdtMatch = String(pdtVal || s).match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (pdtMatch) {
+    let h = parseInt(pdtMatch[1]);
+    const m = parseInt(pdtMatch[2]);
+    const isPM = pdtMatch[3].toUpperCase() === 'PM';
+    if (isPM && h < 12) h += 12;
+    if (!isPM && h === 12) h = 0;
+    // Convert PDT (UTC-7) to UTC (+7 hours)
+    return { h: (h + 7) % 24, m };
+  }
+
+  return null;
+};
+
 const views = {
   staff: async () => {
     if (!currentUser) return window.renderMembersOnlyGuard("Staff & Officers");
@@ -14090,68 +14156,56 @@ window.resetBearTrapEvent = async () => {
       
       let nextEvents = [];
       let nextEventTime = null;
-      
-      if (scheduleData && Array.isArray(scheduleData) && scheduleData.length > 0) {
-        let upcomingEvents = [];
-        let now = new Date();
-        
+      let upcomingEvents = [];
+      let now = new Date();
+
+      if (liveSched && Array.isArray(liveSched.events) && liveSched.events.length > 0) {
+        liveSched.events.forEach(ev => {
+          const eventDate = window.parseScheduleEventDate(ev.dateStr);
+          if (!eventDate) return;
+          const startT = window.parseScheduleEventTime(ev.utcStr, ev.pdtVal);
+          if (!startT) return;
+          const exactEventDate = new Date(eventDate);
+          exactEventDate.setUTCHours(startT.h, startT.m, 0, 0);
+          if (exactEventDate > now) {
+            upcomingEvents.push({
+              name: String(ev.eventName).trim(),
+              exactDate: exactEventDate,
+              emoji: ev.emoji || '✨'
+            });
+          }
+        });
+      } else if (scheduleData && Array.isArray(scheduleData) && scheduleData.length > 0) {
         for (let i = 1; i < Math.min(34, scheduleData.length); i++) {
           let row = scheduleData[i];
           let eventName = row[5];
           let dateRaw = row[6];
           let utcRaw = row[7];
+          let pdtVal = row[8];
           
           if (!eventName || String(eventName).trim() === "" || String(eventName).includes("Event's")) continue;
           if (String(eventName).trim() === 'Rewards') break;
           
-          const dateStr = String(dateRaw || '').trim();
-          let eventDate = null;
-          const mdMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})$/);
-          const isoMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})T/);
-          if (mdMatch) {
-            eventDate = new Date(now.getFullYear(), parseInt(mdMatch[1]) - 1, parseInt(mdMatch[2]));
-          } else if (isoMatch) {
-            eventDate = new Date(dateStr);
-          } else {
-            continue;
-          }
-
-          let exactEventDate = null;
-          const utcStr = String(utcRaw || '').trim();
-          const hmMatch = utcStr.match(/^(\d{1,2}):(\d{2})$/);
-          const isoUtcMatch = utcStr.match(/^\d{4}-\d{2}-\d{2}T/);
-
-          if (hmMatch) {
-            const h = parseInt(hmMatch[1]), m = parseInt(hmMatch[2]);
-            exactEventDate = new Date(eventDate);
-            exactEventDate.setUTCHours(h, m, 0, 0);
-          } else if (isoUtcMatch) {
-            const gasDate = new Date(utcStr);
-            gasDate.setUTCHours(gasDate.getUTCHours() - 8);
-            exactEventDate = new Date(eventDate);
-            exactEventDate.setUTCHours(gasDate.getUTCHours(), gasDate.getUTCMinutes(), 0, 0);
-          } else {
-            continue;
-          }
-          
+          const eventDate = window.parseScheduleEventDate(dateRaw);
+          if (!eventDate) continue;
+          const startT = window.parseScheduleEventTime(utcRaw, pdtVal);
+          if (!startT) continue;
+          const exactEventDate = new Date(eventDate);
+          exactEventDate.setUTCHours(startT.h, startT.m, 0, 0);
           if (exactEventDate > now) {
             upcomingEvents.push({
               name: String(eventName).trim(),
-              exactDate: exactEventDate
+              exactDate: exactEventDate,
+              emoji: '✨'
             });
           }
         }
-        
-        // Sort by closest date
-        if (upcomingEvents.length > 0) {
-          upcomingEvents.sort((a, b) => a.exactDate - b.exactDate);
-          
-          // Get the very next time slot
-          nextEventTime = upcomingEvents[0].exactDate;
-          
-          // Get ALL events that happen at that exact same time
-          nextEvents = upcomingEvents.filter(e => e.exactDate.getTime() === nextEventTime.getTime());
-        }
+      }
+
+      if (upcomingEvents.length > 0) {
+        upcomingEvents.sort((a, b) => a.exactDate - b.exactDate);
+        nextEventTime = upcomingEvents[0].exactDate;
+        nextEvents = upcomingEvents.filter(e => e.exactDate.getTime() === nextEventTime.getTime());
       }
       
       const renderNewsContent = () => {
@@ -16154,39 +16208,6 @@ window.resetBearTrapEvent = async () => {
 
   schedule: async () => {
     if (!currentUser) return window.renderMembersOnlyGuard("State Schedule & Events");
-    window.parseScheduleEventDate = (dateStr) => {
-      if (!dateStr) return null;
-      const s = String(dateStr).trim();
-      
-      const mdMatch = s.match(/(\d{1,2})\/(\d{1,2})/);
-      if (mdMatch) {
-        const now = new Date();
-        return new Date(now.getFullYear(), parseInt(mdMatch[1]) - 1, parseInt(mdMatch[2]));
-      }
-      
-      const isoMatch = s.match(/(\d{4})-(\d{2})-(\d{2})/);
-      if (isoMatch) {
-        return new Date(parseInt(isoMatch[1]), parseInt(isoMatch[2]) - 1, parseInt(isoMatch[3]));
-      }
-
-      const daysMap = { sunday:0, sun:0, monday:1, mon:1, tuesday:2, tue:2, wednesday:3, wed:3, thursday:4, thu:4, friday:5, fri:5, saturday:6, sat:6 };
-      const lower = s.toLowerCase();
-      for (const [dayName, dayNum] of Object.entries(daysMap)) {
-        if (lower.includes(dayName)) {
-          const now = new Date();
-          const currentDay = now.getDay();
-          let diff = dayNum - currentDay;
-          if (diff < 0) diff += 7;
-          const target = new Date(now);
-          target.setDate(now.getDate() + diff);
-          target.setHours(0, 0, 0, 0);
-          return target;
-        }
-      }
-
-      return null;
-    };
-
     let currentTab = localStorage.getItem('scheduleView') || 'today';
     const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
 
@@ -16298,45 +16319,42 @@ window.resetBearTrapEvent = async () => {
              // ── Fast Real-Time Firebase Schedule ──
              liveSched.events.forEach(ev => {
                const dateStr = String(ev.dateStr || '').trim();
-               const utcStr = String(ev.utcStr || '').trim();
-               const endUtcStr = String(ev.endUtcStr || '').trim();
                let eventDate = window.parseScheduleEventDate(dateStr);
-               if (!eventDate) {
-                 return;
-               }
+               if (!eventDate) return;
 
                const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
                const isToday = eventDate.toDateString() === todayStr;
                const isFuture = eventDate >= todayDate && !isToday;
 
-               let utcDisplay = `${utcStr}${endUtcStr ? ' - ' + endUtcStr : ''} UTC`;
+               const startT = window.parseScheduleEventTime(ev.utcStr, ev.pdtVal);
+               const endT = window.parseScheduleEventTime(ev.endUtcStr, ev.endPdtVal);
+
+               let utcDisplay = '';
                let localTimeStr = '';
                let eventDateTime = null;
                let eventEndDateTime = null;
 
-               const hmMatch = utcStr.match(/^(\d{1,2}):(\d{2})$/);
-               if (hmMatch) {
-                 const h = parseInt(hmMatch[1]), m = parseInt(hmMatch[2]);
-                 const localRef = new Date();
-                 localRef.setUTCHours(h, m, 0, 0);
-                 let startLocal = localRef.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-                 
+               if (startT) {
+                 utcDisplay = `${String(startT.h).padStart(2, '0')}:${String(startT.m).padStart(2, '0')}`;
+                 if (endT) utcDisplay += ` - ${String(endT.h).padStart(2, '0')}:${String(endT.m).padStart(2, '0')}`;
+                 utcDisplay += ' UTC';
+
                  eventDateTime = new Date(eventDate);
-                 eventDateTime.setUTCHours(h, m, 0, 0);
+                 eventDateTime.setUTCHours(startT.h, startT.m, 0, 0);
 
-                 const endHmMatch = endUtcStr.match(/^(\d{1,2}):(\d{2})$/);
-                 if (endHmMatch) {
-                   const eh = parseInt(endHmMatch[1]), em = parseInt(endHmMatch[2]);
-                   const endLocalRef = new Date();
-                   endLocalRef.setUTCHours(eh, em, 0, 0);
-                   let endLocal = endLocalRef.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-                   localTimeStr = `${startLocal} - ${endLocal}`;
+                 const localRef = new Date();
+                 localRef.setUTCHours(startT.h, startT.m, 0, 0);
+                 let startLocal = localRef.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+                 if (endT) {
                    eventEndDateTime = new Date(eventDate);
-                   eventEndDateTime.setUTCHours(eh, em, 0, 0);
+                   eventEndDateTime.setUTCHours(endT.h, endT.m, 0, 0);
                    if (eventEndDateTime <= eventDateTime) {
                      eventEndDateTime.setDate(eventEndDateTime.getDate() + 1);
                    }
+                   const endLocalRef = new Date();
+                   endLocalRef.setUTCHours(endT.h, endT.m, 0, 0);
+                   localTimeStr = `${startLocal} - ${endLocalRef.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
                  } else {
                    localTimeStr = startLocal;
                    eventEndDateTime = new Date(eventDateTime.getTime() + 30 * 60000);
@@ -16667,7 +16685,14 @@ window.resetBearTrapEvent = async () => {
 
               if (matchingEvents.length > 0) {
                 categories['Events'] = matchingEvents.map(ev => {
-                  let tStr = ev.utcStr ? ` (${ev.utcStr} UTC)` : '';
+                  const startT = window.parseScheduleEventTime(ev.utcStr, ev.pdtVal);
+                  const endT = window.parseScheduleEventTime(ev.endUtcStr, ev.endPdtVal);
+                  let tStr = '';
+                  if (startT) {
+                    tStr = ` (${String(startT.h).padStart(2, '0')}:${String(startT.m).padStart(2, '0')}`;
+                    if (endT) tStr += ` - ${String(endT.h).padStart(2, '0')}:${String(endT.m).padStart(2, '0')}`;
+                    tStr += ' UTC)';
+                  }
                   return `${ev.emoji || '✨'} ${ev.eventName}${tStr}`;
                 });
               }
