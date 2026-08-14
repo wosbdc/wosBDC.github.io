@@ -1,8 +1,9 @@
 {
-  "version": "1.99.4",
+  "version": "1.99.5",
   "releaseDate": "2026-08-13",
-  "title": "🛡️ Enable Custom Discord Webhook Avatar & Name Settings",
+  "title": "🛡️ Direct Raw GitHub Frost Warrior Avatar for Webhook 1537465776750203060",
   "notes": [
-    "Omitted payload avatar_url and username overrides so Discord automatically uses your custom Gatekeeper avatar uploaded in Discord Webhook Settings"
+    "Updated Alliance Gatekeeper webhook payload to use direct raw GitHub PNG avatar URL",
+    "Ensures user's custom Frost Knight Lion Warrior avatar displays on Webhook ID 1537465776750203060"
   ]
 }

@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [1.99.5] - 2026-08-13
+### 🛡️ Direct Raw GitHub Frost Warrior Avatar for Webhook 1537465776750203060
+- **🛡️ Custom Webhook Avatar Binding**: Configured direct raw GitHub PNG avatar URL (`https://raw.githubusercontent.com/wosbdc/wosBDC.github.io/main/public/gatekeeper.png`) for Webhook ID `1537465776750203060`, ensuring your custom Frost Knight Lion Warrior picture renders on every notification.
+
 ## [1.99.4] - 2026-08-13
 ### 🛡️ Enable Custom Discord Webhook Avatar & Name Settings
 - **🛡️ Custom Webhook Avatar Fix**: Omitted `avatar_url` and `username` payload overrides so Discord automatically displays the custom Gatekeeper frost warrior image uploaded in your Discord Webhook Settings.
