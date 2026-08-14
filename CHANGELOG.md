@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [2.5.14] - 2026-08-14
+- Restored individual notification cards for Alliance Gatekeeper Discord webhooks on new member signups.
+
 ## [2.5.13] - 2026-08-14
 - Simplified and condensed full Changelog into clean, easy-to-read release highlights.
 
