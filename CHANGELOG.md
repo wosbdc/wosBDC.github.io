@@ -1,6 +1,10 @@
 # CHANGELOG
 
-## [1.99.2] - 2026-08-13
+## [1.99.4] - 2026-08-13
+### 🛡️ Enable Custom Discord Webhook Avatar & Name Settings
+- **🛡️ Custom Webhook Avatar Fix**: Omitted `avatar_url` and `username` payload overrides so Discord automatically displays the custom Gatekeeper frost warrior image uploaded in your Discord Webhook Settings.
+
+## [1.99.3] - 2026-08-13
 ### 🧹 Streamlined Discord Webhook Roster Description
 - **🧹 Removed Redundant Sub-Header**: Removed the `Latest Member Registered` sub-header line from the Discord embed card description.
 - **⚡ Real-Time Discord Live Patch**: Dispatched an instant `PATCH` to update the existing live Discord message ID (`1537687110801293365`).

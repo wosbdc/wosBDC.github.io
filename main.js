@@ -7470,16 +7470,13 @@ window.triggerNewMemberAlerts = async (memberRecord) => {
       });
 
       const embedPayload = {
-        username: "Alliance Gatekeeper 🛡️",
-        avatar_url: `${siteUrl}/gatekeeper.png`,
         embeds: [{
           title: "🛡️ ALLIANCE GATEKEEPER — RECENT NEW MEMBERS ROSTER",
           description: `📋 **Active Signups List (Past 7 Days)**:`,
           color: 4242388, // Cyan Accent (#06b6d4)
           fields: rosterFields.length > 0 ? rosterFields : [{ name: "Status", value: "No active signups in the past 7 days.", inline: false }],
           footer: {
-            text: `Whiteout Survival Alliance Dashboard • Total Recent Signups: ${recentMembers.length}`,
-            icon_url: `${siteUrl}/gatekeeper.png`
+            text: `Whiteout Survival Alliance Dashboard • Total Recent Signups: ${recentMembers.length}`
           },
           timestamp: new Date().toISOString()
         }]

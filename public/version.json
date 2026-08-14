@@ -1,9 +1,8 @@
 {
-  "version": "1.99.3",
+  "version": "1.99.4",
   "releaseDate": "2026-08-13",
-  "title": "🛡️ Alliance Gatekeeper Dedicated High-Res PNG Avatar",
+  "title": "🛡️ Enable Custom Discord Webhook Avatar & Name Settings",
   "notes": [
-    "Created public/gatekeeper.png high-res 512x512 PNG shield avatar",
-    "Replaced SVG URL with PNG format for Discord Webhook avatar_url compatibility"
+    "Omitted payload avatar_url and username overrides so Discord automatically uses your custom Gatekeeper avatar uploaded in Discord Webhook Settings"
   ]
 }
