@@ -3992,33 +3992,30 @@ let authCurrentStep = 1;
 function setAuthStep(step) {
   authCurrentStep = step;
   const authStepIndicator = document.getElementById('authStepIndicator');
+  const authSignInPanel = document.getElementById('authSignInPanel');
   const authStep1Panel = document.getElementById('authStep1Panel');
   const authStep2Panel = document.getElementById('authStep2Panel');
+  const authStep3Panel = document.getElementById('authStep3Panel');
+  
   const authStep1Badge = document.getElementById('authStep1Badge');
   const authStep2Badge = document.getElementById('authStep2Badge');
+  const authStep3Badge = document.getElementById('authStep3Badge');
   const authStep1Icon = document.getElementById('authStep1Icon');
   const authStep2Icon = document.getElementById('authStep2Icon');
-  const authStepLine = document.getElementById('authStepLine');
-  const authNextStepBtn = document.getElementById('authNextStepBtn');
-  const authSignInBtn = document.getElementById('authSignInBtn');
-  const authDateWrapper = document.getElementById('authDateWrapper');
-  const authForgotPwWrapper = document.getElementById('authForgotPwWrapper');
-  const authOrDivider = document.getElementById('authOrDivider');
-  const authGoogleBtn = document.getElementById('authGoogleBtn');
+  const authStep3Icon = document.getElementById('authStep3Icon');
+  const authStepLine1 = document.getElementById('authStepLine1');
+  const authStepLine2 = document.getElementById('authStepLine2');
 
   if (isRegistering) {
+    if (authSignInPanel) authSignInPanel.style.display = 'none';
     if (authStepIndicator) authStepIndicator.style.display = 'flex';
-    if (authForgotPwWrapper) authForgotPwWrapper.style.display = 'none';
 
     if (step === 1) {
       if (authStep1Panel) authStep1Panel.style.display = 'block';
       if (authStep2Panel) authStep2Panel.style.display = 'none';
-      if (authNextStepBtn) authNextStepBtn.style.display = 'block';
-      if (authSignInBtn) authSignInBtn.style.display = 'none';
-      if (authDateWrapper) authDateWrapper.style.display = 'block';
-      if (authOrDivider) authOrDivider.style.display = 'flex';
-      if (authGoogleBtn) authGoogleBtn.style.display = 'flex';
+      if (authStep3Panel) authStep3Panel.style.display = 'none';
 
+      // Step 1 Active
       if (authStep1Badge) {
         authStep1Badge.style.color = 'var(--accent)';
         authStep1Badge.style.background = 'color-mix(in srgb, var(--accent) 15%, transparent)';
@@ -4029,6 +4026,9 @@ function setAuthStep(step) {
         authStep1Icon.style.color = '#fff';
         authStep1Icon.textContent = '1';
       }
+      if (authStepLine1) authStepLine1.style.background = 'var(--border)';
+
+      // Step 2 Muted
       if (authStep2Badge) {
         authStep2Badge.style.color = 'var(--text-muted)';
         authStep2Badge.style.background = 'var(--bg-main)';
@@ -4037,12 +4037,27 @@ function setAuthStep(step) {
       if (authStep2Icon) {
         authStep2Icon.style.background = 'var(--border)';
         authStep2Icon.style.color = 'var(--text-muted)';
+        authStep2Icon.textContent = '2';
       }
-      if (authStepLine) authStepLine.style.background = 'var(--border)';
+      if (authStepLine2) authStepLine2.style.background = 'var(--border)';
+
+      // Step 3 Muted
+      if (authStep3Badge) {
+        authStep3Badge.style.color = 'var(--text-muted)';
+        authStep3Badge.style.background = 'var(--bg-main)';
+        authStep3Badge.style.borderColor = 'var(--border)';
+      }
+      if (authStep3Icon) {
+        authStep3Icon.style.background = 'var(--border)';
+        authStep3Icon.style.color = 'var(--text-muted)';
+        authStep3Icon.textContent = '3';
+      }
     } else if (step === 2) {
       if (authStep1Panel) authStep1Panel.style.display = 'none';
       if (authStep2Panel) authStep2Panel.style.display = 'block';
-      
+      if (authStep3Panel) authStep3Panel.style.display = 'none';
+
+      // Step 1 Done
       if (authStep1Badge) {
         authStep1Badge.style.color = '#10b981';
         authStep1Badge.style.background = 'rgba(16,185,129,0.12)';
@@ -4053,6 +4068,9 @@ function setAuthStep(step) {
         authStep1Icon.style.color = '#fff';
         authStep1Icon.textContent = '✓';
       }
+      if (authStepLine1) authStepLine1.style.background = '#10b981';
+
+      // Step 2 Active
       if (authStep2Badge) {
         authStep2Badge.style.color = 'var(--accent)';
         authStep2Badge.style.background = 'color-mix(in srgb, var(--accent) 15%, transparent)';
@@ -4061,22 +4079,77 @@ function setAuthStep(step) {
       if (authStep2Icon) {
         authStep2Icon.style.background = 'var(--accent)';
         authStep2Icon.style.color = '#fff';
+        authStep2Icon.textContent = '2';
       }
-      if (authStepLine) authStepLine.style.background = '#10b981';
-      
+      if (authStepLine2) authStepLine2.style.background = 'var(--border)';
+
+      // Step 3 Muted
+      if (authStep3Badge) {
+        authStep3Badge.style.color = 'var(--text-muted)';
+        authStep3Badge.style.background = 'var(--bg-main)';
+        authStep3Badge.style.borderColor = 'var(--border)';
+      }
+      if (authStep3Icon) {
+        authStep3Icon.style.background = 'var(--border)';
+        authStep3Icon.style.color = 'var(--text-muted)';
+        authStep3Icon.textContent = '3';
+      }
+
+      if (authEmail) setTimeout(() => authEmail.focus(), 60);
+    } else if (step === 3) {
+      if (authStep1Panel) authStep1Panel.style.display = 'none';
+      if (authStep2Panel) authStep2Panel.style.display = 'none';
+      if (authStep3Panel) authStep3Panel.style.display = 'block';
+
+      // Step 1 Done
+      if (authStep1Badge) {
+        authStep1Badge.style.color = '#10b981';
+        authStep1Badge.style.background = 'rgba(16,185,129,0.12)';
+        authStep1Badge.style.borderColor = '#10b981';
+      }
+      if (authStep1Icon) {
+        authStep1Icon.style.background = '#10b981';
+        authStep1Icon.style.color = '#fff';
+        authStep1Icon.textContent = '✓';
+      }
+      if (authStepLine1) authStepLine1.style.background = '#10b981';
+
+      // Step 2 Done
+      if (authStep2Badge) {
+        authStep2Badge.style.color = '#10b981';
+        authStep2Badge.style.background = 'rgba(16,185,129,0.12)';
+        authStep2Badge.style.borderColor = '#10b981';
+      }
+      if (authStep2Icon) {
+        authStep2Icon.style.background = '#10b981';
+        authStep2Icon.style.color = '#fff';
+        authStep2Icon.textContent = '✓';
+      }
+      if (authStepLine2) authStepLine2.style.background = '#10b981';
+
+      // Step 3 Active
+      if (authStep3Badge) {
+        authStep3Badge.style.color = 'var(--accent)';
+        authStep3Badge.style.background = 'color-mix(in srgb, var(--accent) 15%, transparent)';
+        authStep3Badge.style.borderColor = 'var(--accent)';
+      }
+      if (authStep3Icon) {
+        authStep3Icon.style.background = 'var(--accent)';
+        authStep3Icon.style.color = '#fff';
+        authStep3Icon.textContent = '3';
+      }
+
       if (authGameId) setTimeout(() => authGameId.focus(), 60);
     }
   } else {
     // Sign In Mode
     if (authStepIndicator) authStepIndicator.style.display = 'none';
-    if (authStep1Panel) authStep1Panel.style.display = 'block';
+    if (authSignInPanel) authSignInPanel.style.display = 'block';
+    if (authStep1Panel) authStep1Panel.style.display = 'none';
     if (authStep2Panel) authStep2Panel.style.display = 'none';
-    if (authNextStepBtn) authNextStepBtn.style.display = 'none';
-    if (authSignInBtn) authSignInBtn.style.display = 'block';
-    if (authDateWrapper) authDateWrapper.style.display = 'none';
-    if (authForgotPwWrapper) authForgotPwWrapper.style.display = 'block';
-    if (authOrDivider) authOrDivider.style.display = 'flex';
-    if (authGoogleBtn) authGoogleBtn.style.display = 'flex';
+    if (authStep3Panel) authStep3Panel.style.display = 'none';
+    const authLoginEmail = document.getElementById('authLoginEmail');
+    if (authLoginEmail) setTimeout(() => authLoginEmail.focus(), 60);
   }
 }
 
@@ -4123,12 +4196,38 @@ window.openRegisterModal = () => {
 
 window.openClaimProfileModal = window.openRegisterModal;
 
-const authNextStepBtn = document.getElementById('authNextStepBtn');
-const authBackStepBtn = document.getElementById('authBackStepBtn');
+const authChooseEmailBtn = document.getElementById('authChooseEmailBtn');
+const authChooseGoogleBtn = document.getElementById('authChooseGoogleBtn');
+const authBackToStep1Btn = document.getElementById('authBackToStep1Btn');
+const authNextToStep3Btn = document.getElementById('authNextToStep3Btn');
+const authBackToStep2Btn = document.getElementById('authBackToStep2Btn');
 const authSignInBtn = document.getElementById('authSignInBtn');
+const authLoginGoogleBtn = document.getElementById('authLoginGoogleBtn');
+const showLoginPasswordBtn = document.getElementById('showLoginPasswordBtn');
 
-if (authNextStepBtn) {
-  authNextStepBtn.addEventListener('click', () => {
+if (authChooseEmailBtn) {
+  authChooseEmailBtn.addEventListener('click', () => {
+    authErrorMsg.style.display = 'none';
+    setAuthStep(2);
+  });
+}
+
+if (authChooseGoogleBtn) {
+  authChooseGoogleBtn.addEventListener('click', () => {
+    const origGoogleBtn = document.getElementById('authGoogleBtn');
+    if (origGoogleBtn) origGoogleBtn.click();
+  });
+}
+
+if (authBackToStep1Btn) {
+  authBackToStep1Btn.addEventListener('click', () => {
+    authErrorMsg.style.display = 'none';
+    setAuthStep(1);
+  });
+}
+
+if (authNextToStep3Btn) {
+  authNextToStep3Btn.addEventListener('click', () => {
     const email = authEmail.value.trim().toLowerCase();
     const password = authPassword.value;
     const dateStarted = authDateStarted ? authDateStarted.value : "";
@@ -4154,22 +4253,40 @@ if (authNextStepBtn) {
       return;
     }
     authErrorMsg.style.display = 'none';
+    setAuthStep(3);
+  });
+}
+
+if (authBackToStep2Btn) {
+  authBackToStep2Btn.addEventListener('click', () => {
+    authErrorMsg.style.display = 'none';
     setAuthStep(2);
   });
 }
 
-if (authBackStepBtn) {
-  authBackStepBtn.addEventListener('click', () => {
-    authErrorMsg.style.display = 'none';
-    setAuthStep(1);
+if (showLoginPasswordBtn) {
+  showLoginPasswordBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    const authLoginPassword = document.getElementById('authLoginPassword');
+    if (authLoginPassword) {
+      if (authLoginPassword.type === 'password') {
+        authLoginPassword.type = 'text';
+        showLoginPasswordBtn.textContent = '🙈';
+      } else {
+        authLoginPassword.type = 'password';
+        showLoginPasswordBtn.textContent = '👁️';
+      }
+    }
   });
 }
 
 if (authSignInBtn) {
   authSignInBtn.addEventListener('click', async () => {
     authErrorMsg.style.color = 'var(--danger)';
-    const email = authEmail.value.trim().toLowerCase();
-    const password = authPassword.value;
+    const authLoginEmail = document.getElementById('authLoginEmail');
+    const authLoginPassword = document.getElementById('authLoginPassword');
+    const email = authLoginEmail ? authLoginEmail.value.trim().toLowerCase() : "";
+    const password = authLoginPassword ? authLoginPassword.value : "";
     if (!email || !password) {
       authErrorMsg.textContent = 'Email and password required.';
       authErrorMsg.style.display = 'block';
@@ -4191,6 +4308,34 @@ if (authSignInBtn) {
   });
 }
 
+if (authLoginGoogleBtn) {
+  authLoginGoogleBtn.addEventListener('click', () => {
+    const origGoogleBtn = document.getElementById('authGoogleBtn');
+    if (origGoogleBtn) origGoogleBtn.click();
+  });
+}
+
+const authLoginEmail = document.getElementById('authLoginEmail');
+const authLoginPassword = document.getElementById('authLoginPassword');
+
+if (authLoginEmail) {
+  authLoginEmail.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (authLoginPassword) authLoginPassword.focus();
+    }
+  });
+}
+
+if (authLoginPassword) {
+  authLoginPassword.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (authSignInBtn) authSignInBtn.click();
+    }
+  });
+}
+
 if (authEmail) {
   authEmail.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
@@ -4204,10 +4349,9 @@ if (authPassword) {
   authPassword.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      if (isRegistering) {
-        if (authNextStepBtn) authNextStepBtn.click();
-      } else {
-        if (authSignInBtn) authSignInBtn.click();
+      if (authDateStarted) {
+        authDateStarted.focus();
+        try { authDateStarted.showPicker(); } catch(e) {}
       }
     }
   });

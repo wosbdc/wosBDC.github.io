@@ -1,10 +1,10 @@
 {
-  "version": "2.2.1",
+  "version": "2.3.0",
   "releaseDate": "2026-08-14",
-  "title": "✨ 2-Step Chief Registration & Verification Wizard",
+  "title": "✨ 3-Step Chief Registration & Verification Wizard",
   "notes": [
-    "Clean 2-step registration flow: Step 1 Account Credentials & Step 2 In-Game Chief Verification",
-    "Animated step indicators with clear back/next navigation and focused validation",
-    "Seamless in-game verification with real-time level and character locking"
+    "Step 1: Choose Signup Method (Email & Password or Google)",
+    "Step 2: Enter Account Credentials & Mandatory Playing Start Date",
+    "Step 3: In-Game Chief Verification with Live Stats & Character Locking"
   ]
 }

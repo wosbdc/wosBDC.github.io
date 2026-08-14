@@ -296,38 +296,104 @@
       </div>
       
       <!-- Step Indicator (Only shown during multi-step registration) -->
-      <div id="authStepIndicator" style="display:none; align-items:center; justify-content:center; gap:8px; margin-bottom:18px;">
-        <div id="authStep1Badge" style="display:flex; align-items:center; gap:6px; font-size:11px; font-weight:700; color:var(--accent); background:color-mix(in srgb, var(--accent) 15%, transparent); padding:4px 12px; border-radius:20px; border:1px solid var(--accent); transition:all 0.3s;">
-          <span id="authStep1Icon" style="background:var(--accent); color:#fff; width:16px; height:16px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:10px;">1</span> Account
+      <div id="authStepIndicator" style="display:none; align-items:center; justify-content:center; gap:6px; margin-bottom:18px;">
+        <div id="authStep1Badge" style="display:flex; align-items:center; gap:5px; font-size:11px; font-weight:700; color:var(--accent); background:color-mix(in srgb, var(--accent) 15%, transparent); padding:4px 10px; border-radius:20px; border:1px solid var(--accent); transition:all 0.3s;">
+          <span id="authStep1Icon" style="background:var(--accent); color:#fff; width:16px; height:16px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:10px;">1</span> Method
         </div>
-        <div id="authStepLine" style="width:24px; height:2px; background:var(--border); transition:all 0.3s;"></div>
-        <div id="authStep2Badge" style="display:flex; align-items:center; gap:6px; font-size:11px; font-weight:700; color:var(--text-muted); background:var(--bg-main); padding:4px 12px; border-radius:20px; border:1px solid var(--border); transition:all 0.3s;">
-          <span id="authStep2Icon" style="background:var(--border); color:var(--text-muted); width:16px; height:16px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:10px;">2</span> Verify Chief
+        <div id="authStepLine1" style="width:16px; height:2px; background:var(--border); transition:all 0.3s;"></div>
+        <div id="authStep2Badge" style="display:flex; align-items:center; gap:5px; font-size:11px; font-weight:700; color:var(--text-muted); background:var(--bg-main); padding:4px 10px; border-radius:20px; border:1px solid var(--border); transition:all 0.3s;">
+          <span id="authStep2Icon" style="background:var(--border); color:var(--text-muted); width:16px; height:16px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:10px;">2</span> Account
+        </div>
+        <div id="authStepLine2" style="width:16px; height:2px; background:var(--border); transition:all 0.3s;"></div>
+        <div id="authStep3Badge" style="display:flex; align-items:center; gap:5px; font-size:11px; font-weight:700; color:var(--text-muted); background:var(--bg-main); padding:4px 10px; border-radius:20px; border:1px solid var(--border); transition:all 0.3s;">
+          <span id="authStep3Icon" style="background:var(--border); color:var(--text-muted); width:16px; height:16px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:10px;">3</span> Verify Chief
         </div>
       </div>
       
       <div id="authErrorMsg" style="color:var(--danger); font-size:13px; margin-bottom:15px; display:none; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); padding:8px 12px; border-radius:8px;"></div>
       
-      <!-- STEP 1: Account Credentials & Date -->
-      <div id="authStep1Panel">
+      <!-- SIGN IN FORM (Direct Login Mode) -->
+      <div id="authSignInPanel" style="display:none;">
         <div style="margin-bottom:14px; text-align:left;">
           <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Email Address:</label>
-          <input type="email" id="authEmail" placeholder="yourname@example.com" style="width:100%; padding:11px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
+          <input type="email" id="authLoginEmail" placeholder="yourname@example.com" style="width:100%; padding:11px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
         </div>
         
         <div style="position:relative; width:100%; margin-bottom:14px; text-align:left;">
           <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Password:</label>
+          <div style="position:relative; width:100%;">
+            <input type="password" id="authLoginPassword" placeholder="Your password" style="width:100%; padding:11px; padding-right:40px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
+            <button id="showLoginPasswordBtn" type="button" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:16px;">👁️</button>
+          </div>
+        </div>
+        
+        <div id="authForgotPwWrapper" style="text-align:right; margin-top:-6px; margin-bottom:16px;">
+          <a href="#" id="authForgotPwBtn" style="color:var(--accent); text-decoration:none; font-size:12px;">Forgot Password?</a>
+        </div>
+        
+        <button id="authSignInBtn" type="button" style="width:100%; padding:12px; background:var(--accent); color:#fff; border:none; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer; transition:0.2s;">
+          Sign In
+        </button>
+        
+        <div style="text-align:center; margin:14px 0; color:var(--text-muted); font-size:12px; display:flex; align-items:center; gap:10px;">
+          <div style="flex:1; height:1px; background:var(--border);"></div>
+          OR
+          <div style="flex:1; height:1px; background:var(--border);"></div>
+        </div>
+        
+        <button id="authLoginGoogleBtn" type="button" style="width:100%; padding:11px; background:#fff; color:#444; border:1px solid #ddd; border-radius:8px; font-weight:bold; cursor:pointer; display:flex; justify-content:center; align-items:center; gap:10px; transition:0.2s;" onmouseover="this.style.background='#f1f1f1'" onmouseout="this.style.background='#fff'">
+          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width:18px; height:18px;" alt="Google">
+          Continue with Google
+        </button>
+      </div>
+
+      <!-- STEP 1 (Registration): Choose Signup Method -->
+      <div id="authStep1Panel" style="display:none;">
+        <p style="font-size:13px; color:var(--text-muted); margin:0 0 18px 0; line-height:1.4; text-align:center;">
+          Choose how you would like to register your alliance profile:
+        </p>
+
+        <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:14px;">
+          <button id="authChooseEmailBtn" type="button" style="width:100%; padding:14px 18px; background:linear-gradient(135deg, rgba(59,130,246,0.15), rgba(37,99,235,0.25)); border:1px solid rgba(59,130,246,0.5); color:#fff; border-radius:12px; font-weight:bold; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+            <span style="display:flex; align-items:center; gap:10px;">
+              <span style="font-size:20px;">📧</span>
+              <span style="text-align:left;">
+                <span style="display:block; font-size:14px; color:#fff;">Email & Password</span>
+                <span style="display:block; font-size:11px; color:#93c5fd; font-weight:normal;">Create a dedicated password</span>
+              </span>
+            </span>
+            <span style="color:#93c5fd; font-size:18px;">➔</span>
+          </button>
+
+          <button id="authChooseGoogleBtn" type="button" style="width:100%; padding:14px 18px; background:#fff; color:#333; border:1px solid #ddd; border-radius:12px; font-weight:bold; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; transition:all 0.2s;" onmouseover="this.style.background='#f8fafc'; this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#fff'; this.style.transform='translateY(0)'">
+            <span style="display:flex; align-items:center; gap:10px;">
+              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width:20px; height:20px;" alt="Google">
+              <span style="text-align:left;">
+                <span style="display:block; font-size:14px; color:#333;">Continue with Google</span>
+                <span style="display:block; font-size:11px; color:#666; font-weight:normal;">Fast 1-click authentication</span>
+              </span>
+            </span>
+            <span style="color:#666; font-size:18px;">➔</span>
+          </button>
+        </div>
+      </div>
+      
+      <!-- STEP 2 (Registration): Account Credentials & Date -->
+      <div id="authStep2Panel" style="display:none;">
+        <div style="margin-bottom:14px; text-align:left;">
+          <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Email Address: <span style="color:var(--danger); font-weight:bold;">*</span></label>
+          <input type="email" id="authEmail" placeholder="yourname@example.com" style="width:100%; padding:11px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
+        </div>
+        
+        <div style="position:relative; width:100%; margin-bottom:14px; text-align:left;">
+          <label style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Password: <span style="color:var(--danger); font-weight:bold;">*</span></label>
           <div style="position:relative; width:100%;">
             <input type="password" id="authPassword" placeholder="Minimum 6 characters" style="width:100%; padding:11px; padding-right:40px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
             <button id="showPasswordBtn" type="button" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:16px;">👁️</button>
           </div>
         </div>
         
-        <div id="authForgotPwWrapper" style="text-align:right; margin-top:-6px; margin-bottom:14px;">
-          <a href="#" id="authForgotPwBtn" style="color:var(--accent); text-decoration:none; font-size:12px;">Forgot Password?</a>
-        </div>
-        
-        <div id="authDateWrapper" style="display:none; margin-bottom:18px; text-align:left;">
+        <div id="authDateWrapper" style="margin-bottom:18px; text-align:left;">
           <label for="authDateStarted" style="display:block; font-size:12px; color:var(--text-muted); margin-bottom:4px; font-weight:600;">Date You Started Playing: <span style="color:var(--danger); font-weight:bold;">*</span></label>
           <div style="position:relative; width:100%; display:flex; align-items:stretch;">
             <input type="date" id="authDateStarted" required title="Date Started (Required)" onclick="try{this.showPicker();}catch(e){}" style="flex:1; padding:11px 40px 11px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box; cursor:pointer;">
@@ -335,32 +401,21 @@
           </div>
         </div>
         
-        <!-- Step 1 Next Button (Register Mode) -->
-        <button id="authNextStepBtn" type="button" style="display:none; width:100%; padding:12px; background:linear-gradient(135deg, #3b82f6, #2563eb); color:#fff; border:none; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer; box-shadow:0 4px 15px rgba(37,99,235,0.4); transition:0.2s;">
-          Next: Verify Character ➔
-        </button>
-        
-        <!-- Sign In Submit (Login Mode) -->
-        <button id="authSignInBtn" type="button" style="width:100%; padding:12px; background:var(--accent); color:#fff; border:none; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer; transition:0.2s;">
-          Sign In
-        </button>
-        
-        <div id="authOrDivider" style="text-align:center; margin:14px 0; color:var(--text-muted); font-size:12px; display:flex; align-items:center; gap:10px;">
-          <div style="flex:1; height:1px; background:var(--border);"></div>
-          OR
-          <div style="flex:1; height:1px; background:var(--border);"></div>
+        <!-- Step 2 Actions -->
+        <div style="display:flex; gap:10px; margin-top:16px;">
+          <button id="authBackToStep1Btn" type="button" style="flex:1; padding:12px; background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); border-radius:8px; font-weight:bold; cursor:pointer; transition:0.2s;">
+            ← Back
+          </button>
+          <button id="authNextToStep3Btn" type="button" style="flex:2; padding:12px; background:linear-gradient(135deg, #3b82f6, #2563eb); color:#fff; border:none; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer; box-shadow:0 4px 15px rgba(37,99,235,0.4); transition:0.2s;">
+            Next: Verify Chief ➔
+          </button>
         </div>
-        
-        <button id="authGoogleBtn" type="button" style="width:100%; padding:11px; background:#fff; color:#444; border:1px solid #ddd; border-radius:8px; font-weight:bold; cursor:pointer; display:flex; justify-content:center; align-items:center; gap:10px; transition:0.2s;" onmouseover="this.style.background='#f1f1f1'" onmouseout="this.style.background='#fff'">
-          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width:18px; height:18px;" alt="Google">
-          Continue with Google
-        </button>
       </div>
       
-      <!-- STEP 2: Link & Verify In-Game Chief -->
-      <div id="authStep2Panel" style="display:none;">
+      <!-- STEP 3 (Registration): Link & Verify In-Game Chief -->
+      <div id="authStep3Panel" style="display:none;">
         <p style="font-size:12px; color:var(--text-muted); margin:0 0 14px 0; line-height:1.4; text-align:left;">
-          Enter your numeric Game ID to automatically authenticate your character and link your live stats.
+          Enter your numeric Game ID to automatically verify your character & lock in your stats:
         </p>
         
         <div id="authGameIdWrapper" style="display:flex; margin-bottom:14px; align-items:stretch; flex-direction:column; gap:6px;">
@@ -379,7 +434,7 @@
         </div>
         
         <div style="display:flex; gap:10px; margin-top:16px;">
-          <button id="authBackStepBtn" type="button" style="flex:1; padding:12px; background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); border-radius:8px; font-weight:bold; cursor:pointer; transition:0.2s;">
+          <button id="authBackToStep2Btn" type="button" style="flex:1; padding:12px; background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); border-radius:8px; font-weight:bold; cursor:pointer; transition:0.2s;">
             ← Back
           </button>
           <button id="authSubmitBtn" type="button" style="flex:2; padding:12px; background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer; box-shadow:0 4px 15px rgba(16,185,129,0.3); transition:0.2s;">

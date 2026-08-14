@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [2.3.0] - 2026-08-14
+### ✨ 3-Step Chief Registration & Verification Wizard
+- **✨ 3-Step Registration Wizard**: Designed full 3-step registration flow:
+  - **Step 1: Choose Registration Method**: Clean options to sign up via Email & Password or 1-click with Google.
+  - **Step 2: Account Details & Playing Start Date**: Dedicated inputs for email, password (with show/hide), and mandatory playing start date.
+  - **Step 3: Character Link & In-Game Verification**: Automated mailbox verification code and live stats locking.
+- **🔑 Clean Sign In Modal**: Separated direct sign-in panel with email/password and Google authentication.
+
 ## [2.2.1] - 2026-08-14
 ### ✨ Mandatory Start Date in Registration Wizard
 - **📅 Mandatory Playing Start Date**: Made "Date You Started Playing" a required field in Step 1 of the registration wizard with instant validation and picker focus.
