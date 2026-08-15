@@ -152,6 +152,31 @@ async function testOrRedeemCenturyCode(roleId, cdk, kid = DEFAULT_KID) {
   }
 }
 
+async function sendDiscordGiftCodeAlert(code, successCount, totalTargets) {
+  const webhookUrl = "https://discord.com/api/webhooks/1537465776750203060/pjDG_gWRnnS6QyRXaxvrudoq7inLhFi_4xjk-2WfpuiTp3gNJVCS4eGuH0y9CoUL4dUY";
+  const payload = {
+    embeds: [{
+      title: "🎁 ALLIANCE PERK BOT — NEW GIFT CODE CLAIMED!",
+      description: `🎉 **New Promo Code Found:** \`${code}\`\n\n⚡ **Mass Auto-Redeem Status:**\n• ✅ **Successfully Claimed:** \`${successCount}\` Chiefs & Alts\n• 👥 **Total Alliance Targets:** \`${totalTargets}\` Accounts\n• 🌐 **Source:** 3 Scraper Feeds (DotGG, PGG, PG)\n\nCheck your in-game mailbox to collect your rewards! 💎📦`,
+      color: 15483801,
+      footer: { text: "Whiteout Survival Alliance Rewards Bot 🤖" },
+      timestamp: new Date().toISOString()
+    }]
+  };
+  try {
+    const res = await fetch(`${webhookUrl}?wait=true`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (res.ok) {
+      console.log(`📢 [Discord Alert] Sent new gift code announcement for [${code}]!`);
+    }
+  } catch (e) {
+    console.warn(`Discord alert warning: ${e.message}`);
+  }
+}
+
 // Scrape candidate codes from web pages
 async function scrapeCandidateCodes() {
   const candidateCodes = new Set();
@@ -310,6 +335,9 @@ export async function runAutoGiftCodeSweep() {
           failed: failedCount
         }
       });
+
+      // Broadcast Discord Alert
+      await sendDiscordGiftCodeAlert(code, successCount, targets.length);
     }
   }
 

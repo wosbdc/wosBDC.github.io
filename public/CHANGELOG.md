@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.5.78] - 2026-08-15
+- 📢 **Alliance Discord Perks Alerts:**
+  - 🎁 **Automated Embed Broadcasts:** Auto-posts a styled embed alert to the alliance Discord channel upon discovering and mass-claiming new gift codes.
+  - 📊 **Instant Claim Delivery Reports:** Details total accounts rewarded, active targets, and mail pickup reminders directly in Discord.
+
 ## [2.5.77] - 2026-08-15
 - 🎁 **Improved Alliance Perks Systems:**
   - 🤖 **Auto-Scraper Daemon:** Monitors web feeds and auto-discovers newly released promo codes.

@@ -1,9 +1,9 @@
 {
-  "version": "2.5.77",
+  "version": "2.5.78",
   "releaseDate": "2026-08-15",
-  "title": "🎁 Improved Alliance Perks Systems",
+  "title": "📢 Alliance Discord Perks Alerts",
   "notes": [
-    "Autonomous web scraper and live server validator daemon",
-    "Admin Gift Codes Manager with real-time telemetry and 1-tap dispatch"
+    "Automatic Discord webhook broadcasts when new gift codes are claimed",
+    "Real-time delivery statistics and mail pickup reminders directly in Discord"
   ]
 }
