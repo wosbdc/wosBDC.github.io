@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.5.71] - 2026-08-15
+- **Streamlined Push Notifications Controls in Bell Modal:**
+  - Removed topic category checkboxes to ensure members always receive essential alliance event and war alerts.
+  - Placed `[🧪 Test Push Alert]`, `[🔄 Re-sync Device Token]`, and `[🧹 Clear Unread Badges]` buttons inside the clean `[⚙️ Options]` dropdown.
+
 ## [2.5.70] - 2026-08-15
 - **Streamlined Settings Sidebar:** Removed duplicate push notification button and deleted legacy modal markup for a cleaner navigation experience.
 - **Classic Push Notification Options Menu in Bell Modal:**

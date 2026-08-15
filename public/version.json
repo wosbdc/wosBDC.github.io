@@ -1,7 +1,7 @@
 {
-  "version": "2.5.70",
+  "version": "2.5.71",
   "releaseDate": "2026-08-15",
-  "title": "🔔 Classic Push Notification Options Menu",
+  "title": "🔔 Streamlined Push Notification Controls",
   "notes": [
     "Connected the broadcast announcements tray to live realtime database sync",
     "Enabled instant display of alliance broadcasts in the Bell Alert Window"
