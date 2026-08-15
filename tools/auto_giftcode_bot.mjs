@@ -22,6 +22,7 @@ const DEFAULT_KID = '2089';
 
 const SCRAPE_SOURCES = [
   { name: 'WosRewards', url: 'https://www.wosrewards.com/giftcodes' },
+  { name: 'GamsGo', url: 'https://www.gamsgo.com/blog/whiteout-survival-gift-codes' },
   { name: 'DotGG', url: 'https://dotgg.gg/whiteout-survival/gift-codes/' },
   { name: 'ProGameGuides', url: 'https://progameguides.com/whiteout-survival/whiteout-survival-codes/' },
   { name: 'PocketGamer', url: 'https://www.pocketgamer.com/whiteout-survival/codes/' }
