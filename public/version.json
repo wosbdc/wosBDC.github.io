@@ -1,9 +1,9 @@
 {
   "version": "2.5.72",
   "releaseDate": "2026-08-15",
-  "title": "🎁 Gift Code Dispatcher Error Recovery & Targeted Retry",
+  "title": "🎁 Smart Gift Code Recovery",
   "notes": [
-    "Added automated 3-attempt backoff retry in backend for Century Games server timeouts",
-    "Implemented 1-click targeted retry and inline retry tools for errored accounts in Gift Code Dispatcher"
+    "Targeted 1-Tap Retry for failed or timed-out accounts",
+    "Automated server lag protection and instant error reports"
   ]
 }

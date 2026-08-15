@@ -1,11 +1,10 @@
 # CHANGELOG
 
 ## [2.5.72] - 2026-08-15
-- **Gift Code Dispatcher Error Recovery & Targeted Retry Tools:**
-  - **Backend Retry Mechanism:** Added automated 3-attempt backoff retry in Google Apps Script `redeemGiftCode` to seamlessly handle transient Century Games server timeouts (`TIME OUT RETRY.`) and network latency.
-  - **Targeted Batch Retry:** Added `[🔁 Retry Failed Accounts (${count})]` button that runs redemption *only* on failed accounts without re-dispatching to already successful characters.
-  - **Inline 1-Click Retry:** Added individual `[🔁 Retry]` action buttons in the terminal log for instant single-character recovery.
-  - **Diagnostic Error Report:** Added `[📋 Copy Error Report]` to quickly copy errored Game IDs and server failure messages to clipboard for easy tracking.
+- 🎁 **Smart Gift Code Recovery:**
+  - 🔁 **Targeted 1-Tap Retry:** Instantly retry failed or timed-out redemptions without re-running successful accounts.
+  - ⚡ **Auto-Retry Protection:** Built-in auto-retry handles game server lag and timeouts automatically.
+  - 📋 **1-Click Error Reports:** Quickly copy diagnostic logs for any unresolved accounts.
 
 ## [2.5.71] - 2026-08-15
 - **Streamlined Push Notifications Controls in Bell Modal:**
