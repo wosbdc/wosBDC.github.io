@@ -1,10 +1,10 @@
 {
-  "version": "2.5.42",
+  "version": "2.5.43",
   "releaseDate": "2026-08-14",
-  "title": "🎯 Perfectly Centered Fire Crystal Furnace Level Badges",
+  "title": "✨ Seamless Hexagon Digit Realignment & 360° Radiant Fire Particle Engine",
   "notes": [
-    "Cleaned stray sparkle artifacts from corners of all 10 Fire Crystal badge PNG files",
-    "Recalibrated all Fire Crystal shield bounds to exact (512.0, 512.0) dead center",
-    "Centered furnace level row alignment in Account Hub profile ID card"
+    "Seamlessly realigned inner white digits (1-10) to exact geometric center (512, 512) inside all 10 Fire Crystal shields",
+    "Upgraded particle engine to emanate 360° radiant ambient fire embers symmetrically around the shield",
+    "Eliminated particle drift and edge clustering"
   ]
 }

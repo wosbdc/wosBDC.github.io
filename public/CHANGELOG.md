@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.5.43] - 2026-08-14
+- Seamlessly realigned and centered the inner white digits (`1` through `10`) to exact geometric center `(512, 512)` within the metallic hexagon plates across all 10 Fire Crystal badge PNG files.
+- Upgraded the Fire Crystal interactive particle engine to emanate a 360° balanced radiant ember aura symmetrically around the shield, eliminating particle drift and left-side clustering.
+
 ## [2.5.42] - 2026-08-14
 - Removed off-center stray sparkle pixels in the transparent borders of Fire Crystal badge images `fc1.png` through `fc10.png`.
 - Re-encoded and recalibrated all 10 Fire Crystal badge PNG graphics to exact `(512.0, 512.0)` geometric dead center.

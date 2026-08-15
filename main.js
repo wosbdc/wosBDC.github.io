@@ -198,7 +198,7 @@ window.getFurnaceIconHtml = (level, size = 48) => {
      const canvasOffset = Math.round((canvasSize - size) / 2);
      return `<span class="fc-badge-stage" data-fc="${fcNum}" style="display:inline-flex; align-items:center; justify-content:center; position:relative; vertical-align:middle; cursor:pointer; width:${size}px; height:${size}px; user-select:none; -webkit-user-select:none;">
        <canvas class="fc-flame-canvas" width="${canvasSize}" height="${canvasSize}" style="position:absolute; top:-${canvasOffset}px; left:-${canvasOffset}px; width:${canvasSize}px; height:${canvasSize}px; pointer-events:none; z-index:3;"></canvas>
-       <img src="./badges/fc${fcNum}.png?v=2.5.42" onerror="this.onerror=null; this.src='/badges/fc${fcNum}.png?v=2.5.42';" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
+       <img src="./badges/fc${fcNum}.png?v=2.5.43" onerror="this.onerror=null; this.src='/badges/fc${fcNum}.png?v=2.5.43';" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
      </span>`;
   }
 
@@ -21371,13 +21371,15 @@ window.closeMobileNavModal = () => {
 
   class FlameWisp {
     constructor(cx, cy, radius, colors) {
-      this.x = cx + (Math.random() - 0.5) * (radius * 0.8);
-      this.y = cy + (Math.random() - 0.5) * (radius * 0.4) + (radius * 0.2);
-      this.vx = (Math.random() - 0.5) * (radius * 0.015);
-      this.vy = -Math.random() * (radius * 0.035) - (radius * 0.015);
-      this.size = Math.random() * (radius * 0.12) + (radius * 0.05);
-      this.alpha = 1.0;
-      this.decay = Math.random() * 0.025 + 0.012;
+      const angle = Math.random() * Math.PI * 2;
+      const dist = (radius * 0.42) + (Math.random() * radius * 0.22);
+      this.x = cx + Math.cos(angle) * dist;
+      this.y = cy + Math.sin(angle) * dist;
+      this.vx = Math.cos(angle) * (radius * 0.012) + (Math.random() - 0.5) * 0.5;
+      this.vy = Math.sin(angle) * (radius * 0.012) - (radius * 0.025);
+      this.size = Math.random() * (radius * 0.09) + (radius * 0.04);
+      this.alpha = 0.9;
+      this.decay = Math.random() * 0.028 + 0.014;
       this.waveSpeed = Math.random() * 0.1 + 0.05;
       this.waveAngle = Math.random() * Math.PI * 2;
       this.colors = colors;
