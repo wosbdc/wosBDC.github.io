@@ -1,10 +1,11 @@
 {
-  "version": "2.5.84",
+  "version": "2.5.85",
   "releaseDate": "2026-08-15",
-  "title": "⏱️ Restored Time Active for Linked Alt Accounts",
+  "title": "🔍 Advanced Filter & Search for Linked Alt Accounts",
   "notes": [
-    "Integrated Firebase linkedAltsData, users_alts, and in-game token verification timestamps for all secondary characters",
-    "Auto-computes exact Time Active and start dates across all linked accounts",
-    "Enabled full profile editing for alt furnace levels and custom start dates"
+    "Added segmented population switcher (All, Active Sync, Needs Sync, Enrolled Perks)",
+    "Added search input for quick lookup by Alt Name or Game ID",
+    "Added multi-criteria filtering for 30-day token status and gift code enrollment",
+    "Added sorting options by furnace level, alphabetical name, and token expiration"
   ]
 }

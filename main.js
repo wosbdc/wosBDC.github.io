@@ -9248,6 +9248,126 @@ window.openAltManagerModal = function() {
   }
 };
 
+window.currentAltPopulationTab = 'all';
+window.setAltPopulationTab = function(tabName, btnEl) {
+  window.currentAltPopulationTab = tabName;
+  document.querySelectorAll('.alt-filter-tab').forEach(b => {
+    b.classList.remove('active');
+    b.style.background = 'transparent';
+    b.style.color = 'var(--text-muted)';
+  });
+  if (btnEl) {
+    btnEl.classList.add('active');
+    if (tabName === 'active') {
+      btnEl.style.background = '#10b981';
+      btnEl.style.color = '#fff';
+    } else if (tabName === 'needs_sync') {
+      btnEl.style.background = '#f59e0b';
+      btnEl.style.color = '#fff';
+    } else if (tabName === 'enrolled') {
+      btnEl.style.background = '#06b6d4';
+      btnEl.style.color = '#fff';
+    } else {
+      btnEl.style.background = 'var(--accent)';
+      btnEl.style.color = '#fff';
+    }
+  }
+  window.filterAltAccountsList();
+};
+
+window.resetAltFilters = function() {
+  const sInput = document.getElementById('altSearchInput');
+  if (sInput) sInput.value = '';
+  const tSelect = document.getElementById('altTokenFilter');
+  if (tSelect) tSelect.value = 'all';
+  const pSelect = document.getElementById('altPerksFilter');
+  if (pSelect) pSelect.value = 'all';
+  const sortSelect = document.getElementById('altSortFilter');
+  if (sortSelect) sortSelect.value = 'default';
+
+  const defaultBtn = document.querySelector('.alt-filter-tab[data-tab="all"]');
+  window.setAltPopulationTab('all', defaultBtn);
+};
+
+window.filterAltAccountsList = function() {
+  const searchVal = (document.getElementById('altSearchInput')?.value || '').toLowerCase().trim();
+  const activeTab = window.currentAltPopulationTab || 'all';
+  const tokenFilter = document.getElementById('altTokenFilter')?.value || 'all';
+  const perksFilter = document.getElementById('altPerksFilter')?.value || 'all';
+  const sortFilter = document.getElementById('altSortFilter')?.value || 'default';
+
+  const grid = document.getElementById('linkedAltsGrid');
+  if (!grid) return;
+  const cards = Array.from(grid.querySelectorAll('.alt-account-card'));
+  let visibleCount = 0;
+
+  cards.forEach(card => {
+    const name = card.getAttribute('data-name') || '';
+    const gid = card.getAttribute('data-gid') || '';
+    const tokenStatus = card.getAttribute('data-token-status') || 'unverified';
+    const isEnrolled = card.getAttribute('data-enrolled') === 'true';
+
+    // 1. Search Query
+    let matchSearch = true;
+    if (searchVal) {
+      matchSearch = name.includes(searchVal) || gid.includes(searchVal);
+    }
+
+    // 2. Population Segmented Tab
+    let matchTab = true;
+    if (activeTab === 'active') {
+      matchTab = (tokenStatus === 'active' || tokenStatus === 'expiring');
+    } else if (activeTab === 'needs_sync') {
+      matchTab = (tokenStatus === 'unverified' || tokenStatus === 'expired' || tokenStatus === 'expiring');
+    } else if (activeTab === 'enrolled') {
+      matchTab = isEnrolled;
+    }
+
+    // 3. Token Dropdown Filter
+    let matchToken = true;
+    if (tokenFilter === 'active') matchToken = (tokenStatus === 'active' || tokenStatus === 'expiring');
+    else if (tokenFilter === 'expiring') matchToken = (tokenStatus === 'expiring');
+    else if (tokenFilter === 'expired') matchToken = (tokenStatus === 'expired');
+    else if (tokenFilter === 'unverified') matchToken = (tokenStatus === 'unverified');
+
+    // 4. Perks Dropdown Filter
+    let matchPerks = true;
+    if (perksFilter === 'enrolled') matchPerks = isEnrolled;
+    else if (perksFilter === 'not_enrolled') matchPerks = !isEnrolled;
+
+    const isVisible = matchSearch && matchTab && matchToken && matchPerks;
+    card.style.display = isVisible ? 'flex' : 'none';
+    if (isVisible) visibleCount++;
+  });
+
+  // Sort visible cards if container exists
+  if (cards.length > 0 && sortFilter !== 'default') {
+    const sorted = [...cards].sort((a, b) => {
+      if (sortFilter === 'furnace_desc') {
+        return (Number(b.getAttribute('data-fl')) || 0) - (Number(a.getAttribute('data-fl')) || 0);
+      } else if (sortFilter === 'furnace_asc') {
+        return (Number(a.getAttribute('data-fl')) || 0) - (Number(b.getAttribute('data-fl')) || 0);
+      } else if (sortFilter === 'name_asc') {
+        return (a.getAttribute('data-name') || '').localeCompare(b.getAttribute('data-name') || '');
+      } else if (sortFilter === 'days_desc') {
+        return (Number(b.getAttribute('data-days')) || 0) - (Number(a.getAttribute('data-days')) || 0);
+      }
+      return 0;
+    });
+    sorted.forEach(card => grid.appendChild(card));
+  }
+
+  const counterEl = document.getElementById('altFilterCounter');
+  if (counterEl) {
+    counterEl.textContent = `Showing ${visibleCount} of ${cards.length} alt(s)`;
+  }
+
+  const noMatchesBox = document.getElementById('altNoMatchesBox');
+  if (noMatchesBox) {
+    noMatchesBox.style.display = (visibleCount === 0 && cards.length > 0) ? 'block' : 'none';
+  }
+};
+
 window.getPushPreferences = function() {
   try {
     const raw = localStorage.getItem('wos_push_prefs');
@@ -17917,7 +18037,149 @@ window.resetBearTrapEvent = async () => {
 
     let linkedHtml = '';
     let links = currentUser.linkedGameIds || [];
-      
+
+    // Pre-calculate statistics across all linked alts
+    let totalAltsCount = links.length;
+    let activeSyncCount = 0;
+    let expiringSyncCount = 0;
+    let expiredSyncCount = 0;
+    let unverifiedCount = 0;
+    let enrolledCount = 0;
+    let notEnrolledCount = 0;
+
+    const altCardsData = [];
+    links.forEach(gid => {
+        const cleanGid = gid.toString().trim();
+        let altSaved = altProfilesMap[cleanGid] || {};
+        let linkedAltData = (currentUser.linkedAltsData && currentUser.linkedAltsData[cleanGid]) ? currentUser.linkedAltsData[cleanGid] : {};
+        let altTokenData = (currentUser.altTokens && currentUser.altTokens[cleanGid]) ? currentUser.altTokens[cleanGid] : null;
+
+        let altName = (idToNameMap && idToNameMap[cleanGid]) || altSaved.name || linkedAltData.name || (altTokenData && altTokenData.nickname) || `Game ID: ${cleanGid}`;
+
+        let flVal = linkedAltData.stove_lv || linkedAltData.furnaceLevel || altSaved.stove_lv || altSaved.furnaceLevel || (altTokenData && (altTokenData.stove_lv || altTokenData.furnaceLevel)) || 'N/A';
+        
+        let joinedDateVal = linkedAltData.joinedDate || altSaved.joinedDate || '';
+        if (!joinedDateVal) {
+            const avUrl = altSaved.avatar_image || (altTokenData && altTokenData.avatar_image) || '';
+            const m = avUrl.match(/\/avatar\/(\d{4})\/(\d{2})\/(\d{2})\//);
+            if (m) {
+                joinedDateVal = `${m[1]}-${m[2]}-${m[3]}`;
+            }
+        }
+
+        let timeActiveVal = joinedDateVal ? window.calculateTimeActive(joinedDateVal) : 'Unknown';
+
+        const rosterData = window.liveData ? window.liveData["Chief's List"] : null;
+        let foundInRoster = false;
+        if (rosterData && rosterData.length > 1) {
+            for (let i = 1; i < rosterData.length; i++) {
+                if ((rosterData[i][1] && rosterData[i][1].toString().trim() === cleanGid) ||
+                    (rosterData[i][0] && altName && rosterData[i][0].toString().toLowerCase() === altName.toLowerCase())) {
+                    foundInRoster = true;
+                    if (flVal === 'N/A' && rosterData[i][2]) flVal = rosterData[i][2];
+                    if (!joinedDateVal && rosterData[i][4]) {
+                        joinedDateVal = rosterData[i][4];
+                        timeActiveVal = window.calculateTimeActive(joinedDateVal);
+                    } else if (timeActiveVal === 'Unknown' && rosterData[i][5]) {
+                        timeActiveVal = window.formatTimeActiveShort(rosterData[i][5].toString());
+                    }
+                    break;
+                }
+            }
+        }
+
+        if (flVal === 'N/A' && window.rosterCache) {
+            const rItem = window.rosterCache[cleanGid] || window.rosterCache[altName];
+            if (rItem) {
+                if (rItem.furnaceLevel || rItem.stove_lv) flVal = rItem.furnaceLevel || rItem.stove_lv;
+                if (!joinedDateVal && rItem.joinedDate) {
+                    joinedDateVal = rItem.joinedDate;
+                    timeActiveVal = window.calculateTimeActive(joinedDateVal);
+                }
+            }
+        }
+
+        if (timeActiveVal === 'Unknown') {
+            if (linkedAltData.timeActive) {
+                timeActiveVal = linkedAltData.timeActive;
+            } else if (altSaved.timeActive) {
+                timeActiveVal = altSaved.timeActive;
+            } else if (altTokenData && altTokenData.verifiedAt) {
+                timeActiveVal = window.calculateTimeActive(altTokenData.verifiedAt);
+            } else if (currentUser.joinedDate) {
+                timeActiveVal = window.calculateTimeActive(currentUser.joinedDate);
+            }
+        }
+
+        const altToken = (typeof altTokenData === 'string') ? altTokenData : (altTokenData?.token || '');
+        let altTokenDaysRemaining = 0;
+        let isAltTokenActive = false;
+        let tokenState = 'unverified';
+
+        if (altToken) {
+            const verifiedDate = (typeof altTokenData === 'object' && altTokenData.verifiedAt) ? new Date(altTokenData.verifiedAt) : new Date();
+            const now = new Date();
+            const elapsedDays = Math.floor((now - verifiedDate) / (1000 * 60 * 60 * 24));
+            altTokenDaysRemaining = Math.max(0, 30 - elapsedDays);
+            isAltTokenActive = altTokenDaysRemaining > 0;
+            if (isAltTokenActive) {
+                tokenState = (altTokenDaysRemaining <= 5) ? 'expiring' : 'active';
+            } else {
+                tokenState = 'expired';
+            }
+        }
+
+        if (tokenState === 'active') activeSyncCount++;
+        else if (tokenState === 'expiring') { activeSyncCount++; expiringSyncCount++; }
+        else if (tokenState === 'expired') expiredSyncCount++;
+        else unverifiedCount++;
+
+        let isAltEnrolled = false;
+        const gcb = window.liveData['giftcodebot'];
+        if (gcb && gcb.length > 1) {
+            for (let i = 1; i < gcb.length; i++) {
+                if (gcb[i] && gcb[i][2] && gcb[i][2].toString().trim() === cleanGid) {
+                    isAltEnrolled = true;
+                    break;
+                }
+            }
+        }
+        if (!isAltEnrolled && enrolledGameIds.has(cleanGid)) {
+            isAltEnrolled = true;
+        }
+
+        if (isAltEnrolled) enrolledCount++;
+        else notEnrolledCount++;
+
+        let flNumeric = 0;
+        if (flVal && flVal !== 'N/A') {
+            const s = flVal.toString().toUpperCase().trim();
+            if (s.startsWith('FC') || s.startsWith('F')) {
+                flNumeric = 30 + (parseInt(s.replace(/\D/g, ''), 10) || 0);
+            } else {
+                flNumeric = parseInt(s.replace(/\D/g, ''), 10) || 0;
+            }
+        }
+
+        altCardsData.push({
+            cleanGid,
+            altName,
+            altSaved,
+            linkedAltData,
+            altTokenData,
+            flVal,
+            flNumeric,
+            joinedDateVal,
+            timeActiveVal,
+            foundInRoster,
+            altToken,
+            altTokenDaysRemaining,
+            isAltTokenActive,
+            tokenState,
+            isAltEnrolled
+        });
+    });
+
     linkedHtml += `
       <div style="text-align:left; padding-top:4px;">
         <!-- Clean Tab Header -->
@@ -17991,70 +18253,75 @@ window.resetBearTrapEvent = async () => {
     `;
          
     if (links.length > 0) {
-        linkedHtml += `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap:16px; margin-bottom:15px; cursor:default;">`;
-        links.forEach(gid => {
-              const cleanGid = gid.toString().trim();
-              let altSaved = altProfilesMap[cleanGid] || {};
-              let linkedAltData = (currentUser.linkedAltsData && currentUser.linkedAltsData[cleanGid]) ? currentUser.linkedAltsData[cleanGid] : {};
-              let altTokenData = (currentUser.altTokens && currentUser.altTokens[cleanGid]) ? currentUser.altTokens[cleanGid] : null;
+        // Advanced Filter & Search Toolbar (Registered Users Database style)
+        linkedHtml += `
+        <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:14px; margin-bottom:16px; display:flex; flex-direction:column; gap:12px;">
+            <!-- Top Row: Segmented Population Switcher & Live Counter -->
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                <div style="display:inline-flex; background:var(--bg-main); padding:3px; border-radius:10px; border:1px solid var(--border); gap:4px; flex-wrap:wrap;">
+                    <button class="alt-filter-tab active" data-tab="all" onclick="window.setAltPopulationTab('all', this)" style="background:var(--accent); color:#fff; border:none; padding:5px 12px; border-radius:7px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+                        👥 All (${totalAltsCount})
+                    </button>
+                    <button class="alt-filter-tab" data-tab="active" onclick="window.setAltPopulationTab('active', this)" style="background:transparent; color:var(--text-muted); border:none; padding:5px 12px; border-radius:7px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+                        🟢 Active Sync (${activeSyncCount})
+                    </button>
+                    <button class="alt-filter-tab" data-tab="needs_sync" onclick="window.setAltPopulationTab('needs_sync', this)" style="background:transparent; color:var(--text-muted); border:none; padding:5px 12px; border-radius:7px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+                        ⚠️ Needs Sync (${unverifiedCount + expiredSyncCount})
+                    </button>
+                    <button class="alt-filter-tab" data-tab="enrolled" onclick="window.setAltPopulationTab('enrolled', this)" style="background:transparent; color:var(--text-muted); border:none; padding:5px 12px; border-radius:7px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+                        🎁 Enrolled (${enrolledCount})
+                    </button>
+                </div>
+                <div id="altFilterCounter" style="font-size:12px; color:var(--text-muted); font-weight:600;">
+                    Showing ${totalAltsCount} of ${totalAltsCount} alt(s)
+                </div>
+            </div>
 
-              let altName = (idToNameMap && idToNameMap[cleanGid]) || altSaved.name || linkedAltData.name || (altTokenData && altTokenData.nickname) || `Game ID: ${cleanGid}`;
+            <!-- Bottom Row: Search Input + 30d Token Dropdown + Perks Dropdown + Sort Dropdown + Reset Button -->
+            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                <!-- Search Input -->
+                <div style="position:relative; flex:1 1 180px; min-width:160px;">
+                    <input type="text" id="altSearchInput" oninput="window.filterAltAccountsList()" placeholder="🔍 Search Alt Name or ID..." style="width:100%; padding:8px 28px 8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12.5px; font-weight:bold; box-sizing:border-box;">
+                    <button onclick="let i=document.getElementById('altSearchInput'); if(i){i.value=''; window.filterAltAccountsList(); i.focus();}" style="position:absolute; right:6px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text-muted); cursor:pointer; font-weight:bold; font-size:13px;">✕</button>
+                </div>
 
-              let flVal = linkedAltData.stove_lv || linkedAltData.furnaceLevel || altSaved.stove_lv || altSaved.furnaceLevel || (altTokenData && (altTokenData.stove_lv || altTokenData.furnaceLevel)) || 'N/A';
-              
-              let joinedDateVal = linkedAltData.joinedDate || altSaved.joinedDate || '';
-              if (!joinedDateVal) {
-                  const avUrl = altSaved.avatar_image || (altTokenData && altTokenData.avatar_image) || '';
-                  const m = avUrl.match(/\/avatar\/(\d{4})\/(\d{2})\/(\d{2})\//);
-                  if (m) {
-                      joinedDateVal = `${m[1]}-${m[2]}-${m[3]}`;
-                  }
-              }
+                <!-- Token Status Selector -->
+                <select id="altTokenFilter" onchange="window.filterAltAccountsList()" style="flex:1 1 140px; min-width:130px; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer; outline:none; box-sizing:border-box;">
+                    <option value="all">🛡️ Token: All (${totalAltsCount})</option>
+                    <option value="active">🟢 Active Sync (${activeSyncCount})</option>
+                    <option value="expiring">🟠 Expiring Soon (${expiringSyncCount})</option>
+                    <option value="expired">🔴 Expired Sync (${expiredSyncCount})</option>
+                    <option value="unverified">⚪ Unverified (${unverifiedCount})</option>
+                </select>
 
-              let timeActiveVal = joinedDateVal ? window.calculateTimeActive(joinedDateVal) : 'Unknown';
+                <!-- Perks Selector -->
+                <select id="altPerksFilter" onchange="window.filterAltAccountsList()" style="flex:1 1 140px; min-width:130px; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer; outline:none; box-sizing:border-box;">
+                    <option value="all">🎁 Perks: All (${totalAltsCount})</option>
+                    <option value="enrolled">✅ Enrolled (${enrolledCount})</option>
+                    <option value="not_enrolled">⏳ Needs Enrollment (${notEnrolledCount})</option>
+                </select>
 
-              const rosterData = window.liveData ? window.liveData["Chief's List"] : null;
-              let foundInRoster = false;
-              if (rosterData && rosterData.length > 1) {
-                  for (let i = 1; i < rosterData.length; i++) {
-                      if ((rosterData[i][1] && rosterData[i][1].toString().trim() === cleanGid) ||
-                          (rosterData[i][0] && altName && rosterData[i][0].toString().toLowerCase() === altName.toLowerCase())) {
-                          foundInRoster = true;
-                          if (flVal === 'N/A' && rosterData[i][2]) flVal = rosterData[i][2];
-                          if (!joinedDateVal && rosterData[i][4]) {
-                              joinedDateVal = rosterData[i][4];
-                              timeActiveVal = window.calculateTimeActive(joinedDateVal);
-                          } else if (timeActiveVal === 'Unknown' && rosterData[i][5]) {
-                              timeActiveVal = window.formatTimeActiveShort(rosterData[i][5].toString());
-                          }
-                          break;
-                      }
-                  }
-              }
+                <!-- Sort Selector -->
+                <select id="altSortFilter" onchange="window.filterAltAccountsList()" style="flex:1 1 150px; min-width:140px; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer; outline:none; box-sizing:border-box;">
+                    <option value="default">↕️ Sort: Default</option>
+                    <option value="furnace_desc">🔥 Furnace (High → Low)</option>
+                    <option value="furnace_asc">❄️ Furnace (Low → High)</option>
+                    <option value="name_asc">🔤 Name (A → Z)</option>
+                    <option value="days_desc">🛡️ Token Days (Most First)</option>
+                </select>
 
-              if (flVal === 'N/A' && window.rosterCache) {
-                  const rItem = window.rosterCache[cleanGid] || window.rosterCache[altName];
-                  if (rItem) {
-                      if (rItem.furnaceLevel || rItem.stove_lv) flVal = rItem.furnaceLevel || rItem.stove_lv;
-                      if (!joinedDateVal && rItem.joinedDate) {
-                          joinedDateVal = rItem.joinedDate;
-                          timeActiveVal = window.calculateTimeActive(joinedDateVal);
-                      }
-                  }
-              }
+                <!-- Reset Filters Button -->
+                <button id="altResetFilterBtn" onclick="window.resetAltFilters()" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:var(--text-muted); padding:8px 12px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s; white-space:nowrap;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='var(--text-muted)'" title="Reset all alt filters">
+                    🔄 Reset
+                </button>
+            </div>
+        </div>
 
-              if (timeActiveVal === 'Unknown') {
-                  if (linkedAltData.timeActive) {
-                      timeActiveVal = linkedAltData.timeActive;
-                  } else if (altSaved.timeActive) {
-                      timeActiveVal = altSaved.timeActive;
-                  } else if (altTokenData && altTokenData.verifiedAt) {
-                      timeActiveVal = window.calculateTimeActive(altTokenData.verifiedAt);
-                  } else if (currentUser.joinedDate) {
-                      timeActiveVal = window.calculateTimeActive(currentUser.joinedDate);
-                  }
-              }
-              
+        <div id="linkedAltsGrid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap:16px; margin-bottom:15px; cursor:default;">
+        `;
+
+        altCardsData.forEach(item => {
+              const { cleanGid, altName, flVal, flNumeric, timeActiveVal, foundInRoster, altTokenDaysRemaining, isAltTokenActive, tokenState, isAltEnrolled } = item;
               let flSpanId = `alt-fl-${cleanGid}`;
               
               if (!foundInRoster && flVal === 'N/A') {
@@ -18069,31 +18336,9 @@ window.resetBearTrapEvent = async () => {
                       } catch(e) { console.error(e); }
                   }, 100);
               }
-
-              const altToken = (typeof altTokenData === 'string') ? altTokenData : (altTokenData?.token || '');
-              let altTokenDaysRemaining = 0;
-              let isAltTokenActive = false;
-              if (altToken) {
-                  const verifiedDate = (typeof altTokenData === 'object' && altTokenData.verifiedAt) ? new Date(altTokenData.verifiedAt) : new Date();
-                  const now = new Date();
-                  const elapsedDays = Math.floor((now - verifiedDate) / (1000 * 60 * 60 * 24));
-                  altTokenDaysRemaining = Math.max(0, 30 - elapsedDays);
-                  isAltTokenActive = altTokenDaysRemaining > 0;
-              }
-
-              let isAltEnrolled = false;
-              const gcb = window.liveData['giftcodebot'];
-              if (gcb && gcb.length > 1) {
-                  for (let i = 1; i < gcb.length; i++) {
-                      if (gcb[i] && gcb[i][2] && gcb[i][2].toString().trim() === cleanGid) {
-                          isAltEnrolled = true;
-                          break;
-                      }
-                  }
-              }
               
               linkedHtml += `
-              <div style="background:rgba(15,23,42,0.7); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.09); border-radius:18px; padding:18px; box-shadow:0 8px 24px rgba(0,0,0,0.4); display:flex; flex-direction:column; justify-content:space-between; gap:14px;">
+              <div class="alt-account-card" data-gid="${cleanGid}" data-name="${window.escapeHTML(altName.toLowerCase())}" data-fl="${flNumeric}" data-token-status="${tokenState}" data-days="${altTokenDaysRemaining}" data-enrolled="${isAltEnrolled ? 'true' : 'false'}" style="background:rgba(15,23,42,0.7); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.09); border-radius:18px; padding:18px; box-shadow:0 8px 24px rgba(0,0,0,0.4); display:flex; flex-direction:column; justify-content:space-between; gap:14px; transition:transform 0.2s, box-shadow 0.2s;">
                   
                   <!-- Top Row: Avatar + Name/ID/Token Badge + Perks Badge -->
                   <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
@@ -18161,9 +18406,20 @@ window.resetBearTrapEvent = async () => {
                       </button>
                   </div>
               </div>`;
-          });
-          linkedHtml += `</div>`;
-      } else {
+        });
+        linkedHtml += `</div>
+        
+        <!-- No Matches Empty State -->
+        <div id="altNoMatchesBox" style="display:none; background:rgba(15,23,42,0.6); border:1px dashed rgba(255,255,255,0.15); border-radius:14px; padding:32px 20px; text-align:center; margin-bottom:15px;">
+            <div style="font-size:32px; margin-bottom:6px;">🔍</div>
+            <div style="font-size:15px; font-weight:bold; color:#fff; margin-bottom:4px;">No Alt Characters Found</div>
+            <div style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">No secondary accounts match your selected filter criteria.</div>
+            <button onclick="window.resetAltFilters();" style="background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer;">
+                🔄 Reset Filters
+            </button>
+        </div>
+        `;
+    } else {
           linkedHtml += `
             <div style="background:rgba(15,23,42,0.6); border:1px dashed rgba(56,189,248,0.3); border-radius:18px; padding:32px 20px; text-align:center; margin-top:15px; margin-bottom:15px;">
                 <div style="font-size:36px; margin-bottom:8px;">🔗</div>

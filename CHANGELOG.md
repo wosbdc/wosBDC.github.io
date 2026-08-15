@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [2.5.85] - 2026-08-15
+- 🔍 **Advanced Filter & Search System for Linked Alt Accounts:**
+  - 🎛️ **Registered Users DB Style Controls:** Added top segmented switcher to instantly filter alts by `👥 All`, `🟢 Active Sync`, `⚠️ Needs Sync`, and `🎁 Enrolled Perks`.
+  - 🔎 **Instant Search & Clear:** Search linked alts in real-time by character name or numerical Game ID with a 1-click `✕` clear button.
+  - 🛡️ **Fine-Grained Token & Perks Filtering:** Filter specifically by active, expiring (≤5d), expired, or unverified 30-day tokens, as well as automatic Gift Code Bot enrollment.
+  - ↕️ **Smart Sorting & Empty State:** Sort alts by Furnace level (High/Low), Alphabetical Name (A–Z), or Token Days remaining with dynamic result counters and fallback state.
+
 ## [2.5.84] - 2026-08-15
 - ⏱️ **Restored Time Active for Linked Alt Accounts:**
   - 🔄 **Comprehensive Firebase Data Binding:** Linked Alt cards in Account Hub now synchronize directly with `currentUser.linkedAltsData`, `users_alts`, and `altTokens` metadata in Firebase RTDB.
