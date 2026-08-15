@@ -21372,7 +21372,7 @@ window.closeMobileNavModal = () => {
   class FlameWisp {
     constructor(cx, cy, w, h, colors) {
       const scale = w / 280;
-      const r = w * 0.35; // Hexagon perimeter radius (35%)
+      const r = w * 0.36; // Hexagon perimeter radius (36%)
       
       // Pick a random hexagon edge segment (0 to 5)
       const edge = Math.floor(Math.random() * 6);
@@ -21387,13 +21387,13 @@ window.closeMobileNavModal = () => {
       
       // Outward normal velocity + buoyant upward drift
       const midAngle = (angle1 + angle2) / 2;
-      this.vx = (Math.cos(midAngle) * 1.1 + (Math.random() - 0.5) * 0.8) * scale;
+      this.vx = (Math.cos(midAngle) * 1.5 + (Math.random() - 0.5) * 0.8) * scale;
       this.vy = (Math.sin(midAngle) * 0.8 - Math.random() * 2.2 - 1.2) * scale;
       
-      this.size = (Math.random() * 8 + 4) * scale;
+      this.size = (Math.random() * 10 + 5) * scale;
       this.scale = scale;
       this.alpha = 1.0;
-      this.decay = Math.random() * 0.024 + 0.012;
+      this.decay = Math.random() * 0.016 + 0.008;
       this.waveSpeed = Math.random() * 0.1 + 0.05;
       this.waveAngle = Math.random() * Math.PI * 2;
       
@@ -21402,7 +21402,7 @@ window.closeMobileNavModal = () => {
 
     update() {
       this.waveAngle += this.waveSpeed;
-      this.x += this.vx + Math.sin(this.waveAngle) * (0.6 * this.scale);
+      this.x += this.vx + Math.sin(this.waveAngle) * (1.3 * this.scale);
       this.y += this.vy;
       this.size *= 0.96;
       this.alpha -= this.decay;
@@ -21456,7 +21456,7 @@ window.closeMobileNavModal = () => {
       ctx.clearRect(0, 0, w, h);
 
       if (isActive) {
-        if (Math.random() < 0.8) {
+        if (Math.random() < 0.65) {
           wisps.push(new FlameWisp(cx, cy, w, h, colors));
         }
       }

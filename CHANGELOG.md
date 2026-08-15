@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [2.5.50] - 2026-08-14
+- Applied updated user-tuned flame particle physics: 0.65 spawn rate, 36% hexagon perimeter radius, 1.5 outward spread velocity, 1.3 wave wiggle shimmer, 10px ember size, and 0.016 extended decay lifespan.
+
 ## [2.5.49] - 2026-08-14
 - Enlarged Fire Crystal furnace badge from 76px to 120px in Account Hub profile ID card.
 - Enlarged badge preview to 110px in the Edit Profile modal for clear, crisp inspection.

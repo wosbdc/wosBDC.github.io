@@ -1,9 +1,9 @@
 {
-  "version": "2.5.49",
+  "version": "2.5.50",
   "releaseDate": "2026-08-14",
-  "title": "🛡️ Enlarged Fire Crystal Display in Account Hub & Profile",
+  "title": "✨ Refined 36% Perimeter, 1.5 Outward Spread & 1.3 Wiggle Flame Physics",
   "notes": [
-    "Enlarged Fire Crystal furnace badge from 76px to a prominent 120px in Chief Profile ID Card",
-    "Enlarged badge preview to 110px in the Edit Profile modal for maximum visual clarity"
+    "Applied updated user flame configuration: 36% hexagon perimeter radius, 1.5 outward spread velocity, 1.3 wave wiggle, 10px ember size, and 0.016 decay rate",
+    "Flames now burn with a wider, energetic outward shimmer and longer particle lifespan"
   ]
 }
