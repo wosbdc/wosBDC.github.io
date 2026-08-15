@@ -1,9 +1,10 @@
 {
-  "version": "2.5.83",
+  "version": "2.5.84",
   "releaseDate": "2026-08-15",
-  "title": "🔗 Fixed Manage Alt Accounts Navigation",
+  "title": "⏱️ Restored Time Active for Linked Alt Accounts",
   "notes": [
-    "Fixed 'Manage' button in Alt Accounts Un-Sync banner to immediately open Account Hub Alts manager",
-    "Streamlined navigation from Alliance Alerts to 30-day token setup"
+    "Integrated Firebase linkedAltsData, users_alts, and in-game token verification timestamps for all secondary characters",
+    "Auto-computes exact Time Active and start dates across all linked accounts",
+    "Enabled full profile editing for alt furnace levels and custom start dates"
   ]
 }

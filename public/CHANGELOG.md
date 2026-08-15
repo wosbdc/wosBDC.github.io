@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [2.5.84] - 2026-08-15
+- ⏱️ **Restored Time Active for Linked Alt Accounts:**
+  - 🔄 **Comprehensive Firebase Data Binding:** Linked Alt cards in Account Hub now synchronize directly with `currentUser.linkedAltsData`, `users_alts`, and `altTokens` metadata in Firebase RTDB.
+  - 📅 **Intelligent Start Date Resolution:** Seamlessly calculates time active using stored start dates, avatar upload timestamps, in-game verification dates, or alliance roster logs.
+  - ✏️ **Full Alt Profile Editing:** Resolved missing name parameter when clicking `✏️` so players can configure and customize any alt's start date and furnace level.
+
 ## [2.5.83] - 2026-08-15
 - 🔗 **Fixed Manage Alt Accounts Navigation:**
   - 🛠️ **Seamless Alts Hub Access:** Bound `window.openAltManagerModal` to directly dismiss the alerts overlay and navigate straight to the `🔗 Linked Alt Accounts` manager in Account Hub.

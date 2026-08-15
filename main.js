@@ -12168,6 +12168,7 @@ window.openAltVerifyModal = (gid, altName = '') => {
 window.openEditAltProfileModal = async (gameId, chiefName) => {
    if (!currentUser) return;
    const cleanGid = (gameId || '').toString().trim();
+   const resolvedChiefName = chiefName || (window.idToNameMap && window.idToNameMap[cleanGid]) || (currentUser.altTokens && currentUser.altTokens[cleanGid]?.nickname) || `Alt Chief ${cleanGid}`;
 
    let currentFurnace = '';
    let currentJoinedDate = '';
@@ -12197,13 +12198,27 @@ window.openEditAltProfileModal = async (gameId, chiefName) => {
          const rosterSnap = await get(ref(db, 'roster_live'));
          if (rosterSnap.exists()) {
             const roster = rosterSnap.val() || {};
-            const rItem = roster[cleanGid] || roster[chiefName] || Object.values(roster).find(r => r.gameId === cleanGid || (r.name && r.name.toLowerCase() === chiefName.toLowerCase()));
+            const rItem = roster[cleanGid] || roster[resolvedChiefName] || Object.values(roster).find(r => r.gameId === cleanGid || (r.name && r.name.toLowerCase() === resolvedChiefName.toLowerCase()));
             if (rItem) {
                if (!currentFurnace) currentFurnace = rItem.furnaceLevel || rItem.stove_lv || '';
                if (!currentJoinedDate) currentJoinedDate = rItem.joinedDate || '';
             }
          }
       } catch(e) {}
+   }
+
+   // 4. Fallback to altToken metadata & avatar image timestamp
+   if (!currentJoinedDate) {
+      const altToken = currentUser.altTokens && currentUser.altTokens[cleanGid];
+      const avUrl = (altToken && altToken.avatar_image) || '';
+      const m = avUrl.match(/\/avatar\/(\d{4})\/(\d{2})\/(\d{2})\//);
+      if (m) {
+         currentJoinedDate = `${m[1]}-${m[2]}-${m[3]}`;
+      } else if (altToken && altToken.verifiedAt) {
+         try {
+            currentJoinedDate = new Date(altToken.verifiedAt).toISOString().split('T')[0];
+         } catch(e) {}
+      }
    }
 
    const initialTimeActive = currentJoinedDate ? window.calculateTimeActive(currentJoinedDate) : 'Unknown';
@@ -17896,6 +17911,7 @@ window.resetBearTrapEvent = async () => {
             if (profileData.centuryGamesVerified) currentUser.centuryGamesVerified = profileData.centuryGamesVerified;
             if (profileData.altTokens) currentUser.altTokens = profileData.altTokens;
             if (profileData.linkedGameIds) currentUser.linkedGameIds = profileData.linkedGameIds;
+            if (profileData.linkedAltsData) currentUser.linkedAltsData = profileData.linkedAltsData;
         }
     } catch(e) {}
 
@@ -17977,18 +17993,32 @@ window.resetBearTrapEvent = async () => {
     if (links.length > 0) {
         linkedHtml += `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap:16px; margin-bottom:15px; cursor:default;">`;
         links.forEach(gid => {
-              let altName = idToNameMap[gid] || `Game ID: ${gid}`;
-              let altSaved = altProfilesMap[gid] || {};
+              const cleanGid = gid.toString().trim();
+              let altSaved = altProfilesMap[cleanGid] || {};
+              let linkedAltData = (currentUser.linkedAltsData && currentUser.linkedAltsData[cleanGid]) ? currentUser.linkedAltsData[cleanGid] : {};
+              let altTokenData = (currentUser.altTokens && currentUser.altTokens[cleanGid]) ? currentUser.altTokens[cleanGid] : null;
 
-              let flVal = altSaved.stove_lv || altSaved.furnaceLevel || 'N/A';
-              let joinedDateVal = altSaved.joinedDate || '';
+              let altName = (idToNameMap && idToNameMap[cleanGid]) || altSaved.name || linkedAltData.name || (altTokenData && altTokenData.nickname) || `Game ID: ${cleanGid}`;
+
+              let flVal = linkedAltData.stove_lv || linkedAltData.furnaceLevel || altSaved.stove_lv || altSaved.furnaceLevel || (altTokenData && (altTokenData.stove_lv || altTokenData.furnaceLevel)) || 'N/A';
+              
+              let joinedDateVal = linkedAltData.joinedDate || altSaved.joinedDate || '';
+              if (!joinedDateVal) {
+                  const avUrl = altSaved.avatar_image || (altTokenData && altTokenData.avatar_image) || '';
+                  const m = avUrl.match(/\/avatar\/(\d{4})\/(\d{2})\/(\d{2})\//);
+                  if (m) {
+                      joinedDateVal = `${m[1]}-${m[2]}-${m[3]}`;
+                  }
+              }
+
               let timeActiveVal = joinedDateVal ? window.calculateTimeActive(joinedDateVal) : 'Unknown';
 
-              const rosterData = window.liveData["Chief's List"];
+              const rosterData = window.liveData ? window.liveData["Chief's List"] : null;
               let foundInRoster = false;
               if (rosterData && rosterData.length > 1) {
                   for (let i = 1; i < rosterData.length; i++) {
-                      if (rosterData[i][1] && rosterData[i][1].toString().trim() === gid.toString().trim()) {
+                      if ((rosterData[i][1] && rosterData[i][1].toString().trim() === cleanGid) ||
+                          (rosterData[i][0] && altName && rosterData[i][0].toString().toLowerCase() === altName.toLowerCase())) {
                           foundInRoster = true;
                           if (flVal === 'N/A' && rosterData[i][2]) flVal = rosterData[i][2];
                           if (!joinedDateVal && rosterData[i][4]) {
@@ -18003,7 +18033,7 @@ window.resetBearTrapEvent = async () => {
               }
 
               if (flVal === 'N/A' && window.rosterCache) {
-                  const rItem = window.rosterCache[gid] || window.rosterCache[altName];
+                  const rItem = window.rosterCache[cleanGid] || window.rosterCache[altName];
                   if (rItem) {
                       if (rItem.furnaceLevel || rItem.stove_lv) flVal = rItem.furnaceLevel || rItem.stove_lv;
                       if (!joinedDateVal && rItem.joinedDate) {
@@ -18012,13 +18042,25 @@ window.resetBearTrapEvent = async () => {
                       }
                   }
               }
+
+              if (timeActiveVal === 'Unknown') {
+                  if (linkedAltData.timeActive) {
+                      timeActiveVal = linkedAltData.timeActive;
+                  } else if (altSaved.timeActive) {
+                      timeActiveVal = altSaved.timeActive;
+                  } else if (altTokenData && altTokenData.verifiedAt) {
+                      timeActiveVal = window.calculateTimeActive(altTokenData.verifiedAt);
+                  } else if (currentUser.joinedDate) {
+                      timeActiveVal = window.calculateTimeActive(currentUser.joinedDate);
+                  }
+              }
               
-              let flSpanId = `alt-fl-${gid}`;
+              let flSpanId = `alt-fl-${cleanGid}`;
               
               if (!foundInRoster && flVal === 'N/A') {
                   setTimeout(async () => {
                       try {
-                          const res = await fetch(`${VERIFY_PROXY_URL}?id=${encodeURIComponent(gid)}`);
+                          const res = await fetch(`${VERIFY_PROXY_URL}?id=${encodeURIComponent(cleanGid)}`);
                           const data = await res.json();
                           if (data.success && data.stove_lv) {
                               const flEl = document.getElementById(flSpanId);
@@ -18028,7 +18070,6 @@ window.resetBearTrapEvent = async () => {
                   }, 100);
               }
 
-              const altTokenData = (currentUser.altTokens && currentUser.altTokens[gid]) ? currentUser.altTokens[gid] : null;
               const altToken = (typeof altTokenData === 'string') ? altTokenData : (altTokenData?.token || '');
               let altTokenDaysRemaining = 0;
               let isAltTokenActive = false;
@@ -18044,7 +18085,7 @@ window.resetBearTrapEvent = async () => {
               const gcb = window.liveData['giftcodebot'];
               if (gcb && gcb.length > 1) {
                   for (let i = 1; i < gcb.length; i++) {
-                      if (gcb[i] && gcb[i][2] && gcb[i][2].toString().trim() === gid.toString().trim()) {
+                      if (gcb[i] && gcb[i][2] && gcb[i][2].toString().trim() === cleanGid) {
                           isAltEnrolled = true;
                           break;
                       }
@@ -18058,9 +18099,9 @@ window.resetBearTrapEvent = async () => {
                   <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
                       <div style="display:flex; gap:12px; align-items:center; min-width:0;">
                           <!-- Avatar -->
-                          <div style="width:52px; height:52px; border-radius:14px; border:2px solid #0ea5e9; box-shadow:0 0 12px rgba(14,165,233,0.3); overflow:hidden; background:var(--bg-secondary); position:relative; cursor:pointer; flex-shrink:0;" onclick="window.openAvatarManagerModal('${gid}', '${window.escapeHTML(altName)}')" title="Change or Sync Alt Avatar">
-                              <img id="altAvatarImg-${gid}" src="${window.getAvatarUrl(gid, altName)}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(altName)}&background=06b6d4&color=fff&bold=true&size=128';">
-                              <div id="altAvatarFallback-${gid}" style="display:none; align-items:center; justify-content:center; width:100%; height:100%; font-size:22px; font-weight:bold; color:#fff;">${altName.charAt(0).toUpperCase()}</div>
+                          <div style="width:52px; height:52px; border-radius:14px; border:2px solid #0ea5e9; box-shadow:0 0 12px rgba(14,165,233,0.3); overflow:hidden; background:var(--bg-secondary); position:relative; cursor:pointer; flex-shrink:0;" onclick="window.openAvatarManagerModal('${cleanGid}', '${window.escapeHTML(altName)}')" title="Change or Sync Alt Avatar">
+                              <img id="altAvatarImg-${cleanGid}" src="${window.getAvatarUrl(cleanGid, altName)}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(altName)}&background=06b6d4&color=fff&bold=true&size=128';">
+                              <div id="altAvatarFallback-${cleanGid}" style="display:none; align-items:center; justify-content:center; width:100%; height:100%; font-size:22px; font-weight:bold; color:#fff;">${altName.charAt(0).toUpperCase()}</div>
                               <div style="position:absolute; inset:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0'"><span style="font-size:16px;">✏️</span></div>
                           </div>
                           <!-- Name & Token Status -->
@@ -18070,20 +18111,20 @@ window.resetBearTrapEvent = async () => {
                               </div>
                               <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:3px;">
                                   <span style="font-size:11px; color:#94a3b8; font-family:monospace; background:rgba(255,255,255,0.05); padding:1px 6px; border-radius:6px; border:1px solid rgba(255,255,255,0.08);">
-                                      ID: ${gid}
+                                      ID: ${cleanGid}
                                   </span>
                                   ${ isAltTokenActive
-                                      ? `<span style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:1px 6px; border-radius:6px; font-size:10.5px; font-weight:bold; cursor:pointer;" onclick="window.openAltVerifyModal('${gid}')" title="30-Day Token Active (${altTokenDaysRemaining}d remaining). Click to renew early.">🛡️ 30d Sync (${altTokenDaysRemaining}d)</span>`
-                                      : `<span style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); padding:1px 6px; border-radius:6px; font-size:10.5px; font-weight:bold; cursor:pointer;" onclick="window.openAltVerifyModal('${gid}')" title="Unverified or expired token. Click to verify in game.">⚠️ 30-Day Sync</span>`
+                                      ? `<span style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:1px 6px; border-radius:6px; font-size:10.5px; font-weight:bold; cursor:pointer;" onclick="window.openAltVerifyModal('${cleanGid}')" title="30-Day Token Active (${altTokenDaysRemaining}d remaining). Click to renew early.">🛡️ 30d Sync (${altTokenDaysRemaining}d)</span>`
+                                      : `<span style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); padding:1px 6px; border-radius:6px; font-size:10.5px; font-weight:bold; cursor:pointer;" onclick="window.openAltVerifyModal('${cleanGid}')" title="Unverified or expired token. Click to verify in game.">⚠️ 30-Day Sync</span>`
                                   }
                               </div>
                           </div>
                       </div>
                       <!-- Perks Status -->
                       <div style="flex-shrink:0;">
-                          ${ (isAltEnrolled || enrolledGameIds.has(gid.toString())) 
+                          ${ (isAltEnrolled || enrolledGameIds.has(cleanGid)) 
                               ? `<span style="border:1px solid #10b981; color:#10b981; background:rgba(16,185,129,0.1); border-radius:8px; padding:3px 8px; font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:3px;">✅ Enrolled</span>`
-                              : `<button onclick="window.openAltPerksModal('${gid}')" style="background:rgba(16,185,129,0.15); border:1px solid #10b981; color:#10b981; border-radius:8px; padding:3px 8px; font-size:11px; font-weight:600; cursor:pointer; transition:background 0.2s;" onmouseover="this.style.background='rgba(16,185,129,0.25)'" onmouseout="this.style.background='rgba(16,185,129,0.15)'">🎁 Perks</button>`
+                              : `<button onclick="window.openAltPerksModal('${cleanGid}')" style="background:rgba(16,185,129,0.15); border:1px solid #10b981; color:#10b981; border-radius:8px; padding:3px 8px; font-size:11px; font-weight:600; cursor:pointer; transition:background 0.2s;" onmouseover="this.style.background='rgba(16,185,129,0.25)'" onmouseout="this.style.background='rgba(16,185,129,0.15)'">🎁 Perks</button>`
                           }
                       </div>
                   </div>
@@ -18106,16 +18147,16 @@ window.resetBearTrapEvent = async () => {
                   <!-- Bottom Row: Unified, Perfectly Aligned Action Buttons -->
                   <div style="display:flex; gap:6px; align-items:center; border-top:1px solid rgba(255,255,255,0.05); padding-top:12px; flex-wrap:wrap;">
                       ${ isAltTokenActive
-                          ? `<button onclick="window.handleSyncAltProfile('${gid}', this)" style="flex:1; min-width:110px; background:rgba(6,182,212,0.15); border:1px solid #06b6d4; color:#06b6d4; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px; transition:0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.25)'" onmouseout="this.style.background='rgba(6,182,212,0.15)'" title="Token active (${altTokenDaysRemaining}d remaining). Click to sync.">🔄 Sync Stats</button>`
-                          : `<button onclick="window.openAltVerifyModal('${gid}')" style="flex:1; min-width:110px; background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px; box-shadow:0 2px 8px rgba(14,165,233,0.3);" title="Verify via in-game mail to bind 30-day auto-sync token">⚡ Setup 30d Sync</button>`
+                          ? `<button onclick="window.handleSyncAltProfile('${cleanGid}', this)" style="flex:1; min-width:110px; background:rgba(6,182,212,0.15); border:1px solid #06b6d4; color:#06b6d4; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px; transition:0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.25)'" onmouseout="this.style.background='rgba(6,182,212,0.15)'" title="Token active (${altTokenDaysRemaining}d remaining). Click to sync.">🔄 Sync Stats</button>`
+                          : `<button onclick="window.openAltVerifyModal('${cleanGid}')" style="flex:1; min-width:110px; background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px; box-shadow:0 2px 8px rgba(14,165,233,0.3);" title="Verify via in-game mail to bind 30-day auto-sync token">⚡ Setup 30d Sync</button>`
                       }
-                      <button onclick="window.promptSwapPrimaryAccount('${gid}', '${window.escapeHTML(altName)}')" style="background:rgba(234,179,8,0.15); border:1px solid rgba(234,179,8,0.4); color:#eab308; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:0.2s;" onmouseover="this.style.background='rgba(234,179,8,0.25)'" onmouseout="this.style.background='rgba(234,179,8,0.15)'" title="Make this alt character your primary chief">
+                      <button onclick="window.promptSwapPrimaryAccount('${cleanGid}', '${window.escapeHTML(altName)}')" style="background:rgba(234,179,8,0.15); border:1px solid rgba(234,179,8,0.4); color:#eab308; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:0.2s;" onmouseover="this.style.background='rgba(234,179,8,0.25)'" onmouseout="this.style.background='rgba(234,179,8,0.15)'" title="Make this alt character your primary chief">
                           ⭐️ Make Primary
                       </button>
-                      <button onclick="window.openEditAltProfileModal('${gid}')" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:var(--text-main); border-radius:8px; padding:6px 10px; font-size:12px; font-weight:600; cursor:pointer; transition:0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">
+                      <button onclick="window.openEditAltProfileModal('${cleanGid}', '${window.escapeHTML(altName)}')" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:var(--text-main); border-radius:8px; padding:6px 10px; font-size:12px; font-weight:600; cursor:pointer; transition:0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'" title="Edit Alt Profile (Furnace & Start Date)">
                           ✏️
                       </button>
-                      <button onclick="window.unlinkAltAccountPrompt('${gid}')" style="border:1px solid rgba(239,68,68,0.4); color:#ef4444; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:600; cursor:pointer; background:rgba(239,68,68,0.06); transition:0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.15)'" onmouseout="this.style.background='rgba(239,68,68,0.06)'" title="Unlink Alt Character">
+                      <button onclick="window.unlinkAltAccountPrompt('${cleanGid}')" style="border:1px solid rgba(239,68,68,0.4); color:#ef4444; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:600; cursor:pointer; background:rgba(239,68,68,0.06); transition:0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.15)'" onmouseout="this.style.background='rgba(239,68,68,0.06)'" title="Unlink Alt Character">
                           🗑️
                       </button>
                   </div>
