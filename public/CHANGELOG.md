@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [2.5.82] - 2026-08-15
+- 🔔 **Streamlined Alliance Notifications & Alerts (Option 1):**
+  - 🌟 **Header-Integrated Push Status Pill:** Replaced the bulky "set-and-forget" push banner with a compact glowing status badge (`[ 🟢 Push: ON ▾ ]` / `[ 🔔 Turn ON Push ]`) in the modal header next to the close button.
+  - ⚙️ **Quick Diagnostic Dropdown:** 1-click access to test push notifications, re-sync device tokens, and clear unread alert badge counters.
+  - 📋 **Prioritized Action Items:** Expiring sync tokens and un-synced alt accounts are prominently surfaced at the top of the feed before general announcements.
+
 ## [2.5.81] - 2026-08-15
 - 🏰 **Backend Discord Webhook Proxy Deployment:**
   - ⚡ **Seamless Cloud Dispatch:** Routed `#alerts` Gatekeeper Report updates through backend proxy to completely eliminate browser CORS restrictions.
