@@ -21,6 +21,7 @@ const TEST_PLAYER_ID = '318843189'; // Reference player ID for validity checks
 const DEFAULT_KID = '2089';
 
 const SCRAPE_SOURCES = [
+  { name: 'WosRewards', url: 'https://www.wosrewards.com/giftcodes' },
   { name: 'DotGG', url: 'https://dotgg.gg/whiteout-survival/gift-codes/' },
   { name: 'ProGameGuides', url: 'https://progameguides.com/whiteout-survival/whiteout-survival-codes/' },
   { name: 'PocketGamer', url: 'https://www.pocketgamer.com/whiteout-survival/codes/' }
@@ -187,6 +188,20 @@ async function scrapeCandidateCodes() {
       console.log(`   🌐 Fetching ${src.name} (${src.url})...`);
       const res = await fetchUrl(src.url);
       if (res.status !== 200 || !res.body) continue;
+
+      // Specialized parser for WosRewards.com
+      if (src.name === 'WosRewards' || src.url.includes('wosrewards.com')) {
+        const activeMatch = res.body.match(/Active Codes<\/div>([\s\S]*?)<details/i);
+        const targetHtml = activeMatch ? activeMatch[1] : res.body;
+        const codeRegex = /data-code="([^"]+)"/g;
+        let m;
+        while ((m = codeRegex.exec(targetHtml)) !== null) {
+          const code = m[1].trim();
+          if (code.length >= 4 && code.length <= 25 && !IGNORED_WORDS.has(code.toUpperCase())) {
+            candidateCodes.add(code);
+          }
+        }
+      }
 
       // Extract uppercase words or alphanumeric tokens inside strong, code, b, td tags
       const patterns = [

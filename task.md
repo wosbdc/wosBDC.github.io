@@ -15,6 +15,7 @@
 - [x] Resolve non-breaking space issues and harden player search lookup (v2.5.91) <!-- id: 15 -->
 - [x] Integrate wosrewards.com live web scraper into Gift Code AutoBot (v2.5.92) <!-- id: 16 -->
 - [x] Connect 24/7 background AutoBot engine with automatic member dispatch (v2.5.93) <!-- id: 17 -->
+- [x] Add wosrewards.com to local daemon bridge scraper (v2.5.94) <!-- id: 18 -->
 - [x] Update versioning, CHANGELOG.md, and sw.js <!-- id: 4 -->
 - [x] Build & test suite verification <!-- id: 5 -->
 - [x] Commit and push changes to GitHub <!-- id: 6 -->
