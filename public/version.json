@@ -1,9 +1,9 @@
 {
-  "version": "2.5.62",
+  "version": "2.5.63",
   "releaseDate": "2026-08-15",
-  "title": "🎁 Gift Code Server Connection Update",
+  "title": "🔔 Live Message Count & Announcements Tray",
   "notes": [
-    "Connected the Gift Code Dispatcher to the official live redemption server",
-    "Enabled reliable code validation and instant batch delivery"
+    "Added live unread message count badges to the notification bell",
+    "Added leadership broadcast history inside the alert window"
   ]
 }

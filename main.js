@@ -1678,7 +1678,7 @@ window.formatRankBadgeHtml = (rankVal) => {
 // Register Service Worker for Mobile PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=2.5.62')
+    navigator.serviceWorker.register('./sw.js?v=2.5.63')
       .then(reg => {
         reg.update();
         console.log('PWA Service Worker registered:', reg.scope);
@@ -1744,6 +1744,13 @@ onValue(ref(db, 'staffProfiles'), (snap) => {
   staffProfilesMap = snap.val() || {};
   window.staffProfilesMap = staffProfilesMap; // Attach to window for global access
   if (document.querySelector('.staff-grid')) views.staff();
+});
+
+// Realtime listener for broadcast alerts
+onValue(ref(db, 'broadcastAlerts'), () => {
+  if (typeof window.updateNewMemberBadge === 'function') {
+    window.updateNewMemberBadge();
+  }
 });
 
 // Global Realtime Master Listener for Live Event Status across all devices
@@ -8643,12 +8650,28 @@ window.getMemberTokenStatus = (user) => {
   }
 };
 
+window.formatRelativeTime = (ts) => {
+  if (!ts) return '';
+  const diff = Math.max(0, Date.now() - Number(ts));
+  const secs = Math.floor(diff / 1000);
+  if (secs < 60) return 'Just now';
+  const mins = Math.floor(secs / 60);
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(ts).toLocaleDateString([], { month: 'short', day: 'numeric' });
+};
+
 window.updateNewMemberBadge = async () => {
   document.querySelectorAll('#settingsBtn .new-member-badge, #adminSidebarBtn .new-member-badge, #newMembersSidebarBtn .new-member-badge, .nav-admin-btn .new-member-badge').forEach(b => b.remove());
 
   const adminAlertsNavBtn = document.getElementById('adminAlertsNavBtn');
+  const mobileAlertsBtn = document.getElementById('mobileAlertsBtn');
   if (!currentUser) {
     if (adminAlertsNavBtn) adminAlertsNavBtn.style.display = 'none';
+    if (mobileAlertsBtn) mobileAlertsBtn.innerHTML = '🔔 Alerts';
     return;
   }
   if (adminAlertsNavBtn) adminAlertsNavBtn.style.display = 'flex';
@@ -8690,7 +8713,28 @@ window.updateNewMemberBadge = async () => {
     staffUnreadCount = recent.filter(m => m.createdMs > lastSeen).length;
   }
 
-  const totalAlerts = mainAlert + (altAlertsCount > 0 ? 1 : 0) + staffUnreadCount;
+  // 4. Check unread leadership broadcast announcements
+  let broadcastUnreadCount = 0;
+  try {
+    const lastSeenBroadcast = Number(localStorage.getItem('last_seen_broadcast_timestamp') || '0');
+    const bSnap = await get(ref(db, 'broadcastAlerts'));
+    if (bSnap.exists()) {
+      const bVal = bSnap.val() || {};
+      for (const item of Object.values(bVal)) {
+        if (item && item.timestamp && item.timestamp > lastSeenBroadcast) {
+          broadcastUnreadCount++;
+        }
+      }
+    }
+  } catch(e) {
+    console.warn("Failed to count unread broadcasts:", e);
+  }
+
+  const totalAlerts = mainAlert + (altAlertsCount > 0 ? 1 : 0) + staffUnreadCount + broadcastUnreadCount;
+
+  if (mobileAlertsBtn) {
+    mobileAlertsBtn.innerHTML = totalAlerts > 0 ? `🔔 Alerts <span style="background:#ef4444; color:#fff; font-size:10px; font-weight:bold; padding:1px 6px; border-radius:10px; margin-left:4px;">${totalAlerts}</span>` : '🔔 Alerts';
+  }
 
   if (adminAlertsNavBtn) {
     let badge = adminAlertsNavBtn.querySelector('.new-member-badge');
@@ -8756,12 +8800,80 @@ window.openAllianceAlertsModal = async () => {
     let oldModal = document.getElementById('newMembersModalOverlay');
     if (oldModal) oldModal.remove();
 
+    // Fetch broadcast alerts from Firebase RTDB
+    let broadcastsList = [];
+    const lastSeenBroadcast = Number(localStorage.getItem('last_seen_broadcast_timestamp') || '0');
+    let unreadBroadcastCount = 0;
+    try {
+      const bSnap = await get(ref(db, 'broadcastAlerts'));
+      if (bSnap.exists()) {
+        const bVal = bSnap.val() || {};
+        broadcastsList = Object.values(bVal).filter(Boolean);
+        broadcastsList.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+        unreadBroadcastCount = broadcastsList.filter(b => b.timestamp && b.timestamp > lastSeenBroadcast).length;
+      }
+    } catch(err) {
+      console.warn("Failed to load broadcasts:", err);
+    }
+
+    // Immediately mark broadcasts as seen to clear badge counter
+    localStorage.setItem('last_seen_broadcast_timestamp', String(Date.now()));
+    if (typeof window.updateNewMemberBadge === 'function') window.updateNewMemberBadge();
+
     const overlay = document.createElement('div');
     overlay.id = 'notificationsModalOverlay';
     overlay.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.85); backdrop-filter:blur(10px); z-index:99999; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease;';
     overlay.addEventListener('click', (e) => {
       if (e.target === overlay) overlay.remove();
     });
+
+    // 1. Broadcasts Section HTML
+    let broadcastsSectionHtml = '';
+    if (broadcastsList.length > 0) {
+      const bCards = broadcastsList.slice(0, 10).map(b => {
+        const isUnread = Boolean(b.timestamp && b.timestamp > lastSeenBroadcast);
+        const relTime = window.formatRelativeTime ? window.formatRelativeTime(b.timestamp) : '';
+        return `
+          <div style="background:rgba(15,23,42,0.6); border:1px solid ${isUnread ? 'rgba(236,72,153,0.45)' : 'rgba(255,255,255,0.08)'}; border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; gap:4px; position:relative;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div style="font-weight:bold; font-size:13.5px; color:#fff; display:flex; align-items:center; gap:6px;">
+                <span>${window.escapeHTML(b.title || 'Announcement')}</span>
+                ${isUnread ? `<span style="font-size:10px; background:rgba(236,72,153,0.2); color:#ec4899; border:1px solid rgba(236,72,153,0.4); padding:1px 6px; border-radius:8px; font-weight:bold;">NEW</span>` : ''}
+              </div>
+              <span style="font-size:11px; color:var(--text-muted);">${relTime}</span>
+            </div>
+            <div style="font-size:12.5px; color:var(--text-main); line-height:1.4; white-space:pre-wrap; margin-top:2px;">${window.escapeHTML(b.body || '')}</div>
+            <div style="font-size:11px; color:var(--text-muted); margin-top:3px; display:flex; align-items:center; gap:6px;">
+              <span>📢 ${window.escapeHTML(b.senderName || 'Leadership')}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      broadcastsSectionHtml = `
+        <div id="broadcastsAlertsContainer" style="background:rgba(236,72,153,0.06); border:1px solid rgba(236,72,153,0.25); border-radius:14px; margin-bottom:12px; overflow:hidden; transition:all 0.2s ease;">
+          <div id="broadcastsAccordionHeader" onclick="window.toggleBroadcastsAccordionBanner()" style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; cursor:pointer; user-select:none;">
+            <div>
+              <div style="font-size:13.5px; font-weight:bold; color:#f472b6; display:flex; align-items:center; gap:8px;">
+                <span>📢 Leadership Announcements (${broadcastsList.length})</span>
+              </div>
+              <div style="font-size:11.5px; color:var(--text-muted); margin-top:3px;">
+                Alliance broadcasts & leadership notifications
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="background:rgba(236,72,153,0.2); color:#f472b6; border:1px solid rgba(236,72,153,0.4); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold;">${unreadBroadcastCount > 0 ? `${unreadBroadcastCount} New` : `${broadcastsList.length}`}</span>
+              <span id="broadcastsAccordionChevron" style="font-size:15px; color:var(--text-muted); transition:transform 0.2s ease;">▾</span>
+            </div>
+          </div>
+          <div id="broadcastsAccordionBody" style="display:${unreadBroadcastCount > 0 || !tokenStatus.alert ? 'block' : 'none'}; padding:0 14px 14px 14px; max-height:260px; overflow-y:auto;">
+            <div style="display:flex; flex-direction:column; gap:8px; border-top:1px solid rgba(255,255,255,0.06); padding-top:10px;">
+              ${bCards}
+            </div>
+          </div>
+        </div>
+      `;
+    }
 
     // Linked Alts Token Breakdown Section
     let altsSectionHtml = '';
@@ -8921,7 +9033,7 @@ window.openAllianceAlertsModal = async () => {
       `;
     }
 
-    const hasImmediateAlerts = Boolean(tokenStatus.alert || (rawAlts.length > 0 && unSyncedAltsCount > 0));
+    const hasImmediateAlerts = Boolean(tokenStatus.alert || (rawAlts.length > 0 && unSyncedAltsCount > 0) || broadcastsList.length > 0);
     let allCaughtUpHtml = (!hasImmediateAlerts && !isStaff) ? `
       <div id="allCaughtUpNotice" style="text-align:center; padding:28px 16px; background:rgba(16,185,129,0.05); border:1px dashed rgba(16,185,129,0.3); border-radius:14px; margin-bottom:12px;">
         <div style="font-size:32px; margin-bottom:6px;">🎉</div>
@@ -8948,6 +9060,9 @@ window.openAllianceAlertsModal = async () => {
 
         <!-- All Caught Up (if no alerts) -->
         ${allCaughtUpHtml}
+
+        <!-- Broadcast Announcements Section -->
+        ${broadcastsSectionHtml}
 
         <!-- Main Character Status Card (Only if Action Required) -->
         ${mainTokenHtml}
@@ -9017,6 +9132,15 @@ window.openAllianceAlertsModal = async () => {
   } catch(err) {
     console.error("Error in openAllianceAlertsModal:", err);
   }
+};
+
+window.toggleBroadcastsAccordionBanner = () => {
+  const body = document.getElementById('broadcastsAccordionBody');
+  const chevron = document.getElementById('broadcastsAccordionChevron');
+  if (!body) return;
+  const isHidden = (body.style.display === 'none' || !body.style.display);
+  body.style.display = isHidden ? 'block' : 'none';
+  if (chevron) chevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
 };
 
 window.toggleAltAccordionBanner = () => {
@@ -12218,6 +12342,22 @@ const views = {
             statusEl.textContent = "🚀 " + res.message;
             statusEl.style.color = "var(--success)";
             if (window.showToast) window.showToast("🚀 Broadcast Notification Sent!", "success");
+            
+            try {
+              const newAlertRef = push(ref(db, 'broadcastAlerts'));
+              await set(newAlertRef, {
+                id: newAlertRef.key,
+                title: title,
+                body: body,
+                senderName: (currentUser && (currentUser.name || currentUser.chiefName)) || "Leadership",
+                senderId: (currentUser && currentUser.gameId) || "",
+                timestamp: Date.now(),
+                isoDate: new Date().toISOString()
+              });
+            } catch(dbErr) {
+              console.warn("Failed to write broadcast to RTDB:", dbErr);
+            }
+
             document.getElementById('adminPushTitle').value = "";
             document.getElementById('adminPushBody').value = "";
           } else {
