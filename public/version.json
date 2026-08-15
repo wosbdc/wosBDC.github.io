@@ -1,11 +1,11 @@
 {
-  "version": "2.5.37",
+  "version": "2.5.38",
   "releaseDate": "2026-08-14",
-  "title": "🔥 Permanent Fix for Furnace Revert Bug + Public API Fallback",
+  "title": "⚡ Live Century Games Numeric Rank Parsing & Full Server Verification",
   "notes": [
-    "Completely eliminated legacy hardcoded 30 fallback in WosApi.js that reverted non-FC furnace levels (e.g. 21, 28) back to 30",
-    "Added secondary player lookup to Century Games public API if VIP store payload lacks furnace level data",
-    "Updated client sync handlers to safely preserve the user's existing saved furnace level if the game server response is empty",
-    "Deployed Apps Script backend version @158 to live environment"
+    "Confirmed Century Games server payload format: standard furnace levels 1-30 are returned directly as numeric rank integers (e.g. rank: 21)",
+    "Upgraded WosApi parser to accurately map numeric rank 1-30 to standard furnace levels and 31-80 to Fire Crystal tiers",
+    "Deployed Google Apps Script backend Version @159 to live production",
+    "Verified live account sync and 30-day token binding across all site views"
   ]
 }
