@@ -1,9 +1,9 @@
 {
-  "version": "2.5.72",
+  "version": "2.5.73",
   "releaseDate": "2026-08-15",
-  "title": "🎁 Smart Gift Code Recovery",
+  "title": "🎁 Gift Codes Manager (Admin Hub)",
   "notes": [
-    "Targeted 1-Tap Retry for failed or timed-out accounts",
-    "Automated server lag protection and instant error reports"
+    "New Gift Codes Manager tab to manage active and expired alliance codes",
+    "Live validity testing, analytics tracking, and batch dispatch tools"
   ]
 }

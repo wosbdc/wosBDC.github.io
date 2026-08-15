@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [2.5.73] - 2026-08-15
+- 🎁 **Alliance Gift Codes Manager (Admin Hub):**
+  - 🗂️ **Centralized Code Management:** Dedicated admin tab to organize, search, and track active vs expired promotional codes.
+  - 🧪 **Live Validation & Auto-Pruning:** Instant live testing against game servers with automated expiration detection.
+  - 📊 **Redemption Analytics:** Real-time tracking of alliance-wide claim counts, player coverage, and dispatch history.
+  - ⚡ **1-Click Batch Dispatch:** Launch single-code or sequential all-active mass redemptions for all enrolled members & alts.
+
 ## [2.5.72] - 2026-08-15
 - 🎁 **Smart Gift Code Recovery:**
   - 🔁 **Targeted 1-Tap Retry:** Instantly retry failed or timed-out redemptions without re-running successful accounts.

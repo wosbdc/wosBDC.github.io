@@ -10209,7 +10209,7 @@ window.openAccountHubVerifyModal = () => {
   }
 };
 
-window.openGiftCodeDispatcherModal = async () => {
+window.openGiftCodeDispatcherModal = async (initialCode = '') => {
   if (!currentUser || !(typeof window.isAdminUser === 'function' && window.isAdminUser(currentUser))) {
     if (window.showToast) window.showToast("Admin access required.", "error");
     return;
@@ -10217,6 +10217,8 @@ window.openGiftCodeDispatcherModal = async () => {
 
   const oldModal = document.getElementById('giftCodeDispatcherModalOverlay');
   if (oldModal && oldModal.parentNode) oldModal.parentNode.removeChild(oldModal);
+
+  const cleanInitialCode = (initialCode || '').toString().trim().toUpperCase();
 
   const modalOverlay = document.createElement('div');
   modalOverlay.id = 'giftCodeDispatcherModalOverlay';
@@ -10247,7 +10249,7 @@ window.openGiftCodeDispatcherModal = async () => {
             Step 1: Enter Promotional Gift Code
           </div>
           <div style="display:flex; gap:10px; flex-wrap:wrap;">
-            <input type="text" id="gcInputCode" placeholder="e.g. WOS0214, DC300K, gof2026" style="flex:1; min-width:200px; padding:11px 14px; border-radius:10px; border:1px solid var(--border); background:var(--bg-main); color:#fff; font-size:16px; font-family:monospace; letter-spacing:1px; text-transform:uppercase;">
+            <input type="text" id="gcInputCode" value="${cleanInitialCode}" placeholder="e.g. WOS0214, DC300K, gof2026" style="flex:1; min-width:200px; padding:11px 14px; border-radius:10px; border:1px solid var(--border); background:var(--bg-main); color:#fff; font-size:16px; font-family:monospace; letter-spacing:1px; text-transform:uppercase;">
             <button id="gcTestCodeBtn" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:11px 20px; border-radius:10px; font-weight:bold; font-size:14px; cursor:pointer; display:flex; align-items:center; gap:6px;">
               🧪 Test Validity
             </button>
@@ -10881,9 +10883,609 @@ window.openGiftCodeDispatcherModal = async () => {
         }
       }
 
+      // Auto-save dispatch snapshot to Firebase gift_codes_history
+      try {
+        const cleanCodeKey = code.replace(/[^A-Za-z0-9_-]/g, '_');
+        const historyRef = ref(db, `gift_codes_history/${cleanCodeKey}`);
+        const existingSnap = await get(historyRef).catch(() => null);
+        const existingVal = (existingSnap && existingSnap.exists()) ? existingSnap.val() : {};
+        await set(historyRef, {
+          ...existingVal,
+          code: code,
+          status: 'active',
+          lastDispatchedAt: new Date().toISOString(),
+          dispatchedBy: (currentUser && ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name)) || 'Admin',
+          stats: {
+            total: targets.length,
+            success: successCount,
+            already: alreadyCount,
+            failed: failedCount
+          },
+          updatedAt: new Date().toISOString()
+        });
+        if (typeof window.loadGiftCodesManagerData === 'function') {
+          window.loadGiftCodesManagerData();
+        }
+      } catch(e) {
+        console.warn("Could not save to gift_codes_history:", e);
+      }
+
       launchBtn.textContent = '✅ Completed';
       launchBtn.style.background = '#10b981';
     });
+  }
+};
+
+// ============================================================================
+// ALLIANCE GIFT CODES MANAGER (ACTIVE CODES & HISTORY SUITE)
+// ============================================================================
+
+window.currentGiftCodeFilter = 'all';
+
+window.fetchGiftCodesHistory = async () => {
+  if (window._giftCodesHistoryCache) return window._giftCodesHistoryCache;
+  try {
+    const snap = await get(ref(db, 'gift_codes_history')).catch(() => null);
+    let data = (snap && snap.exists()) ? snap.val() : null;
+
+    if (!data || Object.keys(data).length === 0) {
+      // Seed initial active code record
+      data = {
+        'WOS0815': {
+          code: 'WOS0815',
+          status: 'active',
+          description: 'Special Alliance Promotional Pack (500 Gems + 10x 1h Speedups)',
+          createdAt: '2026-08-15T03:00:00.000Z',
+          createdBy: 'Admin',
+          lastDispatchedAt: '2026-08-15T03:45:00.000Z',
+          stats: {
+            total: 26,
+            success: 2,
+            already: 23,
+            failed: 1
+          }
+        }
+      };
+      await set(ref(db, 'gift_codes_history'), data).catch(() => null);
+    }
+
+    const list = Object.entries(data).map(([k, v]) => ({
+      key: k,
+      code: v.code || k,
+      status: v.status || 'active',
+      description: v.description || '',
+      createdAt: v.createdAt || '',
+      createdBy: v.createdBy || 'Admin',
+      lastDispatchedAt: v.lastDispatchedAt || '',
+      stats: v.stats || { total: 0, success: 0, already: 0, failed: 0 }
+    }));
+
+    // Sort by last dispatched or createdAt descending
+    list.sort((a, b) => {
+      const timeA = new Date(a.lastDispatchedAt || a.createdAt || 0).getTime();
+      const timeB = new Date(b.lastDispatchedAt || b.createdAt || 0).getTime();
+      return timeB - timeA;
+    });
+
+    window._giftCodesHistoryCache = list;
+    return list;
+  } catch(e) {
+    console.error("Failed to fetch gift_codes_history:", e);
+    return [];
+  }
+};
+
+window.loadGiftCodesManagerData = async () => {
+  const container = document.getElementById('adminGiftCodesListContainer');
+  if (!container) return;
+
+  window._giftCodesHistoryCache = null; // force fresh read
+  const list = await window.fetchGiftCodesHistory();
+
+  let activeCount = 0;
+  let expiredCount = 0;
+  let totalClaims = 0;
+
+  list.forEach(item => {
+    if (item.status === 'active') activeCount++;
+    else expiredCount++;
+    if (item.stats && item.stats.success) {
+      totalClaims += Number(item.stats.success) || 0;
+    }
+  });
+
+  const kpiActive = document.getElementById('gcKpiActiveCount');
+  const kpiExpired = document.getElementById('gcKpiExpiredCount');
+  const kpiTotal = document.getElementById('gcKpiTotalTracked');
+  const kpiClaims = document.getElementById('gcKpiTotalClaims');
+
+  if (kpiActive) kpiActive.textContent = activeCount;
+  if (kpiExpired) kpiExpired.textContent = expiredCount;
+  if (kpiTotal) kpiTotal.textContent = list.length;
+  if (kpiClaims) kpiClaims.textContent = totalClaims.toLocaleString();
+
+  window.renderGiftCodesTable(list);
+};
+
+window.renderGiftCodesTable = (list) => {
+  const container = document.getElementById('adminGiftCodesListContainer');
+  if (!container) return;
+
+  if (!list || list.length === 0) {
+    container.innerHTML = `
+      <div style="text-align:center; padding:40px 20px; background:rgba(255,255,255,0.02); border:1px dashed var(--border); border-radius:14px;">
+        <div style="font-size:32px; margin-bottom:8px;">🎁</div>
+        <div style="font-weight:bold; font-size:16px; color:#fff; margin-bottom:4px;">No Gift Codes Tracked Yet</div>
+        <div style="font-size:12.5px; color:var(--text-muted); margin-bottom:14px;">Click "+ Add New Code" to register your first promotional code.</div>
+        <button onclick="window.openAddGiftCodeModal()" style="background:linear-gradient(135deg, #ec4899, #d946ef); color:#fff; border:none; padding:8px 18px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer;">➕ Add First Code</button>
+      </div>
+    `;
+    return;
+  }
+
+  let html = `<div style="display:flex; flex-direction:column; gap:12px;">`;
+
+  list.forEach(item => {
+    const isAct = item.status === 'active';
+    const statusPill = isAct
+      ? `<span style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:3px 10px; border-radius:12px; font-weight:bold; font-size:11px; display:inline-flex; align-items:center; gap:4px;">🟢 ACTIVE</span>`
+      : `<span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.4); padding:3px 10px; border-radius:12px; font-weight:bold; font-size:11px; display:inline-flex; align-items:center; gap:4px;">🔴 EXPIRED</span>`;
+
+    const lastDispStr = item.lastDispatchedAt
+      ? new Date(item.lastDispatchedAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+      : 'Never dispatched';
+
+    const statsObj = item.stats || {};
+    const hasStats = statsObj.total > 0;
+
+    html += `
+      <div class="gc-manager-card" data-code="${window.escapeHTML(item.code.toLowerCase())}" data-status="${item.status}" data-desc="${window.escapeHTML((item.description || '').toLowerCase())}" style="background:var(--card-bg); border:1px solid ${isAct ? 'rgba(236,72,153,0.3)' : 'var(--border)'}; border-radius:14px; padding:16px; transition:transform 0.15s ease, border-color 0.2s ease; box-shadow:0 4px 16px rgba(0,0,0,0.15);">
+        
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <div style="font-family:Consolas, Monaco, monospace; font-size:18px; font-weight:900; color:#fff; letter-spacing:1.5px; background:rgba(15,23,42,0.8); padding:4px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.12); display:inline-flex; align-items:center; gap:8px;">
+              <span>${window.escapeHTML(item.code)}</span>
+              <button onclick="navigator.clipboard.writeText('${item.code}'); if(window.showToast) window.showToast('Copied ${item.code}!', 'success');" title="Copy Code" style="background:none; border:none; color:var(--accent); cursor:pointer; font-size:14px; padding:0;">📋</button>
+            </div>
+            ${statusPill}
+          </div>
+
+          <!-- Quick Action Buttons -->
+          <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+            <button onclick="window.openGiftCodeDispatcherModal('${item.code}')" style="background:linear-gradient(135deg, #ec4899, #d946ef); color:#fff; border:none; padding:6px 14px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:flex; align-items:center; gap:5px; box-shadow:0 2px 8px rgba(236,72,153,0.3);">
+              🚀 Dispatch
+            </button>
+            <button onclick="window.testSingleGiftCodeLive('${item.code}', this)" style="background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:6px 12px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:flex; align-items:center; gap:4px;">
+              🧪 Test
+            </button>
+            <button onclick="window.openEditGiftCodeModal('${item.code}')" style="background:rgba(255,255,255,0.06); color:var(--text-main); border:1px solid var(--border); padding:6px 10px; border-radius:8px; font-size:12px; cursor:pointer;" title="Edit Code">
+              ✏️
+            </button>
+            <button onclick="window.deleteGiftCode('${item.code}')" style="background:rgba(239,68,68,0.12); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:6px 10px; border-radius:8px; font-size:12px; cursor:pointer;" title="Delete Code">
+              🗑️
+            </button>
+          </div>
+        </div>
+
+        ${item.description ? `
+          <div style="font-size:13px; color:var(--text-main); margin-bottom:10px; line-height:1.4;">
+            🎁 <strong>Rewards:</strong> ${window.escapeHTML(item.description)}
+          </div>
+        ` : ''}
+
+        <!-- Stats & Meta Row -->
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; background:rgba(0,0,0,0.2); padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.04); font-size:11.5px;">
+          <div style="color:var(--text-muted);">
+            🕒 Last Dispatched: <strong style="color:var(--text-main);">${lastDispStr}</strong>
+          </div>
+          ${hasStats ? `
+            <div style="display:flex; gap:10px; align-items:center;">
+              <span style="color:#10b981; font-weight:bold;">✅ ${statsObj.success || 0} Claimed</span>
+              <span style="color:#06b6d4; font-weight:bold;">⏩ ${statsObj.already || 0} Had</span>
+              ${statsObj.failed > 0 ? `<span style="color:#ef4444; font-weight:bold;">❌ ${statsObj.failed} Failed</span>` : ''}
+              <span style="color:var(--text-muted);">(${statsObj.total || 0} Targets)</span>
+            </div>
+          ` : `
+            <div style="color:var(--text-muted); font-style:italic;">Ready for initial dispatch</div>
+          `}
+        </div>
+
+      </div>
+    `;
+  });
+
+  html += `</div>`;
+  container.innerHTML = html;
+};
+
+window.setGiftCodeFilter = (filter, btnEl) => {
+  window.currentGiftCodeFilter = filter;
+  document.querySelectorAll('.gc-filter-tab').forEach(b => {
+    b.classList.remove('active');
+    b.style.background = 'transparent';
+    b.style.color = 'var(--text-muted)';
+  });
+  if (btnEl) {
+    btnEl.classList.add('active');
+    btnEl.style.background = 'var(--accent)';
+    btnEl.style.color = '#fff';
+  }
+  window.filterGiftCodesTable();
+};
+
+window.filterGiftCodesTable = () => {
+  const query = (document.getElementById('gcSearchInput')?.value || '').toLowerCase().trim();
+  const filter = window.currentGiftCodeFilter || 'all';
+
+  document.querySelectorAll('.gc-manager-card').forEach(card => {
+    const code = card.getAttribute('data-code') || '';
+    const status = card.getAttribute('data-status') || '';
+    const desc = card.getAttribute('data-desc') || '';
+
+    const matchesQuery = !query || code.includes(query) || desc.includes(query);
+    const matchesFilter = (filter === 'all') || (filter === status);
+
+    card.style.display = (matchesQuery && matchesFilter) ? 'block' : 'none';
+  });
+};
+
+window.openAddGiftCodeModal = () => {
+  const oldModal = document.getElementById('addGiftCodeModalOverlay');
+  if (oldModal) oldModal.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'addGiftCodeModalOverlay';
+  overlay.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.88); backdrop-filter:blur(10px); z-index:99999; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease;';
+
+  overlay.innerHTML = `
+    <div class="card" style="width:92%; max-width:480px; background:linear-gradient(145deg, rgba(15,23,42,0.98), rgba(30,41,59,0.96)); border:1px solid rgba(236,72,153,0.4); padding:24px; border-radius:20px; box-shadow:0 25px 60px rgba(0,0,0,0.8); text-align:left; color:var(--text-main);">
+      
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:12px;">
+        <h3 style="margin:0; color:#fff; font-size:18px; font-weight:bold; display:flex; align-items:center; gap:8px;">
+          ➕ Add New Alliance Gift Code
+        </h3>
+        <button onclick="document.getElementById('addGiftCodeModalOverlay').remove()" style="background:none; border:none; color:var(--text-muted); font-size:26px; cursor:pointer; line-height:1;">&times;</button>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:14px; margin-bottom:18px;">
+        <div>
+          <label style="display:block; font-size:12px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; margin-bottom:6px;">
+            Gift Code (Required)
+          </label>
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="newGcCodeInput" placeholder="e.g. WOS0815" style="flex:1; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:#fff; font-size:15px; font-family:monospace; letter-spacing:1px; text-transform:uppercase; font-weight:bold;">
+            <button id="newGcTestBtn" style="background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; padding:9px 14px; border-radius:8px; font-weight:bold; font-size:12.5px; cursor:pointer;">
+              🧪 Test Code
+            </button>
+          </div>
+          <div id="newGcTestFeedback" style="display:none; margin-top:8px; padding:8px 12px; border-radius:8px; font-size:12px;"></div>
+        </div>
+
+        <div>
+          <label style="display:block; font-size:12px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; margin-bottom:6px;">
+            Rewards / Description (Optional)
+          </label>
+          <input type="text" id="newGcDescInput" placeholder="e.g. 500 Gems, 10x 1h Speedups, 100k Meat" style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13.5px; box-sizing:border-box;">
+        </div>
+
+        <div>
+          <label style="display:block; font-size:12px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; margin-bottom:6px;">
+            Initial Status
+          </label>
+          <select id="newGcStatusSelect" style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13.5px; font-weight:bold; cursor:pointer; box-sizing:border-box;">
+            <option value="active">🟢 Active & Valid</option>
+            <option value="expired">🔴 Expired / Inactive</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:10px;">
+        <button onclick="document.getElementById('addGiftCodeModalOverlay').remove()" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:#cbd5e1; padding:9px 16px; border-radius:8px; cursor:pointer; font-size:13px;">
+          Cancel
+        </button>
+        <button id="saveNewGcBtn" style="background:linear-gradient(135deg, #ec4899, #d946ef); color:#fff; border:none; padding:9px 20px; border-radius:8px; font-weight:bold; font-size:13.5px; cursor:pointer; box-shadow:0 3px 12px rgba(236,72,153,0.35);">
+          💾 Save Code
+        </button>
+      </div>
+
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  const testBtn = document.getElementById('newGcTestBtn');
+  const codeInput = document.getElementById('newGcCodeInput');
+  const descInput = document.getElementById('newGcDescInput');
+  const statusSelect = document.getElementById('newGcStatusSelect');
+  const feedback = document.getElementById('newGcTestFeedback');
+  const saveBtn = document.getElementById('saveNewGcBtn');
+
+  if (testBtn && codeInput) {
+    testBtn.addEventListener('click', async () => {
+      const code = codeInput.value.trim().toUpperCase();
+      if (!code) {
+        if (window.showToast) window.showToast("Enter a code to test.", "warning");
+        return;
+      }
+      testBtn.disabled = true;
+      testBtn.textContent = '🧪 Testing...';
+      if (feedback) feedback.style.display = 'none';
+
+      try {
+        const testId = currentUser.gameId || '318843189';
+        const adminToken = await getAuthToken();
+        const res = await fetch(`${API_BASE_URL}?api=redeemGiftCode&gameId=${encodeURIComponent(testId)}&code=${encodeURIComponent(code)}&kid=2089&token=${encodeURIComponent(adminToken)}`);
+        const data = await res.json();
+
+        feedback.style.display = 'block';
+        if (data.code === 0 || data.status === 'success' || data.status === 'already_claimed') {
+          feedback.style.background = 'rgba(16,185,129,0.15)';
+          feedback.style.border = '1px solid rgba(16,185,129,0.4)';
+          feedback.style.color = '#10b981';
+          feedback.innerHTML = `<strong>✅ Valid & Active!</strong> Ready to register.`;
+          if (statusSelect) statusSelect.value = 'active';
+        } else if (data.status === 'expired') {
+          feedback.style.background = 'rgba(239,68,68,0.15)';
+          feedback.style.border = '1px solid rgba(239,68,68,0.4)';
+          feedback.style.color = '#ef4444';
+          feedback.innerHTML = `<strong>❌ Expired / Invalid:</strong> ${window.escapeHTML(data.msg || 'The code does not exist or has expired.')}`;
+          if (statusSelect) statusSelect.value = 'expired';
+        } else {
+          feedback.style.background = 'rgba(245,158,11,0.15)';
+          feedback.style.border = '1px solid rgba(245,158,11,0.4)';
+          feedback.style.color = '#f59e0b';
+          feedback.innerHTML = `<strong>⚠️ Status:</strong> ${window.escapeHTML(data.msg || 'Unknown game server response')}`;
+        }
+      } catch(err) {
+        feedback.style.display = 'block';
+        feedback.style.background = 'rgba(239,68,68,0.15)';
+        feedback.style.border = '1px solid rgba(239,68,68,0.4)';
+        feedback.style.color = '#ef4444';
+        feedback.innerHTML = `<strong>❌ Connection Error:</strong> ${window.escapeHTML(err.message)}`;
+      } finally {
+        testBtn.disabled = false;
+        testBtn.textContent = '🧪 Test Code';
+      }
+    });
+  }
+
+  if (saveBtn && codeInput) {
+    saveBtn.addEventListener('click', async () => {
+      const code = codeInput.value.trim().toUpperCase();
+      if (!code) {
+        if (window.showToast) window.showToast("Please enter a gift code.", "warning");
+        return;
+      }
+      const desc = descInput ? descInput.value.trim() : '';
+      const stat = statusSelect ? statusSelect.value : 'active';
+
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+
+      try {
+        const cleanCodeKey = code.replace(/[^A-Za-z0-9_-]/g, '_');
+        const historyRef = ref(db, `gift_codes_history/${cleanCodeKey}`);
+        const snap = await get(historyRef).catch(() => null);
+        const existingData = (snap && snap.exists()) ? snap.val() : {};
+
+        await set(historyRef, {
+          ...existingData,
+          code: code,
+          status: stat,
+          description: desc,
+          createdAt: existingData.createdAt || new Date().toISOString(),
+          createdBy: (currentUser && ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name)) || 'Admin',
+          updatedAt: new Date().toISOString()
+        });
+
+        if (window.showToast) window.showToast(`🎁 Gift Code [${code}] saved successfully!`, 'success');
+        overlay.remove();
+        window.loadGiftCodesManagerData();
+      } catch(err) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = '💾 Save Code';
+        if (window.showToast) window.showToast(`Failed to save code: ${err.message}`, 'error');
+      }
+    });
+  }
+};
+
+window.openEditGiftCodeModal = async (code) => {
+  const cleanKey = String(code).trim().replace(/[^A-Za-z0-9_-]/g, '_');
+  const snap = await get(ref(db, `gift_codes_history/${cleanKey}`)).catch(() => null);
+  const data = (snap && snap.exists()) ? snap.val() : { code: code, status: 'active', description: '' };
+
+  const oldModal = document.getElementById('editGiftCodeModalOverlay');
+  if (oldModal) oldModal.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'editGiftCodeModalOverlay';
+  overlay.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.88); backdrop-filter:blur(10px); z-index:99999; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease;';
+
+  overlay.innerHTML = `
+    <div class="card" style="width:92%; max-width:460px; background:linear-gradient(145deg, rgba(15,23,42,0.98), rgba(30,41,59,0.96)); border:1px solid rgba(236,72,153,0.4); padding:24px; border-radius:20px; box-shadow:0 25px 60px rgba(0,0,0,0.8); text-align:left; color:var(--text-main);">
+      
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:12px;">
+        <h3 style="margin:0; color:#fff; font-size:18px; font-weight:bold;">
+          ✏️ Edit Gift Code: ${window.escapeHTML(data.code || code)}
+        </h3>
+        <button onclick="document.getElementById('editGiftCodeModalOverlay').remove()" style="background:none; border:none; color:var(--text-muted); font-size:26px; cursor:pointer; line-height:1;">&times;</button>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:14px; margin-bottom:18px;">
+        <div>
+          <label style="display:block; font-size:12px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; margin-bottom:6px;">Status</label>
+          <select id="editGcStatusSelect" style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13.5px; font-weight:bold; cursor:pointer; box-sizing:border-box;">
+            <option value="active" ${data.status === 'active' ? 'selected' : ''}>🟢 Active & Valid</option>
+            <option value="expired" ${data.status === 'expired' ? 'selected' : ''}>🔴 Expired / Inactive</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="display:block; font-size:12px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; margin-bottom:6px;">Rewards / Description</label>
+          <input type="text" id="editGcDescInput" value="${window.escapeHTML(data.description || '')}" placeholder="e.g. 500 Gems, Speedups" style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13.5px; box-sizing:border-box;">
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:10px;">
+        <button onclick="document.getElementById('editGiftCodeModalOverlay').remove()" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:#cbd5e1; padding:9px 16px; border-radius:8px; cursor:pointer; font-size:13px;">Cancel</button>
+        <button id="saveEditGcBtn" style="background:linear-gradient(135deg, #ec4899, #d946ef); color:#fff; border:none; padding:9px 20px; border-radius:8px; font-weight:bold; font-size:13.5px; cursor:pointer;">💾 Save Changes</button>
+      </div>
+
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  document.getElementById('saveEditGcBtn')?.addEventListener('click', async () => {
+    const stat = document.getElementById('editGcStatusSelect').value;
+    const desc = document.getElementById('editGcDescInput').value.trim();
+
+    try {
+      await update(ref(db, `gift_codes_history/${cleanKey}`), {
+        status: stat,
+        description: desc,
+        updatedAt: new Date().toISOString()
+      });
+      if (window.showToast) window.showToast(`Updated ${code}!`, 'success');
+      overlay.remove();
+      window.loadGiftCodesManagerData();
+    } catch(e) {
+      if (window.showToast) window.showToast(`Failed to update: ${e.message}`, 'error');
+    }
+  });
+};
+
+window.deleteGiftCode = async (code) => {
+  const confirmed = await window.customConfirm(`Are you sure you want to delete Gift Code [${code}] from the database?`);
+  if (!confirmed) return;
+
+  try {
+    const cleanKey = String(code).trim().replace(/[^A-Za-z0-9_-]/g, '_');
+    await remove(ref(db, `gift_codes_history/${cleanKey}`));
+    if (window.showToast) window.showToast(`Deleted ${code} from Gift Code history.`, 'success');
+    window.loadGiftCodesManagerData();
+  } catch(e) {
+    if (window.showToast) window.showToast(`Failed to delete: ${e.message}`, 'error');
+  }
+};
+
+window.testSingleGiftCodeLive = async (code, btnEl = null) => {
+  const cleanCode = String(code).trim().toUpperCase();
+  let origHtml = '';
+  if (btnEl) {
+    origHtml = btnEl.innerHTML;
+    btnEl.disabled = true;
+    btnEl.innerHTML = '🧪...';
+  }
+
+  try {
+    const testId = currentUser.gameId || '318843189';
+    const adminToken = await getAuthToken();
+    const res = await fetch(`${API_BASE_URL}?api=redeemGiftCode&gameId=${encodeURIComponent(testId)}&code=${encodeURIComponent(cleanCode)}&kid=2089&token=${encodeURIComponent(adminToken)}`);
+    const data = await res.json();
+
+    const cleanKey = cleanCode.replace(/[^A-Za-z0-9_-]/g, '_');
+    let newStatus = 'active';
+
+    if (data.code === 0 || data.status === 'success' || data.status === 'already_claimed') {
+      newStatus = 'active';
+      await update(ref(db, `gift_codes_history/${cleanKey}`), { status: 'active', lastTestedAt: new Date().toISOString() });
+      if (window.showToast) window.showToast(`✅ [${cleanCode}] is Active & Valid!`, 'success');
+    } else if (data.status === 'expired') {
+      newStatus = 'expired';
+      await update(ref(db, `gift_codes_history/${cleanKey}`), { status: 'expired', lastTestedAt: new Date().toISOString() });
+      if (window.showToast) window.showToast(`🔴 [${cleanCode}] has Expired. Status updated.`, 'warning');
+    } else {
+      if (window.showToast) window.showToast(`⚠️ [${cleanCode}]: ${data.msg || 'Unknown game server response'}`, 'info');
+    }
+
+    window.loadGiftCodesManagerData();
+  } catch(err) {
+    if (window.showToast) window.showToast(`Network error testing code: ${err.message}`, 'error');
+  } finally {
+    if (btnEl) {
+      btnEl.disabled = false;
+      btnEl.innerHTML = origHtml || '🧪 Test';
+    }
+  }
+};
+
+window.testAllGiftCodesLive = async (btnEl = null) => {
+  const list = await window.fetchGiftCodesHistory();
+  const activeCodes = list.filter(item => item.status === 'active');
+
+  if (activeCodes.length === 0) {
+    if (window.showToast) window.showToast("No active gift codes to test.", "info");
+    return;
+  }
+
+  let origHtml = '';
+  if (btnEl) {
+    origHtml = btnEl.innerHTML;
+    btnEl.disabled = true;
+    btnEl.innerHTML = '🧪 Testing All...';
+  }
+
+  if (window.showToast) window.showToast(`🧪 Testing ${activeCodes.length} active code(s) against Century Games...`, "info");
+
+  let validCount = 0;
+  let expiredCount = 0;
+
+  const testId = currentUser.gameId || '318843189';
+  const adminToken = await getAuthToken();
+
+  for (let i = 0; i < activeCodes.length; i++) {
+    const item = activeCodes[i];
+    const code = item.code;
+    const cleanKey = code.replace(/[^A-Za-z0-9_-]/g, '_');
+
+    try {
+      const res = await fetch(`${API_BASE_URL}?api=redeemGiftCode&gameId=${encodeURIComponent(testId)}&code=${encodeURIComponent(code)}&kid=2089&token=${encodeURIComponent(adminToken)}`);
+      const data = await res.json();
+
+      if (data.code === 0 || data.status === 'success' || data.status === 'already_claimed') {
+        validCount++;
+        await update(ref(db, `gift_codes_history/${cleanKey}`), { status: 'active', lastTestedAt: new Date().toISOString() });
+      } else if (data.status === 'expired') {
+        expiredCount++;
+        await update(ref(db, `gift_codes_history/${cleanKey}`), { status: 'expired', lastTestedAt: new Date().toISOString() });
+      }
+    } catch(e) {
+      console.warn(`Error testing ${code}:`, e);
+    }
+
+    await new Promise(r => setTimeout(r, 200));
+  }
+
+  if (btnEl) {
+    btnEl.disabled = false;
+    btnEl.innerHTML = origHtml || '🧪 Test All Live';
+  }
+
+  if (window.showToast) {
+    window.showToast(`🧪 Test Complete: ${validCount} active & valid, ${expiredCount} expired.`, expiredCount > 0 ? 'warning' : 'success');
+  }
+
+  window.loadGiftCodesManagerData();
+};
+
+window.dispatchAllActiveGiftCodes = async () => {
+  const list = await window.fetchGiftCodesHistory();
+  const activeCodes = list.filter(item => item.status === 'active');
+
+  if (activeCodes.length === 0) {
+    if (window.showToast) window.showToast("No active gift codes available to dispatch.", "warning");
+    return;
+  }
+
+  const codeListStr = activeCodes.map(c => `• ${c.code}`).join('\n');
+  const confirmed = await window.customConfirm(`🚀 Launch Sequential Batch Dispatch for ${activeCodes.length} Active Gift Codes?\n\nActive Codes:\n${codeListStr}\n\nThis will open the dispatcher and automatically process rewards for all enrolled alliance members & alts.`);
+  if (!confirmed) return;
+
+  // Open dispatcher with the first code
+  if (window.openGiftCodeDispatcherModal) {
+    window.openGiftCodeDispatcherModal(activeCodes[0].code);
   }
 };
 
@@ -13566,6 +14168,7 @@ const views = {
               div::-webkit-scrollbar { display: none; }
             </style>
             <button class="admin-tab-btn active" data-tab="tab-tools" style="background:none; border:none; color:var(--accent); font-weight:bold; font-size:16px; cursor:pointer; padding:5px 10px; border-bottom:2px solid var(--accent); flex-shrink:0;">🛠️ Daily Tools</button>
+            <button class="admin-tab-btn" data-tab="tab-giftcodes" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:16px; cursor:pointer; padding:5px 10px; border-bottom:2px solid transparent; flex-shrink:0;">🎁 Gift Codes</button>
             <button class="admin-tab-btn" data-tab="tab-indev" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:16px; cursor:pointer; padding:5px 10px; border-bottom:2px solid transparent; flex-shrink:0;">🧪 In-Dev</button>
             ${currentUser && currentUser.gameId.toString() === '318843189' ? `<button class="admin-tab-btn" data-tab="tab-frost" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:16px; cursor:pointer; padding:5px 10px; border-bottom:2px solid transparent; flex-shrink:0;">❄️ Frost Clan</button>` : ''}
             <button class="admin-tab-btn" data-tab="tab-users" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:16px; cursor:pointer; padding:5px 10px; border-bottom:2px solid transparent; flex-shrink:0;">👥 Users</button>
@@ -13607,6 +14210,84 @@ const views = {
 
 
 
+          </div>
+
+          <!-- Tab: Gift Codes Manager -->
+          <div id="tab-giftcodes" class="admin-tab-content" style="display:none;">
+            <div style="background:var(--bg-main); padding:20px; border-radius:14px; border:1px solid rgba(236,72,153,0.35); margin-bottom:20px;">
+              
+              <!-- Top Header -->
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:18px;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                  <div style="width:44px; height:44px; border-radius:12px; background:linear-gradient(135deg, #ec4899, #d946ef); display:flex; align-items:center; justify-content:center; font-size:22px; box-shadow:0 4px 14px rgba(236,72,153,0.35); flex-shrink:0;">
+                    🎁
+                  </div>
+                  <div>
+                    <h3 style="margin:0; color:#f472b6; font-size:18px; font-weight:800;">Alliance Gift Codes Manager</h3>
+                    <p style="margin:2px 0 0 0; font-size:12px; color:var(--text-muted);">Manage active & expired gift codes, track alliance redemption history, and launch mass dispatches.</p>
+                  </div>
+                </div>
+                
+                <!-- Primary Action Buttons -->
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                  <button onclick="window.openAddGiftCodeModal()" style="background:linear-gradient(135deg, #ec4899, #d946ef); color:#fff; border:none; padding:9px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(236,72,153,0.35); transition:0.2s;">
+                    ➕ Add New Code
+                  </button>
+                  <button onclick="window.dispatchAllActiveGiftCodes()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:9px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(16,185,129,0.3); transition:0.2s;">
+                    ⚡ Dispatch ALL Active
+                  </button>
+                  <button id="btnTestAllCodes" onclick="window.testAllGiftCodesLive(this)" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); padding:9px 14px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.2s;">
+                    🧪 Test All Live
+                  </button>
+                </div>
+              </div>
+
+              <!-- Summary KPI Cards -->
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:10px; margin-bottom:18px;">
+                <div style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); border-radius:10px; padding:12px; text-align:center;">
+                  <div style="font-size:22px; font-weight:bold; color:#10b981;" id="gcKpiActiveCount">0</div>
+                  <div style="font-size:11px; color:#10b981; font-weight:bold; text-transform:uppercase; margin-top:2px;">Active Codes</div>
+                </div>
+                <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:10px; padding:12px; text-align:center;">
+                  <div style="font-size:22px; font-weight:bold; color:#ef4444;" id="gcKpiExpiredCount">0</div>
+                  <div style="font-size:11px; color:#ef4444; font-weight:bold; text-transform:uppercase; margin-top:2px;">Expired Codes</div>
+                </div>
+                <div style="background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.3); border-radius:10px; padding:12px; text-align:center;">
+                  <div style="font-size:22px; font-weight:bold; color:#38bdf8;" id="gcKpiTotalTracked">0</div>
+                  <div style="font-size:11px; color:#38bdf8; font-weight:bold; text-transform:uppercase; margin-top:2px;">Total Tracked</div>
+                </div>
+                <div style="background:rgba(168,85,247,0.1); border:1px solid rgba(168,85,247,0.3); border-radius:10px; padding:12px; text-align:center;">
+                  <div style="font-size:22px; font-weight:bold; color:#c084fc;" id="gcKpiTotalClaims">0</div>
+                  <div style="font-size:11px; color:#c084fc; font-weight:bold; text-transform:uppercase; margin-top:2px;">Alliance Claims</div>
+                </div>
+              </div>
+
+              <!-- Search & Filter Controls -->
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:16px;">
+                <div style="display:inline-flex; background:var(--card-bg); padding:3px; border-radius:10px; border:1px solid var(--border); gap:4px;">
+                  <button class="gc-filter-tab active" data-filter="all" onclick="window.setGiftCodeFilter('all', this)" style="background:var(--accent); color:#fff; border:none; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer;">
+                    ALL
+                  </button>
+                  <button class="gc-filter-tab" data-filter="active" onclick="window.setGiftCodeFilter('active', this)" style="background:transparent; color:var(--text-muted); border:none; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer;">
+                    🟢 ACTIVE ONLY
+                  </button>
+                  <button class="gc-filter-tab" data-filter="expired" onclick="window.setGiftCodeFilter('expired', this)" style="background:transparent; color:var(--text-muted); border:none; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer;">
+                    🔴 EXPIRED ONLY
+                  </button>
+                </div>
+
+                <input type="text" id="gcSearchInput" oninput="window.filterGiftCodesTable()" placeholder="🔍 Search codes or rewards..." style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:13px; min-width:200px;">
+              </div>
+
+              <!-- Codes Table Container -->
+              <div id="adminGiftCodesListContainer">
+                <div style="text-align:center; padding:30px; color:var(--text-muted);">
+                  <div style="border:3px solid rgba(255,255,255,0.1); border-top-color:#ec4899; border-radius:50%; width:28px; height:28px; animation:spin 1s linear infinite; margin:0 auto 10px;"></div>
+                  Loading Gift Codes from database...
+                </div>
+              </div>
+
+            </div>
           </div>
 
             <!-- Tab: In-Dev (Projects & Feature Lab) -->
@@ -14353,6 +15034,9 @@ const views = {
           
           if (e.target.getAttribute('data-tab') === 'tab-frost' && !window.frostDataLoaded) {
             window.loadFrostClanData();
+          }
+          if (e.target.getAttribute('data-tab') === 'tab-giftcodes') {
+            window.loadGiftCodesManagerData();
           }
           if (window.initUnifiedFcBadges) {
             setTimeout(window.initUnifiedFcBadges, 50);
