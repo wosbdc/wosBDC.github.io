@@ -1,10 +1,9 @@
 {
-  "version": "2.5.43",
+  "version": "2.5.44",
   "releaseDate": "2026-08-14",
-  "title": "✨ Seamless Hexagon Digit Realignment & 360° Radiant Fire Particle Engine",
+  "title": "🔥 360° Omnidirectional Balanced Fire Aura & Burst",
   "notes": [
-    "Seamlessly realigned inner white digits (1-10) to exact geometric center (512, 512) inside all 10 Fire Crystal shields",
-    "Upgraded particle engine to emanate 360° radiant ambient fire embers symmetrically around the shield",
-    "Eliminated particle drift and edge clustering"
+    "Replaced single-direction flame drift with true 360° omnidirectional radial flame aura around all 6 sides of the crystal",
+    "Enhanced particle velocity, bloom size, and density for complete shield coverage without dead zones"
   ]
 }

@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [2.5.44] - 2026-08-14
+- Upgraded the Fire Crystal interactive flame particle engine to generate continuous 360° omnidirectional radial plasma embers spanning all 6 facets of the shield evenly without vertical or horizontal bias.
+
 ## [2.5.43] - 2026-08-14
 - Seamlessly realigned and centered the inner white digits (`1` through `10`) to exact geometric center `(512, 512)` within the metallic hexagon plates across all 10 Fire Crystal badge PNG files.
 - Upgraded the Fire Crystal interactive particle engine to emanate a 360° balanced radiant ember aura symmetrically around the shield, eliminating particle drift and left-side clustering.
