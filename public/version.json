@@ -1,9 +1,9 @@
 {
-  "version": "2.5.50",
+  "version": "2.5.51",
   "releaseDate": "2026-08-14",
-  "title": "✨ Refined 36% Perimeter, 1.5 Outward Spread & 1.3 Wiggle Flame Physics",
+  "title": "🎯 Live Image Alignment Offset Sliders in Flame Studio",
   "notes": [
-    "Applied updated user flame configuration: 36% hexagon perimeter radius, 1.5 outward spread velocity, 1.3 wave wiggle, 10px ember size, and 0.016 decay rate",
-    "Flames now burn with a wider, energetic outward shimmer and longer particle lifespan"
+    "Added Move Image X and Move Image Y offset sliders in fc_flame_studio.html for real-time visual alignment",
+    "Enabled live coordinate translation for perfect flame-to-badge alignment"
   ]
 }

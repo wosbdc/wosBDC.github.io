@@ -340,10 +340,26 @@
 
       <div class="slider-group">
         <div class="slider-label">
-          <span>⏳ Lifespan / Decay Rate</span>
-          <span class="val" id="val-decayRate">0.024</span>
+          <span>↔️ Move Image X (Left / Right)</span>
+          <span class="val" id="val-imgOffsetX">0px</span>
         </div>
-        <input type="range" id="param-decayRate" min="0.010" max="0.050" step="0.002" value="0.024" oninput="updateParam('decayRate', this.value)">
+        <input type="range" id="param-imgOffsetX" min="-30" max="30" step="1" value="0" oninput="updateParam('imgOffsetX', this.value); updateImagePositions();">
+      </div>
+
+      <div class="slider-group">
+        <div class="slider-label">
+          <span>↕️ Move Image Y (Up / Down)</span>
+          <span class="val" id="val-imgOffsetY">0px</span>
+        </div>
+        <input type="range" id="param-imgOffsetY" min="-30" max="30" step="1" value="0" oninput="updateParam('imgOffsetY', this.value); updateImagePositions();">
+      </div>
+
+      <div class="slider-group">
+        <div class="slider-label">
+          <span>⏳ Lifespan / Decay Rate</span>
+          <span class="val" id="val-decayRate">0.016</span>
+        </div>
+        <input type="range" id="param-decayRate" min="0.010" max="0.050" step="0.002" value="0.016" oninput="updateParam('decayRate', this.value)">
       </div>
 
       <div class="btn-row">
@@ -384,7 +400,9 @@
       outwardSpread: 1.5,
       waveWiggle: 1.3,
       particleSize: 10,
-      decayRate: 0.016
+      decayRate: 0.016,
+      imgOffsetX: 0,
+      imgOffsetY: 0
     };
 
     const colorPalettes = {
@@ -509,6 +527,16 @@
 
         initCanvasEngine(canvas, stage, colorPalettes[fc]);
       }
+      updateImagePositions();
+    }
+
+    function updateImagePositions() {
+      const scale = currentBadgeSize / 280;
+      const tx = config.imgOffsetX * scale;
+      const ty = config.imgOffsetY * scale;
+      document.querySelectorAll('.fc-badge-stage img').forEach(img => {
+        img.style.transform = `translate(${tx}px, ${ty}px)`;
+      });
     }
 
     function initCanvasEngine(canvas, stage, colors) {
@@ -554,7 +582,15 @@
       config[param] = parseFloat(val);
       const display = document.getElementById(`val-${param}`);
       if (display) {
-        display.innerText = (param === 'radiusPct') ? `${val}%` : (param === 'particleSize' ? `${val}px` : val);
+        if (param.includes('Offset')) {
+          display.innerText = `${val}px`;
+        } else if (param === 'radiusPct') {
+          display.innerText = `${val}%`;
+        } else if (param === 'particleSize') {
+          display.innerText = `${val}px`;
+        } else {
+          display.innerText = val;
+        }
       }
     }
 
@@ -580,33 +616,43 @@
 
     function resetDefaults() {
       config.spawnRate = 0.65;
-      config.radiusPct = 32;
+      config.radiusPct = 36;
       config.floatSpeed = 2.2;
-      config.outwardSpread = 1.1;
-      config.waveWiggle = 0.6;
+      config.outwardSpread = 1.5;
+      config.waveWiggle = 1.3;
       config.particleSize = 10;
-      config.decayRate = 0.024;
+      config.decayRate = 0.016;
+      config.imgOffsetX = 0;
+      config.imgOffsetY = 0;
 
       document.getElementById('param-spawnRate').value = 0.65;
       document.getElementById('val-spawnRate').innerText = '0.65';
 
-      document.getElementById('param-radiusPct').value = 32;
-      document.getElementById('val-radiusPct').innerText = '32%';
+      document.getElementById('param-radiusPct').value = 36;
+      document.getElementById('val-radiusPct').innerText = '36%';
 
       document.getElementById('param-floatSpeed').value = 2.2;
       document.getElementById('val-floatSpeed').innerText = '2.2';
 
-      document.getElementById('param-outwardSpread').value = 1.1;
-      document.getElementById('val-outwardSpread').innerText = '1.1';
+      document.getElementById('param-outwardSpread').value = 1.5;
+      document.getElementById('val-outwardSpread').innerText = '1.5';
 
-      document.getElementById('param-waveWiggle').value = 0.6;
-      document.getElementById('val-waveWiggle').innerText = '0.6';
+      document.getElementById('param-waveWiggle').value = 1.3;
+      document.getElementById('val-waveWiggle').innerText = '1.3';
 
       document.getElementById('param-particleSize').value = 10;
       document.getElementById('val-particleSize').innerText = '10px';
 
-      document.getElementById('param-decayRate').value = 0.024;
-      document.getElementById('val-decayRate').innerText = '0.024';
+      document.getElementById('param-decayRate').value = 0.016;
+      document.getElementById('val-decayRate').innerText = '0.016';
+
+      document.getElementById('param-imgOffsetX').value = 0;
+      document.getElementById('val-imgOffsetX').innerText = '0px';
+
+      document.getElementById('param-imgOffsetY').value = 0;
+      document.getElementById('val-imgOffsetY').innerText = '0px';
+
+      updateImagePositions();
     }
 
     function copyConfigJson() {

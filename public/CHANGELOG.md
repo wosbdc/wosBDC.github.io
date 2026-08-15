@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [2.5.51] - 2026-08-14
+- Added live Move Image X and Move Image Y offset sliders in `fc_flame_studio.html` to allow real-time shifting and alignment between the badge image and the flame canvas.
+
 ## [2.5.50] - 2026-08-14
 - Applied updated user-tuned flame particle physics: 0.65 spawn rate, 36% hexagon perimeter radius, 1.5 outward spread velocity, 1.3 wave wiggle shimmer, 10px ember size, and 0.016 extended decay lifespan.
 
