@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.5.89] - 2026-08-15
+- 🧹 **Database User Deduplication:**
+  - Removed duplicate account record from database.
+  - Verified active account with complete 5/6 verified alt tokens.
+
 ## [2.5.88] - 2026-08-15
 - 🔒 **Claimed Accounts Gift Code Enforcement:**
   - Added `🔒 Only Claimed Accounts` toggle to the Mass Gift Code Dispatcher (default: ON).
