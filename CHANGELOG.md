@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.5.49] - 2026-08-14
+- Enlarged Fire Crystal furnace badge from 76px to 120px in Account Hub profile ID card.
+- Enlarged badge preview to 110px in the Edit Profile modal for clear, crisp inspection.
+
 ## [2.5.48] - 2026-08-14
 - Applied updated fine-tuned flame settings across the entire platform: 0.8 spawn rate density, 35% hexagon perimeter radius, and 8px glowing ember particles.
 

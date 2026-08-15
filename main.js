@@ -2127,8 +2127,8 @@ window.openAdminEditFurnaceModal = async (chiefName, gameId = '', currentFurnace
                 <div style="flex:1;">
                    ${furnaceSelectHtml}
                 </div>
-                <div id="adminEditBadgePreview" style="min-width:88px; height:88px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:14px; display:flex; align-items:center; justify-content:center; flex-shrink:0; padding:4px;">
-                   ${window.getFurnaceIconHtml(currentFurnace, 76)}
+                <div id="adminEditBadgePreview" style="min-width:120px; height:120px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:14px; display:flex; align-items:center; justify-content:center; flex-shrink:0; padding:4px;">
+                   ${window.getFurnaceIconHtml(currentFurnace, 110)}
                 </div>
              </div>
           </div>
@@ -15684,7 +15684,7 @@ window.resetBearTrapEvent = async () => {
                   </div>
                   <div class="id-card-stat-row" style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:8px;">
                       <span style="color:var(--text-muted); font-size:13px; text-transform:uppercase; letter-spacing:1px;">Furnace Level</span>
-                      <span style="color:var(--text-main); font-weight:bold; font-size:20px; text-align:right; display:flex; align-items:center; justify-content:center;">${window.getFurnaceIconHtml(furnaceLevelStr, 76)}</span>
+                      <span style="color:var(--text-main); font-weight:bold; font-size:20px; text-align:right; display:flex; align-items:center; justify-content:center;">${window.getFurnaceIconHtml(furnaceLevelStr, 120)}</span>
                   </div>
                   
                   <div class="id-card-stat-row" style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:8px;">

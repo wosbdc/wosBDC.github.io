@@ -1,10 +1,9 @@
 {
-  "version": "2.5.48",
+  "version": "2.5.49",
   "releaseDate": "2026-08-14",
-  "title": "🔥 Applied Perfect Flame Parameters (0.8 Density, 35% Radius, 8px Embers)",
+  "title": "🛡️ Enlarged Fire Crystal Display in Account Hub & Profile",
   "notes": [
-    "Increased flame spawn rate to 0.8 for rich, active ember density",
-    "Expanded perimeter radius to 35% for seamless outer edge coverage",
-    "Set ember particle size to 8px for enhanced luminous glow"
+    "Enlarged Fire Crystal furnace badge from 76px to a prominent 120px in Chief Profile ID Card",
+    "Enlarged badge preview to 110px in the Edit Profile modal for maximum visual clarity"
   ]
 }
