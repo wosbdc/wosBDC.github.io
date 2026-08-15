@@ -9114,6 +9114,13 @@ window.openEditProfileModal = async () => {
 window.handleSyncCenturyGamesProfile = async () => {
   if (!currentUser) return;
   const syncBtn = document.getElementById('btnSyncCgProfile');
+  const menuBtn = document.getElementById('idCardActionsMenuBtn');
+  let originalMenuText = '';
+  if (menuBtn) {
+    originalMenuText = menuBtn.innerHTML;
+    menuBtn.innerHTML = '🔄 Syncing...';
+    menuBtn.disabled = true;
+  }
   if (syncBtn) {
     syncBtn.disabled = true;
     syncBtn.innerHTML = '🔄 Syncing...';
@@ -9194,6 +9201,10 @@ window.handleSyncCenturyGamesProfile = async () => {
     if (syncBtn) {
       syncBtn.disabled = false;
       syncBtn.innerHTML = '🔄 Sync from Game';
+    }
+    if (menuBtn) {
+      menuBtn.disabled = false;
+      menuBtn.innerHTML = originalMenuText || '⚙️ Options ▾';
     }
   }
 };
@@ -15649,7 +15660,7 @@ window.resetBearTrapEvent = async () => {
                           <button onclick="window.closeIdCardActionsMenu(); window.openEditProfileHubModal();" style="width:100%; display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; border:none; background:transparent; color:#fff; font-size:13.5px; font-weight:600; cursor:pointer; text-align:left; transition:background 0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.15)'" onmouseout="this.style.background='transparent'">
                               <span style="font-size:16px;">✏️</span> <span>Edit Member Profile</span>
                           </button>
-                          <button onclick="window.closeIdCardActionsMenu(); window.handleSyncCenturyGamesProfile();" style="width:100%; display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; border:none; background:transparent; color:#38bdf8; font-size:13.5px; font-weight:600; cursor:pointer; text-align:left; transition:background 0.2s;" onmouseover="this.style.background='rgba(56,189,248,0.15)'" onmouseout="this.style.background='transparent'">
+                          <button id="btnSyncCgProfile" onclick="window.closeIdCardActionsMenu(); window.handleSyncCenturyGamesProfile();" style="width:100%; display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; border:none; background:transparent; color:#38bdf8; font-size:13.5px; font-weight:600; cursor:pointer; text-align:left; transition:background 0.2s;" onmouseover="this.style.background='rgba(56,189,248,0.15)'" onmouseout="this.style.background='transparent'">
                               <span style="font-size:16px;">🔄</span> <span>Sync from Game</span>
                           </button>
                           <button onclick="window.closeIdCardActionsMenu(); window.openAccountHubVerifyModal();" style="width:100%; display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; border:none; background:transparent; color:#10b981; font-size:13.5px; font-weight:600; cursor:pointer; text-align:left; transition:background 0.2s;" onmouseover="this.style.background='rgba(16,185,129,0.15)'" onmouseout="this.style.background='transparent'">
@@ -15692,24 +15703,6 @@ window.resetBearTrapEvent = async () => {
               
               <!-- Watermark -->
               <div style="position:absolute; bottom:-20px; right:-20px; font-size:120px; opacity:0.04; pointer-events:none; transform:rotate(-15deg); z-index:1;">&#x2744;&#xFE0F;</div>
-          </div>
-          
-          <div style="display:flex; gap:12px; justify-content:center; margin-top:20px; margin-bottom:20px; flex-wrap:wrap;">
-              <button id="openUserEditProfileBtn" onclick="window.openEditProfileHubModal()" class="btn-auth-primary" style="padding:12px 24px; border-radius:10px; font-size:15px;">
-                  ✏️ Edit Profile
-              </button>
-              ${ (tokenStatus.status === 'active' || tokenStatus.status === 'expiring_soon') ? `
-                  <button id="btnSyncCgProfile" onclick="window.handleSyncCenturyGamesProfile()" class="btn-auth-secondary" style="padding:12px 20px; border-radius:10px; font-size:15px; display:inline-flex; align-items:center; gap:8px;">
-                      🔄 Sync from Game
-                  </button>
-                  <button id="btnRenewCgToken" onclick="window.openAccountHubVerifyModal()" class="btn-auth-secondary" style="padding:12px 18px; border-radius:10px; font-size:14px; display:inline-flex; align-items:center; gap:6px;">
-                      🔑 Renew Token
-                  </button>
-              ` : `
-                  <button id="btnVerifyCgProfile" onclick="window.openAccountHubVerifyModal()" class="btn-auth-primary" style="padding:12px 20px; border-radius:10px; font-size:15px; display:inline-flex; align-items:center; gap:8px;">
-                      🛡️ Renew 30-Day Sync Token
-                  </button>
-              `}
           </div>
 
           <input type="file" id="avatarUploadInput" accept="image/png, image/jpeg, image/webp" style="display:none;">

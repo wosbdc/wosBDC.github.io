@@ -1,11 +1,9 @@
 {
-  "version": "2.5.35",
+  "version": "2.5.36",
   "releaseDate": "2026-08-14",
-  "title": "🔥 Accurate Furnace & FC Level Sync + ID Card Options Menu",
+  "title": "✨ Streamlined Account Hub & Redundant Button Cleanup",
   "notes": [
-    "Fixed backend game sync bug where non-FC furnace levels (e.g. Lv 21, 28) were unintentionally overwritten to 30",
-    "Added full multi-stage ladder support for Fire Crystal levels (FC1 to FC10)",
-    "Added sleek ⚙️ Options dropdown menu directly in the Account Hub ID Card header near Chief Name",
-    "Synchronized stove_lv and furnaceLevel simultaneously across Firebase and live roster caches"
+    "Removed redundant bottom buttons below the ID Card to fully streamline the interface into the ⚙️ Options menu",
+    "Enhanced ⚙️ Options dropdown menu with live sync feedback and full action parity"
   ]
 }

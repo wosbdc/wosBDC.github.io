@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.5.36] - 2026-08-14
+- Removed redundant bottom buttons below the Account Hub ID card to keep the profile card streamlined and clean.
+- Integrated all actions exclusively into the sleek `⚙️ Options ▾` menu near the Chief Name.
+- Added interactive loading states on the Options button during game profile syncing.
+
 ## [2.5.35] - 2026-08-14
 - Fixed non-FC furnace level overwrite in `WosApi.js` where players with normal furnace levels (e.g. 21, 28) were overwritten to 30 upon clicking "Sync from Game".
 - Upgraded Fire Crystal (FC 1–10) multi-stage ladder parsing across backend and frontend helpers.
