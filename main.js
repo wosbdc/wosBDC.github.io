@@ -132,7 +132,7 @@ window.fetchRoster = async () => {
 };
 
 
-const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbw7qJBayYV_zQgAFMvd_V7W5dLj5JjhbmLlsx9vEk0LYaWYIiFQTL5LVsf3Oqvf4Ag/exec';
+const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbx3BOEmkmqvB-KL1unFQyYiTUyyELdcXOZG67P1gXA1xzwqAaaVYN2DgRFEOL_PpK0/exec';
 const VERIFY_PROXY_URL = 'https://wos-vercel-proxy.vercel.app/api/verify'; // Fallback / secondary proxy
 
 // Get a fresh Firebase ID token for the current user (replaces hardcoded APP_SECRET)
@@ -1678,7 +1678,7 @@ window.formatRankBadgeHtml = (rankVal) => {
 // Register Service Worker for Mobile PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=2.5.61')
+    navigator.serviceWorker.register('./sw.js?v=2.5.62')
       .then(reg => {
         reg.update();
         console.log('PWA Service Worker registered:', reg.scope);

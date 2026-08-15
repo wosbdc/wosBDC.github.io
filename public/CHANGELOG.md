@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.5.62] - 2026-08-15
+- Connected the **Alliance Mass Gift Code Dispatcher** directly to the live game redemption server.
+- Improved live error handling and response status parsing.
+
 ## [2.5.61] - 2026-08-15
 - Fixed authentication token handling in the **Alliance Mass Gift Code Dispatcher**.
 

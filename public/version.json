@@ -1,9 +1,9 @@
 {
-  "version": "2.5.61",
+  "version": "2.5.62",
   "releaseDate": "2026-08-15",
-  "title": "⚡ Gift Code Dispatcher Token Scoping Fix",
+  "title": "🎁 Gift Code Server Connection Update",
   "notes": [
-    "Fixed authentication token handling in the Mass Gift Code Dispatcher",
-    "Enabled smooth live testing and automated batch delivery"
+    "Connected the Gift Code Dispatcher to the official live redemption server",
+    "Enabled reliable code validation and instant batch delivery"
   ]
 }
