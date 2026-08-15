@@ -8801,7 +8801,7 @@ window.openAllianceAlertsModal = async () => {
     let oldModal = document.getElementById('newMembersModalOverlay');
     if (oldModal) oldModal.remove();
 
-    // Fetch broadcast alerts from Firebase RTDB
+    // Fetch broadcast alerts from Firebase RTDB with keys
     let broadcastsList = [];
     const lastSeenBroadcast = Number(localStorage.getItem('last_seen_broadcast_timestamp') || '0');
     let unreadBroadcastCount = 0;
@@ -8809,7 +8809,11 @@ window.openAllianceAlertsModal = async () => {
       const bSnap = await get(ref(db, 'broadcastAlerts'));
       if (bSnap.exists()) {
         const bVal = bSnap.val() || {};
-        broadcastsList = Object.values(bVal).filter(Boolean);
+        broadcastsList = Object.entries(bVal).map(([k, v]) => ({
+          ...v,
+          id: v.id || k,
+          key: k
+        })).filter(Boolean);
         broadcastsList.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
         unreadBroadcastCount = broadcastsList.filter(b => b.timestamp && b.timestamp > lastSeenBroadcast).length;
       }
@@ -8854,6 +8858,11 @@ window.openAllianceAlertsModal = async () => {
               <button onclick="window.handleModalPushToggle(this); window.closeHeaderPushDropdown();" style="width:100%; text-align:left; background:transparent; border:none; color:#10b981; padding:7px 9px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.15s;" onmouseover="this.style.background='rgba(16,185,129,0.15)'" onmouseout="this.style.background='transparent'">
                 🔄 Re-sync Token
               </button>
+              ${isStaff ? `
+                <button onclick="window.openBroadcastCleanerModal(); window.closeHeaderPushDropdown();" style="width:100%; text-align:left; background:transparent; border:none; color:#f472b6; padding:7px 9px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.15s;" onmouseover="this.style.background='rgba(244,114,182,0.15)'" onmouseout="this.style.background='transparent'">
+                  🧹 Alert Cleaner
+                </button>
+              ` : ''}
               <button onclick="window.markAllBroadcastsRead(); document.getElementById('notificationsModalOverlay').remove(); window.openAllianceAlertsModal();" style="width:100%; text-align:left; background:transparent; border:none; color:var(--text-muted); padding:7px 9px; border-radius:6px; font-size:12px; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
                 🧹 Clear Badges
               </button>
@@ -8871,20 +8880,29 @@ window.openAllianceAlertsModal = async () => {
 
     // 1. Broadcasts Section HTML
     let broadcastsSectionHtml = '';
-    const bCards = broadcastsList.length > 0 ? broadcastsList.slice(0, 10).map(b => {
+    const bCards = broadcastsList.length > 0 ? broadcastsList.slice(0, 15).map(b => {
       const isUnread = Boolean(b.timestamp && b.timestamp > lastSeenBroadcast);
       const relTime = window.formatRelativeTime ? window.formatRelativeTime(b.timestamp) : '';
+      const deleteBtn = isStaff ? `
+        <button onclick="event.stopPropagation(); window.deleteBroadcastAlert('${b.key}')" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; border-radius:6px; padding:2px 7px; font-size:11px; cursor:pointer; display:inline-flex; align-items:center; gap:2px; transition:0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.25)'" onmouseout="this.style.background='rgba(239,68,68,0.1)'" title="Delete this announcement">
+          🗑️
+        </button>
+      ` : '';
+
       return `
         <div style="background:rgba(15,23,42,0.6); border:1px solid ${isUnread ? 'rgba(236,72,153,0.45)' : 'rgba(255,255,255,0.08)'}; border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; gap:4px; position:relative;">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div style="font-weight:bold; font-size:13.5px; color:#fff; display:flex; align-items:center; gap:6px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+            <div style="font-weight:bold; font-size:13.5px; color:#fff; display:flex; align-items:center; gap:6px; flex-wrap:wrap; min-width:0;">
               <span>${window.escapeHTML(b.title || 'Announcement')}</span>
               ${isUnread ? `<span style="font-size:10px; background:rgba(236,72,153,0.2); color:#ec4899; border:1px solid rgba(236,72,153,0.4); padding:1px 6px; border-radius:8px; font-weight:bold;">NEW</span>` : ''}
             </div>
-            <span style="font-size:11px; color:var(--text-muted);">${relTime}</span>
+            <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+              <span style="font-size:11px; color:var(--text-muted);">${relTime}</span>
+              ${deleteBtn}
+            </div>
           </div>
           <div style="font-size:12.5px; color:var(--text-main); line-height:1.4; white-space:pre-wrap; margin-top:2px;">${window.escapeHTML(b.body || '')}</div>
-          <div style="font-size:11px; color:var(--text-muted); margin-top:3px; display:flex; align-items:center; gap:6px;">
+          <div style="font-size:11px; color:var(--text-muted); margin-top:3px; display:flex; align-items:center; justify-content:space-between; gap:6px;">
             <span>📢 ${window.escapeHTML(b.senderName || 'Leadership')}</span>
           </div>
         </div>
@@ -8907,6 +8925,11 @@ window.openAllianceAlertsModal = async () => {
             </div>
           </div>
           <div style="display:flex; align-items:center; gap:8px;">
+            ${isStaff && broadcastsList.length > 0 ? `
+              <button onclick="event.stopPropagation(); window.openBroadcastCleanerModal();" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.35); color:#ef4444; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:3px; transition:0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.25)'" onmouseout="this.style.background='rgba(239,68,68,0.15)'" title="Open Announcement Cleaner to delete or purge old messages">
+                🧹 Cleaner
+              </button>
+            ` : ''}
             <span style="background:rgba(236,72,153,0.2); color:#f472b6; border:1px solid rgba(236,72,153,0.4); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold;">${unreadBroadcastCount > 0 ? `${unreadBroadcastCount} New` : `${broadcastsList.length}`}</span>
             <span id="broadcastsAccordionChevron" style="font-size:15px; color:var(--text-muted); transition:transform 0.2s ease;">▾</span>
           </div>
@@ -9427,6 +9450,173 @@ window.markAllBroadcastsRead = function() {
     window.updateBroadcastBellCount();
   }
   if (window.showToast) window.showToast("All alert badges marked as read.", "info");
+};
+
+window.deleteBroadcastAlert = async (key) => {
+  if (!key) return;
+  const isStaff = (currentUser && typeof window.isAdminUser === 'function') ? window.isAdminUser(currentUser) : false;
+  if (!isStaff) {
+    if (window.showToast) window.showToast("Only leadership/admin can delete announcements.", "warning");
+    return;
+  }
+  
+  const confirmed = confirm("Are you sure you want to permanently delete this announcement?");
+  if (!confirmed) return;
+
+  try {
+    await remove(ref(db, `broadcastAlerts/${key}`));
+    if (window.showToast) window.showToast("🗑️ Announcement deleted successfully.", "success");
+    if (typeof window.updateNewMemberBadge === 'function') window.updateNewMemberBadge();
+    
+    // Re-render modal if open
+    const overlay = document.getElementById('notificationsModalOverlay');
+    if (overlay) {
+      overlay.remove();
+      window.openAllianceAlertsModal();
+    }
+  } catch(err) {
+    console.error("Failed to delete broadcast alert:", err);
+    if (window.showToast) window.showToast("Failed to delete announcement: " + (err.message || err), "error");
+  }
+};
+
+window.openBroadcastCleanerModal = async () => {
+  const isStaff = (currentUser && typeof window.isAdminUser === 'function') ? window.isAdminUser(currentUser) : false;
+  if (!isStaff) {
+    if (window.showToast) window.showToast("Only leadership/admin can access the announcement cleaner.", "warning");
+    return;
+  }
+
+  let existingCleaner = document.getElementById('broadcastCleanerModalOverlay');
+  if (existingCleaner) existingCleaner.remove();
+
+  // Fetch current broadcastAlerts
+  let allBroadcasts = [];
+  try {
+    const snap = await get(ref(db, 'broadcastAlerts'));
+    if (snap.exists()) {
+      const val = snap.val() || {};
+      allBroadcasts = Object.entries(val).map(([k, v]) => ({ ...v, key: k }));
+    }
+  } catch(e) {
+    console.warn("Error fetching broadcasts for cleaner:", e);
+  }
+
+  const now = Date.now();
+  const oneDay = 24 * 60 * 60 * 1000;
+  const countOlderThan3d = allBroadcasts.filter(b => b.timestamp && (now - b.timestamp > 3 * oneDay)).length;
+  const countOlderThan7d = allBroadcasts.filter(b => b.timestamp && (now - b.timestamp > 7 * oneDay)).length;
+
+  const cleanerModal = document.createElement('div');
+  cleanerModal.id = 'broadcastCleanerModalOverlay';
+  cleanerModal.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.85); backdrop-filter:blur(10px); z-index:100001; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease;';
+  cleanerModal.addEventListener('click', (e) => {
+    if (e.target === cleanerModal) cleanerModal.remove();
+  });
+
+  cleanerModal.innerHTML = `
+    <div class="card" style="width:92%; max-width:440px; background:linear-gradient(145deg, rgba(15,23,42,0.98), rgba(30,41,59,0.96)); border:1px solid rgba(239,68,68,0.35); padding:22px; border-radius:18px; box-shadow:0 25px 60px rgba(0,0,0,0.8); text-align:left; color:var(--text-main); animation:zoomIn 0.2s ease;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:10px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:22px;">🧹</span>
+          <div>
+            <h3 style="margin:0; color:#fff; font-size:16px; font-weight:bold;">Announcement Cleaner</h3>
+            <div style="font-size:11px; color:var(--text-muted);">Manage and purge old alliance broadcast alerts</div>
+          </div>
+        </div>
+        <button onclick="document.getElementById('broadcastCleanerModalOverlay').remove()" style="background:none; border:none; color:var(--text-muted); font-size:22px; cursor:pointer; line-height:1;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-muted)'">&times;</button>
+      </div>
+
+      <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:12px; margin-bottom:16px; display:flex; justify-content:space-around; text-align:center;">
+        <div>
+          <div style="font-size:18px; font-weight:bold; color:#fff;">${allBroadcasts.length}</div>
+          <div style="font-size:10.5px; color:var(--text-muted); text-transform:uppercase; margin-top:2px;">Total Alerts</div>
+        </div>
+        <div style="border-left:1px solid rgba(255,255,255,0.08);"></div>
+        <div>
+          <div style="font-size:18px; font-weight:bold; color:#f59e0b;">${countOlderThan3d}</div>
+          <div style="font-size:10.5px; color:var(--text-muted); text-transform:uppercase; margin-top:2px;">&gt; 3 Days Old</div>
+        </div>
+        <div style="border-left:1px solid rgba(255,255,255,0.08);"></div>
+        <div>
+          <div style="font-size:18px; font-weight:bold; color:#ef4444;">${countOlderThan7d}</div>
+          <div style="font-size:10.5px; color:var(--text-muted); text-transform:uppercase; margin-top:2px;">&gt; 7 Days Old</div>
+        </div>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:18px;">
+        <button onclick="window.executeBroadcastCleanup(7)" style="background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.35); color:#f59e0b; padding:10px 14px; border-radius:10px; font-size:13px; font-weight:bold; cursor:pointer; text-align:left; display:flex; justify-content:space-between; align-items:center; transition:0.2s;" onmouseover="this.style.background='rgba(245,158,11,0.22)'" onmouseout="this.style.background='rgba(245,158,11,0.12)'">
+          <span>🕒 Clean Messages Older Than 7 Days</span>
+          <span style="font-size:11px; background:rgba(245,158,11,0.2); padding:2px 8px; border-radius:10px;">${countOlderThan7d} items</span>
+        </button>
+
+        <button onclick="window.executeBroadcastCleanup(3)" style="background:rgba(249,115,22,0.12); border:1px solid rgba(249,115,22,0.35); color:#f97316; padding:10px 14px; border-radius:10px; font-size:13px; font-weight:bold; cursor:pointer; text-align:left; display:flex; justify-content:space-between; align-items:center; transition:0.2s;" onmouseover="this.style.background='rgba(249,115,22,0.22)'" onmouseout="this.style.background='rgba(249,115,22,0.12)'">
+          <span>🕒 Clean Messages Older Than 3 Days</span>
+          <span style="font-size:11px; background:rgba(249,115,22,0.2); padding:2px 8px; border-radius:10px;">${countOlderThan3d} items</span>
+        </button>
+
+        <button onclick="window.executeBroadcastCleanup(0)" style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.35); color:#ef4444; padding:10px 14px; border-radius:10px; font-size:13px; font-weight:bold; cursor:pointer; text-align:left; display:flex; justify-content:space-between; align-items:center; transition:0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.22)'" onmouseout="this.style.background='rgba(239,68,68,0.12)'">
+          <span>🗑️ Delete ALL Announcements</span>
+          <span style="font-size:11px; background:rgba(239,68,68,0.2); padding:2px 8px; border-radius:10px;">${allBroadcasts.length} items</span>
+        </button>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end;">
+        <button onclick="document.getElementById('broadcastCleanerModalOverlay').remove()" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#cbd5e1; padding:7px 16px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12px;">Cancel</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(cleanerModal);
+};
+
+window.executeBroadcastCleanup = async (daysThreshold) => {
+  const isStaff = (currentUser && typeof window.isAdminUser === 'function') ? window.isAdminUser(currentUser) : false;
+  if (!isStaff) return;
+
+  const confirmMsg = daysThreshold === 0 
+    ? "⚠️ Are you sure you want to DELETE ALL announcements from Firebase?" 
+    : `Are you sure you want to clean up announcements older than ${daysThreshold} day(s)?`;
+  
+  if (!confirm(confirmMsg)) return;
+
+  try {
+    const snap = await get(ref(db, 'broadcastAlerts'));
+    if (!snap.exists()) {
+      if (window.showToast) window.showToast("No announcements found to clean.", "info");
+      return;
+    }
+
+    const val = snap.val() || {};
+    const now = Date.now();
+    const cutoff = daysThreshold > 0 ? now - (daysThreshold * 24 * 60 * 60 * 1000) : Infinity;
+
+    let deletedCount = 0;
+    const deletePromises = [];
+    for (const [key, item] of Object.entries(val)) {
+      if (daysThreshold === 0 || (item && item.timestamp && item.timestamp < cutoff) || !item.timestamp) {
+        deletePromises.push(remove(ref(db, `broadcastAlerts/${key}`)));
+        deletedCount++;
+      }
+    }
+
+    await Promise.all(deletePromises);
+
+    const cleanerOverlay = document.getElementById('broadcastCleanerModalOverlay');
+    if (cleanerOverlay) cleanerOverlay.remove();
+
+    if (window.showToast) window.showToast(`🧹 Successfully cleaned up ${deletedCount} announcement(s)!`, "success");
+    if (typeof window.updateNewMemberBadge === 'function') window.updateNewMemberBadge();
+
+    const notifOverlay = document.getElementById('notificationsModalOverlay');
+    if (notifOverlay) {
+      notifOverlay.remove();
+      window.openAllianceAlertsModal();
+    }
+  } catch(err) {
+    console.error("Cleanup error:", err);
+    if (window.showToast) window.showToast("Cleanup failed: " + (err.message || err), "error");
+  }
 };
 
 window.handleModalPushToggle = async (btnEl) => {

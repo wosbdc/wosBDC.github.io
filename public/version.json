@@ -1,9 +1,9 @@
 {
-  "version": "2.5.86",
+  "version": "2.5.87",
   "releaseDate": "2026-08-15",
-  "title": "📧 Restored Account Email",
+  "title": "🧹 Announcement Cleaner & Alert Deletion",
   "notes": [
-    "Restored primary account email in Firebase database",
-    "Protected real account emails during admin testing"
+    "Added 1-click delete button to individual leadership announcements",
+    "Added Announcement Cleaner to purge old broadcast alerts by age (3d, 7d, or all)"
   ]
 }

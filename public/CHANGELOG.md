@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.5.87] - 2026-08-15
+- 🧹 **Announcement Cleaner & Alert Management:**
+  - Added delete button (`🗑️`) to individual leadership announcements in the Notifications modal.
+  - Added Announcement Cleaner modal to batch purge old alerts by age (3+ days, 7+ days, or clear all).
+
 ## [2.5.86] - 2026-08-15
 - 📧 **Account Email Restored:**
   - Restored primary account email in Firebase database.
