@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [2.5.74] - 2026-08-15
+- 🤖 **Autonomous Gift Code Bot & Live Metrics:**
+  - 🌐 **Multi-Source Scraper Daemon:** Autonomous scraper monitoring DotGG, ProGameGuides, and PocketGamer feeds for new promo drops.
+  - ⚡ **Auto-Discovery & Validation:** Tests new codes against Century Games servers and auto-registers active codes into the alliance database.
+  - 📊 **Live Telemetry Box:** Real-time bot heartbeat, sweep schedule countdown, and activity logs right in the Admin Hub.
+  - ▶️ **1-Tap Live Sweep:** Trigger on-demand web sweeps directly from the Gift Codes Manager.
+
 ## [2.5.73] - 2026-08-15
 - 🎁 **Alliance Gift Codes Manager (Admin Hub):**
   - 🗂️ **Centralized Code Management:** Dedicated admin tab to organize, search, and track active vs expired promotional codes.

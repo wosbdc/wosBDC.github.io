@@ -26,6 +26,8 @@ tmp/
 *.py
 *.cjs
 *.mjs
+!tools/*.cjs
+!tools/*.mjs
 *.bat
 *.txt
 *.bak

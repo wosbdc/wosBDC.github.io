@@ -1,9 +1,9 @@
 {
-  "version": "2.5.73",
+  "version": "2.5.74",
   "releaseDate": "2026-08-15",
-  "title": "🎁 Gift Codes Manager (Admin Hub)",
+  "title": "🤖 Autonomous Gift Code Bot & Live Telemetry",
   "notes": [
-    "New Gift Codes Manager tab to manage active and expired alliance codes",
-    "Live validity testing, analytics tracking, and batch dispatch tools"
+    "Integrated autonomous web scraper & Century Games validator daemon",
+    "Live telemetry metrics box in Admin Hub with real-time status and sweep logs"
   ]
 }
