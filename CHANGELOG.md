@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.5.55] - 2026-08-14
+- Re-centered solid shield bodies for all 10 badge PNG files (`FC 1` through `FC 10`) to the exact pixel (136px to 887px, center 511.5px), fixing the 44px left offset caused by corner sparkle artifacts.
+- Synchronized `FlameWisp` shield contour polygon to match the true solid shield perimeter (`(0, -0.433)`, `(±0.367, -0.226)`, `(±0.367, +0.226)`, `(0, +0.433)`).
+
 ## [2.5.54] - 2026-08-14
 - Expanded flame canvas bounds to 1.85x badge size, preventing particle clipping on all 4 borders.
 - Replaced approximate hexagon math with exact pixel-measured shield contour polygon coordinates (`(0, -0.441)`, `(±0.359, -0.231)`, `(±0.359, +0.223)`, `(0, +0.433)`).

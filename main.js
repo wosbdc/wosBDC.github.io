@@ -198,7 +198,7 @@ window.getFurnaceIconHtml = (level, size = 48) => {
      const canvasOffset = Math.round((canvasSize - size) / 2);
      return `<span class="fc-badge-stage" data-fc="${fcNum}" data-size="${size}" style="display:inline-flex; align-items:center; justify-content:center; position:relative; vertical-align:middle; cursor:pointer; width:${size}px; height:${size}px; line-height:0; user-select:none; -webkit-user-select:none;">
        <canvas class="fc-flame-canvas" width="${canvasSize}" height="${canvasSize}" style="position:absolute; top:-${canvasOffset}px; left:-${canvasOffset}px; width:${canvasSize}px; height:${canvasSize}px; pointer-events:none; z-index:3; display:block;"></canvas>
-       <img src="./badges/fc${fcNum}.png?v=2.5.54" onerror="this.onerror=null; this.src='/badges/fc${fcNum}.png?v=2.5.54';" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; display:block; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
+       <img src="./badges/fc${fcNum}.png?v=2.5.55" onerror="this.onerror=null; this.src='/badges/fc${fcNum}.png?v=2.5.55';" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; display:block; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
      </span>`;
   }
 
@@ -21380,12 +21380,12 @@ window.closeMobileNavModal = () => {
       
       // Exact pixel-aligned shield contour vertices (measured from 1024x1024 assets)
       const v = [
-        { x: cx, y: cy - (badgeSize * 0.441) },                                  // Top Point
-        { x: cx + (badgeSize * 0.359), y: cy - (badgeSize * 0.231) },          // Top Right Corner
-        { x: cx + (badgeSize * 0.359), y: cy + (badgeSize * 0.223) },          // Bottom Right Corner
+        { x: cx, y: cy - (badgeSize * 0.433) },                                  // Top Point
+        { x: cx + (badgeSize * 0.367), y: cy - (badgeSize * 0.226) },          // Top Right Corner
+        { x: cx + (badgeSize * 0.367), y: cy + (badgeSize * 0.226) },          // Bottom Right Corner
         { x: cx, y: cy + (badgeSize * 0.433) },                                  // Bottom Point
-        { x: cx - (badgeSize * 0.359), y: cy + (badgeSize * 0.223) },          // Bottom Left Corner
-        { x: cx - (badgeSize * 0.359), y: cy - (badgeSize * 0.231) }           // Top Left Corner
+        { x: cx - (badgeSize * 0.367), y: cy + (badgeSize * 0.226) },          // Bottom Left Corner
+        { x: cx - (badgeSize * 0.367), y: cy - (badgeSize * 0.226) }           // Top Left Corner
       ];
 
       // Pick a random edge segment along the shield (0 to 5)

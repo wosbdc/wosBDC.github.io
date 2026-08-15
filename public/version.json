@@ -1,10 +1,10 @@
 {
-  "version": "2.5.54",
+  "version": "2.5.55",
   "releaseDate": "2026-08-14",
-  "title": "🔥 Pixel-Perfect Measured Shield Contour & Expanded 1.85x Canvas",
+  "title": "🛡️ 100% Solid Body Centering & Symmetrical Flame Flaring",
   "notes": [
-    "Expanded canvas boundary to 1.85x badge size, providing generous padding on all sides so flames never clip",
-    "Applied exact pixel-measured shield contour polygon coordinates directly from 1024x1024 assets",
-    "Embers now spawn flush along the shield perimeter and billow outward symmetrically across all 6 facets"
+    "Re-centered solid shield bodies for all 10 badges to the exact pixel (136 to 887, center 511.5px), fixing the 44px left offset",
+    "Synchronized FlameWisp contour vertices to the true shield facets (x=±0.367, y=±0.226/±0.433)",
+    "Embers now flare with complete bilateral symmetry across all 6 facets of every Fire Crystal badge"
   ]
 }
