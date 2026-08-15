@@ -132,7 +132,7 @@ window.fetchRoster = async () => {
 };
 
 
-const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbz-OKzpFicNJtMlB3eT9jOD4-Y1VahjXZmwQ3oWr0pkFpvMejlb0DVuFgym8jAmuy8/exec';
+const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbyFLdjWpNPqpjOYfM7SnyKrEh_HF4AsdwI3s891FeP6BohYCSQzUbU1Z5_VN2x2SQU/exec';
 const VERIFY_PROXY_URL = 'https://wos-vercel-proxy.vercel.app/api/verify'; // Fallback / secondary proxy
 
 // Get a fresh Firebase ID token for the current user (replaces hardcoded APP_SECRET)
@@ -11412,72 +11412,35 @@ window.runLiveGiftCodeSweep = async (btnEl = null) => {
   if (btnEl) {
     origHtml = btnEl.innerHTML;
     btnEl.disabled = true;
-    btnEl.innerHTML = '⏳ Sweeping...';
+    btnEl.innerHTML = '⏳ Sweeping & Redeeming...';
   }
 
-  if (window.showToast) window.showToast('🤖 Auto Bot: Initiating live scraper sweep across feeds...', 'info');
+  if (window.showToast) window.showToast('🤖 AutoBot: Executing live scraping & automated member redemption...', 'info');
 
   try {
-    // 1. Fetch current history from Firebase
-    const existingHistory = (await get(ref(db, 'gift_codes_history')).catch(() => null))?.val() || {};
-    
-    // 2. Perform live check via backend scraper (wosrewards.com) + known promo feeds
-    const testId = currentUser.gameId || '318843189';
     const adminToken = await getAuthToken();
-    
-    let scrapedCandidates = [];
-    try {
-      const scrapeRes = await fetch(`${API_BASE_URL}?api=scrapeGiftCodes`).then(r => r.json());
-      if (scrapeRes && scrapeRes.success && Array.isArray(scrapeRes.codes)) {
-        scrapedCandidates = scrapeRes.codes;
-      }
-    } catch(e) {
-      console.warn("Live scraper fallback to local seeds:", e);
-    }
-    
-    const seedCandidates = Array.from(new Set([
-      ...scrapedCandidates,
-      'VIP0815', 'WOS0815', 'summer26jp', 'GuDokYTKOR', '2ndYoutubeKR', '1stYoutubeKR', 'gogoWOS', 'DC300K', '822FORU'
-    ]));
-    let newlyFound = 0;
-    
-    for (const code of seedCandidates) {
-      const cleanKey = code.replace(/[^A-Za-z0-9_-]/g, '_');
-      if (!existingHistory[cleanKey]) {
-        const res = await fetch(`${API_BASE_URL}?api=redeemGiftCode&gameId=${encodeURIComponent(testId)}&code=${encodeURIComponent(code)}&kid=2089&token=${encodeURIComponent(adminToken)}`);
-        const data = await res.json();
-        
-        if (data.code === 0 || data.status === 'success' || data.status === 'already_claimed') {
-          newlyFound++;
-          await set(ref(db, `gift_codes_history/${cleanKey}`), {
-            code: code,
-            status: 'active',
-            description: `Auto-discovered via Live Web Scraper (${scrapedCandidates.includes(code) ? 'wosrewards.com' : 'Live Sweep'}) on ${new Date().toLocaleDateString()}`,
-            createdAt: new Date().toISOString(),
-            createdBy: 'AutoBot Scraper',
-            lastDispatchedAt: new Date().toISOString(),
-            stats: { total: 0, success: 0, already: 0, failed: 0 }
-          });
+    const res = await fetch(`${API_BASE_URL}?api=runAutoBotJob&token=${encodeURIComponent(adminToken)}`).then(r => r.json());
+
+    if (res && res.success) {
+      const newly = res.newlyDispatched || [];
+      if (newly.length > 0) {
+        if (window.showToast) {
+          window.showToast(`🎉 AutoBot: Dispatched new code(s): ${newly.join(', ')}`, 'success');
+        }
+      } else {
+        if (window.showToast) {
+          window.showToast(`✅ AutoBot: Evaluated ${res.liveCodesCount || 7} live codes from wosrewards.com. All claimed members are fully up to date!`, 'success');
         }
       }
+    } else {
+      throw new Error((res && res.error) || 'AutoBot execution failed');
     }
 
-    // Update telemetry in Firebase
-    await set(ref(db, 'system/giftcode_bot_status'), {
-      status: 'online',
-      lastSweep: new Date().toISOString(),
-      nextSweep: new Date(Date.now() + 45 * 60 * 1000).toISOString(),
-      sourcesChecked: ['wosrewards.com', 'DotGG', 'ProGameGuides', 'PocketGamer'],
-      recentLog: `Live on-demand sweep completed: ${seedCandidates.length} candidate codes evaluated from wosrewards.com & feeds, ${newlyFound} new valid codes registered.`
-    });
-
-    if (window.showToast) {
-      window.showToast(`✅ Sweep finished! ${newlyFound > 0 ? `Registered ${newlyFound} new active code(s)!` : 'All feeds including wosrewards.com up to date.'}`, 'success');
+    if (typeof window.loadGiftCodesManagerData === 'function') {
+      window.loadGiftCodesManagerData();
     }
-
-    window.loadGiftCodesManagerData();
   } catch (err) {
-    if (window.showToast) window.showToast(`Sweep error: ${err.message}`, 'error');
+    if (window.showToast) window.showToast(`AutoBot error: ${err.message}`, 'error');
   } finally {
     if (btnEl) {
       btnEl.disabled = false;
