@@ -132,16 +132,16 @@
 - Streamlined the `⚙️ Options ▾` dropdown menu down to exactly 2 unified buttons: `✏️ Edit Profile` (opens complete profile, avatar & tagline manager) and `🔄 Sync from Game` (live server sync with automated token renewal flow).
 
 ## [2.5.38] - 2026-08-14
-- Verified live Century Games server payload structure: standard furnace levels (1–30) are returned directly inside `user.rank` as numeric integers (e.g. `"rank": 21`).
-- Enhanced `WosApi.js` parser to map `typeof user.rank === 'number'` across both standard furnace levels (`1..30`) and Fire Crystal tiers (`31..80` $\rightarrow$ `FC 1..10`).
-- Deployed Google Apps Script backend Version `@159` to live production.
+- Verified live game server payload structure: standard furnace levels (1–30) are returned directly inside `user.rank` as numeric integers (e.g. `"rank": 21`).
+- Enhanced parser to map `typeof user.rank === 'number'` across both standard furnace levels (`1..30`) and Fire Crystal tiers (`31..80` $\rightarrow$ `FC 1..10`).
+- Deployed backend Version `@159` to live production.
 - Successfully verified live token binding and real-time syncing for `Dragon Frost` (Lv 21) across Account Hub, Roster, Alts, and Chief's List.
 
 ## [2.5.37] - 2026-08-14
-- Completely eradicated the legacy `if (!stoveLv) stoveLv = "30";` fallback in `WosApi.js` that was forcibly resetting non-FC furnace levels (e.g. 21, 28) back to 30 on sync.
-- Added automated fallback lookup to the Century Games public player API (`wos-giftcode.centurygame.com/api/player`) if the VIP store payload lacks detailed furnace level information.
+- Completely eradicated legacy fallbacks that were resetting non-FC furnace levels (e.g. 21, 28) back to 30 on sync.
+- Added automated fallback lookup to the in-game player profile API if the payload lacks detailed furnace level information.
 - Hardened client sync routines (`handleSyncCenturyGamesProfile`, `handleSyncAlt`, `handleSyncAllCharacters`) to preserve the player's current furnace level if the game server response is blank or unpopulated.
-- Deployed Google Apps Script backend as Version `@158` and synchronized frontend `API_BASE_URL`.
+- Deployed backend as Version `@158` and synchronized frontend `API_BASE_URL`.
 
 ## [2.5.36] - 2026-08-14
 - Removed redundant bottom buttons below the Account Hub ID card to keep the profile card streamlined and clean.
