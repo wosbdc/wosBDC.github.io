@@ -132,7 +132,7 @@ window.fetchRoster = async () => {
 };
 
 
-const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbzInxxI5zPqg0i7I-n06pYLSMNJZzkboTsrowSAAhao86xwmWYf08NO4zG6vJ6nTg/exec';
+const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbzY1Vt0C1ccKLTdciqICnwE1Z7SMgxNdWSnBE6Bn-gWAX4ltcEtOikbeOxN6qRyoRY/exec';
 const VERIFY_PROXY_URL = 'https://wos-vercel-proxy.vercel.app/api/verify'; // Fallback / secondary proxy
 
 // Get a fresh Firebase ID token for the current user (replaces hardcoded APP_SECRET)
@@ -11449,6 +11449,44 @@ window.runLiveGiftCodeSweep = async (btnEl = null) => {
   }
 };
 
+window.runNightlyMaintenanceSweep = async (btnEl = null) => {
+  let origHtml = '';
+  if (btnEl) {
+    origHtml = btnEl.innerHTML;
+    btnEl.disabled = true;
+    btnEl.innerHTML = '⏳ Syncing Accounts...';
+  }
+
+  if (window.showToast) window.showToast('🌙 Running Account Maintenance: Syncing furnace levels & nicknames across all members & alts...', 'info');
+
+  try {
+    const adminToken = await getAuthToken();
+    const res = await fetch(`${API_BASE_URL}?api=runNightlyMaintenance&token=${encodeURIComponent(adminToken)}`).then(r => r.json());
+
+    if (res && res.success) {
+      const rep = res.report || {};
+      const upg = rep.upgradesCount || 0;
+      const nc = rep.nameChangesCount || 0;
+      const aud = rep.accountsAudited || 0;
+      if (window.showToast) {
+        window.showToast(`✅ Nightly Maintenance Complete: Audited ${aud} account(s), synced ${upg} furnace upgrade(s), ${nc} nickname change(s)!`, 'success');
+      }
+      if (typeof window.renderLinkedAlts === 'function') {
+        window.renderLinkedAlts();
+      }
+    } else {
+      throw new Error((res && res.error) || 'Maintenance sync failed');
+    }
+  } catch (err) {
+    if (window.showToast) window.showToast(`Maintenance error: ${err.message}`, 'error');
+  } finally {
+    if (btnEl) {
+      btnEl.disabled = false;
+      btnEl.innerHTML = origHtml || '🌙 Run Maintenance Now';
+    }
+  }
+};
+
 window.loadGiftCodesManagerData = async () => {
   const container = document.getElementById('adminGiftCodesListContainer');
   if (!container) return;
@@ -14837,12 +14875,15 @@ const views = {
                         </span>
                       </div>
                       <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
-                        Autonomous Scraper & Rewards Auto-Redeemer (DotGG, ProGameGuides, PocketGamer)
+                        Autonomous 24/7 Engine (WosRewards, GamsGo, DotGG, ProGameGuides, PocketGamer)
                       </div>
                     </div>
                   </div>
 
-                  <div style="display:flex; align-items:center; gap:8px;">
+                  <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <button id="btnTriggerManualMaint" onclick="window.runNightlyMaintenanceSweep(this)" style="background:linear-gradient(135deg, #8b5cf6, #6d28d9); color:#fff; border:none; padding:7px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:5px; box-shadow:0 2px 8px rgba(139,92,246,0.3);">
+                      🌙 Run Maintenance Now
+                    </button>
                     <button id="btnTriggerManualSweep" onclick="window.runLiveGiftCodeSweep(this)" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:7px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:5px; box-shadow:0 2px 8px rgba(14,165,233,0.3);">
                       ▶️ Run Live Sweep Now
                     </button>
@@ -14860,7 +14901,7 @@ const views = {
                   </div>
                   <div style="background:rgba(0,0,0,0.25); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.04);">
                     <div style="color:var(--text-muted); font-size:11px; text-transform:uppercase; font-weight:bold;">🌐 Monitored Sources</div>
-                    <div style="color:#10b981; font-weight:bold; margin-top:2px;">3 Feeds Online (DotGG, PGG, PG)</div>
+                    <div style="color:#10b981; font-weight:bold; margin-top:2px;">5 Feeds Online</div>
                   </div>
                 </div>
 
