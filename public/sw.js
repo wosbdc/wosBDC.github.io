@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wos-bdc-pwa-v2.5.69';
+const CACHE_NAME = 'wos-bdc-pwa-v2.5.70';
 const ASSETS_TO_CACHE = [
   './manifest.json',
   './favicon.svg',
@@ -28,6 +28,32 @@ self.addEventListener('activate', (event) => {
         })
       );
     }).then(() => self.clients.claim())
+  );
+});
+
+// Message Event - Handle local test notifications
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'TEST_PUSH') {
+    self.registration.showNotification(event.data.title || 'wosBDC Alert', {
+      body: event.data.body || 'Test push notification received.',
+      icon: './favicon.svg',
+      badge: './favicon.svg',
+      vibrate: [100, 50, 100],
+      data: { url: './' }
+    });
+  }
+});
+
+// Notification Click Event - Focus or open dashboard
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url && 'focus' in client) return client.focus();
+      }
+      if (clients.openWindow) return clients.openWindow('./');
+    })
   );
 });
 

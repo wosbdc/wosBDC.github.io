@@ -38,7 +38,7 @@
               👁️ <span id="views-counter">...</span>
             </span>
             <span id="versionBadge" title="Click to view Changelog" style="background: rgba(168, 85, 247, 0.2); color: #a855f7; padding: 2px 6px; border-radius: 10px; font-weight: bold; display:flex; align-items:center; gap:4px; cursor:pointer;">
-              v2.5.69
+              v2.5.70
             </span>
             <span id="navbar-user-indicator" onclick="if(window.views && window.views.account) window.views.account('Profile');" title="Click to open Chief Profile" style="display:none; background: rgba(59, 130, 246, 0.18); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa; padding: 2px 8px; border-radius: 10px; font-weight: bold; align-items:center; gap:4px; max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer;">
             </span>
@@ -205,9 +205,6 @@
         <button onclick="window.openThemeModal && window.openThemeModal()" class="sidebar-action-btn">
           🎨 Theme Engine
         </button>
-        <button onclick="window.openPushNotificationsModal && window.openPushNotificationsModal()" class="sidebar-action-btn">
-          🔔 Push Notifications
-        </button>
       </div>
 
       <!-- Section 4: Admin / Developer Controls -->
@@ -232,23 +229,6 @@
         <p id="errorMsgText" style="color:var(--text-main); font-size:16px; margin-bottom:25px; line-height:1.5;">We encountered an issue while connecting to the backend Google Apps Script database.</p>
         <button onclick="window.location.reload()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; font-weight:bold; font-size:16px; cursor:pointer; transition:0.2s;">Retry Connection</button>
       </div>
-    </div>
-    
-    <!-- Notifications Modal -->
-    <div id="notificationsModalOverlay" class="sidebar-overlay" onclick="document.getElementById('notificationsModal').style.display='none'; this.style.display='none';"></div>
-    <div id="notificationsModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:var(--card-bg); padding:30px; border-radius:12px; border:1px solid var(--accent); box-shadow:0 10px 25px rgba(0,0,0,0.5); z-index:1001; width:90%; max-width:400px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:10px;">
-        <h2 style="margin:0; color:var(--text-main);">🔔 Push Notifications</h2>
-        <button onclick="document.getElementById('notificationsModal').style.display='none'; document.getElementById('notificationsModalOverlay').style.display='none';" class="close-btn">&times;</button>
-      </div>
-      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:15px;">
-        <span style="font-size:16px; color:var(--text-main); font-weight:bold;">Push Alerts</span>
-        <button id="enablePushBtn" style="padding:8px 16px; background:var(--accent); color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:14px; transition:0.2s;">
-          Enable 🔔
-        </button>
-      </div>
-      <div id="pushStatus" style="font-size:13px; color:var(--success); display:none; text-align:center; padding:10px; background:rgba(46,204,113,0.1); border-radius:6px;">✅ Subscribed to alerts!</div>
-      <p style="font-size:12px; color:var(--text-muted); margin-top:20px; line-height:1.5;">Enable push notifications to receive real-time alerts when important events occur or when leadership needs your attention.</p>
     </div>
 
     <!-- Theme Modal -->

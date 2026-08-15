@@ -1678,7 +1678,7 @@ window.formatRankBadgeHtml = (rankVal) => {
 // Register Service Worker for Mobile PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=2.5.69')
+    navigator.serviceWorker.register('./sw.js?v=2.5.70')
       .then(reg => {
         reg.update();
         console.log('PWA Service Worker registered:', reg.scope);
@@ -8825,53 +8825,104 @@ window.openAllianceAlertsModal = async () => {
       if (e.target === overlay) overlay.remove();
     });
 
-    // 0. Push Notifications Permission Banner
+    // 0. Push Notifications Options Menu
     const isPushSupported = ('Notification' in window) && ('serviceWorker' in navigator);
     const pushPermission = isPushSupported ? Notification.permission : 'unsupported';
+    const isPushActive = isPushSupported && (pushPermission === 'granted');
+    const pushPrefs = typeof window.getPushPreferences === 'function' ? window.getPushPreferences() : { beartrap: true, shields: true, championship: true, broadcasts: true, giftcodes: true, sync: true };
+
     let pushBannerHtml = '';
 
     if (isPushSupported) {
-      if (pushPermission === 'granted') {
-        pushBannerHtml = `
-          <div id="devicePushBanner" style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.3); border-radius:14px; padding:11px 15px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      pushBannerHtml = `
+        <div id="devicePushContainer" style="background:rgba(15,23,42,0.65); border:1px solid ${isPushActive ? 'rgba(16,185,129,0.3)' : 'rgba(236,72,153,0.35)'}; border-radius:14px; margin-bottom:12px; overflow:hidden; transition:all 0.2s ease; box-shadow:0 4px 15px rgba(0,0,0,0.15);">
+          
+          <!-- Header Status Row -->
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 15px; background:${isPushActive ? 'rgba(16,185,129,0.08)' : 'linear-gradient(135deg, rgba(236,72,153,0.12), rgba(59,130,246,0.12))'}; border-bottom:1px solid ${isPushActive ? 'rgba(16,185,129,0.2)' : 'rgba(236,72,153,0.25)'}; flex-wrap:wrap; gap:10px;">
             <div style="display:flex; align-items:center; gap:10px;">
-              <div style="width:34px; height:34px; border-radius:50%; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.3); display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0;">🔔</div>
+              <div style="width:36px; height:36px; border-radius:50%; background:${isPushActive ? 'rgba(16,185,129,0.18)' : 'rgba(236,72,153,0.2)'}; border:1px solid ${isPushActive ? 'rgba(16,185,129,0.4)' : 'rgba(236,72,153,0.4)'}; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0;">
+                ${isPushActive ? '🔔' : '🔕'}
+              </div>
               <div>
-                <div style="font-weight:bold; font-size:13.5px; color:#10b981; display:flex; align-items:center; gap:6px;">
-                  <span>Device Push Alerts Active</span>
-                  <span style="background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:1px 6px; border-radius:8px; font-size:10px; font-weight:bold;">ON</span>
+                <div style="font-weight:bold; font-size:13.5px; color:${isPushActive ? '#10b981' : '#fff'}; display:flex; align-items:center; gap:6px;">
+                  <span>Device Push Notifications</span>
+                  <span style="background:${isPushActive ? 'rgba(16,185,129,0.2)' : 'rgba(236,72,153,0.2)'}; color:${isPushActive ? '#10b981' : '#f472b6'}; border:1px solid ${isPushActive ? 'rgba(16,185,129,0.4)' : 'rgba(236,72,153,0.4)'}; padding:1px 6px; border-radius:8px; font-size:10px; font-weight:bold;">
+                    ${isPushActive ? 'ACTIVE (ON)' : 'OFF'}
+                  </span>
                 </div>
                 <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">
-                  This device receives instant Bear Trap, Shield & leadership alerts
+                  ${isPushActive ? 'Real-time alert delivery enabled for this device' : 'Enable instant alerts for Bear Trap, Shields & leadership updates'}
                 </div>
               </div>
             </div>
-            <button id="modalPushToggleBtn" onclick="window.handleModalPushToggle(this)" style="background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.35); color:#10b981; border-radius:8px; padding:5px 12px; font-size:11.5px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:0.2s;" title="Re-sync device push subscription">
-              🔄 Re-sync
-            </button>
-          </div>
-        `;
-      } else {
-        pushBannerHtml = `
-          <div id="devicePushBanner" style="background:linear-gradient(135deg, rgba(236,72,153,0.12), rgba(59,130,246,0.12)); border:1px solid rgba(236,72,153,0.35); border-radius:14px; padding:12px 15px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; box-shadow:0 4px 15px rgba(236,72,153,0.1);">
-            <div style="display:flex; align-items:center; gap:10px;">
-              <div style="width:36px; height:36px; border-radius:50%; background:rgba(236,72,153,0.2); border:1px solid rgba(236,72,153,0.4); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;">🔔</div>
-              <div>
-                <div style="font-weight:bold; font-size:13.5px; color:#fff; display:flex; align-items:center; gap:6px;">
-                  <span>Enable Push Notifications</span>
-                  <span style="background:rgba(236,72,153,0.2); color:#f472b6; border:1px solid rgba(236,72,153,0.4); padding:1px 6px; border-radius:8px; font-size:10px; font-weight:bold;">OFF</span>
-                </div>
-                <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">
-                  Get instant mobile/desktop alerts when leadership broadcasts or events begin
-                </div>
-              </div>
+            
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+              ${!isPushActive ? `
+                <button id="modalPushToggleBtn" onclick="window.handleModalPushToggle(this)" style="background:linear-gradient(135deg, #ec4899, #8b5cf6); color:#fff; border:none; border-radius:8px; padding:6px 14px; font-size:12px; font-weight:bold; cursor:pointer; box-shadow:0 3px 10px rgba(236,72,153,0.3); display:inline-flex; align-items:center; gap:5px; transition:0.2s;">
+                  🔔 Turn ON Alerts
+                </button>
+              ` : `
+                <button onclick="window.testLocalPushNotification()" style="background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.35); color:#60a5fa; border-radius:8px; padding:5px 10px; font-size:11.5px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:0.2s;" title="Send test push notification to this device">
+                  🧪 Test Alert
+                </button>
+                <button id="modalPushToggleBtn" onclick="window.handleModalPushToggle(this)" style="background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.35); color:#10b981; border-radius:8px; padding:5px 10px; font-size:11.5px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:0.2s;" title="Re-sync device push subscription">
+                  🔄 Re-sync
+                </button>
+              `}
+              <button onclick="window.togglePushOptionsAccordion()" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); padding:5px 10px; border-radius:8px; font-size:11.5px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px;" title="Notification Preferences & Topics">
+                ⚙️ Options <span id="pushOptionsChevron" style="font-size:11px; transition:transform 0.2s ease;">▾</span>
+              </button>
             </div>
-            <button id="modalPushToggleBtn" onclick="window.handleModalPushToggle(this)" style="background:linear-gradient(135deg, #ec4899, #8b5cf6); color:#fff; border:none; border-radius:8px; padding:7px 15px; font-size:12px; font-weight:bold; cursor:pointer; box-shadow:0 3px 12px rgba(236,72,153,0.4); display:flex; align-items:center; gap:5px; transition:transform 0.1s ease;">
-              🔔 Turn ON Alerts
-            </button>
           </div>
-        `;
-      }
+
+          <!-- Collapsible Classic Options Menu Body -->
+          <div id="pushOptionsAccordionBody" style="display:none; padding:12px 15px; background:rgba(0,0,0,0.25); border-top:1px solid rgba(255,255,255,0.05);">
+            <div style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px; letter-spacing:0.5px;">
+              🔔 Alert Topic Preferences:
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:8px; margin-bottom:12px;">
+              
+              <label style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.03); border:1px solid var(--border); padding:7px 10px; border-radius:8px; cursor:pointer; font-size:12px; color:var(--text-main);">
+                <input type="checkbox" onchange="window.savePushPref('beartrap', this.checked)" ${pushPrefs.beartrap !== false ? 'checked' : ''} style="cursor:pointer; accent-color:var(--accent);">
+                <span>🪤 Bear Trap</span>
+              </label>
+
+              <label style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.03); border:1px solid var(--border); padding:7px 10px; border-radius:8px; cursor:pointer; font-size:12px; color:var(--text-main);">
+                <input type="checkbox" onchange="window.savePushPref('shields', this.checked)" ${pushPrefs.shields !== false ? 'checked' : ''} style="cursor:pointer; accent-color:var(--accent);">
+                <span>🛡️ Shields & War</span>
+              </label>
+
+              <label style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.03); border:1px solid var(--border); padding:7px 10px; border-radius:8px; cursor:pointer; font-size:12px; color:var(--text-main);">
+                <input type="checkbox" onchange="window.savePushPref('championship', this.checked)" ${pushPrefs.championship !== false ? 'checked' : ''} style="cursor:pointer; accent-color:var(--accent);">
+                <span>⚔️ Championship</span>
+              </label>
+
+              <label style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.03); border:1px solid var(--border); padding:7px 10px; border-radius:8px; cursor:pointer; font-size:12px; color:var(--text-main);">
+                <input type="checkbox" onchange="window.savePushPref('broadcasts', this.checked)" ${pushPrefs.broadcasts !== false ? 'checked' : ''} style="cursor:pointer; accent-color:var(--accent);">
+                <span>📢 Broadcasts</span>
+              </label>
+
+              <label style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.03); border:1px solid var(--border); padding:7px 10px; border-radius:8px; cursor:pointer; font-size:12px; color:var(--text-main);">
+                <input type="checkbox" onchange="window.savePushPref('giftcodes', this.checked)" ${pushPrefs.giftcodes !== false ? 'checked' : ''} style="cursor:pointer; accent-color:var(--accent);">
+                <span>🎁 Gift Codes</span>
+              </label>
+
+              <label style="display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.03); border:1px solid var(--border); padding:7px 10px; border-radius:8px; cursor:pointer; font-size:12px; color:var(--text-main);">
+                <input type="checkbox" onchange="window.savePushPref('sync', this.checked)" ${pushPrefs.sync !== false ? 'checked' : ''} style="cursor:pointer; accent-color:var(--accent);">
+                <span>🔄 Sync Alerts</span>
+              </label>
+
+            </div>
+            <div style="font-size:11px; color:var(--text-muted); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+              <span>Preferences are automatically stored on this browser.</span>
+              <button onclick="window.markAllBroadcastsRead(); document.getElementById('notificationsModalOverlay').remove(); window.openAllianceAlertsModal();" style="background:none; border:none; color:var(--accent); font-size:11px; cursor:pointer; text-decoration:underline;">
+                🧹 Clear unread alert badges
+              </button>
+            </div>
+          </div>
+
+        </div>
+      `;
     }
 
     // 1. Broadcasts Section HTML
@@ -9216,6 +9267,67 @@ window.toggleStaffAccordionBanner = () => {
 window.openNewMembersModal = window.openAllianceAlertsModal;
 window.openNotificationsModal = window.openAllianceAlertsModal;
 window.openPushNotificationsModal = window.openAllianceAlertsModal;
+
+window.getPushPreferences = function() {
+  try {
+    const raw = localStorage.getItem('wos_push_prefs');
+    return raw ? JSON.parse(raw) : { beartrap: true, shields: true, championship: true, broadcasts: true, giftcodes: true, sync: true };
+  } catch(e) {
+    return { beartrap: true, shields: true, championship: true, broadcasts: true, giftcodes: true, sync: true };
+  }
+};
+
+window.savePushPref = function(key, val) {
+  const prefs = window.getPushPreferences();
+  prefs[key] = val;
+  try {
+    localStorage.setItem('wos_push_prefs', JSON.stringify(prefs));
+  } catch(e) {}
+  if (window.showToast) window.showToast(`Preference updated: ${key} = ${val ? 'ON' : 'OFF'}`, "success");
+};
+
+window.togglePushOptionsAccordion = function() {
+  const body = document.getElementById('pushOptionsAccordionBody');
+  const chevron = document.getElementById('pushOptionsChevron');
+  if (!body) return;
+  const isHidden = (body.style.display === 'none' || !body.style.display);
+  body.style.display = isHidden ? 'block' : 'none';
+  if (chevron) chevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+};
+
+window.testLocalPushNotification = function() {
+  if (!('Notification' in window) || Notification.permission !== 'granted') {
+    if (window.showToast) window.showToast("Please enable device notifications first!", "warning");
+    return;
+  }
+  
+  try {
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({
+        type: 'TEST_PUSH',
+        title: 'wosBDC Alert: Test Notification 🔔',
+        body: 'Push notifications are working perfectly on this device!'
+      });
+    } else {
+      new Notification('wosBDC Alert: Test Notification 🔔', {
+        body: 'Push notifications are working perfectly on this device!',
+        icon: 'https://wosbdc.github.io/favicon.svg'
+      });
+    }
+    if (window.showToast) window.showToast("🔔 Test notification sent to your device!", "success");
+  } catch(e) {
+    console.error("Test notification error:", e);
+    if (window.showToast) window.showToast("Test notification sent (check system tray).", "info");
+  }
+};
+
+window.markAllBroadcastsRead = function() {
+  localStorage.setItem('last_seen_broadcast_timestamp', String(Date.now()));
+  if (typeof window.updateBroadcastBellCount === 'function') {
+    window.updateBroadcastBellCount();
+  }
+  if (window.showToast) window.showToast("All alert badges marked as read.", "info");
+};
 
 window.handleModalPushToggle = async (btnEl) => {
   if (!('Notification' in window) || !('serviceWorker' in navigator)) {

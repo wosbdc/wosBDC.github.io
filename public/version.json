@@ -1,7 +1,7 @@
 {
-  "version": "2.5.69",
+  "version": "2.5.70",
   "releaseDate": "2026-08-15",
-  "title": "🔔 One-Tap Device Push Notification Toggle",
+  "title": "🔔 Classic Push Notification Options Menu",
   "notes": [
     "Connected the broadcast announcements tray to live realtime database sync",
     "Enabled instant display of alliance broadcasts in the Bell Alert Window"

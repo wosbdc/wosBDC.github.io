@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [2.5.70] - 2026-08-15
+- **Streamlined Settings Sidebar:** Removed duplicate push notification button and deleted legacy modal markup for a cleaner navigation experience.
+- **Classic Push Notification Options Menu in Bell Modal:**
+  - Added integrated Master Status Header (`ACTIVE (ON)` / `OFF`) with instant 1-tap activation.
+  - Added `[🧪 Test Alert]` device notification tester.
+  - Added `[🔄 Re-sync]` device token refresh.
+  - Added collapsible `[⚙️ Options]` topic preferences menu (Bear Trap, Shields/SvS, Championship, Broadcasts, Gift Codes, Sync Alerts) with local persistence.
+  - Added `[🧹 Clear unread alert badges]` shortcut.
+
 ## [2.5.69] - 2026-08-15
 - **Frost Clan Command Center Shield Counter & Coverage Bar:** Added live KPI counters for Shields Active (`ON`), Unshielded Alts (`OFF / Vulnerable`), Rebirth Tomes, and dynamic Shield Defense coverage progress bar.
 - **Roster Quick Filters:** Added 1-tap view filters (`All`, `⚠️ Needs Shields`, `🛡️ Shielded`) to instantly isolate vulnerable accounts.
