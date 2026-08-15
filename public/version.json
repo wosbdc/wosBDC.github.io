@@ -1,10 +1,10 @@
 {
-  "version": "2.5.55",
+  "version": "2.5.56",
   "releaseDate": "2026-08-14",
-  "title": "🛡️ 100% Solid Body Centering & Symmetrical Flame Flaring",
+  "title": "✨ Unified Single-Canvas Fire Crystal Engine",
   "notes": [
-    "Re-centered solid shield bodies for all 10 badges to the exact pixel (136 to 887, center 511.5px), fixing the 44px left offset",
-    "Synchronized FlameWisp contour vertices to the true shield facets (x=±0.367, y=±0.226/±0.433)",
-    "Embers now flare with complete bilateral symmetry across all 6 facets of every Fire Crystal badge"
+    "Re-architected Fire Crystal badge renderer to a Unified Single-Canvas Engine where the badge sprite and flame particle system are rendered together inside the exact same 2D Canvas context",
+    "Completely eliminated DOM overlay offset and misalignment issues with automatic Retina/HiDPI display scaling",
+    "Updated PWA Service Worker to bypass cached badge assets and always deliver fresh graphics"
   ]
 }

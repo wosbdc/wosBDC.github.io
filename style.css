@@ -636,6 +636,13 @@ tr:hover td {
     flex-direction: row;
 }
 
+.fc-unified-badge {
+    display: inline-block;
+    vertical-align: middle;
+    transform: translateZ(0);
+    will-change: transform;
+}
+
 .id-card-furnace-showcase {
     display: flex;
     flex-direction: column;

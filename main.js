@@ -194,12 +194,9 @@ window.getFurnaceIconHtml = (level, size = 48) => {
        10: 'rgba(255,215,0,0.9)'    // Imperial Gold
      };
      const glow = fcGlowMap[fcNum];
-     const canvasSize = Math.round(size * 1.85);
-     const canvasOffset = Math.round((canvasSize - size) / 2);
-     return `<span class="fc-badge-stage" data-fc="${fcNum}" data-size="${size}" style="display:inline-flex; align-items:center; justify-content:center; position:relative; vertical-align:middle; cursor:pointer; width:${size}px; height:${size}px; line-height:0; user-select:none; -webkit-user-select:none;">
-       <canvas class="fc-flame-canvas" width="${canvasSize}" height="${canvasSize}" style="position:absolute; top:-${canvasOffset}px; left:-${canvasOffset}px; width:${canvasSize}px; height:${canvasSize}px; pointer-events:none; z-index:3; display:block;"></canvas>
-       <img src="./badges/fc${fcNum}.png?v=2.5.55" onerror="this.onerror=null; this.src='/badges/fc${fcNum}.png?v=2.5.55';" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; display:block; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
-     </span>`;
+     const canvasDisplaySize = Math.round(size * 1.45);
+     const marginOffset = Math.round((canvasDisplaySize - size) / 2);
+     return `<canvas class="fc-unified-badge" data-fc="${fcNum}" data-size="${size}" style="display:inline-block; vertical-align:middle; width:${canvasDisplaySize}px; height:${canvasDisplaySize}px; cursor:pointer; user-select:none; -webkit-user-select:none; margin:-${marginOffset}px; transition:filter 0.25s ease;" title="Fire Crystal ${fcNum} (FC ${fcNum})"></canvas>`;
   }
 
   // Render Modern Standard Furnace Badge (Furnace 1 to 30)
@@ -1680,7 +1677,7 @@ window.formatRankBadgeHtml = (rankVal) => {
 // Register Service Worker for Mobile PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=2.5.55')
+    navigator.serviceWorker.register('./sw.js?v=2.5.56')
       .then(reg => {
         reg.update();
         console.log('PWA Service Worker registered:', reg.scope);
@@ -21358,34 +21355,45 @@ window.closeMobileNavModal = () => {
 };
 
 // ============================================================================
-// 3D SOLAR FIRE WISPS PARTICLE ENGINE FOR FIRE CRYSTAL BADGES (v1.76.0)
+// UNIFIED SINGLE-CANVAS FIRE CRYSTAL ENGINE (v2.5.56)
+// Renders both Badge Image & Symmetrical Flame Physics in a Single 2D Context
 // ============================================================================
 (function() {
   const colorPalettes = {
-    1: { outer: '#ef4444', core: '#fef2f2', glow: '#dc2626' },
-    2: { outer: '#ff6b00', core: '#fff7ed', glow: '#ff4500' },
-    3: { outer: '#eab308', core: '#fefce8', glow: '#ca8a04' },
-    4: { outer: '#10b981', core: '#ecfdf5', glow: '#059669' },
-    5: { outer: '#06b6d4', core: '#cff4fc', glow: '#0891b2' },
-    6: { outer: '#3b82f6', core: '#eff6ff', glow: '#2563eb' },
-    7: { outer: '#a855f7', core: '#fae8ff', glow: '#9333ea' },
-    8: { outer: '#ec4899', core: '#fdf2f8', glow: '#db2777' },
-    9: { outer: '#84cc16', core: '#f7fee7', glow: '#65a30d' },
-    10: { outer: '#ffd700', core: '#ffffff', glow: '#ff8c00' }
+    1: { outer: '#ef4444', core: '#fee2e2', glow: '#dc2626', name: 'Crimson' },
+    2: { outer: '#f97316', core: '#ffedd5', glow: '#ea580c', name: 'Inferno' },
+    3: { outer: '#eab308', core: '#fef9c3', glow: '#ca8a04', name: 'Solar' },
+    4: { outer: '#10b981', core: '#ecfdf5', glow: '#059669', name: 'Verdant' },
+    5: { outer: '#06b6d4', core: '#cff4fc', glow: '#0891b2', name: 'Frostfire' },
+    6: { outer: '#3b82f6', core: '#eff6ff', glow: '#2563eb', name: 'Azure' },
+    7: { outer: '#a855f7', core: '#fae8ff', glow: '#9333ea', name: 'Void' },
+    8: { outer: '#ec4899', core: '#fdf2f8', glow: '#db2777', name: 'Abyssal' },
+    9: { outer: '#84cc16', core: '#f7fee7', glow: '#65a30d', name: 'Venom' },
+    10: { outer: '#ffd700', core: '#ffffff', glow: '#ff8c00', name: 'Imperial' }
   };
 
+  const badgeImageCache = new Map();
+  function getBadgeImage(fcNum) {
+    if (badgeImageCache.has(fcNum)) return badgeImageCache.get(fcNum);
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.src = `./badges/fc${fcNum}.png?v=2.5.56`;
+    badgeImageCache.set(fcNum, img);
+    return img;
+  }
+
   class FlameWisp {
-    constructor(cx, cy, badgeSize, colors) {
-      const scale = badgeSize / 140;
+    constructor(cx, cy, drawW, drawH, colors, isBurst = false) {
+      const scale = drawW / 130;
       
       // Exact pixel-aligned shield contour vertices (measured from 1024x1024 assets)
       const v = [
-        { x: cx, y: cy - (badgeSize * 0.433) },                                  // Top Point
-        { x: cx + (badgeSize * 0.367), y: cy - (badgeSize * 0.226) },          // Top Right Corner
-        { x: cx + (badgeSize * 0.367), y: cy + (badgeSize * 0.226) },          // Bottom Right Corner
-        { x: cx, y: cy + (badgeSize * 0.433) },                                  // Bottom Point
-        { x: cx - (badgeSize * 0.367), y: cy + (badgeSize * 0.226) },          // Bottom Left Corner
-        { x: cx - (badgeSize * 0.367), y: cy - (badgeSize * 0.226) }           // Top Left Corner
+        { x: cx, y: cy - (drawH * 0.433) },                                  // Top Point
+        { x: cx + (drawW * 0.367), y: cy - (drawH * 0.226) },               // Top Right Corner
+        { x: cx + (drawW * 0.367), y: cy + (drawH * 0.226) },               // Bottom Right Corner
+        { x: cx, y: cy + (drawH * 0.433) },                                  // Bottom Point
+        { x: cx - (drawW * 0.367), y: cy + (drawH * 0.226) },               // Bottom Left Corner
+        { x: cx - (drawW * 0.367), y: cy - (drawH * 0.226) }                // Top Left Corner
       ];
 
       // Pick a random edge segment along the shield (0 to 5)
@@ -21394,9 +21402,9 @@ window.closeMobileNavModal = () => {
       const pB = v[(edge + 1) % 6];
       const t = Math.random();
       
-      // Interpolate along the exact shield border with slight randomized variance
-      this.x = pA.x * (1 - t) + pB.x * t + (Math.random() - 0.5) * (4 * scale);
-      this.y = pA.y * (1 - t) + pB.y * t + (Math.random() - 0.5) * (4 * scale);
+      // Interpolate along the exact shield border
+      this.x = pA.x * (1 - t) + pB.x * t + (Math.random() - 0.5) * (3 * scale);
+      this.y = pA.y * (1 - t) + pB.y * t + (Math.random() - 0.5) * (3 * scale);
       
       // Outward vector pointing straight out from the facet normal
       const edgeDx = pB.x - pA.x;
@@ -21412,14 +21420,15 @@ window.closeMobileNavModal = () => {
         ny = -ny;
       }
 
-      this.vx = (nx * 1.5 + (Math.random() - 0.5) * 0.7) * scale;
-      this.vy = (ny * 0.6 - Math.random() * 2.2 - 1.2) * scale;
+      const speedMult = isBurst ? 1.6 : 1.0;
+      this.vx = (nx * 1.6 * speedMult + (Math.random() - 0.5) * 0.8) * scale;
+      this.vy = (ny * 0.6 * speedMult - (Math.random() * 2.4 + 1.2) * speedMult) * scale;
       
-      this.size = (Math.random() * 10 + 5) * scale;
+      this.size = (Math.random() * 9 + 4.5) * scale * (isBurst ? 1.3 : 1.0);
       this.scale = scale;
       this.alpha = 1.0;
-      this.decay = Math.random() * 0.016 + 0.008;
-      this.waveSpeed = Math.random() * 0.1 + 0.05;
+      this.decay = (Math.random() * 0.018 + 0.010) * (isBurst ? 0.9 : 1.0);
+      this.waveSpeed = Math.random() * 0.12 + 0.06;
       this.waveAngle = Math.random() * Math.PI * 2;
       
       this.colors = colors;
@@ -21434,13 +21443,13 @@ window.closeMobileNavModal = () => {
     }
 
     draw(ctx) {
-      if (this.alpha <= 0 || this.size <= 1) return;
+      if (this.alpha <= 0 || this.size <= 0.8) return;
 
       ctx.save();
       ctx.globalAlpha = Math.max(0, this.alpha);
       
       ctx.beginPath();
-      ctx.shadowBlur = 12;
+      ctx.shadowBlur = 10 * this.scale;
       ctx.shadowColor = this.colors.glow;
       
       ctx.fillStyle = this.colors.outer;
@@ -21456,95 +21465,131 @@ window.closeMobileNavModal = () => {
     }
   }
 
-  const activeInstances = new Map();
+  const activeUnifiedInstances = new Map();
 
-  function attachEngineToStage(stage) {
-    if (activeInstances.has(stage)) return;
+  function attachUnifiedFcEngine(canvas) {
+    if (activeUnifiedInstances.has(canvas)) return activeUnifiedInstances.get(canvas);
 
-    const fcNum = parseInt(stage.getAttribute('data-fc'), 10) || 2;
-    const canvas = stage.querySelector('.fc-flame-canvas');
-    const img = stage.querySelector('img');
-    if (!canvas) return;
+    const fcNum = parseInt(canvas.getAttribute('data-fc'), 10) || 1;
+    const badgeSize = parseInt(canvas.getAttribute('data-size'), 10) || 130;
+    const colors = colorPalettes[fcNum] || colorPalettes[1];
+    const img = getBadgeImage(fcNum);
 
     const ctx = canvas.getContext('2d');
-    const colors = colorPalettes[fcNum] || colorPalettes[2];
-    const w = canvas.width;
-    const h = canvas.height;
-    const cx = w / 2;
-    const cy = h / 2;
-    const badgeSize = parseInt(stage.getAttribute('data-size'), 10) || Math.round(w / 1.85);
+    const dpr = window.devicePixelRatio || 1;
+    
+    // Display dimensions
+    const displaySize = Math.round(badgeSize * 1.45);
+    canvas.width = Math.round(displaySize * dpr);
+    canvas.height = Math.round(displaySize * dpr);
+    canvas.style.width = displaySize + 'px';
+    canvas.style.height = displaySize + 'px';
+
+    const cx = displaySize / 2;
+    const cy = displaySize / 2;
 
     let wisps = [];
     let isActive = false;
     let animFrame = null;
+    let scaleAnim = 1.0;
+    let targetScale = 1.0;
+    let roarTimeout = null;
 
     function render() {
-      ctx.clearRect(0, 0, w, h);
+      ctx.save();
+      ctx.scale(dpr, dpr);
+      ctx.clearRect(0, 0, displaySize, displaySize);
 
+      // Smooth spring scale interpolation
+      scaleAnim += (targetScale - scaleAnim) * 0.2;
+      const curDrawW = badgeSize * scaleAnim;
+      const curDrawH = badgeSize * scaleAnim;
+      const curDrawX = cx - (curDrawW / 2);
+      const curDrawY = cy - (curDrawH / 2);
+
+      // 1. Draw Background Radial Glow when active
+      if (isActive || scaleAnim > 1.01) {
+        const glowRad = (badgeSize * 0.7) * scaleAnim;
+        const grad = ctx.createRadialGradient(cx, cy, badgeSize * 0.2, cx, cy, glowRad);
+        grad.addColorStop(0, colors.glow);
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.save();
+        ctx.globalAlpha = 0.45 * Math.min(1, scaleAnim);
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(cx, cy, glowRad, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // 2. Spawn wisps when active
       if (isActive) {
-        if (Math.random() < 0.65) {
-          wisps.push(new FlameWisp(cx, cy, badgeSize, colors));
+        if (Math.random() < 0.75) {
+          wisps.push(new FlameWisp(cx, cy, curDrawW, curDrawH, colors, false));
         }
       }
 
+      // 3. Draw Flame Wisps (Behind & Around)
       for (let i = wisps.length - 1; i >= 0; i--) {
         wisps[i].update();
         wisps[i].draw(ctx);
-        if (wisps[i].alpha <= 0 || wisps[i].size <= 1) {
+        if (wisps[i].alpha <= 0 || wisps[i].size <= 0.8) {
           wisps.splice(i, 1);
         }
       }
 
-      if (isActive || wisps.length > 0) {
+      // 4. Draw Center Shield Badge Sprite
+      if (img.complete && img.naturalWidth > 0) {
+        ctx.save();
+        ctx.shadowColor = colors.glow;
+        ctx.shadowBlur = Math.max(8, Math.round(badgeSize / 4));
+        ctx.drawImage(img, curDrawX, curDrawY, curDrawW, curDrawH);
+        ctx.restore();
+      }
+
+      ctx.restore();
+
+      if (isActive || wisps.length > 0 || Math.abs(targetScale - scaleAnim) > 0.005) {
         animFrame = requestAnimationFrame(render);
       } else {
-        ctx.clearRect(0, 0, w, h);
         animFrame = null;
       }
     }
 
-    let roarTimeout = null;
-
     function triggerHaptic() {
-      // 1. Android & Native Vibration
       if (typeof navigator !== 'undefined' && navigator.vibrate) {
-        try {
-          navigator.vibrate([18, 30, 22]);
-        } catch (e) {}
+        try { navigator.vibrate([18, 30, 22]); } catch (e) {}
       }
-      // 2. Apple iOS Taptic Haptic Engine (Web Audio Impulse Click)
       try {
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
         if (AudioCtx) {
-          if (!window._appleHapticCtx) {
-            window._appleHapticCtx = new AudioCtx();
-          }
-          const ctx = window._appleHapticCtx;
-          if (ctx.state === 'suspended') ctx.resume();
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
+          if (!window._appleHapticCtx) window._appleHapticCtx = new AudioCtx();
+          const ac = window._appleHapticCtx;
+          if (ac.state === 'suspended') ac.resume();
+          const osc = ac.createOscillator();
+          const gain = ac.createGain();
           osc.type = 'sine';
-          osc.frequency.setValueAtTime(160, ctx.currentTime);
-          osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.025);
-          gain.gain.setValueAtTime(0.35, ctx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.025);
+          osc.frequency.setValueAtTime(160, ac.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(40, ac.currentTime + 0.025);
+          gain.gain.setValueAtTime(0.35, ac.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.025);
           osc.connect(gain);
-          gain.connect(ctx.destination);
+          gain.connect(ac.destination);
           osc.start();
-          osc.stop(ctx.currentTime + 0.025);
+          osc.stop(ac.currentTime + 0.025);
         }
       } catch (e) {}
     }
 
     function start() {
       isActive = true;
-      if (img) img.style.transform = 'perspective(600px) rotateX(8deg) scale(1.12)';
+      targetScale = 1.10;
       if (!animFrame) animFrame = requestAnimationFrame(render);
     }
 
     function stop() {
       isActive = false;
-      if (img) img.style.transform = 'scale(1)';
+      targetScale = 1.0;
       if (roarTimeout) {
         clearTimeout(roarTimeout);
         roarTimeout = null;
@@ -21554,14 +21599,14 @@ window.closeMobileNavModal = () => {
     function burst() {
       triggerHaptic();
       start();
-      if (img) {
-        img.style.transform = 'perspective(600px) rotateX(-10deg) scale(0.93)';
-        setTimeout(() => {
-          if (img && isActive) img.style.transform = 'perspective(600px) rotateX(8deg) scale(1.12)';
-        }, 140);
-      }
-      for (let i = 0; i < 12; i++) {
-        wisps.push(new FlameWisp(cx, cy, badgeSize, colors));
+      targetScale = 0.94;
+      setTimeout(() => {
+        if (isActive) targetScale = 1.12;
+      }, 120);
+      const curDrawW = badgeSize * 1.10;
+      const curDrawH = badgeSize * 1.10;
+      for (let i = 0; i < 14; i++) {
+        wisps.push(new FlameWisp(cx, cy, curDrawW, curDrawH, colors, true));
       }
       if (roarTimeout) clearTimeout(roarTimeout);
       roarTimeout = setTimeout(() => {
@@ -21569,28 +21614,64 @@ window.closeMobileNavModal = () => {
       }, 3500);
     }
 
-    stage.addEventListener('mouseenter', start);
-    stage.addEventListener('mouseleave', stop);
-    stage.addEventListener('touchstart', (e) => {
+    canvas.addEventListener('mouseenter', start);
+    canvas.addEventListener('mouseleave', stop);
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
       burst();
-    }, { passive: true });
+    }, { passive: false });
+    canvas.addEventListener('click', burst);
 
-    activeInstances.set(stage, { start, stop, burst });
+    // Initial static render on load
+    if (img.complete) {
+      render();
+    } else {
+      img.onload = () => render();
+    }
+
+    const instance = { start, stop, burst, render };
+    activeUnifiedInstances.set(canvas, instance);
+    return instance;
+  }
+
+  // Global Auto-Init Scanner for all Unified Badges in DOM
+  window.initUnifiedFcBadges = () => {
+    document.querySelectorAll('.fc-unified-badge').forEach(canvas => {
+      attachUnifiedFcEngine(canvas);
+    });
+  };
+
+  // Run on DOM events & dynamic view changes
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', window.initUnifiedFcBadges);
+  } else {
+    window.initUnifiedFcBadges();
   }
 
   document.addEventListener('mouseover', (e) => {
-    const stage = e.target.closest('.fc-badge-stage');
-    if (stage) attachEngineToStage(stage);
+    const canvas = e.target.closest('.fc-unified-badge');
+    if (canvas) {
+      const inst = attachUnifiedFcEngine(canvas);
+      if (inst) inst.start();
+    }
   });
 
   document.addEventListener('touchstart', (e) => {
-    const stage = e.target.closest('.fc-badge-stage');
-    if (stage) {
-      attachEngineToStage(stage);
-      const inst = activeInstances.get(stage);
+    const canvas = e.target.closest('.fc-unified-badge');
+    if (canvas) {
+      const inst = attachUnifiedFcEngine(canvas);
       if (inst) inst.burst();
     }
   }, { passive: true });
+
+  // Periodically scan for newly rendered badges (e.g. after view switches)
+  setInterval(() => {
+    document.querySelectorAll('.fc-unified-badge').forEach(canvas => {
+      if (!activeUnifiedInstances.has(canvas)) {
+        attachUnifiedFcEngine(canvas);
+      }
+    });
+  }, 1200);
 })();
 
 // ============================================================================

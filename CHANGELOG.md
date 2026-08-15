@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.5.56] - 2026-08-14
+- Re-architected Fire Crystal badge renderer to a **Unified Single-Canvas Engine** where both the badge sprite and flame particle system render in the exact same 2D Canvas context.
+- Fixed PWA Service Worker caching (`sw.js`) to ensure all badge image updates are fetched fresh from the network.
+- Added high-DPI Retina display scaling via `devicePixelRatio` for sharp rendering on mobile and desktop screens.
+
 ## [2.5.55] - 2026-08-14
 - Re-centered solid shield bodies for all 10 badge PNG files (`FC 1` through `FC 10`) to the exact pixel (136px to 887px, center 511.5px), fixing the 44px left offset caused by corner sparkle artifacts.
 - Synchronized `FlameWisp` shield contour polygon to match the true solid shield perimeter (`(0, -0.433)`, `(±0.367, -0.226)`, `(±0.367, +0.226)`, `(0, +0.433)`).
