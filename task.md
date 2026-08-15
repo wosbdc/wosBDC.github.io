@@ -26,6 +26,7 @@
 - [x] Apply verified member start dates across Firebase & Google Sheets (v2.5.102) <!-- id: 26 -->
 - [x] Add queryAllGameServers and fix 2 missing furnace levels (v2.5.103) <!-- id: 27 -->
 - [x] Fix Row 1 header & Row 2 data indexing to purge Sigmashu duplication (v2.5.104) <!-- id: 28 -->
+- [x] Strict token-guarded furnace levels (leave unverified blank) & add sync alert banners (v2.5.105) <!-- id: 29 -->
 - [x] Update versioning, CHANGELOG.md, and sw.js <!-- id: 4 -->
 - [x] Build & test suite verification <!-- id: 5 -->
 - [x] Commit and push changes to GitHub <!-- id: 6 -->

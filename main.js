@@ -132,7 +132,7 @@ window.fetchRoster = async () => {
 };
 
 
-const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbz6mHwdpwwgKQfl-8FjuSHVv3EWqIPsNhX98ln5H8_nntAPf-ZH6Wt_cqDOs5p2J-0/exec';
+const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbxbZF0w8MCgog7YCFzWgTY1j1Ke_TsXbmXsdokPN8taYuh4MtZXxA-ZMnub4tsa3QA/exec';
 const VERIFY_PROXY_URL = 'https://wos-vercel-proxy.vercel.app/api/verify'; // Fallback / secondary proxy
 
 // Get a fresh Firebase ID token for the current user (replaces hardcoded APP_SECRET)
@@ -148,7 +148,9 @@ window.getAuthToken = getAuthToken;
 
 
 window.getFurnaceIconHtml = (level, size = 32) => {
-  if (!level || level === "N/A" || level === "") return `<span style="color:var(--text-muted); font-size:13px; font-weight:bold;">🔥 N/A</span>`;
+  if (!level || level === "N/A" || level === "" || level === "Unlinked" || level === "Pending Setup") {
+    return `<span class="furnace-level-badge unlinked" title="Unlinked / Sync Setup Required" style="display:inline-flex; align-items:center; gap:5px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); padding:3px 8px; border-radius:10px; font-weight:600; font-size:${Math.max(11, Math.round(size*0.36))}px; color:var(--text-muted); white-space:nowrap; vertical-align:middle;"><span style="opacity:0.6;">⚠️</span> Unlinked</span>`;
+  }
   
   const rawStr = level.toString().trim().toUpperCase();
   let fcNum = null;
@@ -182,29 +184,19 @@ window.getFurnaceIconHtml = (level, size = 32) => {
 
   // Render 3D Gem Faceted Fire Crystal Star Badge if fcNum is valid (FC 1 - 10)
   if (fcNum && fcNum >= 1 && fcNum <= 10) {
-     const fcGlowMap = {
-       1: 'rgba(239,68,68,0.85)',    // Crimson Red
-       2: 'rgba(249,115,22,0.85)',   // Flame Orange
-       3: 'rgba(234,179,8,0.85)',    // Sunburst Yellow
-       4: 'rgba(16,185,129,0.85)',   // Emerald Green
-       5: 'rgba(6,182,212,0.85)',    // Ice Cyan
-       6: 'rgba(59,130,246,0.85)',   // Sapphire Blue
-       7: 'rgba(139,92,246,0.85)',   // Amethyst Purple
-       8: 'rgba(236,72,153,0.85)',   // Magenta Rose
-       9: 'rgba(132,204,22,0.95)',   // Kryptonite Lime
-       10: 'rgba(255,215,0,0.9)'    // Imperial Gold
-     };
-     const glow = fcGlowMap[fcNum];
      const canvasDisplaySize = Math.round(size * 1.35);
      const marginOffset = Math.round((canvasDisplaySize - size) / 2);
      return `<canvas class="fc-unified-badge" data-fc="${fcNum}" data-size="${size}" style="display:inline-block; vertical-align:middle; width:${canvasDisplaySize}px; height:${canvasDisplaySize}px; cursor:pointer; user-select:none; -webkit-user-select:none; margin:-${marginOffset}px 2px; transition:filter 0.25s ease;" title="Fire Crystal ${fcNum} (FC ${fcNum})"></canvas>`;
   }
 
   // Render Modern Standard Furnace Badge (Furnace 1 to 30)
-  const fn = furnaceNum || 30;
-  return `<span class="furnace-level-badge" title="Furnace Level ${fn}" style="display:inline-flex; align-items:center; gap:6px; background:linear-gradient(135deg, rgba(30,41,59,0.8), rgba(15,23,42,0.9)); border:1px solid rgba(249,115,22,0.4); padding:3px 8px; border-radius:10px; font-weight:800; font-size:${Math.max(11, Math.round(size*0.36))}px; color:#ffffff; box-shadow:0 4px 12px rgba(249,115,22,0.15); white-space:nowrap; vertical-align:middle;">
-    <span style="filter:drop-shadow(0 0 4px #f97316);">🔥</span> Lv ${fn}
-  </span>`;
+  if (furnaceNum && furnaceNum >= 1 && furnaceNum <= 30) {
+    return `<span class="furnace-level-badge" title="Furnace Level ${furnaceNum}" style="display:inline-flex; align-items:center; gap:6px; background:linear-gradient(135deg, rgba(30,41,59,0.8), rgba(15,23,42,0.9)); border:1px solid rgba(249,115,22,0.4); padding:3px 8px; border-radius:10px; font-weight:800; font-size:${Math.max(11, Math.round(size*0.36))}px; color:#ffffff; box-shadow:0 4px 12px rgba(249,115,22,0.15); white-space:nowrap; vertical-align:middle;">
+      <span style="filter:drop-shadow(0 0 4px #f97316);">🔥</span> Lv ${furnaceNum}
+    </span>`;
+  }
+
+  return `<span class="furnace-level-badge unlinked" title="Unlinked / Sync Setup Required" style="display:inline-flex; align-items:center; gap:5px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); padding:3px 8px; border-radius:10px; font-weight:600; font-size:${Math.max(11, Math.round(size*0.36))}px; color:var(--text-muted); white-space:nowrap; vertical-align:middle;"><span style="opacity:0.6;">⚠️</span> Unlinked</span>`;
 };
 
 window.renderFurnaceSelectHtml = (id = 'manualFurnaceLevel', selectedVal = '', extraStyles = '') => {
@@ -18206,7 +18198,7 @@ window.resetBearTrapEvent = async () => {
                         <span class="${/^[ -~]*$/.test(p.name) ? 'notranslate' : ''}">${window.escapeHTML(p.name)}</span>
                     </div>
                     ${p.gameId ? `<span style="font-family:monospace; font-size:12px; background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px; color:var(--text-muted);">ID: ${p.gameId}</span>` : ''}
-                    <span onclick="event.stopPropagation(); if(window.isAdminUser(currentUser)){ window.openAdminEditFurnaceModal('${window.escapeHTML(p.name)}', '${p.gameId || ''}', '${p.furnaceLevel || ''}'); }else{ window.searchPlayerFull('${window.escapeHTML(p.name)}'); }" style="cursor:pointer; display:inline-flex; align-items:center;" title="${window.isAdminUser(currentUser) ? 'Click to Edit Furnace Level' : 'Furnace Level'}">${window.getFurnaceIconHtml(p.furnaceLevel || '30', 36)}</span>
+                    <span onclick="event.stopPropagation(); if(window.isAdminUser(currentUser)){ window.openAdminEditFurnaceModal('${window.escapeHTML(p.name)}', '${p.gameId || ''}', '${p.furnaceLevel || ''}'); }else{ window.searchPlayerFull('${window.escapeHTML(p.name)}'); }" style="cursor:pointer; display:inline-flex; align-items:center;" title="${window.isAdminUser(currentUser) ? 'Click to Edit Furnace Level' : 'Furnace Level'}">${window.getFurnaceIconHtml(p.furnaceLevel || '', 36)}</span>
                 </div>
                 <div style="display:flex; gap:8px; align-items:center;">
                     ${window.isAdminUser(currentUser) ? `<button onclick="event.stopPropagation(); window.openAdminEditFurnaceModal('${window.escapeHTML(p.name)}', '${p.gameId || ''}', '${p.furnaceLevel || ''}')" style="background:rgba(249,115,22,0.15); border:1px solid rgba(249,115,22,0.4); color:#f97316; padding:5px 12px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">🔥 Level</button>` : ''}
@@ -18869,6 +18861,32 @@ window.resetBearTrapEvent = async () => {
 
         <!-- Section 1: Account Profile Tab -->
         <div id="accTabSectionProfile">
+          <!-- Game Server Sync Status Banner -->
+          <div style="max-width:400px; margin:0 auto 16px auto; text-align:left;">
+            ${ tokenStatus.status !== 'active' ? `
+              <div style="background:linear-gradient(135deg, rgba(245,158,11,0.12), rgba(239,68,68,0.08)); border:1px solid rgba(245,158,11,0.4); border-radius:12px; padding:12px 14px; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; box-shadow:0 4px 15px rgba(0,0,0,0.3);">
+                <div style="display:flex; align-items:center; gap:10px; flex:1; min-width:180px;">
+                  <span style="font-size:22px; flex-shrink:0;">⚠️</span>
+                  <div style="font-size:12px; color:var(--text-main); line-height:1.4;">
+                    <strong style="color:#f59e0b; display:block; font-size:13px; margin-bottom:2px;">Game Server Sync Required</strong>
+                    ${tokenStatus.status === 'expired' ? 'Your 30-day token has expired. Re-verify with in-game mail code.' : 'Link your account via in-game mail to unlock live furnace badges & auto gift codes.'}
+                  </div>
+                </div>
+                <button onclick="window.openAccountHubVerifyModal()" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:7px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:5px; box-shadow:0 2px 8px rgba(14,165,233,0.3); flex-shrink:0;">
+                  🔑 Setup Sync
+                </button>
+              </div>
+            ` : `
+              <div style="background:linear-gradient(135deg, rgba(16,185,129,0.08), rgba(6,182,212,0.05)); border:1px solid rgba(16,185,129,0.3); border-radius:12px; padding:9px 14px; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="font-size:16px;">🟢</span>
+                  <span style="font-size:12px; color:#10b981; font-weight:600;">Game Server Sync Active (Refreshes Daily)</span>
+                </div>
+                <span style="font-size:11px; color:var(--text-muted);">${tokenStatus.daysLeft}d left</span>
+              </div>
+            `}
+          </div>
+
           <!-- Premium ID Card -->
           <div class="id-card-container" style="position:relative; box-sizing:border-box; width:100%; max-width:400px; margin:0 auto 30px auto; background:linear-gradient(135deg, rgba(30,41,59,0.9), rgba(15,23,42,0.95)); border:1px solid rgba(56,189,248,0.3); border-radius:16px; box-shadow:0 10px 40px rgba(0,0,0,0.5), inset 0 0 20px rgba(56,189,248,0.1); overflow:hidden; backdrop-filter:blur(10px); text-align:left;">
               
