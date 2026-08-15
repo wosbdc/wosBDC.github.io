@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wos-bdc-pwa-v2.5.97';
+const CACHE_NAME = 'wos-bdc-pwa-v2.5.98';
 const ASSETS_TO_CACHE = [
   './manifest.json',
   './favicon.svg',
