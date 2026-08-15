@@ -1,9 +1,9 @@
 {
-  "version": "2.5.63",
+  "version": "2.5.64",
   "releaseDate": "2026-08-15",
-  "title": "🔔 Live Message Count & Announcements Tray",
+  "title": "🔔 Always-Visible Notification Bell & Counter",
   "notes": [
-    "Added live unread message count badges to the notification bell",
-    "Added leadership broadcast history inside the alert window"
+    "Ensured the Notification Bell is always visible on navbar and mobile controls",
+    "Enabled live message count badges and instant announcements tray"
   ]
 }

@@ -1678,7 +1678,7 @@ window.formatRankBadgeHtml = (rankVal) => {
 // Register Service Worker for Mobile PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=2.5.63')
+    navigator.serviceWorker.register('./sw.js?v=2.5.64')
       .then(reg => {
         reg.update();
         console.log('PWA Service Worker registered:', reg.scope);
@@ -8669,45 +8669,44 @@ window.updateNewMemberBadge = async () => {
 
   const adminAlertsNavBtn = document.getElementById('adminAlertsNavBtn');
   const mobileAlertsBtn = document.getElementById('mobileAlertsBtn');
-  if (!currentUser) {
-    if (adminAlertsNavBtn) adminAlertsNavBtn.style.display = 'none';
-    if (mobileAlertsBtn) mobileAlertsBtn.innerHTML = '🔔 Alerts';
-    return;
-  }
   if (adminAlertsNavBtn) adminAlertsNavBtn.style.display = 'flex';
 
-  // 1. Check main character token status (only alert if expired or expiring soon)
-  const tokenStatus = window.getMemberTokenStatus(currentUser);
-  let mainAlert = (tokenStatus.status === 'expired' || tokenStatus.status === 'expiring_soon' || tokenStatus.status === 'unverified') ? 1 : 0;
-
-  // 2. Check linked alts token status (only alert if previously verified and expired or expiring soon)
-  let altAlertsCount = 0;
+  // 1. Check main character token status (if logged in)
+  let mainAlert = 0;
   let hasExpiredAlt = false;
   let hasExpiringAlt = false;
+  let altAlertsCount = 0;
+  let tokenStatus = { status: 'active', alert: false };
 
-  if (currentUser.linkedGameIds && Array.isArray(currentUser.linkedGameIds) && currentUser.linkedGameIds.length > 0) {
-    currentUser.linkedGameIds.forEach(agid => {
-      const aTok = currentUser.altTokens ? currentUser.altTokens[agid] : null;
-      if (aTok) {
-        const aDate = (typeof aTok === 'object' && aTok.verifiedAt) ? new Date(aTok.verifiedAt) : null;
-        if (aDate && !isNaN(aDate.getTime())) {
-          const elapsed = Math.floor((Date.now() - aDate.getTime()) / (1000 * 60 * 60 * 24));
-          const daysLeft = Math.max(0, 30 - elapsed);
-          if (daysLeft <= 0) {
-            altAlertsCount++;
-            hasExpiredAlt = true;
-          } else if (daysLeft <= 5) {
-            altAlertsCount++;
-            hasExpiringAlt = true;
+  if (currentUser) {
+    tokenStatus = window.getMemberTokenStatus(currentUser);
+    mainAlert = (tokenStatus.status === 'expired' || tokenStatus.status === 'expiring_soon' || tokenStatus.status === 'unverified') ? 1 : 0;
+
+    // 2. Check linked alts token status
+    if (currentUser.linkedGameIds && Array.isArray(currentUser.linkedGameIds) && currentUser.linkedGameIds.length > 0) {
+      currentUser.linkedGameIds.forEach(agid => {
+        const aTok = currentUser.altTokens ? currentUser.altTokens[agid] : null;
+        if (aTok) {
+          const aDate = (typeof aTok === 'object' && aTok.verifiedAt) ? new Date(aTok.verifiedAt) : null;
+          if (aDate && !isNaN(aDate.getTime())) {
+            const elapsed = Math.floor((Date.now() - aDate.getTime()) / (1000 * 60 * 60 * 24));
+            const daysLeft = Math.max(0, 30 - elapsed);
+            if (daysLeft <= 0) {
+              altAlertsCount++;
+              hasExpiredAlt = true;
+            } else if (daysLeft <= 5) {
+              altAlertsCount++;
+              hasExpiringAlt = true;
+            }
           }
         }
-      }
-    });
+      });
+    }
   }
 
   // 3. Check staff signups if admin
   let staffUnreadCount = 0;
-  if (window.isAdminUser(currentUser)) {
+  if (currentUser && window.isAdminUser(currentUser)) {
     const recent = await window.getRecentNewMembers();
     const lastSeen = Number(localStorage.getItem('last_seen_new_member_timestamp') || '0');
     staffUnreadCount = recent.filter(m => m.createdMs > lastSeen).length;
@@ -8741,8 +8740,8 @@ window.updateNewMemberBadge = async () => {
     if (totalAlerts > 0) {
       const isCritical = (tokenStatus.status === 'expired' || hasExpiredAlt);
       const isWarning = (tokenStatus.status === 'expiring_soon' || tokenStatus.status === 'unverified' || hasExpiringAlt);
-      const alertColor = isCritical ? '#ef4444' : (isWarning ? '#f59e0b' : '#06b6d4');
-      const alertBg = isCritical ? 'rgba(239,68,68,0.2)' : (isWarning ? 'rgba(245,158,11,0.2)' : 'rgba(6,182,212,0.2)');
+      const alertColor = isCritical ? '#ef4444' : (isWarning ? '#f59e0b' : '#ec4899');
+      const alertBg = isCritical ? 'rgba(239,68,68,0.2)' : (isWarning ? 'rgba(245,158,11,0.2)' : 'rgba(236,72,153,0.2)');
 
       adminAlertsNavBtn.style.position = 'relative';
       adminAlertsNavBtn.style.overflow = 'visible';
@@ -8767,16 +8766,15 @@ window.updateNewMemberBadge = async () => {
   }
 };
 
+// Initial load check for alerts badge
+setTimeout(() => {
+  if (typeof window.updateNewMemberBadge === 'function') window.updateNewMemberBadge();
+}, 300);
+
 window.openAllianceAlertsModal = async () => {
   try {
-    if (!currentUser) {
-      if (typeof window.openLoginModal === 'function') window.openLoginModal();
-      else if (typeof window.openAuthModal === 'function') window.openAuthModal('login');
-      return;
-    }
-
-    const isStaff = (typeof window.isAdminUser === 'function') ? window.isAdminUser(currentUser) : false;
-    const tokenStatus = (typeof window.getMemberTokenStatus === 'function') ? window.getMemberTokenStatus(currentUser) : {
+    const isStaff = (currentUser && typeof window.isAdminUser === 'function') ? window.isAdminUser(currentUser) : false;
+    const tokenStatus = (currentUser && typeof window.getMemberTokenStatus === 'function') ? window.getMemberTokenStatus(currentUser) : {
       status: 'active',
       label: 'In-Game Sync Active',
       desc: 'Your 30-day sync token is verified and active.',
@@ -8786,14 +8784,14 @@ window.openAllianceAlertsModal = async () => {
       icon: '🛡️'
     };
 
-    const gId = currentUser.gameId || '';
-    const chiefName = (
+    const gId = (currentUser && currentUser.gameId) || '';
+    const chiefName = currentUser ? (
       (window.idToNameMap && gId && window.idToNameMap[gId]) ||
       (typeof idToNameMap !== 'undefined' && gId && idToNameMap[gId]) ||
       currentUser.name ||
       currentUser.chiefName ||
       'Chief'
-    ).toString().trim();
+    ).toString().trim() : 'Chief';
 
     let existing = document.getElementById('notificationsModalOverlay');
     if (existing) existing.remove();

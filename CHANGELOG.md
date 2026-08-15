@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.5.64] - 2026-08-15
+- Made the **Notification Bell** always visible in the navbar for all visitors and alliance members.
+- Added live unread message badges and announcements tray.
+
 ## [2.5.63] - 2026-08-15
 - Added live message count badge to the **Notification Bell**.
 - Added leadership broadcast history directly inside the **Bell Alert Window**.
