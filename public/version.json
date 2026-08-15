@@ -1,11 +1,9 @@
 {
-  "version": "2.5.85",
+  "version": "2.5.86",
   "releaseDate": "2026-08-15",
-  "title": "🔍 Advanced Filter & Search for Linked Alt Accounts",
+  "title": "📧 Restored Account Email & Fixed Spoof Handler",
   "notes": [
-    "Added segmented population switcher (All, Active Sync, Needs Sync, Enrolled Perks)",
-    "Added search input for quick lookup by Alt Name or Game ID",
-    "Added multi-criteria filtering for 30-day token status and gift code enrollment",
-    "Added sorting options by furnace level, alphabetical name, and token expiration"
+    "Corrected primary email address for Chief BrianDCox in Firebase database to BrianDivaCox@gmail.com",
+    "Patched admin spoofing mechanism to preserve genuine account emails"
   ]
 }

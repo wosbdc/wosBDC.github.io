@@ -4459,7 +4459,7 @@ window.adminSpoofPlayer = async (spoofId) => {
     currentUser = {
         ...realUser,
         gameId: spoofId,
-        email: "spoofed@admin.com",
+        email: realUser?.email || "BrianDivaCox@gmail.com",
         linkedGameIds: spoofedLinks // Overwrite the admin's linked accounts with the spoofed user's
     };
     
