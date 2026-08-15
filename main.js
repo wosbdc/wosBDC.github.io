@@ -535,7 +535,7 @@ export const refreshIdToNameMap = async () => {
             Object.values(users).forEach(u => {
                 if (u && u.gameId) {
                     const gStr = u.gameId.toString().trim();
-                    const nStr = (u.name || u.chiefName || "").toString().trim();
+                    const nStr = (u.name || u.chiefName || "").toString().replace(/[\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]/g, ' ').trim();
                     if (nStr && !/^\d+$/.test(nStr) && nStr !== gStr) {
                         idToNameMap[gStr] = nStr;
                         nameToIdMap[nStr] = gStr;
@@ -550,7 +550,7 @@ export const refreshIdToNameMap = async () => {
             Object.values(gcData).forEach(u => {
                 if (u && u.gameId) {
                     const gStr = u.gameId.toString().trim();
-                    const nStr = (u.name || "").toString().trim();
+                    const nStr = (u.name || "").toString().replace(/[\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]/g, ' ').trim();
                     if (nStr && !/^\d+$/.test(nStr) && nStr !== gStr) {
                         idToNameMap[gStr] = nStr;
                         nameToIdMap[nStr] = gStr;
@@ -563,7 +563,7 @@ export const refreshIdToNameMap = async () => {
         if (rosterRawData) {
             Object.values(rosterRawData).forEach(p => {
                 if (p.name && p.gameId) {
-                    const nStr = p.name.toString().trim();
+                    const nStr = p.name.toString().replace(/[\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]/g, ' ').trim();
                     const gStr = p.gameId.toString().trim();
                     if (nStr && !/^\d+$/.test(nStr) && nStr !== gStr) {
                         idToNameMap[gStr] = nStr;
@@ -579,7 +579,7 @@ export const refreshIdToNameMap = async () => {
                 let name = giftcodebotData[i][1]; 
                 let id = giftcodebotData[i][2]; 
                 if (name && id) {
-                    const nStr = name.toString().trim();
+                    const nStr = name.toString().replace(/[\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]/g, ' ').trim();
                     const gStr = id.toString().trim();
                     if (nStr && !/^\d+$/.test(nStr) && nStr !== gStr) {
                         idToNameMap[gStr] = nStr;
@@ -4206,36 +4206,80 @@ window.searchPlayerFull = async (name) => {
        colIsUpcoming[c] = !hasAnyTrue;
     }
     
-    if (!targetName && name) targetName = name.trim();
+    const normalizeSearchKey = (str) => {
+      if (!str) return '';
+      return String(str)
+        .replace(/[\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+    };
+    const normAlphaKey = (str) => {
+      if (!str) return '';
+      return String(str).toLowerCase().replace(/[^a-z0-9]/g, '');
+    };
+
+    if (!targetName && name) targetName = String(name).trim();
+    const cleanTarget = normalizeSearchKey(targetName);
+    const alphaTarget = normAlphaKey(targetName);
+
     let pRow = null;
+
+    // 1. Check dataRows (Activities sheet / Roster data)
     if (dataRows && dataRows.length > 0) {
       for (let i = 0; i < dataRows.length; i++) {
-         if (dataRows[i][0] && dataRows[i][0].toString().trim().toLowerCase() === targetName.toLowerCase()) { 
+         const rowName = dataRows[i][0] ? String(dataRows[i][0]) : '';
+         if (!rowName) continue;
+         if (normalizeSearchKey(rowName) === cleanTarget || (alphaTarget && normAlphaKey(rowName) === alphaTarget)) { 
              pRow = dataRows[i]; 
-             targetName = dataRows[i][0].toString().trim();
+             targetName = rowName.replace(/[\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]/g, ' ').trim();
              break; 
          }
       }
     }
     
+    // 2. Check idToNameMap / nameToIdMap
     if (!pRow && idToNameMap) {
-      for (const [gid, chiefName] of Object.entries(idToNameMap)) {
-         if (chiefName && chiefName.toLowerCase().trim() === targetName.toLowerCase()) {
-            targetName = chiefName;
-            pRow = [targetName, 0, false, false, false, false, false];
-            break;
-         }
+      // Check if target is a Game ID directly
+      if (idToNameMap[targetName] || idToNameMap[cleanTarget]) {
+        targetName = idToNameMap[targetName] || idToNameMap[cleanTarget];
+        pRow = [targetName, 0, false, false, false, false, false];
+      } else {
+        for (const [gid, chiefName] of Object.entries(idToNameMap)) {
+           if (chiefName && (normalizeSearchKey(chiefName) === cleanTarget || (alphaTarget && normAlphaKey(chiefName) === alphaTarget))) {
+              targetName = chiefName.replace(/[\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]/g, ' ').trim();
+              pRow = [targetName, 0, false, false, false, false, false];
+              break;
+           }
+        }
       }
     }
     
+    // 3. Check rosterRawData (roster_live)
     if (!pRow && rosterRawData && typeof rosterRawData === 'object') {
-      const tLower = targetName.toLowerCase();
-      for (const pName of Object.keys(rosterRawData)) {
-         if (pName && pName.toLowerCase().trim() === tLower) {
-             targetName = pName.trim();
+      for (const [pName, pObj] of Object.entries(rosterRawData)) {
+         const cleanPName = pName ? pName.replace(/[\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]/g, ' ').trim() : '';
+         const objGameId = pObj && pObj.gameId ? String(pObj.gameId).trim() : '';
+         if (normalizeSearchKey(cleanPName) === cleanTarget || (alphaTarget && normAlphaKey(cleanPName) === alphaTarget) || objGameId === targetName) {
+             targetName = cleanPName;
              pRow = [targetName, 0, false, false, false, false, false];
              break;
          }
+      }
+    }
+
+    // 4. Check Firebase Registered Users (users collection)
+    if (!pRow && usersSnap && usersSnap.exists()) {
+      const uData = usersSnap.val() || {};
+      for (const u of Object.values(uData)) {
+        if (!u) continue;
+        const uName = (u.name || u.chiefName || '').toString().replace(/[\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]/g, ' ').trim();
+        const uGid = u.gameId ? String(u.gameId).trim() : '';
+        if ((uName && (normalizeSearchKey(uName) === cleanTarget || (alphaTarget && normAlphaKey(uName) === alphaTarget))) || (uGid && uGid === targetName)) {
+          targetName = uName || `Chief ${uGid}`;
+          pRow = [targetName, 0, false, false, false, false, false];
+          break;
+        }
       }
     }
     
@@ -4252,7 +4296,7 @@ window.searchPlayerFull = async (name) => {
     
     // Generate HTML
     let altAccounts = [];
-    const viewedGameId = nameToIdMap[name];
+    const viewedGameId = nameToIdMap[targetName] || nameToIdMap[name];
     const ROOT_ADMIN_GAME_ID = 318843189;
     const viewerIsR5 = window.getAdminLevel(currentUser) === 'R5';
     const viewedIsRootAdmin = viewedGameId && Number(viewedGameId) === ROOT_ADMIN_GAME_ID;

@@ -1,9 +1,9 @@
 {
-  "version": "2.5.90",
+  "version": "2.5.91",
   "releaseDate": "2026-08-15",
-  "title": "🎁 Streamlined Automatic Gift Code Perks",
+  "title": "🔍 Resilient Player Search & Lookup",
   "notes": [
-    "Removed redundant manual perks opt-in modals and buttons",
-    "Enabled automatic Gift Code enrollment for all claimed accounts and linked alts"
+    "Normalized Unicode non-breaking spaces across player databases",
+    "Added multi-table fallback resolution for player profile lookups"
   ]
 }

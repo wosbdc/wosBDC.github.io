@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.5.91] - 2026-08-15
+- 🔍 **Resilient Player Search & Lookup:**
+  - Resolved non-breaking space (`\u00a0`) mismatches in `roster_live` and player lookup indexes.
+  - Added robust Unicode whitespace normalization, Game ID lookup, and multi-database fallback in player profile search.
+
 ## [2.5.90] - 2026-08-15
 - 🎁 **Streamlined Automatic Gift Code Perks:**
   - Removed outdated manual "Perks Opt-In" modal and standalone buttons.

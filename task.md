@@ -12,6 +12,7 @@
 - [x] Implement Claimed Accounts Gift Code Enforcement & Toggle in Dispatcher (v2.5.88) <!-- id: 12 -->
 - [x] Clean up duplicate BrianDCox account & preserve authentic 5/6 alts (v2.5.89) <!-- id: 13 -->
 - [x] Streamline automatic Gift Code perks and remove redundant modals (v2.5.90) <!-- id: 14 -->
+- [x] Resolve non-breaking space issues and harden player search lookup (v2.5.91) <!-- id: 15 -->
 - [x] Update versioning, CHANGELOG.md, and sw.js <!-- id: 4 -->
 - [x] Build & test suite verification <!-- id: 5 -->
 - [x] Commit and push changes to GitHub <!-- id: 6 -->
