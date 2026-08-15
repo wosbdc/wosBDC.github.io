@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [2.5.67] - 2026-08-15
+- Fixed gift code redemption by including kingdom identifier in API payload and signature.
+- Resolved validation error for gift code testing and mass dispatch operations.
+- Updated status detection for accurate code state reporting (claimed, expired, invalid).
+- Backend deployment updated to @172.
+
 ## [2.5.66] - 2026-08-15
 - Connected the broadcast announcements tray to live realtime database sync.
 - Enabled instant display of alliance broadcasts inside the **Bell Alert Window**.

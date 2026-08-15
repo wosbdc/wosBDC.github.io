@@ -132,7 +132,7 @@ window.fetchRoster = async () => {
 };
 
 
-const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbyPrrii9U79FVk77ZVOKb2ciwbi999czsc47YiN5iv8AwcXEkZZOBxmyogTdJh-rP4/exec';
+const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbyjNQ0R_2GqQl6gfZmpioYFkAVsFfkUscNuB_l2V4KnbGh67rl64tVevdmSicQu_x8/exec';
 const VERIFY_PROXY_URL = 'https://wos-vercel-proxy.vercel.app/api/verify'; // Fallback / secondary proxy
 
 // Get a fresh Firebase ID token for the current user (replaces hardcoded APP_SECRET)
@@ -1678,7 +1678,7 @@ window.formatRankBadgeHtml = (rankVal) => {
 // Register Service Worker for Mobile PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=2.5.66')
+    navigator.serviceWorker.register('./sw.js?v=2.5.67')
       .then(reg => {
         reg.update();
         console.log('PWA Service Worker registered:', reg.scope);
@@ -10262,21 +10262,21 @@ window.openGiftCodeDispatcherModal = async () => {
       try {
         const testId = currentUser.gameId || '318843189';
         const adminToken = await getAuthToken();
-        const res = await fetch(`${API_BASE_URL}?api=redeemGiftCode&gameId=${encodeURIComponent(testId)}&code=${encodeURIComponent(code)}&token=${encodeURIComponent(adminToken)}`);
+        const res = await fetch(`${API_BASE_URL}?api=redeemGiftCode&gameId=${encodeURIComponent(testId)}&code=${encodeURIComponent(code)}&kid=2089&token=${encodeURIComponent(adminToken)}`);
         const data = await res.json();
 
         resultBox.style.display = 'block';
-        if (data.code === 0) {
+        if (data.code === 0 || data.status === 'success') {
           resultBox.style.background = 'rgba(16,185,129,0.15)';
           resultBox.style.border = '1px solid rgba(16,185,129,0.4)';
           resultBox.style.color = '#10b981';
           resultBox.innerHTML = `<strong>✅ Code is Active & Valid!</strong> Successfully redeemed on test character (ID: ${testId}).`;
-        } else if (data.code === 40008 || data.status === 'already_claimed') {
+        } else if (data.status === 'already_claimed') {
           resultBox.style.background = 'rgba(6,182,212,0.15)';
           resultBox.style.border = '1px solid rgba(6,182,212,0.4)';
           resultBox.style.color = '#06b6d4';
           resultBox.innerHTML = `<strong>✅ Code is Valid!</strong> (Test character already redeemed this code previously). Ready for alliance dispatch.`;
-        } else if (data.code === 40004 || data.code === 40007 || data.status === 'expired') {
+        } else if (data.status === 'expired') {
           resultBox.style.background = 'rgba(239,68,68,0.15)';
           resultBox.style.border = '1px solid rgba(239,68,68,0.4)';
           resultBox.style.color = '#ef4444';
@@ -10358,15 +10358,15 @@ window.openGiftCodeDispatcherModal = async () => {
         if (pTitle) pTitle.textContent = `🚀 Processing [${i + 1}/${targets.length}] - ${name}...`;
 
         try {
-          const res = await fetch(`${API_BASE_URL}?api=redeemGiftCode&gameId=${encodeURIComponent(gid)}&code=${encodeURIComponent(code)}&token=${encodeURIComponent(adminToken)}`);
+          const res = await fetch(`${API_BASE_URL}?api=redeemGiftCode&gameId=${encodeURIComponent(gid)}&code=${encodeURIComponent(code)}&kid=2089&token=${encodeURIComponent(adminToken)}`);
           const data = await res.json();
 
           let logLine = '';
-          if (data.code === 0) {
+          if (data.code === 0 || data.status === 'success') {
             successCount++;
             if (kpiSuccess) kpiSuccess.textContent = successCount;
             logLine = `<div style="color:#10b981;">[${i + 1}/${targets.length}] ${window.escapeHTML(name)} (${gid}): ✅ Claimed! Reward delivered to in-game mailbox.</div>`;
-          } else if (data.code === 40008 || data.status === 'already_claimed') {
+          } else if (data.status === 'already_claimed') {
             alreadyCount++;
             if (kpiAlready) kpiAlready.textContent = alreadyCount;
             logLine = `<div style="color:#06b6d4;">[${i + 1}/${targets.length}] ${window.escapeHTML(name)} (${gid}): ⏩ Already claimed on this character.</div>`;
