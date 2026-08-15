@@ -1677,7 +1677,7 @@ window.formatRankBadgeHtml = (rankVal) => {
 // Register Service Worker for Mobile PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=2.5.56')
+    navigator.serviceWorker.register('./sw.js?v=2.5.57')
       .then(reg => {
         reg.update();
         console.log('PWA Service Worker registered:', reg.scope);
@@ -3831,6 +3831,17 @@ window.updateNavbarUserIndicator = (user = currentUser) => {
         navIndicator.style.background = 'rgba(59, 130, 246, 0.18)';
     }
 };
+
+const navUserIndicatorEl = document.getElementById('navbar-user-indicator');
+if (navUserIndicatorEl) {
+    navUserIndicatorEl.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (window.views && window.views.account) {
+            window.views.account('Profile');
+        }
+    });
+}
 
 // Listen to Auth State
 let realUser = null; // Store the actual logged in user so we can revert from spoofing
@@ -15191,9 +15202,16 @@ window.resetBearTrapEvent = async () => {
 
   account: async (defaultTab = null) => {
     if (!currentUser) return window.renderMembersOnlyGuard("User Account Hub");
-    const targetTab = defaultTab || window.currentAccountHubTab || 'Profile';
+    const targetTab = (typeof defaultTab === 'string' && defaultTab) ? defaultTab : (window.currentAccountHubTab || 'Profile');
     window.currentAccountHubTab = targetTab;
     window.activeViewFunc = () => views.account(window.currentAccountHubTab);
+
+    // Reset active navbar tab states
+    document.querySelectorAll('.nav-link, .sub-link').forEach(l => l.classList.remove('active'));
+    const navbar = document.querySelector('.navbar');
+    if (navbar) navbar.style.display = 'flex';
+    const mobMenu = document.getElementById('mobileMenu');
+    if (mobMenu) mobMenu.classList.remove('open');
     
     let altProfilesMap = {};
     try {
@@ -15590,7 +15608,13 @@ window.resetBearTrapEvent = async () => {
     
     app.innerHTML = `
       <div id="accountHubView" class="card" style="max-width:750px; margin:0 auto; text-align:center;">
-        <h2 style="color:var(--text-main); margin-top:0; font-size:24px;">Account Hub</h2>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+          <button onclick="if(window.views && window.views.home) window.views.home();" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-muted); padding:6px 14px; border-radius:8px; font-size:12.5px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:all 0.2s;" onmouseover="this.style.color='#fff'; this.style.borderColor='var(--accent)';" onmouseout="this.style.color='var(--text-muted)'; this.style.borderColor='var(--border)';">
+            ← Back to Dashboard
+          </button>
+          <h2 style="color:var(--text-main); margin:0; font-size:22px;">Account Hub</h2>
+          <div style="width:130px; display:none;" class="acc-header-spacer"></div>
+        </div>
         
         <!-- Tab Navigation Bar -->
         <div style="display:flex; justify-content:center; gap:8px; margin-bottom:24px; border-bottom:1px solid var(--border); padding-bottom:12px; flex-wrap:wrap;">
@@ -16205,10 +16229,12 @@ window.resetBearTrapEvent = async () => {
               if (altChiefConfirm) altChiefConfirm.style.display = 'none';
           });
 
+          if (cancelAltBtn) {
               cancelAltBtn.addEventListener('click', () => {
                   openLinkAltBtn.style.display = 'inline-flex';
                   linkAltForm.style.display = 'none';
               });
+          }
 
           // Mode toggle listeners
           if (toggleAltLinkAutoBtn && toggleAltLinkManualBtn) {
@@ -16402,10 +16428,10 @@ window.resetBearTrapEvent = async () => {
       }
       
       const uploadInput = document.getElementById('avatarUploadInput');
-    
-    uploadInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
+      if (uploadInput) {
+        uploadInput.addEventListener('change', (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
       
       // Basic size check (optional but good practice to prevent massive uploads crashing browser)
       if (file.size > 10 * 1024 * 1024) { // 10MB
@@ -16509,12 +16535,15 @@ window.resetBearTrapEvent = async () => {
                saveBtn.disabled = false;
            };
         };
-        img.src = event.target.result;
-      };
-      reader.readAsDataURL(file);
-    });
+       };
+       reader.readAsDataURL(file);
+     });
+   }
 
-  },
+   if (window.initUnifiedFcBadges) {
+     setTimeout(window.initUnifiedFcBadges, 50);
+   }
+ },
 
   home: async () => {
     if (!currentUser) return window.renderMembersOnlyGuard("WOS Alliance Dashboard & Schedule");

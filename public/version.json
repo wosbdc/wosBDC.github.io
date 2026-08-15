@@ -1,10 +1,10 @@
 {
-  "version": "2.5.56",
+  "version": "2.5.57",
   "releaseDate": "2026-08-14",
-  "title": "✨ Unified Single-Canvas Fire Crystal Engine",
+  "title": "🛡️ Robust Account Hub Navigation & Exit Workflow",
   "notes": [
-    "Re-architected Fire Crystal badge renderer to a Unified Single-Canvas Engine where the badge sprite and flame particle system are rendered together inside the exact same 2D Canvas context",
-    "Completely eliminated DOM overlay offset and misalignment issues with automatic Retina/HiDPI display scaling",
-    "Updated PWA Service Worker to bypass cached badge assets and always deliver fresh graphics"
+    "Fixed Account Hub not re-opening from the navbar user indicator on repeated clicks",
+    "Added safe null checking for all dynamic Account Hub event listeners to eliminate silent runtime exceptions",
+    "Added an explicit Back to Dashboard button in the Account Hub header for frictionless exit navigation"
   ]
 }

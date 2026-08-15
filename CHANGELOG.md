@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [2.5.57] - 2026-08-14
+- Fixed Account Hub failing to re-open on repeated clicks from the navbar user indicator (`#navbar-user-indicator`).
+- Added safe null guarding for all dynamic Account Hub DOM event listeners (`cancelAltBtn`, `uploadInput`, `submitAltBtn`, `selectEl`).
+- Added an explicit `← Back to Dashboard` exit button directly inside the Account Hub header.
+- Synchronized `#navbar-user-indicator` to always open the default `Profile` tab on direct click.
+
 ## [2.5.56] - 2026-08-14
 - Re-architected Fire Crystal badge renderer to a **Unified Single-Canvas Engine** where both the badge sprite and flame particle system render in the exact same 2D Canvas context.
 - Fixed PWA Service Worker caching (`sw.js`) to ensure all badge image updates are fetched fresh from the network.
