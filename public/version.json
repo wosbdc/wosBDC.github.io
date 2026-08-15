@@ -1,9 +1,9 @@
 {
-  "version": "2.5.44",
+  "version": "2.5.45",
   "releaseDate": "2026-08-14",
-  "title": "🔥 360° Omnidirectional Balanced Fire Aura & Burst",
+  "title": "🛡️ Restored Original 3D Solar Fire Wisps Particle Physics & Badges",
   "notes": [
-    "Replaced single-direction flame drift with true 360° omnidirectional radial flame aura around all 6 sides of the crystal",
-    "Enhanced particle velocity, bloom size, and density for complete shield coverage without dead zones"
+    "Restored pristine original badge graphics directly from fc_demo.html",
+    "Restored exact authentic 3D Solar Fire Wisps flame physics and motion curves from fc_demo.html"
   ]
 }

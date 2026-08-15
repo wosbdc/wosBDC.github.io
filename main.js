@@ -198,7 +198,7 @@ window.getFurnaceIconHtml = (level, size = 48) => {
      const canvasOffset = Math.round((canvasSize - size) / 2);
      return `<span class="fc-badge-stage" data-fc="${fcNum}" style="display:inline-flex; align-items:center; justify-content:center; position:relative; vertical-align:middle; cursor:pointer; width:${size}px; height:${size}px; user-select:none; -webkit-user-select:none;">
        <canvas class="fc-flame-canvas" width="${canvasSize}" height="${canvasSize}" style="position:absolute; top:-${canvasOffset}px; left:-${canvasOffset}px; width:${canvasSize}px; height:${canvasSize}px; pointer-events:none; z-index:3;"></canvas>
-       <img src="./badges/fc${fcNum}.png?v=2.5.43" onerror="this.onerror=null; this.src='/badges/fc${fcNum}.png?v=2.5.43';" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
+       <img src="./badges/fc${fcNum}.png?v=2.5.45" onerror="this.onerror=null; this.src='/badges/fc${fcNum}.png?v=2.5.45';" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
      </span>`;
   }
 
@@ -21370,51 +21370,49 @@ window.closeMobileNavModal = () => {
   };
 
   class FlameWisp {
-    constructor(cx, cy, radius, colors) {
-      // Spawn evenly along the perimeter of the crystal shield
-      const angle = Math.random() * Math.PI * 2;
-      const dist = (radius * 0.68) + (Math.random() * radius * 0.12);
-      this.x = cx + Math.cos(angle) * dist;
-      this.y = cy + Math.sin(angle) * dist;
+    constructor(cx, cy, w, h, colors) {
+      const scale = w / 280;
+      this.x = cx + (Math.random() - 0.5) * 100 * scale;
+      this.y = cy + (Math.random() - 0.5) * 50 * scale + (30 * scale);
+      this.vx = (Math.random() - 0.5) * 1.6 * scale;
+      this.vy = (-Math.random() * 3.2 - 1.4) * scale;
       
-      // Radial outward momentum in all 360 degrees
-      const speed = (radius * 0.016) * (0.7 + Math.random() * 0.6);
-      this.vx = Math.cos(angle) * speed;
-      this.vy = Math.sin(angle) * speed;
+      this.size = (Math.random() * 11 + 5) * scale;
+      this.alpha = 1.0;
+      this.decay = Math.random() * 0.025 + 0.012;
+      this.waveSpeed = Math.random() * 0.1 + 0.05;
+      this.waveAngle = Math.random() * Math.PI * 2;
       
-      this.size = Math.random() * (radius * 0.07) + (radius * 0.035);
-      this.maxSize = this.size * 1.5;
-      this.alpha = 0.95;
-      this.decay = Math.random() * 0.022 + 0.012;
       this.colors = colors;
     }
 
     update() {
-      this.x += this.vx;
+      this.waveAngle += this.waveSpeed;
+      this.x += this.vx + Math.sin(this.waveAngle) * 0.7;
       this.y += this.vy;
-      this.size = Math.min(this.maxSize, this.size * 1.02);
+      this.size *= 0.96;
       this.alpha -= this.decay;
     }
 
     draw(ctx) {
-      if (this.alpha <= 0 || this.size <= 0.5) return;
+      if (this.alpha <= 0 || this.size <= 1) return;
+
       ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
       ctx.globalAlpha = Math.max(0, this.alpha);
       
-      // Outer radiant glow
       ctx.beginPath();
-      ctx.shadowBlur = 10;
+      ctx.shadowBlur = 12;
       ctx.shadowColor = this.colors.glow;
+      
       ctx.fillStyle = this.colors.outer;
-      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      ctx.ellipse(this.x, this.y, this.size * 0.6, this.size * 1.2, Math.sin(this.waveAngle) * 0.3, 0, Math.PI * 2);
       ctx.fill();
-
-      // Hot core
+      
       ctx.beginPath();
       ctx.fillStyle = this.colors.core;
-      ctx.arc(this.x, this.y, this.size * 0.45, 0, Math.PI * 2);
+      ctx.ellipse(this.x, this.y + 2, this.size * 0.3, this.size * 0.6, 0, 0, Math.PI * 2);
       ctx.fill();
+      
       ctx.restore();
     }
   }
@@ -21435,7 +21433,6 @@ window.closeMobileNavModal = () => {
     const h = canvas.height;
     const cx = w / 2;
     const cy = h / 2;
-    const radius = w / 2;
 
     let wisps = [];
     let isActive = false;
@@ -21445,16 +21442,15 @@ window.closeMobileNavModal = () => {
       ctx.clearRect(0, 0, w, h);
 
       if (isActive) {
-        // Continuous, balanced omnidirectional particle stream
-        for (let i = 0; i < 2; i++) {
-          wisps.push(new FlameWisp(cx, cy, radius, colors));
+        if (Math.random() < 0.65) {
+          wisps.push(new FlameWisp(cx, cy, w, h, colors));
         }
       }
 
       for (let i = wisps.length - 1; i >= 0; i--) {
         wisps[i].update();
         wisps[i].draw(ctx);
-        if (wisps[i].alpha <= 0 || wisps[i].size <= 0.5) {
+        if (wisps[i].alpha <= 0 || wisps[i].size <= 1) {
           wisps.splice(i, 1);
         }
       }
@@ -21524,8 +21520,8 @@ window.closeMobileNavModal = () => {
           if (img && isActive) img.style.transform = 'perspective(600px) rotateX(8deg) scale(1.12)';
         }, 140);
       }
-      for (let i = 0; i < 20; i++) {
-        wisps.push(new FlameWisp(cx, cy, radius, colors));
+      for (let i = 0; i < 12; i++) {
+        wisps.push(new FlameWisp(cx, cy, w, h, colors));
       }
       if (roarTimeout) clearTimeout(roarTimeout);
       roarTimeout = setTimeout(() => {

@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.5.45] - 2026-08-14
+- Restored original pristine Fire Crystal badge graphics directly from `fc_demo.html`.
+- Restored the authentic 3D Solar Fire Wisps particle physics, sinusoidal wave motion, and haptic burst mechanics exactly as designed in `fc_demo.html`.
+
 ## [2.5.44] - 2026-08-14
 - Upgraded the Fire Crystal interactive flame particle engine to generate continuous 360° omnidirectional radial plasma embers spanning all 6 facets of the shield evenly without vertical or horizontal bias.
 
