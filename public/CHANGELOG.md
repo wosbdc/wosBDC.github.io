@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [2.5.37] - 2026-08-14
+- Completely eradicated the legacy `if (!stoveLv) stoveLv = "30";` fallback in `WosApi.js` that was forcibly resetting non-FC furnace levels (e.g. 21, 28) back to 30 on sync.
+- Added automated fallback lookup to the Century Games public player API (`wos-giftcode.centurygame.com/api/player`) if the VIP store payload lacks detailed furnace level information.
+- Hardened client sync routines (`handleSyncCenturyGamesProfile`, `handleSyncAlt`, `handleSyncAllCharacters`) to preserve the player's current furnace level if the game server response is blank or unpopulated.
+- Deployed Google Apps Script backend as Version `@158` and synchronized frontend `API_BASE_URL`.
+
 ## [2.5.36] - 2026-08-14
 - Removed redundant bottom buttons below the Account Hub ID card to keep the profile card streamlined and clean.
 - Integrated all actions exclusively into the sleek `⚙️ Options ▾` menu near the Chief Name.

@@ -132,7 +132,7 @@ window.fetchRoster = async () => {
 };
 
 
-const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbx_9jzP94fsjIVnOGiEVnpbsQ18cxSk-6La-LVABvInfqFhoxd_m_mEdel-NanK6kE/exec';
+const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbw8ll31Wuz_GBKCangy9TgI5f9ERDHNKkafTZ97SkKwCXtVLLwVD64XD87SHOOJt44/exec';
 const VERIFY_PROXY_URL = 'https://wos-vercel-proxy.vercel.app/api/verify'; // Fallback / secondary proxy
 
 // Get a fresh Firebase ID token for the current user (replaces hardcoded APP_SECRET)
@@ -9401,7 +9401,8 @@ window.handleSyncAltProfile = async (gid, btnEl = null) => {
     const data = await res.json();
 
     if (data && data.success) {
-      const finalStove = data.stove_lv || "";
+      const existingAltFurnace = (typeof tokenData === 'object' && tokenData ? (tokenData.stove_lv || tokenData.furnaceLevel) : '') || '';
+      const finalStove = data.stove_lv || existingAltFurnace || "";
       const updates = {
         stove_lv: finalStove,
         furnaceLevel: finalStove,
@@ -9577,7 +9578,8 @@ window.handleSyncAllCharacters = async (btnEl = null) => {
         const res = await fetch(`${API_BASE_URL}?api=syncProfileWithToken&id=${encodeURIComponent(gid)}&cgToken=${encodeURIComponent(token)}`);
         const data = await res.json();
         if (data && data.success) {
-          const finalStove = data.stove_lv || "";
+          const existingAltFurnace = (typeof tokenData === 'object' && tokenData ? (tokenData.stove_lv || tokenData.furnaceLevel) : '') || '';
+          const finalStove = data.stove_lv || existingAltFurnace || "";
           const updates = {
             stove_lv: finalStove,
             furnaceLevel: finalStove,

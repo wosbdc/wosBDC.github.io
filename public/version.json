@@ -1,9 +1,11 @@
 {
-  "version": "2.5.36",
+  "version": "2.5.37",
   "releaseDate": "2026-08-14",
-  "title": "✨ Streamlined Account Hub & Redundant Button Cleanup",
+  "title": "🔥 Permanent Fix for Furnace Revert Bug + Public API Fallback",
   "notes": [
-    "Removed redundant bottom buttons below the ID Card to fully streamline the interface into the ⚙️ Options menu",
-    "Enhanced ⚙️ Options dropdown menu with live sync feedback and full action parity"
+    "Completely eliminated legacy hardcoded 30 fallback in WosApi.js that reverted non-FC furnace levels (e.g. 21, 28) back to 30",
+    "Added secondary player lookup to Century Games public API if VIP store payload lacks furnace level data",
+    "Updated client sync handlers to safely preserve the user's existing saved furnace level if the game server response is empty",
+    "Deployed Apps Script backend version @158 to live environment"
   ]
 }
