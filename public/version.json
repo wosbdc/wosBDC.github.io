@@ -1,11 +1,9 @@
 {
-  "version": "2.5.38",
+  "version": "2.5.39",
   "releaseDate": "2026-08-14",
-  "title": "⚡ Live Century Games Numeric Rank Parsing & Full Server Verification",
+  "title": "✨ Streamlined 2-Button Options Dropdown Menu",
   "notes": [
-    "Confirmed Century Games server payload format: standard furnace levels 1-30 are returned directly as numeric rank integers (e.g. rank: 21)",
-    "Upgraded WosApi parser to accurately map numeric rank 1-30 to standard furnace levels and 31-80 to Fire Crystal tiers",
-    "Deployed Google Apps Script backend Version @159 to live production",
-    "Verified live account sync and 30-day token binding across all site views"
+    "Grouped Options menu actions into exactly 2 high-impact buttons: '✏️ Edit Profile' and '🔄 Sync from Game'",
+    "Cleaned up redundant sub-actions for a sleeker, frictionless user interface"
   ]
 }

@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [2.5.39] - 2026-08-14
+- Streamlined the `⚙️ Options ▾` dropdown menu down to exactly 2 unified buttons: `✏️ Edit Profile` (opens complete profile, avatar & tagline manager) and `🔄 Sync from Game` (live server sync with automated token renewal flow).
+
 ## [2.5.38] - 2026-08-14
 - Verified live Century Games server payload structure: standard furnace levels (1–30) are returned directly inside `user.rank` as numeric integers (e.g. `"rank": 21`).
 - Enhanced `WosApi.js` parser to map `typeof user.rank === 'number'` across both standard furnace levels (`1..30`) and Fire Crystal tiers (`31..80` $\rightarrow$ `FC 1..10`).
