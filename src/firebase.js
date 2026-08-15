@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getDatabase, ref, onValue, onDisconnect, set, push, runTransaction, get, increment } from "firebase/database";
+import { getDatabase, ref, onValue, onDisconnect, set, push, runTransaction, get, increment, update } from "firebase/database";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail } from "firebase/auth";
 import { getMessaging, getToken, onMessage } from "firebase/messaging";
 const firebaseConfig = {
@@ -140,7 +140,7 @@ export async function deleteAvatar(gameId) {
   await set(ref(db, `avatars/${gameId}`), null);
 }
 
-export { get, set, ref, db };
+export { get, set, ref, db, update };
 
 // Push Notifications Setup
 let messaging = null;

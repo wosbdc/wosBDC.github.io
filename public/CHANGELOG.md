@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [2.5.59] - 2026-08-14
+- Added 1-Click **"⭐️ Make Primary"** Character Switcher on all linked alt cards in the Account Hub.
+- Added **"🛠️ Account Character & ID Repair Wizard"** in the Registered Users Database and Admin Tools tab.
+- Integrated automated Century Games verification lookup to allow staff to easily fix mismatched Game IDs with real-time stat verification.
+- Ensured atomic data swaps between primary chief profiles and linked alt tokens (`altTokens` and `linkedAltsData`), preserving all 30-day tokens, avatars, and furnace levels.
+
 ## [2.5.58] - 2026-08-14
 - Fixed Fire Crystal badge sizing inside the Registered Users Database and member tables.
 - Removed redundant outer bordered wrapper spans that caused double/misaligned boxes around FC badges.

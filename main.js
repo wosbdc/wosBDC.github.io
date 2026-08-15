@@ -1677,7 +1677,7 @@ window.formatRankBadgeHtml = (rankVal) => {
 // Register Service Worker for Mobile PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=2.5.58')
+    navigator.serviceWorker.register('./sw.js?v=2.5.59')
       .then(reg => {
         reg.update();
         console.log('PWA Service Worker registered:', reg.scope);
@@ -1794,6 +1794,535 @@ window.unlinkAltAccountPrompt = async (gid) => {
         if(window.showToast) window.showToast(e.message, "error");
         else window.showToast(e.message, "error");
     }
+};
+
+window.promptSwapPrimaryAccount = async (gid, altName = '') => {
+    if (!currentUser) return;
+    const cleanGid = (gid || '').toString().trim();
+    const cleanName = altName || (window.idToNameMap && window.idToNameMap[cleanGid]) || (currentUser.altTokens && currentUser.altTokens[cleanGid]?.nickname) || `Alt (${cleanGid})`;
+    const currentPrimaryName = (currentUser.gameId && window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name || `Chief ${currentUser.gameId}`;
+
+    const confirmed = await window.customConfirm(
+        `Are you sure you want to make ${cleanName} (ID: ${cleanGid}) your PRIMARY Chief character?\n\nYour current main character (${currentPrimaryName}) will be preserved as a linked alt account.`
+    );
+    if (!confirmed) return;
+
+    try {
+        await window.swapPrimaryWithAltAccount(cleanGid);
+    } catch(e) {
+        console.error("Error swapping primary account:", e);
+        if (window.showToast) window.showToast("Failed to swap primary character: " + e.message, "error");
+    }
+};
+
+window.swapPrimaryWithAltAccount = async (targetAltGid) => {
+    if (!currentUser || !currentUser.uid) throw new Error("You must be logged in to switch characters.");
+    const cleanAltGid = targetAltGid.toString().trim();
+    const uid = currentUser.uid;
+
+    if (window.showToast) window.showToast("Switching primary chief character...", "info");
+
+    // 1. Fetch fresh user data from Firebase
+    const snap = await get(ref(db, `users/${uid}`));
+    if (!snap.exists()) throw new Error("User record not found in database.");
+    const userData = snap.val();
+
+    const oldPrimaryGid = (userData.gameId || '').toString().trim();
+    if (oldPrimaryGid === cleanAltGid) {
+        if (window.showToast) window.showToast("This character is already your primary chief!", "info");
+        return;
+    }
+
+    const currentLinks = Array.isArray(userData.linkedGameIds) ? [...userData.linkedGameIds] : [];
+    const altTokens = userData.altTokens ? { ...userData.altTokens } : {};
+    const linkedAltsData = userData.linkedAltsData ? { ...userData.linkedAltsData } : {};
+
+    // 2. Extract selected alt data
+    const altTokenObj = altTokens[cleanAltGid] || {};
+    const altDataObj = linkedAltsData[cleanAltGid] || {};
+
+    const newPrimaryName = altTokenObj.nickname || altDataObj.name || (window.idToNameMap && window.idToNameMap[cleanAltGid]) || `Chief ${cleanAltGid}`;
+    const newPrimaryStove = altTokenObj.stove_lv || altTokenObj.furnaceLevel || altDataObj.stove_lv || altDataObj.furnaceLevel || '30';
+    const newPrimarySection = altTokenObj.section || altDataObj.section || userData.section || '';
+    const newPrimaryAvatar = altTokenObj.avatar_image || altDataObj.avatar_image || '';
+    const newPrimaryToken = altTokenObj.token || null;
+    const newPrimaryVerified = Boolean(altTokenObj.centuryGamesVerified || newPrimaryToken);
+    const newPrimaryVerifiedAt = altTokenObj.verifiedAt || null;
+    const newPrimaryLastSyncedAt = altTokenObj.lastSyncedAt || new Date().toISOString();
+
+    // 3. Pack current primary into an alt record
+    const oldPrimaryName = userData.name || (window.idToNameMap && window.idToNameMap[oldPrimaryGid]) || `Chief ${oldPrimaryGid}`;
+    const oldPrimaryStove = userData.stove_lv || userData.furnaceLevel || '30';
+    const oldPrimarySection = userData.section || '';
+    const oldPrimaryAvatar = userData.avatar_image || '';
+    const oldPrimaryToken = userData.wos_cg_token || null;
+    const oldPrimaryVerified = Boolean(userData.centuryGamesVerified || oldPrimaryToken);
+    const oldPrimaryVerifiedAt = userData.verifiedAt || null;
+    const oldPrimaryLastSyncedAt = userData.lastSyncedAt || new Date().toISOString();
+
+    // 4. Update linkedGameIds: remove new primary, add old primary
+    const updatedLinkedIds = currentLinks.filter(id => id.toString().trim() !== cleanAltGid);
+    if (oldPrimaryGid && !updatedLinkedIds.includes(oldPrimaryGid)) {
+        updatedLinkedIds.push(oldPrimaryGid);
+    }
+
+    // 5. Update altTokens: delete selected alt, add old primary
+    delete altTokens[cleanAltGid];
+    if (oldPrimaryGid) {
+        altTokens[oldPrimaryGid] = {
+            nickname: oldPrimaryName,
+            stove_lv: oldPrimaryStove,
+            furnaceLevel: oldPrimaryStove,
+            section: oldPrimarySection,
+            avatar_image: oldPrimaryAvatar,
+            token: oldPrimaryToken,
+            centuryGamesVerified: oldPrimaryVerified,
+            verifiedAt: oldPrimaryVerifiedAt,
+            lastSyncedAt: oldPrimaryLastSyncedAt
+        };
+    }
+
+    // 6. Update linkedAltsData
+    delete linkedAltsData[cleanAltGid];
+    if (oldPrimaryGid) {
+        linkedAltsData[oldPrimaryGid] = {
+            name: oldPrimaryName,
+            gameId: oldPrimaryGid,
+            stove_lv: oldPrimaryStove,
+            furnaceLevel: oldPrimaryStove,
+            section: oldPrimarySection,
+            updatedAt: new Date().toISOString()
+        };
+    }
+
+    // 7. Construct final update payload
+    const updates = {
+        name: newPrimaryName,
+        gameId: cleanAltGid,
+        stove_lv: newPrimaryStove,
+        furnaceLevel: newPrimaryStove,
+        section: newPrimarySection,
+        avatar_image: newPrimaryAvatar,
+        wos_cg_token: newPrimaryToken,
+        centuryGamesVerified: newPrimaryVerified,
+        verifiedAt: newPrimaryVerifiedAt,
+        lastSyncedAt: newPrimaryLastSyncedAt,
+        linkedGameIds: updatedLinkedIds,
+        altTokens: altTokens,
+        linkedAltsData: linkedAltsData,
+        updatedAt: new Date().toISOString()
+    };
+
+    // 8. Commit atomic update to Firebase
+    await update(ref(db, `users/${uid}`), updates);
+
+    // 9. Update local state
+    currentUser = {
+        ...currentUser,
+        ...updates
+    };
+
+    if (window.idToNameMap) {
+        window.idToNameMap[cleanAltGid] = newPrimaryName;
+        if (oldPrimaryGid) window.idToNameMap[oldPrimaryGid] = oldPrimaryName;
+    }
+
+    window.updateNavbarUserIndicator(currentUser);
+    if (window.showToast) window.showToast(`✨ Successfully switched primary chief to ${newPrimaryName}!`, "success");
+
+    if (views.account) {
+        views.account('Alts');
+    }
+};
+
+window.openAdminRepairUserModal = async (uid) => {
+    if (!currentUser || !(typeof window.isAdminUser === 'function' && window.isAdminUser(currentUser))) {
+        if (window.showToast) window.showToast("Admin access required.", "error");
+        return;
+    }
+
+    const oldModal = document.getElementById('adminRepairUserModalOverlay');
+    if (oldModal && oldModal.parentNode) oldModal.parentNode.removeChild(oldModal);
+
+    const modalOverlay = document.createElement('div');
+    modalOverlay.id = 'adminRepairUserModalOverlay';
+    modalOverlay.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.88); backdrop-filter:blur(12px); z-index:99999; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease;';
+
+    modalOverlay.innerHTML = `
+      <div class="card" style="width:92%; max-width:540px; background:linear-gradient(145deg, rgba(15,23,42,0.98), rgba(30,41,59,0.96)); border:1px solid rgba(168,85,247,0.4); padding:26px; border-radius:22px; box-shadow:0 25px 60px rgba(0,0,0,0.8); text-align:left; animation:zoomIn 0.2s forwards; color:var(--text-main); max-height:90vh; overflow-y:auto;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:12px;">
+          <h3 style="margin:0; color:#fff; font-size:18px; font-weight:bold; display:flex; align-items:center; gap:8px;">
+            🛠️ Account Character & ID Repair Wizard
+          </h3>
+          <button onclick="document.getElementById('adminRepairUserModalOverlay').remove()" style="background:none; border:none; color:var(--text-muted); font-size:26px; cursor:pointer; line-height:1;">&times;</button>
+        </div>
+
+        <div id="adminRepairModalContent">
+          <div style="text-align:center; padding:30px; color:var(--text-muted);">
+            <div style="border:3px solid rgba(255,255,255,0.1); border-top-color:#a855f7; border-radius:50%; width:32px; height:32px; animation:spin 1s linear infinite; margin:0 auto 12px;"></div>
+            Loading user profile from Firebase...
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modalOverlay);
+
+    try {
+        const snap = await get(ref(db, `users/${uid}`));
+        if (!snap.exists()) {
+            document.getElementById('adminRepairModalContent').innerHTML = `<div style="color:#ef4444; padding:20px; text-align:center;">User record not found in database.</div>`;
+            return;
+        }
+
+        const user = snap.val();
+        user.uid = uid;
+        const currentPrimaryGid = (user.gameId || '').toString().trim();
+        const currentPrimaryName = user.name || (window.idToNameMap && window.idToNameMap[currentPrimaryGid]) || `Chief ${currentPrimaryGid}`;
+        const currentFurnace = user.stove_lv || user.furnaceLevel || '30';
+        const linkedGids = Array.isArray(user.linkedGameIds) ? user.linkedGameIds : [];
+
+        let altsOptionsHtml = '';
+        if (linkedGids.length > 0) {
+            altsOptionsHtml = `
+              <div style="margin-top:16px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:16px;">
+                <div style="font-size:13px; font-weight:bold; color:#a855f7; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px; display:flex; align-items:center; gap:6px;">
+                  ⚡ Option A: Swap Primary with a Linked Alt (1-Click)
+                </div>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+            `;
+
+            linkedGids.forEach(agid => {
+                const altTok = (user.altTokens && user.altTokens[agid]) || {};
+                const altData = (user.linkedAltsData && user.linkedAltsData[agid]) || {};
+                const aName = altTok.nickname || altData.name || (window.idToNameMap && window.idToNameMap[agid]) || `Alt ${agid}`;
+                const aFurnace = altTok.stove_lv || altTok.furnaceLevel || altData.stove_lv || altData.furnaceLevel || '30';
+
+                altsOptionsHtml += `
+                  <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(15,23,42,0.6); padding:10px 14px; border-radius:10px; border:1px solid rgba(255,255,255,0.06);">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                      <div style="width:34px; height:34px; border-radius:50%; overflow:hidden; background:var(--bg-secondary); border:1px solid var(--border);">
+                        <img src="${altTok.avatar_image || window.getAvatarUrl(agid, aName)}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(aName)}&background=a855f7&color=fff&bold=true&size=128';">
+                      </div>
+                      <div>
+                        <div style="font-weight:bold; font-size:14px; color:#fff;">${window.escapeHTML(aName)}</div>
+                        <div style="font-size:11px; color:#94a3b8; font-family:monospace;">ID: ${agid} &bull; ${aFurnace.startsWith('FC') ? aFurnace : 'Lv ' + aFurnace}</div>
+                      </div>
+                    </div>
+                    <button onclick="window.adminExecuteSwapPrimary('${uid}', '${agid}', '${window.escapeHTML(aName)}')" style="background:rgba(168,85,247,0.18); border:1px solid #a855f7; color:#c084fc; border-radius:8px; padding:6px 12px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;" onmouseover="this.style.background='rgba(168,85,247,0.3)'" onmouseout="this.style.background='rgba(168,85,247,0.18)'">
+                      ⭐️ Make Primary
+                    </button>
+                  </div>
+                `;
+            });
+
+            altsOptionsHtml += `</div></div>`;
+        }
+
+        const contentHtml = `
+          <!-- Current Account Status Card -->
+          <div style="background:rgba(15,23,42,0.8); border:1px solid rgba(56,189,248,0.3); border-radius:14px; padding:16px; margin-bottom:16px;">
+            <div style="font-size:11px; color:#38bdf8; font-weight:bold; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">
+              👤 Current Registered Account
+            </div>
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div style="width:46px; height:46px; border-radius:50%; overflow:hidden; border:2px solid #06b6d4; background:var(--bg-secondary);">
+                <img src="${user.avatar_image || window.getAvatarUrl(currentPrimaryGid, currentPrimaryName)}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(currentPrimaryName)}&background=06b6d4&color=fff&bold=true&size=128';">
+              </div>
+              <div style="flex:1;">
+                <div style="font-weight:bold; font-size:16px; color:#fff; display:flex; align-items:center; gap:6px;">
+                  ${window.escapeHTML(currentPrimaryName)}
+                  <span style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:1px 6px; border-radius:6px; font-size:10px; font-weight:bold;">PRIMARY</span>
+                </div>
+                <div style="font-size:12px; color:#94a3b8; font-family:monospace; margin-top:2px;">
+                  Game ID: <strong>${currentPrimaryGid}</strong> &bull; Email: ${window.escapeHTML(user.email || 'N/A')}
+                </div>
+                <div style="font-size:12px; color:#cbd5e1; margin-top:4px;">
+                  Furnace: <strong>${currentFurnace.startsWith('FC') ? currentFurnace : 'Lv ' + currentFurnace}</strong> &bull; State: <strong>${user.section || 'Unknown'}</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          ${altsOptionsHtml}
+
+          <!-- Option B: Manual Game ID Correction & Century Games Lookup -->
+          <div style="margin-top:16px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:16px;">
+            <div style="font-size:13px; font-weight:bold; color:#38bdf8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px;">
+              🔍 Option B: Manually Reassign Primary Game ID
+            </div>
+            <p style="font-size:12px; color:var(--text-muted); margin:0 0 12px 0;">
+              If this member registered with the wrong ID, enter their true Century Games ID below to auto-fetch their verified profile and furnace stats.
+            </p>
+
+            <div style="display:flex; gap:8px; margin-bottom:12px;">
+              <input type="text" id="adminRepairNewGidInput" placeholder="Enter Correct Game ID (e.g. 318843189)" style="flex:1; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:#fff; font-size:14px; font-family:monospace;">
+              <button id="adminRepairLookupBtn" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:9px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer;">
+                🔍 Lookup
+              </button>
+            </div>
+
+            <!-- Preview box -->
+            <div id="adminRepairPreviewBox" style="display:none; background:rgba(15,23,42,0.85); border:1px solid rgba(16,185,129,0.4); border-radius:12px; padding:14px; margin-bottom:14px;">
+              <div style="font-size:11px; color:#10b981; font-weight:bold; text-transform:uppercase; margin-bottom:8px;">✅ Verified Century Games Character</div>
+              <div style="display:flex; align-items:center; gap:12px;">
+                <div style="width:42px; height:42px; border-radius:50%; overflow:hidden; border:2px solid #10b981; background:var(--bg-secondary);">
+                  <img id="adminRepairPreviewAvatar" src="" style="width:100%; height:100%; object-fit:cover;">
+                </div>
+                <div style="flex:1;">
+                  <div id="adminRepairPreviewName" style="font-weight:bold; font-size:15px; color:#fff;"></div>
+                  <div id="adminRepairPreviewDetails" style="font-size:12px; color:#94a3b8; font-family:monospace;"></div>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:8px;">
+              <button id="adminRepairApplyBtn" disabled style="background:rgba(16,185,129,0.3); border:1px solid rgba(16,185,129,0.4); color:#94a3b8; padding:9px 18px; border-radius:8px; font-weight:bold; font-size:13px; cursor:not-allowed;">
+                💾 Apply Repaired ID
+              </button>
+            </div>
+          </div>
+        `;
+
+        document.getElementById('adminRepairModalContent').innerHTML = contentHtml;
+
+        // Wire up lookup logic
+        const lookupBtn = document.getElementById('adminRepairLookupBtn');
+        const gidInput = document.getElementById('adminRepairNewGidInput');
+        const previewBox = document.getElementById('adminRepairPreviewBox');
+        const applyBtn = document.getElementById('adminRepairApplyBtn');
+        let fetchedData = null;
+
+        if (lookupBtn && gidInput) {
+            lookupBtn.addEventListener('click', async () => {
+                const targetGid = gidInput.value.trim();
+                if (!targetGid) {
+                    if (window.showToast) window.showToast("Please enter a Game ID to look up.", "warning");
+                    return;
+                }
+
+                lookupBtn.disabled = true;
+                lookupBtn.textContent = 'Looking up...';
+                if (previewBox) previewBox.style.display = 'none';
+                if (applyBtn) {
+                    applyBtn.disabled = true;
+                    applyBtn.style.background = 'rgba(16,185,129,0.3)';
+                    applyBtn.style.color = '#94a3b8';
+                    applyBtn.style.cursor = 'not-allowed';
+                }
+
+                try {
+                    const res = await fetch(`${API_BASE_URL}?api=lookupPlayer&id=${encodeURIComponent(targetGid)}`);
+                    const data = await res.json();
+
+                    if (data && data.success && data.player) {
+                        fetchedData = {
+                            gameId: targetGid,
+                            name: data.player.nickname || data.player.name || `Chief ${targetGid}`,
+                            stove_lv: data.player.stove_lv_content || data.player.stove_lv || '30',
+                            furnaceLevel: data.player.stove_lv_content || data.player.stove_lv || '30',
+                            section: data.player.sid || data.player.section || '',
+                            avatar_image: data.player.avatar_image || ''
+                        };
+
+                        document.getElementById('adminRepairPreviewName').textContent = fetchedData.name;
+                        document.getElementById('adminRepairPreviewDetails').textContent = `ID: ${targetGid} • Furnace: ${fetchedData.stove_lv} • State: ${fetchedData.section}`;
+                        document.getElementById('adminRepairPreviewAvatar').src = fetchedData.avatar_image || window.getAvatarUrl(targetGid, fetchedData.name);
+                        
+                        previewBox.style.display = 'block';
+                        applyBtn.disabled = false;
+                        applyBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+                        applyBtn.style.color = '#fff';
+                        applyBtn.style.cursor = 'pointer';
+                    } else {
+                        if (window.showToast) window.showToast(data.message || "Player not found on Century Games.", "error");
+                    }
+                } catch (e) {
+                    if (window.showToast) window.showToast("Lookup failed: " + e.message, "error");
+                } finally {
+                    lookupBtn.disabled = false;
+                    lookupBtn.textContent = '🔍 Lookup';
+                }
+            });
+        }
+
+        if (applyBtn) {
+            applyBtn.addEventListener('click', async () => {
+                if (!fetchedData) return;
+                applyBtn.disabled = true;
+                applyBtn.textContent = 'Applying Repair...';
+                try {
+                    await window.adminApplyRepairedId(uid, fetchedData, user);
+                    document.getElementById('adminRepairUserModalOverlay').remove();
+                } catch(e) {
+                    if (window.showToast) window.showToast("Failed to apply repair: " + e.message, "error");
+                    applyBtn.disabled = false;
+                    applyBtn.textContent = '💾 Apply Repaired ID';
+                }
+            });
+        }
+
+    } catch (e) {
+        document.getElementById('adminRepairModalContent').innerHTML = `<div style="color:#ef4444; padding:20px; text-align:center;">Failed to load user: ${e.message}</div>`;
+    }
+};
+
+window.adminExecuteSwapPrimary = async (uid, altGid, altName) => {
+    const confirmed = await window.customConfirm(`Promote ${altName} (ID: ${altGid}) to PRIMARY Character for this user?`);
+    if (!confirmed) return;
+
+    if (window.showToast) window.showToast("Executing primary character swap...", "info");
+
+    try {
+        const snap = await get(ref(db, `users/${uid}`));
+        if (!snap.exists()) throw new Error("User record not found.");
+        const userData = snap.val();
+
+        const oldPrimaryGid = (userData.gameId || '').toString().trim();
+        const currentLinks = Array.isArray(userData.linkedGameIds) ? [...userData.linkedGameIds] : [];
+        const altTokens = userData.altTokens ? { ...userData.altTokens } : {};
+        const linkedAltsData = userData.linkedAltsData ? { ...userData.linkedAltsData } : {};
+
+        const altTokenObj = altTokens[altGid] || {};
+        const altDataObj = linkedAltsData[altGid] || {};
+
+        const newPrimaryName = altTokenObj.nickname || altDataObj.name || (window.idToNameMap && window.idToNameMap[altGid]) || `Chief ${altGid}`;
+        const newPrimaryStove = altTokenObj.stove_lv || altTokenObj.furnaceLevel || altDataObj.stove_lv || altDataObj.furnaceLevel || '30';
+        const newPrimarySection = altTokenObj.section || altDataObj.section || userData.section || '';
+        const newPrimaryAvatar = altTokenObj.avatar_image || altDataObj.avatar_image || '';
+        const newPrimaryToken = altTokenObj.token || null;
+        const newPrimaryVerified = Boolean(altTokenObj.centuryGamesVerified || newPrimaryToken);
+        const newPrimaryVerifiedAt = altTokenObj.verifiedAt || null;
+        const newPrimaryLastSyncedAt = altTokenObj.lastSyncedAt || new Date().toISOString();
+
+        const oldPrimaryName = userData.name || (window.idToNameMap && window.idToNameMap[oldPrimaryGid]) || `Chief ${oldPrimaryGid}`;
+        const oldPrimaryStove = userData.stove_lv || userData.furnaceLevel || '30';
+        const oldPrimarySection = userData.section || '';
+        const oldPrimaryAvatar = userData.avatar_image || '';
+        const oldPrimaryToken = userData.wos_cg_token || null;
+        const oldPrimaryVerified = Boolean(userData.centuryGamesVerified || oldPrimaryToken);
+        const oldPrimaryVerifiedAt = userData.verifiedAt || null;
+        const oldPrimaryLastSyncedAt = userData.lastSyncedAt || new Date().toISOString();
+
+        const updatedLinkedIds = currentLinks.filter(id => id.toString().trim() !== altGid.toString().trim());
+        if (oldPrimaryGid && !updatedLinkedIds.includes(oldPrimaryGid)) {
+            updatedLinkedIds.push(oldPrimaryGid);
+        }
+
+        delete altTokens[altGid];
+        if (oldPrimaryGid) {
+            altTokens[oldPrimaryGid] = {
+                nickname: oldPrimaryName,
+                stove_lv: oldPrimaryStove,
+                furnaceLevel: oldPrimaryStove,
+                section: oldPrimarySection,
+                avatar_image: oldPrimaryAvatar,
+                token: oldPrimaryToken,
+                centuryGamesVerified: oldPrimaryVerified,
+                verifiedAt: oldPrimaryVerifiedAt,
+                lastSyncedAt: oldPrimaryLastSyncedAt
+            };
+        }
+
+        delete linkedAltsData[altGid];
+        if (oldPrimaryGid) {
+            linkedAltsData[oldPrimaryGid] = {
+                name: oldPrimaryName,
+                gameId: oldPrimaryGid,
+                stove_lv: oldPrimaryStove,
+                furnaceLevel: oldPrimaryStove,
+                section: oldPrimarySection,
+                updatedAt: new Date().toISOString()
+            };
+        }
+
+        const updates = {
+            name: newPrimaryName,
+            gameId: altGid.toString().trim(),
+            stove_lv: newPrimaryStove,
+            furnaceLevel: newPrimaryStove,
+            section: newPrimarySection,
+            avatar_image: newPrimaryAvatar,
+            wos_cg_token: newPrimaryToken,
+            centuryGamesVerified: newPrimaryVerified,
+            verifiedAt: newPrimaryVerifiedAt,
+            lastSyncedAt: newPrimaryLastSyncedAt,
+            linkedGameIds: updatedLinkedIds,
+            altTokens: altTokens,
+            linkedAltsData: linkedAltsData,
+            updatedAt: new Date().toISOString()
+        };
+
+        await update(ref(db, `users/${uid}`), updates);
+
+        if (window.logAdminAction) {
+            window.logAdminAction("Account Repair", `Swapped primary chief of user ${uid} to ${newPrimaryName} (${altGid})`, newPrimaryName);
+        }
+
+        if (window.idToNameMap) {
+            window.idToNameMap[altGid] = newPrimaryName;
+            if (oldPrimaryGid) window.idToNameMap[oldPrimaryGid] = oldPrimaryName;
+        }
+
+        if (window.showToast) window.showToast(`✅ Primary character swapped to ${newPrimaryName}!`, "success");
+
+        const modal = document.getElementById('adminRepairUserModalOverlay');
+        if (modal) modal.remove();
+
+        if (views.admin) views.admin('tab-users');
+    } catch(e) {
+        console.error("Admin swap error:", e);
+        if (window.showToast) window.showToast("Swap failed: " + e.message, "error");
+    }
+};
+
+window.adminApplyRepairedId = async (uid, fetchedData, oldUserData) => {
+    const cleanGid = fetchedData.gameId.toString().trim();
+    const oldPrimaryGid = (oldUserData.gameId || '').toString().trim();
+    const currentLinks = Array.isArray(oldUserData.linkedGameIds) ? [...oldUserData.linkedGameIds] : [];
+    const linkedAltsData = oldUserData.linkedAltsData ? { ...oldUserData.linkedAltsData } : {};
+
+    // If the old ID was valid and different, preserve it in linked alts
+    if (oldPrimaryGid && oldPrimaryGid !== cleanGid && !currentLinks.includes(oldPrimaryGid)) {
+        currentLinks.push(oldPrimaryGid);
+        linkedAltsData[oldPrimaryGid] = {
+            name: oldUserData.name || `Chief ${oldPrimaryGid}`,
+            gameId: oldPrimaryGid,
+            stove_lv: oldUserData.stove_lv || oldUserData.furnaceLevel || '30',
+            furnaceLevel: oldUserData.stove_lv || oldUserData.furnaceLevel || '30',
+            section: oldUserData.section || '',
+            updatedAt: new Date().toISOString()
+        };
+    }
+
+    const updatedLinks = currentLinks.filter(id => id.toString().trim() !== cleanGid);
+
+    const updates = {
+        name: fetchedData.name,
+        gameId: cleanGid,
+        stove_lv: fetchedData.stove_lv,
+        furnaceLevel: fetchedData.furnaceLevel,
+        section: fetchedData.section,
+        avatar_image: fetchedData.avatar_image,
+        centuryGamesVerified: true,
+        linkedGameIds: updatedLinks,
+        linkedAltsData: linkedAltsData,
+        updatedAt: new Date().toISOString()
+    };
+
+    await update(ref(db, `users/${uid}`), updates);
+
+    if (window.logAdminAction) {
+        window.logAdminAction("Repair Game ID", `Reassigned primary Game ID of user ${uid} from ${oldPrimaryGid} to ${fetchedData.name} (${cleanGid})`, fetchedData.name);
+    }
+
+    if (window.idToNameMap) {
+        window.idToNameMap[cleanGid] = fetchedData.name;
+    }
+
+    if (window.showToast) window.showToast(`✅ Successfully repaired account to ${fetchedData.name} (${cleanGid})!`, "success");
+
+    if (views.admin) views.admin('tab-users');
 };
 
 // Add new player to Roster natively in Firebase roster_live & sync to GAS
@@ -12019,6 +12548,7 @@ const views = {
               <p style="margin:0 0 15px 0; font-size:12px; color:var(--text-muted); text-align:left;">Manage Chief names, Game IDs, push alerts, and master database sync.</p>
               
               <div style="display:flex; flex-direction:column; gap:12px; align-items:center;">
+                <button onclick="document.querySelector('.admin-tab-btn[data-tab=\'tab-users\']')?.click(); if(window.showToast) window.showToast('Click 🛠️ Repair ID next to any member in the table to swap or fix IDs!', 'info');" style="background:linear-gradient(135deg, #a855f7, #9333ea); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(168,85,247,0.3);">🛠️ Chief Character & ID Repair Wizard</button>
                 <button onclick="window.openNewMembersModal()" style="background:linear-gradient(135deg, #06b6d4, #3b82f6); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(6,182,212,0.3);">🔔 View Recent Member Signups</button>
                 <button onclick="views.playerEditor()" style="background:linear-gradient(135deg, #6366f1, #4f46e5); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(99,102,241,0.3);">👤 Open Player Database Editor</button>
                 ${isR5 ? `<button onclick="window.openBroadcastPushModal()" style="background:linear-gradient(135deg, #ec4899, #be185d); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(236,72,153,0.3);">🚀 Broadcast Push Notification</button>` : ''}
@@ -12412,6 +12942,7 @@ const views = {
 
             <td style="padding:12px 10px; text-align:right;">
               <div style="display:flex; gap:6px; justify-content:flex-end; flex-wrap:wrap;">
+                <button onclick="window.openAdminRepairUserModal('${uid}')" style="background:rgba(168,85,247,0.15); color:#c084fc; border:1px solid rgba(168,85,247,0.35); padding:5px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;" title="Repair primary Game ID or promote an alt">🛠️ Repair ID</button>
                 <button onclick="window.adminManageAltsPrompt('${uid}')" style="background:rgba(59,130,246,0.12); color:#3b82f6; border:1px solid rgba(59,130,246,0.3); padding:5px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">🔗 Alts</button>
                 ${isAdminUser && u.gameId != 318843189 ? `<button onclick="window.revokeAdmin('${u.gameId}')" style="background:rgba(234,179,8,0.12); color:#eab308; border:1px solid rgba(234,179,8,0.3); padding:5px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">👑 Revoke Staff</button>` : (!isAdminUser && u.gameId ? `<button onclick="window.grantAdmin('${u.gameId}', 'R4')" style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:5px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">+ Staff</button>` : '')}
                 ${hasAvatar ? `<button class="delete-avatar-btn" data-id="${u.gameId}" style="background:transparent; border:1px solid var(--danger); color:var(--danger); padding:5px 10px; border-radius:6px; font-size:12px; cursor:pointer;">Delete Avatar</button>` : ``}
@@ -15442,13 +15973,16 @@ window.resetBearTrapEvent = async () => {
                   </div>
 
                   <!-- Bottom Row: Unified, Perfectly Aligned Action Buttons -->
-                  <div style="display:flex; gap:6px; align-items:center; border-top:1px solid rgba(255,255,255,0.05); padding-top:12px;">
+                  <div style="display:flex; gap:6px; align-items:center; border-top:1px solid rgba(255,255,255,0.05); padding-top:12px; flex-wrap:wrap;">
                       ${ isAltTokenActive
-                          ? `<button onclick="window.handleSyncAltProfile('${gid}', this)" style="flex:1; background:rgba(6,182,212,0.15); border:1px solid #06b6d4; color:#06b6d4; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px; transition:0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.25)'" onmouseout="this.style.background='rgba(6,182,212,0.15)'" title="Token active (${altTokenDaysRemaining}d remaining). Click to sync.">🔄 Sync Stats</button>`
-                          : `<button onclick="window.openAltVerifyModal('${gid}')" style="flex:1; background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px; box-shadow:0 2px 8px rgba(14,165,233,0.3);" title="Verify via in-game mail to bind 30-day auto-sync token">⚡ Setup 30d Sync</button>`
+                          ? `<button onclick="window.handleSyncAltProfile('${gid}', this)" style="flex:1; min-width:110px; background:rgba(6,182,212,0.15); border:1px solid #06b6d4; color:#06b6d4; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px; transition:0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.25)'" onmouseout="this.style.background='rgba(6,182,212,0.15)'" title="Token active (${altTokenDaysRemaining}d remaining). Click to sync.">🔄 Sync Stats</button>`
+                          : `<button onclick="window.openAltVerifyModal('${gid}')" style="flex:1; min-width:110px; background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px; box-shadow:0 2px 8px rgba(14,165,233,0.3);" title="Verify via in-game mail to bind 30-day auto-sync token">⚡ Setup 30d Sync</button>`
                       }
-                      <button onclick="window.openEditAltProfileModal('${gid}')" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:var(--text-main); border-radius:8px; padding:6px 12px; font-size:12px; font-weight:600; cursor:pointer; transition:0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">
-                          ✏️ Edit
+                      <button onclick="window.promptSwapPrimaryAccount('${gid}', '${window.escapeHTML(altName)}')" style="background:rgba(234,179,8,0.15); border:1px solid rgba(234,179,8,0.4); color:#eab308; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:0.2s;" onmouseover="this.style.background='rgba(234,179,8,0.25)'" onmouseout="this.style.background='rgba(234,179,8,0.15)'" title="Make this alt character your primary chief">
+                          ⭐️ Make Primary
+                      </button>
+                      <button onclick="window.openEditAltProfileModal('${gid}')" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:var(--text-main); border-radius:8px; padding:6px 10px; font-size:12px; font-weight:600; cursor:pointer; transition:0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.06)'">
+                          ✏️
                       </button>
                       <button onclick="window.unlinkAltAccountPrompt('${gid}')" style="border:1px solid rgba(239,68,68,0.4); color:#ef4444; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:600; cursor:pointer; background:rgba(239,68,68,0.06); transition:0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.15)'" onmouseout="this.style.background='rgba(239,68,68,0.06)'" title="Unlink Alt Character">
                           🗑️

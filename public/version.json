@@ -1,10 +1,10 @@
 {
-  "version": "2.5.58",
+  "version": "2.5.59",
   "releaseDate": "2026-08-14",
-  "title": "💎 Perfected Registered Users Database FC Sizing & Layout",
+  "title": "⭐️ Primary Character Switcher & Admin Account Repair Wizard",
   "notes": [
-    "Fixed Fire Crystal badge sizing and eliminated awkward container boxes in Registered Users Database and member tables",
-    "Streamlined inline badge rendering with dedicated flex bounds and optimized display proportions",
-    "Synchronized tab-switching listeners to ensure immediate canvas badge rendering across all admin sub-views"
+    "Added 1-click 'Make Primary' button in Account Hub to safely promote any linked alt character to primary chief without losing tokens or stats",
+    "Added Admin Account Character & ID Repair Wizard to quickly fix mismatched Game IDs with live Century Games stat lookup",
+    "Preserved bidirectional alt tokens, avatars, and linked data during primary character promotions and ID corrections"
   ]
 }
