@@ -1,9 +1,10 @@
 {
-  "version": "2.5.51",
+  "version": "2.5.52",
   "releaseDate": "2026-08-14",
-  "title": "🎯 Live Image Alignment Offset Sliders in Flame Studio",
+  "title": "🛡️ Centered All Badge Sprites & True Shield Polygon Geometry",
   "notes": [
-    "Added Move Image X and Move Image Y offset sliders in fc_flame_studio.html for real-time visual alignment",
-    "Enabled live coordinate translation for perfect flame-to-badge alignment"
+    "Re-centered FC 2 through FC 10 graphic sprites to the exact geometric center (512, 511), eliminating 43px horizontal offset",
+    "Implemented true pointy-topped shield polygon perimeter in FlameWisp so flames trace all 6 facets evenly",
+    "Updated cachebuster to v2.5.52 for instant browser synchronization"
   ]
 }

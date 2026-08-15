@@ -196,9 +196,9 @@ window.getFurnaceIconHtml = (level, size = 48) => {
      const glow = fcGlowMap[fcNum];
      const canvasSize = Math.round(size * 1.5);
      const canvasOffset = Math.round((canvasSize - size) / 2);
-     return `<span class="fc-badge-stage" data-fc="${fcNum}" style="display:inline-flex; align-items:center; justify-content:center; position:relative; vertical-align:middle; cursor:pointer; width:${size}px; height:${size}px; user-select:none; -webkit-user-select:none;">
-       <canvas class="fc-flame-canvas" width="${canvasSize}" height="${canvasSize}" style="position:absolute; top:-${canvasOffset}px; left:-${canvasOffset}px; width:${canvasSize}px; height:${canvasSize}px; pointer-events:none; z-index:3;"></canvas>
-       <img src="./badges/fc${fcNum}.png?v=2.5.45" onerror="this.onerror=null; this.src='/badges/fc${fcNum}.png?v=2.5.45';" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
+     return `<span class="fc-badge-stage" data-fc="${fcNum}" style="display:inline-flex; align-items:center; justify-content:center; position:relative; vertical-align:middle; cursor:pointer; width:${size}px; height:${size}px; line-height:0; user-select:none; -webkit-user-select:none;">
+       <canvas class="fc-flame-canvas" width="${canvasSize}" height="${canvasSize}" style="position:absolute; top:-${canvasOffset}px; left:-${canvasOffset}px; width:${canvasSize}px; height:${canvasSize}px; pointer-events:none; z-index:3; display:block;"></canvas>
+       <img src="./badges/fc${fcNum}.png?v=2.5.52" onerror="this.onerror=null; this.src='/badges/fc${fcNum}.png?v=2.5.52';" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; display:block; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
      </span>`;
   }
 
@@ -21372,23 +21372,38 @@ window.closeMobileNavModal = () => {
   class FlameWisp {
     constructor(cx, cy, w, h, colors) {
       const scale = w / 280;
-      const r = w * 0.36; // Hexagon perimeter radius (36%)
+      const rx = w * 0.40; // True shield half-width
+      const ry = w * 0.43; // True shield half-height
       
-      // Pick a random hexagon edge segment (0 to 5)
+      // Exact pointy-topped shield polygon vertices
+      const v = [
+        { x: cx, y: cy - ry },                      // Top Point
+        { x: cx + rx, y: cy - ry * 0.49 },          // Top Right
+        { x: cx + rx, y: cy + ry * 0.49 },          // Bottom Right
+        { x: cx, y: cy + ry },                      // Bottom Point
+        { x: cx - rx, y: cy + ry * 0.49 },          // Bottom Left
+        { x: cx - rx, y: cy - ry * 0.49 }           // Top Left
+      ];
+
+      // Pick a random edge segment along the shield (0 to 5)
       const edge = Math.floor(Math.random() * 6);
-      const angle1 = (edge * 60) * Math.PI / 180;
-      const angle2 = ((edge + 1) * 60) * Math.PI / 180;
+      const pA = v[edge];
+      const pB = v[(edge + 1) % 6];
       const t = Math.random();
       
-      // Interpolate along the edge with slight randomized depth
-      const depth = 1 + (Math.random() - 0.5) * 0.15;
-      this.x = cx + (Math.cos(angle1) * (1 - t) + Math.cos(angle2) * t) * r * depth;
-      this.y = cy + (Math.sin(angle1) * (1 - t) + Math.sin(angle2) * t) * r * depth;
+      // Interpolate along the shield edge with slight randomized depth
+      this.x = pA.x * (1 - t) + pB.x * t + (Math.random() - 0.5) * (6 * scale);
+      this.y = pA.y * (1 - t) + pB.y * t + (Math.random() - 0.5) * (6 * scale);
       
-      // Outward normal velocity + buoyant upward drift
-      const midAngle = (angle1 + angle2) / 2;
-      this.vx = (Math.cos(midAngle) * 1.5 + (Math.random() - 0.5) * 0.8) * scale;
-      this.vy = (Math.sin(midAngle) * 0.8 - Math.random() * 2.2 - 1.2) * scale;
+      // Outward normal vector from shield center + natural rising buoyancy
+      const dx = this.x - cx;
+      const dy = this.y - cy;
+      const dist = Math.hypot(dx, dy) || 1;
+      const nx = dx / dist;
+      const ny = dy / dist;
+
+      this.vx = (nx * 1.5 + (Math.random() - 0.5) * 0.6) * scale;
+      this.vy = (ny * 0.7 - Math.random() * 2.0 - 1.0) * scale;
       
       this.size = (Math.random() * 10 + 5) * scale;
       this.scale = scale;

@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.5.52] - 2026-08-14
+- Re-centered all Fire Crystal badge PNG files (`FC 2` to `FC 10`) to the exact geometric center `(512, 511)` to eliminate the baked-in 43px horizontal offset.
+- Implemented exact pointy-topped shield polygon geometry in `FlameWisp` so embers trace all 6 facets of the shield symmetrically.
+- Added `line-height: 0` and `display: block` to eliminate browser font metric descent offset.
+
 ## [2.5.51] - 2026-08-14
 - Added live Move Image X and Move Image Y offset sliders in `fc_flame_studio.html` to allow real-time shifting and alignment between the badge image and the flame canvas.
 
