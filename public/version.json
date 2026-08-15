@@ -1,9 +1,9 @@
 {
-  "version": "2.5.39",
+  "version": "2.5.40",
   "releaseDate": "2026-08-14",
-  "title": "✨ Streamlined 2-Button Options Dropdown Menu",
+  "title": "🎨 Unified Frost Blue & White Theme Consistency",
   "notes": [
-    "Grouped Options menu actions into exactly 2 high-impact buttons: '✏️ Edit Profile' and '🔄 Sync from Game'",
-    "Cleaned up redundant sub-actions for a sleeker, frictionless user interface"
+    "Unified text, icon accents, and hover effects in the Options dropdown to a consistent crisp white and frost blue theme",
+    "Standardized option cards in the Profile Hub modal with cohesive ice blue gradients and indicators"
   ]
 }

@@ -8889,36 +8889,36 @@ window.openEditProfileHubModal = () => {
        
        <div style="display:flex; flex-direction:column; gap:14px;">
           <!-- Option 1: Chief Profile -->
-          <div onclick="document.getElementById('editProfileHubModalOverlay').remove(); window.openEditProfileModal();" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.12); border-radius:14px; padding:16px; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; gap:16px;" onmouseover="this.style.background='rgba(6,182,212,0.12)'; this.style.borderColor='rgba(6,182,212,0.4)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='rgba(255,255,255,0.12)'; this.style.transform='translateY(0)';">
-             <div style="width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg, #06b6d4, #3b82f6); display:flex; align-items:center; justify-content:center; font-size:24px; flex-shrink:0; box-shadow:0 4px 12px rgba(6,182,212,0.3);">
+          <div onclick="document.getElementById('editProfileHubModalOverlay').remove(); window.openEditProfileModal();" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.12); border-radius:14px; padding:16px; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; gap:16px;" onmouseover="this.style.background='rgba(56,189,248,0.12)'; this.style.borderColor='rgba(56,189,248,0.4)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='rgba(255,255,255,0.12)'; this.style.transform='translateY(0)';" >
+             <div style="width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg, #0ea5e9, #0284c7); display:flex; align-items:center; justify-content:center; font-size:24px; flex-shrink:0; box-shadow:0 4px 12px rgba(14,165,233,0.3);">
                 👤
              </div>
              <div style="flex:1;">
-                <div style="font-weight:800; font-size:15px; color:#fff; margin-bottom:3px;">Chief Member Profile</div>
+                <div style="font-weight:800; font-size:15px; color:#ffffff; margin-bottom:3px;">Chief Member Profile</div>
                 <div style="font-size:12px; color:#94a3b8; line-height:1.3;">Furnace Level, FC Badges, Play Start Date & Status Quote</div>
              </div>
-             <div style="color:var(--accent); font-size:18px; font-weight:bold;">➔</div>
+             <div style="color:#38bdf8; font-size:18px; font-weight:bold;">➔</div>
           </div>
 
           <!-- Option 2: Profile Picture & Avatar Manager -->
-          <div onclick="document.getElementById('editProfileHubModalOverlay').remove(); window.openAvatarManagerModal('${activeUser.gameId}', '${window.escapeHTML(activeUser.name || 'Chief')}');" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.12); border-radius:14px; padding:16px; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; gap:16px;" onmouseover="this.style.background='rgba(16,185,129,0.12)'; this.style.borderColor='rgba(16,185,129,0.4)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='rgba(255,255,255,0.12)'; this.style.transform='translateY(0)';">
-             <div style="width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg, #10b981, #059669); display:flex; align-items:center; justify-content:center; font-size:24px; flex-shrink:0; box-shadow:0 4px 12px rgba(16,185,129,0.3);">
+          <div onclick="document.getElementById('editProfileHubModalOverlay').remove(); window.openAvatarManagerModal('${activeUser.gameId}', '${window.escapeHTML(activeUser.name || 'Chief')}');" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.12); border-radius:14px; padding:16px; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; gap:16px;" onmouseover="this.style.background='rgba(56,189,248,0.12)'; this.style.borderColor='rgba(56,189,248,0.4)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='rgba(255,255,255,0.12)'; this.style.transform='translateY(0)';" >
+             <div style="width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg, #0284c7, #0369a1); display:flex; align-items:center; justify-content:center; font-size:24px; flex-shrink:0; box-shadow:0 4px 12px rgba(2,132,199,0.3);">
                 📷
              </div>
              <div style="flex:1;">
-                <div style="font-weight:800; font-size:15px; color:#fff; margin-bottom:3px;">Profile Picture & Avatar</div>
+                <div style="font-weight:800; font-size:15px; color:#ffffff; margin-bottom:3px;">Profile Picture & Avatar</div>
                 <div style="font-size:12px; color:#94a3b8; line-height:1.3;">Sync Whiteout Survival in-game avatar or upload a custom picture</div>
              </div>
-             <div style="color:var(--accent); font-size:18px; font-weight:bold;">➔</div>
+             <div style="color:#38bdf8; font-size:18px; font-weight:bold;">➔</div>
           </div>
           
           <!-- Option 3: Staff Directory Profile -->
-          <div onclick="document.getElementById('editProfileHubModalOverlay').remove(); window.openStaffProfileModal();" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.12); border-radius:14px; padding:16px; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; gap:16px;" onmouseover="this.style.background='rgba(168,85,247,0.12)'; this.style.borderColor='rgba(168,85,247,0.4)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='rgba(255,255,255,0.12)'; this.style.transform='translateY(0)';">
-             <div style="width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg, #a855f7, #0284c7); display:flex; align-items:center; justify-content:center; font-size:24px; flex-shrink:0; box-shadow:0 4px 12px rgba(168,85,247,0.3);">
+          <div onclick="document.getElementById('editProfileHubModalOverlay').remove(); window.openStaffProfileModal();" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.12); border-radius:14px; padding:16px; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; gap:16px;" onmouseover="this.style.background='rgba(56,189,248,0.12)'; this.style.borderColor='rgba(56,189,248,0.4)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='rgba(255,255,255,0.12)'; this.style.transform='translateY(0)';" >
+             <div style="width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg, #38bdf8, #0ea5e9); display:flex; align-items:center; justify-content:center; font-size:24px; flex-shrink:0; box-shadow:0 4px 12px rgba(56,189,248,0.3);">
                 🛡️
              </div>
              <div style="flex:1;">
-                <div style="font-weight:800; font-size:15px; color:#fff; margin-bottom:3px;">Staff Directory Profile</div>
+                <div style="font-weight:800; font-size:15px; color:#ffffff; margin-bottom:3px;">Staff Directory Profile</div>
                 <div style="font-size:12px; color:#94a3b8; line-height:1.3;">Department / Specialty, Timezone, Location & Public Staff Bio</div>
              </div>
              <div style="color:var(--accent); font-size:18px; font-weight:bold;">➔</div>
@@ -15659,10 +15659,10 @@ window.resetBearTrapEvent = async () => {
                           ⚙️ Options ▾
                       </button>
                       <div id="idCardActionsDropdown" style="display:none; position:absolute; right:0; top:38px; width:200px; background:linear-gradient(145deg, rgba(15,23,42,0.98), rgba(30,41,59,0.96)); backdrop-filter:blur(16px); border:1px solid rgba(56,189,248,0.35); border-radius:14px; box-shadow:0 14px 40px rgba(0,0,0,0.75); padding:6px; z-index:999; text-align:left; animation:fadeIn 0.15s ease;">
-                          <button onclick="window.closeIdCardActionsMenu(); window.openEditProfileHubModal();" style="width:100%; display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; border:none; background:transparent; color:#fff; font-size:13.5px; font-weight:600; cursor:pointer; text-align:left; transition:background 0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.15)'" onmouseout="this.style.background='transparent'">
+                          <button onclick="window.closeIdCardActionsMenu(); window.openEditProfileHubModal();" style="width:100%; display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; border:none; background:transparent; color:#ffffff; font-size:13.5px; font-weight:600; cursor:pointer; text-align:left; transition:all 0.2s;" onmouseover="this.style.background='rgba(56,189,248,0.15)'; this.style.color='#38bdf8';" onmouseout="this.style.background='transparent'; this.style.color='#ffffff';">
                               <span style="font-size:16px;">✏️</span> <span>Edit Profile</span>
                           </button>
-                          <button id="btnSyncCgProfile" onclick="window.closeIdCardActionsMenu(); window.handleSyncCenturyGamesProfile();" style="width:100%; display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; border:none; background:transparent; color:#38bdf8; font-size:13.5px; font-weight:600; cursor:pointer; text-align:left; transition:background 0.2s;" onmouseover="this.style.background='rgba(56,189,248,0.15)'" onmouseout="this.style.background='transparent'">
+                          <button id="btnSyncCgProfile" onclick="window.closeIdCardActionsMenu(); window.handleSyncCenturyGamesProfile();" style="width:100%; display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; border:none; background:transparent; color:#ffffff; font-size:13.5px; font-weight:600; cursor:pointer; text-align:left; transition:all 0.2s;" onmouseover="this.style.background='rgba(56,189,248,0.15)'; this.style.color='#38bdf8';" onmouseout="this.style.background='transparent'; this.style.color='#ffffff';">
                               <span style="font-size:16px;">🔄</span> <span>Sync from Game</span>
                           </button>
                       </div>

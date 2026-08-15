@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.5.40] - 2026-08-14
+- Unified the color scheme across the `⚙️ Options ▾` dropdown and profile modal components to a consistent Whiteout Survival Frost Blue (`#0ea5e9` / `#38bdf8`) and Crisp White (`#ffffff`) palette.
+- Removed mismatched accent colors across modal option cards in favor of a cohesive theme.
+
 ## [2.5.39] - 2026-08-14
 - Streamlined the `⚙️ Options ▾` dropdown menu down to exactly 2 unified buttons: `✏️ Edit Profile` (opens complete profile, avatar & tagline manager) and `🔄 Sync from Game` (live server sync with automated token renewal flow).
 
