@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.5.66] - 2026-08-15
+- Connected the broadcast announcements tray to live realtime database sync.
+- Enabled instant display of alliance broadcasts inside the **Bell Alert Window**.
+
 ## [2.5.65] - 2026-08-15
 - Updated push notification formatting to display as **wosBDC Alert**.
 - Configured direct dashboard deep-linking on alert click.

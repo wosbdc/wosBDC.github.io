@@ -1,9 +1,9 @@
 {
-  "version": "2.5.65",
+  "version": "2.5.66",
   "releaseDate": "2026-08-15",
-  "title": "🔔 wosBDC Alert Notification Branding",
+  "title": "📢 Live Announcements Tray & Sync Engine",
   "notes": [
-    "Updated all push notifications to display as wosBDC Alert",
-    "Configured custom alert titles and direct dashboard links"
+    "Connected the broadcast announcements tray to live realtime database sync",
+    "Enabled instant display of alliance broadcasts in the Bell Alert Window"
   ]
 }

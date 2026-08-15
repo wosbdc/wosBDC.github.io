@@ -132,7 +132,7 @@ window.fetchRoster = async () => {
 };
 
 
-const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbwV16y5yVH_Z6JozBBgwWJ5UqgTYNiWsYTOB3ukomiWGDQ9QUWA1uevV7TG-H6dcJQ/exec';
+const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbyPrrii9U79FVk77ZVOKb2ciwbi999czsc47YiN5iv8AwcXEkZZOBxmyogTdJh-rP4/exec';
 const VERIFY_PROXY_URL = 'https://wos-vercel-proxy.vercel.app/api/verify'; // Fallback / secondary proxy
 
 // Get a fresh Firebase ID token for the current user (replaces hardcoded APP_SECRET)
@@ -1678,7 +1678,7 @@ window.formatRankBadgeHtml = (rankVal) => {
 // Register Service Worker for Mobile PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=2.5.65')
+    navigator.serviceWorker.register('./sw.js?v=2.5.66')
       .then(reg => {
         reg.update();
         console.log('PWA Service Worker registered:', reg.scope);
@@ -8827,51 +8827,53 @@ window.openAllianceAlertsModal = async () => {
 
     // 1. Broadcasts Section HTML
     let broadcastsSectionHtml = '';
-    if (broadcastsList.length > 0) {
-      const bCards = broadcastsList.slice(0, 10).map(b => {
-        const isUnread = Boolean(b.timestamp && b.timestamp > lastSeenBroadcast);
-        const relTime = window.formatRelativeTime ? window.formatRelativeTime(b.timestamp) : '';
-        return `
-          <div style="background:rgba(15,23,42,0.6); border:1px solid ${isUnread ? 'rgba(236,72,153,0.45)' : 'rgba(255,255,255,0.08)'}; border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; gap:4px; position:relative;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <div style="font-weight:bold; font-size:13.5px; color:#fff; display:flex; align-items:center; gap:6px;">
-                <span>${window.escapeHTML(b.title || 'Announcement')}</span>
-                ${isUnread ? `<span style="font-size:10px; background:rgba(236,72,153,0.2); color:#ec4899; border:1px solid rgba(236,72,153,0.4); padding:1px 6px; border-radius:8px; font-weight:bold;">NEW</span>` : ''}
-              </div>
-              <span style="font-size:11px; color:var(--text-muted);">${relTime}</span>
+    const bCards = broadcastsList.length > 0 ? broadcastsList.slice(0, 10).map(b => {
+      const isUnread = Boolean(b.timestamp && b.timestamp > lastSeenBroadcast);
+      const relTime = window.formatRelativeTime ? window.formatRelativeTime(b.timestamp) : '';
+      return `
+        <div style="background:rgba(15,23,42,0.6); border:1px solid ${isUnread ? 'rgba(236,72,153,0.45)' : 'rgba(255,255,255,0.08)'}; border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; gap:4px; position:relative;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="font-weight:bold; font-size:13.5px; color:#fff; display:flex; align-items:center; gap:6px;">
+              <span>${window.escapeHTML(b.title || 'Announcement')}</span>
+              ${isUnread ? `<span style="font-size:10px; background:rgba(236,72,153,0.2); color:#ec4899; border:1px solid rgba(236,72,153,0.4); padding:1px 6px; border-radius:8px; font-weight:bold;">NEW</span>` : ''}
             </div>
-            <div style="font-size:12.5px; color:var(--text-main); line-height:1.4; white-space:pre-wrap; margin-top:2px;">${window.escapeHTML(b.body || '')}</div>
-            <div style="font-size:11px; color:var(--text-muted); margin-top:3px; display:flex; align-items:center; gap:6px;">
-              <span>📢 ${window.escapeHTML(b.senderName || 'Leadership')}</span>
-            </div>
+            <span style="font-size:11px; color:var(--text-muted);">${relTime}</span>
           </div>
-        `;
-      }).join('');
-
-      broadcastsSectionHtml = `
-        <div id="broadcastsAlertsContainer" style="background:rgba(236,72,153,0.06); border:1px solid rgba(236,72,153,0.25); border-radius:14px; margin-bottom:12px; overflow:hidden; transition:all 0.2s ease;">
-          <div id="broadcastsAccordionHeader" onclick="window.toggleBroadcastsAccordionBanner()" style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; cursor:pointer; user-select:none;">
-            <div>
-              <div style="font-size:13.5px; font-weight:bold; color:#f472b6; display:flex; align-items:center; gap:8px;">
-                <span>📢 Leadership Announcements (${broadcastsList.length})</span>
-              </div>
-              <div style="font-size:11.5px; color:var(--text-muted); margin-top:3px;">
-                Alliance broadcasts & leadership notifications
-              </div>
-            </div>
-            <div style="display:flex; align-items:center; gap:8px;">
-              <span style="background:rgba(236,72,153,0.2); color:#f472b6; border:1px solid rgba(236,72,153,0.4); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold;">${unreadBroadcastCount > 0 ? `${unreadBroadcastCount} New` : `${broadcastsList.length}`}</span>
-              <span id="broadcastsAccordionChevron" style="font-size:15px; color:var(--text-muted); transition:transform 0.2s ease;">▾</span>
-            </div>
-          </div>
-          <div id="broadcastsAccordionBody" style="display:${unreadBroadcastCount > 0 || !tokenStatus.alert ? 'block' : 'none'}; padding:0 14px 14px 14px; max-height:260px; overflow-y:auto;">
-            <div style="display:flex; flex-direction:column; gap:8px; border-top:1px solid rgba(255,255,255,0.06); padding-top:10px;">
-              ${bCards}
-            </div>
+          <div style="font-size:12.5px; color:var(--text-main); line-height:1.4; white-space:pre-wrap; margin-top:2px;">${window.escapeHTML(b.body || '')}</div>
+          <div style="font-size:11px; color:var(--text-muted); margin-top:3px; display:flex; align-items:center; gap:6px;">
+            <span>📢 ${window.escapeHTML(b.senderName || 'Leadership')}</span>
           </div>
         </div>
       `;
-    }
+    }).join('') : `
+      <div style="text-align:center; padding:14px 10px; color:var(--text-muted); font-size:12px;">
+        No announcements posted yet. Broadcast alerts sent by leadership will appear here.
+      </div>
+    `;
+
+    broadcastsSectionHtml = `
+      <div id="broadcastsAlertsContainer" style="background:rgba(236,72,153,0.06); border:1px solid rgba(236,72,153,0.25); border-radius:14px; margin-bottom:12px; overflow:hidden; transition:all 0.2s ease;">
+        <div id="broadcastsAccordionHeader" onclick="window.toggleBroadcastsAccordionBanner()" style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; cursor:pointer; user-select:none;">
+          <div>
+            <div style="font-size:13.5px; font-weight:bold; color:#f472b6; display:flex; align-items:center; gap:8px;">
+              <span>📢 Leadership Announcements (${broadcastsList.length})</span>
+            </div>
+            <div style="font-size:11.5px; color:var(--text-muted); margin-top:3px;">
+              Alliance broadcasts & leadership notifications
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="background:rgba(236,72,153,0.2); color:#f472b6; border:1px solid rgba(236,72,153,0.4); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold;">${unreadBroadcastCount > 0 ? `${unreadBroadcastCount} New` : `${broadcastsList.length}`}</span>
+            <span id="broadcastsAccordionChevron" style="font-size:15px; color:var(--text-muted); transition:transform 0.2s ease;">▾</span>
+          </div>
+        </div>
+        <div id="broadcastsAccordionBody" style="display:${unreadBroadcastCount > 0 || broadcastsList.length > 0 ? 'block' : 'none'}; padding:0 14px 14px 14px; max-height:260px; overflow-y:auto;">
+          <div style="display:flex; flex-direction:column; gap:8px; border-top:1px solid rgba(255,255,255,0.06); padding-top:10px;">
+            ${bCards}
+          </div>
+        </div>
+      </div>
+    `;
 
     // Linked Alts Token Breakdown Section
     let altsSectionHtml = '';
