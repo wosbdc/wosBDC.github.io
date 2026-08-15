@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🔥 Fire Crystal 3D Solar Flame Studio • Real-Time Tuning Lab</title>
+  <style>
+    :root {
+      --bg: #090d16;
+      --panel-bg: rgba(18, 24, 38, 0.95);
+      --card-bg: rgba(23, 32, 51, 0.75);
+      --gold: #ffd700;
+      --accent: #38bdf8;
+      --text: #f1f5f9;
+      --text-sub: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg);
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(255, 215, 0, 0.07) 0%, transparent 50%),
+        radial-gradient(circle at 10% 90%, rgba(56, 189, 248, 0.05) 0%, transparent 40%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 24px 20px;
+      text-align: center;
+      background: rgba(10, 15, 26, 0.8);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(10px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    header h1 {
+      font-size: 1.8rem;
+      color: var(--gold);
+      margin-bottom: 6px;
+      text-shadow: 0 0 16px rgba(255, 215, 0, 0.25);
+    }
+
+    header p {
+      color: var(--text-sub);
+      font-size: 0.95rem;
+    }
+
+    .main-container {
+      display: flex;
+      flex: 1;
+      max-width: 1700px;
+      width: 100%;
+      margin: 0 auto;
+      gap: 20px;
+      padding: 20px;
+    }
+
+    /* Control Panel */
+    .controls-panel {
+      width: 360px;
+      background: var(--panel-bg);
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      height: fit-content;
+      position: sticky;
+      top: 100px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .controls-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .controls-header h2 {
+      font-size: 1.15rem;
+      color: var(--gold);
+    }
+
+    .slider-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .slider-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      color: var(--text-sub);
+    }
+
+    .slider-label span.val {
+      color: var(--accent);
+      font-weight: 700;
+      font-family: monospace;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 4px;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--gold);
+      cursor: pointer;
+      box-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    button.btn {
+      flex: 1;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text);
+    }
+
+    button.btn:hover {
+      background: rgba(255, 215, 0, 0.15);
+      border-color: var(--gold);
+      color: var(--gold);
+      transform: translateY(-1px);
+    }
+
+    button.btn-primary {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      border-color: #f59e0b;
+      color: #000;
+      font-weight: 800;
+    }
+
+    button.btn-primary:hover {
+      background: linear-gradient(135deg, #fbbf24, #f59e0b);
+      box-shadow: 0 0 16px rgba(245, 158, 11, 0.4);
+      color: #000;
+    }
+
+    /* Badges Display Grid */
+    .showcase-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--panel-bg);
+      border-radius: 12px;
+      padding: 10px 16px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .size-selector {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+      color: var(--text-sub);
+    }
+
+    .size-btn {
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: transparent;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+
+    .size-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #000;
+      font-weight: 800;
+    }
+
+    .badges-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+    }
+
+    .badge-card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.25s ease;
+      min-height: 220px;
+      backdrop-filter: blur(8px);
+    }
+
+    .badge-card:hover {
+      border-color: rgba(255, 215, 0, 0.4);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+
+    .badge-label {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #e2e8f0;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+
+    .fc-badge-stage {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      user-select: none;
+      -webkit-user-select: none;
+      cursor: pointer;
+    }
+
+    .fc-flame-canvas {
+      position: absolute;
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    .fc-badge-stage img {
+      object-fit: contain;
+      vertical-align: middle;
+      position: relative;
+      z-index: 2;
+      transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .fc-badge-stage:hover img, .fc-badge-stage.sim-active img {
+      transform: perspective(600px) rotateX(8deg) scale(1.12);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>🔥 Fire Crystal 3D Solar Flame Studio</h1>
+    <p>Live Real-Time Tuning Lab • Hover or tap badges to see the symmetrical flame physics in action</p>
+  </header>
+
+  <div class="main-container">
+    
+    <!-- Real-Time Sliders Control Panel -->
+    <aside class="controls-panel">
+      <div class="controls-header">
+        <h2>⚙️ Flame Parameters</h2>
+        <button class="btn" style="padding:4px 8px; font-size:0.75rem;" onclick="resetDefaults()">↺ Reset</button>
+      </div>
+
+      <div class="slider-group">
+        <div class="slider-label">
+          <span>🔥 Spawn Rate (Density)</span>
+          <span class="val" id="val-spawnRate">0.65</span>
+        </div>
+        <input type="range" id="param-spawnRate" min="0.1" max="1.0" step="0.05" value="0.65" oninput="updateParam('spawnRate', this.value)">
+      </div>
+
+      <div class="slider-group">
+        <div class="slider-label">
+          <span>📏 Hex Perimeter Radius</span>
+          <span class="val" id="val-radiusPct">32%</span>
+        </div>
+        <input type="range" id="param-radiusPct" min="15" max="45" step="1" value="32" oninput="updateParam('radiusPct', this.value)">
+      </div>
+
+      <div class="slider-group">
+        <div class="slider-label">
+          <span>⬆️ Upward Float Speed</span>
+          <span class="val" id="val-floatSpeed">2.2</span>
+        </div>
+        <input type="range" id="param-floatSpeed" min="0.5" max="5.0" step="0.1" value="2.2" oninput="updateParam('floatSpeed', this.value)">
+      </div>
+
+      <div class="slider-group">
+        <div class="slider-label">
+          <span>↔️ Outward Edge Spread</span>
+          <span class="val" id="val-outwardSpread">1.1</span>
+        </div>
+        <input type="range" id="param-outwardSpread" min="0.2" max="3.0" step="0.1" value="1.1" oninput="updateParam('outwardSpread', this.value)">
+      </div>
+
+      <div class="slider-group">
+        <div class="slider-label">
+          <span>🌀 Wave Shimmer Wiggle</span>
+          <span class="val" id="val-waveWiggle">0.6</span>
+        </div>
+        <input type="range" id="param-waveWiggle" min="0.1" max="2.0" step="0.1" value="0.6" oninput="updateParam('waveWiggle', this.value)">
+      </div>
+
+      <div class="slider-group">
+        <div class="slider-label">
+          <span>✨ Particle Size (Radius)</span>
+          <span class="val" id="val-particleSize">10px</span>
+        </div>
+        <input type="range" id="param-particleSize" min="4" max="22" step="1" value="10" oninput="updateParam('particleSize', this.value)">
+      </div>
+
+      <div class="slider-group">
+        <div class="slider-label">
+          <span>⏳ Lifespan / Decay Rate</span>
+          <span class="val" id="val-decayRate">0.024</span>
+        </div>
+        <input type="range" id="param-decayRate" min="0.010" max="0.050" step="0.002" value="0.024" oninput="updateParam('decayRate', this.value)">
+      </div>
+
+      <div class="btn-row">
+        <button class="btn" id="btn-touchSim" onclick="toggleTouchSim()">📱 Sim Touch: OFF</button>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="copyConfigJson()">📋 Copy Config JSON</button>
+      </div>
+    </aside>
+
+    <!-- Showcase Area -->
+    <main class="showcase-area">
+      <div class="toolbar">
+        <div class="size-selector">
+          <span>Badge Size:</span>
+          <button class="size-btn" onclick="changeSize(48)">48px</button>
+          <button class="size-btn" onclick="changeSize(80)">80px (Hub)</button>
+          <button class="size-btn active" onclick="changeSize(120)">120px</button>
+          <button class="size-btn" onclick="changeSize(180)">180px</button>
+        </div>
+        <span style="font-size:0.85rem; color:var(--text-sub);">All 10 Elemental Levels</span>
+      </div>
+
+      <div class="badges-grid" id="badgesContainer">
+        <!-- Dynamically rendered badge cards -->
+      </div>
+    </main>
+
+  </div>
+
+  <script>
+    // Live Parameters Configuration
+    const config = {
+      spawnRate: 0.65,
+      radiusPct: 32,
+      floatSpeed: 2.2,
+      outwardSpread: 1.1,
+      waveWiggle: 0.6,
+      particleSize: 10,
+      decayRate: 0.024
+    };
+
+    const colorPalettes = {
+      1: { outer: '#ef4444', core: '#fef2f2', glow: '#dc2626', name: 'FC 1 • Crimson' },
+      2: { outer: '#ff6b00', core: '#fff7ed', glow: '#ff4500', name: 'FC 2 • Flame' },
+      3: { outer: '#eab308', core: '#fefce8', glow: '#ca8a04', name: 'FC 3 • Sunburst' },
+      4: { outer: '#10b981', core: '#ecfdf5', glow: '#059669', name: 'FC 4 • Emerald' },
+      5: { outer: '#06b6d4', core: '#cff4fc', glow: '#0891b2', name: 'FC 5 • Glacier' },
+      6: { outer: '#3b82f6', core: '#eff6ff', glow: '#2563eb', name: 'FC 6 • Sapphire' },
+      7: { outer: '#a855f7', core: '#fae8ff', glow: '#9333ea', name: 'FC 7 • Amethyst' },
+      8: { outer: '#ec4899', core: '#fdf2f8', glow: '#db2777', name: 'FC 8 • Magenta' },
+      9: { outer: '#84cc16', core: '#f7fee7', glow: '#65a30d', name: 'FC 9 • Kryptonite' },
+      10: { outer: '#ffd700', core: '#ffffff', glow: '#ff8c00', name: 'FC 10 • Celestial Gold' }
+    };
+
+    let currentBadgeSize = 120;
+    let touchSimMode = false;
+
+    class FlameWisp {
+      constructor(cx, cy, w, h, colors) {
+        const scale = w / 280;
+        const r = w * (config.radiusPct / 100);
+        
+        // Pick a random hexagon edge segment (0 to 5)
+        const edge = Math.floor(Math.random() * 6);
+        const angle1 = (edge * 60) * Math.PI / 180;
+        const angle2 = ((edge + 1) * 60) * Math.PI / 180;
+        const t = Math.random();
+        
+        const depth = 1 + (Math.random() - 0.5) * 0.15;
+        this.x = cx + (Math.cos(angle1) * (1 - t) + Math.cos(angle2) * t) * r * depth;
+        this.y = cy + (Math.sin(angle1) * (1 - t) + Math.sin(angle2) * t) * r * depth;
+        
+        const midAngle = (angle1 + angle2) / 2;
+        this.vx = (Math.cos(midAngle) * config.outwardSpread + (Math.random() - 0.5) * 0.8) * scale;
+        this.vy = (Math.sin(midAngle) * 0.8 - Math.random() * config.floatSpeed - 1.2) * scale;
+        
+        this.size = (Math.random() * config.particleSize + (config.particleSize * 0.5)) * scale;
+        this.scale = scale;
+        this.alpha = 1.0;
+        this.decay = Math.random() * config.decayRate + (config.decayRate * 0.5);
+        this.waveSpeed = Math.random() * 0.1 + 0.05;
+        this.waveAngle = Math.random() * Math.PI * 2;
+        
+        this.colors = colors;
+      }
+
+      update() {
+        this.waveAngle += this.waveSpeed;
+        this.x += this.vx + Math.sin(this.waveAngle) * (config.waveWiggle * this.scale);
+        this.y += this.vy;
+        this.size *= 0.96;
+        this.alpha -= this.decay;
+      }
+
+      draw(ctx) {
+        if (this.alpha <= 0 || this.size <= 1) return;
+
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, this.alpha);
+        
+        ctx.beginPath();
+        ctx.shadowBlur = 12;
+        ctx.shadowColor = this.colors.glow;
+        
+        ctx.fillStyle = this.colors.outer;
+        ctx.ellipse(this.x, this.y, this.size * 0.6, this.size * 1.2, Math.sin(this.waveAngle) * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.beginPath();
+        ctx.fillStyle = this.colors.core;
+        ctx.ellipse(this.x, this.y + (2 * this.scale), this.size * 0.3, this.size * 0.6, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.restore();
+      }
+    }
+
+    function renderBadges() {
+      const container = document.getElementById('badgesContainer');
+      container.innerHTML = '';
+
+      const canvasSize = Math.round(currentBadgeSize * 1.5);
+      const canvasOffset = Math.round((canvasSize - currentBadgeSize) / 2);
+
+      for (let fc = 1; fc <= 10; fc++) {
+        const card = document.createElement('div');
+        card.className = 'badge-card';
+
+        const title = document.createElement('div');
+        title.className = 'badge-label';
+        title.innerText = colorPalettes[fc].name;
+        card.appendChild(title);
+
+        const stage = document.createElement('span');
+        stage.className = 'fc-badge-stage';
+        stage.id = `stage-${fc}`;
+        stage.style.width = `${currentBadgeSize}px`;
+        stage.style.height = `${currentBadgeSize}px`;
+
+        const canvas = document.createElement('canvas');
+        canvas.className = 'fc-flame-canvas';
+        canvas.id = `canvas-${fc}`;
+        canvas.width = canvasSize;
+        canvas.height = canvasSize;
+        canvas.style.width = `${canvasSize}px`;
+        canvas.style.height = `${canvasSize}px`;
+        canvas.style.top = `-${canvasOffset}px`;
+        canvas.style.left = `-${canvasOffset}px`;
+        stage.appendChild(canvas);
+
+        const img = document.createElement('img');
+        img.src = `./badges/fc${fc}.png?v=2.5.45`;
+        img.alt = `Fire Crystal ${fc}`;
+        img.style.width = `${currentBadgeSize}px`;
+        img.style.height = `${currentBadgeSize}px`;
+        img.style.filter = `drop-shadow(0 0 ${Math.max(6, Math.round(currentBadgeSize / 3.5))}px ${colorPalettes[fc].glow})`;
+        stage.appendChild(img);
+
+        card.appendChild(stage);
+        container.appendChild(card);
+
+        initCanvasEngine(canvas, stage, colorPalettes[fc]);
+      }
+    }
+
+    function initCanvasEngine(canvas, stage, colors) {
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width;
+      const h = canvas.height;
+      const cx = w / 2;
+      const cy = h / 2;
+
+      let wisps = [];
+      let isActive = false;
+
+      stage.addEventListener('mouseenter', () => isActive = true);
+      stage.addEventListener('mouseleave', () => isActive = false);
+      stage.addEventListener('touchstart', () => {
+        isActive = true;
+        for (let i = 0; i < 16; i++) wisps.push(new FlameWisp(cx, cy, w, h, colors));
+      }, { passive: true });
+
+      function loop() {
+        ctx.clearRect(0, 0, w, h);
+
+        if (isActive || touchSimMode) {
+          if (Math.random() < config.spawnRate) {
+            wisps.push(new FlameWisp(cx, cy, w, h, colors));
+          }
+        }
+
+        for (let i = wisps.length - 1; i >= 0; i--) {
+          wisps[i].update();
+          wisps[i].draw(ctx);
+          if (wisps[i].alpha <= 0 || wisps[i].size <= 1) {
+            wisps.splice(i, 1);
+          }
+        }
+
+        requestAnimationFrame(loop);
+      }
+      loop();
+    }
+
+    function updateParam(param, val) {
+      config[param] = parseFloat(val);
+      const display = document.getElementById(`val-${param}`);
+      if (display) {
+        display.innerText = (param === 'radiusPct') ? `${val}%` : (param === 'particleSize' ? `${val}px` : val);
+      }
+    }
+
+    function changeSize(size) {
+      currentBadgeSize = size;
+      document.querySelectorAll('.size-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.innerText.includes(`${size}px`));
+      });
+      renderBadges();
+    }
+
+    function toggleTouchSim() {
+      touchSimMode = !touchSimMode;
+      const btn = document.getElementById('btn-touchSim');
+      btn.innerText = `📱 Sim Touch: ${touchSimMode ? 'ON' : 'OFF'}`;
+      btn.style.background = touchSimMode ? 'rgba(56, 189, 248, 0.25)' : 'rgba(255, 255, 255, 0.05)';
+      btn.style.borderColor = touchSimMode ? 'var(--accent)' : 'rgba(255, 255, 255, 0.15)';
+      
+      document.querySelectorAll('.fc-badge-stage').forEach(st => {
+        st.classList.toggle('sim-active', touchSimMode);
+      });
+    }
+
+    function resetDefaults() {
+      config.spawnRate = 0.65;
+      config.radiusPct = 32;
+      config.floatSpeed = 2.2;
+      config.outwardSpread = 1.1;
+      config.waveWiggle = 0.6;
+      config.particleSize = 10;
+      config.decayRate = 0.024;
+
+      document.getElementById('param-spawnRate').value = 0.65;
+      document.getElementById('val-spawnRate').innerText = '0.65';
+
+      document.getElementById('param-radiusPct').value = 32;
+      document.getElementById('val-radiusPct').innerText = '32%';
+
+      document.getElementById('param-floatSpeed').value = 2.2;
+      document.getElementById('val-floatSpeed').innerText = '2.2';
+
+      document.getElementById('param-outwardSpread').value = 1.1;
+      document.getElementById('val-outwardSpread').innerText = '1.1';
+
+      document.getElementById('param-waveWiggle').value = 0.6;
+      document.getElementById('val-waveWiggle').innerText = '0.6';
+
+      document.getElementById('param-particleSize').value = 10;
+      document.getElementById('val-particleSize').innerText = '10px';
+
+      document.getElementById('param-decayRate').value = 0.024;
+      document.getElementById('val-decayRate').innerText = '0.024';
+    }
+
+    function copyConfigJson() {
+      const jsonStr = JSON.stringify(config, null, 2);
+      navigator.clipboard.writeText(jsonStr).then(() => {
+        alert('Configuration JSON copied to clipboard!');
+      }).catch(() => {
+        prompt('Copy your configuration JSON:', jsonStr);
+      });
+    }
+
+    // Initial render
+    renderBadges();
+  </script>
+</body>
+</html>

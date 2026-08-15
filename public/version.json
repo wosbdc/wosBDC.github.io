@@ -1,9 +1,10 @@
 {
-  "version": "2.5.45",
+  "version": "2.5.46",
   "releaseDate": "2026-08-14",
-  "title": "🛡️ Restored Original 3D Solar Fire Wisps Particle Physics & Badges",
+  "title": "🔥 Symmetrical Hexagonal Flame Border & Real-Time Tuning Studio",
   "notes": [
-    "Restored pristine original badge graphics directly from fc_demo.html",
-    "Restored exact authentic 3D Solar Fire Wisps flame physics and motion curves from fc_demo.html"
+    "Implemented symmetrical hexagonal perimeter particle spawning so flames rise and radiate evenly across all 6 facets of the badge",
+    "Added resolution-scaled wave shimmer physics to ensure crystal-clear, balanced particles across all badge sizes",
+    "Launched fc_flame_studio.html for live interactive parameter tuning"
   ]
 }

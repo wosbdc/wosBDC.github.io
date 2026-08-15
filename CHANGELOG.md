@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.5.46] - 2026-08-14
+- Implemented symmetrical hexagonal perimeter particle spawning so flames rise and radiate evenly across all 6 facets of the badge without one-sided drift.
+- Scaled particle shimmer and wave amplitude mathematically to the canvas size for consistent rendering at 48px, 80px, and 180px.
+- Released [`fc_flame_studio.html`](public/fc_flame_studio.html) with real-time sliders for live particle parameter tuning and instant JSON configuration export.
+
 ## [2.5.45] - 2026-08-14
 - Restored original pristine Fire Crystal badge graphics directly from `fc_demo.html`.
 - Restored the authentic 3D Solar Fire Wisps particle physics, sinusoidal wave motion, and haptic burst mechanics exactly as designed in `fc_demo.html`.

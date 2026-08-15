@@ -21372,14 +21372,28 @@ window.closeMobileNavModal = () => {
   class FlameWisp {
     constructor(cx, cy, w, h, colors) {
       const scale = w / 280;
-      this.x = cx + (Math.random() - 0.5) * 100 * scale;
-      this.y = cy + (Math.random() - 0.5) * 50 * scale + (30 * scale);
-      this.vx = (Math.random() - 0.5) * 1.6 * scale;
-      this.vy = (-Math.random() * 3.2 - 1.4) * scale;
+      const r = w * 0.32; // Hexagon perimeter radius
       
-      this.size = (Math.random() * 11 + 5) * scale;
+      // Pick a random hexagon edge segment (0 to 5)
+      const edge = Math.floor(Math.random() * 6);
+      const angle1 = (edge * 60) * Math.PI / 180;
+      const angle2 = ((edge + 1) * 60) * Math.PI / 180;
+      const t = Math.random();
+      
+      // Interpolate along the edge with slight randomized depth
+      const depth = 1 + (Math.random() - 0.5) * 0.15;
+      this.x = cx + (Math.cos(angle1) * (1 - t) + Math.cos(angle2) * t) * r * depth;
+      this.y = cy + (Math.sin(angle1) * (1 - t) + Math.sin(angle2) * t) * r * depth;
+      
+      // Outward normal velocity + buoyant upward drift
+      const midAngle = (angle1 + angle2) / 2;
+      this.vx = (Math.cos(midAngle) * 1.1 + (Math.random() - 0.5) * 0.8) * scale;
+      this.vy = (Math.sin(midAngle) * 0.8 - Math.random() * 2.2 - 1.2) * scale;
+      
+      this.size = (Math.random() * 10 + 5) * scale;
+      this.scale = scale;
       this.alpha = 1.0;
-      this.decay = Math.random() * 0.025 + 0.012;
+      this.decay = Math.random() * 0.024 + 0.012;
       this.waveSpeed = Math.random() * 0.1 + 0.05;
       this.waveAngle = Math.random() * Math.PI * 2;
       
@@ -21388,7 +21402,7 @@ window.closeMobileNavModal = () => {
 
     update() {
       this.waveAngle += this.waveSpeed;
-      this.x += this.vx + Math.sin(this.waveAngle) * 0.7;
+      this.x += this.vx + Math.sin(this.waveAngle) * (0.6 * this.scale);
       this.y += this.vy;
       this.size *= 0.96;
       this.alpha -= this.decay;
@@ -21410,7 +21424,7 @@ window.closeMobileNavModal = () => {
       
       ctx.beginPath();
       ctx.fillStyle = this.colors.core;
-      ctx.ellipse(this.x, this.y + 2, this.size * 0.3, this.size * 0.6, 0, 0, Math.PI * 2);
+      ctx.ellipse(this.x, this.y + (2 * this.scale), this.size * 0.3, this.size * 0.6, 0, 0, Math.PI * 2);
       ctx.fill();
       
       ctx.restore();
