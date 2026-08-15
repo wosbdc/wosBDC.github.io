@@ -1678,7 +1678,7 @@ window.formatRankBadgeHtml = (rankVal) => {
 // Register Service Worker for Mobile PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=2.5.68')
+    navigator.serviceWorker.register('./sw.js?v=2.5.69')
       .then(reg => {
         reg.update();
         console.log('PWA Service Worker registered:', reg.scope);
@@ -12347,6 +12347,49 @@ const views = {
       if (window.deduplicateRosterLive) window.deduplicateRosterLive().catch(() => null);
 
       
+      window.broadcastPresets = {
+        shields: {
+          title: "Shields Up!!",
+          body: "Shields up alliance! Sunfire / SvS battle is active. Keep your shields ON and check the dashboard for instructions!"
+        },
+        beartrap: {
+          title: "Bear Trap in 5 Minutes!",
+          body: "Bear Trap opens in 5 minutes! Set your rallies and join promptly for max alliance rewards."
+        },
+        championship: {
+          title: "Alliance Championship Starting!",
+          body: "Championship battles are beginning! Check your matchups and ensure defensive setups are ready."
+        },
+        giftcode: {
+          title: "New Gift Code Released!",
+          body: "A new game gift code is live! Visit the dashboard to auto-claim rewards for all your accounts."
+        },
+        reset: {
+          title: "Daily Reset / Events Updated!",
+          body: "Daily game reset is complete. Check the alliance dashboard for today's active events and schedules."
+        }
+      };
+
+      window.applyBroadcastPreset = function(presetKey) {
+        const preset = window.broadcastPresets ? window.broadcastPresets[presetKey] : null;
+        if (!preset) return;
+        const titleEl = document.getElementById('adminPushTitle');
+        const bodyEl = document.getElementById('adminPushBody');
+        if (titleEl) titleEl.value = preset.title;
+        if (bodyEl) bodyEl.value = preset.body;
+      };
+
+      window.openBroadcastPushModalWithPreset = function(presetKey) {
+        if (typeof window.openBroadcastPushModal === 'function') {
+          window.openBroadcastPushModal();
+          setTimeout(() => {
+            if (presetKey && typeof window.applyBroadcastPreset === 'function') {
+              window.applyBroadcastPreset(presetKey);
+            }
+          }, 50);
+        }
+      };
+
       window.openBroadcastPushModal = function() {
           let existing = document.getElementById('broadcastPushModal');
           if (existing) existing.remove();
@@ -12370,6 +12413,20 @@ const views = {
                   </div>
                   
                   <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Send an instant <strong>wosBDC Alert</strong> notification to all registered devices.</p>
+
+                  <!-- Quick Preset Templates -->
+                  <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px;">
+                      <div style="font-size: 11px; font-weight: bold; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                          <span>⚡ Quick Preset Templates:</span>
+                      </div>
+                      <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                          <button type="button" onclick="window.applyBroadcastPreset('shields')" style="background: rgba(236,72,153,0.15); border: 1px solid rgba(236,72,153,0.35); color: #f472b6; padding: 4px 9px; border-radius: 6px; font-size: 11.5px; font-weight: bold; cursor: pointer; transition: 0.15s;">🛡️ Shields Up!</button>
+                          <button type="button" onclick="window.applyBroadcastPreset('beartrap')" style="background: rgba(249,115,22,0.15); border: 1px solid rgba(249,115,22,0.35); color: #f97316; padding: 4px 9px; border-radius: 6px; font-size: 11.5px; font-weight: bold; cursor: pointer; transition: 0.15s;">🪤 Bear Trap</button>
+                          <button type="button" onclick="window.applyBroadcastPreset('championship')" style="background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.35); color: #60a5fa; padding: 4px 9px; border-radius: 6px; font-size: 11.5px; font-weight: bold; cursor: pointer; transition: 0.15s;">⚔️ Championship</button>
+                          <button type="button" onclick="window.applyBroadcastPreset('giftcode')" style="background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.35); color: #10b981; padding: 4px 9px; border-radius: 6px; font-size: 11.5px; font-weight: bold; cursor: pointer; transition: 0.15s;">🎁 Gift Code</button>
+                          <button type="button" onclick="window.applyBroadcastPreset('reset')" style="background: rgba(168,85,247,0.15); border: 1px solid rgba(168,85,247,0.35); color: #c084fc; padding: 4px 9px; border-radius: 6px; font-size: 11.5px; font-weight: bold; cursor: pointer; transition: 0.15s;">🔄 Daily Reset</button>
+                      </div>
+                  </div>
 
                   <div>
                       <label style="font-size: 12px; font-weight: bold; color: var(--text-main); display: block; margin-bottom: 6px;">Notification Title</label>
@@ -13956,6 +14013,35 @@ const views = {
         }
       };
       
+      window.frostFilter = window.frostFilter || 'all'; // 'all' | 'unshielded' | 'shielded'
+
+      window.setFrostFilter = function(filter) {
+        window.frostFilter = filter;
+        window.renderFrostClan();
+      };
+
+      window.shieldAllFrostClan = async function() {
+        const confirmed = await window.customConfirm("🛡️ Shield ALL Frost Clan Alts?\n\nThis will mark all alts as SHIELDED (ON).");
+        if (!confirmed) return;
+
+        window.frostState.alts.forEach(alt => {
+          alt.shields = true;
+        });
+        window.renderFrostClan();
+
+        window.showToast("🛡️ Shielding all Frost Clan alts...", "success");
+        try {
+          const adminToken = await auth.currentUser.getIdToken(true);
+          const updatePromises = window.frostState.alts.map(alt => 
+            fetch(`${API_BASE_URL}?api=updateFrost&row=${alt.row}&field=shields&value=true&token=${encodeURIComponent(adminToken)}`).then(r => r.json()).catch(() => null)
+          );
+          await Promise.all(updatePromises);
+          if (window.showToast) window.showToast("✅ All Frost Clan alts marked as SHIELDED!", "success");
+        } catch(e) {
+          console.error("Bulk shield error:", e);
+        }
+      };
+      
       window.renderFrostClan = function() {
         const container = document.getElementById('frostClanContainer');
         if (!container) return;
@@ -13964,59 +14050,174 @@ const views = {
           container.innerHTML = `<div style="color:var(--text-muted); margin:40px 0;">No alt accounts found.</div>`;
           return;
         }
-        
+
+        const totalAlts = window.frostState.alts.length;
+        const shieldedCount = window.frostState.alts.filter(a => a.shields).length;
+        const unshieldedCount = totalAlts - shieldedCount;
+        const rebirthCount = window.frostState.alts.filter(a => a.rebirth).length;
+        const shieldPct = totalAlts > 0 ? Math.round((shieldedCount / totalAlts) * 100) : 0;
+
+        const filteredAlts = window.frostState.alts.map((alt, idx) => ({ ...alt, originalIdx: idx })).filter(alt => {
+          if (window.frostFilter === 'unshielded') return !alt.shields;
+          if (window.frostFilter === 'shielded') return Boolean(alt.shields);
+          return true;
+        });
+
         let html = `
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:15px;">
+          <!-- Header & Controls -->
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:15px;">
             <div style="text-align:left;">
-              <h2 style="margin:0; font-size:22px; color:var(--text-main);">Frost Clan Command Center</h2>
-              <p style="margin:4px 0 0; color:var(--text-muted); font-size:13px;">Private Dashboard & Tracker</p>
+              <h2 style="margin:0; font-size:22px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+                <span>❄️ Frost Clan Command Center</span>
+              </h2>
+              <p style="margin:4px 0 0; color:var(--text-muted); font-size:12.5px;">Live Shield Defense & Rebirth Readiness Tracker</p>
             </div>
-            <button onclick="window.resetFrostClan()" style="background:linear-gradient(135deg, #ef4444, #b91c1c); color:white; border:none; padding:10px 20px; border-radius:30px; font-weight:bold; cursor:pointer; font-size:14px; box-shadow:0 4px 15px rgba(239,68,68,0.3);">
-              ⚠️ Reset Shields & Tomes
-            </button>
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <button onclick="window.shieldAllFrostClan()" style="background:linear-gradient(135deg, #10b981, #059669); color:white; border:none; padding:8px 16px; border-radius:10px; font-weight:bold; cursor:pointer; font-size:13px; box-shadow:0 3px 10px rgba(16,185,129,0.3); display:inline-flex; align-items:center; gap:6px; transition:0.2s;">
+                🛡️ Shield ALL (${totalAlts})
+              </button>
+              <button onclick="window.openBroadcastPushModalWithPreset('shields')" style="background:linear-gradient(135deg, #ec4899, #8b5cf6); color:white; border:none; padding:8px 16px; border-radius:10px; font-weight:bold; cursor:pointer; font-size:13px; box-shadow:0 3px 10px rgba(236,72,153,0.3); display:inline-flex; align-items:center; gap:6px; transition:0.2s;">
+                📢 Send Shield Alert
+              </button>
+              <button onclick="window.resetFrostClan()" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:8px 14px; border-radius:10px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; transition:0.2s;">
+                🔄 Reset / Drop All
+              </button>
+            </div>
           </div>
-          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:25px; text-align:left;">
+
+          <!-- Live KPI Counter & Coverage Bar -->
+          <div style="background:var(--bg-main, #0f172a); border:1px solid var(--border); border-radius:16px; padding:16px 18px; margin-bottom:20px; box-shadow:0 6px 20px rgba(0,0,0,0.2);">
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-bottom:14px;">
+              
+              <!-- KPI 1: Shields ON -->
+              <div style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.3); border-radius:12px; padding:12px 14px; text-align:center;">
+                <div style="font-size:11px; color:#10b981; text-transform:uppercase; font-weight:bold; letter-spacing:0.5px; margin-bottom:4px;">🛡️ Shields Active (ON)</div>
+                <div style="font-size:24px; font-weight:800; color:#10b981;">${shieldedCount} <span style="font-size:15px; font-weight:600; color:var(--text-muted);">/ ${totalAlts}</span></div>
+                <div style="font-size:11.5px; color:#10b981; font-weight:bold; margin-top:2px;">${shieldPct}% Protected</div>
+              </div>
+
+              <!-- KPI 2: Shields OFF / Vulnerable -->
+              <div style="background:${unshieldedCount > 0 ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.03)'}; border:1px solid ${unshieldedCount > 0 ? 'rgba(239,68,68,0.4)' : 'var(--border)'}; border-radius:12px; padding:12px 14px; text-align:center; ${unshieldedCount > 0 ? 'animation:pulse 2s infinite;' : ''}">
+                <div style="font-size:11px; color:${unshieldedCount > 0 ? '#ef4444' : 'var(--text-muted)'}; text-transform:uppercase; font-weight:bold; letter-spacing:0.5px; margin-bottom:4px;">⚠️ Unshielded / Vulnerable</div>
+                <div style="font-size:24px; font-weight:800; color:${unshieldedCount > 0 ? '#ef4444' : '#10b981'};">${unshieldedCount} <span style="font-size:15px; font-weight:600; color:var(--text-muted);">Alts</span></div>
+                <div style="font-size:11.5px; color:${unshieldedCount > 0 ? '#ef4444' : '#10b981'}; font-weight:bold; margin-top:2px;">${unshieldedCount === 0 ? '✅ All Alts Safe' : '⚠️ Action Required'}</div>
+              </div>
+
+              <!-- KPI 3: Rebirth Tomes -->
+              <div style="background:rgba(6,182,212,0.08); border:1px solid rgba(6,182,212,0.3); border-radius:12px; padding:12px 14px; text-align:center;">
+                <div style="font-size:11px; color:#38bdf8; text-transform:uppercase; font-weight:bold; letter-spacing:0.5px; margin-bottom:4px;">📖 Rebirth Tomes</div>
+                <div style="font-size:24px; font-weight:800; color:#38bdf8;">${rebirthCount} <span style="font-size:15px; font-weight:600; color:var(--text-muted);">/ ${totalAlts}</span></div>
+                <div style="font-size:11.5px; color:var(--text-muted); font-weight:bold; margin-top:2px;">${totalAlts > 0 ? Math.round((rebirthCount / totalAlts) * 100) : 0}% Claimed</div>
+              </div>
+
+            </div>
+
+            <!-- Visual Progress Bar -->
+            <div>
+              <div style="display:flex; justify-content:space-between; font-size:11.5px; color:var(--text-muted); margin-bottom:6px; font-weight:bold;">
+                <span>Clan Shield Defense Coverage</span>
+                <span style="color:${shieldPct === 100 ? '#10b981' : (shieldPct > 50 ? '#f59e0b' : '#ef4444')};">${shieldedCount} of ${totalAlts} Shielded (${shieldPct}%)</span>
+              </div>
+              <div style="width:100%; height:10px; background:rgba(255,255,255,0.08); border-radius:10px; overflow:hidden; position:relative;">
+                <div style="width:${shieldPct}%; height:100%; background:linear-gradient(90deg, #10b981, #06b6d4); border-radius:10px; transition:width 0.3s ease; box-shadow:0 0 10px rgba(16,185,129,0.5);"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Filter Pills -->
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:18px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:12px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Filter View:</span>
+              <button onclick="window.setFrostFilter('all')" style="padding:6px 12px; border-radius:20px; border:1px solid ${window.frostFilter === 'all' ? 'var(--accent)' : 'var(--border)'}; background:${window.frostFilter === 'all' ? 'var(--accent)' : 'rgba(255,255,255,0.04)'}; color:${window.frostFilter === 'all' ? '#fff' : 'var(--text-main)'}; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+                All (${totalAlts})
+              </button>
+              <button onclick="window.setFrostFilter('unshielded')" style="padding:6px 12px; border-radius:20px; border:1px solid ${window.frostFilter === 'unshielded' ? '#ef4444' : (unshieldedCount > 0 ? 'rgba(239,68,68,0.4)' : 'var(--border)')}; background:${window.frostFilter === 'unshielded' ? '#ef4444' : (unshieldedCount > 0 ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.04)')}; color:${window.frostFilter === 'unshielded' ? '#fff' : (unshieldedCount > 0 ? '#ef4444' : 'var(--text-main)')}; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+                ⚠️ Needs Shields (${unshieldedCount})
+              </button>
+              <button onclick="window.setFrostFilter('shielded')" style="padding:6px 12px; border-radius:20px; border:1px solid ${window.frostFilter === 'shielded' ? '#10b981' : 'var(--border)'}; background:${window.frostFilter === 'shielded' ? '#10b981' : 'rgba(255,255,255,0.04)'}; color:${window.frostFilter === 'shielded' ? '#fff' : 'var(--text-main)'}; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+                🛡️ Shielded (${shieldedCount})
+              </button>
+            </div>
+            <div style="font-size:12px; color:var(--text-muted);">
+              Showing <strong>${filteredAlts.length}</strong> of <strong>${totalAlts}</strong> alts
+            </div>
+          </div>
+
+          <!-- Alts Cards Grid -->
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:20px; text-align:left;">
         `;
-        
-        window.frostState.alts.forEach((alt, idx) => {
+
+        if (filteredAlts.length === 0) {
           html += `
-            <div style="background:var(--bg-card, #1a0b2e); border:1px solid var(--border); border-radius:16px; padding:25px; box-shadow:0 10px 25px rgba(0,0,0,0.1); position:relative; overflow:hidden;">
-              <div style="display:flex; align-items:center; gap:15px; border-bottom:1px solid var(--border); padding-bottom:15px; margin-bottom:20px;">
-                <div style="width:50px; height:50px; border-radius:12px; background:linear-gradient(135deg, var(--accent), #8b5cf6); overflow:hidden; display:flex; align-items:center; justify-content:center; color:white; font-weight:800; font-size:24px;">
-                  <img src="images/${encodeURIComponent(alt.name)}.png" alt="${alt.name}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.parentElement.innerHTML='${alt.name.charAt(0).toUpperCase()}';">
+            <div style="grid-column:1 / -1; text-align:center; padding:35px 20px; background:rgba(255,255,255,0.02); border:1px dashed var(--border); border-radius:14px;">
+              <div style="font-size:28px; margin-bottom:8px;">🎉</div>
+              <div style="font-size:15px; font-weight:bold; color:var(--text-main); margin-bottom:4px;">No Alts in this view</div>
+              <div style="font-size:12.5px; color:var(--text-muted);">
+                ${window.frostFilter === 'unshielded' ? 'All alts currently have shields active!' : 'No matching alts.'}
+              </div>
+            </div>
+          `;
+        }
+
+        filteredAlts.forEach(alt => {
+          const idx = alt.originalIdx;
+          const isShielded = Boolean(alt.shields);
+          const isRebirth = Boolean(alt.rebirth);
+
+          html += `
+            <div style="background:var(--bg-card, #1a0b2e); border:1px solid ${isShielded ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.35)'}; border-radius:16px; padding:22px; box-shadow:0 8px 24px rgba(0,0,0,0.2); position:relative; overflow:hidden; transition:transform 0.15s ease, border-color 0.2s ease;">
+              
+              <!-- Top Header -->
+              <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:14px; margin-bottom:16px;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                  <div style="width:46px; height:46px; border-radius:12px; background:linear-gradient(135deg, var(--accent), #8b5cf6); overflow:hidden; display:flex; align-items:center; justify-content:center; color:white; font-weight:800; font-size:20px; flex-shrink:0;">
+                    <img src="images/${encodeURIComponent(alt.name)}.png" alt="${alt.name}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.parentElement.innerHTML='${alt.name.charAt(0).toUpperCase()}';">
+                  </div>
+                  <div>
+                    <h3 style="margin:0; font-size:18px; font-weight:700; color:var(--text-main);">${window.escapeHTML(alt.name)}</h3>
+                    <div style="color:var(--text-muted); font-size:11.5px; margin-top:2px;">Frost Clan Member</div>
+                  </div>
                 </div>
                 <div>
-                  <h2 style="margin:0; font-size:22px; font-weight:700;">${alt.name}</h2>
-                  <div style="color:var(--text-muted); font-size:12px; margin-top:2px;">Frost Clan Member</div>
+                  <span style="background:${isShielded ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)'}; color:${isShielded ? '#10b981' : '#ef4444'}; border:1px solid ${isShielded ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.4)'}; padding:3px 10px; border-radius:12px; font-size:11px; font-weight:bold;">
+                    ${isShielded ? '🛡️ SHIELDED' : '⚠️ UNSHIELDED'}
+                  </span>
                 </div>
               </div>
               
-              <div style="font-size:13px; color:var(--text-muted); margin-bottom:10px; font-weight:600;">Main Alliance Tracked</div>
-              <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:20px;">
-                <div style="background:rgba(15,23,42,0.5); border:1px solid var(--border); border-radius:12px; padding:12px; text-align:center;">
-                  <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:600; margin-bottom:8px;">Championship</div>
-                  <div style="font-size:22px;">${alt.champ ? '✅' : '❌'}</div>
+              <!-- Main Alliance Tracked -->
+              <div style="font-size:11.5px; color:var(--text-muted); text-transform:uppercase; font-weight:bold; letter-spacing:0.5px; margin-bottom:8px;">Alliance Events Tracked</div>
+              <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:16px;">
+                <div style="background:rgba(15,23,42,0.5); border:1px solid var(--border); border-radius:10px; padding:8px 4px; text-align:center;">
+                  <div style="font-size:10px; color:var(--text-muted); text-transform:uppercase; font-weight:600; margin-bottom:4px;">Championship</div>
+                  <div style="font-size:18px;">${alt.champ ? '✅' : '❌'}</div>
                 </div>
-                <div style="background:rgba(15,23,42,0.5); border:1px solid var(--border); border-radius:12px; padding:12px; text-align:center;">
-                  <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:600; margin-bottom:8px;">Mercenary</div>
-                  <div style="font-size:22px;">${alt.merc ? '✅' : '❌'}</div>
+                <div style="background:rgba(15,23,42,0.5); border:1px solid var(--border); border-radius:10px; padding:8px 4px; text-align:center;">
+                  <div style="font-size:10px; color:var(--text-muted); text-transform:uppercase; font-weight:600; margin-bottom:4px;">Mercenary</div>
+                  <div style="font-size:18px;">${alt.merc ? '✅' : '❌'}</div>
                 </div>
-                <div style="background:rgba(15,23,42,0.5); border:1px solid var(--border); border-radius:12px; padding:12px; text-align:center; grid-column:1 / -1;">
-                  <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:600; margin-bottom:8px;">Polar Terrors</div>
-                  <div style="font-size:22px;">${alt.polar ? '✅' : '❌'}</div>
+                <div style="background:rgba(15,23,42,0.5); border:1px solid var(--border); border-radius:10px; padding:8px 4px; text-align:center;">
+                  <div style="font-size:10px; color:var(--text-muted); text-transform:uppercase; font-weight:600; margin-bottom:4px;">Polar Terrors</div>
+                  <div style="font-size:18px;">${alt.polar ? '✅' : '❌'}</div>
                 </div>
               </div>
               
-              <div style="font-size:13px; color:var(--accent); margin-bottom:10px; font-weight:600;">Click to Update</div>
-              <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
-                <div style="background:rgba(15,23,42,0.5); border:1px solid rgba(56, 189, 248, 0.3); border-radius:12px; padding:12px; text-align:center; cursor:pointer; transition:transform 0.1s;" onclick="window.toggleFrostCheckbox(${idx}, 'shields')" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                  <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:600; margin-bottom:8px;">🛡️ Shields</div>
-                  <div id="val_${idx}_shields" style="font-size:22px; user-select:none;">${alt.shields ? '✅' : '❌'}</div>
+              <!-- Quick 1-Tap Toggle Buttons -->
+              <div style="font-size:11.5px; color:var(--accent); text-transform:uppercase; font-weight:bold; letter-spacing:0.5px; margin-bottom:8px;">1-Tap Status Updates</div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                
+                <!-- Shield Toggle Card -->
+                <div onclick="window.toggleFrostCheckbox(${idx}, 'shields')" style="background:${isShielded ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.08)'}; border:1px solid ${isShielded ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.35)'}; border-radius:12px; padding:10px 8px; text-align:center; cursor:pointer; transition:transform 0.1s ease;" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
+                  <div style="font-size:11px; color:${isShielded ? '#10b981' : '#ef4444'}; font-weight:bold; margin-bottom:4px;">🛡️ Shields</div>
+                  <div id="val_${idx}_shields" style="font-size:18px; font-weight:bold; color:${isShielded ? '#10b981' : '#ef4444'}; user-select:none;">${isShielded ? '✅ ON' : '❌ OFF'}</div>
                 </div>
-                <div style="background:rgba(15,23,42,0.5); border:1px solid rgba(56, 189, 248, 0.3); border-radius:12px; padding:12px; text-align:center; cursor:pointer; transition:transform 0.1s;" onclick="window.toggleFrostCheckbox(${idx}, 'rebirth')" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                  <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:600; margin-bottom:8px;">📖 Rebirth Tomes</div>
-                  <div id="val_${idx}_rebirth" style="font-size:22px; user-select:none;">${alt.rebirth ? '✅' : '❌'}</div>
+
+                <!-- Rebirth Tomes Toggle Card -->
+                <div onclick="window.toggleFrostCheckbox(${idx}, 'rebirth')" style="background:${isRebirth ? 'rgba(6,182,212,0.12)' : 'rgba(255,255,255,0.03)'}; border:1px solid ${isRebirth ? 'rgba(6,182,212,0.4)' : 'var(--border)'}; border-radius:12px; padding:10px 8px; text-align:center; cursor:pointer; transition:transform 0.1s ease;" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
+                  <div style="font-size:11px; color:${isRebirth ? '#38bdf8' : 'var(--text-muted)'}; font-weight:bold; margin-bottom:4px;">📖 Rebirth Tomes</div>
+                  <div id="val_${idx}_rebirth" style="font-size:18px; font-weight:bold; color:${isRebirth ? '#38bdf8' : 'var(--text-muted)'}; user-select:none;">${isRebirth ? '✅ ON' : '❌ OFF'}</div>
                 </div>
+
               </div>
             </div>
           `;
@@ -14031,8 +14232,7 @@ const views = {
         const newVal = !alt[field];
         alt[field] = newVal; // Optimistic update
         
-        const el = document.getElementById(`val_${idx}_${field}`);
-        if (el) el.textContent = newVal ? '✅' : '❌';
+        window.renderFrostClan();
         
         try {
           const adminToken = await auth.currentUser.getIdToken(true);
@@ -14041,12 +14241,12 @@ const views = {
           if (!res.success) {
             window.showToast("Failed to save!", "error");
             alt[field] = !newVal; // Revert
-            if (el) el.textContent = alt[field] ? '✅' : '❌';
+            window.renderFrostClan();
           }
         } catch (e) {
           window.showToast("Network error!", "error");
           alt[field] = !newVal; // Revert
-          if (el) el.textContent = alt[field] ? '✅' : '❌';
+          window.renderFrostClan();
         }
       };
       
@@ -14057,11 +14257,8 @@ const views = {
         window.frostState.alts.forEach((alt, idx) => {
           alt.shields = false;
           alt.rebirth = false;
-          let elS = document.getElementById(`val_${idx}_shields`);
-          let elR = document.getElementById(`val_${idx}_rebirth`);
-          if(elS) elS.textContent = '❌';
-          if(elR) elR.textContent = '❌';
         });
+        window.renderFrostClan();
         
         window.showToast("Resetting...");
         try {

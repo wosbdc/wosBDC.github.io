@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [2.5.69] - 2026-08-15
+- **Frost Clan Command Center Shield Counter & Coverage Bar:** Added live KPI counters for Shields Active (`ON`), Unshielded Alts (`OFF / Vulnerable`), Rebirth Tomes, and dynamic Shield Defense coverage progress bar.
+- **Roster Quick Filters:** Added 1-tap view filters (`All`, `⚠️ Needs Shields`, `🛡️ Shielded`) to instantly isolate vulnerable accounts.
+- **1-Tap Bulk Shielding:** Added `[🛡️ Shield ALL]` bulk action to immediately mark all alts protected during wars/SvS.
+- **Broadcast Preset Templates:** Added 1-click preset message buttons (`🛡️ Shields Up!`, `🪤 Bear Trap`, `⚔️ Championship`, `🎁 Gift Code`, `🔄 Daily Reset`) inside the Broadcast Alert modal.
+
 ## [2.5.68] - 2026-08-15
 - Integrated the **Device Push Notifications Switch** directly inside the **Bell Alert Window** for seamless 1-tap activation.
 - Added live status detection (`ON` / `OFF`) and device token re-sync capability.
