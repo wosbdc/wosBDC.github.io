@@ -132,7 +132,7 @@ window.fetchRoster = async () => {
 };
 
 
-const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbzOfiaG87nY9fPXQbEK5mZD3RZsNBH8Uvh7y-QFpTvZpc3HL7MAkssVswK4JpeBAE0/exec';
+const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbxf9fuHxUuHZZ16zTtGMBlNHHFez60TyGPCPiFv4CXRtP6fRQ1lRNgfzsybCV6bDsw/exec';
 const VERIFY_PROXY_URL = 'https://wos-vercel-proxy.vercel.app/api/verify'; // Fallback / secondary proxy
 
 // Get a fresh Firebase ID token for the current user (replaces hardcoded APP_SECRET)
@@ -10587,7 +10587,7 @@ window.openGiftCodeDispatcherModal = async (initialCode = '') => {
             </span>
           </div>
 
-          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:10px; margin-bottom:10px;">
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px; margin-bottom:10px;">
             <label style="display:flex; align-items:center; gap:8px; background:rgba(15,23,42,0.6); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.06); cursor:pointer; font-size:13px;">
               <input type="checkbox" id="gcIncludeEnrolled" checked style="width:16px; height:16px; accent-color:#ec4899;">
               <span>🎁 Enrolled Roster Chiefs (<strong id="gcEnrolledCount">...</strong>)</span>
@@ -10595,6 +10595,10 @@ window.openGiftCodeDispatcherModal = async (initialCode = '') => {
             <label style="display:flex; align-items:center; gap:8px; background:rgba(15,23,42,0.6); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.06); cursor:pointer; font-size:13px;">
               <input type="checkbox" id="gcIncludeAlts" checked style="width:16px; height:16px; accent-color:#ec4899;">
               <span>❄️ Verified Linked Alts (<strong id="gcAltsCount">...</strong>)</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; background:rgba(16,185,129,0.08); padding:10px 12px; border-radius:8px; border:1px solid rgba(16,185,129,0.3); cursor:pointer; font-size:13px; color:#10b981; font-weight:bold;">
+              <input type="checkbox" id="gcOnlyClaimed" checked style="width:16px; height:16px; accent-color:#10b981;">
+              <span>🔒 Only Claimed Accounts (<strong id="gcClaimedCount">...</strong>)</span>
             </label>
           </div>
         </div>
@@ -10684,27 +10688,39 @@ window.openGiftCodeDispatcherModal = async (initialCode = '') => {
   // Target Resolvers
   let enrolledList = [];
   let altsList = [];
+  const claimedGameIds = new Set();
 
   const updateTargetCounts = () => {
     const incEnrolled = document.getElementById('gcIncludeEnrolled')?.checked ?? true;
     const incAlts = document.getElementById('gcIncludeAlts')?.checked ?? true;
+    const onlyClaimed = document.getElementById('gcOnlyClaimed')?.checked ?? true;
 
     const targetSet = new Map();
 
     if (incEnrolled) {
-      enrolledList.forEach(p => targetSet.set(String(p.gameId), p));
+      enrolledList.forEach(p => {
+        if (!onlyClaimed || claimedGameIds.has(String(p.gameId))) {
+          targetSet.set(String(p.gameId), p);
+        }
+      });
     }
     if (incAlts) {
       altsList.forEach(a => {
         if (!targetSet.has(String(a.gameId))) {
-          targetSet.set(String(a.gameId), a);
+          if (!onlyClaimed || claimedGameIds.has(String(a.gameId))) {
+            targetSet.set(String(a.gameId), a);
+          }
         }
       });
     }
 
     const total = targetSet.size;
     const badge = document.getElementById('gcTargetCountBadge');
-    if (badge) badge.textContent = `${total} Total Characters`;
+    if (badge) {
+      badge.textContent = onlyClaimed 
+        ? `${total} Claimed Characters` 
+        : `${total} Total Characters`;
+    }
     return Array.from(targetSet.values());
   };
 
@@ -10730,13 +10746,17 @@ window.openGiftCodeDispatcherModal = async (initialCode = '') => {
       }
     }
 
-    // Parse verified alts from Firebase Users
+    // Parse verified alts and claimed IDs from Firebase Users
     if (usersSnap.exists()) {
       const uData = usersSnap.val() || {};
       for (const u of Object.values(uData)) {
+        if (u.gameId) {
+          claimedGameIds.add(String(u.gameId).trim());
+        }
         if (u.linkedGameIds && Array.isArray(u.linkedGameIds)) {
           u.linkedGameIds.forEach(agid => {
             const altGid = String(agid).trim();
+            if (altGid) claimedGameIds.add(altGid);
             const altTok = (u.altTokens && u.altTokens[altGid]) || {};
             const aName = altTok.nickname || (window.idToNameMap && window.idToNameMap[altGid]) || `Alt ${altGid}`;
             altsList.push({ gameId: altGid, name: aName, type: 'alt' });
@@ -10749,6 +10769,8 @@ window.openGiftCodeDispatcherModal = async (initialCode = '') => {
     if (enrEl) enrEl.textContent = enrolledList.length;
     const altsEl = document.getElementById('gcAltsCount');
     if (altsEl) altsEl.textContent = altsList.length;
+    const clmEl = document.getElementById('gcClaimedCount');
+    if (clmEl) clmEl.textContent = claimedGameIds.size;
 
     updateTargetCounts();
   } catch(e) {
@@ -10757,6 +10779,7 @@ window.openGiftCodeDispatcherModal = async (initialCode = '') => {
 
   document.getElementById('gcIncludeEnrolled')?.addEventListener('change', updateTargetCounts);
   document.getElementById('gcIncludeAlts')?.addEventListener('change', updateTargetCounts);
+  document.getElementById('gcOnlyClaimed')?.addEventListener('change', updateTargetCounts);
 
   // Test Code Button handler
   const testBtn = document.getElementById('gcTestCodeBtn');

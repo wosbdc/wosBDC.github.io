@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.5.88] - 2026-08-15
+- 🔒 **Claimed Accounts Gift Code Enforcement:**
+  - Added `🔒 Only Claimed Accounts` toggle to the Mass Gift Code Dispatcher (default: ON).
+  - Restricted backend batch redemption to claimed primary accounts and verified linked alts in Firebase.
+
 ## [2.5.87] - 2026-08-15
 - 🧹 **Announcement Cleaner & Alert Management:**
   - Added delete button (`🗑️`) to individual leadership announcements in the Notifications modal.

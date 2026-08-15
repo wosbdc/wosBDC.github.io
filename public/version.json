@@ -1,9 +1,9 @@
 {
-  "version": "2.5.87",
+  "version": "2.5.88",
   "releaseDate": "2026-08-15",
-  "title": "🧹 Announcement Cleaner & Alert Deletion",
+  "title": "🔒 Claimed Accounts Gift Code Enforcement",
   "notes": [
-    "Added 1-click delete button to individual leadership announcements",
-    "Added Announcement Cleaner to purge old broadcast alerts by age (3d, 7d, or all)"
+    "Added Only Claimed Accounts toggle to Mass Gift Code Dispatcher",
+    "Restricted backend batch redemption to verified registered characters and alts"
   ]
 }
