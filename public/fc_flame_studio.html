@@ -423,18 +423,17 @@
 
     class FlameWisp {
       constructor(cx, cy, w, h, colors) {
-        const scale = w / 280;
-        const rx = w * (config.radiusPct / 100) * 1.11; // True shield half-width
-        const ry = w * (config.radiusPct / 100) * 1.20; // True shield half-height
+        const badgeSize = currentBadgeSize;
+        const scale = badgeSize / 140;
         
-        // Exact pointy-topped shield polygon vertices
+        // Exact pixel-aligned shield contour vertices
         const v = [
-          { x: cx, y: cy - ry },                      // Top Point
-          { x: cx + rx, y: cy - ry * 0.49 },          // Top Right
-          { x: cx + rx, y: cy + ry * 0.49 },          // Bottom Right
-          { x: cx, y: cy + ry },                      // Bottom Point
-          { x: cx - rx, y: cy + ry * 0.49 },          // Bottom Left
-          { x: cx - rx, y: cy - ry * 0.49 }           // Top Left
+          { x: cx, y: cy - (badgeSize * 0.441) },                                  // Top Point
+          { x: cx + (badgeSize * 0.359), y: cy - (badgeSize * 0.231) },          // Top Right Corner
+          { x: cx + (badgeSize * 0.359), y: cy + (badgeSize * 0.223) },          // Bottom Right Corner
+          { x: cx, y: cy + (badgeSize * 0.433) },                                  // Bottom Point
+          { x: cx - (badgeSize * 0.359), y: cy + (badgeSize * 0.223) },          // Bottom Left Corner
+          { x: cx - (badgeSize * 0.359), y: cy - (badgeSize * 0.231) }           // Top Left Corner
         ];
 
         // Pick a random edge segment along the shield (0 to 5)
@@ -443,19 +442,26 @@
         const pB = v[(edge + 1) % 6];
         const t = Math.random();
         
-        // Interpolate along the shield edge with slight randomized depth
-        this.x = pA.x * (1 - t) + pB.x * t + (Math.random() - 0.5) * (6 * scale);
-        this.y = pA.y * (1 - t) + pB.y * t + (Math.random() - 0.5) * (6 * scale);
+        // Interpolate along the exact shield border with slight randomized variance
+        this.x = pA.x * (1 - t) + pB.x * t + (Math.random() - 0.5) * (4 * scale);
+        this.y = pA.y * (1 - t) + pB.y * t + (Math.random() - 0.5) * (4 * scale);
         
-        // Outward normal vector from shield center + natural rising buoyancy
-        const dx = this.x - cx;
-        const dy = this.y - cy;
-        const dist = Math.hypot(dx, dy) || 1;
-        const nx = dx / dist;
-        const ny = dy / dist;
+        // Outward vector pointing straight out from the facet normal
+        const edgeDx = pB.x - pA.x;
+        const edgeDy = pB.y - pA.y;
+        let nx = edgeDy;
+        let ny = -edgeDx;
+        const nLen = Math.hypot(nx, ny) || 1;
+        nx /= nLen;
+        ny /= nLen;
 
-        this.vx = (nx * config.outwardSpread + (Math.random() - 0.5) * 0.6) * scale;
-        this.vy = (ny * 0.7 - Math.random() * config.floatSpeed - 1.0) * scale;
+        if (nx * (this.x - cx) + ny * (this.y - cy) < 0) {
+          nx = -nx;
+          ny = -ny;
+        }
+
+        this.vx = (nx * config.outwardSpread + (Math.random() - 0.5) * 0.7) * scale;
+        this.vy = (ny * 0.6 - Math.random() * config.floatSpeed - 1.2) * scale;
         
         this.size = (Math.random() * config.particleSize + (config.particleSize * 0.5)) * scale;
         this.scale = scale;
@@ -502,7 +508,7 @@
       const container = document.getElementById('badgesContainer');
       container.innerHTML = '';
 
-      const canvasSize = Math.round(currentBadgeSize * 1.5);
+      const canvasSize = Math.round(currentBadgeSize * 1.85);
       const canvasOffset = Math.round((canvasSize - currentBadgeSize) / 2);
 
       for (let fc = 1; fc <= 10; fc++) {
@@ -532,7 +538,7 @@
         stage.appendChild(canvas);
 
         const img = document.createElement('img');
-        img.src = `./badges/fc${fc}.png?v=2.5.52`;
+        img.src = `./badges/fc${fc}.png?v=2.5.54`;
         img.alt = `Fire Crystal ${fc}`;
         img.style.width = `${currentBadgeSize}px`;
         img.style.height = `${currentBadgeSize}px`;

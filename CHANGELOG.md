@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.5.54] - 2026-08-14
+- Expanded flame canvas bounds to 1.85x badge size, preventing particle clipping on all 4 borders.
+- Replaced approximate hexagon math with exact pixel-measured shield contour polygon coordinates (`(0, -0.441)`, `(±0.359, -0.231)`, `(±0.359, +0.223)`, `(0, +0.433)`).
+- Embers now spawn flush against the shield facets and radiate outward with bilateral symmetry.
+
 ## [2.5.53] - 2026-08-14
 - Redesigned Furnace / Fire Crystal display into a dedicated centered showcase in Chief Profile ID card.
 - Updated `style.css` mobile styles to keep the Fire Crystal badge 100% centered horizontally on smartphones and tablets.

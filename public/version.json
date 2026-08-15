@@ -1,9 +1,10 @@
 {
-  "version": "2.5.53",
+  "version": "2.5.54",
   "releaseDate": "2026-08-14",
-  "title": "📱 Responsive Centered Fire Crystal Hero Showcase",
+  "title": "🔥 Pixel-Perfect Measured Shield Contour & Expanded 1.85x Canvas",
   "notes": [
-    "Redesigned Furnace / Fire Crystal display into a dedicated centered showcase banner in the Chief Profile ID card",
-    "Optimized mobile responsive styles in style.css to keep the Fire Crystal badge perfectly centered across all smartphone screen sizes"
+    "Expanded canvas boundary to 1.85x badge size, providing generous padding on all sides so flames never clip",
+    "Applied exact pixel-measured shield contour polygon coordinates directly from 1024x1024 assets",
+    "Embers now spawn flush along the shield perimeter and billow outward symmetrically across all 6 facets"
   ]
 }

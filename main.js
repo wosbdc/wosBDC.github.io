@@ -194,11 +194,11 @@ window.getFurnaceIconHtml = (level, size = 48) => {
        10: 'rgba(255,215,0,0.9)'    // Imperial Gold
      };
      const glow = fcGlowMap[fcNum];
-     const canvasSize = Math.round(size * 1.5);
+     const canvasSize = Math.round(size * 1.85);
      const canvasOffset = Math.round((canvasSize - size) / 2);
-     return `<span class="fc-badge-stage" data-fc="${fcNum}" style="display:inline-flex; align-items:center; justify-content:center; position:relative; vertical-align:middle; cursor:pointer; width:${size}px; height:${size}px; line-height:0; user-select:none; -webkit-user-select:none;">
+     return `<span class="fc-badge-stage" data-fc="${fcNum}" data-size="${size}" style="display:inline-flex; align-items:center; justify-content:center; position:relative; vertical-align:middle; cursor:pointer; width:${size}px; height:${size}px; line-height:0; user-select:none; -webkit-user-select:none;">
        <canvas class="fc-flame-canvas" width="${canvasSize}" height="${canvasSize}" style="position:absolute; top:-${canvasOffset}px; left:-${canvasOffset}px; width:${canvasSize}px; height:${canvasSize}px; pointer-events:none; z-index:3; display:block;"></canvas>
-       <img src="./badges/fc${fcNum}.png?v=2.5.52" onerror="this.onerror=null; this.src='/badges/fc${fcNum}.png?v=2.5.52';" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; display:block; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
+       <img src="./badges/fc${fcNum}.png?v=2.5.54" onerror="this.onerror=null; this.src='/badges/fc${fcNum}.png?v=2.5.54';" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; display:block; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
      </span>`;
   }
 
@@ -21375,19 +21375,17 @@ window.closeMobileNavModal = () => {
   };
 
   class FlameWisp {
-    constructor(cx, cy, w, h, colors) {
-      const scale = w / 280;
-      const rx = w * 0.40; // True shield half-width
-      const ry = w * 0.43; // True shield half-height
+    constructor(cx, cy, badgeSize, colors) {
+      const scale = badgeSize / 140;
       
-      // Exact pointy-topped shield polygon vertices
+      // Exact pixel-aligned shield contour vertices (measured from 1024x1024 assets)
       const v = [
-        { x: cx, y: cy - ry },                      // Top Point
-        { x: cx + rx, y: cy - ry * 0.49 },          // Top Right
-        { x: cx + rx, y: cy + ry * 0.49 },          // Bottom Right
-        { x: cx, y: cy + ry },                      // Bottom Point
-        { x: cx - rx, y: cy + ry * 0.49 },          // Bottom Left
-        { x: cx - rx, y: cy - ry * 0.49 }           // Top Left
+        { x: cx, y: cy - (badgeSize * 0.441) },                                  // Top Point
+        { x: cx + (badgeSize * 0.359), y: cy - (badgeSize * 0.231) },          // Top Right Corner
+        { x: cx + (badgeSize * 0.359), y: cy + (badgeSize * 0.223) },          // Bottom Right Corner
+        { x: cx, y: cy + (badgeSize * 0.433) },                                  // Bottom Point
+        { x: cx - (badgeSize * 0.359), y: cy + (badgeSize * 0.223) },          // Bottom Left Corner
+        { x: cx - (badgeSize * 0.359), y: cy - (badgeSize * 0.231) }           // Top Left Corner
       ];
 
       // Pick a random edge segment along the shield (0 to 5)
@@ -21396,19 +21394,26 @@ window.closeMobileNavModal = () => {
       const pB = v[(edge + 1) % 6];
       const t = Math.random();
       
-      // Interpolate along the shield edge with slight randomized depth
-      this.x = pA.x * (1 - t) + pB.x * t + (Math.random() - 0.5) * (6 * scale);
-      this.y = pA.y * (1 - t) + pB.y * t + (Math.random() - 0.5) * (6 * scale);
+      // Interpolate along the exact shield border with slight randomized variance
+      this.x = pA.x * (1 - t) + pB.x * t + (Math.random() - 0.5) * (4 * scale);
+      this.y = pA.y * (1 - t) + pB.y * t + (Math.random() - 0.5) * (4 * scale);
       
-      // Outward normal vector from shield center + natural rising buoyancy
-      const dx = this.x - cx;
-      const dy = this.y - cy;
-      const dist = Math.hypot(dx, dy) || 1;
-      const nx = dx / dist;
-      const ny = dy / dist;
+      // Outward vector pointing straight out from the facet normal
+      const edgeDx = pB.x - pA.x;
+      const edgeDy = pB.y - pA.y;
+      let nx = edgeDy;
+      let ny = -edgeDx;
+      const nLen = Math.hypot(nx, ny) || 1;
+      nx /= nLen;
+      ny /= nLen;
 
-      this.vx = (nx * 1.5 + (Math.random() - 0.5) * 0.6) * scale;
-      this.vy = (ny * 0.7 - Math.random() * 2.0 - 1.0) * scale;
+      if (nx * (this.x - cx) + ny * (this.y - cy) < 0) {
+        nx = -nx;
+        ny = -ny;
+      }
+
+      this.vx = (nx * 1.5 + (Math.random() - 0.5) * 0.7) * scale;
+      this.vy = (ny * 0.6 - Math.random() * 2.2 - 1.2) * scale;
       
       this.size = (Math.random() * 10 + 5) * scale;
       this.scale = scale;
@@ -21422,7 +21427,7 @@ window.closeMobileNavModal = () => {
 
     update() {
       this.waveAngle += this.waveSpeed;
-      this.x += this.vx + Math.sin(this.waveAngle) * (1.3 * this.scale);
+      this.x += this.vx + Math.sin(this.waveAngle) * (1.1 * this.scale);
       this.y += this.vy;
       this.size *= 0.96;
       this.alpha -= this.decay;
@@ -21467,6 +21472,7 @@ window.closeMobileNavModal = () => {
     const h = canvas.height;
     const cx = w / 2;
     const cy = h / 2;
+    const badgeSize = parseInt(stage.getAttribute('data-size'), 10) || Math.round(w / 1.85);
 
     let wisps = [];
     let isActive = false;
@@ -21477,7 +21483,7 @@ window.closeMobileNavModal = () => {
 
       if (isActive) {
         if (Math.random() < 0.65) {
-          wisps.push(new FlameWisp(cx, cy, w, h, colors));
+          wisps.push(new FlameWisp(cx, cy, badgeSize, colors));
         }
       }
 
@@ -21555,7 +21561,7 @@ window.closeMobileNavModal = () => {
         }, 140);
       }
       for (let i = 0; i < 12; i++) {
-        wisps.push(new FlameWisp(cx, cy, w, h, colors));
+        wisps.push(new FlameWisp(cx, cy, badgeSize, colors));
       }
       if (roarTimeout) clearTimeout(roarTimeout);
       roarTimeout = setTimeout(() => {
