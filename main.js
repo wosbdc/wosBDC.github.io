@@ -2054,13 +2054,13 @@ window.openAdminRepairUserModal = async (uid) => {
 
           ${altsOptionsHtml}
 
-          <!-- Option B: Manual Game ID Correction & Century Games Lookup -->
+          <!-- Option B: Manual Game ID Correction & Game Server Lookup -->
           <div style="margin-top:16px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:16px;">
             <div style="font-size:13px; font-weight:bold; color:#38bdf8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px;">
               🔍 Option B: Manually Reassign Primary Game ID
             </div>
             <p style="font-size:12px; color:var(--text-muted); margin:0 0 12px 0;">
-              If this member registered with the wrong ID, enter their true Century Games ID below to auto-fetch their verified profile and furnace stats.
+              If this member registered with the wrong ID, enter their true Game ID below to auto-fetch their verified profile and furnace stats.
             </p>
 
             <div style="display:flex; gap:8px; margin-bottom:12px;">
@@ -2072,7 +2072,7 @@ window.openAdminRepairUserModal = async (uid) => {
 
             <!-- Preview box -->
             <div id="adminRepairPreviewBox" style="display:none; background:rgba(15,23,42,0.85); border:1px solid rgba(16,185,129,0.4); border-radius:12px; padding:14px; margin-bottom:14px;">
-              <div style="font-size:11px; color:#10b981; font-weight:bold; text-transform:uppercase; margin-bottom:8px;">✅ Verified Century Games Character</div>
+              <div style="font-size:11px; color:#10b981; font-weight:bold; text-transform:uppercase; margin-bottom:8px;">✅ Verified In-Game Character</div>
               <div style="display:flex; align-items:center; gap:12px;">
                 <div style="width:42px; height:42px; border-radius:50%; overflow:hidden; border:2px solid #10b981; background:var(--bg-secondary);">
                   <img id="adminRepairPreviewAvatar" src="" style="width:100%; height:100%; object-fit:cover;">
@@ -2143,7 +2143,7 @@ window.openAdminRepairUserModal = async (uid) => {
                         applyBtn.style.color = '#fff';
                         applyBtn.style.cursor = 'pointer';
                     } else {
-                        if (window.showToast) window.showToast(data.message || "Player not found on Century Games.", "error");
+                        if (window.showToast) window.showToast(data.message || "Player not found on game server.", "error");
                     }
                 } catch (e) {
                     if (window.showToast) window.showToast("Lookup failed: " + e.message, "error");
@@ -10324,7 +10324,7 @@ window.openGiftCodeDispatcherModal = async (initialCode = '') => {
                 <span id="gcRecoveryTitle">⚠️ 1 Account Encountered Timeouts or Errors</span>
               </div>
               <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
-                Century Games server had temporary network latency. Retry failed characters now without re-dispatching to successful ones.
+                Game server had temporary network latency. Retry failed characters now without re-dispatching to successful ones.
               </div>
             </div>
             <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
@@ -11544,7 +11544,7 @@ window.testAllGiftCodesLive = async (btnEl = null) => {
     btnEl.innerHTML = '🧪 Testing All...';
   }
 
-  if (window.showToast) window.showToast(`🧪 Testing ${activeCodes.length} active code(s) against Century Games...`, "info");
+  if (window.showToast) window.showToast(`🧪 Testing ${activeCodes.length} active code(s) against game servers...`, "info");
 
   let validCount = 0;
   let expiredCount = 0;
@@ -14374,7 +14374,7 @@ const views = {
                         </span>
                       </div>
                       <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
-                        Autonomous Scraper & Century Games Auto-Redeemer (DotGG, ProGameGuides, PocketGamer)
+                        Autonomous Scraper & Rewards Auto-Redeemer (DotGG, ProGameGuides, PocketGamer)
                       </div>
                     </div>
                   </div>

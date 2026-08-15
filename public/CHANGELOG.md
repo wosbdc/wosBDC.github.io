@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [2.5.77] - 2026-08-15
+- 🎁 **Improved Alliance Perks Systems:**
+  - 🤖 **Auto-Scraper Daemon:** Monitors web feeds and auto-discovers newly released promo codes.
+  - ⚡ **Instant Server Verification:** Verifies codes live and auto-registers active perks for the alliance.
+  - 📊 **Real-Time Telemetry:** Live heartbeat status, scheduled sweep timer, and activity logs.
+  - 🚀 **1-Tap Mass Dispatch:** Distributes rewards to all enrolled members and alts in seconds.
+
 ## [2.5.76] - 2026-08-15
 - 🎁 **Improved Alliance Perks Systems:**
   - 🤖 **Auto-Perks Scraping & Verification:** Autonomous background daemon sweeps game feeds and claims rewards for all enrolled alliance members.
@@ -16,7 +23,7 @@
 ## [2.5.74] - 2026-08-15
 - 🤖 **Autonomous Gift Code Bot & Live Metrics:**
   - 🌐 **Multi-Source Scraper Daemon:** Autonomous scraper monitoring DotGG, ProGameGuides, and PocketGamer feeds for new promo drops.
-  - ⚡ **Auto-Discovery & Validation:** Tests new codes against Century Games servers and auto-registers active codes into the alliance database.
+  - ⚡ **Auto-Discovery & Validation:** Tests new codes against official game servers and auto-registers active codes into the alliance database.
   - 📊 **Live Telemetry Box:** Real-time bot heartbeat, sweep schedule countdown, and activity logs right in the Admin Hub.
   - ▶️ **1-Tap Live Sweep:** Trigger on-demand web sweeps directly from the Gift Codes Manager.
 
