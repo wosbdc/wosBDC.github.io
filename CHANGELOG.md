@@ -1,21 +1,19 @@
 # CHANGELOG
 
 ## [2.5.61] - 2026-08-15
-- Fixed `getAuthToken` scoping issue inside the **Alliance Mass Gift Code Dispatcher**.
-- Exported `window.getAuthToken` globally for seamless auth token acquisition across all admin modals.
+- Fixed authentication token handling in the **Alliance Mass Gift Code Dispatcher**.
 
 ## [2.5.60] - 2026-08-15
 - Added **"🎁 Alliance Mass Gift Code Dispatcher"** in Admin Daily Tools.
-- Added **"🧪 Test Code Validity"** with live Century Games API inspection (detects Active, Already Claimed, Expired, or Usage Limit reached).
-- Implemented real-time streaming batch execution engine with animated progress bar, KPI summary strip, and auto-scrolling terminal log.
-- Automated target resolution across all enrolled roster members and verified linked alt accounts in Firebase.
-- Deployed backend Century Games cryptographic gift code redemption endpoints (`redeemGiftCode`, `batchRedeemGiftCode`, `lookupPlayer`) to Google Apps Script (`@162`).
+- Added **"🧪 Test Code Validity"** with live game server check (detects Active, Already Claimed, Expired, or Limit Reached).
+- Added real-time progress bar, summary counters, and live activity log for batch redemptions.
+- Added automated target selection for all enrolled alliance members and verified alts.
 
 ## [2.5.59] - 2026-08-14
 - Added 1-Click **"⭐️ Make Primary"** Character Switcher on all linked alt cards in the Account Hub.
-- Added **"🛠️ Account Character & ID Repair Wizard"** in the Registered Users Database and Admin Tools tab.
-- Integrated automated Century Games verification lookup to allow staff to easily fix mismatched Game IDs with real-time stat verification.
-- Ensured atomic data swaps between primary chief profiles and linked alt tokens (`altTokens` and `linkedAltsData`), preserving all 30-day tokens, avatars, and furnace levels.
+- Added **"🛠️ Account Character & ID Repair Wizard"** in Registered Users and Admin Tools.
+- Added real-time character lookup to preview chief name, level, and stats when correcting IDs.
+- Preserved all 30-day sync tokens, avatars, and character levels when switching primary chiefs.
 
 ## [2.5.58] - 2026-08-14
 - Fixed Fire Crystal badge sizing inside the Registered Users Database and member tables.

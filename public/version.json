@@ -3,7 +3,7 @@
   "releaseDate": "2026-08-15",
   "title": "⚡ Gift Code Dispatcher Token Scoping Fix",
   "notes": [
-    "Fixed getAuthToken scoping in Mass Gift Code Dispatcher to ensure flawless live Century Games API communication",
-    "Exported window.getAuthToken globally to guarantee authentication across all asynchronous admin modals"
+    "Fixed authentication token handling in the Mass Gift Code Dispatcher",
+    "Enabled smooth live testing and automated batch delivery"
   ]
 }
