@@ -1,9 +1,9 @@
 {
-  "version": "2.5.78",
+  "version": "2.5.79",
   "releaseDate": "2026-08-15",
-  "title": "📢 Alliance Discord Perks Alerts",
+  "title": "📢 Alliance Gatekeeper Perks Alerts",
   "notes": [
-    "Automatic Discord webhook broadcasts when new gift codes are claimed",
-    "Real-time delivery statistics and mail pickup reminders directly in Discord"
+    "Cleaned Discord perks embed format routed to Alliance Gatekeeper webhook",
+    "Real-time code announcements and mass-claim statistics directly in Discord"
   ]
 }

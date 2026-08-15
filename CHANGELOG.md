@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.5.79] - 2026-08-15
+- 📢 **Alliance Gatekeeper Perks Alerts:**
+  - 🛡️ **Clean Discord Embed Format:** Streamlined embed alerts directly under the Alliance Gatekeeper banner.
+  - ⚡ **Direct Webhook Routing:** Delivers new gift code announcements and mass-claim counts to the Gatekeeper channel.
+
 ## [2.5.78] - 2026-08-15
 - 📢 **Alliance Discord Perks Alerts:**
   - 🎁 **Automated Embed Broadcasts:** Auto-posts a styled embed alert to the alliance Discord channel upon discovering and mass-claiming new gift codes.

@@ -157,9 +157,9 @@ async function sendDiscordGiftCodeAlert(code, successCount, totalTargets) {
   const payload = {
     embeds: [{
       title: "🎁 ALLIANCE PERK BOT — NEW GIFT CODE CLAIMED!",
-      description: `🎉 **New Promo Code Found:** \`${code}\`\n\n⚡ **Mass Auto-Redeem Status:**\n• ✅ **Successfully Claimed:** \`${successCount}\` Chiefs & Alts\n• 👥 **Total Alliance Targets:** \`${totalTargets}\` Accounts\n• 🌐 **Source:** 3 Scraper Feeds (DotGG, PGG, PG)\n\nCheck your in-game mailbox to collect your rewards! 💎📦`,
+      description: `🎉 **New Promo Code Found:** \`${code}\`\n\n⚡ **Mass Auto-Redeem Status:**\n• ✅ **Successfully Claimed:** \`${successCount}\` Chiefs & Alts\n• 👥 **Total Alliance Targets:** \`${totalTargets}\` Accounts\n\nCheck your in-game mailbox to collect your rewards! 💎📦`,
       color: 15483801,
-      footer: { text: "Whiteout Survival Alliance Rewards Bot 🤖" },
+      footer: { text: "Alliance Gatekeeper • Rewards Bot 🤖" },
       timestamp: new Date().toISOString()
     }]
   };
