@@ -14285,7 +14285,7 @@ const views = {
               div::-webkit-scrollbar { display: none; }
             </style>
             <button class="admin-tab-btn active" data-tab="tab-tools" style="background:none; border:none; color:var(--accent); font-weight:bold; font-size:16px; cursor:pointer; padding:5px 10px; border-bottom:2px solid var(--accent); flex-shrink:0;">🛠️ Daily Tools</button>
-            <button class="admin-tab-btn" data-tab="tab-giftcodes" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:16px; cursor:pointer; padding:5px 10px; border-bottom:2px solid transparent; flex-shrink:0;">🎁 Alliance Perks</button>
+            <button class="admin-tab-btn" data-tab="tab-giftcodes" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:16px; cursor:pointer; padding:5px 10px; border-bottom:2px solid transparent; flex-shrink:0;">🎁 Gift Codes</button>
             <button class="admin-tab-btn" data-tab="tab-indev" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:16px; cursor:pointer; padding:5px 10px; border-bottom:2px solid transparent; flex-shrink:0;">🧪 In-Dev</button>
             ${currentUser && currentUser.gameId.toString() === '318843189' ? `<button class="admin-tab-btn" data-tab="tab-frost" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:16px; cursor:pointer; padding:5px 10px; border-bottom:2px solid transparent; flex-shrink:0;">❄️ Frost Clan</button>` : ''}
             <button class="admin-tab-btn" data-tab="tab-users" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:16px; cursor:pointer; padding:5px 10px; border-bottom:2px solid transparent; flex-shrink:0;">👥 Users</button>
@@ -14329,7 +14329,7 @@ const views = {
 
           </div>
 
-          <!-- Tab: Alliance Perks & Gift Codes Manager -->
+          <!-- Tab: Gift Codes Manager -->
           <div id="tab-giftcodes" class="admin-tab-content" style="display:none;">
             <div style="background:var(--bg-main); padding:20px; border-radius:14px; border:1px solid rgba(236,72,153,0.35); margin-bottom:20px;">
               
@@ -14340,18 +14340,18 @@ const views = {
                     🎁
                   </div>
                   <div>
-                    <h3 style="margin:0; color:#f472b6; font-size:18px; font-weight:800;">Alliance Perks & Rewards System</h3>
-                    <p style="margin:2px 0 0 0; font-size:12px; color:var(--text-muted);">Manage automated gift code drops, active promo rewards, and alliance perks for all enrolled members & alts.</p>
+                    <h3 style="margin:0; color:#f472b6; font-size:18px; font-weight:800;">Alliance Gift Codes Manager</h3>
+                    <p style="margin:2px 0 0 0; font-size:12px; color:var(--text-muted);">Manage active & expired gift codes, track alliance redemption history, and launch mass dispatches.</p>
                   </div>
                 </div>
                 
                 <!-- Primary Action Buttons -->
                 <div style="display:flex; gap:8px; flex-wrap:wrap;">
                   <button onclick="window.openAddGiftCodeModal()" style="background:linear-gradient(135deg, #ec4899, #d946ef); color:#fff; border:none; padding:9px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(236,72,153,0.35); transition:0.2s;">
-                    ➕ Add Perk Code
+                    ➕ Add New Code
                   </button>
                   <button onclick="window.dispatchAllActiveGiftCodes()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:9px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(16,185,129,0.3); transition:0.2s;">
-                    ⚡ Dispatch ALL Active Perks
+                    ⚡ Dispatch ALL Active
                   </button>
                   <button id="btnTestAllCodes" onclick="window.testAllGiftCodesLive(this)" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); padding:9px 14px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.2s;">
                     🧪 Test All Live
@@ -14368,13 +14368,13 @@ const views = {
                     </div>
                     <div>
                       <div style="font-weight:bold; font-size:14px; color:#fff; display:flex; align-items:center; gap:8px;">
-                        <span>Alliance Perks Auto-Claim Bot</span>
+                        <span>Auto Gift Code Bot Daemon</span>
                         <span id="gcBotStatusPill" style="background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold; display:inline-flex; align-items:center; gap:4px;">
                           🟢 ACTIVE & MONITORING
                         </span>
                       </div>
                       <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
-                        Autonomous Scraper & Century Games Rewards Engine (DotGG, ProGameGuides, PocketGamer)
+                        Autonomous Scraper & Century Games Auto-Redeemer (DotGG, ProGameGuides, PocketGamer)
                       </div>
                     </div>
                   </div>
@@ -14410,11 +14410,11 @@ const views = {
               <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:10px; margin-bottom:18px;">
                 <div style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); border-radius:10px; padding:12px; text-align:center;">
                   <div style="font-size:22px; font-weight:bold; color:#10b981;" id="gcKpiActiveCount">0</div>
-                  <div style="font-size:11px; color:#10b981; font-weight:bold; text-transform:uppercase; margin-top:2px;">Active Perks</div>
+                  <div style="font-size:11px; color:#10b981; font-weight:bold; text-transform:uppercase; margin-top:2px;">Active Codes</div>
                 </div>
                 <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:10px; padding:12px; text-align:center;">
                   <div style="font-size:22px; font-weight:bold; color:#ef4444;" id="gcKpiExpiredCount">0</div>
-                  <div style="font-size:11px; color:#ef4444; font-weight:bold; text-transform:uppercase; margin-top:2px;">Expired Perks</div>
+                  <div style="font-size:11px; color:#ef4444; font-weight:bold; text-transform:uppercase; margin-top:2px;">Expired Codes</div>
                 </div>
                 <div style="background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.3); border-radius:10px; padding:12px; text-align:center;">
                   <div style="font-size:22px; font-weight:bold; color:#38bdf8;" id="gcKpiTotalTracked">0</div>
@@ -14422,7 +14422,7 @@ const views = {
                 </div>
                 <div style="background:rgba(168,85,247,0.1); border:1px solid rgba(168,85,247,0.3); border-radius:10px; padding:12px; text-align:center;">
                   <div style="font-size:22px; font-weight:bold; color:#c084fc;" id="gcKpiTotalClaims">0</div>
-                  <div style="font-size:11px; color:#c084fc; font-weight:bold; text-transform:uppercase; margin-top:2px;">Perks Delivered</div>
+                  <div style="font-size:11px; color:#c084fc; font-weight:bold; text-transform:uppercase; margin-top:2px;">Alliance Claims</div>
                 </div>
               </div>
 

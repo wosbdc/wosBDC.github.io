@@ -1,9 +1,9 @@
 {
-  "version": "2.5.75",
+  "version": "2.5.76",
   "releaseDate": "2026-08-15",
-  "title": "🎁 Improved Alliance Perks System",
+  "title": "🎁 Improved Alliance Perks Systems",
   "notes": [
-    "Rebranded and unified the Alliance Perks & Rewards suite",
-    "Automated promo drops, live server verification, and mass perks redemption"
+    "Autonomous web scraper and Century Games validator daemon",
+    "Admin Gift Codes Manager with live telemetry and mass auto-dispatch"
   ]
 }

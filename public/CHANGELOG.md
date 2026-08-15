@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [2.5.76] - 2026-08-15
+- 🎁 **Improved Alliance Perks Systems:**
+  - 🤖 **Auto-Perks Scraping & Verification:** Autonomous background daemon sweeps game feeds and claims rewards for all enrolled alliance members.
+  - 🗂️ **Gift Codes Manager:** Centralized admin hub to manage active codes, monitor live server validity, and review alliance claim history.
+  - 📊 **Real-Time Telemetry:** Live heartbeat tracking, scheduled sweep countdowns, and 1-tap instant dispatch.
+
 ## [2.5.75] - 2026-08-15
 - 🎁 **Improved Alliance Perks System:**
   - 🏰 **Unified Alliance Perks Hub:** Rebranded and enhanced the Admin Hub with dedicated Alliance Perks & Rewards controls.
