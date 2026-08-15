@@ -1,9 +1,9 @@
 {
-  "version": "2.5.89",
+  "version": "2.5.90",
   "releaseDate": "2026-08-15",
-  "title": "🧹 Purged Duplicate User Record",
+  "title": "🎁 Streamlined Automatic Gift Code Perks",
   "notes": [
-    "Removed duplicate user record in database",
-    "Preserved authentic 5/6 verified alt tokens and account history"
+    "Removed redundant manual perks opt-in modals and buttons",
+    "Enabled automatic Gift Code enrollment for all claimed accounts and linked alts"
   ]
 }

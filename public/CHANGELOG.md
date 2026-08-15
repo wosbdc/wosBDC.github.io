@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [2.5.90] - 2026-08-15
+- 🎁 **Streamlined Automatic Gift Code Perks:**
+  - Removed outdated manual "Perks Opt-In" modal and standalone buttons.
+  - Added automatic `🎁 Auto Redeem` status badge across all claimed main characters and linked alts.
+  - Upgraded Gift Codes overview into a live automatic status hub.
+
 ## [2.5.89] - 2026-08-15
 - 🧹 **Database User Deduplication:**
   - Removed duplicate account record from database.

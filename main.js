@@ -18580,10 +18580,7 @@ window.resetBearTrapEvent = async () => {
                       </div>
                       <!-- Perks Status -->
                       <div style="flex-shrink:0;">
-                          ${ (isAltEnrolled || enrolledGameIds.has(cleanGid)) 
-                              ? `<span style="border:1px solid #10b981; color:#10b981; background:rgba(16,185,129,0.1); border-radius:8px; padding:3px 8px; font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:3px;">✅ Enrolled</span>`
-                              : `<button onclick="window.openAltPerksModal('${cleanGid}')" style="background:rgba(16,185,129,0.15); border:1px solid #10b981; color:#10b981; border-radius:8px; padding:3px 8px; font-size:11px; font-weight:600; cursor:pointer; transition:background 0.2s;" onmouseover="this.style.background='rgba(16,185,129,0.25)'" onmouseout="this.style.background='rgba(16,185,129,0.15)'">🎁 Perks</button>`
-                          }
+                          <span style="border:1px solid rgba(16,185,129,0.4); color:#10b981; background:rgba(16,185,129,0.12); border-radius:8px; padding:3px 8px; font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:3px;" title="Automatic Gift Code redemption is active for this claimed alt.">🎁 Auto Redeem</span>
                       </div>
                   </div>
 
@@ -21705,85 +21702,59 @@ window.resetBearTrapEvent = async () => {
     } catch(e) { renderError(e.message); }
   },
   giftcodes: async () => {
-      let contentHtml = '';
-      
-      if (!currentUser) {
-        contentHtml = `
-          <div style="text-align:center; padding:40px 20px;">
-            <div style="font-size:48px; margin-bottom:20px;">&#x1F512;</div>
-            <h3 style="color:var(--text-main); margin-bottom:10px;">Sign In Required</h3>
-            <p style="color:var(--text-muted); margin-bottom:25px; font-size:15px; line-height:1.5;">You must be signed into the Dashboard to securely enable Auto Redeem Perks.</p>
-            <button onclick="document.getElementById('authModal').style.display='block'; document.getElementById('authModalOverlay').style.display='block';" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:16px;">Sign In / Register</button>
-          </div>
-        `;
-      } else {
-        const chiefName = currentUser.name || idToNameMap[currentUser.gameId] || "Unknown Chief";
-        
-        let isMainEnrolled = await window.isGiftcodeEnrolled(currentUser.gameId);
-        
-        if (isMainEnrolled) {
-            contentHtml = `
-              <div style="text-align:center; padding:40px 20px;">
-                <h3 style="color:var(--success); margin-bottom:10px;">Already Enrolled!</h3>
-                <p style="color:var(--text-muted); margin-bottom:25px; font-size:15px; line-height:1.5;">Chief <strong>${chiefName}</strong> is actively monitored by the Auto Redeem Bot.</p>
-                <button disabled style="background:transparent; color:var(--success); border:1px solid var(--success); padding:14px 28px; border-radius:8px; font-weight:bold; font-size:16px;">Active &#x2705;</button>
-              </div>
-            `;
-        } else {
-            contentHtml = `
-              <div style="text-align:center; padding:40px 20px;">
-                <div style="font-size:48px; margin-bottom:20px;">&#x1F381;</div>
-                <h3 style="color:var(--text-main); margin-bottom:10px;">Enable Auto Redeem</h3>
-                <p style="color:var(--text-muted); margin-bottom:25px; font-size:15px; line-height:1.5;">Welcome <strong>${chiefName}</strong>! Click below to securely link your Game ID (${currentUser.gameId}) to the Auto Redeem Bot. We will automatically fetch all new gift codes and inject them into your account!</p>
-                <button id="optInPerksBtn" style="background:var(--success); color:var(--text-main); border:none; padding:14px 28px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:16px; transition:0.2s; box-shadow:0 4px 15px rgba(16,185,129,0.3);">1-Click Opt-In</button>
-                <p style="margin-top:20px; font-size:13px; color:var(--text-muted);"><em>No double data entry needed. It's fully automated!</em></p>
-              </div>
-            `;
-        }
-
-      }
-
+    if (!currentUser) {
       app.innerHTML = `
         <div class="card" style="display:flex; flex-direction:column; padding:0; overflow:hidden; animation: fadeIn 0.3s ease; max-width: 600px; margin: 40px auto;">
           <div style="padding:20px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; justify-content:center; background:var(--bg-card);">
-            <span style="font-size:24px;">&#x1F381;</span>
-            <h2 style="margin:0; font-size:22px; color:var(--text-main);">Auto Redeem (Perks)</h2>
+            <span style="font-size:24px;">🎁</span>
+            <h2 style="margin:0; font-size:22px; color:var(--text-main);">Automatic Gift Codes</h2>
           </div>
-          <div style="flex:1; width:100%; position:relative; background:var(--bg-main);">
-            ${contentHtml}
+          <div style="padding:40px 20px; text-align:center; background:var(--bg-main);">
+            <div style="font-size:48px; margin-bottom:20px;">🔒</div>
+            <h3 style="color:var(--text-main); margin-bottom:10px;">Claimed Account Perk</h3>
+            <p style="color:var(--text-muted); margin-bottom:25px; font-size:15px; line-height:1.5;">Automatic Gift Code redemption is exclusive to claimed accounts. Sign in or register to activate automatic in-game deliveries!</p>
+            <button onclick="document.getElementById('authModal').style.display='block'; document.getElementById('authModalOverlay').style.display='block';" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:16px;">Sign In / Register</button>
           </div>
         </div>
       `;
-      
-      // Attach Event Listener if the button exists
-      const optInBtn = document.getElementById('optInPerksBtn');
-      if (optInBtn) {
-        optInBtn.addEventListener('click', async () => {
-           if (!currentUser) return;
-           optInBtn.disabled = true;
-           optInBtn.textContent = 'Linking...';
-           const chiefName = currentUser.name || idToNameMap[currentUser.gameId] || "Unknown Chief";
-           try {
-               await window.enrollGiftcodeBot(currentUser.gameId, chiefName);
-               
-               const optInToken = await getAuthToken();
-               const url = `${API_BASE_URL}?api=registerNewPlayer&gameId=${encodeURIComponent(currentUser.gameId)}&name=${encodeURIComponent(chiefName)}&token=${encodeURIComponent(optInToken)}`;
-               fetch(url, { mode: 'no-cors' }).catch(e => null);
-               
-               window.showToast("Successfully Enrolled in Auto Redeem!", "success");
-               optInBtn.textContent = 'Active ✅';
-               optInBtn.style.background = 'transparent';
-               optInBtn.style.color = 'var(--success)';
-               optInBtn.style.border = '1px solid var(--success)';
-           } catch(e) {
-               console.error(e);
-               window.showToast("Error linking account. Try again later.", "error");
-               optInBtn.disabled = false;
-               optInBtn.textContent = '1-Click Opt-In';
-           }
-        });
-      }
-    },
+      return;
+    }
+
+    const chiefName = currentUser.name || (window.idToNameMap && window.idToNameMap[currentUser.gameId]) || "Chief";
+    const altsCount = (currentUser.linkedGameIds || []).length;
+
+    app.innerHTML = `
+      <div class="card" style="display:flex; flex-direction:column; padding:0; overflow:hidden; animation: fadeIn 0.3s ease; max-width: 620px; margin: 40px auto;">
+        <div style="padding:20px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; justify-content:center; background:var(--bg-card);">
+          <span style="font-size:24px;">🎁</span>
+          <h2 style="margin:0; font-size:22px; color:var(--text-main);">Automatic Gift Codes</h2>
+        </div>
+        <div style="padding:32px 24px; text-align:center; background:var(--bg-main);">
+          <div style="display:inline-flex; align-items:center; justify-content:center; width:64px; height:64px; border-radius:50%; background:rgba(16,185,129,0.15); border:2px solid #10b981; margin-bottom:16px; font-size:30px;">
+            ✅
+          </div>
+          <h3 style="color:#10b981; margin:0 0 8px 0; font-size:20px;">Auto Redeem Is Active!</h3>
+          <p style="color:var(--text-muted); margin:0 auto 20px auto; font-size:14.5px; line-height:1.6; max-width:480px;">
+            As a verified claimed account, Chief <strong>${window.escapeHTML(chiefName)}</strong> and all <strong>${altsCount} linked alt(s)</strong> automatically receive every newly released gift code directly in your in-game mailbox.
+          </p>
+
+          <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:16px; margin-bottom:24px; text-align:left; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div style="font-weight:bold; color:#fff; font-size:14px;">Main Character & Linked Alts</div>
+              <div style="font-size:12px; color:#94a3b8; margin-top:2px;">1 Main + ${altsCount} Alt(s) Enrolled</div>
+            </div>
+            <button onclick="if(views.account) views.account('Alts')" style="background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; padding:8px 14px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer;">
+              🔗 Manage Alts
+            </button>
+          </div>
+
+          <div style="font-size:12.5px; color:var(--text-muted);">
+            <em>✨ Zero manual entry needed. When leadership dispatches a gift code, your whole lineup is redeemed simultaneously.</em>
+          </div>
+        </div>
+      </div>
+    `;
+  },
   
 
   schedule: async () => {
@@ -24346,68 +24317,9 @@ if (contactSidebarBtn) {
 
 
 window.openAltPerksModal = (gameId, altName) => {
-    const modal = document.getElementById('altPerksModal');
-    const overlay = document.getElementById('altPerksModalOverlay');
-    const nameInput = document.getElementById('altPerksName');
-    const idInput = document.getElementById('altPerksGameId');
-    const dateInput = document.getElementById('altPerksDateStarted');
-    const errorMsg = document.getElementById('altPerksErrorMsg');
-    const submitBtn = document.getElementById('altPerksSubmitBtn');
-    
-    if(!modal || !idInput) return;
-    
-    errorMsg.style.display = 'none';
-    idInput.value = gameId;
-    nameInput.value = (altName && !altName.startsWith('Game ID:')) ? altName : '';
-    dateInput.value = '';
-    submitBtn.textContent = 'Enroll Alt Account';
-    submitBtn.disabled = false;
-    
-    modal.style.display = 'block';
-    overlay.style.display = 'block';
-    
-    // Ensure we don't attach multiple event listeners
-    submitBtn.replaceWith(submitBtn.cloneNode(true));
-    document.getElementById('altPerksSubmitBtn').addEventListener('click', async () => {
-        const btn = document.getElementById('altPerksSubmitBtn');
-        const err = document.getElementById('altPerksErrorMsg');
-        const cName = document.getElementById('altPerksName').value.trim();
-        const cDate = document.getElementById('altPerksDateStarted').value;
-        const gId = document.getElementById('altPerksGameId').value;
-        
-        if (!cName) {
-            err.textContent = "Chief Name is required.";
-            err.style.display = 'block';
-            return;
-        }
-        
-        try {
-            btn.disabled = true;
-            btn.textContent = "Enrolling...";
-            
-            const altToken = await getAuthToken();
-            const url = `${API_BASE_URL}?api=registerNewPlayer&gameId=${encodeURIComponent(gId)}&name=${encodeURIComponent(cName)}&dateStarted=${encodeURIComponent(cDate)}&token=${encodeURIComponent(altToken)}`;
-            const res = await fetch(url).then(r => r.json());
-            
-            if (res && res.success) {
-                if (res.status === 'duplicate_skipped') {
-                    window.showToast("This Alt is already enrolled!", "success");
-                } else {
-                    window.showToast("Successfully Enrolled Alt Account!", "success");
-                }
-                document.getElementById('altPerksModal').style.display = 'none';
-                document.getElementById('altPerksModalOverlay').style.display = 'none';
-                if (views.account) views.account('Alts');
-            } else {
-                throw new Error("Backend error");
-            }
-        } catch (e) {
-            err.textContent = "Failed to enroll Alt Account. Try again.";
-            err.style.display = 'block';
-            btn.disabled = false;
-            btn.textContent = "Enroll Alt Account";
-        }
-    });
+    if (window.showToast) {
+        window.showToast("🎁 All claimed accounts & linked alts automatically receive Gift Codes!", "success");
+    }
 };
 
 

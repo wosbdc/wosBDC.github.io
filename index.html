@@ -286,29 +286,7 @@
       <button id="forgotPwSubmitBtn" style="width:100%; padding:12px; background:var(--accent); color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer; transition:opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Send Reset Link</button>
     </div>
     
-<!-- Alt Perks Modal -->
-    <div id="altPerksModalOverlay" class="sidebar-overlay"></div>
-    <div id="altPerksModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:var(--card-bg); padding:30px; border-radius:12px; border:1px solid var(--border); box-shadow:0 10px 25px rgba(0,0,0,0.5); z-index:1001; width:90%; max-width:400px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-        <h2 style="margin:0; color:var(--text-main);">&#x1F381; Enroll Alt in Perks</h2>
-        <button onclick="document.getElementById('altPerksModal').style.display='none'; document.getElementById('altPerksModalOverlay').style.display='none';" class="close-btn">&times;</button>
-      </div>
-      
-      <div id="altPerksErrorMsg" style="color:var(--danger); font-size:13px; margin-bottom:15px; display:none;"></div>
-      
-      <label style="color:var(--text-muted); font-size:13px; display:block; margin-bottom:5px;">Chief Name</label>
-      <input type="text" id="altPerksName" readonly style="width:100%; padding:10px; margin-bottom:15px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
-      
-      <label style="color:var(--text-muted); font-size:13px; display:block; margin-bottom:5px;">Perk Type</label>
-      <select id="altPerksType" style="width:100%; padding:10px; margin-bottom:20px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
-          <option value="Construction">Construction (Speed)</option>
-          <option value="Research">Research (Speed)</option>
-          <option value="Training">Training (Capacity & Speed)</option>
-          <option value="Healing">Healing (Speed)</option>
-      </select>
-      
-      <button id="altPerksSubmitBtn" style="width:100%; padding:12px; background:var(--accent); color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">Enroll</button>
-    </div>
+
 
     <!-- Master Key Modal -->
     <div id="masterKeyModalOverlay" class="sidebar-overlay"></div>
