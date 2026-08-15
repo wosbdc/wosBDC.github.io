@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [2.5.102] - 2026-08-15
+- Patches to members perk system.
+
 ## [2.5.101] - 2026-08-15
 - Patches to members perk system.
 
