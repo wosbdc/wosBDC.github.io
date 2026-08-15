@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [2.5.41] - 2026-08-14
+- Added full translation dictionary for Century Games API error code `15030` and `"未登录"` ("30-Day session token expired. Please enter a fresh in-game code to renew.").
+- Resolved duplicate `[Code X]` prefix stacking in alert toasts and added a universal Chinese character fallback translation.
+- Enhanced profile and alt sync handlers to automatically open the 30-day token verification renewal prompt on code 15030 without throwing raw errors.
+- Deployed Google Apps Script backend Version `@160`.
+
 ## [2.5.40] - 2026-08-14
 - Unified the color scheme across the `⚙️ Options ▾` dropdown and profile modal components to a consistent Whiteout Survival Frost Blue (`#0ea5e9` / `#38bdf8`) and Crisp White (`#ffffff`) palette.
 - Removed mismatched accent colors across modal option cards in favor of a cohesive theme.

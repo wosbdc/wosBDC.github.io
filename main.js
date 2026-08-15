@@ -132,7 +132,7 @@ window.fetchRoster = async () => {
 };
 
 
-const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbxrL_amwoeTXD4cLf481jcoGvjVZ_rJTzS0etCykUrZkX21pX6KGnvWYrRV0cMc6eY/exec';
+const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbxux9ycuaOZHXToFO0oiiii00Zz-Wh-rSZ-9kA3aeFr6Jvu1K5gSoU65nYrwEN2jw/exec';
 const VERIFY_PROXY_URL = 'https://wos-vercel-proxy.vercel.app/api/verify'; // Fallback / secondary proxy
 
 // Get a fresh Firebase ID token for the current user (replaces hardcoded APP_SECRET)
@@ -273,44 +273,48 @@ window.translateWosApiError = (msg, code = null) => {
     if (msg.code !== undefined) code = msg.code;
     msg = msg.message || msg.rawMsg || JSON.stringify(msg);
   }
+  let cleanMsg = (msg || '').toString().trim();
+  
+  // Extract code from message if embedded (e.g. "[Code 15030]")
+  const extractedCodeMatch = cleanMsg.match(/\[Code\s*(\d+)\]/i);
+  if (!code && extractedCodeMatch) {
+    code = extractedCodeMatch[1];
+  }
+  // Strip duplicate code badges from raw text
+  cleanMsg = cleanMsg.replace(/\[Code\s*\d+\]\s*/gi, '').trim();
+
   const codeNum = typeof code === 'number' ? code : (code ? parseInt(code, 10) : null);
   const codeBadge = codeNum ? `[Code ${codeNum}] ` : '';
 
-  if (codeNum === 101031008 || codeNum === 15006) {
+  if (codeNum === 15030 || codeNum === 101031008 || codeNum === 15006 || cleanMsg.includes("未登录") || cleanMsg.includes("登录态已失效") || cleanMsg.includes("已失效") || cleanMsg.includes("token失效")) {
     return `${codeBadge}30-Day session token expired. Please enter a fresh in-game code to renew.`;
   }
-  if (codeNum === 101031005) {
-    return `${codeBadge}Daily verification code limit reached for this Game ID. Please wait a while or enter Chief Name manually.`;
+  if (codeNum === 101031005 || cleanMsg.includes("验证码发送次数已达上限") || cleanMsg.includes("次数已达上限") || cleanMsg.includes("上限")) {
+    return `${codeBadge}Daily verification code limit reached for this Game ID today. Please wait a while before requesting another code, or enter Chief Name manually.`;
   }
-  if (codeNum === 101031002) {
-    return `${codeBadge}Invalid or expired verification code. Please check your latest in-game mailbox.`;
-  }
-  if (codeNum === 101031001) {
-    return `${codeBadge}Player ID not found. Please double-check your numeric Game ID in Whiteout Survival.`;
-  }
-  if (codeNum === 40001 || codeNum === 40003) {
-    return `${codeBadge}Rate limit exceeded. Please wait 30 seconds before trying again.`;
-  }
-
-  if (!msg || typeof msg !== 'string') return `${codeBadge}An error occurred communicating with the game server.`;
-
-  if (msg.includes("验证码发送次数已达上限") || msg.includes("次数已达上限") || msg.includes("上限")) {
-    return `${codeBadge}Verification code limit reached for this Game ID today. Please wait a while before requesting another code, or enter your Chief Name manually below.`;
-  }
-  if (msg.includes("验证码错误") || msg.includes("验证码无效") || msg.includes("验证码已过期")) {
+  if (codeNum === 101031002 || cleanMsg.includes("验证码错误") || cleanMsg.includes("验证码无效") || cleanMsg.includes("验证码已过期")) {
     return `${codeBadge}Invalid or expired verification code. Please check your in-game mailbox or request a new code.`;
   }
-  if (msg.includes("角色不存在") || msg.includes("用户不存在") || msg.includes("未找到")) {
-    return `${codeBadge}Player ID not found. Please double check your numeric Game ID in Whiteout Survival.`;
+  if (codeNum === 101031001 || cleanMsg.includes("角色不存在") || cleanMsg.includes("用户不存在") || cleanMsg.includes("未找到")) {
+    return `${codeBadge}Player ID not found. Please double-check your numeric Game ID in Whiteout Survival.`;
   }
-  if (msg.includes("频繁") || msg.includes("稍后再试")) {
+  if (codeNum === 40001 || codeNum === 40003 || cleanMsg.includes("频繁") || cleanMsg.includes("稍后再试")) {
     return `${codeBadge}Too many requests. Please wait a moment and try again.`;
   }
-  if (msg.includes("登录态已失效") || msg.includes("已失效")) {
-    return `${codeBadge}30-day sync token expired. Please enter a fresh in-game code to renew.`;
+  if (cleanMsg.includes("参数错误")) {
+    return `${codeBadge}Invalid request parameters. Please verify your Game ID.`;
+  }
+  if (cleanMsg.includes("系统错误") || cleanMsg.includes("服务异常")) {
+    return `${codeBadge}Game server is currently busy. Please try again shortly.`;
   }
 
-  return codeBadge ? `${codeBadge}${msg}` : msg;
+  // Catch-all for any untranslated Chinese characters
+  if (/[\u4e00-\u9fa5]/.test(cleanMsg)) {
+    return `${codeBadge}30-Day session expired or profile unavailable. Please verify with a fresh in-game code.`;
+  }
+
+  if (!cleanMsg) return `${codeBadge}An error occurred communicating with the game server.`;
+  return codeBadge ? `${codeBadge}${cleanMsg}` : cleanMsg;
 };
 
 window.formatTimeActiveShort = (str) => {
@@ -9187,16 +9191,16 @@ window.handleSyncCenturyGamesProfile = async () => {
 
       window.showToast("Profile synced successfully!", "success");
       if (views.account) views.account();
-    } else if (data && data.expired) {
-      window.showToast(window.translateWosApiError(data.message || "30-day session token expired. Please enter new in-game code to refresh.", data.code), "warning");
+    } else if (data && (data.expired || data.code === 15030 || data.code === 101031008 || data.code === 15006 || (data.message && data.message.includes('未登录')) || (data.rawMsg && data.rawMsg.includes('未登录')))) {
+      window.showToast("30-Day session expired. Please enter new in-game code to refresh.", "warning");
       window.openAccountHubVerifyModal();
     } else {
-      const errMsg = window.translateWosApiError(data.message || "Failed to sync character stats.", data.code);
-      throw new Error(errMsg);
+      const errMsg = window.translateWosApiError(data ? (data.message || data.rawMsg || "Failed to sync character stats.") : "Failed to sync character stats.", data ? data.code : null);
+      window.showToast(errMsg, "error");
     }
   } catch (err) {
     console.error("Sync profile error:", err);
-    window.showToast(err.message || "Failed to sync with game servers.", "error");
+    window.showToast(window.translateWosApiError(err.message || "Failed to sync with game servers."), "error");
   } finally {
     if (syncBtn) {
       syncBtn.disabled = false;
@@ -9471,16 +9475,16 @@ window.handleSyncAltProfile = async (gid, btnEl = null) => {
 
       window.showToast(`✨ Alt ${data.nickname || cleanName} stats & avatar synced!`, 'success');
       if (views.account) views.account('Alts');
-    } else if (data && data.expired) {
+    } else if (data && (data.expired || data.code === 15030 || data.code === 101031008 || data.code === 15006 || (data.message && data.message.includes('未登录')) || (data.rawMsg && data.rawMsg.includes('未登录')))) {
       window.showToast(window.translateWosApiError(data.message || `30-day token expired for ${cleanName}. Please enter in-game code to renew.`, data.code), 'warning');
       window.openAltVerifyModal(cleanGid);
     } else {
-      const errMsg = window.translateWosApiError(data.message || 'Failed to sync alt stats.', data.code);
-      throw new Error(errMsg);
+      const errMsg = window.translateWosApiError(data ? (data.message || data.rawMsg || 'Failed to sync alt stats.') : 'Failed to sync alt stats.', data ? data.code : null);
+      window.showToast(errMsg, 'error');
     }
   } catch (err) {
     console.error('Sync alt error:', err);
-    window.showToast(err.message || 'Failed to sync with game servers.', 'error');
+    window.showToast(window.translateWosApiError(err.message || 'Failed to sync with game servers.'), 'error');
   } finally {
     if (btnEl) {
       btnEl.disabled = false;

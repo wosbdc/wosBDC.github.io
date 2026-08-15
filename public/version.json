@@ -1,9 +1,11 @@
 {
-  "version": "2.5.40",
+  "version": "2.5.41",
   "releaseDate": "2026-08-14",
-  "title": "🎨 Unified Frost Blue & White Theme Consistency",
+  "title": "🌐 Comprehensive Century Games API Error Translation",
   "notes": [
-    "Unified text, icon accents, and hover effects in the Options dropdown to a consistent crisp white and frost blue theme",
-    "Standardized option cards in the Profile Hub modal with cohesive ice blue gradients and indicators"
+    "Added full English translation for Century Games server code 15030 and '未登录' (30-day session expired)",
+    "Eliminated duplicate [Code X] text stacking and added universal Chinese character fallback translation",
+    "Seamlessly redirects expired tokens to in-game verification renewal prompt with zero raw error alerts",
+    "Deployed Apps Script backend version @160"
   ]
 }
