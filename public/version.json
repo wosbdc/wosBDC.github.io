@@ -1,9 +1,9 @@
 {
-  "version": "2.5.71",
+  "version": "2.5.72",
   "releaseDate": "2026-08-15",
-  "title": "🔔 Streamlined Push Notification Controls",
+  "title": "🎁 Gift Code Dispatcher Error Recovery & Targeted Retry",
   "notes": [
-    "Connected the broadcast announcements tray to live realtime database sync",
-    "Enabled instant display of alliance broadcasts in the Bell Alert Window"
+    "Added automated 3-attempt backoff retry in backend for Century Games server timeouts",
+    "Implemented 1-click targeted retry and inline retry tools for errored accounts in Gift Code Dispatcher"
   ]
 }

@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [2.5.72] - 2026-08-15
+- **Gift Code Dispatcher Error Recovery & Targeted Retry Tools:**
+  - **Backend Retry Mechanism:** Added automated 3-attempt backoff retry in Google Apps Script `redeemGiftCode` to seamlessly handle transient Century Games server timeouts (`TIME OUT RETRY.`) and network latency.
+  - **Targeted Batch Retry:** Added `[🔁 Retry Failed Accounts (${count})]` button that runs redemption *only* on failed accounts without re-dispatching to already successful characters.
+  - **Inline 1-Click Retry:** Added individual `[🔁 Retry]` action buttons in the terminal log for instant single-character recovery.
+  - **Diagnostic Error Report:** Added `[📋 Copy Error Report]` to quickly copy errored Game IDs and server failure messages to clipboard for easy tracking.
+
 ## [2.5.71] - 2026-08-15
 - **Streamlined Push Notifications Controls in Bell Modal:**
   - Removed topic category checkboxes to ensure members always receive essential alliance event and war alerts.

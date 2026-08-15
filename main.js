@@ -10308,8 +10308,28 @@ window.openGiftCodeDispatcherModal = async () => {
           </div>
 
           <!-- Streaming Monospace Terminal Log -->
-          <div id="gcTerminalLog" style="height:160px; overflow-y:auto; background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px; font-family:Consolas, Monaco, monospace; font-size:11.5px; line-height:1.6; color:#94a3b8;">
+          <div id="gcTerminalLog" style="height:170px; overflow-y:auto; background:rgba(0,0,0,0.55); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px; font-family:Consolas, Monaco, monospace; font-size:11.5px; line-height:1.6; color:#94a3b8;">
             <div>Waiting for start...</div>
+          </div>
+
+          <!-- Error Recovery & Targeted Retry Action Hub -->
+          <div id="gcRecoveryHub" style="display:none; margin-top:12px; background:linear-gradient(135deg, rgba(239,68,68,0.12), rgba(245,158,11,0.08)); border:1px solid rgba(239,68,68,0.35); border-radius:10px; padding:12px 14px; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <div>
+              <div style="font-weight:bold; font-size:13px; color:#ef4444; display:flex; align-items:center; gap:6px;">
+                <span id="gcRecoveryTitle">⚠️ 1 Account Encountered Timeouts or Errors</span>
+              </div>
+              <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
+                Century Games server had temporary network latency. Retry failed characters now without re-dispatching to successful ones.
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <button id="gcRetryAllBtn" onclick="window.retryAllFailedGiftCodes()" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:#fff; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; font-size:12.5px; cursor:pointer; box-shadow:0 3px 10px rgba(239,68,68,0.35); display:inline-flex; align-items:center; gap:6px; transition:all 0.2s ease;">
+                🔁 Retry Failed Accounts (<span id="gcRetryCountBadge">0</span>)
+              </button>
+              <button onclick="window.copyGiftCodeErrorReport()" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); padding:8px 12px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; gap:5px;">
+                📋 Copy Error Report
+              </button>
+            </div>
           </div>
         </div>
 
@@ -10329,6 +10349,13 @@ window.openGiftCodeDispatcherModal = async () => {
   `;
 
   document.body.appendChild(modalOverlay);
+
+  // Global Dispatcher State
+  window._gcFailedTargets = [];
+  window._gcActiveCode = '';
+  window._gcSuccessCount = 0;
+  window._gcAlreadyCount = 0;
+  window._gcTotalCount = 0;
 
   // Target Resolvers
   let enrolledList = [];
@@ -10465,6 +10492,248 @@ window.openGiftCodeDispatcherModal = async () => {
     });
   }
 
+  // Update Recovery Hub UI State
+  window.updateGiftCodeRecoveryHub = () => {
+    const hub = document.getElementById('gcRecoveryHub');
+    const badge = document.getElementById('gcRetryCountBadge');
+    const title = document.getElementById('gcRecoveryTitle');
+    const kpiFailed = document.getElementById('gcKpiFailed');
+    const failedList = window._gcFailedTargets || [];
+
+    if (kpiFailed) kpiFailed.textContent = failedList.length;
+
+    if (!hub) return;
+    if (failedList.length > 0) {
+      hub.style.display = 'flex';
+      if (badge) badge.textContent = failedList.length;
+      if (title) title.innerHTML = `<span>⚠️ ${failedList.length} Character${failedList.length > 1 ? 's' : ''} Encountered Timeouts or Errors</span>`;
+    } else {
+      hub.style.display = 'none';
+      const pTitle = document.getElementById('gcProgressTitle');
+      if (pTitle) pTitle.textContent = `🎉 All Characters Successfully Dispatched!`;
+    }
+  };
+
+  // Copy Error Report Handler
+  window.copyGiftCodeErrorReport = () => {
+    const failedList = window._gcFailedTargets || [];
+    if (failedList.length === 0) {
+      if (window.showToast) window.showToast("No errors to report! Everything is clean.", "success");
+      return;
+    }
+
+    let report = `🎁 GIFT CODE DISPATCH ERROR REPORT\n`;
+    report += `Code: ${window._gcActiveCode || 'Unknown'}\n`;
+    report += `Timestamp: ${new Date().toLocaleString()}\n`;
+    report += `Total Errored: ${failedList.length}\n`;
+    report += `----------------------------------------\n`;
+    failedList.forEach((item, idx) => {
+      report += `[${idx + 1}] ${item.name} (Game ID: ${item.gameId})\n    Error: ${item.error}\n`;
+    });
+    report += `----------------------------------------\n`;
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(report).then(() => {
+        if (window.showToast) window.showToast(`📋 Copied report for ${failedList.length} errored character(s) to clipboard!`, 'success');
+      }).catch(() => {
+        window.prompt("Copy Error Report:", report);
+      });
+    } else {
+      window.prompt("Copy Error Report:", report);
+    }
+  };
+
+  // Retry Single Target Handler
+  window.retrySingleGiftCode = async (gid, name, code, rowId, btnEl = null) => {
+    const cleanGid = String(gid).trim();
+    const cleanCode = String(code || window._gcActiveCode).trim().toUpperCase();
+    const row = document.getElementById(rowId);
+    let originalBtnHtml = '';
+
+    if (btnEl) {
+      originalBtnHtml = btnEl.innerHTML;
+      btnEl.disabled = true;
+      btnEl.innerHTML = '🔄...';
+    }
+
+    try {
+      const adminToken = await getAuthToken();
+      const res = await fetch(`${API_BASE_URL}?api=redeemGiftCode&gameId=${encodeURIComponent(cleanGid)}&code=${encodeURIComponent(cleanCode)}&kid=2089&token=${encodeURIComponent(adminToken)}`);
+      const data = await res.json();
+
+      const kpiSuccess = document.getElementById('gcKpiSuccess');
+      const kpiAlready = document.getElementById('gcKpiAlready');
+
+      if (data.code === 0 || data.status === 'success') {
+        window._gcSuccessCount = (window._gcSuccessCount || 0) + 1;
+        if (kpiSuccess) kpiSuccess.textContent = window._gcSuccessCount;
+        window._gcFailedTargets = window._gcFailedTargets.filter(t => String(t.gameId) !== cleanGid);
+        window.updateGiftCodeRecoveryHub();
+
+        if (row) {
+          row.style.color = '#10b981';
+          row.innerHTML = `<span>${window.escapeHTML(name)} (${cleanGid}): ✅ Claimed! Reward delivered to in-game mailbox (Retried).</span>`;
+        }
+        if (window.showToast) window.showToast(`✅ ${name} (${cleanGid}) claimed successfully!`, 'success');
+      } else if (data.status === 'already_claimed') {
+        window._gcAlreadyCount = (window._gcAlreadyCount || 0) + 1;
+        if (kpiAlready) kpiAlready.textContent = window._gcAlreadyCount;
+        window._gcFailedTargets = window._gcFailedTargets.filter(t => String(t.gameId) !== cleanGid);
+        window.updateGiftCodeRecoveryHub();
+
+        if (row) {
+          row.style.color = '#06b6d4';
+          row.innerHTML = `<span>${window.escapeHTML(name)} (${cleanGid}): ⏩ Already claimed on this character.</span>`;
+        }
+        if (window.showToast) window.showToast(`⏩ ${name} (${cleanGid}) had already claimed this code.`, 'info');
+      } else {
+        const errorMsg = data.msg || 'Redemption failed on retry';
+        // Update error in failed targets
+        const item = window._gcFailedTargets.find(t => String(t.gameId) === cleanGid);
+        if (item) item.error = errorMsg;
+
+        if (row) {
+          row.style.color = '#ef4444';
+          row.innerHTML = `
+            <span style="flex:1;">${window.escapeHTML(name)} (${cleanGid}): ❌ ${window.escapeHTML(errorMsg)}</span>
+            <button onclick="window.retrySingleGiftCode('${cleanGid}', '${window.escapeHTML(name.replace(/'/g, "\\'"))}', '${cleanCode}', '${rowId}', this)" style="background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.5); color:#fca5a5; padding:2px 8px; border-radius:6px; font-size:10.5px; font-weight:bold; cursor:pointer; margin-left:8px; white-space:nowrap;">🔁 Retry</button>
+          `;
+        }
+        if (window.showToast) window.showToast(`❌ ${name}: ${errorMsg}`, 'error');
+      }
+    } catch(err) {
+      if (btnEl) {
+        btnEl.disabled = false;
+        btnEl.innerHTML = originalBtnHtml || '🔁 Retry';
+      }
+      if (window.showToast) window.showToast(`Network error retrying ${name}: ${err.message}`, 'error');
+    }
+  };
+
+  // Retry All Failed Targets Handler
+  window.retryAllFailedGiftCodes = async () => {
+    const failedList = [...(window._gcFailedTargets || [])];
+    const code = window._gcActiveCode;
+
+    if (failedList.length === 0 || !code) {
+      if (window.showToast) window.showToast("No errored targets to retry.", "info");
+      return;
+    }
+
+    const retryBtn = document.getElementById('gcRetryAllBtn');
+    if (retryBtn) {
+      retryBtn.disabled = true;
+      retryBtn.innerHTML = '🔄 Retrying Errored Targets...';
+      retryBtn.style.opacity = '0.7';
+    }
+
+    const terminal = document.getElementById('gcTerminalLog');
+    const pTitle = document.getElementById('gcProgressTitle');
+    const pPercent = document.getElementById('gcProgressPercent');
+    const pBar = document.getElementById('gcProgressBar');
+    const kpiSuccess = document.getElementById('gcKpiSuccess');
+    const kpiAlready = document.getElementById('gcKpiAlready');
+
+    if (terminal) {
+      terminal.innerHTML += `<div style="color:#f59e0b; margin-top:8px; font-weight:bold;">[${new Date().toLocaleTimeString()}] 🔁 Initiating targeted retry for ${failedList.length} errored targets...</div>`;
+      terminal.scrollTop = terminal.scrollHeight;
+    }
+
+    const adminToken = await getAuthToken();
+    let resolvedCount = 0;
+
+    for (let i = 0; i < failedList.length; i++) {
+      const item = failedList[i];
+      const gid = item.gameId;
+      const name = item.name;
+      const rowId = item.rowId;
+
+      const currentPct = Math.round(((i + 1) / failedList.length) * 100);
+      if (pBar) pBar.style.width = `${currentPct}%`;
+      if (pPercent) pPercent.textContent = `${currentPct}%`;
+      if (pTitle) pTitle.textContent = `🔁 Retrying [${i + 1}/${failedList.length}] - ${name}...`;
+
+      try {
+        const res = await fetch(`${API_BASE_URL}?api=redeemGiftCode&gameId=${encodeURIComponent(gid)}&code=${encodeURIComponent(code)}&kid=2089&token=${encodeURIComponent(adminToken)}`);
+        const data = await res.json();
+
+        const row = document.getElementById(rowId);
+
+        if (data.code === 0 || data.status === 'success') {
+          resolvedCount++;
+          window._gcSuccessCount = (window._gcSuccessCount || 0) + 1;
+          if (kpiSuccess) kpiSuccess.textContent = window._gcSuccessCount;
+          window._gcFailedTargets = window._gcFailedTargets.filter(t => String(t.gameId) !== String(gid));
+
+          if (row) {
+            row.style.color = '#10b981';
+            row.innerHTML = `<span>${window.escapeHTML(name)} (${gid}): ✅ Claimed! Reward delivered to in-game mailbox (Retried).</span>`;
+          }
+          if (terminal) {
+            terminal.innerHTML += `<div style="color:#10b981;">[Retry ${i + 1}/${failedList.length}] ${window.escapeHTML(name)} (${gid}): ✅ Claimed!</div>`;
+            terminal.scrollTop = terminal.scrollHeight;
+          }
+        } else if (data.status === 'already_claimed') {
+          resolvedCount++;
+          window._gcAlreadyCount = (window._gcAlreadyCount || 0) + 1;
+          if (kpiAlready) kpiAlready.textContent = window._gcAlreadyCount;
+          window._gcFailedTargets = window._gcFailedTargets.filter(t => String(t.gameId) !== String(gid));
+
+          if (row) {
+            row.style.color = '#06b6d4';
+            row.innerHTML = `<span>${window.escapeHTML(name)} (${gid}): ⏩ Already claimed on this character.</span>`;
+          }
+          if (terminal) {
+            terminal.innerHTML += `<div style="color:#06b6d4;">[Retry ${i + 1}/${failedList.length}] ${window.escapeHTML(name)} (${gid}): ⏩ Already claimed.</div>`;
+            terminal.scrollTop = terminal.scrollHeight;
+          }
+        } else {
+          const newErr = data.msg || 'Redemption failed on retry';
+          const targetInList = window._gcFailedTargets.find(t => String(t.gameId) === String(gid));
+          if (targetInList) targetInList.error = newErr;
+
+          if (row) {
+            row.style.color = '#ef4444';
+            row.innerHTML = `
+              <span style="flex:1;">${window.escapeHTML(name)} (${gid}): ❌ ${window.escapeHTML(newErr)}</span>
+              <button onclick="window.retrySingleGiftCode('${gid}', '${window.escapeHTML(name.replace(/'/g, "\\'"))}', '${code}', '${rowId}', this)" style="background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.5); color:#fca5a5; padding:2px 8px; border-radius:6px; font-size:10.5px; font-weight:bold; cursor:pointer; margin-left:8px; white-space:nowrap;">🔁 Retry</button>
+            `;
+          }
+          if (terminal) {
+            terminal.innerHTML += `<div style="color:#ef4444;">[Retry ${i + 1}/${failedList.length}] ${window.escapeHTML(name)} (${gid}): ❌ ${window.escapeHTML(newErr)}</div>`;
+            terminal.scrollTop = terminal.scrollHeight;
+          }
+        }
+      } catch(e) {
+        if (terminal) {
+          terminal.innerHTML += `<div style="color:#ef4444;">[Retry ${i + 1}/${failedList.length}] ${window.escapeHTML(name)} (${gid}): ❌ Network error: ${window.escapeHTML(e.message)}</div>`;
+          terminal.scrollTop = terminal.scrollHeight;
+        }
+      }
+
+      window.updateGiftCodeRecoveryHub();
+      await new Promise(r => setTimeout(r, 200));
+    }
+
+    if (retryBtn) {
+      retryBtn.disabled = false;
+      retryBtn.innerHTML = `🔁 Retry Failed Accounts (<span id="gcRetryCountBadge">${window._gcFailedTargets.length}</span>)`;
+      retryBtn.style.opacity = '1';
+    }
+
+    if (window._gcFailedTargets.length === 0) {
+      if (pTitle) pTitle.textContent = `🎉 All Errors Successfully Resolved!`;
+      if (terminal) {
+        terminal.innerHTML += `<div style="color:#10b981; font-weight:bold; margin-top:6px;">[${new Date().toLocaleTimeString()}] 🎊 All failed characters have been resolved!</div>`;
+        terminal.scrollTop = terminal.scrollHeight;
+      }
+      if (window.showToast) window.showToast(`🎉 100% complete! All ${resolvedCount} errored accounts claimed successfully.`, 'success');
+    } else {
+      if (pTitle) pTitle.textContent = `⚠️ Retry Complete: ${window._gcFailedTargets.length} Remaining Error(s)`;
+      if (window.showToast) window.showToast(`🔁 Retried: ${resolvedCount} resolved, ${window._gcFailedTargets.length} remaining.`, 'warning');
+    }
+  };
+
   // Launch Mass Dispatch Handler
   const launchBtn = document.getElementById('gcLaunchBtn');
   if (launchBtn) {
@@ -10483,6 +10752,13 @@ window.openGiftCodeDispatcherModal = async () => {
 
       const confirmed = await window.customConfirm(`Launch Mass Gift Code Redemption for [${code}] across ${targets.length} alliance characters?`);
       if (!confirmed) return;
+
+      // Reset State
+      window._gcActiveCode = code;
+      window._gcFailedTargets = [];
+      window._gcSuccessCount = 0;
+      window._gcAlreadyCount = 0;
+      window._gcTotalCount = targets.length;
 
       // Lock UI and show Execution Section
       launchBtn.disabled = true;
@@ -10504,6 +10780,9 @@ window.openGiftCodeDispatcherModal = async () => {
       const terminal = document.getElementById('gcTerminalLog');
 
       if (kpiTotal) kpiTotal.textContent = targets.length;
+      if (kpiSuccess) kpiSuccess.textContent = '0';
+      if (kpiAlready) kpiAlready.textContent = '0';
+      if (kpiFailed) kpiFailed.textContent = '0';
       if (terminal) terminal.innerHTML = `<div style="color:#38bdf8;">[${new Date().toLocaleTimeString()}] 🚀 Initiating batch redemption for code: <strong>${window.escapeHTML(code)}</strong> (${targets.length} targets)...</div>`;
 
       let successCount = 0;
@@ -10514,8 +10793,9 @@ window.openGiftCodeDispatcherModal = async () => {
 
       for (let i = 0; i < targets.length; i++) {
         const item = targets[i];
-        const gid = item.gameId;
+        const gid = String(item.gameId).trim();
         const name = item.name;
+        const rowId = `gcRow_${gid}`;
 
         const currentPct = Math.round(((i + 1) / targets.length) * 100);
         if (pBar) pBar.style.width = `${currentPct}%`;
@@ -10529,16 +10809,25 @@ window.openGiftCodeDispatcherModal = async () => {
           let logLine = '';
           if (data.code === 0 || data.status === 'success') {
             successCount++;
+            window._gcSuccessCount = successCount;
             if (kpiSuccess) kpiSuccess.textContent = successCount;
-            logLine = `<div style="color:#10b981;">[${i + 1}/${targets.length}] ${window.escapeHTML(name)} (${gid}): ✅ Claimed! Reward delivered to in-game mailbox.</div>`;
+            logLine = `<div id="${rowId}" style="color:#10b981;">[${i + 1}/${targets.length}] ${window.escapeHTML(name)} (${gid}): ✅ Claimed! Reward delivered to in-game mailbox.</div>`;
           } else if (data.status === 'already_claimed') {
             alreadyCount++;
+            window._gcAlreadyCount = alreadyCount;
             if (kpiAlready) kpiAlready.textContent = alreadyCount;
-            logLine = `<div style="color:#06b6d4;">[${i + 1}/${targets.length}] ${window.escapeHTML(name)} (${gid}): ⏩ Already claimed on this character.</div>`;
+            logLine = `<div id="${rowId}" style="color:#06b6d4;">[${i + 1}/${targets.length}] ${window.escapeHTML(name)} (${gid}): ⏩ Already claimed on this character.</div>`;
           } else {
             failedCount++;
+            const errMsg = data.msg || 'Redemption failed';
+            window._gcFailedTargets.push({ gameId: gid, name: name, error: errMsg, rowId: rowId });
             if (kpiFailed) kpiFailed.textContent = failedCount;
-            logLine = `<div style="color:#ef4444;">[${i + 1}/${targets.length}] ${window.escapeHTML(name)} (${gid}): ❌ ${window.escapeHTML(data.msg || 'Redemption failed')}</div>`;
+            logLine = `
+              <div id="${rowId}" style="color:#ef4444; display:flex; justify-content:space-between; align-items:center; padding:1px 0;">
+                <span style="flex:1;">[${i + 1}/${targets.length}] ${window.escapeHTML(name)} (${gid}): ❌ ${window.escapeHTML(errMsg)}</span>
+                <button onclick="window.retrySingleGiftCode('${gid}', '${window.escapeHTML(name.replace(/'/g, "\\'"))}', '${code}', '${rowId}', this)" style="background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.5); color:#fca5a5; padding:2px 8px; border-radius:6px; font-size:10.5px; font-weight:bold; cursor:pointer; margin-left:8px; white-space:nowrap;">🔁 Retry</button>
+              </div>
+            `;
           }
 
           if (terminal) {
@@ -10547,29 +10836,46 @@ window.openGiftCodeDispatcherModal = async () => {
           }
         } catch (e) {
           failedCount++;
+          const errMsg = `Network error: ${e.message}`;
+          window._gcFailedTargets.push({ gameId: gid, name: name, error: errMsg, rowId: rowId });
           if (kpiFailed) kpiFailed.textContent = failedCount;
           if (terminal) {
-            terminal.innerHTML += `<div style="color:#ef4444;">[${i + 1}/${targets.length}] ${window.escapeHTML(name)} (${gid}): ❌ Network error: ${window.escapeHTML(e.message)}</div>`;
+            terminal.innerHTML += `
+              <div id="${rowId}" style="color:#ef4444; display:flex; justify-content:space-between; align-items:center; padding:1px 0;">
+                <span style="flex:1;">[${i + 1}/${targets.length}] ${window.escapeHTML(name)} (${gid}): ❌ ${window.escapeHTML(errMsg)}</span>
+                <button onclick="window.retrySingleGiftCode('${gid}', '${window.escapeHTML(name.replace(/'/g, "\\'"))}', '${code}', '${rowId}', this)" style="background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.5); color:#fca5a5; padding:2px 8px; border-radius:6px; font-size:10.5px; font-weight:bold; cursor:pointer; margin-left:8px; white-space:nowrap;">🔁 Retry</button>
+              </div>
+            `;
             terminal.scrollTop = terminal.scrollHeight;
           }
         }
 
+        window.updateGiftCodeRecoveryHub();
         // Polite throttle between requests (150ms)
         await new Promise(r => setTimeout(r, 150));
       }
 
-      if (pTitle) pTitle.textContent = `🎉 Batch Complete!`;
+      if (window._gcFailedTargets.length > 0) {
+        if (pTitle) pTitle.textContent = `⚠️ Batch Finished with ${window._gcFailedTargets.length} Error(s)`;
+      } else {
+        if (pTitle) pTitle.textContent = `🎉 Batch Complete!`;
+      }
+
       if (terminal) {
         terminal.innerHTML += `<div style="color:#10b981; font-weight:bold; margin-top:8px;">[${new Date().toLocaleTimeString()}] ✅ Finished processing ${targets.length} characters! (${successCount} claimed, ${alreadyCount} already had, ${failedCount} errors).</div>`;
         terminal.scrollTop = terminal.scrollHeight;
       }
 
       if (window.logAdminAction) {
-        window.logAdminAction("Mass Gift Code", `Redeemed [${code}] for ${targets.length} characters (${successCount} claimed, ${alreadyCount} already had)`, "GiftCode Dispatcher");
+        window.logAdminAction("Mass Gift Code", `Redeemed [${code}] for ${targets.length} characters (${successCount} claimed, ${alreadyCount} already had, ${failedCount} errors)`, "GiftCode Dispatcher");
       }
 
       if (window.showToast) {
-        window.showToast(`🎉 Gift Code [${code}] dispatch complete! ${successCount} claimed, ${alreadyCount} already had.`, "success");
+        if (failedCount > 0) {
+          window.showToast(`⚠️ Gift Code dispatch finished: ${successCount} claimed, ${alreadyCount} already had, ${failedCount} errors. Targeted retry available below.`, "warning");
+        } else {
+          window.showToast(`🎉 Gift Code [${code}] dispatch complete! ${successCount} claimed, ${alreadyCount} already had.`, "success");
+        }
       }
 
       launchBtn.textContent = '✅ Completed';

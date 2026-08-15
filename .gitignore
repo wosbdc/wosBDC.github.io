@@ -39,6 +39,8 @@ top_part.js
 scratch_test.js
 test.js
 temp_*.css
+schedule.json
+whiteout.json
 
 # Logs
 logs/
