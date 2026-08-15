@@ -144,6 +144,7 @@ const getAuthToken = async () => {
   } catch(e) { console.warn('getAuthToken failed:', e); }
   return null;
 };
+window.getAuthToken = getAuthToken;
 
 
 window.getFurnaceIconHtml = (level, size = 32) => {
@@ -1677,7 +1678,7 @@ window.formatRankBadgeHtml = (rankVal) => {
 // Register Service Worker for Mobile PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=2.5.60')
+    navigator.serviceWorker.register('./sw.js?v=2.5.61')
       .then(reg => {
         reg.update();
         console.log('PWA Service Worker registered:', reg.scope);
@@ -10136,7 +10137,7 @@ window.openGiftCodeDispatcherModal = async () => {
 
       try {
         const testId = currentUser.gameId || '318843189';
-        const adminToken = await window.getAuthToken();
+        const adminToken = await getAuthToken();
         const res = await fetch(`${API_BASE_URL}?api=redeemGiftCode&gameId=${encodeURIComponent(testId)}&code=${encodeURIComponent(code)}&token=${encodeURIComponent(adminToken)}`);
         const data = await res.json();
 
@@ -10220,7 +10221,7 @@ window.openGiftCodeDispatcherModal = async () => {
       let alreadyCount = 0;
       let failedCount = 0;
 
-      const adminToken = await window.getAuthToken();
+      const adminToken = await getAuthToken();
 
       for (let i = 0; i < targets.length; i++) {
         const item = targets[i];

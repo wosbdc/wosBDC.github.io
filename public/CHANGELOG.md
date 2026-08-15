@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.5.61] - 2026-08-15
+- Fixed `getAuthToken` scoping issue inside the **Alliance Mass Gift Code Dispatcher**.
+- Exported `window.getAuthToken` globally for seamless auth token acquisition across all admin modals.
+
 ## [2.5.60] - 2026-08-15
 - Added **"🎁 Alliance Mass Gift Code Dispatcher"** in Admin Daily Tools.
 - Added **"🧪 Test Code Validity"** with live Century Games API inspection (detects Active, Already Claimed, Expired, or Usage Limit reached).

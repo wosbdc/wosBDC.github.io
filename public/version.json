@@ -1,11 +1,9 @@
 {
-  "version": "2.5.60",
+  "version": "2.5.61",
   "releaseDate": "2026-08-15",
-  "title": "🎁 Alliance Mass Gift Code Dispatcher & Automated Redemption Engine",
+  "title": "⚡ Gift Code Dispatcher Token Scoping Fix",
   "notes": [
-    "Added 1-click Gift Code testing tool with live Century Games status check (Active, Already Claimed, Expired)",
-    "Built Alliance Mass Gift Code Dispatcher with live progress bar, KPI counters, and real-time streaming terminal log",
-    "Enabled automated target resolution across all enrolled roster chiefs and verified linked alts",
-    "Deployed backend Century Games cryptographic gift code redemption endpoints to Apps Script @162"
+    "Fixed getAuthToken scoping in Mass Gift Code Dispatcher to ensure flawless live Century Games API communication",
+    "Exported window.getAuthToken globally to guarantee authentication across all asynchronous admin modals"
   ]
 }
