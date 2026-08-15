@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.5.68] - 2026-08-15
+- Integrated the **Device Push Notifications Switch** directly inside the **Bell Alert Window** for seamless 1-tap activation.
+- Added live status detection (`ON` / `OFF`) and device token re-sync capability.
+- Directed settings drawer push notifications trigger straight to the Bell modal.
+
 ## [2.5.67] - 2026-08-15
 - Fixed gift code redemption by including kingdom identifier in API payload and signature.
 - Resolved validation error for gift code testing and mass dispatch operations.

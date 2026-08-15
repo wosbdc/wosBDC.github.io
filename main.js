@@ -1678,7 +1678,7 @@ window.formatRankBadgeHtml = (rankVal) => {
 // Register Service Worker for Mobile PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=2.5.67')
+    navigator.serviceWorker.register('./sw.js?v=2.5.68')
       .then(reg => {
         reg.update();
         console.log('PWA Service Worker registered:', reg.scope);
@@ -8825,6 +8825,55 @@ window.openAllianceAlertsModal = async () => {
       if (e.target === overlay) overlay.remove();
     });
 
+    // 0. Push Notifications Permission Banner
+    const isPushSupported = ('Notification' in window) && ('serviceWorker' in navigator);
+    const pushPermission = isPushSupported ? Notification.permission : 'unsupported';
+    let pushBannerHtml = '';
+
+    if (isPushSupported) {
+      if (pushPermission === 'granted') {
+        pushBannerHtml = `
+          <div id="devicePushBanner" style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.3); border-radius:14px; padding:11px 15px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div style="width:34px; height:34px; border-radius:50%; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.3); display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0;">🔔</div>
+              <div>
+                <div style="font-weight:bold; font-size:13.5px; color:#10b981; display:flex; align-items:center; gap:6px;">
+                  <span>Device Push Alerts Active</span>
+                  <span style="background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:1px 6px; border-radius:8px; font-size:10px; font-weight:bold;">ON</span>
+                </div>
+                <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">
+                  This device receives instant Bear Trap, Shield & leadership alerts
+                </div>
+              </div>
+            </div>
+            <button id="modalPushToggleBtn" onclick="window.handleModalPushToggle(this)" style="background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.35); color:#10b981; border-radius:8px; padding:5px 12px; font-size:11.5px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:0.2s;" title="Re-sync device push subscription">
+              🔄 Re-sync
+            </button>
+          </div>
+        `;
+      } else {
+        pushBannerHtml = `
+          <div id="devicePushBanner" style="background:linear-gradient(135deg, rgba(236,72,153,0.12), rgba(59,130,246,0.12)); border:1px solid rgba(236,72,153,0.35); border-radius:14px; padding:12px 15px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; box-shadow:0 4px 15px rgba(236,72,153,0.1);">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div style="width:36px; height:36px; border-radius:50%; background:rgba(236,72,153,0.2); border:1px solid rgba(236,72,153,0.4); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;">🔔</div>
+              <div>
+                <div style="font-weight:bold; font-size:13.5px; color:#fff; display:flex; align-items:center; gap:6px;">
+                  <span>Enable Push Notifications</span>
+                  <span style="background:rgba(236,72,153,0.2); color:#f472b6; border:1px solid rgba(236,72,153,0.4); padding:1px 6px; border-radius:8px; font-size:10px; font-weight:bold;">OFF</span>
+                </div>
+                <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">
+                  Get instant mobile/desktop alerts when leadership broadcasts or events begin
+                </div>
+              </div>
+            </div>
+            <button id="modalPushToggleBtn" onclick="window.handleModalPushToggle(this)" style="background:linear-gradient(135deg, #ec4899, #8b5cf6); color:#fff; border:none; border-radius:8px; padding:7px 15px; font-size:12px; font-weight:bold; cursor:pointer; box-shadow:0 3px 12px rgba(236,72,153,0.4); display:flex; align-items:center; gap:5px; transition:transform 0.1s ease;">
+              🔔 Turn ON Alerts
+            </button>
+          </div>
+        `;
+      }
+    }
+
     // 1. Broadcasts Section HTML
     let broadcastsSectionHtml = '';
     const bCards = broadcastsList.length > 0 ? broadcastsList.slice(0, 10).map(b => {
@@ -9052,11 +9101,14 @@ window.openAllianceAlertsModal = async () => {
             <span style="font-size:20px;">🔔</span>
             <div>
               <h3 style="margin:0; color:#fff; font-size:17.5px; font-weight:800;">Alliance Notifications & Alerts</h3>
-              <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">Status for Chief <strong>${window.escapeHTML(chiefName)}</strong> (ID: ${currentUser.gameId || 'N/A'})</div>
+              <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">Status for Chief <strong>${window.escapeHTML(chiefName)}</strong> (ID: ${currentUser ? (currentUser.gameId || 'N/A') : 'N/A'})</div>
             </div>
           </div>
           <button onclick="document.getElementById('notificationsModalOverlay').remove()" style="background:none; border:none; color:var(--text-muted); font-size:24px; cursor:pointer; line-height:1;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-muted)'">&times;</button>
         </div>
+
+        <!-- Device Push Notification Switch -->
+        ${pushBannerHtml}
 
         <!-- All Caught Up (if no alerts) -->
         ${allCaughtUpHtml}
@@ -9163,6 +9215,39 @@ window.toggleStaffAccordionBanner = () => {
 
 window.openNewMembersModal = window.openAllianceAlertsModal;
 window.openNotificationsModal = window.openAllianceAlertsModal;
+window.openPushNotificationsModal = window.openAllianceAlertsModal;
+
+window.handleModalPushToggle = async (btnEl) => {
+  if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+    if (window.showToast) window.showToast("Push notifications are not supported by your browser.", "warning");
+    return;
+  }
+
+  const origHtml = btnEl ? btnEl.innerHTML : '';
+  if (btnEl) {
+    btnEl.disabled = true;
+    btnEl.innerHTML = '⏳ Enabling...';
+  }
+
+  try {
+    const token = await requestPushPermission(currentUser ? currentUser.uid : null);
+    if (token) {
+      if (window.showToast) window.showToast("🎉 Push notifications enabled for this device!", "success");
+      if (typeof window.openAllianceAlertsModal === 'function') {
+        window.openAllianceAlertsModal();
+      }
+    }
+  } catch(err) {
+    console.error("Failed to enable push notifications:", err);
+    if (btnEl) {
+      btnEl.disabled = false;
+      btnEl.innerHTML = '❌ Retry';
+    }
+    if (window.showToast) {
+      window.showToast("Please ensure notifications are allowed in your browser/device permissions.", "error");
+    }
+  }
+};
 
 window.copyWelcomeMessage = (chiefName) => {
   const siteUrl = window.location.origin || 'https://wosbdc.github.io';
@@ -22397,14 +22482,13 @@ const styleEl = document.createElement('style'); styleEl.textContent = `/* --- H
 
 // --- Settings Modal Helpers ---
 window.openPushNotificationsModal = () => {
-  const modal = document.getElementById('notificationsModal');
-  const overlay = document.getElementById('notificationsModalOverlay');
-  if (modal) modal.style.display = 'block';
-  if (overlay) overlay.style.display = 'block';
   const sidebar = document.getElementById('settingsSidebar');
   const sideOverlay = document.getElementById('sidebarOverlay');
   if (sidebar) sidebar.classList.remove('open');
   if (sideOverlay) sideOverlay.classList.remove('active');
+  if (typeof window.openAllianceAlertsModal === 'function') {
+    window.openAllianceAlertsModal();
+  }
 };
 
 window.openThemeModal = () => {
