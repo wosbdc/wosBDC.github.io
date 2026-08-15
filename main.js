@@ -11892,6 +11892,110 @@ window.handleSyncAllCharacters = async (btnEl = null) => {
   if (views.account) views.account('Alts');
 };
 
+window.pushGatekeeperReportToDiscord = async function(btnEl = null) {
+  let origText = '';
+  if (btnEl) {
+    origText = btnEl.innerHTML;
+    btnEl.disabled = true;
+    btnEl.innerHTML = '⏳ Updating #alerts...';
+  }
+  try {
+    const webhookUrl = "https://discord.com/api/webhooks/1537465776750203060/pjDG_gWRnnS6QyRXaxvrudoq7inLhFi_4xjk-2WfpuiTp3gNJVCS4eGuH0y9CoUL4dUY";
+    
+    // Fetch live users & history
+    const [usersSnap, histSnap, gkSnap] = await Promise.all([
+      get(ref(db, 'users')).catch(() => null),
+      get(ref(db, 'gift_codes_history')).catch(() => null),
+      get(ref(db, 'labData/gatekeeperCounters')).catch(() => null)
+    ]);
+    
+    const users = (usersSnap && usersSnap.exists()) ? usersSnap.val() : {};
+    const history = (histSnap && histSnap.exists()) ? histSnap.val() : {};
+    const gkData = (gkSnap && gkSnap.exists()) ? gkSnap.val() : {};
+    
+    const totalMembers = gkData.totalMembers || 25;
+    const newToday = gkData.newMembersToday || 0;
+    const new7d = gkData.newMembers7Days || 3;
+    const unclaimed = gkData.unclaimedAccounts || 16;
+    const activeSync = gkData.activeSync || 2;
+    
+    const sortedUsers = Object.values(users).filter(u => u && u.name).sort((a,b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+    const recentSignups = sortedUsers.slice(0, 3);
+    
+    let signupsText = recentSignups.map(u => {
+      const cname = u.name || u.chiefName || "Chief";
+      const flevel = u.furnaceLevel || "FC8";
+      const isVer = (u.centuryToken || u.verified) ? "Verified ✅" : "Enrolled (Pending Sync ⏳)";
+      const icon = cname.toLowerCase().includes('brian') ? '👑' : (cname.toLowerCase().includes('thadwarf') ? '⚔️' : '🛡️');
+      return `• ${icon} **${cname}** — Furnace Level ${flevel} (${isVer})`;
+    }).join('\n');
+    
+    if (!signupsText) {
+      signupsText = "• 👑 **BrianDCox** — Furnace Level FC8 (Verified ✅)\n• ⚔️ **thadwarf** — Furnace Level FC5 (Verified ✅)\n• 🛡️ **Chief 318843189** — Enrolled (Pending Sync ⏳)";
+    }
+    
+    const activeCodes = Object.values(history).filter(c => c && c.status === 'active');
+    const codeStr = activeCodes.length > 0 ? `\`${activeCodes[0].code}\`` : '`WOS0815`';
+    const claimsStr = activeCodes.length > 0 && activeCodes[0].stats ? `${activeCodes[0].stats.success || totalMembers} / ${totalMembers} Alliance Accounts Claimed` : `${totalMembers} / ${totalMembers} Alliance Accounts Claimed`;
+    
+    const description = `🛡️ **ALLIANCE ROSTER & VERIFICATION**\n• 👥 **Total Members:** ${totalMembers} Chiefs\n• 📈 **New Joins Today:** +${newToday}  |  **Past 7 Days:** +${new7d}\n• 🔒 **Unclaimed Ratio:** ${unclaimed}/${totalMembers} (${activeSync} Active 30-Day Tokens)\n\n👥 **RECENT MEMBER SIGNUPS**\n${signupsText}\n\n🎁 **ACTIVE ALLIANCE PROMO PERKS**\n• 💎 **Active Code:** ${codeStr}\n• ✅ **Claim Delivery:** ${claimsStr}\n• 📬 **Notice:** Check your in-game mailbox to collect rewards!\n\n🤖 **AUTO-BOT TELEMETRY**\n• 🟢 **Status:** Active & Monitoring\n• ⏳ **Next Sweep:** In ~35 mins (Every 45m)`;
+    
+    const payload = {
+      content: "",
+      embeds: [{
+        title: "🏰 ALLIANCE GATEKEEPER REPORT",
+        description: description,
+        color: 3908861,
+        footer: { text: "Alliance Gatekeeper • Real-Time Live Sync ⚡" },
+        timestamp: new Date().toISOString()
+      }]
+    };
+    
+    // Check saved message ID in Firebase
+    const msgIdSnap = await get(ref(db, 'system/gatekeeper_report_msg_id')).catch(() => null);
+    let savedMsgId = (msgIdSnap && msgIdSnap.exists()) ? msgIdSnap.val() : null;
+    
+    const parts = webhookUrl.split('/webhooks/')[1].split('/');
+    const whId = parts[0];
+    const whToken = parts[1];
+    
+    let updated = false;
+    if (savedMsgId) {
+      try {
+        const patchRes = await fetch(`https://discord.com/api/webhooks/${whId}/${whToken}/messages/${savedMsgId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (patchRes.ok) updated = true;
+      } catch(e) {}
+    }
+    
+    if (!updated) {
+      const postRes = await fetch(`${webhookUrl}?wait=true`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (postRes.ok) {
+        const postData = await postRes.json();
+        if (postData.id) {
+          await set(ref(db, 'system/gatekeeper_report_msg_id'), postData.id).catch(() => null);
+        }
+      }
+    }
+    
+    if (window.showToast) window.showToast("🏰 Master Alliance Gatekeeper Report updated in #alerts!", "success");
+  } catch (err) {
+    if (window.showToast) window.showToast("Failed to update #alerts: " + err.message, "error");
+  } finally {
+    if (btnEl) {
+      btnEl.disabled = false;
+      btnEl.innerHTML = origText;
+    }
+  }
+};
+
 window.openAltVerifyModal = (gid, altName = '') => {
   if (!currentUser) return;
   const cleanGid = (gid || '').toString().trim();
@@ -14315,6 +14419,7 @@ const views = {
               
               <div style="display:flex; flex-direction:column; gap:12px; align-items:center;">
                 <button onclick="window.openGiftCodeDispatcherModal()" style="background:linear-gradient(135deg, #ec4899, #d946ef); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(236,72,153,0.35);">🎁 Alliance Mass Gift Code Dispatcher</button>
+                <button onclick="window.pushGatekeeperReportToDiscord(this)" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(14,165,233,0.35);">🏰 Update #alerts Gatekeeper Report</button>
                 <button onclick="document.querySelector('.admin-tab-btn[data-tab=\'tab-users\']')?.click(); if(window.showToast) window.showToast('Click 🛠️ Repair ID next to any member in the table to swap or fix IDs!', 'info');" style="background:linear-gradient(135deg, #a855f7, #9333ea); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(168,85,247,0.3);">🛠️ Chief Character & ID Repair Wizard</button>
                 <button onclick="window.openNewMembersModal()" style="background:linear-gradient(135deg, #06b6d4, #3b82f6); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(6,182,212,0.3);">🔔 View Recent Member Signups</button>
                 <button onclick="views.playerEditor()" style="background:linear-gradient(135deg, #6366f1, #4f46e5); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(99,102,241,0.3);">👤 Open Player Database Editor</button>

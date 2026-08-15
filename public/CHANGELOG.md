@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.5.80] - 2026-08-15
+- 🏰 **Unified Alliance Gatekeeper Report (#alerts):**
+  - 📊 **Living Discord Dashboard Card:** Self-updating master post in `#alerts` showcasing total alliance members, new joins, unclaimed ratios, recent signups, and active perks.
+  - ⚡ **1-Click Web & Bridge Refresh:** Push real-time dashboard updates to Discord anytime directly from the Admin Hub or Bridge GUI.
+
 ## [2.5.79] - 2026-08-15
 - 📢 **Alliance Gatekeeper Perks Alerts:**
   - 🛡️ **Clean Discord Embed Format:** Streamlined embed alerts directly under the Alliance Gatekeeper banner.
