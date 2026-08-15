@@ -1,12 +1,46 @@
 const fs = require('fs');
+const path = require('path');
 
 function testAllFeatures() {
     console.log("⚡ [ELITE TESTING SYSTEM] Running comprehensive automated static & scope analysis on main.js...");
-    let c = fs.readFileSync('main.js', 'utf8');
+    let c = fs.readFileSync(path.join(__dirname, '../main.js'), 'utf8');
 
     let errors = [];
 
-    // 1. Check for unhandled variable usages in template literals inside buildVaultModalContent
+    // 1. Full JS Syntax & AST Validation using Node's built-in vm module
+    try {
+        const vm = require('vm');
+        const lines = c.split('\n');
+        let inImport = false;
+        const strippedLines = lines.map(line => {
+            const trimmed = line.trim();
+            if (/^import\s+['"].*?['"]\s*;?$/.test(trimmed)) {
+                return '// ' + line;
+            }
+            if (/^import\s+[\s\S]*?\s+from\s+['"].*?['"]\s*;?$/.test(trimmed)) {
+                return '// ' + line;
+            }
+            if (/^import\b/.test(trimmed)) {
+                inImport = true;
+                return '// ' + line;
+            }
+            if (inImport) {
+                if (/from\s+['"].*?['"]\s*;?$/.test(trimmed)) inImport = false;
+                return '// ' + line;
+            }
+            if (/^export\s+(default|const|let|var|function|class)\b/.test(trimmed)) {
+                return line.replace(/^export\s+default\s+/, 'const __default_export__ = ').replace(/^export\s+/, '');
+            }
+            return line;
+        });
+        const stripped = strippedLines.join('\n');
+        new vm.Script(`(async () => {\n${stripped}\n})()`, { filename: 'main.js' });
+        console.log("✓ Full JS AST Syntax validation passed (0 syntax errors).");
+    } catch (e) {
+        errors.push(`JS Syntax/Parse Error in main.js: ${e.message}\n${e.stack}`);
+    }
+
+    // 2. Check for unhandled variable usages in template literals inside buildVaultModalContent
     const vaultStart = c.indexOf('window.buildVaultModalContent =');
     const vaultEnd = c.indexOf('window.openShowdownArchiveVaultModal =', vaultStart);
     if (vaultStart !== -1 && vaultEnd !== -1) {
@@ -27,7 +61,7 @@ function testAllFeatures() {
         });
     }
 
-    // 2. Audit top-level 'if (varName)' and 'if(varName)' checks for existence of declaration
+    // 3. Audit top-level 'if (varName)' and 'if(varName)' checks for existence of declaration
     const ifChecks = c.match(/if\s*\(\s*([a-zA-Z0-9_$]+)\s*\)/g) || [];
     const builtins = new Set(['window', 'document', 'navigator', 'history', 'location', 'console', 'isRegistering', 'isGoogleRegistration', 'pendingGoogleUser', 'currentUser', 'verifiedChiefName', 'verifiedFurnaceLevel', 'auth', 'db']);
     ifChecks.forEach(match => {
@@ -43,7 +77,7 @@ function testAllFeatures() {
         }
     });
 
-    // 3. Audit window export functions
+    // 4. Audit window export functions
     const windowExportMatches = c.match(/window\.([a-zA-Z0-9_]+)\s*=/g) || [];
     console.log(`✓ Audited ${windowExportMatches.length} window exported functions.`);
 
