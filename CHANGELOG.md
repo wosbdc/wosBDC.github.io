@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [2.5.35] - 2026-08-14
+- Fixed non-FC furnace level overwrite in `WosApi.js` where players with normal furnace levels (e.g. 21, 28) were overwritten to 30 upon clicking "Sync from Game".
+- Upgraded Fire Crystal (FC 1–10) multi-stage ladder parsing across backend and frontend helpers.
+- Added interactive `⚙️ Options ▾` dropdown menu in the Account Hub ID Card header directly next to the Chief Name for instant access to Edit Profile, Sync from Game, Token Renewal, and Avatar management.
+- Synchronized `stove_lv` and `furnaceLevel` concurrently across Firebase user records, alts, and live roster caches.
+- Deployed backend Apps Script `@157` to live environment.
+
 ## [2.5.34] - 2026-08-14
 - Unified button styling and interactive visual effects (FX) across all Sign In, Claim / Register, and action buttons.
 - Added smooth scale transitions (`scale(1.03)` on hover, `scale(0.98)` on active press), gradient glows, and glassmorphism borders for all secondary and mode toggle buttons.

@@ -132,7 +132,7 @@ window.fetchRoster = async () => {
 };
 
 
-const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbz5xAvh0XLhrf8ixqFES9Pbcr1Zkzsamfc9MjEGzILdZd1tb6gb4LyGInhBUdBYeFI/exec';
+const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbx_9jzP94fsjIVnOGiEVnpbsQ18cxSk-6La-LVABvInfqFhoxd_m_mEdel-NanK6kE/exec';
 const VERIFY_PROXY_URL = 'https://wos-vercel-proxy.vercel.app/api/verify'; // Fallback / secondary proxy
 
 // Get a fresh Firebase ID token for the current user (replaces hardcoded APP_SECRET)
@@ -153,14 +153,16 @@ window.getFurnaceIconHtml = (level, size = 48) => {
   let fcNum = null;
   let furnaceNum = null;
   
-  // 1. Check for explicit "FC" or "FIRE CRYSTAL" prefix followed by number 1-10
-  const fcMatch = rawStr.match(/(?:FC|FIRE\s*CRYSTAL)\s*[\.-]?\s*(\d+)/i);
+  // 1. Check for explicit "FC", "FIRE CRYSTAL", or "STOVE_LV_" prefix followed by number 1-10
+  const fcMatch = rawStr.match(/(?:FC|FIRE\s*CRYSTAL|STOVE_LV_)\s*[\.-]?\s*(\d+)/i);
   if (fcMatch) {
      const parsedFc = parseInt(fcMatch[1], 10);
      if (parsedFc >= 1 && parsedFc <= 10) {
         fcNum = parsedFc;
      } else if (parsedFc > 30 && parsedFc <= 40) {
         fcNum = parsedFc - 30;
+     } else if (parsedFc > 40 && parsedFc <= 80) {
+        fcNum = Math.ceil((parsedFc - 30) / 5);
      }
   } else {
      // 2. If no explicit FC prefix, extract the FIRST number in the string
@@ -169,6 +171,8 @@ window.getFurnaceIconHtml = (level, size = 48) => {
         const numVal = parseInt(firstNumMatch[1], 10);
         if (numVal > 30 && numVal <= 40) { // Century Games API stove_lv (31=FC1 ... 40=FC10)
            fcNum = numVal - 30;
+        } else if (numVal > 40 && numVal <= 80) { // Century Games 5-stage ladder (51-55=FC5 ... 76-80=FC10)
+           fcNum = Math.ceil((numVal - 30) / 5);
         } else if (numVal >= 1 && numVal <= 30) {
            furnaceNum = numVal;
         }
@@ -194,7 +198,7 @@ window.getFurnaceIconHtml = (level, size = 48) => {
      const canvasOffset = Math.round((canvasSize - size) / 2);
      return `<span class="fc-badge-stage" data-fc="${fcNum}" style="display:inline-flex; align-items:center; justify-content:center; position:relative; vertical-align:middle; cursor:pointer; width:${size}px; height:${size}px; user-select:none; -webkit-user-select:none;">
        <canvas class="fc-flame-canvas" width="${canvasSize}" height="${canvasSize}" style="position:absolute; top:-${canvasOffset}px; left:-${canvasOffset}px; width:${canvasSize}px; height:${canvasSize}px; pointer-events:none; z-index:3;"></canvas>
-       <img src="/badges/fc${fcNum}.png?v=1.95.3" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
+       <img src="./badges/fc${fcNum}.png?v=1.95.3" onerror="this.onerror=null; this.src='/badges/fc${fcNum}.png';" alt="Fire Crystal ${fcNum}" title="Fire Crystal ${fcNum} (FC ${fcNum})" style="width:${size}px; height:${size}px; object-fit:contain; filter:drop-shadow(0 0 ${Math.max(6, Math.round(size/3.5))}px ${glow}); vertical-align:middle; transition:transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); position:relative; z-index:2;" loading="lazy">
      </span>`;
   }
 
@@ -210,16 +214,18 @@ window.renderFurnaceSelectHtml = (id = 'manualFurnaceLevel', selectedVal = '', e
   let selFc = null;
   let selLv = null;
 
-  const fcMatch = norm.match(/(?:FC|FIRE\s*CRYSTAL)\s*[\.-]?\s*(\d+)/i);
+  const fcMatch = norm.match(/(?:FC|FIRE\s*CRYSTAL|STOVE_LV_)\s*[\.-]?\s*(\d+)/i);
   if (fcMatch) {
      const pFc = parseInt(fcMatch[1], 10);
      if (pFc >= 1 && pFc <= 10) selFc = pFc;
      else if (pFc > 30 && pFc <= 40) selFc = pFc - 30;
+     else if (pFc > 40 && pFc <= 80) selFc = Math.ceil((pFc - 30) / 5);
   } else {
      const firstNumMatch = norm.match(/(\d+)/);
      if (firstNumMatch) {
         const numVal = parseInt(firstNumMatch[1], 10);
         if (numVal > 30 && numVal <= 40) selFc = numVal - 30;
+        else if (numVal > 40 && numVal <= 80) selFc = Math.ceil((numVal - 30) / 5);
         else if (numVal >= 1 && numVal <= 30) selLv = numVal;
      }
   }
@@ -8831,6 +8837,30 @@ window.resetAvatarToInitials = async (gameId, chiefName) => {
   }
 };
 
+window.toggleIdCardActionsMenu = (e) => {
+  if (e) e.stopPropagation();
+  const dd = document.getElementById('idCardActionsDropdown');
+  if (dd) {
+    const isHidden = dd.style.display === 'none' || !dd.style.display;
+    dd.style.display = isHidden ? 'block' : 'none';
+  }
+};
+
+window.closeIdCardActionsMenu = () => {
+  const dd = document.getElementById('idCardActionsDropdown');
+  if (dd) dd.style.display = 'none';
+};
+
+document.addEventListener('click', (e) => {
+  const dd = document.getElementById('idCardActionsDropdown');
+  const btn = document.getElementById('idCardActionsMenuBtn');
+  if (dd && dd.style.display === 'block') {
+    if (!dd.contains(e.target) && (!btn || !btn.contains(e.target))) {
+      dd.style.display = 'none';
+    }
+  }
+});
+
 window.openEditProfileHubModal = () => {
   const activeUser = currentUser || realUser;
   if (!activeUser) return;
@@ -9103,8 +9133,10 @@ window.handleSyncCenturyGamesProfile = async () => {
     const data = await res.json();
 
     if (data && data.success) {
+      const finalStove = data.stove_lv || currentUser.stove_lv || "";
       const updates = {
-        stove_lv: data.stove_lv || currentUser.stove_lv || "",
+        stove_lv: finalStove,
+        furnaceLevel: finalStove,
         section: data.section || currentUser.section || "2089",
         lastSyncedAt: new Date().toISOString(),
         centuryGamesVerified: true
@@ -9113,9 +9145,38 @@ window.handleSyncCenturyGamesProfile = async () => {
       if (data.nickname && !/^\d+$/.test(data.nickname)) updates.name = data.nickname;
 
       await update(ref(db, `users/${currentUser.uid}`), updates);
-      currentUser.stove_lv = updates.stove_lv;
+      currentUser.stove_lv = finalStove;
+      currentUser.furnaceLevel = finalStove;
       currentUser.section = updates.section;
       currentUser.centuryGamesVerified = true;
+      if (updates.name) currentUser.name = updates.name;
+
+      // Update roster_live in Firebase and in-memory cache
+      try {
+        const chiefName = (idToNameMap[currentUser.gameId] || currentUser.name || '').toString().trim();
+        const cleanGid = (currentUser.gameId || '').toString().trim();
+        const rosterSnap = await get(ref(db, 'roster_live')).catch(() => null);
+        let rosterObj = (rosterSnap && rosterSnap.exists()) ? rosterSnap.val() : {};
+        let foundKey = null;
+        for (const [rk, rv] of Object.entries(rosterObj)) {
+          if ((cleanGid && rv && rv.gameId && rv.gameId.toString().trim() === cleanGid) ||
+              (chiefName && rk.toLowerCase() === chiefName.toLowerCase())) {
+            foundKey = rk;
+            break;
+          }
+        }
+        const saveKey = foundKey || chiefName || cleanGid;
+        rosterObj[saveKey] = {
+          ...(rosterObj[saveKey] || {}),
+          name: chiefName || updates.name || '',
+          gameId: cleanGid,
+          furnaceLevel: finalStove,
+          stove_lv: finalStove,
+          updatedAt: Date.now()
+        };
+        await set(ref(db, 'roster_live'), rosterObj);
+        window.rosterCache = rosterObj;
+      } catch(e) {}
 
       window.showToast("Profile synced successfully!", "success");
       if (views.account) views.account();
@@ -9329,8 +9390,10 @@ window.handleSyncAltProfile = async (gid, btnEl = null) => {
     const data = await res.json();
 
     if (data && data.success) {
+      const finalStove = data.stove_lv || "";
       const updates = {
-        stove_lv: data.stove_lv || "",
+        stove_lv: finalStove,
+        furnaceLevel: finalStove,
         section: data.section || "2089",
         lastSyncedAt: new Date().toISOString(),
         centuryGamesVerified: true
@@ -9350,7 +9413,8 @@ window.handleSyncAltProfile = async (gid, btnEl = null) => {
       await update(ref(db, `users/${currentUser.uid}/altTokens/${cleanGid}`), {
         ...((typeof tokenData === 'object') ? tokenData : {}),
         token: token,
-        stove_lv: updates.stove_lv,
+        stove_lv: finalStove,
+        furnaceLevel: finalStove,
         nickname: updates.name || "",
         avatar_image: data.avatar_image || "",
         lastSyncedAt: updates.lastSyncedAt
@@ -9360,11 +9424,38 @@ window.handleSyncAltProfile = async (gid, btnEl = null) => {
       currentUser.altTokens[cleanGid] = {
         ...((typeof tokenData === 'object') ? tokenData : {}),
         token: token,
-        stove_lv: updates.stove_lv,
+        stove_lv: finalStove,
+        furnaceLevel: finalStove,
         nickname: updates.name || "",
         avatar_image: data.avatar_image || "",
         lastSyncedAt: updates.lastSyncedAt
       };
+
+      // Update roster_live for alt
+      try {
+        const altRosterName = updates.name || idToNameMap[cleanGid] || cleanName;
+        const rosterSnap = await get(ref(db, 'roster_live')).catch(() => null);
+        let rosterObj = (rosterSnap && rosterSnap.exists()) ? rosterSnap.val() : {};
+        let foundKey = null;
+        for (const [rk, rv] of Object.entries(rosterObj)) {
+          if ((cleanGid && rv && rv.gameId && rv.gameId.toString().trim() === cleanGid) ||
+              (altRosterName && rk.toLowerCase() === altRosterName.toLowerCase())) {
+            foundKey = rk;
+            break;
+          }
+        }
+        const saveKey = foundKey || altRosterName || cleanGid;
+        rosterObj[saveKey] = {
+          ...(rosterObj[saveKey] || {}),
+          name: altRosterName,
+          gameId: cleanGid,
+          furnaceLevel: finalStove,
+          stove_lv: finalStove,
+          updatedAt: Date.now()
+        };
+        await set(ref(db, 'roster_live'), rosterObj);
+        window.rosterCache = rosterObj;
+      } catch(e) {}
 
       window.showToast(`✨ Alt ${data.nickname || cleanName} stats & avatar synced!`, 'success');
       if (views.account) views.account('Alts');
@@ -9406,8 +9497,10 @@ window.handleSyncAllCharacters = async (btnEl = null) => {
       const res = await fetch(`${API_BASE_URL}?api=syncProfileWithToken&id=${encodeURIComponent(currentUser.gameId)}&cgToken=${encodeURIComponent(currentUser.wos_cg_token)}`);
       const data = await res.json();
       if (data && data.success) {
+        const finalStove = data.stove_lv || currentUser.stove_lv || "";
         const updates = {
-          stove_lv: data.stove_lv || currentUser.stove_lv || "",
+          stove_lv: finalStove,
+          furnaceLevel: finalStove,
           section: data.section || currentUser.section || "2089",
           lastSyncedAt: new Date().toISOString(),
           centuryGamesVerified: true
@@ -9423,9 +9516,38 @@ window.handleSyncAllCharacters = async (btnEl = null) => {
         }
         if (data.nickname && !/^\d+$/.test(data.nickname)) updates.name = data.nickname;
         await update(ref(db, `users/${currentUser.uid}`), updates);
-        currentUser.stove_lv = updates.stove_lv;
+        currentUser.stove_lv = finalStove;
+        currentUser.furnaceLevel = finalStove;
         currentUser.section = updates.section;
         currentUser.centuryGamesVerified = true;
+        if (updates.name) currentUser.name = updates.name;
+
+        try {
+          const chiefName = (idToNameMap[currentUser.gameId] || currentUser.name || '').toString().trim();
+          const cleanGid = (currentUser.gameId || '').toString().trim();
+          const rosterSnap = await get(ref(db, 'roster_live')).catch(() => null);
+          let rosterObj = (rosterSnap && rosterSnap.exists()) ? rosterSnap.val() : {};
+          let foundKey = null;
+          for (const [rk, rv] of Object.entries(rosterObj)) {
+            if ((cleanGid && rv && rv.gameId && rv.gameId.toString().trim() === cleanGid) ||
+                (chiefName && rk.toLowerCase() === chiefName.toLowerCase())) {
+              foundKey = rk;
+              break;
+            }
+          }
+          const saveKey = foundKey || chiefName || cleanGid;
+          rosterObj[saveKey] = {
+            ...(rosterObj[saveKey] || {}),
+            name: chiefName || updates.name || '',
+            gameId: cleanGid,
+            furnaceLevel: finalStove,
+            stove_lv: finalStove,
+            updatedAt: Date.now()
+          };
+          await set(ref(db, 'roster_live'), rosterObj);
+          window.rosterCache = rosterObj;
+        } catch(e) {}
+
         successCount++;
       }
     } catch(e) {
@@ -9444,8 +9566,10 @@ window.handleSyncAllCharacters = async (btnEl = null) => {
         const res = await fetch(`${API_BASE_URL}?api=syncProfileWithToken&id=${encodeURIComponent(gid)}&cgToken=${encodeURIComponent(token)}`);
         const data = await res.json();
         if (data && data.success) {
+          const finalStove = data.stove_lv || "";
           const updates = {
-            stove_lv: data.stove_lv || "",
+            stove_lv: finalStove,
+            furnaceLevel: finalStove,
             section: data.section || "2089",
             lastSyncedAt: new Date().toISOString(),
             centuryGamesVerified: true
@@ -9462,7 +9586,8 @@ window.handleSyncAllCharacters = async (btnEl = null) => {
           await update(ref(db, `users/${currentUser.uid}/altTokens/${gid}`), {
             ...((typeof tokenData === 'object') ? tokenData : {}),
             token: token,
-            stove_lv: updates.stove_lv,
+            stove_lv: finalStove,
+            furnaceLevel: finalStove,
             nickname: updates.name || "",
             avatar_image: data.avatar_image || "",
             lastSyncedAt: updates.lastSyncedAt
@@ -9470,11 +9595,38 @@ window.handleSyncAllCharacters = async (btnEl = null) => {
           currentUser.altTokens[gid] = {
             ...((typeof tokenData === 'object') ? tokenData : {}),
             token: token,
-            stove_lv: updates.stove_lv,
+            stove_lv: finalStove,
+            furnaceLevel: finalStove,
             nickname: updates.name || "",
             avatar_image: data.avatar_image || "",
             lastSyncedAt: updates.lastSyncedAt
           };
+
+          try {
+            const altRosterName = updates.name || idToNameMap[gid] || `Alt ${gid}`;
+            const rosterSnap = await get(ref(db, 'roster_live')).catch(() => null);
+            let rosterObj = (rosterSnap && rosterSnap.exists()) ? rosterSnap.val() : {};
+            let foundKey = null;
+            for (const [rk, rv] of Object.entries(rosterObj)) {
+              if ((gid && rv && rv.gameId && rv.gameId.toString().trim() === gid.toString().trim()) ||
+                  (altRosterName && rk.toLowerCase() === altRosterName.toLowerCase())) {
+                foundKey = rk;
+                break;
+              }
+            }
+            const saveKey = foundKey || altRosterName || gid;
+            rosterObj[saveKey] = {
+              ...(rosterObj[saveKey] || {}),
+              name: altRosterName,
+              gameId: gid,
+              furnaceLevel: finalStove,
+              stove_lv: finalStove,
+              updatedAt: Date.now()
+            };
+            await set(ref(db, 'roster_live'), rosterObj);
+            window.rosterCache = rosterObj;
+          } catch(e) {}
+
           successCount++;
         }
       } catch(e) {
@@ -15450,36 +15602,62 @@ window.resetBearTrapEvent = async () => {
               <!-- Glowing accent line at top -->
               <div style="position:absolute; top:0; left:0; width:100%; height:4px; background:var(--accent); box-shadow:0 0 10px var(--accent);"></div>
               
-              <div class="id-card-header" style="display:flex; align-items:center; margin-bottom:15px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:15px; position:relative; z-index:2;">
-                  <div class="id-card-avatar" style="border-radius:12px; overflow:hidden; border:2px solid var(--accent); box-shadow:0 4px 15px rgba(0,0,0,0.3); background:var(--bg-secondary); flex-shrink:0; cursor:pointer; position:relative;" onclick="window.openAvatarManagerModal('${currentUser.gameId}', '${window.escapeHTML(currentChiefName)}')" title="Change or Sync Profile Picture">
-                      <img id="accountHubAvatarImg" src="${avatarSrc}" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';" style="width:100%; height:100%; object-fit:cover;" />
-                      <div style="display:none; align-items:center; justify-content:center; width:100%; height:100%; font-size:32px; font-weight:bold; color:#fff;">${currentChiefName.charAt(0).toUpperCase()}</div>
-                      <div style="position:absolute; inset:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0'"><span style="font-size:24px;">✏️</span></div>
-                  </div>
-                  <div style="overflow:hidden;">
-                      <h2 class="id-card-name" style="margin:0 0 5px 0; color:#fff; letter-spacing:0.5px; text-shadow:0 2px 4px rgba(0,0,0,0.5); white-space:nowrap; text-overflow:ellipsis; overflow:hidden;">${window.escapeHTML(currentChiefName)}${adminBadgeHtml}</h2>
-                      <div style="display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:4px;">
-                          <div style="display:inline-flex; align-items:center; gap:6px; background:rgba(0,0,0,0.3); padding:4px 10px; border-radius:20px; border:1px solid rgba(255,255,255,0.1);">
-                              <span style="color:var(--accent); font-size:12px; font-weight:bold;">ID:</span>
-                              <span style="color:var(--text-main); font-family:monospace; font-size:14px; letter-spacing:1px;">${currentUser.gameId}</span>
+              <div class="id-card-header" style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:15px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:15px; position:relative; z-index:30;">
+                  <div style="display:flex; align-items:center; gap:14px; min-width:0; flex:1;">
+                      <div class="id-card-avatar" style="width:62px; height:62px; border-radius:14px; overflow:hidden; border:2px solid var(--accent); box-shadow:0 4px 15px rgba(0,0,0,0.3); background:var(--bg-secondary); flex-shrink:0; cursor:pointer; position:relative;" onclick="window.openAvatarManagerModal('${currentUser.gameId}', '${window.escapeHTML(currentChiefName)}')" title="Change or Sync Profile Picture">
+                          <img id="accountHubAvatarImg" src="${avatarSrc}" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';" style="width:100%; height:100%; object-fit:cover;" />
+                          <div style="display:none; align-items:center; justify-content:center; width:100%; height:100%; font-size:30px; font-weight:bold; color:#fff;">${currentChiefName.charAt(0).toUpperCase()}</div>
+                          <div style="position:absolute; inset:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0'"><span style="font-size:20px;">✏️</span></div>
+                      </div>
+                      <div style="overflow:hidden; min-width:0; flex:1;">
+                          <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                              <h2 class="id-card-name" style="margin:0; color:#fff; font-size:18px; letter-spacing:0.3px; text-shadow:0 2px 4px rgba(0,0,0,0.5); white-space:nowrap; text-overflow:ellipsis; overflow:hidden;">${window.escapeHTML(currentChiefName)}</h2>
+                              ${adminBadgeHtml}
                           </div>
-                          ${ tokenStatus.status === 'active' ? `
-                              <div style="display:inline-flex; align-items:center; gap:4px; background:rgba(16,185,129,0.15); border:1px solid #10b981; padding:3px 8px; border-radius:20px; font-size:11px; font-weight:bold; color:#10b981; cursor:pointer;" onclick="window.openAccountHubVerifyModal()" title="30-Day Sync Active (${tokenStatus.daysLeft}d left) - Click to manage or renew early">
-                                  🛡️ 30-Day Sync Active (${tokenStatus.daysLeft}d left) ${currentUser.section ? `(#${currentUser.section})` : ''}
+                          <div style="display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:5px;">
+                              <div style="display:inline-flex; align-items:center; gap:6px; background:rgba(0,0,0,0.35); padding:3px 8px; border-radius:12px; border:1px solid rgba(255,255,255,0.08);">
+                                  <span style="color:var(--accent); font-size:11px; font-weight:bold;">ID:</span>
+                                  <span style="color:var(--text-main); font-family:monospace; font-size:13px; letter-spacing:0.5px;">${currentUser.gameId}</span>
                               </div>
-                          ` : (tokenStatus.status === 'expiring_soon' ? `
-                              <div style="display:inline-flex; align-items:center; gap:4px; background:rgba(245,158,11,0.15); border:1px solid #f59e0b; padding:3px 8px; border-radius:20px; font-size:11px; font-weight:bold; color:#f59e0b; cursor:pointer;" onclick="window.openAccountHubVerifyModal()" title="30-Day Token Expiring Soon (${tokenStatus.daysLeft}d left) - Click to renew">
-                                  ⏳ 30-Day Sync (${tokenStatus.daysLeft}d left) ${currentUser.section ? `(#${currentUser.section})` : ''}
-                              </div>
-                          ` : (tokenStatus.status === 'expired' ? `
-                              <div style="display:inline-flex; align-items:center; gap:4px; background:rgba(239,68,68,0.15); border:1px solid #ef4444; padding:3px 8px; border-radius:20px; font-size:11px; font-weight:bold; color:#ef4444; cursor:pointer;" onclick="window.openAccountHubVerifyModal()" title="30-Day Token Expired - Click to renew in game">
-                                  🚨 30-Day Token Expired ${currentUser.section ? `(#${currentUser.section})` : ''}
-                              </div>
-                          ` : `
-                              <div style="display:inline-flex; align-items:center; gap:4px; background:rgba(245,158,11,0.15); border:1px solid #f59e0b; padding:3px 8px; border-radius:20px; font-size:11px; font-weight:bold; color:#f59e0b; cursor:pointer;" onclick="window.openAccountHubVerifyModal()" title="Click to verify character with in-game mailbox code">
-                                  ⚠️ 30-Day Sync Unverified
-                              </div>
-                          `))}
+                              ${ tokenStatus.status === 'active' ? `
+                                  <div style="display:inline-flex; align-items:center; gap:4px; background:rgba(16,185,129,0.15); border:1px solid #10b981; padding:2px 7px; border-radius:12px; font-size:10.5px; font-weight:bold; color:#10b981; cursor:pointer;" onclick="window.openAccountHubVerifyModal()" title="30-Day Sync Active (${tokenStatus.daysLeft}d left) - Click to manage or renew early">
+                                      🛡️ 30d Sync (${tokenStatus.daysLeft}d)
+                                  </div>
+                              ` : (tokenStatus.status === 'expiring_soon' ? `
+                                  <div style="display:inline-flex; align-items:center; gap:4px; background:rgba(245,158,11,0.15); border:1px solid #f59e0b; padding:2px 7px; border-radius:12px; font-size:10.5px; font-weight:bold; color:#f59e0b; cursor:pointer;" onclick="window.openAccountHubVerifyModal()" title="30-Day Token Expiring Soon (${tokenStatus.daysLeft}d left) - Click to renew">
+                                      ⏳ 30d Sync (${tokenStatus.daysLeft}d)
+                                  </div>
+                              ` : (tokenStatus.status === 'expired' ? `
+                                  <div style="display:inline-flex; align-items:center; gap:4px; background:rgba(239,68,68,0.15); border:1px solid #ef4444; padding:2px 7px; border-radius:12px; font-size:10.5px; font-weight:bold; color:#ef4444; cursor:pointer;" onclick="window.openAccountHubVerifyModal()" title="30-Day Token Expired - Click to renew in game">
+                                      🚨 Token Expired
+                                  </div>
+                              ` : `
+                                  <div style="display:inline-flex; align-items:center; gap:4px; background:rgba(245,158,11,0.15); border:1px solid #f59e0b; padding:2px 7px; border-radius:12px; font-size:10.5px; font-weight:bold; color:#f59e0b; cursor:pointer;" onclick="window.openAccountHubVerifyModal()" title="Click to verify character with in-game mailbox code">
+                                      ⚠️ 30d Unverified
+                                  </div>
+                              `))}
+                          </div>
+                      </div>
+                  </div>
+
+                  <!-- Options Action Menu Button & Dropdown -->
+                  <div style="position:relative; flex-shrink:0;">
+                      <button id="idCardActionsMenuBtn" type="button" onclick="window.toggleIdCardActionsMenu(event)" style="background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.18); color:#fff; padding:6px 10px; border-radius:10px; cursor:pointer; font-size:13px; font-weight:bold; display:inline-flex; align-items:center; gap:5px; transition:all 0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.2)'; this.style.borderColor='rgba(6,182,212,0.5)';" onmouseout="this.style.background='rgba(255,255,255,0.07)'; this.style.borderColor='rgba(255,255,255,0.18)';" title="Options & Actions">
+                          ⚙️ Options ▾
+                      </button>
+                      <div id="idCardActionsDropdown" style="display:none; position:absolute; right:0; top:38px; width:225px; background:linear-gradient(145deg, rgba(15,23,42,0.98), rgba(30,41,59,0.96)); backdrop-filter:blur(16px); border:1px solid rgba(56,189,248,0.35); border-radius:14px; box-shadow:0 14px 40px rgba(0,0,0,0.75); padding:6px; z-index:999; text-align:left; animation:fadeIn 0.15s ease;">
+                          <button onclick="window.closeIdCardActionsMenu(); window.openEditProfileHubModal();" style="width:100%; display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; border:none; background:transparent; color:#fff; font-size:13.5px; font-weight:600; cursor:pointer; text-align:left; transition:background 0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.15)'" onmouseout="this.style.background='transparent'">
+                              <span style="font-size:16px;">✏️</span> <span>Edit Member Profile</span>
+                          </button>
+                          <button onclick="window.closeIdCardActionsMenu(); window.handleSyncCenturyGamesProfile();" style="width:100%; display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; border:none; background:transparent; color:#38bdf8; font-size:13.5px; font-weight:600; cursor:pointer; text-align:left; transition:background 0.2s;" onmouseover="this.style.background='rgba(56,189,248,0.15)'" onmouseout="this.style.background='transparent'">
+                              <span style="font-size:16px;">🔄</span> <span>Sync from Game</span>
+                          </button>
+                          <button onclick="window.closeIdCardActionsMenu(); window.openAccountHubVerifyModal();" style="width:100%; display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; border:none; background:transparent; color:#10b981; font-size:13.5px; font-weight:600; cursor:pointer; text-align:left; transition:background 0.2s;" onmouseover="this.style.background='rgba(16,185,129,0.15)'" onmouseout="this.style.background='transparent'">
+                              <span style="font-size:16px;">🛡️</span> <span>Renew 30-Day Token</span>
+                          </button>
+                          <button onclick="window.closeIdCardActionsMenu(); window.openAvatarManagerModal('${currentUser.gameId}', '${window.escapeHTML(currentChiefName)}');" style="width:100%; display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; border:none; background:transparent; color:#e2e8f0; font-size:13.5px; font-weight:600; cursor:pointer; text-align:left; transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='transparent'">
+                              <span style="font-size:16px;">📷</span> <span>Profile Picture & Avatar</span>
+                          </button>
                       </div>
                   </div>
               </div>
@@ -15517,18 +15695,18 @@ window.resetBearTrapEvent = async () => {
           </div>
           
           <div style="display:flex; gap:12px; justify-content:center; margin-top:20px; margin-bottom:20px; flex-wrap:wrap;">
-              <button id="openUserEditProfileBtn" onclick="window.openEditProfileHubModal()" style="background:linear-gradient(135deg, #06b6d4, #3b82f6); color:#fff; border:none; padding:12px 24px; border-radius:10px; font-weight:bold; font-size:15px; cursor:pointer; box-shadow:0 4px 15px rgba(6,182,212,0.35); transition:transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+              <button id="openUserEditProfileBtn" onclick="window.openEditProfileHubModal()" class="btn-auth-primary" style="padding:12px 24px; border-radius:10px; font-size:15px;">
                   ✏️ Edit Profile
               </button>
               ${ (tokenStatus.status === 'active' || tokenStatus.status === 'expiring_soon') ? `
-                  <button id="btnSyncCgProfile" onclick="window.handleSyncCenturyGamesProfile()" style="background:rgba(56,189,248,0.15); border:1px solid #38bdf8; color:#38bdf8; padding:12px 20px; border-radius:10px; font-weight:bold; font-size:15px; cursor:pointer; display:inline-flex; align-items:center; gap:8px; transition:0.2s;" onmouseover="this.style.background='rgba(56,189,248,0.25)'" onmouseout="this.style.background='rgba(56,189,248,0.15)'">
+                  <button id="btnSyncCgProfile" onclick="window.handleSyncCenturyGamesProfile()" class="btn-auth-secondary" style="padding:12px 20px; border-radius:10px; font-size:15px; display:inline-flex; align-items:center; gap:8px;">
                       🔄 Sync from Game
                   </button>
-                  <button id="btnRenewCgToken" onclick="window.openAccountHubVerifyModal()" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.2); color:var(--text-main); padding:12px 18px; border-radius:10px; font-weight:bold; font-size:14px; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                  <button id="btnRenewCgToken" onclick="window.openAccountHubVerifyModal()" class="btn-auth-secondary" style="padding:12px 18px; border-radius:10px; font-size:14px; display:inline-flex; align-items:center; gap:6px;">
                       🔑 Renew Token
                   </button>
               ` : `
-                  <button id="btnVerifyCgProfile" onclick="window.openAccountHubVerifyModal()" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:12px 20px; border-radius:10px; font-weight:bold; font-size:15px; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 15px rgba(14,165,233,0.35); transition:transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+                  <button id="btnVerifyCgProfile" onclick="window.openAccountHubVerifyModal()" class="btn-auth-primary" style="padding:12px 20px; border-radius:10px; font-size:15px; display:inline-flex; align-items:center; gap:8px;">
                       🛡️ Renew 30-Day Sync Token
                   </button>
               `}

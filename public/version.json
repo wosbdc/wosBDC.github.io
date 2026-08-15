@@ -1,8 +1,11 @@
 {
-  "version": "2.5.34",
+  "version": "2.5.35",
   "releaseDate": "2026-08-14",
-  "title": "✨ Unified Button FX & Micro-Animations",
+  "title": "🔥 Accurate Furnace & FC Level Sync + ID Card Options Menu",
   "notes": [
-    "Unified hover scale, cyan-to-blue glow, and active press visual effects (FX) across all Sign In, Claim / Register, and action buttons"
+    "Fixed backend game sync bug where non-FC furnace levels (e.g. Lv 21, 28) were unintentionally overwritten to 30",
+    "Added full multi-stage ladder support for Fire Crystal levels (FC1 to FC10)",
+    "Added sleek ⚙️ Options dropdown menu directly in the Account Hub ID Card header near Chief Name",
+    "Synchronized stove_lv and furnaceLevel simultaneously across Firebase and live roster caches"
   ]
 }
