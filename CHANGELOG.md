@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.5.65] - 2026-08-15
+- Updated push notification formatting to display as **wosBDC Alert**.
+- Configured direct dashboard deep-linking on alert click.
+
 ## [2.5.64] - 2026-08-15
 - Made the **Notification Bell** always visible in the navbar for all visitors and alliance members.
 - Added live unread message badges and announcements tray.

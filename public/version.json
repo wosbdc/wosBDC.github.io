@@ -1,9 +1,9 @@
 {
-  "version": "2.5.64",
+  "version": "2.5.65",
   "releaseDate": "2026-08-15",
-  "title": "🔔 Always-Visible Notification Bell & Counter",
+  "title": "🔔 wosBDC Alert Notification Branding",
   "notes": [
-    "Ensured the Notification Bell is always visible on navbar and mobile controls",
-    "Enabled live message count badges and instant announcements tray"
+    "Updated all push notifications to display as wosBDC Alert",
+    "Configured custom alert titles and direct dashboard links"
   ]
 }

@@ -16,14 +16,33 @@ const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
   console.log('[firebase-messaging-sw.js] Received background message ', payload);
-  // FCM automatically displays notifications when the payload contains a 'notification' object.
-  // We only call showNotification if custom payload data is sent without a notification object.
   if (payload.data && !payload.notification) {
-    const notificationTitle = payload.data.title || 'BDC Dashboard';
+    const rawTitle = payload.data.title || 'Alert';
+    const notificationTitle = /^wosBDC\s*Alert/i.test(rawTitle) ? rawTitle : 'wosBDC Alert: ' + rawTitle;
     const notificationOptions = {
       body: payload.data.body || '',
-      icon: './favicon.svg'
+      icon: 'https://wosbdc.github.io/favicon.svg',
+      badge: 'https://wosbdc.github.io/favicon.svg',
+      data: {
+        url: 'https://wosbdc.github.io/'
+      }
     };
     self.registration.showNotification(notificationTitle, notificationOptions);
   }
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url.includes('wosbdc.github.io') && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow('https://wosbdc.github.io/');
+      }
+    })
+  );
 });

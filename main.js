@@ -132,7 +132,7 @@ window.fetchRoster = async () => {
 };
 
 
-const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbx3BOEmkmqvB-KL1unFQyYiTUyyELdcXOZG67P1gXA1xzwqAaaVYN2DgRFEOL_PpK0/exec';
+const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbwV16y5yVH_Z6JozBBgwWJ5UqgTYNiWsYTOB3ukomiWGDQ9QUWA1uevV7TG-H6dcJQ/exec';
 const VERIFY_PROXY_URL = 'https://wos-vercel-proxy.vercel.app/api/verify'; // Fallback / secondary proxy
 
 // Get a fresh Firebase ID token for the current user (replaces hardcoded APP_SECRET)
@@ -1678,7 +1678,7 @@ window.formatRankBadgeHtml = (rankVal) => {
 // Register Service Worker for Mobile PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=2.5.64')
+    navigator.serviceWorker.register('./sw.js?v=2.5.65')
       .then(reg => {
         reg.update();
         console.log('PWA Service Worker registered:', reg.scope);
@@ -12282,7 +12282,7 @@ const views = {
                       <button onclick="document.getElementById('broadcastPushModal').remove()" style="background: transparent; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer; padding: 0;">✕</button>
                   </div>
                   
-                  <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Send an instant alert notification to all registered devices.</p>
+                  <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Send an instant <strong>wosBDC Alert</strong> notification to all registered devices.</p>
 
                   <div>
                       <label style="font-size: 12px; font-weight: bold; color: var(--text-main); display: block; margin-bottom: 6px;">Notification Title</label>
@@ -12311,16 +12311,18 @@ const views = {
       };
 
       window.sendBroadcastPush = async () => {
-        const title = document.getElementById('adminPushTitle').value.trim();
+        let rawTitle = document.getElementById('adminPushTitle').value.trim();
         const body = document.getElementById('adminPushBody').value.trim();
         const statusEl = document.getElementById('adminPushStatus');
         
-        if (!title || !body) {
+        if (!rawTitle || !body) {
           statusEl.textContent = "Title and Body are required.";
           statusEl.style.color = "var(--danger)";
           return;
         }
         
+        const title = /^wosBDC\s*Alert/i.test(rawTitle) ? rawTitle : 'wosBDC Alert: ' + rawTitle;
+
         const confirmed = await window.customConfirm("Are you sure you want to broadcast this notification to all subscribed users?");
         if (!confirmed) return;
         
