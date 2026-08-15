@@ -1,9 +1,9 @@
 # CHANGELOG
 
 ## [2.5.86] - 2026-08-15
-- 📧 **Restored Account Email & Fixed Spoof Handler:**
-  - 🔄 **Direct Firebase Correction:** Updated Chief BrianDCox's account records in Firebase RTDB with the correct email `BrianDivaCox@gmail.com`.
-  - 🛡️ **Hardened Admin Spoofing:** Updated `window.spoofUser` to preserve the user's authentic email address and prevent test email strings from overwriting database records.
+- 📧 **Account Email Restored:**
+  - Fixed Chief BrianDCox's email to `BrianDivaCox@gmail.com` in Firebase.
+  - Prevented test spoof emails from overwriting database records.
 
 ## [2.5.85] - 2026-08-15
 - 🔍 **Advanced Filter & Search System for Linked Alt Accounts:**
