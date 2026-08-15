@@ -132,7 +132,7 @@ window.fetchRoster = async () => {
 };
 
 
-const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbxux9ycuaOZHXToFO0oiiii00Zz-Wh-rSZ-9kA3aeFr6Jvu1K5gSoU65nYrwEN2jw/exec';
+const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbw7qJBayYV_zQgAFMvd_V7W5dLj5JjhbmLlsx9vEk0LYaWYIiFQTL5LVsf3Oqvf4Ag/exec';
 const VERIFY_PROXY_URL = 'https://wos-vercel-proxy.vercel.app/api/verify'; // Fallback / secondary proxy
 
 // Get a fresh Firebase ID token for the current user (replaces hardcoded APP_SECRET)
@@ -1677,7 +1677,7 @@ window.formatRankBadgeHtml = (rankVal) => {
 // Register Service Worker for Mobile PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=2.5.59')
+    navigator.serviceWorker.register('./sw.js?v=2.5.60')
       .then(reg => {
         reg.update();
         console.log('PWA Service Worker registered:', reg.scope);
@@ -9916,6 +9916,378 @@ window.openAccountHubVerifyModal = () => {
   }
 };
 
+window.openGiftCodeDispatcherModal = async () => {
+  if (!currentUser || !(typeof window.isAdminUser === 'function' && window.isAdminUser(currentUser))) {
+    if (window.showToast) window.showToast("Admin access required.", "error");
+    return;
+  }
+
+  const oldModal = document.getElementById('giftCodeDispatcherModalOverlay');
+  if (oldModal && oldModal.parentNode) oldModal.parentNode.removeChild(oldModal);
+
+  const modalOverlay = document.createElement('div');
+  modalOverlay.id = 'giftCodeDispatcherModalOverlay';
+  modalOverlay.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.88); backdrop-filter:blur(12px); z-index:99999; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease;';
+
+  modalOverlay.innerHTML = `
+    <div class="card" style="width:94%; max-width:680px; background:linear-gradient(145deg, rgba(15,23,42,0.98), rgba(30,41,59,0.96)); border:1px solid rgba(236,72,153,0.4); padding:26px; border-radius:22px; box-shadow:0 25px 60px rgba(0,0,0,0.85); text-align:left; animation:zoomIn 0.2s forwards; color:var(--text-main); max-height:92vh; display:flex; flex-direction:column;">
+      
+      <!-- Modal Header -->
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:12px; flex-shrink:0;">
+        <div>
+          <h3 style="margin:0; color:#fff; font-size:20px; font-weight:bold; display:flex; align-items:center; gap:8px;">
+            🎁 Alliance Mass Gift Code Dispatcher
+          </h3>
+          <p style="margin:4px 0 0 0; font-size:12.5px; color:var(--text-muted);">
+            Test promotional gift codes and automatically redeem them for all enrolled members & alts.
+          </p>
+        </div>
+        <button onclick="document.getElementById('giftCodeDispatcherModalOverlay').remove()" style="background:none; border:none; color:var(--text-muted); font-size:28px; cursor:pointer; line-height:1;">&times;</button>
+      </div>
+
+      <!-- Modal Body (Scrollable) -->
+      <div style="overflow-y:auto; flex:1; padding-right:4px;">
+        
+        <!-- Step 1: Input Code & Test Box -->
+        <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:18px; margin-bottom:16px;">
+          <div style="font-size:12px; font-weight:bold; color:#ec4899; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">
+            Step 1: Enter Promotional Gift Code
+          </div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <input type="text" id="gcInputCode" placeholder="e.g. WOS0214, DC300K, gof2026" style="flex:1; min-width:200px; padding:11px 14px; border-radius:10px; border:1px solid var(--border); background:var(--bg-main); color:#fff; font-size:16px; font-family:monospace; letter-spacing:1px; text-transform:uppercase;">
+            <button id="gcTestCodeBtn" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:11px 20px; border-radius:10px; font-weight:bold; font-size:14px; cursor:pointer; display:flex; align-items:center; gap:6px;">
+              🧪 Test Validity
+            </button>
+          </div>
+          <div id="gcTestResultBox" style="display:none; margin-top:12px; padding:10px 14px; border-radius:8px; font-size:13px;"></div>
+        </div>
+
+        <!-- Step 2: Target Audience Preview -->
+        <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:18px; margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <div style="font-size:12px; font-weight:bold; color:#38bdf8; text-transform:uppercase; letter-spacing:0.5px;">
+              Step 2: Target Resolution
+            </div>
+            <span id="gcTargetCountBadge" style="background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:3px 10px; border-radius:12px; font-size:12px; font-weight:bold;">
+              Calculating targets...
+            </span>
+          </div>
+
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:10px; margin-bottom:10px;">
+            <label style="display:flex; align-items:center; gap:8px; background:rgba(15,23,42,0.6); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.06); cursor:pointer; font-size:13px;">
+              <input type="checkbox" id="gcIncludeEnrolled" checked style="width:16px; height:16px; accent-color:#ec4899;">
+              <span>🎁 Enrolled Roster Chiefs (<strong id="gcEnrolledCount">...</strong>)</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; background:rgba(15,23,42,0.6); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.06); cursor:pointer; font-size:13px;">
+              <input type="checkbox" id="gcIncludeAlts" checked style="width:16px; height:16px; accent-color:#ec4899;">
+              <span>❄️ Verified Linked Alts (<strong id="gcAltsCount">...</strong>)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Step 3: Live Progress & Execution Box -->
+        <div id="gcExecutionSection" style="display:none; background:rgba(15,23,42,0.85); border:1px solid rgba(236,72,153,0.4); border-radius:14px; padding:18px; margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <div style="font-size:13px; font-weight:bold; color:#fff;" id="gcProgressTitle">🚀 Redeeming Batch...</div>
+            <div style="font-size:13px; font-weight:bold; color:#ec4899;" id="gcProgressPercent">0%</div>
+          </div>
+          
+          <!-- Progress Bar Track -->
+          <div style="width:100%; height:10px; background:rgba(255,255,255,0.1); border-radius:5px; overflow:hidden; margin-bottom:14px;">
+            <div id="gcProgressBar" style="width:0%; height:100%; background:linear-gradient(90deg, #ec4899, #8b5cf6); transition:width 0.2s ease;"></div>
+          </div>
+
+          <!-- KPI Summary Strip -->
+          <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; text-align:center; margin-bottom:14px;">
+            <div style="background:rgba(255,255,255,0.04); padding:8px 4px; border-radius:8px; border:1px solid rgba(255,255,255,0.06);">
+              <div style="font-size:16px; font-weight:bold; color:#fff;" id="gcKpiTotal">0</div>
+              <div style="font-size:10px; color:#94a3b8; text-transform:uppercase;">Queued</div>
+            </div>
+            <div style="background:rgba(16,185,129,0.1); padding:8px 4px; border-radius:8px; border:1px solid rgba(16,185,129,0.3);">
+              <div style="font-size:16px; font-weight:bold; color:#10b981;" id="gcKpiSuccess">0</div>
+              <div style="font-size:10px; color:#10b981; text-transform:uppercase;">Claimed</div>
+            </div>
+            <div style="background:rgba(6,182,212,0.1); padding:8px 4px; border-radius:8px; border:1px solid rgba(6,182,212,0.3);">
+              <div style="font-size:16px; font-weight:bold; color:#06b6d4;" id="gcKpiAlready">0</div>
+              <div style="font-size:10px; color:#06b6d4; text-transform:uppercase;">Already Had</div>
+            </div>
+            <div style="background:rgba(239,68,68,0.1); padding:8px 4px; border-radius:8px; border:1px solid rgba(239,68,68,0.3);">
+              <div style="font-size:16px; font-weight:bold; color:#ef4444;" id="gcKpiFailed">0</div>
+              <div style="font-size:10px; color:#ef4444; text-transform:uppercase;">Failed</div>
+            </div>
+          </div>
+
+          <!-- Streaming Monospace Terminal Log -->
+          <div id="gcTerminalLog" style="height:160px; overflow-y:auto; background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px; font-family:Consolas, Monaco, monospace; font-size:11.5px; line-height:1.6; color:#94a3b8;">
+            <div>Waiting for start...</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.08); padding-top:16px; margin-top:12px; flex-shrink:0;">
+        <button onclick="document.getElementById('giftCodeDispatcherModalOverlay').remove()" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:#cbd5e1; padding:9px 18px; border-radius:8px; cursor:pointer; font-size:13px;">
+          Close
+        </button>
+        <button id="gcLaunchBtn" style="background:linear-gradient(135deg, #ec4899, #d946ef); color:#fff; border:none; padding:10px 24px; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer; box-shadow:0 4px 14px rgba(236,72,153,0.35); display:flex; align-items:center; gap:8px;">
+          🚀 Dispatch to All Members
+        </button>
+      </div>
+
+    </div>
+  `;
+
+  document.body.appendChild(modalOverlay);
+
+  // Target Resolvers
+  let enrolledList = [];
+  let altsList = [];
+
+  const updateTargetCounts = () => {
+    const incEnrolled = document.getElementById('gcIncludeEnrolled')?.checked ?? true;
+    const incAlts = document.getElementById('gcIncludeAlts')?.checked ?? true;
+
+    const targetSet = new Map();
+
+    if (incEnrolled) {
+      enrolledList.forEach(p => targetSet.set(String(p.gameId), p));
+    }
+    if (incAlts) {
+      altsList.forEach(a => {
+        if (!targetSet.has(String(a.gameId))) {
+          targetSet.set(String(a.gameId), a);
+        }
+      });
+    }
+
+    const total = targetSet.size;
+    const badge = document.getElementById('gcTargetCountBadge');
+    if (badge) badge.textContent = `${total} Total Characters`;
+    return Array.from(targetSet.values());
+  };
+
+  // Fetch data to populate targets
+  try {
+    const [cListSnap, usersSnap] = await Promise.all([
+      get(ref(db, "sheets/Chief's List")),
+      get(ref(db, "users"))
+    ]);
+
+    // Parse enrolled chiefs from Chief's List
+    if (cListSnap.exists()) {
+      const cRows = cListSnap.val() || [];
+      for (let i = 3; i < cRows.length; i++) {
+        const row = cRows[i];
+        if (!row || !row[0]) continue;
+        const name = String(row[0]).trim();
+        const gid = String(row[1] || '').trim();
+        const enrolled = String(row[3] || '').toLowerCase() === 'true';
+        if (gid && enrolled) {
+          enrolledList.push({ gameId: gid, name: name, type: 'roster' });
+        }
+      }
+    }
+
+    // Parse verified alts from Firebase Users
+    if (usersSnap.exists()) {
+      const uData = usersSnap.val() || {};
+      for (const u of Object.values(uData)) {
+        if (u.linkedGameIds && Array.isArray(u.linkedGameIds)) {
+          u.linkedGameIds.forEach(agid => {
+            const altGid = String(agid).trim();
+            const altTok = (u.altTokens && u.altTokens[altGid]) || {};
+            const aName = altTok.nickname || (window.idToNameMap && window.idToNameMap[altGid]) || `Alt ${altGid}`;
+            altsList.push({ gameId: altGid, name: aName, type: 'alt' });
+          });
+        }
+      }
+    }
+
+    const enrEl = document.getElementById('gcEnrolledCount');
+    if (enrEl) enrEl.textContent = enrolledList.length;
+    const altsEl = document.getElementById('gcAltsCount');
+    if (altsEl) altsEl.textContent = altsList.length;
+
+    updateTargetCounts();
+  } catch(e) {
+    console.warn("Failed to load targets for Gift Code Dispatcher:", e);
+  }
+
+  document.getElementById('gcIncludeEnrolled')?.addEventListener('change', updateTargetCounts);
+  document.getElementById('gcIncludeAlts')?.addEventListener('change', updateTargetCounts);
+
+  // Test Code Button handler
+  const testBtn = document.getElementById('gcTestCodeBtn');
+  const codeInput = document.getElementById('gcInputCode');
+  const resultBox = document.getElementById('gcTestResultBox');
+
+  if (testBtn && codeInput) {
+    testBtn.addEventListener('click', async () => {
+      const code = codeInput.value.trim().toUpperCase();
+      if (!code) {
+        if (window.showToast) window.showToast("Please enter a gift code to test.", "warning");
+        return;
+      }
+
+      testBtn.disabled = true;
+      testBtn.textContent = '🧪 Testing...';
+      if (resultBox) resultBox.style.display = 'none';
+
+      try {
+        const testId = currentUser.gameId || '318843189';
+        const adminToken = await window.getAuthToken();
+        const res = await fetch(`${API_BASE_URL}?api=redeemGiftCode&gameId=${encodeURIComponent(testId)}&code=${encodeURIComponent(code)}&token=${encodeURIComponent(adminToken)}`);
+        const data = await res.json();
+
+        resultBox.style.display = 'block';
+        if (data.code === 0) {
+          resultBox.style.background = 'rgba(16,185,129,0.15)';
+          resultBox.style.border = '1px solid rgba(16,185,129,0.4)';
+          resultBox.style.color = '#10b981';
+          resultBox.innerHTML = `<strong>✅ Code is Active & Valid!</strong> Successfully redeemed on test character (ID: ${testId}).`;
+        } else if (data.code === 40008 || data.status === 'already_claimed') {
+          resultBox.style.background = 'rgba(6,182,212,0.15)';
+          resultBox.style.border = '1px solid rgba(6,182,212,0.4)';
+          resultBox.style.color = '#06b6d4';
+          resultBox.innerHTML = `<strong>✅ Code is Valid!</strong> (Test character already redeemed this code previously). Ready for alliance dispatch.`;
+        } else if (data.code === 40004 || data.code === 40007 || data.status === 'expired') {
+          resultBox.style.background = 'rgba(239,68,68,0.15)';
+          resultBox.style.border = '1px solid rgba(239,68,68,0.4)';
+          resultBox.style.color = '#ef4444';
+          resultBox.innerHTML = `<strong>❌ Code Expired or Invalid:</strong> ${window.escapeHTML(data.msg || 'The code does not exist or has expired.')}`;
+        } else {
+          resultBox.style.background = 'rgba(245,158,11,0.15)';
+          resultBox.style.border = '1px solid rgba(245,158,11,0.4)';
+          resultBox.style.color = '#f59e0b';
+          resultBox.innerHTML = `<strong>⚠️ Code Status:</strong> ${window.escapeHTML(data.msg || 'Unknown response from game server.')}`;
+        }
+      } catch (err) {
+        resultBox.style.display = 'block';
+        resultBox.style.background = 'rgba(239,68,68,0.15)';
+        resultBox.style.border = '1px solid rgba(239,68,68,0.4)';
+        resultBox.style.color = '#ef4444';
+        resultBox.innerHTML = `<strong>❌ Error connecting to game API:</strong> ${window.escapeHTML(err.message)}`;
+      } finally {
+        testBtn.disabled = false;
+        testBtn.textContent = '🧪 Test Validity';
+      }
+    });
+  }
+
+  // Launch Mass Dispatch Handler
+  const launchBtn = document.getElementById('gcLaunchBtn');
+  if (launchBtn) {
+    launchBtn.addEventListener('click', async () => {
+      const code = codeInput.value.trim().toUpperCase();
+      if (!code) {
+        if (window.showToast) window.showToast("Please enter a gift code first.", "warning");
+        return;
+      }
+
+      const targets = updateTargetCounts();
+      if (targets.length === 0) {
+        if (window.showToast) window.showToast("No target members selected.", "warning");
+        return;
+      }
+
+      const confirmed = await window.customConfirm(`Launch Mass Gift Code Redemption for [${code}] across ${targets.length} alliance characters?`);
+      if (!confirmed) return;
+
+      // Lock UI and show Execution Section
+      launchBtn.disabled = true;
+      launchBtn.style.opacity = '0.5';
+      launchBtn.style.cursor = 'not-allowed';
+      if (testBtn) testBtn.disabled = true;
+      if (codeInput) codeInput.disabled = true;
+
+      const execSection = document.getElementById('gcExecutionSection');
+      if (execSection) execSection.style.display = 'block';
+
+      const pTitle = document.getElementById('gcProgressTitle');
+      const pPercent = document.getElementById('gcProgressPercent');
+      const pBar = document.getElementById('gcProgressBar');
+      const kpiTotal = document.getElementById('gcKpiTotal');
+      const kpiSuccess = document.getElementById('gcKpiSuccess');
+      const kpiAlready = document.getElementById('gcKpiAlready');
+      const kpiFailed = document.getElementById('gcKpiFailed');
+      const terminal = document.getElementById('gcTerminalLog');
+
+      if (kpiTotal) kpiTotal.textContent = targets.length;
+      if (terminal) terminal.innerHTML = `<div style="color:#38bdf8;">[${new Date().toLocaleTimeString()}] 🚀 Initiating batch redemption for code: <strong>${window.escapeHTML(code)}</strong> (${targets.length} targets)...</div>`;
+
+      let successCount = 0;
+      let alreadyCount = 0;
+      let failedCount = 0;
+
+      const adminToken = await window.getAuthToken();
+
+      for (let i = 0; i < targets.length; i++) {
+        const item = targets[i];
+        const gid = item.gameId;
+        const name = item.name;
+
+        const currentPct = Math.round(((i + 1) / targets.length) * 100);
+        if (pBar) pBar.style.width = `${currentPct}%`;
+        if (pPercent) pPercent.textContent = `${currentPct}%`;
+        if (pTitle) pTitle.textContent = `🚀 Processing [${i + 1}/${targets.length}] - ${name}...`;
+
+        try {
+          const res = await fetch(`${API_BASE_URL}?api=redeemGiftCode&gameId=${encodeURIComponent(gid)}&code=${encodeURIComponent(code)}&token=${encodeURIComponent(adminToken)}`);
+          const data = await res.json();
+
+          let logLine = '';
+          if (data.code === 0) {
+            successCount++;
+            if (kpiSuccess) kpiSuccess.textContent = successCount;
+            logLine = `<div style="color:#10b981;">[${i + 1}/${targets.length}] ${window.escapeHTML(name)} (${gid}): ✅ Claimed! Reward delivered to in-game mailbox.</div>`;
+          } else if (data.code === 40008 || data.status === 'already_claimed') {
+            alreadyCount++;
+            if (kpiAlready) kpiAlready.textContent = alreadyCount;
+            logLine = `<div style="color:#06b6d4;">[${i + 1}/${targets.length}] ${window.escapeHTML(name)} (${gid}): ⏩ Already claimed on this character.</div>`;
+          } else {
+            failedCount++;
+            if (kpiFailed) kpiFailed.textContent = failedCount;
+            logLine = `<div style="color:#ef4444;">[${i + 1}/${targets.length}] ${window.escapeHTML(name)} (${gid}): ❌ ${window.escapeHTML(data.msg || 'Redemption failed')}</div>`;
+          }
+
+          if (terminal) {
+            terminal.innerHTML += logLine;
+            terminal.scrollTop = terminal.scrollHeight;
+          }
+        } catch (e) {
+          failedCount++;
+          if (kpiFailed) kpiFailed.textContent = failedCount;
+          if (terminal) {
+            terminal.innerHTML += `<div style="color:#ef4444;">[${i + 1}/${targets.length}] ${window.escapeHTML(name)} (${gid}): ❌ Network error: ${window.escapeHTML(e.message)}</div>`;
+            terminal.scrollTop = terminal.scrollHeight;
+          }
+        }
+
+        // Polite throttle between requests (150ms)
+        await new Promise(r => setTimeout(r, 150));
+      }
+
+      if (pTitle) pTitle.textContent = `🎉 Batch Complete!`;
+      if (terminal) {
+        terminal.innerHTML += `<div style="color:#10b981; font-weight:bold; margin-top:8px;">[${new Date().toLocaleTimeString()}] ✅ Finished processing ${targets.length} characters! (${successCount} claimed, ${alreadyCount} already had, ${failedCount} errors).</div>`;
+        terminal.scrollTop = terminal.scrollHeight;
+      }
+
+      if (window.logAdminAction) {
+        window.logAdminAction("Mass Gift Code", `Redeemed [${code}] for ${targets.length} characters (${successCount} claimed, ${alreadyCount} already had)`, "GiftCode Dispatcher");
+      }
+
+      if (window.showToast) {
+        window.showToast(`🎉 Gift Code [${code}] dispatch complete! ${successCount} claimed, ${alreadyCount} already had.`, "success");
+      }
+
+      launchBtn.textContent = '✅ Completed';
+      launchBtn.style.background = '#10b981';
+    });
+  }
+};
+
 window.handleSyncAltProfile = async (gid, btnEl = null) => {
   if (!currentUser) return;
   const cleanGid = (gid || '').toString().trim();
@@ -12548,11 +12920,12 @@ const views = {
               <p style="margin:0 0 15px 0; font-size:12px; color:var(--text-muted); text-align:left;">Manage Chief names, Game IDs, push alerts, and master database sync.</p>
               
               <div style="display:flex; flex-direction:column; gap:12px; align-items:center;">
+                <button onclick="window.openGiftCodeDispatcherModal()" style="background:linear-gradient(135deg, #ec4899, #d946ef); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(236,72,153,0.35);">🎁 Alliance Mass Gift Code Dispatcher</button>
                 <button onclick="document.querySelector('.admin-tab-btn[data-tab=\'tab-users\']')?.click(); if(window.showToast) window.showToast('Click 🛠️ Repair ID next to any member in the table to swap or fix IDs!', 'info');" style="background:linear-gradient(135deg, #a855f7, #9333ea); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(168,85,247,0.3);">🛠️ Chief Character & ID Repair Wizard</button>
                 <button onclick="window.openNewMembersModal()" style="background:linear-gradient(135deg, #06b6d4, #3b82f6); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(6,182,212,0.3);">🔔 View Recent Member Signups</button>
                 <button onclick="views.playerEditor()" style="background:linear-gradient(135deg, #6366f1, #4f46e5); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(99,102,241,0.3);">👤 Open Player Database Editor</button>
                 ${isR5 ? `<button onclick="window.openBroadcastPushModal()" style="background:linear-gradient(135deg, #ec4899, #be185d); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(236,72,153,0.3);">🚀 Broadcast Push Notification</button>` : ''}
-                <button id="syncAllSheetsBtn" onclick="window.syncAllSheetsToFirebase()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(16,185,129,0.3);">⚡ Master Sync Sheets ➔ Firebase</button>
+                <button id="syncAllSheetsBtn" onclick="window.syncAllSheetsToFirebase()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(168,85,247,0.3);">⚡ Master Sync Sheets ➔ Firebase</button>
                 <button onclick="window.syncScheduleDirectly()" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(59,130,246,0.3);">📅 Sync Schedule ➔ Site</button>
               </div>
             </div>

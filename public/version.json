@@ -1,10 +1,11 @@
 {
-  "version": "2.5.59",
-  "releaseDate": "2026-08-14",
-  "title": "⭐️ Primary Character Switcher & Admin Account Repair Wizard",
+  "version": "2.5.60",
+  "releaseDate": "2026-08-15",
+  "title": "🎁 Alliance Mass Gift Code Dispatcher & Automated Redemption Engine",
   "notes": [
-    "Added 1-click 'Make Primary' button in Account Hub to safely promote any linked alt character to primary chief without losing tokens or stats",
-    "Added Admin Account Character & ID Repair Wizard to quickly fix mismatched Game IDs with live Century Games stat lookup",
-    "Preserved bidirectional alt tokens, avatars, and linked data during primary character promotions and ID corrections"
+    "Added 1-click Gift Code testing tool with live Century Games status check (Active, Already Claimed, Expired)",
+    "Built Alliance Mass Gift Code Dispatcher with live progress bar, KPI counters, and real-time streaming terminal log",
+    "Enabled automated target resolution across all enrolled roster chiefs and verified linked alts",
+    "Deployed backend Century Games cryptographic gift code redemption endpoints to Apps Script @162"
   ]
 }

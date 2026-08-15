@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [2.5.60] - 2026-08-15
+- Added **"🎁 Alliance Mass Gift Code Dispatcher"** in Admin Daily Tools.
+- Added **"🧪 Test Code Validity"** with live Century Games API inspection (detects Active, Already Claimed, Expired, or Usage Limit reached).
+- Implemented real-time streaming batch execution engine with animated progress bar, KPI summary strip, and auto-scrolling terminal log.
+- Automated target resolution across all enrolled roster members and verified linked alt accounts in Firebase.
+- Deployed backend Century Games cryptographic gift code redemption endpoints (`redeemGiftCode`, `batchRedeemGiftCode`, `lookupPlayer`) to Google Apps Script (`@162`).
+
 ## [2.5.59] - 2026-08-14
 - Added 1-Click **"⭐️ Make Primary"** Character Switcher on all linked alt cards in the Account Hub.
 - Added **"🛠️ Account Character & ID Repair Wizard"** in the Registered Users Database and Admin Tools tab.
