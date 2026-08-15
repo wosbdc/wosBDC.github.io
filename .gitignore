@@ -23,13 +23,28 @@ dist-ssr
 *.sln
 *.sw?
 
-# Environment and scratch files
+# Environment and scratch/analysis files
 .env
 .env.*
+scratch/
+scratch/*
 *.cjs
+*.mjs
+*.py
+tools/*.py
 *.bat
-!tools/*
+*.txt
+*.bak
+*.zip
+prev_*.js
+old_*.js
+e5_*.js
+top_part.js
+scratch_test.js
+test.js
+temp_*.css
 !tools/*.cjs
+!tools/*.mjs
 
 # Ignore root data JSON snapshots (keep project configs)
 /*.json
