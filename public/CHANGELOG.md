@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [2.5.48] - 2026-08-14
+- Applied updated fine-tuned flame settings across the entire platform: 0.8 spawn rate density, 35% hexagon perimeter radius, and 8px glowing ember particles.
+
 ## [2.5.47] - 2026-08-14
 - Applied custom user-tuned flame particle physics into the live website: refined 5px ember radius, balanced 32% hexagonal perimeter radius, 2.2 buoyant upward speed, and 0.6 wave shimmer.
 

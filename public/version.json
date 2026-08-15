@@ -1,9 +1,10 @@
 {
-  "version": "2.5.47",
+  "version": "2.5.48",
   "releaseDate": "2026-08-14",
-  "title": "✨ Applied Custom Refined Particle Size & Flame Physics",
+  "title": "🔥 Applied Perfect Flame Parameters (0.8 Density, 35% Radius, 8px Embers)",
   "notes": [
-    "Applied custom user-tuned flame parameters: fine 5px ember radius, balanced 32% hexagonal perimeter radius, and buoyant 2.2 float speed",
-    "Flames now burn with crisp, refined embers wrapping symmetrically around all 6 facets of the badge"
+    "Increased flame spawn rate to 0.8 for rich, active ember density",
+    "Expanded perimeter radius to 35% for seamless outer edge coverage",
+    "Set ember particle size to 8px for enhanced luminous glow"
   ]
 }
