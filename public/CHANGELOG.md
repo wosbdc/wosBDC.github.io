@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.5.83] - 2026-08-15
+- 🔗 **Fixed Manage Alt Accounts Navigation:**
+  - 🛠️ **Seamless Alts Hub Access:** Bound `window.openAltManagerModal` to directly dismiss the alerts overlay and navigate straight to the `🔗 Linked Alt Accounts` manager in Account Hub.
+  - ⚡ **Instant Token Setup:** Enables 1-click access to link new alts, verify in-game tokens, and manage secondary character perks.
+
 ## [2.5.82] - 2026-08-15
 - 🔔 **Streamlined Alliance Notifications & Alerts (Option 1):**
   - 🌟 **Header-Integrated Push Status Pill:** Replaced the bulky "set-and-forget" push banner with a compact glowing status badge (`[ 🟢 Push: ON ▾ ]` / `[ 🔔 Turn ON Push ]`) in the modal header next to the close button.

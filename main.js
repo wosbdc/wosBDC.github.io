@@ -9239,6 +9239,15 @@ window.openNewMembersModal = window.openAllianceAlertsModal;
 window.openNotificationsModal = window.openAllianceAlertsModal;
 window.openPushNotificationsModal = window.openAllianceAlertsModal;
 
+window.openAltManagerModal = function() {
+  const overlay = document.getElementById('notificationsModalOverlay');
+  if (overlay) overlay.remove();
+  if (window.views && typeof window.views.account === 'function') {
+    window.views.account('Alts');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+};
+
 window.getPushPreferences = function() {
   try {
     const raw = localStorage.getItem('wos_push_prefs');

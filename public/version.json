@@ -1,11 +1,9 @@
 {
-  "version": "2.5.82",
+  "version": "2.5.83",
   "releaseDate": "2026-08-15",
-  "title": "🔔 Streamlined Alliance Notifications & Alerts",
+  "title": "🔗 Fixed Manage Alt Accounts Navigation",
   "notes": [
-    "Integrated Push Notification status pill into the modal header bar",
-    "Eliminated bulky set-and-forget banner to maximize alert reading space",
-    "Added quick dropdown menu for Push tools (Test Alert, Re-sync, Clear Badges)",
-    "Prioritized actionable member token warnings above general announcements"
+    "Fixed 'Manage' button in Alt Accounts Un-Sync banner to immediately open Account Hub Alts manager",
+    "Streamlined navigation from Alliance Alerts to 30-day token setup"
   ]
 }
