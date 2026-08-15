@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [2.5.47] - 2026-08-14
+- Applied custom user-tuned flame particle physics into the live website: refined 5px ember radius, balanced 32% hexagonal perimeter radius, 2.2 buoyant upward speed, and 0.6 wave shimmer.
+
 ## [2.5.46] - 2026-08-14
 - Implemented symmetrical hexagonal perimeter particle spawning so flames rise and radiate evenly across all 6 facets of the badge without one-sided drift.
 - Scaled particle shimmer and wave amplitude mathematically to the canvas size for consistent rendering at 48px, 80px, and 180px.

@@ -21390,7 +21390,7 @@ window.closeMobileNavModal = () => {
       this.vx = (Math.cos(midAngle) * 1.1 + (Math.random() - 0.5) * 0.8) * scale;
       this.vy = (Math.sin(midAngle) * 0.8 - Math.random() * 2.2 - 1.2) * scale;
       
-      this.size = (Math.random() * 10 + 5) * scale;
+      this.size = (Math.random() * 5 + 2.5) * scale;
       this.scale = scale;
       this.alpha = 1.0;
       this.decay = Math.random() * 0.024 + 0.012;
