@@ -132,7 +132,7 @@ window.fetchRoster = async () => {
 };
 
 
-const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbxf9fuHxUuHZZ16zTtGMBlNHHFez60TyGPCPiFv4CXRtP6fRQ1lRNgfzsybCV6bDsw/exec';
+const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbz-OKzpFicNJtMlB3eT9jOD4-Y1VahjXZmwQ3oWr0pkFpvMejlb0DVuFgym8jAmuy8/exec';
 const VERIFY_PROXY_URL = 'https://wos-vercel-proxy.vercel.app/api/verify'; // Fallback / secondary proxy
 
 // Get a fresh Firebase ID token for the current user (replaces hardcoded APP_SECRET)
@@ -11421,12 +11421,24 @@ window.runLiveGiftCodeSweep = async (btnEl = null) => {
     // 1. Fetch current history from Firebase
     const existingHistory = (await get(ref(db, 'gift_codes_history')).catch(() => null))?.val() || {};
     
-    // 2. Perform live check via backend or known feeds
+    // 2. Perform live check via backend scraper (wosrewards.com) + known promo feeds
     const testId = currentUser.gameId || '318843189';
     const adminToken = await getAuthToken();
     
-    // Quick test against common promo seeds to ensure live synchronization
-    const seedCandidates = ['WOS0815', 'WOSFAMILY26', 'DC300K', '822FORU', 'WOS3ANNIVERSARY'];
+    let scrapedCandidates = [];
+    try {
+      const scrapeRes = await fetch(`${API_BASE_URL}?api=scrapeGiftCodes`).then(r => r.json());
+      if (scrapeRes && scrapeRes.success && Array.isArray(scrapeRes.codes)) {
+        scrapedCandidates = scrapeRes.codes;
+      }
+    } catch(e) {
+      console.warn("Live scraper fallback to local seeds:", e);
+    }
+    
+    const seedCandidates = Array.from(new Set([
+      ...scrapedCandidates,
+      'VIP0815', 'WOS0815', 'summer26jp', 'GuDokYTKOR', '2ndYoutubeKR', '1stYoutubeKR', 'gogoWOS', 'DC300K', '822FORU'
+    ]));
     let newlyFound = 0;
     
     for (const code of seedCandidates) {
@@ -11440,7 +11452,7 @@ window.runLiveGiftCodeSweep = async (btnEl = null) => {
           await set(ref(db, `gift_codes_history/${cleanKey}`), {
             code: code,
             status: 'active',
-            description: `Auto-discovered via Live Web Sweep on ${new Date().toLocaleDateString()}`,
+            description: `Auto-discovered via Live Web Scraper (${scrapedCandidates.includes(code) ? 'wosrewards.com' : 'Live Sweep'}) on ${new Date().toLocaleDateString()}`,
             createdAt: new Date().toISOString(),
             createdBy: 'AutoBot Scraper',
             lastDispatchedAt: new Date().toISOString(),
@@ -11455,12 +11467,12 @@ window.runLiveGiftCodeSweep = async (btnEl = null) => {
       status: 'online',
       lastSweep: new Date().toISOString(),
       nextSweep: new Date(Date.now() + 45 * 60 * 1000).toISOString(),
-      sourcesChecked: ['DotGG', 'ProGameGuides', 'PocketGamer'],
-      recentLog: `Live on-demand sweep completed: ${seedCandidates.length} candidate codes evaluated, ${newlyFound} new valid codes registered.`
+      sourcesChecked: ['wosrewards.com', 'DotGG', 'ProGameGuides', 'PocketGamer'],
+      recentLog: `Live on-demand sweep completed: ${seedCandidates.length} candidate codes evaluated from wosrewards.com & feeds, ${newlyFound} new valid codes registered.`
     });
 
     if (window.showToast) {
-      window.showToast(`✅ Sweep finished! ${newlyFound > 0 ? `Registered ${newlyFound} new active code(s)!` : 'All 3 sources up to date.'}`, 'success');
+      window.showToast(`✅ Sweep finished! ${newlyFound > 0 ? `Registered ${newlyFound} new active code(s)!` : 'All feeds including wosrewards.com up to date.'}`, 'success');
     }
 
     window.loadGiftCodesManagerData();

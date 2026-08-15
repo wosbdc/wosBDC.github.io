@@ -1,9 +1,8 @@
 {
-  "version": "2.5.91",
+  "version": "2.5.92",
   "releaseDate": "2026-08-15",
-  "title": "🔍 Resilient Player Search & Lookup",
+  "title": "Patches to members perk system",
   "notes": [
-    "Normalized Unicode non-breaking spaces across player databases",
-    "Added multi-table fallback resolution for player profile lookups"
+    "Patches to members perk system"
   ]
 }

@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [2.5.92] - 2026-08-15
+- Patches to members perk system.
+
 ## [2.5.91] - 2026-08-15
 - 🔍 **Resilient Player Search & Lookup:**
   - Resolved non-breaking space (`\u00a0`) mismatches in `roster_live` and player lookup indexes.
