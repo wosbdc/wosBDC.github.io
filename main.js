@@ -1680,7 +1680,7 @@ window.formatRankBadgeHtml = (rankVal) => {
 // Register Service Worker for Mobile PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js')
+    navigator.serviceWorker.register('./sw.js?v=2.5.55')
       .then(reg => {
         reg.update();
         console.log('PWA Service Worker registered:', reg.scope);
