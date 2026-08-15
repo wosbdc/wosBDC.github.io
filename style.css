@@ -641,6 +641,7 @@ tr:hover td {
     vertical-align: middle;
     transform: translateZ(0);
     will-change: transform;
+    flex-shrink: 0;
 }
 
 .id-card-furnace-showcase {

@@ -146,7 +146,7 @@ const getAuthToken = async () => {
 };
 
 
-window.getFurnaceIconHtml = (level, size = 48) => {
+window.getFurnaceIconHtml = (level, size = 32) => {
   if (!level || level === "N/A" || level === "") return `<span style="color:var(--text-muted); font-size:13px; font-weight:bold;">🔥 N/A</span>`;
   
   const rawStr = level.toString().trim().toUpperCase();
@@ -169,9 +169,9 @@ window.getFurnaceIconHtml = (level, size = 48) => {
      const firstNumMatch = rawStr.match(/(\d+)/);
      if (firstNumMatch) {
         const numVal = parseInt(firstNumMatch[1], 10);
-        if (numVal > 30 && numVal <= 40) { // Century Games API stove_lv (31=FC1 ... 40=FC10)
+        if (numVal > 30 && numVal <= 40) {
            fcNum = numVal - 30;
-        } else if (numVal > 40 && numVal <= 80) { // Century Games 5-stage ladder (51-55=FC5 ... 76-80=FC10)
+        } else if (numVal > 40 && numVal <= 80) {
            fcNum = Math.ceil((numVal - 30) / 5);
         } else if (numVal >= 1 && numVal <= 30) {
            furnaceNum = numVal;
@@ -194,14 +194,14 @@ window.getFurnaceIconHtml = (level, size = 48) => {
        10: 'rgba(255,215,0,0.9)'    // Imperial Gold
      };
      const glow = fcGlowMap[fcNum];
-     const canvasDisplaySize = Math.round(size * 1.45);
+     const canvasDisplaySize = Math.round(size * 1.35);
      const marginOffset = Math.round((canvasDisplaySize - size) / 2);
-     return `<canvas class="fc-unified-badge" data-fc="${fcNum}" data-size="${size}" style="display:inline-block; vertical-align:middle; width:${canvasDisplaySize}px; height:${canvasDisplaySize}px; cursor:pointer; user-select:none; -webkit-user-select:none; margin:-${marginOffset}px; transition:filter 0.25s ease;" title="Fire Crystal ${fcNum} (FC ${fcNum})"></canvas>`;
+     return `<canvas class="fc-unified-badge" data-fc="${fcNum}" data-size="${size}" style="display:inline-block; vertical-align:middle; width:${canvasDisplaySize}px; height:${canvasDisplaySize}px; cursor:pointer; user-select:none; -webkit-user-select:none; margin:-${marginOffset}px 2px; transition:filter 0.25s ease;" title="Fire Crystal ${fcNum} (FC ${fcNum})"></canvas>`;
   }
 
   // Render Modern Standard Furnace Badge (Furnace 1 to 30)
   const fn = furnaceNum || 30;
-  return `<span class="furnace-level-badge" title="Furnace Level ${fn}" style="display:inline-flex; align-items:center; gap:6px; background:linear-gradient(135deg, rgba(30,41,59,0.8), rgba(15,23,42,0.9)); border:1px solid rgba(249,115,22,0.4); padding:4px 10px; border-radius:12px; font-weight:800; font-size:${Math.max(12, Math.round(size*0.38))}px; color:#ffffff; box-shadow:0 4px 12px rgba(249,115,22,0.15); white-space:nowrap; vertical-align:middle;">
+  return `<span class="furnace-level-badge" title="Furnace Level ${fn}" style="display:inline-flex; align-items:center; gap:6px; background:linear-gradient(135deg, rgba(30,41,59,0.8), rgba(15,23,42,0.9)); border:1px solid rgba(249,115,22,0.4); padding:3px 8px; border-radius:10px; font-weight:800; font-size:${Math.max(11, Math.round(size*0.36))}px; color:#ffffff; box-shadow:0 4px 12px rgba(249,115,22,0.15); white-space:nowrap; vertical-align:middle;">
     <span style="filter:drop-shadow(0 0 4px #f97316);">🔥</span> Lv ${fn}
   </span>`;
 };
@@ -1677,7 +1677,7 @@ window.formatRankBadgeHtml = (rankVal) => {
 // Register Service Worker for Mobile PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=2.5.57')
+    navigator.serviceWorker.register('./sw.js?v=2.5.58')
       .then(reg => {
         reg.update();
         console.log('PWA Service Worker registered:', reg.scope);
@@ -12352,7 +12352,7 @@ const views = {
             let taVal = p.timeActive;
             isEnrolled = (gcVal === true || gcVal === 'TRUE' || (typeof gcVal === 'string' && gcVal.toLowerCase().trim() === 'true'));
             
-            if (flVal) rosterInfoHtml += `<span style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); padding:3px 8px; border-radius:10px; font-size:11px; display:inline-flex; align-items:center;">${window.getFurnaceIconHtml(flVal)}</span>`;
+            if (flVal) rosterInfoHtml += window.getFurnaceIconHtml(flVal, 32);
             if (isEnrolled) rosterInfoHtml += `<span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:3px 8px; border-radius:10px; font-size:11px; font-weight:bold;">🎁 Enrolled</span>`;
             if (taVal) rosterInfoHtml += `<span style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-muted); padding:3px 8px; border-radius:10px; font-size:11px;">⏱️ ${escapeHTML(taVal)}</span>`;
         }
@@ -12445,7 +12445,7 @@ const views = {
           const avatarSrc = window.getAvatarUrl(uGid, uName);
           
           let rosterInfoHtml = '';
-          if (flVal) rosterInfoHtml += `<span style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); padding:3px 8px; border-radius:10px; font-size:11px; display:inline-flex; align-items:center;">${window.getFurnaceIconHtml(flVal)}</span>`;
+          if (flVal) rosterInfoHtml += window.getFurnaceIconHtml(flVal, 32);
           if (isEnrolled) rosterInfoHtml += `<span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:3px 8px; border-radius:10px; font-size:11px; font-weight:bold;">✅ Enrolled</span>`;
 
           html += `
@@ -12775,6 +12775,9 @@ const views = {
           
           if (e.target.getAttribute('data-tab') === 'tab-frost' && !window.frostDataLoaded) {
             window.loadFrostClanData();
+          }
+          if (window.initUnifiedFcBadges) {
+            setTimeout(window.initUnifiedFcBadges, 50);
           }
         });
       });
@@ -20537,7 +20540,7 @@ window.generatePlayerProfileHtml = (chiefName, p, headers, colIsUpcoming, roster
   if (rosterInfo) {
     let flVal = rosterInfo.furnaceLevel;
     if (flVal && flVal.toString().trim() !== "") {
-       headerBadgesHtml += `<span style="background:color-mix(in srgb, var(--accent) 15%, transparent); border:1px solid var(--accent); color:var(--text-main); padding:4px 10px; border-radius:12px; font-size:14px; font-weight:bold; display:inline-flex; align-items:center;">${window.getFurnaceIconHtml(flVal, 48)}</span>`;
+       headerBadgesHtml += window.getFurnaceIconHtml(flVal, 38);
     }
     let gcVal = rosterInfo.giftCodes;
     if (gcVal === true || gcVal === 'TRUE' || (typeof gcVal === 'string' && gcVal.toLowerCase().trim() === 'true')) {

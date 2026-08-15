@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [2.5.58] - 2026-08-14
+- Fixed Fire Crystal badge sizing inside the Registered Users Database and member tables.
+- Removed redundant outer bordered wrapper spans that caused double/misaligned boxes around FC badges.
+- Optimized inline badge proportions (`size = 32`) and added `flex-shrink: 0` for responsive alignment.
+- Added automatic canvas badge initialization upon switching Admin tabs.
+
 ## [2.5.57] - 2026-08-14
 - Fixed Account Hub failing to re-open on repeated clicks from the navbar user indicator (`#navbar-user-indicator`).
 - Added safe null guarding for all dynamic Account Hub DOM event listeners (`cancelAltBtn`, `uploadInput`, `submitAltBtn`, `selectEl`).
