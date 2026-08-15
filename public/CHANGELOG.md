@@ -2,8 +2,8 @@
 
 ## [2.5.86] - 2026-08-15
 - 📧 **Account Email Restored:**
-  - Fixed Chief BrianDCox's email to `BrianDivaCox@gmail.com` in Firebase.
-  - Prevented test spoof emails from overwriting database records.
+  - Restored primary account email in Firebase database.
+  - Prevented test spoof emails from overwriting user records.
 
 ## [2.5.85] - 2026-08-15
 - 🔍 **Advanced Filter & Search System for Linked Alt Accounts:**

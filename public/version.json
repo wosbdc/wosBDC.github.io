@@ -3,7 +3,7 @@
   "releaseDate": "2026-08-15",
   "title": "📧 Restored Account Email",
   "notes": [
-    "Fixed Chief BrianDCox's email in Firebase to BrianDivaCox@gmail.com",
+    "Restored primary account email in Firebase database",
     "Protected real account emails during admin testing"
   ]
 }
