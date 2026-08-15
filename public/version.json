@@ -1,9 +1,9 @@
 {
-  "version": "2.5.80",
+  "version": "2.5.81",
   "releaseDate": "2026-08-15",
-  "title": "🏰 Unified Alliance Gatekeeper Report",
+  "title": "🏰 Backend Discord Webhook Proxy Deployment",
   "notes": [
-    "Living single-post Discord dashboard card in #alerts",
-    "Real-time roster stats, recent member signups, active perks, and auto-bot telemetry"
+    "Routed #alerts Gatekeeper Report updates through backend proxy",
+    "Linked frontend to live Apps Script deployment @174"
   ]
 }

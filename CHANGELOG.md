@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.5.81] - 2026-08-15
+- 🏰 **Backend Discord Webhook Proxy Deployment:**
+  - ⚡ **Seamless Cloud Dispatch:** Routed `#alerts` Gatekeeper Report updates through backend proxy to completely eliminate browser CORS restrictions.
+  - 🔗 **Updated Deployment Endpoint:** Linked frontend to live Apps Script deployment `@174`.
+
 ## [2.5.80] - 2026-08-15
 - 🏰 **Unified Alliance Gatekeeper Report (#alerts):**
   - 📊 **Living Discord Dashboard Card:** Self-updating master post in `#alerts` showcasing total alliance members, new joins, unclaimed ratios, recent signups, and active perks.

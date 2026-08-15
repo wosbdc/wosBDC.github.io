@@ -132,7 +132,7 @@ window.fetchRoster = async () => {
 };
 
 
-const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbwQ9tsxHuwnd1NsWbq54HOkAsAgVUVDkQ2VuKyY_etfm4CCUCfpcTnyDIbzWgkiChQ/exec';
+const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbzOfiaG87nY9fPXQbEK5mZD3RZsNBH8Uvh7y-QFpTvZpc3HL7MAkssVswK4JpeBAE0/exec';
 const VERIFY_PROXY_URL = 'https://wos-vercel-proxy.vercel.app/api/verify'; // Fallback / secondary proxy
 
 // Get a fresh Firebase ID token for the current user (replaces hardcoded APP_SECRET)
@@ -11953,39 +11953,21 @@ window.pushGatekeeperReportToDiscord = async function(btnEl = null) {
     
     // Check saved message ID in Firebase
     const msgIdSnap = await get(ref(db, 'system/gatekeeper_report_msg_id')).catch(() => null);
-    let savedMsgId = (msgIdSnap && msgIdSnap.exists()) ? msgIdSnap.val() : null;
-    
-    const parts = webhookUrl.split('/webhooks/')[1].split('/');
-    const whId = parts[0];
-    const whToken = parts[1];
-    
-    let updated = false;
-    if (savedMsgId) {
-      try {
-        const patchRes = await fetch(`https://discord.com/api/webhooks/${whId}/${whToken}/messages/${savedMsgId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        if (patchRes.ok) updated = true;
-      } catch(e) {}
-    }
-    
-    if (!updated) {
-      const postRes = await fetch(`${webhookUrl}?wait=true`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (postRes.ok) {
-        const postData = await postRes.json();
-        if (postData.id) {
-          await set(ref(db, 'system/gatekeeper_report_msg_id'), postData.id).catch(() => null);
-        }
+    let savedMsgId = (msgIdSnap && msgIdSnap.exists()) ? msgIdSnap.val() : '';
+
+    const adminToken = await getAuthToken();
+    const gasUrl = `${API_BASE_URL}?api=postDiscordReport&token=${encodeURIComponent(adminToken)}&msgId=${encodeURIComponent(savedMsgId)}&payload=${encodeURIComponent(JSON.stringify(payload))}`;
+    const gasRes = await fetch(gasUrl);
+    const gasData = await gasRes.json();
+
+    if (gasData && gasData.success) {
+      if (gasData.messageId) {
+        await set(ref(db, 'system/gatekeeper_report_msg_id'), gasData.messageId).catch(() => null);
       }
+      if (window.showToast) window.showToast("🏰 Master Alliance Gatekeeper Report updated in #alerts!", "success");
+    } else {
+      throw new Error((gasData && gasData.message) || "Backend webhook proxy failed");
     }
-    
-    if (window.showToast) window.showToast("🏰 Master Alliance Gatekeeper Report updated in #alerts!", "success");
   } catch (err) {
     if (window.showToast) window.showToast("Failed to update #alerts: " + err.message, "error");
   } finally {
