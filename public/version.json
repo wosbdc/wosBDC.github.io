@@ -1,9 +1,9 @@
 {
-  "version": "2.5.74",
+  "version": "2.5.75",
   "releaseDate": "2026-08-15",
-  "title": "🤖 Autonomous Gift Code Bot & Live Telemetry",
+  "title": "🎁 Improved Alliance Perks System",
   "notes": [
-    "Integrated autonomous web scraper & Century Games validator daemon",
-    "Live telemetry metrics box in Admin Hub with real-time status and sweep logs"
+    "Rebranded and unified the Alliance Perks & Rewards suite",
+    "Automated promo drops, live server verification, and mass perks redemption"
   ]
 }

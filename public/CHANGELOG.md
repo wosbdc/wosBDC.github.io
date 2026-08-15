@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [2.5.75] - 2026-08-15
+- 🎁 **Improved Alliance Perks System:**
+  - 🏰 **Unified Alliance Perks Hub:** Rebranded and enhanced the Admin Hub with dedicated Alliance Perks & Rewards controls.
+  - 🤖 **Auto-Claim Daemon Integration:** Background perks bot actively sweeps promo feeds and redeems loot for all enrolled alliance members.
+  - 📊 **Live Perks Telemetry:** Real-time visibility into active perks, expired drops, total claims delivered, and bot heartbeat.
+  - ⚡ **1-Click Mass Dispatch:** Deliver all active alliance perk rewards to all main accounts and verified linked alts instantly.
+
 ## [2.5.74] - 2026-08-15
 - 🤖 **Autonomous Gift Code Bot & Live Metrics:**
   - 🌐 **Multi-Source Scraper Daemon:** Autonomous scraper monitoring DotGG, ProGameGuides, and PocketGamer feeds for new promo drops.
