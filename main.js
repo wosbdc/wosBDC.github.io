@@ -132,7 +132,7 @@ window.fetchRoster = async () => {
 };
 
 
-const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbyjNQ0R_2GqQl6gfZmpioYFkAVsFfkUscNuB_l2V4KnbGh67rl64tVevdmSicQu_x8/exec';
+const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbwQ9tsxHuwnd1NsWbq54HOkAsAgVUVDkQ2VuKyY_etfm4CCUCfpcTnyDIbzWgkiChQ/exec';
 const VERIFY_PROXY_URL = 'https://wos-vercel-proxy.vercel.app/api/verify'; // Fallback / secondary proxy
 
 // Get a fresh Firebase ID token for the current user (replaces hardcoded APP_SECRET)
@@ -5465,9 +5465,12 @@ if (versionBadge) versionBadge.addEventListener('click', async () => {
     changelogContent.innerHTML = '<span style="color:var(--text-muted)">Loading changelog...</span>';
     let response = await fetch(`./CHANGELOG.md?nocache=${Date.now()}`, { cache: 'no-store' }).catch(() => null);
     if (!response || !response.ok) {
-      response = await fetch(`https://raw.githubusercontent.com/wosbdc/wosBDC.github.io/main/CHANGELOG.md?nocache=${Date.now()}`, { cache: 'no-store' });
+      response = await fetch(`/CHANGELOG.md?nocache=${Date.now()}`, { cache: 'no-store' }).catch(() => null);
     }
-    if (!response.ok) throw new Error('Failed to fetch changelog');
+    if (!response || !response.ok) {
+      response = await fetch(`https://raw.githubusercontent.com/wosbdc/wosBDC.github.io/main/CHANGELOG.md?nocache=${Date.now()}`, { cache: 'no-store' }).catch(() => null);
+    }
+    if (!response || !response.ok) throw new Error('Failed to fetch changelog');
     let md = await response.text();
     
     // Basic Markdown parser for headings and bullets
