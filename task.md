@@ -19,6 +19,8 @@
 - [x] Add GamsGo blog scraper across local bridge & cloud AutoBot (v2.5.95) <!-- id: 19 -->
 - [x] Correct furnace level parser bug & fix Sentinel Frost to Level 24 (v2.5.96) <!-- id: 20 -->
 - [x] Implement Automated Nightly Account Maintenance engine & trigger (v2.5.96) <!-- id: 21 -->
+- [x] Implement Two-Way Firebase to Google Sheets Master Backup Sync (v2.5.98) <!-- id: 22 -->
+- [x] Purge ghost rows, sanitize Chief's List, and optimize atomic batch sync (v2.5.99) <!-- id: 23 -->
 - [x] Update versioning, CHANGELOG.md, and sw.js <!-- id: 4 -->
 - [x] Build & test suite verification <!-- id: 5 -->
 - [x] Commit and push changes to GitHub <!-- id: 6 -->
