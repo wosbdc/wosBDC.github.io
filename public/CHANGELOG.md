@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.5.42] - 2026-08-14
+- Removed off-center stray sparkle pixels in the transparent borders of Fire Crystal badge images `fc1.png` through `fc10.png`.
+- Re-encoded and recalibrated all 10 Fire Crystal badge PNG graphics to exact `(512.0, 512.0)` geometric dead center.
+- Aligned and centered the Furnace Level display inside the Account Hub profile ID card.
+
 ## [2.5.41] - 2026-08-14
 - Added full translation dictionary for Century Games API error code `15030` and `"未登录"` ("30-Day session token expired. Please enter a fresh in-game code to renew.").
 - Resolved duplicate `[Code X]` prefix stacking in alert toasts and added a universal Chinese character fallback translation.

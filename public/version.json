@@ -1,11 +1,10 @@
 {
-  "version": "2.5.41",
+  "version": "2.5.42",
   "releaseDate": "2026-08-14",
-  "title": "🌐 Comprehensive Century Games API Error Translation",
+  "title": "🎯 Perfectly Centered Fire Crystal Furnace Level Badges",
   "notes": [
-    "Added full English translation for Century Games server code 15030 and '未登录' (30-day session expired)",
-    "Eliminated duplicate [Code X] text stacking and added universal Chinese character fallback translation",
-    "Seamlessly redirects expired tokens to in-game verification renewal prompt with zero raw error alerts",
-    "Deployed Apps Script backend version @160"
+    "Cleaned stray sparkle artifacts from corners of all 10 Fire Crystal badge PNG files",
+    "Recalibrated all Fire Crystal shield bounds to exact (512.0, 512.0) dead center",
+    "Centered furnace level row alignment in Account Hub profile ID card"
   ]
 }
