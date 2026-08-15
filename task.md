@@ -22,6 +22,7 @@
 - [x] Implement Two-Way Firebase to Google Sheets Master Backup Sync (v2.5.98) <!-- id: 22 -->
 - [x] Purge ghost rows, sanitize Chief's List, and optimize atomic batch sync (v2.5.99) <!-- id: 23 -->
 - [x] Install live dynamic DATEDIF formulas into Column F (Time Active) (v2.5.100) <!-- id: 24 -->
+- [x] Implement dynamic on-demand row growth & auto blank row trimming (v2.5.101) <!-- id: 25 -->
 - [x] Update versioning, CHANGELOG.md, and sw.js <!-- id: 4 -->
 - [x] Build & test suite verification <!-- id: 5 -->
 - [x] Commit and push changes to GitHub <!-- id: 6 -->
