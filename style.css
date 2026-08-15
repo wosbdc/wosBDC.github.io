@@ -636,6 +636,21 @@ tr:hover td {
     flex-direction: row;
 }
 
+.id-card-furnace-showcase {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 16px 12px;
+    margin: 12px 0;
+    background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.05) 0%, rgba(0, 0, 0, 0.25) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    position: relative;
+    overflow: visible;
+    text-align: center;
+}
+
 @media (max-width: 450px) {
     .id-card-container {
         padding: 15px !important;
@@ -658,6 +673,11 @@ tr:hover td {
     }
     .id-card-stat-row > span:last-child {
         text-align: left !important;
+    }
+    .id-card-furnace-showcase {
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
     }
     .account-hub-buttons {
         flex-direction: column !important;

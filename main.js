@@ -15673,6 +15673,16 @@ window.resetBearTrapEvent = async () => {
                   </div>
               </div>
               
+              <!-- Dedicated Centered Fire Crystal Showcase (Responsive & Centered on all Screen Sizes) -->
+              <div class="id-card-furnace-showcase">
+                  <div style="color:var(--text-muted); font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:1.5px; margin-bottom:10px; display:flex; align-items:center; justify-content:center; gap:6px;">
+                      <span>🔥</span> <span>Furnace / Fire Crystal</span>
+                  </div>
+                  <div style="display:flex; align-items:center; justify-content:center; width:100%; position:relative; overflow:visible;">
+                      ${window.getFurnaceIconHtml(furnaceLevelStr, 130)}
+                  </div>
+              </div>
+
               <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:15px; position:relative; z-index:2;">
                   <div class="id-card-stat-row" style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:8px;">
                       <span style="color:var(--text-muted); font-size:13px; text-transform:uppercase; letter-spacing:1px;">Email</span>
@@ -15682,11 +15692,6 @@ window.resetBearTrapEvent = async () => {
                       <span style="color:var(--text-muted); font-size:13px; text-transform:uppercase; letter-spacing:1px;">Joined Date</span>
                       <span style="color:#fff; font-weight:bold; font-size:15px;">${joinedDateStr}</span>
                   </div>
-                  <div class="id-card-stat-row" style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:8px;">
-                      <span style="color:var(--text-muted); font-size:13px; text-transform:uppercase; letter-spacing:1px;">Furnace Level</span>
-                      <span style="color:var(--text-main); font-weight:bold; font-size:20px; text-align:right; display:flex; align-items:center; justify-content:center;">${window.getFurnaceIconHtml(furnaceLevelStr, 120)}</span>
-                  </div>
-                  
                   <div class="id-card-stat-row" style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:8px;">
                       <span style="color:var(--text-muted); font-size:13px; text-transform:uppercase; letter-spacing:1px;">Time Active</span>
                       <span style="color:var(--text-main); font-weight:bold; font-size:13px; text-align:right;">${timeActiveStr}</span>

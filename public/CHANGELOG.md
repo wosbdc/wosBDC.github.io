@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.5.53] - 2026-08-14
+- Redesigned Furnace / Fire Crystal display into a dedicated centered showcase in Chief Profile ID card.
+- Updated `style.css` mobile styles to keep the Fire Crystal badge 100% centered horizontally on smartphones and tablets.
+
 ## [2.5.52] - 2026-08-14
 - Re-centered all Fire Crystal badge PNG files (`FC 2` to `FC 10`) to the exact geometric center `(512, 511)` to eliminate the baked-in 43px horizontal offset.
 - Implemented exact pointy-topped shield polygon geometry in `FlameWisp` so embers trace all 6 facets of the shield symmetrically.

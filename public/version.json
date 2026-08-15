@@ -1,10 +1,9 @@
 {
-  "version": "2.5.52",
+  "version": "2.5.53",
   "releaseDate": "2026-08-14",
-  "title": "🛡️ Centered All Badge Sprites & True Shield Polygon Geometry",
+  "title": "📱 Responsive Centered Fire Crystal Hero Showcase",
   "notes": [
-    "Re-centered FC 2 through FC 10 graphic sprites to the exact geometric center (512, 511), eliminating 43px horizontal offset",
-    "Implemented true pointy-topped shield polygon perimeter in FlameWisp so flames trace all 6 facets evenly",
-    "Updated cachebuster to v2.5.52 for instant browser synchronization"
+    "Redesigned Furnace / Fire Crystal display into a dedicated centered showcase banner in the Chief Profile ID card",
+    "Optimized mobile responsive styles in style.css to keep the Fire Crystal badge perfectly centered across all smartphone screen sizes"
   ]
 }
