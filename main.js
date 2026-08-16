@@ -1197,6 +1197,691 @@ window.togglePolarTerrorsStatus = async (gameId, forceStatus = null) => {
     }
 };
 
+// Persistent Player Lifetime Event Stats
+window.fetchPlayerEventStats = async () => {
+    if (window._playerEventStatsCache) return window._playerEventStatsCache;
+    try {
+        const snap = await get(ref(db, 'player_event_stats'));
+        if (snap && snap.exists()) {
+            window._playerEventStatsCache = snap.val() || {};
+        } else {
+            window._playerEventStatsCache = {};
+        }
+    } catch(e) {
+        console.warn("Firebase player_event_stats read error:", e);
+        window._playerEventStatsCache = {};
+    }
+    return window._playerEventStatsCache;
+};
+
+// 🏆 Alliance Championship: Dedicated Archive & Reset Engine
+window.archiveAndResetChampionshipCycle = async () => {
+    const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+    if (!isManager) {
+        if (window.showToast) window.showToast("Only R4/R5 managers can archive & reset Championship cycles", "error");
+        return;
+    }
+
+    const confirmFirst = await window.customConfirm("🔄 Archive & Reset Alliance Championship?\n\nThis will:\n1. Save a timestamped snapshot of current signups to Firebase archives.\n2. Update player lifetime stats (increment miss counters for unsigned members).\n3. Reset all signup statuses back to NO for the new round.\n\nProceed?");
+    if (!confirmFirst) return;
+
+    const confirmSecond = await window.customConfirm("⚠️ FINAL CONFIRMATION:\n\nAre you sure you want to reset Alliance Championship signups now?");
+    if (!confirmSecond) return;
+
+    if (window.showToast) window.showToast("Archiving Championship cycle...", "info");
+
+    try {
+        const timestamp = Date.now();
+        const dateStr = new Date(timestamp).toISOString().split('T')[0];
+        const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name || "Admin") : "Admin";
+        const isT = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
+
+        const [champData, rosterData, statsObj] = await Promise.all([
+            window.fetchChampionshipData(),
+            window.fetchRoster().catch(() => ({})),
+            window.fetchPlayerEventStats()
+        ]);
+
+        let rosterList = [];
+        if (rosterData) {
+            Object.values(rosterData).forEach(p => {
+                if (p.name && p.gameId) rosterList.push(p);
+            });
+        }
+        if (rosterList.length === 0 && window.idToNameMap) {
+            Object.entries(window.idToNameMap).forEach(([gid, name]) => {
+                rosterList.push({ gameId: gid, name: name });
+            });
+        }
+
+        let yesCount = 0, noCount = 0;
+        let playerSnapshots = [];
+
+        rosterList.forEach(p => {
+            const gidStr = p.gameId.toString().trim();
+            const rec = champData[gidStr] || (p.name ? champData[p.name] : null);
+            const isSigned = rec && isT(rec.signedUp);
+            if (isSigned) {
+                yesCount++;
+            } else {
+                noCount++;
+            }
+            playerSnapshots.push({
+                gameId: gidStr,
+                name: p.name,
+                signedUp: Boolean(isSigned)
+            });
+
+            // Update lifetime player event stats
+            const pStats = statsObj[gidStr] || {
+                gameId: gidStr,
+                name: p.name,
+                missedShowdown: 0,
+                missedChampionship: 0,
+                missedMercenary: 0,
+                missedPolarTerrors: 0,
+                missedBearTrap: 0,
+                totalCyclesTracked: 0,
+                totalMisses: 0
+            };
+            pStats.name = p.name;
+            pStats.totalCyclesTracked = (pStats.totalCyclesTracked || 0) + 1;
+            if (!isSigned) {
+                pStats.missedChampionship = (pStats.missedChampionship || 0) + 1;
+            }
+            pStats.totalMisses = (pStats.missedShowdown || 0) + (pStats.missedChampionship || 0) + (pStats.missedMercenary || 0) + (pStats.missedPolarTerrors || 0) + (pStats.missedBearTrap || 0);
+            pStats.lastUpdated = timestamp;
+            statsObj[gidStr] = pStats;
+        });
+
+        // 1. Save Archive to Firebase
+        const archivePayload = {
+            timestamp: timestamp,
+            dateStr: dateStr,
+            archivedBy: adminName,
+            event: 'Alliance Championship',
+            totalMembers: rosterList.length,
+            yesCount: yesCount,
+            noCount: noCount,
+            players: playerSnapshots
+        };
+        await set(ref(db, `events_archive/championship/${timestamp}`), archivePayload);
+
+        // 2. Update player_event_stats
+        await set(ref(db, 'player_event_stats'), statsObj);
+        window._playerEventStatsCache = statsObj;
+
+        // 3. Reset live Championship status in activity_live & championship
+        for (const p of rosterList) {
+            const gidStr = p.gameId.toString().trim();
+            try {
+                await update(ref(db, `activity_live/${gidStr}`), { championship: false, updatedAt: timestamp });
+            } catch(e) {
+                await set(ref(db, `activity_live/${gidStr}/championship`), false).catch(() => null);
+            }
+            await set(ref(db, `championship/${gidStr}`), { gameId: gidStr, name: p.name, signedUp: false, lastUpdated: timestamp, updatedBy: adminName }).catch(() => null);
+        }
+
+        window.clearAllEventCaches();
+
+        if (window.logAdminAction) {
+            window.logAdminAction("Archive & Reset Championship", `Archived cycle ${dateStr} (${yesCount} YES, ${noCount} NO) and reset signups for next round.`);
+        }
+
+        if (window.showToast) window.showToast(`Championship archived & reset successfully! 🎉`, "success");
+        if (window.views && window.views.championshipAdmin) window.views.championshipAdmin();
+    } catch(err) {
+        console.error("Archive Championship error:", err);
+        if (window.showToast) window.showToast("Error archiving Championship: " + err.message, "error");
+    }
+};
+
+// ⚔️ Mercenary Prestige: Dedicated Archive & Reset Engine
+window.archiveAndResetMercenaryCycle = async () => {
+    const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+    if (!isManager) {
+        if (window.showToast) window.showToast("Only R4/R5 managers can archive & reset Mercenary cycles", "error");
+        return;
+    }
+
+    const confirmFirst = await window.customConfirm("🔄 Archive & Reset Mercenary Prestige?\n\nThis will:\n1. Save a timestamped snapshot of current completions to Firebase archives.\n2. Update player lifetime stats (increment miss counters for incomplete members).\n3. Reset all completion statuses back to Not Done for the new event cycle.\n\nProceed?");
+    if (!confirmFirst) return;
+
+    const confirmSecond = await window.customConfirm("⚠️ FINAL CONFIRMATION:\n\nAre you sure you want to reset Mercenary Prestige now?");
+    if (!confirmSecond) return;
+
+    if (window.showToast) window.showToast("Archiving Mercenary Prestige cycle...", "info");
+
+    try {
+        const timestamp = Date.now();
+        const dateStr = new Date(timestamp).toISOString().split('T')[0];
+        const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name || "Admin") : "Admin";
+
+        const [mercData, rosterData, statsObj] = await Promise.all([
+            window.fetchMercenaryData(),
+            window.fetchRoster().catch(() => ({})),
+            window.fetchPlayerEventStats()
+        ]);
+
+        let rosterList = [];
+        if (rosterData) {
+            Object.values(rosterData).forEach(p => {
+                if (p.name && p.gameId) rosterList.push(p);
+            });
+        }
+        if (rosterList.length === 0 && window.idToNameMap) {
+            Object.entries(window.idToNameMap).forEach(([gid, name]) => {
+                rosterList.push({ gameId: gid, name: name });
+            });
+        }
+
+        let yesCount = 0, noCount = 0;
+        let playerSnapshots = [];
+
+        rosterList.forEach(p => {
+            const gidStr = p.gameId.toString().trim();
+            const rec = mercData[gidStr];
+            const isDone = rec && Boolean(rec.signedUp);
+            if (isDone) {
+                yesCount++;
+            } else {
+                noCount++;
+            }
+            playerSnapshots.push({
+                gameId: gidStr,
+                name: p.name,
+                signedUp: isDone
+            });
+
+            // Update lifetime player event stats
+            const pStats = statsObj[gidStr] || {
+                gameId: gidStr,
+                name: p.name,
+                missedShowdown: 0,
+                missedChampionship: 0,
+                missedMercenary: 0,
+                missedPolarTerrors: 0,
+                missedBearTrap: 0,
+                totalCyclesTracked: 0,
+                totalMisses: 0
+            };
+            pStats.name = p.name;
+            pStats.totalCyclesTracked = (pStats.totalCyclesTracked || 0) + 1;
+            if (!isDone) {
+                pStats.missedMercenary = (pStats.missedMercenary || 0) + 1;
+            }
+            pStats.totalMisses = (pStats.missedShowdown || 0) + (pStats.missedChampionship || 0) + (pStats.missedMercenary || 0) + (pStats.missedPolarTerrors || 0) + (pStats.missedBearTrap || 0);
+            pStats.lastUpdated = timestamp;
+            statsObj[gidStr] = pStats;
+        });
+
+        // 1. Save Archive to Firebase
+        const archivePayload = {
+            timestamp: timestamp,
+            dateStr: dateStr,
+            archivedBy: adminName,
+            event: 'Mercenary Prestige',
+            totalMembers: rosterList.length,
+            yesCount: yesCount,
+            noCount: noCount,
+            players: playerSnapshots
+        };
+        await set(ref(db, `events_archive/mercenary/${timestamp}`), archivePayload);
+
+        // 2. Update player_event_stats
+        await set(ref(db, 'player_event_stats'), statsObj);
+        window._playerEventStatsCache = statsObj;
+
+        // 3. Reset live Mercenary status in activity_live & mercenary
+        for (const p of rosterList) {
+            const gidStr = p.gameId.toString().trim();
+            try {
+                await update(ref(db, `activity_live/${gidStr}`), { mercenary: false, updatedAt: timestamp });
+            } catch(e) {
+                await set(ref(db, `activity_live/${gidStr}/mercenary`), false).catch(() => null);
+            }
+            await set(ref(db, `mercenary/${gidStr}`), { gameId: gidStr, name: p.name, signedUp: false, lastUpdated: timestamp, updatedBy: adminName }).catch(() => null);
+        }
+
+        window.clearAllEventCaches();
+
+        if (window.logAdminAction) {
+            window.logAdminAction("Archive & Reset Mercenary", `Archived cycle ${dateStr} (${yesCount} Done, ${noCount} Not Done) and reset for next cycle.`);
+        }
+
+        if (window.showToast) window.showToast(`Mercenary Prestige archived & reset successfully! 🎉`, "success");
+        if (window.views && window.views.mercenaryAdmin) window.views.mercenaryAdmin();
+    } catch(err) {
+        console.error("Archive Mercenary error:", err);
+        if (window.showToast) window.showToast("Error archiving Mercenary Prestige: " + err.message, "error");
+    }
+};
+
+// 🐻‍❄️ Polar Terrors: Dedicated Archive & Reset Engine
+window.archiveAndResetPolarTerrorsCycle = async () => {
+    const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+    if (!isManager) {
+        if (window.showToast) window.showToast("Only R4/R5 managers can archive & reset Polar Terrors cycles", "error");
+        return;
+    }
+
+    const confirmFirst = await window.customConfirm("🔄 Archive & Reset Polar Terrors?\n\nThis will:\n1. Save a timestamped snapshot of current rallies to Firebase archives.\n2. Update player lifetime stats (increment miss counters for missing members).\n3. Reset all Polar Terrors statuses back to Not Done for the new event cycle.\n\nProceed?");
+    if (!confirmFirst) return;
+
+    const confirmSecond = await window.customConfirm("⚠️ FINAL CONFIRMATION:\n\nAre you sure you want to reset Polar Terrors now?");
+    if (!confirmSecond) return;
+
+    if (window.showToast) window.showToast("Archiving Polar Terrors cycle...", "info");
+
+    try {
+        const timestamp = Date.now();
+        const dateStr = new Date(timestamp).toISOString().split('T')[0];
+        const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name || "Admin") : "Admin";
+
+        const [polarData, rosterData, statsObj] = await Promise.all([
+            window.fetchPolarTerrorsData(),
+            window.fetchRoster().catch(() => ({})),
+            window.fetchPlayerEventStats()
+        ]);
+
+        let rosterList = [];
+        if (rosterData) {
+            Object.values(rosterData).forEach(p => {
+                if (p.name && p.gameId) rosterList.push(p);
+            });
+        }
+        if (rosterList.length === 0 && window.idToNameMap) {
+            Object.entries(window.idToNameMap).forEach(([gid, name]) => {
+                rosterList.push({ gameId: gid, name: name });
+            });
+        }
+
+        let yesCount = 0, noCount = 0;
+        let playerSnapshots = [];
+
+        rosterList.forEach(p => {
+            const gidStr = p.gameId.toString().trim();
+            const rec = polarData[gidStr];
+            const isDone = rec && Boolean(rec.signedUp);
+            if (isDone) {
+                yesCount++;
+            } else {
+                noCount++;
+            }
+            playerSnapshots.push({
+                gameId: gidStr,
+                name: p.name,
+                signedUp: isDone
+            });
+
+            // Update lifetime player event stats
+            const pStats = statsObj[gidStr] || {
+                gameId: gidStr,
+                name: p.name,
+                missedShowdown: 0,
+                missedChampionship: 0,
+                missedMercenary: 0,
+                missedPolarTerrors: 0,
+                missedBearTrap: 0,
+                totalCyclesTracked: 0,
+                totalMisses: 0
+            };
+            pStats.name = p.name;
+            pStats.totalCyclesTracked = (pStats.totalCyclesTracked || 0) + 1;
+            if (!isDone) {
+                pStats.missedPolarTerrors = (pStats.missedPolarTerrors || 0) + 1;
+            }
+            pStats.totalMisses = (pStats.missedShowdown || 0) + (pStats.missedChampionship || 0) + (pStats.missedMercenary || 0) + (pStats.missedPolarTerrors || 0) + (pStats.missedBearTrap || 0);
+            pStats.lastUpdated = timestamp;
+            statsObj[gidStr] = pStats;
+        });
+
+        // 1. Save Archive to Firebase
+        const archivePayload = {
+            timestamp: timestamp,
+            dateStr: dateStr,
+            archivedBy: adminName,
+            event: 'Polar Terrors',
+            totalMembers: rosterList.length,
+            yesCount: yesCount,
+            noCount: noCount,
+            players: playerSnapshots
+        };
+        await set(ref(db, `events_archive/polar_terrors/${timestamp}`), archivePayload);
+
+        // 2. Update player_event_stats
+        await set(ref(db, 'player_event_stats'), statsObj);
+        window._playerEventStatsCache = statsObj;
+
+        // 3. Reset live Polar Terrors status in activity_live & polarterrors
+        for (const p of rosterList) {
+            const gidStr = p.gameId.toString().trim();
+            try {
+                await update(ref(db, `activity_live/${gidStr}`), { polarTerrors: false, updatedAt: timestamp });
+            } catch(e) {
+                await set(ref(db, `activity_live/${gidStr}/polarTerrors`), false).catch(() => null);
+            }
+            await set(ref(db, `polarterrors/${gidStr}`), { gameId: gidStr, name: p.name, signedUp: false, lastUpdated: timestamp, updatedBy: adminName }).catch(() => null);
+        }
+
+        window.clearAllEventCaches();
+
+        if (window.logAdminAction) {
+            window.logAdminAction("Archive & Reset Polar Terrors", `Archived cycle ${dateStr} (${yesCount} Done, ${noCount} Not Done) and reset for next cycle.`);
+        }
+
+        if (window.showToast) window.showToast(`Polar Terrors archived & reset successfully! 🎉`, "success");
+        if (window.views && window.views.polarTerrorsAdmin) window.views.polarTerrorsAdmin();
+    } catch(err) {
+        console.error("Archive Polar Terrors error:", err);
+        if (window.showToast) window.showToast("Error archiving Polar Terrors: " + err.message, "error");
+    }
+};
+
+// 🐻 Bear Trap: Dedicated Archive & Reset Engine
+window.archiveAndResetBearTrapCycle = async () => {
+    const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+    if (!isManager) {
+        if (window.showToast) window.showToast("Only R4/R5 managers can archive & reset Bear Trap cycles", "error");
+        return;
+    }
+
+    const confirmFirst = await window.customConfirm("🔄 Archive & Reset Bear Trap?\n\nThis will:\n1. Save a timestamped snapshot of current donations to Firebase archives.\n2. Update player lifetime stats (increment miss counters for non-donators).\n3. Reset all donation statuses back to NO for the new event cycle.\n\nProceed?");
+    if (!confirmFirst) return;
+
+    const confirmSecond = await window.customConfirm("⚠️ FINAL CONFIRMATION:\n\nAre you sure you want to reset Bear Trap donations now?");
+    if (!confirmSecond) return;
+
+    if (window.showToast) window.showToast("Archiving Bear Trap cycle...", "info");
+
+    try {
+        const timestamp = Date.now();
+        const dateStr = new Date(timestamp).toISOString().split('T')[0];
+        const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name || "Admin") : "Admin";
+        const isT = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
+
+        const [btData, rosterData, statsObj] = await Promise.all([
+            window.fetchBearTrapData(),
+            window.fetchRoster().catch(() => ({})),
+            window.fetchPlayerEventStats()
+        ]);
+
+        let rosterList = [];
+        if (rosterData) {
+            Object.values(rosterData).forEach(p => {
+                if (p.name && p.gameId) rosterList.push(p);
+            });
+        }
+        if (rosterList.length === 0 && window.idToNameMap) {
+            Object.entries(window.idToNameMap).forEach(([gid, name]) => {
+                rosterList.push({ gameId: gid, name: name });
+            });
+        }
+
+        let yesCount = 0, noCount = 0;
+        let playerSnapshots = [];
+
+        rosterList.forEach(p => {
+            const gidStr = p.gameId.toString().trim();
+            const rec = btData[gidStr] || (p.name ? btData[p.name] : null);
+            const isDone = rec && (isT(rec.donated) || isT(rec.signedUp));
+            if (isDone) {
+                yesCount++;
+            } else {
+                noCount++;
+            }
+            playerSnapshots.push({
+                gameId: gidStr,
+                name: p.name,
+                signedUp: Boolean(isDone),
+                donated: Boolean(isDone)
+            });
+
+            // Update lifetime player event stats
+            const pStats = statsObj[gidStr] || {
+                gameId: gidStr,
+                name: p.name,
+                missedShowdown: 0,
+                missedChampionship: 0,
+                missedMercenary: 0,
+                missedPolarTerrors: 0,
+                missedBearTrap: 0,
+                totalCyclesTracked: 0,
+                totalMisses: 0
+            };
+            pStats.name = p.name;
+            pStats.totalCyclesTracked = (pStats.totalCyclesTracked || 0) + 1;
+            if (!isDone) {
+                pStats.missedBearTrap = (pStats.missedBearTrap || 0) + 1;
+            }
+            pStats.totalMisses = (pStats.missedShowdown || 0) + (pStats.missedChampionship || 0) + (pStats.missedMercenary || 0) + (pStats.missedPolarTerrors || 0) + (pStats.missedBearTrap || 0);
+            pStats.lastUpdated = timestamp;
+            statsObj[gidStr] = pStats;
+        });
+
+        // 1. Save Archive to Firebase
+        const archivePayload = {
+            timestamp: timestamp,
+            dateStr: dateStr,
+            archivedBy: adminName,
+            event: 'Bear Trap',
+            totalMembers: rosterList.length,
+            yesCount: yesCount,
+            noCount: noCount,
+            players: playerSnapshots
+        };
+        await set(ref(db, `events_archive/bear_trap/${timestamp}`), archivePayload);
+
+        // 2. Update player_event_stats
+        await set(ref(db, 'player_event_stats'), statsObj);
+        window._playerEventStatsCache = statsObj;
+
+        // 3. Reset live Bear Trap status in activity_live & beartrap
+        for (const p of rosterList) {
+            const gidStr = p.gameId.toString().trim();
+            try {
+                await update(ref(db, `activity_live/${gidStr}`), { bearTrap: false, updatedAt: timestamp });
+            } catch(e) {
+                await set(ref(db, `activity_live/${gidStr}/bearTrap`), false).catch(() => null);
+            }
+            await set(ref(db, `beartrap/${gidStr}`), { gameId: gidStr, name: p.name, donated: false, signedUp: false, lastUpdated: timestamp, updatedBy: adminName }).catch(() => null);
+        }
+
+        window.clearAllEventCaches();
+
+        if (window.logAdminAction) {
+            window.logAdminAction("Archive & Reset Bear Trap", `Archived cycle ${dateStr} (${yesCount} Donated, ${noCount} Missed) and reset for next cycle.`);
+        }
+
+        if (window.showToast) window.showToast(`Bear Trap archived & reset successfully! 🎉`, "success");
+        if (window.views && window.views.beartrapAdmin) window.views.beartrapAdmin();
+    } catch(err) {
+        console.error("Archive Bear Trap error:", err);
+        if (window.showToast) window.showToast("Error archiving Bear Trap: " + err.message, "error");
+    }
+};
+
+// Universal Event Archive Restore Modal
+window.showEventArchiveRestoreModal = async (eventType) => {
+    const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+    if (!isManager) {
+        if (window.showToast) window.showToast("Only R4/R5 managers can restore archived events", "error");
+        return;
+    }
+
+    const eventConfig = {
+        polar_terrors: { name: 'Polar Terrors', icon: '🐻‍❄️', tableKey: 'polarterrors', liveKey: 'polarTerrors', viewFn: 'polarTerrorsAdmin' },
+        mercenary_prestige: { name: 'Mercenary Prestige', icon: '⚔️', tableKey: 'mercenary_signups', liveKey: 'mercenary', viewFn: 'mercenaryAdmin' },
+        championship: { name: 'Alliance Championship', icon: '🏆', tableKey: 'championship_signups', liveKey: 'championship', viewFn: 'championshipAdmin' },
+        bear_trap: { name: 'Bear Trap', icon: '🐻', tableKey: 'beartrap', liveKey: 'bearTrap', viewFn: 'beartrapAdmin' }
+    };
+
+    const cfg = eventConfig[eventType] || { name: eventType, icon: '📋', tableKey: eventType, liveKey: eventType, viewFn: 'admin' };
+
+    // Remove existing modal if open
+    const existing = document.getElementById('eventArchiveRestoreModal');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'eventArchiveRestoreModal';
+    modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); backdrop-filter:blur(4px); z-index:99999; display:flex; align-items:center; justify-content:center; padding:15px; box-sizing:border-box; animation:fadeIn 0.2s ease;';
+
+    modal.innerHTML = `
+        <div style="background:var(--card-bg, #1e293b); border:1px solid var(--border, #334155); border-radius:16px; width:100%; max-width:650px; max-height:85vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);">
+            <div style="padding:18px 24px; border-bottom:1px solid var(--border, #334155); display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03);">
+                <h3 style="margin:0; font-size:18px; color:var(--text-main, #f8fafc); display:flex; align-items:center; gap:8px;">
+                    <span>${cfg.icon}</span> Restore ${escapeHTML(cfg.name)} Archive
+                </h3>
+                <button onclick="document.getElementById('eventArchiveRestoreModal').remove()" style="background:none; border:none; color:var(--text-muted, #94a3b8); font-size:20px; cursor:pointer; padding:4px 8px; line-height:1; border-radius:6px;">✕</button>
+            </div>
+            <div id="eventArchiveListContainer" style="padding:20px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:12px;">
+                <div style="text-align:center; padding:40px; color:var(--text-muted);">Loading archives from Firebase...</div>
+            </div>
+            <div style="padding:14px 24px; border-top:1px solid var(--border, #334155); display:flex; justify-content:flex-end; background:rgba(255,255,255,0.02);">
+                <button onclick="document.getElementById('eventArchiveRestoreModal').remove()" style="background:var(--bg-main, #0f172a); border:1px solid var(--border, #334155); color:var(--text-main, #f8fafc); padding:8px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13px;">Close</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    try {
+        const snap = await get(ref(db, `events_archive/${eventType}`));
+        const container = document.getElementById('eventArchiveListContainer');
+        if (!container) return;
+
+        if (!snap.exists() || !snap.val()) {
+            container.innerHTML = `
+                <div style="text-align:center; padding:40px; color:var(--text-muted);">
+                    <div style="font-size:36px; margin-bottom:12px;">📭</div>
+                    <div style="font-weight:bold; font-size:15px; margin-bottom:6px;">No Archives Found</div>
+                    <div style="font-size:13px;">No cycles have been archived for ${escapeHTML(cfg.name)} yet. When an admin uses "Archive & Reset", past snapshots will appear here for 1-click restoration.</div>
+                </div>
+            `;
+            return;
+        }
+
+        const archivesObj = snap.val();
+        const archivesList = Object.entries(archivesObj).map(([key, data]) => ({
+            key,
+            ...data
+        })).sort((a, b) => (Number(b.timestamp || b.key) || 0) - (Number(a.timestamp || a.key) || 0));
+
+        let html = '';
+        archivesList.forEach((arch) => {
+            const timeNum = Number(arch.timestamp || arch.key);
+            const dateDisplay = arch.dateStr || (timeNum ? new Date(timeNum).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Unknown Date');
+            const total = arch.totalMembers || (arch.players ? arch.players.length : 0);
+            const yes = arch.yesCount || 0;
+            const no = arch.noCount || Math.max(0, total - yes);
+            const admin = arch.archivedBy || 'Manager';
+
+            html += `
+                <div style="background:var(--bg-main, #0f172a); border:1px solid var(--border, #334155); border-radius:12px; padding:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; transition:0.2s;">
+                    <div>
+                        <div style="font-weight:bold; font-size:15px; color:var(--text-main, #f8fafc); margin-bottom:4px;">
+                            📅 ${escapeHTML(dateDisplay)}
+                        </div>
+                        <div style="font-size:12px; color:var(--text-muted, #94a3b8); display:flex; gap:12px; flex-wrap:wrap;">
+                            <span>Archived by: <strong style="color:var(--text-main);">${escapeHTML(admin)}</strong></span>
+                            <span>Done: <strong style="color:var(--success, #10b981);">${yes}</strong></span>
+                            <span>Missed: <strong style="color:var(--danger, #ef4444);">${no}</strong></span>
+                            <span>Total: <strong>${total}</strong></span>
+                        </div>
+                    </div>
+                    <button onclick="window.restoreEventArchiveSnapshot('${eventType}', '${arch.key}')" style="background:linear-gradient(135deg, #10b981, #059669); color:white; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(16,185,129,0.25); transition:0.2s;">
+                        ↩️ Restore This Cycle
+                    </button>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    } catch(err) {
+        console.error("Error loading event archives:", err);
+        const container = document.getElementById('eventArchiveListContainer');
+        if (container) {
+            container.innerHTML = `<div style="color:var(--danger); padding:20px; text-align:center;">Failed to load archives: ${escapeHTML(err.message)}</div>`;
+        }
+    }
+};
+
+// Execute Restore of Snapshot
+window.restoreEventArchiveSnapshot = async (eventType, archiveKey) => {
+    const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+    if (!isManager) {
+        if (window.showToast) window.showToast("Only R4/R5 managers can restore archives", "error");
+        return;
+    }
+
+    const eventConfig = {
+        polar_terrors: { name: 'Polar Terrors', tableKey: 'polarterrors', liveKey: 'polarTerrors', viewFn: 'polarTerrorsAdmin' },
+        mercenary_prestige: { name: 'Mercenary Prestige', tableKey: 'mercenary_signups', liveKey: 'mercenary', viewFn: 'mercenaryAdmin' },
+        championship: { name: 'Alliance Championship', tableKey: 'championship', liveKey: 'championship', viewFn: 'championshipAdmin' },
+        bear_trap: { name: 'Bear Trap', tableKey: 'beartrap', liveKey: 'bearTrap', viewFn: 'beartrapAdmin' }
+    };
+
+    const cfg = eventConfig[eventType];
+    if (!cfg) return;
+
+    const confirmRestore = await window.customConfirm(`⚠️ RESTORE ARCHIVE CONFIRMATION\n\nAre you sure you want to restore the archived ${cfg.name} cycle?\n\nThis will overwrite current live member statuses with the records saved in this snapshot.`);
+    if (!confirmRestore) return;
+
+    if (window.showToast) window.showToast("Restoring cycle snapshot...", "info");
+
+    try {
+        const snap = await get(ref(db, `events_archive/${eventType}/${archiveKey}`));
+        if (!snap.exists() || !snap.val()) {
+            if (window.showToast) window.showToast("Archive not found.", "error");
+            return;
+        }
+
+        const archData = snap.val();
+        const players = archData.players || [];
+        const timestamp = Date.now();
+        const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name || "Admin") : "Admin";
+
+        for (const p of players) {
+            const gidStr = (p.gameId || '').toString().trim();
+            if (!gidStr) continue;
+            const isDone = Boolean(p.signedUp || p.donated);
+
+            // Update live activity node
+            try {
+                await update(ref(db, `activity_live/${gidStr}`), { [cfg.liveKey]: isDone, updatedAt: timestamp });
+            } catch(e) {
+                await set(ref(db, `activity_live/${gidStr}/${cfg.liveKey}`), isDone).catch(() => null);
+            }
+
+            // Update dedicated event table
+            const tablePayload = {
+                gameId: gidStr,
+                name: p.name || '',
+                signedUp: isDone,
+                donated: isDone,
+                lastUpdated: timestamp,
+                updatedBy: adminName
+            };
+            await set(ref(db, `${cfg.tableKey}/${gidStr}`), tablePayload).catch(() => null);
+        }
+
+        window.clearAllEventCaches();
+
+        const modal = document.getElementById('eventArchiveRestoreModal');
+        if (modal) modal.remove();
+
+        if (window.logAdminAction) {
+            window.logAdminAction(`Restore ${cfg.name} Archive`, `Restored cycle snapshot ${archData.dateStr || archiveKey} containing ${players.length} players.`);
+        }
+
+        if (window.showToast) window.showToast(`${cfg.name} restored from archive successfully! 🎉`, "success");
+        if (window.views && window.views[cfg.viewFn]) window.views[cfg.viewFn]();
+    } catch(err) {
+        console.error("Error restoring event archive:", err);
+        if (window.showToast) window.showToast("Error restoring archive: " + err.message, "error");
+    }
+};
+
 // Fetch Bear Trap Tracker Data
 window.fetchBearTrapData = async () => {
     if (window.bearTrapCache) return window.bearTrapCache;
@@ -17355,9 +18040,14 @@ html += `</select>
                   <p style="margin:4px 0 0 0; color:var(--text-muted); font-size:13px;">Real-time tracking of member event signups & missing roster responses.</p>
                 </div>
               </div>
-              <button onclick="window.openActivityMatrix()" style="background:linear-gradient(135deg, var(--accent), #1d4ed8); color:white; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(59,130,246,0.3);">
-                📊 Activity Matrix ➔
-              </button>
+              <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                <button onclick="window.showEventArchiveRestoreModal('championship')" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--accent); padding:8px 14px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; transition:0.2s;">
+                  ↩️ Restore Archive
+                </button>
+                <button onclick="window.archiveAndResetChampionshipCycle()" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:white; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(239,68,68,0.3); transition:0.2s;">
+                  🔄 Archive & Reset Cycle
+                </button>
+              </div>
             </div>
 
             <!-- Summary KPI Cards -->
@@ -17650,12 +18340,19 @@ html += `</select>
 
         let html = `
         <div style="background:var(--bg-main); min-height:100vh; font-family:var(--font-family); color:var(--text-main);">
-          <div style="background:linear-gradient(135deg, #0ea5e9, #0284c7); padding:20px; box-shadow:0 2px 10px rgba(0,0,0,0.1); display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:100;">
+          <div style="background:linear-gradient(135deg, #0ea5e9, #0284c7); padding:20px; box-shadow:0 2px 10px rgba(0,0,0,0.1); display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:100; flex-wrap:wrap; gap:12px;">
             <div style="display:flex; align-items:center; gap:15px;">
-              <button onclick="views.admin('tab-indev')" style="background:rgba(255,255,255,0.2); border:none; color:#fff; cursor:pointer; font-size:18px; padding:8px 12px; border-radius:8px; transition:0.2s;">⬅ Back</button>
+              <button onclick="if(document.querySelector('.navbar')) document.querySelector('.navbar').style.display='flex'; views.admin()" style="background:rgba(255,255,255,0.2); border:none; color:#fff; cursor:pointer; font-size:14px; font-weight:bold; padding:8px 14px; border-radius:8px; transition:0.2s;">⬅️ Back to Admin</button>
               <h2 style="margin:0; color:#fff; font-size:1.3em;">🐻‍❄️ Polar Terrors Tracker</h2>
             </div>
-            <button onclick="window.openActivityMatrix()" style="background:rgba(255,255,255,0.2); border:none; color:#fff; cursor:pointer; font-size:13px; padding:8px 14px; border-radius:8px; font-weight:bold; transition:0.2s;">📊 Activity Matrix ➔</button>
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+              <button onclick="window.showEventArchiveRestoreModal('polar_terrors')" style="background:rgba(255,255,255,0.2); border:1px solid rgba(255,255,255,0.4); color:#fff; cursor:pointer; font-size:13px; padding:8px 14px; border-radius:8px; font-weight:bold; transition:0.2s;">
+                ↩️ Restore Archive
+              </button>
+              <button onclick="window.archiveAndResetPolarTerrorsCycle()" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:white; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(239,68,68,0.3); transition:0.2s;">
+                🔄 Archive & Reset Cycle
+              </button>
+            </div>
           </div>
 
           <div style="padding:20px; max-width:1600px; margin:0 auto;">
@@ -17883,18 +18580,22 @@ html += `</select>
 
         let html = `
         <div style="background:var(--bg-main); min-height:100vh; font-family:var(--font-family); color:var(--text-main);">
-          <div style="background:linear-gradient(135deg, #10b981, #059669); padding:20px; box-shadow:0 2px 10px rgba(0,0,0,0.1); display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:100;">
+          <div style="background:linear-gradient(135deg, #10b981, #059669); padding:20px; box-shadow:0 2px 10px rgba(0,0,0,0.1); display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:100; flex-wrap:wrap; gap:12px;">
             <div style="display:flex; align-items:center; gap:15px;">
               <button onclick="views.beartrap()" style="background:rgba(255,255,255,0.2); border:none; color:#fff; cursor:pointer; font-size:16px; padding:8px 14px; border-radius:8px; transition:0.2s; font-weight:bold;">⬅ Back to Bear Trap</button>
               <h2 style="margin:0; color:#fff; font-size:1.3em;">🐻 BT Donations Tracker</h2>
             </div>
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+              <button onclick="window.showEventArchiveRestoreModal('bear_trap')" style="background:rgba(255,255,255,0.2); border:1px solid rgba(255,255,255,0.4); color:#fff; cursor:pointer; font-size:13px; padding:8px 14px; border-radius:8px; font-weight:bold; transition:0.2s;">
+                ↩️ Restore Archive
+              </button>
+              <button onclick="window.archiveAndResetBearTrapCycle()" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:white; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(239,68,68,0.3); transition:0.2s;">
+                🔄 Archive & Reset Cycle
+              </button>
+            </div>
           </div>
 
           <div style="padding:25px; max-width:1600px; margin:0 auto;">
-            
-            <button onclick="window.openActivityMatrix()" style="background:linear-gradient(135deg, #a855f7, #9333ea); color:#fff; border:none; padding:14px 24px; border-radius:10px; cursor:pointer; font-weight:bold; font-size:15px; width:100%; box-shadow:0 4px 12px rgba(168,85,247,0.3); margin-bottom: 20px; transition: transform 0.2s ease;">
-              📊 Open Roster Event Activity Matrix ➔
-            </button>
 
             <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:20px; margin-bottom:25px;">
               <div class="card" style="text-align:center; padding:20px;">
@@ -18239,9 +18940,14 @@ html += `</select>
                   <p style="margin:4px 0 0 0; color:var(--text-muted); font-size:13px;">Real-time tracking of who has completed Mercenary Prestige & who still needs to.</p>
                 </div>
               </div>
-              <button onclick="window.openActivityMatrix()" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:white; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(239,68,68,0.3);">
-                📊 Activity Matrix ➔
-              </button>
+              <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                <button onclick="window.showEventArchiveRestoreModal('mercenary_prestige')" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--accent); padding:8px 14px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; transition:0.2s;">
+                  ↩️ Restore Archive
+                </button>
+                <button onclick="window.archiveAndResetMercenaryCycle()" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:white; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(239,68,68,0.3); transition:0.2s;">
+                  🔄 Archive & Reset Cycle
+                </button>
+              </div>
             </div>
 
             <!-- Summary KPI Cards -->

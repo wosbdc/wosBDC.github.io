@@ -1,9 +1,9 @@
 {
-  "version": "2.5.119",
+  "version": "2.5.120",
   "releaseDate": "2026-08-16",
-  "title": "Restored Smooth Horizontal Scrolling Admin Menu Bar",
+  "title": "Member Event Activity Matrix & Universal Event Cycle Manager",
   "notes": [
-    "Restored the sleek, native-feel single-line horizontal scrolling Admin menu bar for mobile and smartphones.",
-    "Added PC mouse wheel horizontal scrolling, drag gestures, and active tab auto-centering so all tabs are effortless to access on desktop."
+    "Added full multi-event aggregate Activity Matrix tracking Bear Trap donations, multi-day Showdown participation (missing day detection D1-D6), Mercenary Prestige completions, and Polar Terrors (1+ completions counted as done).",
+    "Added full Archive/Reset Cycle and 1-Click Restore Snapshot suite across Bear Trap, Alliance Championship, Mercenary Prestige, and Polar Terrors tracker management sections."
   ]
 }

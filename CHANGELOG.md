@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [2.5.120] - 2026-08-16
+- Member Event Activity Matrix: Integrated comprehensive multi-event activity aggregate matrix view accessible from Admin Dashboard (`📊 Activity Matrix` tab) and direct shortcuts, aggregating Bear Trap donations, multi-day Showdown participation, Mercenary Prestige completions, and Polar Terrors.
+- Multi-Day Showdown Missing Day Tracking: Detects missing participation per day across all active days (Day 1 through Day 6), displaying clear badges (e.g. `⚠️ Missing D1, D3` or `✅ Active All Days`) with exact daily score breakdowns.
+- Polar Terrors Multi-Level Aggregate: Evaluates player completions across all difficulty levels, automatically classifying any member with 1 or more completions as having completed Polar Terrors for the cycle.
+- Universal Event Archive & Reset Engine: Added dedicated "🔄 Archive & Reset Cycle" actions for Bear Trap, Alliance Championship, Mercenary Prestige, and Polar Terrors in their respective manager sections. Snapshots are timestamped, archived in Firebase Realtime Database, and member lifetime miss counters are accurately incremented.
+- 1-Click Event Archive Restoration: Added "↩️ Restore Archive" modals to Bear Trap, Championship, Mercenary, and Polar Terrors tracker management sections, enabling managers to view past cycle archives and restore live member statuses with a single click.
+
 ## [2.5.119] - 2026-08-16
 - Restored Single-Line Horizontal Scrolling Admin Menu: Reverted the bulky stacked pill layout on mobile in favor of the clean, smooth single-line horizontal scrolling bar with native touch momentum.
 - Desktop Mouse Wheel & Drag Support: Added intuitive mouse wheel horizontal scrolling and mouse drag gestures on PC desktop, plus automatic centering of active tabs so all tabs (including Logs and System) are effortless to navigate across all devices.
