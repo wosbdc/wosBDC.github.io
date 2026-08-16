@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.7.1] - 2026-08-16
+- Strict Alt Account Privacy Lockdown: Enforced complete owner-only privacy across all public Player Lookup cards, modal profile views, and live statistics dashboards. The "🔗 Linked Alt Accounts" section is now exclusively rendered when the account owner is logged in.
+- Admin Users Hub Alt Privacy: Restricted alt character sub-rows, linked alt badges, and alt management action buttons in the Admin Member Directory (`#tab-users`) so that other admins cannot view or inspect another user's linked alts.
+- Private Account Hub Retained: Members retain full 100% control to manage, link, verify, and monitor 30-day token health for all their alts inside their private Account Hub.
+
 ## [2.7.0] - 2026-08-16
 - Unified Member Database & Player Command Center: Consolidated the standalone Player Database Editor directly into the Admin Users Hub (`#tab-users`), giving leadership a single, unified command center to manage all members.
 - Integrated Add New Player with Live Verification: Added `➕ Add New Player` button directly in `#tab-users` with 1-click real-time game server verification against Whiteout Survival servers to auto-fill Chief Name and Furnace Level without creating fake credentials or claiming accounts.

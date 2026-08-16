@@ -4752,14 +4752,14 @@ window.getLivePlayerEventRow = async (chiefName, pRow, headers) => {
     const viewedGameId = nameToIdMap[name];
     const ROOT_ADMIN_GAME_ID = 318843189;
     const viewerIsR5 = window.getAdminLevel(currentUser) === 'R5';
-    const viewedIsRootAdmin = viewedGameId && Number(viewedGameId) === ROOT_ADMIN_GAME_ID;
+    // Alt accounts are strictly private - only the logged-in owner can view their own alts
+    const isOwnerOfProfile = currentUser && (
+        (viewedGameId && currentUser.gameId && Number(currentUser.gameId) === Number(viewedGameId)) ||
+        (currentUser.name && targetName && currentUser.name.toString().trim().toLowerCase() === targetName.toString().trim().toLowerCase()) ||
+        (currentUser.chiefName && targetName && currentUser.chiefName.toString().trim().toLowerCase() === targetName.toString().trim().toLowerCase())
+    );
 
-    // Only show alt accounts if:
-    //   - The viewer is R5 (root admin), OR
-    //   - The player being viewed is NOT the root admin
-    const showAlts = viewerIsR5 || !viewedIsRootAdmin;
-
-    if (showAlts && usersSnap && usersSnap.exists()) {
+    if (isOwnerOfProfile && usersSnap && usersSnap.exists()) {
         const users = usersSnap.val();
         if (viewedGameId) {
             for (const u of Object.values(users)) {
@@ -5057,14 +5057,14 @@ window.searchPlayerFull = async (name) => {
     const viewedGameId = nameToIdMap[targetName] || nameToIdMap[name];
     const ROOT_ADMIN_GAME_ID = 318843189;
     const viewerIsR5 = window.getAdminLevel(currentUser) === 'R5';
-    const viewedIsRootAdmin = viewedGameId && Number(viewedGameId) === ROOT_ADMIN_GAME_ID;
+    // Alt accounts are strictly private - only the logged-in owner can view their own alts
+    const isOwnerOfProfile = currentUser && (
+        (viewedGameId && currentUser.gameId && Number(currentUser.gameId) === Number(viewedGameId)) ||
+        (currentUser.name && targetName && currentUser.name.toString().trim().toLowerCase() === targetName.toString().trim().toLowerCase()) ||
+        (currentUser.chiefName && targetName && currentUser.chiefName.toString().trim().toLowerCase() === targetName.toString().trim().toLowerCase())
+    );
 
-    // Only show alt accounts if:
-    //   - The viewer is R5 (root admin), OR
-    //   - The player being viewed is NOT the root admin
-    const showAlts = viewerIsR5 || !viewedIsRootAdmin;
-
-    if (showAlts && usersSnap && usersSnap.exists()) {
+    if (isOwnerOfProfile && usersSnap && usersSnap.exists()) {
         const users = usersSnap.val();
         if (viewedGameId) {
             for (const u of Object.values(users)) {
@@ -16670,7 +16670,12 @@ const views = {
                 let ms = u.createdAt ? new Date(u.createdAt).getTime() : (u.timestamp ? Number(u.timestamp) : 0);
                 if (ms > 0 && (Date.now() - ms) <= (7 * 24 * 60 * 60 * 1000)) newSignupsCount++;
 
-                if (u.linkedGameIds && Array.isArray(u.linkedGameIds) && u.linkedGameIds.length > 0) {
+                const isViewerOwnerOfU = currentUser && (
+                  (currentUser.uid && currentUser.uid === u.uid) ||
+                  (currentUser.gameId && u.gameId && Number(currentUser.gameId) === Number(u.gameId))
+                );
+
+                if (isViewerOwnerOfU && u.linkedGameIds && Array.isArray(u.linkedGameIds) && u.linkedGameIds.length > 0) {
                   hasAltsCount++;
                   totalAltsCount += u.linkedGameIds.length;
                 }
@@ -16819,7 +16824,11 @@ const views = {
 
         const hasAvatar = avatarMap[u.gameId] ? true : false;
         const avatarSrc = window.getAvatarUrl(u.gameId, cName);
-        const hasAlts = (u.linkedGameIds && Array.isArray(u.linkedGameIds) && u.linkedGameIds.length > 0);
+        const isViewerOwnerOfAccount = currentUser && (
+          (currentUser.uid && currentUser.uid === uid) ||
+          (currentUser.gameId && u.gameId && Number(currentUser.gameId) === Number(u.gameId))
+        );
+        const hasAlts = (isViewerOwnerOfAccount && u.linkedGameIds && Array.isArray(u.linkedGameIds) && u.linkedGameIds.length > 0);
         const adminLvl = window.getAdminLevel(u);
         const isAdminUser = (u.role === 'admin' || u.role === 'R5' || (adminLvl !== false && adminLvl !== 'User'));
         
@@ -16836,10 +16845,10 @@ const views = {
           tokenPillHtml = `<span style="background:rgba(255,255,255,0.06); color:var(--text-muted); border:1px solid var(--border); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:normal;" title="Character not verified with in-game code yet.">⚪ Unverified Sync</span>`;
         }
 
-        // Linked Alts Token Calculation
+        // Linked Alts Token Calculation (Only visible to the account owner)
         let altTokensSyncedCount = 0;
-        let totalAlts = (u.linkedGameIds && Array.isArray(u.linkedGameIds)) ? u.linkedGameIds.length : 0;
-        if (totalAlts > 0 && u.altTokens) {
+        let totalAlts = (isViewerOwnerOfAccount && u.linkedGameIds && Array.isArray(u.linkedGameIds)) ? u.linkedGameIds.length : 0;
+        if (totalAlts > 0 && u.altTokens && isViewerOwnerOfAccount) {
           u.linkedGameIds.forEach(agid => {
             const aTok = u.altTokens[agid];
             if (aTok) {
@@ -16852,7 +16861,7 @@ const views = {
           });
         }
         let altPillHtml = '';
-        if (totalAlts > 0) {
+        if (totalAlts > 0 && isViewerOwnerOfAccount) {
           const altAllSynced = (altTokensSyncedCount === totalAlts);
           const altColor = altAllSynced ? '#38bdf8' : (altTokensSyncedCount > 0 ? '#f59e0b' : 'var(--text-muted)');
           const altBg = altAllSynced ? 'rgba(56,189,248,0.12)' : (altTokensSyncedCount > 0 ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.06)');
@@ -16941,7 +16950,7 @@ const views = {
                 <button onclick="views.roster(); setTimeout(() => { const i=document.getElementById('playerLookupSelect'); if(i){ i.value='${escapeHTML(cName)}'; i.dispatchEvent(new Event('input')); const f=document.querySelector('.custom-dropdown-item'); if(f) f.click(); } }, 150);" style="background:rgba(14,165,233,0.15); color:#38bdf8; border:1px solid rgba(14,165,233,0.35); padding:5px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;" title="View full member profile">👁️ Profile</button>
                 <button onclick="window.openAdminEditFurnaceModal('${escapeHTML(cName)}', '${uGidStr}', '${flVal || ''}')" style="background:rgba(249,115,22,0.15); border:1px solid rgba(249,115,22,0.4); color:#f97316; padding:5px 10px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;" title="Edit Furnace Level">🔥 Level</button>
                 <button onclick="window.openAdminRepairUserModal('${uid}')" style="background:rgba(168,85,247,0.15); color:#c084fc; border:1px solid rgba(168,85,247,0.35); padding:5px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;" title="Repair primary Game ID or promote an alt">🛠️ Repair ID</button>
-                <button onclick="window.adminManageAltsPrompt('${uid}')" style="background:rgba(59,130,246,0.12); color:#3b82f6; border:1px solid rgba(59,130,246,0.3); padding:5px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">🔗 Alts</button>
+                ${isViewerOwnerOfAccount ? `<button onclick="window.adminManageAltsPrompt('${uid}')" style="background:rgba(59,130,246,0.12); color:#3b82f6; border:1px solid rgba(59,130,246,0.3); padding:5px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">🔗 Alts</button>` : ''}
                 ${isAdminUser && u.gameId != 318843189 ? `<button onclick="window.revokeAdmin('${u.gameId}')" style="background:rgba(234,179,8,0.12); color:#eab308; border:1px solid rgba(234,179,8,0.3); padding:5px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">👑 Revoke Staff</button>` : (!isAdminUser && u.gameId ? `<button onclick="window.grantAdmin('${u.gameId}', 'R4')" style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:5px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">+ Staff</button>` : '')}
                 ${hasAvatar ? `<button class="delete-avatar-btn" data-id="${u.gameId}" style="background:transparent; border:1px solid var(--danger); color:var(--danger); padding:5px 10px; border-radius:6px; font-size:12px; cursor:pointer;">Delete Avatar</button>` : ``}
                 <button onclick="window.adminDeleteUserRow('${uid}', '${cName.replace(/'/g, "\\'")}')" style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); color:var(--danger); padding:5px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">🗑️ Delete</button>
@@ -16951,8 +16960,8 @@ const views = {
           </tr>
         `;
 
-        // Render dedicated sub-rows for each linked alt character
-        if (totalAlts > 0) {
+        // Render dedicated sub-rows for each linked alt character (ONLY if viewer is the owner of this account)
+        if (totalAlts > 0 && isViewerOwnerOfAccount) {
           u.linkedGameIds.forEach(agid => {
             const altGidStr = String(agid).trim();
             const aTok = u.altTokens ? u.altTokens[altGidStr] : null;
@@ -22939,14 +22948,23 @@ window.resetBearTrapEvent = async () => {
         let targetGameId = nameToIdMap[chiefName];
 
         try {
-            const freshUsersSnap = await get(ref(db, 'users'));
-            if (freshUsersSnap.exists()) {
-                const users = freshUsersSnap.val();
-                if (targetGameId) {
-                    for (const u of Object.values(users)) {
-                        if (Number(u.gameId) === Number(targetGameId)) {
-                            if (u.linkedGameIds && Array.isArray(u.linkedGameIds)) {
-                                altAccounts = [...new Set([...altAccounts, ...u.linkedGameIds])];
+            // Alt accounts are strictly private - only the logged-in owner can view their own alts
+            const isOwnerOfProfile = currentUser && (
+                (targetGameId && currentUser.gameId && Number(currentUser.gameId) === Number(targetGameId)) ||
+                (currentUser.name && chiefName && currentUser.name.toString().trim().toLowerCase() === chiefName.toString().trim().toLowerCase()) ||
+                (currentUser.chiefName && chiefName && currentUser.chiefName.toString().trim().toLowerCase() === chiefName.toString().trim().toLowerCase())
+            );
+
+            if (isOwnerOfProfile) {
+                const freshUsersSnap = await get(ref(db, 'users'));
+                if (freshUsersSnap.exists()) {
+                    const users = freshUsersSnap.val();
+                    if (targetGameId) {
+                        for (const u of Object.values(users)) {
+                            if (Number(u.gameId) === Number(targetGameId)) {
+                                if (u.linkedGameIds && Array.isArray(u.linkedGameIds)) {
+                                    altAccounts = [...new Set([...altAccounts, ...u.linkedGameIds])];
+                                }
                             }
                         }
                     }
@@ -25474,7 +25492,14 @@ window.generatePlayerProfileHtml = (chiefName, p, headers, colIsUpcoming, roster
     
     let html = '<div class="card" style="margin-bottom:20px; animation: fadeIn 0.3s ease;"><div style="display:flex; align-items:center; gap:20px; margin-bottom:15px; flex-wrap:wrap;"><div style="width:70px; height:70px; border-radius:50%; overflow:hidden; background:var(--accent); color:#fff; font-size:32px; font-weight:bold; display:flex; justify-content:center; align-items:center; border:2px solid var(--border); box-shadow:0 4px 10px rgba(0,0,0,0.1); flex-shrink:0;">' + avatarImgHtml + '</div><div style="flex:1; min-width:200px;"><div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;"><h2 style="margin:0; font-size:24px; color:var(--text-main); display:flex; align-items:center; gap:10px; word-break:break-word;">' + chiefName + adminBadgeHtml + '</h2>' + adminBarHtml + '</div>' + headerBadgesHtml + '</div></div>' + metricsHtml;
 
-    if (isAdmin && altAccounts && altAccounts.length > 0) {
+    const targetGid = nameToIdMap[chiefName] || gid || '';
+    const isOwnerOfProfile = currentUser && (
+        (targetGid && currentUser.gameId && Number(currentUser.gameId) === Number(targetGid)) ||
+        (currentUser.name && chiefName && currentUser.name.toString().trim().toLowerCase() === chiefName.toString().trim().toLowerCase()) ||
+        (currentUser.chiefName && chiefName && currentUser.chiefName.toString().trim().toLowerCase() === chiefName.toString().trim().toLowerCase())
+    );
+
+    if (isOwnerOfProfile && altAccounts && altAccounts.length > 0) {
         html += `<div style="text-align:left; border-top:1px solid var(--border); padding-top:20px; margin-top:20px;">
          <details style="background:rgba(255,255,255,0.02); border-radius:12px; border:1px solid var(--border); padding:10px; cursor:pointer;" class="alt-accounts-details">
              <summary style="font-weight:bold; font-size:18px; color:var(--text-main); outline:none; display:flex; align-items:center; justify-content:space-between;">
