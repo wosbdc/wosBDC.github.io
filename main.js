@@ -17711,9 +17711,6 @@ const views = {
                ⚔️ Showdown Data Entry
              </h2>
            </div>
-           <button onclick="window.openActivityMatrix()" style="background:linear-gradient(135deg, var(--accent), #1d4ed8); color:white; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(59,130,246,0.3);">
-             📊 Activity Matrix ➔
-           </button>
          </div>
 
          <div class="card">

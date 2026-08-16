@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [2.6.1] - 2026-08-16
+- Showdown Header Navigation Clean-up: Removed the redundant Activity Matrix button from the Showdown Data Entry header bar, keeping the view clean and exclusively focused on Showdown scores, daily breakdowns, and the Archive Vault.
+
 ## [2.6.0] - 2026-08-16
 - Dedicated Event Archive & Reset Engines: Implemented independent, self-contained `🔄 Archive & Reset Cycle` actions for Alliance Championship (`window.archiveAndResetChampionshipCycle`), Mercenary Prestige (`window.archiveAndResetMercenaryCycle`), Polar Terrors (`window.archiveAndResetPolarTerrorsCycle`), and Bear Trap (`window.archiveAndResetBearTrapCycle`) with timestamped Firebase snapshot archiving and player lifetime attendance counter updates.
 - 1-Click Event Archive Restoration: Integrated `↩️ Restore Archive` modal suite across all tracker management pages, permitting instantaneous rollback of member status from any historical cycle snapshot.
