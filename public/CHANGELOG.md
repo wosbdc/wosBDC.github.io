@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [2.9.1] - 2026-08-16
+- Native UTC Game Time Entry: Enhanced the Scheduled Countdown Alert modal (`openCreateCountdownAlertModal`) with dedicated UTC Date (`<input type="date">`) and UTC Time (`<input type="time">`) inputs matching official Whiteout Survival announcement standards.
+- Real-Time Local Time Conversion Card: Integrated a live conversion card that automatically translates the entered UTC date & time into the user's exact local timezone (e.g. `Sun, Aug 16 @ 11:00 PM PDT (UTC-7)`) alongside live relative countdown indicators (`⏳ in 6h 55m`).
+- Quick UTC Presets: Added 1-click UTC time quick-fill pills for `00:00 UTC` (Server Day Start), `02:00 UTC` (Daily Reset), `06:00 UTC` (Game Patch / Maintenance), `12:00 UTC` (Midday Events), and `19:00 UTC` (Bear Trap).
+- Dual-Mode Timezone Synchronization: Added an interactive `🌐 Set in UTC Time` vs `🕒 Set in Local Time` toggle that automatically synchronizes values across both modes in real-time.
+
 ## [2.9.0] - 2026-08-16
 - Unified Push Notification Hub & Device Token Migration: Integrated real-time push notification subscriber counting (`window.getPushSubscriberCount`) across the Leadership Blast Broadcast modal, Bell Notification dropdown, and Admin Dashboard.
 - Blast Notifications Suite: Added dynamic live subscriber count preview on broadcast modal headers and action buttons, giving leadership instant feedback on the number of registered recipient devices prior to sending.

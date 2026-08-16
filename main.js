@@ -10611,6 +10611,41 @@ window.openEditCountdownAlertModal = async (key) => {
   }
 };
 
+window.ccaCurrentMode = 'utc';
+
+window.setCcaTimeInputMode = function(mode) {
+  window.ccaCurrentMode = mode;
+  const utcFields = document.getElementById('ccaUtcFields');
+  const localFields = document.getElementById('ccaLocalFields');
+  const utcBtn = document.getElementById('ccaModeUtcBtn');
+  const localBtn = document.getElementById('ccaModeLocalBtn');
+  
+  if (mode === 'utc') {
+    if (utcFields) utcFields.style.display = 'flex';
+    if (localFields) localFields.style.display = 'none';
+    if (utcBtn) { utcBtn.style.background = 'var(--accent)'; utcBtn.style.color = '#fff'; }
+    if (localBtn) { localBtn.style.background = 'transparent'; localBtn.style.color = 'var(--text-muted)'; }
+  } else {
+    if (utcFields) utcFields.style.display = 'none';
+    if (localFields) localFields.style.display = 'flex';
+    if (localBtn) { localBtn.style.background = 'var(--accent)'; localBtn.style.color = '#fff'; }
+    if (utcBtn) { utcBtn.style.background = 'transparent'; utcBtn.style.color = 'var(--text-muted)'; }
+  }
+  if (typeof window.updateCountdownModalPreview === 'function') {
+    window.updateCountdownModalPreview();
+  }
+};
+
+window.applyCcaUtcPreset = function(timeStr) {
+  const tEl = document.getElementById('ccaUtcTime');
+  if (tEl) {
+    tEl.value = timeStr;
+    if (typeof window.updateCountdownModalPreview === 'function') {
+      window.updateCountdownModalPreview();
+    }
+  }
+};
+
 window.openCreateCountdownAlertModal = function(editData = null) {
   const isStaff = (currentUser && typeof window.isAdminUser === 'function') ? window.isAdminUser(currentUser) : false;
   if (!isStaff) {
@@ -10628,26 +10663,47 @@ window.openCreateCountdownAlertModal = function(editData = null) {
   const initialCountdownMode = (editData && editData.countdownMode) || '1hour';
   const initialPriority = (editData && editData.priority) || 'high';
 
-  // Format initial start datetime-local
-  let initialDateTimeLocalStr = '';
+  window.ccaCurrentMode = 'utc';
+
+  // Format initial start UTC and Local datetime strings
+  let initialUtcDate = '';
+  let initialUtcTime = '06:00';
+  let initialLocalDt = '';
+
   if (editData && editData.targetTimestamp) {
-    const d = new Date(editData.targetTimestamp);
-    const yr = d.getFullYear();
-    const mo = String(d.getMonth() + 1).padStart(2, '0');
-    const da = String(d.getDate()).padStart(2, '0');
-    const ho = String(d.getHours()).padStart(2, '0');
-    const mi = String(d.getMinutes()).padStart(2, '0');
-    initialDateTimeLocalStr = `${yr}-${mo}-${da}T${ho}:${mi}`;
+    const d = new Date(Number(editData.targetTimestamp));
+    const uYr = d.getUTCFullYear();
+    const uMo = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const uDa = String(d.getUTCDate()).padStart(2, '0');
+    const uHo = String(d.getUTCHours()).padStart(2, '0');
+    const uMi = String(d.getUTCMinutes()).padStart(2, '0');
+    initialUtcDate = `${uYr}-${uMo}-${uDa}`;
+    initialUtcTime = `${uHo}:${uMi}`;
+
+    const lYr = d.getFullYear();
+    const lMo = String(d.getMonth() + 1).padStart(2, '0');
+    const lDa = String(d.getDate()).padStart(2, '0');
+    const lHo = String(d.getHours()).padStart(2, '0');
+    const lMi = String(d.getMinutes()).padStart(2, '0');
+    initialLocalDt = `${lYr}-${lMo}-${lDa}T${lHo}:${lMi}`;
   } else {
-    // Default to nearest next hour + 1
-    const d = new Date(Date.now() + 2 * 3600000);
-    d.setMinutes(0, 0, 0);
-    const yr = d.getFullYear();
-    const mo = String(d.getMonth() + 1).padStart(2, '0');
-    const da = String(d.getDate()).padStart(2, '0');
-    const ho = String(d.getHours()).padStart(2, '0');
-    const mi = String(d.getMinutes()).padStart(2, '0');
-    initialDateTimeLocalStr = `${yr}-${mo}-${da}T${ho}:${mi}`;
+    // Default to nearest next UTC hour + 2
+    const nowUtc = new Date(Date.now() + 2 * 3600000);
+    nowUtc.setUTCMinutes(0, 0, 0);
+    const uYr = nowUtc.getUTCFullYear();
+    const uMo = String(nowUtc.getUTCMonth() + 1).padStart(2, '0');
+    const uDa = String(nowUtc.getUTCDate()).padStart(2, '0');
+    const uHo = String(nowUtc.getUTCHours()).padStart(2, '0');
+    const uMi = String(nowUtc.getUTCMinutes()).padStart(2, '0');
+    initialUtcDate = `${uYr}-${uMo}-${uDa}`;
+    initialUtcTime = `${uHo}:${uMi}`;
+
+    const lYr = nowUtc.getFullYear();
+    const lMo = String(nowUtc.getMonth() + 1).padStart(2, '0');
+    const lDa = String(nowUtc.getDate()).padStart(2, '0');
+    const lHo = String(nowUtc.getHours()).padStart(2, '0');
+    const lMi = String(nowUtc.getMinutes()).padStart(2, '0');
+    initialLocalDt = `${lYr}-${lMo}-${lDa}T${lHo}:${lMi}`;
   }
 
   let initialDurationMs = 7200000; // 2 hours default
@@ -10663,13 +10719,13 @@ window.openCreateCountdownAlertModal = function(editData = null) {
   });
 
   modal.innerHTML = `
-    <div class="card" style="width:94%; max-width:480px; background:linear-gradient(145deg, rgba(15,23,42,0.98), rgba(30,41,59,0.96)); border:1px solid rgba(56,189,248,0.4); padding:22px; border-radius:18px; box-shadow:0 25px 60px rgba(0,0,0,0.85); text-align:left; color:var(--text-main); max-height:90vh; overflow-y:auto; animation:zoomIn 0.2s ease;">
+    <div class="card" style="width:94%; max-width:500px; background:linear-gradient(145deg, rgba(15,23,42,0.98), rgba(30,41,59,0.96)); border:1px solid rgba(56,189,248,0.4); padding:22px; border-radius:18px; box-shadow:0 25px 60px rgba(0,0,0,0.85); text-align:left; color:var(--text-main); max-height:90vh; overflow-y:auto; animation:zoomIn 0.2s ease;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:10px;">
         <div style="display:flex; align-items:center; gap:8px;">
           <span style="font-size:22px;">${isEdit ? '✏️' : '🚀'}</span>
           <div>
             <h3 style="margin:0; color:#fff; font-size:16.5px; font-weight:800;">${isEdit ? 'Edit Scheduled Alert' : 'Post Scheduled Alert / Countdown'}</h3>
-            <div style="font-size:11px; color:var(--text-muted);">Displays in Notification Bell Hub with live ticking ticker</div>
+            <div style="font-size:11px; color:var(--text-muted);">Displays in Notification Bell Hub with live countdown timer</div>
           </div>
         </div>
         <button onclick="document.getElementById('createCountdownAlertModalOverlay').remove()" style="background:none; border:none; color:var(--text-muted); font-size:22px; cursor:pointer; line-height:1;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-muted)'">&times;</button>
@@ -10701,7 +10757,7 @@ window.openCreateCountdownAlertModal = function(editData = null) {
         <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(56,189,248,0.25); border-radius:12px; padding:12px; display:flex; flex-direction:column; gap:10px;">
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <span style="font-size:12px; font-weight:bold; color:#38bdf8; display:flex; align-items:center; gap:5px;">
-              <span>⏳</span> Event Date, Time & Countdown
+              <span>⏳</span> Event Date, Time & Live Countdown
             </span>
             <label style="display:flex; align-items:center; gap:5px; font-size:11.5px; color:var(--text-muted); cursor:pointer;">
               <input type="checkbox" id="ccaHasCountdown" checked onchange="document.getElementById('ccaScheduleFields').style.display = this.checked ? 'flex' : 'none';" style="cursor:pointer;">
@@ -10710,13 +10766,74 @@ window.openCreateCountdownAlertModal = function(editData = null) {
           </div>
 
           <div id="ccaScheduleFields" style="display:flex; flex-direction:column; gap:10px;">
-            <div>
-              <label style="font-size:11px; font-weight:bold; color:var(--text-muted); display:block; margin-bottom:4px;">Event Start Date & Time (Your Local Time)</label>
-              <input type="datetime-local" id="ccaDateTime" required value="${initialDateTimeLocalStr}" oninput="window.updateCountdownModalPreview()" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12.5px; outline:none; box-sizing:border-box; cursor:pointer;">
-              <div id="ccaTimePreview" style="font-size:11.5px; color:#38bdf8; font-family:monospace; margin-top:4px; font-weight:bold;"></div>
+            
+            <!-- Timing Mode Switcher -->
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+              <div style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">
+                Input Timezone:
+              </div>
+              <div style="display:inline-flex; background:rgba(0,0,0,0.3); padding:2px; border-radius:8px; border:1px solid rgba(255,255,255,0.08); gap:3px;">
+                <button type="button" id="ccaModeUtcBtn" onclick="window.setCcaTimeInputMode('utc')" style="background:var(--accent); color:#fff; border:none; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
+                  🌐 Set in UTC Time
+                </button>
+                <button type="button" id="ccaModeLocalBtn" onclick="window.setCcaTimeInputMode('local')" style="background:transparent; color:var(--text-muted); border:none; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
+                  🕒 Set in Local Time
+                </button>
+              </div>
             </div>
 
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <!-- UTC Input Controls -->
+            <div id="ccaUtcFields" style="display:flex; flex-direction:column; gap:8px;">
+              <div style="display:grid; grid-template-columns:1.2fr 1fr; gap:10px;">
+                <div>
+                  <label style="font-size:11px; font-weight:bold; color:#38bdf8; display:block; margin-bottom:4px;">🌐 UTC Event Date</label>
+                  <input type="date" id="ccaUtcDate" value="${initialUtcDate}" oninput="window.updateCountdownModalPreview()" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12.5px; font-weight:bold; outline:none; box-sizing:border-box; cursor:pointer;">
+                </div>
+                <div>
+                  <label style="font-size:11px; font-weight:bold; color:#38bdf8; display:block; margin-bottom:4px;">🌐 UTC Time (HH:MM)</label>
+                  <input type="time" id="ccaUtcTime" value="${initialUtcTime}" oninput="window.updateCountdownModalPreview()" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12.5px; font-weight:bold; outline:none; box-sizing:border-box; cursor:pointer;">
+                </div>
+              </div>
+
+              <!-- Quick UTC Presets -->
+              <div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap;">
+                <span style="font-size:10px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Quick UTC:</span>
+                <button type="button" onclick="window.applyCcaUtcPreset('00:00')" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); padding:2px 7px; border-radius:6px; font-size:10.5px; font-weight:bold; cursor:pointer;">00:00</button>
+                <button type="button" onclick="window.applyCcaUtcPreset('02:00')" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:#c084fc; padding:2px 7px; border-radius:6px; font-size:10.5px; font-weight:bold; cursor:pointer;">02:00 (Reset)</button>
+                <button type="button" onclick="window.applyCcaUtcPreset('06:00')" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:#38bdf8; padding:2px 7px; border-radius:6px; font-size:10.5px; font-weight:bold; cursor:pointer;">06:00 (Patch)</button>
+                <button type="button" onclick="window.applyCcaUtcPreset('12:00')" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); padding:2px 7px; border-radius:6px; font-size:10.5px; font-weight:bold; cursor:pointer;">12:00</button>
+                <button type="button" onclick="window.applyCcaUtcPreset('19:00')" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:#f97316; padding:2px 7px; border-radius:6px; font-size:10.5px; font-weight:bold; cursor:pointer;">19:00 (Trap)</button>
+              </div>
+            </div>
+
+            <!-- Local Input Controls -->
+            <div id="ccaLocalFields" style="display:none; flex-direction:column; gap:8px;">
+              <div>
+                <label style="font-size:11px; font-weight:bold; color:#10b981; display:block; margin-bottom:4px;">🕒 Event Start Date & Time (Your Local Time)</label>
+                <input type="datetime-local" id="ccaLocalDt" value="${initialLocalDt}" oninput="window.updateCountdownModalPreview()" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12.5px; font-weight:bold; outline:none; box-sizing:border-box; cursor:pointer;">
+              </div>
+            </div>
+
+            <!-- Live Real-Time Local Conversion Display Card -->
+            <div id="ccaLiveConversionBox" style="background:linear-gradient(135deg, rgba(14,165,233,0.12), rgba(15,23,42,0.9)); border:1.5px solid rgba(56,189,248,0.4); border-radius:12px; padding:12px 14px; display:flex; flex-direction:column; gap:6px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+                <span style="font-size:11px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.5px; display:flex; align-items:center; gap:5px;">
+                  🕒 Converted to Your Local Time:
+                </span>
+                <span id="ccaLocalTzBadge" style="font-size:10.5px; background:rgba(56,189,248,0.2); color:#38bdf8; padding:2px 8px; border-radius:6px; font-weight:bold; font-family:monospace;"></span>
+              </div>
+
+              <div id="ccaLocalTimeConverted" style="font-size:15px; font-weight:800; color:#fff; line-height:1.3;">
+                Calculating...
+              </div>
+
+              <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.08); padding-top:6px; font-size:11.5px; color:var(--text-muted); font-family:monospace; flex-wrap:wrap; gap:6px;">
+                <span id="ccaUtcConfirmLabel" style="color:#94a3b8;">🌐 00:00 UTC</span>
+                <span id="ccaRelativeDiffLabel" style="color:#f59e0b; font-weight:bold;">⏳ calculating</span>
+              </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:2px;">
               <div>
                 <label style="font-size:11px; font-weight:bold; color:var(--text-muted); display:block; margin-bottom:4px;">Expected Duration</label>
                 <select id="ccaDuration" onchange="window.updateCountdownModalPreview()" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer; outline:none; box-sizing:border-box;">
@@ -10785,37 +10902,101 @@ window.openCreateCountdownAlertModal = function(editData = null) {
 };
 
 window.updateCountdownModalPreview = function() {
-  const dtInput = document.getElementById('ccaDateTime');
-  const previewEl = document.getElementById('ccaTimePreview');
-  if (!dtInput || !previewEl) return;
+  const localConvertedEl = document.getElementById('ccaLocalTimeConverted');
+  const localTzEl = document.getElementById('ccaLocalTzBadge');
+  const utcConfirmEl = document.getElementById('ccaUtcConfirmLabel');
+  const relDiffEl = document.getElementById('ccaRelativeDiffLabel');
+  if (!localConvertedEl) return;
 
-  const val = dtInput.value;
-  if (!val) {
-    previewEl.textContent = 'Please select a date and time';
-    return;
-  }
-
-  const d = new Date(val);
-  if (isNaN(d.getTime())) {
-    previewEl.textContent = 'Invalid date';
-    return;
-  }
-
-  const utcHours = String(d.getUTCHours()).padStart(2, '0');
-  const utcMins = String(d.getUTCMinutes()).padStart(2, '0');
-  const utcStr = `${d.toUTCString().slice(0, 16)} @ ${utcHours}:${utcMins} UTC`;
-  
-  const diffMs = d.getTime() - Date.now();
-  let relStr = '';
-  if (diffMs > 0) {
-    const hrs = Math.floor(diffMs / 3600000);
-    const mins = Math.floor((diffMs % 3600000) / 60000);
-    relStr = hrs > 24 ? `in ${Math.floor(hrs/24)}d ${hrs%24}h` : (hrs > 0 ? `in ${hrs}h ${mins}m` : `in ${mins}m`);
+  let targetTs = null;
+  if (window.ccaCurrentMode === 'utc') {
+    const uDate = document.getElementById('ccaUtcDate')?.value;
+    const uTime = document.getElementById('ccaUtcTime')?.value || '00:00';
+    if (!uDate) {
+      localConvertedEl.textContent = 'Please enter a UTC date';
+      return;
+    }
+    const [yr, mo, da] = uDate.split('-').map(Number);
+    const [ho, mi] = uTime.split(':').map(Number);
+    targetTs = Date.UTC(yr, mo - 1, da, ho || 0, mi || 0, 0);
   } else {
-    relStr = 'Now / In Past';
+    const lVal = document.getElementById('ccaLocalDt')?.value;
+    if (!lVal) {
+      localConvertedEl.textContent = 'Please select a local date and time';
+      return;
+    }
+    const d = new Date(lVal);
+    targetTs = d.getTime();
   }
 
-  previewEl.textContent = `🌐 ${utcStr} (${relStr})`;
+  if (!targetTs || isNaN(targetTs)) {
+    localConvertedEl.textContent = 'Invalid date/time';
+    return;
+  }
+
+  const dateObj = new Date(targetTs);
+
+  // Format Local Time (e.g. Sun, Aug 16, 2026 @ 11:00 PM)
+  const weekday = dateObj.toLocaleDateString([], { weekday: 'short' });
+  const monthDay = dateObj.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+  const timeStr = dateObj.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+  localConvertedEl.innerHTML = `<span style="color:#38bdf8;">${weekday}, ${monthDay}</span> <span style="color:#fff;">@ ${timeStr}</span>`;
+
+  // Timezone offset label (e.g. PDT (UTC-7) or timezone name)
+  try {
+    const tzName = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+    const offsetMin = -dateObj.getTimezoneOffset();
+    const offSign = offsetMin >= 0 ? '+' : '-';
+    const offH = Math.floor(Math.abs(offsetMin) / 60);
+    const offM = Math.abs(offsetMin) % 60;
+    const offsetStr = `UTC${offSign}${offH}${offM > 0 ? `:${String(offM).padStart(2, '0')}` : ''}`;
+    if (localTzEl) localTzEl.textContent = `${offsetStr} (${tzName.split('/')[1] || tzName})`;
+  } catch(e) {
+    if (localTzEl) localTzEl.textContent = 'Local Time';
+  }
+
+  // UTC Confirmation
+  const uYr = dateObj.getUTCFullYear();
+  const uMo = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+  const uDa = String(dateObj.getUTCDate()).padStart(2, '0');
+  const uHo = String(dateObj.getUTCHours()).padStart(2, '0');
+  const uMi = String(dateObj.getUTCMinutes()).padStart(2, '0');
+  if (utcConfirmEl) utcConfirmEl.textContent = `🌐 ${uYr}-${uMo}-${uDa} @ ${uHo}:${uMi} UTC`;
+
+  // Relative Countdown
+  const diffMs = targetTs - Date.now();
+  if (relDiffEl) {
+    if (diffMs > 0) {
+      const hrs = Math.floor(diffMs / 3600000);
+      const mins = Math.floor((diffMs % 3600000) / 60000);
+      const rel = hrs > 24 ? `in ${Math.floor(hrs/24)}d ${hrs%24}h` : (hrs > 0 ? `in ${hrs}h ${mins}m` : `in ${mins}m`);
+      relDiffEl.textContent = `⏳ ${rel}`;
+      relDiffEl.style.color = '#f59e0b';
+    } else {
+      relDiffEl.textContent = '🟢 Event is Live / Past';
+      relDiffEl.style.color = '#10b981';
+    }
+  }
+
+  // Keep the alternate input field in sync
+  if (window.ccaCurrentMode === 'utc') {
+    const localInput = document.getElementById('ccaLocalDt');
+    if (localInput) {
+      const lYr = dateObj.getFullYear();
+      const lMo = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const lDa = String(dateObj.getDate()).padStart(2, '0');
+      const lHo = String(dateObj.getHours()).padStart(2, '0');
+      const lMi = String(dateObj.getMinutes()).padStart(2, '0');
+      localInput.value = `${lYr}-${lMo}-${lDa}T${lHo}:${lMi}`;
+    }
+  } else {
+    const uDateInput = document.getElementById('ccaUtcDate');
+    const uTimeInput = document.getElementById('ccaUtcTime');
+    if (uDateInput && uTimeInput) {
+      uDateInput.value = `${uYr}-${uMo}-${uDa}`;
+      uTimeInput.value = `${uHo}:${uMi}`;
+    }
+  }
 };
 
 window.handleSaveCountdownAlert = async function(e, editKey = '') {
@@ -10833,7 +11014,6 @@ window.handleSaveCountdownAlert = async function(e, editKey = '') {
     const title = document.getElementById('ccaTitle')?.value.trim() || '';
     const body = document.getElementById('ccaBody')?.value.trim() || '';
     const hasCountdown = document.getElementById('ccaHasCountdown')?.checked ?? true;
-    const dtVal = document.getElementById('ccaDateTime')?.value;
     const durMs = Number(document.getElementById('ccaDuration')?.value || '7200000');
     const countdownMode = document.getElementById('ccaMode')?.value || '1hour';
     const priority = document.getElementById('ccaPriority')?.value || 'high';
@@ -10847,10 +11027,25 @@ window.handleSaveCountdownAlert = async function(e, editKey = '') {
 
     let targetTimestamp = null;
     let endTimestamp = null;
-    if (hasCountdown && dtVal) {
-      const d = new Date(dtVal);
-      if (!isNaN(d.getTime())) {
-        targetTimestamp = d.getTime();
+    if (hasCountdown) {
+      if (window.ccaCurrentMode === 'utc') {
+        const uDate = document.getElementById('ccaUtcDate')?.value;
+        const uTime = document.getElementById('ccaUtcTime')?.value || '00:00';
+        if (uDate) {
+          const [yr, mo, da] = uDate.split('-').map(Number);
+          const [ho, mi] = uTime.split(':').map(Number);
+          targetTimestamp = Date.UTC(yr, mo - 1, da, ho || 0, mi || 0, 0);
+        }
+      } else {
+        const dtVal = document.getElementById('ccaLocalDt')?.value;
+        if (dtVal) {
+          const d = new Date(dtVal);
+          if (!isNaN(d.getTime())) {
+            targetTimestamp = d.getTime();
+          }
+        }
+      }
+      if (targetTimestamp) {
         endTimestamp = targetTimestamp + durMs;
       }
     }

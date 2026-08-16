@@ -1,11 +1,10 @@
 {
-  "version": "2.9.0",
+  "version": "2.9.1",
   "releaseDate": "2026-08-16",
-  "title": "Unified Push Notification Hub, Blast Broadcast Suite & Device Migration",
+  "title": "UTC Event Entry Mode & Real-Time Local Time Conversion Engine",
   "notes": [
-    "Integrated dynamic subscriber count tracking across the leadership broadcast panel, bell alerts modal, and admin command center.",
-    "Upgraded push notification token migration system to maintain clean registration across all devices with automatic duplicate cleanup.",
-    "Added 1-click preset alert templates for Bear Trap, Shields Up, Championship, Gift Codes, and Daily Reset.",
-    "Enhanced error diagnostics and smart auto-repair retry logic for expired or mismatched FCM registration tokens."
+    "Added native UTC date and time inputs to the Scheduled Countdown Alert Creator with instant live conversion to local timezone.",
+    "Integrated quick UTC preset buttons (00:00, 02:00 Reset, 06:00 Patch, 12:00, 19:00 Bear Trap) for effortless event scheduling.",
+    "Added seamless two-way synchronization between Game UTC and Local time modes."
   ]
 }
