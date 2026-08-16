@@ -1,9 +1,9 @@
 {
-  "version": "2.5.111",
+  "version": "2.5.112",
   "releaseDate": "2026-08-15",
-  "title": "Alliance Gatekeeper Report Editor & Live Discord Preview",
+  "title": "Nightly Maintenance Telemetry in Alliance Gatekeeper Report",
   "notes": [
-    "Admin Menu: Added interactive Alliance Gatekeeper Report Editor with live Discord embed preview, custom R5 announcement directive, and section toggles.",
-    "Bots Tab: Added 1-click Fast Update and Editor launcher directly within the Discord Gatekeeper Bot card."
+    "Gatekeeper Editor: Added Nightly Account Maintenance Telemetry checkbox toggle, live stats binding, and Discord embed section.",
+    "Discord Gatekeeper: Live 2:00 AM UTC maintenance status, audited accounts, refreshed tokens, and two-way sync state now seamlessly embeddable."
   ]
 }

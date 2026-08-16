@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.5.112] - 2026-08-15
+- Gatekeeper Report Editor: Added Nightly Account Maintenance Telemetry toggle checkbox and live stats binding into the Discord #alerts embed report.
+- Discord Alerts Bot: Included 2:00 AM UTC maintenance status, audited accounts, refreshed tokens, and two-way sync state in automated reports.
+
 ## [2.5.111] - 2026-08-15
 - Admin Menu: Added interactive Alliance Gatekeeper Report Editor & Live Discord Embed Preview Modal with customizable R5 announcements, section toggles, color themes, and draft saving.
 - Bots Tab: Integrated Editor launcher alongside 1-click Fast Update in the Discord Gatekeeper & Webhook Bot card.
