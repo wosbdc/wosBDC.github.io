@@ -11399,6 +11399,70 @@ window.listenToBotTelemetry = () => {
   }
 };
 
+window.listenToMaintenanceTelemetry = () => {
+  if (window._maintTelemetryUnsub) window._maintTelemetryUnsub();
+  try {
+    window._maintTelemetryUnsub = onValue(ref(db, 'system/nightly_maintenance_status'), (snap) => {
+      const data = snap && snap.exists() ? snap.val() : null;
+      window.renderMaintenanceTelemetryData(data);
+    });
+  } catch(e) {
+    console.warn("Could not attach maintenance telemetry listener:", e);
+  }
+};
+
+window.renderMaintenanceTelemetryData = (data) => {
+  const pill = document.getElementById('maintBotStatusPill');
+  const lastRunEl = document.getElementById('maintBotLastRun');
+  const nextRunEl = document.getElementById('maintBotNextRun');
+  const auditedEl = document.getElementById('maintBotAuditedCount');
+  const refreshedEl = document.getElementById('maintBotRefreshedCount');
+  const upgradesEl = document.getElementById('maintBotUpgradesCount');
+  const nameChangesEl = document.getElementById('maintBotNameChangesCount');
+  const summaryEl = document.getElementById('maintBotSummaryText');
+
+  if (!data) {
+    if (pill) {
+      pill.innerHTML = '⚪ STANDBY';
+      pill.style.color = 'var(--text-muted)';
+      pill.style.background = 'rgba(255,255,255,0.06)';
+    }
+    return;
+  }
+
+  if (pill) {
+    const isComplete = data.status === 'complete';
+    pill.innerHTML = isComplete ? '🟢 ACTIVE & SCHEDULED' : '🟡 IN PROGRESS';
+    pill.style.color = isComplete ? '#10b981' : '#f59e0b';
+    pill.style.background = isComplete ? 'rgba(16,185,129,0.2)' : 'rgba(245,158,11,0.2)';
+    pill.style.borderColor = isComplete ? 'rgba(16,185,129,0.4)' : 'rgba(245,158,11,0.4)';
+  }
+
+  if (lastRunEl && data.lastRun) {
+    const d = new Date(data.lastRun);
+    const diffMin = Math.floor((Date.now() - d.getTime()) / 60000);
+    let relStr = '';
+    if (diffMin < 1) relStr = 'Just now';
+    else if (diffMin < 60) relStr = `${diffMin}m ago`;
+    else if (diffMin < 1440) relStr = `${Math.floor(diffMin / 60)}h ago`;
+    else relStr = `${Math.floor(diffMin / 1440)}d ago`;
+
+    lastRunEl.textContent = `${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} (${d.toLocaleDateString([], { month: 'short', day: 'numeric' })}) • ${relStr}`;
+  }
+
+  if (nextRunEl && data.nextRun) {
+    const n = new Date(data.nextRun);
+    const diffHours = Math.round((n.getTime() - Date.now()) / (1000 * 60 * 60));
+    nextRunEl.textContent = `${n.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} (${n.toLocaleDateString([], { month: 'short', day: 'numeric' })}) • ${diffHours > 0 ? `In ~${diffHours}h` : 'Tonight'}`;
+  }
+
+  if (auditedEl) auditedEl.textContent = data.accountsAudited ?? 0;
+  if (refreshedEl) refreshedEl.textContent = data.tokensRefreshed ?? 0;
+  if (upgradesEl) upgradesEl.textContent = data.upgradesCount ?? 0;
+  if (nameChangesEl) nameChangesEl.textContent = data.nameChangesCount ?? 0;
+  if (summaryEl && data.summary) summaryEl.textContent = data.summary;
+};
+
 window.runLiveGiftCodeSweep = async (btnEl = null) => {
   let origHtml = '';
   if (btnEl) {
@@ -11462,6 +11526,9 @@ window.runNightlyMaintenanceSweep = async (btnEl = null) => {
       const aud = rep.accountsAudited || 0;
       if (window.showToast) {
         window.showToast(`✅ Nightly Maintenance Complete: Audited ${aud} account(s), synced ${upg} furnace upgrade(s), ${nc} nickname change(s)!`, 'success');
+      }
+      if (window.renderMaintenanceTelemetryData) {
+        window.renderMaintenanceTelemetryData(rep);
       }
       if (typeof window.renderLinkedAlts === 'function') {
         window.renderLinkedAlts();
@@ -13860,6 +13927,7 @@ const views = {
             const isNew = row.getAttribute('data-is-new') === 'true';
             const isAdmin = row.getAttribute('data-is-admin') === 'true';
             const hasAlts = row.getAttribute('data-has-alts') === 'true';
+            const altSyncedCount = parseInt(row.getAttribute('data-alt-synced-count') || '0', 10);
             const isEnrolled = row.getAttribute('data-is-enrolled') === 'true';
             const isClaimed = row.getAttribute('data-is-claimed') === 'true';
             const tokenStatus = row.getAttribute('data-token-status') || 'unverified';
@@ -13872,7 +13940,19 @@ const views = {
 
             let matchesToken = true;
             if (tokenFilter !== 'all') {
-                matchesToken = (tokenStatus === tokenFilter);
+                if (attrFilter === 'alts') {
+                    if (tokenFilter === 'active') {
+                        matchesToken = (tokenStatus === 'active' || altSyncedCount > 0);
+                    } else if (tokenFilter === 'unverified') {
+                        matchesToken = (tokenStatus === 'unverified' || altSyncedCount === 0);
+                    } else if (tokenFilter === 'expired') {
+                        matchesToken = (tokenStatus === 'expired');
+                    } else if (tokenFilter === 'expiring') {
+                        matchesToken = (tokenStatus === 'expiring');
+                    }
+                } else {
+                    matchesToken = (tokenStatus === tokenFilter);
+                }
             }
 
             let matchesAttr = true;
@@ -14777,6 +14857,7 @@ const views = {
               div::-webkit-scrollbar { display: none; }
             </style>
             <button class="admin-tab-btn active" data-tab="tab-tools" style="background:none; border:none; color:var(--accent); font-weight:bold; font-size:16px; cursor:pointer; padding:5px 10px; border-bottom:2px solid var(--accent); flex-shrink:0;">🛠️ Daily Tools</button>
+            <button class="admin-tab-btn" data-tab="tab-bots" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:16px; cursor:pointer; padding:5px 10px; border-bottom:2px solid transparent; flex-shrink:0;">🤖 Bots</button>
             <button class="admin-tab-btn" data-tab="tab-giftcodes" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:16px; cursor:pointer; padding:5px 10px; border-bottom:2px solid transparent; flex-shrink:0;">🎁 Gift Codes</button>
             <button class="admin-tab-btn" data-tab="tab-indev" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:16px; cursor:pointer; padding:5px 10px; border-bottom:2px solid transparent; flex-shrink:0;">🧪 In-Dev</button>
             ${currentUser && currentUser.gameId.toString() === '318843189' ? `<button class="admin-tab-btn" data-tab="tab-frost" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:16px; cursor:pointer; padding:5px 10px; border-bottom:2px solid transparent; flex-shrink:0;">❄️ Frost Clan</button>` : ''}
@@ -14802,20 +14883,176 @@ const views = {
 
             <!-- Category 2: System & Roster Tools -->
             <div style="background:var(--bg-main); padding:20px; border-radius:12px; border:1px solid var(--border); margin-bottom:20px;">
-              <h3 style="margin:0 0 5px 0; color:var(--text-main); text-align:left; font-size:16px;">⚙️ System & Roster Tools</h3>
-              <p style="margin:0 0 15px 0; font-size:12px; color:var(--text-muted); text-align:left;">Manage Chief names, Game IDs, push alerts, and master database sync.</p>
+              <h3 style="margin:0 0 5px 0; color:var(--text-main); text-align:left; font-size:16px;">👥 Member & Roster Management</h3>
+              <p style="margin:0 0 15px 0; font-size:12px; color:var(--text-muted); text-align:left;">Manage Chief profiles, fix game IDs, review signups, and sync master sheets.</p>
               
-              <div style="display:flex; flex-direction:column; gap:12px; align-items:center;">
-                <button onclick="window.openGiftCodeDispatcherModal()" style="background:linear-gradient(135deg, #ec4899, #d946ef); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(236,72,153,0.35);">🎁 Alliance Mass Gift Code Dispatcher</button>
-                <button onclick="window.pushGatekeeperReportToDiscord(this)" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(14,165,233,0.35);">🏰 Update #alerts Gatekeeper Report</button>
-                <button onclick="document.querySelector('.admin-tab-btn[data-tab=\'tab-users\']')?.click(); if(window.showToast) window.showToast('Click 🛠️ Repair ID next to any member in the table to swap or fix IDs!', 'info');" style="background:linear-gradient(135deg, #a855f7, #9333ea); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(168,85,247,0.3);">🛠️ Chief Character & ID Repair Wizard</button>
-                <button onclick="window.openNewMembersModal()" style="background:linear-gradient(135deg, #06b6d4, #3b82f6); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(6,182,212,0.3);">🔔 View Recent Member Signups</button>
-                <button onclick="views.playerEditor()" style="background:linear-gradient(135deg, #6366f1, #4f46e5); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(99,102,241,0.3);">👤 Open Player Database Editor</button>
-                ${isR5 ? `<button onclick="window.openBroadcastPushModal()" style="background:linear-gradient(135deg, #ec4899, #be185d); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(236,72,153,0.3);">🚀 Broadcast Push Notification</button>` : ''}
-                <button id="syncAllSheetsBtn" onclick="window.syncAllSheetsToFirebase()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(168,85,247,0.3);">⚡ Master Sync Sheets ➔ Firebase</button>
-                <button onclick="window.syncScheduleDirectly()" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(59,130,246,0.3);">📅 Sync Schedule ➔ Site</button>
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:12px;">
+                <button onclick="views.playerEditor()" style="background:linear-gradient(135deg, #6366f1, #4f46e5); color:#fff; border:none; padding:12px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; box-shadow:0 4px 12px rgba(99,102,241,0.3); display:flex; align-items:center; justify-content:center; gap:8px;">👤 Player Database Editor</button>
+                <button onclick="document.querySelector('.admin-tab-btn[data-tab=\'tab-users\']')?.click(); if(window.showToast) window.showToast('Click 🛠️ Repair ID next to any member in the table to swap or fix IDs!', 'info');" style="background:linear-gradient(135deg, #a855f7, #9333ea); color:#fff; border:none; padding:12px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; box-shadow:0 4px 12px rgba(168,85,247,0.3); display:flex; align-items:center; justify-content:center; gap:8px;">🛠️ Chief Character & ID Repair</button>
+                <button onclick="window.openNewMembersModal()" style="background:linear-gradient(135deg, #06b6d4, #3b82f6); color:#fff; border:none; padding:12px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; box-shadow:0 4px 12px rgba(6,182,212,0.3); display:flex; align-items:center; justify-content:center; gap:8px;">🔔 Recent Member Signups</button>
+                <button id="syncAllSheetsBtn" onclick="window.syncAllSheetsToFirebase()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:12px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; box-shadow:0 4px 12px rgba(16,185,129,0.3); display:flex; align-items:center; justify-content:center; gap:8px;">⚡ Master Sync Sheets ➔ Firebase</button>
+                <button onclick="window.syncScheduleDirectly()" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#fff; border:none; padding:12px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; box-shadow:0 4px 12px rgba(59,130,246,0.3); display:flex; align-items:center; justify-content:center; gap:8px;">📅 Sync Schedule ➔ Site</button>
               </div>
             </div>
+          </div>
+
+          <!-- Tab: Bots Hub -->
+          <div id="tab-bots" class="admin-tab-content" style="display:none;">
+            <div style="display:flex; flex-direction:column; gap:20px; margin-bottom:20px;">
+              
+              <!-- Hub Header -->
+              <div style="background:linear-gradient(135deg, rgba(30,41,59,0.95), rgba(15,23,42,0.9)); padding:18px 20px; border-radius:14px; border:1px solid rgba(56,189,248,0.3); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                  <div style="width:44px; height:44px; border-radius:12px; background:linear-gradient(135deg, #0ea5e9, #6366f1); display:flex; align-items:center; justify-content:center; font-size:22px; box-shadow:0 4px 14px rgba(14,165,233,0.35); flex-shrink:0;">
+                    🤖
+                  </div>
+                  <div>
+                    <h3 style="margin:0; color:#38bdf8; font-size:18px; font-weight:800;">Autonomous Bots & Background Daemons Hub</h3>
+                    <p style="margin:2px 0 0 0; font-size:12px; color:var(--text-muted);">24/7 web scraping engines, scheduled nightly character audits, and live Discord webhooks.</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Daemon 1: Nightly Account Maintenance -->
+              <div style="background:linear-gradient(135deg, rgba(15,23,42,0.9), rgba(30,41,59,0.85)); border:1px solid rgba(139,92,246,0.35); border-radius:14px; padding:18px; box-shadow:0 8px 24px rgba(0,0,0,0.2);">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:12px;">
+                  <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="width:38px; height:38px; border-radius:10px; background:rgba(139,92,246,0.15); border:1px solid rgba(139,92,246,0.4); display:flex; align-items:center; justify-content:center; font-size:18px;">
+                      🌙
+                    </div>
+                    <div>
+                      <div style="font-weight:bold; font-size:15px; color:#fff; display:flex; align-items:center; gap:8px;">
+                        <span>Nightly Account Maintenance Daemon</span>
+                        <span id="maintBotStatusPill" style="background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold; display:inline-flex; align-items:center; gap:4px;">
+                          🟢 ACTIVE & SCHEDULED
+                        </span>
+                      </div>
+                      <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
+                        Automated 2:00 AM UTC Audit: queries official game servers with 30-day tokens, syncs stove levels & nicknames to Firebase, and mirrors Chief's List on Google Sheets.
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <button id="btnTriggerManualMaintBotsTab" onclick="window.runNightlyMaintenanceSweep(this)" style="background:linear-gradient(135deg, #8b5cf6, #6d28d9); color:#fff; border:none; padding:8px 16px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 2px 10px rgba(139,92,246,0.35); transition:0.2s;">
+                      🌙 Run Maintenance Now
+                    </button>
+                  </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:10px; font-size:12px; margin-bottom:12px;">
+                  <div style="background:rgba(0,0,0,0.25); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.04);">
+                    <div style="color:var(--text-muted); font-size:11px; text-transform:uppercase; font-weight:bold;">🕒 Last Run</div>
+                    <div id="maintBotLastRun" style="color:#fff; font-weight:bold; margin-top:2px;">-</div>
+                  </div>
+                  <div style="background:rgba(0,0,0,0.25); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.04);">
+                    <div style="color:var(--text-muted); font-size:11px; text-transform:uppercase; font-weight:bold;">⏳ Next Scheduled Run</div>
+                    <div id="maintBotNextRun" style="color:#a78bfa; font-weight:bold; margin-top:2px;">Tonight @ 2:00 AM UTC</div>
+                  </div>
+                  <div style="background:rgba(0,0,0,0.25); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.04);">
+                    <div style="color:var(--text-muted); font-size:11px; text-transform:uppercase; font-weight:bold;">👥 Audited</div>
+                    <div id="maintBotAuditedCount" style="color:#38bdf8; font-weight:bold; font-size:14px; margin-top:2px;">0</div>
+                  </div>
+                  <div style="background:rgba(0,0,0,0.25); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.04);">
+                    <div style="color:var(--text-muted); font-size:11px; text-transform:uppercase; font-weight:bold;">🔑 Verified Tokens</div>
+                    <div id="maintBotRefreshedCount" style="color:#10b981; font-weight:bold; font-size:14px; margin-top:2px;">0</div>
+                  </div>
+                  <div style="background:rgba(0,0,0,0.25); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.04);">
+                    <div style="color:var(--text-muted); font-size:11px; text-transform:uppercase; font-weight:bold;">🔥 Stove Upgrades</div>
+                    <div id="maintBotUpgradesCount" style="color:#f59e0b; font-weight:bold; font-size:14px; margin-top:2px;">0</div>
+                  </div>
+                  <div style="background:rgba(0,0,0,0.25); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.04);">
+                    <div style="color:var(--text-muted); font-size:11px; text-transform:uppercase; font-weight:bold;">🏷️ Nickname Changes</div>
+                    <div id="maintBotNameChangesCount" style="color:#ec4899; font-weight:bold; font-size:14px; margin-top:2px;">0</div>
+                  </div>
+                </div>
+
+                <div id="maintBotSummaryBox" style="background:rgba(0,0,0,0.35); padding:10px 14px; border-radius:8px; border:1px solid rgba(255,255,255,0.04); font-family:monospace; font-size:12px; color:#cbd5e1;">
+                  📡 <strong>Maintenance Log:</strong> <span id="maintBotSummaryText">Ready. Nightly maintenance runs automatically every day at 2:00 AM UTC.</span>
+                </div>
+              </div>
+
+              <!-- Daemon 2: Auto Gift Code Bot -->
+              <div style="background:linear-gradient(135deg, rgba(15,23,42,0.9), rgba(30,41,59,0.85)); border:1px solid rgba(16,185,129,0.35); border-radius:14px; padding:18px; box-shadow:0 8px 24px rgba(0,0,0,0.2);">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:12px;">
+                  <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="width:38px; height:38px; border-radius:10px; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.4); display:flex; align-items:center; justify-content:center; font-size:18px;">
+                      🎁
+                    </div>
+                    <div>
+                      <div style="font-weight:bold; font-size:15px; color:#fff; display:flex; align-items:center; gap:8px;">
+                        <span>Auto Gift Code Bot Daemon</span>
+                        <span id="gcBotStatusPill" style="background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold; display:inline-flex; align-items:center; gap:4px;">
+                          🟢 ACTIVE & MONITORING
+                        </span>
+                      </div>
+                      <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
+                        Autonomous 24/7 Engine: monitors 5 web feeds (WosRewards, GamsGo, DotGG, ProGameGuides, PocketGamer) and auto-redeems active codes for all enrolled members.
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <button id="btnTriggerManualSweepBotsTab" onclick="window.runLiveGiftCodeSweep(this)" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:8px 16px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 2px 10px rgba(14,165,233,0.35); transition:0.2s;">
+                      ▶️ Run Live Sweep Now
+                    </button>
+                    <button onclick="window.openGiftCodeDispatcherModal()" style="background:linear-gradient(135deg, #ec4899, #d946ef); color:#fff; border:none; padding:8px 16px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 2px 10px rgba(236,72,153,0.35); transition:0.2s;">
+                      🎁 Mass Code Dispatcher
+                    </button>
+                  </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px; font-size:12px; margin-bottom:12px;">
+                  <div style="background:rgba(0,0,0,0.25); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.04);">
+                    <div style="color:var(--text-muted); font-size:11px; text-transform:uppercase; font-weight:bold;">🕒 Last Sweep</div>
+                    <div id="gcBotLastSweepTime" style="color:#fff; font-weight:bold; margin-top:2px;">Just now</div>
+                  </div>
+                  <div style="background:rgba(0,0,0,0.25); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.04);">
+                    <div style="color:var(--text-muted); font-size:11px; text-transform:uppercase; font-weight:bold;">⏳ Next Scheduled Sweep</div>
+                    <div id="gcBotNextSweepTime" style="color:#38bdf8; font-weight:bold; margin-top:2px;">In ~45 mins</div>
+                  </div>
+                  <div style="background:rgba(0,0,0,0.25); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.04);">
+                    <div style="color:var(--text-muted); font-size:11px; text-transform:uppercase; font-weight:bold;">🌐 Monitored Sources</div>
+                    <div style="color:#10b981; font-weight:bold; margin-top:2px;">5 Feeds Online</div>
+                  </div>
+                </div>
+
+                <div id="gcBotRecentLogBox" style="background:rgba(0,0,0,0.35); padding:10px 14px; border-radius:8px; border:1px solid rgba(255,255,255,0.04); font-family:monospace; font-size:12px; color:#cbd5e1;">
+                  📡 <strong>Bot Log:</strong> <span id="gcBotRecentLogText">Monitoring web feeds for newly released Whiteout Survival gift codes...</span>
+                </div>
+              </div>
+
+              <!-- Daemon 3: Discord Gatekeeper & Alerts Bot -->
+              <div style="background:linear-gradient(135deg, rgba(15,23,42,0.9), rgba(30,41,59,0.85)); border:1px solid rgba(14,165,233,0.35); border-radius:14px; padding:18px; box-shadow:0 8px 24px rgba(0,0,0,0.2);">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                  <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="width:38px; height:38px; border-radius:10px; background:rgba(14,165,233,0.15); border:1px solid rgba(14,165,233,0.4); display:flex; align-items:center; justify-content:center; font-size:18px;">
+                      🏰
+                    </div>
+                    <div>
+                      <div style="font-weight:bold; font-size:15px; color:#fff; display:flex; align-items:center; gap:8px;">
+                        <span>Discord Gatekeeper & Webhook Bot</span>
+                        <span style="background:rgba(14,165,233,0.2); color:#38bdf8; border:1px solid rgba(14,165,233,0.4); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold;">
+                          🟢 CONNECTED
+                        </span>
+                      </div>
+                      <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
+                        Automated Discord webhook engine for roster changes, unregistered member audits, and gatekeeper alerts.
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <button onclick="window.pushGatekeeperReportToDiscord(this)" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:8px 16px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 2px 10px rgba(14,165,233,0.35); transition:0.2s;">
+                      🏰 Update #alerts Gatekeeper Report
+                    </button>
+                    ${isR5 ? `<button onclick="window.openBroadcastPushModal()" style="background:linear-gradient(135deg, #ec4899, #be185d); color:#fff; border:none; padding:8px 16px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 2px 10px rgba(236,72,153,0.35);">🚀 Broadcast Push Notification</button>` : ''}
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
 
 
 
@@ -15157,8 +15394,8 @@ const views = {
                     <!-- Feature Attributes Selector with Live Counters -->
                     <select id="adminUserAttrFilter" onchange="window.filterAdminUsersList()" style="flex:1 1 170px; min-width:160px; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer; outline:none; box-sizing:border-box;">
                       <option value="all">🏷️ Attributes: All (${totalMembersCount})</option>
+                      <option value="alts">🔗 Alt Accounts (${hasAltsCount})</option>
                       <option value="new">🆕 New Signups (${newSignupsCount})</option>
-                      <option value="alts">🔗 Has Linked Alts (${hasAltsCount})</option>
                       <option value="enrolled">🎁 Gift Codes (${giftCodesCount})</option>
                       <option value="staff">👑 R4/R5 Staff (${staffCount})</option>
                     </select>
@@ -15289,6 +15526,8 @@ const views = {
               data-is-new="${isNew ? 'true' : 'false'}" 
               data-is-admin="${isAdminUser ? 'true' : 'false'}" 
               data-has-alts="${hasAlts ? 'true' : 'false'}" 
+              data-alt-synced-count="${altTokensSyncedCount}"
+              data-alt-total-count="${totalAlts}"
               data-is-enrolled="${isEnrolled ? 'true' : 'false'}" 
               data-token-status="${tokenStatus.status}"
               data-is-claimed="true"
@@ -15694,6 +15933,10 @@ const views = {
           
           if (e.target.getAttribute('data-tab') === 'tab-frost' && !window.frostDataLoaded) {
             window.loadFrostClanData();
+          }
+          if (e.target.getAttribute('data-tab') === 'tab-bots') {
+            if (window.listenToBotTelemetry) window.listenToBotTelemetry();
+            if (window.listenToMaintenanceTelemetry) window.listenToMaintenanceTelemetry();
           }
           if (e.target.getAttribute('data-tab') === 'tab-giftcodes') {
             window.loadGiftCodesManagerData();
