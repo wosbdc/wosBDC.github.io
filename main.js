@@ -15024,7 +15024,7 @@ const views = {
 
               <!-- Daemon 3: Discord Gatekeeper & Alerts Bot -->
               <div style="background:linear-gradient(135deg, rgba(15,23,42,0.9), rgba(30,41,59,0.85)); border:1px solid rgba(14,165,233,0.35); border-radius:14px; padding:18px; box-shadow:0 8px 24px rgba(0,0,0,0.2);">
-                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:${isR5 ? '16px' : '0'}; border-bottom:${isR5 ? '1px solid rgba(255,255,255,0.06)' : 'none'}; padding-bottom:${isR5 ? '14px' : '0'};">
                   <div style="display:flex; align-items:center; gap:10px;">
                     <div style="width:38px; height:38px; border-radius:10px; background:rgba(14,165,233,0.15); border:1px solid rgba(14,165,233,0.4); display:flex; align-items:center; justify-content:center; font-size:18px;">
                       🏰
@@ -15049,6 +15049,35 @@ const views = {
                     ${isR5 ? `<button onclick="window.openBroadcastPushModal()" style="background:linear-gradient(135deg, #ec4899, #be185d); color:#fff; border:none; padding:8px 16px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 2px 10px rgba(236,72,153,0.35);">🚀 Broadcast Push Notification</button>` : ''}
                   </div>
                 </div>
+
+                ${isR5 ? `
+                <!-- R5 Only: Webhook Configuration & Test Panel -->
+                <div style="background:rgba(0,0,0,0.25); padding:14px; border-radius:10px; border:1px solid rgba(255,255,255,0.04); display:flex; flex-direction:column; gap:12px; margin-top:10px;">
+                  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                    <span style="font-size:12px; font-weight:bold; color:#38bdf8; display:flex; align-items:center; gap:6px;">
+                      👑 R5 Webhook Configuration (Brian Only)
+                    </span>
+                    <div style="display:flex; gap:8px;">
+                      <button onclick="window.testDiscordWebhook()" style="background:rgba(16,185,129,0.15); color:var(--success); border:1px solid rgba(16,185,129,0.3); padding:6px 12px; border-radius:6px; font-weight:bold; font-size:11px; cursor:pointer; display:flex; align-items:center; gap:4px;">
+                        🧪 Test Webhook
+                      </button>
+                      <button onclick="window.saveDiscordAlertSettings()" style="background:var(--accent); color:#fff; border:none; padding:6px 14px; border-radius:6px; font-weight:bold; font-size:11px; cursor:pointer; box-shadow:0 2px 8px rgba(6,182,212,0.3);">
+                        💾 Save Settings
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">💬 Discord Webhook URL</label>
+                    <input type="text" id="discordWebhookUrlInput" placeholder="https://discord.com/api/webhooks/..." style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-main); font-size:12px; font-family:monospace; box-sizing:border-box;">
+                  </div>
+
+                  <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:12px; font-weight:bold; color:var(--text-main);">
+                    <input type="checkbox" id="discordAlertsEnabledCheckbox" checked style="width:16px; height:16px; accent-color:var(--accent);">
+                    <span>Enable Real-Time New Member Discord Alerts</span>
+                  </label>
+                </div>
+                ` : ''}
               </div>
 
             </div>
@@ -15696,35 +15725,6 @@ const views = {
               </label>
             </div>
             
-            <div style="background:var(--bg-main); padding:20px; border-radius:12px; border:1px solid var(--accent); margin-bottom:20px; text-align:left;">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:10px;">
-                <h3 style="margin:0; color:var(--text-main); font-size:16px; display:flex; align-items:center; gap:8px;">
-                  🔔 Discord & New Member Alert System
-                </h3>
-                <button onclick="window.saveDiscordAlertSettings()" style="background:var(--accent); color:#fff; border:none; padding:8px 16px; border-radius:6px; font-weight:bold; font-size:13px; cursor:pointer; box-shadow:0 2px 8px rgba(6,182,212,0.3);">Save Alert Settings</button>
-              </div>
-              <p style="margin:0 0 16px 0; font-size:12px; color:var(--text-muted); line-height:1.4;">
-                Automatically alert your R4/R5 Staff team on Discord whenever new players sign up on the website or claim their profile.
-              </p>
-
-              <div style="display:flex; flex-direction:column; gap:14px;">
-                <div>
-                  <label style="display:block; font-size:12px; font-weight:bold; color:var(--text-main); margin-bottom:6px;">💬 Discord Webhook URL</label>
-                  <input type="text" id="discordWebhookUrlInput" placeholder="https://discord.com/api/webhooks/..." style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-main); font-size:13px; font-family:monospace; box-sizing:border-box;">
-                </div>
-
-                <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
-                  <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; font-weight:bold; color:var(--text-main);">
-                    <input type="checkbox" id="discordAlertsEnabledCheckbox" checked style="width:18px; height:18px; accent-color:var(--accent);">
-                    <span>Enable Real-Time Discord Webhook Notifications</span>
-                  </label>
-
-                  <button onclick="window.testDiscordWebhook()" style="background:rgba(16,185,129,0.15); color:var(--success); border:1px solid rgba(16,185,129,0.3); padding:8px 14px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">
-                    🧪 Test Webhook Alert
-                  </button>
-                </div>
-              </div>
-            </div>
 
             <div style="background:var(--bg-main); padding:15px; border-radius:12px; border:1px solid var(--accent); margin-bottom:20px;">
               <h3 style="margin:0; color:var(--text-main); margin-bottom:10px;">🔄 Live Database Sync Status</h3>
