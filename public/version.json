@@ -1,9 +1,10 @@
 {
-  "version": "2.5.119",
+  "version": "2.6.0",
   "releaseDate": "2026-08-16",
-  "title": "Restored Smooth Horizontal Scrolling Admin Menu Bar",
+  "title": "Dedicated Event Archive & Reset Engines and Daily Tools Suite",
   "notes": [
-    "Restored the sleek, native-feel single-line horizontal scrolling Admin menu bar for mobile and smartphones.",
-    "Added PC mouse wheel horizontal scrolling, drag gestures, and active tab auto-centering so all tabs are effortless to access on desktop."
+    "Added self-contained Archive & Reset Cycle and 1-Click Restore Snapshot engines across Bear Trap, Alliance Championship, Mercenary Prestige, and Polar Terrors.",
+    "Promoted Mercenary Prestige and Polar Terrors trackers from In-Dev to Active Alliance Events in Daily Tools.",
+    "Streamlined Admin Logs menu by removing cluttered matrix subtab in favor of pure audit action logs."
   ]
 }

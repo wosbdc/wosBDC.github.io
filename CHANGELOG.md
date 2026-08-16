@@ -1,6 +1,10 @@
 # CHANGELOG
 
-## [2.5.120] - 2026-08-16
+## [2.6.0] - 2026-08-16
+- Dedicated Event Archive & Reset Engines: Implemented independent, self-contained `🔄 Archive & Reset Cycle` actions for Alliance Championship (`window.archiveAndResetChampionshipCycle`), Mercenary Prestige (`window.archiveAndResetMercenaryCycle`), Polar Terrors (`window.archiveAndResetPolarTerrorsCycle`), and Bear Trap (`window.archiveAndResetBearTrapCycle`) with timestamped Firebase snapshot archiving and player lifetime attendance counter updates.
+- 1-Click Event Archive Restoration: Integrated `↩️ Restore Archive` modal suite across all tracker management pages, permitting instantaneous rollback of member status from any historical cycle snapshot.
+- Promoted Trackers to Daily Tools: Promoted Mercenary Prestige and Polar Terrors trackers out of the In-Dev Lab directly into `#tab-tools` Active Alliance Events tools for seamless daily operational access.
+- Streamlined Admin Logs: Removed the bulky activity matrix sub-tab from the Admin Logs menu, restoring a clean, clutter-free focus on Admin Action Audit Logs and Activity History Archives.
 - Member Event Activity Matrix: Integrated comprehensive multi-event activity aggregate matrix view accessible from Admin Dashboard (`📊 Activity Matrix` tab) and direct shortcuts, aggregating Bear Trap donations, multi-day Showdown participation, Mercenary Prestige completions, and Polar Terrors.
 - Multi-Day Showdown Missing Day Tracking: Detects missing participation per day across all active days (Day 1 through Day 6), displaying clear badges (e.g. `⚠️ Missing D1, D3` or `✅ Active All Days`) with exact daily score breakdowns.
 - Polar Terrors Multi-Level Aggregate: Evaluates player completions across all difficulty levels, automatically classifying any member with 1 or more completions as having completed Polar Terrors for the cycle.

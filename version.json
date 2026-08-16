@@ -1,9 +1,10 @@
 {
-  "version": "2.5.120",
+  "version": "2.6.0",
   "releaseDate": "2026-08-16",
-  "title": "Member Event Activity Matrix & Universal Event Cycle Manager",
+  "title": "Dedicated Event Archive & Reset Engines and Daily Tools Suite",
   "notes": [
-    "Added full multi-event aggregate Activity Matrix tracking Bear Trap donations, multi-day Showdown participation (missing day detection D1-D6), Mercenary Prestige completions, and Polar Terrors (1+ completions counted as done).",
-    "Added full Archive/Reset Cycle and 1-Click Restore Snapshot suite across Bear Trap, Alliance Championship, Mercenary Prestige, and Polar Terrors tracker management sections."
+    "Added self-contained Archive & Reset Cycle and 1-Click Restore Snapshot engines across Bear Trap, Alliance Championship, Mercenary Prestige, and Polar Terrors.",
+    "Promoted Mercenary Prestige and Polar Terrors trackers from In-Dev to Active Alliance Events in Daily Tools.",
+    "Streamlined Admin Logs menu by removing cluttered matrix subtab in favor of pure audit action logs."
   ]
 }

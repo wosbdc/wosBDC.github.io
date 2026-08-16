@@ -15679,22 +15679,14 @@ const views = {
         const target = document.getElementById(subtabId);
         if (target) target.style.display = 'block';
 
-        if (subtabId === 'subtab-activity-matrix' && !window._activityMatrixLoaded) {
-            window.loadActivityMatrix();
-        } else if (subtabId === 'subtab-activity-history' && !window._activityHistoryLoaded) {
+        if (subtabId === 'subtab-activity-history' && !window._activityHistoryLoaded) {
             window.loadActivityHistory();
         }
       };
 
       window.openActivityMatrix = async () => {
           if (document.querySelector('.navbar')) document.querySelector('.navbar').style.display = 'flex';
-          await views.admin('tab-logs');
-          setTimeout(() => {
-              const logsTabBtn = document.querySelector('.admin-tab-btn[data-tab="tab-logs"]');
-              if (logsTabBtn) logsTabBtn.click();
-              if (window.switchLogsSubtab) window.switchLogsSubtab('subtab-activity-matrix');
-              if (window.loadActivityMatrix) window.loadActivityMatrix();
-          }, 100);
+          await views.admin('tab-activity-matrix');
       };
 
       // Fetch / Cache persistent player event stats from Firebase
@@ -16135,6 +16127,8 @@ const views = {
                 <button onclick="views.beartrap()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(16,185,129,0.3);">🐻 Bear Trap</button>
                 <button onclick="views.showdownAdmin()" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px;">⚔️ ShowDown</button>
                 <button onclick="views.championshipAdmin()" style="background:linear-gradient(135deg, #f59e0b, #d97706); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(217,119,6,0.3);">🏆 Alliance Championship</button>
+                <button onclick="views.mercenaryAdmin()" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(239,68,68,0.3);">⚔️ Mercenary Prestige</button>
+                <button onclick="views.polarTerrorsAdmin()" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:320px; box-shadow:0 4px 12px rgba(14,165,233,0.3);">🐻‍❄️ Polar Terrors Tracker</button>
               </div>
             </div>
 
@@ -16488,8 +16482,6 @@ const views = {
               </div>
               
               <div style="background:var(--card-bg); padding:20px; border-radius:12px; border:1px solid var(--border); text-align:center; display:flex; flex-direction:column; gap:15px; align-items:center;">
-                <button onclick="views.mercenaryAdmin()" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px; box-shadow:0 4px 12px rgba(239,68,68,0.3);">⚔️ Mercenary Prestige</button>
-                <button onclick="views.polarTerrorsAdmin()" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px; box-shadow:0 4px 12px rgba(14,165,233,0.3);">🐻‍❄️ Polar Terrors Tracker</button>
                 <button onclick="window.openScheduleEditorModal()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px; box-shadow:0 4px 12px rgba(16,185,129,0.3);">📅 Live Schedule Manager</button>
               </div>
             </div>
@@ -17044,9 +17036,6 @@ const views = {
               <button class="logs-subtab-btn active" data-subtab="subtab-admin-logs" onclick="window.switchLogsSubtab('subtab-admin-logs')" style="background:var(--accent); color:white; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:14px;">
                 📋 Admin Action Logs
               </button>
-              <button class="logs-subtab-btn" data-subtab="subtab-activity-matrix" onclick="window.switchLogsSubtab('subtab-activity-matrix')" style="background:var(--bg-card); color:var(--text-main); border:1px solid var(--border); padding:8px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:14px;">
-                📊 Member Activity Checklist
-              </button>
               <button class="logs-subtab-btn" data-subtab="subtab-activity-history" onclick="window.switchLogsSubtab('subtab-activity-history')" style="background:var(--bg-card); color:var(--text-main); border:1px solid var(--border); padding:8px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:14px;">
                 📜 Activity History Archives
               </button>
@@ -17093,42 +17082,6 @@ const views = {
                     </thead>
                     <tbody id="adminLogsTableBody">
                       <tr><td colspan="5" style="padding:15px; text-align:center; color:var(--text-muted);">Loading logs from Firebase...</td></tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-
-            <!-- Sub-Tab 2: Member Activity Checklist Matrix -->
-            <div id="subtab-activity-matrix" class="logs-subtab-content" style="display:none;">
-              <div style="background:var(--bg-main); padding:15px; border-radius:12px; border:1px solid var(--border); display:flex; flex-direction:column; gap:15px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-                  <div>
-                    <h3 style="margin:0; color:var(--text-main);">📊 Roster Event Activity Matrix</h3>
-                    <p style="margin:4px 0 0 0; color:var(--text-muted); font-size:12px;">Live participation checklist across all alliance events & attendance.</p>
-                  </div>
-                  <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-                    <button onclick="window.clearAllEventCaches(); window._activityMatrixLoaded=false; window.loadActivityMatrix();" style="background:var(--accent); color:white; border:none; padding:8px 14px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13px; display:flex; align-items:center; gap:6px;">🔄 Refresh Matrix</button>
-                    <button onclick="window.archiveAndResetEventCycle()" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:white; border:none; padding:8px 14px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13px; box-shadow:0 2px 8px rgba(239,68,68,0.3); display:flex; align-items:center; gap:6px;">🔄 Archive & Reset Cycle</button>
-                    <input type="text" id="activityMatrixSearch" placeholder="🔍 Search chief name..." onkeyup="window.filterActivityMatrix()" style="padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); width:200px;">
-                  </div>
-                </div>
-                <div style="overflow-x:auto;">
-                  <table style="width:100%; border-collapse:collapse; text-align:left; font-size:13px;">
-                    <thead>
-                      <tr style="border-bottom:2px solid var(--border); color:var(--text-muted); font-size:11px; text-transform:uppercase;">
-                        <th style="padding:10px;">Chief Name</th>
-                        <th style="padding:10px;">Missed (Cycle / Total)</th>
-                        <th style="padding:10px;">Perfect Attendance</th>
-                        <th style="padding:10px;">Championship</th>
-                        <th style="padding:10px;">Mercenary</th>
-                        <th style="padding:10px;">Polar Terrors</th>
-                        <th style="padding:10px;">Bear Trap</th>
-                        <th style="padding:10px;">Voter</th>
-                      </tr>
-                    </thead>
-                    <tbody id="activityMatrixTableBody">
-                      <tr><td colspan="8" style="padding:20px; text-align:center; color:var(--text-muted);">Click tab to load activity matrix...</td></tr>
                     </tbody>
                   </table>
                 </div>
