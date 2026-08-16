@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.5.113] - 2026-08-15
+- Admin Menu: Fixed admin authorization checks on Alliance Gatekeeper Report publishing.
+- Dual-Engine Discord Publishing: Integrated direct Discord Webhook dispatch with instant PATCH updates and backend proxy fallback to eliminate quota bottlenecks and permission errors.
+
 ## [2.5.112] - 2026-08-15
 - Gatekeeper Report Editor: Added Nightly Account Maintenance Telemetry toggle checkbox and live stats binding into the Discord #alerts embed report.
 - Discord Alerts Bot: Included 2:00 AM UTC maintenance status, audited accounts, refreshed tokens, and two-way sync state in automated reports.

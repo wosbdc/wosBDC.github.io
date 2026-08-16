@@ -1,9 +1,9 @@
 {
-  "version": "2.5.112",
+  "version": "2.5.113",
   "releaseDate": "2026-08-15",
-  "title": "Nightly Maintenance Telemetry in Alliance Gatekeeper Report",
+  "title": "Dual-Engine Discord Publishing & Admin Authorization Fix",
   "notes": [
-    "Gatekeeper Editor: Added Nightly Account Maintenance Telemetry checkbox toggle, live stats binding, and Discord embed section.",
-    "Discord Gatekeeper: Live 2:00 AM UTC maintenance status, audited accounts, refreshed tokens, and two-way sync state now seamlessly embeddable."
+    "Admin Access: Resolved 'Forbidden: admin access required' permission error on Discord Gatekeeper Report.",
+    "Dual-Engine Delivery: Added direct Discord Webhook dispatch with instant patch and Apps Script backup proxy."
   ]
 }
