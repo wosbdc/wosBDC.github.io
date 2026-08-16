@@ -14561,12 +14561,8 @@ const views = {
         
         // Ensure Users tab stays active
         setTimeout(() => {
-            document.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.admin-tab-content').forEach(c => c.style.display = 'none');
-            const usersBtn = document.querySelector('[data-tab="tab-users"]');
-            const usersTab = document.getElementById('tab-users');
-            if (usersBtn) usersBtn.classList.add('active');
-            if (usersTab) usersTab.style.display = 'block';
+            const usersBtn = document.querySelector('.admin-tab-btn[data-tab="tab-users"]');
+            if (usersBtn) usersBtn.click();
         }, 50);
         
         if (window.showToast) window.showToast("User database refreshed!", "success");
@@ -15422,21 +15418,16 @@ const views = {
           </div>
           
           <!-- Tab Navigation -->
-          <div style="display:flex; gap:10px; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:10px; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; white-space:nowrap;">
-            <style>
-              .admin-tab-btn { flex-shrink: 0; }
-              /* Hide scrollbar for Chrome, Safari and Opera */
-              div::-webkit-scrollbar { display: none; }
-            </style>
-            <button class="admin-tab-btn active" data-tab="tab-tools" style="background:none; border:none; color:var(--accent); font-weight:bold; font-size:16px; cursor:pointer; padding:5px 10px; border-bottom:2px solid var(--accent); flex-shrink:0;">🛠️ Daily Tools</button>
-            <button class="admin-tab-btn" data-tab="tab-bots" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:16px; cursor:pointer; padding:5px 10px; border-bottom:2px solid transparent; flex-shrink:0;">🤖 Bots</button>
-            <button class="admin-tab-btn" data-tab="tab-giftcodes" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:16px; cursor:pointer; padding:5px 10px; border-bottom:2px solid transparent; flex-shrink:0;">🎁 Gift Codes</button>
-            <button class="admin-tab-btn" data-tab="tab-indev" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:16px; cursor:pointer; padding:5px 10px; border-bottom:2px solid transparent; flex-shrink:0;">🧪 In-Dev</button>
-            ${currentUser && currentUser.gameId.toString() === '318843189' ? `<button class="admin-tab-btn" data-tab="tab-frost" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:16px; cursor:pointer; padding:5px 10px; border-bottom:2px solid transparent; flex-shrink:0;">❄️ Frost Clan</button>` : ''}
-            <button class="admin-tab-btn" data-tab="tab-users" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:16px; cursor:pointer; padding:5px 10px; border-bottom:2px solid transparent; flex-shrink:0;">👥 Users</button>
-            ${isR5 ? `<button class="admin-tab-btn" data-tab="tab-settings" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:16px; cursor:pointer; padding:5px 10px; border-bottom:2px solid transparent; flex-shrink:0;">⚙️ Settings</button>` : ''}
-            <button class="admin-tab-btn" data-tab="tab-logs" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:16px; cursor:pointer; padding:5px 10px; border-bottom:2px solid transparent; flex-shrink:0;">📋 Logs</button>
-            ${isR5 ? `<button class="admin-tab-btn" data-tab="tab-system" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:16px; cursor:pointer; padding:5px 10px; border-bottom:2px solid transparent; flex-shrink:0;">⚡ System</button>` : ''}
+          <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:14px;">
+            <button class="admin-tab-btn active" data-tab="tab-tools" style="background:rgba(14,165,233,0.15); border:1px solid var(--accent); color:var(--accent); font-weight:bold; font-size:13px; cursor:pointer; padding:7px 14px; border-radius:8px; transition:all 0.2s ease; box-shadow:0 2px 8px rgba(14,165,233,0.25);">🛠️ Daily Tools</button>
+            <button class="admin-tab-btn" data-tab="tab-bots" style="background:rgba(255,255,255,0.04); border:1px solid var(--border); color:var(--text-muted); font-weight:bold; font-size:13px; cursor:pointer; padding:7px 14px; border-radius:8px; transition:all 0.2s ease;">🤖 Bots</button>
+            <button class="admin-tab-btn" data-tab="tab-giftcodes" style="background:rgba(255,255,255,0.04); border:1px solid var(--border); color:var(--text-muted); font-weight:bold; font-size:13px; cursor:pointer; padding:7px 14px; border-radius:8px; transition:all 0.2s ease;">🎁 Gift Codes</button>
+            <button class="admin-tab-btn" data-tab="tab-indev" style="background:rgba(255,255,255,0.04); border:1px solid var(--border); color:var(--text-muted); font-weight:bold; font-size:13px; cursor:pointer; padding:7px 14px; border-radius:8px; transition:all 0.2s ease;">🧪 In-Dev</button>
+            ${currentUser && currentUser.gameId.toString() === '318843189' ? `<button class="admin-tab-btn" data-tab="tab-frost" style="background:rgba(255,255,255,0.04); border:1px solid var(--border); color:var(--text-muted); font-weight:bold; font-size:13px; cursor:pointer; padding:7px 14px; border-radius:8px; transition:all 0.2s ease;">❄️ Frost Clan</button>` : ''}
+            <button class="admin-tab-btn" data-tab="tab-users" style="background:rgba(255,255,255,0.04); border:1px solid var(--border); color:var(--text-muted); font-weight:bold; font-size:13px; cursor:pointer; padding:7px 14px; border-radius:8px; transition:all 0.2s ease;">👥 Users</button>
+            ${isR5 ? `<button class="admin-tab-btn" data-tab="tab-settings" style="background:rgba(255,255,255,0.04); border:1px solid var(--border); color:var(--text-muted); font-weight:bold; font-size:13px; cursor:pointer; padding:7px 14px; border-radius:8px; transition:all 0.2s ease;">⚙️ Settings</button>` : ''}
+            <button class="admin-tab-btn" data-tab="tab-logs" style="background:rgba(255,255,255,0.04); border:1px solid var(--border); color:var(--text-muted); font-weight:bold; font-size:13px; cursor:pointer; padding:7px 14px; border-radius:8px; transition:all 0.2s ease;">📋 Logs</button>
+            ${isR5 ? `<button class="admin-tab-btn" data-tab="tab-system" style="background:rgba(255,255,255,0.04); border:1px solid var(--border); color:var(--text-muted); font-weight:bold; font-size:13px; cursor:pointer; padding:7px 14px; border-radius:8px; transition:all 0.2s ease;">⚡ System</button>` : ''}
           </div>
           
           <!-- Tab 1: Daily Tools -->
@@ -16496,25 +16487,38 @@ const views = {
       // Bind Admin Tabs
       document.querySelectorAll('.admin-tab-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
+          const clickedBtn = e.currentTarget || e.target;
           document.querySelectorAll('.admin-tab-btn').forEach(b => {
+            b.classList.remove('active');
             b.style.color = 'var(--text-muted)';
-            b.style.borderBottomColor = 'transparent';
+            b.style.background = 'rgba(255,255,255,0.04)';
+            b.style.borderColor = 'var(--border)';
+            b.style.boxShadow = 'none';
           });
           document.querySelectorAll('.admin-tab-content').forEach(c => c.style.display = 'none');
           
-          e.target.style.color = 'var(--accent)';
-          e.target.style.borderBottomColor = 'var(--accent)';
-          document.getElementById(e.target.getAttribute('data-tab')).style.display = 'block';
+          clickedBtn.classList.add('active');
+          clickedBtn.style.color = 'var(--accent)';
+          clickedBtn.style.background = 'rgba(14,165,233,0.15)';
+          clickedBtn.style.borderColor = 'var(--accent)';
+          clickedBtn.style.boxShadow = '0 2px 8px rgba(14,165,233,0.25)';
           
-          if (e.target.getAttribute('data-tab') === 'tab-frost' && !window.frostDataLoaded) {
+          const tabKey = clickedBtn.getAttribute('data-tab');
+          const targetEl = document.getElementById(tabKey);
+          if (targetEl) targetEl.style.display = 'block';
+          
+          if (tabKey === 'tab-frost' && !window.frostDataLoaded) {
             window.loadFrostClanData();
           }
-          if (e.target.getAttribute('data-tab') === 'tab-bots') {
+          if (tabKey === 'tab-bots') {
             if (window.listenToBotTelemetry) window.listenToBotTelemetry();
             if (window.listenToMaintenanceTelemetry) window.listenToMaintenanceTelemetry();
           }
-          if (e.target.getAttribute('data-tab') === 'tab-giftcodes') {
+          if (tabKey === 'tab-giftcodes') {
             window.loadGiftCodesManagerData();
+          }
+          if (tabKey === 'tab-system') {
+            if (window.refreshSystemStats) setTimeout(window.refreshSystemStats, 100);
           }
           if (window.initUnifiedFcBadges) {
             setTimeout(window.initUnifiedFcBadges, 50);

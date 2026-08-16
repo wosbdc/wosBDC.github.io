@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.5.118] - 2026-08-16
+- Admin Navigation Desktop Responsiveness: Fixed an issue where `📋 Logs` and `⚡ System` tabs were clipped off-screen on PC/desktop monitors due to single-line hidden horizontal overflow.
+- Responsive Pill Segmented Tabs: Converted Admin Menu tabs to modern, wrap-around pill badges with active glow indicators so all admin sections are immediately accessible on desktop and mobile without scrolling.
+
 ## [2.5.117] - 2026-08-16
 - Seamless Data Entry & Scroll Retention: Fixed an issue where Firebase websocket real-time updates echoed back local toggle clicks and triggered full-page re-renders, causing the browser to reset scroll position to the top.
 - Optimistic In-Place Updates: Trackers now update the DOM in-place without flashing loading screens or discarding user viewport position across Alliance Championship, Polar Terrors, and Mercenary Prestige pages.
