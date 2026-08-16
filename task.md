@@ -28,6 +28,7 @@
 - [x] Fix Row 1 header & Row 2 data indexing to purge Sigmashu duplication (v2.5.104) <!-- id: 28 -->
 - [x] Strict token-guarded furnace levels (leave unverified blank) & add sync alert banners (v2.5.105) <!-- id: 29 -->
 - [x] Fix Chief Name resolution across all sources in Chief's List Column A (v2.5.106) <!-- id: 30 -->
+- [x] Remove synthetic 2-day auto Bear Trap fallback calculation (v2.5.107) <!-- id: 31 -->
 - [x] Update versioning, CHANGELOG.md, and sw.js <!-- id: 4 -->
 - [x] Build & test suite verification <!-- id: 5 -->
 - [x] Commit and push changes to GitHub <!-- id: 6 -->

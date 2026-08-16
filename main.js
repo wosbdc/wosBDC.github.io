@@ -19838,25 +19838,6 @@ window.resetBearTrapEvent = async () => {
         });
       }
 
-      // 2-day auto Bear Trap fallback if none today
-      const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const hasTodayEvent = upcomingEvents.some(e => e.exactDate.toDateString() === todayDate.toDateString());
-      if (!hasTodayEvent) {
-        const anchorDate = new Date(2026, 7, 1);
-        const diffDays = Math.floor((todayDate - anchorDate) / (1000 * 60 * 60 * 24));
-        if (diffDays % 2 === 0) {
-          const btTime = new Date(todayDate);
-          btTime.setUTCHours(16, 0, 0, 0);
-          if (btTime > now) {
-            upcomingEvents.push({
-              name: "Bear Trap (Auto 2-Day Cycle)",
-              exactDate: btTime,
-              emoji: "🪤"
-            });
-          }
-        }
-      }
-
       if (upcomingEvents.length > 0) {
         upcomingEvents.sort((a, b) => a.exactDate - b.exactDate);
         nextEventTime = upcomingEvents[0].exactDate;
@@ -21971,7 +21952,7 @@ window.resetBearTrapEvent = async () => {
 
                  const localRef = new Date();
                  localRef.setUTCHours(startT.h, startT.m, 0, 0);
-                 let startLocal = localRef.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                 const startLocal = localRef.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
                  if (endT) {
                    eventEndDateTime = new Date(eventDate);
@@ -22000,38 +21981,7 @@ window.resetBearTrapEvent = async () => {
                }
              });
 
-             // ── Bear Trap 2-Day Auto-Formula Check ──
-             const hasBearTrapToday = todayEvents.some(e => e.eventName.includes('Bear Trap') || e.eventName.includes('🪤'));
-             if (!hasBearTrapToday) {
-               const anchorDate = new Date(2026, 7, 1); // 8/1/2026 anchor
-               const diffDays = Math.floor((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - anchorDate) / (1000 * 60 * 60 * 24));
-               if (diffDays % 2 === 0) {
-                 const localRef = new Date();
-                 localRef.setUTCHours(16, 0, 0, 0);
-                 const startLocal = localRef.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-                 localRef.setUTCHours(16, 30, 0, 0);
-                 const endLocal = localRef.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-                 const eventDateTime = new Date();
-                 eventDateTime.setUTCHours(16, 0, 0, 0);
-                 const eventEndDateTime = new Date();
-                 eventEndDateTime.setUTCHours(16, 30, 0, 0);
-                 const isLiveNow = eventDateTime <= now && now <= eventEndDateTime;
-                 const isPast = eventEndDateTime < now;
 
-                 todayEvents.push({
-                   eventName: "Bear Trap (Auto 2-Day Cycle)",
-                   utcDisplay: "16:00 - 16:30 UTC",
-                   localTimeStr: `${startLocal} - ${endLocal}`,
-                   pdtVal: "",
-                   isLiveNow,
-                   isPast,
-                   emoji: "🪤",
-                   eventDateTime,
-                   eventEndDateTime,
-                   eventDate: now
-                 });
-               }
-             }
 
              rewards = liveSched.rewards || [];
              signups = liveSched.signups || [];
