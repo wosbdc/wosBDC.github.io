@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.5.117] - 2026-08-16
+- Seamless Data Entry & Scroll Retention: Fixed an issue where Firebase websocket real-time updates echoed back local toggle clicks and triggered full-page re-renders, causing the browser to reset scroll position to the top.
+- Optimistic In-Place Updates: Trackers now update the DOM in-place without flashing loading screens or discarding user viewport position across Alliance Championship, Polar Terrors, and Mercenary Prestige pages.
+
 ## [2.5.116] - 2026-08-16
 - Alliance Championship Tracker Toggle Fix: Resolved an unhandled `ReferenceError` during statistics recalculation that prevented member signup rows from toggling back from YES to NO.
 - Live Championship Status Synchronization: Ensured master node `activity_live` remains the authoritative source of truth, preventing legacy secondary nodes from overriding explicit NO responses.

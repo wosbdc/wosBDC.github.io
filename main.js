@@ -1813,6 +1813,11 @@ onValue(ref(db, 'activity_live'), async (snap) => {
     return;
   }
 
+  // Skip full-page re-renders while the user is actively clicking/toggling locally
+  if (window._isLocalToggleActive) {
+    return;
+  }
+
   // 1. If Polar Terrors Tracker page is currently open
   if (document.getElementById('ptTableBody') || document.getElementById('pt-yes-count')) {
     if (typeof views.polarTerrorsAdmin === 'function') await views.polarTerrorsAdmin();
@@ -17245,7 +17250,12 @@ html += `</select>
        return;
     }
 
-    renderLoading("Loading Alliance Championship Tracker...");
+    const isAlreadyMounted = Boolean(document.getElementById('champTableBody'));
+    const savedScrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0;
+
+    if (!isAlreadyMounted) {
+        renderLoading("Loading Alliance Championship Tracker...");
+    }
 
     if (document.querySelector('.navbar')) {
         document.querySelector('.navbar').style.display = 'none';
@@ -17388,6 +17398,9 @@ html += `</select>
         `;
 
         app.innerHTML = html;
+        if (isAlreadyMounted && savedScrollY > 0) {
+            window.scrollTo({ top: savedScrollY, behavior: 'instant' });
+        }
         window.champMissingNames = missingNames;
 
         window.updateChampStatsUI = () => {
@@ -17442,6 +17455,10 @@ html += `</select>
         window.onChampToggle = async (gameId, btnElement) => {
             const btn = btnElement || (event && (event.currentTarget || event.target));
             if (!btn || btn.disabled) return;
+
+            window._isLocalToggleActive = true;
+            clearTimeout(window._localToggleTimeout);
+            window._localToggleTimeout = setTimeout(() => { window._isLocalToggleActive = false; }, 2000);
 
             const row = btn.closest('.champ-row');
             if (!row) return;
@@ -17548,7 +17565,12 @@ html += `</select>
        return;
     }
 
-    renderLoading("Loading Polar Terrors Tracker...");
+    const isAlreadyMounted = Boolean(document.getElementById('ptTableBody'));
+    const savedScrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0;
+
+    if (!isAlreadyMounted) {
+        renderLoading("Loading Polar Terrors Tracker...");
+    }
 
     if (document.querySelector('.navbar')) {
         document.querySelector('.navbar').style.display = 'none';
@@ -17660,6 +17682,9 @@ html += `</select>
         `;
 
         app.innerHTML = html;
+        if (isAlreadyMounted && savedScrollY > 0) {
+            window.scrollTo({ top: savedScrollY, behavior: 'instant' });
+        }
 
         window.ptRosterList = rosterList;
         window.currentPtFilter = 'all';
@@ -17707,6 +17732,10 @@ html += `</select>
         };
 
         window.onPtToggleSingle = async (gameId, btnElement) => {
+            window._isLocalToggleActive = true;
+            clearTimeout(window._localToggleTimeout);
+            window._localToggleTimeout = setTimeout(() => { window._isLocalToggleActive = false; }, 2000);
+
             const row = btnElement.closest('tr');
             const currentStatus = row.getAttribute('data-status');
             const willSign = currentStatus === 'missing';
@@ -18107,7 +18136,12 @@ html += `</select>
        return;
     }
 
-    renderLoading("Loading Mercenary Prestige Tracker...");
+    const isAlreadyMounted = Boolean(document.getElementById('mercTableBody'));
+    const savedScrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0;
+
+    if (!isAlreadyMounted) {
+        renderLoading("Loading Mercenary Prestige Tracker...");
+    }
 
     if (document.querySelector('.navbar')) {
         document.querySelector('.navbar').style.display = 'none';
@@ -18266,6 +18300,9 @@ html += `</select>
         `;
 
         app.innerHTML = html;
+        if (isAlreadyMounted && savedScrollY > 0) {
+            window.scrollTo({ top: savedScrollY, behavior: 'instant' });
+        }
         window.mercMissingNames = missingNames;
 
         window.updateMercStatsUI = () => {
@@ -18329,6 +18366,10 @@ html += `</select>
         window.onMercToggle = async (gameId, btnElement) => {
             const btn = btnElement || (event && (event.currentTarget || event.target));
             if (!btn || btn.disabled) return;
+
+            window._isLocalToggleActive = true;
+            clearTimeout(window._localToggleTimeout);
+            window._localToggleTimeout = setTimeout(() => { window._isLocalToggleActive = false; }, 2000);
 
             const row = btn.closest('.merc-row');
             if (!row) return;

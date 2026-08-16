@@ -1,9 +1,9 @@
 {
-  "version": "2.5.116",
+  "version": "2.5.117",
   "releaseDate": "2026-08-16",
-  "title": "Alliance Championship Tracker Toggle Fix",
+  "title": "Scroll Retention & Smooth In-Place Data Entry",
   "notes": [
-    "Fixed Alliance Championship Tracker toggle to allow toggling freely between YES and NO without freezing.",
-    "Resolved ReferenceError in stats counter calculation and ensured consistent boolean status parsing."
+    "Prevented scroll jump and full-page refreshes during data entry in Alliance Championship, Polar Terrors, and Mercenary Prestige trackers.",
+    "Added local toggle protection to ignore websocket echoes and preserve table scroll positions seamlessly."
   ]
 }
