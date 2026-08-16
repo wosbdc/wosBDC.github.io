@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [2.5.115] - 2026-08-16
+- Event Activity Matrix: Added real-time cross-event sync with automatic bidirectional synchronization for Alliance Championship signups, Mercenary Prestige completions, and Showdown scores.
+- Championship Tracker Live Sync: Toggling member signup status directly updates Firebase `allianceChampionship` records and broadcasts to all active admin views.
+- Mercenary Prestige Live Sync: Checking/unchecking member completions directly updates Firebase `mercenaryPrestige` records and refreshes the matrix.
+- Navigation Modernization: Replaced floating/overlapping close buttons in Showdown Data Entry, Championship Tracker, and Mercenary Prestige with responsive top header bars featuring direct Back to Admin and Activity Matrix navigation.
+
 ## [2.5.114] - 2026-08-15
 - Gatekeeper Report Editor: Upgraded from toggle-only checkboxes to fully editable textareas for every report section (Roster, Signups, Perks, Maintenance, Bot).
 - Each section now has a "Reset to Live Data" button to revert custom edits back to auto-generated values from Firebase.

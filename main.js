@@ -697,29 +697,57 @@ window.clearAllEventCaches = () => {
 };
 
 // Fetch Championship Data natively from single master node activity_live
+// Fetch Championship Data natively from master node activity_live with fallback to championship node
 window.fetchChampionshipData = async () => {
     if (window.championshipCache) return window.championshipCache;
     const result = {};
     const isT = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
 
     try {
-        const snap = await get(ref(db, 'activity_live'));
-        if (snap.exists()) {
-            const actObj = snap.val() || {};
-            if (typeof actObj === 'object') {
-                Object.entries(actObj).forEach(([gid, rec]) => {
-                    if (rec && typeof rec === 'object') {
-                        result[gid] = {
-                            gameId: gid,
-                            name: rec.name || (window.idToNameMap && window.idToNameMap[gid]) || 'Chief',
-                            signedUp: isT(rec.championship),
-                            lastUpdated: rec.updatedAt || Date.now()
-                        };
-                    }
-                });
-            }
+        const [actSnap, champSnap] = await Promise.all([
+            get(ref(db, 'activity_live')).catch(() => null),
+            get(ref(db, 'championship')).catch(() => null)
+        ]);
+
+        const actObj = (actSnap && actSnap.exists()) ? (actSnap.val() || {}) : {};
+        const champObj = (champSnap && champSnap.exists()) ? (champSnap.val() || {}) : {};
+
+        // 1. Process activity_live as primary source
+        if (typeof actObj === 'object') {
+            Object.entries(actObj).forEach(([gid, rec]) => {
+                if (rec && typeof rec === 'object') {
+                    const chiefName = rec.name || (window.idToNameMap && window.idToNameMap[gid]) || 'Chief';
+                    const isSigned = rec.championship !== undefined ? isT(rec.championship) : false;
+                    result[gid] = {
+                        gameId: gid,
+                        name: chiefName,
+                        signedUp: isSigned,
+                        lastUpdated: rec.updatedAt || Date.now()
+                    };
+                }
+            });
         }
-    } catch(e) { console.warn("Firebase activity_live championship read error:", e); }
+
+        // 2. Merge secondary championship node for any missing players
+        if (typeof champObj === 'object') {
+            Object.entries(champObj).forEach(([gid, rec]) => {
+                if (rec && typeof rec === 'object') {
+                    if (!result[gid] || result[gid].signedUp === false) {
+                        const chiefName = rec.name || (window.idToNameMap && window.idToNameMap[gid]) || result[gid]?.name || 'Chief';
+                        const isSigned = rec.signedUp !== undefined ? isT(rec.signedUp) : false;
+                        if (!result[gid] || isSigned) {
+                            result[gid] = {
+                                gameId: gid,
+                                name: chiefName,
+                                signedUp: isSigned,
+                                lastUpdated: rec.lastUpdated || rec.updatedAt || Date.now()
+                            };
+                        }
+                    }
+                }
+            });
+        }
+    } catch(e) { console.warn("Firebase championship read error:", e); }
 
     // Ensure all roster players are represented
     if (window.idToNameMap) {
@@ -734,7 +762,7 @@ window.fetchChampionshipData = async () => {
     return result;
 };
 
-// Toggle Championship signup status natively in master node activity_live
+// Toggle Championship signup status natively in master node activity_live & championship node
 window.toggleChampionshipStatus = async (gameId, forceStatus = null) => {
     if (!gameId) return false;
     const gIdStr = gameId.toString().trim();
@@ -745,6 +773,7 @@ window.toggleChampionshipStatus = async (gameId, forceStatus = null) => {
     const newSignedUpStatus = (forceStatus !== null) ? forceStatus : !existing.signedUp;
     const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name || "Admin") : "Admin";
     const playerName = existing.name || (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief';
+    const now = Date.now();
 
     try {
         // 1. Write directly to master node activity_live
@@ -752,23 +781,29 @@ window.toggleChampionshipStatus = async (gameId, forceStatus = null) => {
             await update(ref(db, `activity_live/${gIdStr}`), {
                 name: playerName,
                 championship: newSignedUpStatus,
-                updatedAt: Date.now()
+                updatedAt: now
             });
         } catch(uErr) {
             const snap = await get(ref(db, `activity_live/${gIdStr}`));
             const currentRec = (snap && snap.exists()) ? snap.val() : { name: playerName };
             currentRec.name = playerName;
             currentRec.championship = newSignedUpStatus;
-            currentRec.updatedAt = Date.now();
+            currentRec.updatedAt = now;
             await set(ref(db, `activity_live/${gIdStr}`), currentRec);
         }
 
         // 2. Secondary write for legacy node
         try {
             await set(ref(db, `championship/${gIdStr}`), {
-                gameId: gIdStr, name: playerName, signedUp: newSignedUpStatus, lastUpdated: Date.now(), updatedBy: adminName
+                gameId: gIdStr, name: playerName, signedUp: newSignedUpStatus, lastUpdated: now, updatedBy: adminName
             });
         } catch(e) {}
+
+        // Update memory cache immediately
+        if (window.championshipCache && window.championshipCache[gIdStr]) {
+            window.championshipCache[gIdStr].signedUp = newSignedUpStatus;
+            window.championshipCache[gIdStr].lastUpdated = now;
+        }
 
         window.clearAllEventCaches();
 
@@ -15114,22 +15149,23 @@ const views = {
                    if (gIdStr) seenGids.add(gIdStr);
                    if (normName) seenNames.add(normName);
 
-                   const actRec = actObj[gIdStr] || {};
-                   const champRec = champObj[gIdStr] || {};
-                   const mercRec = mercObj[gIdStr] || {};
-                   const pStats = statsObj[gIdStr] || {};
+                   const nameKey = p.name ? p.name.toLowerCase().replace(/[^a-z0-9]/g, '_') : '';
+                   const actRec = actObj[gIdStr] || (nameKey ? actObj[nameKey] : {}) || (p.name ? actObj[p.name] : {}) || {};
+                   const champRec = champObj[gIdStr] || (nameKey ? champObj[nameKey] : {}) || (p.name ? champObj[p.name] : {}) || {};
+                   const mercRec = mercObj[gIdStr] || (nameKey ? mercObj[nameKey] : {}) || (p.name ? mercObj[p.name] : {}) || {};
+                   const pStats = statsObj[gIdStr] || (nameKey ? statsObj[nameKey] : {}) || (p.name ? statsObj[p.name] : {}) || {};
 
                    const isTrue = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
 
                    const donKey = p.name.toLowerCase().replace(/[^a-z0-9]/g, '_');
                    const donRec = donObj[donKey] || {};
-                   const btRec = btObj[gIdStr] || {};
-                   const isBtActive = (donRec.current && donRec.current > 0) || isTrue(btRec.signedUp) || isTrue(actRec.beartrap);
+                   const btRec = btObj[gIdStr] || (nameKey ? btObj[nameKey] : {}) || {};
+                   const isBtActive = (donRec.current && donRec.current > 0) || isTrue(actRec.beartrap) || isTrue(btRec.signedUp);
 
                    const isPerf = actRec.perfectAttendance !== undefined ? isTrue(actRec.perfectAttendance) : false;
-                   const isChamp = champRec.signedUp !== undefined ? isTrue(champRec.signedUp) : isTrue(actRec.championship);
-                   const isMerc = mercRec.signedUp !== undefined ? isTrue(mercRec.signedUp) : isTrue(actRec.mercenary);
-                   const isPolar = isTrue(actRec.polarTerrors);
+                   const isChamp = actRec.championship !== undefined ? isTrue(actRec.championship) : (champRec.signedUp !== undefined ? isTrue(champRec.signedUp) : false);
+                   const isMerc = actRec.mercenary !== undefined ? isTrue(actRec.mercenary) : (mercRec.signedUp !== undefined ? isTrue(mercRec.signedUp) : false);
+                   const isPolar = actRec.polarTerrors !== undefined ? isTrue(actRec.polarTerrors) : false;
                    const isVoter = isTrue(actRec.voter);
 
                    let currentMisses = 0;
@@ -16960,12 +16996,26 @@ const views = {
        
        const staticHorns = { d1: 1, d2: 2, d3: 2, d4: 2, d5: 2, d6: 4 };
        
-       let html = `<div style="display:flex; flex-direction:column; gap:20px; max-width:800px; margin:0 auto; padding-bottom:40px; animation: fadeIn 0.3s ease; position:relative;">
-         <button onclick="if(document.querySelector('.navbar')) document.querySelector('.navbar').style.display='flex'; views.admin()" style="position:absolute; top:0px; right:0px; background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); padding:5px 12px; border-radius:6px; cursor:pointer; z-index:10;">&times; Close</button>
+       let html = `<div style="display:flex; flex-direction:column; gap:20px; max-width:800px; margin:0 auto; padding-bottom:40px; animation: fadeIn 0.3s ease;">
          
-         <div class="card" style="margin-top:40px;">
-           <div class="card-title" style="text-align:center; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-              <span>⚔️ Showdown Data Entry</span>
+         <!-- Top Navigation Header -->
+         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; border-bottom:2px solid var(--accent); padding-bottom:12px;">
+           <div style="display:flex; align-items:center; gap:12px;">
+             <button onclick="if(document.querySelector('.navbar')) document.querySelector('.navbar').style.display='flex'; views.admin()" style="background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); padding:8px 14px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13px; display:inline-flex; align-items:center; gap:6px; transition:0.2s;">
+               ⬅️ Back to Admin
+             </button>
+             <h2 style="margin:0; color:var(--text-main); font-size:22px; display:flex; align-items:center; gap:8px;">
+               ⚔️ Showdown Data Entry
+             </h2>
+           </div>
+           <button onclick="window.openActivityMatrix()" style="background:linear-gradient(135deg, var(--accent), #1d4ed8); color:white; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(59,130,246,0.3);">
+             📊 Activity Matrix ➔
+           </button>
+         </div>
+
+         <div class="card">
+           <div class="card-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+              <span>Daily Player Scores</span>
               <div style="display:flex; gap:8px; flex-wrap:wrap;">
                  <button onclick="window.openShowdownArchiveVaultModal('all', true)" style="background:linear-gradient(135deg, rgba(139,92,246,0.3) 0%, rgba(124,58,237,0.15) 100%); color:#a78bfa; border:1px solid rgba(139,92,246,0.5); padding:4px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:4px;">📂 Vault Manager</button>
                   <button onclick="window.showMissedDaysReportModal(this)" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--accent); padding:4px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:4px;">📋 Missed Days Report</button>
@@ -17218,19 +17268,22 @@ html += `</select>
         let percentSignedUp = totalCount > 0 ? Math.round((yesCount / totalCount) * 100) : 0;
 
         let html = `
-          <div style="display:flex; flex-direction:column; gap:20px; max-width:900px; margin:0 auto; padding-bottom:40px; animation: fadeIn 0.3s ease; position:relative;">
+          <div style="display:flex; flex-direction:column; gap:20px; max-width:900px; margin:0 auto; padding-bottom:40px; animation: fadeIn 0.3s ease;">
             
-            <button onclick="if(document.querySelector('.navbar')) document.querySelector('.navbar').style.display='flex'; views.admin()" style="position:absolute; top:0px; right:0px; background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); padding:6px 14px; border-radius:8px; cursor:pointer; z-index:10; font-weight:bold;">&times; Close</button>
-            
-            <div style="border-bottom: 2px solid var(--accent); padding-bottom: 12px; margin-bottom: 10px; display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:12px;">
-              <div>
-                <h2 style="margin:0; color:var(--text-main); font-size:24px; display:flex; align-items:center; gap:10px;">
-                  🏆 Alliance Championship Signup Tracker
-                </h2>
-                <p style="margin:5px 0 0 0; color:var(--text-muted); font-size:13px;">Real-time tracking of member event signups & missing roster responses.</p>
+            <div style="border-bottom: 2px solid var(--accent); padding-bottom: 12px; margin-bottom: 10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+              <div style="display:flex; align-items:center; gap:12px;">
+                <button onclick="if(document.querySelector('.navbar')) document.querySelector('.navbar').style.display='flex'; views.admin()" style="background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); padding:8px 14px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13px; display:inline-flex; align-items:center; gap:6px; transition:0.2s;">
+                  ⬅️ Back to Admin
+                </button>
+                <div>
+                  <h2 style="margin:0; color:var(--text-main); font-size:22px; display:flex; align-items:center; gap:10px;">
+                    🏆 Alliance Championship Tracker
+                  </h2>
+                  <p style="margin:4px 0 0 0; color:var(--text-muted); font-size:13px;">Real-time tracking of member event signups & missing roster responses.</p>
+                </div>
               </div>
               <button onclick="window.openActivityMatrix()" style="background:linear-gradient(135deg, var(--accent), #1d4ed8); color:white; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(59,130,246,0.3);">
-                📊 Open Roster Event Activity Matrix ➔
+                📊 Activity Matrix ➔
               </button>
             </div>
 
@@ -18061,19 +18114,22 @@ html += `</select>
         let percentSignedUp = totalCount > 0 ? Math.round((yesCount / totalCount) * 100) : 0;
 
         let html = `
-          <div style="display:flex; flex-direction:column; gap:20px; max-width:900px; margin:0 auto; padding-bottom:40px; animation: fadeIn 0.3s ease; position:relative;">
+          <div style="display:flex; flex-direction:column; gap:20px; max-width:900px; margin:0 auto; padding-bottom:40px; animation: fadeIn 0.3s ease;">
             
-            <button onclick="if(document.querySelector('.navbar')) document.querySelector('.navbar').style.display='flex'; views.admin()" style="position:absolute; top:0px; right:0px; background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); padding:6px 14px; border-radius:8px; cursor:pointer; z-index:10; font-weight:bold;">&times; Close</button>
-            
-            <div style="border-bottom: 2px solid #ef4444; padding-bottom: 12px; margin-bottom: 10px; display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:12px;">
-              <div>
-                <h2 style="margin:0; color:var(--text-main); font-size:24px; display:flex; align-items:center; gap:10px;">
-                  ⚔️ Mercenary Prestige: Tracker
-                </h2>
-                <p style="margin:5px 0 0 0; color:var(--text-muted); font-size:13px;">Real-time tracking of who has completed Mercenary Prestige & who still needs to.</p>
+            <div style="border-bottom: 2px solid #ef4444; padding-bottom: 12px; margin-bottom: 10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+              <div style="display:flex; align-items:center; gap:12px;">
+                <button onclick="if(document.querySelector('.navbar')) document.querySelector('.navbar').style.display='flex'; views.admin()" style="background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); padding:8px 14px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13px; display:inline-flex; align-items:center; gap:6px; transition:0.2s;">
+                  ⬅️ Back to Admin
+                </button>
+                <div>
+                  <h2 style="margin:0; color:var(--text-main); font-size:22px; display:flex; align-items:center; gap:10px;">
+                    ⚔️ Mercenary Prestige Tracker
+                  </h2>
+                  <p style="margin:4px 0 0 0; color:var(--text-muted); font-size:13px;">Real-time tracking of who has completed Mercenary Prestige & who still needs to.</p>
+                </div>
               </div>
               <button onclick="window.openActivityMatrix()" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:white; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(239,68,68,0.3);">
-                📊 Open Roster Event Activity Matrix ➔
+                📊 Activity Matrix ➔
               </button>
             </div>
 
