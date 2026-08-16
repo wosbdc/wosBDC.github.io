@@ -33,6 +33,11 @@
 - [x] Build live 🌙 Nightly Maintenance Telemetry Card with stats, logs, & trigger (v2.5.108) <!-- id: 33 -->
 - [x] Clean up ⚙️ System & Roster Tools in Daily Tools tab into streamlined groups (v2.5.108) <!-- id: 34 -->
 - [x] Add 🔗 Alt Accounts filter to Attributes dropdown in Registered Users (v2.5.108) <!-- id: 35 -->
+- [x] Move Discord Webhook configuration to Bots tab for R5 only (v2.5.109) <!-- id: 36 -->
+- [x] Fix Staff & Leadership page mobile responsiveness & auto-adjustable roles (v2.5.110) <!-- id: 37 -->
+- [x] Build Alliance Gatekeeper Report Editor & Live Discord Preview Modal (v2.5.111) <!-- id: 38 -->
+- [x] Add section toggles, custom R5 announcement input, and live data auto-pull (v2.5.111) <!-- id: 39 -->
+- [x] Update pushGatekeeperReportToDiscord to support custom payload & persistence (v2.5.111) <!-- id: 40 -->
 - [x] Update versioning, CHANGELOG.md, and sw.js <!-- id: 4 -->
 - [x] Build & test suite verification <!-- id: 5 -->
 - [x] Commit and push changes to GitHub <!-- id: 6 -->

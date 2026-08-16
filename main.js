@@ -12350,7 +12350,7 @@ window.handleSyncAllCharacters = async (btnEl = null) => {
   if (views.account) views.account('Alts');
 };
 
-window.pushGatekeeperReportToDiscord = async function(btnEl = null) {
+window.pushGatekeeperReportToDiscord = async function(btnEl = null, customPayload = null) {
   let origText = '';
   if (btnEl) {
     origText = btnEl.innerHTML;
@@ -12358,56 +12358,74 @@ window.pushGatekeeperReportToDiscord = async function(btnEl = null) {
     btnEl.innerHTML = '⏳ Updating #alerts...';
   }
   try {
-    const webhookUrl = "https://discord.com/api/webhooks/1537465776750203060/pjDG_gWRnnS6QyRXaxvrudoq7inLhFi_4xjk-2WfpuiTp3gNJVCS4eGuH0y9CoUL4dUY";
-    
-    // Fetch live users & history
-    const [usersSnap, histSnap, gkSnap] = await Promise.all([
-      get(ref(db, 'users')).catch(() => null),
-      get(ref(db, 'gift_codes_history')).catch(() => null),
-      get(ref(db, 'labData/gatekeeperCounters')).catch(() => null)
-    ]);
-    
-    const users = (usersSnap && usersSnap.exists()) ? usersSnap.val() : {};
-    const history = (histSnap && histSnap.exists()) ? histSnap.val() : {};
-    const gkData = (gkSnap && gkSnap.exists()) ? gkSnap.val() : {};
-    
-    const totalMembers = gkData.totalMembers || 25;
-    const newToday = gkData.newMembersToday || 0;
-    const new7d = gkData.newMembers7Days || 3;
-    const unclaimed = gkData.unclaimedAccounts || 16;
-    const activeSync = gkData.activeSync || 2;
-    
-    const sortedUsers = Object.values(users).filter(u => u && u.name).sort((a,b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
-    const recentSignups = sortedUsers.slice(0, 3);
-    
-    let signupsText = recentSignups.map(u => {
-      const cname = u.name || u.chiefName || "Chief";
-      const flevel = u.furnaceLevel || "FC8";
-      const isVer = (u.centuryToken || u.verified) ? "Verified ✅" : "Enrolled (Pending Sync ⏳)";
-      const icon = cname.toLowerCase().includes('brian') ? '👑' : (cname.toLowerCase().includes('thadwarf') ? '⚔️' : '🛡️');
-      return `• ${icon} **${cname}** — Furnace Level ${flevel} (${isVer})`;
-    }).join('\n');
-    
-    if (!signupsText) {
-      signupsText = "• 👑 **BrianDCox** — Furnace Level FC8 (Verified ✅)\n• ⚔️ **thadwarf** — Furnace Level FC5 (Verified ✅)\n• 🛡️ **Chief 318843189** — Enrolled (Pending Sync ⏳)";
+    let payload = customPayload;
+    if (!payload) {
+      // Build auto payload using live database telemetry
+      const [usersSnap, histSnap, gkSnap, cfgSnap] = await Promise.all([
+        get(ref(db, 'users')).catch(() => null),
+        get(ref(db, 'gift_codes_history')).catch(() => null),
+        get(ref(db, 'labData/gatekeeperCounters')).catch(() => null),
+        get(ref(db, 'config/gatekeeperReportSettings')).catch(() => null)
+      ]);
+      
+      const users = (usersSnap && usersSnap.exists()) ? usersSnap.val() : {};
+      const history = (histSnap && histSnap.exists()) ? histSnap.val() : {};
+      const gkData = (gkSnap && gkSnap.exists()) ? gkSnap.val() : {};
+      const savedConfig = (cfgSnap && cfgSnap.exists()) ? cfgSnap.val() : {};
+      
+      const totalMembers = gkData.totalMembers || Object.keys(users).length || 25;
+      const newToday = gkData.newMembersToday !== undefined ? gkData.newMembersToday : 0;
+      const new7d = gkData.newMembers7Days !== undefined ? gkData.newMembers7Days : 3;
+      const unclaimed = gkData.unclaimedAccounts !== undefined ? gkData.unclaimedAccounts : 16;
+      const activeSync = gkData.activeSync !== undefined ? gkData.activeSync : 2;
+      
+      const sortedUsers = Object.values(users).filter(u => u && u.name).sort((a,b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+      const recentSignups = sortedUsers.slice(0, 3);
+      
+      let signupsText = recentSignups.map(u => {
+        const cname = u.name || u.chiefName || "Chief";
+        const flevel = u.furnaceLevel || "FC8";
+        const isVer = (u.centuryToken || u.verified) ? "Verified ✅" : "Enrolled (Pending Sync ⏳)";
+        const icon = cname.toLowerCase().includes('brian') ? '👑' : (cname.toLowerCase().includes('thadwarf') ? '⚔️' : '🛡️');
+        return `• ${icon} **${cname}** — Furnace Level ${flevel} (${isVer})`;
+      }).join('\n');
+      
+      if (!signupsText) {
+        signupsText = "• 👑 **BrianDCox** — Furnace Level FC8 (Verified ✅)\n• ⚔️ **thadwarf** — Furnace Level FC5 (Verified ✅)\n• 🛡️ **Chief 318843189** — Enrolled (Pending Sync ⏳)";
+      }
+      
+      const activeCodes = Object.values(history).filter(c => c && c.status === 'active');
+      const codeStr = activeCodes.length > 0 ? `\`${activeCodes[0].code}\`` : '`WOS0815`';
+      const claimsStr = activeCodes.length > 0 && activeCodes[0].stats ? `${activeCodes[0].stats.success || totalMembers} / ${totalMembers} Alliance Accounts Claimed` : `${totalMembers} / ${totalMembers} Alliance Accounts Claimed`;
+      
+      let sections = [];
+      if (savedConfig.announcement) {
+        sections.push(`📢 **ALLIANCE DIRECTIVE**\n${savedConfig.announcement}`);
+      }
+      if (savedConfig.incRoster !== false) {
+        sections.push(`🛡️ **ALLIANCE ROSTER & VERIFICATION**\n• 👥 **Total Members:** ${totalMembers} Chiefs\n• 📈 **New Joins Today:** +${newToday}  |  **Past 7 Days:** +${new7d}\n• 🔒 **Unclaimed Ratio:** ${unclaimed}/${totalMembers} (${activeSync} Active 30-Day Tokens)`);
+      }
+      if (savedConfig.incSignups !== false) {
+        sections.push(`👥 **RECENT MEMBER SIGNUPS**\n${signupsText}`);
+      }
+      if (savedConfig.incPerks !== false) {
+        sections.push(`🎁 **ACTIVE ALLIANCE PROMO PERKS**\n• 💎 **Active Code:** ${codeStr}\n• ✅ **Claim Delivery:** ${claimsStr}\n• 📬 **Notice:** Check your in-game mailbox to collect rewards!`);
+      }
+      if (savedConfig.incBot !== false) {
+        sections.push(`🤖 **AUTO-BOT TELEMETRY**\n• 🟢 **Status:** Active & Monitoring\n• ⏳ **Next Sweep:** In ~35 mins (Every 45m)`);
+      }
+      
+      payload = {
+        content: "",
+        embeds: [{
+          title: savedConfig.title || "🏰 ALLIANCE GATEKEEPER REPORT",
+          description: sections.join('\n\n') || "No active sections.",
+          color: savedConfig.colorDec || 3908861,
+          footer: { text: savedConfig.footer || "Alliance Gatekeeper • Real-Time Live Sync ⚡" },
+          timestamp: new Date().toISOString()
+        }]
+      };
     }
-    
-    const activeCodes = Object.values(history).filter(c => c && c.status === 'active');
-    const codeStr = activeCodes.length > 0 ? `\`${activeCodes[0].code}\`` : '`WOS0815`';
-    const claimsStr = activeCodes.length > 0 && activeCodes[0].stats ? `${activeCodes[0].stats.success || totalMembers} / ${totalMembers} Alliance Accounts Claimed` : `${totalMembers} / ${totalMembers} Alliance Accounts Claimed`;
-    
-    const description = `🛡️ **ALLIANCE ROSTER & VERIFICATION**\n• 👥 **Total Members:** ${totalMembers} Chiefs\n• 📈 **New Joins Today:** +${newToday}  |  **Past 7 Days:** +${new7d}\n• 🔒 **Unclaimed Ratio:** ${unclaimed}/${totalMembers} (${activeSync} Active 30-Day Tokens)\n\n👥 **RECENT MEMBER SIGNUPS**\n${signupsText}\n\n🎁 **ACTIVE ALLIANCE PROMO PERKS**\n• 💎 **Active Code:** ${codeStr}\n• ✅ **Claim Delivery:** ${claimsStr}\n• 📬 **Notice:** Check your in-game mailbox to collect rewards!\n\n🤖 **AUTO-BOT TELEMETRY**\n• 🟢 **Status:** Active & Monitoring\n• ⏳ **Next Sweep:** In ~35 mins (Every 45m)`;
-    
-    const payload = {
-      content: "",
-      embeds: [{
-        title: "🏰 ALLIANCE GATEKEEPER REPORT",
-        description: description,
-        color: 3908861,
-        footer: { text: "Alliance Gatekeeper • Real-Time Live Sync ⚡" },
-        timestamp: new Date().toISOString()
-      }]
-    };
     
     // Check saved message ID in Firebase
     const msgIdSnap = await get(ref(db, 'system/gatekeeper_report_msg_id')).catch(() => null);
@@ -12423,11 +12441,349 @@ window.pushGatekeeperReportToDiscord = async function(btnEl = null) {
         await set(ref(db, 'system/gatekeeper_report_msg_id'), gasData.messageId).catch(() => null);
       }
       if (window.showToast) window.showToast("🏰 Master Alliance Gatekeeper Report updated in #alerts!", "success");
+      return { success: true };
     } else {
       throw new Error((gasData && gasData.message) || "Backend webhook proxy failed");
     }
   } catch (err) {
     if (window.showToast) window.showToast("Failed to update #alerts: " + err.message, "error");
+    throw err;
+  } finally {
+    if (btnEl) {
+      btnEl.disabled = false;
+      btnEl.innerHTML = origText;
+    }
+  }
+};
+
+window.openGatekeeperReportEditorModal = async function() {
+  if (!window.isAdminUser(currentUser)) {
+    if (window.showToast) window.showToast("Access Denied: Staff permissions required.", "error");
+    return;
+  }
+
+  let old = document.getElementById('gatekeeperReportModal');
+  if (old) old.remove();
+
+  if (window.showToast) window.showToast("Fetching live Alliance Gatekeeper telemetry...", "info");
+
+  // Fetch live stats & settings
+  const [usersSnap, histSnap, gkSnap, cfgSnap] = await Promise.all([
+    get(ref(db, 'users')).catch(() => null),
+    get(ref(db, 'gift_codes_history')).catch(() => null),
+    get(ref(db, 'labData/gatekeeperCounters')).catch(() => null),
+    get(ref(db, 'config/gatekeeperReportSettings')).catch(() => null)
+  ]);
+
+  const users = (usersSnap && usersSnap.exists()) ? usersSnap.val() : {};
+  const history = (histSnap && histSnap.exists()) ? histSnap.val() : {};
+  const gkData = (gkSnap && gkSnap.exists()) ? gkSnap.val() : {};
+  const savedConfig = (cfgSnap && cfgSnap.exists()) ? cfgSnap.val() : {};
+
+  // Compute live counts
+  const totalMembers = gkData.totalMembers || Object.keys(users).length || 25;
+  const newToday = gkData.newMembersToday !== undefined ? gkData.newMembersToday : 0;
+  const new7d = gkData.newMembers7Days !== undefined ? gkData.newMembers7Days : 3;
+  const unclaimed = gkData.unclaimedAccounts !== undefined ? gkData.unclaimedAccounts : 16;
+  const activeSync = gkData.activeSync !== undefined ? gkData.activeSync : 2;
+
+  const sortedUsers = Object.values(users).filter(u => u && u.name).sort((a,b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+  const recentSignups = sortedUsers.slice(0, 3);
+  let signupsText = recentSignups.map(u => {
+    const cname = u.name || u.chiefName || "Chief";
+    const flevel = u.furnaceLevel || "FC8";
+    const isVer = (u.centuryToken || u.verified) ? "Verified ✅" : "Enrolled (Pending Sync ⏳)";
+    const icon = cname.toLowerCase().includes('brian') ? '👑' : (cname.toLowerCase().includes('thadwarf') ? '⚔️' : '🛡️');
+    return `• ${icon} **${cname}** — Furnace Level ${flevel} (${isVer})`;
+  }).join('\n');
+
+  if (!signupsText) {
+    signupsText = "• 👑 **BrianDCox** — Furnace Level FC8 (Verified ✅)\n• ⚔️ **thadwarf** — Furnace Level FC5 (Verified ✅)\n• 🛡️ **Chief 318843189** — Enrolled (Pending Sync ⏳)";
+  }
+
+  const activeCodes = Object.values(history).filter(c => c && c.status === 'active');
+  const codeStr = activeCodes.length > 0 ? `\`${activeCodes[0].code}\`` : '`WOS0815`';
+  const claimsStr = activeCodes.length > 0 && activeCodes[0].stats ? `${activeCodes[0].stats.success || totalMembers} / ${totalMembers} Alliance Accounts Claimed` : `${totalMembers} / ${totalMembers} Alliance Accounts Claimed`;
+
+  // Editor State
+  window._gkEditorState = {
+    title: savedConfig.title || "🏰 ALLIANCE GATEKEEPER REPORT",
+    announcement: savedConfig.announcement || "",
+    incRoster: savedConfig.incRoster !== false,
+    incSignups: savedConfig.incSignups !== false,
+    incPerks: savedConfig.incPerks !== false,
+    incBot: savedConfig.incBot !== false,
+    colorHex: savedConfig.colorHex || "#38bdf8",
+    colorDec: savedConfig.colorDec || 3718648,
+    footer: savedConfig.footer || "Alliance Gatekeeper • Real-Time Live Sync ⚡",
+    live: {
+      totalMembers,
+      newToday,
+      new7d,
+      unclaimed,
+      activeSync,
+      signupsText,
+      codeStr,
+      claimsStr
+    }
+  };
+
+  const modal = document.createElement('div');
+  modal.id = 'gatekeeperReportModal';
+  modal.style.cssText = `
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px);
+    z-index: 999999; display: flex; justify-content: center; align-items: center;
+    padding: 16px; box-sizing: border-box; animation: fadeIn 0.2s ease;
+  `;
+
+  modal.innerHTML = `
+    <div style="background: var(--bg-card); border: 1px solid rgba(56,189,248,0.3); border-radius: 16px; width: 100%; max-width: 820px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 20px 50px rgba(0,0,0,0.7); overflow: hidden;">
+      
+      <!-- Top Header -->
+      <div style="padding: 18px 22px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, rgba(30,41,59,0.7), rgba(15,23,42,0.8));">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(56,189,248,0.15); border: 1px solid rgba(56,189,248,0.4); display: flex; align-items: center; justify-content: center; font-size: 20px;">
+            🏰
+          </div>
+          <div>
+            <h3 style="margin: 0; color: #38bdf8; font-size: 17px; font-weight: 800;">Alliance Gatekeeper Report Editor</h3>
+            <p style="margin: 2px 0 0 0; font-size: 11.5px; color: var(--text-muted);">Customize announcement notes, toggle live data sections, and preview Discord embeds.</p>
+          </div>
+        </div>
+        <button onclick="document.getElementById('gatekeeperReportModal').remove()" style="background: none; border: none; color: var(--text-muted); font-size: 22px; cursor: pointer; padding: 4px 8px; line-height: 1;">✕</button>
+      </div>
+
+      <!-- Modal Body (Two-Column Responsive Layout) -->
+      <div style="padding: 20px 22px; overflow-y: auto; display: flex; flex-direction: column; gap: 18px;">
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 18px; align-items: start;">
+          
+          <!-- Column 1: Controls & Toggles -->
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+            
+            <!-- Custom R5 Announcement -->
+            <div style="background: rgba(0,0,0,0.25); padding: 14px; border-radius: 10px; border: 1px solid var(--border);">
+              <label style="display: block; font-size: 12px; font-weight: bold; color: var(--accent); margin-bottom: 6px;">
+                📢 Custom R5 Announcement / Directive (Optional)
+              </label>
+              <textarea id="gkEditorAnnouncement" oninput="window.updateGatekeeperPreview()" placeholder="e.g. Sunfire Castle battle this Saturday @ 14:00 UTC! Keep shields active." style="width: 100%; min-height: 70px; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-main); font-size: 12px; box-sizing: border-box; resize: vertical;">${window.escapeHTML(window._gkEditorState.announcement)}</textarea>
+              <span style="font-size: 10.5px; color: var(--text-muted); display: block; margin-top: 4px;">Appears at the very top of the Discord embed card.</span>
+            </div>
+
+            <!-- Section Checkbox Toggles -->
+            <div style="background: rgba(0,0,0,0.25); padding: 14px; border-radius: 10px; border: 1px solid var(--border);">
+              <div style="font-size: 12px; font-weight: bold; color: var(--text-main); margin-bottom: 8px;">
+                📋 Report Sections to Include:
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 8px;">
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-main); cursor: pointer;">
+                  <input type="checkbox" id="gkToggleRoster" ${window._gkEditorState.incRoster ? 'checked' : ''} onchange="window.updateGatekeeperPreview()" style="width: 16px; height: 16px; accent-color: var(--accent);">
+                  <span>🛡️ Alliance Roster & Verification Counts</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-main); cursor: pointer;">
+                  <input type="checkbox" id="gkToggleSignups" ${window._gkEditorState.incSignups ? 'checked' : ''} onchange="window.updateGatekeeperPreview()" style="width: 16px; height: 16px; accent-color: var(--accent);">
+                  <span>👥 Recent Member Signups (Past 7 Days)</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-main); cursor: pointer;">
+                  <input type="checkbox" id="gkTogglePerks" ${window._gkEditorState.incPerks ? 'checked' : ''} onchange="window.updateGatekeeperPreview()" style="width: 16px; height: 16px; accent-color: var(--accent);">
+                  <span>🎁 Active Alliance Promo Perks / Codes</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-main); cursor: pointer;">
+                  <input type="checkbox" id="gkToggleBot" ${window._gkEditorState.incBot ? 'checked' : ''} onchange="window.updateGatekeeperPreview()" style="width: 16px; height: 16px; accent-color: var(--accent);">
+                  <span>🤖 Auto-Bot 24/7 Telemetry Status</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Embed Color Presets -->
+            <div style="background: rgba(0,0,0,0.25); padding: 14px; border-radius: 10px; border: 1px solid var(--border);">
+              <div style="font-size: 12px; font-weight: bold; color: var(--text-main); margin-bottom: 8px;">
+                🎨 Embed Border Color:
+              </div>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button type="button" onclick="window.setGatekeeperColor('#38bdf8', 3718648)" style="background: #38bdf8; color: #000; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer;">🔵 Cyan</button>
+                <button type="button" onclick="window.setGatekeeperColor('#10b981', 1097650)" style="background: #10b981; color: #fff; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer;">🟢 Green</button>
+                <button type="button" onclick="window.setGatekeeperColor('#f59e0b', 16096779)" style="background: #f59e0b; color: #000; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer;">🟡 Gold</button>
+                <button type="button" onclick="window.setGatekeeperColor('#8b5cf6', 9133302)" style="background: #8b5cf6; color: #fff; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer;">🟣 Purple</button>
+                <button type="button" onclick="window.setGatekeeperColor('#ef4444', 15680580)" style="background: #ef4444; color: #fff; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer;">🔴 Red</button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Column 2: Live Discord Preview -->
+          <div>
+            <div style="font-size: 12px; font-weight: bold; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+              <span>👁️ Live Discord #alerts Preview</span>
+            </div>
+            
+            <div style="background: #2b2d31; border-radius: 10px; padding: 14px; font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #dbdee1; font-size: 12.5px; line-height: 1.45; box-shadow: 0 4px 14px rgba(0,0,0,0.3);">
+              
+              <!-- Discord Author Header -->
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                <div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #0ea5e9, #6366f1); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0;">
+                  🏰
+                </div>
+                <div>
+                  <span style="font-weight: 600; color: #f2f3f5; font-size: 13.5px;">Alliance Gatekeeper</span>
+                  <span style="background: #5865f2; color: #fff; font-size: 9.5px; font-weight: 800; padding: 1px 4px; border-radius: 3px; margin-left: 4px; vertical-align: middle;">BOT</span>
+                  <span style="color: #949ba4; font-size: 10.5px; margin-left: 6px;">Today at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+              </div>
+
+              <!-- Embed Card with Left Color Border -->
+              <div id="discordPreviewCard" style="background: #232428; border-left: 4px solid ${window._gkEditorState.colorHex}; border-radius: 4px; padding: 12px 14px; margin-left: 20px;">
+                <div id="discordPreviewTitle" style="font-weight: 700; color: #f2f3f5; font-size: 14.5px; margin-bottom: 8px;">
+                  🏰 ALLIANCE GATEKEEPER REPORT
+                </div>
+                <div id="discordPreviewDesc" style="white-space: pre-wrap; font-size: 12px; color: #dbdee1;">
+                  <!-- Dynamically rendered -->
+                </div>
+                <div id="discordPreviewFooter" style="font-size: 10.5px; color: #949ba4; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 6px;">
+                  Alliance Gatekeeper • Real-Time Live Sync ⚡
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- Bottom Action Bar -->
+      <div style="padding: 14px 22px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; background: rgba(0,0,0,0.2);">
+        <button type="button" onclick="window.openGatekeeperReportEditorModal()" style="background: rgba(255,255,255,0.06); border: 1px solid var(--border); color: var(--text-main); padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+          🔄 Re-Pull DB Data
+        </button>
+
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <button type="button" onclick="window.saveGatekeeperDraftSettings()" style="background: rgba(56,189,248,0.15); border: 1px solid rgba(56,189,248,0.35); color: #38bdf8; padding: 9px 16px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer;">
+            💾 Save Draft
+          </button>
+          <button type="button" id="btnPublishGatekeeperReport" onclick="window.publishGatekeeperReportFromEditor(this)" style="background: linear-gradient(135deg, #0ea5e9, #0284c7); color: #fff; border: none; padding: 9px 20px; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 14px rgba(14,165,233,0.35); display: flex; align-items: center; gap: 6px; transition: 0.2s;">
+            🚀 Update Discord #alerts
+          </button>
+        </div>
+      </div>
+
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+  window.updateGatekeeperPreview();
+};
+
+window.setGatekeeperColor = function(hex, dec) {
+  if (!window._gkEditorState) return;
+  window._gkEditorState.colorHex = hex;
+  window._gkEditorState.colorDec = dec;
+  const previewCard = document.getElementById('discordPreviewCard');
+  if (previewCard) previewCard.style.borderLeft = `4px solid ${hex}`;
+  window.updateGatekeeperPreview();
+};
+
+window.buildGatekeeperReportPayload = function() {
+  const s = window._gkEditorState;
+  if (!s) return null;
+
+  const ann = (document.getElementById('gkEditorAnnouncement')?.value || '').trim();
+  const incRoster = document.getElementById('gkToggleRoster')?.checked !== false;
+  const incSignups = document.getElementById('gkToggleSignups')?.checked !== false;
+  const incPerks = document.getElementById('gkTogglePerks')?.checked !== false;
+  const incBot = document.getElementById('gkToggleBot')?.checked !== false;
+
+  let sections = [];
+
+  if (ann) {
+    sections.push(`📢 **ALLIANCE DIRECTIVE**\n${ann}`);
+  }
+
+  if (incRoster) {
+    sections.push(`🛡️ **ALLIANCE ROSTER & VERIFICATION**\n• 👥 **Total Members:** ${s.live.totalMembers} Chiefs\n• 📈 **New Joins Today:** +${s.live.newToday}  |  **Past 7 Days:** +${s.live.new7d}\n• 🔒 **Unclaimed Ratio:** ${s.live.unclaimed}/${s.live.totalMembers} (${s.live.activeSync} Active 30-Day Tokens)`);
+  }
+
+  if (incSignups) {
+    sections.push(`👥 **RECENT MEMBER SIGNUPS**\n${s.live.signupsText}`);
+  }
+
+  if (incPerks) {
+    sections.push(`🎁 **ACTIVE ALLIANCE PROMO PERKS**\n• 💎 **Active Code:** ${s.live.codeStr}\n• ✅ **Claim Delivery:** ${s.live.claimsStr}\n• 📬 **Notice:** Check your in-game mailbox to collect rewards!`);
+  }
+
+  if (incBot) {
+    sections.push(`🤖 **AUTO-BOT TELEMETRY**\n• 🟢 **Status:** Active & Monitoring\n• ⏳ **Next Sweep:** In ~35 mins (Every 45m)`);
+  }
+
+  const description = sections.join('\n\n');
+
+  return {
+    content: "",
+    embeds: [{
+      title: s.title || "🏰 ALLIANCE GATEKEEPER REPORT",
+      description: description || "No active sections selected.",
+      color: s.colorDec || 3718648,
+      footer: { text: s.footer || "Alliance Gatekeeper • Real-Time Live Sync ⚡" },
+      timestamp: new Date().toISOString()
+    }]
+  };
+};
+
+window.updateGatekeeperPreview = function() {
+  const payload = window.buildGatekeeperReportPayload();
+  if (!payload) return;
+  const descEl = document.getElementById('discordPreviewDesc');
+  const titleEl = document.getElementById('discordPreviewTitle');
+  if (titleEl) titleEl.textContent = payload.embeds[0].title;
+  if (descEl) descEl.textContent = payload.embeds[0].description;
+};
+
+window.saveGatekeeperDraftSettings = async function() {
+  const ann = (document.getElementById('gkEditorAnnouncement')?.value || '').trim();
+  const incRoster = document.getElementById('gkToggleRoster')?.checked !== false;
+  const incSignups = document.getElementById('gkToggleSignups')?.checked !== false;
+  const incPerks = document.getElementById('gkTogglePerks')?.checked !== false;
+  const incBot = document.getElementById('gkToggleBot')?.checked !== false;
+
+  const data = {
+    announcement: ann,
+    incRoster,
+    incSignups,
+    incPerks,
+    incBot,
+    colorHex: window._gkEditorState?.colorHex || "#38bdf8",
+    colorDec: window._gkEditorState?.colorDec || 3718648,
+    updatedAt: new Date().toISOString()
+  };
+
+  try {
+    await set(ref(db, 'config/gatekeeperReportSettings'), data);
+    if (window.showToast) window.showToast("💾 Gatekeeper report draft settings saved!", "success");
+  } catch(e) {
+    if (window.showToast) window.showToast("Failed to save draft: " + e.message, "error");
+  }
+};
+
+window.publishGatekeeperReportFromEditor = async function(btnEl) {
+  const payload = window.buildGatekeeperReportPayload();
+  if (!payload) return;
+
+  let origText = '';
+  if (btnEl) {
+    origText = btnEl.innerHTML;
+    btnEl.disabled = true;
+    btnEl.innerHTML = '⏳ Updating Discord...';
+  }
+
+  try {
+    await window.pushGatekeeperReportToDiscord(null, payload);
+    await window.saveGatekeeperDraftSettings();
+    if (window.showToast) window.showToast("🚀 Master Alliance Gatekeeper Report published to #alerts!", "success");
+    const m = document.getElementById('gatekeeperReportModal');
+    if (m) m.remove();
+  } catch(e) {
+    if (window.showToast) window.showToast("Failed to publish report: " + e.message, "error");
   } finally {
     if (btnEl) {
       btnEl.disabled = false;
@@ -15051,8 +15407,11 @@ const views = {
                   </div>
 
                   <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                    <button onclick="window.pushGatekeeperReportToDiscord(this)" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:8px 16px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 2px 10px rgba(14,165,233,0.35); transition:0.2s;">
-                      🏰 Update #alerts Gatekeeper Report
+                    <button onclick="window.openGatekeeperReportEditorModal()" style="background:linear-gradient(135deg, #0ea5e9, #6366f1); color:#fff; border:none; padding:8px 16px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 2px 10px rgba(14,165,233,0.35); transition:0.2s;">
+                      ✏️ Edit & Preview Report
+                    </button>
+                    <button onclick="window.pushGatekeeperReportToDiscord(this)" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); padding:8px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.2s;">
+                      ⚡ Fast Update #alerts
                     </button>
                     ${isR5 ? `<button onclick="window.openBroadcastPushModal()" style="background:linear-gradient(135deg, #ec4899, #be185d); color:#fff; border:none; padding:8px 16px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 2px 10px rgba(236,72,153,0.35);">🚀 Broadcast Push Notification</button>` : ''}
                   </div>

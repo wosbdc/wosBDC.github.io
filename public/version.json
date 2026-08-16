@@ -1,9 +1,9 @@
 {
-  "version": "2.5.110",
+  "version": "2.5.111",
   "releaseDate": "2026-08-15",
-  "title": "Staff Page Mobile Responsiveness & Auto-Adjustable Roles",
+  "title": "Alliance Gatekeeper Report Editor & Live Discord Preview",
   "notes": [
-    "Staff Page: Fixed card truncation on Android & iOS devices by replacing fixed height constraints with auto-adjusting dynamic containers.",
-    "Managed Events & Roles: Added fluid flex wrapping and interactive tap-to-expand/collapse hints."
+    "Admin Menu: Added interactive Alliance Gatekeeper Report Editor with live Discord embed preview, custom R5 announcement directive, and section toggles.",
+    "Bots Tab: Added 1-click Fast Update and Editor launcher directly within the Discord Gatekeeper Bot card."
   ]
 }

@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.5.111] - 2026-08-15
+- Admin Menu: Added interactive Alliance Gatekeeper Report Editor & Live Discord Embed Preview Modal with customizable R5 announcements, section toggles, color themes, and draft saving.
+- Bots Tab: Integrated Editor launcher alongside 1-click Fast Update in the Discord Gatekeeper & Webhook Bot card.
+
 ## [2.5.110] - 2026-08-15
 - Staff & Leadership Page: Fixed card truncation on Android & iOS devices by replacing fixed height constraints with auto-adjusting dynamic containers.
 - Enhanced Managed Events & Roles badges with fluid flex wrapping, role count indicators, and interactive tap-to-expand/collapse hints.
