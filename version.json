@@ -1,9 +1,9 @@
 {
-  "version": "2.6.1",
+  "version": "2.6.2",
   "releaseDate": "2026-08-16",
-  "title": "Showdown Data Entry Navigation Clean-up",
+  "title": "Alliance Gift Codes Manager Moved to Bots Tab",
   "notes": [
-    "Cleaned up the Showdown Data Entry header navigation bar by removing the redundant Activity Matrix button.",
-    "Streamlined focus strictly on Showdown score entry and archive vault operations."
+    "Integrated Alliance Gift Codes Manager into the Bots tab under Auto Gift Code Bot Daemon with a clean Back to Bots navigation button.",
+    "Streamlined Admin Menu tabs by removing the top-level Gift Codes tab button."
   ]
 }

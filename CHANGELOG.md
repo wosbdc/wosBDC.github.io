@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.6.2] - 2026-08-16
+- Alliance Gift Codes Manager Integration: Relocated the Alliance Gift Codes Manager into the 🤖 Bots tab under Auto Gift Code Bot Daemon with a prominent launch action card and a dedicated `⬅️ Back to Bots` header navigation button.
+- Streamlined Admin Navigation: Removed the redundant top-level `🎁 Gift Codes` tab from `#adminTabNav`, decluttering the Admin Menu bar.
+
 ## [2.6.1] - 2026-08-16
 - Showdown Header Navigation Clean-up: Removed the redundant Activity Matrix button from the Showdown Data Entry header bar, keeping the view clean and exclusively focused on Showdown scores, daily breakdowns, and the Archive Vault.
 

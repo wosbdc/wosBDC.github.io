@@ -12292,6 +12292,27 @@ window.runNightlyMaintenanceSweep = async (btnEl = null) => {
   }
 };
 
+window.openAllianceGiftCodesManager = () => {
+  const botsTabBtn = document.querySelector('.admin-tab-btn[data-tab="tab-bots"]');
+  if (botsTabBtn && !botsTabBtn.classList.contains('active')) {
+    botsTabBtn.click();
+  }
+  const botsMain = document.getElementById('botsHubMainContainer');
+  const gcManager = document.getElementById('allianceGiftCodesManagerContainer');
+  if (botsMain) botsMain.style.display = 'none';
+  if (gcManager) gcManager.style.display = 'block';
+  window.loadGiftCodesManagerData();
+};
+
+window.backToBotsHub = () => {
+  const botsMain = document.getElementById('botsHubMainContainer');
+  const gcManager = document.getElementById('allianceGiftCodesManagerContainer');
+  if (gcManager) gcManager.style.display = 'none';
+  if (botsMain) botsMain.style.display = 'flex';
+  if (window.listenToBotTelemetry) window.listenToBotTelemetry();
+  if (window.listenToMaintenanceTelemetry) window.listenToMaintenanceTelemetry();
+};
+
 window.loadGiftCodesManagerData = async () => {
   const container = document.getElementById('adminGiftCodesListContainer');
   if (!container) return;
@@ -16106,7 +16127,6 @@ const views = {
               </style>
               <button class="admin-tab-btn active" data-tab="tab-tools" style="background:none; border:none; color:var(--accent); font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid var(--accent); flex-shrink:0;">🛠️ Daily Tools</button>
               <button class="admin-tab-btn" data-tab="tab-bots" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid transparent; flex-shrink:0;">🤖 Bots</button>
-              <button class="admin-tab-btn" data-tab="tab-giftcodes" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid transparent; flex-shrink:0;">🎁 Gift Codes</button>
               <button class="admin-tab-btn" data-tab="tab-indev" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid transparent; flex-shrink:0;">🧪 In-Dev</button>
               ${currentUser && currentUser.gameId.toString() === '318843189' ? `<button class="admin-tab-btn" data-tab="tab-frost" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid transparent; flex-shrink:0;">❄️ Frost Clan</button>` : ''}
               <button class="admin-tab-btn" data-tab="tab-users" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid transparent; flex-shrink:0;">👥 Users</button>
@@ -16149,7 +16169,9 @@ const views = {
 
           <!-- Tab: Bots Hub -->
           <div id="tab-bots" class="admin-tab-content" style="display:none;">
-            <div style="display:flex; flex-direction:column; gap:20px; margin-bottom:20px;">
+            
+            <!-- Main Bots Hub View -->
+            <div id="botsHubMainContainer" style="display:flex; flex-direction:column; gap:20px; margin-bottom:20px;">
               
               <!-- Hub Header -->
               <div style="background:linear-gradient(135deg, rgba(30,41,59,0.95), rgba(15,23,42,0.9)); padding:18px 20px; border-radius:14px; border:1px solid rgba(56,189,248,0.3); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
@@ -16268,8 +16290,23 @@ const views = {
                   </div>
                 </div>
 
-                <div id="gcBotRecentLogBox" style="background:rgba(0,0,0,0.35); padding:10px 14px; border-radius:8px; border:1px solid rgba(255,255,255,0.04); font-family:monospace; font-size:12px; color:#cbd5e1;">
+                <div id="gcBotRecentLogBox" style="background:rgba(0,0,0,0.35); padding:10px 14px; border-radius:8px; border:1px solid rgba(255,255,255,0.04); font-family:monospace; font-size:12px; color:#cbd5e1; margin-bottom:14px;">
                   📡 <strong>Bot Log:</strong> <span id="gcBotRecentLogText">Monitoring web feeds for newly released Whiteout Survival gift codes...</span>
+                </div>
+
+                <!-- Alliance Gift Codes Manager Entrypoint Button -->
+                <div style="background:linear-gradient(135deg, rgba(236,72,153,0.12), rgba(217,70,239,0.08)); border:1px solid rgba(236,72,153,0.3); border-radius:10px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                  <div>
+                    <div style="font-weight:bold; font-size:13.5px; color:#f472b6; display:flex; align-items:center; gap:6px;">
+                      🎁 Alliance Gift Codes Manager
+                    </div>
+                    <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
+                      View active/expired code history, test codes live, review alliance claim totals, or manually add promotional codes.
+                    </div>
+                  </div>
+                  <button onclick="window.openAllianceGiftCodesManager()" style="background:linear-gradient(135deg, #ec4899, #d946ef); color:#fff; border:none; padding:9px 18px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 12px rgba(236,72,153,0.35); transition:0.2s;">
+                    🎁 Open Gift Codes Manager ➔
+                  </button>
                 </div>
               </div>
 
@@ -16335,26 +16372,25 @@ const views = {
               </div>
 
             </div>
-          </div>
+            <!-- End botsHubMainContainer -->
 
-
-
-
-          </div>
-
-          <!-- Tab: Gift Codes Manager -->
-          <div id="tab-giftcodes" class="admin-tab-content" style="display:none;">
-            <div style="background:var(--bg-main); padding:20px; border-radius:14px; border:1px solid rgba(236,72,153,0.35); margin-bottom:20px;">
+            <!-- Alliance Gift Codes Manager Sub-View (with Back Button) -->
+            <div id="allianceGiftCodesManagerContainer" style="display:none; background:var(--bg-main); padding:20px; border-radius:14px; border:1px solid rgba(236,72,153,0.35); margin-bottom:20px; animation: fadeIn 0.3s ease;">
               
-              <!-- Top Header -->
-              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:18px;">
-                <div style="display:flex; align-items:center; gap:12px;">
-                  <div style="width:44px; height:44px; border-radius:12px; background:linear-gradient(135deg, #ec4899, #d946ef); display:flex; align-items:center; justify-content:center; font-size:22px; box-shadow:0 4px 14px rgba(236,72,153,0.35); flex-shrink:0;">
-                    🎁
-                  </div>
-                  <div>
-                    <h3 style="margin:0; color:#f472b6; font-size:18px; font-weight:800;">Alliance Gift Codes Manager</h3>
-                    <p style="margin:2px 0 0 0; font-size:12px; color:var(--text-muted);">Manage active & expired gift codes, track alliance redemption history, and launch mass dispatches.</p>
+              <!-- Top Navigation Header -->
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:18px; border-bottom:1px solid rgba(236,72,153,0.3); padding-bottom:14px;">
+                <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                  <button onclick="window.backToBotsHub()" style="background:var(--card-bg); border:1px solid var(--border); color:var(--text-main); padding:8px 14px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13px; display:inline-flex; align-items:center; gap:6px; transition:0.2s;">
+                    ⬅️ Back to Bots
+                  </button>
+                  <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="width:38px; height:38px; border-radius:10px; background:linear-gradient(135deg, #ec4899, #d946ef); display:flex; align-items:center; justify-content:center; font-size:18px; box-shadow:0 4px 14px rgba(236,72,153,0.35); flex-shrink:0;">
+                      🎁
+                    </div>
+                    <div>
+                      <h3 style="margin:0; color:#f472b6; font-size:18px; font-weight:800;">Alliance Gift Codes Manager</h3>
+                      <p style="margin:2px 0 0 0; font-size:12px; color:var(--text-muted);">Manage active & expired gift codes, track alliance redemption history, and launch mass dispatches.</p>
+                    </div>
                   </div>
                 </div>
                 
@@ -16369,56 +16405,6 @@ const views = {
                   <button id="btnTestAllCodes" onclick="window.testAllGiftCodesLive(this)" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); padding:9px 14px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.2s;">
                     🧪 Test All Live
                   </button>
-                </div>
-              </div>
-
-              <!-- Auto Bot Status & Telemetry Strip -->
-              <div id="gcBotLiveStatusCard" style="background:linear-gradient(135deg, rgba(15,23,42,0.9), rgba(30,41,59,0.85)); border:1px solid rgba(16,185,129,0.35); border-radius:14px; padding:16px; margin-bottom:20px; box-shadow:0 8px 24px rgba(0,0,0,0.2);">
-                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:10px;">
-                  <div style="display:flex; align-items:center; gap:10px;">
-                    <div style="width:36px; height:36px; border-radius:10px; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.4); display:flex; align-items:center; justify-content:center; font-size:18px;">
-                      🤖
-                    </div>
-                    <div>
-                      <div style="font-weight:bold; font-size:14px; color:#fff; display:flex; align-items:center; gap:8px;">
-                        <span>Auto Gift Code Bot Daemon</span>
-                        <span id="gcBotStatusPill" style="background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold; display:inline-flex; align-items:center; gap:4px;">
-                          🟢 ACTIVE & MONITORING
-                        </span>
-                      </div>
-                      <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
-                        Autonomous 24/7 Engine (WosRewards, GamsGo, DotGG, ProGameGuides, PocketGamer)
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                    <button id="btnTriggerManualMaint" onclick="window.runNightlyMaintenanceSweep(this)" style="background:linear-gradient(135deg, #8b5cf6, #6d28d9); color:#fff; border:none; padding:7px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:5px; box-shadow:0 2px 8px rgba(139,92,246,0.3);">
-                      🌙 Run Maintenance Now
-                    </button>
-                    <button id="btnTriggerManualSweep" onclick="window.runLiveGiftCodeSweep(this)" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:7px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:5px; box-shadow:0 2px 8px rgba(14,165,233,0.3);">
-                      ▶️ Run Live Sweep Now
-                    </button>
-                  </div>
-                </div>
-
-                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px; font-size:12px;">
-                  <div style="background:rgba(0,0,0,0.25); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.04);">
-                    <div style="color:var(--text-muted); font-size:11px; text-transform:uppercase; font-weight:bold;">🕒 Last Sweep</div>
-                    <div id="gcBotLastSweepTime" style="color:#fff; font-weight:bold; margin-top:2px;">Just now</div>
-                  </div>
-                  <div style="background:rgba(0,0,0,0.25); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.04);">
-                    <div style="color:var(--text-muted); font-size:11px; text-transform:uppercase; font-weight:bold;">⏳ Next Scheduled Sweep</div>
-                    <div id="gcBotNextSweepTime" style="color:#38bdf8; font-weight:bold; margin-top:2px;">In ~45 mins</div>
-                  </div>
-                  <div style="background:rgba(0,0,0,0.25); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.04);">
-                    <div style="color:var(--text-muted); font-size:11px; text-transform:uppercase; font-weight:bold;">🌐 Monitored Sources</div>
-                    <div style="color:#10b981; font-weight:bold; margin-top:2px;">5 Feeds Online</div>
-                  </div>
-                </div>
-
-                <div id="gcBotRecentLogBox" style="margin-top:10px; background:rgba(0,0,0,0.35); padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.04); font-family:monospace; font-size:11.5px; color:#cbd5e1;">
-                  📡 <strong>Bot Log:</strong> <span id="gcBotRecentLogText">Monitoring web feeds for newly released Whiteout Survival gift codes...</span>
                 </div>
               </div>
 
@@ -16468,6 +16454,8 @@ const views = {
               </div>
 
             </div>
+            <!-- End allianceGiftCodesManagerContainer -->
+
           </div>
 
             <!-- Tab: In-Dev (Projects & Feature Lab) -->
@@ -17184,11 +17172,14 @@ const views = {
             window.loadFrostClanData();
           }
           if (tabKey === 'tab-bots') {
+            if (window.backToBotsHub) window.backToBotsHub();
             if (window.listenToBotTelemetry) window.listenToBotTelemetry();
             if (window.listenToMaintenanceTelemetry) window.listenToMaintenanceTelemetry();
           }
           if (tabKey === 'tab-giftcodes') {
-            window.loadGiftCodesManagerData();
+            const botsBtn = document.querySelector('.admin-tab-btn[data-tab="tab-bots"]');
+            if (botsBtn) botsBtn.click();
+            if (window.openAllianceGiftCodesManager) window.openAllianceGiftCodesManager();
           }
           if (tabKey === 'tab-system') {
             if (window.refreshSystemStats) setTimeout(window.refreshSystemStats, 100);
@@ -17201,6 +17192,12 @@ const views = {
 
       // Automatically open requested targetTab (or default to tab-tools)
       setTimeout(() => {
+          if (targetTab === 'tab-giftcodes') {
+              const botsTabBtn = document.querySelector('.admin-tab-btn[data-tab="tab-bots"]');
+              if (botsTabBtn) botsTabBtn.click();
+              if (window.openAllianceGiftCodesManager) window.openAllianceGiftCodesManager();
+              return;
+          }
           const targetTabBtn = document.querySelector(`.admin-tab-btn[data-tab="${targetTab}"]`);
           if (targetTabBtn) {
               targetTabBtn.click();
