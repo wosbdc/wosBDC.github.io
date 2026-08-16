@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.7.2] - 2026-08-16
+- Streamlined Actions Dropdown Menu: Replaced cluttered rows of 5–7 inline action buttons in the Admin Member Directory (`#tab-users`) with a single, sleek `⚡ Actions ▾` dropdown button for every player row.
+- Grouped & Categorized Player Operations: Cleanly organized options into View Profile, Edit Furnace Level, Repair Game ID, Manage Linked Alts (owner-only), Staff Permissions (R4/R5), Delete Custom Avatar, and Delete Member / Remove from Roster.
+- Auto-Close & Overflow Protection: Integrated outside-click auto-close and enhanced table container padding so dropdown menus never get clipped on any screen size.
+
 ## [2.7.1] - 2026-08-16
 - Strict Alt Account Privacy Lockdown: Enforced complete owner-only privacy across all public Player Lookup cards, modal profile views, and live statistics dashboards. The "🔗 Linked Alt Accounts" section is now exclusively rendered when the account owner is logged in.
 - Admin Users Hub Alt Privacy: Restricted alt character sub-rows, linked alt badges, and alt management action buttons in the Admin Member Directory (`#tab-users`) so that other admins cannot view or inspect another user's linked alts.

@@ -1,9 +1,9 @@
 {
-  "version": "2.7.1",
+  "version": "2.7.2",
   "releaseDate": "2026-08-16",
-  "title": "Strict Alt Account Privacy Lockdown",
+  "title": "Streamlined Actions Dropdown for Member Management",
   "notes": [
-    "Enforced strict privacy lockdown for linked alt accounts across all public profile cards and lookup views - only the account owner when logged in can view their linked alts.",
-    "Restricted alt character sub-rows, badges, and management actions in the Admin Users Hub so that each user's alts remain completely private and hidden from other admins."
+    "Replaced crowded rows of inline action buttons in the Member Management directory with a single, sleek 'Actions ▾' dropdown menu per player.",
+    "Categorized management options into Profile View, Furnace Level Editing, Game ID Repair, Alt Management, Staff Role Permissions, and Danger Zone actions."
   ]
 }

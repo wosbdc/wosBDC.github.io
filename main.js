@@ -15210,6 +15210,33 @@ const views = {
     // Backward-compatibility alias
     window.setAdminUserFilter = (f, btn) => window.setAdminUserPopulationTab(f, btn);
 
+    window.closeAllUserActionMenus = () => {
+        document.querySelectorAll('.actions-dropdown-content').forEach(m => m.style.display = 'none');
+    };
+
+    window.toggleUserActionsMenu = (menuId, e) => {
+        if (e) {
+            e.stopPropagation();
+            if (e.preventDefault) e.preventDefault();
+        }
+        const menu = document.getElementById(menuId);
+        if (!menu) return;
+        const isCurrentlyOpen = menu.style.display === 'block';
+        window.closeAllUserActionMenus();
+        if (!isCurrentlyOpen) {
+            menu.style.display = 'block';
+        }
+    };
+
+    if (!window._userActionsClickListenerAdded && typeof document !== 'undefined') {
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest || !e.target.closest('.user-actions-container')) {
+                window.closeAllUserActionMenus();
+            }
+        });
+        window._userActionsClickListenerAdded = true;
+    }
+
     window.filterAdminUsersList = () => {
         const searchVal = (document.getElementById('adminUserSearchInput')?.value || '').toLowerCase().trim();
         const activeTab = window.currentAdminUserPopulationTab || 'all';
@@ -16769,7 +16796,7 @@ const views = {
               `;
             })()}
 
-            <div style="overflow-x:auto;">
+            <div style="overflow-x:auto; min-height:300px; padding-bottom:80px;">
               <table style="width:100%; border-collapse:collapse; text-align:left;">
                 <thead>
                   <tr style="border-bottom:2px solid var(--border); color:var(--text-muted); font-size:12px; text-transform:uppercase;">
@@ -16946,14 +16973,46 @@ const views = {
             </td>
 
             <td style="padding:12px 10px; text-align:right;">
-              <div style="display:flex; gap:6px; justify-content:flex-end; flex-wrap:wrap;">
-                <button onclick="views.roster(); setTimeout(() => { const i=document.getElementById('playerLookupSelect'); if(i){ i.value='${escapeHTML(cName)}'; i.dispatchEvent(new Event('input')); const f=document.querySelector('.custom-dropdown-item'); if(f) f.click(); } }, 150);" style="background:rgba(14,165,233,0.15); color:#38bdf8; border:1px solid rgba(14,165,233,0.35); padding:5px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;" title="View full member profile">👁️ Profile</button>
-                <button onclick="window.openAdminEditFurnaceModal('${escapeHTML(cName)}', '${uGidStr}', '${flVal || ''}')" style="background:rgba(249,115,22,0.15); border:1px solid rgba(249,115,22,0.4); color:#f97316; padding:5px 10px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;" title="Edit Furnace Level">🔥 Level</button>
-                <button onclick="window.openAdminRepairUserModal('${uid}')" style="background:rgba(168,85,247,0.15); color:#c084fc; border:1px solid rgba(168,85,247,0.35); padding:5px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;" title="Repair primary Game ID or promote an alt">🛠️ Repair ID</button>
-                ${isViewerOwnerOfAccount ? `<button onclick="window.adminManageAltsPrompt('${uid}')" style="background:rgba(59,130,246,0.12); color:#3b82f6; border:1px solid rgba(59,130,246,0.3); padding:5px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">🔗 Alts</button>` : ''}
-                ${isAdminUser && u.gameId != 318843189 ? `<button onclick="window.revokeAdmin('${u.gameId}')" style="background:rgba(234,179,8,0.12); color:#eab308; border:1px solid rgba(234,179,8,0.3); padding:5px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">👑 Revoke Staff</button>` : (!isAdminUser && u.gameId ? `<button onclick="window.grantAdmin('${u.gameId}', 'R4')" style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:5px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">+ Staff</button>` : '')}
-                ${hasAvatar ? `<button class="delete-avatar-btn" data-id="${u.gameId}" style="background:transparent; border:1px solid var(--danger); color:var(--danger); padding:5px 10px; border-radius:6px; font-size:12px; cursor:pointer;">Delete Avatar</button>` : ``}
-                <button onclick="window.adminDeleteUserRow('${uid}', '${cName.replace(/'/g, "\\'")}')" style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); color:var(--danger); padding:5px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">🗑️ Delete</button>
+              <div class="user-actions-container" style="position:relative; display:inline-block; text-align:left;">
+                <button onclick="window.toggleUserActionsMenu('actions-menu-${uid.replace(/[^a-zA-Z0-9_-]/g, '_')}', event)" 
+                        style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); padding:6px 12px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:all 0.15s ease;" 
+                        onmouseover="this.style.background='rgba(56,189,248,0.15)'; this.style.borderColor='rgba(56,189,248,0.4)';" 
+                        onmouseout="this.style.background='rgba(255,255,255,0.06)'; this.style.borderColor='var(--border)';"
+                        title="Open Actions Menu">
+                  ⚡ Actions <span style="font-size:9px; opacity:0.7;">▼</span>
+                </button>
+                <div id="actions-menu-${uid.replace(/[^a-zA-Z0-9_-]/g, '_')}" class="actions-dropdown-content" style="display:none; position:absolute; right:0; top:calc(100% + 4px); background:#0f172a; border:1px solid rgba(255,255,255,0.15); border-radius:10px; box-shadow:0 10px 25px -5px rgba(0,0,0,0.7), 0 0 15px rgba(56,189,248,0.1); min-width:205px; padding:6px; z-index:9999; backdrop-filter:blur(12px);">
+                  <div onclick="window.closeAllUserActionMenus(); views.roster(); setTimeout(() => { const i=document.getElementById('playerLookupSelect'); if(i){ i.value='${escapeHTML(cName)}'; i.dispatchEvent(new Event('input')); const f=document.querySelector('.custom-dropdown-item'); if(f) f.click(); } }, 150);" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:var(--text-main); cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(56,189,248,0.15)'; this.style.color='#38bdf8';" onmouseout="this.style.background='transparent'; this.style.color='var(--text-main)';">
+                    <span style="font-size:14px;">👁️</span> View Profile
+                  </div>
+                  <div onclick="window.closeAllUserActionMenus(); window.openAdminEditFurnaceModal('${escapeHTML(cName)}', '${uGidStr}', '${flVal || ''}');" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:var(--text-main); cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(249,115,22,0.15)'; this.style.color='#f97316';" onmouseout="this.style.background='transparent'; this.style.color='var(--text-main)';">
+                    <span style="font-size:14px;">🔥</span> Edit Furnace Level
+                  </div>
+                  <div onclick="window.closeAllUserActionMenus(); window.openAdminRepairUserModal('${uid}');" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:var(--text-main); cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(168,85,247,0.15)'; this.style.color='#c084fc';" onmouseout="this.style.background='transparent'; this.style.color='var(--text-main)';">
+                    <span style="font-size:14px;">🛠️</span> Repair Game ID
+                  </div>
+                  ${isViewerOwnerOfAccount ? `
+                  <div onclick="window.closeAllUserActionMenus(); window.adminManageAltsPrompt('${uid}');" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:var(--text-main); cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(59,130,246,0.15)'; this.style.color='#3b82f6';" onmouseout="this.style.background='transparent'; this.style.color='var(--text-main)';">
+                    <span style="font-size:14px;">🔗</span> Manage Linked Alts
+                  </div>` : ''}
+                  ${(isAdminUser && u.gameId != 318843189) ? `
+                  <div style="height:1px; background:rgba(255,255,255,0.08); margin:4px 0;"></div>
+                  <div onclick="window.closeAllUserActionMenus(); window.revokeAdmin('${u.gameId}');" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:#eab308; cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(234,179,8,0.15)';" onmouseout="this.style.background='transparent';">
+                    <span style="font-size:14px;">👑</span> Revoke Staff Role
+                  </div>` : (!isAdminUser && u.gameId ? `
+                  <div style="height:1px; background:rgba(255,255,255,0.08); margin:4px 0;"></div>
+                  <div onclick="window.closeAllUserActionMenus(); window.grantAdmin('${u.gameId}', 'R4');" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:#10b981; cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(16,185,129,0.15)';" onmouseout="this.style.background='transparent';">
+                    <span style="font-size:14px;">👑</span> Grant Staff Role (R4)
+                  </div>` : '')}
+                  ${hasAvatar ? `
+                  <div class="delete-avatar-btn" data-id="${u.gameId}" onclick="window.closeAllUserActionMenus();" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:var(--danger); cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(239,68,68,0.15)';" onmouseout="this.style.background='transparent';">
+                    <span style="font-size:14px;">🖼️</span> Delete Custom Avatar
+                  </div>` : ''}
+                  <div style="height:1px; background:rgba(255,255,255,0.08); margin:4px 0;"></div>
+                  <div onclick="window.closeAllUserActionMenus(); window.adminDeleteUserRow('${uid}', '${cName.replace(/'/g, "\\'")}');" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:#ef4444; cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(239,68,68,0.18)';" onmouseout="this.style.background='transparent';">
+                    <span style="font-size:14px;">🗑️</span> Delete Member
+                  </div>
+                </div>
               </div>
             </td>
 
@@ -17041,10 +17100,25 @@ const views = {
                 </td>
 
                 <td style="padding:10px 10px; text-align:right;">
-                  <div style="display:flex; gap:6px; justify-content:flex-end; flex-wrap:wrap;">
-                    <button onclick="views.roster(); setTimeout(() => { const i=document.getElementById('playerLookupSelect'); if(i){ i.value='${escapeHTML(altName)}'; i.dispatchEvent(new Event('input')); const f=document.querySelector('.custom-dropdown-item'); if(f) f.click(); } }, 150);" style="background:rgba(14,165,233,0.12); color:#38bdf8; border:1px solid rgba(14,165,233,0.3); padding:4px 8px; border-radius:6px; font-size:11.5px; font-weight:bold; cursor:pointer;" title="View alt profile">👁️ Profile</button>
-                    <button onclick="window.openAdminEditFurnaceModal('${escapeHTML(altName)}', '${altGidStr}', '${altFurnace}')" style="background:rgba(249,115,22,0.12); border:1px solid rgba(249,115,22,0.35); color:#f97316; padding:4px 8px; border-radius:6px; font-weight:bold; font-size:11.5px; cursor:pointer;" title="Edit Furnace Level">🔥 Level</button>
-                    <button onclick="window.adminManageAltsPrompt('${uid}')" style="background:rgba(59,130,246,0.12); color:#3b82f6; border:1px solid rgba(59,130,246,0.3); padding:4px 8px; border-radius:6px; font-size:11.5px; font-weight:bold; cursor:pointer;">🔗 Manage</button>
+                  <div class="user-actions-container" style="position:relative; display:inline-block; text-align:left;">
+                    <button onclick="window.toggleUserActionsMenu('actions-menu-alt-${altGidStr}', event)" 
+                            style="background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.25); color:#38bdf8; padding:5px 10px; border-radius:8px; font-size:11.5px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:5px; transition:all 0.15s ease;" 
+                            onmouseover="this.style.background='rgba(56,189,248,0.18)'; this.style.borderColor='rgba(56,189,248,0.5)';" 
+                            onmouseout="this.style.background='rgba(56,189,248,0.08)'; this.style.borderColor='rgba(56,189,248,0.25)';"
+                            title="Open Alt Options">
+                      ⚡ Actions <span style="font-size:9px; opacity:0.7;">▼</span>
+                    </button>
+                    <div id="actions-menu-alt-${altGidStr}" class="actions-dropdown-content" style="display:none; position:absolute; right:0; top:calc(100% + 4px); background:#0f172a; border:1px solid rgba(255,255,255,0.15); border-radius:10px; box-shadow:0 10px 25px -5px rgba(0,0,0,0.7), 0 0 15px rgba(56,189,248,0.1); min-width:190px; padding:6px; z-index:9999; backdrop-filter:blur(12px);">
+                      <div onclick="window.closeAllUserActionMenus(); views.roster(); setTimeout(() => { const i=document.getElementById('playerLookupSelect'); if(i){ i.value='${escapeHTML(altName)}'; i.dispatchEvent(new Event('input')); const f=document.querySelector('.custom-dropdown-item'); if(f) f.click(); } }, 150);" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:var(--text-main); cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(56,189,248,0.15)'; this.style.color='#38bdf8';" onmouseout="this.style.background='transparent'; this.style.color='var(--text-main)';">
+                        <span style="font-size:14px;">👁️</span> View Profile
+                      </div>
+                      <div onclick="window.closeAllUserActionMenus(); window.openAdminEditFurnaceModal('${escapeHTML(altName)}', '${altGidStr}', '${altFurnace}');" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:var(--text-main); cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(249,115,22,0.15)'; this.style.color='#f97316';" onmouseout="this.style.background='transparent'; this.style.color='var(--text-main)';">
+                        <span style="font-size:14px;">🔥</span> Edit Furnace Level
+                      </div>
+                      <div onclick="window.closeAllUserActionMenus(); window.adminManageAltsPrompt('${uid}');" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:var(--text-main); cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(59,130,246,0.15)'; this.style.color='#3b82f6';" onmouseout="this.style.background='transparent'; this.style.color='var(--text-main)';">
+                        <span style="font-size:14px;">🔗</span> Manage Linked Alts
+                      </div>
+                    </div>
                   </div>
                 </td>
 
@@ -17128,11 +17202,28 @@ const views = {
               </td>
 
               <td style="padding:12px 10px; text-align:right;">
-                <div style="display:flex; gap:6px; justify-content:flex-end; flex-wrap:wrap;">
-                  <button onclick="window.copyPlayerClaimLink('${escapeHTML(uGid)}', '${escapeHTML(uName.replace(/'/g, "\\'"))}')" style="background:rgba(239,68,68,0.12); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:5px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;" title="Copy claim invite link">📋 Copy Claim Link</button>
-                  <button onclick="views.roster(); setTimeout(() => { const i=document.getElementById('playerLookupSelect'); if(i){ i.value='${escapeHTML(uName.replace(/'/g, "\\'"))}'; i.dispatchEvent(new Event('input')); const f=document.querySelector('.custom-dropdown-item'); if(f) f.click(); } }, 150);" style="background:rgba(14,165,233,0.12); color:#38bdf8; border:1px solid rgba(14,165,233,0.3); padding:5px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;" title="View profile">👁️ Profile</button>
-                  <button onclick="window.openAdminEditFurnaceModal('${escapeHTML(uName)}', '${uGid}', '${flVal || ''}')" style="background:rgba(249,115,22,0.12); border:1px solid rgba(249,115,22,0.35); color:#f97316; padding:5px 10px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;" title="Edit Furnace Level">🔥 Level</button>
-                  <button onclick="window.openEditRosterMemberModal('${escapeHTML(uName.replace(/'/g, "\\'"))}')" style="background:rgba(59,130,246,0.12); color:#3b82f6; border:1px solid rgba(59,130,246,0.3); padding:5px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">✏️ Edit Roster</button>
+                <div class="user-actions-container" style="position:relative; display:inline-block; text-align:left;">
+                  <button onclick="window.toggleUserActionsMenu('actions-menu-unclaimed-${(uGid || uName).replace(/[^a-zA-Z0-9_-]/g, '_')}', event)" 
+                          style="background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.25); color:#ef4444; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:all 0.15s ease;" 
+                          onmouseover="this.style.background='rgba(239,68,68,0.18)'; this.style.borderColor='rgba(239,68,68,0.5)';" 
+                          onmouseout="this.style.background='rgba(239,68,68,0.08)'; this.style.borderColor='rgba(239,68,68,0.25)';"
+                          title="Open Unclaimed Member Options">
+                    ⚡ Actions <span style="font-size:9px; opacity:0.7;">▼</span>
+                  </button>
+                  <div id="actions-menu-unclaimed-${(uGid || uName).replace(/[^a-zA-Z0-9_-]/g, '_')}" class="actions-dropdown-content" style="display:none; position:absolute; right:0; top:calc(100% + 4px); background:#0f172a; border:1px solid rgba(255,255,255,0.15); border-radius:10px; box-shadow:0 10px 25px -5px rgba(0,0,0,0.7), 0 0 15px rgba(239,68,68,0.1); min-width:205px; padding:6px; z-index:9999; backdrop-filter:blur(12px);">
+                    <div onclick="window.closeAllUserActionMenus(); window.copyPlayerClaimLink('${escapeHTML(uGid)}', '${escapeHTML(uName.replace(/'/g, "\\'"))}');" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:#10b981; cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(16,185,129,0.15)';" onmouseout="this.style.background='transparent';">
+                      <span style="font-size:14px;">📋</span> Copy Claim Link
+                    </div>
+                    <div onclick="window.closeAllUserActionMenus(); views.roster(); setTimeout(() => { const i=document.getElementById('playerLookupSelect'); if(i){ i.value='${escapeHTML(uName.replace(/'/g, "\\'"))}'; i.dispatchEvent(new Event('input')); const f=document.querySelector('.custom-dropdown-item'); if(f) f.click(); } }, 150);" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:var(--text-main); cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(56,189,248,0.15)'; this.style.color='#38bdf8';" onmouseout="this.style.background='transparent'; this.style.color='var(--text-main)';">
+                      <span style="font-size:14px;">👁️</span> View Profile
+                    </div>
+                    <div onclick="window.closeAllUserActionMenus(); window.openAdminEditFurnaceModal('${escapeHTML(uName)}', '${uGid}', '${flVal || ''}');" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:var(--text-main); cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(249,115,22,0.15)'; this.style.color='#f97316';" onmouseout="this.style.background='transparent'; this.style.color='var(--text-main)';">
+                      <span style="font-size:14px;">🔥</span> Edit Furnace Level
+                    </div>
+                    <div onclick="window.closeAllUserActionMenus(); window.openEditRosterMemberModal('${escapeHTML(uName.replace(/'/g, "\\'"))}');" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:#3b82f6; cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(59,130,246,0.15)';" onmouseout="this.style.background='transparent';">
+                      <span style="font-size:14px;">✏️</span> Edit Roster Member
+                    </div>
+                  </div>
                 </div>
               </td>
 
