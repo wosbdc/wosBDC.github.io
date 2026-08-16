@@ -13781,11 +13781,14 @@ const views = {
       if (profile && profile.department) {
           const deptArray = profile.department.split(/\n|,/).map(d => d.trim()).filter(d => d.length > 0);
           if (deptArray.length > 0) {
-              const tagsHtml = deptArray.map(d => `<span style="display:inline-block; background:rgba(6,182,212,0.15); color:var(--accent); border:1px solid rgba(6,182,212,0.3); padding:4px 10px; border-radius:12px; font-size:11px; font-weight:bold;">${window.escapeHTML(d)}</span>`).join('');
+              const tagsHtml = deptArray.map(d => `<span style="display:inline-flex; align-items:center; background:rgba(6,182,212,0.15); color:var(--accent); border:1px solid rgba(6,182,212,0.3); padding:5px 11px; border-radius:12px; font-size:11.5px; font-weight:bold; line-height:1.3; word-break:break-word; max-width:100%; box-sizing:border-box; box-shadow:0 2px 6px rgba(0,0,0,0.15);">${window.escapeHTML(d)}</span>`).join('');
               deptHtml = `
-              <div style="margin-top:12px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.05); text-align:left;">
-                  <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">Managed Events & Roles</div>
-                  <div style="display:flex; flex-wrap:wrap; gap:6px;">
+              <div style="margin-top:14px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.08); text-align:left; width:100%; box-sizing:border-box;">
+                  <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; font-weight:bold; display:flex; justify-content:space-between; align-items:center;">
+                    <span>🛡️ Managed Events & Roles</span>
+                    <span style="background:rgba(6,182,212,0.2); color:var(--accent); padding:1px 6px; border-radius:8px; font-size:10px;">${deptArray.length}</span>
+                  </div>
+                  <div style="display:flex; flex-wrap:wrap; gap:6px; width:100%;">
                       ${tagsHtml}
                   </div>
               </div>`;
@@ -13799,6 +13802,11 @@ const views = {
             <div class="staff-role" style="font-weight:bold; letter-spacing:0.5px; color:var(--accent);">${title}</div>
             ${bioHtml}
             
+            <div class="staff-tap-hint" style="margin-top:10px; font-size:11px; color:var(--text-muted); opacity:0.85; display:flex; align-items:center; justify-content:center; gap:4px;">
+              <span class="staff-tap-hint-expand">👆 Tap for Officer Details & Roles</span>
+              <span class="staff-tap-hint-collapse" style="display:none;">▲ Tap to Collapse</span>
+            </div>
+
             <div class="staff-details">
               <div class="staff-details-row">
                 <span>In-Game ID:</span>
