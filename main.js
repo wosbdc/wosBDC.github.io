@@ -12390,15 +12390,13 @@ window.pushGatekeeperReportToDiscord = async function(btnEl = null, customPayloa
       const recentSignups = sortedUsers.slice(0, 3);
       
       let signupsText = recentSignups.map(u => {
-        const cname = u.name || u.chiefName || "Chief";
-        const flevel = u.furnaceLevel || "FC8";
-        const isVer = (u.centuryToken || u.verified) ? "Verified ✅" : "Enrolled (Pending Sync ⏳)";
+        const cname = u.name || u.chiefName || (u.gameId ? `Chief ${u.gameId}` : "Chief");
         const icon = cname.toLowerCase().includes('brian') ? '👑' : (cname.toLowerCase().includes('thadwarf') ? '⚔️' : '🛡️');
-        return `• ${icon} **${cname}** — Furnace Level ${flevel} (${isVer})`;
+        return `• ${icon} **${cname}**`;
       }).join('\n');
       
       if (!signupsText) {
-        signupsText = "• 👑 **BrianDCox** — Furnace Level FC8 (Verified ✅)\n• ⚔️ **thadwarf** — Furnace Level FC5 (Verified ✅)\n• 🛡️ **Chief 318843189** — Enrolled (Pending Sync ⏳)";
+        signupsText = "• 👑 **BrianDCox**\n• ⚔️ **thadwarf**\n• 🛡️ **Chief 318843189**";
       }
       
       const activeCodes = Object.values(history).filter(c => c && c.status === 'active');
@@ -12557,15 +12555,13 @@ window.openGatekeeperReportEditorModal = async function() {
   const sortedUsers = Object.values(users).filter(u => u && u.name).sort((a,b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
   const recentSignups = sortedUsers.slice(0, 3);
   let signupsText = recentSignups.map(u => {
-    const cname = u.name || u.chiefName || "Chief";
-    const flevel = u.furnaceLevel || "FC8";
-    const isVer = (u.centuryToken || u.verified) ? "Verified ✅" : "Enrolled (Pending Sync ⏳)";
+    const cname = u.name || u.chiefName || (u.gameId ? `Chief ${u.gameId}` : "Chief");
     const icon = cname.toLowerCase().includes('brian') ? '👑' : (cname.toLowerCase().includes('thadwarf') ? '⚔️' : '🛡️');
-    return `• ${icon} **${cname}** — Furnace Level ${flevel} (${isVer})`;
+    return `• ${icon} **${cname}**`;
   }).join('\n');
 
   if (!signupsText) {
-    signupsText = "• 👑 **BrianDCox** — Furnace Level FC8 (Verified ✅)\n• ⚔️ **thadwarf** — Furnace Level FC5 (Verified ✅)\n• 🛡️ **Chief 318843189** — Enrolled (Pending Sync ⏳)";
+    signupsText = "• 👑 **BrianDCox**\n• ⚔️ **thadwarf**\n• 🛡️ **Chief 318843189**";
   }
 
   const activeCodes = Object.values(history).filter(c => c && c.status === 'active');
