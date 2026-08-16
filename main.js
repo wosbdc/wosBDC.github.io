@@ -9469,6 +9469,137 @@ window.formatRelativeTime = (ts) => {
   return new Date(ts).toLocaleDateString([], { month: 'short', day: 'numeric' });
 };
 
+window.getCountdownAlertCategoryMeta = (cat) => {
+  switch (cat) {
+    case 'game_update':
+      return { icon: '🎮', name: 'Game Update & Maintenance', color: '#38bdf8', bg: 'rgba(56,189,248,0.12)', border: 'rgba(56,189,248,0.4)', glow: 'rgba(56,189,248,0.25)' };
+    case 'site_maintenance':
+      return { icon: '🛠️', name: 'Site Maintenance', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.4)', glow: 'rgba(245,158,11,0.25)' };
+    case 'alliance_event':
+      return { icon: '⚔️', name: 'Alliance Event / War', color: '#c084fc', bg: 'rgba(168,85,247,0.12)', border: 'rgba(168,85,247,0.4)', glow: 'rgba(168,85,247,0.25)' };
+    default:
+      return { icon: '📢', name: 'Leadership Announcement', color: '#f472b6', bg: 'rgba(236,72,153,0.12)', border: 'rgba(236,72,153,0.4)', glow: 'rgba(236,72,153,0.25)' };
+  }
+};
+
+window.formatCountdownTimeRemaining = (diffMs) => {
+  if (diffMs <= 0) return '00:00:00';
+  const totalSecs = Math.floor(diffMs / 1000);
+  const hours = Math.floor(totalSecs / 3600);
+  const mins = Math.floor((totalSecs % 3600) / 60);
+  const secs = totalSecs % 60;
+  return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+};
+
+window.getScheduledAlertStatus = (targetMs, endMs, mode = '1hour') => {
+  const now = Date.now();
+  if (!targetMs) return { stage: 'none' };
+  
+  const diffToStart = Number(targetMs) - now;
+  const effectiveEnd = Number(endMs) || (Number(targetMs) + 2 * 60 * 60 * 1000);
+  const diffToEnd = effectiveEnd - now;
+
+  if (diffToStart > 0) {
+    const isFinalHour = diffToStart <= (60 * 60 * 1000);
+    const shouldTickLive = (mode === 'always') || isFinalHour;
+    return {
+      stage: shouldTickLive ? 'countdown' : 'scheduled',
+      isFinalHour,
+      diffToStart,
+      diffToEnd,
+      targetMs: Number(targetMs),
+      endMs: effectiveEnd
+    };
+  } else if (diffToEnd > 0) {
+    return {
+      stage: 'live',
+      isFinalHour: false,
+      diffToStart,
+      diffToEnd,
+      targetMs: Number(targetMs),
+      endMs: effectiveEnd
+    };
+  } else {
+    return {
+      stage: 'ended',
+      isFinalHour: false,
+      diffToStart,
+      diffToEnd,
+      targetMs: Number(targetMs),
+      endMs: effectiveEnd
+    };
+  }
+};
+
+window.startBellCountdownTicker = () => {
+  if (window._bellCountdownInterval) clearInterval(window._bellCountdownInterval);
+  
+  const updateTickers = () => {
+    const els = document.querySelectorAll('.bell-countdown-ticker-el');
+    els.forEach(el => {
+      const targetMs = Number(el.getAttribute('data-target-ts') || '0');
+      const endMs = Number(el.getAttribute('data-end-ts') || '0');
+      const mode = el.getAttribute('data-mode') || '1hour';
+      if (!targetMs) return;
+
+      const status = window.getScheduledAlertStatus(targetMs, endMs, mode);
+      const dateObj = new Date(targetMs);
+      const localTimeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const localDateStr = dateObj.toLocaleDateString([], { month: 'short', day: 'numeric' });
+      const utcHours = String(dateObj.getUTCHours()).padStart(2, '0');
+      const utcMins = String(dateObj.getUTCMinutes()).padStart(2, '0');
+      const utcDisplay = `${utcHours}:${utcMins} UTC`;
+
+      if (status.stage === 'countdown') {
+        const timeStr = window.formatCountdownTimeRemaining(status.diffToStart);
+        el.innerHTML = `
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-family:monospace; font-weight:800; font-size:15px; color:#f59e0b; text-shadow:0 0 10px rgba(245,158,11,0.5); letter-spacing:0.5px;">⏳ STARTS IN: ${timeStr}</span>
+          </div>
+          <div style="font-size:11.5px; color:var(--text-muted); font-family:monospace;">
+            🕒 ${localDateStr}, ${localTimeStr} (${utcDisplay})
+          </div>
+        `;
+      } else if (status.stage === 'live') {
+        const timeStr = window.formatCountdownTimeRemaining(status.diffToEnd);
+        el.innerHTML = `
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-family:monospace; font-weight:800; font-size:15px; color:#10b981; text-shadow:0 0 10px rgba(16,185,129,0.5); letter-spacing:0.5px;">🚨 LIVE NOW (Ends in ${timeStr})</span>
+          </div>
+          <div style="font-size:11.5px; color:#10b981; font-weight:bold; font-family:monospace;">
+            🟢 In Progress
+          </div>
+        `;
+      } else if (status.stage === 'scheduled') {
+        const diffHrs = Math.floor(status.diffToStart / 3600000);
+        const diffMins = Math.floor((status.diffToStart % 3600000) / 60000);
+        const inLabel = diffHrs > 24 ? `in ${Math.floor(diffHrs/24)}d ${diffHrs%24}h` : (diffHrs > 0 ? `in ${diffHrs}h ${diffMins}m` : `in ${diffMins}m`);
+        el.innerHTML = `
+          <div style="font-size:13.5px; font-weight:700; color:#38bdf8; display:flex; align-items:center; gap:6px;">
+            <span>📅 Scheduled: ${localDateStr} at ${localTimeStr}</span>
+            <span style="background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:1px 6px; border-radius:6px; font-size:11px;">${inLabel}</span>
+          </div>
+          <div style="font-size:11.5px; color:var(--text-muted); font-family:monospace;">
+            ${utcDisplay}
+          </div>
+        `;
+      } else if (status.stage === 'ended') {
+        el.innerHTML = `
+          <div style="font-size:12px; font-weight:bold; color:var(--text-muted);">
+            ✅ Event Concluded
+          </div>
+          <div style="font-size:11.5px; color:var(--text-muted); font-family:monospace;">
+            ${localDateStr}, ${localTimeStr}
+          </div>
+        `;
+      }
+    });
+  };
+
+  updateTickers();
+  window._bellCountdownInterval = setInterval(updateTickers, 1000);
+};
+
 window.updateNewMemberBadge = async () => {
   document.querySelectorAll('#settingsBtn .new-member-badge, #adminSidebarBtn .new-member-badge, #newMembersSidebarBtn .new-member-badge, .nav-admin-btn .new-member-badge').forEach(b => b.remove());
 
@@ -9517,16 +9648,29 @@ window.updateNewMemberBadge = async () => {
     staffUnreadCount = recent.filter(m => m.createdMs > lastSeen).length;
   }
 
-  // 4. Check unread leadership broadcast announcements
+  // 4. Check unread leadership broadcast announcements & active countdowns
   let broadcastUnreadCount = 0;
+  let nearestActiveCountdown = null;
+  let liveCountdownCount = 0;
   try {
     const lastSeenBroadcast = Number(localStorage.getItem('last_seen_broadcast_timestamp') || '0');
     const bSnap = await get(ref(db, 'broadcastAlerts'));
     if (bSnap.exists()) {
       const bVal = bSnap.val() || {};
       for (const item of Object.values(bVal)) {
-        if (item && item.timestamp && item.timestamp > lastSeenBroadcast) {
+        if (!item) continue;
+        if (item.timestamp && item.timestamp > lastSeenBroadcast) {
           broadcastUnreadCount++;
+        }
+        if (item.targetTimestamp) {
+          const cStatus = window.getScheduledAlertStatus(item.targetTimestamp, item.endTimestamp, item.countdownMode);
+          if (cStatus.stage === 'countdown' && cStatus.isFinalHour) {
+            if (!nearestActiveCountdown || cStatus.diffToStart < nearestActiveCountdown.diffToStart) {
+              nearestActiveCountdown = cStatus;
+            }
+          } else if (cStatus.stage === 'live') {
+            liveCountdownCount++;
+          }
         }
       }
     }
@@ -9537,12 +9681,48 @@ window.updateNewMemberBadge = async () => {
   const totalAlerts = mainAlert + (altAlertsCount > 0 ? 1 : 0) + staffUnreadCount + broadcastUnreadCount;
 
   if (mobileAlertsBtn) {
-    mobileAlertsBtn.innerHTML = totalAlerts > 0 ? `🔔 Alerts <span style="background:#ef4444; color:#fff; font-size:10px; font-weight:bold; padding:1px 6px; border-radius:10px; margin-left:4px;">${totalAlerts}</span>` : '🔔 Alerts';
+    if (liveCountdownCount > 0) {
+      mobileAlertsBtn.innerHTML = `🔔 Alerts <span style="background:#10b981; color:#fff; font-size:10px; font-weight:bold; padding:1px 6px; border-radius:10px; margin-left:4px; animation:pulse 2s infinite;">🟢 LIVE</span>`;
+    } else if (nearestActiveCountdown) {
+      const minsLeft = Math.max(1, Math.ceil(nearestActiveCountdown.diffToStart / 60000));
+      mobileAlertsBtn.innerHTML = `🔔 Alerts <span style="background:#f59e0b; color:#fff; font-size:10px; font-weight:bold; padding:1px 6px; border-radius:10px; margin-left:4px; animation:pulse 2s infinite;">⏳ ${minsLeft}m</span>`;
+    } else {
+      mobileAlertsBtn.innerHTML = totalAlerts > 0 ? `🔔 Alerts <span style="background:#ef4444; color:#fff; font-size:10px; font-weight:bold; padding:1px 6px; border-radius:10px; margin-left:4px;">${totalAlerts}</span>` : '🔔 Alerts';
+    }
   }
 
   if (adminAlertsNavBtn) {
     let badge = adminAlertsNavBtn.querySelector('.new-member-badge');
-    if (totalAlerts > 0) {
+    if (liveCountdownCount > 0) {
+      adminAlertsNavBtn.style.position = 'relative';
+      adminAlertsNavBtn.style.overflow = 'visible';
+      adminAlertsNavBtn.style.background = 'rgba(16,185,129,0.2)';
+      adminAlertsNavBtn.style.borderColor = '#10b981';
+      adminAlertsNavBtn.style.color = '#10b981';
+      adminAlertsNavBtn.style.animation = 'pulse 1.5s infinite';
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'new-member-badge';
+        adminAlertsNavBtn.appendChild(badge);
+      }
+      badge.style.cssText = 'position:absolute; top:-7px; right:-8px; height:18px; background:#10b981; color:#fff; font-size:9.5px; font-weight:800; padding:0 6px; border-radius:9px; box-shadow:0 0 10px rgba(16,185,129,0.8); z-index:10; pointer-events:none; display:flex; align-items:center; justify-content:center; line-height:1; letter-spacing:0.5px;';
+      badge.textContent = `🟢 LIVE`;
+    } else if (nearestActiveCountdown) {
+      const minsLeft = Math.max(1, Math.ceil(nearestActiveCountdown.diffToStart / 60000));
+      adminAlertsNavBtn.style.position = 'relative';
+      adminAlertsNavBtn.style.overflow = 'visible';
+      adminAlertsNavBtn.style.background = 'rgba(245,158,11,0.2)';
+      adminAlertsNavBtn.style.borderColor = '#f59e0b';
+      adminAlertsNavBtn.style.color = '#f59e0b';
+      adminAlertsNavBtn.style.animation = 'pulse 2s infinite';
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'new-member-badge';
+        adminAlertsNavBtn.appendChild(badge);
+      }
+      badge.style.cssText = 'position:absolute; top:-7px; right:-8px; height:18px; background:#f59e0b; color:#fff; font-size:10px; font-weight:800; padding:0 5px; border-radius:9px; box-shadow:0 0 10px rgba(245,158,11,0.8); z-index:10; pointer-events:none; display:flex; align-items:center; justify-content:center; line-height:1;';
+      badge.textContent = `⏳ ${minsLeft}m`;
+    } else if (totalAlerts > 0) {
       const isCritical = (tokenStatus.status === 'expired' || hasExpiredAlt);
       const isWarning = (tokenStatus.status === 'expiring_soon' || tokenStatus.status === 'unverified' || hasExpiringAlt);
       const alertColor = isCritical ? '#ef4444' : (isWarning ? '#f59e0b' : '#ec4899');
@@ -9557,9 +9737,9 @@ window.updateNewMemberBadge = async () => {
       if (!badge) {
         badge = document.createElement('span');
         badge.className = 'new-member-badge';
-        badge.style.cssText = 'position:absolute; top:-6px; right:-6px; min-width:18px; height:18px; background:#ef4444; color:#fff; font-size:10px; font-weight:bold; padding:0 4px; border-radius:9px; box-shadow:0 0 8px rgba(239,68,68,0.7); z-index:10; pointer-events:none; display:flex; align-items:center; justify-content:center; line-height:1;';
         adminAlertsNavBtn.appendChild(badge);
       }
+      badge.style.cssText = 'position:absolute; top:-6px; right:-6px; min-width:18px; height:18px; background:#ef4444; color:#fff; font-size:10px; font-weight:bold; padding:0 4px; border-radius:9px; box-shadow:0 0 8px rgba(239,68,68,0.7); z-index:10; pointer-events:none; display:flex; align-items:center; justify-content:center; line-height:1;';
       badge.textContent = `${totalAlerts}`;
     } else {
       if (badge) badge.remove();
@@ -9607,6 +9787,9 @@ window.openAllianceAlertsModal = async () => {
     let broadcastsList = [];
     const lastSeenBroadcast = Number(localStorage.getItem('last_seen_broadcast_timestamp') || '0');
     let unreadBroadcastCount = 0;
+    let countdownAlerts = [];
+    let standardBroadcasts = [];
+
     try {
       const bSnap = await get(ref(db, 'broadcastAlerts'));
       if (bSnap.exists()) {
@@ -9616,8 +9799,23 @@ window.openAllianceAlertsModal = async () => {
           id: v.id || k,
           key: k
         })).filter(Boolean);
+        
         broadcastsList.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
         unreadBroadcastCount = broadcastsList.filter(b => b.timestamp && b.timestamp > lastSeenBroadcast).length;
+
+        const now = Date.now();
+        broadcastsList.forEach(b => {
+          if (b.targetTimestamp) {
+            const effectiveEnd = Number(b.endTimestamp) || (Number(b.targetTimestamp) + 2 * 3600000);
+            if (effectiveEnd > (now - 12 * 3600000)) {
+              countdownAlerts.push(b);
+              return;
+            }
+          }
+          standardBroadcasts.push(b);
+        });
+
+        countdownAlerts.sort((a, b) => Number(a.targetTimestamp) - Number(b.targetTimestamp));
       }
     } catch(err) {
       console.warn("Failed to load broadcasts:", err);
@@ -9661,6 +9859,9 @@ window.openAllianceAlertsModal = async () => {
                 🔄 Re-sync Token
               </button>
               ${isStaff ? `
+                <button onclick="window.openCreateCountdownAlertModal(); window.closeHeaderPushDropdown();" style="width:100%; text-align:left; background:transparent; border:none; color:#a855f7; padding:7px 9px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.15s;" onmouseover="this.style.background='rgba(168,85,247,0.15)'" onmouseout="this.style.background='transparent'">
+                  ➕ New Countdown Alert
+                </button>
                 <button onclick="window.openBroadcastCleanerModal(); window.closeHeaderPushDropdown();" style="width:100%; text-align:left; background:transparent; border:none; color:#f472b6; padding:7px 9px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.15s;" onmouseover="this.style.background='rgba(244,114,182,0.15)'" onmouseout="this.style.background='transparent'">
                   🧹 Alert Cleaner
                 </button>
@@ -9680,9 +9881,82 @@ window.openAllianceAlertsModal = async () => {
       }
     }
 
-    // 1. Broadcasts Section HTML
+    // 1. Spotlight Scheduled Countdown Alerts Section
+    let spotlightSectionHtml = '';
+    if (countdownAlerts.length > 0) {
+      const cardsHtml = countdownAlerts.map(b => {
+        const catMeta = window.getCountdownAlertCategoryMeta(b.category || 'general');
+        const targetMs = Number(b.targetTimestamp);
+        const endMs = Number(b.endTimestamp || (targetMs + 2 * 3600000));
+        const status = window.getScheduledAlertStatus(targetMs, endMs, b.countdownMode || '1hour');
+        
+        const isLive = status.stage === 'live';
+        const isCountdown = status.stage === 'countdown';
+        const isUrgent = b.priority === 'urgent' || isLive || isCountdown;
+        
+        const borderColor = isLive ? '#10b981' : (isCountdown ? '#f59e0b' : catMeta.color);
+        const bgGradient = isLive 
+          ? 'linear-gradient(145deg, rgba(16,185,129,0.12), rgba(15,23,42,0.92))'
+          : (isCountdown 
+              ? 'linear-gradient(145deg, rgba(245,158,11,0.14), rgba(15,23,42,0.92))' 
+              : `linear-gradient(145deg, ${catMeta.bg}, rgba(15,23,42,0.92))`);
+
+        const staffActions = isStaff ? `
+          <div style="display:flex; align-items:center; gap:5px;">
+            <button onclick="event.stopPropagation(); window.openEditCountdownAlertModal('${b.key}');" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:6px; padding:3px 8px; font-size:11px; cursor:pointer; font-weight:bold; transition:0.15s;" onmouseover="this.style.background='rgba(56,189,248,0.2)'" title="Edit scheduled alert">
+              ✏️ Edit
+            </button>
+            <button onclick="event.stopPropagation(); window.deleteBroadcastAlert('${b.key}');" style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); color:#ef4444; border-radius:6px; padding:3px 8px; font-size:11px; cursor:pointer; font-weight:bold; transition:0.15s;" onmouseover="this.style.background='rgba(239,68,68,0.25)'" title="Delete announcement">
+              🗑️
+            </button>
+          </div>
+        ` : '';
+
+        return `
+          <div style="background:${bgGradient}; border:1.5px solid ${borderColor}; border-radius:14px; padding:14px; box-shadow:0 8px 24px rgba(0,0,0,0.5), 0 0 15px ${isUrgent ? 'rgba(245,158,11,0.15)' : 'transparent'}; position:relative; overflow:hidden;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:8px;">
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <span style="background:${catMeta.bg}; color:${catMeta.color}; border:1px solid ${catMeta.border}; padding:3px 9px; border-radius:12px; font-size:11px; font-weight:800; display:inline-flex; align-items:center; gap:4px; text-transform:uppercase; letter-spacing:0.5px;">
+                  ${catMeta.icon} ${catMeta.name}
+                </span>
+                ${b.priority === 'urgent' ? `<span style="background:rgba(239,68,68,0.2); color:#ef4444; border:1px solid rgba(239,68,68,0.4); padding:2px 8px; border-radius:10px; font-size:10px; font-weight:bold; animation:pulse 2s infinite;">🚨 URGENT</span>` : ''}
+              </div>
+              ${staffActions}
+            </div>
+
+            <div style="font-weight:800; font-size:15.5px; color:#fff; line-height:1.3; margin-bottom:6px;">
+              ${window.escapeHTML(b.title || 'Scheduled Event')}
+            </div>
+
+            ${b.body ? `<div style="font-size:12.5px; color:var(--text-main); line-height:1.4; white-space:pre-wrap; margin-bottom:12px; opacity:0.9;">${window.escapeHTML(b.body)}</div>` : ''}
+
+            <!-- Live Ticking Countdown Box -->
+            <div class="bell-countdown-ticker-el" 
+                 data-target-ts="${targetMs}" 
+                 data-end-ts="${endMs}" 
+                 data-mode="${b.countdownMode || '1hour'}"
+                 style="background:rgba(15,23,42,0.85); border:1px solid rgba(255,255,255,0.12); border-radius:10px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+              <div style="font-size:13px; font-weight:bold; color:#fff;">⏳ Calculating countdown...</div>
+            </div>
+
+            <div style="font-size:11px; color:var(--text-muted); margin-top:8px; display:flex; justify-content:space-between; align-items:center;">
+              <span>📢 Posted by ${window.escapeHTML(b.senderName || 'Leadership')}</span>
+              <span>${window.formatRelativeTime ? window.formatRelativeTime(b.timestamp) : ''}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      spotlightSectionHtml = `
+        <div style="margin-bottom:14px; display:flex; flex-direction:column; gap:10px;">
+          ${cardsHtml}
+        </div>
+      `;
+    }
+
+    // 2. Standard Broadcasts Section HTML
     let broadcastsSectionHtml = '';
-    const bCards = broadcastsList.length > 0 ? broadcastsList.slice(0, 15).map(b => {
+    const bCards = standardBroadcasts.length > 0 ? standardBroadcasts.slice(0, 15).map(b => {
       const isUnread = Boolean(b.timestamp && b.timestamp > lastSeenBroadcast);
       const relTime = window.formatRelativeTime ? window.formatRelativeTime(b.timestamp) : '';
       const deleteBtn = isStaff ? `
@@ -9711,7 +9985,7 @@ window.openAllianceAlertsModal = async () => {
       `;
     }).join('') : `
       <div style="text-align:center; padding:14px 10px; color:var(--text-muted); font-size:12px;">
-        No announcements posted yet. Broadcast alerts sent by leadership will appear here.
+        No standard announcements posted yet.
       </div>
     `;
 
@@ -9720,23 +9994,26 @@ window.openAllianceAlertsModal = async () => {
         <div id="broadcastsAccordionHeader" onclick="window.toggleBroadcastsAccordionBanner()" style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; cursor:pointer; user-select:none;">
           <div>
             <div style="font-size:13.5px; font-weight:bold; color:#f472b6; display:flex; align-items:center; gap:8px;">
-              <span>📢 Leadership Announcements (${broadcastsList.length})</span>
+              <span>📢 Leadership Announcements (${standardBroadcasts.length})</span>
             </div>
             <div style="font-size:11.5px; color:var(--text-muted); margin-top:3px;">
-              Alliance broadcasts & leadership notifications
+              Alliance broadcasts & general leadership notices
             </div>
           </div>
           <div style="display:flex; align-items:center; gap:8px;">
-            ${isStaff && broadcastsList.length > 0 ? `
-              <button onclick="event.stopPropagation(); window.openBroadcastCleanerModal();" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.35); color:#ef4444; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:3px; transition:0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.25)'" onmouseout="this.style.background='rgba(239,68,68,0.15)'" title="Open Announcement Cleaner to delete or purge old messages">
+            ${isStaff ? `
+              <button onclick="event.stopPropagation(); window.openCreateCountdownAlertModal();" style="background:linear-gradient(135deg, #ec4899, #8b5cf6); color:#fff; border:none; padding:3px 9px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:3px; box-shadow:0 2px 6px rgba(236,72,153,0.3);" title="Post a new announcement or scheduled countdown alert">
+                ➕ New Alert
+              </button>
+              <button onclick="event.stopPropagation(); window.openBroadcastCleanerModal();" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.35); color:#ef4444; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:3px; transition:0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.25)'" onmouseout="this.style.background='rgba(239,68,68,0.15)'" title="Open Announcement Cleaner">
                 🧹 Cleaner
               </button>
             ` : ''}
-            <span style="background:rgba(236,72,153,0.2); color:#f472b6; border:1px solid rgba(236,72,153,0.4); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold;">${unreadBroadcastCount > 0 ? `${unreadBroadcastCount} New` : `${broadcastsList.length}`}</span>
+            <span style="background:rgba(236,72,153,0.2); color:#f472b6; border:1px solid rgba(236,72,153,0.4); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold;">${unreadBroadcastCount > 0 ? `${unreadBroadcastCount} New` : `${standardBroadcasts.length}`}</span>
             <span id="broadcastsAccordionChevron" style="font-size:15px; color:var(--text-muted); transition:transform 0.2s ease;">▾</span>
           </div>
         </div>
-        <div id="broadcastsAccordionBody" style="display:${unreadBroadcastCount > 0 || broadcastsList.length > 0 ? 'block' : 'none'}; padding:0 14px 14px 14px; max-height:260px; overflow-y:auto;">
+        <div id="broadcastsAccordionBody" style="display:${unreadBroadcastCount > 0 || (standardBroadcasts.length > 0 && countdownAlerts.length === 0) ? 'block' : 'none'}; padding:0 14px 14px 14px; max-height:260px; overflow-y:auto;">
           <div style="display:flex; flex-direction:column; gap:8px; border-top:1px solid rgba(255,255,255,0.06); padding-top:10px;">
             ${bCards}
           </div>
@@ -9930,6 +10207,9 @@ window.openAllianceAlertsModal = async () => {
           </div>
         </div>
 
+        <!-- Spotlight Scheduled Countdown Alerts Section -->
+        ${spotlightSectionHtml}
+
         <!-- Main Character Status Card (Only if Action Required) -->
         ${mainTokenHtml}
 
@@ -9957,6 +10237,7 @@ window.openAllianceAlertsModal = async () => {
     `;
 
     document.body.appendChild(overlay);
+    if (typeof window.startBellCountdownTicker === 'function') window.startBellCountdownTicker();
 
     // Close header push dropdown if clicked outside
     overlay.addEventListener('click', (e) => {
@@ -10279,6 +10560,328 @@ window.deleteBroadcastAlert = async (key) => {
   } catch(err) {
     console.error("Failed to delete broadcast alert:", err);
     if (window.showToast) window.showToast("Failed to delete announcement: " + (err.message || err), "error");
+  }
+};
+
+window.openEditCountdownAlertModal = async (key) => {
+  if (!key) return;
+  try {
+    const snap = await get(ref(db, `broadcastAlerts/${key}`));
+    if (snap.exists()) {
+      const data = snap.val();
+      window.openCreateCountdownAlertModal({ ...data, key });
+    } else {
+      if (window.showToast) window.showToast("Alert not found in database.", "warning");
+    }
+  } catch(e) {
+    console.error("Error fetching alert for edit:", e);
+    if (window.showToast) window.showToast("Failed to load alert details.", "error");
+  }
+};
+
+window.openCreateCountdownAlertModal = function(editData = null) {
+  const isStaff = (currentUser && typeof window.isAdminUser === 'function') ? window.isAdminUser(currentUser) : false;
+  if (!isStaff) {
+    if (window.showToast) window.showToast("Only leadership/admin can create or edit countdown alerts.", "warning");
+    return;
+  }
+
+  let existingModal = document.getElementById('createCountdownAlertModalOverlay');
+  if (existingModal) existingModal.remove();
+
+  const isEdit = Boolean(editData && editData.key);
+  const initialCategory = (editData && editData.category) || 'game_update';
+  const initialTitle = (editData && editData.title) || '';
+  const initialBody = (editData && editData.body) || '';
+  const initialCountdownMode = (editData && editData.countdownMode) || '1hour';
+  const initialPriority = (editData && editData.priority) || 'high';
+
+  // Format initial start datetime-local
+  let initialDateTimeLocalStr = '';
+  if (editData && editData.targetTimestamp) {
+    const d = new Date(editData.targetTimestamp);
+    const yr = d.getFullYear();
+    const mo = String(d.getMonth() + 1).padStart(2, '0');
+    const da = String(d.getDate()).padStart(2, '0');
+    const ho = String(d.getHours()).padStart(2, '0');
+    const mi = String(d.getMinutes()).padStart(2, '0');
+    initialDateTimeLocalStr = `${yr}-${mo}-${da}T${ho}:${mi}`;
+  } else {
+    // Default to nearest next hour + 1
+    const d = new Date(Date.now() + 2 * 3600000);
+    d.setMinutes(0, 0, 0);
+    const yr = d.getFullYear();
+    const mo = String(d.getMonth() + 1).padStart(2, '0');
+    const da = String(d.getDate()).padStart(2, '0');
+    const ho = String(d.getHours()).padStart(2, '0');
+    const mi = String(d.getMinutes()).padStart(2, '0');
+    initialDateTimeLocalStr = `${yr}-${mo}-${da}T${ho}:${mi}`;
+  }
+
+  let initialDurationMs = 7200000; // 2 hours default
+  if (editData && editData.targetTimestamp && editData.endTimestamp) {
+    initialDurationMs = Math.max(1800000, Number(editData.endTimestamp) - Number(editData.targetTimestamp));
+  }
+
+  const modal = document.createElement('div');
+  modal.id = 'createCountdownAlertModalOverlay';
+  modal.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.85); backdrop-filter:blur(10px); z-index:100002; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease;';
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.remove();
+  });
+
+  modal.innerHTML = `
+    <div class="card" style="width:94%; max-width:480px; background:linear-gradient(145deg, rgba(15,23,42,0.98), rgba(30,41,59,0.96)); border:1px solid rgba(56,189,248,0.4); padding:22px; border-radius:18px; box-shadow:0 25px 60px rgba(0,0,0,0.85); text-align:left; color:var(--text-main); max-height:90vh; overflow-y:auto; animation:zoomIn 0.2s ease;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:10px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:22px;">${isEdit ? '✏️' : '🚀'}</span>
+          <div>
+            <h3 style="margin:0; color:#fff; font-size:16.5px; font-weight:800;">${isEdit ? 'Edit Scheduled Alert' : 'Post Scheduled Alert / Countdown'}</h3>
+            <div style="font-size:11px; color:var(--text-muted);">Displays in Notification Bell Hub with live ticking ticker</div>
+          </div>
+        </div>
+        <button onclick="document.getElementById('createCountdownAlertModalOverlay').remove()" style="background:none; border:none; color:var(--text-muted); font-size:22px; cursor:pointer; line-height:1;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-muted)'">&times;</button>
+      </div>
+
+      <form id="createCountdownAlertForm" onsubmit="window.handleSaveCountdownAlert(event, '${isEdit ? editData.key : ''}')" style="display:flex; flex-direction:column; gap:12px;">
+        
+        <div>
+          <label style="font-size:11.5px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:5px;">Alert Category & Type</label>
+          <select id="ccaCategory" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; font-weight:bold; cursor:pointer; outline:none; box-sizing:border-box;">
+            <option value="game_update" ${initialCategory === 'game_update' ? 'selected' : ''}>🎮 Game Update & Server Maintenance</option>
+            <option value="site_maintenance" ${initialCategory === 'site_maintenance' ? 'selected' : ''}>🛠️ Website Maintenance & Downtime</option>
+            <option value="alliance_event" ${initialCategory === 'alliance_event' ? 'selected' : ''}>⚔️ Alliance Battle / Special Event</option>
+            <option value="general" ${initialCategory === 'general' ? 'selected' : ''}>📢 General Alliance Announcement</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="font-size:11.5px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:5px;">Announcement Title</label>
+          <input type="text" id="ccaTitle" required value="${window.escapeHTML(initialTitle)}" placeholder="e.g. Whiteout Survival v1.21 Update & Maintenance" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; outline:none; box-sizing:border-box;">
+        </div>
+
+        <div>
+          <label style="font-size:11.5px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:5px;">Details / Message Body (Optional)</label>
+          <textarea id="ccaBody" rows="3" placeholder="Server maintenance details, expected patch changes, server offline notice..." style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12.5px; outline:none; resize:vertical; box-sizing:border-box;">${window.escapeHTML(initialBody)}</textarea>
+        </div>
+
+        <!-- Schedule & Countdown Section -->
+        <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(56,189,248,0.25); border-radius:12px; padding:12px; display:flex; flex-direction:column; gap:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:12px; font-weight:bold; color:#38bdf8; display:flex; align-items:center; gap:5px;">
+              <span>⏳</span> Event Date, Time & Countdown
+            </span>
+            <label style="display:flex; align-items:center; gap:5px; font-size:11.5px; color:var(--text-muted); cursor:pointer;">
+              <input type="checkbox" id="ccaHasCountdown" checked onchange="document.getElementById('ccaScheduleFields').style.display = this.checked ? 'flex' : 'none';" style="cursor:pointer;">
+              Enable Timer
+            </label>
+          </div>
+
+          <div id="ccaScheduleFields" style="display:flex; flex-direction:column; gap:10px;">
+            <div>
+              <label style="font-size:11px; font-weight:bold; color:var(--text-muted); display:block; margin-bottom:4px;">Event Start Date & Time (Your Local Time)</label>
+              <input type="datetime-local" id="ccaDateTime" required value="${initialDateTimeLocalStr}" oninput="window.updateCountdownModalPreview()" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12.5px; outline:none; box-sizing:border-box; cursor:pointer;">
+              <div id="ccaTimePreview" style="font-size:11.5px; color:#38bdf8; font-family:monospace; margin-top:4px; font-weight:bold;"></div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+              <div>
+                <label style="font-size:11px; font-weight:bold; color:var(--text-muted); display:block; margin-bottom:4px;">Expected Duration</label>
+                <select id="ccaDuration" onchange="window.updateCountdownModalPreview()" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer; outline:none; box-sizing:border-box;">
+                  <option value="1800000" ${initialDurationMs === 1800000 ? 'selected' : ''}>30 Minutes</option>
+                  <option value="3600000" ${initialDurationMs === 3600000 ? 'selected' : ''}>1 Hour</option>
+                  <option value="7200000" ${initialDurationMs === 7200000 ? 'selected' : ''}>2 Hours (Default)</option>
+                  <option value="10800000" ${initialDurationMs === 10800000 ? 'selected' : ''}>3 Hours</option>
+                  <option value="14400000" ${initialDurationMs === 14400000 ? 'selected' : ''}>4 Hours</option>
+                  <option value="21600000" ${initialDurationMs === 21600000 ? 'selected' : ''}>6 Hours</option>
+                  <option value="43200000" ${initialDurationMs === 43200000 ? 'selected' : ''}>12 Hours</option>
+                  <option value="86400000" ${initialDurationMs === 86400000 ? 'selected' : ''}>24 Hours</option>
+                </select>
+              </div>
+
+              <div>
+                <label style="font-size:11px; font-weight:bold; color:var(--text-muted); display:block; margin-bottom:4px;">Countdown Ticker Mode</label>
+                <select id="ccaMode" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer; outline:none; box-sizing:border-box;">
+                  <option value="1hour" ${initialCountdownMode === '1hour' ? 'selected' : ''}>⏳ Final 1 Hour (Standard)</option>
+                  <option value="always" ${initialCountdownMode === 'always' ? 'selected' : ''}>⏳ Always Live Ticking</option>
+                  <option value="none" ${initialCountdownMode === 'none' ? 'selected' : ''}>📅 Date Only (No Ticker)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+          <div>
+            <label style="font-size:11px; font-weight:bold; color:var(--text-muted); display:block; margin-bottom:4px;">Priority Level</label>
+            <select id="ccaPriority" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer; outline:none; box-sizing:border-box;">
+              <option value="high" ${initialPriority === 'high' ? 'selected' : ''}>🟠 High Priority</option>
+              <option value="urgent" ${initialPriority === 'urgent' ? 'selected' : ''}>🚨 Urgent / Critical Alert</option>
+              <option value="normal" ${initialPriority === 'normal' ? 'selected' : ''}>🔵 Normal Notice</option>
+            </select>
+          </div>
+
+          <div style="display:flex; align-items:center;">
+            <label style="display:flex; align-items:center; gap:7px; font-size:12px; font-weight:bold; color:#f472b6; cursor:pointer; margin-top:14px;">
+              <input type="checkbox" id="ccaSendPush" ${!isEdit ? 'checked' : ''} style="cursor:pointer;">
+              <span>🔔 Blast Push Notification</span>
+            </label>
+          </div>
+        </div>
+
+        <div id="ccaStatusMsg" style="font-size:12px; min-height:16px; margin-top:2px;"></div>
+
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:4px;">
+          <button type="button" onclick="document.getElementById('createCountdownAlertModalOverlay').remove()" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#cbd5e1; padding:8px 16px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12.5px;">Cancel</button>
+          <button type="submit" id="ccaSubmitBtn" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:8px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12.5px; box-shadow:0 2px 10px rgba(14,165,233,0.4); display:inline-flex; align-items:center; gap:6px;">
+            <span>${isEdit ? '💾 Update Alert' : '🚀 Publish Alert'}</span>
+          </button>
+        </div>
+
+      </form>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+  window.updateCountdownModalPreview();
+};
+
+window.updateCountdownModalPreview = function() {
+  const dtInput = document.getElementById('ccaDateTime');
+  const previewEl = document.getElementById('ccaTimePreview');
+  if (!dtInput || !previewEl) return;
+
+  const val = dtInput.value;
+  if (!val) {
+    previewEl.textContent = 'Please select a date and time';
+    return;
+  }
+
+  const d = new Date(val);
+  if (isNaN(d.getTime())) {
+    previewEl.textContent = 'Invalid date';
+    return;
+  }
+
+  const utcHours = String(d.getUTCHours()).padStart(2, '0');
+  const utcMins = String(d.getUTCMinutes()).padStart(2, '0');
+  const utcStr = `${d.toUTCString().slice(0, 16)} @ ${utcHours}:${utcMins} UTC`;
+  
+  const diffMs = d.getTime() - Date.now();
+  let relStr = '';
+  if (diffMs > 0) {
+    const hrs = Math.floor(diffMs / 3600000);
+    const mins = Math.floor((diffMs % 3600000) / 60000);
+    relStr = hrs > 24 ? `in ${Math.floor(hrs/24)}d ${hrs%24}h` : (hrs > 0 ? `in ${hrs}h ${mins}m` : `in ${mins}m`);
+  } else {
+    relStr = 'Now / In Past';
+  }
+
+  previewEl.textContent = `🌐 ${utcStr} (${relStr})`;
+};
+
+window.handleSaveCountdownAlert = async function(e, editKey = '') {
+  if (e) e.preventDefault();
+  const isStaff = (currentUser && typeof window.isAdminUser === 'function') ? window.isAdminUser(currentUser) : false;
+  if (!isStaff) return;
+
+  const submitBtn = document.getElementById('ccaSubmitBtn');
+  const statusEl = document.getElementById('ccaStatusMsg');
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = '⏳ Saving...'; }
+  if (statusEl) { statusEl.textContent = ''; statusEl.style.color = 'var(--text-muted)'; }
+
+  try {
+    const category = document.getElementById('ccaCategory')?.value || 'game_update';
+    const title = document.getElementById('ccaTitle')?.value.trim() || '';
+    const body = document.getElementById('ccaBody')?.value.trim() || '';
+    const hasCountdown = document.getElementById('ccaHasCountdown')?.checked ?? true;
+    const dtVal = document.getElementById('ccaDateTime')?.value;
+    const durMs = Number(document.getElementById('ccaDuration')?.value || '7200000');
+    const countdownMode = document.getElementById('ccaMode')?.value || '1hour';
+    const priority = document.getElementById('ccaPriority')?.value || 'high';
+    const sendPush = document.getElementById('ccaSendPush')?.checked ?? false;
+
+    if (!title) {
+      if (statusEl) { statusEl.textContent = 'Please provide an alert title'; statusEl.style.color = '#ef4444'; }
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '🚀 Publish Alert'; }
+      return;
+    }
+
+    let targetTimestamp = null;
+    let endTimestamp = null;
+    if (hasCountdown && dtVal) {
+      const d = new Date(dtVal);
+      if (!isNaN(d.getTime())) {
+        targetTimestamp = d.getTime();
+        endTimestamp = targetTimestamp + durMs;
+      }
+    }
+
+    const payload = {
+      title,
+      body,
+      category,
+      countdownMode: hasCountdown ? countdownMode : 'none',
+      priority,
+      senderName: (currentUser && (currentUser.name || currentUser.chiefName)) || "Leadership",
+      senderId: (currentUser && currentUser.gameId) || ""
+    };
+
+    if (targetTimestamp) {
+      payload.targetTimestamp = targetTimestamp;
+      payload.endTimestamp = endTimestamp;
+    }
+
+    if (editKey) {
+      payload.updatedAt = Date.now();
+      await update(ref(db, `broadcastAlerts/${editKey}`), payload);
+      if (window.showToast) window.showToast("✅ Scheduled alert updated successfully!", "success");
+    } else {
+      payload.timestamp = Date.now();
+      payload.isoDate = new Date().toISOString();
+      const newRef = push(ref(db, 'broadcastAlerts'));
+      payload.id = newRef.key;
+      await set(newRef, payload);
+      if (window.showToast) window.showToast("🚀 Scheduled alert broadcasted live!", "success");
+    }
+
+    // Optional device push broadcast
+    if (sendPush) {
+      try {
+        const userToken = await getAuthToken();
+        const pushToken = userToken || "n5fTnxcK5J5ddNsT77AhZIoQGTogW3ROpk4k03Sv";
+        const catMeta = window.getCountdownAlertCategoryMeta(category);
+        const pushTitle = `${catMeta.icon} ${title}`;
+        let pushBody = body || '';
+        if (targetTimestamp) {
+          const d = new Date(targetTimestamp);
+          pushBody = `Scheduled for ${d.toLocaleDateString([], { month:'short', day:'numeric' })} at ${d.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}${pushBody ? ` • ${pushBody}` : ''}`;
+        }
+        await fetch(API_BASE_URL, {
+          method: 'POST',
+          body: JSON.stringify({ api: 'sendPush', title: pushTitle, body: pushBody, secret: pushToken, token: pushToken }),
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+        });
+      } catch(pushErr) {
+        console.warn("Device push notification error:", pushErr);
+      }
+    }
+
+    const modal = document.getElementById('createCountdownAlertModalOverlay');
+    if (modal) modal.remove();
+
+    if (typeof window.updateNewMemberBadge === 'function') window.updateNewMemberBadge();
+
+    // Re-render open modal if open
+    const notifOverlay = document.getElementById('notificationsModalOverlay');
+    if (notifOverlay) {
+      notifOverlay.remove();
+      window.openAllianceAlertsModal();
+    }
+  } catch(err) {
+    console.error("Save countdown alert error:", err);
+    if (statusEl) { statusEl.textContent = 'Error: ' + (err.message || err); statusEl.style.color = '#ef4444'; }
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = 'Retry'; }
   }
 };
 
@@ -15449,11 +16052,18 @@ const views = {
 
           overlay.innerHTML = `
               <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; width: 100%; max-width: 480px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 15px; text-align: left;">
-                  <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
-                      <h3 style="margin: 0; color: var(--accent); font-size: 18px; display: flex; align-items: center; gap: 8px;">
-                          🚀 Broadcast Push Notification
-                      </h3>
-                      <button onclick="document.getElementById('broadcastPushModal').remove()" style="background: transparent; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer; padding: 0;">✕</button>
+                  <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                      <div style="display: flex; align-items: center; gap: 8px;">
+                        <h3 style="margin: 0; color: var(--accent); font-size: 18px; display: flex; align-items: center; gap: 8px;">
+                            🚀 Broadcast Alert
+                        </h3>
+                      </div>
+                      <div style="display: flex; align-items: center; gap: 8px;">
+                        <button type="button" onclick="document.getElementById('broadcastPushModal').remove(); window.openCreateCountdownAlertModal();" style="background: linear-gradient(135deg, #a855f7, #6366f1); color: #fff; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11.5px; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 6px rgba(168,85,247,0.3);" title="Create a scheduled announcement with live countdown timer">
+                            ⏳ Countdown Alert
+                        </button>
+                        <button onclick="document.getElementById('broadcastPushModal').remove()" style="background: transparent; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer; padding: 0;">✕</button>
+                      </div>
                   </div>
                   
                   <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Send an instant <strong>wosBDC Alert</strong> notification to all registered devices.</p>

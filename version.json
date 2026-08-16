@@ -1,9 +1,9 @@
 {
-  "version": "2.7.2",
+  "version": "2.8.0",
   "releaseDate": "2026-08-16",
-  "title": "Streamlined Actions Dropdown for Member Management",
+  "title": "Live Countdown & Scheduled Alert System in Notification Bell",
   "notes": [
-    "Replaced crowded rows of inline action buttons in the Member Management directory with a single, sleek 'Actions ▾' dropdown menu per player.",
-    "Categorized management options into Profile View, Furnace Level Editing, Game ID Repair, Alt Management, Staff Role Permissions, and Danger Zone actions."
+    "Added scheduled announcement capabilities to the Notification Bell with live second-by-second countdown tickers for Whiteout Survival game updates, server maintenance, and alliance events.",
+    "Integrated a 3-stage countdown engine with high-visibility spotlight cards and pulsing countdown pills on the navbar notification bell during the final 60 minutes and live event periods."
   ]
 }

@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [2.8.0] - 2026-08-16
+- Live Countdown & Scheduled Alert System: Enhanced the Alliance Notification Bell Hub (`openAllianceAlertsModal`) to support scheduled announcements with real-time countdown tickers for Whiteout Survival Game Updates, Server Maintenance, Alliance Wars, and Event Battles.
+- 3-Stage Smart Countdown Engine: Displays clean date and time formatted in user's local timezone when scheduled ahead, automatically transitions to a second-by-second live countdown ticker within the final 60 minutes, and shifts to `🚨 LIVE NOW` during active events.
+- Navbar Countdown Badge Integration: Displays a pulsing orange timer pill (e.g. `⏳ 42m`) or green `🟢 LIVE` indicator directly on the top navbar notification bell and mobile drawer alert button.
+- Leadership Creation Suite: Added `openCreateCountdownAlertModal` and edit controls with UTC/Local live preview, duration presets, priority badges, and optional instant device push notification broadcasts.
+
 ## [2.7.2] - 2026-08-16
 - Streamlined Actions Dropdown Menu: Replaced cluttered rows of 5–7 inline action buttons in the Admin Member Directory (`#tab-users`) with a single, sleek `⚡ Actions ▾` dropdown button for every player row.
 - Grouped & Categorized Player Operations: Cleanly organized options into View Profile, Edit Furnace Level, Repair Game ID, Manage Linked Alts (owner-only), Staff Permissions (R4/R5), Delete Custom Avatar, and Delete Member / Remove from Roster.
