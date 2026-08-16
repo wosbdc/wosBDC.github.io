@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.2] - 2026-08-16
+- 🛠️ Fixed alert system push notification import bug (`push is not defined`)
+- 🔔 Added Push Notification status badges (Push ON/OFF) to Admin Hub member management
+- 🎯 Added live push notification attribute filters (Push Enabled vs Push Disabled) with device counters in Admin Hub
+
 ## [2.9.1] - 2026-08-16
 - 🌐 Added UTC game time entry with instant conversion to your local time
 - ⚡ Added 1-click UTC quick-fill presets (Reset, Maintenance, Bear Trap)

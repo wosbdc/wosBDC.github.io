@@ -1,10 +1,10 @@
 {
-  "version": "2.9.1",
+  "version": "2.9.2",
   "releaseDate": "2026-08-16",
-  "title": "What's New in v2.9.1",
+  "title": "What's New in v2.9.2",
   "notes": [
-    "🌐 Enter event times in UTC with instant conversion to your local time",
-    "⚡ Added 1-click UTC quick-fill presets (Reset, Maintenance, Bear Trap)",
-    "🔄 Seamless toggle between UTC Game Time and Local Time modes"
+    "🛠️ Fixed alert system push notification import bug (`push is not defined`)",
+    "🔔 Added Push Notification status badges (Push ON/OFF) to Admin Hub member management",
+    "🎯 Added live push notification attribute filters (Push Enabled vs Push Disabled) with device counters in Admin Hub"
   ]
 }

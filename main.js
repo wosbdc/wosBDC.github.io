@@ -1,6 +1,6 @@
 import './style.css'
 import { initPresence, listenToAuth, loginUser, logoutUser, registerUser, uploadAvatar, deleteAvatar, db, auth, requestPushPermission, listenForForegroundMessages, linkAltAccount, unlinkAltAccount, loginWithGoogle, resetPassword } from './src/firebase.js'
-import { ref, onValue, get, set, remove, update } from 'firebase/database'
+import { ref, onValue, get, set, remove, update, push } from 'firebase/database'
 import pkg from './package.json'
 
 
@@ -10574,25 +10574,65 @@ window.deleteBroadcastAlert = async (key) => {
 
 window.getPushSubscriberCount = async () => {
   try {
-    const snap = await get(ref(db, 'fcmTokens'));
-    if (snap.exists()) {
-      const val = snap.val() || {};
-      const tokens = Object.keys(val);
-      const uids = new Set();
-      Object.values(val).forEach(v => {
-        if (v && v.uid && v.uid !== 'anonymous') uids.add(v.uid);
-      });
-      const uniqueCount = uids.size > 0 ? uids.size : tokens.length;
-      return {
-        totalDevices: tokens.length,
-        uniqueUsers: uniqueCount,
-        displayCount: tokens.length
-      };
+    const [fcmSnap, usersSnap] = await Promise.all([
+      get(ref(db, 'fcmTokens')),
+      get(ref(db, 'users'))
+    ]);
+
+    const val = (fcmSnap && fcmSnap.exists()) ? (fcmSnap.val() || {}) : {};
+    const usersData = (usersSnap && usersSnap.exists()) ? (usersSnap.val() || {}) : {};
+
+    const tokens = Object.keys(val);
+    const uniqueChiefs = new Set();
+    const pushUserIds = new Set();
+
+    Object.values(val).forEach(v => {
+      if (v && typeof v === 'object') {
+        if (v.uid && v.uid !== 'anonymous') {
+          pushUserIds.add(v.uid);
+          const u = usersData[v.uid];
+          const cName = (u && (u.chiefName || u.name)) || v.chiefName || v.uid;
+          uniqueChiefs.add(cName);
+        } else if (v.chiefName) {
+          uniqueChiefs.add(v.chiefName);
+        } else if (v.gameId) {
+          uniqueChiefs.add(String(v.gameId));
+        }
+      }
+    });
+
+    Object.entries(usersData).forEach(([uid, u]) => {
+      if (u && (u.pushEnabled === true || (u.fcmToken && val[u.fcmToken]))) {
+        pushUserIds.add(uid);
+        const cName = u.chiefName || u.name || (idToNameMap && idToNameMap[u.gameId]) || uid;
+        uniqueChiefs.add(cName);
+      }
+    });
+
+    const totalDevices = tokens.length;
+    const totalChiefs = uniqueChiefs.size;
+
+    let displayCount = '';
+    if (totalChiefs > 0) {
+      const chiefWord = totalChiefs === 1 ? '1 Chief' : `${totalChiefs} Chiefs`;
+      const devWord = totalDevices === 1 ? '1 Device' : `${totalDevices} Devices`;
+      displayCount = `${chiefWord} (${devWord})`;
+    } else if (totalDevices > 0) {
+      displayCount = totalDevices === 1 ? '1 Device' : `${totalDevices} Devices`;
+    } else {
+      displayCount = '0 Devices';
     }
+
+    return {
+      totalDevices,
+      totalChiefs,
+      displayCount,
+      pushUserIds: Array.from(pushUserIds)
+    };
   } catch(e) {
     console.warn("Failed to fetch fcmTokens count:", e);
   }
-  return { totalDevices: 0, uniqueUsers: 0, displayCount: 0 };
+  return { totalDevices: 0, totalChiefs: 0, displayCount: '0 Devices', pushUserIds: [] };
 };
 
 window.openEditCountdownAlertModal = async (key) => {
@@ -16117,11 +16157,14 @@ const views = {
             }
 
             let matchesAttr = true;
+            const isPushOn = row.getAttribute('data-push-enabled') === 'true';
             if (attrFilter === 'new') matchesAttr = isNew && !isAlt;
             else if (attrFilter === 'alts') matchesAttr = hasAlts && !isAlt;
             else if (attrFilter === 'all_alts') matchesAttr = isAlt;
             else if (attrFilter === 'enrolled') matchesAttr = isEnrolled && !isAlt;
             else if (attrFilter === 'staff') matchesAttr = isAdmin && !isAlt;
+            else if (attrFilter === 'push_on') matchesAttr = isPushOn && !isAlt;
+            else if (attrFilter === 'push_off') matchesAttr = !isPushOn && !isAlt;
             else if (attrFilter === 'all') {
                 if (isAlt && !searchVal) matchesAttr = false;
             }
@@ -16217,11 +16260,13 @@ const views = {
     const isR5 = window.getAdminLevel(currentUser) === 'R5';
     
     try {
-      const [usersSnap, rosterRawData] = await Promise.all([
+      const [usersSnap, rosterRawData, fcmSnap] = await Promise.all([
         get(ref(db, 'users')),
-        window.fetchRoster()
+        window.fetchRoster(),
+        get(ref(db, 'fcmTokens'))
       ]);
       const users = usersSnap.val() || {};
+      const fcmData = (fcmSnap && fcmSnap.exists()) ? (fcmSnap.val() || {}) : {};
       
       await refreshIdToNameMap();
       if (window.deduplicateRosterLive) window.deduplicateRosterLive().catch(() => null);
@@ -17540,8 +17585,10 @@ const views = {
               let newSignupsCount = 0;
               let giftCodesCount = 0;
               let staffCount = 0;
+              let pushEnabledCount = 0;
+              let pushDisabledCount = 0;
 
-              Object.values(users).forEach(u => {
+              Object.entries(users).forEach(([uid, u]) => {
                 const tStat = window.getMemberTokenStatus(u);
                 if (tStat.status === 'active') tokenActiveCount++;
                 else if (tStat.status === 'expiring') tokenExpiringCount++;
@@ -17563,6 +17610,10 @@ const views = {
 
                 const adminLvl = window.getAdminLevel(u);
                 if (u.role === 'admin' || u.role === 'R5' || (adminLvl !== false && adminLvl !== 'User')) staffCount++;
+
+                const isPush = u.pushEnabled === true || (u.fcmToken && fcmData[u.fcmToken]) || Object.values(fcmData).some(item => item && (item.uid === uid || (item.gameId && u.gameId && String(item.gameId) === String(u.gameId))));
+                if (isPush) pushEnabledCount++;
+                else pushDisabledCount++;
               });
 
               if (rosterRawData) {
@@ -17586,7 +17637,7 @@ const views = {
                         👥 Alliance Members & Player Database
                       </div>
                       <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">
-                        ${totalUsersCount} registered account(s) • ${unclaimedCount} unclaimed roster member(s) • ${totalAltsCount} linked alt(s)
+                        ${totalUsersCount} registered account(s) • ${pushEnabledCount} with push enabled • ${unclaimedCount} unclaimed roster member(s) • ${totalAltsCount} linked alt(s)
                       </div>
                     </div>
 
@@ -17615,6 +17666,8 @@ const views = {
                     <!-- Feature Attributes Selector with Live Counters -->
                     <select id="adminUserAttrFilter" onchange="window.filterAdminUsersList()" style="flex:1 1 170px; min-width:160px; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer; outline:none; box-sizing:border-box;">
                       <option value="all">🏷️ Attributes: All (${totalMembersCount})</option>
+                      <option value="push_on">🔔 Push: Enabled (${pushEnabledCount})</option>
+                      <option value="push_off">🔕 Push: Disabled (${pushDisabledCount})</option>
                       <option value="alts">👥 Main Accounts with Alts (${hasAltsCount})</option>
                       <option value="all_alts">🔗 All Linked Alt Characters (${totalAltsCount})</option>
                       <option value="new">🆕 New Signups (${newSignupsCount})</option>
@@ -17773,6 +17826,11 @@ const views = {
 
         const furnaceScore = window.getFurnaceNumericValue(flVal);
         
+        const isPushOn = u.pushEnabled === true || (u.fcmToken && fcmData[u.fcmToken]) || Object.values(fcmData).some(item => item && (item.uid === uid || (item.gameId && u.gameId && String(item.gameId) === String(u.gameId))));
+        const pushPillHtml = isPushOn
+          ? `<span style="background:rgba(168,85,247,0.12); color:#c084fc; border:1px solid rgba(168,85,247,0.35); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold; display:inline-flex; align-items:center; gap:3px;" title="Push notifications active on this Chief's device(s)">🔔 Push ON</span>`
+          : `<span style="background:rgba(255,255,255,0.05); color:var(--text-muted); border:1px solid var(--border); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:normal;" title="Push notifications disabled">🔕 Push OFF</span>`;
+        
         html += `
           <tr class="admin-user-row" 
               data-name="${escapeHTML(cName.toLowerCase())}" 
@@ -17785,6 +17843,7 @@ const views = {
               data-alt-synced-count="${altTokensSyncedCount}"
               data-alt-total-count="${totalAlts}"
               data-is-enrolled="${isEnrolled ? 'true' : 'false'}" 
+              data-push-enabled="${isPushOn ? 'true' : 'false'}"
               data-token-status="${tokenStatus.status}"
               data-is-claimed="true"
               data-is-alt="false"
@@ -17800,7 +17859,8 @@ const views = {
                 <div style="display:flex; flex-direction:column; gap:2px;">
                   <div style="font-weight:bold; font-size:14px; color:var(--text-main); display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
                     <span>${escapeHTML(cName)}</span>
-                    <span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:2px 8px; border-radius:12px; font-size:10px; font-weight:bold;">✅ CLAIMED</span>
+                    <span style="background:rgba(168,85,247,0.12); color:#c084fc; border:1px solid rgba(168,85,247,0.3); padding:2px 8px; border-radius:12px; font-size:10px; font-weight:bold;">${isPushOn ? '🔔 PUSH ON' : '🔕 PUSH OFF'}</span>
+                    <span style="background:rgba(168,85,129,0.12); color:#10b981; border:1px solid rgba(168,85,129,0.3); padding:2px 8px; border-radius:12px; font-size:10px; font-weight:bold;">✅ CLAIMED</span>
                     ${isNew ? `<span style="background:rgba(16,185,129,0.18); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:2px 8px; border-radius:12px; font-size:10px; font-weight:bold; letter-spacing:0.5px;">🆕 NEW</span>` : ''}
                     ${isAdminUser ? `<span style="background:rgba(234,179,8,0.15); color:#eab308; border:1px solid rgba(234,179,8,0.3); padding:2px 6px; border-radius:10px; font-size:10px; font-weight:bold;">👑 ${adminLvl === 'R5' ? 'R5 Staff' : 'R4 Staff'}</span>` : ''}
                   </div>
@@ -17814,6 +17874,7 @@ const views = {
             <td style="padding:12px 10px;">
               <div style="display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
                 ${tokenPillHtml}
+                ${pushPillHtml}
                 ${altPillHtml}
                 ${rosterInfoHtml}
               </div>

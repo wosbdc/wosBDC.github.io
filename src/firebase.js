@@ -150,7 +150,7 @@ try {
   console.warn("Firebase Messaging not supported in this browser.", e);
 }
 
-export async function requestPushPermission(uid) {
+export async function requestPushPermission(uid, userInfo = null) {
   if (!messaging) throw new Error("Push notifications are not supported in your browser.");
   
   const permission = await Notification.requestPermission();
@@ -169,11 +169,24 @@ export async function requestPushPermission(uid) {
     });
     
     if (token) {
-      // Save token securely
-      await set(ref(db, `fcmTokens/${token}`), {
+      // Save token securely with Chief metadata
+      const payload = {
         createdAt: new Date().toISOString(),
-        uid: uid || 'anonymous'
-      });
+        uid: uid || 'anonymous',
+        token: token
+      };
+      if (userInfo && typeof userInfo === 'object') {
+        if (userInfo.gameId) payload.gameId = String(userInfo.gameId);
+        if (userInfo.name || userInfo.chiefName) payload.chiefName = userInfo.name || userInfo.chiefName;
+      }
+      await set(ref(db, `fcmTokens/${token}`), payload);
+      if (uid && uid !== 'anonymous') {
+        await update(ref(db, `users/${uid}`), {
+          pushEnabled: true,
+          fcmToken: token,
+          lastPushEnabledAt: Date.now()
+        }).catch(() => null);
+      }
       return token;
     }
   }
