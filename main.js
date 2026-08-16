@@ -12568,6 +12568,23 @@ window.openGatekeeperReportEditorModal = async function() {
   const codeStr = activeCodes.length > 0 ? `\`${activeCodes[0].code}\`` : '`WOS0815`';
   const claimsStr = activeCodes.length > 0 && activeCodes[0].stats ? `${activeCodes[0].stats.success || totalMembers} / ${totalMembers} Alliance Accounts Claimed` : `${totalMembers} / ${totalMembers} Alliance Accounts Claimed`;
 
+  // Pre-build default text for each section from live data
+  const maintAuditedDef = maintData.accountsAudited ?? totalMembers;
+  const maintRefreshedDef = maintData.tokensRefreshed ?? activeSync;
+  let maintLastRunStrDef = '2:00 AM UTC (Last Night)';
+  if (maintData.lastRun) {
+    const ld = new Date(maintData.lastRun);
+    maintLastRunStrDef = `${ld.toLocaleDateString([], { month: 'short', day: 'numeric' })} • ${ld.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+  }
+
+  const defaultSectionTexts = {
+    roster: `🛡️ **ALLIANCE ROSTER & VERIFICATION**\n• 👥 **Total Members:** ${totalMembers} Chiefs\n• 📈 **New Joins Today:** +${newToday}  |  **Past 7 Days:** +${new7d}\n• 🔒 **Unclaimed Ratio:** ${unclaimed}/${totalMembers} (${activeSync} Active 30-Day Tokens)`,
+    signups: `👥 **RECENT MEMBER SIGNUPS**\n${signupsText}`,
+    perks: `🎁 **ACTIVE ALLIANCE PROMO PERKS**\n• 💎 **Active Code:** ${codeStr}\n• ✅ **Claim Delivery:** ${claimsStr}\n• 📬 **Notice:** Check your in-game mailbox to collect rewards!`,
+    maintenance: `🌙 **NIGHTLY ACCOUNT MAINTENANCE**\n• 🟢 **Status:** 2:00 AM UTC Audit Active & Scheduled\n• 🔄 **Last Audit:** ${maintLastRunStrDef} (${maintAuditedDef} Audited, ${maintRefreshedDef} Refreshed)\n• ⚡ **Sync State:** Google Sheets & Firebase Two-Way Verified`,
+    bot: `🤖 **AUTO-BOT TELEMETRY**\n• 🟢 **Status:** Active & Monitoring\n• ⏳ **Next Sweep:** In ~35 mins (Every 45m)`
+  };
+
   // Editor State
   window._gkEditorState = {
     title: savedConfig.title || "🏰 ALLIANCE GATEKEEPER REPORT",
@@ -12580,6 +12597,7 @@ window.openGatekeeperReportEditorModal = async function() {
     colorHex: savedConfig.colorHex || "#38bdf8",
     colorDec: savedConfig.colorDec || 3718648,
     footer: savedConfig.footer || "Alliance Gatekeeper • Real-Time Live Sync ⚡",
+    defaultSectionTexts,
     live: {
       totalMembers,
       newToday,
@@ -12593,6 +12611,17 @@ window.openGatekeeperReportEditorModal = async function() {
     }
   };
 
+  // Load saved custom overrides or fall back to defaults
+  const sRoster = savedConfig.customRosterText || defaultSectionTexts.roster;
+  const sSignups = savedConfig.customSignupsText || defaultSectionTexts.signups;
+  const sPerks = savedConfig.customPerksText || defaultSectionTexts.perks;
+  const sMaint = savedConfig.customMaintenanceText || defaultSectionTexts.maintenance;
+  const sBot = savedConfig.customBotText || defaultSectionTexts.bot;
+
+  const sectionEditorStyle = `width: 100%; min-height: 60px; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-main); font-size: 11.5px; box-sizing: border-box; resize: vertical; font-family: 'Consolas', 'Monaco', monospace; line-height: 1.5;`;
+  const sectionBoxStyle = `background: rgba(0,0,0,0.25); padding: 12px; border-radius: 10px; border: 1px solid var(--border);`;
+  const resetBtnStyle = `background: none; border: none; color: var(--text-muted); font-size: 10px; cursor: pointer; padding: 2px 6px; text-decoration: underline;`;
+
   const modal = document.createElement('div');
   modal.id = 'gatekeeperReportModal';
   modal.style.cssText = `
@@ -12603,7 +12632,7 @@ window.openGatekeeperReportEditorModal = async function() {
   `;
 
   modal.innerHTML = `
-    <div style="background: var(--bg-card); border: 1px solid rgba(56,189,248,0.3); border-radius: 16px; width: 100%; max-width: 820px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 20px 50px rgba(0,0,0,0.7); overflow: hidden;">
+    <div style="background: var(--bg-card); border: 1px solid rgba(56,189,248,0.3); border-radius: 16px; width: 100%; max-width: 900px; max-height: 92vh; display: flex; flex-direction: column; box-shadow: 0 20px 50px rgba(0,0,0,0.7); overflow: hidden;">
       
       <!-- Top Header -->
       <div style="padding: 18px 22px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, rgba(30,41,59,0.7), rgba(15,23,42,0.8));">
@@ -12613,60 +12642,90 @@ window.openGatekeeperReportEditorModal = async function() {
           </div>
           <div>
             <h3 style="margin: 0; color: #38bdf8; font-size: 17px; font-weight: 800;">Alliance Gatekeeper Report Editor</h3>
-            <p style="margin: 2px 0 0 0; font-size: 11.5px; color: var(--text-muted);">Customize announcement notes, toggle live data sections, and preview Discord embeds.</p>
+            <p style="margin: 2px 0 0 0; font-size: 11.5px; color: var(--text-muted);">Edit each section's text directly. Toggle sections on/off with checkboxes. Preview updates live.</p>
           </div>
         </div>
         <button onclick="document.getElementById('gatekeeperReportModal').remove()" style="background: none; border: none; color: var(--text-muted); font-size: 22px; cursor: pointer; padding: 4px 8px; line-height: 1;">✕</button>
       </div>
 
       <!-- Modal Body (Two-Column Responsive Layout) -->
-      <div style="padding: 20px 22px; overflow-y: auto; display: flex; flex-direction: column; gap: 18px;">
+      <div style="padding: 20px 22px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px;">
         
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 18px; align-items: start;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px; align-items: start;">
           
-          <!-- Column 1: Controls & Toggles -->
-          <div style="display: flex; flex-direction: column; gap: 14px;">
+          <!-- Column 1: Editable Sections -->
+          <div style="display: flex; flex-direction: column; gap: 10px;">
             
             <!-- Custom R5 Announcement -->
-            <div style="background: rgba(0,0,0,0.25); padding: 14px; border-radius: 10px; border: 1px solid var(--border);">
+            <div style="${sectionBoxStyle}">
               <label style="display: block; font-size: 12px; font-weight: bold; color: var(--accent); margin-bottom: 6px;">
                 📢 Custom R5 Announcement / Directive (Optional)
               </label>
-              <textarea id="gkEditorAnnouncement" oninput="window.updateGatekeeperPreview()" placeholder="e.g. Sunfire Castle battle this Saturday @ 14:00 UTC! Keep shields active." style="width: 100%; min-height: 70px; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-main); font-size: 12px; box-sizing: border-box; resize: vertical;">${window.escapeHTML(window._gkEditorState.announcement)}</textarea>
-              <span style="font-size: 10.5px; color: var(--text-muted); display: block; margin-top: 4px;">Appears at the very top of the Discord embed card.</span>
+              <textarea id="gkEditorAnnouncement" oninput="window.updateGatekeeperPreview()" placeholder="e.g. Sunfire Castle battle this Saturday @ 14:00 UTC! Keep shields active." style="${sectionEditorStyle} min-height: 50px;">${window.escapeHTML(window._gkEditorState.announcement)}</textarea>
             </div>
 
-            <!-- Section Checkbox Toggles -->
-            <div style="background: rgba(0,0,0,0.25); padding: 14px; border-radius: 10px; border: 1px solid var(--border);">
-              <div style="font-size: 12px; font-weight: bold; color: var(--text-main); margin-bottom: 8px;">
-                📋 Report Sections to Include:
+            <!-- Roster Section -->
+            <div style="${sectionBoxStyle}">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: bold; color: var(--text-main); cursor: pointer;">
+                  <input type="checkbox" id="gkToggleRoster" ${window._gkEditorState.incRoster ? 'checked' : ''} onchange="window.updateGatekeeperPreview()" style="width: 15px; height: 15px; accent-color: var(--accent);">
+                  🛡️ Alliance Roster & Verification
+                </label>
+                <button type="button" onclick="document.getElementById('gkTextRoster').value=window._gkEditorState.defaultSectionTexts.roster;window.updateGatekeeperPreview()" style="${resetBtnStyle}">↻ Reset</button>
               </div>
-              <div style="display: flex; flex-direction: column; gap: 8px;">
-                <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-main); cursor: pointer;">
-                  <input type="checkbox" id="gkToggleRoster" ${window._gkEditorState.incRoster ? 'checked' : ''} onchange="window.updateGatekeeperPreview()" style="width: 16px; height: 16px; accent-color: var(--accent);">
-                  <span>🛡️ Alliance Roster & Verification Counts</span>
+              <textarea id="gkTextRoster" oninput="window.updateGatekeeperPreview()" style="${sectionEditorStyle}">${window.escapeHTML(sRoster)}</textarea>
+            </div>
+
+            <!-- Signups Section -->
+            <div style="${sectionBoxStyle}">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: bold; color: var(--text-main); cursor: pointer;">
+                  <input type="checkbox" id="gkToggleSignups" ${window._gkEditorState.incSignups ? 'checked' : ''} onchange="window.updateGatekeeperPreview()" style="width: 15px; height: 15px; accent-color: var(--accent);">
+                  👥 Recent Member Signups
                 </label>
-                <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-main); cursor: pointer;">
-                  <input type="checkbox" id="gkToggleSignups" ${window._gkEditorState.incSignups ? 'checked' : ''} onchange="window.updateGatekeeperPreview()" style="width: 16px; height: 16px; accent-color: var(--accent);">
-                  <span>👥 Recent Member Signups (Past 7 Days)</span>
-                </label>
-                <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-main); cursor: pointer;">
-                  <input type="checkbox" id="gkTogglePerks" ${window._gkEditorState.incPerks ? 'checked' : ''} onchange="window.updateGatekeeperPreview()" style="width: 16px; height: 16px; accent-color: var(--accent);">
-                  <span>🎁 Active Alliance Promo Perks / Codes</span>
-                </label>
-                <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-main); cursor: pointer;">
-                  <input type="checkbox" id="gkToggleMaintenance" ${window._gkEditorState.incMaintenance ? 'checked' : ''} onchange="window.updateGatekeeperPreview()" style="width: 16px; height: 16px; accent-color: var(--accent);">
-                  <span>🌙 Nightly Maintenance Telemetry</span>
-                </label>
-                <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-main); cursor: pointer;">
-                  <input type="checkbox" id="gkToggleBot" ${window._gkEditorState.incBot ? 'checked' : ''} onchange="window.updateGatekeeperPreview()" style="width: 16px; height: 16px; accent-color: var(--accent);">
-                  <span>🤖 Auto-Bot 24/7 Telemetry Status</span>
-                </label>
+                <button type="button" onclick="document.getElementById('gkTextSignups').value=window._gkEditorState.defaultSectionTexts.signups;window.updateGatekeeperPreview()" style="${resetBtnStyle}">↻ Reset</button>
               </div>
+              <textarea id="gkTextSignups" oninput="window.updateGatekeeperPreview()" style="${sectionEditorStyle}">${window.escapeHTML(sSignups)}</textarea>
+            </div>
+
+            <!-- Perks Section -->
+            <div style="${sectionBoxStyle}">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: bold; color: var(--text-main); cursor: pointer;">
+                  <input type="checkbox" id="gkTogglePerks" ${window._gkEditorState.incPerks ? 'checked' : ''} onchange="window.updateGatekeeperPreview()" style="width: 15px; height: 15px; accent-color: var(--accent);">
+                  🎁 Alliance Promo Perks / Codes
+                </label>
+                <button type="button" onclick="document.getElementById('gkTextPerks').value=window._gkEditorState.defaultSectionTexts.perks;window.updateGatekeeperPreview()" style="${resetBtnStyle}">↻ Reset</button>
+              </div>
+              <textarea id="gkTextPerks" oninput="window.updateGatekeeperPreview()" style="${sectionEditorStyle}">${window.escapeHTML(sPerks)}</textarea>
+            </div>
+
+            <!-- Maintenance Section -->
+            <div style="${sectionBoxStyle}">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: bold; color: var(--text-main); cursor: pointer;">
+                  <input type="checkbox" id="gkToggleMaintenance" ${window._gkEditorState.incMaintenance ? 'checked' : ''} onchange="window.updateGatekeeperPreview()" style="width: 15px; height: 15px; accent-color: var(--accent);">
+                  🌙 Nightly Maintenance Telemetry
+                </label>
+                <button type="button" onclick="document.getElementById('gkTextMaintenance').value=window._gkEditorState.defaultSectionTexts.maintenance;window.updateGatekeeperPreview()" style="${resetBtnStyle}">↻ Reset</button>
+              </div>
+              <textarea id="gkTextMaintenance" oninput="window.updateGatekeeperPreview()" style="${sectionEditorStyle}">${window.escapeHTML(sMaint)}</textarea>
+            </div>
+
+            <!-- Bot Section -->
+            <div style="${sectionBoxStyle}">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: bold; color: var(--text-main); cursor: pointer;">
+                  <input type="checkbox" id="gkToggleBot" ${window._gkEditorState.incBot ? 'checked' : ''} onchange="window.updateGatekeeperPreview()" style="width: 15px; height: 15px; accent-color: var(--accent);">
+                  🤖 Auto-Bot 24/7 Telemetry
+                </label>
+                <button type="button" onclick="document.getElementById('gkTextBot').value=window._gkEditorState.defaultSectionTexts.bot;window.updateGatekeeperPreview()" style="${resetBtnStyle}">↻ Reset</button>
+              </div>
+              <textarea id="gkTextBot" oninput="window.updateGatekeeperPreview()" style="${sectionEditorStyle}">${window.escapeHTML(sBot)}</textarea>
             </div>
 
             <!-- Embed Color Presets -->
-            <div style="background: rgba(0,0,0,0.25); padding: 14px; border-radius: 10px; border: 1px solid var(--border);">
+            <div style="${sectionBoxStyle}">
               <div style="font-size: 12px; font-weight: bold; color: var(--text-main); margin-bottom: 8px;">
                 🎨 Embed Border Color:
               </div>
@@ -12687,7 +12746,7 @@ window.openGatekeeperReportEditorModal = async function() {
               <span>👁️ Live Discord #alerts Preview</span>
             </div>
             
-            <div style="background: #2b2d31; border-radius: 10px; padding: 14px; font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #dbdee1; font-size: 12.5px; line-height: 1.45; box-shadow: 0 4px 14px rgba(0,0,0,0.3);">
+            <div style="background: #2b2d31; border-radius: 10px; padding: 14px; font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #dbdee1; font-size: 12.5px; line-height: 1.45; box-shadow: 0 4px 14px rgba(0,0,0,0.3); position: sticky; top: 0;">
               
               <!-- Discord Author Header -->
               <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
@@ -12770,32 +12829,30 @@ window.buildGatekeeperReportPayload = function() {
     sections.push(`📢 **ALLIANCE DIRECTIVE**\n${ann}`);
   }
 
+  // Read directly from the editable textareas
   if (incRoster) {
-    sections.push(`🛡️ **ALLIANCE ROSTER & VERIFICATION**\n• 👥 **Total Members:** ${s.live.totalMembers} Chiefs\n• 📈 **New Joins Today:** +${s.live.newToday}  |  **Past 7 Days:** +${s.live.new7d}\n• 🔒 **Unclaimed Ratio:** ${s.live.unclaimed}/${s.live.totalMembers} (${s.live.activeSync} Active 30-Day Tokens)`);
+    const txt = document.getElementById('gkTextRoster')?.value || s.defaultSectionTexts?.roster || '';
+    sections.push(txt.trim());
   }
 
   if (incSignups) {
-    sections.push(`👥 **RECENT MEMBER SIGNUPS**\n${s.live.signupsText}`);
+    const txt = document.getElementById('gkTextSignups')?.value || s.defaultSectionTexts?.signups || '';
+    sections.push(txt.trim());
   }
 
   if (incPerks) {
-    sections.push(`🎁 **ACTIVE ALLIANCE PROMO PERKS**\n• 💎 **Active Code:** ${s.live.codeStr}\n• ✅ **Claim Delivery:** ${s.live.claimsStr}\n• 📬 **Notice:** Check your in-game mailbox to collect rewards!`);
+    const txt = document.getElementById('gkTextPerks')?.value || s.defaultSectionTexts?.perks || '';
+    sections.push(txt.trim());
   }
 
   if (incMaintenance) {
-    const m = s.live.maintData || {};
-    const maintAudited = m.accountsAudited ?? s.live.totalMembers;
-    const maintRefreshed = m.tokensRefreshed ?? s.live.activeSync;
-    let maintLastRunStr = '2:00 AM UTC (Last Night)';
-    if (m.lastRun) {
-      const ld = new Date(m.lastRun);
-      maintLastRunStr = `${ld.toLocaleDateString([], { month: 'short', day: 'numeric' })} • ${ld.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-    }
-    sections.push(`🌙 **NIGHTLY ACCOUNT MAINTENANCE**\n• 🟢 **Status:** 2:00 AM UTC Audit Active & Scheduled\n• 🔄 **Last Audit:** ${maintLastRunStr} (${maintAudited} Audited, ${maintRefreshed} Refreshed)\n• ⚡ **Sync State:** Google Sheets & Firebase Two-Way Verified`);
+    const txt = document.getElementById('gkTextMaintenance')?.value || s.defaultSectionTexts?.maintenance || '';
+    sections.push(txt.trim());
   }
 
   if (incBot) {
-    sections.push(`🤖 **AUTO-BOT TELEMETRY**\n• 🟢 **Status:** Active & Monitoring\n• ⏳ **Next Sweep:** In ~35 mins (Every 45m)`);
+    const txt = document.getElementById('gkTextBot')?.value || s.defaultSectionTexts?.bot || '';
+    sections.push(txt.trim());
   }
 
   const description = sections.join('\n\n');
@@ -12836,6 +12893,11 @@ window.saveGatekeeperDraftSettings = async function() {
     incPerks,
     incMaintenance,
     incBot,
+    customRosterText: (document.getElementById('gkTextRoster')?.value || '').trim(),
+    customSignupsText: (document.getElementById('gkTextSignups')?.value || '').trim(),
+    customPerksText: (document.getElementById('gkTextPerks')?.value || '').trim(),
+    customMaintenanceText: (document.getElementById('gkTextMaintenance')?.value || '').trim(),
+    customBotText: (document.getElementById('gkTextBot')?.value || '').trim(),
     colorHex: window._gkEditorState?.colorHex || "#38bdf8",
     colorDec: window._gkEditorState?.colorDec || 3718648,
     updatedAt: new Date().toISOString()

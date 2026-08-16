@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [2.5.114] - 2026-08-15
+- Gatekeeper Report Editor: Upgraded from toggle-only checkboxes to fully editable textareas for every report section (Roster, Signups, Perks, Maintenance, Bot).
+- Each section now has a "Reset to Live Data" button to revert custom edits back to auto-generated values from Firebase.
+- Custom section text overrides are persisted to Firebase draft settings and restored when reopening the editor.
+- Discord preview panel made sticky so it stays visible while scrolling through editable sections.
+
 ## [2.5.113] - 2026-08-15
 - Admin Menu: Fixed admin authorization checks on Alliance Gatekeeper Report publishing.
 - Dual-Engine Discord Publishing: Integrated direct Discord Webhook dispatch with instant PATCH updates and backend proxy fallback to eliminate quota bottlenecks and permission errors.
