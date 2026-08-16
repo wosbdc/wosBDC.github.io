@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.5.116] - 2026-08-16
+- Alliance Championship Tracker Toggle Fix: Resolved an unhandled `ReferenceError` during statistics recalculation that prevented member signup rows from toggling back from YES to NO.
+- Live Championship Status Synchronization: Ensured master node `activity_live` remains the authoritative source of truth, preventing legacy secondary nodes from overriding explicit NO responses.
+- Robust Error Handling: Wrapped toggle handlers in `try/finally` blocks to guarantee buttons always re-enable immediately after state transitions.
+
 ## [2.5.115] - 2026-08-16
 - Event Activity Matrix: Added real-time cross-event sync with automatic bidirectional synchronization for Alliance Championship signups, Mercenary Prestige completions, and Showdown scores.
 - Championship Tracker Live Sync: Toggling member signup status directly updates Firebase `allianceChampionship` records and broadcasts to all active admin views.

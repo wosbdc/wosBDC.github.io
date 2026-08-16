@@ -1,9 +1,9 @@
 {
-  "version": "2.5.115",
+  "version": "2.5.116",
   "releaseDate": "2026-08-16",
-  "title": "Live Cross-Event Sync & Modernized Admin Navigation",
+  "title": "Alliance Championship Tracker Toggle Fix",
   "notes": [
-    "Alliance Championship & Mercenary Prestige: Real-time live synchronization directly to Firebase & Activity Matrix.",
-    "Navigation: Clean inline navigation headers replacing floating close buttons."
+    "Fixed Alliance Championship Tracker toggle to allow toggling freely between YES and NO without freezing.",
+    "Resolved ReferenceError in stats counter calculation and ensured consistent boolean status parsing."
   ]
 }

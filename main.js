@@ -704,50 +704,47 @@ window.fetchChampionshipData = async () => {
     const isT = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
 
     try {
-        const [actSnap, champSnap] = await Promise.all([
-            get(ref(db, 'activity_live')).catch(() => null),
-            get(ref(db, 'championship')).catch(() => null)
-        ]);
-
-        const actObj = (actSnap && actSnap.exists()) ? (actSnap.val() || {}) : {};
-        const champObj = (champSnap && champSnap.exists()) ? (champSnap.val() || {}) : {};
-
-        // 1. Process activity_live as primary source
-        if (typeof actObj === 'object') {
-            Object.entries(actObj).forEach(([gid, rec]) => {
-                if (rec && typeof rec === 'object') {
-                    const chiefName = rec.name || (window.idToNameMap && window.idToNameMap[gid]) || 'Chief';
-                    const isSigned = rec.championship !== undefined ? isT(rec.championship) : false;
-                    result[gid] = {
-                        gameId: gid,
-                        name: chiefName,
-                        signedUp: isSigned,
-                        lastUpdated: rec.updatedAt || Date.now()
-                    };
-                }
-            });
-        }
-
-        // 2. Merge secondary championship node for any missing players
-        if (typeof champObj === 'object') {
-            Object.entries(champObj).forEach(([gid, rec]) => {
-                if (rec && typeof rec === 'object') {
-                    if (!result[gid] || result[gid].signedUp === false) {
-                        const chiefName = rec.name || (window.idToNameMap && window.idToNameMap[gid]) || result[gid]?.name || 'Chief';
-                        const isSigned = rec.signedUp !== undefined ? isT(rec.signedUp) : false;
-                        if (!result[gid] || isSigned) {
-                            result[gid] = {
-                                gameId: gid,
-                                name: chiefName,
-                                signedUp: isSigned,
-                                lastUpdated: rec.lastUpdated || rec.updatedAt || Date.now()
-                            };
-                        }
+        const snap = await get(ref(db, 'activity_live'));
+        if (snap && snap.exists()) {
+            const actObj = snap.val() || {};
+            if (typeof actObj === 'object') {
+                Object.entries(actObj).forEach(([gid, rec]) => {
+                    if (rec && typeof rec === 'object') {
+                        const chiefName = rec.name || (window.idToNameMap && window.idToNameMap[gid]) || 'Chief';
+                        const isSigned = rec.championship !== undefined ? isT(rec.championship) : false;
+                        result[gid] = {
+                            gameId: gid,
+                            name: chiefName,
+                            signedUp: isSigned,
+                            lastUpdated: rec.updatedAt || Date.now()
+                        };
                     }
-                }
-            });
+                });
+            }
         }
-    } catch(e) { console.warn("Firebase championship read error:", e); }
+    } catch(e) { console.warn("Firebase activity_live championship read error:", e); }
+
+    // Fallback only for gameIds that do not exist at all in activity_live
+    try {
+        const champSnap = await get(ref(db, 'championship')).catch(() => null);
+        if (champSnap && champSnap.exists()) {
+            const champObj = champSnap.val() || {};
+            if (typeof champObj === 'object') {
+                Object.entries(champObj).forEach(([gid, rec]) => {
+                    if (rec && typeof rec === 'object' && result[gid] === undefined) {
+                        const chiefName = rec.name || (window.idToNameMap && window.idToNameMap[gid]) || 'Chief';
+                        const isSigned = rec.signedUp !== undefined ? isT(rec.signedUp) : false;
+                        result[gid] = {
+                            gameId: gid,
+                            name: chiefName,
+                            signedUp: isSigned,
+                            lastUpdated: rec.lastUpdated || rec.updatedAt || Date.now()
+                        };
+                    }
+                });
+            }
+        }
+    } catch(e) {}
 
     // Ensure all roster players are represented
     if (window.idToNameMap) {
@@ -769,11 +766,14 @@ window.toggleChampionshipStatus = async (gameId, forceStatus = null) => {
     let data = {};
     try { data = await window.fetchChampionshipData(); } catch(e) { console.error(e); }
 
+    const isT = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
     const existing = data[gIdStr] || { gameId: gIdStr, name: (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief', signedUp: false };
-    const newSignedUpStatus = (forceStatus !== null) ? forceStatus : !existing.signedUp;
+    const currentStatus = isT(existing.signedUp);
+    const newSignedUpStatus = (forceStatus !== null) ? Boolean(forceStatus) : !currentStatus;
     const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name || "Admin") : "Admin";
     const playerName = existing.name || (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief';
     const now = Date.now();
+    const nameKey = playerName ? playerName.toLowerCase().replace(/[^a-z0-9]/g, '_') : '';
 
     try {
         // 1. Write directly to master node activity_live
@@ -792,17 +792,38 @@ window.toggleChampionshipStatus = async (gameId, forceStatus = null) => {
             await set(ref(db, `activity_live/${gIdStr}`), currentRec);
         }
 
+        if (nameKey && nameKey !== gIdStr) {
+            try {
+                await update(ref(db, `activity_live/${nameKey}`), {
+                    name: playerName,
+                    championship: newSignedUpStatus,
+                    updatedAt: now
+                }).catch(() => null);
+            } catch(e) {}
+        }
+
         // 2. Secondary write for legacy node
         try {
             await set(ref(db, `championship/${gIdStr}`), {
                 gameId: gIdStr, name: playerName, signedUp: newSignedUpStatus, lastUpdated: now, updatedBy: adminName
             });
+            if (nameKey && nameKey !== gIdStr) {
+                await set(ref(db, `championship/${nameKey}`), {
+                    gameId: gIdStr, name: playerName, signedUp: newSignedUpStatus, lastUpdated: now, updatedBy: adminName
+                }).catch(() => null);
+            }
         } catch(e) {}
 
         // Update memory cache immediately
-        if (window.championshipCache && window.championshipCache[gIdStr]) {
-            window.championshipCache[gIdStr].signedUp = newSignedUpStatus;
-            window.championshipCache[gIdStr].lastUpdated = now;
+        if (window.championshipCache) {
+            if (window.championshipCache[gIdStr]) {
+                window.championshipCache[gIdStr].signedUp = newSignedUpStatus;
+                window.championshipCache[gIdStr].lastUpdated = now;
+            }
+            if (nameKey && window.championshipCache[nameKey]) {
+                window.championshipCache[nameKey].signedUp = newSignedUpStatus;
+                window.championshipCache[nameKey].lastUpdated = now;
+            }
         }
 
         window.clearAllEventCaches();
@@ -1793,15 +1814,15 @@ onValue(ref(db, 'activity_live'), async (snap) => {
   }
 
   // 1. If Polar Terrors Tracker page is currently open
-  if (document.getElementById('pt-yes-count')) {
+  if (document.getElementById('ptTableBody') || document.getElementById('pt-yes-count')) {
     if (typeof views.polarTerrorsAdmin === 'function') await views.polarTerrorsAdmin();
   }
   // 2. If Alliance Championship Tracker page is currently open
-  else if (document.getElementById('champ-yes-count')) {
+  else if (document.getElementById('champTableBody') || document.getElementById('champ-yes-count')) {
     if (typeof views.championshipAdmin === 'function') await views.championshipAdmin();
   }
   // 3. If Mercenary Prestige Tracker page is currently open
-  else if (document.getElementById('merc-yes-count')) {
+  else if (document.getElementById('mercTableBody') || document.getElementById('merc-yes-count')) {
     if (typeof views.mercenaryAdmin === 'function') await views.mercenaryAdmin();
   }
 
@@ -17247,6 +17268,8 @@ html += `</select>
         // Sort roster by name
         rosterList.sort((a,b) => (a.name || '').localeCompare(b.name || ''));
 
+        const isT = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
+
         // Calculate statistics
         let totalCount = rosterList.length;
         let yesCount = 0;
@@ -17254,9 +17277,10 @@ html += `</select>
         let missingNames = [];
 
         rosterList.forEach(p => {
-            let gIdStr = p.gameId.toString().trim();
-            let record = championshipData[gIdStr];
-            let isSignedUp = record && record.signedUp;
+            let gIdStr = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (p.name ? p.name.toLowerCase().replace(/[^a-z0-9]/g, '_') : '');
+            let nameKey = p.name ? p.name.toLowerCase().replace(/[^a-z0-9]/g, '_') : '';
+            let record = championshipData[gIdStr] || (nameKey ? championshipData[nameKey] : null) || (p.name ? championshipData[p.name] : null);
+            let isSignedUp = record && isT(record.signedUp);
             if (isSignedUp) {
                 yesCount++;
             } else {
@@ -17342,8 +17366,9 @@ html += `</select>
                 <tbody id="champTableBody">
                   ${rosterList.map(p => {
                       let gIdStr = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (p.name ? p.name.toLowerCase().replace(/[^a-z0-9]/g, '_') : '');
-                      let record = championshipData[gIdStr];
-                      let isSignedUp = record && record.signedUp;
+                      let nameKey = p.name ? p.name.toLowerCase().replace(/[^a-z0-9]/g, '_') : '';
+                      let record = championshipData[gIdStr] || (nameKey ? championshipData[nameKey] : null) || (p.name ? championshipData[p.name] : null);
+                      let isSignedUp = record && isT(record.signedUp);
                       return `
                         <tr class="champ-row" data-name="${escapeHTML((p.name || '').toLowerCase())}" data-gid="${gIdStr}" data-signed="${isSignedUp ? 'yes' : 'no'}" style="border-bottom:1px solid var(--border);">
                           <td class="champ-name-cell" style="padding:14px 20px; font-weight:bold; color:var(--text-main); font-size:15px;">${escapeHTML(p.name)}</td>
@@ -17400,9 +17425,6 @@ html += `</select>
             if (elBtnYes) elBtnYes.textContent = `Signed Up (${yes})`;
             if (elBtnNo) elBtnNo.textContent = `Missing (${no})`;
             if (elMissingCount) elMissingCount.textContent = `(${missingList.length})`;
-            if (elMissingBox) {
-                elMissingBox.innerHTML = missingList.length > 0 ? missingList.join(', ') : '<span style="color:var(--success);">🎉 All members have signed up!</span>';
-            }
             window.champMissingNames = missingList;
         };
 
@@ -17438,13 +17460,29 @@ html += `</select>
             btn.innerHTML = willSign ? '✅ YES' : '❌ NO';
 
             window.updateChampStatsUI();
-            window.filterChampTable();
+            if (window.champCurrentFilter && window.champCurrentFilter !== 'all') {
+                window.filterChampTable();
+            }
 
-            const ok = await window.toggleChampionshipStatus(gameId, willSign);
-            btn.disabled = false;
+            try {
+                const ok = await window.toggleChampionshipStatus(gameId, willSign);
 
-            if (!ok) {
-                // Revert on write error
+                if (!ok) {
+                    // Revert on write error
+                    row.setAttribute('data-signed', wasSigned ? 'yes' : 'no');
+                    btn.style.background = wasSigned ? '#10b981' : 'rgba(239,68,68,0.15)';
+                    btn.style.color = wasSigned ? '#ffffff' : '#ef4444';
+                    btn.style.border = wasSigned ? 'none' : '1px solid rgba(239,68,68,0.4)';
+                    btn.style.boxShadow = wasSigned ? '0 2px 8px rgba(16,185,129,0.35)' : 'none';
+                    btn.innerHTML = wasSigned ? '✅ YES' : '❌ NO';
+                    window.updateChampStatsUI();
+                    if (window.champCurrentFilter && window.champCurrentFilter !== 'all') {
+                        window.filterChampTable();
+                    }
+                    if (window.showToast) window.showToast("Failed to save signup status", "error");
+                }
+            } catch (err) {
+                console.error("onChampToggle error:", err);
                 row.setAttribute('data-signed', wasSigned ? 'yes' : 'no');
                 btn.style.background = wasSigned ? '#10b981' : 'rgba(239,68,68,0.15)';
                 btn.style.color = wasSigned ? '#ffffff' : '#ef4444';
@@ -17452,8 +17490,8 @@ html += `</select>
                 btn.style.boxShadow = wasSigned ? '0 2px 8px rgba(16,185,129,0.35)' : 'none';
                 btn.innerHTML = wasSigned ? '✅ YES' : '❌ NO';
                 window.updateChampStatsUI();
-                window.filterChampTable();
-                if (window.showToast) window.showToast("Failed to save signup status", "error");
+            } finally {
+                btn.disabled = false;
             }
         };
 
