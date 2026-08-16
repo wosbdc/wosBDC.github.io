@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.5.119] - 2026-08-16
+- Restored Single-Line Horizontal Scrolling Admin Menu: Reverted the bulky stacked pill layout on mobile in favor of the clean, smooth single-line horizontal scrolling bar with native touch momentum.
+- Desktop Mouse Wheel & Drag Support: Added intuitive mouse wheel horizontal scrolling and mouse drag gestures on PC desktop, plus automatic centering of active tabs so all tabs (including Logs and System) are effortless to navigate across all devices.
+
 ## [2.5.118] - 2026-08-16
 - Admin Navigation Desktop Responsiveness: Fixed an issue where `📋 Logs` and `⚡ System` tabs were clipped off-screen on PC/desktop monitors due to single-line hidden horizontal overflow.
 - Responsive Pill Segmented Tabs: Converted Admin Menu tabs to modern, wrap-around pill badges with active glow indicators so all admin sections are immediately accessible on desktop and mobile without scrolling.

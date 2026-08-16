@@ -15417,17 +15417,26 @@ const views = {
             <h2 style="color:var(--danger); margin:0;">🛡️ Admin Menu</h2>
           </div>
           
-          <!-- Tab Navigation -->
-          <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:14px;">
-            <button class="admin-tab-btn active" data-tab="tab-tools" style="background:rgba(14,165,233,0.15); border:1px solid var(--accent); color:var(--accent); font-weight:bold; font-size:13px; cursor:pointer; padding:7px 14px; border-radius:8px; transition:all 0.2s ease; box-shadow:0 2px 8px rgba(14,165,233,0.25);">🛠️ Daily Tools</button>
-            <button class="admin-tab-btn" data-tab="tab-bots" style="background:rgba(255,255,255,0.04); border:1px solid var(--border); color:var(--text-muted); font-weight:bold; font-size:13px; cursor:pointer; padding:7px 14px; border-radius:8px; transition:all 0.2s ease;">🤖 Bots</button>
-            <button class="admin-tab-btn" data-tab="tab-giftcodes" style="background:rgba(255,255,255,0.04); border:1px solid var(--border); color:var(--text-muted); font-weight:bold; font-size:13px; cursor:pointer; padding:7px 14px; border-radius:8px; transition:all 0.2s ease;">🎁 Gift Codes</button>
-            <button class="admin-tab-btn" data-tab="tab-indev" style="background:rgba(255,255,255,0.04); border:1px solid var(--border); color:var(--text-muted); font-weight:bold; font-size:13px; cursor:pointer; padding:7px 14px; border-radius:8px; transition:all 0.2s ease;">🧪 In-Dev</button>
-            ${currentUser && currentUser.gameId.toString() === '318843189' ? `<button class="admin-tab-btn" data-tab="tab-frost" style="background:rgba(255,255,255,0.04); border:1px solid var(--border); color:var(--text-muted); font-weight:bold; font-size:13px; cursor:pointer; padding:7px 14px; border-radius:8px; transition:all 0.2s ease;">❄️ Frost Clan</button>` : ''}
-            <button class="admin-tab-btn" data-tab="tab-users" style="background:rgba(255,255,255,0.04); border:1px solid var(--border); color:var(--text-muted); font-weight:bold; font-size:13px; cursor:pointer; padding:7px 14px; border-radius:8px; transition:all 0.2s ease;">👥 Users</button>
-            ${isR5 ? `<button class="admin-tab-btn" data-tab="tab-settings" style="background:rgba(255,255,255,0.04); border:1px solid var(--border); color:var(--text-muted); font-weight:bold; font-size:13px; cursor:pointer; padding:7px 14px; border-radius:8px; transition:all 0.2s ease;">⚙️ Settings</button>` : ''}
-            <button class="admin-tab-btn" data-tab="tab-logs" style="background:rgba(255,255,255,0.04); border:1px solid var(--border); color:var(--text-muted); font-weight:bold; font-size:13px; cursor:pointer; padding:7px 14px; border-radius:8px; transition:all 0.2s ease;">📋 Logs</button>
-            ${isR5 ? `<button class="admin-tab-btn" data-tab="tab-system" style="background:rgba(255,255,255,0.04); border:1px solid var(--border); color:var(--text-muted); font-weight:bold; font-size:13px; cursor:pointer; padding:7px 14px; border-radius:8px; transition:all 0.2s ease;">⚡ System</button>` : ''}
+          <!-- Tab Navigation (Single-line scrolling menu bar) -->
+          <div style="position:relative; margin-bottom:20px; border-bottom:1px solid var(--border);">
+            <div id="adminTabNav" style="display:flex; gap:10px; padding-bottom:10px; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:thin; scrollbar-color:rgba(255,255,255,0.18) transparent; white-space:nowrap;">
+              <style>
+                #adminTabNav { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.18) transparent; }
+                #adminTabNav::-webkit-scrollbar { height: 4px; }
+                #adminTabNav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 4px; }
+                #adminTabNav::-webkit-scrollbar-track { background: transparent; }
+                .admin-tab-btn { flex-shrink: 0; user-select: none; }
+              </style>
+              <button class="admin-tab-btn active" data-tab="tab-tools" style="background:none; border:none; color:var(--accent); font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid var(--accent); flex-shrink:0;">🛠️ Daily Tools</button>
+              <button class="admin-tab-btn" data-tab="tab-bots" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid transparent; flex-shrink:0;">🤖 Bots</button>
+              <button class="admin-tab-btn" data-tab="tab-giftcodes" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid transparent; flex-shrink:0;">🎁 Gift Codes</button>
+              <button class="admin-tab-btn" data-tab="tab-indev" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid transparent; flex-shrink:0;">🧪 In-Dev</button>
+              ${currentUser && currentUser.gameId.toString() === '318843189' ? `<button class="admin-tab-btn" data-tab="tab-frost" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid transparent; flex-shrink:0;">❄️ Frost Clan</button>` : ''}
+              <button class="admin-tab-btn" data-tab="tab-users" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid transparent; flex-shrink:0;">👥 Users</button>
+              ${isR5 ? `<button class="admin-tab-btn" data-tab="tab-settings" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid transparent; flex-shrink:0;">⚙️ Settings</button>` : ''}
+              <button class="admin-tab-btn" data-tab="tab-logs" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid transparent; flex-shrink:0;">📋 Logs</button>
+              ${isR5 ? `<button class="admin-tab-btn" data-tab="tab-system" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid transparent; flex-shrink:0;">⚡ System</button>` : ''}
+            </div>
           </div>
           
           <!-- Tab 1: Daily Tools -->
@@ -16484,24 +16493,50 @@ const views = {
       if (window.renderStaffRoles) window.renderStaffRoles();
       if (window.loadDiscordAlertSettings) window.loadDiscordAlertSettings();
       
-      // Bind Admin Tabs
+      // Bind Admin Tabs & Enable Horizontal Mouse Wheel / Drag Scrolling
+      const adminNavEl = document.getElementById('adminTabNav');
+      if (adminNavEl) {
+        adminNavEl.addEventListener('wheel', (e) => {
+          if (e.deltaY !== 0) {
+            e.preventDefault();
+            adminNavEl.scrollLeft += e.deltaY;
+          }
+        }, { passive: false });
+
+        let isDown = false, startX, scrollLeftVal;
+        adminNavEl.addEventListener('mousedown', (e) => {
+          isDown = true;
+          startX = e.pageX - adminNavEl.offsetLeft;
+          scrollLeftVal = adminNavEl.scrollLeft;
+        });
+        adminNavEl.addEventListener('mouseleave', () => { isDown = false; });
+        adminNavEl.addEventListener('mouseup', () => { isDown = false; });
+        adminNavEl.addEventListener('mousemove', (e) => {
+          if (!isDown) return;
+          e.preventDefault();
+          const x = e.pageX - adminNavEl.offsetLeft;
+          const walk = (x - startX) * 1.5;
+          adminNavEl.scrollLeft = scrollLeftVal - walk;
+        });
+      }
+
       document.querySelectorAll('.admin-tab-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
           const clickedBtn = e.currentTarget || e.target;
           document.querySelectorAll('.admin-tab-btn').forEach(b => {
             b.classList.remove('active');
             b.style.color = 'var(--text-muted)';
-            b.style.background = 'rgba(255,255,255,0.04)';
-            b.style.borderColor = 'var(--border)';
-            b.style.boxShadow = 'none';
+            b.style.borderBottom = '2px solid transparent';
           });
           document.querySelectorAll('.admin-tab-content').forEach(c => c.style.display = 'none');
           
           clickedBtn.classList.add('active');
           clickedBtn.style.color = 'var(--accent)';
-          clickedBtn.style.background = 'rgba(14,165,233,0.15)';
-          clickedBtn.style.borderColor = 'var(--accent)';
-          clickedBtn.style.boxShadow = '0 2px 8px rgba(14,165,233,0.25)';
+          clickedBtn.style.borderBottom = '2px solid var(--accent)';
+          
+          try {
+            clickedBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+          } catch(err) {}
           
           const tabKey = clickedBtn.getAttribute('data-tab');
           const targetEl = document.getElementById(tabKey);

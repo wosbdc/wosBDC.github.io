@@ -1,9 +1,9 @@
 {
-  "version": "2.5.118",
+  "version": "2.5.119",
   "releaseDate": "2026-08-16",
-  "title": "Admin Navigation Desktop Responsiveness Fix",
+  "title": "Restored Smooth Horizontal Scrolling Admin Menu Bar",
   "notes": [
-    "Fixed missing Logs and System tabs on PC/desktop by redesigning admin navigation into responsive pill tabs.",
-    "Eliminated horizontal overflow clipping so all admin menu tabs are immediately visible on desktop mice and monitors without scrolling."
+    "Restored the sleek, native-feel single-line horizontal scrolling Admin menu bar for mobile and smartphones.",
+    "Added PC mouse wheel horizontal scrolling, drag gestures, and active tab auto-centering so all tabs are effortless to access on desktop."
   ]
 }
