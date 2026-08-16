@@ -1,112 +1,84 @@
 # CHANGELOG
 
 ## [2.9.1] - 2026-08-16
-- Native UTC Game Time Entry: Enhanced the Scheduled Countdown Alert modal (`openCreateCountdownAlertModal`) with dedicated UTC Date (`<input type="date">`) and UTC Time (`<input type="time">`) inputs matching official Whiteout Survival announcement standards.
-- Real-Time Local Time Conversion Card: Integrated a live conversion card that automatically translates the entered UTC date & time into the user's exact local timezone (e.g. `Sun, Aug 16 @ 11:00 PM PDT (UTC-7)`) alongside live relative countdown indicators (`⏳ in 6h 55m`).
-- Quick UTC Presets: Added 1-click UTC time quick-fill pills for `00:00 UTC` (Server Day Start), `02:00 UTC` (Daily Reset), `06:00 UTC` (Game Patch / Maintenance), `12:00 UTC` (Midday Events), and `19:00 UTC` (Bear Trap).
-- Dual-Mode Timezone Synchronization: Added an interactive `🌐 Set in UTC Time` vs `🕒 Set in Local Time` toggle that automatically synchronizes values across both modes in real-time.
+- 🌐 Added UTC game time entry with instant conversion to your local time
+- ⚡ Added 1-click UTC quick-fill presets (Reset, Maintenance, Bear Trap)
+- 🔄 Added seamless toggle between UTC Game Time and Local Time modes
 
 ## [2.9.0] - 2026-08-16
-- Unified Push Notification Hub & Device Token Migration: Integrated real-time push notification subscriber counting (`window.getPushSubscriberCount`) across the Leadership Blast Broadcast modal, Bell Notification dropdown, and Admin Dashboard.
-- Blast Notifications Suite: Added dynamic live subscriber count preview on broadcast modal headers and action buttons, giving leadership instant feedback on the number of registered recipient devices prior to sending.
-- 1-Click Preset Alert Templates: Added quick-fill templates for Shields Up, Bear Trap, Championship, Gift Codes, and Daily Reset directly into the blast notification modal.
-- Multi-Device Token Health & Auto-Repair: Upgraded push registration pipeline to seamlessly maintain active tokens across desktop and mobile devices while auto-pruning expired or orphaned Firebase tokens.
+- 🔔 Added live device subscriber counts to leadership broadcast tools
+- 🚀 Added 1-click preset alert templates for Bear Trap, Shields Up, and Events
+- 📱 Improved multi-device push notification sync and token cleanup
 
 ## [2.8.0] - 2026-08-16
-- Live Countdown & Scheduled Alert System: Enhanced the Alliance Notification Bell Hub (`openAllianceAlertsModal`) to support scheduled announcements with real-time countdown tickers for Whiteout Survival Game Updates, Server Maintenance, Alliance Wars, and Event Battles.
-- 3-Stage Smart Countdown Engine: Displays clean date and time formatted in user's local timezone when scheduled ahead, automatically transitions to a second-by-second live countdown ticker within the final 60 minutes, and shifts to `🚨 LIVE NOW` during active events.
-- Navbar Countdown Badge Integration: Displays a pulsing orange timer pill (e.g. `⏳ 42m`) or green `🟢 LIVE` indicator directly on the top navbar notification bell and mobile drawer alert button.
-- Leadership Creation Suite: Added `openCreateCountdownAlertModal` and edit controls with UTC/Local live preview, duration presets, priority badges, and optional instant device push notification broadcasts.
+- ⏳ Added live countdown timers for game updates, maintenance, and alliance events
+- 🚨 Added pulsing countdown pills to the notification bell and mobile menu
+- ✏️ Added event scheduling suite with custom durations and priority badges
 
 ## [2.7.2] - 2026-08-16
-- Streamlined Actions Dropdown Menu: Replaced cluttered rows of 5–7 inline action buttons in the Admin Member Directory (`#tab-users`) with a single, sleek `⚡ Actions ▾` dropdown button for every player row.
-- Grouped & Categorized Player Operations: Cleanly organized options into View Profile, Edit Furnace Level, Repair Game ID, Manage Linked Alts (owner-only), Staff Permissions (R4/R5), Delete Custom Avatar, and Delete Member / Remove from Roster.
-- Auto-Close & Overflow Protection: Integrated outside-click auto-close and enhanced table container padding so dropdown menus never get clipped on any screen size.
+- ⚡ Added single streamlined Actions menu for every player row
+- 📱 Improved mobile table layout and prevented menu clipping
 
 ## [2.7.1] - 2026-08-16
-- Strict Alt Account Privacy Lockdown: Enforced complete owner-only privacy across all public Player Lookup cards, modal profile views, and live statistics dashboards. The "🔗 Linked Alt Accounts" section is now exclusively rendered when the account owner is logged in.
-- Admin Users Hub Alt Privacy: Restricted alt character sub-rows, linked alt badges, and alt management action buttons in the Admin Member Directory (`#tab-users`) so that other admins cannot view or inspect another user's linked alts.
-- Private Account Hub Retained: Members retain full 100% control to manage, link, verify, and monitor 30-day token health for all their alts inside their private Account Hub.
+- 🔒 Strict privacy: Linked alt accounts are now visible only to account owners
+- 🛡️ Hidden alt account details from public lookups and admin directories
 
 ## [2.7.0] - 2026-08-16
-- Unified Member Database & Player Command Center: Consolidated the standalone Player Database Editor directly into the Admin Users Hub (`#tab-users`), giving leadership a single, unified command center to manage all members.
-- Integrated Add New Player with Live Verification: Added `➕ Add New Player` button directly in `#tab-users` with 1-click real-time game server verification against Whiteout Survival servers to auto-fill Chief Name and Furnace Level without creating fake credentials or claiming accounts.
-- Expanded Attributes & Alt Character Breakdown: Added `🔗 All Linked Alt Characters` view in the Attributes dropdown, showing each linked alt character with its owner Chief, Game ID, furnace level, and 30-day token health sync status.
-- Multi-Mode Member Sorting: Integrated instant live sorting by `🔤 Name (A-Z)`, `🔤 Name (Z-A)`, `🔥 Furnace Level (High ➔ Low)`, `🕒 Newest Signups`, `⌛ Oldest Signups`, and `🔢 Game ID (Asc)`.
-- Per-Row Interactive Actions: Added 1-click `👁️ Profile`, `🔥 Level` (edit furnace level), `🛠️ Repair ID`, `🔗 Alts`, and `📋 Copy Claim Link` across all member and alt rows.
-- Daily Tools Redirection: Updated Daily Tools member management shortcuts to route directly to the unified Member Database & User Hub.
+- 👥 Unified Member Database and Player Command Center
+- ➕ Added 1-click player verification to auto-fill Chief Name and Furnace Level
+- 🔍 Added multi-mode sorting (Name, Furnace Level, Signups) and quick actions
 
 ## [2.6.2] - 2026-08-16
-- Alliance Gift Codes Manager Integration: Relocated the Alliance Gift Codes Manager into the 🤖 Bots tab under Auto Gift Code Bot Daemon with a prominent launch action card and a dedicated `⬅️ Back to Bots` header navigation button.
-- Streamlined Admin Navigation: Removed the redundant top-level `🎁 Gift Codes` tab from `#adminTabNav`, decluttering the Admin Menu bar.
+- 🎁 Moved Alliance Gift Codes Manager into the Bots hub
+- 🧹 Cleaned up admin navigation menu bar
 
 ## [2.6.1] - 2026-08-16
-- Showdown Header Navigation Clean-up: Removed the redundant Activity Matrix button from the Showdown Data Entry header bar, keeping the view clean and exclusively focused on Showdown scores, daily breakdowns, and the Archive Vault.
+- 🛡️ Streamlined Showdown Data Entry header navigation
 
 ## [2.6.0] - 2026-08-16
-- Dedicated Event Archive & Reset Engines: Implemented independent, self-contained `🔄 Archive & Reset Cycle` actions for Alliance Championship (`window.archiveAndResetChampionshipCycle`), Mercenary Prestige (`window.archiveAndResetMercenaryCycle`), Polar Terrors (`window.archiveAndResetPolarTerrorsCycle`), and Bear Trap (`window.archiveAndResetBearTrapCycle`) with timestamped Firebase snapshot archiving and player lifetime attendance counter updates.
-- 1-Click Event Archive Restoration: Integrated `↩️ Restore Archive` modal suite across all tracker management pages, permitting instantaneous rollback of member status from any historical cycle snapshot.
-- Promoted Trackers to Daily Tools: Promoted Mercenary Prestige and Polar Terrors trackers out of the In-Dev Lab directly into `#tab-tools` Active Alliance Events tools for seamless daily operational access.
-- Streamlined Admin Logs: Removed the bulky activity matrix sub-tab from the Admin Logs menu, restoring a clean, clutter-free focus on Admin Action Audit Logs and Activity History Archives.
-- Member Event Activity Matrix: Integrated comprehensive multi-event activity aggregate matrix view accessible from Admin Dashboard (`📊 Activity Matrix` tab) and direct shortcuts, aggregating Bear Trap donations, multi-day Showdown participation, Mercenary Prestige completions, and Polar Terrors.
-- Multi-Day Showdown Missing Day Tracking: Detects missing participation per day across all active days (Day 1 through Day 6), displaying clear badges (e.g. `⚠️ Missing D1, D3` or `✅ Active All Days`) with exact daily score breakdowns.
-- Polar Terrors Multi-Level Aggregate: Evaluates player completions across all difficulty levels, automatically classifying any member with 1 or more completions as having completed Polar Terrors for the cycle.
-- Universal Event Archive & Reset Engine: Added dedicated "🔄 Archive & Reset Cycle" actions for Bear Trap, Alliance Championship, Mercenary Prestige, and Polar Terrors in their respective manager sections. Snapshots are timestamped, archived in Firebase Realtime Database, and member lifetime miss counters are accurately incremented.
-- 1-Click Event Archive Restoration: Added "↩️ Restore Archive" modals to Bear Trap, Championship, Mercenary, and Polar Terrors tracker management sections, enabling managers to view past cycle archives and restore live member statuses with a single click.
+- 🔄 Added 1-click Archive & Reset for Bear Trap, Championship, Mercenary, and Polar Terrors
+- ↩️ Added 1-click cycle restoration from historical snapshots
+- 📊 Added comprehensive Multi-Event Activity Matrix dashboard
 
 ## [2.5.119] - 2026-08-16
-- Restored Single-Line Horizontal Scrolling Admin Menu: Reverted the bulky stacked pill layout on mobile in favor of the clean, smooth single-line horizontal scrolling bar with native touch momentum.
-- Desktop Mouse Wheel & Drag Support: Added intuitive mouse wheel horizontal scrolling and mouse drag gestures on PC desktop, plus automatic centering of active tabs so all tabs (including Logs and System) are effortless to navigate across all devices.
+- 🖥️ Added mouse wheel horizontal scrolling and drag gestures to Admin Menu
+- 📱 Restored smooth single-line scrolling menu on mobile
 
 ## [2.5.118] - 2026-08-16
-- Admin Navigation Desktop Responsiveness: Fixed an issue where `📋 Logs` and `⚡ System` tabs were clipped off-screen on PC/desktop monitors due to single-line hidden horizontal overflow.
-- Responsive Pill Segmented Tabs: Converted Admin Menu tabs to modern, wrap-around pill badges with active glow indicators so all admin sections are immediately accessible on desktop and mobile without scrolling.
+- 🖥️ Improved Admin Menu layout on desktop screens
 
 ## [2.5.117] - 2026-08-16
-- Seamless Data Entry & Scroll Retention: Fixed an issue where Firebase websocket real-time updates echoed back local toggle clicks and triggered full-page re-renders, causing the browser to reset scroll position to the top.
-- Optimistic In-Place Updates: Trackers now update the DOM in-place without flashing loading screens or discarding user viewport position across Alliance Championship, Polar Terrors, and Mercenary Prestige pages.
+- ⚡ Fixed page scroll position jumping when toggling tracker rows
 
 ## [2.5.116] - 2026-08-16
-- Alliance Championship Tracker Toggle Fix: Resolved an unhandled `ReferenceError` during statistics recalculation that prevented member signup rows from toggling back from YES to NO.
-- Live Championship Status Synchronization: Ensured master node `activity_live` remains the authoritative source of truth, preventing legacy secondary nodes from overriding explicit NO responses.
-- Robust Error Handling: Wrapped toggle handlers in `try/finally` blocks to guarantee buttons always re-enable immediately after state transitions.
+- 🛡️ Fixed Alliance Championship signup toggle button
 
 ## [2.5.115] - 2026-08-16
-- Event Activity Matrix: Added real-time cross-event sync with automatic bidirectional synchronization for Alliance Championship signups, Mercenary Prestige completions, and Showdown scores.
-- Championship Tracker Live Sync: Toggling member signup status directly updates Firebase `allianceChampionship` records and broadcasts to all active admin views.
-- Mercenary Prestige Live Sync: Checking/unchecking member completions directly updates Firebase `mercenaryPrestige` records and refreshes the matrix.
-- Navigation Modernization: Replaced floating/overlapping close buttons in Showdown Data Entry, Championship Tracker, and Mercenary Prestige with responsive top header bars featuring direct Back to Admin and Activity Matrix navigation.
+- 🔄 Added real-time cross-event sync for Championship, Mercenary, and Showdown
+- 🧭 Modernized tracker headers and navigation shortcuts
 
 ## [2.5.114] - 2026-08-15
-- Gatekeeper Report Editor: Upgraded from toggle-only checkboxes to fully editable textareas for every report section (Roster, Signups, Perks, Maintenance, Bot).
-- Each section now has a "Reset to Live Data" button to revert custom edits back to auto-generated values from Firebase.
-- Custom section text overrides are persisted to Firebase draft settings and restored when reopening the editor.
-- Discord preview panel made sticky so it stays visible while scrolling through editable sections.
+- ✏️ Added editable text sections to Gatekeeper Report Editor
+- 🔄 Added Reset to Live Data button for each report section
 
 ## [2.5.113] - 2026-08-15
-- Admin Menu: Fixed admin authorization checks on Alliance Gatekeeper Report publishing.
-- Dual-Engine Discord Publishing: Integrated direct Discord Webhook dispatch with instant PATCH updates and backend proxy fallback to eliminate quota bottlenecks and permission errors.
+- 🤖 Enhanced Discord webhook report publishing and reliability
 
 ## [2.5.112] - 2026-08-15
-- Gatekeeper Report Editor: Added Nightly Account Maintenance Telemetry toggle checkbox and live stats binding into the Discord #alerts embed report.
-- Discord Alerts Bot: Included 2:00 AM UTC maintenance status, audited accounts, refreshed tokens, and two-way sync state in automated reports.
+- ⚙️ Added Nightly Account Maintenance telemetry to Discord alerts
 
 ## [2.5.111] - 2026-08-15
-- Admin Menu: Added interactive Alliance Gatekeeper Report Editor & Live Discord Embed Preview Modal with customizable R5 announcements, section toggles, color themes, and draft saving.
-- Bots Tab: Integrated Editor launcher alongside 1-click Fast Update in the Discord Gatekeeper & Webhook Bot card.
+- 📊 Added interactive Alliance Gatekeeper Report Editor with live Discord preview
 
 ## [2.5.110] - 2026-08-15
-- Staff & Leadership Page: Fixed card truncation on Android & iOS devices by replacing fixed height constraints with auto-adjusting dynamic containers.
-- Enhanced Managed Events & Roles badges with fluid flex wrapping, role count indicators, and interactive tap-to-expand/collapse hints.
+- 📱 Fixed card layout and text clipping on mobile devices
 
 ## [2.5.109] - 2026-08-15
-- Admin Menu: Consolidated Discord Webhook Alert settings into the Bots hub, secured with exclusive R5-only administrative visibility and controls.
-- Cleaned up redundant configuration panels from Settings.
+- 🤖 Consolidated Discord Webhook settings into the Bots hub
 
 ## [2.5.108] - 2026-08-15
-- Admin Menu: Added dedicated Bots & Daemons Hub consolidating Nightly Maintenance telemetry, Discord Gatekeeper bot, and Alliance Perks System.
-- Registered Users: Added Alt Accounts attribute filtering with live 30-day token status cross-referencing.
-- Streamlined Daily Tools management into a clean, focused 2-column grid.
+- 🤖 Added dedicated Bots & Daemons Hub
+- 🔗 Added Alt Accounts attribute filtering in member list
 
 ## [2.5.107] - 2026-08-15
 - Patches to members perk system.
