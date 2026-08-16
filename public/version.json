@@ -1,8 +1,9 @@
 {
   "version": "2.5.110",
   "releaseDate": "2026-08-15",
-  "title": "Patches to members perk system",
+  "title": "Staff Page Mobile Responsiveness & Auto-Adjustable Roles",
   "notes": [
-    "Patches to members perk system"
+    "Staff Page: Fixed card truncation on Android & iOS devices by replacing fixed height constraints with auto-adjusting dynamic containers.",
+    "Managed Events & Roles: Added fluid flex wrapping and interactive tap-to-expand/collapse hints."
   ]
 }

@@ -1,13 +1,17 @@
 # CHANGELOG
 
 ## [2.5.110] - 2026-08-15
-- Patches to members perk system.
+- Staff & Leadership Page: Fixed card truncation on Android & iOS devices by replacing fixed height constraints with auto-adjusting dynamic containers.
+- Enhanced Managed Events & Roles badges with fluid flex wrapping, role count indicators, and interactive tap-to-expand/collapse hints.
 
 ## [2.5.109] - 2026-08-15
-- Patches to members perk system.
+- Admin Menu: Consolidated Discord Webhook Alert settings into the Bots hub, secured with exclusive R5-only administrative visibility and controls.
+- Cleaned up redundant configuration panels from Settings.
 
 ## [2.5.108] - 2026-08-15
-- Patches to members perk system.
+- Admin Menu: Added dedicated Bots & Daemons Hub consolidating Nightly Maintenance telemetry, Discord Gatekeeper bot, and Alliance Perks System.
+- Registered Users: Added Alt Accounts attribute filtering with live 30-day token status cross-referencing.
+- Streamlined Daily Tools management into a clean, focused 2-column grid.
 
 ## [2.5.107] - 2026-08-15
 - Patches to members perk system.
