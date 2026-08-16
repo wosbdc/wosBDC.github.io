@@ -199,6 +199,26 @@ window.getFurnaceIconHtml = (level, size = 32) => {
   return `<span class="furnace-level-badge unlinked" title="Unlinked / Sync Setup Required" style="display:inline-flex; align-items:center; gap:5px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); padding:3px 8px; border-radius:10px; font-weight:600; font-size:${Math.max(11, Math.round(size*0.36))}px; color:var(--text-muted); white-space:nowrap; vertical-align:middle;"><span style="opacity:0.6;">⚠️</span> Unlinked</span>`;
 };
 
+window.getFurnaceNumericValue = (level) => {
+  if (!level) return 0;
+  const rawStr = level.toString().trim().toUpperCase();
+  const fcMatch = rawStr.match(/(?:FC|FIRE\s*CRYSTAL|STOVE_LV_)\s*[\.-]?\s*(\d+)/i);
+  if (fcMatch) {
+     const parsedFc = parseInt(fcMatch[1], 10);
+     if (parsedFc >= 1 && parsedFc <= 10) return 30 + parsedFc;
+     if (parsedFc > 30 && parsedFc <= 40) return parsedFc;
+     if (parsedFc > 40 && parsedFc <= 80) return 30 + Math.ceil((parsedFc - 30) / 5);
+  }
+  const firstNumMatch = rawStr.match(/(\d+)/);
+  if (firstNumMatch) {
+     const numVal = parseInt(firstNumMatch[1], 10);
+     if (numVal > 30 && numVal <= 40) return numVal;
+     if (numVal > 40 && numVal <= 80) return 30 + Math.ceil((numVal - 30) / 5);
+     if (numVal >= 1 && numVal <= 30) return numVal;
+  }
+  return 0;
+};
+
 window.renderFurnaceSelectHtml = (id = 'manualFurnaceLevel', selectedVal = '', extraStyles = '') => {
   const norm = (selectedVal || '').toString().trim().toUpperCase();
   let selFc = null;
@@ -15204,6 +15224,7 @@ const views = {
             const isNew = row.getAttribute('data-is-new') === 'true';
             const isAdmin = row.getAttribute('data-is-admin') === 'true';
             const hasAlts = row.getAttribute('data-has-alts') === 'true';
+            const isAlt = row.getAttribute('data-is-alt') === 'true';
             const altSyncedCount = parseInt(row.getAttribute('data-alt-synced-count') || '0', 10);
             const isEnrolled = row.getAttribute('data-is-enrolled') === 'true';
             const isClaimed = row.getAttribute('data-is-claimed') === 'true';
@@ -15212,12 +15233,12 @@ const views = {
             const matchesSearch = !searchVal || name.includes(searchVal) || gid.includes(searchVal) || email.includes(searchVal);
 
             let matchesTab = true;
-            if (activeTab === 'unclaimed') matchesTab = !isClaimed;
-            else if (activeTab === 'claimed') matchesTab = isClaimed;
+            if (activeTab === 'unclaimed') matchesTab = !isClaimed && !isAlt;
+            else if (activeTab === 'claimed') matchesTab = isClaimed || isAlt;
 
             let matchesToken = true;
             if (tokenFilter !== 'all') {
-                if (attrFilter === 'alts') {
+                if (attrFilter === 'alts' && !isAlt) {
                     if (tokenFilter === 'active') {
                         matchesToken = (tokenStatus === 'active' || altSyncedCount > 0);
                     } else if (tokenFilter === 'unverified') {
@@ -15233,10 +15254,14 @@ const views = {
             }
 
             let matchesAttr = true;
-            if (attrFilter === 'new') matchesAttr = isNew;
-            else if (attrFilter === 'alts') matchesAttr = hasAlts;
-            else if (attrFilter === 'enrolled') matchesAttr = isEnrolled;
-            else if (attrFilter === 'staff') matchesAttr = isAdmin;
+            if (attrFilter === 'new') matchesAttr = isNew && !isAlt;
+            else if (attrFilter === 'alts') matchesAttr = hasAlts && !isAlt;
+            else if (attrFilter === 'all_alts') matchesAttr = isAlt;
+            else if (attrFilter === 'enrolled') matchesAttr = isEnrolled && !isAlt;
+            else if (attrFilter === 'staff') matchesAttr = isAdmin && !isAlt;
+            else if (attrFilter === 'all') {
+                if (isAlt && !searchVal) matchesAttr = false;
+            }
 
             if (matchesSearch && matchesTab && matchesToken && matchesAttr) {
                 row.style.display = '';
@@ -15244,6 +15269,45 @@ const views = {
                 row.style.display = 'none';
             }
         });
+    };
+
+    window.sortAdminUsersList = () => {
+        const sortVal = document.getElementById('adminUserSortFilter')?.value || 'name_asc';
+        const tbody = document.getElementById('adminUsersTbody');
+        if (!tbody) return;
+        const rows = Array.from(tbody.querySelectorAll('.admin-user-row'));
+        
+        rows.sort((a, b) => {
+            if (sortVal === 'name_asc') {
+                const nameA = (a.getAttribute('data-name-raw') || '').toLowerCase();
+                const nameB = (b.getAttribute('data-name-raw') || '').toLowerCase();
+                return nameA.localeCompare(nameB);
+            } else if (sortVal === 'name_desc') {
+                const nameA = (a.getAttribute('data-name-raw') || '').toLowerCase();
+                const nameB = (b.getAttribute('data-name-raw') || '').toLowerCase();
+                return nameB.localeCompare(nameA);
+            } else if (sortVal === 'furnace_desc') {
+                const fA = parseInt(a.getAttribute('data-furnace-score') || '0', 10);
+                const fB = parseInt(b.getAttribute('data-furnace-score') || '0', 10);
+                if (fB !== fA) return fB - fA;
+                return (a.getAttribute('data-name-raw') || '').localeCompare(b.getAttribute('data-name-raw') || '');
+            } else if (sortVal === 'newest') {
+                const tA = parseInt(a.getAttribute('data-created-ms') || '0', 10);
+                const tB = parseInt(b.getAttribute('data-created-ms') || '0', 10);
+                return tB - tA;
+            } else if (sortVal === 'oldest') {
+                const tA = parseInt(a.getAttribute('data-created-ms') || '0', 10);
+                const tB = parseInt(b.getAttribute('data-created-ms') || '0', 10);
+                return tA - tB;
+            } else if (sortVal === 'gid_asc') {
+                const gA = parseInt(a.getAttribute('data-gid') || '0', 10) || 0;
+                const gB = parseInt(b.getAttribute('data-gid') || '0', 10) || 0;
+                return gA - gB;
+            }
+            return 0;
+        });
+
+        rows.forEach(r => tbody.appendChild(r));
     };
 
     window.refreshAdminUsers = async () => {
@@ -16158,7 +16222,7 @@ const views = {
               <p style="margin:0 0 15px 0; font-size:12px; color:var(--text-muted); text-align:left;">Manage Chief profiles, fix game IDs, review signups, and sync master sheets.</p>
               
               <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:12px;">
-                <button onclick="views.playerEditor()" style="background:linear-gradient(135deg, #6366f1, #4f46e5); color:#fff; border:none; padding:12px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; box-shadow:0 4px 12px rgba(99,102,241,0.3); display:flex; align-items:center; justify-content:center; gap:8px;">👤 Player Database Editor</button>
+                <button onclick="views.admin('tab-users')" style="background:linear-gradient(135deg, #6366f1, #4f46e5); color:#fff; border:none; padding:12px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; box-shadow:0 4px 12px rgba(99,102,241,0.3); display:flex; align-items:center; justify-content:center; gap:8px;">👥 Member Database & User Hub</button>
                 <button onclick="document.querySelector('.admin-tab-btn[data-tab=\'tab-users\']')?.click(); if(window.showToast) window.showToast('Click 🛠️ Repair ID next to any member in the table to swap or fix IDs!', 'info');" style="background:linear-gradient(135deg, #a855f7, #9333ea); color:#fff; border:none; padding:12px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; box-shadow:0 4px 12px rgba(168,85,247,0.3); display:flex; align-items:center; justify-content:center; gap:8px;">🛠️ Chief Character & ID Repair</button>
                 <button onclick="window.openNewMembersModal()" style="background:linear-gradient(135deg, #06b6d4, #3b82f6); color:#fff; border:none; padding:12px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; box-shadow:0 4px 12px rgba(6,182,212,0.3); display:flex; align-items:center; justify-content:center; gap:8px;">🔔 Recent Member Signups</button>
                 <button id="syncAllSheetsBtn" onclick="window.syncAllSheetsToFirebase()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:12px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; box-shadow:0 4px 12px rgba(16,185,129,0.3); display:flex; align-items:center; justify-content:center; gap:8px;">⚡ Master Sync Sheets ➔ Firebase</button>
@@ -16479,10 +16543,17 @@ const views = {
       html += `
           <!-- Tab 2: Users -->
           <div id="tab-users" class="admin-tab-content" style="display:none;">
-            <div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
-                <button onclick="window.refreshAdminUsers()" style="background:var(--accent); color:#fff; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px; display:flex; align-items:center; gap:5px;">
-                    <span id="adminRefreshIcon">🔄</span> Refresh User List
-                </button>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <button onclick="window.openAddPlayerModal()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:9px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13.5px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(16,185,129,0.3); transition:0.2s;">
+                        ➕ Add New Player
+                    </button>
+                </div>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <button onclick="window.refreshAdminUsers()" style="background:var(--card-bg); border:1px solid var(--border); color:var(--text-main); padding:8px 14px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13px; display:flex; align-items:center; gap:6px; transition:0.2s;">
+                        <span id="adminRefreshIcon">🔄</span> Refresh User List
+                    </button>
+                </div>
             </div>
               <div style="background:var(--bg-main); padding:15px; border-radius:12px; border:1px solid var(--accent); margin-bottom:20px; display:flex; justify-content:space-between; align-items:center;">
                 <div>
@@ -16578,13 +16649,14 @@ const views = {
               const unclaimedCount = (window._currentUnclaimedRosterList || []).length;
               const totalMembersCount = totalUsersCount + unclaimedCount;
 
+              let totalAltsCount = 0;
+              let hasAltsCount = 0;
               let tokenActiveCount = 0;
               let tokenExpiringCount = 0;
               let tokenExpiredCount = 0;
               let tokenUnverifiedCount = unclaimedCount;
 
               let newSignupsCount = 0;
-              let hasAltsCount = 0;
               let giftCodesCount = 0;
               let staffCount = 0;
 
@@ -16598,7 +16670,10 @@ const views = {
                 let ms = u.createdAt ? new Date(u.createdAt).getTime() : (u.timestamp ? Number(u.timestamp) : 0);
                 if (ms > 0 && (Date.now() - ms) <= (7 * 24 * 60 * 60 * 1000)) newSignupsCount++;
 
-                if (u.linkedGameIds && Array.isArray(u.linkedGameIds) && u.linkedGameIds.length > 0) hasAltsCount++;
+                if (u.linkedGameIds && Array.isArray(u.linkedGameIds) && u.linkedGameIds.length > 0) {
+                  hasAltsCount++;
+                  totalAltsCount += u.linkedGameIds.length;
+                }
 
                 const adminLvl = window.getAdminLevel(u);
                 if (u.role === 'admin' || u.role === 'R5' || (adminLvl !== false && adminLvl !== 'User')) staffCount++;
@@ -16622,10 +16697,10 @@ const views = {
                   <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
                     <div>
                       <div style="font-weight:bold; font-size:16px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
-                        👥 Registered Users Database
+                        👥 Alliance Members & Player Database
                       </div>
                       <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">
-                        ${totalUsersCount} registered account(s) • ${unclaimedCount} unclaimed roster member(s)
+                        ${totalUsersCount} registered account(s) • ${unclaimedCount} unclaimed roster member(s) • ${totalAltsCount} linked alt(s)
                       </div>
                     </div>
 
@@ -16643,16 +16718,26 @@ const views = {
                     </div>
                   </div>
 
-                  <!-- Bottom Row: Search + 30-Day Token Dropdown + Attributes Dropdown + Copy Action Button -->
+                  <!-- Bottom Row: Search + Attributes + Token + Sort + Copy Action Button -->
                   <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
                     <!-- Search Input -->
-                    <div style="position:relative; flex:1 1 200px; min-width:180px;">
+                    <div style="position:relative; flex:2 1 220px; min-width:200px;">
                       <input type="text" id="adminUserSearchInput" oninput="window.filterAdminUsersList()" placeholder="🔍 Search Name, Game ID, or Email..." style="width:100%; padding:9px 30px 9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; font-weight:bold; box-sizing:border-box;">
                       <button onclick="let i=document.getElementById('adminUserSearchInput'); if(i){i.value=''; window.filterAdminUsersList(); i.focus();}" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text-muted); cursor:pointer; font-weight:bold; font-size:14px;">✕</button>
                     </div>
 
+                    <!-- Feature Attributes Selector with Live Counters -->
+                    <select id="adminUserAttrFilter" onchange="window.filterAdminUsersList()" style="flex:1 1 170px; min-width:160px; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer; outline:none; box-sizing:border-box;">
+                      <option value="all">🏷️ Attributes: All (${totalMembersCount})</option>
+                      <option value="alts">👥 Main Accounts with Alts (${hasAltsCount})</option>
+                      <option value="all_alts">🔗 All Linked Alt Characters (${totalAltsCount})</option>
+                      <option value="new">🆕 New Signups (${newSignupsCount})</option>
+                      <option value="enrolled">🎁 Gift Codes (${giftCodesCount})</option>
+                      <option value="staff">👑 R4/R5 Staff (${staffCount})</option>
+                    </select>
+
                     <!-- 30-Day Token Status Selector with Live Counters -->
-                    <select id="adminUserTokenFilter" onchange="window.filterAdminUsersList()" style="flex:1 1 170px; min-width:160px; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer; outline:none; box-sizing:border-box;">
+                    <select id="adminUserTokenFilter" onchange="window.filterAdminUsersList()" style="flex:1 1 150px; min-width:140px; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer; outline:none; box-sizing:border-box;">
                       <option value="all">🛡️ Token: All (${totalMembersCount})</option>
                       <option value="active">🟢 Active Sync (${tokenActiveCount})</option>
                       <option value="expiring">🟠 Expiring Soon (${tokenExpiringCount})</option>
@@ -16660,13 +16745,14 @@ const views = {
                       <option value="unverified">⚪ Unverified (${tokenUnverifiedCount})</option>
                     </select>
 
-                    <!-- Feature Attributes Selector with Live Counters -->
-                    <select id="adminUserAttrFilter" onchange="window.filterAdminUsersList()" style="flex:1 1 170px; min-width:160px; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer; outline:none; box-sizing:border-box;">
-                      <option value="all">🏷️ Attributes: All (${totalMembersCount})</option>
-                      <option value="alts">🔗 Alt Accounts (${hasAltsCount})</option>
-                      <option value="new">🆕 New Signups (${newSignupsCount})</option>
-                      <option value="enrolled">🎁 Gift Codes (${giftCodesCount})</option>
-                      <option value="staff">👑 R4/R5 Staff (${staffCount})</option>
+                    <!-- Sort Selector -->
+                    <select id="adminUserSortFilter" onchange="window.sortAdminUsersList()" style="flex:1 1 150px; min-width:140px; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer; outline:none; box-sizing:border-box;">
+                      <option value="name_asc">🔤 Sort: Name (A-Z)</option>
+                      <option value="name_desc">🔤 Sort: Name (Z-A)</option>
+                      <option value="furnace_desc">🔥 Furnace (High ➔ Low)</option>
+                      <option value="newest">🕒 Newest Signups</option>
+                      <option value="oldest">⌛ Oldest Signups</option>
+                      <option value="gid_asc">🔢 Game ID (Asc)</option>
                     </select>
 
                     <!-- Copy Unclaimed Button -->
@@ -16702,8 +16788,14 @@ const views = {
         return { uid, u, createdMs, isNew };
       });
 
-      // Sort newest signups first
-      userEntries.sort((a, b) => b.createdMs - a.createdMs);
+      // Sort alphabetically by name initially for clean roster directory
+      userEntries.sort((a, b) => {
+        const uGidA = String(a.u.gameId || '').trim();
+        const uGidB = String(b.u.gameId || '').trim();
+        const nameA = (idToNameMap[uGidA] || a.u.chiefName || a.u.name || '').toLowerCase();
+        const nameB = (idToNameMap[uGidB] || b.u.chiefName || b.u.name || '').toLowerCase();
+        return nameA.localeCompare(nameB);
+      });
 
       for (const item of userEntries) {
         const { uid, u, createdMs, isNew } = item;
@@ -16770,21 +16862,26 @@ const views = {
 
         let rosterInfoHtml = '';
         let isEnrolled = false;
+        let flVal = u.stove_lv || u.furnaceLevel || '';
         if (p) {
-            let flVal = p.furnaceLevel || p.stove_lv;
+            flVal = p.furnaceLevel || p.stove_lv || flVal;
             let gcVal = p.giftCodes;
             let taVal = p.timeActive;
             isEnrolled = (gcVal === true || gcVal === 'TRUE' || (typeof gcVal === 'string' && gcVal.toLowerCase().trim() === 'true'));
             
-            if (flVal) rosterInfoHtml += window.getFurnaceIconHtml(flVal, 32);
+            if (flVal) rosterInfoHtml += `<span onclick="window.openAdminEditFurnaceModal('${escapeHTML(cName)}', '${uGidStr}', '${flVal}')" style="cursor:pointer; display:inline-flex; align-items:center;" title="Click to Edit Furnace Level">${window.getFurnaceIconHtml(flVal, 32)}</span>`;
             if (isEnrolled) rosterInfoHtml += `<span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:3px 8px; border-radius:10px; font-size:11px; font-weight:bold;">🎁 Enrolled</span>`;
             if (taVal) rosterInfoHtml += `<span style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-muted); padding:3px 8px; border-radius:10px; font-size:11px;">⏱️ ${escapeHTML(taVal)}</span>`;
+        } else if (flVal) {
+            rosterInfoHtml += `<span onclick="window.openAdminEditFurnaceModal('${escapeHTML(cName)}', '${uGidStr}', '${flVal}')" style="cursor:pointer; display:inline-flex; align-items:center;" title="Click to Edit Furnace Level">${window.getFurnaceIconHtml(flVal, 32)}</span>`;
         }
 
         let dateDisplay = 'Unknown';
         if (createdMs > 0) {
             dateDisplay = new Date(createdMs).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         }
+
+        const furnaceScore = window.getFurnaceNumericValue(flVal);
         
         html += `
           <tr class="admin-user-row" 
@@ -16800,6 +16897,9 @@ const views = {
               data-is-enrolled="${isEnrolled ? 'true' : 'false'}" 
               data-token-status="${tokenStatus.status}"
               data-is-claimed="true"
+              data-is-alt="false"
+              data-furnace-score="${furnaceScore}"
+              data-created-ms="${createdMs}"
               style="border-bottom:1px solid var(--border); background:var(--card-bg);">
             
             <td style="padding:12px 10px;">
@@ -16838,6 +16938,8 @@ const views = {
 
             <td style="padding:12px 10px; text-align:right;">
               <div style="display:flex; gap:6px; justify-content:flex-end; flex-wrap:wrap;">
+                <button onclick="views.roster(); setTimeout(() => { const i=document.getElementById('playerLookupSelect'); if(i){ i.value='${escapeHTML(cName)}'; i.dispatchEvent(new Event('input')); const f=document.querySelector('.custom-dropdown-item'); if(f) f.click(); } }, 150);" style="background:rgba(14,165,233,0.15); color:#38bdf8; border:1px solid rgba(14,165,233,0.35); padding:5px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;" title="View full member profile">👁️ Profile</button>
+                <button onclick="window.openAdminEditFurnaceModal('${escapeHTML(cName)}', '${uGidStr}', '${flVal || ''}')" style="background:rgba(249,115,22,0.15); border:1px solid rgba(249,115,22,0.4); color:#f97316; padding:5px 10px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;" title="Edit Furnace Level">🔥 Level</button>
                 <button onclick="window.openAdminRepairUserModal('${uid}')" style="background:rgba(168,85,247,0.15); color:#c084fc; border:1px solid rgba(168,85,247,0.35); padding:5px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;" title="Repair primary Game ID or promote an alt">🛠️ Repair ID</button>
                 <button onclick="window.adminManageAltsPrompt('${uid}')" style="background:rgba(59,130,246,0.12); color:#3b82f6; border:1px solid rgba(59,130,246,0.3); padding:5px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">🔗 Alts</button>
                 ${isAdminUser && u.gameId != 318843189 ? `<button onclick="window.revokeAdmin('${u.gameId}')" style="background:rgba(234,179,8,0.12); color:#eab308; border:1px solid rgba(234,179,8,0.3); padding:5px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">👑 Revoke Staff</button>` : (!isAdminUser && u.gameId ? `<button onclick="window.grantAdmin('${u.gameId}', 'R4')" style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:5px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">+ Staff</button>` : '')}
@@ -16848,6 +16950,99 @@ const views = {
 
           </tr>
         `;
+
+        // Render dedicated sub-rows for each linked alt character
+        if (totalAlts > 0) {
+          u.linkedGameIds.forEach(agid => {
+            const altGidStr = String(agid).trim();
+            const aTok = u.altTokens ? u.altTokens[altGidStr] : null;
+            let altName = (aTok && aTok.nickname) || idToNameMap[altGidStr] || `Alt (${altGidStr})`;
+            let altFurnace = (aTok && (aTok.stove_lv || aTok.furnaceLevel)) || '';
+            
+            let altTokenStatus = 'unverified';
+            let altTokenPill = `<span style="background:rgba(255,255,255,0.06); color:var(--text-muted); border:1px solid var(--border); padding:2px 8px; border-radius:10px; font-size:11px;">⚪ Unverified Alt</span>`;
+            if (aTok && aTok.verifiedAt) {
+              const aVerified = new Date(aTok.verifiedAt);
+              if (!isNaN(aVerified.getTime())) {
+                const daysElapsed = Math.floor((Date.now() - aVerified.getTime()) / (1000 * 60 * 60 * 24));
+                const daysLeft = Math.max(0, 30 - daysElapsed);
+                if (daysLeft > 14) {
+                  altTokenStatus = 'active';
+                  altTokenPill = `<span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold;">🟢 ${daysLeft}d Alt Sync</span>`;
+                } else if (daysLeft > 0) {
+                  altTokenStatus = 'expiring';
+                  altTokenPill = `<span style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold;">🟠 ${daysLeft}d Alt Sync</span>`;
+                } else {
+                  altTokenStatus = 'expired';
+                  altTokenPill = `<span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.4); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold;">🔴 Expired Alt Sync</span>`;
+                }
+              }
+            }
+
+            const altFurnaceScore = window.getFurnaceNumericValue(altFurnace);
+            const altAvatarSrc = window.getAvatarUrl(altGidStr, altName);
+
+            html += `
+              <tr class="admin-user-row alt-character-row" 
+                  data-name="${escapeHTML(altName.toLowerCase())}" 
+                  data-name-raw="${escapeHTML(altName)}"
+                  data-gid="${escapeHTML(altGidStr.toLowerCase())}" 
+                  data-email="${escapeHTML((u.email || '').toString().toLowerCase())}" 
+                  data-is-new="false" 
+                  data-is-admin="false" 
+                  data-has-alts="false" 
+                  data-is-enrolled="false" 
+                  data-token-status="${altTokenStatus}"
+                  data-is-claimed="true"
+                  data-is-alt="true"
+                  data-furnace-score="${altFurnaceScore}"
+                  data-created-ms="${createdMs}"
+                  style="border-bottom:1px solid rgba(255,255,255,0.05); background:rgba(30,41,59,0.35);">
+                
+                <td style="padding:10px 10px 10px 30px;">
+                  <div style="display:flex; align-items:center; gap:10px;">
+                    <span style="color:var(--text-muted); font-size:16px;">↳</span>
+                    <div style="width:32px; height:32px; border-radius:50%; overflow:hidden; background:rgba(56,189,248,0.15); flex-shrink:0; border:1.5px solid rgba(56,189,248,0.4);">
+                      <img src="${altAvatarSrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(altName)}&background=0284c7&color=fff&bold=true&size=128';">
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:2px;">
+                      <div style="font-weight:bold; font-size:13px; color:var(--text-main); display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                        <span>${escapeHTML(altName)}</span>
+                        <span style="background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:1px 6px; border-radius:10px; font-size:10px; font-weight:bold;">🔗 Alt of ${escapeHTML(cName)}</span>
+                      </div>
+                      <div style="font-family:monospace; font-size:11.5px; color:var(--text-muted); font-weight:bold;">
+                        ID: ${escapeHTML(altGidStr)}
+                      </div>
+                    </div>
+                  </div>
+                </td>
+
+                <td style="padding:10px 10px;">
+                  <div style="display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
+                    ${altTokenPill}
+                    ${altFurnace ? `<span onclick="window.openAdminEditFurnaceModal('${escapeHTML(altName)}', '${altGidStr}', '${altFurnace}')" style="cursor:pointer; display:inline-flex; align-items:center;" title="Click to Edit Furnace Level">${window.getFurnaceIconHtml(altFurnace, 28)}</span>` : ''}
+                  </div>
+                </td>
+
+                <td style="padding:10px 10px;">
+                  <div style="display:flex; flex-direction:column; gap:2px;">
+                    <div style="color:var(--text-muted); font-size:11.5px;">Main: <strong style="color:var(--text-main);">${escapeHTML(cName)}</strong></div>
+                    <div style="color:var(--text-muted); font-size:11px; opacity:0.8;">${escapeHTML(u.email || 'No email')}</div>
+                  </div>
+                </td>
+
+                <td style="padding:10px 10px; text-align:right;">
+                  <div style="display:flex; gap:6px; justify-content:flex-end; flex-wrap:wrap;">
+                    <button onclick="views.roster(); setTimeout(() => { const i=document.getElementById('playerLookupSelect'); if(i){ i.value='${escapeHTML(altName)}'; i.dispatchEvent(new Event('input')); const f=document.querySelector('.custom-dropdown-item'); if(f) f.click(); } }, 150);" style="background:rgba(14,165,233,0.12); color:#38bdf8; border:1px solid rgba(14,165,233,0.3); padding:4px 8px; border-radius:6px; font-size:11.5px; font-weight:bold; cursor:pointer;" title="View alt profile">👁️ Profile</button>
+                    <button onclick="window.openAdminEditFurnaceModal('${escapeHTML(altName)}', '${altGidStr}', '${altFurnace}')" style="background:rgba(249,115,22,0.12); border:1px solid rgba(249,115,22,0.35); color:#f97316; padding:4px 8px; border-radius:6px; font-weight:bold; font-size:11.5px; cursor:pointer;" title="Edit Furnace Level">🔥 Level</button>
+                    <button onclick="window.adminManageAltsPrompt('${uid}')" style="background:rgba(59,130,246,0.12); color:#3b82f6; border:1px solid rgba(59,130,246,0.3); padding:4px 8px; border-radius:6px; font-size:11.5px; font-weight:bold; cursor:pointer;">🔗 Manage</button>
+                  </div>
+                </td>
+
+              </tr>
+            `;
+          });
+        }
       }
 
       // Render Unclaimed Alliance Roster Members
@@ -16870,9 +17065,10 @@ const views = {
           const gcVal = p.giftCodes;
           const isEnrolled = (gcVal === true || gcVal === 'TRUE' || (typeof gcVal === 'string' && gcVal.toLowerCase().trim() === 'true'));
           const avatarSrc = window.getAvatarUrl(uGid, uName);
+          const furnaceScore = window.getFurnaceNumericValue(flVal);
           
           let rosterInfoHtml = '';
-          if (flVal) rosterInfoHtml += window.getFurnaceIconHtml(flVal, 32);
+          if (flVal) rosterInfoHtml += `<span onclick="window.openAdminEditFurnaceModal('${escapeHTML(uName)}', '${uGid}', '${flVal}')" style="cursor:pointer; display:inline-flex; align-items:center;" title="Click to Edit Furnace Level">${window.getFurnaceIconHtml(flVal, 32)}</span>`;
           if (isEnrolled) rosterInfoHtml += `<span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:3px 8px; border-radius:10px; font-size:11px; font-weight:bold;">✅ Enrolled</span>`;
 
           html += `
@@ -16887,6 +17083,9 @@ const views = {
                 data-is-enrolled="${isEnrolled ? 'true' : 'false'}" 
                 data-token-status="unverified"
                 data-is-claimed="false"
+                data-is-alt="false"
+                data-furnace-score="${furnaceScore}"
+                data-created-ms="0"
                 style="border-bottom:1px solid var(--border); background:rgba(239,68,68,0.02);">
               
               <td style="padding:12px 10px;">
@@ -16921,7 +17120,9 @@ const views = {
 
               <td style="padding:12px 10px; text-align:right;">
                 <div style="display:flex; gap:6px; justify-content:flex-end; flex-wrap:wrap;">
-                  <button onclick="window.copyPlayerClaimLink('${escapeHTML(uGid)}', '${escapeHTML(uName.replace(/'/g, "\\'"))}')" style="background:rgba(239,68,68,0.12); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:5px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">📋 Copy Claim Link</button>
+                  <button onclick="window.copyPlayerClaimLink('${escapeHTML(uGid)}', '${escapeHTML(uName.replace(/'/g, "\\'"))}')" style="background:rgba(239,68,68,0.12); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:5px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;" title="Copy claim invite link">📋 Copy Claim Link</button>
+                  <button onclick="views.roster(); setTimeout(() => { const i=document.getElementById('playerLookupSelect'); if(i){ i.value='${escapeHTML(uName.replace(/'/g, "\\'"))}'; i.dispatchEvent(new Event('input')); const f=document.querySelector('.custom-dropdown-item'); if(f) f.click(); } }, 150);" style="background:rgba(14,165,233,0.12); color:#38bdf8; border:1px solid rgba(14,165,233,0.3); padding:5px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;" title="View profile">👁️ Profile</button>
+                  <button onclick="window.openAdminEditFurnaceModal('${escapeHTML(uName)}', '${uGid}', '${flVal || ''}')" style="background:rgba(249,115,22,0.12); border:1px solid rgba(249,115,22,0.35); color:#f97316; padding:5px 10px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;" title="Edit Furnace Level">🔥 Level</button>
                   <button onclick="window.openEditRosterMemberModal('${escapeHTML(uName.replace(/'/g, "\\'"))}')" style="background:rgba(59,130,246,0.12); color:#3b82f6; border:1px solid rgba(59,130,246,0.3); padding:5px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">✏️ Edit Roster</button>
                 </div>
               </td>
@@ -19567,285 +19768,7 @@ window.resetBearTrapEvent = async () => {
   },
 
   playerEditor: async () => {
-    if (!window.isAdminUser(currentUser)) {
-      if (window.showToast) window.showToast("Access Denied: Staff permissions required.", "error");
-      views.home();
-      return;
-    }
-    window.activeViewFunc = () => views.playerEditor();
-    const isUnlocked = await window.isGoogleAuthVerified();
-    if (!isUnlocked) {
-        views.admin();
-        return;
-    }
-    
-    let rosterRawData = null;
-    let usersSnap = null;
-    try {
-      const results = await Promise.all([
-        window.fetchRoster(),
-        get(ref(db, 'users'))
-      ]);
-      rosterRawData = results[0];
-      usersSnap = results[1];
-    } catch (e) {
-      console.error("Failed to load data for player editor", e);
-    }
-    
-    await refreshIdToNameMap();
-    
-    const users = usersSnap ? (usersSnap.val() || {}) : {};
-    const registeredGameIds = new Set();
-    Object.values(users).forEach(u => {
-        if (u.gameId) registeredGameIds.add(u.gameId.toString().trim());
-    });
-    
-    // Comprehensive player compilation across all data sources (Deduplicated)
-    const playerMap = new Map();
-
-    const findExistingPlayerKey = (nameStr, gidStr) => {
-        const cleanN = (nameStr || '').toString().toLowerCase().trim();
-        const cleanG = (gidStr || '').toString().trim();
-        for (const [k, p] of playerMap.entries()) {
-            if (cleanN && p.name && p.name.toString().toLowerCase().trim() === cleanN) return k;
-            if (cleanG && p.gameId && p.gameId.toString().trim() === cleanG) return k;
-        }
-        return null;
-    };
-
-    // 1. Add Firebase Registered Users
-    Object.values(users).forEach(u => {
-        let gid = u.gameId ? u.gameId.toString().trim() : "";
-        let name = (u.name || u.chiefName || (gid ? window.idToNameMap[gid] : "") || "").toString().trim();
-        if (name && !/^\d+$/.test(name)) {
-            let key = name.toLowerCase();
-            playerMap.set(key, {
-                name: name,
-                gameId: gid,
-                isRegistered: true,
-                email: u.email || "",
-                role: u.role || "Member",
-                furnaceLevel: u.stove_lv || u.furnaceLevel || ""
-            });
-        }
-    });
-
-    // 2. Add Alliance Roster Sheet
-    if (rosterRawData) {
-        Object.values(rosterRawData).forEach(p => {
-            if (p.name && !/^\d+$/.test(p.name.toString().trim())) {
-                let name = p.name.toString().trim();
-                let existingKey = findExistingPlayerKey(name, p.gameId);
-                let existing = existingKey ? playerMap.get(existingKey) : {};
-                let gid = (p.gameId || existing.gameId || window.nameToIdMap[name] || "").toString().trim();
-                let targetKey = existingKey || name.toLowerCase();
-
-                playerMap.set(targetKey, {
-                    name: existing.name || name,
-                    gameId: gid || existing.gameId || "",
-                    isRegistered: existing.isRegistered || (gid ? registeredGameIds.has(gid) : false),
-                    email: existing.email || "",
-                    role: p.rank || existing.role || "Member",
-                    furnaceLevel: existing.furnaceLevel || p.furnaceLevel || p.stove_lv || ""
-                });
-            }
-        });
-    }
-
-    // 3. Add Master Name-to-ID mappings (giftcodebot / roster_live)
-    if (window.nameToIdMap) {
-        Object.keys(window.nameToIdMap).forEach(name => {
-            let cleanName = name.toString().trim();
-            if (cleanName && !/^\d+$/.test(cleanName)) {
-                let gid = window.nameToIdMap[cleanName].toString().trim();
-                let existingKey = findExistingPlayerKey(cleanName, gid);
-                if (!existingKey) {
-                    playerMap.set(cleanName.toLowerCase(), {
-                        name: cleanName,
-                        gameId: gid,
-                        isRegistered: registeredGameIds.has(gid),
-                        email: "",
-                        role: "Member",
-                        furnaceLevel: ""
-                    });
-                }
-            }
-        });
-    }
-
-    const allPlayers = Array.from(playerMap.values());
-    allPlayers.sort((a, b) => a.name.localeCompare(b.name));
-
-    const totalAccounts = allPlayers.length;
-    const registeredCount = allPlayers.filter(p => p.isRegistered).length;
-    
-    let dropdownItems = allPlayers.map(p => ({
-        name: p.name,
-        gameId: p.gameId,
-        isReg: p.isRegistered,
-        nt: /^[ -~]*$/.test(p.name) ? 'notranslate' : ''
-    }));
-
-    app.innerHTML = `
-      <div class="card" style="max-width:1000px; margin:0 auto; animation: fadeIn 0.3s ease; position:relative; min-height: 80vh;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid var(--border); padding-bottom:12px; flex-wrap:wrap; gap:10px;">
-          <div>
-            <h2 style="color:var(--accent); margin:0; display:flex; align-items:center; gap:10px;">
-              👤 Player Database Editor
-            </h2>
-            <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">
-              Total Accounts: <strong style="color:var(--text-main);">${totalAccounts}</strong> | 
-              Registered: <strong style="color:var(--success);">${registeredCount}</strong>
-            </div>
-          </div>
-          <div style="display:flex; gap:10px; align-items:center;">
-            <button onclick="window.openAddPlayerModal()" style="background:var(--success); color:white; border:none; padding:8px 14px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:13px; box-shadow:0 2px 8px rgba(16,185,129,0.3);">➕ Add New Player</button>
-            <button onclick="views.admin()" style="background:var(--bg-main); color:var(--text-main); border:1px solid var(--border); padding:8px 12px; border-radius:6px; cursor:pointer; font-weight:bold;">◀ Back</button>
-          </div>
-        </div>
-        
-        <div style="display:flex; gap:10px; margin-bottom:15px;">
-          <div style="position:relative; flex:1; display:flex; align-items:center;">
-            <input type="text" id="uniSearchInput" placeholder="Search Chief Name or Game ID..." autocomplete="off" style="width:100%; padding:14px 40px 14px 16px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:16px; font-weight:bold; cursor:text; box-sizing:border-box; position:relative; z-index:101;">
-            <button onclick="document.getElementById('uniSearchInput').value=''; window.filterPlayerDirectory(''); document.getElementById('uniSearchInput').focus();" style="position:absolute; right:12px; background:transparent; border:none; color:var(--danger); font-size:20px; cursor:pointer; font-weight:bold; display:flex; align-items:center; justify-content:center; width:30px; height:30px; padding:0; border-radius:50%; z-index:102;" onmouseover="this.style.background='rgba(239,68,68,0.1)'" onmouseout="this.style.background='transparent'">✖</button>
-            <div id="uniSearchCustomDropdown" style="display:none; position:absolute; top:calc(100% - 8px); left:0; width:100%; max-height:300px; overflow-y:auto; background:var(--card-bg); border:1px solid var(--border); border-radius:0 0 8px 8px; z-index:100; box-shadow:0 10px 30px rgba(0,0,0,0.6); flex-direction:column; padding-top:8px;"></div>
-          </div>
-          <button onclick="window.searchPlayerFull(document.getElementById('uniSearchInput').value)" style="background:var(--accent); color:#fff; border:none; padding:0 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px;">Search</button>
-        </div>
-
-        <div style="display:flex; gap:8px; margin-bottom:15px; flex-wrap:wrap;">
-            <button id="filterAllBtn" onclick="window.setDirectoryFilter('all')" style="padding:6px 12px; border-radius:20px; border:1px solid var(--accent); background:var(--accent); color:#fff; font-size:12px; font-weight:bold; cursor:pointer;">All Accounts (${totalAccounts})</button>
-            <button id="filterRegBtn" onclick="window.setDirectoryFilter('reg')" style="padding:6px 12px; border-radius:20px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">✅ Registered (${registeredCount})</button>
-            <button id="filterUnregBtn" onclick="window.setDirectoryFilter('unreg')" style="padding:6px 12px; border-radius:20px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">Unregistered (${totalAccounts - registeredCount})</button>
-        </div>
-        
-        <div id="uniEditorRes" style="display:none; flex-direction:column; gap:16px; border-top:1px solid var(--border); padding-top:20px; margin-bottom:20px;">
-           <!-- Individual player detail editor view -->
-        </div>
-
-        <!-- Directory Accounts List View (Collapsible for clean search UI) -->
-        <details id="playerDirectoryDetails" style="border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--bg-main); margin-top:10px;">
-            <summary style="padding:12px 16px; background:var(--card-bg); cursor:pointer; font-weight:bold; font-size:14px; color:var(--text-main); display:flex; justify-content:space-between; align-items:center; user-select:none;">
-                <span style="display:flex; align-items:center; gap:8px;">📋 Browse Full Accounts Directory <span id="dirCountLabel" style="font-size:12px; color:var(--text-muted); font-weight:normal;">(${totalAccounts} Accounts)</span></span>
-                <span style="font-size:12px; color:var(--accent);">▼ Expand Directory</span>
-            </summary>
-            <div id="playerDirectoryList" style="max-height:450px; overflow-y:auto; padding:8px 0; border-top:1px solid var(--border);">
-                <!-- Populated dynamically -->
-            </div>
-        </details>
-      </div>
-    `;
-
-    // Global filtering helper for the directory list
-    let currentFilterType = 'all';
-    window.setDirectoryFilter = (type) => {
-        currentFilterType = type;
-        const bAll = document.getElementById('filterAllBtn');
-        const bReg = document.getElementById('filterRegBtn');
-        const bUnreg = document.getElementById('filterUnregBtn');
-        if (bAll) { bAll.style.background = type === 'all' ? 'var(--accent)' : 'var(--bg-main)'; bAll.style.color = type === 'all' ? '#fff' : 'var(--text-main)'; }
-        if (bReg) { bReg.style.background = type === 'reg' ? 'var(--accent)' : 'var(--bg-main)'; bReg.style.color = type === 'reg' ? '#fff' : 'var(--text-main)'; }
-        if (bUnreg) { bUnreg.style.background = type === 'unreg' ? 'var(--accent)' : 'var(--bg-main)'; bUnreg.style.color = type === 'unreg' ? '#fff' : 'var(--text-main)'; }
-        window.filterPlayerDirectory(document.getElementById('uniSearchInput').value);
-    };
-
-    window.filterPlayerDirectory = (queryStr) => {
-        const q = (queryStr || '').toLowerCase().trim();
-        const listDiv = document.getElementById('playerDirectoryList');
-        const countLabel = document.getElementById('dirCountLabel');
-        if (!listDiv) return;
-
-        let filtered = allPlayers.filter(p => {
-            if (currentFilterType === 'reg' && !p.isRegistered) return false;
-            if (currentFilterType === 'unreg' && p.isRegistered) return false;
-            if (q) {
-                const matchName = p.name.toLowerCase().includes(q);
-                const matchGid = p.gameId && p.gameId.includes(q);
-                return matchName || matchGid;
-            }
-            return true;
-        });
-
-        if (countLabel) countLabel.textContent = `${filtered.length} of ${totalAccounts} Accounts`;
-
-        if (filtered.length === 0) {
-            listDiv.innerHTML = `<div style="padding:30px; text-align:center; color:var(--text-muted);">No matching accounts found.</div>`;
-            return;
-        }
-
-        listDiv.innerHTML = filtered.map(p => `
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 16px; border-bottom:1px solid rgba(255,255,255,0.05); transition:0.2s; cursor:pointer;" onmouseover="this.style.background='var(--card-bg)'" onmouseout="this.style.background='transparent'" onclick="window.searchPlayerFull('${window.escapeHTML(p.name)}')">
-                <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-                    <div style="font-weight:bold; font-size:15px; color:var(--text-main); display:flex; align-items:center; gap:6px;">
-                        ${p.isRegistered ? '<span style="color:var(--success); font-size:13px;" title="Registered Account">✅</span>' : '<span style="color:var(--text-muted); font-size:13px;" title="Roster Only">📋</span>'}
-                        <span class="${/^[ -~]*$/.test(p.name) ? 'notranslate' : ''}">${window.escapeHTML(p.name)}</span>
-                    </div>
-                    ${p.gameId ? `<span style="font-family:monospace; font-size:12px; background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px; color:var(--text-muted);">ID: ${p.gameId}</span>` : ''}
-                    <span onclick="event.stopPropagation(); if(window.isAdminUser(currentUser)){ window.openAdminEditFurnaceModal('${window.escapeHTML(p.name)}', '${p.gameId || ''}', '${p.furnaceLevel || ''}'); }else{ window.searchPlayerFull('${window.escapeHTML(p.name)}'); }" style="cursor:pointer; display:inline-flex; align-items:center;" title="${window.isAdminUser(currentUser) ? 'Click to Edit Furnace Level' : 'Furnace Level'}">${window.getFurnaceIconHtml(p.furnaceLevel || '', 36)}</span>
-                </div>
-                <div style="display:flex; gap:8px; align-items:center;">
-                    ${window.isAdminUser(currentUser) ? `<button onclick="event.stopPropagation(); window.openAdminEditFurnaceModal('${window.escapeHTML(p.name)}', '${p.gameId || ''}', '${p.furnaceLevel || ''}')" style="background:rgba(249,115,22,0.15); border:1px solid rgba(249,115,22,0.4); color:#f97316; padding:5px 12px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">🔥 Level</button>` : ''}
-                    <button onclick="event.stopPropagation(); window.searchPlayerFull('${window.escapeHTML(p.name)}')" style="background:var(--accent); color:#fff; border:none; padding:5px 12px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">👁️ View Profile</button>
-                </div>
-            </div>
-        `).join('');
-    };
-
-    // Render initial directory list
-    window.filterPlayerDirectory('');
-    
-    // Hide navbar on mobile for a clean, full-screen editor experience
-    if (window.innerWidth <= 768) {
-        const navbar = document.querySelector('.navbar');
-        if (navbar) navbar.style.display = 'none';
-    }
-    
-    // Bind logic for custom autocomplete
-    const searchInput = document.getElementById('uniSearchInput');
-    const dropdown = document.getElementById('uniSearchCustomDropdown');
-    
-    const filterAndShowDropdown = () => {
-        const query = searchInput.value.toLowerCase().trim();
-        window.filterPlayerDirectory(query);
-
-        if (!query) {
-            dropdown.style.display = 'none';
-            return;
-        }
-        
-        const matches = dropdownItems.filter(item => item.name.toLowerCase().includes(query) || (item.gameId && item.gameId.includes(query))).slice(0, 50);
-        
-        if (matches.length === 0) {
-            dropdown.innerHTML = `<div style="padding:12px; color:var(--text-muted); text-align:center; font-size:14px;">No matches found.</div>`;
-        } else {
-            dropdown.innerHTML = matches.map(item => `
-                <div class="uni-dropdown-item ${item.nt}" data-value="${item.name}" style="padding:12px 15px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.05); color:var(--text-main); font-weight:bold; font-size:15px; display:flex; align-items:center; gap:8px; transition:0.2s;">
-                    ${item.isReg ? '<span style="color:var(--success); font-size:12px;">✅</span> ' : ''}${window.escapeHTML(item.name)} ${item.gameId ? `<span style="font-size:12px; color:var(--text-muted); font-weight:normal;">(${item.gameId})</span>` : ''}
-                </div>
-            `).join('');
-            
-            dropdown.querySelectorAll('.uni-dropdown-item').forEach(el => {
-                el.addEventListener('mouseover', () => el.style.background = 'var(--bg-main)');
-                el.addEventListener('mouseout', () => el.style.background = 'transparent');
-                el.addEventListener('mousedown', (e) => {
-                    e.preventDefault();
-                    searchInput.value = el.getAttribute('data-value');
-                    dropdown.style.display = 'none';
-                    window.searchPlayerFull(searchInput.value);
-                });
-            });
-        }
-        dropdown.style.display = 'flex';
-    };
-    searchInput.addEventListener('input', filterAndShowDropdown);
-    searchInput.addEventListener('focus', filterAndShowDropdown);
-    searchInput.addEventListener('blur', () => { setTimeout(() => dropdown.style.display = 'none', 150); });
-    searchInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        dropdown.style.display = 'none';
-        window.searchPlayerFull(e.target.value);
-      }
-    });
+    if (views.admin) views.admin('tab-users');
   },
 
   account: async (defaultTab = null) => {

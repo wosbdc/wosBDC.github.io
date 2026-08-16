@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [2.7.0] - 2026-08-16
+- Unified Member Database & Player Command Center: Consolidated the standalone Player Database Editor directly into the Admin Users Hub (`#tab-users`), giving leadership a single, unified command center to manage all members.
+- Integrated Add New Player with Live Verification: Added `➕ Add New Player` button directly in `#tab-users` with 1-click real-time game server verification against Whiteout Survival servers to auto-fill Chief Name and Furnace Level without creating fake credentials or claiming accounts.
+- Expanded Attributes & Alt Character Breakdown: Added `🔗 All Linked Alt Characters` view in the Attributes dropdown, showing each linked alt character with its owner Chief, Game ID, furnace level, and 30-day token health sync status.
+- Multi-Mode Member Sorting: Integrated instant live sorting by `🔤 Name (A-Z)`, `🔤 Name (Z-A)`, `🔥 Furnace Level (High ➔ Low)`, `🕒 Newest Signups`, `⌛ Oldest Signups`, and `🔢 Game ID (Asc)`.
+- Per-Row Interactive Actions: Added 1-click `👁️ Profile`, `🔥 Level` (edit furnace level), `🛠️ Repair ID`, `🔗 Alts`, and `📋 Copy Claim Link` across all member and alt rows.
+- Daily Tools Redirection: Updated Daily Tools member management shortcuts to route directly to the unified Member Database & User Hub.
+
 ## [2.6.2] - 2026-08-16
 - Alliance Gift Codes Manager Integration: Relocated the Alliance Gift Codes Manager into the 🤖 Bots tab under Auto Gift Code Bot Daemon with a prominent launch action card and a dedicated `⬅️ Back to Bots` header navigation button.
 - Streamlined Admin Navigation: Removed the redundant top-level `🎁 Gift Codes` tab from `#adminTabNav`, decluttering the Admin Menu bar.

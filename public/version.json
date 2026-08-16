@@ -1,9 +1,9 @@
 {
-  "version": "2.6.2",
+  "version": "2.7.0",
   "releaseDate": "2026-08-16",
-  "title": "Alliance Gift Codes Manager Moved to Bots Tab",
+  "title": "Unified Member Database & Player Command Center",
   "notes": [
-    "Integrated Alliance Gift Codes Manager into the Bots tab under Auto Gift Code Bot Daemon with a clean Back to Bots navigation button.",
-    "Streamlined Admin Menu tabs by removing the top-level Gift Codes tab button."
+    "Consolidated Player Database Editor directly into the Admin Users Hub with 1-click Game Server Verification to add new members.",
+    "Enhanced Attributes dropdown with 'All Linked Alt Characters' breakdown and multi-mode sorting (Name, Furnace Level, Newest Signups, Game ID)."
   ]
 }
