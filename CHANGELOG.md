@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [2.9.0] - 2026-08-16
+- Unified Push Notification Hub & Device Token Migration: Integrated real-time push notification subscriber counting (`window.getPushSubscriberCount`) across the Leadership Blast Broadcast modal, Bell Notification dropdown, and Admin Dashboard.
+- Blast Notifications Suite: Added dynamic live subscriber count preview on broadcast modal headers and action buttons, giving leadership instant feedback on the number of registered recipient devices prior to sending.
+- 1-Click Preset Alert Templates: Added quick-fill templates for Shields Up, Bear Trap, Championship, Gift Codes, and Daily Reset directly into the blast notification modal.
+- Multi-Device Token Health & Auto-Repair: Upgraded push registration pipeline to seamlessly maintain active tokens across desktop and mobile devices while auto-pruning expired or orphaned Firebase tokens.
+
 ## [2.8.0] - 2026-08-16
 - Live Countdown & Scheduled Alert System: Enhanced the Alliance Notification Bell Hub (`openAllianceAlertsModal`) to support scheduled announcements with real-time countdown tickers for Whiteout Survival Game Updates, Server Maintenance, Alliance Wars, and Event Battles.
 - 3-Stage Smart Countdown Engine: Displays clean date and time formatted in user's local timezone when scheduled ahead, automatically transitions to a second-by-second live countdown ticker within the final 60 minutes, and shifts to `🚨 LIVE NOW` during active events.

@@ -9869,6 +9869,9 @@ window.openAllianceAlertsModal = async () => {
               <button onclick="window.markAllBroadcastsRead(); document.getElementById('notificationsModalOverlay').remove(); window.openAllianceAlertsModal();" style="width:100%; text-align:left; background:transparent; border:none; color:var(--text-muted); padding:7px 9px; border-radius:6px; font-size:12px; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
                 🧹 Clear Badges
               </button>
+              <div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.06); font-size:10px; color:var(--text-muted); text-align:center;">
+                Subscribers: <strong id="headerPushSubscriberCount" style="color:#38bdf8;">...</strong>
+              </div>
             </div>
           </div>
         `;
@@ -10238,6 +10241,12 @@ window.openAllianceAlertsModal = async () => {
 
     document.body.appendChild(overlay);
     if (typeof window.startBellCountdownTicker === 'function') window.startBellCountdownTicker();
+    if (typeof window.getPushSubscriberCount === 'function') {
+      window.getPushSubscriberCount().then(res => {
+        const el = document.getElementById('headerPushSubscriberCount');
+        if (el) el.textContent = `${res.displayCount} devices`;
+      });
+    }
 
     // Close header push dropdown if clicked outside
     overlay.addEventListener('click', (e) => {
@@ -10563,6 +10572,29 @@ window.deleteBroadcastAlert = async (key) => {
   }
 };
 
+window.getPushSubscriberCount = async () => {
+  try {
+    const snap = await get(ref(db, 'fcmTokens'));
+    if (snap.exists()) {
+      const val = snap.val() || {};
+      const tokens = Object.keys(val);
+      const uids = new Set();
+      Object.values(val).forEach(v => {
+        if (v && v.uid && v.uid !== 'anonymous') uids.add(v.uid);
+      });
+      const uniqueCount = uids.size > 0 ? uids.size : tokens.length;
+      return {
+        totalDevices: tokens.length,
+        uniqueUsers: uniqueCount,
+        displayCount: tokens.length
+      };
+    }
+  } catch(e) {
+    console.warn("Failed to fetch fcmTokens count:", e);
+  }
+  return { totalDevices: 0, uniqueUsers: 0, displayCount: 0 };
+};
+
 window.openEditCountdownAlertModal = async (key) => {
   if (!key) return;
   try {
@@ -10724,7 +10756,7 @@ window.openCreateCountdownAlertModal = function(editData = null) {
           <div style="display:flex; align-items:center;">
             <label style="display:flex; align-items:center; gap:7px; font-size:12px; font-weight:bold; color:#f472b6; cursor:pointer; margin-top:14px;">
               <input type="checkbox" id="ccaSendPush" ${!isEdit ? 'checked' : ''} style="cursor:pointer;">
-              <span>🔔 Blast Push Notification</span>
+              <span>🔔 Blast Notifications (<span id="ccaSubCountBadge">...</span>)</span>
             </label>
           </div>
         </div>
@@ -10744,6 +10776,12 @@ window.openCreateCountdownAlertModal = function(editData = null) {
 
   document.body.appendChild(modal);
   window.updateCountdownModalPreview();
+  if (typeof window.getPushSubscriberCount === 'function') {
+    window.getPushSubscriberCount().then(res => {
+      const bEl = document.getElementById('ccaSubCountBadge');
+      if (bEl) bEl.textContent = `${res.displayCount}`;
+    });
+  }
 };
 
 window.updateCountdownModalPreview = function() {
@@ -16055,7 +16093,7 @@ const views = {
                   <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 12px; flex-wrap: wrap; gap: 8px;">
                       <div style="display: flex; align-items: center; gap: 8px;">
                         <h3 style="margin: 0; color: var(--accent); font-size: 18px; display: flex; align-items: center; gap: 8px;">
-                            🚀 Broadcast Alert
+                            🚀 Blast Notifications (<span id="bpmHeaderCount">...</span>)
                         </h3>
                       </div>
                       <div style="display: flex; align-items: center; gap: 8px;">
@@ -16066,7 +16104,7 @@ const views = {
                       </div>
                   </div>
                   
-                  <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Send an instant <strong>wosBDC Alert</strong> notification to all registered devices.</p>
+                  <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Send an instant <strong>wosBDC Alert</strong> notification to all <strong id="bpmSubCount" style="color:var(--accent);">...</strong> registered devices.</p>
 
                   <!-- Quick Preset Templates -->
                   <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px;">
@@ -16096,12 +16134,23 @@ const views = {
 
                   <div style="display: flex; gap: 10px; margin-top: 5px;">
                       <button onclick="document.getElementById('broadcastPushModal').remove()" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-main); font-weight: bold; cursor: pointer;">Cancel</button>
-                      <button onclick="window.sendBroadcastPush()" style="flex: 1; padding: 12px; border-radius: 8px; border: none; background: var(--danger); color: #fff; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(239,68,68,0.3);">Send Alert 🚀</button>
+                      <button onclick="window.sendBroadcastPush()" style="flex: 1; padding: 12px; border-radius: 8px; border: none; background: var(--danger); color: #fff; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(239,68,68,0.3);">Send Alert (<span id="bpmBtnCount">...</span>) 🚀</button>
                   </div>
               </div>
           `;
 
           document.body.appendChild(overlay);
+
+          if (typeof window.getPushSubscriberCount === 'function') {
+            window.getPushSubscriberCount().then(res => {
+              const h = document.getElementById('bpmHeaderCount');
+              const s = document.getElementById('bpmSubCount');
+              const b = document.getElementById('bpmBtnCount');
+              if (h) h.textContent = `${res.displayCount}`;
+              if (s) s.textContent = `${res.displayCount}`;
+              if (b) b.textContent = `${res.displayCount}`;
+            });
+          }
 
           overlay.addEventListener('click', (e) => {
               if (e.target === overlay) overlay.remove();
@@ -17038,7 +17087,7 @@ const views = {
                     <button onclick="window.pushGatekeeperReportToDiscord(this)" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); padding:8px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.2s;">
                       ⚡ Fast Update #alerts
                     </button>
-                    ${isR5 ? `<button onclick="window.openBroadcastPushModal()" style="background:linear-gradient(135deg, #ec4899, #be185d); color:#fff; border:none; padding:8px 16px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 2px 10px rgba(236,72,153,0.35);">🚀 Broadcast Push Notification</button>` : ''}
+                    ${isR5 ? `<button onclick="window.openBroadcastPushModal()" style="background:linear-gradient(135deg, #ec4899, #be185d); color:#fff; border:none; padding:8px 16px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 2px 10px rgba(236,72,153,0.35);">🚀 Blast Notifications (<span id="adminBlastPushBtnCount">...</span>)</button>` : ''}
                   </div>
                 </div>
 
@@ -18029,6 +18078,12 @@ const views = {
       app.innerHTML = html;
       if (window.renderStaffRoles) window.renderStaffRoles();
       if (window.loadDiscordAlertSettings) window.loadDiscordAlertSettings();
+      if (typeof window.getPushSubscriberCount === 'function') {
+        window.getPushSubscriberCount().then(res => {
+          const el = document.getElementById('adminBlastPushBtnCount');
+          if (el) el.textContent = `${res.displayCount}`;
+        });
+      }
       
       // Bind Admin Tabs & Enable Horizontal Mouse Wheel / Drag Scrolling
       const adminNavEl = document.getElementById('adminTabNav');
