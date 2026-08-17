@@ -5210,12 +5210,12 @@ listenToAuth((user) => {
     const isStaff = (typeof window.isAdminUser === 'function') && window.isAdminUser(currentUser);
     if(isStaff) {
       if (adminHeaderNavBtn) adminHeaderNavBtn.style.display = 'inline-flex';
-      if (mobileAdminBtn) mobileAdminBtn.style.display = 'block';
+      if (mobileAdminBtn) mobileAdminBtn.classList.add('is-staff-visible');
       if (sidebarAdminSection) sidebarAdminSection.style.display = 'flex';
       if (adminSidebarBtn) adminSidebarBtn.style.display = 'block';
     } else {
       if (adminHeaderNavBtn) adminHeaderNavBtn.style.display = 'none';
-      if (mobileAdminBtn) mobileAdminBtn.style.display = 'none';
+      if (mobileAdminBtn) mobileAdminBtn.classList.remove('is-staff-visible');
       if (sidebarAdminSection) sidebarAdminSection.style.display = 'none';
       if (adminSidebarBtn) adminSidebarBtn.style.display = 'none';
     }
@@ -5233,7 +5233,7 @@ listenToAuth((user) => {
     if(authSidebarBtn) authSidebarBtn.innerHTML = `👤 Sign In / Register`;
     if(userProfileSidebarBtn) userProfileSidebarBtn.style.display = 'none';
     if(adminHeaderNavBtn) adminHeaderNavBtn.style.display = 'none';
-    if(mobileAdminBtn) mobileAdminBtn.style.display = 'none';
+    if(mobileAdminBtn) mobileAdminBtn.classList.remove('is-staff-visible');
     if(sidebarAdminSection) sidebarAdminSection.style.display = 'none';
     if(adminSidebarBtn) adminSidebarBtn.style.display = 'none';
     if(signOutSidebarBtn) signOutSidebarBtn.style.display = 'none';

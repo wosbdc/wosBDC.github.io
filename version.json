@@ -1,9 +1,9 @@
 {
-  "version": "2.9.6",
+  "version": "2.9.7",
   "releaseDate": "2026-08-17",
-  "title": "What's New in v2.9.6",
+  "title": "What's New in v2.9.7",
   "notes": [
-    "✨ Cleaner Player Database: Removed duplicate push status badges from Chief name cards",
-    "🛡️ Streamlined Member Database Table: Clean visual hierarchy with push notifications, 30d sync tokens, and furnace levels neatly organized"
+    "🎯 Clean Navigation Bar: Fixed duplicate Admin Hub link in desktop navbar so only the single, dedicated 🛡️ Admin button appears in desktop controls",
+    "📱 Responsive Mobile Drawer: Kept 🛡️ Admin Hub neatly nestled inside the mobile drawer only on mobile viewports for staff members"
   ]
 }

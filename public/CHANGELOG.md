@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.9.7] - 2026-08-17
+- 🎯 Clean Navigation Bar: Fixed duplicate Admin Hub link in desktop navbar so only the single, dedicated 🛡️ Admin button appears in desktop controls
+- 📱 Responsive Mobile Drawer: Kept 🛡️ Admin Hub neatly nestled inside the mobile drawer only on mobile viewports for staff members
+
 ## [2.9.6] - 2026-08-17
 - ✨ Cleaner Player Database: Removed duplicate push status badges from Chief name cards in Admin Member Management
 - 🛡️ Streamlined Member Database Table: Clean visual hierarchy with push notifications, 30d sync tokens, and furnace levels neatly organized
