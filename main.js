@@ -9979,7 +9979,7 @@ window.openAllianceAlertsModal = async () => {
 
             ${isStaff ? `
               <div style="display:flex; align-items:center; gap:6px;">
-                <button onclick="event.stopPropagation(); window.openCreateCountdownAlertModal();" style="background:linear-gradient(135deg, #f59e0b, #d97706); color:#fff; border:none; padding:4px 10px; border-radius:8px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px; box-shadow:0 2px 8px rgba(245,158,11,0.3); transition:0.2s;" title="Schedule a new countdown alert">
+                <button onclick="event.stopPropagation(); window.openCreateCountdownAlertModal(null, 'timer');" style="background:linear-gradient(135deg, #f59e0b, #d97706); color:#fff; border:none; padding:4px 10px; border-radius:8px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px; box-shadow:0 2px 8px rgba(245,158,11,0.3); transition:0.2s;" title="Schedule a new countdown alert">
                   ➕ Schedule Event
                 </button>
               </div>
@@ -16346,7 +16346,7 @@ const views = {
                         </h3>
                       </div>
                       <div style="display: flex; align-items: center; gap: 8px;">
-                        <button type="button" onclick="document.getElementById('broadcastPushModal').remove(); window.openCreateCountdownAlertModal();" style="background: linear-gradient(135deg, #a855f7, #6366f1); color: #fff; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11.5px; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 6px rgba(168,85,247,0.3);" title="Create a scheduled announcement with live countdown timer">
+                        <button type="button" onclick="document.getElementById('broadcastPushModal').remove(); window.openCreateCountdownAlertModal(null, 'timer');" style="background: linear-gradient(135deg, #a855f7, #6366f1); color: #fff; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11.5px; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 6px rgba(168,85,247,0.3);" title="Create a scheduled announcement with live countdown timer">
                             ⏳ Countdown Alert
                         </button>
                         <button onclick="document.getElementById('broadcastPushModal').remove()" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#cbd5e1; font-size:18px; width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; line-height:1; transition:0.15s;" onmouseover="this.style.background='rgba(239,68,68,0.2)'; this.style.borderColor='rgba(239,68,68,0.4)'; this.style.color='#ef4444'" onmouseout="this.style.background='rgba(255,255,255,0.06)'; this.style.borderColor='rgba(255,255,255,0.12)'; this.style.color='#cbd5e1'" title="Close Window">✕</button>
