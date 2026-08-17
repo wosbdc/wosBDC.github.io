@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.9.11] - 2026-08-17
+- 👤 **Automatic Account Hub Routing**: Logging in via email/password or Google now immediately transitions members directly into their personal Account Hub.
+- 🚀 **Instant Character & Alt Overview**: Quick access to linked characters, alts, furnace upgrades, and gift code claim statuses immediately upon login.
+
 ## [2.9.10] - 2026-08-17
 - 🎁 **Smart Gift Code Detection**: Intelligent active vs expired code status detection and persistent candidate blacklist to eliminate repetitive sweeps.
 - 🧪 **Live Code Auditing**: 1-click test suite to audit all tracked promo codes against game servers in real time.

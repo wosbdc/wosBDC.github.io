@@ -1,9 +1,9 @@
 {
-  "version": "2.9.10",
+  "version": "2.9.11",
   "releaseDate": "2026-08-17",
-  "title": "What's New in v2.9.10",
+  "title": "What's New in v2.9.11",
   "notes": [
-    "🎁 Smart Gift Code Detection: Intelligent active vs expired code status detection and persistent candidate blacklist",
-    "🧪 Live Code Auditing: 1-click test suite to verify all tracked promo codes in real time"
+    "👤 Automatic Account Hub Routing: Seamlessly routes all members directly into their personal Account Hub upon sign-in or session restore",
+    "🚀 Instant Character Overview: Immediate access to linked characters, alts, and gift code redemption upon login"
   ]
 }

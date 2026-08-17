@@ -5227,9 +5227,16 @@ listenToAuth((user) => {
     const onboardingEl = document.getElementById('essentialOnboardingBanner');
     if (onboardingEl) onboardingEl.remove();
     
-    if (app.querySelector('#accountHubView')) views.account(); // Refresh account view if open
-    else if (typeof window.activeViewFunc === 'function') window.activeViewFunc();
+    // Force user directly into the Account Hub upon login or session start
+    if (!window._initialAuthRouted) {
+      window._initialAuthRouted = true;
+      if (views.account) views.account();
+    } else {
+      if (app.querySelector('#accountHubView')) views.account(); // Refresh account view if open
+      else if (typeof window.activeViewFunc === 'function') window.activeViewFunc();
+    }
   } else {
+    window._initialAuthRouted = false;
     if(authSidebarBtn) authSidebarBtn.innerHTML = `👤 Sign In / Register`;
     if(userProfileSidebarBtn) userProfileSidebarBtn.style.display = 'none';
     if(adminHeaderNavBtn) adminHeaderNavBtn.style.display = 'none';
@@ -5722,6 +5729,7 @@ if (authSignInBtn) {
       await loginUser(email, password);
       window.showToast("Successfully signed in!", "success");
       closeAuthModal();
+      if (views.account) views.account();
     } catch(err) {
       authErrorMsg.textContent = err.message || 'Login failed. Please check credentials.';
       authErrorMsg.style.display = 'block';
@@ -6192,8 +6200,7 @@ if(authSubmitBtn) authSubmitBtn.addEventListener('click', async () => {
     closeAuthModal();
     const onboardingEl = document.getElementById('essentialOnboardingBanner');
     if (onboardingEl) onboardingEl.remove();
-    if (typeof window.activeViewFunc === 'function') window.activeViewFunc();
-    else views.home();
+    if (views.account) views.account();
   } catch(err) {
     authErrorMsg.textContent = err.message;
     authErrorMsg.style.display = 'block';
@@ -6220,8 +6227,7 @@ async function handleGoogleAuth() {
             closeAuthModal();
             const onboardingEl = document.getElementById('essentialOnboardingBanner');
             if (onboardingEl) onboardingEl.remove();
-            if (typeof window.activeViewFunc === 'function') window.activeViewFunc();
-            else views.home();
+            if (views.account) views.account();
         } else {
             // New user registering with Google!
             isRegistering = true;

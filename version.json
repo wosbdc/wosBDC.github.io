@@ -29,8 +29,12 @@
       "repository": "https://github.com/bdclive/BDClive"
     },
     "wosbdc_alliance_dashboard": {
-      "version": "2.9.10",
-      "repository": "https://github.com/wosbdc/wosBDC.github.io"
+      "version": "2.9.11",
+      "repository": "https://github.com/wosbdc/wosBDC.github.io",
+      "latestChanges": [
+        "v2.9.11: Automatic routing to Account Hub upon login and session start",
+        "v2.9.10: Smart Gift Code Detection and 1-click live testing suite"
+      ]
     },
     "google_apps_script_backend": {
       "deploymentId": "AKfycbzXjvqOcr9w3CZuwNxDhesndWeSwFLDeo7RS_REykgenkqf73lq4FAfZ7bTitTmVEA",
