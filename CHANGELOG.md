@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.4] - 2026-08-16
+- ⚡ Unified 3-in-1 Alert Hub: Dedicated structured cards for Scheduled Live Timers, Public Leadership Announcements, and Confidential Staff-Only Alerts
+- 🚀 Unified 3-in-1 Alert Creator: Single modal with seamless segmented control for Announcements, Timers, and Staff Alerts
+- ✨ Clean Alert Headers: Removed noisy inline badge counts on each announcement for clean, professional display with clear event timing and actions
+
 ## [2.9.3] - 2026-08-16
 - ⚡ Added dedicated blocked-off Live Timers & Scheduled Events card container to Bell Notifications
 - 🏷️ Added dynamic top header banner with live status badges (🔴 LIVE NOW / ⏳ Active)

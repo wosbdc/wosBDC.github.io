@@ -1,10 +1,10 @@
 {
-  "version": "2.9.3",
+  "version": "2.9.4",
   "releaseDate": "2026-08-16",
-  "title": "What's New in v2.9.3",
+  "title": "What's New in v2.9.4",
   "notes": [
-    "⚡ Added dedicated blocked-off Live Timers & Scheduled Events card container to Bell Notifications",
-    "🏷️ Added dynamic top header banner with live status badges (🔴 LIVE NOW / ⏳ Active)",
-    "✨ Added visual divider cleanly separating live countdown clocks from standard announcements"
+    "⚡ Unified 3-in-1 Alert Hub: Dedicated cards for Live Timers, Public Announcements, and Confidential Staff Alerts",
+    "🚀 Unified 3-in-1 Alert Creator: Single modal with seamless segmented control for Announcements, Timers, and Staff Alerts",
+    "✨ Clean Alert Headers: Cleaned up inline counts for a sleek, streamlined appearance with clear event timing and actions"
   ]
 }
