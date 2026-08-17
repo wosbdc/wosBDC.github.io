@@ -79,6 +79,20 @@ if os.path.exists("discord_config.json"):
 
 FIREBASE_URL = "https://livecounters-8eaa8-default-rtdb.firebaseio.com/labData.json"
 WOS_FIREBASE_URL = "https://wos-dashboard-38d4c-default-rtdb.firebaseio.com"
+GAS_API_URL = "https://script.google.com/macros/s/AKfycbwVxrfIb4UQDAoHNJ9RfFIdzWG4BRegZPf8QAOvUIoPRAvulUkQqtSNMClGR9UBxrI/exec"
+
+def sync_upgrade_to_google_sheet(fid, name, furnace_level):
+    try:
+        params = {
+            "api": "updateChiefLevel",
+            "gameId": str(fid).strip(),
+            "name": str(name).strip(),
+            "furnaceLevel": str(furnace_level).strip()
+        }
+        r = session.get(GAS_API_URL, params=params, timeout=10)
+        return r.json().get("success", False)
+    except Exception:
+        return False
 
 # --- TIMERS ---
 META_INTERVAL = 45          
@@ -760,6 +774,17 @@ class WoSMaintenanceEngine:
             session.put(f"{WOS_FIREBASE_URL}/roster_live.json", json=roster_live, timeout=15)
         except Exception as e:
             self.log(f"❌ [WOS MAINT] Error writing to Firebase: {e}")
+
+        # Auto-sync detected upgrades directly into Google Sheet Chief's List (0 Google Quota)
+        if upgrades:
+            for upg in upgrades:
+                u_fid = upg.get('fid')
+                u_name = upg.get('name')
+                u_lvl = upg.get('newLevel')
+                if u_fid and u_lvl:
+                    ok_sheet = sync_upgrade_to_google_sheet(u_fid, u_name, u_lvl)
+                    if ok_sheet:
+                        self.log(f"📊 Auto-synced {u_name} ({u_lvl}) directly to Google Sheet Chief's List!")
 
         # Telemetry
         now_iso = datetime.now(timezone.utc).isoformat()

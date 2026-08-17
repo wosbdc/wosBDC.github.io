@@ -77,6 +77,9 @@ WOS_GIFTCODE_API_URL = "https://wos-giftcode-api.centurygame.com/api/gift_code"
 WOS_ENCRYPT_KEY = "tB87#kPtkxqOS2"
 TEST_PLAYER_ID = "318843189"
 
+# --- GOOGLE APPS SCRIPT WEBHOOK CONFIG (0 Quota Webhook) ---
+GAS_API_URL = "https://script.google.com/macros/s/AKfycbwVxrfIb4UQDAoHNJ9RfFIdzWG4BRegZPf8QAOvUIoPRAvulUkQqtSNMClGR9UBxrI/exec"
+
 # --- TIMING & CADENCE INTERVALS (Seconds) ---
 SOCIAL_FAST_INTERVAL = 2          # 2 seconds (Plex, Twitch live streams)
 SOCIAL_META_INTERVAL = 300        # 5 minutes (Facebook, Instagram, Threads)
@@ -277,6 +280,19 @@ def fetch_stove_info(player_id):
     except Exception as e:
         return {'success': False, 'msg': str(e)}
 
+def sync_upgrade_to_google_sheet(fid, name, furnace_level):
+    try:
+        params = {
+            "api": "updateChiefLevel",
+            "gameId": str(fid).strip(),
+            "name": str(name).strip(),
+            "furnaceLevel": str(furnace_level).strip()
+        }
+        r = session.get(GAS_API_URL, params=params, timeout=10)
+        return r.json().get("success", False)
+    except Exception:
+        return False
+
 def execute_wos_maintenance_sweep():
     log_event("WOS MAINT", "Starting Automated Account Maintenance sweep (4x Daily Cadence)...")
     live_stats["maint_status"] = "SWEEPING"
@@ -389,6 +405,17 @@ def execute_wos_maintenance_sweep():
         session.put(f"{WOS_DASHBOARD_FIREBASE_URL}/roster_live.json", json=roster_live, timeout=15)
     except Exception as e:
         log_event("WOS MAINT", f"Error saving data to Firebase: {e}")
+
+    # 4. Auto-sync detected upgrades directly into Google Sheet Chief's List (0 Google Quota)
+    if upgrades:
+        for upg in upgrades:
+            u_fid = upg.get('fid')
+            u_name = upg.get('name')
+            u_lvl = upg.get('newLevel')
+            if u_fid and u_lvl:
+                ok_sheet = sync_upgrade_to_google_sheet(u_fid, u_name, u_lvl)
+                if ok_sheet:
+                    log_event("WOS MAINT", f"📊 Auto-synced {u_name} ({u_lvl}) directly to Google Sheet Chief's List!")
 
     # 4. Generate Telemetry Report
     now_iso = datetime.now(timezone.utc).isoformat()

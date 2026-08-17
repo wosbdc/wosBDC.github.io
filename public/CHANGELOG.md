@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.9] - 2026-08-17
+- ⚡ **Zero-Quota Google Sheets Auto-Sync Webhook**: Added incoming `updateChiefLevel` and `syncChiefsList` webhook endpoints to Google Apps Script (`Sidebars_and_Tools.js`) to allow BDC Central Command to auto-update spreadsheet cells instantly on furnace level upgrades with 0 outgoing `UrlFetchApp` calls.
+- 🔄 **Updated API Base URL**: Deployed updated Apps Script Web App (`@195`) and re-linked frontend `API_BASE_URL`.
+- 🛠️ **BDC Central Command v1.0.52 Integration**: Embedded automated webhook notification dispatch for all detected Chief & Alt furnace level upgrades.
+
 ## [2.9.8] - 2026-08-17
 - 🔐 Enhanced Google Authentication: Initialized explicit OAuth scopes (`email`, `profile`) and `browserPopupRedirectResolver` for robust cross-browser and mobile compatibility
 - 🛠️ Improved Auth Error Diagnostics: Added actionable error descriptions for `auth/internal-error` to pinpoint Firebase Console configuration requirements
