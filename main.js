@@ -17930,10 +17930,8 @@ const views = {
                 <div style="display:flex; flex-direction:column; gap:2px;">
                   <div style="font-weight:bold; font-size:14px; color:var(--text-main); display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
                     <span>${escapeHTML(cName)}</span>
-                    <span style="background:rgba(168,85,247,0.12); color:#c084fc; border:1px solid rgba(168,85,247,0.3); padding:2px 8px; border-radius:12px; font-size:10px; font-weight:bold;">${isPushOn ? '🔔 PUSH ON' : '🔕 PUSH OFF'}</span>
-                    <span style="background:rgba(168,85,129,0.12); color:#10b981; border:1px solid rgba(168,85,129,0.3); padding:2px 8px; border-radius:12px; font-size:10px; font-weight:bold;">✅ CLAIMED</span>
-                    ${isNew ? `<span style="background:rgba(16,185,129,0.18); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:2px 8px; border-radius:12px; font-size:10px; font-weight:bold; letter-spacing:0.5px;">🆕 NEW</span>` : ''}
                     ${isAdminUser ? `<span style="background:rgba(234,179,8,0.15); color:#eab308; border:1px solid rgba(234,179,8,0.3); padding:2px 6px; border-radius:10px; font-size:10px; font-weight:bold;">👑 ${adminLvl === 'R5' ? 'R5 Staff' : 'R4 Staff'}</span>` : ''}
+                    ${isNew ? `<span style="background:rgba(16,185,129,0.18); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:2px 8px; border-radius:12px; font-size:10px; font-weight:bold; letter-spacing:0.5px;">🆕 NEW</span>` : ''}
                   </div>
                   <div style="font-family:monospace; font-size:12px; color:var(--accent); font-weight:bold;">
                     ID: ${escapeHTML(u.gameId || '')}

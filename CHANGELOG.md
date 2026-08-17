@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.9.6] - 2026-08-17
+- ✨ Cleaner Player Database: Removed duplicate push status badges from Chief name cards in Admin Member Management
+- 🛡️ Streamlined Member Database Table: Clean visual hierarchy with push notifications, 30d sync tokens, and furnace levels neatly organized
+
 ## [2.9.5] - 2026-08-16
 - 🛡️ Clean Separation of User & Admin Features: Dedicated Leadership Suite and 1-click Admin Hub in navbar and mobile drawer for R4/R5 Staff
 - 📱 Streamlined Device Push Dropdown: Push: ON pill in alerts header is now strictly dedicated to user device status, testing, and settings

@@ -1,11 +1,9 @@
 {
-  "version": "2.9.5",
-  "releaseDate": "2026-08-16",
-  "title": "What's New in v2.9.5",
+  "version": "2.9.6",
+  "releaseDate": "2026-08-17",
+  "title": "What's New in v2.9.6",
   "notes": [
-    "🛡️ Clean Separation of User & Admin Features: Dedicated Leadership Suite and 1-click Admin Hub for R4/R5 Staff",
-    "📱 Streamlined Device Push Dropdown: Push: ON pill is now strictly dedicated to user device status, testing, and settings",
-    "👑 Dedicated Staff Tools Dropdown: Staff officers get their own broadcast, instant push blast, and cleaner toolkit",
-    "⚙️ Restructured 4-Card Settings Sidebar: Clean, logical separation for My Account, Display/Preferences, Clocks & Timers, and Leadership Suite"
+    "✨ Cleaner Player Database: Removed duplicate push status badges from Chief name cards",
+    "🛡️ Streamlined Member Database Table: Clean visual hierarchy with push notifications, 30d sync tokens, and furnace levels neatly organized"
   ]
 }
