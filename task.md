@@ -1,43 +1,10 @@
-# Task: Streamline Alliance Notifications & Alerts Modal
+# Task: Sidebar Clean Up & Compact Mini Buttons Layout
 
-- [x] Present streamlining suggestions and proposed design options to user <!-- id: 0 -->
-- [x] Receive user feedback and confirmation on preferred layout (Option 1 selected) <!-- id: 1 -->
-- [x] Create automated project backup archive <!-- id: 2 -->
-- [x] Implement streamlined Push Notification UI and Notifications modal hierarchy <!-- id: 3 -->
-- [x] Fix 'Manage' Alt Accounts button navigation in Notifications modal (v2.5.83) <!-- id: 7 -->
-- [x] Restore Time Active and Firebase data binding for Linked Alt Accounts (v2.5.84) <!-- id: 8 -->
-- [x] Implement Advanced Filter & Search System on Linked Alt Accounts (v2.5.85) <!-- id: 9 -->
-- [x] Correct BrianDCox Email to BrianDivaCox@gmail.com & harden spoofing (v2.5.86) <!-- id: 10 -->
-- [x] Implement Announcement Cleaner & Delete buttons in Alliance Notifications & Alerts (v2.5.87) <!-- id: 11 -->
-- [x] Implement Claimed Accounts Gift Code Enforcement & Toggle in Dispatcher (v2.5.88) <!-- id: 12 -->
-- [x] Clean up duplicate BrianDCox account & preserve authentic 5/6 alts (v2.5.89) <!-- id: 13 -->
-- [x] Streamline automatic Gift Code perks and remove redundant modals (v2.5.90) <!-- id: 14 -->
-- [x] Resolve non-breaking space issues and harden player search lookup (v2.5.91) <!-- id: 15 -->
-- [x] Integrate wosrewards.com live web scraper into Gift Code AutoBot (v2.5.92) <!-- id: 16 -->
-- [x] Connect 24/7 background AutoBot engine with automatic member dispatch (v2.5.93) <!-- id: 17 -->
-- [x] Add wosrewards.com to local daemon bridge scraper (v2.5.94) <!-- id: 18 -->
-- [x] Add GamsGo blog scraper across local bridge & cloud AutoBot (v2.5.95) <!-- id: 19 -->
-- [x] Correct furnace level parser bug & fix Sentinel Frost to Level 24 (v2.5.96) <!-- id: 20 -->
-- [x] Implement Automated Nightly Account Maintenance engine & trigger (v2.5.96) <!-- id: 21 -->
-- [x] Implement Two-Way Firebase to Google Sheets Master Backup Sync (v2.5.98) <!-- id: 22 -->
-- [x] Purge ghost rows, sanitize Chief's List, and optimize atomic batch sync (v2.5.99) <!-- id: 23 -->
-- [x] Install live dynamic DATEDIF formulas into Column F (Time Active) (v2.5.100) <!-- id: 24 -->
-- [x] Implement dynamic on-demand row growth & auto blank row trimming (v2.5.101) <!-- id: 25 -->
-- [x] Apply verified member start dates across Firebase & Google Sheets (v2.5.102) <!-- id: 26 -->
-- [x] Add queryAllGameServers and fix 2 missing furnace levels (v2.5.103) <!-- id: 27 -->
-- [x] Fix Row 1 header & Row 2 data indexing to purge Sigmashu duplication (v2.5.104) <!-- id: 28 -->
-- [x] Strict token-guarded furnace levels (leave unverified blank) & add sync alert banners (v2.5.105) <!-- id: 29 -->
-- [x] Fix Chief Name resolution across all sources in Chief's List Column A (v2.5.106) <!-- id: 30 -->
-- [x] Remove synthetic 2-day auto Bear Trap fallback calculation (v2.5.107) <!-- id: 31 -->
-- [x] Create dedicated '🤖 Bots' Tab in Admin menu consolidating bots & daemons (v2.5.108) <!-- id: 32 -->
-- [x] Build live 🌙 Nightly Maintenance Telemetry Card with stats, logs, & trigger (v2.5.108) <!-- id: 33 -->
-- [x] Clean up ⚙️ System & Roster Tools in Daily Tools tab into streamlined groups (v2.5.108) <!-- id: 34 -->
-- [x] Add 🔗 Alt Accounts filter to Attributes dropdown in Registered Users (v2.5.108) <!-- id: 35 -->
-- [x] Move Discord Webhook configuration to Bots tab for R5 only (v2.5.109) <!-- id: 36 -->
-- [x] Fix Staff & Leadership page mobile responsiveness & auto-adjustable roles (v2.5.110) <!-- id: 37 -->
-- [x] Build Alliance Gatekeeper Report Editor & Live Discord Preview Modal (v2.5.111) <!-- id: 38 -->
-- [x] Add section toggles, custom R5 announcement input, and live data auto-pull (v2.5.111) <!-- id: 39 -->
-- [x] Update pushGatekeeperReportToDiscord to support custom payload & persistence (v2.5.111) <!-- id: 40 -->
-- [x] Update versioning, CHANGELOG.md, and sw.js <!-- id: 4 -->
-- [x] Build & test suite verification <!-- id: 5 -->
-- [x] Commit and push changes to GitHub <!-- id: 6 -->
+- [x] Create automated project backup archive (`backup_wos_website_v2.9.14_pre_sidebar_cleanup.zip`) <!-- id: 0 -->
+- [x] Elevate User Account to top of sidebar with side-by-side mini buttons layout <!-- id: 1 -->
+- [x] Add compact styling (`.sidebar-mini-btn`, `.sidebar-btn-grid`) to prevent pushing timers down <!-- id: 2 -->
+- [x] Modernize Display & Preferences into a streamlined 2-column mini grid <!-- id: 3 -->
+- [x] Update versioning across `package.json`, `version.json`, `public/version.json`, `public/sw.js`, and `CHANGELOG.md` to `v2.9.15` <!-- id: 4 -->
+- [x] Build & run feature verification test suite (`npm run build`) <!-- id: 5 -->
+- [ ] Commit and push changes to GitHub with `v2.9.15 : ...` commit title <!-- id: 6 -->
+

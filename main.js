@@ -5201,7 +5201,7 @@ listenToAuth((user) => {
     if (adminAlertsNavBtn) adminAlertsNavBtn.style.display = 'flex';
     if (window.updateNewMemberBadge) window.updateNewMemberBadge();
     
-    if(signOutSidebarBtn) signOutSidebarBtn.style.display = 'block';
+    if(signOutSidebarBtn) signOutSidebarBtn.style.display = 'inline-flex';
     
     window.updateNavbarUserIndicator(currentUser);
     
@@ -5219,7 +5219,7 @@ listenToAuth((user) => {
     }
   } else {
     window._initialAuthRouted = false;
-    if(authSidebarBtn) authSidebarBtn.innerHTML = `👤 Sign In / Register`;
+    if(authSidebarBtn) authSidebarBtn.innerHTML = `🔐 Sign In / Register`;
     if(signOutSidebarBtn) signOutSidebarBtn.style.display = 'none';
     window.updateNavbarUserIndicator(null);
     
@@ -6693,8 +6693,7 @@ const fetchSheet = async (sheetName) => {
 refreshIdToNameMap().then(() => {
     // Update navbar if user already loaded
     if (currentUser && authSidebarBtn) {
-       let uName = idToNameMap[currentUser.gameId] || 'Account';
-       authSidebarBtn.innerHTML = `👤 ${uName}'s Profile`;
+       authSidebarBtn.innerHTML = `👤 Account Hub`;
     }
     // Update Account Hub if it is currently open
     const accHubView = document.getElementById('accountHubView');

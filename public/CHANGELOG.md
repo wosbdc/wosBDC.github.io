@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.9.15] - 2026-08-17
+- 👤 **Compact Mini User Account Actions**: Redesigned the User Account section to sit cleanly at the top of the Settings sidebar using side-by-side mini buttons (`👤 Account Hub` & `🚪 Sign Out`), taking minimal vertical space so Alliance Timers and countdowns remain prominently visible without being pushed down.
+- 🎨 **2-Column Display & Preferences Grid**: Compact 2x2 grid layout for Theme Engine, Mobile Navigation, App Installation, and Support actions.
+
 ## [2.9.14] - 2026-08-17
 - 📋 **Batch Copy Unsynced In-Game Tokens**: Added 1-click **"Copy Unsynced Tokens"** button in the Alliance Members & Player Database to instantly export all members with expired or unverified in-game sync tokens, complete with Game IDs and renewal instructions.
 - 🎯 **Contextual Token Filtering & Export**: Respects active token filter selections (Expired vs Unverified vs Expiring) when copying, or exports all unsynced tokens when in overview mode.

@@ -29,11 +29,11 @@
       "repository": "https://github.com/bdclive/BDClive"
     },
     "wosbdc_alliance_dashboard": {
-      "version": "2.9.12",
+      "version": "2.9.15",
       "repository": "https://github.com/wosbdc/wosBDC.github.io",
       "latestChanges": [
-        "v2.9.12: Moved admin entry to Account Hub Leadership suite and Settings Sidebar",
-        "v2.9.11: Automatic routing to Account Hub upon login and session start"
+        "v2.9.15: Compact mini buttons for user account & 2-column display tools grid in Settings sidebar",
+        "v2.9.14: Batch Copy Unsynced In-Game Tokens and DM reminder actions in Database"
       ]
     },
     "google_apps_script_backend": {
