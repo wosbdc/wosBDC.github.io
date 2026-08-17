@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.3] - 2026-08-16
+- ⚡ Added dedicated blocked-off Live Timers & Scheduled Events card container to Bell Notifications
+- 🏷️ Added dynamic top header banner with live status badges (🔴 LIVE NOW / ⏳ Active)
+- ✨ Added visual divider cleanly separating live countdown clocks from standard announcements
+
 ## [2.9.2] - 2026-08-16
 - 🛠️ Fixed alert system push notification import bug (`push is not defined`)
 - 🔔 Added Push Notification status badges (Push ON/OFF) to Admin Hub member management

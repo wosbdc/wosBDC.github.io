@@ -9887,6 +9887,9 @@ window.openAllianceAlertsModal = async () => {
     // 1. Spotlight Scheduled Countdown Alerts Section
     let spotlightSectionHtml = '';
     if (countdownAlerts.length > 0) {
+      let liveCount = 0;
+      let urgentCount = 0;
+
       const cardsHtml = countdownAlerts.map(b => {
         const catMeta = window.getCountdownAlertCategoryMeta(b.category || 'general');
         const targetMs = Number(b.targetTimestamp);
@@ -9896,13 +9899,15 @@ window.openAllianceAlertsModal = async () => {
         const isLive = status.stage === 'live';
         const isCountdown = status.stage === 'countdown';
         const isUrgent = b.priority === 'urgent' || isLive || isCountdown;
+        if (isLive) liveCount++;
+        if (isUrgent) urgentCount++;
         
         const borderColor = isLive ? '#10b981' : (isCountdown ? '#f59e0b' : catMeta.color);
         const bgGradient = isLive 
-          ? 'linear-gradient(145deg, rgba(16,185,129,0.12), rgba(15,23,42,0.92))'
+          ? 'linear-gradient(145deg, rgba(16,185,129,0.14), rgba(15,23,42,0.95))'
           : (isCountdown 
-              ? 'linear-gradient(145deg, rgba(245,158,11,0.14), rgba(15,23,42,0.92))' 
-              : `linear-gradient(145deg, ${catMeta.bg}, rgba(15,23,42,0.92))`);
+              ? 'linear-gradient(145deg, rgba(245,158,11,0.16), rgba(15,23,42,0.95))' 
+              : `linear-gradient(145deg, ${catMeta.bg}, rgba(15,23,42,0.95))`);
 
         const staffActions = isStaff ? `
           <div style="display:flex; align-items:center; gap:5px;">
@@ -9950,9 +9955,44 @@ window.openAllianceAlertsModal = async () => {
         `;
       }).join('');
 
+      const hasLive = liveCount > 0;
+      const containerBorder = hasLive ? 'rgba(16,185,129,0.55)' : 'rgba(245,158,11,0.45)';
+      const containerShadow = hasLive ? '0 12px 35px rgba(0,0,0,0.65), 0 0 25px rgba(16,185,129,0.22)' : '0 12px 35px rgba(0,0,0,0.65), 0 0 25px rgba(245,158,11,0.15)';
+      const ribbonGradient = hasLive ? 'linear-gradient(90deg, #10b981, #38bdf8, #10b981)' : 'linear-gradient(90deg, #f59e0b, #ec4899, #f59e0b)';
+
       spotlightSectionHtml = `
-        <div style="margin-bottom:14px; display:flex; flex-direction:column; gap:10px;">
-          ${cardsHtml}
+        <div style="background:linear-gradient(145deg, rgba(15,23,42,0.92), rgba(30,41,59,0.85)); border:2px solid ${containerBorder}; border-radius:16px; padding:14px; margin-bottom:16px; box-shadow:${containerShadow}; position:relative; overflow:hidden;">
+          
+          <!-- Top Accent Ribbon -->
+          <div style="position:absolute; top:0; left:0; right:0; height:3.5px; background:${ribbonGradient};"></div>
+
+          <!-- Header Banner -->
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.08);">
+            <div>
+              <div style="font-size:13.5px; font-weight:800; color:${hasLive ? '#34d399' : '#fbbf24'}; display:flex; align-items:center; gap:8px; letter-spacing:0.5px; text-transform:uppercase;">
+                <span style="font-size:16px;">⚡</span>
+                <span>Live Timers & Scheduled Events</span>
+                ${hasLive ? `<span style="background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:2px 8px; border-radius:12px; font-size:10px; font-weight:800; animation:pulse 2s infinite;">🔴 ${liveCount} LIVE</span>` : ''}
+                <span style="background:rgba(245,158,11,0.18); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); padding:2px 8px; border-radius:12px; font-size:10px; font-weight:bold;">⏳ ${countdownAlerts.length} Active</span>
+              </div>
+              <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
+                Real-time event countdowns & active alliance schedules
+              </div>
+            </div>
+
+            ${isStaff ? `
+              <div style="display:flex; align-items:center; gap:6px;">
+                <button onclick="event.stopPropagation(); window.openCreateCountdownAlertModal();" style="background:linear-gradient(135deg, #f59e0b, #d97706); color:#fff; border:none; padding:4px 10px; border-radius:8px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px; box-shadow:0 2px 8px rgba(245,158,11,0.3); transition:0.2s;" title="Schedule a new countdown alert">
+                  ➕ Schedule Event
+                </button>
+              </div>
+            ` : ''}
+          </div>
+
+          <!-- Cards Stack -->
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            ${cardsHtml}
+          </div>
         </div>
       `;
     }
@@ -10212,6 +10252,17 @@ window.openAllianceAlertsModal = async () => {
 
         <!-- Spotlight Scheduled Countdown Alerts Section -->
         ${spotlightSectionHtml}
+
+        ${countdownAlerts.length > 0 && (standardBroadcasts.length > 0 || tokenStatus.alert || rawAlts.length > 0 || isStaff) ? `
+          <!-- Visual Section Divider -->
+          <div style="display:flex; align-items:center; gap:12px; margin:16px 0 14px 0;">
+            <div style="flex:1; height:1px; background:rgba(255,255,255,0.08);"></div>
+            <span style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; display:flex; align-items:center; gap:5px;">
+              📢 Alliance Announcements & Updates
+            </span>
+            <div style="flex:1; height:1px; background:rgba(255,255,255,0.08);"></div>
+          </div>
+        ` : ''}
 
         <!-- Main Character Status Card (Only if Action Required) -->
         ${mainTokenHtml}

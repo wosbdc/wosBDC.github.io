@@ -1,10 +1,10 @@
 {
-  "version": "2.9.2",
+  "version": "2.9.3",
   "releaseDate": "2026-08-16",
-  "title": "What's New in v2.9.2",
+  "title": "What's New in v2.9.3",
   "notes": [
-    "🛠️ Fixed alert system push notification import bug (`push is not defined`)",
-    "🔔 Added Push Notification status badges (Push ON/OFF) to Admin Hub member management",
-    "🎯 Added live push notification attribute filters (Push Enabled vs Push Disabled) with device counters in Admin Hub"
+    "⚡ Added dedicated blocked-off Live Timers & Scheduled Events card container to Bell Notifications",
+    "🏷️ Added dynamic top header banner with live status badges (🔴 LIVE NOW / ⏳ Active)",
+    "✨ Added visual divider cleanly separating live countdown clocks from standard announcements"
   ]
 }
