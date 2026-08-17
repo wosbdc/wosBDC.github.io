@@ -1,9 +1,9 @@
 # CHANGELOG
 
 ## [2.9.9] - 2026-08-17
-- ⚡ **Zero-Quota Google Sheets Auto-Sync Webhook**: Added incoming `updateChiefLevel` and `syncChiefsList` webhook endpoints to Google Apps Script (`Sidebars_and_Tools.js`) to allow BDC Central Command to auto-update spreadsheet cells instantly on furnace level upgrades with 0 outgoing `UrlFetchApp` calls.
-- 🔄 **Updated API Base URL**: Deployed updated Apps Script Web App (`@195`) and re-linked frontend `API_BASE_URL`.
-- 🛠️ **BDC Central Command v1.0.52 Integration**: Embedded automated webhook notification dispatch for all detected Chief & Alt furnace level upgrades.
+- 🏰 **Alliance Gatekeeper Discord Bot Report Sync**: Connected the automated Discord report to Firebase (`config/gatekeeperReportSettings`), ensuring all custom section edits, member stats, R5 directives, and embed colors saved from the Web App Editor appear live in Discord without getting overwritten.
+- ⚡ **Zero-Quota Google Sheets Auto-Sync Webhook**: Deployed incoming `updateChiefLevel` and `syncChiefsList` webhook endpoints to Google Apps Script (`Sidebars_and_Tools.js`) to automatically update furnace levels in the `Chief's List` sheet with 0 outgoing quota.
+- 🔄 **Updated API Base URL**: Re-linked frontend `API_BASE_URL` to deployment `@195`.
 
 ## [2.9.8] - 2026-08-17
 - 🔐 Enhanced Google Authentication: Initialized explicit OAuth scopes (`email`, `profile`) and `browserPopupRedirectResolver` for robust cross-browser and mobile compatibility
