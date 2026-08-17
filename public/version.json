@@ -1,9 +1,9 @@
 {
-  "version": "2.9.8",
+  "version": "2.9.10",
   "releaseDate": "2026-08-17",
-  "title": "What's New in v2.9.8",
+  "title": "What's New in v2.9.10",
   "notes": [
-    "🔐 Enhanced Google Authentication: Initialized explicit OAuth scopes and browserPopupRedirectResolver for maximum cross-browser compatibility",
-    "🛠️ Improved Auth Error Diagnostics: Added detailed troubleshooting messages for Google Authentication flows"
+    "🎁 Smart Gift Code Detection: Intelligent active vs expired code status detection and persistent candidate blacklist",
+    "🧪 Live Code Auditing: 1-click test suite to verify all tracked promo codes in real time"
   ]
 }

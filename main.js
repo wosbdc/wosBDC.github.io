@@ -132,7 +132,7 @@ window.fetchRoster = async () => {
 };
 
 
-const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbwVxrfIb4UQDAoHNJ9RfFIdzWG4BRegZPf8QAOvUIoPRAvulUkQqtSNMClGR9UBxrI/exec';
+const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbzXjvqOcr9w3CZuwNxDhesndWeSwFLDeo7RS_REykgenkqf73lq4FAfZ7bTitTmVEA/exec';
 const VERIFY_PROXY_URL = 'https://wos-vercel-proxy.vercel.app/api/verify'; // Fallback / secondary proxy
 
 // Get a fresh Firebase ID token for the current user (replaces hardcoded APP_SECRET)
@@ -13708,17 +13708,22 @@ window.testSingleGiftCodeLive = async (code, btnEl = null) => {
 
     const cleanKey = cleanCode.replace(/[^A-Za-z0-9_-]/g, '_');
     let newStatus = 'active';
+    const msgUpper = (data.msg || '').toUpperCase();
 
-    if (data.code === 0 || data.status === 'success' || data.status === 'already_claimed') {
+    if (data.code === 0 || data.status === 'success' || data.status === 'already_claimed' || msgUpper.includes('SUCCESS') || msgUpper.includes('RECEIVED') || msgUpper.includes('USED') || msgUpper.includes('CLAIMED')) {
       newStatus = 'active';
       await update(ref(db, `gift_codes_history/${cleanKey}`), { status: 'active', lastTestedAt: new Date().toISOString() });
-      if (window.showToast) window.showToast(`✅ [${cleanCode}] is Active & Valid!`, 'success');
-    } else if (data.status === 'expired') {
+      if (window.showToast) window.showToast(`✅ [${cleanCode}] is Active & Valid! (${data.msg || 'Active'})`, 'success');
+    } else if (data.status === 'expired' || msgUpper.includes('TIME ERROR') || msgUpper.includes('TIMEOUT') || msgUpper.includes('EXPIRED')) {
       newStatus = 'expired';
       await update(ref(db, `gift_codes_history/${cleanKey}`), { status: 'expired', lastTestedAt: new Date().toISOString() });
-      if (window.showToast) window.showToast(`🔴 [${cleanCode}] has Expired. Status updated.`, 'warning');
+      if (window.showToast) window.showToast(`🔴 [${cleanCode}] has Expired. Marked expired in catalog.`, 'warning');
+    } else if (data.status === 'not_found' || msgUpper.includes('CDK NOT FOUND') || msgUpper.includes('NOT EXIST')) {
+      newStatus = 'expired';
+      await update(ref(db, `gift_codes_history/${cleanKey}`), { status: 'expired', description: 'Invalid or non-existent code', lastTestedAt: new Date().toISOString() });
+      if (window.showToast) window.showToast(`❌ [${cleanCode}] is not a valid promo code.`, 'warning');
     } else {
-      if (window.showToast) window.showToast(`⚠️ [${cleanCode}]: ${data.msg || 'Unknown game server response'}`, 'info');
+      if (window.showToast) window.showToast(`⚠️ [${cleanCode}]: ${data.msg || 'Unknown response'}`, 'info');
     }
 
     window.loadGiftCodesManagerData();
@@ -13734,10 +13739,9 @@ window.testSingleGiftCodeLive = async (code, btnEl = null) => {
 
 window.testAllGiftCodesLive = async (btnEl = null) => {
   const list = await window.fetchGiftCodesHistory();
-  const activeCodes = list.filter(item => item.status === 'active');
 
-  if (activeCodes.length === 0) {
-    if (window.showToast) window.showToast("No active gift codes to test.", "info");
+  if (!list || list.length === 0) {
+    if (window.showToast) window.showToast("No gift codes in catalog to test.", "info");
     return;
   }
 
@@ -13748,7 +13752,7 @@ window.testAllGiftCodesLive = async (btnEl = null) => {
     btnEl.innerHTML = '🧪 Testing All...';
   }
 
-  if (window.showToast) window.showToast(`🧪 Testing ${activeCodes.length} active code(s) against game servers...`, "info");
+  if (window.showToast) window.showToast(`🧪 Testing ${list.length} code(s) against Century Games servers...`, "info");
 
   let validCount = 0;
   let expiredCount = 0;
@@ -13756,19 +13760,20 @@ window.testAllGiftCodesLive = async (btnEl = null) => {
   const testId = currentUser.gameId || '318843189';
   const adminToken = await getAuthToken();
 
-  for (let i = 0; i < activeCodes.length; i++) {
-    const item = activeCodes[i];
+  for (let i = 0; i < list.length; i++) {
+    const item = list[i];
     const code = item.code;
     const cleanKey = code.replace(/[^A-Za-z0-9_-]/g, '_');
 
     try {
       const res = await fetch(`${API_BASE_URL}?api=redeemGiftCode&gameId=${encodeURIComponent(testId)}&code=${encodeURIComponent(code)}&kid=2089&token=${encodeURIComponent(adminToken)}`);
       const data = await res.json();
+      const msgUpper = (data.msg || '').toUpperCase();
 
-      if (data.code === 0 || data.status === 'success' || data.status === 'already_claimed') {
+      if (data.code === 0 || data.status === 'success' || data.status === 'already_claimed' || msgUpper.includes('SUCCESS') || msgUpper.includes('RECEIVED') || msgUpper.includes('USED') || msgUpper.includes('CLAIMED')) {
         validCount++;
         await update(ref(db, `gift_codes_history/${cleanKey}`), { status: 'active', lastTestedAt: new Date().toISOString() });
-      } else if (data.status === 'expired') {
+      } else {
         expiredCount++;
         await update(ref(db, `gift_codes_history/${cleanKey}`), { status: 'expired', lastTestedAt: new Date().toISOString() });
       }
@@ -13776,7 +13781,7 @@ window.testAllGiftCodesLive = async (btnEl = null) => {
       console.warn(`Error testing ${code}:`, e);
     }
 
-    await new Promise(r => setTimeout(r, 200));
+    await new Promise(r => setTimeout(r, 250));
   }
 
   if (btnEl) {

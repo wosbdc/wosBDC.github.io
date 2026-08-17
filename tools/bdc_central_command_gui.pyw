@@ -796,31 +796,65 @@ def send_or_update_gatekeeper_report():
     return False
 
 # ====================================================================
-# 🎁 WHITEOUT SURVIVAL — GIFT CODE AUTO-BOT ENGINE
+# 🎁 WHITEOUT SURVIVAL — SMART GIFT CODE AUTO-BOT ENGINE
 # ====================================================================
+
+GIFTCODE_BLACKLIST_FILE = "scraped_candidates_blacklist.json"
 
 class GiftCodeBotEngine:
     def __init__(self, log_callback=None, card_callback=None):
         self.log_callback = log_callback
         self.card_callback = card_callback
+        self.blacklist = set()
+        self.load_blacklist()
         self.sources = [
             ("WosRewards", "https://www.wosrewards.com/giftcodes"),
             ("GamsGo", "https://www.gamsgo.com/blog/whiteout-survival-gift-codes"),
+            ("PocketGamer", "https://www.pocketgamer.com/whiteout-survival/codes/"),
             ("DotGG", "https://dotgg.gg/whiteout-survival/gift-codes/"),
-            ("ProGameGuides", "https://progameguides.com/whiteout-survival/whiteout-survival-codes/"),
-            ("PocketGamer", "https://www.pocketgamer.com/whiteout-survival/codes/")
+            ("ProGameGuides", "https://progameguides.com/whiteout-survival/whiteout-survival-codes/")
         ]
         self.ignored_words = {
             'WHITEOUT', 'SURVIVAL', 'CENTURY', 'GAMES', 'DISCORD', 'FACEBOOK', 'REDDIT',
             'YOUTUBE', 'GOOGLE', 'CHROME', 'APPLE', 'ANDROID', 'UPDATE', 'EXPIRED',
             'ACTIVE', 'REWARD', 'REWARDS', 'GIFTCODE', 'PLAYERS', 'AVATAR', 'STOVE',
             'FURNACE', 'STATUS', 'SERVER', 'ONLINE', 'OFFLINE', 'METHOD', 'REPORT',
-            'CODES', 'CODE', 'ADDED', 'LIST', 'CLAIM', 'EXCHANGE', 'PAGE', 'NOTES'
+            'CODES', 'CODE', 'ADDED', 'LIST', 'CLAIM', 'EXCHANGE', 'PAGE', 'NOTES',
+            'SETTINGS', 'TERMS', 'POLICY', 'PRIVACY', 'CONTACT', 'COOKIE', 'COOKIES',
+            'IN-GAME', 'CASE-SENSITIVE', 'TIME-LIMITED', 'OFFICIALSTORE', 'DISCOUNTED',
+            'POPULAR', 'GEMS', 'TYPE', 'REDEEM', 'EVENT', 'MAILBOX', 'ACCOUNTS',
+            'ADOBE', 'AFFILIATE', 'BLOG', 'CANNVA', 'CAPCUT', 'CHATGPT', 'CLAUDE',
+            'COINS', 'CRUNCHYROL', 'CRUNCHYROLL', 'CURSOR'
         }
 
     def log(self, msg):
         if self.log_callback:
             self.log_callback(f"🎁 [GiftCode Bot] {msg}")
+
+    def load_blacklist(self):
+        if os.path.exists(GIFTCODE_BLACKLIST_FILE):
+            try:
+                with open(GIFTCODE_BLACKLIST_FILE, "r", encoding="utf-8") as f:
+                    saved = json.load(f)
+                    if isinstance(saved, list):
+                        self.blacklist.update(saved)
+            except: pass
+        try:
+            r = session.get(f"{WOS_FIREBASE_URL}/system/giftcode_bot_blacklist.json", timeout=5)
+            fb_list = r.json()
+            if isinstance(fb_list, list):
+                self.blacklist.update(fb_list)
+        except: pass
+
+    def save_blacklist(self):
+        bl_list = sorted(list(self.blacklist))
+        try:
+            with open(GIFTCODE_BLACKLIST_FILE, "w", encoding="utf-8") as f:
+                json.dump(bl_list, f, indent=2)
+        except: pass
+        try:
+            session.put(f"{WOS_FIREBASE_URL}/system/giftcode_bot_blacklist.json", json=bl_list, timeout=5)
+        except: pass
 
     def test_or_redeem(self, role_id, cdk, kid="2089"):
         clean_id = str(role_id or '').strip()
@@ -839,41 +873,49 @@ class GiftCodeBotEngine:
             "Content-Type": "application/x-www-form-urlencoded",
             "Origin": "https://wos-giftcode.centurygame.com",
             "Referer": "https://wos-giftcode.centurygame.com/",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
         }
         try:
             r = session.post(WOS_GIFTCODE_API_URL, data=payload, headers=headers, timeout=8)
             data = r.json()
-            msg = (data.get("msg") or "").lower()
+            msg = (data.get("msg") or "").strip().upper()
             code = data.get("code")
-            if code == 0 or data.get("status") == "success":
-                return {"success": True, "status": "success", "msg": data.get("msg", "Redeemed successfully")}
-            if "already" in msg or "received" in msg or "claimed" in msg or code == 40008 or code == 20002:
-                return {"success": True, "status": "already_claimed", "msg": data.get("msg", "Already claimed")}
-            if "expired" in msg or "not exist" in msg or code in (40007, 20001, 20005):
-                return {"success": False, "status": "expired", "msg": data.get("msg", "Expired or invalid code")}
-            return {"success": False, "status": "failed", "msg": data.get("msg", "Unknown API response")}
+
+            # 1. ACTIVE & VALID
+            if code == 0 or data.get("status") == "success" or "SUCCESS" in msg or "RECEIVED" in msg or "CLAIMED" in msg or "USED" in msg or code in (40008, 20002):
+                return {"success": True, "status": "active", "msg": data.get("msg", "Valid & Active Code")}
+
+            # 2. EXPIRED (TIME ERROR)
+            if "TIME ERROR" in msg or "TIMEOUT" in msg or "TIME OUT" in msg or "EXPIRED" in msg or code in (40007, 20005, 40014):
+                return {"success": False, "status": "expired", "msg": data.get("msg", "Expired Promo Code")}
+
+            # 3. NON-EXISTENT / JUNK CANDIDATE (CDK NOT FOUND)
+            if "CDK NOT FOUND" in msg or "NOT EXIST" in msg or "NOT FOUND" in msg or code == 20001:
+                return {"success": False, "status": "non_existent", "msg": data.get("msg", "Code Does Not Exist")}
+
+            return {"success": False, "status": "failed", "msg": data.get("msg", "Unknown response")}
         except Exception as e:
             return {"success": False, "status": "network_error", "msg": str(e)}
 
     def scrape_candidate_codes(self):
         candidates = set()
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"}
         for name, url in self.sources:
             try:
-                headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"}
                 r = session.get(url, headers=headers, timeout=10)
                 if r.status_code == 200:
-                    matches = re.findall(r'\b[A-Za-z0-9]{5,20}\b', r.text)
+                    matches = re.findall(r'<(?:code|strong|b|td|span)[^>]*>\s*([A-Za-z0-9_\-]{4,20})\s*</(?:code|strong|b|td|span)>', r.text)
                     for m in matches:
                         code_clean = m.strip().upper()
-                        if code_clean not in self.ignored_words and not code_clean.isdigit():
-                            candidates.add(code_clean)
+                        if code_clean not in self.ignored_words and not code_clean.isdigit() and len(code_clean) >= 4:
+                            if code_clean not in self.blacklist:
+                                candidates.add(code_clean)
             except Exception as e:
                 self.log(f"Warning scraping {name}: {e}")
         return list(candidates)
 
     def run_sweep(self):
-        self.log("Starting autonomous gift code sweep across web feeds...")
+        self.log("Starting intelligent gift code sweep across web feeds...")
         try:
             r = session.get(f"{WOS_FIREBASE_URL}/gift_codes_history.json", timeout=6)
             existing_history = r.json() or {}
@@ -882,16 +924,20 @@ class GiftCodeBotEngine:
 
         candidates = self.scrape_candidate_codes()
         valid_new_codes = []
+        new_blacklist_items = False
 
-        for code in candidates[:30]:
+        pending_candidates = [c for c in candidates if c not in existing_history and c not in self.blacklist]
+        self.log(f"Found {len(pending_candidates)} new untracked candidate keyword(s) to evaluate.")
+
+        for code in pending_candidates[:25]:
             clean_key = re.sub(r'[^A-Za-z0-9_-]', '_', code)
-            if clean_key in existing_history:
-                continue
 
             self.log(f"Testing candidate code: [{code}]...")
             res = self.test_or_redeem(TEST_PLAYER_ID, code)
-            if res.get("status") in ("success", "already_claimed"):
-                self.log(f"🎉 VERIFIED ACTIVE: [{code}] is valid! ({res.get('msg')})")
+            st = res.get("status")
+
+            if st == "active":
+                self.log(f"🎉 VERIFIED ACTIVE: [{code}] is VALID! ({res.get('msg')})")
                 valid_new_codes.append(code)
                 try:
                     session.put(f"{WOS_FIREBASE_URL}/gift_codes_history/{clean_key}.json", json={
@@ -901,25 +947,39 @@ class GiftCodeBotEngine:
                         "createdAt": datetime.utcnow().isoformat() + "Z",
                         "createdBy": "BDC Central Command v1.0.53",
                         "lastDispatchedAt": datetime.utcnow().isoformat() + "Z",
+                        "lastTestedAt": datetime.utcnow().isoformat() + "Z",
                         "stats": {"total": 0, "success": 0, "already": 0, "failed": 0}
                     }, timeout=5)
                 except: pass
-            elif res.get("status") == "expired":
+            elif st == "expired":
+                self.log(f"🔴 EXPIRED: [{code}] was a promo code but has expired ({res.get('msg')})")
+                self.blacklist.add(code)
+                new_blacklist_items = True
                 try:
                     session.put(f"{WOS_FIREBASE_URL}/gift_codes_history/{clean_key}.json", json={
                         "code": code,
                         "status": "expired",
                         "description": "Auto-tested and found expired",
                         "createdAt": datetime.utcnow().isoformat() + "Z",
-                        "createdBy": "BDC Central Command v1.0.53"
+                        "createdBy": "BDC Central Command v1.0.53",
+                        "lastTestedAt": datetime.utcnow().isoformat() + "Z"
                     }, timeout=5)
                 except: pass
+            elif st == "non_existent":
+                self.log(f"❌ Discarding non-code keyword: [{code}]")
+                self.blacklist.add(code)
+                new_blacklist_items = True
+
             time.sleep(0.4)
+
+        if new_blacklist_items:
+            self.save_blacklist()
 
         # Refresh telemetry
         try:
             all_hist = session.get(f"{WOS_FIREBASE_URL}/gift_codes_history.json", timeout=6).json() or {}
             active_cnt = sum(1 for c in all_hist.values() if isinstance(c, dict) and c.get("status") == "active")
+            expired_cnt = sum(1 for c in all_hist.values() if isinstance(c, dict) and c.get("status") == "expired")
             total_claims = sum(int(c.get("stats", {}).get("success", 0)) for c in all_hist.values() if isinstance(c, dict))
             next_sweep = (datetime.utcnow().timestamp() + GIFTCODE_SWEEP_INTERVAL)
             next_iso = datetime.utcfromtimestamp(next_sweep).isoformat() + "Z"
@@ -928,16 +988,18 @@ class GiftCodeBotEngine:
                 "status": "online",
                 "lastSweep": datetime.utcnow().isoformat() + "Z",
                 "nextSweep": next_iso,
-                "sourcesChecked": ["WosRewards", "GamsGo", "DotGG", "ProGameGuides", "PocketGamer"],
+                "sourcesChecked": ["WosRewards", "GamsGo", "PocketGamer", "DotGG", "ProGameGuides"],
                 "totalTrackedCodes": len(all_hist),
                 "activeCodesCount": active_cnt,
+                "expiredCodesCount": expired_cnt,
+                "blacklistedWordsCount": len(self.blacklist),
                 "lifetimeClaimsDelivered": total_claims,
-                "recentLog": f"Sweep complete: {len(candidates)} candidates, {len(valid_new_codes)} new valid code(s)."
+                "recentLog": f"Sweep complete: {len(pending_candidates)} evaluated, {len(valid_new_codes)} new active code(s), {len(self.blacklist)} blacklisted non-codes."
             }, timeout=5)
 
             if self.card_callback:
-                self.card_callback(f"{active_cnt} Active / {total_claims} Claims")
-            self.log(f"Sweep complete. Active codes: {active_cnt}, Lifetime alliance claims: {total_claims}")
+                self.card_callback(f"{active_cnt} Active / {expired_cnt} Exp")
+            self.log(f"Sweep complete. Catalog: {active_cnt} Active, {expired_cnt} Expired, {len(self.blacklist)} Blacklisted.")
 
             send_or_update_gatekeeper_report()
         except Exception as e:

@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.9.10] - 2026-08-17
+- 🎁 **Smart Gift Code Detection**: Intelligent active vs expired code status detection and persistent candidate blacklist to eliminate repetitive sweeps.
+- 🧪 **Live Code Auditing**: 1-click test suite to audit all tracked promo codes against game servers in real time.
+
 ## [2.9.9] - 2026-08-17
 - 🏰 **Alliance Gatekeeper**: Custom report edits and leadership directives now sync live to Discord in real time.
 - ⚡ **Furnace Level Auto-Sync**: Seamless real-time level tracking across the Alliance Roster and Google Sheets.
