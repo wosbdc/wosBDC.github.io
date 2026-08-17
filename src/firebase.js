@@ -1,6 +1,18 @@
 import { initializeApp } from "firebase/app";
 import { getDatabase, ref, onValue, onDisconnect, set, push, runTransaction, get, increment, update } from "firebase/database";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, sendPasswordResetEmail } from "firebase/auth";
+import { 
+  getAuth, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signOut, 
+  onAuthStateChanged, 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  signInWithRedirect,
+  getRedirectResult,
+  sendPasswordResetEmail,
+  browserPopupRedirectResolver
+} from "firebase/auth";
 import { getMessaging, getToken, onMessage } from "firebase/messaging";
 const firebaseConfig = {
   apiKey: "AIzaSyBuw51XRkUz5sbr-i8DKiGUgMpAPSiR-vs",
@@ -113,11 +125,20 @@ export async function loginUser(email, password) {
   return signInWithEmailAndPassword(auth, email, password);
 }
 
-const googleProvider = new GoogleAuthProvider();
-googleProvider.setCustomParameters({ prompt: 'select_account' });
-
 export async function loginWithGoogle() {
-  return signInWithPopup(auth, googleProvider);
+  const provider = new GoogleAuthProvider();
+  provider.addScope('profile');
+  provider.addScope('email');
+  provider.setCustomParameters({ prompt: 'select_account' });
+  try {
+    return await signInWithPopup(auth, provider, browserPopupRedirectResolver);
+  } catch (err) {
+    console.error("[Firebase Google Auth Error]:", err);
+    if (err.code === 'auth/internal-error') {
+      console.error("[Firebase Diagnostic]: auth/internal-error typically occurs when Google Sign-in provider or Project Support Email is not configured in Firebase Console (Authentication > Sign-in method > Google), or when the current domain is not in Authorized Domains.");
+    }
+    throw err;
+  }
 }
 
 export async function logoutUser() {

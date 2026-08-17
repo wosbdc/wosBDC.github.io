@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.9.8] - 2026-08-17
+- 🔐 Enhanced Google Authentication: Initialized explicit OAuth scopes (`email`, `profile`) and `browserPopupRedirectResolver` for robust cross-browser and mobile compatibility
+- 🛠️ Improved Auth Error Diagnostics: Added actionable error descriptions for `auth/internal-error` to pinpoint Firebase Console configuration requirements
+
 ## [2.9.7] - 2026-08-17
 - 🎯 Clean Navigation Bar: Fixed duplicate Admin Hub link in desktop navbar so only the single, dedicated 🛡️ Admin button appears in desktop controls
 - 📱 Responsive Mobile Drawer: Kept 🛡️ Admin Hub neatly nestled inside the mobile drawer only on mobile viewports for staff members

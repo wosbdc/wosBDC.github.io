@@ -1,9 +1,9 @@
 {
-  "version": "2.9.7",
+  "version": "2.9.8",
   "releaseDate": "2026-08-17",
-  "title": "What's New in v2.9.7",
+  "title": "What's New in v2.9.8",
   "notes": [
-    "🎯 Clean Navigation Bar: Fixed duplicate Admin Hub link in desktop navbar so only the single, dedicated 🛡️ Admin button appears in desktop controls",
-    "📱 Responsive Mobile Drawer: Kept 🛡️ Admin Hub neatly nestled inside the mobile drawer only on mobile viewports for staff members"
+    "🔐 Enhanced Google Authentication: Initialized explicit OAuth scopes and browserPopupRedirectResolver for maximum cross-browser compatibility",
+    "🛠️ Improved Auth Error Diagnostics: Added detailed troubleshooting messages for Google Authentication flows"
   ]
 }

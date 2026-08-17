@@ -6243,9 +6243,17 @@ async function handleGoogleAuth() {
             setAuthStep(2);
         }
     } catch(err) {
+        console.error("Google Auth error:", err);
         if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
-            authErrorMsg.textContent = err.message || 'Google sign-in error';
-            authErrorMsg.style.display = 'block';
+            let msg = err.message || 'Google sign-in error';
+            if (err.code === 'auth/internal-error') {
+                msg = "Google Sign-In error (auth/internal-error). Please ensure Google Sign-In is enabled with a valid Project Support Email in the Firebase Console.";
+            }
+            if (authErrorMsg) {
+                authErrorMsg.textContent = msg;
+                authErrorMsg.style.display = 'block';
+            }
+            if (window.showToast) window.showToast(msg, "error");
         }
     } finally {
         if (authChooseGoogleBtn) authChooseGoogleBtn.disabled = false;
@@ -15488,9 +15496,14 @@ const views = {
                 render();
               }
             } catch(e) {
+              console.error("Google Auth error:", e);
               btnGoogle.disabled = false;
               btnGoogle.innerHTML = `<span style="display:flex; align-items:center; gap:14px;"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width:24px; height:24px;" alt="Google"><span><span class="method-title" style="font-size:15px;">Continue with Google</span><span class="method-desc">Instant 1-click authentication</span></span></span><span class="method-arrow">➔</span>`;
-              showError(e.message || "Google sign-in failed.");
+              let errMsg = e.message || "Google sign-in failed.";
+              if (e.code === 'auth/internal-error') {
+                errMsg = "Google Sign-In error (auth/internal-error). Please ensure Google Sign-In is enabled with a valid Project Support Email in the Firebase Console.";
+              }
+              showError(errMsg);
             }
           });
         } else {
@@ -15579,9 +15592,14 @@ const views = {
                 render();
               }
             } catch(e) {
+              console.error("Google Auth error:", e);
               btnGoogle.disabled = false;
               btnGoogle.innerHTML = `<span style="display:flex; align-items:center; gap:14px;"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width:24px; height:24px;" alt="Google"><span><span class="method-title" style="font-size:15px;">Continue with Google</span><span class="method-desc">Fast 1-click authentication</span></span></span><span class="method-arrow">➔</span>`;
-              showError(e.message || "Google registration failed.");
+              let errMsg = e.message || "Google registration failed.";
+              if (e.code === 'auth/internal-error') {
+                errMsg = "Google Sign-In error (auth/internal-error). Please ensure Google Sign-In is enabled with a valid Project Support Email in the Firebase Console.";
+              }
+              showError(errMsg);
             }
           });
         } else if (step === 2) {
