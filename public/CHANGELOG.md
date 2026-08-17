@@ -1,21 +1,21 @@
 # CHANGELOG
 
 ## [2.9.9] - 2026-08-17
-- 🏰 **Alliance Gatekeeper Discord Bot Report Sync**: Connected the automated Discord report to Firebase (`config/gatekeeperReportSettings`), ensuring all custom section edits, member stats, R5 directives, and embed colors saved from the Web App Editor appear live in Discord without getting overwritten.
-- ⚡ **Zero-Quota Google Sheets Auto-Sync Webhook**: Deployed incoming `updateChiefLevel` and `syncChiefsList` webhook endpoints to Google Apps Script (`Sidebars_and_Tools.js`) to automatically update furnace levels in the `Chief's List` sheet with 0 outgoing quota.
-- 🔄 **Updated API Base URL**: Re-linked frontend `API_BASE_URL` to deployment `@195`.
+- 🏰 **Alliance Gatekeeper**: Custom report edits and leadership directives now sync live to Discord in real time.
+- ⚡ **Furnace Level Auto-Sync**: Seamless real-time level tracking across the Alliance Roster and Google Sheets.
+- 🚀 **Performance Improvements**: Faster data sync and enhanced reliability across all alliance tools.
 
 ## [2.9.8] - 2026-08-17
-- 🔐 Enhanced Google Authentication: Initialized explicit OAuth scopes (`email`, `profile`) and `browserPopupRedirectResolver` for robust cross-browser and mobile compatibility
-- 🛠️ Improved Auth Error Diagnostics: Added actionable error descriptions for `auth/internal-error` to pinpoint Firebase Console configuration requirements
+- 🔐 **Enhanced Google Login**: Smoother sign-in experience across all mobile and desktop browsers.
+- 🛠️ **Account Diagnostics**: Improved account connection and troubleshooting guidance.
 
 ## [2.9.7] - 2026-08-17
-- 🎯 Clean Navigation Bar: Fixed duplicate Admin Hub link in desktop navbar so only the single, dedicated 🛡️ Admin button appears in desktop controls
-- 📱 Responsive Mobile Drawer: Kept 🛡️ Admin Hub neatly nestled inside the mobile drawer only on mobile viewports for staff members
+- 🎯 **Cleaner Navigation**: Streamlined toolbar and quick-access admin controls.
+- 📱 **Mobile Drawer**: Improved navigation drawer layout on mobile devices.
 
 ## [2.9.6] - 2026-08-17
-- ✨ Cleaner Player Database: Removed duplicate push status badges from Chief name cards in Admin Member Management
-- 🛡️ Streamlined Member Database Table: Clean visual hierarchy with push notifications, 30d sync tokens, and furnace levels neatly organized
+- ✨ **Member Directory**: Cleaner visual layout for chief profiles, furnace levels, and notification status.
+- 🛡️ **Table Hierarchy**: Streamlined roster overview for alliance officers.
 
 ## [2.9.5] - 2026-08-16
 - 🛡️ Clean Separation of User & Admin Features: Dedicated Leadership Suite and 1-click Admin Hub in navbar and mobile drawer for R4/R5 Staff
