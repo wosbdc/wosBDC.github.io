@@ -6,5 +6,5 @@
 - [x] Modernize Display & Preferences into a streamlined 2-column mini grid <!-- id: 3 -->
 - [x] Update versioning across `package.json`, `version.json`, `public/version.json`, `public/sw.js`, and `CHANGELOG.md` to `v2.9.15` <!-- id: 4 -->
 - [x] Build & run feature verification test suite (`npm run build`) <!-- id: 5 -->
-- [ ] Commit and push changes to GitHub with `v2.9.15 : ...` commit title <!-- id: 6 -->
+- [x] Commit and push changes to GitHub with `v2.9.15 : ...` commit title <!-- id: 6 -->
 
