@@ -410,10 +410,6 @@ tr:hover td {
   display: none !important;
 }
 
-#mobileAdminBtn {
-  display: none !important;
-}
-
 /* Mobile Responsiveness */
 @media (max-width: 900px) {
   .mobile-only-link {
@@ -421,17 +417,6 @@ tr:hover td {
     margin-top: 15px;
     border-top: 1px solid var(--border);
     padding-top: 15px;
-  }
-  
-  #mobileAdminBtn.is-staff-visible {
-    display: block !important;
-    margin-top: 15px;
-    border-top: 1px solid var(--border);
-    padding-top: 15px;
-  }
-  
-  .nav-controls #adminHeaderNavBtn {
-    display: none !important;
   }
   
   .nav-controls .settings-btn {

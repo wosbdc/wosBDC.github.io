@@ -1,9 +1,9 @@
 {
-  "version": "2.9.11",
+  "version": "2.9.12",
   "releaseDate": "2026-08-17",
-  "title": "What's New in v2.9.11",
+  "title": "What's New in v2.9.12",
   "notes": [
-    "👤 Automatic Account Hub Routing: Seamlessly routes all members directly into their personal Account Hub upon sign-in or session restore",
-    "🚀 Instant Character Overview: Immediate access to linked characters, alts, and gift code redemption upon login"
+    "🛡️ Dedicated Leadership Hub in Account Suite: Replaced cluttered navbar admin links with clean, integrated Leadership access directly inside Account Hub & Settings Sidebar",
+    "✨ Streamlined Header Navigation: Cleaner, distractions-free top menu bar and mobile drawer for all chiefs"
   ]
 }

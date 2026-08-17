@@ -29,11 +29,11 @@
       "repository": "https://github.com/bdclive/BDClive"
     },
     "wosbdc_alliance_dashboard": {
-      "version": "2.9.11",
+      "version": "2.9.12",
       "repository": "https://github.com/wosbdc/wosBDC.github.io",
       "latestChanges": [
-        "v2.9.11: Automatic routing to Account Hub upon login and session start",
-        "v2.9.10: Smart Gift Code Detection and 1-click live testing suite"
+        "v2.9.12: Moved admin entry to Account Hub Leadership suite and Settings Sidebar",
+        "v2.9.11: Automatic routing to Account Hub upon login and session start"
       ]
     },
     "google_apps_script_backend": {

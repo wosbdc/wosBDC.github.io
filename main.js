@@ -5191,8 +5191,6 @@ listenToAuth((user) => {
   }
   realUser = user;
   
-  const adminHeaderNavBtn = document.getElementById('adminHeaderNavBtn');
-  const mobileAdminBtn = document.getElementById('mobileAdminBtn');
   const sidebarAdminSection = document.getElementById('sidebarAdminSection');
   const userProfileSidebarBtn = document.getElementById('userProfileSidebarBtn');
   const adminAlertsNavBtn = document.getElementById('adminAlertsNavBtn');
@@ -5209,13 +5207,9 @@ listenToAuth((user) => {
     
     const isStaff = (typeof window.isAdminUser === 'function') && window.isAdminUser(currentUser);
     if(isStaff) {
-      if (adminHeaderNavBtn) adminHeaderNavBtn.style.display = 'inline-flex';
-      if (mobileAdminBtn) mobileAdminBtn.classList.add('is-staff-visible');
       if (sidebarAdminSection) sidebarAdminSection.style.display = 'flex';
       if (adminSidebarBtn) adminSidebarBtn.style.display = 'block';
     } else {
-      if (adminHeaderNavBtn) adminHeaderNavBtn.style.display = 'none';
-      if (mobileAdminBtn) mobileAdminBtn.classList.remove('is-staff-visible');
       if (sidebarAdminSection) sidebarAdminSection.style.display = 'none';
       if (adminSidebarBtn) adminSidebarBtn.style.display = 'none';
     }
@@ -5239,8 +5233,6 @@ listenToAuth((user) => {
     window._initialAuthRouted = false;
     if(authSidebarBtn) authSidebarBtn.innerHTML = `👤 Sign In / Register`;
     if(userProfileSidebarBtn) userProfileSidebarBtn.style.display = 'none';
-    if(adminHeaderNavBtn) adminHeaderNavBtn.style.display = 'none';
-    if(mobileAdminBtn) mobileAdminBtn.classList.remove('is-staff-visible');
     if(sidebarAdminSection) sidebarAdminSection.style.display = 'none';
     if(adminSidebarBtn) adminSidebarBtn.style.display = 'none';
     if(signOutSidebarBtn) signOutSidebarBtn.style.display = 'none';
@@ -21465,7 +21457,11 @@ window.resetBearTrapEvent = async () => {
             ← Back to Dashboard
           </button>
           <h2 style="color:var(--text-main); margin:0; font-size:22px;">Account Hub</h2>
-          <div style="width:130px; display:none;" class="acc-header-spacer"></div>
+          ${ (typeof window.isAdminUser === 'function' && window.isAdminUser(currentUser)) ? `
+            <button onclick="if(window.views && window.views.admin) window.views.admin();" style="background:linear-gradient(135deg, rgba(239,68,68,0.22), rgba(220,38,38,0.12)); border:1px solid rgba(239,68,68,0.45); color:#ef4444; padding:6px 14px; border-radius:8px; font-size:12.5px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:all 0.2s; box-shadow:0 2px 10px rgba(239,68,68,0.15);" onmouseover="this.style.background='rgba(239,68,68,0.3)';" onmouseout="this.style.background='linear-gradient(135deg, rgba(239,68,68,0.22), rgba(220,38,38,0.12))';">
+              🛡️ Leadership Hub →
+            </button>
+          ` : `<div style="width:130px; display:none;" class="acc-header-spacer"></div>`}
         </div>
         
         <!-- Tab Navigation Bar -->
@@ -21482,6 +21478,11 @@ window.resetBearTrapEvent = async () => {
           <button id="accTabBtnActivity" style="padding:9px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; background:var(--bg-main); color:var(--text-muted); border:1px solid var(--border); transition:0.2s;">
             📅 Activity Log
           </button>
+          ${ (typeof window.isAdminUser === 'function' && window.isAdminUser(currentUser)) ? `
+            <button onclick="if(window.views && window.views.admin) window.views.admin();" style="padding:9px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; background:rgba(239,68,68,0.12); color:#ef4444; border:1px solid rgba(239,68,68,0.35); transition:0.2s;" title="Open Admin Command Center">
+              🛡️ Leadership Tools
+            </button>
+          ` : ''}
         </div>
 
         <!-- Section 1: Account Profile Tab -->

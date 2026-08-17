@@ -73,7 +73,6 @@
             </div>
 
             <a href="#" class="nav-link" data-target="schedule">Schedule</a>
-            <a href="#" class="nav-link mobile-only-link" id="mobileAdminBtn" onclick="if(window.views && window.views.admin){ document.getElementById('mobileMenu').classList.remove('open'); window.views.admin(); } return false;" style="color:#ef4444; font-weight:bold;">🛡️ Admin Hub</a>
             <a href="#" class="nav-link mobile-only-link" id="mobileAlertsBtn" onclick="window.openAllianceAlertsModal && window.openAllianceAlertsModal(); return false;">🔔 Alerts</a>
             <a href="#" class="nav-link mobile-only-link" id="mobileSettingsBtn">⚙️ Settings</a>
           </div>
@@ -81,7 +80,6 @@
         </div>
         
         <div class="nav-controls">
-          <button id="adminHeaderNavBtn" onclick="if(window.views && window.views.admin) window.views.admin();" style="display:none; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#ef4444; border-radius:10px; padding:4px 10px; font-size:12px; font-weight:800; cursor:pointer; align-items:center; gap:4px; transition:0.2s;" title="Open Admin Command Center">🛡️ Admin</button>
           <button id="adminAlertsNavBtn" onclick="window.openAllianceAlertsModal && window.openAllianceAlertsModal()" class="alerts-nav-btn" style="display:flex; position:relative; background:rgba(6,182,212,0.15); border:1px solid rgba(6,182,212,0.4); color:#06b6d4; cursor:pointer;" title="Alliance Alerts & Notifications">🔔</button>
           <button id="mobileMenuBtn" class="mobile-menu-btn">☰</button>
           <button id="settingsBtn" class="settings-btn" title="Settings">⚙️</button>

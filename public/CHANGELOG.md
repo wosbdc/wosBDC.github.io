@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.9.12] - 2026-08-17
+- 🛡️ **Dedicated Leadership Hub in Account Suite**: Moved Admin Command Center entry from the top navigation bar into a seamless, integrated Leadership button and tab directly within the Account Hub and Settings Sidebar.
+- ✨ **Streamlined Navigation Bar**: Cleaned up the public top navigation header and mobile drawer for a polished user experience.
+
 ## [2.9.11] - 2026-08-17
 - 👤 **Automatic Account Hub Routing**: Logging in via email/password or Google now immediately transitions members directly into their personal Account Hub.
 - 🚀 **Instant Character & Alt Overview**: Quick access to linked characters, alts, furnace upgrades, and gift code claim statuses immediately upon login.
