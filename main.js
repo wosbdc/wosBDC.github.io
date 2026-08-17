@@ -9640,18 +9640,11 @@ window.updateNewMemberBadge = async () => {
     }
   }
 
-  // 3. Check staff signups if admin
-  let staffUnreadCount = 0;
-  if (currentUser && window.isAdminUser(currentUser)) {
-    const recent = await window.getRecentNewMembers();
-    const lastSeen = Number(localStorage.getItem('last_seen_new_member_timestamp') || '0');
-    staffUnreadCount = recent.filter(m => m.createdMs > lastSeen).length;
-  }
-
-  // 4. Check unread leadership broadcast announcements & active countdowns
+  // 3. Check unread leadership broadcast announcements & active countdowns
   let broadcastUnreadCount = 0;
   let nearestActiveCountdown = null;
   let liveCountdownCount = 0;
+  const isStaffUser = Boolean(currentUser && typeof window.isAdminUser === 'function' && window.isAdminUser(currentUser));
   try {
     const lastSeenBroadcast = Number(localStorage.getItem('last_seen_broadcast_timestamp') || '0');
     const bSnap = await get(ref(db, 'broadcastAlerts'));
@@ -9659,6 +9652,7 @@ window.updateNewMemberBadge = async () => {
       const bVal = bSnap.val() || {};
       for (const item of Object.values(bVal)) {
         if (!item) continue;
+        if (item.isStaffOnly && !isStaffUser) continue;
         if (item.timestamp && item.timestamp > lastSeenBroadcast) {
           broadcastUnreadCount++;
         }
@@ -9678,7 +9672,7 @@ window.updateNewMemberBadge = async () => {
     console.warn("Failed to count unread broadcasts:", e);
   }
 
-  const totalAlerts = mainAlert + (altAlertsCount > 0 ? 1 : 0) + staffUnreadCount + broadcastUnreadCount;
+  const totalAlerts = mainAlert + (altAlertsCount > 0 ? 1 : 0) + broadcastUnreadCount;
 
   if (mobileAlertsBtn) {
     if (liveCountdownCount > 0) {
@@ -9837,9 +9831,6 @@ window.openAllianceAlertsModal = async () => {
     const overlay = document.createElement('div');
     overlay.id = 'notificationsModalOverlay';
     overlay.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.85); backdrop-filter:blur(10px); z-index:99999; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease;';
-    overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) overlay.remove();
-    });
 
     // 0. Push Notifications Header Pill & Tools Dropdown
     const isPushSupported = ('Notification' in window) && ('serviceWorker' in navigator);
@@ -10204,30 +10195,27 @@ window.openAllianceAlertsModal = async () => {
       }
 
       staffPlaceholderHtml = `
-        <div id="staffAlertsContainer" style="background:rgba(6,182,212,0.06); border:1px solid rgba(6,182,212,0.25); border-radius:14px; margin-bottom:12px; overflow:hidden; transition:all 0.2s ease;">
+        <div id="staffAlertsContainer" style="background:rgba(168,85,247,0.06); border:1px solid rgba(168,85,247,0.25); border-radius:14px; margin-bottom:12px; overflow:hidden; transition:all 0.2s ease;">
           <div id="staffAccordionHeader" onclick="window.toggleStaffAccordionBanner()" style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; cursor:pointer; user-select:none;">
             <div>
-              <div style="font-size:13.5px; font-weight:bold; color:#38bdf8; display:flex; align-items:center; gap:8px;">
-                <span id="staffAlertsTitle">🛡️ Staff Only Alerts & Signups (${staffBroadcasts.length})</span>
+              <div style="font-size:13.5px; font-weight:bold; color:#c084fc; display:flex; align-items:center; gap:8px;">
+                <span id="staffAlertsTitle">🛡️ Staff Only (${staffBroadcasts.length})</span>
               </div>
               <div id="staffAlertsSubtitle" style="font-size:11.5px; color:var(--text-muted); margin-top:3px;">
-                Confidential leadership directives & recent member signups
+                Confidential leadership directives & alerts (R4/R5 only)
               </div>
             </div>
             <div style="display:flex; align-items:center; gap:8px;">
               <button onclick="event.stopPropagation(); window.openCreateCountdownAlertModal(null, 'staff');" style="background:linear-gradient(135deg, #a855f7, #6366f1); color:#fff; border:none; padding:3px 9px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:3px; box-shadow:0 2px 6px rgba(168,85,247,0.3);" title="Post a staff-only confidential alert">
                 ➕ Staff Alert
               </button>
-              <span id="staffAlertsBadgeCount" style="background:rgba(6,182,212,0.2); color:#38bdf8; border:1px solid rgba(6,182,212,0.4); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold;">${staffBroadcasts.length}</span>
+              <span id="staffAlertsBadgeCount" style="background:rgba(168,85,247,0.2); color:#c084fc; border:1px solid rgba(168,85,247,0.4); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold;">${staffBroadcasts.length}</span>
               <span id="staffAccordionChevron" style="font-size:15px; color:var(--text-muted); transition:transform 0.2s ease;">▾</span>
             </div>
           </div>
           <div id="staffAccordionBody" style="display:none; padding:0 14px 14px 14px; max-height:260px; overflow-y:auto;">
             <div style="display:flex; flex-direction:column; gap:8px; border-top:1px solid rgba(255,255,255,0.06); padding-top:10px;">
-              ${staffBroadcastsCardsHtml}
-              <div id="staffAlertsList" style="display:flex; flex-direction:column; gap:8px;">
-                <div style="text-align:center; padding:10px; color:var(--text-muted); font-size:12.5px;">⏳ Loading recent signups...</div>
-              </div>
+              ${staffBroadcastsCardsHtml || `<div style="text-align:center; padding:12px; color:var(--text-muted); font-size:12.5px;">No active staff alerts.</div>`}
             </div>
           </div>
         </div>
@@ -10286,7 +10274,7 @@ window.openAllianceAlertsModal = async () => {
           </div>
           <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
             ${headerPushPillHtml}
-            <button onclick="document.getElementById('notificationsModalOverlay').remove()" style="background:none; border:none; color:var(--text-muted); font-size:22px; cursor:pointer; line-height:1; padding:0 4px;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-muted)'">&times;</button>
+            <button onclick="document.getElementById('notificationsModalOverlay').remove()" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#cbd5e1; font-size:18px; width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; line-height:1; transition:0.15s;" onmouseover="this.style.background='rgba(239,68,68,0.2)'; this.style.borderColor='rgba(239,68,68,0.4)'; this.style.color='#ef4444'" onmouseout="this.style.background='rgba(255,255,255,0.06)'; this.style.borderColor='rgba(255,255,255,0.12)'; this.style.color='#cbd5e1'" title="Close Window">✕</button>
           </div>
         </div>
 
@@ -10343,54 +10331,7 @@ window.openAllianceAlertsModal = async () => {
       if (dd && dd.style.display === 'block' && !dd.contains(e.target) && (!btn || !btn.contains(e.target))) {
         window.closeHeaderPushDropdown();
       }
-      if (e.target === overlay) overlay.remove();
     });
-
-    // Asynchronously load recent staff signups if admin
-    if (isStaff && typeof window.getRecentNewMembers === 'function') {
-      window.getRecentNewMembers().then(recent => {
-        const staffTitleEl = document.getElementById('staffAlertsTitle');
-        const staffBadgeEl = document.getElementById('staffAlertsBadgeCount');
-        const staffListEl = document.getElementById('staffAlertsList');
-        const staffBroadcastCount = staffBroadcasts ? staffBroadcasts.length : 0;
-        const totalStaff = staffBroadcastCount + recent.length;
-        if (staffTitleEl) staffTitleEl.innerText = `🛡️ Staff Only Alerts & Signups (${totalStaff})`;
-        if (staffBadgeEl) staffBadgeEl.innerText = `${totalStaff} Active`;
-
-        if (!staffListEl) return;
-        if (recent.length === 0) {
-          staffListEl.innerHTML = `<div style="text-align:center; padding:12px; color:var(--text-muted); font-size:12.5px;">No new member signups in the past 7 days.</div>`;
-        } else {
-          localStorage.setItem('last_seen_new_member_timestamp', String(Date.now()));
-          if (typeof window.updateNewMemberBadge === 'function') window.updateNewMemberBadge();
-          staffListEl.innerHTML = recent.map(m => {
-            const fLvl = m.furnaceLevel ? String(m.furnaceLevel).replace(/^FC\s*/i, '') : '';
-            return `
-              <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:9px 12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-                <div style="display:flex; align-items:center; gap:10px;">
-                  <div style="width:32px; height:32px; border-radius:50%; background:rgba(6,182,212,0.15); border:1px solid rgba(6,182,212,0.3); display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0;">👤</div>
-                  <div>
-                    <div style="font-weight:bold; font-size:13.5px; color:var(--text-main); display:flex; align-items:center; gap:6px;">
-                      <span>${window.escapeHTML(m.name)}</span>
-                      <span style="font-size:10px; background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:1px 6px; border-radius:8px; font-weight:bold;">NEW</span>
-                      ${fLvl ? `<span style="font-size:10px; background:rgba(249,115,22,0.15); color:#f97316; border:1px solid rgba(249,115,22,0.4); padding:1px 6px; border-radius:8px; font-weight:bold;">🔥 FC ${window.escapeHTML(fLvl)}</span>` : ''}
-                    </div>
-                    <div style="font-size:11px; color:var(--text-muted); font-family:monospace; margin-top:2px;">
-                      ID: ${m.gameId || 'N/A'} • Joined: ${m.createdStr}
-                    </div>
-                  </div>
-                </div>
-                <div style="display:flex; gap:6px; align-items:center;">
-                  <button onclick="window.copyWelcomeMessage('${window.escapeHTML(m.name)}')" style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:4px 9px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">📋 Welcome</button>
-                  <button onclick="document.getElementById('notificationsModalOverlay').remove(); window.searchPlayerFull('${window.escapeHTML(m.name)}');" style="background:var(--accent); color:#fff; border:none; padding:4px 9px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">👁️ Profile</button>
-                </div>
-              </div>`;
-          }).join('');
-        }
-      }).catch(err => {
-        console.warn("Failed to load staff alerts:", err);
-      });
-    }
   } catch(err) {
     console.error("Error in openAllianceAlertsModal:", err);
   }
@@ -10906,9 +10847,6 @@ window.openCreateCountdownAlertModal = function(editData = null, defaultType = '
   const modal = document.createElement('div');
   modal.id = 'createCountdownAlertModalOverlay';
   modal.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.85); backdrop-filter:blur(10px); z-index:100002; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease;';
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) modal.remove();
-  });
 
   modal.innerHTML = `
     <div class="card" style="width:94%; max-width:520px; background:linear-gradient(145deg, rgba(15,23,42,0.98), rgba(30,41,59,0.96)); border:1px solid rgba(56,189,248,0.4); padding:22px; border-radius:18px; box-shadow:0 25px 60px rgba(0,0,0,0.85); text-align:left; color:var(--text-main); max-height:90vh; overflow-y:auto; animation:zoomIn 0.2s ease;">
@@ -10920,7 +10858,7 @@ window.openCreateCountdownAlertModal = function(editData = null, defaultType = '
             <div id="ccaModalSubtitle" style="font-size:11px; color:var(--text-muted);">Post a leadership announcement, live timer, or staff-only alert</div>
           </div>
         </div>
-        <button onclick="document.getElementById('createCountdownAlertModalOverlay').remove()" style="background:none; border:none; color:var(--text-muted); font-size:22px; cursor:pointer; line-height:1;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-muted)'">&times;</button>
+        <button onclick="document.getElementById('createCountdownAlertModalOverlay').remove()" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#cbd5e1; font-size:18px; width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; line-height:1; transition:0.15s;" onmouseover="this.style.background='rgba(239,68,68,0.2)'; this.style.borderColor='rgba(239,68,68,0.4)'; this.style.color='#ef4444'" onmouseout="this.style.background='rgba(255,255,255,0.06)'; this.style.borderColor='rgba(255,255,255,0.12)'; this.style.color='#cbd5e1'" title="Close Window">✕</button>
       </div>
 
       <!-- 3-in-1 Alert Type Segmented Control -->
@@ -11262,9 +11200,6 @@ window.openBroadcastCleanerModal = async () => {
   const cleanerModal = document.createElement('div');
   cleanerModal.id = 'broadcastCleanerModalOverlay';
   cleanerModal.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.85); backdrop-filter:blur(10px); z-index:100001; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease;';
-  cleanerModal.addEventListener('click', (e) => {
-    if (e.target === cleanerModal) cleanerModal.remove();
-  });
 
   cleanerModal.innerHTML = `
     <div class="card" style="width:92%; max-width:440px; background:linear-gradient(145deg, rgba(15,23,42,0.98), rgba(30,41,59,0.96)); border:1px solid rgba(239,68,68,0.35); padding:22px; border-radius:18px; box-shadow:0 25px 60px rgba(0,0,0,0.8); text-align:left; color:var(--text-main); animation:zoomIn 0.2s ease;">
@@ -11276,7 +11211,7 @@ window.openBroadcastCleanerModal = async () => {
             <div style="font-size:11px; color:var(--text-muted);">Manage and purge old alliance broadcast alerts</div>
           </div>
         </div>
-        <button onclick="document.getElementById('broadcastCleanerModalOverlay').remove()" style="background:none; border:none; color:var(--text-muted); font-size:22px; cursor:pointer; line-height:1;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-muted)'">&times;</button>
+        <button onclick="document.getElementById('broadcastCleanerModalOverlay').remove()" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#cbd5e1; font-size:18px; width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; line-height:1; transition:0.15s;" onmouseover="this.style.background='rgba(239,68,68,0.2)'; this.style.borderColor='rgba(239,68,68,0.4)'; this.style.color='#ef4444'" onmouseout="this.style.background='rgba(255,255,255,0.06)'; this.style.borderColor='rgba(255,255,255,0.12)'; this.style.color='#cbd5e1'" title="Close Window">✕</button>
       </div>
 
       <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:12px; margin-bottom:16px; display:flex; justify-content:space-around; text-align:center;">
@@ -16414,7 +16349,7 @@ const views = {
                         <button type="button" onclick="document.getElementById('broadcastPushModal').remove(); window.openCreateCountdownAlertModal();" style="background: linear-gradient(135deg, #a855f7, #6366f1); color: #fff; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11.5px; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 6px rgba(168,85,247,0.3);" title="Create a scheduled announcement with live countdown timer">
                             ⏳ Countdown Alert
                         </button>
-                        <button onclick="document.getElementById('broadcastPushModal').remove()" style="background: transparent; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer; padding: 0;">✕</button>
+                        <button onclick="document.getElementById('broadcastPushModal').remove()" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#cbd5e1; font-size:18px; width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; line-height:1; transition:0.15s;" onmouseover="this.style.background='rgba(239,68,68,0.2)'; this.style.borderColor='rgba(239,68,68,0.4)'; this.style.color='#ef4444'" onmouseout="this.style.background='rgba(255,255,255,0.06)'; this.style.borderColor='rgba(255,255,255,0.12)'; this.style.color='#cbd5e1'" title="Close Window">✕</button>
                       </div>
                   </div>
                   
@@ -16465,10 +16400,6 @@ const views = {
               if (b) b.textContent = `${res.displayCount}`;
             });
           }
-
-          overlay.addEventListener('click', (e) => {
-              if (e.target === overlay) overlay.remove();
-          });
       };
 
       window.sendBroadcastPush = async () => {
