@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.14] - 2026-08-17
+- 📋 **Batch Copy Unsynced In-Game Tokens**: Added 1-click **"Copy Unsynced Tokens"** button in the Alliance Members & Player Database to instantly export all members with expired or unverified in-game sync tokens, complete with Game IDs and renewal instructions.
+- 🎯 **Contextual Token Filtering & Export**: Respects active token filter selections (Expired vs Unverified vs Expiring) when copying, or exports all unsynced tokens when in overview mode.
+- ⚡ **Individual Token Reminder Actions**: Added 1-click **"Copy Sync Reminder"** action in member option dropdowns for quick direct messaging.
+
 ## [2.9.13] - 2026-08-17
 - 🕐 **Sidebar Hierarchy & Clocks at the Top**: Alliance Clocks, UTC/Local time, daily/intel countdowns, and active event cards are now elevated to the very top of the Settings Sidebar for instant glanceability.
 - 👤 **Unified Account Hub Action**: Removed duplicate "View My Profile" and renamed sidebar actions to "Account Hub" for clear, single-point navigation.

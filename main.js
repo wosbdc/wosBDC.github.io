@@ -16123,6 +16123,118 @@ const views = {
         });
     };
 
+    window.copyTokenReminderMessage = (chiefName, gameId) => {
+        const siteUrl = window.location.origin || 'https://wosbdc.github.io';
+        const msg = `Hi ${chiefName || 'Chief'}! Your Whiteout Survival in-game sync token needs to be verified/renewed on our alliance website. Please visit ${siteUrl}/ -> Account Hub -> In-Game Sync and enter your mailbox verification code so your stats and furnace levels continue auto-syncing!`;
+        navigator.clipboard.writeText(msg).then(() => {
+            if (window.showToast) window.showToast(`📋 Copied sync token reminder for ${chiefName}!`, "success");
+        }).catch(err => {
+            console.error("Copy reminder failed:", err);
+            if (window.showToast) window.showToast("Failed to copy reminder message.", "danger");
+        });
+    };
+
+    window.copyUnsyncedTokensList = () => {
+        const tokenFilter = document.getElementById('adminUserTokenFilter')?.value || 'all';
+        const allRows = Array.from(document.querySelectorAll('.admin-user-row'));
+        
+        if (!allRows || allRows.length === 0) {
+            if (window.showToast) window.showToast("No members found in player database.", "warning");
+            return;
+        }
+        
+        const expiredList = [];
+        const unverifiedList = [];
+        const expiringList = [];
+        
+        allRows.forEach(row => {
+            const tStatus = row.getAttribute('data-token-status') || 'unverified';
+            const name = row.getAttribute('data-name-raw') || row.getAttribute('data-name') || '';
+            const gid = row.getAttribute('data-gid') || '';
+            const isAlt = row.getAttribute('data-is-alt') === 'true';
+            const isClaimed = row.getAttribute('data-is-claimed') === 'true';
+            
+            const item = { name, gid, isAlt, isClaimed };
+            
+            if (tStatus === 'expired') {
+                expiredList.push(item);
+            } else if (tStatus === 'unverified') {
+                unverifiedList.push(item);
+            } else if (tStatus === 'expiring') {
+                expiringList.push(item);
+            }
+        });
+
+        let listText = '';
+        let copiedCount = 0;
+        const siteUrl = window.location.origin || 'https://wosbdc.github.io';
+
+        if (tokenFilter === 'expired') {
+            if (expiredList.length === 0) {
+                if (window.showToast) window.showToast("No expired sync tokens found! 🎉", "success");
+                return;
+            }
+            copiedCount = expiredList.length;
+            listText += `🔴 Expired In-Game Sync Tokens (${expiredList.length}):\n`;
+            expiredList.forEach(item => {
+                listText += `• ${item.name}${item.gid ? ` (ID: ${item.gid})` : ''}${item.isAlt ? ' [Alt]' : ''}\n`;
+            });
+        } else if (tokenFilter === 'unverified') {
+            if (unverifiedList.length === 0) {
+                if (window.showToast) window.showToast("No unverified sync tokens found! 🎉", "success");
+                return;
+            }
+            copiedCount = unverifiedList.length;
+            listText += `⚪ Unverified In-Game Sync Tokens (${unverifiedList.length}):\n`;
+            unverifiedList.forEach(item => {
+                listText += `• ${item.name}${item.gid ? ` (ID: ${item.gid})` : ''}${item.isAlt ? ' [Alt]' : ''}${!item.isClaimed ? ' [Unclaimed Roster]' : ''}\n`;
+            });
+        } else if (tokenFilter === 'expiring') {
+            if (expiringList.length === 0) {
+                if (window.showToast) window.showToast("No tokens expiring soon! 🟢", "success");
+                return;
+            }
+            copiedCount = expiringList.length;
+            listText += `🟠 Tokens Expiring Soon (${expiringList.length}):\n`;
+            expiringList.forEach(item => {
+                listText += `• ${item.name}${item.gid ? ` (ID: ${item.gid})` : ''}${item.isAlt ? ' [Alt]' : ''}\n`;
+            });
+        } else {
+            copiedCount = expiredList.length + unverifiedList.length;
+            if (copiedCount === 0) {
+                if (window.showToast) window.showToast("All alliance members have active in-game sync tokens! 🛡️🎉", "success");
+                return;
+            }
+            listText += `🚨 Alliance Characters Needing In-Game Token Sync (${copiedCount}):\n\n`;
+            if (expiredList.length > 0) {
+                listText += `🔴 Expired 30-Day Sync Tokens (${expiredList.length}):\n`;
+                expiredList.forEach(item => {
+                    listText += `• ${item.name}${item.gid ? ` (ID: ${item.gid})` : ''}${item.isAlt ? ' [Alt]' : ''}\n`;
+                });
+                listText += `\n`;
+            }
+            if (unverifiedList.length > 0) {
+                listText += `⚪ Unverified In-Game Sync (${unverifiedList.length}):\n`;
+                unverifiedList.forEach(item => {
+                    listText += `• ${item.name}${item.gid ? ` (ID: ${item.gid})` : ''}${item.isAlt ? ' [Alt]' : ''}${!item.isClaimed ? ' [Unclaimed]' : ''}\n`;
+                });
+                listText += `\n`;
+            }
+        }
+
+        listText += `📱 To sync or renew your in-game stats:\n`;
+        listText += `1. Log into your Account Hub on ${siteUrl}/\n`;
+        listText += `2. Request a verification code to your Whiteout Survival in-game mailbox\n`;
+        listText += `3. Enter the code to activate 30-day auto-sync!`;
+
+        navigator.clipboard.writeText(listText).then(() => {
+            if (window.showToast) window.showToast(`📋 Copied ${copiedCount} unsynced member(s) to clipboard!`, "success");
+        }).catch(err => {
+            console.error("Copy unsynced tokens failed:", err);
+            if (window.showToast) window.showToast("Failed to copy unsynced tokens list.", "danger");
+        });
+    };
+
     window.openEditRosterMemberModal = (chiefName) => {
         if (window.openAdminEditFurnaceModal) {
             window.openAdminEditFurnaceModal(chiefName);
@@ -17763,8 +17875,13 @@ const views = {
                     </select>
 
                     <!-- Copy Unclaimed Button -->
-                    <button onclick="window.copyUnclaimedRosterList()" style="background:rgba(239,68,68,0.12); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:9px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s; white-space:nowrap; flex-shrink:0;" onmouseover="this.style.background='rgba(239,68,68,0.2)'" onmouseout="this.style.background='rgba(239,68,68,0.12)'">
+                    <button onclick="window.copyUnclaimedRosterList()" style="background:rgba(239,68,68,0.12); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:9px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s; white-space:nowrap; flex-shrink:0;" onmouseover="this.style.background='rgba(239,68,68,0.2)'" onmouseout="this.style.background='rgba(239,68,68,0.12)'" title="Copy all unclaimed alliance roster members">
                       📋 Copy Unclaimed (${unclaimedCount})
+                    </button>
+
+                    <!-- Copy Unsynced Tokens Button -->
+                    <button onclick="window.copyUnsyncedTokensList()" style="background:rgba(245,158,11,0.12); color:#f59e0b; border:1px solid rgba(245,158,11,0.35); padding:9px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s; white-space:nowrap; flex-shrink:0; display:inline-flex; align-items:center; gap:5px;" onmouseover="this.style.background='rgba(245,158,11,0.22)'" onmouseout="this.style.background='rgba(245,158,11,0.12)'" title="Copy all alliance characters with expired or unverified in-game sync tokens">
+                      📋 Copy Unsynced Tokens (${tokenExpiredCount + tokenUnverifiedCount})
                     </button>
                   </div>
                 </div>
@@ -17972,6 +18089,10 @@ const views = {
                   <div onclick="window.closeAllUserActionMenus(); window.openAdminRepairUserModal('${uid}');" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:var(--text-main); cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(168,85,247,0.15)'; this.style.color='#c084fc';" onmouseout="this.style.background='transparent'; this.style.color='var(--text-main)';">
                     <span style="font-size:14px;">🛠️</span> Repair Game ID
                   </div>
+                  ${(tokenStatus.status === 'expired' || tokenStatus.status === 'unverified' || tokenStatus.status === 'expiring') ? `
+                  <div onclick="window.closeAllUserActionMenus(); window.copyTokenReminderMessage('${escapeHTML(cName.replace(/'/g, "\\'"))}', '${uGidStr}');" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:#f59e0b; cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(245,158,11,0.15)';" onmouseout="this.style.background='transparent';">
+                    <span style="font-size:14px;">📋</span> Copy Sync Reminder
+                  </div>` : ''}
                   ${isViewerOwnerOfAccount ? `
                   <div onclick="window.closeAllUserActionMenus(); window.adminManageAltsPrompt('${uid}');" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:var(--text-main); cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(59,130,246,0.15)'; this.style.color='#3b82f6';" onmouseout="this.style.background='transparent'; this.style.color='var(--text-main)';">
                     <span style="font-size:14px;">🔗</span> Manage Linked Alts
