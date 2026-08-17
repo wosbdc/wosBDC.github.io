@@ -1,10 +1,11 @@
 {
-  "version": "2.9.4",
+  "version": "2.9.5",
   "releaseDate": "2026-08-16",
-  "title": "What's New in v2.9.4",
+  "title": "What's New in v2.9.5",
   "notes": [
-    "⚡ Unified 3-in-1 Alert Hub: Dedicated cards for Live Timers, Public Announcements, and Confidential Staff Alerts",
-    "🚀 Unified 3-in-1 Alert Creator: Single modal with seamless segmented control for Announcements, Timers, and Staff Alerts",
-    "✨ Clean Alert Headers: Cleaned up inline counts for a sleek, streamlined appearance with clear event timing and actions"
+    "🛡️ Clean Separation of User & Admin Features: Dedicated Leadership Suite and 1-click Admin Hub for R4/R5 Staff",
+    "📱 Streamlined Device Push Dropdown: Push: ON pill is now strictly dedicated to user device status, testing, and settings",
+    "👑 Dedicated Staff Tools Dropdown: Staff officers get their own broadcast, instant push blast, and cleaner toolkit",
+    "⚙️ Restructured 4-Card Settings Sidebar: Clean, logical separation for My Account, Display/Preferences, Clocks & Timers, and Leadership Suite"
   ]
 }

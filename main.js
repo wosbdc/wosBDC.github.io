@@ -5191,19 +5191,33 @@ listenToAuth((user) => {
   }
   realUser = user;
   
+  const adminHeaderNavBtn = document.getElementById('adminHeaderNavBtn');
+  const mobileAdminBtn = document.getElementById('mobileAdminBtn');
+  const sidebarAdminSection = document.getElementById('sidebarAdminSection');
+  const userProfileSidebarBtn = document.getElementById('userProfileSidebarBtn');
+  const adminAlertsNavBtn = document.getElementById('adminAlertsNavBtn');
+
   if (currentUser) {
     let name = (currentUser.gameId && window.idToNameMap && window.idToNameMap[currentUser.gameId]) 
       ? window.idToNameMap[currentUser.gameId] 
       : (currentUser.name || currentUser.chiefName || currentUser.displayName || 'Chief');
       
-    if(authSidebarBtn) authSidebarBtn.innerHTML = window._spoofedUser ? `🎭 Spoofing: ${name}` : `👤 ${name}'s Profile`;
-    const adminAlertsNavBtn = document.getElementById('adminAlertsNavBtn');
+    if(authSidebarBtn) authSidebarBtn.innerHTML = window._spoofedUser ? `🎭 Spoofing: ${name}` : `👤 Switch / Manage Account`;
+    if(userProfileSidebarBtn) userProfileSidebarBtn.style.display = 'block';
     if (adminAlertsNavBtn) adminAlertsNavBtn.style.display = 'flex';
     if (window.updateNewMemberBadge) window.updateNewMemberBadge();
-    if(adminSidebarBtn && window.isAdminUser(currentUser)) {
-      adminSidebarBtn.style.display = 'block';
-    } else if (adminSidebarBtn) {
-      adminSidebarBtn.style.display = 'none';
+    
+    const isStaff = (typeof window.isAdminUser === 'function') && window.isAdminUser(currentUser);
+    if(isStaff) {
+      if (adminHeaderNavBtn) adminHeaderNavBtn.style.display = 'inline-flex';
+      if (mobileAdminBtn) mobileAdminBtn.style.display = 'block';
+      if (sidebarAdminSection) sidebarAdminSection.style.display = 'flex';
+      if (adminSidebarBtn) adminSidebarBtn.style.display = 'block';
+    } else {
+      if (adminHeaderNavBtn) adminHeaderNavBtn.style.display = 'none';
+      if (mobileAdminBtn) mobileAdminBtn.style.display = 'none';
+      if (sidebarAdminSection) sidebarAdminSection.style.display = 'none';
+      if (adminSidebarBtn) adminSidebarBtn.style.display = 'none';
     }
     if(signOutSidebarBtn) signOutSidebarBtn.style.display = 'block';
     
@@ -5217,6 +5231,10 @@ listenToAuth((user) => {
     else if (typeof window.activeViewFunc === 'function') window.activeViewFunc();
   } else {
     if(authSidebarBtn) authSidebarBtn.innerHTML = `👤 Sign In / Register`;
+    if(userProfileSidebarBtn) userProfileSidebarBtn.style.display = 'none';
+    if(adminHeaderNavBtn) adminHeaderNavBtn.style.display = 'none';
+    if(mobileAdminBtn) mobileAdminBtn.style.display = 'none';
+    if(sidebarAdminSection) sidebarAdminSection.style.display = 'none';
     if(adminSidebarBtn) adminSidebarBtn.style.display = 'none';
     if(signOutSidebarBtn) signOutSidebarBtn.style.display = 'none';
     window.updateNavbarUserIndicator(null);
@@ -9832,43 +9850,65 @@ window.openAllianceAlertsModal = async () => {
     overlay.id = 'notificationsModalOverlay';
     overlay.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.85); backdrop-filter:blur(10px); z-index:99999; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease;';
 
-    // 0. Push Notifications Header Pill & Tools Dropdown
+    // 0. Push Notifications Header Pill & Leadership Tools Dropdown
     const isPushSupported = ('Notification' in window) && ('serviceWorker' in navigator);
     const pushPermission = isPushSupported ? Notification.permission : 'unsupported';
     const isPushActive = isPushSupported && (pushPermission === 'granted');
+
+    let headerStaffToolsPillHtml = '';
+    if (isStaff) {
+      headerStaffToolsPillHtml = `
+        <div style="position:relative; display:inline-block;">
+          <button id="modalHeaderStaffBtn" onclick="window.toggleHeaderStaffDropdown(event)" style="background:rgba(239,68,68,0.14); border:1px solid rgba(239,68,68,0.45); color:#ef4444; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:5px; box-shadow:0 0 10px rgba(239,68,68,0.15); transition:all 0.2s ease;" title="Staff & Leadership Broadcast Tools">
+            <span>🛡️ Staff Tools</span>
+            <span id="headerStaffChevron" style="font-size:9px; opacity:0.8; transition:transform 0.2s ease;">▾</span>
+          </button>
+          <div id="headerStaffDropdown" style="display:none; position:absolute; right:0; top:calc(100% + 6px); width:210px; background:rgba(15,23,42,0.98); border:1px solid rgba(239,68,68,0.35); border-radius:12px; box-shadow:0 14px 35px rgba(0,0,0,0.85); z-index:10000; padding:6px; backdrop-filter:blur(14px); animation:fadeIn 0.15s ease;">
+            <div style="padding:6px 8px; font-size:10px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid rgba(255,255,255,0.06); margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
+              <span>🛡️ Leadership Suite</span>
+              <span style="color:#ef4444; font-size:9.5px; font-weight:bold;">R4/R5 👑</span>
+            </div>
+            <button onclick="window.openCreateCountdownAlertModal(); window.closeHeaderStaffDropdown();" style="width:100%; text-align:left; background:transparent; border:none; color:#a855f7; padding:7px 9px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.15s;" onmouseover="this.style.background='rgba(168,85,247,0.15)'" onmouseout="this.style.background='transparent'">
+              ➕ Create 3-in-1 Alert
+            </button>
+            <button onclick="window.openBroadcastPushModal(); window.closeHeaderStaffDropdown();" style="width:100%; text-align:left; background:transparent; border:none; color:#ec4899; padding:7px 9px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.15s;" onmouseover="this.style.background='rgba(236,72,153,0.15)'" onmouseout="this.style.background='transparent'">
+              🚀 Instant Push Blast
+            </button>
+            <button onclick="window.openBroadcastCleanerModal(); window.closeHeaderStaffDropdown();" style="width:100%; text-align:left; background:transparent; border:none; color:#f472b6; padding:7px 9px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.15s;" onmouseover="this.style.background='rgba(244,114,182,0.15)'" onmouseout="this.style.background='transparent'">
+              🧹 Alert Cleaner
+            </button>
+            <div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.06); font-size:10px; color:var(--text-muted); text-align:center;">
+              Active Devices: <strong id="headerPushSubscriberCount" style="color:#38bdf8;">...</strong>
+            </div>
+          </div>
+        </div>
+      `;
+    }
 
     let headerPushPillHtml = '';
     if (isPushSupported) {
       if (isPushActive) {
         headerPushPillHtml = `
           <div style="position:relative; display:inline-block;">
-            <button id="modalHeaderPushBtn" onclick="window.toggleHeaderPushDropdown(event)" style="background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.4); color:#10b981; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:5px; box-shadow:0 0 10px rgba(16,185,129,0.15); transition:all 0.2s ease;" title="Push Notifications Active (Click for tools)">
+            <button id="modalHeaderPushBtn" onclick="window.toggleHeaderPushDropdown(event)" style="background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.4); color:#10b981; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:5px; box-shadow:0 0 10px rgba(16,185,129,0.15); transition:all 0.2s ease;" title="Device Push Notifications Active (Click for settings)">
               <span style="width:6px; height:6px; border-radius:50%; background:#10b981; box-shadow:0 0 6px #10b981; display:inline-block;"></span>
               <span>Push: ON</span>
               <span id="headerPushChevron" style="font-size:9px; opacity:0.8; transition:transform 0.2s ease;">▾</span>
             </button>
-            <div id="headerPushDropdown" style="display:none; position:absolute; right:0; top:calc(100% + 6px); width:210px; background:rgba(15,23,42,0.98); border:1px solid rgba(56,189,248,0.3); border-radius:12px; box-shadow:0 14px 35px rgba(0,0,0,0.85); z-index:10000; padding:6px; backdrop-filter:blur(14px); animation:fadeIn 0.15s ease;">
+            <div id="headerPushDropdown" style="display:none; position:absolute; right:0; top:calc(100% + 6px); width:200px; background:rgba(15,23,42,0.98); border:1px solid rgba(56,189,248,0.3); border-radius:12px; box-shadow:0 14px 35px rgba(0,0,0,0.85); z-index:10000; padding:6px; backdrop-filter:blur(14px); animation:fadeIn 0.15s ease;">
               <div style="padding:6px 8px; font-size:10px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid rgba(255,255,255,0.06); margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
-                <span>⚙️ Device Push Tools</span>
+                <span>📱 Device Notifications</span>
                 <span style="color:#10b981; font-size:9.5px; font-weight:bold;">Active 🟢</span>
               </div>
               <button onclick="window.testLocalPushNotification(); window.closeHeaderPushDropdown();" style="width:100%; text-align:left; background:transparent; border:none; color:#60a5fa; padding:7px 9px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.15s;" onmouseover="this.style.background='rgba(59,130,246,0.15)'" onmouseout="this.style.background='transparent'">
-                🧪 Test Push Alert
+                🧪 Test Alert on this Device
               </button>
-              ${isStaff ? `
-                <button onclick="window.openCreateCountdownAlertModal(); window.closeHeaderPushDropdown();" style="width:100%; text-align:left; background:transparent; border:none; color:#a855f7; padding:7px 9px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.15s;" onmouseover="this.style.background='rgba(168,85,247,0.15)'" onmouseout="this.style.background='transparent'">
-                  ➕ New Alert (3-in-1)
-                </button>
-                <button onclick="window.openBroadcastCleanerModal(); window.closeHeaderPushDropdown();" style="width:100%; text-align:left; background:transparent; border:none; color:#f472b6; padding:7px 9px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.15s;" onmouseover="this.style.background='rgba(244,114,182,0.15)'" onmouseout="this.style.background='transparent'">
-                  🧹 Alert Cleaner
-                </button>
-              ` : ''}
               <button onclick="window.markAllBroadcastsRead(); document.getElementById('notificationsModalOverlay').remove(); window.openAllianceAlertsModal();" style="width:100%; text-align:left; background:transparent; border:none; color:var(--text-muted); padding:7px 9px; border-radius:6px; font-size:12px; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
-                🧹 Clear Badges
+                🧹 Mark All as Read
               </button>
-              <div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.06); font-size:10px; color:var(--text-muted); text-align:center;">
-                Subscribers: <strong id="headerPushSubscriberCount" style="color:#38bdf8;">...</strong>
-              </div>
+              <button onclick="window.handleModalPushToggle(this); window.closeHeaderPushDropdown();" style="width:100%; text-align:left; background:transparent; border:none; color:#f87171; padding:7px 9px; border-radius:6px; font-size:12px; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.15s;" onmouseover="this.style.background='rgba(239,68,68,0.12)'" onmouseout="this.style.background='transparent'">
+                🔕 Turn OFF Push
+              </button>
             </div>
           </div>
         `;
@@ -10273,8 +10313,9 @@ window.openAllianceAlertsModal = async () => {
             </div>
           </div>
           <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+            ${headerStaffToolsPillHtml}
             ${headerPushPillHtml}
-            <button onclick="document.getElementById('notificationsModalOverlay').remove()" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#cbd5e1; font-size:18px; width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; line-height:1; transition:0.15s;" onmouseover="this.style.background='rgba(239,68,68,0.2)'; this.style.borderColor='rgba(239,68,68,0.4)'; this.style.color='#ef4444'" onmouseout="this.style.background='rgba(255,255,255,0.06)'; this.style.borderColor='rgba(255,255,255,0.12)'; this.style.color='#cbd5e1'" title="Close Window">✕</button>
+            <button onclick="document.getElementById('notificationsModalOverlay').remove()" class="close-btn" title="Close Window">✕</button>
           </div>
         </div>
 
@@ -10324,17 +10365,41 @@ window.openAllianceAlertsModal = async () => {
       });
     }
 
-    // Close header push dropdown if clicked outside
+    // Close header dropdowns if clicked outside
     overlay.addEventListener('click', (e) => {
       const dd = document.getElementById('headerPushDropdown');
       const btn = document.getElementById('modalHeaderPushBtn');
       if (dd && dd.style.display === 'block' && !dd.contains(e.target) && (!btn || !btn.contains(e.target))) {
         window.closeHeaderPushDropdown();
       }
+
+      const sdd = document.getElementById('headerStaffDropdown');
+      const sbtn = document.getElementById('modalHeaderStaffBtn');
+      if (sdd && sdd.style.display === 'block' && !sdd.contains(e.target) && (!sbtn || !sbtn.contains(e.target))) {
+        window.closeHeaderStaffDropdown();
+      }
     });
   } catch(err) {
     console.error("Error in openAllianceAlertsModal:", err);
   }
+};
+
+window.toggleHeaderStaffDropdown = (e) => {
+  if (e) e.stopPropagation();
+  const dd = document.getElementById('headerStaffDropdown');
+  const chevron = document.getElementById('headerStaffChevron');
+  if (!dd) return;
+  const isHidden = (dd.style.display === 'none' || !dd.style.display);
+  dd.style.display = isHidden ? 'block' : 'none';
+  if (chevron) chevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+  if (isHidden) window.closeHeaderPushDropdown();
+};
+
+window.closeHeaderStaffDropdown = () => {
+  const dd = document.getElementById('headerStaffDropdown');
+  const chevron = document.getElementById('headerStaffChevron');
+  if (dd) dd.style.display = 'none';
+  if (chevron) chevron.style.transform = 'rotate(0deg)';
 };
 
 window.toggleHeaderPushDropdown = (e) => {
@@ -10345,6 +10410,7 @@ window.toggleHeaderPushDropdown = (e) => {
   const isHidden = (dd.style.display === 'none' || !dd.style.display);
   dd.style.display = isHidden ? 'block' : 'none';
   if (chevron) chevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+  if (isHidden) window.closeHeaderStaffDropdown();
 };
 
 window.closeHeaderPushDropdown = () => {

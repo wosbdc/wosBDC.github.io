@@ -38,7 +38,7 @@
               👁️ <span id="views-counter">...</span>
             </span>
             <span id="versionBadge" title="Click to view Changelog" style="background: rgba(168, 85, 247, 0.2); color: #a855f7; padding: 2px 6px; border-radius: 10px; font-weight: bold; display:flex; align-items:center; gap:4px; cursor:pointer;">
-              v2.9.4
+              v2.9.5
             </span>
             <span id="navbar-user-indicator" onclick="if(window.views && window.views.account) window.views.account('Profile');" title="Click to open Chief Profile" style="display:none; background: rgba(59, 130, 246, 0.18); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa; padding: 2px 8px; border-radius: 10px; font-weight: bold; align-items:center; gap:4px; max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer;">
             </span>
@@ -73,6 +73,7 @@
             </div>
 
             <a href="#" class="nav-link" data-target="schedule">Schedule</a>
+            <a href="#" class="nav-link mobile-only-link" id="mobileAdminBtn" onclick="if(window.views && window.views.admin){ document.getElementById('mobileMenu').classList.remove('open'); window.views.admin(); } return false;" style="display:none; color:#ef4444; font-weight:bold;">🛡️ Admin Hub</a>
             <a href="#" class="nav-link mobile-only-link" id="mobileAlertsBtn" onclick="window.openAllianceAlertsModal && window.openAllianceAlertsModal(); return false;">🔔 Alerts</a>
             <a href="#" class="nav-link mobile-only-link" id="mobileSettingsBtn">⚙️ Settings</a>
           </div>
@@ -80,6 +81,7 @@
         </div>
         
         <div class="nav-controls">
+          <button id="adminHeaderNavBtn" onclick="if(window.views && window.views.admin) window.views.admin();" style="display:none; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#ef4444; border-radius:10px; padding:4px 10px; font-size:12px; font-weight:800; cursor:pointer; align-items:center; gap:4px; transition:0.2s;" title="Open Admin Command Center">🛡️ Admin</button>
           <button id="adminAlertsNavBtn" onclick="window.openAllianceAlertsModal && window.openAllianceAlertsModal()" class="alerts-nav-btn" style="display:flex; position:relative; background:rgba(6,182,212,0.15); border:1px solid rgba(6,182,212,0.4); color:#06b6d4; cursor:pointer;" title="Alliance Alerts & Notifications">🔔</button>
           <button id="mobileMenuBtn" class="mobile-menu-btn">☰</button>
           <button id="settingsBtn" class="settings-btn" title="Settings">⚙️</button>
@@ -97,9 +99,40 @@
         <button id="closeSidebar" class="close-btn" title="Close Window">✕</button>
       </div>
       
-      <!-- Section 1: Global Timers (AT THE TOP) -->
-      <div class="sidebar-section" style="margin-top:15px; margin-bottom:20px; background:var(--bg-main); padding:15px; border-radius:10px; border:1px solid var(--border);">
-        <h3 style="margin-top:0; margin-bottom:12px; font-size:15px; color:var(--text-main); border-bottom:1px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:6px;">🕐 Global Timers</h3>
+      <!-- Section 1: User Account -->
+      <div class="sidebar-section" id="sidebarAccountSection" style="margin-top:15px; margin-bottom:18px; background:var(--bg-main); padding:15px; border-radius:10px; border:1px solid var(--border); display:flex; flex-direction:column; gap:10px;">
+        <h3 style="margin-top:0; margin-bottom:5px; font-size:14px; color:var(--text-main); border-bottom:1px solid var(--border); padding-bottom:6px; display:flex; align-items:center; gap:6px;">👤 User Account</h3>
+        <button id="authSidebarBtn" class="sidebar-action-btn primary">
+          🔐 Sign In / Register
+        </button>
+        <button id="userProfileSidebarBtn" onclick="if(window.views && window.views.account){ document.getElementById('settingsSidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('active'); window.views.account('Profile'); }" class="sidebar-action-btn" style="display:none;">
+          👤 View My Profile
+        </button>
+        <button id="signOutSidebarBtn" class="sidebar-action-btn" style="display:none;">
+          🚪 Sign Out
+        </button>
+      </div>
+
+      <!-- Section 2: Preferences & Appearance -->
+      <div class="sidebar-section" id="sidebarPrefsSection" style="margin-bottom:18px; background:var(--bg-main); padding:15px; border-radius:10px; border:1px solid var(--border); display:flex; flex-direction:column; gap:10px;">
+        <h3 style="margin-top:0; margin-bottom:5px; font-size:14px; color:var(--text-main); border-bottom:1px solid var(--border); padding-bottom:6px; display:flex; align-items:center; gap:6px;">🎨 Display & Preferences</h3>
+        <button onclick="window.openThemeModal && window.openThemeModal()" class="sidebar-action-btn">
+          🎨 Theme Engine
+        </button>
+        <button onclick="window.openMobileNavModal && window.openMobileNavModal()" class="sidebar-action-btn">
+          📱 Mobile Navigation
+        </button>
+        <button onclick="window.showAppInstallSelector && window.showAppInstallSelector()" class="sidebar-action-btn">
+          📱 Install wosBDC App
+        </button>
+        <button id="contactSidebarBtn" class="sidebar-action-btn">
+          💬 Contact Support
+        </button>
+      </div>
+
+      <!-- Section 3: Alliance Clocks & Daily Timers -->
+      <div class="sidebar-section" id="sidebarTimersSection" style="margin-bottom:18px; background:var(--bg-main); padding:15px; border-radius:10px; border:1px solid var(--border);">
+        <h3 style="margin-top:0; margin-bottom:12px; font-size:14px; color:var(--text-main); border-bottom:1px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:6px;">🕐 Alliance Clocks & Timers</h3>
 
         <!-- Clock Format Toggle -->
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
@@ -176,45 +209,26 @@
         </div>
       </div>
 
-      <!-- Section 2: User Account & Support -->
-      <div class="sidebar-section" style="margin-bottom:20px; background:var(--bg-main); padding:15px; border-radius:8px; border:1px solid var(--border); display:flex; flex-direction:column; gap:10px;">
-        <h3 style="margin-top:0; margin-bottom:5px; font-size:15px; color:var(--text-main); border-bottom:1px solid var(--border); padding-bottom:6px;">👤 User Account</h3>
-        <button id="authSidebarBtn" class="sidebar-action-btn primary">
-          🔐 Sign In / Register
+      <!-- Section 4: Leadership & Admin Suite -->
+      <div class="sidebar-section" id="sidebarAdminSection" style="display:none; margin-bottom:18px; background:rgba(239,68,68,0.04); padding:15px; border-radius:10px; border:1px solid rgba(239,68,68,0.25); flex-direction:column; gap:10px;">
+        <h3 style="margin-top:0; margin-bottom:5px; font-size:14px; color:#ef4444; border-bottom:1px solid rgba(239,68,68,0.2); padding-bottom:6px; display:flex; align-items:center; gap:6px;">🛡️ Leadership & Admin Suite</h3>
+        <button id="adminSidebarBtn" class="sidebar-action-btn danger">
+          🛡️ Admin Command Center
         </button>
-        <button id="adminSidebarBtn" class="sidebar-action-btn danger" style="display:none;">
-          🛡️ Admin Menu
+        <button onclick="document.getElementById('settingsSidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('active'); window.openBroadcastPushModal && window.openBroadcastPushModal();" class="sidebar-action-btn" style="color:#ec4899; border-color:rgba(236,72,153,0.3);">
+          🚀 Instant Push Blast
         </button>
-        <button id="signOutSidebarBtn" class="sidebar-action-btn" style="display:none;">
-          🚪 Sign Out
+        <button onclick="document.getElementById('settingsSidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('active'); window.openBroadcastCleanerModal && window.openBroadcastCleanerModal();" class="sidebar-action-btn" style="color:#f472b6; border-color:rgba(244,114,182,0.3);">
+          🧹 Alert Cleaner
         </button>
-        <button id="contactSidebarBtn" class="sidebar-action-btn primary">
-          💬 Contact Support
-        </button>
-      </div>
-
-      <!-- Section 3: Preferences & Appearance -->
-      <div class="sidebar-section" style="margin-bottom:20px; background:var(--bg-main); padding:15px; border-radius:8px; border:1px solid var(--border); display:flex; flex-direction:column; gap:10px;">
-        <h3 style="margin-top:0; margin-bottom:5px; font-size:15px; color:var(--text-main); border-bottom:1px solid var(--border); padding-bottom:6px;">📱 Preferences</h3>
-        <button onclick="window.showAppInstallSelector && window.showAppInstallSelector()" class="sidebar-action-btn">
-          📱 Install wosBDC App
-        </button>
-        <button onclick="window.openMobileNavModal && window.openMobileNavModal()" class="sidebar-action-btn">
-          📱 Mobile Navigation
-        </button>
-        <button onclick="window.openThemeModal && window.openThemeModal()" class="sidebar-action-btn">
-          🎨 Theme Engine
-        </button>
-      </div>
-
-      <!-- Section 4: Admin / Developer Controls -->
-      <div id="floatingSpoofControls" style="display:none; flex-direction:column; gap:10px; margin-bottom:20px; background:var(--bg-main); padding:15px; border-radius:8px; border:1px solid var(--border);">
+        <div id="floatingSpoofControls" style="display:none; flex-direction:column; gap:8px; margin-top:4px;">
           <button onclick="window.clearSpoof && window.clearSpoof()" class="sidebar-action-btn danger" style="animation: pulse 2s infinite;">
-              🛑 Stop Spoofing
+            🛑 Stop Spoofing
           </button>
           <button onclick="window.switchSpoofUser && window.switchSpoofUser()" class="sidebar-action-btn">
-              🔄 Switch User
+            🔄 Switch User
           </button>
+        </div>
       </div>
     </div>
     

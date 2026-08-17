@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [2.9.5] - 2026-08-16
+- 🛡️ Clean Separation of User & Admin Features: Dedicated Leadership Suite and 1-click Admin Hub in navbar and mobile drawer for R4/R5 Staff
+- 📱 Streamlined Device Push Dropdown: Push: ON pill in alerts header is now strictly dedicated to user device status, testing, and settings
+- 👑 Dedicated Staff Tools Dropdown: Staff officers get their own broadcast, instant push blast, and cleaner toolkit
+- ⚙️ Restructured 4-Card Settings Sidebar: Clean, logical separation for My Account, Display/Preferences, Clocks & Timers, and Leadership Suite
+
 ## [2.9.4] - 2026-08-16
 - ⚡ Unified 3-in-1 Alert Hub: Dedicated structured cards for Scheduled Live Timers, Public Leadership Announcements, and Confidential Staff-Only Alerts
 - 🚀 Unified 3-in-1 Alert Creator: Single modal with seamless segmented control for Announcements, Timers, and Staff Alerts
