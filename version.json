@@ -1,7 +1,6 @@
 {
   "name": "BDC Ecosystem Master Version Registry",
-  "lastUpdated": "2026-08-17T15:46:00-07:00",
-  "appsDirectory": "apps/BDC_Central_Command/",
+  "lastUpdated": "2026-08-17T15:48:00-07:00",
   "components": {
     "bdc_central_command_desktop": {
       "version": "1.0.59",
@@ -14,6 +13,16 @@
         "v1.0.58: Authenticated Firebase REST requests via WOS_FIREBASE_SECRET for gift code uploads",
         "v1.0.57: Added PLATFORM_REPAIR_GUIDES and HTML email alerts for expired social tokens"
       ]
+    },
+    "daemons": {
+      "folder": "Daemons/",
+      "counterChecker": "Daemons/counter_checker_daemon.py",
+      "githubAutoDiscovery": "Daemons/github_auto_discovery_daemon.py"
+    },
+    "threads_bridge": {
+      "folder": "Threads_Bridge/",
+      "guiFile": "Threads_Bridge/threads_bridge_gui_v1.0.59_(windows).pyw",
+      "cliFile": "Threads_Bridge/threads_bridge_cli_v1.0.59_(terminal).py"
     },
     "bdclive_web_dashboard": {
       "version": "10.2.77",
