@@ -78,7 +78,8 @@ WOS_ENCRYPT_KEY = "tB87#kPtkxqOS2"
 TEST_PLAYER_ID = "318843189"
 
 # --- GOOGLE APPS SCRIPT WEBHOOK CONFIG (0 Quota Webhook) ---
-GAS_API_URL = "https://script.google.com/macros/s/AKfycbwVxrfIb4UQDAoHNJ9RfFIdzWG4BRegZPf8QAOvUIoPRAvulUkQqtSNMClGR9UBxrI/exec"
+WOS_FIREBASE_SECRET = "n5fTnxcK5J5ddNsT77AhZIoQGTogW3ROpk4k03Sv"
+GAS_API_URL = "https://script.google.com/macros/s/AKfycbzXjvqOcr9w3CZuwNxDhesndWeSwFLDeo7RS_REykgenkqf73lq4FAfZ7bTitTmVEA/exec"
 
 # --- TIMING & CADENCE INTERVALS (Seconds) ---
 SOCIAL_FAST_INTERVAL = 2          # 2 seconds (Plex, Twitch live streams)
@@ -558,7 +559,7 @@ def execute_giftcode_bot_sweep():
 
     load_cli_blacklist()
     try:
-        r = session.get(f"{WOS_DASHBOARD_FIREBASE_URL}/gift_codes_history.json", timeout=6)
+        r = session.get(f"{WOS_DASHBOARD_FIREBASE_URL}/gift_codes_history.json?auth={WOS_FIREBASE_SECRET}", timeout=6)
         existing_history = r.json() or {}
     except:
         existing_history = {}
@@ -593,7 +594,7 @@ def execute_giftcode_bot_sweep():
             log_event("GIFTCODE BOT", f"🔥 ACTIVE CODE DISCOVERED: [{c}] ({v.get('msg')})")
             valid_new_codes.append(c)
             try:
-                session.put(f"{WOS_DASHBOARD_FIREBASE_URL}/gift_codes_history/{clean_key}.json", json={
+                session.put(f"{WOS_DASHBOARD_FIREBASE_URL}/gift_codes_history/{clean_key}.json?auth={WOS_FIREBASE_SECRET}", json={
                     "code": c,
                     "status": "active",
                     "description": f"Auto-discovered via BDC Central Command on {datetime.now().strftime('%Y-%m-%d')}",
@@ -609,7 +610,7 @@ def execute_giftcode_bot_sweep():
             GIFTCODE_BLACKLIST.add(c)
             new_bl = True
             try:
-                session.put(f"{WOS_DASHBOARD_FIREBASE_URL}/gift_codes_history/{clean_key}.json", json={
+                session.put(f"{WOS_DASHBOARD_FIREBASE_URL}/gift_codes_history/{clean_key}.json?auth={WOS_FIREBASE_SECRET}", json={
                     "code": c,
                     "status": "expired",
                     "description": "Auto-tested and found expired",
@@ -629,7 +630,7 @@ def execute_giftcode_bot_sweep():
 
     # Update telemetry in Firebase
     try:
-        all_hist = session.get(f"{WOS_DASHBOARD_FIREBASE_URL}/gift_codes_history.json", timeout=6).json() or {}
+        all_hist = session.get(f"{WOS_DASHBOARD_FIREBASE_URL}/gift_codes_history.json?auth={WOS_FIREBASE_SECRET}", timeout=6).json() or {}
         active_cnt = sum(1 for item in all_hist.values() if isinstance(item, dict) and item.get("status") == "active")
         expired_cnt = sum(1 for item in all_hist.values() if isinstance(item, dict) and item.get("status") == "expired")
         total_claims = sum(int(item.get("stats", {}).get("success", 0)) for item in all_hist.values() if isinstance(item, dict))
@@ -646,7 +647,7 @@ def execute_giftcode_bot_sweep():
             "lifetimeClaimsDelivered": total_claims,
             "recentLog": f"Sweep complete: {len(pending_candidates)} evaluated, {len(valid_new_codes)} new active code(s), {len(GIFTCODE_BLACKLIST)} blacklisted non-codes."
         }
-        session.put(f"{WOS_DASHBOARD_FIREBASE_URL}/system/giftcode_bot_status.json", json=telemetry, timeout=5)
+        session.put(f"{WOS_DASHBOARD_FIREBASE_URL}/system/giftcode_bot_status.json?auth={WOS_FIREBASE_SECRET}", json=telemetry, timeout=5)
 
         live_stats["bot_status"] = "OK"
         live_stats["bot_last_run"] = datetime.now().strftime("%H:%M:%S")
