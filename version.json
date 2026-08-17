@@ -1,13 +1,14 @@
 {
   "name": "BDC Ecosystem Master Version Registry",
-  "lastUpdated": "2026-08-17T15:45:00-07:00",
-  "appsDirectory": "apps/",
+  "lastUpdated": "2026-08-17T15:46:00-07:00",
+  "appsDirectory": "apps/BDC_Central_Command/",
   "components": {
     "bdc_central_command_desktop": {
       "version": "1.0.59",
-      "folder": "apps/",
-      "guiFile": "apps/bdc_central_command_gui_v1.0.59_(windows).pyw",
-      "cliFile": "apps/bdc_central_command_cli_v1.0.59_(terminal).py",
+      "folder": "BDC_Central_Command/",
+      "guiFile": "BDC_Central_Command/bdc_central_command_gui_v1.0.59_(windows).pyw",
+      "cliFile": "BDC_Central_Command/bdc_central_command_cli_v1.0.59_(terminal).py",
+      "blacklistFile": "BDC_Central_Command/scraped_candidates_blacklist.json",
       "latestChanges": [
         "v1.0.59: Smart 3-Tier Gift Code Detection with persistent candidate blacklist",
         "v1.0.58: Authenticated Firebase REST requests via WOS_FIREBASE_SECRET for gift code uploads",
@@ -16,24 +17,15 @@
     },
     "bdclive_web_dashboard": {
       "version": "10.2.77",
-      "repository": "https://github.com/bdclive/BDClive",
-      "latestChanges": [
-        "v10.2.77: Integrated Master Version Manifest, apps/ folder structure, and automated version tracking"
-      ]
+      "repository": "https://github.com/bdclive/BDClive"
     },
     "wosbdc_alliance_dashboard": {
       "version": "2.9.10",
-      "repository": "https://github.com/wosbdc/wosBDC.github.io",
-      "latestChanges": [
-        "v2.9.10: Smart Gift Code Detection and 1-click live testing suite"
-      ]
+      "repository": "https://github.com/wosbdc/wosBDC.github.io"
     },
     "google_apps_script_backend": {
       "deploymentId": "AKfycbzXjvqOcr9w3CZuwNxDhesndWeSwFLDeo7RS_REykgenkqf73lq4FAfZ7bTitTmVEA",
-      "versionNumber": "@196",
-      "latestChanges": [
-        "@196: Enhanced gift code status response parsing for TIME ERROR and CDK NOT FOUND"
-      ]
+      "versionNumber": "@196"
     }
   }
 }
