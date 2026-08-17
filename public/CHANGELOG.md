@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.13] - 2026-08-17
+- 🕐 **Sidebar Hierarchy & Clocks at the Top**: Alliance Clocks, UTC/Local time, daily/intel countdowns, and active event cards are now elevated to the very top of the Settings Sidebar for instant glanceability.
+- 👤 **Unified Account Hub Action**: Removed duplicate "View My Profile" and renamed sidebar actions to "Account Hub" for clear, single-point navigation.
+- 🛡️ **Cleaner Sidebar**: Removed redundant Leadership suite cards from the general Settings sidebar now that officers access all administration tools via the dedicated tab in the Account Hub.
+
 ## [2.9.12] - 2026-08-17
 - 🛡️ **Dedicated Leadership Hub in Account Suite**: Moved Admin Command Center entry from the top navigation bar into a seamless, integrated Leadership button and tab directly within the Account Hub and Settings Sidebar.
 - ✨ **Streamlined Navigation Bar**: Cleaned up the public top navigation header and mobile drawer for a polished user experience.

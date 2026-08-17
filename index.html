@@ -38,9 +38,9 @@
               👁️ <span id="views-counter">...</span>
             </span>
             <span id="versionBadge" title="Click to view Changelog" style="background: rgba(168, 85, 247, 0.2); color: #a855f7; padding: 2px 6px; border-radius: 10px; font-weight: bold; display:flex; align-items:center; gap:4px; cursor:pointer;">
-              v2.9.8
+              v2.9.13
             </span>
-            <span id="navbar-user-indicator" onclick="if(window.views && window.views.account) window.views.account('Profile');" title="Click to open Chief Profile" style="display:none; background: rgba(59, 130, 246, 0.18); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa; padding: 2px 8px; border-radius: 10px; font-weight: bold; align-items:center; gap:4px; max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer;">
+            <span id="navbar-user-indicator" onclick="if(window.views && window.views.account) window.views.account('Profile');" title="Click to open Account Hub" style="display:none; background: rgba(59, 130, 246, 0.18); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa; padding: 2px 8px; border-radius: 10px; font-weight: bold; align-items:center; gap:4px; max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer;">
             </span>
           </div>
         </div>
@@ -97,39 +97,8 @@
         <button id="closeSidebar" class="close-btn" title="Close Window">✕</button>
       </div>
       
-      <!-- Section 1: User Account -->
-      <div class="sidebar-section" id="sidebarAccountSection" style="margin-top:15px; margin-bottom:18px; background:var(--bg-main); padding:15px; border-radius:10px; border:1px solid var(--border); display:flex; flex-direction:column; gap:10px;">
-        <h3 style="margin-top:0; margin-bottom:5px; font-size:14px; color:var(--text-main); border-bottom:1px solid var(--border); padding-bottom:6px; display:flex; align-items:center; gap:6px;">👤 User Account</h3>
-        <button id="authSidebarBtn" class="sidebar-action-btn primary">
-          🔐 Sign In / Register
-        </button>
-        <button id="userProfileSidebarBtn" onclick="if(window.views && window.views.account){ document.getElementById('settingsSidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('active'); window.views.account('Profile'); }" class="sidebar-action-btn" style="display:none;">
-          👤 View My Profile
-        </button>
-        <button id="signOutSidebarBtn" class="sidebar-action-btn" style="display:none;">
-          🚪 Sign Out
-        </button>
-      </div>
-
-      <!-- Section 2: Preferences & Appearance -->
-      <div class="sidebar-section" id="sidebarPrefsSection" style="margin-bottom:18px; background:var(--bg-main); padding:15px; border-radius:10px; border:1px solid var(--border); display:flex; flex-direction:column; gap:10px;">
-        <h3 style="margin-top:0; margin-bottom:5px; font-size:14px; color:var(--text-main); border-bottom:1px solid var(--border); padding-bottom:6px; display:flex; align-items:center; gap:6px;">🎨 Display & Preferences</h3>
-        <button onclick="window.openThemeModal && window.openThemeModal()" class="sidebar-action-btn">
-          🎨 Theme Engine
-        </button>
-        <button onclick="window.openMobileNavModal && window.openMobileNavModal()" class="sidebar-action-btn">
-          📱 Mobile Navigation
-        </button>
-        <button onclick="window.showAppInstallSelector && window.showAppInstallSelector()" class="sidebar-action-btn">
-          📱 Install wosBDC App
-        </button>
-        <button id="contactSidebarBtn" class="sidebar-action-btn">
-          💬 Contact Support
-        </button>
-      </div>
-
-      <!-- Section 3: Alliance Clocks & Daily Timers -->
-      <div class="sidebar-section" id="sidebarTimersSection" style="margin-bottom:18px; background:var(--bg-main); padding:15px; border-radius:10px; border:1px solid var(--border);">
+      <!-- Section 1: Alliance Clocks & Daily Timers -->
+      <div class="sidebar-section" id="sidebarTimersSection" style="margin-top:15px; margin-bottom:18px; background:var(--bg-main); padding:15px; border-radius:10px; border:1px solid var(--border);">
         <h3 style="margin-top:0; margin-bottom:12px; font-size:14px; color:var(--text-main); border-bottom:1px solid var(--border); padding-bottom:8px; display:flex; align-items:center; gap:6px;">🕐 Alliance Clocks & Timers</h3>
 
         <!-- Clock Format Toggle -->
@@ -207,26 +176,32 @@
         </div>
       </div>
 
-      <!-- Section 4: Leadership & Admin Suite -->
-      <div class="sidebar-section" id="sidebarAdminSection" style="display:none; margin-bottom:18px; background:rgba(239,68,68,0.04); padding:15px; border-radius:10px; border:1px solid rgba(239,68,68,0.25); flex-direction:column; gap:10px;">
-        <h3 style="margin-top:0; margin-bottom:5px; font-size:14px; color:#ef4444; border-bottom:1px solid rgba(239,68,68,0.2); padding-bottom:6px; display:flex; align-items:center; gap:6px;">🛡️ Leadership & Admin Suite</h3>
-        <button id="adminSidebarBtn" class="sidebar-action-btn danger">
-          🛡️ Admin Command Center
+      <!-- Section 2: User Account -->
+      <div class="sidebar-section" id="sidebarAccountSection" style="margin-bottom:18px; background:var(--bg-main); padding:15px; border-radius:10px; border:1px solid var(--border); display:flex; flex-direction:column; gap:10px;">
+        <h3 style="margin-top:0; margin-bottom:5px; font-size:14px; color:var(--text-main); border-bottom:1px solid var(--border); padding-bottom:6px; display:flex; align-items:center; gap:6px;">👤 User Account</h3>
+        <button id="authSidebarBtn" class="sidebar-action-btn primary">
+          🔐 Sign In / Register
         </button>
-        <button onclick="document.getElementById('settingsSidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('active'); window.openBroadcastPushModal && window.openBroadcastPushModal();" class="sidebar-action-btn" style="color:#ec4899; border-color:rgba(236,72,153,0.3);">
-          🚀 Instant Push Blast
+        <button id="signOutSidebarBtn" class="sidebar-action-btn" style="display:none;">
+          🚪 Sign Out
         </button>
-        <button onclick="document.getElementById('settingsSidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('active'); window.openBroadcastCleanerModal && window.openBroadcastCleanerModal();" class="sidebar-action-btn" style="color:#f472b6; border-color:rgba(244,114,182,0.3);">
-          🧹 Alert Cleaner
+      </div>
+
+      <!-- Section 3: Preferences & Appearance -->
+      <div class="sidebar-section" id="sidebarPrefsSection" style="margin-bottom:18px; background:var(--bg-main); padding:15px; border-radius:10px; border:1px solid var(--border); display:flex; flex-direction:column; gap:10px;">
+        <h3 style="margin-top:0; margin-bottom:5px; font-size:14px; color:var(--text-main); border-bottom:1px solid var(--border); padding-bottom:6px; display:flex; align-items:center; gap:6px;">🎨 Display & Preferences</h3>
+        <button onclick="window.openThemeModal && window.openThemeModal()" class="sidebar-action-btn">
+          🎨 Theme Engine
         </button>
-        <div id="floatingSpoofControls" style="display:none; flex-direction:column; gap:8px; margin-top:4px;">
-          <button onclick="window.clearSpoof && window.clearSpoof()" class="sidebar-action-btn danger" style="animation: pulse 2s infinite;">
-            🛑 Stop Spoofing
-          </button>
-          <button onclick="window.switchSpoofUser && window.switchSpoofUser()" class="sidebar-action-btn">
-            🔄 Switch User
-          </button>
-        </div>
+        <button onclick="window.openMobileNavModal && window.openMobileNavModal()" class="sidebar-action-btn">
+          📱 Mobile Navigation
+        </button>
+        <button onclick="window.showAppInstallSelector && window.showAppInstallSelector()" class="sidebar-action-btn">
+          📱 Install wosBDC App
+        </button>
+        <button id="contactSidebarBtn" class="sidebar-action-btn">
+          💬 Contact Support
+        </button>
       </div>
     </div>
     

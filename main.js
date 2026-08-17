@@ -3645,7 +3645,6 @@ window.revokeAdmin = async (gameId) => {
   }
 };
 
-const adminSidebarBtn = document.getElementById('adminSidebarBtn');
 const signOutSidebarBtn = document.getElementById('signOutSidebarBtn');
 
 
@@ -5191,8 +5190,6 @@ listenToAuth((user) => {
   }
   realUser = user;
   
-  const sidebarAdminSection = document.getElementById('sidebarAdminSection');
-  const userProfileSidebarBtn = document.getElementById('userProfileSidebarBtn');
   const adminAlertsNavBtn = document.getElementById('adminAlertsNavBtn');
 
   if (currentUser) {
@@ -5200,19 +5197,10 @@ listenToAuth((user) => {
       ? window.idToNameMap[currentUser.gameId] 
       : (currentUser.name || currentUser.chiefName || currentUser.displayName || 'Chief');
       
-    if(authSidebarBtn) authSidebarBtn.innerHTML = window._spoofedUser ? `🎭 Spoofing: ${name}` : `👤 Switch / Manage Account`;
-    if(userProfileSidebarBtn) userProfileSidebarBtn.style.display = 'block';
+    if(authSidebarBtn) authSidebarBtn.innerHTML = window._spoofedUser ? `🎭 Spoofing: ${name}` : `👤 Account Hub`;
     if (adminAlertsNavBtn) adminAlertsNavBtn.style.display = 'flex';
     if (window.updateNewMemberBadge) window.updateNewMemberBadge();
     
-    const isStaff = (typeof window.isAdminUser === 'function') && window.isAdminUser(currentUser);
-    if(isStaff) {
-      if (sidebarAdminSection) sidebarAdminSection.style.display = 'flex';
-      if (adminSidebarBtn) adminSidebarBtn.style.display = 'block';
-    } else {
-      if (sidebarAdminSection) sidebarAdminSection.style.display = 'none';
-      if (adminSidebarBtn) adminSidebarBtn.style.display = 'none';
-    }
     if(signOutSidebarBtn) signOutSidebarBtn.style.display = 'block';
     
     window.updateNavbarUserIndicator(currentUser);
@@ -5232,9 +5220,6 @@ listenToAuth((user) => {
   } else {
     window._initialAuthRouted = false;
     if(authSidebarBtn) authSidebarBtn.innerHTML = `👤 Sign In / Register`;
-    if(userProfileSidebarBtn) userProfileSidebarBtn.style.display = 'none';
-    if(sidebarAdminSection) sidebarAdminSection.style.display = 'none';
-    if(adminSidebarBtn) adminSidebarBtn.style.display = 'none';
     if(signOutSidebarBtn) signOutSidebarBtn.style.display = 'none';
     window.updateNavbarUserIndicator(null);
     
@@ -5311,8 +5296,7 @@ window.clearSpoof = () => {
     
     // Brute force redraw
     window.updateNavbarUserIndicator(currentUser);
-    let name = currentUser ? ((currentUser.gameId && idToNameMap[currentUser.gameId]) || currentUser.name || 'Account') : 'Unknown';
-    if(authSidebarBtn) authSidebarBtn.innerHTML = `👤 ${name}'s Profile`;
+    if(authSidebarBtn) authSidebarBtn.innerHTML = `👤 Account Hub`;
     
     // Trigger fake auth update to restore real state
     listenToAuth.fakeUpdate ? listenToAuth.fakeUpdate(currentUser) : null;
@@ -5358,14 +5342,6 @@ if(authSidebarBtn) authSidebarBtn.addEventListener('click', (e) => {
   }
 });
 
-if(adminSidebarBtn) adminSidebarBtn.addEventListener('click', (e) => {
-  e.preventDefault();
-  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-  if (mobileMenu) mobileMenu.classList.remove('open');
-  settingsSidebar.classList.remove('open');
-  sidebarOverlay.classList.remove('active');
-  views.admin();
-});
 
 if(signOutSidebarBtn) signOutSidebarBtn.addEventListener('click', (e) => {
   e.preventDefault();
