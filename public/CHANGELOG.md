@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.36] - 2026-08-18
+- 📡 **Real-Time Sync Tracker & Telemetry HUD**: Deployed a dedicated live sync monitoring sidebar to Google Sheets featuring real-time queue detection, automatic 3-second status polling, force sync buttons, and per-sheet telemetry logs.
+- ⚡ **Apps Script Backend Deployment (@197)**: Pushed and deployed Google Apps Script backend update `@197` with `getLiveSyncTelemetry`, `forceFlushSyncQueue`, and automated Firebase RTDB telemetry sync (`sync_telemetry/latest`).
+- 🔗 **Updated API Base Endpoint**: Synchronized `API_BASE_URL` in `main.js` with deployment `AKfycbxZu-vWynJB-Gs2vk5Zc9fl1nuGpMTlL3LKmVmKg5Na_DuhWLNiyilnfVxeQFuHmkE`.
+
 ## [2.9.35] - 2026-08-18
 - 🛡️ **Account Hub & Formatter Hardening**: Added resilient `window.formatDateForDisplay` and `window.parseDateSafe` fallback handlers to gracefully catch null/invalid date inputs and prevent runtime exceptions across all Account Hub profile cards.
 - ⚡ **Enrolled Game ID Safe Set References**: Added universal defensive checks across `enrolledGameIds` and `window.enrolledGameIds` lookups in Bear Trap alt managers, live member rosters, and bot link indicators.
