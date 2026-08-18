@@ -17078,12 +17078,99 @@ const views = {
         }
       };
 
+      // Mobile & Desktop Interactive Modal to View All Batched Member Names
+      window.showBatchedMembersModal = (batchId) => {
+        const batchData = window._batchedMembersMap && window._batchedMembersMap[batchId];
+        if (!batchData) return;
+
+        const existing = document.getElementById('batchedMembersModal');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'batchedMembersModal';
+        modal.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(6px); z-index:100060; display:flex; align-items:center; justify-content:center; padding:16px; box-sizing:border-box; animation:fadeIn 0.2s ease;';
+
+        modal.onclick = (e) => {
+          if (e.target === modal) modal.remove();
+        };
+
+        const membersListHtml = batchData.members && batchData.members.length > 0
+          ? batchData.members.map((name, idx) => `
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:9px 12px; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:8px; font-size:13px; transition:background 0.15s ease;">
+                <div style="display:flex; align-items:center; gap:8px; min-width:0;">
+                  <span style="color:var(--text-muted); font-size:11px; font-family:monospace; width:22px;">${idx + 1}.</span>
+                  <span style="font-weight:600; color:var(--text-main); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHTML(name)}</span>
+                </div>
+                <span style="background:rgba(56,189,248,0.1); color:#38bdf8; font-size:11px; padding:2px 8px; border-radius:6px; font-weight:600;">Chief</span>
+              </div>
+            `).join('')
+          : `<div style="text-align:center; color:var(--text-muted); padding:20px;">No named members found in this batch.</div>`;
+
+        modal.innerHTML = `
+          <div style="background:var(--bg-card, #1e293b); border:1px solid var(--border, #334155); border-radius:16px; width:100%; max-width:440px; max-height:85vh; display:flex; flex-direction:column; box-shadow:0 25px 50px -12px rgba(0,0,0,0.6); overflow:hidden;" onclick="event.stopPropagation()">
+            <!-- Header -->
+            <div style="padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.02);">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <div style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.3); color:#f59e0b; width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px;">
+                  👥
+                </div>
+                <div>
+                  <h3 style="margin:0; color:var(--text-main); font-size:16px; font-weight:700;">Batched Members</h3>
+                  <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
+                    ${batchData.members ? batchData.members.length : 0} Target Chiefs &bull; Admin: <span style="color:#a78bfa; font-weight:600;">${escapeHTML(batchData.admin || 'Admin')}</span>
+                  </div>
+                </div>
+              </div>
+              <button onclick="document.getElementById('batchedMembersModal')?.remove()" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:15px; transition:0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.2)'; this.style.color='#ef4444';" onmouseout="this.style.background='rgba(255,255,255,0.06)'; this.style.color='var(--text-main)';">✕</button>
+            </div>
+
+            <!-- Action Sub-Header -->
+            <div style="padding:10px 20px; background:rgba(0,0,0,0.2); border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; font-size:12px; gap:8px; flex-wrap:wrap;">
+              <span style="color:var(--text-muted);">Action: <strong style="color:var(--text-main);">${escapeHTML(batchData.action || 'Batch Action')}</strong></span>
+              <span style="color:var(--text-muted); font-size:11px;">🕒 ${escapeHTML(batchData.timeStr || '')}</span>
+            </div>
+
+            <!-- Scrollable List -->
+            <div style="padding:16px 20px; overflow-y:auto; -webkit-overflow-scrolling:touch; max-height:50vh; display:flex; flex-direction:column; gap:8px;">
+              ${membersListHtml}
+            </div>
+
+            <!-- Footer -->
+            <div style="padding:14px 20px; border-top:1px solid var(--border); display:flex; gap:10px; justify-content:flex-end; background:rgba(255,255,255,0.02);">
+              <button onclick="window.copyBatchedMembersList('${batchId}')" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); padding:8px 14px; border-radius:8px; font-size:12.5px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:0.2s;">
+                📋 Copy List
+              </button>
+              <button onclick="document.getElementById('batchedMembersModal')?.remove()" style="background:var(--accent); color:white; border:none; padding:8px 18px; border-radius:8px; font-size:12.5px; font-weight:bold; cursor:pointer;">
+                Done
+              </button>
+            </div>
+          </div>
+        `;
+
+        document.body.appendChild(modal);
+      };
+
+      window.copyBatchedMembersList = (batchId) => {
+        const batchData = window._batchedMembersMap && window._batchedMembersMap[batchId];
+        if (!batchData || !batchData.members || batchData.members.length === 0) return;
+        const text = batchData.members.join('\n');
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text);
+        }
+        if (typeof window.showToast === 'function') {
+          window.showToast(`📋 Copied ${batchData.members.length} member names!`);
+        } else {
+          alert(`📋 Copied ${batchData.members.length} member names!`);
+        }
+      };
+
       // Global function to fetch real-time Admin Logs from Firebase with fallback to Sheets API
       window.fetchAdminLog = async () => {
         const tb = document.getElementById('adminLogsTableBody');
         if (!tb) return;
         tb.innerHTML = `<tr><td colspan="5" style="padding:20px; text-align:center; color:var(--text-muted); font-size:13px;">⏳ Loading Admin Activity Logs...</td></tr>`;
         
+        window._batchedMembersMap = {};
         let logItems = [];
         let fetchedFromFirebase = false;
 
@@ -17213,10 +17300,20 @@ const views = {
               const memberNames = Array.from(new Set(group.map(l => l.target).filter(t => Boolean(t) && t !== '-')));
               let hoverTitle = '';
               if (memberNames.length > 0) {
-                hoverTitle = `👥 Batched Target Members (${memberNames.length}):\n` + memberNames.map((m, idx) => `  ${idx + 1}. ${m}`).join('\n');
+                hoverTitle = `👥 Batched Target Members (${memberNames.length}):\n` + memberNames.map((m, idx) => `  ${idx + 1}. ${m}`).join('\n') + `\n\n💡 Click or tap to open member list modal`;
               } else {
                 hoverTitle = `${group.length} consecutive actions batched`;
               }
+
+              window._batchedMembersMap = window._batchedMembersMap || {};
+              window._batchedMembersMap[batchId] = {
+                admin: adminName,
+                action: firstLog.action || 'Batch Action',
+                dateStr: dateStr,
+                timeStr: `${startTimeStr} – ${endTimeStr}`,
+                members: memberNames,
+                group: group
+              };
 
               const actionBadge = window.getAdminActionBadgeHtml(firstLog.action || 'Batch Action', true, group.length);
 
@@ -17233,8 +17330,9 @@ const views = {
                   </td>
                   <td style="padding:12px 14px; white-space:nowrap;">${actionBadge}</td>
                   <td style="padding:12px 14px; white-space:nowrap;">
-                    <span title="${escapeHTML(hoverTitle)}" style="background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.3); color:#f59e0b; padding:3px 9px; border-radius:8px; font-size:11.5px; font-weight:700; display:inline-flex; align-items:center; gap:5px; white-space:nowrap; cursor:help; transition:all 0.15s ease;" onmouseover="this.style.borderColor='rgba(245,158,11,0.6)'; this.style.background='rgba(245,158,11,0.2)';" onmouseout="this.style.borderColor='rgba(245,158,11,0.3)'; this.style.background='rgba(245,158,11,0.12)';">
+                    <span onclick="window.showBatchedMembersModal('${batchId}')" title="${escapeHTML(hoverTitle)}" style="background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.3); color:#f59e0b; padding:3px 9px; border-radius:8px; font-size:11.5px; font-weight:700; display:inline-flex; align-items:center; gap:5px; white-space:nowrap; cursor:pointer; transition:all 0.15s ease;" onmouseover="this.style.borderColor='rgba(245,158,11,0.6)'; this.style.background='rgba(245,158,11,0.2)';" onmouseout="this.style.borderColor='rgba(245,158,11,0.3)'; this.style.background='rgba(245,158,11,0.12)';" role="button" aria-label="View batched members list">
                       👥 Multiple (${group.length})
+                      <span style="font-size:9.5px; opacity:0.8; margin-left:1px;">ℹ️</span>
                     </span>
                   </td>
                   <td style="padding:12px 14px; font-size:13px; color:var(--text-main);">

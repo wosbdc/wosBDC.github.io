@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.9.25] - 2026-08-17
+- 👥 **Batched Members Detail Modal**: Added an interactive glassmorphic modal for batched audit log entries triggered on click/tap of the `👥 Multiple (N)` pill. Features a numbered member list, copy list to clipboard button, action badges, and complete mobile touch support.
+- 💡 **Hover & Tap Guidance**: Enhanced batched member pill styling with info indicator and explanatory tooltip text for cross-device accessibility.
+
 ## [2.9.24] - 2026-08-17
 - 👥 **Batched Members Tooltip**: Hovering over the orange `👥 Multiple (N)` pill in Admin Action Audit Logs now displays a formatted, numbered list of all unique member names included in the batched action with smooth hover glow and help cursor.
 

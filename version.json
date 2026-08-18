@@ -29,9 +29,10 @@
       "repository": "https://github.com/bdclive/BDClive"
     },
     "wosbdc_alliance_dashboard": {
-      "version": "2.9.24",
+      "version": "2.9.25",
       "repository": "https://github.com/wosbdc/wosBDC.github.io",
       "latestChanges": [
+        "v2.9.25: Added interactive Batched Members Modal with copy button for seamless mobile and desktop inspection of grouped actions",
         "v2.9.24: Added hover tooltip with numbered member names list to the orange batched pill in Admin Logs",
         "v2.9.23: Redesigned Admin Action Audit Logs table layout, semantic category badges, and batch summaries",
         "v2.9.22: Refined member perks copy for in-game mailbox delivery and furnace sync"
