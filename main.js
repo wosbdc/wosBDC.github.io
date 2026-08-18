@@ -3186,6 +3186,12 @@ window.openAddPlayerModal = () => {
   `;
 
   document.body.insertAdjacentHTML('beforeend', modalHtml);
+  const m = document.getElementById('addPlayerModal');
+  if (m) {
+    m.addEventListener('click', (e) => {
+      if (e.target === m) m.remove();
+    });
+  }
 };
 
 // Verify Game ID & Auto-Fill Chief Name
@@ -3206,7 +3212,7 @@ window.verifyAddPlayerGameId = async () => {
   btn.disabled = true;
   btn.textContent = '...';
   statusDiv.style.color = 'var(--text-muted)';
-  statusDiv.textContent = 'Verifying Game ID...';
+  statusDiv.textContent = 'Verifying Game ID with Century Games...';
 
   // 1. Check local alliance db first
   try {
@@ -3225,7 +3231,7 @@ window.verifyAddPlayerGameId = async () => {
 
      if (matchedName) {
          nameInput.value = matchedName;
-         if (matchedFurnace) furnaceInput.value = matchedFurnace;
+         if (matchedFurnace && furnaceInput) furnaceInput.value = matchedFurnace;
          statusDiv.style.color = '#10b981';
          statusDiv.innerHTML = `✅ Found in Alliance Database: <strong>${escapeHTML(matchedName)}</strong>`;
          btn.disabled = false;
@@ -3234,23 +3240,33 @@ window.verifyAddPlayerGameId = async () => {
      }
   } catch(e) { console.error(e); }
 
-  // 2. Query official Century Games server
+  // 2. Query official Century Games server via backend API
   try {
-    const response = await fetch(`${VERIFY_PROXY_URL}?id=${encodeURIComponent(val)}`);
+    const response = await fetch(`${API_BASE_URL}?api=sendGameCaptcha&id=${encodeURIComponent(val)}`);
     const data = await response.json();
 
-    if (data.success && data.nickname) {
-       nameInput.value = data.nickname;
-       if (data.stove_lv) furnaceInput.value = `FC${data.stove_lv}` || `F${data.stove_lv}`;
+    if (data.success || data.code === 1) {
+       if (!nameInput.value.trim()) {
+         nameInput.value = `Chief ${val}`;
+       }
        statusDiv.style.color = '#10b981';
-       statusDiv.innerHTML = `🌐 Verified from Game Servers: <strong>${escapeHTML(data.nickname)}</strong>`;
-    } else {
+       statusDiv.innerHTML = `🌐 <strong>Verified Active Game Account (ID: ${val})!</strong> Code sent to player's game mailbox. You may set Chief Name and save.`;
+    } else if (data.code === 101031005) {
+       if (!nameInput.value.trim()) {
+         nameInput.value = `Chief ${val}`;
+       }
+       statusDiv.style.color = '#10b981';
+       statusDiv.innerHTML = `🌐 <strong>Verified Active Game Account (ID: ${val})!</strong> (Daily code limit reached). You may set Chief Name and save.`;
+    } else if (data.code === 15034 || (data.message && data.message.includes('not found'))) {
        statusDiv.style.color = '#ef4444';
-       statusDiv.textContent = 'ID Not Found on Game Servers. You may enter details manually.';
+       statusDiv.textContent = `❌ Game ID ${val} does not exist on Whiteout Survival game servers. Please check the ID numbers.`;
+    } else {
+       statusDiv.style.color = '#f59e0b';
+       statusDiv.textContent = data.message || 'Verification returned status. You may enter details manually.';
     }
   } catch(err) {
-    statusDiv.style.color = '#ef4444';
-    statusDiv.textContent = 'Game server verification offline. You may enter details manually.';
+    statusDiv.style.color = '#f59e0b';
+    statusDiv.textContent = 'Game server verification busy. You may enter details manually.';
   } finally {
     btn.disabled = false;
     btn.textContent = '🔍 Verify ID';
@@ -17820,17 +17836,24 @@ const views = {
                       </div>
                     </div>
 
-                    <!-- Primary Segmented Switcher -->
-                    <div style="display:inline-flex; background:var(--bg-main); padding:3px; border-radius:10px; border:1px solid var(--border); gap:4px;">
-                      <button class="admin-user-filter-tab active" data-tab="all" onclick="window.setAdminUserPopulationTab('all', this)" style="background:var(--accent); color:#fff; border:none; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
-                        👥 All (${totalMembersCount})
+                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                      <!-- Add Player Button -->
+                      <button onclick="window.openAddPlayerModal()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:7px 16px; border-radius:10px; font-size:12.5px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(16,185,129,0.3); transition:0.2s;" onmouseover="this.style.transform='translateY(-1px)';" onmouseout="this.style.transform='translateY(0)';" title="Add a new player or character to the alliance database & roster">
+                        ➕ Add Player
                       </button>
-                      <button class="admin-user-filter-tab" data-tab="claimed" onclick="window.setAdminUserPopulationTab('claimed', this)" style="background:transparent; color:var(--text-muted); border:none; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
-                        ✅ Claimed (${totalUsersCount})
-                      </button>
-                      <button class="admin-user-filter-tab" data-tab="unclaimed" onclick="window.setAdminUserPopulationTab('unclaimed', this)" style="background:transparent; color:var(--text-muted); border:none; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
-                        ⚠️ Unclaimed (${unclaimedCount})
-                      </button>
+
+                      <!-- Primary Segmented Switcher -->
+                      <div style="display:inline-flex; background:var(--bg-main); padding:3px; border-radius:10px; border:1px solid var(--border); gap:4px;">
+                        <button class="admin-user-filter-tab active" data-tab="all" onclick="window.setAdminUserPopulationTab('all', this)" style="background:var(--accent); color:#fff; border:none; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+                          👥 All (${totalMembersCount})
+                        </button>
+                        <button class="admin-user-filter-tab" data-tab="claimed" onclick="window.setAdminUserPopulationTab('claimed', this)" style="background:transparent; color:var(--text-muted); border:none; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+                          ✅ Claimed (${totalUsersCount})
+                        </button>
+                        <button class="admin-user-filter-tab" data-tab="unclaimed" onclick="window.setAdminUserPopulationTab('unclaimed', this)" style="background:transparent; color:var(--text-muted); border:none; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+                          ⚠️ Unclaimed (${unclaimedCount})
+                        </button>
+                      </div>
                     </div>
                   </div>
 

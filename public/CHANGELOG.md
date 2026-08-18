@@ -1,6 +1,8 @@
 # CHANGELOG
 
 ## [2.9.15] - 2026-08-17
+- ➕ **Add Player to Alliance Database**: Added a prominent **"➕ Add Player"** button directly inside the **👥 Alliance Members & Player Database** header toolbar next to the segmented switcher, enabling instant manual addition of new members to the roster with native Firebase sync, Google Sheets logging, and optional alerts.
+- 🔍 **Century Games Game ID Verification Audit**: Fixed the Game ID verification engine (`Verify ID`) to query active Century Games official server endpoints directly via the backend API instead of deprecated proxies, properly verifying active players (e.g. `811636250`) and checking database records.
 - 👤 **Compact Mini User Account Actions**: Redesigned the User Account section to sit cleanly at the top of the Settings sidebar using side-by-side mini buttons (`👤 Account Hub` & `🚪 Sign Out`), taking minimal vertical space so Alliance Timers and countdowns remain prominently visible without being pushed down.
 - 🎨 **2-Column Display & Preferences Grid**: Compact 2x2 grid layout for Theme Engine, Mobile Navigation, App Installation, and Support actions.
 
