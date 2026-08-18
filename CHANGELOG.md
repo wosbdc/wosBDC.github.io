@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [2.9.32] - 2026-08-18
+- ⏱️ **Dynamic Time Active Duration Calculation**: Implemented an automated time-elapsed calculation engine (`window.calculateTimeActive`) that computes the exact active duration (e.g., `1y 9m`, `3w 2d`, or `5d`) dynamically from a player's start/joined date.
+- 📅 **Multi-Format Date Parsing & Normalization**: Added `window.parseDateSafe`, `window.formatDateForDisplay`, and `window.formatDateForInput` to robustly parse all standard date formats (`YYYY/MM/DD`, `YYYY-MM-DD`, `MM/DD/YYYY`, and ISO strings) across local timezones and browsers.
+- 👤 **Account Hub & Profile View Polish**: Separated the Joined Date display (formatted date e.g. `Nov 18, 2024`) from the Time Active badge (elapsed duration e.g. `1y 9m`).
+- ✏️ **Edit Profile Modal Integration**: Enhanced profile editing so selecting or changing a start date instantly re-calculates and synchronizes both `dateStarted`, `joinedDate`, and `timeActive` in Firebase and local state.
+- 👥 **Ecosystem-Wide Consistency**: Updated Alt Manager cards, Member Profiles, and Registered Users administration tables to dynamically format active duration.
+
 ## [2.9.31] - 2026-08-18
 - 📱 **Amethyst Radiant Glow Mobile App Icons**: Deployed custom high-resolution 3D Amethyst BDC app icons across the ecosystem.
 - 🍏 **iOS Home Screen Apple Touch Support**: Integrated dedicated 180×180px PNG `apple-touch-icon.png` so iPhones and iPads render crisp, vibrant app tiles when added to the home screen.

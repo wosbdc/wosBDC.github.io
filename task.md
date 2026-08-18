@@ -1,13 +1,15 @@
-# Task: Fix iOS Mobile Sidebar & Background Scroll Leak
+# Task: Fix Joined Date & Time Active Duration Calculation (v2.9.32)
 
-- [x] Create automated project backup archive (`backup_wos_v2.9.29_pre_ios_sidebar_fix.zip`) <!-- id: 0 -->
-- [ ] Fix Z-index layering (`.sidebar-overlay` z-index 99990, `.settings-sidebar` z-index 99999) so navbar (z-index 9990) cannot bleed through or receive touches <!-- id: 1 -->
-- [ ] Implement iOS body scroll lock (`body.sidebar-open`, `body.mobile-menu-open`, `touch-action: none`, `overscroll-behavior: contain`) <!-- id: 2 -->
-- [ ] Upgrade `.settings-sidebar` and `.mobile-menu` with `height: 100dvh`, `-webkit-overflow-scrolling: touch`, `touch-action: pan-y`, and transform-based sliding animations <!-- id: 3 -->
-- [ ] Add touchmove event cancellation on `.sidebar-overlay` to block iOS rubber-band dragging of background document <!-- id: 4 -->
-- [ ] Bump version to `v2.9.30` across `package.json`, `index.html`, `version.json`, `public/version.json`, `public/sw.js`, and `CHANGELOG.md` <!-- id: 5 -->
-- [ ] Run full automated test suite & build validation (`cmd /c npm run build`) <!-- id: 6 -->
-- [ ] Commit and push to GitHub with `v2.9.30 : ...` title <!-- id: 7 -->
+- [x] Create automated project backup archive (`backup_wos_v2.9.32_pre_date_active_fix.zip`) <!-- id: 0 -->
+- [x] Implement robust multi-format date parser `parseDateSafe` and formatters `formatDateForDisplay` and `formatDateForInput` <!-- id: 1 -->
+- [x] Implement accurate `calculateTimeActive` to compute elapsed active time (years, months, days) from start date <!-- id: 2 -->
+- [x] Implement intelligent `formatTimeActiveShort` to parse raw dates or shorten verbose time strings <!-- id: 3 -->
+- [x] Update Account Hub | Profile view (`views.account`) to display clean joined date and computed elapsed duration <!-- id: 4 -->
+- [x] Update Edit Profile modal to load and save `dateStarted` and `joinedDate`, automatically updating `timeActive` <!-- id: 5 -->
+- [x] Update Alt Manager, Member Profiles, and Admin Users table to properly format `timeActive` <!-- id: 6 -->
+- [x] Bump version to `v2.9.32` across `package.json`, `index.html`, `public/sw.js`, `public/version.json`, `CHANGELOG.md`, `public/CHANGELOG.md` <!-- id: 7 -->
+- [x] Run full automated test suite & build validation (`cmd /c npm run build`) <!-- id: 8 -->
+- [ ] Commit and push to GitHub with `v2.9.32 : ...` format <!-- id: 9 -->
 
 
 

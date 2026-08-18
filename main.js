@@ -327,23 +327,22 @@ window.translateWosApiError = (msg, code = null) => {
   return codeBadge ? `${codeBadge}${cleanMsg}` : cleanMsg;
 };
 
-window.formatTimeActiveShort = (str) => {
-    if (!str || typeof str !== 'string') return str;
-    let formatted = str.replace(/\s*years?/gi, 'y')
-              .replace(/\s*months?/gi, 'm')
-              .replace(/\s*days?/gi, 'd')
-              .replace(/,\s*/g, ' ')
-              .replace(/\s+/g, ' ')
-              .trim();
-              
-    let filtered = formatted.split(' ').filter(part => !part.match(/^0[ymd]$/i)).join(' ');
-    return filtered === '' ? '0d' : filtered;
+window.parseDateSafe = (dateInput) => {
+    if (!dateInput) return null;
+    if (dateInput instanceof Date) return isNaN(dateInput.getTime()) ? null : dateInput;
+    const str = dateInput.toString().trim();
+    if (!str) return null;
+    const norm = str.includes('T') ? str : str.replace(/-/g, '/');
+    const d = new Date(norm);
+    return isNaN(d.getTime()) ? null : d;
 };
 
 window.calculateTimeActive = (dateInput) => {
    if (!dateInput) return 'Unknown';
-   const startDate = new Date(dateInput);
-   if (isNaN(startDate.getTime())) return window.formatTimeActiveShort(dateInput.toString());
+   const startDate = window.parseDateSafe ? window.parseDateSafe(dateInput) : new Date(dateInput);
+   if (!startDate) {
+       return window.formatTimeActiveShort(dateInput.toString());
+   }
    
    const now = new Date();
    let years = now.getFullYear() - startDate.getFullYear();
@@ -370,10 +369,33 @@ window.calculateTimeActive = (dateInput) => {
    return parts.join(' ');
 };
 
+window.formatTimeActiveShort = (str) => {
+    if (!str) return 'Unknown';
+    if (typeof str !== 'string') str = String(str);
+    str = str.trim();
+    if (!str) return 'Unknown';
+    
+    // If input is a raw date string (e.g. '2024/11/18', '2024-11-18', '11/18/2024', ISO date), calculate elapsed active time
+    if (!/\b(years?|months?|days?|y|m|d)\b/i.test(str)) {
+        const parsedD = window.parseDateSafe ? window.parseDateSafe(str) : new Date(str);
+        if (parsedD && !isNaN(parsedD.getTime())) return window.calculateTimeActive(str);
+    }
+
+    let formatted = str.replace(/\s*years?/gi, 'y')
+              .replace(/\s*months?/gi, 'm')
+              .replace(/\s*days?/gi, 'd')
+              .replace(/,\s*/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim();
+              
+    let filtered = formatted.split(' ').filter(part => !part.match(/^0[ymd]$/i)).join(' ');
+    return filtered === '' ? '0d' : filtered;
+};
+
 window.formatDateForInput = (dateStr) => {
    if (!dateStr) return '';
-   const d = new Date(dateStr);
-   if (isNaN(d.getTime())) return '';
+   const d = window.parseDateSafe ? window.parseDateSafe(dateStr) : new Date(dateStr);
+   if (!d || isNaN(d.getTime())) return '';
    const year = d.getFullYear();
    const month = String(d.getMonth() + 1).padStart(2, '0');
    const day = String(d.getDate()).padStart(2, '0');
@@ -12196,7 +12218,7 @@ window.openEditProfileModal = async () => {
     if (snap.exists()) {
       const uData = snap.val();
       if (uData.stove_lv || uData.furnaceLevel) currentFurnace = (uData.stove_lv || uData.furnaceLevel).toString();
-      if (uData.joinedDate) currentJoinedDate = uData.joinedDate;
+      if (uData.dateStarted || uData.joinedDate) currentJoinedDate = (uData.dateStarted || uData.joinedDate).toString();
       if (uData.bio) currentBio = uData.bio;
     }
   } catch(e) { console.error("Firebase fetch error in edit profile:", e); }
@@ -12208,18 +12230,13 @@ window.openEditProfileModal = async () => {
        const p = Object.values(rosterData).find(rp => rp[1] && rp[1].toString().trim() === currentUser.gameId.toString().trim() || (rp[0] && rp[0].toString().toLowerCase() === chiefName.toLowerCase()));
        if (p) {
           if (p[2] && currentFurnace === '30') currentFurnace = p[2].toString();
-          if (p[5] && !currentJoinedDate) currentJoinedDate = p[5].toString();
+          if (p[4] && !currentJoinedDate) currentJoinedDate = p[4].toString();
+          else if (p[5] && !currentJoinedDate) currentJoinedDate = p[5].toString();
        }
     }
   }
 
-  let isoDate = '';
-  if (currentJoinedDate) {
-     try {
-       const d = new Date(currentJoinedDate);
-       if (!isNaN(d.getTime())) isoDate = d.toISOString().split('T')[0];
-     } catch(e) {}
-  }
+  const isoDate = currentJoinedDate ? window.formatDateForInput(currentJoinedDate) : '';
 
   const oldModal = document.getElementById('editProfileModalOverlay');
   if (oldModal && oldModal.parentNode) oldModal.parentNode.removeChild(oldModal);
@@ -12305,11 +12322,12 @@ window.openEditProfileModal = async () => {
 
            // 1. Update user node in Firebase
            const userRef = ref(db, `users/${currentUser.uid}`);
-           await set(userRef, {
-              ...currentUser,
+           await update(userRef, {
               stove_lv: newFurnace,
               furnaceLevel: newFurnace,
+              dateStarted: newJoinedDate,
               joinedDate: newJoinedDate,
+              timeActive: window.calculateTimeActive(newJoinedDate),
               bio: newBio,
               updatedAt: new Date().toISOString()
            });
@@ -12328,13 +12346,16 @@ window.openEditProfileModal = async () => {
                     break;
                  }
               }
-              const saveKey = foundKey || chiefName;
+              const saveKey = foundKey || (cleanGid ? cleanGid : chiefName);
               rosterObj[saveKey] = {
                  ...(rosterObj[saveKey] || {}),
                  name: chiefName,
                  gameId: cleanGid,
                  furnaceLevel: newFurnace,
                  stove_lv: newFurnace,
+                 dateStarted: newJoinedDate,
+                 joinedDate: newJoinedDate,
+                 timeActive: window.calculateTimeActive(newJoinedDate),
                  updatedAt: Date.now()
               };
 
@@ -12344,7 +12365,9 @@ window.openEditProfileModal = async () => {
 
            currentUser.stove_lv = newFurnace;
            currentUser.furnaceLevel = newFurnace;
+           currentUser.dateStarted = newJoinedDate;
            currentUser.joinedDate = newJoinedDate;
+           currentUser.timeActive = window.calculateTimeActive(newJoinedDate);
            currentUser.bio = newBio;
 
            try {
@@ -18800,12 +18823,17 @@ const views = {
         if (p) {
             flVal = p.furnaceLevel || p.stove_lv || flVal;
             let gcVal = p.giftCodes;
-            let taVal = p.timeActive;
+            let taVal = p.timeActive || p.dateStarted || p.joinedDate || u.timeActive || u.dateStarted || u.joinedDate;
             isEnrolled = (gcVal === true || gcVal === 'TRUE' || (typeof gcVal === 'string' && gcVal.toLowerCase().trim() === 'true'));
             
             if (flVal) rosterInfoHtml += `<span onclick="window.openAdminEditFurnaceModal('${escapeHTML(cName)}', '${uGidStr}', '${flVal}')" style="cursor:pointer; display:inline-flex; align-items:center;" title="Click to Edit Furnace Level">${window.getFurnaceIconHtml(flVal, 32)}</span>`;
             if (isEnrolled) rosterInfoHtml += `<span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:3px 8px; border-radius:10px; font-size:11px; font-weight:bold;">🎁 Enrolled</span>`;
-            if (taVal) rosterInfoHtml += `<span style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-muted); padding:3px 8px; border-radius:10px; font-size:11px;">⏱️ ${escapeHTML(taVal)}</span>`;
+            if (taVal) {
+                const taFormatted = window.formatTimeActiveShort(taVal.toString());
+                if (taFormatted && taFormatted !== 'Unknown') {
+                    rosterInfoHtml += `<span style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-muted); padding:3px 8px; border-radius:10px; font-size:11px;">⏱️ ${escapeHTML(taFormatted)}</span>`;
+                }
+            }
         } else if (flVal) {
             rosterInfoHtml += `<span onclick="window.openAdminEditFurnaceModal('${escapeHTML(cName)}', '${uGidStr}', '${flVal}')" style="cursor:pointer; display:inline-flex; align-items:center;" title="Click to Edit Furnace Level">${window.getFurnaceIconHtml(flVal, 32)}</span>`;
         }
@@ -22020,7 +22048,9 @@ window.resetBearTrapEvent = async () => {
             const profileData = profileSnap.val();
             if (profileData.stove_lv) currentUser.stove_lv = profileData.stove_lv;
             if (profileData.furnaceLevel) currentUser.furnaceLevel = profileData.furnaceLevel;
+            if (profileData.dateStarted) currentUser.dateStarted = profileData.dateStarted;
             if (profileData.joinedDate) currentUser.joinedDate = profileData.joinedDate;
+            if (profileData.timeActive) currentUser.timeActive = profileData.timeActive;
             if (profileData.bio) currentUser.bio = profileData.bio;
             if (profileData.wos_cg_token) currentUser.wos_cg_token = profileData.wos_cg_token;
             if (profileData.section) currentUser.section = profileData.section;
@@ -22494,13 +22524,17 @@ window.resetBearTrapEvent = async () => {
           );
           if (p) {
               if (p.furnaceLevel || p.stove_lv) furnaceLevelStr = (p.furnaceLevel || p.stove_lv).toString();
-              if (p.joinedDate) {
-                  try {
-                      const d = new Date(p.joinedDate);
-                      if (!isNaN(d)) joinedDateStr = d.toLocaleDateString();
-                  } catch(e) { console.error(e); }
+              const pDate = p.dateStarted || p.joinedDate;
+              if (pDate) {
+                  const fmt = window.formatDateForDisplay(pDate);
+                  if (fmt && fmt !== 'N/A') {
+                      joinedDateStr = fmt;
+                      timeActiveStr = window.calculateTimeActive(pDate);
+                  }
               }
-              if (p.timeActive) timeActiveStr = window.formatTimeActiveShort(p.timeActive.toString());
+              if (p.timeActive && (!timeActiveStr || timeActiveStr === 'Unknown')) {
+                  timeActiveStr = window.formatTimeActiveShort(p.timeActive.toString());
+              }
           }
       }
 
@@ -22509,14 +22543,13 @@ window.resetBearTrapEvent = async () => {
       if (userFurnace) {
           furnaceLevelStr = userFurnace.toString();
       }
-      if (currentUser.joinedDate) {
-          try {
-              const d = new Date(currentUser.joinedDate);
-              if (!isNaN(d.getTime())) {
-                  joinedDateStr = d.toLocaleDateString();
-                  timeActiveStr = window.formatTimeActiveShort(currentUser.joinedDate);
-              }
-          } catch(e) {}
+      const userJoined = currentUser.dateStarted || currentUser.joinedDate;
+      if (userJoined) {
+          const fmt = window.formatDateForDisplay(userJoined);
+          if (fmt && fmt !== 'N/A') {
+              joinedDateStr = fmt;
+              timeActiveStr = window.calculateTimeActive(userJoined);
+          }
       }
 
       const userBio = currentUser.bio || '';
@@ -27739,9 +27772,9 @@ window.generatePlayerProfileHtml = (chiefName, p, headers, colIsUpcoming, roster
     if (gcVal === true || gcVal === 'TRUE' || (typeof gcVal === 'string' && gcVal.toLowerCase().trim() === 'true')) {
        headerBadgesHtml += '<span style="background:color-mix(in srgb, var(--success) 15%, transparent); border:1px solid var(--success); color:var(--text-main); padding:4px 8px; border-radius:12px; font-size:11px; font-weight:bold;">✅ All Gift Codes</span>';
     }
-    let taVal = rosterInfo.timeActive;
+    let taVal = rosterInfo.timeActive || rosterInfo.dateStarted || rosterInfo.joinedDate;
     if (taVal && taVal.toString().trim() !== "") {
-       headerBadgesHtml += '<span style="background:color-mix(in srgb, var(--text-main) 10%, transparent); border:1px solid var(--border); color:var(--text-main); padding:4px 8px; border-radius:12px; font-size:11px; font-weight:bold;">⏱️ '+taVal+'</span>';
+       headerBadgesHtml += '<span style="background:color-mix(in srgb, var(--text-main) 10%, transparent); border:1px solid var(--border); color:var(--text-main); padding:4px 8px; border-radius:12px; font-size:11px; font-weight:bold;">⏱️ '+window.formatTimeActiveShort(taVal)+'</span>';
     }
   }
   
@@ -28015,7 +28048,8 @@ window.generatePlayerProfileHtml = (chiefName, p, headers, colIsUpcoming, roster
                 for (let i = 1; i < rosterData.length; i++) {
                     if (rosterData[i][1] && rosterData[i][1].toString().trim() === gid.toString().trim()) {
                         flVal = rosterData[i][2] !== undefined && rosterData[i][2] !== "" ? rosterData[i][2] : 'N/A';
-                        timeActiveVal = rosterData[i][5] !== undefined && rosterData[i][5] !== "" ? window.formatTimeActiveShort(rosterData[i][5].toString()) : 'Unknown';
+                        let rawDateOrTa = (rosterData[i][4] || rosterData[i][5] || '');
+                        timeActiveVal = rawDateOrTa ? window.formatTimeActiveShort(rawDateOrTa.toString()) : 'Unknown';
                         break;
                     }
                 }

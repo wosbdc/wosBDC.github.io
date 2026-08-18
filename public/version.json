@@ -1,19 +1,19 @@
 {
-  "version": "2.9.31",
+  "version": "2.9.32",
   "releaseDate": "2026-08-18",
-  "title": "What's New in v2.9.31",
+  "title": "What's New in v2.9.32",
   "notes": [
-    "📱 Amethyst Radiant Glow App Icon: Deployed high-resolution 3D Amethyst & Frost BDC mobile app icons, Apple Touch bookmarks, PWA manifests, and multi-resolution favicons for phone home screens."
+    "⏱️ Dynamic Time Active & Joined Date Calculation: Implemented robust multi-format date parsing and dynamic active duration calculations (years, months, days) across Profile, Alt Manager, and Alliance Roster."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "2.9.31",
+    "version": "2.9.32",
     "repository": "https://github.com/wosbdc/wosBDC.github.io",
     "latestChanges": [
+      "v2.9.32: Fixed Joined Date and Dynamic Time Active duration calculation across Profile, Edit Modal, and Roster",
+      "v2.9.31: Amethyst Radiant Glow App Icon, iOS Apple Touch Icon, and PWA Manifests",
+      "v2.9.30: Settings Sidebar & Mobile Interaction Polish with iOS body scroll lock and 100dvh",
       "v2.9.29: Dynamic Alliance Gatekeeper & Live Signup Telemetry across Discord alerts and Central Command",
-      "v2.9.28: Merged Target Player and Action Details into unified 'Target Chief(s) & Details' column with compact badge chips",
-      "v2.9.27: Expanded Admin Hub & Audit Logs window to 1300px and added custom high-contrast scrollbars with sticky column headers",
-      "v2.9.26: Supported multi-member target & breakdown parsing for single-entry batch logs (such as multi-player Bear Trap donations) with interactive modal details and badges",
-      "v2.9.25: Added interactive Batched Members Modal with copy button for seamless mobile and desktop inspection of grouped actions"
+      "v2.9.28: Merged Target Player and Action Details into unified 'Target Chief(s) & Details' column with compact badge chips"
     ]
   }
 }
