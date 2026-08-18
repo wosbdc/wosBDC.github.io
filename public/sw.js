@@ -1,9 +1,11 @@
-const CACHE_NAME = 'wos-bdc-pwa-v2.9.30';
+const CACHE_NAME = 'wos-bdc-pwa-v2.9.31';
 const ASSETS_TO_CACHE = [
   './manifest.json',
-  './favicon.svg',
-  './icon-192.svg',
-  './icon-512.svg'
+  './favicon.ico',
+  './favicon.png',
+  './apple-touch-icon.png',
+  './icon-192.png',
+  './icon-512.png'
 ];
 
 // Install Event - Skip waiting immediately on update

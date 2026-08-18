@@ -4,22 +4,28 @@
   "description": "Official Whiteout Survival BDC Alliance Dashboard & Tracker",
   "icons": [
     {
-      "src": "favicon.svg",
-      "type": "image/svg+xml",
-      "sizes": "any",
+      "src": "icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
       "purpose": "any maskable"
     },
     {
-      "src": "icon-192.svg",
-      "type": "image/svg+xml",
-      "sizes": "192x192 180x180 128x128",
+      "src": "icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
       "purpose": "any maskable"
     },
     {
-      "src": "icon-512.svg",
-      "type": "image/svg+xml",
-      "sizes": "512x512 384x384 256x256",
-      "purpose": "any maskable"
+      "src": "apple-touch-icon.png",
+      "type": "image/png",
+      "sizes": "180x180",
+      "purpose": "any"
+    },
+    {
+      "src": "favicon.png",
+      "type": "image/png",
+      "sizes": "64x64",
+      "purpose": "any"
     }
   ],
   "start_url": "./",

@@ -1,12 +1,12 @@
 {
-  "version": "2.9.30",
+  "version": "2.9.31",
   "releaseDate": "2026-08-18",
-  "title": "What's New in v2.9.30",
+  "title": "What's New in v2.9.31",
   "notes": [
-    "⚙️ Settings Sidebar & Mobile UX Refinement: Improved sidebar close interactions, cleaned up scroll-locks on drawer dismiss, and ensured seamless navigation flow across mobile and desktop devices."
+    "📱 Amethyst Radiant Glow App Icon: Deployed high-resolution 3D Amethyst & Frost BDC mobile app icons, Apple Touch bookmarks, PWA manifests, and multi-resolution favicons for phone home screens."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "2.9.30",
+    "version": "2.9.31",
     "repository": "https://github.com/wosbdc/wosBDC.github.io",
     "latestChanges": [
       "v2.9.29: Dynamic Alliance Gatekeeper & Live Signup Telemetry across Discord alerts and Central Command",

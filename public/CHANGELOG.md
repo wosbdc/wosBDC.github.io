@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.31] - 2026-08-18
+- 📱 **Amethyst Radiant Glow Mobile App Icons**: Deployed custom high-resolution 3D Amethyst BDC app icons across the ecosystem.
+- 🍏 **iOS Home Screen Apple Touch Support**: Integrated dedicated 180×180px PNG `apple-touch-icon.png` so iPhones and iPads render crisp, vibrant app tiles when added to the home screen.
+- 🤖 **PWA Manifest & Favicon Overhaul**: Upgraded `manifest.json` with 192×192 and 512×512 maskable PNG assets and multi-resolution `favicon.ico`.
+
 ## [2.9.30] - 2026-08-18
 - ⚙️ **Settings Sidebar & Mobile Interaction Polish**: Enhanced drawer dismissal logic, ensured complete cleanup of touch-action and scroll-locks on mobile devices, and improved responsive navigation flow.
 
