@@ -1,19 +1,19 @@
 {
-  "version": "2.9.27",
+  "version": "2.9.28",
   "releaseDate": "2026-08-17",
-  "title": "What's New in v2.9.27",
+  "title": "What's New in v2.9.28",
   "notes": [
-    "🖥️ Expanded Admin Hub & Audit Logs: Expanded the maximum container width to 1300px for a widescreen layout and added custom high-contrast scrollbars with sticky column headers for smooth vertical and horizontal navigation."
+    "✨ Compact 4-Column Audit Logs Layout: Merged Target Player and Action Details into a unified 'Target Chief(s) & Details' column with inline styled chief chips, removing horizontal table blowout."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "2.9.27",
+    "version": "2.9.28",
     "repository": "https://github.com/wosbdc/wosBDC.github.io",
     "latestChanges": [
+      "v2.9.28: Merged Target Player and Action Details into unified 'Target Chief(s) & Details' column with compact badge chips",
       "v2.9.27: Expanded Admin Hub & Audit Logs window to 1300px and added custom high-contrast scrollbars with sticky column headers",
       "v2.9.26: Supported multi-member target & breakdown parsing for single-entry batch logs (such as multi-player Bear Trap donations) with interactive modal details and badges",
       "v2.9.25: Added interactive Batched Members Modal with copy button for seamless mobile and desktop inspection of grouped actions",
-      "v2.9.24: Added hover tooltip with numbered member names list to the orange batched pill in Admin Logs",
-      "v2.9.23: Redesigned Admin Action Audit Logs table layout, semantic category badges, and batch summaries"
+      "v2.9.24: Added hover tooltip with numbered member names list to the orange batched pill in Admin Logs"
     ]
   }
 }

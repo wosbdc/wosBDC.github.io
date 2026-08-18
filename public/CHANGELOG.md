@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.28] - 2026-08-17
+- ✨ **Compact 4-Column Audit Logs Layout**: Merged the redundant Target Player and Action Details columns into a unified "Target Chief(s) & Details" column, eliminating horizontal overflow and table blowout while providing a cleaner, more readable view.
+- 🏷️ **Inline Target Chief Badges & Chips**: Formatted player targets into compact chief badges (e.g. `👤 Target: ChiefName` or `👥 Multiple (N)` batch pill) alongside cleanly parsed event details and notes.
+- 🎨 **Enhanced Category Badges & Typography**: Polished action category badges with semantic icons, consistent pill tags, and modern contrast for instant visual categorization.
+
 ## [2.9.27] - 2026-08-17
 - 🖥️ **Widescreen Admin Hub Layout (1300px)**: Expanded the maximum width of the Admin Menu container from 800px to 1300px with 100% responsive fluid width, giving the Admin Action Audit Logs and all admin tabs expansive widescreen workspace on desktop and tablets.
 - 📜 **Custom High-Contrast Scrollbars & Sticky Headers**: Implemented `.admin-audit-table-scroll` container with custom styled scrollbars for both horizontal and vertical navigation, fixed 68vh viewport height, and sticky column headers that stay in view while scrolling through historical logs.

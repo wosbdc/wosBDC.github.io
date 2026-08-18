@@ -17113,27 +17113,30 @@ const views = {
         return [{ name: name || raw, meta, raw }];
       };
 
-      // Mobile & Desktop Interactive Modal to View All Batched Member Names
-      window.showBatchedMembersModal = (batchId) => {
-        const batchData = window._batchedMembersMap && window._batchedMembersMap[batchId];
-        if (!batchData) return;
+      // Rich Unified Interactive Modal to View Action & Batched Member Details
+      window.showLogDetailModal = (logId) => {
+        const logData = window._batchedMembersMap && window._batchedMembersMap[logId];
+        if (!logData) return;
 
-        const existing = document.getElementById('batchedMembersModal');
+        const existing = document.getElementById('logDetailModal');
         if (existing) existing.remove();
 
         const modal = document.createElement('div');
-        modal.id = 'batchedMembersModal';
+        modal.id = 'logDetailModal';
         modal.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(6px); z-index:100060; display:flex; align-items:center; justify-content:center; padding:16px; box-sizing:border-box; animation:fadeIn 0.2s ease;';
 
         modal.onclick = (e) => {
           if (e.target === modal) modal.remove();
         };
 
-        const listSource = (batchData.memberDetails && batchData.memberDetails.length > 0)
-          ? batchData.memberDetails
-          : (batchData.members && batchData.members.length > 0)
-            ? batchData.members.map(m => ({ name: m, meta: '', raw: m }))
+        const listSource = (logData.memberDetails && logData.memberDetails.length > 0)
+          ? logData.memberDetails
+          : (logData.members && logData.members.length > 0)
+            ? logData.members.map(m => ({ name: m, meta: '', raw: m }))
             : [];
+
+        const isBatch = logData.isBatch || listSource.length > 1;
+        const memberCount = listSource.length;
 
         const membersListHtml = listSource.length > 0
           ? listSource.map((item, idx) => {
@@ -17153,43 +17156,79 @@ const views = {
                 </div>
               `;
             }).join('')
-          : `<div style="text-align:center; color:var(--text-muted); padding:20px;">No named members found in this batch.</div>`;
+          : (logData.target && logData.target !== '-')
+            ? `<div style="display:flex; align-items:center; justify-content:space-between; padding:9px 12px; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:8px; font-size:13px;">
+                <span style="font-weight:600; color:var(--text-main);">${escapeHTML(logData.target)}</span>
+                <span style="background:rgba(56,189,248,0.1); color:#38bdf8; font-size:11px; padding:2px 8px; border-radius:6px; font-weight:600;">Chief</span>
+              </div>`
+            : `<div style="text-align:center; color:var(--text-muted); padding:12px; font-size:12.5px;">No specific target player attached.</div>`;
 
         modal.innerHTML = `
-          <div style="background:var(--bg-card, #1e293b); border:1px solid var(--border, #334155); border-radius:16px; width:100%; max-width:440px; max-height:85vh; display:flex; flex-direction:column; box-shadow:0 25px 50px -12px rgba(0,0,0,0.6); overflow:hidden;" onclick="event.stopPropagation()">
+          <div style="background:var(--bg-card, #1e293b); border:1px solid var(--border, #334155); border-radius:16px; width:100%; max-width:480px; max-height:88vh; display:flex; flex-direction:column; box-shadow:0 25px 50px -12px rgba(0,0,0,0.6); overflow:hidden;" onclick="event.stopPropagation()">
             <!-- Header -->
             <div style="padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.02);">
               <div style="display:flex; align-items:center; gap:10px;">
-                <div style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.3); color:#f59e0b; width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px;">
-                  👥
+                <div style="background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:19px;">
+                  ${isBatch ? '👥' : '📋'}
                 </div>
                 <div>
-                  <h3 style="margin:0; color:var(--text-main); font-size:16px; font-weight:700;">Batched Members</h3>
+                  <h3 style="margin:0; color:var(--text-main); font-size:16px; font-weight:700;">${escapeHTML(logData.action || 'Admin Action Details')}</h3>
                   <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
-                    ${listSource.length} Target Chiefs &bull; Admin: <span style="color:#a78bfa; font-weight:600;">${escapeHTML(batchData.admin || 'Admin')}</span>
+                    ${isBatch ? `${memberCount} Target Chiefs` : (logData.target || 'General Action')} &bull; Admin: <span style="color:#a78bfa; font-weight:700;">${escapeHTML(logData.admin || 'Admin')}</span>
                   </div>
                 </div>
               </div>
-              <button onclick="document.getElementById('batchedMembersModal')?.remove()" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:15px; transition:0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.2)'; this.style.color='#ef4444';" onmouseout="this.style.background='rgba(255,255,255,0.06)'; this.style.color='var(--text-main)';">✕</button>
+              <button onclick="document.getElementById('logDetailModal')?.remove()" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:15px; transition:0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.2)'; this.style.color='#ef4444';" onmouseout="this.style.background='rgba(255,255,255,0.06)'; this.style.color='var(--text-main)';">✕</button>
             </div>
 
-            <!-- Action Sub-Header -->
-            <div style="padding:10px 20px; background:rgba(0,0,0,0.2); border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; font-size:12px; gap:8px; flex-wrap:wrap;">
-              <span style="color:var(--text-muted);">Action: <strong style="color:var(--text-main);">${escapeHTML(batchData.action || 'Batch Action')}</strong></span>
-              <span style="color:var(--text-muted); font-size:11px;">🕒 ${escapeHTML(batchData.timeStr || '')}</span>
+            <!-- Meta Sub-Header -->
+            <div style="padding:10px 20px; background:rgba(0,0,0,0.25); border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; font-size:12px; gap:8px; flex-wrap:wrap;">
+              <span style="color:var(--text-muted);">📅 <strong style="color:var(--text-main);">${escapeHTML(logData.dateStr || '')}</strong></span>
+              <span style="color:var(--text-muted); font-size:11.5px;">🕒 ${escapeHTML(logData.timeStr || '')}</span>
             </div>
 
-            <!-- Scrollable List -->
-            <div style="padding:16px 20px; overflow-y:auto; -webkit-overflow-scrolling:touch; max-height:50vh; display:flex; flex-direction:column; gap:8px;">
-              ${membersListHtml}
+            <!-- Scrollable Content -->
+            <div style="padding:16px 20px; overflow-y:auto; -webkit-overflow-scrolling:touch; max-height:55vh; display:flex; flex-direction:column; gap:14px; scrollbar-width:thin; scrollbar-color:var(--accent) rgba(0,0,0,0.3);">
+              
+              <!-- Action Details Box -->
+              ${logData.details ? `
+                <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:10px; padding:12px 14px;">
+                  <div style="font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:700; letter-spacing:0.5px; margin-bottom:4px;">📝 Action Details & Changes</div>
+                  <div style="font-size:13px; color:var(--text-main); line-height:1.5; word-break:break-word;">
+                    ${escapeHTML(logData.details)}
+                  </div>
+                </div>
+              ` : ''}
+
+              <!-- Summary Badges if batched -->
+              ${logData.summaryHtml ? `
+                <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                  ${logData.summaryHtml}
+                </div>
+              ` : ''}
+
+              <!-- Target Chiefs List Section -->
+              <div>
+                <div style="font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:700; letter-spacing:0.5px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+                  <span>👥 Target Chief(s) (${memberCount || (logData.target ? 1 : 0)})</span>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:6px;">
+                  ${membersListHtml}
+                </div>
+              </div>
+
             </div>
 
             <!-- Footer -->
-            <div style="padding:14px 20px; border-top:1px solid var(--border); display:flex; gap:10px; justify-content:flex-end; background:rgba(255,255,255,0.02);">
-              <button onclick="window.copyBatchedMembersList('${batchId}')" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); padding:8px 14px; border-radius:8px; font-size:12.5px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:0.2s;">
-                📋 Copy List
-              </button>
-              <button onclick="document.getElementById('batchedMembersModal')?.remove()" style="background:var(--accent); color:white; border:none; padding:8px 18px; border-radius:8px; font-size:12.5px; font-weight:bold; cursor:pointer;">
+            <div style="padding:14px 20px; border-top:1px solid var(--border); display:flex; gap:10px; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02);">
+              <div>
+                ${listSource.length > 0 || (logData.target && logData.target !== '-') ? `
+                  <button onclick="window.copyBatchedMembersList('${logId}')" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); padding:8px 14px; border-radius:8px; font-size:12.5px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:0.2s;">
+                    📋 Copy Details
+                  </button>
+                ` : ''}
+              </div>
+              <button onclick="document.getElementById('logDetailModal')?.remove()" style="background:var(--accent); color:white; border:none; padding:8px 20px; border-radius:8px; font-size:12.5px; font-weight:bold; cursor:pointer;">
                 Done
               </button>
             </div>
@@ -17198,6 +17237,9 @@ const views = {
 
         document.body.appendChild(modal);
       };
+
+      // Compatibility alias
+      window.showBatchedMembersModal = (id) => window.showLogDetailModal(id);
 
       window.copyBatchedMembersList = (batchId) => {
         const batchData = window._batchedMembersMap && window._batchedMembersMap[batchId];
@@ -17211,16 +17253,18 @@ const views = {
           }).join('\n');
         } else if (batchData.members && batchData.members.length > 0) {
           text = batchData.members.map((m, idx) => `${idx + 1}. ${m}`).join('\n');
+        } else if (batchData.target && batchData.target !== '-') {
+          text = `${batchData.target}: ${batchData.details || ''}`;
         }
         if (!text) return;
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(text);
         }
-        const count = (batchData.memberDetails || batchData.members || []).length;
+        const count = (batchData.memberDetails || batchData.members || (batchData.target ? [1] : [])).length;
         if (typeof window.showToast === 'function') {
-          window.showToast(`📋 Copied ${count} member names!`);
+          window.showToast(`📋 Copied details for ${count} chief(s)!`);
         } else {
-          alert(`📋 Copied ${count} member names!`);
+          alert(`📋 Copied details for ${count} chief(s)!`);
         }
       };
 
@@ -17228,7 +17272,7 @@ const views = {
       window.fetchAdminLog = async () => {
         const tb = document.getElementById('adminLogsTableBody');
         if (!tb) return;
-        tb.innerHTML = `<tr><td colspan="5" style="padding:20px; text-align:center; color:var(--text-muted); font-size:13px;">⏳ Loading Admin Activity Logs...</td></tr>`;
+        tb.innerHTML = `<tr><td colspan="4" style="padding:20px; text-align:center; color:var(--text-muted); font-size:13px;">⏳ Loading Admin Activity Logs...</td></tr>`;
         
         window._batchedMembersMap = {};
         let logItems = [];
@@ -17319,14 +17363,17 @@ const views = {
                  const batchId = `b_single_${batchCounter}_${Date.now()}`;
                  let hoverTitle = `👥 Batched Target Members (${singleExtracted.length}):\n` + 
                                   singleExtracted.map((m, idx) => `  ${idx + 1}. ${m.raw || m.name}`).join('\n') + 
-                                  `\n\n💡 Click or tap to open member list modal`;
+                                  `\n\n💡 Click or tap to open details modal`;
 
                  window._batchedMembersMap = window._batchedMembersMap || {};
                  window._batchedMembersMap[batchId] = {
+                   id: batchId,
+                   isBatch: true,
                    admin: adminName,
                    action: firstLog.action || 'Admin Action',
                    dateStr: dateStr,
                    timeStr: timeStr,
+                   details: firstLog.details || '',
                    members: singleExtracted.map(m => m.name),
                    memberDetails: singleExtracted,
                    group: group
@@ -17335,7 +17382,7 @@ const views = {
                  const actionBadge = window.getAdminActionBadgeHtml(firstLog.action || 'Batch Action', true, singleExtracted.length);
 
                  tbodyHtml += `
-                   <tr class="admin-log-row" data-admin="${adminName.toLowerCase()}" data-timestamp="${firstLog.timestamp || 0}" style="border-bottom:1px solid var(--border); background:rgba(14,165,233,0.03); transition:background 0.15s ease;">
+                   <tr class="admin-log-row" data-admin="${adminName.toLowerCase()}" data-timestamp="${firstLog.timestamp || 0}" style="border-bottom:1px solid var(--border); background:rgba(14,165,233,0.03); cursor:pointer; transition:background 0.15s ease;" onclick="window.showLogDetailModal('${batchId}')">
                      <td style="padding:12px 14px; white-space:nowrap;">
                        <div style="display:flex; flex-direction:column; gap:2px;">
                          <span style="color:var(--text-main); font-size:12.5px; font-weight:600;">${dateStr}</span>
@@ -17346,27 +17393,40 @@ const views = {
                        <span style="color:#a78bfa; font-weight:700; font-size:13px;">${escapeHTML(adminName)}</span>
                      </td>
                      <td style="padding:12px 14px; white-space:nowrap;">${actionBadge}</td>
-                     <td style="padding:12px 14px; white-space:nowrap;">
-                       <span onclick="window.showBatchedMembersModal('${batchId}')" title="${escapeHTML(hoverTitle)}" style="background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.3); color:#f59e0b; padding:3px 9px; border-radius:8px; font-size:11.5px; font-weight:700; display:inline-flex; align-items:center; gap:5px; white-space:nowrap; cursor:pointer; transition:all 0.15s ease;" onmouseover="this.style.borderColor='rgba(245,158,11,0.6)'; this.style.background='rgba(245,158,11,0.2)';" onmouseout="this.style.borderColor='rgba(245,158,11,0.3)'; this.style.background='rgba(245,158,11,0.12)';" role="button" aria-label="View batched members list">
-                         👥 Multiple (${singleExtracted.length})
-                         <span style="font-size:9.5px; opacity:0.8; margin-left:1px;">ℹ️</span>
-                       </span>
-                     </td>
-                     <td style="padding:12px 14px; font-size:13px; color:var(--text-main); line-height:1.4;">
-                       <div style="display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:nowrap;">
-                         <span style="color:var(--text-main); font-weight:500;">${escapeHTML(firstLog.details || `Updated ${singleExtracted.length} target members`)}</span>
-                         <button onclick="window.showBatchedMembersModal('${batchId}')" style="background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; white-space:nowrap; flex-shrink:0; display:inline-flex; align-items:center; gap:4px; transition:all 0.2s;">
-                           <span>👥 View List (${singleExtracted.length})</span>
+                     <td style="padding:12px 14px;">
+                       <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                         <span title="${escapeHTML(hoverTitle)}" style="background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.35); color:#f59e0b; padding:4px 10px; border-radius:8px; font-size:12px; font-weight:700; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;">
+                           👥 Multiple (${singleExtracted.length})
+                           <span style="font-size:10px; opacity:0.8;">ℹ️</span>
+                         </span>
+                         <button onclick="event.stopPropagation(); window.showLogDetailModal('${batchId}')" style="background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; padding:3px 9px; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:0.2s;" onmouseover="this.style.background='rgba(56,189,248,0.2)';" onmouseout="this.style.background='rgba(56,189,248,0.1)';">
+                           🔍 Details
                          </button>
                        </div>
                      </td>
                    </tr>
                  `;
               } else {
+                 const logId = `log_${batchCounter}_${Date.now()}`;
                  const actionBadge = window.getAdminActionBadgeHtml(firstLog.action || 'Admin Action', false);
+                 const targetName = firstLog.target && firstLog.target !== '-' ? firstLog.target : '';
+
+                 window._batchedMembersMap = window._batchedMembersMap || {};
+                 window._batchedMembersMap[logId] = {
+                   id: logId,
+                   isBatch: false,
+                   admin: adminName,
+                   action: firstLog.action || 'Admin Action',
+                   target: targetName,
+                   dateStr: dateStr,
+                   timeStr: timeStr,
+                   details: firstLog.details || '',
+                   members: targetName ? [targetName] : [],
+                   memberDetails: singleExtracted.length > 0 ? singleExtracted : (targetName ? [{ name: targetName, meta: '', raw: targetName }] : [])
+                 };
                  
                  tbodyHtml += `
-                   <tr class="admin-log-row" data-admin="${adminName.toLowerCase()}" data-timestamp="${firstLog.timestamp || 0}" style="border-bottom:1px solid var(--border); transition:background 0.15s ease;">
+                   <tr class="admin-log-row" data-admin="${adminName.toLowerCase()}" data-timestamp="${firstLog.timestamp || 0}" style="border-bottom:1px solid var(--border); cursor:pointer; transition:background 0.15s ease;" onclick="window.showLogDetailModal('${logId}')">
                      <td style="padding:12px 14px; white-space:nowrap;">
                        <div style="display:flex; flex-direction:column; gap:2px;">
                          <span style="color:var(--text-main); font-size:12.5px; font-weight:600;">${dateStr}</span>
@@ -17377,12 +17437,18 @@ const views = {
                        <span style="color:#a78bfa; font-weight:700; font-size:13px;">${escapeHTML(adminName)}</span>
                      </td>
                      <td style="padding:12px 14px; white-space:nowrap;">${actionBadge}</td>
-                     <td style="padding:12px 14px; white-space:nowrap;">
-                       ${firstLog.target && firstLog.target !== '-' ? `
-                         <span style="font-weight:600; color:var(--text-main); font-size:13px;">${escapeHTML(firstLog.target)}</span>
-                       ` : `<span style="color:var(--text-muted); font-size:13px;">—</span>`}
+                     <td style="padding:12px 14px;">
+                       <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                         ${targetName ? `
+                           <span style="font-weight:600; color:#38bdf8; font-size:13px; display:inline-flex; align-items:center; gap:5px; background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.22); padding:2px 8px; border-radius:6px;">
+                             👤 ${escapeHTML(targetName)}
+                           </span>
+                         ` : `<span style="color:var(--text-muted); font-size:13px;">—</span>`}
+                         <button onclick="event.stopPropagation(); window.showLogDetailModal('${logId}')" style="background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--text-muted); padding:3px 8px; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:0.2s;" onmouseover="this.style.color='var(--accent)'; this.style.borderColor='var(--accent)';" onmouseout="this.style.color='var(--text-muted)'; this.style.borderColor='var(--border)';">
+                           🔍 Details
+                         </button>
+                       </div>
                      </td>
-                     <td style="padding:12px 14px; font-size:13px; color:var(--text-main); line-height:1.4;">${escapeHTML(firstLog.details || '—')}</td>
                    </tr>
                  `;
               }
@@ -17413,7 +17479,7 @@ const views = {
                  if (extracted.length > 0) {
                     allGroupMembers.push(...extracted);
                  } else if (l.target && l.target !== '-') {
-                    allGroupMembers.push({ name: l.target, meta: '', raw: l.target });
+                    allGroupMembers.push({ name: l.target, meta: l.details || '', raw: l.target });
                  }
               });
 
@@ -17430,17 +17496,21 @@ const views = {
               const memberNames = uniqueMembers.map(m => m.name);
               let hoverTitle = '';
               if (uniqueMembers.length > 0) {
-                hoverTitle = `👥 Batched Target Members (${uniqueMembers.length}):\n` + uniqueMembers.map((m, idx) => `  ${idx + 1}. ${m.raw || m.name}`).join('\n') + `\n\n💡 Click or tap to open member list modal`;
+                hoverTitle = `👥 Batched Target Members (${uniqueMembers.length}):\n` + uniqueMembers.map((m, idx) => `  ${idx + 1}. ${m.raw || m.name}`).join('\n') + `\n\n💡 Click or tap to open details modal`;
               } else {
                 hoverTitle = `${group.length} consecutive actions batched`;
               }
 
               window._batchedMembersMap = window._batchedMembersMap || {};
               window._batchedMembersMap[batchId] = {
+                id: batchId,
+                isBatch: true,
                 admin: adminName,
                 action: firstLog.action || 'Batch Action',
                 dateStr: dateStr,
                 timeStr: `${startTimeStr} – ${endTimeStr}`,
+                summaryHtml: summaryHtml,
+                details: `${group.length} consecutive actions batched (${uniqueMembers.length} chiefs affected)`,
                 members: memberNames,
                 memberDetails: uniqueMembers,
                 group: group
@@ -17449,7 +17519,7 @@ const views = {
               const actionBadge = window.getAdminActionBadgeHtml(firstLog.action || 'Batch Action', true, group.length);
 
               tbodyHtml += `
-                <tr class="admin-log-row batch-header-row" data-batchid="${batchId}" data-admin="${adminName.toLowerCase()}" data-timestamp="${firstLog.timestamp || 0}" style="border-bottom:1px solid var(--border); background:rgba(14,165,233,0.05); transition:background 0.15s ease;">
+                <tr class="admin-log-row" data-admin="${adminName.toLowerCase()}" data-timestamp="${firstLog.timestamp || 0}" style="border-bottom:1px solid var(--border); background:rgba(14,165,233,0.04); cursor:pointer; transition:background 0.15s ease;" onclick="window.showLogDetailModal('${batchId}')">
                   <td style="padding:12px 14px; white-space:nowrap;">
                     <div style="display:flex; flex-direction:column; gap:2px;">
                       <span style="color:var(--text-main); font-size:12.5px; font-weight:600;">${dateStr}</span>
@@ -17460,43 +17530,23 @@ const views = {
                     <span style="color:#a78bfa; font-weight:700; font-size:13px;">${escapeHTML(adminName)}</span>
                   </td>
                   <td style="padding:12px 14px; white-space:nowrap;">${actionBadge}</td>
-                  <td style="padding:12px 14px; white-space:nowrap;">
-                    <span onclick="window.showBatchedMembersModal('${batchId}')" title="${escapeHTML(hoverTitle)}" style="background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.3); color:#f59e0b; padding:3px 9px; border-radius:8px; font-size:11.5px; font-weight:700; display:inline-flex; align-items:center; gap:5px; white-space:nowrap; cursor:pointer; transition:all 0.15s ease;" onmouseover="this.style.borderColor='rgba(245,158,11,0.6)'; this.style.background='rgba(245,158,11,0.2)';" onmouseout="this.style.borderColor='rgba(245,158,11,0.3)'; this.style.background='rgba(245,158,11,0.12)';" role="button" aria-label="View batched members list">
-                      👥 Multiple (${group.length})
-                      <span style="font-size:9.5px; opacity:0.8; margin-left:1px;">ℹ️</span>
-                    </span>
-                  </td>
-                  <td style="padding:12px 14px; font-size:13px; color:var(--text-main);">
-                    <div style="display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:nowrap;">
-                      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                        ${summaryHtml}
-                      </div>
-                      <button id="batch-btn-${batchId}" onclick="window.toggleLogBatch('${batchId}')" style="background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; white-space:nowrap; flex-shrink:0; display:inline-flex; align-items:center; gap:4px; transition:all 0.2s;">
-                        <span>▼ Expand (${group.length})</span>
+                  <td style="padding:12px 14px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                      <span title="${escapeHTML(hoverTitle)}" style="background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.35); color:#f59e0b; padding:4px 10px; border-radius:8px; font-size:12px; font-weight:700; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;">
+                        👥 Multiple (${group.length})
+                        <span style="font-size:10px; opacity:0.85;">ℹ️</span>
+                      </span>
+                      <button onclick="event.stopPropagation(); window.showLogDetailModal('${batchId}')" style="background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; padding:3px 9px; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:0.2s;" onmouseover="this.style.background='rgba(56,189,248,0.2)';" onmouseout="this.style.background='rgba(56,189,248,0.1)';">
+                        🔍 Details
                       </button>
                     </div>
                   </td>
                 </tr>
               `;
-
-              group.forEach(subLog => {
-                 const subTime = subLog.timeStr || (subLog.timestamp ? new Date(subLog.timestamp).toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'}) : '');
-                 tbodyHtml += `
-                   <tr class="admin-log-row batch-subrow batch-subrow-${batchId}" data-admin="${adminName.toLowerCase()}" data-timestamp="${subLog.timestamp || 0}" style="display:none; border-bottom:1px solid rgba(255,255,255,0.03); background:rgba(15,23,42,0.65);">
-                     <td style="padding:9px 14px 9px 24px; font-size:11.5px; color:var(--text-muted); font-family:monospace; white-space:nowrap;">
-                       <span style="color:var(--border); margin-right:4px;">└</span> 🕒 ${subTime}
-                     </td>
-                     <td style="padding:9px 14px; font-size:12px; color:var(--text-muted); white-space:nowrap;">${escapeHTML(adminName)}</td>
-                     <td style="padding:9px 14px; font-size:11.5px; color:var(--text-muted); white-space:nowrap;">${escapeHTML(subLog.action || '')}</td>
-                     <td style="padding:9px 14px; font-weight:600; color:#38bdf8; font-size:12px; white-space:nowrap;">${escapeHTML(subLog.target || '—')}</td>
-                     <td style="padding:9px 14px; font-size:12.5px; color:var(--text-main);">${escapeHTML(subLog.details || '—')}</td>
-                   </tr>
-                 `;
-              });
            }
         });
 
-        if (tbodyHtml === '') tbodyHtml = `<tr><td colspan="5" style="padding:20px; text-align:center; color:var(--text-muted); font-size:13px;">No admin logs recorded yet.</td></tr>`;
+        if (tbodyHtml === '') tbodyHtml = `<tr><td colspan="4" style="padding:20px; text-align:center; color:var(--text-muted); font-size:13px;">No admin logs recorded yet.</td></tr>`;
         tb.innerHTML = tbodyHtml;
         
         const adminSelect = document.getElementById('adminLogFilter');
@@ -19125,18 +19175,17 @@ const views = {
                    <button class="log-cat-pill" data-cat="system" onclick="window.filterAdminLogs('system')" style="background:rgba(255,255,255,0.05); color:var(--text-muted); border:1px solid var(--border); border-radius:20px; padding:5px 14px; font-size:12px; font-weight:bold; cursor:pointer; transition:all 0.2s;">⚙️ System & Syncs</button>
                 </div>
                  <div class="admin-audit-table-scroll">
-                  <table style="width:100%; min-width:960px; border-collapse:collapse; text-align:left;">
+                  <table style="width:100%; border-collapse:collapse; text-align:left;">
                     <thead>
                       <tr style="border-bottom:1px solid var(--border); background:#1e293b; color:var(--text-muted); font-size:11px; text-transform:uppercase; letter-spacing:0.5px;">
-                        <th style="padding:12px 14px; width:180px; min-width:170px;">Date & Time</th>
-                        <th style="padding:12px 14px; width:130px; min-width:120px;">Admin</th>
-                        <th style="padding:12px 14px; width:190px; min-width:180px;">Action Category</th>
-                        <th style="padding:12px 14px; width:160px; min-width:150px;">Target Player</th>
-                        <th style="padding:12px 14px; min-width:300px;">Action Details</th>
+                        <th style="padding:12px 14px; width:180px; min-width:160px;">Date & Time</th>
+                        <th style="padding:12px 14px; width:140px; min-width:120px;">Admin</th>
+                        <th style="padding:12px 14px; width:220px; min-width:190px;">Action Category</th>
+                        <th style="padding:12px 14px; min-width:240px;">Target Chief(s) & Details</th>
                       </tr>
                     </thead>
                     <tbody id="adminLogsTableBody">
-                      <tr><td colspan="5" style="padding:20px; text-align:center; color:var(--text-muted); font-size:13px;">Loading logs from Firebase...</td></tr>
+                      <tr><td colspan="4" style="padding:20px; text-align:center; color:var(--text-muted); font-size:13px;">Loading logs from Firebase...</td></tr>
                     </tbody>
                   </table>
                 </div>
