@@ -1,10 +1,10 @@
 {
-  "version": "2.9.22",
+  "version": "2.9.23",
   "releaseDate": "2026-08-17",
-  "title": "What's New in v2.9.22",
+  "title": "What's New in v2.9.23",
   "notes": [
-    "✨ Refined Member Perks: Streamlined copy and clarified in-game mailbox delivery and furnace sync details.",
-    "🎁 Account Hub Member Perks: Unified exclusive perks, promo codes, and 30-day token status directly into the user Account Hub."
+    "📋 Admin Action Audit Logs Overhaul: Redesigned the audit logs table with semantic category badges, 2-line date/time timestamps, clean action summary pills, and responsive layout.",
+    "✨ Refined Member Perks: Streamlined copy and clarified in-game mailbox delivery and furnace sync details."
   ]
 }
 

@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [2.9.23] - 2026-08-17
+- 📋 **Admin Action Audit Logs Overhaul**: Redesigned the audit logs table layout with semantic category badge styling & icons, structured 2-line date/time timestamps, clean NO/YES batch summary pills, responsive horizontal scrolling container, and clean subrow tree hierarchy.
+
 ## [2.9.22] - 2026-08-17
 - 📝 **Streamlined Member Perks Copy**: Refined and simplified card descriptions across the Account Hub Member Perks grid (clarifying in-game mailbox delivery and live Furnace level sync).
 

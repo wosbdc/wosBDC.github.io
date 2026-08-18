@@ -17011,27 +17011,78 @@ const views = {
         }
       });
 
+      // Smart Action Category Badge Generator with Semantic Styling
+      window.getAdminActionBadgeHtml = (actionName, isBatch = false, batchCount = 0) => {
+        const act = (actionName || 'Admin Action').trim();
+        const lower = act.toLowerCase();
+        
+        let bg = 'rgba(56,189,248,0.12)';
+        let border = 'rgba(56,189,248,0.35)';
+        let color = '#38bdf8';
+        let icon = '⚡';
+
+        if (lower.includes('championship')) {
+          bg = 'rgba(56,189,248,0.15)';
+          border = 'rgba(56,189,248,0.4)';
+          color = '#38bdf8';
+          icon = '🏆';
+        } else if (lower.includes('showdown')) {
+          bg = 'rgba(168,85,247,0.15)';
+          border = 'rgba(168,85,247,0.4)';
+          color = '#c084fc';
+          icon = '⚔️';
+        } else if (lower.includes('roster') || lower.includes('member') || lower.includes('player') || lower.includes('add') || lower.includes('remove')) {
+          bg = 'rgba(16,185,129,0.15)';
+          border = 'rgba(16,185,129,0.4)';
+          color = '#34d399';
+          icon = '👤';
+        } else if (lower.includes('enemy') || lower.includes('opponent')) {
+          bg = 'rgba(244,63,94,0.15)';
+          border = 'rgba(244,63,94,0.4)';
+          color = '#fb7185';
+          icon = '🥊';
+        } else if (lower.includes('bear trap') || lower.includes('beartrap') || lower.includes('donation') || lower.includes('event')) {
+          bg = 'rgba(245,158,11,0.15)';
+          border = 'rgba(245,158,11,0.4)';
+          color = '#fbbf24';
+          icon = '🐻';
+        } else if (lower.includes('furnace') || lower.includes('stove') || lower.includes('profile')) {
+          bg = 'rgba(99,102,241,0.15)';
+          border = 'rgba(99,102,241,0.4)';
+          color = '#a5b4fc';
+          icon = '🔥';
+        } else if (lower.includes('sync') || lower.includes('system') || lower.includes('auth')) {
+          bg = 'rgba(148,163,184,0.15)';
+          border = 'rgba(148,163,184,0.4)';
+          color = '#cbd5e1';
+          icon = '⚙️';
+        }
+
+        const badgeText = isBatch ? `${act} (${batchCount})` : act;
+        return `<span style="background:${bg}; border:1px solid ${border}; color:${color}; padding:4px 10px; border-radius:12px; font-size:11.5px; font-weight:700; display:inline-flex; align-items:center; gap:5px; white-space:nowrap; letter-spacing:0.2px;"><span>${icon}</span><span>${escapeHTML(badgeText)}</span></span>`;
+      };
+
       window.toggleLogBatch = (batchId) => {
-   const btn = document.getElementById(`batch-btn-${batchId}`);
-   const subrows = document.querySelectorAll(`.batch-subrow-${batchId}`);
-   if (!subrows || subrows.length === 0) return;
+        const btn = document.getElementById(`batch-btn-${batchId}`);
+        const subrows = document.querySelectorAll(`.batch-subrow-${batchId}`);
+        if (!subrows || subrows.length === 0) return;
 
-   const isHidden = subrows[0].style.display === 'none';
-   subrows.forEach(r => r.style.display = isHidden ? 'table-row' : 'none');
+        const isHidden = subrows[0].style.display === 'none';
+        subrows.forEach(r => r.style.display = isHidden ? 'table-row' : 'none');
 
-   if (btn) {
-      btn.innerHTML = isHidden ? `[▲ Collapse Batch]` : `[▼ Expand ${subrows.length} Logs]`;
-      btn.style.background = isHidden ? 'rgba(239,68,68,0.15)' : 'rgba(59,130,246,0.15)';
-      btn.style.borderColor = isHidden ? '#ef4444' : '#3b82f6';
-      btn.style.color = isHidden ? '#f87171' : '#60a5fa';
-   }
-};
+        if (btn) {
+          btn.innerHTML = isHidden ? `<span>▲ Collapse</span>` : `<span>▼ Expand (${subrows.length})</span>`;
+          btn.style.background = isHidden ? 'rgba(239,68,68,0.15)' : 'rgba(56,189,248,0.12)';
+          btn.style.borderColor = isHidden ? '#ef4444' : 'rgba(56,189,248,0.4)';
+          btn.style.color = isHidden ? '#f87171' : '#38bdf8';
+        }
+      };
 
       // Global function to fetch real-time Admin Logs from Firebase with fallback to Sheets API
       window.fetchAdminLog = async () => {
         const tb = document.getElementById('adminLogsTableBody');
         if (!tb) return;
-        tb.innerHTML = `<tr><td colspan="5" style="padding:15px; text-align:center; color:var(--text-muted);">Loading Admin Activity Logs...</td></tr>`;
+        tb.innerHTML = `<tr><td colspan="5" style="padding:20px; text-align:center; color:var(--text-muted); font-size:13px;">⏳ Loading Admin Activity Logs...</td></tr>`;
         
         let logItems = [];
         let fetchedFromFirebase = false;
@@ -17111,25 +17162,37 @@ const views = {
            const adminName = firstLog.admin || 'Admin';
            uniqueAdmins.add(adminName);
 
+           const d = new Date(firstLog.timestamp || Date.now());
+           const dateStr = firstLog.dateStr || d.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+           const timeStr = firstLog.timeStr || d.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'});
+
            if (group.length === 1) {
-              const dateDisplay = firstLog.dateStr ? `${firstLog.dateStr} ${firstLog.timeStr || ''}` : new Date(firstLog.timestamp).toLocaleString();
-              const actionBadge = `<span style="background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.3); color:#60a5fa; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:bold;">${escapeHTML(firstLog.action || 'Admin Action')}</span>`;
+              const actionBadge = window.getAdminActionBadgeHtml(firstLog.action || 'Admin Action', false);
               
               tbodyHtml += `
-                <tr class="admin-log-row" data-admin="${adminName.toLowerCase()}" data-timestamp="${firstLog.timestamp || 0}" style="border-bottom:1px solid var(--border);">
-                  <td style="padding:10px; font-size:12px; color:var(--text-muted); white-space:nowrap;">${dateDisplay}</td>
-                  <td style="padding:10px; font-weight:bold; color:var(--accent);">${escapeHTML(adminName)}</td>
-                  <td style="padding:10px;">${actionBadge}</td>
-                  <td style="padding:10px; font-weight:bold; color:var(--text-main);">${escapeHTML(firstLog.target || '-')}</td>
-                  <td style="padding:10px; font-size:13px; color:var(--text-main);">${escapeHTML(firstLog.details || '-')}</td>
+                <tr class="admin-log-row" data-admin="${adminName.toLowerCase()}" data-timestamp="${firstLog.timestamp || 0}" style="border-bottom:1px solid var(--border); transition:background 0.15s ease;">
+                  <td style="padding:12px 14px; white-space:nowrap;">
+                    <div style="display:flex; flex-direction:column; gap:2px;">
+                      <span style="color:var(--text-main); font-size:12.5px; font-weight:600;">${dateStr}</span>
+                      <span style="color:var(--text-muted); font-size:11px;">🕒 ${timeStr}</span>
+                    </div>
+                  </td>
+                  <td style="padding:12px 14px; white-space:nowrap;">
+                    <span style="color:#a78bfa; font-weight:700; font-size:13px;">${escapeHTML(adminName)}</span>
+                  </td>
+                  <td style="padding:12px 14px; white-space:nowrap;">${actionBadge}</td>
+                  <td style="padding:12px 14px; white-space:nowrap;">
+                    ${firstLog.target && firstLog.target !== '-' ? `
+                      <span style="font-weight:600; color:var(--text-main); font-size:13px;">${escapeHTML(firstLog.target)}</span>
+                    ` : `<span style="color:var(--text-muted); font-size:13px;">—</span>`}
+                  </td>
+                  <td style="padding:12px 14px; font-size:13px; color:var(--text-main); line-height:1.4;">${escapeHTML(firstLog.details || '—')}</td>
                 </tr>
               `;
            } else {
               const batchId = `b_${batchCounter}_${Date.now()}`;
               const startTimeStr = lastLog.timeStr || new Date(lastLog.timestamp).toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'});
               const endTimeStr = firstLog.timeStr || new Date(firstLog.timestamp).toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'});
-              const dateStr = firstLog.dateStr || new Date(firstLog.timestamp).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
-              const dateRangeDisplay = `${dateStr} (${startTimeStr} – ${endTimeStr})`;
 
               let yesCount = 0;
               let noCount = 0;
@@ -17139,25 +17202,42 @@ const views = {
                  if (det.includes('no') || det.includes('❌')) noCount++;
               });
 
-              let summaryDetails = `${group.length} actions batched`;
+              let summaryHtml = `<span style="color:var(--text-muted); font-size:12.5px; font-style:italic;">${group.length} consecutive actions batched</span>`;
               if (yesCount > 0 || noCount > 0) {
                  let parts = [];
-                 if (noCount > 0) parts.push(`${noCount} set to NO (❌)`);
-                 if (yesCount > 0) parts.push(`${yesCount} set to YES (✅)`);
-                 summaryDetails = parts.join(', ');
+                 if (noCount > 0) parts.push(`<span style="background:rgba(239,68,68,0.12); color:#f87171; border:1px solid rgba(239,68,68,0.3); padding:2px 8px; border-radius:6px; font-size:11.5px; font-weight:600;">❌ ${noCount} set to NO</span>`);
+                 if (yesCount > 0) parts.push(`<span style="background:rgba(16,185,129,0.12); color:#34d399; border:1px solid rgba(16,185,129,0.3); padding:2px 8px; border-radius:6px; font-size:11.5px; font-weight:600;">✅ ${yesCount} set to YES</span>`);
+                 summaryHtml = parts.join(' ');
               }
 
-              const actionBadge = `<span style="background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.3); color:#34d399; padding:3px 10px; border-radius:12px; font-size:11px; font-weight:bold;">⚡ ${escapeHTML(firstLog.action || 'Batch Action')} (${group.length})</span>`;
+              const actionBadge = window.getAdminActionBadgeHtml(firstLog.action || 'Batch Action', true, group.length);
 
               tbodyHtml += `
-                <tr class="admin-log-row batch-header-row" data-batchid="${batchId}" data-admin="${adminName.toLowerCase()}" data-timestamp="${firstLog.timestamp || 0}" style="border-bottom:1px solid var(--border); background:rgba(6,182,212,0.06);">
-                  <td style="padding:10px; font-size:12px; color:var(--text-muted); white-space:nowrap;">${dateRangeDisplay}</td>
-                  <td style="padding:10px; font-weight:bold; color:var(--accent);">${escapeHTML(adminName)}</td>
-                  <td style="padding:10px;">${actionBadge}</td>
-                  <td style="padding:10px; font-weight:bold; color:#f59e0b;">Multiple Members (${group.length})</td>
-                  <td style="padding:10px; font-size:13px; color:var(--text-main); display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
-                    <span>${summaryDetails}</span>
-                    <button id="batch-btn-${batchId}" onclick="window.toggleLogBatch('${batchId}')" style="background:rgba(59,130,246,0.15); border:1px solid #3b82f6; color:#60a5fa; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; transition:all 0.2s;">[▼ Expand ${group.length} Logs]</button>
+                <tr class="admin-log-row batch-header-row" data-batchid="${batchId}" data-admin="${adminName.toLowerCase()}" data-timestamp="${firstLog.timestamp || 0}" style="border-bottom:1px solid var(--border); background:rgba(14,165,233,0.05); transition:background 0.15s ease;">
+                  <td style="padding:12px 14px; white-space:nowrap;">
+                    <div style="display:flex; flex-direction:column; gap:2px;">
+                      <span style="color:var(--text-main); font-size:12.5px; font-weight:600;">${dateStr}</span>
+                      <span style="color:var(--text-muted); font-size:11px; white-space:nowrap;">🕒 ${startTimeStr} – ${endTimeStr}</span>
+                    </div>
+                  </td>
+                  <td style="padding:12px 14px; white-space:nowrap;">
+                    <span style="color:#a78bfa; font-weight:700; font-size:13px;">${escapeHTML(adminName)}</span>
+                  </td>
+                  <td style="padding:12px 14px; white-space:nowrap;">${actionBadge}</td>
+                  <td style="padding:12px 14px; white-space:nowrap;">
+                    <span style="background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.3); color:#f59e0b; padding:3px 9px; border-radius:8px; font-size:11.5px; font-weight:700; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;">
+                      👥 Multiple (${group.length})
+                    </span>
+                  </td>
+                  <td style="padding:12px 14px; font-size:13px; color:var(--text-main);">
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:nowrap;">
+                      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                        ${summaryHtml}
+                      </div>
+                      <button id="batch-btn-${batchId}" onclick="window.toggleLogBatch('${batchId}')" style="background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; white-space:nowrap; flex-shrink:0; display:inline-flex; align-items:center; gap:4px; transition:all 0.2s;">
+                        <span>▼ Expand (${group.length})</span>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               `;
@@ -17165,25 +17245,27 @@ const views = {
               group.forEach(subLog => {
                  const subTime = subLog.timeStr || (subLog.timestamp ? new Date(subLog.timestamp).toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'}) : '');
                  tbodyHtml += `
-                   <tr class="admin-log-row batch-subrow batch-subrow-${batchId}" data-admin="${adminName.toLowerCase()}" data-timestamp="${subLog.timestamp || 0}" style="display:none; border-bottom:1px dashed rgba(255,255,255,0.06); background:rgba(15,23,42,0.4);">
-                     <td style="padding:8px 10px 8px 24px; font-size:11px; color:var(--text-muted); font-style:italic;">└ ${subTime}</td>
-                     <td style="padding:8px 10px; font-size:12px; color:var(--text-muted);">${escapeHTML(adminName)}</td>
-                     <td style="padding:8px 10px; font-size:11px; color:var(--text-muted);">${escapeHTML(subLog.action || '')}</td>
-                     <td style="padding:8px 10px; font-weight:bold; color:var(--accent); font-size:12px;">${escapeHTML(subLog.target || '-')}</td>
-                     <td style="padding:8px 10px; font-size:12px; color:var(--text-main);">${escapeHTML(subLog.details || '-')}</td>
+                   <tr class="admin-log-row batch-subrow batch-subrow-${batchId}" data-admin="${adminName.toLowerCase()}" data-timestamp="${subLog.timestamp || 0}" style="display:none; border-bottom:1px solid rgba(255,255,255,0.03); background:rgba(15,23,42,0.65);">
+                     <td style="padding:9px 14px 9px 24px; font-size:11.5px; color:var(--text-muted); font-family:monospace; white-space:nowrap;">
+                       <span style="color:var(--border); margin-right:4px;">└</span> 🕒 ${subTime}
+                     </td>
+                     <td style="padding:9px 14px; font-size:12px; color:var(--text-muted); white-space:nowrap;">${escapeHTML(adminName)}</td>
+                     <td style="padding:9px 14px; font-size:11.5px; color:var(--text-muted); white-space:nowrap;">${escapeHTML(subLog.action || '')}</td>
+                     <td style="padding:9px 14px; font-weight:600; color:#38bdf8; font-size:12px; white-space:nowrap;">${escapeHTML(subLog.target || '—')}</td>
+                     <td style="padding:9px 14px; font-size:12.5px; color:var(--text-main);">${escapeHTML(subLog.details || '—')}</td>
                    </tr>
                  `;
               });
            }
         });
 
-        if (tbodyHtml === '') tbodyHtml = `<tr><td colspan="5" style="padding:15px; text-align:center; color:var(--text-muted);">No admin logs recorded yet.</td></tr>`;
+        if (tbodyHtml === '') tbodyHtml = `<tr><td colspan="5" style="padding:20px; text-align:center; color:var(--text-muted); font-size:13px;">No admin logs recorded yet.</td></tr>`;
         tb.innerHTML = tbodyHtml;
         
         const adminSelect = document.getElementById('adminLogFilter');
         if (adminSelect) {
            const currentSelection = adminSelect.value;
-           let selectHtml = '<option value="">All Admins</option>';
+           let selectHtml = '<option value="">👤 All Admins</option>';
            Array.from(uniqueAdmins).sort().forEach(admin => {
               selectHtml += `<option value="${admin.toLowerCase()}">${escapeHTML(admin)}</option>`;
            });
@@ -18776,21 +18858,24 @@ const views = {
 
             <!-- Sub-Tab 1: Admin Action Logs -->
             <div id="subtab-admin-logs" class="logs-subtab-content" style="display:block;">
-              <div style="background:var(--bg-main); padding:15px; border-radius:12px; border:1px solid var(--border); display:flex; flex-direction:column; gap:15px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-                  <h3 style="margin:0; color:var(--text-main);">&#128203; Admin Action Audit Logs</h3>
-                  <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                    <button onclick="window.fetchAdminLog()" style="background:var(--accent); color:white; border:none; border-radius:6px; padding:8px 12px; cursor:pointer; font-weight:bold; font-size:12px;">&#128259; Refresh</button>
-                    <select id="adminLogDateFilter" onchange="window.filterAdminLogs()" style="padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);">
-                      <option value="all">All Time</option>
-                      <option value="today">Today</option>
-                      <option value="yesterday">Yesterday</option>
-                      <option value="7days">Last 7 Days</option>
+              <div style="background:var(--bg-main); padding:18px; border-radius:12px; border:1px solid var(--border); display:flex; flex-direction:column; gap:16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:20px;">📋</span>
+                    <h3 style="margin:0; color:var(--text-main); font-size:17px; font-weight:700;">Admin Action Audit Logs</h3>
+                  </div>
+                  <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                    <button onclick="window.fetchAdminLog()" style="background:var(--accent); color:white; border:none; border-radius:6px; padding:8px 14px; cursor:pointer; font-weight:bold; font-size:12px; display:inline-flex; align-items:center; gap:5px; transition:all 0.2s;">🔄 Refresh</button>
+                    <select id="adminLogDateFilter" onchange="window.filterAdminLogs()" style="padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px;">
+                      <option value="all">📅 All Time</option>
+                      <option value="today">📅 Today</option>
+                      <option value="yesterday">📅 Yesterday</option>
+                      <option value="7days">📅 Last 7 Days</option>
                     </select>
-                    <select id="adminLogFilter" onchange="window.filterAdminLogs()" style="padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);">
-                      <option value="">All Admins</option>
+                    <select id="adminLogFilter" onchange="window.filterAdminLogs()" style="padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px;">
+                      <option value="">👤 All Admins</option>
                     </select>
-                    <input type="text" id="adminLogSearch" placeholder="Search logs..." onkeyup="window.filterAdminLogs()" style="padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); width:180px;">
+                    <input type="text" id="adminLogSearch" placeholder="🔍 Search logs..." onkeyup="window.filterAdminLogs()" style="padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); width:190px; font-size:12px;">
                   </div>
                 </div>
 
@@ -18802,19 +18887,19 @@ const views = {
                    <button class="log-cat-pill" data-cat="events" onclick="window.filterAdminLogs('events')" style="background:rgba(255,255,255,0.05); color:var(--text-muted); border:1px solid var(--border); border-radius:20px; padding:5px 14px; font-size:12px; font-weight:bold; cursor:pointer; transition:all 0.2s;">🐻 Bear Trap & Events</button>
                    <button class="log-cat-pill" data-cat="system" onclick="window.filterAdminLogs('system')" style="background:rgba(255,255,255,0.05); color:var(--text-muted); border:1px solid var(--border); border-radius:20px; padding:5px 14px; font-size:12px; font-weight:bold; cursor:pointer; transition:all 0.2s;">⚙️ System & Syncs</button>
                 </div>
-                <div style="overflow-x:auto;">
-                  <table style="width:100%; border-collapse:collapse; text-align:left;">
+                <div style="overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:10px; border:1px solid var(--border); background:rgba(0,0,0,0.15);">
+                  <table style="width:100%; min-width:920px; border-collapse:collapse; text-align:left;">
                     <thead>
-                      <tr style="border-bottom:2px solid var(--border); color:var(--text-muted); font-size:12px; text-transform:uppercase;">
-                        <th style="padding:10px;">Date & Time</th>
-                        <th style="padding:10px;">Admin</th>
-                        <th style="padding:10px;">Action Category</th>
-                        <th style="padding:10px;">Target Player</th>
-                        <th style="padding:10px;">Action Details</th>
+                      <tr style="border-bottom:1px solid var(--border); background:rgba(255,255,255,0.03); color:var(--text-muted); font-size:11px; text-transform:uppercase; letter-spacing:0.5px;">
+                        <th style="padding:12px 14px; width:180px; min-width:170px;">Date & Time</th>
+                        <th style="padding:12px 14px; width:130px; min-width:120px;">Admin</th>
+                        <th style="padding:12px 14px; width:190px; min-width:180px;">Action Category</th>
+                        <th style="padding:12px 14px; width:160px; min-width:150px;">Target Player</th>
+                        <th style="padding:12px 14px; min-width:280px;">Action Details</th>
                       </tr>
                     </thead>
                     <tbody id="adminLogsTableBody">
-                      <tr><td colspan="5" style="padding:15px; text-align:center; color:var(--text-muted);">Loading logs from Firebase...</td></tr>
+                      <tr><td colspan="5" style="padding:20px; text-align:center; color:var(--text-muted); font-size:13px;">Loading logs from Firebase...</td></tr>
                     </tbody>
                   </table>
                 </div>
@@ -18823,22 +18908,22 @@ const views = {
 
             <!-- Sub-Tab 3: Activity History Archives -->
             <div id="subtab-activity-history" class="logs-subtab-content" style="display:none;">
-              <div style="background:var(--bg-main); padding:15px; border-radius:12px; border:1px solid var(--border); display:flex; flex-direction:column; gap:15px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+              <div style="background:var(--bg-main); padding:18px; border-radius:12px; border:1px solid var(--border); display:flex; flex-direction:column; gap:16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
                   <div>
-                    <h3 style="margin:0; color:var(--text-main);">📜 Event Activity History Archives</h3>
+                    <h3 style="margin:0; color:var(--text-main); font-size:17px; font-weight:700;">📜 Event Activity History Archives</h3>
                     <p style="margin:4px 0 0 0; color:var(--text-muted); font-size:12px;">Historical event attendance logs & archived activity entries.</p>
                   </div>
-                  <input type="text" id="activityHistorySearch" placeholder="🔍 Search history..." onkeyup="window.filterActivityHistory()" style="padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); width:220px;">
+                  <input type="text" id="activityHistorySearch" placeholder="🔍 Search history..." onkeyup="window.filterActivityHistory()" style="padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); width:220px; font-size:12px;">
                 </div>
-                <div style="overflow-x:auto;">
-                  <table style="width:100%; border-collapse:collapse; text-align:left; font-size:13px;">
+                <div style="overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:10px; border:1px solid var(--border); background:rgba(0,0,0,0.15);">
+                  <table style="width:100%; min-width:850px; border-collapse:collapse; text-align:left; font-size:13px;">
                     <thead>
-                      <tr style="border-bottom:2px solid var(--border); color:var(--text-muted); font-size:11px; text-transform:uppercase;">
-                        <th style="padding:10px;">Event Category</th>
-                        <th style="padding:10px;">Target Chief</th>
-                        <th style="padding:10px;">Participation Status</th>
-                        <th style="padding:10px;">Recorded Timestamp</th>
+                      <tr style="border-bottom:1px solid var(--border); background:rgba(255,255,255,0.03); color:var(--text-muted); font-size:11px; text-transform:uppercase; letter-spacing:0.5px;">
+                        <th style="padding:12px 14px; width:180px;">Event Category</th>
+                        <th style="padding:12px 14px; width:200px;">Target Chief</th>
+                        <th style="padding:12px 14px; width:180px;">Participation Status</th>
+                        <th style="padding:12px 14px;">Recorded Timestamp</th>
                       </tr>
                     </thead>
                     <tbody id="activityHistoryTableBody">
