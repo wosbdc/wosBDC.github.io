@@ -840,7 +840,14 @@ def fetch_live_gatekeeper_telemetry():
 def send_or_update_gatekeeper_report():
     target_webhook = GATEKEEPER_WEBHOOK_URL or DISCORD_WEBHOOK_URL
     if not target_webhook or '/webhooks/' not in target_webhook:
-        return False
+        try:
+            r = session.get(f"{WOS_FIREBASE_URL}/config/discordAlerts/webhookUrl.json?auth={WOS_FIREBASE_SECRET}", timeout=4)
+            wh = (r.json() or "").strip()
+            if wh and '/webhooks/' in wh:
+                target_webhook = wh
+        except: pass
+        if not target_webhook or '/webhooks/' not in target_webhook:
+            target_webhook = "https://discord.com/api/webhooks/1537465776750203060/pjDG_gWRnnS6QyRXaxvrudoq7inLhFi_4xjk-2WfpuiTp3gNJVCS4eGuH0y9CoUL4dUY"
     
     t = fetch_live_gatekeeper_telemetry()
     saved_cfg = t["saved_cfg"]
