@@ -3143,7 +3143,7 @@ window.openAddPlayerModal = () => {
           <h3 style="margin:0; color:var(--text-main); font-size:20px; display:flex; align-items:center; gap:10px;">
             ➕ Add New Player to Roster
           </h3>
-          <button onclick="document.getElementById('addPlayerModal').remove()" style="background:transparent; border:none; color:var(--text-muted); font-size:24px; cursor:pointer; padding:0; line-height:1;">&times;</button>
+          <button type="button" onclick="document.getElementById('addPlayerModal')?.remove()" style="background:rgba(255,255,255,0.08); border:1px solid var(--border); color:var(--text-main); font-size:18px; width:34px; height:34px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.2)'; this.style.color='#ef4444';" onmouseout="this.style.background='rgba(255,255,255,0.08)'; this.style.color='var(--text-main)';" title="Close Window">✕</button>
         </div>
 
         <form id="addPlayerForm" onsubmit="window.submitAddPlayerForm(event)" style="display:flex; flex-direction:column; gap:14px;">
@@ -3176,7 +3176,7 @@ window.openAddPlayerModal = () => {
           <div id="addPlayerStatus" style="font-size:13px; font-weight:bold; text-align:center;"></div>
 
           <div style="display:flex; gap:10px; margin-top:10px;">
-            <button type="button" onclick="document.getElementById('addPlayerModal').remove()" style="flex:1; padding:12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-weight:bold; cursor:pointer;">Cancel</button>
+            <button type="button" onclick="document.getElementById('addPlayerModal')?.remove()" style="flex:1; padding:12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-weight:bold; cursor:pointer;">Cancel</button>
             <button type="submit" id="addPlayerSubmitBtn" style="flex:2; padding:12px; border-radius:8px; border:none; background:var(--success); color:white; font-weight:bold; cursor:pointer; font-size:15px;">💾 Save to Roster</button>
           </div>
         </form>
@@ -3186,12 +3186,6 @@ window.openAddPlayerModal = () => {
   `;
 
   document.body.insertAdjacentHTML('beforeend', modalHtml);
-  const m = document.getElementById('addPlayerModal');
-  if (m) {
-    m.addEventListener('click', (e) => {
-      if (e.target === m) m.remove();
-    });
-  }
 };
 
 // Verify Game ID & Auto-Fill Chief Name
@@ -3212,7 +3206,7 @@ window.verifyAddPlayerGameId = async () => {
   btn.disabled = true;
   btn.textContent = '...';
   statusDiv.style.color = 'var(--text-muted)';
-  statusDiv.textContent = 'Verifying Game ID with Century Games...';
+  statusDiv.textContent = 'Verifying Game ID...';
 
   // 1. Check local alliance db first
   try {
