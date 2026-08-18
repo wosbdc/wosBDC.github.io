@@ -29,9 +29,10 @@
       "repository": "https://github.com/bdclive/BDClive"
     },
     "wosbdc_alliance_dashboard": {
-      "version": "2.9.29",
+      "version": "2.9.30",
       "repository": "https://github.com/wosbdc/wosBDC.github.io",
       "latestChanges": [
+        "v2.9.30: Enhanced Account Hub resilience with safe property fallbacks and verified token lifecycle handling",
         "v2.9.29: Dynamic Alliance Gatekeeper & Live Signup Telemetry across Discord alerts and Central Command",
         "v2.9.28: Merged Target Player and Action Details into unified 'Target Chief(s) & Details' column with compact badge chips",
         "v2.9.27: Expanded Admin Hub & Audit Logs window to 1300px and added custom high-contrast scrollbars with sticky column headers",

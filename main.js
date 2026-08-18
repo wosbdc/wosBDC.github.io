@@ -6546,6 +6546,18 @@ const renderError = (err) => {
 };
 
 window.renderMembersOnlyGuard = (viewName = "Alliance Portal") => {
+  if (!currentUser && auth && auth.currentUser) {
+    currentUser = {
+      uid: auth.currentUser.uid,
+      email: auth.currentUser.email || '',
+      name: auth.currentUser.displayName || (auth.currentUser.email ? auth.currentUser.email.split('@')[0] : 'Chief'),
+      displayName: auth.currentUser.displayName || 'Chief'
+    };
+    if (typeof window.activeViewFunc === 'function') {
+      window.activeViewFunc();
+      return;
+    }
+  }
   const appEl = document.getElementById('app');
   if (!appEl) return;
   appEl.innerHTML = `
@@ -22025,6 +22037,14 @@ window.resetBearTrapEvent = async () => {
   },
 
   account: async (defaultTab = null) => {
+    if (!currentUser && auth && auth.currentUser) {
+      currentUser = {
+        uid: auth.currentUser.uid,
+        email: auth.currentUser.email || '',
+        name: auth.currentUser.displayName || (auth.currentUser.email ? auth.currentUser.email.split('@')[0] : 'Chief'),
+        displayName: auth.currentUser.displayName || 'Chief'
+      };
+    }
     if (!currentUser) return window.renderMembersOnlyGuard("User Account Hub");
     const targetTab = (typeof defaultTab === 'string' && defaultTab) ? defaultTab : (window.currentAccountHubTab || 'Profile');
     window.currentAccountHubTab = targetTab;
@@ -22044,8 +22064,22 @@ window.resetBearTrapEvent = async () => {
             get(ref(db, `users/${currentUser.uid}`)).catch(() => null)
         ]);
         if (altsSnap && altsSnap.exists()) altProfilesMap = altsSnap.val() || {};
-        if (profileSnap && profileSnap.exists()) {
-            const profileData = profileSnap.val();
+        let profileData = (profileSnap && profileSnap.exists()) ? profileSnap.val() : null;
+        if (!profileData && currentUser.email) {
+            const allUsersSnap = await get(ref(db, 'users')).catch(() => null);
+            if (allUsersSnap && allUsersSnap.exists()) {
+                const allUsers = allUsersSnap.val();
+                for (const [k, u] of Object.entries(allUsers)) {
+                    if (u && u.email && u.email.toLowerCase() === currentUser.email.toLowerCase()) {
+                        profileData = u;
+                        break;
+                    }
+                }
+            }
+        }
+        if (profileData) {
+            if (profileData.gameId && !currentUser.gameId) currentUser.gameId = profileData.gameId;
+            if (profileData.name && !currentUser.name) currentUser.name = profileData.name;
             if (profileData.stove_lv) currentUser.stove_lv = profileData.stove_lv;
             if (profileData.furnaceLevel) currentUser.furnaceLevel = profileData.furnaceLevel;
             if (profileData.dateStarted) currentUser.dateStarted = profileData.dateStarted;
@@ -22468,9 +22502,9 @@ window.resetBearTrapEvent = async () => {
       
       linkedHtml += `</div>`;
       
-      let currentChiefName = (idToNameMap[currentUser.gameId] && !/^\d+$/.test(idToNameMap[currentUser.gameId])) 
+      let currentChiefName = (currentUser.gameId && idToNameMap[currentUser.gameId] && !/^\d+$/.test(idToNameMap[currentUser.gameId])) 
           ? idToNameMap[currentUser.gameId] 
-          : (currentUser.name || currentUser.chiefName || currentUser.displayName || `Chief ${currentUser.gameId}`);
+          : (currentUser.name || currentUser.chiefName || currentUser.displayName || (currentUser.gameId ? `Chief ${currentUser.gameId}` : 'Chief'));
       
       let adminBadgeHtml = '';
       let accLevel = window.getAdminLevel(currentUser);
@@ -22489,10 +22523,11 @@ window.resetBearTrapEvent = async () => {
       let timeActiveStr = "N/A";
       let furnaceLevelStr = "N/A";
       
-      const gcb = window.liveData['giftcodebot'];
-      if (gcb && gcb.length > 1) {
+      const gcb = window.liveData ? window.liveData['giftcodebot'] : null;
+      if (gcb && gcb.length > 1 && currentUser.gameId) {
+          const cleanGameId = currentUser.gameId.toString().trim();
           for (let i = 1; i < gcb.length; i++) {
-              if (gcb[i] && gcb[i][2] && gcb[i][2].toString().trim() === currentUser.gameId.toString().trim()) {
+              if (gcb[i] && gcb[i][2] && gcb[i][2].toString().trim() === cleanGameId) {
                   isMainEnrolled = true;
                   if (gcb[i][3]) {
                       try {
@@ -22554,8 +22589,8 @@ window.resetBearTrapEvent = async () => {
 
       const userBio = currentUser.bio || '';
 
-      const avatarSrc = window.getAvatarUrl(currentUser.gameId, currentChiefName);
-      const isEnrolled = isMainEnrolled || enrolledGameIds.has(currentUser.gameId.toString());
+      const avatarSrc = window.getAvatarUrl(currentUser.gameId || '', currentChiefName);
+      const isEnrolled = isMainEnrolled || (currentUser.gameId && enrolledGameIds.has(currentUser.gameId.toString()));
 
       const botStatusHtml = isEnrolled 
           ? `<div style="background:rgba(16,185,129,0.1); border:1px solid var(--success); color:var(--success); padding:8px 16px; border-radius:8px; font-weight:bold; font-size:14px; display:inline-flex; align-items:center; gap:8px;">&#x2705; Active Bot Link</div>`
@@ -22671,7 +22706,7 @@ window.resetBearTrapEvent = async () => {
               
               <div class="id-card-header" style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:15px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:15px; position:relative; z-index:30;">
                   <div style="display:flex; align-items:center; gap:14px; min-width:0; flex:1;">
-                      <div class="id-card-avatar" style="width:62px; height:62px; border-radius:14px; overflow:hidden; border:2px solid var(--accent); box-shadow:0 4px 15px rgba(0,0,0,0.3); background:var(--bg-secondary); flex-shrink:0; cursor:pointer; position:relative;" onclick="window.openAvatarManagerModal('${currentUser.gameId}', '${window.escapeHTML(currentChiefName)}')" title="Change or Sync Profile Picture">
+                      <div class="id-card-avatar" style="width:62px; height:62px; border-radius:14px; overflow:hidden; border:2px solid var(--accent); box-shadow:0 4px 15px rgba(0,0,0,0.3); background:var(--bg-secondary); flex-shrink:0; cursor:pointer; position:relative;" onclick="window.openAvatarManagerModal('${currentUser.gameId || ''}', '${window.escapeHTML(currentChiefName)}')" title="Change or Sync Profile Picture">
                           <img id="accountHubAvatarImg" src="${avatarSrc}" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';" style="width:100%; height:100%; object-fit:cover;" />
                           <div style="display:none; align-items:center; justify-content:center; width:100%; height:100%; font-size:30px; font-weight:bold; color:#fff;">${currentChiefName.charAt(0).toUpperCase()}</div>
                           <div style="position:absolute; inset:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0'"><span style="font-size:20px;">✏️</span></div>
@@ -22684,7 +22719,7 @@ window.resetBearTrapEvent = async () => {
                           <div style="display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:5px;">
                               <div style="display:inline-flex; align-items:center; gap:6px; background:rgba(0,0,0,0.35); padding:3px 8px; border-radius:12px; border:1px solid rgba(255,255,255,0.08);">
                                   <span style="color:var(--accent); font-size:11px; font-weight:bold;">ID:</span>
-                                  <span style="color:var(--text-main); font-family:monospace; font-size:13px; letter-spacing:0.5px;">${currentUser.gameId}</span>
+                                  <span style="color:var(--text-main); font-family:monospace; font-size:13px; letter-spacing:0.5px;">${currentUser.gameId || 'Not Linked'}</span>
                               </div>
                               ${ tokenStatus.status === 'active' ? `
                                   <div style="display:inline-flex; align-items:center; gap:4px; background:rgba(16,185,129,0.15); border:1px solid #10b981; padding:2px 7px; border-radius:12px; font-size:10.5px; font-weight:bold; color:#10b981; cursor:pointer;" onclick="window.openAccountHubVerifyModal()" title="30-Day Sync Active (${tokenStatus.daysLeft}d left) - Click to manage or renew early">
@@ -22736,7 +22771,7 @@ window.resetBearTrapEvent = async () => {
               <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:15px; position:relative; z-index:2;">
                   <div class="id-card-stat-row" style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:8px;">
                       <span style="color:var(--text-muted); font-size:13px; text-transform:uppercase; letter-spacing:1px;">Email</span>
-                      <span style="color:#fff; font-weight:bold; font-size:13px; text-align:right;">${currentUser.email}</span>
+                      <span style="color:#fff; font-weight:bold; font-size:13px; text-align:right;">${currentUser.email || 'N/A'}</span>
                   </div>
                   <div class="id-card-stat-row" style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:8px;">
                       <span style="color:var(--text-muted); font-size:13px; text-transform:uppercase; letter-spacing:1px;">Joined Date</span>
@@ -22752,12 +22787,12 @@ window.resetBearTrapEvent = async () => {
                   </div>` : ''}
               </div>
               
-              <div class="id-card-bot-status" style="text-align:center; margin-top:15px; padding-top:15px; border-top:1px solid rgba(255,255,20.05); position:relative; z-index:2;">
+              <div class="id-card-bot-status" style="text-align:center; margin-top:15px; padding-top:15px; border-top:1px solid rgba(255,255,255,0.05); position:relative; z-index:2;">
                   ${botStatusHtml}
               </div>
               
               <!-- Watermark -->
-              <div style="position:absolute; bottom:-20px; right:-20px; font-size:120px; opacity:0.04; pointer-events:none; transform:rotate(-15deg); z-index:1;">&#x2744;&#xFE0F;</div>
+              <div style="position:absolute; bottom:-20px; right:-20px; font-size:120px; opacity:0.04; pointer-events:none; transform:rotate(-15deg); z-index:1;">❄️</div>
           </div>
 
           <input type="file" id="avatarUploadInput" accept="image/png, image/jpeg, image/webp" style="display:none;">
@@ -22818,7 +22853,7 @@ window.resetBearTrapEvent = async () => {
                       <span style="font-size:14px;">⭐</span>
                       <div>
                         <strong style="color:#fff; font-size:13.5px;">${window.escapeHTML(currentChiefName)}</strong>
-                        <span style="font-size:11px; color:var(--text-muted); font-family:monospace; margin-left:6px;">ID: ${currentUser.gameId}</span>
+                        <span style="font-size:11px; color:var(--text-muted); font-family:monospace; margin-left:6px;">ID: ${currentUser.gameId || 'Not Linked'}</span>
                       </div>
                     </div>
                     <div style="display:flex; align-items:center; gap:8px;">

@@ -69,15 +69,49 @@ export function listenToAuth(callback) {
   onAuthStateChanged(auth, (user) => {
     if (user) {
       const usersRef = ref(db, `users/${user.uid}`);
-      onValue(usersRef, (snapshot) => {
+      onValue(usersRef, async (snapshot) => {
         if (snapshot.exists()) {
-          let data = snapshot.val();
+          let data = snapshot.val() || {};
           data.uid = user.uid; // Inject UID for easy access
+          if (!data.email && user.email) data.email = user.email;
+          if (!data.name && user.displayName) data.name = user.displayName;
           callback(data);
         } else {
-          callback(null);
+          // If no direct users/{uid} entry exists, lookup in all users by email to find existing profile
+          let fallbackData = {
+            uid: user.uid,
+            email: user.email || '',
+            name: user.displayName || (user.email ? user.email.split('@')[0] : 'Chief'),
+            displayName: user.displayName || 'Chief',
+            createdAt: new Date().toISOString()
+          };
+          try {
+            const allUsersSnap = await get(ref(db, 'users')).catch(() => null);
+            if (allUsersSnap && allUsersSnap.exists()) {
+              const allUsers = allUsersSnap.val();
+              for (const [k, u] of Object.entries(allUsers)) {
+                if (u && u.email && user.email && u.email.toLowerCase() === user.email.toLowerCase()) {
+                  fallbackData = { ...u, uid: user.uid, dbKey: k };
+                  try {
+                    await set(ref(db, `users/${user.uid}`), fallbackData).catch(() => null);
+                  } catch(e) {}
+                  break;
+                }
+              }
+            }
+          } catch(e) {}
+          // NEVER return null when user is authenticated with Firebase!
+          callback(fallbackData);
         }
-      }); // Removed { onlyOnce: true } so UI live-updates on link/unlink
+      }, (err) => {
+        console.warn("Realtime Database user profile listener error:", err);
+        callback({
+          uid: user.uid,
+          email: user.email || '',
+          name: user.displayName || (user.email ? user.email.split('@')[0] : 'Chief'),
+          createdAt: new Date().toISOString()
+        });
+      });
     } else {
       callback(null);
     }
