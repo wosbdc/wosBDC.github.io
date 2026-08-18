@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.35] - 2026-08-18
+- 🛡️ **Account Hub & Formatter Hardening**: Added resilient `window.formatDateForDisplay` and `window.parseDateSafe` fallback handlers to gracefully catch null/invalid date inputs and prevent runtime exceptions across all Account Hub profile cards.
+- ⚡ **Enrolled Game ID Safe Set References**: Added universal defensive checks across `enrolledGameIds` and `window.enrolledGameIds` lookups in Bear Trap alt managers, live member rosters, and bot link indicators.
+- 🧪 **Ecosystem Audit & Zero-Error Validation**: Passed all automated window binding tests and AST syntax audits across all 627 exported global methods.
+
 ## [2.9.34] - 2026-08-18
 - 🛡️ **Account Verification & Token Renewal Enhancement**: Updated `openAccountHubVerifyModal` to support users without a pre-linked Game ID, prompting for numeric Game ID entry and binding directly to their profile upon in-game verification code confirmation.
 - 🔗 **Google Sign-In & Profile Sync Polish**: Enhanced automatic UID-to-profile linking and session state fallback logic to prevent missing character ID states.

@@ -330,11 +330,26 @@ window.translateWosApiError = (msg, code = null) => {
 window.parseDateSafe = (dateInput) => {
     if (!dateInput) return null;
     if (dateInput instanceof Date) return isNaN(dateInput.getTime()) ? null : dateInput;
-    const str = dateInput.toString().trim();
-    if (!str) return null;
-    const norm = str.includes('T') ? str : str.replace(/-/g, '/');
-    const d = new Date(norm);
-    return isNaN(d.getTime()) ? null : d;
+    try {
+        const str = dateInput.toString().trim();
+        if (!str) return null;
+        const norm = str.includes('T') ? str : str.replace(/-/g, '/');
+        const d = new Date(norm);
+        return isNaN(d.getTime()) ? null : d;
+    } catch(e) {
+        return null;
+    }
+};
+
+window.formatDateForDisplay = (dateInput) => {
+    if (!dateInput) return 'N/A';
+    try {
+        const d = window.parseDateSafe ? window.parseDateSafe(dateInput) : new Date(dateInput);
+        if (!d || isNaN(d.getTime())) return String(dateInput);
+        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch (e) {
+        return String(dateInput || 'N/A');
+    }
 };
 
 window.calculateTimeActive = (dateInput) => {
@@ -611,6 +626,7 @@ export const refreshIdToNameMap = async () => {
             Object.values(gcData).forEach(u => {
                 if (u && u.gameId) {
                     const gStr = u.gameId.toString().trim();
+                    if (u.enrolled !== false) enrolledGameIds.add(gStr);
                     const nStr = (u.name || "").toString().replace(/[\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]/g, ' ').trim();
                     if (nStr && !/^\d+$/.test(nStr) && nStr !== gStr) {
                         idToNameMap[gStr] = nStr;
@@ -639,12 +655,15 @@ export const refreshIdToNameMap = async () => {
             for (let i = 1; i < giftcodebotData.length; i++) {
                 let name = giftcodebotData[i][1]; 
                 let id = giftcodebotData[i][2]; 
-                if (name && id) {
-                    const nStr = name.toString().replace(/[\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]/g, ' ').trim();
+                if (id) {
                     const gStr = id.toString().trim();
-                    if (nStr && !/^\d+$/.test(nStr) && nStr !== gStr) {
-                        idToNameMap[gStr] = nStr;
-                        nameToIdMap[nStr] = gStr;
+                    enrolledGameIds.add(gStr);
+                    if (name) {
+                        const nStr = name.toString().replace(/[\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]/g, ' ').trim();
+                        if (nStr && !/^\d+$/.test(nStr) && nStr !== gStr) {
+                            idToNameMap[gStr] = nStr;
+                            nameToIdMap[nStr] = gStr;
+                        }
                     }
                 }
             }
@@ -666,6 +685,13 @@ window.fetchGiftcodeEnrollments = async () => {
         const snap = await get(ref(db, 'giftcode_bot'));
         if (snap.exists()) {
             window.giftcodeCache = snap.val();
+            if (window.giftcodeCache) {
+                Object.values(window.giftcodeCache).forEach(rec => {
+                    if (rec && rec.gameId && rec.enrolled !== false) {
+                        enrolledGameIds.add(rec.gameId.toString().trim());
+                    }
+                });
+            }
             return window.giftcodeCache;
         }
     } catch(e) { console.warn('Firebase giftcode_bot read error:', e); }
@@ -679,6 +705,7 @@ window.fetchGiftcodeEnrollments = async () => {
                 let name = gcb[i][1];
                 let id = gcb[i][2] ? gcb[i][2].toString().trim() : '';
                 if (id) {
+                    enrolledGameIds.add(id);
                     seededData[id] = {
                         gameId: id,
                         name: name || '',
@@ -700,11 +727,14 @@ window.fetchGiftcodeEnrollments = async () => {
 window.isGiftcodeEnrolled = async (gameId) => {
     if (!gameId) return false;
     const gIdStr = gameId.toString().trim();
+    if (window.enrolledGameIds && window.enrolledGameIds.has(gIdStr)) return true;
+    if (typeof enrolledGameIds !== 'undefined' && enrolledGameIds && enrolledGameIds.has(gIdStr)) return true;
     const allEnrollments = await window.fetchGiftcodeEnrollments();
     if (allEnrollments && allEnrollments[gIdStr] && allEnrollments[gIdStr].enrolled) {
+        if (window.enrolledGameIds) window.enrolledGameIds.add(gIdStr);
         return true;
     }
-    return window.enrolledGameIds.has(gIdStr);
+    return (window.enrolledGameIds ? window.enrolledGameIds.has(gIdStr) : false);
 };
 
 // Enroll a player natively into Firebase Realtime Database
@@ -724,7 +754,8 @@ window.enrollGiftcodeBot = async (gameId, chiefName) => {
         if (window.giftcodeCache) {
             window.giftcodeCache[gIdStr] = record;
         }
-        window.enrolledGameIds.add(gIdStr);
+        if (window.enrolledGameIds) window.enrolledGameIds.add(gIdStr);
+        if (typeof enrolledGameIds !== 'undefined' && enrolledGameIds) enrolledGameIds.add(gIdStr);
         return true;
     } catch(e) {
         console.warn("Failed to write giftcode_bot in Firebase", e);
@@ -22288,7 +22319,7 @@ window.resetBearTrapEvent = async () => {
         else unverifiedCount++;
 
         let isAltEnrolled = false;
-        const gcb = window.liveData['giftcodebot'];
+        const gcb = window.liveData ? window.liveData['giftcodebot'] : null;
         if (gcb && gcb.length > 1) {
             for (let i = 1; i < gcb.length; i++) {
                 if (gcb[i] && gcb[i][2] && gcb[i][2].toString().trim() === cleanGid) {
@@ -22297,7 +22328,7 @@ window.resetBearTrapEvent = async () => {
                 }
             }
         }
-        if (!isAltEnrolled && enrolledGameIds.has(cleanGid)) {
+        if (!isAltEnrolled && ((window.enrolledGameIds && window.enrolledGameIds.has(cleanGid)) || (typeof enrolledGameIds !== 'undefined' && enrolledGameIds && enrolledGameIds.has(cleanGid)))) {
             isAltEnrolled = true;
         }
 
@@ -22683,7 +22714,10 @@ window.resetBearTrapEvent = async () => {
       const userBio = currentUser.bio || '';
 
       const avatarSrc = window.getAvatarUrl(currentUser.gameId || '', currentChiefName);
-      const isEnrolled = isMainEnrolled || (currentUser.gameId && enrolledGameIds.has(currentUser.gameId.toString()));
+      const isEnrolled = isMainEnrolled || (currentUser.gameId && (
+          (window.enrolledGameIds && window.enrolledGameIds.has(currentUser.gameId.toString())) ||
+          (typeof enrolledGameIds !== 'undefined' && enrolledGameIds && enrolledGameIds.has(currentUser.gameId.toString()))
+      ));
 
       const botStatusHtml = isEnrolled 
           ? `<div style="background:rgba(16,185,129,0.1); border:1px solid var(--success); color:var(--success); padding:8px 16px; border-radius:8px; font-weight:bold; font-size:14px; display:inline-flex; align-items:center; gap:8px;">&#x2705; Active Bot Link</div>`
