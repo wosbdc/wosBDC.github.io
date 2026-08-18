@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.9.17] - 2026-08-17
+- ⚔️ **All 5 Showdown Historical Battles Restored**: Complete restoration and auto-seeding of all 5 Showdown historical battle records (including Jun 1st – 7th 2026 vs [RED]Army) across the Showdown Leaderboard, Archive Vault, and Member Account event statistics.
+- 🛡️ **Showdown Vault Manager & Seeder**: Auto-seeds default archives on load and adds an explicit "Restore All 5 Cycles" button to Showdown Data Entry for effortless database maintenance.
+
 ## [2.9.16] - 2026-08-17
 - 👑 **Dynamic R4 & R5 Leadership Tiers**: Integrated real-time leadership detection directly across the Alliance Leadership directory, Member Profile, and User Database.
 - 🛡️ **Interactive Claim Status Badges**: Added visual indicators and clickable direct links for claimed and unclaimed officer profiles.

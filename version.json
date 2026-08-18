@@ -29,11 +29,11 @@
       "repository": "https://github.com/bdclive/BDClive"
     },
     "wosbdc_alliance_dashboard": {
-      "version": "2.9.16",
+      "version": "2.9.17",
       "repository": "https://github.com/wosbdc/wosBDC.github.io",
       "latestChanges": [
-        "v2.9.16: Dynamic R4/R5 leadership ranks & claim badges with tab state preservation",
-        "v2.9.15: Compact mini buttons for user account & 2-column display tools grid in Settings sidebar"
+        "v2.9.17: Restored & auto-seeded all 5 Showdown historical battles with Showdown Vault Manager & Seeder",
+        "v2.9.16: Dynamic R4/R5 leadership ranks & claim badges with tab state preservation"
       ]
     },
     "google_apps_script_backend": {

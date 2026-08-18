@@ -1,11 +1,10 @@
 {
-  "version": "2.9.16",
+  "version": "2.9.17",
   "releaseDate": "2026-08-17",
-  "title": "What's New in v2.9.16",
+  "title": "What's New in v2.9.17",
   "notes": [
-    "👑 Dynamic Alliance Rank Hierarchy: Fully integrated R4 (Officials) and R5 (President) leadership tiers with live updates and responsive styling across Alliance Leadership, Member Profile, and User Database.",
-    "🛡️ Leadership Claim Badges: Interactive claim status badges showing verified account states for alliance officers.",
-    "🔄 Seamless State Preservation: Retains active admin/leadership tab states on instant data refresh."
+    "⚔️ Complete Showdown Historical Archives: Fully restored and auto-seeded all 5 Showdown historical battle cycles (including Jun 1st – 7th 2026 vs [RED]Army) across the Showdown Leaderboard, Archive Vault, and Member Account event statistics.",
+    "🛡️ Showdown Vault Manager & Seeder: Automatic database seeder and an explicit 'Restore All 5 Cycles' button in Showdown Data Entry for effortless database synchronization and recovery."
   ]
 }
 
