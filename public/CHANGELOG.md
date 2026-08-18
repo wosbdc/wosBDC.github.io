@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [2.9.26] - 2026-08-17
+- 👥 **Multi-Member Target & Donation Breakdown Parsing**: Single-row batch actions (e.g. multi-player Bear Trap donation submissions with breakdown strings like `Thadwarf (+22 ➔ New Total: 96)...`) are now parsed as batched actions, rendering the interactive `👥 Multiple (N)` pill, detailed hover tooltips, and modal cards with metadata badges and quick copy.
+
 ## [2.9.25] - 2026-08-17
 - 👥 **Batched Members Detail Modal**: Added an interactive glassmorphic modal for batched audit log entries triggered on click/tap of the `👥 Multiple (N)` pill. Features a numbered member list, copy list to clipboard button, action badges, and complete mobile touch support.
 - 💡 **Hover & Tap Guidance**: Enhanced batched member pill styling with info indicator and explanatory tooltip text for cross-device accessibility.

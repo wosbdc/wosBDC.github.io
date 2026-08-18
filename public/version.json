@@ -1,19 +1,18 @@
 {
-  "version": "2.9.25",
+  "version": "2.9.26",
   "releaseDate": "2026-08-17",
-  "title": "What's New in v2.9.25",
+  "title": "What's New in v2.9.26",
   "notes": [
-    "👥 Audit Log Tooltip for Batched Members: Hovering over the orange 'Multiple' pill in batched admin logs now displays a clean, numbered list tooltip showing all included target member names.",
-    "📋 Admin Action Audit Logs Overhaul: Redesigned the audit logs table with semantic category badges, 2-line date/time timestamps, clean action summary pills, and responsive layout."
+    "👥 Multi-Member Target & Breakdown Parsing: Single-row batch actions (e.g. multi-chief Bear Trap donations) now automatically detect all affected members, display the interactive 'Multiple (N)' pill, show clean hover tooltips with donation amounts, and open the detailed member modal with badges."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "2.9.25",
+    "version": "2.9.26",
     "repository": "https://github.com/wosbdc/wosBDC.github.io",
     "latestChanges": [
+      "v2.9.26: Supported multi-member target & breakdown parsing for single-entry batch logs (such as multi-player Bear Trap donations) with interactive modal details and badges",
       "v2.9.25: Added interactive Batched Members Modal with copy button for seamless mobile and desktop inspection of grouped actions",
       "v2.9.24: Added hover tooltip with numbered member names list to the orange batched pill in Admin Logs",
-      "v2.9.23: Redesigned Admin Action Audit Logs table layout, semantic category badges, and batch summaries",
-      "v2.9.22: Refined member perks copy for in-game mailbox delivery and furnace sync"
+      "v2.9.23: Redesigned Admin Action Audit Logs table layout, semantic category badges, and batch summaries"
     ]
   }
 }

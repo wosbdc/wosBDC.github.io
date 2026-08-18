@@ -17078,6 +17078,41 @@ const views = {
         }
       };
 
+      // Helper to extract named target members and breakdown metadata from log objects
+      window.extractLogMembers = (log) => {
+        if (!log) return [];
+        let raw = (log.target && log.target !== '-') ? String(log.target).trim() : '';
+        if (!raw && log.details && (log.details.includes('➔') || (log.details.includes('(+') && log.details.includes(',')))) {
+          raw = String(log.details).trim();
+        }
+        if (!raw || raw === '-' || raw.toLowerCase() === 'none') return [];
+
+        if (raw.includes(',')) {
+          const parts = raw.split(',').map(s => s.trim()).filter(Boolean);
+          if (parts.length > 1) {
+            return parts.map(part => {
+              let name = part;
+              let meta = '';
+              const match = part.match(/^(.*?)\s*\((.*?)\)$/);
+              if (match) {
+                name = match[1].trim();
+                meta = match[2].trim();
+              }
+              return { name: name || part, meta, raw: part };
+            }).filter(m => m.name && m.name !== '-');
+          }
+        }
+
+        let name = raw;
+        let meta = '';
+        const match = raw.match(/^(.*?)\s*\((.*?)\)$/);
+        if (match) {
+          name = match[1].trim();
+          meta = match[2].trim();
+        }
+        return [{ name: name || raw, meta, raw }];
+      };
+
       // Mobile & Desktop Interactive Modal to View All Batched Member Names
       window.showBatchedMembersModal = (batchId) => {
         const batchData = window._batchedMembersMap && window._batchedMembersMap[batchId];
@@ -17094,16 +17129,30 @@ const views = {
           if (e.target === modal) modal.remove();
         };
 
-        const membersListHtml = batchData.members && batchData.members.length > 0
-          ? batchData.members.map((name, idx) => `
-              <div style="display:flex; align-items:center; justify-content:space-between; padding:9px 12px; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:8px; font-size:13px; transition:background 0.15s ease;">
-                <div style="display:flex; align-items:center; gap:8px; min-width:0;">
-                  <span style="color:var(--text-muted); font-size:11px; font-family:monospace; width:22px;">${idx + 1}.</span>
-                  <span style="font-weight:600; color:var(--text-main); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHTML(name)}</span>
+        const listSource = (batchData.memberDetails && batchData.memberDetails.length > 0)
+          ? batchData.memberDetails
+          : (batchData.members && batchData.members.length > 0)
+            ? batchData.members.map(m => ({ name: m, meta: '', raw: m }))
+            : [];
+
+        const membersListHtml = listSource.length > 0
+          ? listSource.map((item, idx) => {
+              const name = typeof item === 'object' ? item.name : item;
+              const meta = typeof item === 'object' ? item.meta : '';
+              return `
+                <div style="display:flex; align-items:center; justify-content:space-between; padding:9px 12px; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:8px; font-size:13px; gap:8px; transition:background 0.15s ease;">
+                  <div style="display:flex; align-items:center; gap:8px; min-width:0; flex:1;">
+                    <span style="color:var(--text-muted); font-size:11px; font-family:monospace; width:22px; flex-shrink:0;">${idx + 1}.</span>
+                    <span style="font-weight:600; color:var(--text-main); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHTML(name)}</span>
+                  </div>
+                  ${meta ? `
+                    <span style="background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); color:#34d399; font-size:11px; padding:2px 8px; border-radius:6px; font-weight:600; white-space:nowrap; flex-shrink:0;">${escapeHTML(meta)}</span>
+                  ` : `
+                    <span style="background:rgba(56,189,248,0.1); color:#38bdf8; font-size:11px; padding:2px 8px; border-radius:6px; font-weight:600; flex-shrink:0;">Chief</span>
+                  `}
                 </div>
-                <span style="background:rgba(56,189,248,0.1); color:#38bdf8; font-size:11px; padding:2px 8px; border-radius:6px; font-weight:600;">Chief</span>
-              </div>
-            `).join('')
+              `;
+            }).join('')
           : `<div style="text-align:center; color:var(--text-muted); padding:20px;">No named members found in this batch.</div>`;
 
         modal.innerHTML = `
@@ -17117,7 +17166,7 @@ const views = {
                 <div>
                   <h3 style="margin:0; color:var(--text-main); font-size:16px; font-weight:700;">Batched Members</h3>
                   <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
-                    ${batchData.members ? batchData.members.length : 0} Target Chiefs &bull; Admin: <span style="color:#a78bfa; font-weight:600;">${escapeHTML(batchData.admin || 'Admin')}</span>
+                    ${listSource.length} Target Chiefs &bull; Admin: <span style="color:#a78bfa; font-weight:600;">${escapeHTML(batchData.admin || 'Admin')}</span>
                   </div>
                 </div>
               </div>
@@ -17152,15 +17201,26 @@ const views = {
 
       window.copyBatchedMembersList = (batchId) => {
         const batchData = window._batchedMembersMap && window._batchedMembersMap[batchId];
-        if (!batchData || !batchData.members || batchData.members.length === 0) return;
-        const text = batchData.members.join('\n');
+        if (!batchData) return;
+        let text = '';
+        if (batchData.memberDetails && batchData.memberDetails.length > 0) {
+          text = batchData.memberDetails.map((m, idx) => {
+            const name = typeof m === 'object' ? m.name : m;
+            const meta = typeof m === 'object' ? m.meta : '';
+            return `${idx + 1}. ${name}${meta ? ` (${meta})` : ''}`;
+          }).join('\n');
+        } else if (batchData.members && batchData.members.length > 0) {
+          text = batchData.members.map((m, idx) => `${idx + 1}. ${m}`).join('\n');
+        }
+        if (!text) return;
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(text);
         }
+        const count = (batchData.memberDetails || batchData.members || []).length;
         if (typeof window.showToast === 'function') {
-          window.showToast(`📋 Copied ${batchData.members.length} member names!`);
+          window.showToast(`📋 Copied ${count} member names!`);
         } else {
-          alert(`📋 Copied ${batchData.members.length} member names!`);
+          alert(`📋 Copied ${count} member names!`);
         }
       };
 
@@ -17254,28 +17314,78 @@ const views = {
            const timeStr = firstLog.timeStr || d.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'});
 
            if (group.length === 1) {
-              const actionBadge = window.getAdminActionBadgeHtml(firstLog.action || 'Admin Action', false);
-              
-              tbodyHtml += `
-                <tr class="admin-log-row" data-admin="${adminName.toLowerCase()}" data-timestamp="${firstLog.timestamp || 0}" style="border-bottom:1px solid var(--border); transition:background 0.15s ease;">
-                  <td style="padding:12px 14px; white-space:nowrap;">
-                    <div style="display:flex; flex-direction:column; gap:2px;">
-                      <span style="color:var(--text-main); font-size:12.5px; font-weight:600;">${dateStr}</span>
-                      <span style="color:var(--text-muted); font-size:11px;">🕒 ${timeStr}</span>
-                    </div>
-                  </td>
-                  <td style="padding:12px 14px; white-space:nowrap;">
-                    <span style="color:#a78bfa; font-weight:700; font-size:13px;">${escapeHTML(adminName)}</span>
-                  </td>
-                  <td style="padding:12px 14px; white-space:nowrap;">${actionBadge}</td>
-                  <td style="padding:12px 14px; white-space:nowrap;">
-                    ${firstLog.target && firstLog.target !== '-' ? `
-                      <span style="font-weight:600; color:var(--text-main); font-size:13px;">${escapeHTML(firstLog.target)}</span>
-                    ` : `<span style="color:var(--text-muted); font-size:13px;">—</span>`}
-                  </td>
-                  <td style="padding:12px 14px; font-size:13px; color:var(--text-main); line-height:1.4;">${escapeHTML(firstLog.details || '—')}</td>
-                </tr>
-              `;
+              const singleExtracted = window.extractLogMembers(firstLog);
+              if (singleExtracted.length > 1) {
+                 const batchId = `b_single_${batchCounter}_${Date.now()}`;
+                 let hoverTitle = `👥 Batched Target Members (${singleExtracted.length}):\n` + 
+                                  singleExtracted.map((m, idx) => `  ${idx + 1}. ${m.raw || m.name}`).join('\n') + 
+                                  `\n\n💡 Click or tap to open member list modal`;
+
+                 window._batchedMembersMap = window._batchedMembersMap || {};
+                 window._batchedMembersMap[batchId] = {
+                   admin: adminName,
+                   action: firstLog.action || 'Admin Action',
+                   dateStr: dateStr,
+                   timeStr: timeStr,
+                   members: singleExtracted.map(m => m.name),
+                   memberDetails: singleExtracted,
+                   group: group
+                 };
+
+                 const actionBadge = window.getAdminActionBadgeHtml(firstLog.action || 'Batch Action', true, singleExtracted.length);
+
+                 tbodyHtml += `
+                   <tr class="admin-log-row" data-admin="${adminName.toLowerCase()}" data-timestamp="${firstLog.timestamp || 0}" style="border-bottom:1px solid var(--border); background:rgba(14,165,233,0.03); transition:background 0.15s ease;">
+                     <td style="padding:12px 14px; white-space:nowrap;">
+                       <div style="display:flex; flex-direction:column; gap:2px;">
+                         <span style="color:var(--text-main); font-size:12.5px; font-weight:600;">${dateStr}</span>
+                         <span style="color:var(--text-muted); font-size:11px;">🕒 ${timeStr}</span>
+                       </div>
+                     </td>
+                     <td style="padding:12px 14px; white-space:nowrap;">
+                       <span style="color:#a78bfa; font-weight:700; font-size:13px;">${escapeHTML(adminName)}</span>
+                     </td>
+                     <td style="padding:12px 14px; white-space:nowrap;">${actionBadge}</td>
+                     <td style="padding:12px 14px; white-space:nowrap;">
+                       <span onclick="window.showBatchedMembersModal('${batchId}')" title="${escapeHTML(hoverTitle)}" style="background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.3); color:#f59e0b; padding:3px 9px; border-radius:8px; font-size:11.5px; font-weight:700; display:inline-flex; align-items:center; gap:5px; white-space:nowrap; cursor:pointer; transition:all 0.15s ease;" onmouseover="this.style.borderColor='rgba(245,158,11,0.6)'; this.style.background='rgba(245,158,11,0.2)';" onmouseout="this.style.borderColor='rgba(245,158,11,0.3)'; this.style.background='rgba(245,158,11,0.12)';" role="button" aria-label="View batched members list">
+                         👥 Multiple (${singleExtracted.length})
+                         <span style="font-size:9.5px; opacity:0.8; margin-left:1px;">ℹ️</span>
+                       </span>
+                     </td>
+                     <td style="padding:12px 14px; font-size:13px; color:var(--text-main); line-height:1.4;">
+                       <div style="display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:nowrap;">
+                         <span style="color:var(--text-main); font-weight:500;">${escapeHTML(firstLog.details || `Updated ${singleExtracted.length} target members`)}</span>
+                         <button onclick="window.showBatchedMembersModal('${batchId}')" style="background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; white-space:nowrap; flex-shrink:0; display:inline-flex; align-items:center; gap:4px; transition:all 0.2s;">
+                           <span>👥 View List (${singleExtracted.length})</span>
+                         </button>
+                       </div>
+                     </td>
+                   </tr>
+                 `;
+              } else {
+                 const actionBadge = window.getAdminActionBadgeHtml(firstLog.action || 'Admin Action', false);
+                 
+                 tbodyHtml += `
+                   <tr class="admin-log-row" data-admin="${adminName.toLowerCase()}" data-timestamp="${firstLog.timestamp || 0}" style="border-bottom:1px solid var(--border); transition:background 0.15s ease;">
+                     <td style="padding:12px 14px; white-space:nowrap;">
+                       <div style="display:flex; flex-direction:column; gap:2px;">
+                         <span style="color:var(--text-main); font-size:12.5px; font-weight:600;">${dateStr}</span>
+                         <span style="color:var(--text-muted); font-size:11px;">🕒 ${timeStr}</span>
+                       </div>
+                     </td>
+                     <td style="padding:12px 14px; white-space:nowrap;">
+                       <span style="color:#a78bfa; font-weight:700; font-size:13px;">${escapeHTML(adminName)}</span>
+                     </td>
+                     <td style="padding:12px 14px; white-space:nowrap;">${actionBadge}</td>
+                     <td style="padding:12px 14px; white-space:nowrap;">
+                       ${firstLog.target && firstLog.target !== '-' ? `
+                         <span style="font-weight:600; color:var(--text-main); font-size:13px;">${escapeHTML(firstLog.target)}</span>
+                       ` : `<span style="color:var(--text-muted); font-size:13px;">—</span>`}
+                     </td>
+                     <td style="padding:12px 14px; font-size:13px; color:var(--text-main); line-height:1.4;">${escapeHTML(firstLog.details || '—')}</td>
+                   </tr>
+                 `;
+              }
            } else {
               const batchId = `b_${batchCounter}_${Date.now()}`;
               const startTimeStr = lastLog.timeStr || new Date(lastLog.timestamp).toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'});
@@ -17297,10 +17407,30 @@ const views = {
                  summaryHtml = parts.join(' ');
               }
 
-              const memberNames = Array.from(new Set(group.map(l => l.target).filter(t => Boolean(t) && t !== '-')));
+              let allGroupMembers = [];
+              group.forEach(l => {
+                 const extracted = window.extractLogMembers(l);
+                 if (extracted.length > 0) {
+                    allGroupMembers.push(...extracted);
+                 } else if (l.target && l.target !== '-') {
+                    allGroupMembers.push({ name: l.target, meta: '', raw: l.target });
+                 }
+              });
+
+              const uniqueMembers = [];
+              const seenKeys = new Set();
+              allGroupMembers.forEach(m => {
+                 const key = (m.name || '').toLowerCase();
+                 if (key && !seenKeys.has(key)) {
+                    seenKeys.add(key);
+                    uniqueMembers.push(m);
+                 }
+              });
+
+              const memberNames = uniqueMembers.map(m => m.name);
               let hoverTitle = '';
-              if (memberNames.length > 0) {
-                hoverTitle = `👥 Batched Target Members (${memberNames.length}):\n` + memberNames.map((m, idx) => `  ${idx + 1}. ${m}`).join('\n') + `\n\n💡 Click or tap to open member list modal`;
+              if (uniqueMembers.length > 0) {
+                hoverTitle = `👥 Batched Target Members (${uniqueMembers.length}):\n` + uniqueMembers.map((m, idx) => `  ${idx + 1}. ${m.raw || m.name}`).join('\n') + `\n\n💡 Click or tap to open member list modal`;
               } else {
                 hoverTitle = `${group.length} consecutive actions batched`;
               }
@@ -17312,6 +17442,7 @@ const views = {
                 dateStr: dateStr,
                 timeStr: `${startTimeStr} – ${endTimeStr}`,
                 members: memberNames,
+                memberDetails: uniqueMembers,
                 group: group
               };
 
