@@ -28561,6 +28561,137 @@ window.closeMobileNavModal = () => {
 };
 
 // ============================================================================
+// APP ICON & BRAND EMBLEM SWITCHER ENGINE (v2.9.33)
+// ============================================================================
+window.APP_ICONS = [
+  {
+    id: 'cosmic-4b',
+    name: 'Cosmic Nebula (4b)',
+    badge: 'Popular',
+    desc: '3D Amethyst & Ice crystal with hearth fire set against a purple cosmic galaxy.',
+    src: './app-icons/icon-cosmic-4b.jpg'
+  },
+  {
+    id: 'radiant-4a',
+    name: 'Radiant Amethyst (4a)',
+    badge: 'Vibrant',
+    desc: 'Bright purple crystal light rays with gold-accented snowflake facets.',
+    src: './app-icons/icon-radiant-4a.jpg'
+  },
+  {
+    id: 'obsidian-4c',
+    name: 'Obsidian & Neon (4c)',
+    badge: 'Stealth',
+    desc: 'Ultra-dark glass tile with glowing violet perimeter neon glow.',
+    src: './app-icons/icon-obsidian-4c.jpg'
+  },
+  {
+    id: 'classic',
+    name: 'Frost Amethyst Classic',
+    badge: 'Original',
+    desc: 'Standard official high-resolution BDC alliance crest.',
+    src: './app-icons/icon-classic.png'
+  }
+];
+
+window.getSavedAppIconId = function() {
+  try {
+    return localStorage.getItem('bdc_custom_app_icon') || 'cosmic-4b';
+  } catch(e) {
+    return 'cosmic-4b';
+  }
+};
+
+window.setAppIcon = function(iconId, showToast = true) {
+  const icon = (window.APP_ICONS && window.APP_ICONS.find(i => i.id === iconId)) || (window.APP_ICONS ? window.APP_ICONS[0] : null);
+  if (!icon) return;
+  try {
+    localStorage.setItem('bdc_custom_app_icon', icon.id);
+  } catch(e) {}
+  
+  // Update Navbar Logo image
+  const navbarLogo = document.getElementById('navbarAppLogo');
+  if (navbarLogo) {
+    navbarLogo.src = icon.src;
+    navbarLogo.alt = icon.name;
+  }
+  
+  // Dynamically update Favicons in tab
+  const faviconSelectors = ["link[rel='icon']", "link[rel='shortcut icon']", "link[rel='apple-touch-icon']"];
+  faviconSelectors.forEach(sel => {
+    document.querySelectorAll(sel).forEach(el => {
+      el.href = icon.src;
+    });
+  });
+  
+  // Refresh modal UI if open
+  if (typeof window.renderAppIconGrid === 'function') {
+    window.renderAppIconGrid();
+  }
+  
+  if (showToast && typeof window.showToast === 'function') {
+    window.showToast(`✨ App Icon set to ${icon.name}!`, 'success');
+  }
+};
+
+window.renderAppIconGrid = function() {
+  const grid = document.getElementById('appIconGrid');
+  if (!grid || !window.APP_ICONS) return;
+  const currentId = window.getSavedAppIconId();
+  
+  grid.innerHTML = window.APP_ICONS.map(item => {
+    const isActive = item.id === currentId;
+    return `
+      <div onclick="window.setAppIcon('${item.id}')" 
+           style="background:var(--bg-main); border:2px solid ${isActive ? 'var(--accent, #a855f7)' : 'var(--border)'}; border-radius:14px; padding:16px; cursor:pointer; transition:all 0.2s ease; display:flex; flex-direction:column; align-items:center; text-align:center; position:relative; box-shadow:${isActive ? '0 0 16px rgba(168,85,247,0.35)' : 'none'};"
+           onmouseover="this.style.borderColor='var(--accent, #a855f7)'; this.style.transform='translateY(-2px)';"
+           onmouseout="this.style.borderColor='${isActive ? 'var(--accent, #a855f7)' : 'var(--border)'}'; this.style.transform='none';">
+        ${isActive ? `<span style="position:absolute; top:8px; right:8px; background:#10b981; color:#ffffff; font-size:10px; font-weight:bold; padding:2px 8px; border-radius:10px;">✓ ACTIVE</span>` : (item.badge ? `<span style="position:absolute; top:8px; right:8px; background:rgba(168,85,247,0.18); color:var(--accent,#a855f7); font-size:10px; font-weight:bold; padding:2px 8px; border-radius:10px; border:1px solid rgba(168,85,247,0.3);">${item.badge}</span>` : '')}
+        <img src="${item.src}" alt="${item.name}" style="width:84px; height:84px; border-radius:18px; object-fit:cover; margin-bottom:12px; box-shadow:0 4px 14px rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.12);" />
+        <div style="font-weight:bold; font-size:14px; color:var(--text-main); margin-bottom:4px;">${item.name}</div>
+        <div style="font-size:11.5px; color:var(--text-muted); line-height:1.35; margin-bottom:12px; min-height:32px;">${item.desc}</div>
+        <button style="margin-top:auto; width:100%; padding:8px 12px; font-size:12px; font-weight:bold; border-radius:8px; border:none; background:${isActive ? '#10b981' : 'var(--card-bg)'}; color:${isActive ? '#ffffff' : 'var(--text-main)'}; cursor:pointer; border:1px solid ${isActive ? '#10b981' : 'var(--border)'};">
+          ${isActive ? '✓ Selected' : 'Apply This Icon'}
+        </button>
+      </div>
+    `;
+  }).join('');
+};
+
+window.openAppIconModal = function() {
+  if (typeof window.renderAppIconGrid === 'function') {
+    window.renderAppIconGrid();
+  }
+  const modal = document.getElementById('appIconModal');
+  const overlay = document.getElementById('appIconModalOverlay');
+  if (modal) modal.style.display = 'block';
+  if (overlay) overlay.style.display = 'block';
+  const sidebar = document.getElementById('settingsSidebar');
+  const sideOverlay = document.getElementById('sidebarOverlay');
+  if (sidebar) sidebar.classList.remove('open');
+  if (sideOverlay) sideOverlay.classList.remove('active');
+};
+
+window.closeAppIconModal = function() {
+  const modal = document.getElementById('appIconModal');
+  const overlay = document.getElementById('appIconModalOverlay');
+  if (modal) modal.style.display = 'none';
+  if (overlay) overlay.style.display = 'none';
+};
+
+window.initAppIcon = function() {
+  const savedId = window.getSavedAppIconId();
+  window.setAppIcon(savedId, false);
+};
+
+// Initialize app icon on startup
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => window.initAppIcon());
+} else {
+  window.initAppIcon();
+}
+
+// ============================================================================
 // UNIFIED SINGLE-CANVAS FIRE CRYSTAL ENGINE (v2.5.56)
 // Renders both Badge Image & Symmetrical Flame Physics in a Single 2D Context
 // ============================================================================

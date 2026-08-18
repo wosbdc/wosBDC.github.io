@@ -30,7 +30,10 @@
     <nav class="navbar">
       <div class="nav-inner">
         <div class="nav-brand" style="line-height:1.1; text-align:center;">
-          ❄️ Dashboard
+          <div style="display:inline-flex; align-items:center; justify-content:center; gap:8px; cursor:pointer;" onclick="window.openAppIconModal && window.openAppIconModal()" title="Click to Switch App Icon / Brand Emblem">
+            <img id="navbarAppLogo" src="./app-icons/icon-cosmic-4b.jpg" alt="BDC App Icon" style="width:26px; height:26px; border-radius:7px; object-fit:cover; border:1px solid rgba(168,85,247,0.4); box-shadow:0 0 10px rgba(168,85,247,0.3); transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1.0)'" />
+            <span style="font-weight:bold; font-size:18px; color:var(--text-main); letter-spacing:0.5px;">Dashboard</span>
+          </div>
           <span style="display:block; font-size:12px; color:var(--text-muted); font-weight:normal; margin-top:2px;">for BDC Alliance</span>
           <div style="font-size: 11px; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 6px;">
             <span title="Currently Online" style="background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 2px 6px; border-radius: 10px; font-weight: bold; display:flex; align-items:center; gap:4px;">
@@ -40,7 +43,7 @@
               👁️ <span id="views-counter">...</span>
             </span>
             <span id="versionBadge" title="Click to view Changelog" style="background: rgba(168, 85, 247, 0.2); color: #a855f7; padding: 2px 6px; border-radius: 10px; font-weight: bold; display:flex; align-items:center; gap:4px; cursor:pointer;">
-              v2.9.32
+              v2.9.33
             </span>
             <span id="navbar-user-indicator" onclick="if(window.views && window.views.account) window.views.account('Profile');" title="Click to open Account Hub" style="display:none; background: rgba(59, 130, 246, 0.18); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa; padding: 2px 8px; border-radius: 10px; font-weight: bold; align-items:center; gap:4px; max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer;">
             </span>
@@ -193,13 +196,16 @@
           <button onclick="window.openThemeModal && window.openThemeModal()" class="sidebar-action-btn sidebar-mini-btn" title="Theme Engine">
             🎨 Themes
           </button>
+          <button onclick="window.openAppIconModal && window.openAppIconModal()" class="sidebar-action-btn sidebar-mini-btn" title="App Icon & Brand Emblem Switcher">
+            🖼️ App Icon
+          </button>
           <button onclick="window.openMobileNavModal && window.openMobileNavModal()" class="sidebar-action-btn sidebar-mini-btn" title="Mobile Navigation Layout">
             📱 Mobile Nav
           </button>
           <button onclick="window.showAppInstallSelector && window.showAppInstallSelector()" class="sidebar-action-btn sidebar-mini-btn" title="Install App on Device">
             📲 Install App
           </button>
-          <button id="contactSidebarBtn" class="sidebar-action-btn sidebar-mini-btn" title="Contact Support">
+          <button id="contactSidebarBtn" class="sidebar-action-btn sidebar-mini-btn" style="grid-column: span 2;" title="Contact Support">
             💬 Contact
           </button>
         </div>
@@ -337,6 +343,22 @@
           <button id="cropperCancelBtn" style="flex:1; padding:10px; background:var(--bg-card); border:1px solid var(--border); color:var(--text-main); border-radius:8px; font-weight:bold; cursor:pointer;">Cancel</button>
           <button id="cropperSaveBtn" style="flex:2; padding:10px; background:var(--accent); border:none; color:#fff; border-radius:8px; font-weight:bold; cursor:pointer;">Save</button>
         </div>
+      </div>
+    </div>
+
+    <!-- App Icon & Logo Switcher Modal -->
+    <div id="appIconModalOverlay" class="sidebar-overlay" onclick="window.closeAppIconModal && window.closeAppIconModal();" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.75); backdrop-filter:blur(6px); z-index:9998;"></div>
+    <div id="appIconModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:var(--card-bg); padding:24px; border-radius:16px; border:1px solid var(--accent); box-shadow:0 15px 35px rgba(0,0,0,0.6); z-index:9999; width:92%; max-width:620px; max-height:85vh; overflow-y:auto; animation:fadeIn 0.2s ease;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid var(--border); padding-bottom:12px;">
+        <h3 style="margin:0; color:var(--text-main); font-size:18px; display:flex; align-items:center; gap:8px;">
+          🖼️ App Icon & Brand Switcher
+        </h3>
+        <button onclick="window.closeAppIconModal && window.closeAppIconModal();" class="close-btn" title="Close Window">✕</button>
+      </div>
+      <p style="margin:0 0 16px 0; font-size:12.5px; color:var(--text-muted); line-height:1.4;">
+        Personalize your BDC Dashboard experience by selecting your favorite 3D crystal emblem. Your choice dynamically updates your navbar logo, browser favicons, and web app tile.
+      </p>
+      <div id="appIconGrid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:12px;">
       </div>
     </div>
 

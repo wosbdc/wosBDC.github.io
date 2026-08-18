@@ -1,19 +1,19 @@
 {
-  "version": "2.9.32",
+  "version": "2.9.33",
   "releaseDate": "2026-08-18",
-  "title": "What's New in v2.9.32",
+  "title": "What's New in v2.9.33",
   "notes": [
-    "⏱️ Dynamic Time Active & Joined Date Calculation: Implemented robust multi-format date parsing and dynamic active duration calculations (years, months, days) across Profile, Alt Manager, and Alliance Roster."
+    "🖼️ App Icon & Brand Emblem Switcher: Choose from high-resolution 3D Amethyst crystal emblems (Cosmic Nebula 4b, Radiant Amethyst 4a, Dark Obsidian 4c, and Classic) with live navbar and favicon synchronization."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "2.9.32",
+    "version": "2.9.33",
     "repository": "https://github.com/wosbdc/wosBDC.github.io",
     "latestChanges": [
+      "v2.9.33: Added interactive App Icon and Brand Emblem Switcher in Settings Sidebar and navbar brand header",
       "v2.9.32: Fixed Joined Date and Dynamic Time Active duration calculation across Profile, Edit Modal, and Roster",
       "v2.9.31: Amethyst Radiant Glow App Icon, iOS Apple Touch Icon, and PWA Manifests",
       "v2.9.30: Settings Sidebar & Mobile Interaction Polish with iOS body scroll lock and 100dvh",
-      "v2.9.29: Dynamic Alliance Gatekeeper & Live Signup Telemetry across Discord alerts and Central Command",
-      "v2.9.28: Merged Target Player and Action Details into unified 'Target Chief(s) & Details' column with compact badge chips"
+      "v2.9.29: Dynamic Alliance Gatekeeper & Live Signup Telemetry across Discord alerts and Central Command"
     ]
   }
 }

@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.33] - 2026-08-18
+- 🖼️ **Interactive App Icon & Emblem Switcher**: Added an icon picker in the Settings Sidebar and Navbar Brand Header allowing chiefs to choose between multiple 3D Amethyst crystal emblems (Amethyst Cosmic Nebula 4b, Radiant Amethyst Glow 4a, Dark Obsidian & Neon 4c, and Frost Amethyst Classic).
+- 🔄 **Real-Time Ecosystem Sync**: Dynamically updates the top navbar brand logo, browser tab favicons, and web app shortcuts with `localStorage` persistence.
+- 🎨 **Glassmorphic Preview Modal**: Added an interactive gallery modal with active badges and descriptions.
+
 ## [2.9.32] - 2026-08-18
 - ⏱️ **Dynamic Time Active Duration Calculation**: Implemented an automated time-elapsed calculation engine (`window.calculateTimeActive`) that computes the exact active duration (e.g., `1y 9m`, `3w 2d`, or `5d`) dynamically from a player's start/joined date.
 - 📅 **Multi-Format Date Parsing & Normalization**: Added `window.parseDateSafe`, `window.formatDateForDisplay`, and `window.formatDateForInput` to robustly parse all standard date formats (`YYYY/MM/DD`, `YYYY-MM-DD`, `MM/DD/YYYY`, and ISO strings) across local timezones and browsers.
