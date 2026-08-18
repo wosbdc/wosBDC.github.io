@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.9.38] - 2026-08-18
+- 🔄 **Active View & Tab State Persistence**: Added `sessionStorage` persistence across all views and admin sub-tabs (`tab-users`, `tab-tools`, `tab-bots`, `tab-frost`, etc.). When refreshing or reloading the page, the user stays on their active view and tab instead of being forcibly routed back to Account Hub.
+- 👥 **Manager / Admin Workflow Streamlining**: Allows managers to seamlessly work inside the Users tab (`👥 Users`) and add/edit multiple members without having to navigate back into the admin menu on every reload.
+
 ## [2.9.37] - 2026-08-18
 - ❄️ **Frost Clan Showdown: Daily Checkable Box**: Added interactive 1-tap `⚔️ Showdown: Daily` tracking toggle box to each alt card in the Frost Clan Command Center (Admin Menu > Frost Clan).
 - 📊 **Daily Showdown Live KPI Counter**: Integrated real-time KPI badge and completion progress tracking (`X / Total Alts`) into the Command Center statistics grid.

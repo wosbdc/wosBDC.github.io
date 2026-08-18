@@ -5310,10 +5310,23 @@ listenToAuth((user) => {
     const onboardingEl = document.getElementById('essentialOnboardingBanner');
     if (onboardingEl) onboardingEl.remove();
     
-    // Force user directly into the Account Hub upon login or session start
+    // Restore user's active view upon reload or default to Account Hub on fresh session start
     if (!window._initialAuthRouted) {
       window._initialAuthRouted = true;
-      if (views.account) views.account();
+      const savedView = sessionStorage.getItem('activeView');
+      const savedAdminTab = sessionStorage.getItem('activeAdminTab');
+      const savedAccountTab = sessionStorage.getItem('activeAccountTab');
+      const savedArg = sessionStorage.getItem('activeViewArg');
+
+      if (savedView === 'admin' && views.admin) {
+        views.admin(savedAdminTab || 'tab-tools');
+      } else if (savedView === 'account' && views.account) {
+        views.account(savedAccountTab || savedArg || 'Profile');
+      } else if (savedView && typeof views[savedView] === 'function') {
+        views[savedView](savedArg);
+      } else if (views.account) {
+        views.account();
+      }
     } else {
       if (app.querySelector('#accountHubView')) views.account(); // Refresh account view if open
       else if (typeof window.activeViewFunc === 'function') window.activeViewFunc();
@@ -16680,8 +16693,10 @@ const views = {
   admin: async (initialTab) => {
     const navbar = document.querySelector('.navbar');
     if (navbar) navbar.style.display = 'block';
-    const targetTab = initialTab || window._lastAdminTab || 'tab-tools';
+    const targetTab = initialTab || window._lastAdminTab || sessionStorage.getItem('activeAdminTab') || 'tab-tools';
     window._lastAdminTab = targetTab;
+    sessionStorage.setItem('activeView', 'admin');
+    sessionStorage.setItem('activeAdminTab', targetTab);
     window.activeViewFunc = () => views.admin(window._lastAdminTab || 'tab-tools');
 
     window.copyUnclaimedRosterList = () => {
@@ -19547,6 +19562,8 @@ const views = {
           
           const tabKey = clickedBtn.getAttribute('data-tab');
           window._lastAdminTab = tabKey;
+          sessionStorage.setItem('activeAdminTab', tabKey);
+          sessionStorage.setItem('activeView', 'admin');
           window.activeViewFunc = () => views.admin(tabKey);
           const targetEl = document.getElementById(tabKey);
           if (targetEl) targetEl.style.display = 'block';
@@ -22186,8 +22203,10 @@ window.resetBearTrapEvent = async () => {
       };
     }
     if (!currentUser) return window.renderMembersOnlyGuard("User Account Hub");
-    const targetTab = (typeof defaultTab === 'string' && defaultTab) ? defaultTab : (window.currentAccountHubTab || 'Profile');
+    const targetTab = (typeof defaultTab === 'string' && defaultTab) ? defaultTab : (window.currentAccountHubTab || sessionStorage.getItem('activeAccountTab') || 'Profile');
     window.currentAccountHubTab = targetTab;
+    sessionStorage.setItem('activeView', 'account');
+    sessionStorage.setItem('activeAccountTab', targetTab);
     window.activeViewFunc = () => views.account(window.currentAccountHubTab);
 
     // Reset active navbar tab states
@@ -23556,6 +23575,8 @@ window.resetBearTrapEvent = async () => {
 
     const switchAccountHubTab = (activeId) => {
       window.currentAccountHubTab = activeId;
+      sessionStorage.setItem('activeAccountTab', activeId);
+      sessionStorage.setItem('activeView', 'account');
       accTabs.forEach(t => {
         if (!t.btn || !t.sec) return;
         if (t.id === activeId) {
@@ -27913,7 +27934,9 @@ allLinks.forEach(link => {
     const target = targetEl.getAttribute('data-target');
     const filter = targetEl.getAttribute('data-filter');
     if (views[target]) {
-      if (target === 'admin') window.activeViewFunc = null;
+      sessionStorage.setItem('activeView', target);
+      if (filter) sessionStorage.setItem('activeViewArg', filter);
+      if (target === 'admin') window.activeViewFunc = () => views.admin(window._lastAdminTab || sessionStorage.getItem('activeAdminTab') || 'tab-tools');
       else window.activeViewFunc = () => views[target](filter);
       
       views[target](filter);
@@ -27922,15 +27945,37 @@ allLinks.forEach(link => {
   });
 });
 
-// Initial load
-window.activeViewFunc = () => views.home();
-views.home();
+// Initial boot view resolver
+const savedBootView = sessionStorage.getItem('activeView');
+const savedBootAdminTab = sessionStorage.getItem('activeAdminTab');
+const savedBootAccountTab = sessionStorage.getItem('activeAccountTab');
+const savedBootArg = sessionStorage.getItem('activeViewArg');
+
+if (savedBootView === 'admin' && views.admin) {
+  window.activeViewFunc = () => views.admin(savedBootAdminTab || 'tab-tools');
+  views.admin(savedBootAdminTab || 'tab-tools');
+} else if (savedBootView === 'account' && views.account) {
+  window.activeViewFunc = () => views.account(savedBootAccountTab || savedBootArg || 'Profile');
+  views.account(savedBootAccountTab || savedBootArg || 'Profile');
+} else if (savedBootView && typeof views[savedBootView] === 'function') {
+  window.activeViewFunc = () => views[savedBootView](savedBootArg);
+  views[savedBootView](savedBootArg);
+} else {
+  window.activeViewFunc = () => views.home();
+  views.home();
+}
 initPresence();
 
-// Automatically trigger update checks across ALL pages and view transitions
+// Automatically trigger update checks across ALL pages and view transitions, and persist active view
 Object.keys(views).forEach(key => {
   const orig = views[key];
   views[key] = async function(...args) {
+    if (key !== 'login' && key !== 'register' && key !== 'auth') {
+      sessionStorage.setItem('activeView', key);
+      if (args[0] && typeof args[0] === 'string') {
+        sessionStorage.setItem('activeViewArg', args[0]);
+      }
+    }
     if (window.checkAppVersion) window.checkAppVersion();
     return orig.apply(this, args);
   };
