@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [2.9.39] - 2026-08-18
+- 👥 **Bear-Trap-Style Bulk Add Players to Roster**: Implemented an intelligent multi-entry Bulk Add modal and parser in the Admin Chief's List (`👥 Users` tab) allowing leaders to rapidly import multiple members at once.
+- 📋 **Flexible Multi-Format Parser**: Supports line breaks, tab/comma separated data, `ID Name`, `Name ID`, `Name (ID)` syntax, and handles trailing brackets or power numbers.
+- 🛡️ **Real-Time Duplication & Validation Guard**: Automatically highlights duplicate names/IDs against live roster and registered users, flags conflicts, and offers single-click "Remove Duplicates" and row editing.
+- ⚡ **Direct Firebase Sync with Auto FID**: Writes verified members directly into `roster_live` and `members` with automatic 9-digit FID generation when missing, and triggers Google Apps Script sheet sync.
+- 🚀 **One-Click Admin Toolbar Launch**: Added `👥 Bulk Add` action button directly in the Members & Player Database toolbar next to `➕ Add Player`.
+
 ## [2.9.38] - 2026-08-18
 - 🔄 **Active View & Tab State Persistence**: Added `sessionStorage` persistence across all views and admin sub-tabs (`tab-users`, `tab-tools`, `tab-bots`, `tab-frost`, etc.). When refreshing or reloading the page, the user stays on their active view and tab instead of being forcibly routed back to Account Hub.
 - 👥 **Manager / Admin Workflow Streamlining**: Allows managers to seamlessly work inside the Users tab (`👥 Users`) and add/edit multiple members without having to navigate back into the admin menu on every reload.

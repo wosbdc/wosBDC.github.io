@@ -29,19 +29,17 @@
       "repository": "https://github.com/bdclive/BDClive"
     },
     "wosbdc_alliance_dashboard": {
-      "version": "2.9.30",
+      "version": "2.9.39",
       "repository": "https://github.com/wosbdc/wosBDC.github.io",
       "latestChanges": [
-        "v2.9.30: Enhanced Account Hub resilience with safe property fallbacks and verified token lifecycle handling",
-        "v2.9.29: Dynamic Alliance Gatekeeper & Live Signup Telemetry across Discord alerts and Central Command",
-        "v2.9.28: Merged Target Player and Action Details into unified 'Target Chief(s) & Details' column with compact badge chips",
-        "v2.9.27: Expanded Admin Hub & Audit Logs window to 1300px and added custom high-contrast scrollbars with sticky column headers",
-        "v2.9.26: Supported multi-member target & breakdown parsing for single-entry batch logs (such as multi-player Bear Trap donations) with interactive modal details and badges"
+        "v2.9.39: Bear-Trap-Style Bulk Add Players to Roster with multi-format parsing, duplicate checking, and direct Firebase sync",
+        "v2.9.38: Persist active view and admin tab state across page reloads and refreshes",
+        "v2.9.37: Added Showdown Daily checkable box and KPI tracker to Frost Clan Command Center"
       ]
     },
     "google_apps_script_backend": {
-      "deploymentId": "AKfycbzXjvqOcr9w3CZuwNxDhesndWeSwFLDeo7RS_REykgenkqf73lq4FAfZ7bTitTmVEA",
-      "versionNumber": "@196"
+      "deploymentId": "AKfycbzpQ0MIt3QJ3sco-d5d8PdthaG-g4o9CRZkcnBOyES7LX-8aAaDffvCUt2SOAQL-go",
+      "versionNumber": "@198"
     }
   }
 }

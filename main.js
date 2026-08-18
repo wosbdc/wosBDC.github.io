@@ -3208,67 +3208,480 @@ window.addNewChiefToRoster = async (gameId, name, furnaceLevel = 'F30', dateStar
   return record;
 };
 
-// Open Add Player Modal
-window.openAddPlayerModal = () => {
+// Open Add Player Modal with Single & Bulk Add tabs
+window.openAddPlayerModal = (initialMode = 'single') => {
   const existingModal = document.getElementById('addPlayerModal');
   if (existingModal) existingModal.remove();
 
   const todayStr = new Date().toISOString().split('T')[0];
 
   const modalHtml = `
-    <div id="addPlayerModal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.75); backdrop-filter:blur(5px); z-index:100050; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease;">
-      <div style="background:var(--card-bg); border:1px solid var(--accent); border-radius:16px; padding:24px; width:90%; max-width:480px; box-shadow:0 20px 50px rgba(0,0,0,0.8); position:relative;">
+    <div id="addPlayerModal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); backdrop-filter:blur(6px); z-index:100050; display:flex; align-items:center; justify-content:center; padding:16px; animation:fadeIn 0.2s ease;">
+      <div id="addPlayerModalCard" style="background:var(--card-bg); border:1px solid var(--accent); border-radius:16px; padding:24px; width:100%; max-width:${initialMode === 'bulk' ? '880px' : '500px'}; max-height:92vh; display:flex; flex-direction:column; box-shadow:0 25px 60px rgba(0,0,0,0.85); position:relative; transition:max-width 0.3s ease;">
         
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:12px;">
-          <h3 style="margin:0; color:var(--text-main); font-size:20px; display:flex; align-items:center; gap:10px;">
-            ➕ Add New Player to Roster
-          </h3>
+        <!-- Header & Mode Switcher -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:14px; flex-shrink:0;">
+          <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+            <h3 style="margin:0; color:var(--text-main); font-size:20px; display:flex; align-items:center; gap:8px;">
+              ➕ Add Player to Roster
+            </h3>
+            
+            <!-- Mode Switcher Tabs -->
+            <div style="display:inline-flex; background:rgba(255,255,255,0.06); border:1px solid var(--border); border-radius:10px; padding:3px; gap:4px;">
+              <button type="button" id="tabBtnSinglePlayer" onclick="window.switchAddPlayerMode('single')" style="background:${initialMode === 'single' ? 'var(--accent)' : 'transparent'}; color:${initialMode === 'single' ? '#ffffff' : 'var(--text-muted)'}; border:none; padding:5px 14px; border-radius:7px; font-weight:bold; font-size:12px; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.2s;">
+                👤 Single
+              </button>
+              <button type="button" id="tabBtnBulkPlayer" onclick="window.switchAddPlayerMode('bulk')" style="background:${initialMode === 'bulk' ? 'var(--accent)' : 'transparent'}; color:${initialMode === 'bulk' ? '#ffffff' : 'var(--text-muted)'}; border:none; padding:5px 14px; border-radius:7px; font-weight:bold; font-size:12px; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.2s;">
+                👥 Bulk Add
+              </button>
+            </div>
+          </div>
           <button type="button" onclick="document.getElementById('addPlayerModal')?.remove()" style="background:rgba(255,255,255,0.08); border:1px solid var(--border); color:var(--text-main); font-size:18px; width:34px; height:34px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.2)'; this.style.color='#ef4444';" onmouseout="this.style.background='rgba(255,255,255,0.08)'; this.style.color='var(--text-main)';" title="Close Window">✕</button>
         </div>
 
-        <form id="addPlayerForm" onsubmit="window.submitAddPlayerForm(event)" style="display:flex; flex-direction:column; gap:14px;">
-          <div>
-            <label style="display:block; margin-bottom:4px; font-size:12px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Game ID (Required)</label>
-            <div style="display:flex; gap:8px;">
-              <input type="text" id="newPlayerGameId" placeholder="e.g. 318843189" required style="flex:1; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:15px; font-weight:bold;">
-              <button type="button" id="verifyAddPlayerBtn" onclick="window.verifyAddPlayerGameId()" style="background:var(--accent); color:white; border:none; padding:10px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; flex-shrink:0;">🔍 Verify ID</button>
+        <!-- ================= SINGLE PLAYER VIEW ================= -->
+        <div id="addPlayerSingleView" style="display:${initialMode === 'single' ? 'flex' : 'none'}; flex-direction:column; gap:14px; overflow-y:auto;">
+          <form id="addPlayerForm" onsubmit="window.submitAddPlayerForm(event)" style="display:flex; flex-direction:column; gap:14px;">
+            <div>
+              <label style="display:block; margin-bottom:4px; font-size:12px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Game ID (Required)</label>
+              <div style="display:flex; gap:8px;">
+                <input type="text" id="newPlayerGameId" placeholder="e.g. 318843189" required style="flex:1; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:15px; font-weight:bold;">
+                <button type="button" id="verifyAddPlayerBtn" onclick="window.verifyAddPlayerGameId()" style="background:var(--accent); color:white; border:none; padding:10px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; flex-shrink:0;">🔍 Verify ID</button>
+              </div>
+            </div>
+
+            <div>
+              <label style="display:block; margin-bottom:4px; font-size:12px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Chief Name (Required)</label>
+              <input type="text" id="newPlayerName" placeholder="e.g. BrianDCox" required style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:15px; font-weight:bold;">
+            </div>
+
+            <div>
+              <label style="display:block; margin-bottom:4px; font-size:12px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Furnace Level</label>
+              ${window.renderFurnaceSelectHtml('newPlayerFurnace', '30')}
+            </div>
+
+            <div>
+              <label style="display:block; margin-bottom:4px; font-size:12px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Date Joined</label>
+              <div style="position:relative; width:100%; display:flex; align-items:stretch;">
+                <input type="date" id="newPlayerDate" value="${todayStr}" onclick="try{this.showPicker();}catch(e){}" style="flex:1; padding:10px 40px 10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:15px; cursor:pointer;">
+                <button type="button" onclick="try{document.getElementById('newPlayerDate').showPicker();}catch(e){}" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--accent); font-size:18px; cursor:pointer; padding:4px;" title="Open Calendar">📅</button>
+              </div>
+            </div>
+
+            <div id="addPlayerStatus" style="font-size:13px; font-weight:bold; text-align:center;"></div>
+
+            <div style="display:flex; gap:10px; margin-top:10px;">
+              <button type="button" onclick="document.getElementById('addPlayerModal')?.remove()" style="flex:1; padding:12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-weight:bold; cursor:pointer;">Cancel</button>
+              <button type="submit" id="addPlayerSubmitBtn" style="flex:2; padding:12px; border-radius:8px; border:none; background:var(--success); color:white; font-weight:bold; cursor:pointer; font-size:15px;">💾 Save to Roster</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- ================= BULK ADD PLAYERS VIEW (BEAR TRAP MULTI-ROW STYLE) ================= -->
+        <div id="addPlayerBulkView" style="display:${initialMode === 'bulk' ? 'flex' : 'none'}; flex-direction:column; flex:1; min-height:0; gap:12px;">
+          
+          <!-- Action Bar: Add Extra Person & Quick Paste -->
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; flex-shrink:0;">
+            <div style="display:flex; gap:8px; align-items:center;">
+              <button type="button" onclick="window.addBulkPlayerRow()" style="background:rgba(168,85,247,0.15); color:var(--accent); border:1px solid var(--accent); padding:7px 14px; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.2s;" onmouseover="this.style.background='rgba(168,85,247,0.25)'" onmouseout="this.style.background='rgba(168,85,247,0.15)'">
+                ➕ Add Extra Player
+              </button>
+              <button type="button" onclick="window.toggleBulkPasteDrawer()" style="background:rgba(59,130,246,0.15); color:#60a5fa; border:1px solid rgba(59,130,246,0.4); padding:7px 14px; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.2s;" onmouseover="this.style.background='rgba(59,130,246,0.25)'" onmouseout="this.style.background='rgba(59,130,246,0.15)'">
+                📋 Paste Raw List
+              </button>
+              <button type="button" onclick="window.clearBulkPlayerRows()" style="background:rgba(239,68,68,0.1); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:7px 12px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:4px; transition:0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.2)'" onmouseout="this.style.background='rgba(239,68,68,0.1)'" title="Reset all rows">
+                🧹 Clear
+              </button>
+            </div>
+            <span id="bulkPlayerCounter" style="font-size:12px; font-weight:bold; color:var(--text-muted);">
+              0 Players Ready
+            </span>
+          </div>
+
+          <!-- Quick Paste Drawer (Collapsible) -->
+          <div id="bulkPasteDrawer" style="display:none; background:rgba(0,0,0,0.3); border:1px solid rgba(59,130,246,0.3); border-radius:10px; padding:12px; flex-shrink:0;">
+            <div style="font-size:12px; font-weight:bold; color:#93c5fd; margin-bottom:6px;">
+              📋 Paste Lines (Format: <code>GameID, ChiefName, Furnace(opt), Date(opt)</code>):
+            </div>
+            <textarea id="bulkPasteInput" rows="3" placeholder="318843189, BrianDCox, FC 5&#10;159982424, LordBrian, FC 3&#10;156455325, IceMouse, 30" style="width:100%; box-sizing:border-box; background:var(--bg-main); color:var(--text-main); border:1px solid var(--border); border-radius:6px; padding:8px; font-size:13px; font-family:monospace; resize:vertical;"></textarea>
+            <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:8px;">
+              <button type="button" onclick="window.toggleBulkPasteDrawer(false)" style="background:transparent; border:1px solid var(--border); color:var(--text-muted); padding:5px 12px; border-radius:6px; font-size:12px; cursor:pointer;">Cancel</button>
+              <button type="button" onclick="window.applyBulkPaste()" style="background:#3b82f6; color:white; border:none; padding:5px 16px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">⚡ Populate Rows</button>
             </div>
           </div>
 
-          <div>
-            <label style="display:block; margin-bottom:4px; font-size:12px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Chief Name (Required)</label>
-            <input type="text" id="newPlayerName" placeholder="e.g. BrianDCox" required style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:15px; font-weight:bold;">
+          <!-- Table Header Labels -->
+          <div style="display:grid; grid-template-columns:36px 1fr 1fr 140px 140px 42px; gap:8px; padding:0 8px; font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; flex-shrink:0;">
+            <div style="text-align:center;">#</div>
+            <div>Game ID *</div>
+            <div>Chief Name *</div>
+            <div>Furnace</div>
+            <div>Date Joined</div>
+            <div style="text-align:center;">Del</div>
           </div>
 
-          <div>
-            <label style="display:block; margin-bottom:4px; font-size:12px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Furnace Level</label>
-            ${window.renderFurnaceSelectHtml('newPlayerFurnace', '30')}
+          <!-- Dynamic Multi-Row Container -->
+          <div id="bulkPlayersList" style="flex:1; overflow-y:auto; max-height:48vh; padding:4px 2px; display:flex; flex-direction:column; gap:8px; border:1px solid var(--border); border-radius:10px; background:rgba(0,0,0,0.15); padding:8px;">
+            <!-- Rows are injected here dynamically -->
           </div>
 
-          <div>
-            <label style="display:block; margin-bottom:4px; font-size:12px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Date Joined</label>
-            <div style="position:relative; width:100%; display:flex; align-items:stretch;">
-              <input type="date" id="newPlayerDate" value="${todayStr}" onclick="try{this.showPicker();}catch(e){}" style="flex:1; padding:10px 40px 10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:15px; cursor:pointer;">
-              <button type="button" onclick="try{document.getElementById('newPlayerDate').showPicker();}catch(e){}" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--accent); font-size:18px; cursor:pointer; padding:4px;" title="Open Calendar">📅</button>
-            </div>
-          </div>
+          <!-- Status & Footer Actions -->
+          <div id="bulkPlayerStatus" style="font-size:13px; font-weight:bold; text-align:center; min-height:18px;"></div>
 
-          <div id="addPlayerStatus" style="font-size:13px; font-weight:bold; text-align:center;"></div>
-
-          <div style="display:flex; gap:10px; margin-top:10px;">
+          <div style="display:flex; gap:10px; flex-shrink:0; margin-top:4px;">
             <button type="button" onclick="document.getElementById('addPlayerModal')?.remove()" style="flex:1; padding:12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-weight:bold; cursor:pointer;">Cancel</button>
-            <button type="submit" id="addPlayerSubmitBtn" style="flex:2; padding:12px; border-radius:8px; border:none; background:var(--success); color:white; font-weight:bold; cursor:pointer; font-size:15px;">💾 Save to Roster</button>
+            <button type="button" id="bulkPlayerSubmitBtn" onclick="window.submitBulkAddPlayers()" style="flex:2; padding:12px; border-radius:8px; border:none; background:var(--success); color:white; font-weight:bold; cursor:pointer; font-size:15px; display:flex; align-items:center; justify-content:center; gap:8px;">
+              💾 Save All to Roster
+            </button>
           </div>
-        </form>
+
+        </div>
 
       </div>
     </div>
   `;
 
   document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+  // Initialize bulk rows if starting in bulk mode or pre-populate 2 default rows
+  if (initialMode === 'bulk') {
+    window.clearBulkPlayerRows();
+  }
 };
 
-// Verify Game ID & Auto-Fill Chief Name
+// Switch between Single Player and Bulk Add views
+window.switchAddPlayerMode = (mode) => {
+  const modal = document.getElementById('addPlayerModalCard');
+  const singleView = document.getElementById('addPlayerSingleView');
+  const bulkView = document.getElementById('addPlayerBulkView');
+  const tabSingle = document.getElementById('tabBtnSinglePlayer');
+  const tabBulk = document.getElementById('tabBtnBulkPlayer');
+
+  if (!modal || !singleView || !bulkView) return;
+
+  if (mode === 'bulk') {
+    modal.style.maxWidth = '880px';
+    singleView.style.display = 'none';
+    bulkView.style.display = 'flex';
+    if (tabSingle) { tabSingle.style.background = 'transparent'; tabSingle.style.color = 'var(--text-muted)'; }
+    if (tabBulk) { tabBulk.style.background = 'var(--accent)'; tabBulk.style.color = '#ffffff'; }
+    
+    // If container is empty, populate 2 default rows
+    const list = document.getElementById('bulkPlayersList');
+    if (list && list.children.length === 0) {
+      window.clearBulkPlayerRows();
+    }
+  } else {
+    modal.style.maxWidth = '500px';
+    singleView.style.display = 'flex';
+    bulkView.style.display = 'none';
+    if (tabSingle) { tabSingle.style.background = 'var(--accent)'; tabSingle.style.color = '#ffffff'; }
+    if (tabBulk) { tabBulk.style.background = 'transparent'; tabBulk.style.color = 'var(--text-muted)'; }
+  }
+};
+
+let bulkPlayerRowIdCounter = 0;
+
+// Add a new dynamic row in Bulk Mode
+window.addBulkPlayerRow = (initialData = {}) => {
+  const container = document.getElementById('bulkPlayersList');
+  if (!container) return;
+
+  bulkPlayerRowIdCounter++;
+  const rowId = `bulkRow_${bulkPlayerRowIdCounter}`;
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  const gid = initialData.gameId || '';
+  const name = initialData.name || '';
+  const furnace = initialData.furnaceLevel || '30';
+  const dateVal = initialData.dateStarted || todayStr;
+
+  const furnaceHtml = window.renderFurnaceSelectHtml(`furnace_${rowId}`, furnace, 'width:100%; padding:9px 10px; border-radius:6px; font-size:13px; font-weight:bold;');
+
+  const rowHtml = `
+    <div id="${rowId}" class="bulk-player-row" style="display:grid; grid-template-columns:36px 1fr 1fr 140px 140px 42px; gap:8px; align-items:center; background:var(--bg-main); border:1px solid var(--border); border-radius:8px; padding:6px 8px; transition:border-color 0.2s;">
+      
+      <!-- Row Number Index Badge -->
+      <div class="bulk-row-idx" style="font-weight:bold; font-size:13px; color:var(--text-muted); text-align:center; background:rgba(255,255,255,0.05); border-radius:4px; padding:6px 0;">
+        ${container.children.length + 1}
+      </div>
+
+      <!-- Game ID -->
+      <div>
+        <input type="text" class="bulk-gid" value="${escapeHTML(gid)}" placeholder="Game ID (e.g. 318843189)" style="width:100%; box-sizing:border-box; padding:9px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:13px; font-weight:bold;" oninput="window.updateBulkRowCount()">
+      </div>
+
+      <!-- Chief Name -->
+      <div>
+        <input type="text" class="bulk-name" value="${escapeHTML(name)}" placeholder="Chief Name (e.g. BrianDCox)" style="width:100%; box-sizing:border-box; padding:9px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:13px; font-weight:bold;" oninput="window.updateBulkRowCount()">
+      </div>
+
+      <!-- Furnace Level Dropdown -->
+      <div class="bulk-furnace-container">
+        ${furnaceHtml}
+      </div>
+
+      <!-- Date Joined -->
+      <div>
+        <input type="date" class="bulk-date" value="${dateVal}" onclick="try{this.showPicker();}catch(e){}" style="width:100%; box-sizing:border-box; padding:9px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px; cursor:pointer;">
+      </div>
+
+      <!-- Remove Row Button -->
+      <div style="text-align:center;">
+        <button type="button" onclick="window.removeBulkPlayerRow('${rowId}')" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); color:#ef4444; width:32px; height:32px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px; display:inline-flex; align-items:center; justify-content:center; transition:0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.3)'" onmouseout="this.style.background='rgba(239,68,68,0.15)'" title="Delete Row">✕</button>
+      </div>
+
+    </div>
+  `;
+
+  container.insertAdjacentHTML('beforeend', rowHtml);
+  window.updateBulkRowCount();
+};
+
+// Remove a dynamic row in Bulk Mode
+window.removeBulkPlayerRow = (rowId) => {
+  const row = document.getElementById(rowId);
+  if (row) row.remove();
+
+  // Re-number badges
+  const container = document.getElementById('bulkPlayersList');
+  if (container) {
+    Array.from(container.children).forEach((child, index) => {
+      const idxBadge = child.querySelector('.bulk-row-idx');
+      if (idxBadge) idxBadge.textContent = index + 1;
+    });
+  }
+
+  window.updateBulkRowCount();
+};
+
+// Reset Bulk rows
+window.clearBulkPlayerRows = () => {
+  const container = document.getElementById('bulkPlayersList');
+  if (!container) return;
+  container.innerHTML = '';
+  window.addBulkPlayerRow();
+  window.addBulkPlayerRow();
+  window.updateBulkRowCount();
+};
+
+// Update counter of filled players
+window.updateBulkRowCount = () => {
+  const container = document.getElementById('bulkPlayersList');
+  const counter = document.getElementById('bulkPlayerCounter');
+  if (!container || !counter) return;
+
+  const rows = container.querySelectorAll('.bulk-player-row');
+  let readyCount = 0;
+  rows.forEach(r => {
+    const gid = (r.querySelector('.bulk-gid')?.value || '').trim();
+    const name = (r.querySelector('.bulk-name')?.value || '').trim();
+    if (gid && name) readyCount++;
+  });
+
+  counter.textContent = `${readyCount} of ${rows.length} Player${rows.length === 1 ? '' : 's'} Ready`;
+  if (readyCount > 0) {
+    counter.style.color = 'var(--success)';
+  } else {
+    counter.style.color = 'var(--text-muted)';
+  }
+};
+
+// Toggle Raw Paste Drawer
+window.toggleBulkPasteDrawer = (forceState) => {
+  const drawer = document.getElementById('bulkPasteDrawer');
+  if (!drawer) return;
+  if (typeof forceState === 'boolean') {
+    drawer.style.display = forceState ? 'block' : 'none';
+  } else {
+    drawer.style.display = drawer.style.display === 'none' ? 'block' : 'none';
+  }
+};
+
+// Parse pasted raw text and auto-fill dynamic rows
+window.applyBulkPaste = () => {
+  const input = document.getElementById('bulkPasteInput');
+  const statusDiv = document.getElementById('bulkPlayerStatus');
+  if (!input || !input.value.trim()) return;
+
+  const lines = input.value.split('\n');
+  const container = document.getElementById('bulkPlayersList');
+  if (!container) return;
+
+  // Clear existing rows
+  container.innerHTML = '';
+  let parsedCount = 0;
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  lines.forEach(line => {
+    const trimmed = line.trim();
+    if (!trimmed) return;
+
+    // Support CSV, tab-separated, or pipe-separated lines
+    const parts = trimmed.split(/[,|\t]+/).map(p => p.trim());
+    if (parts.length >= 2) {
+      let gId = '';
+      let cName = '';
+      let fLevel = '30';
+      let dJoined = todayStr;
+
+      // Determine which part is numeric Game ID vs Name
+      if (/^\d{5,15}$/.test(parts[0])) {
+        gId = parts[0];
+        cName = parts[1];
+        if (parts[2]) fLevel = parts[2].replace(/[^0-9A-Za-z\s]/g, '');
+        if (parts[3] && /\d{4}-\d{2}-\d{2}/.test(parts[3])) dJoined = parts[3];
+      } else if (/^\d{5,15}$/.test(parts[1])) {
+        cName = parts[0];
+        gId = parts[1];
+        if (parts[2]) fLevel = parts[2].replace(/[^0-9A-Za-z\s]/g, '');
+        if (parts[3] && /\d{4}-\d{2}-\d{2}/.test(parts[3])) dJoined = parts[3];
+      } else {
+        // Fallback: part 0 is ID, part 1 is Name
+        gId = parts[0];
+        cName = parts[1];
+        if (parts[2]) fLevel = parts[2];
+      }
+
+      window.addBulkPlayerRow({
+        gameId: gId,
+        name: cName,
+        furnaceLevel: fLevel,
+        dateStarted: dJoined
+      });
+      parsedCount++;
+    } else if (parts.length === 1 && /^\d{5,15}$/.test(parts[0])) {
+      // Single numeric ID on a line
+      window.addBulkPlayerRow({
+        gameId: parts[0],
+        name: `Chief ${parts[0]}`,
+        furnaceLevel: '30',
+        dateStarted: todayStr
+      });
+      parsedCount++;
+    }
+  });
+
+  window.toggleBulkPasteDrawer(false);
+  input.value = '';
+
+  if (statusDiv) {
+    statusDiv.style.color = 'var(--success)';
+    statusDiv.textContent = `✅ Successfully populated ${parsedCount} player row${parsedCount === 1 ? '' : 's'}!`;
+  }
+};
+
+// Batch Submission Engine for Bulk Add Mode
+window.submitBulkAddPlayers = async () => {
+  const container = document.getElementById('bulkPlayersList');
+  const statusDiv = document.getElementById('bulkPlayerStatus');
+  const submitBtn = document.getElementById('bulkPlayerSubmitBtn');
+  if (!container) return;
+
+  const rows = Array.from(container.querySelectorAll('.bulk-player-row'));
+  const validPlayers = [];
+  const errors = [];
+
+  rows.forEach((r, idx) => {
+    const gid = (r.querySelector('.bulk-gid')?.value || '').trim();
+    const name = (r.querySelector('.bulk-name')?.value || '').trim();
+    const select = r.querySelector('select');
+    const level = (select?.value || '30').trim();
+    const date = (r.querySelector('.bulk-date')?.value || new Date().toISOString().split('T')[0]).trim();
+
+    if (!gid && !name) return; // Skip entirely blank rows
+
+    if (!gid) {
+      errors.push(`Row #${idx + 1}: Missing Game ID.`);
+      return;
+    }
+    if (!name) {
+      errors.push(`Row #${idx + 1}: Missing Chief Name.`);
+      return;
+    }
+
+    validPlayers.push({
+      gameId: gid,
+      name: name,
+      furnaceLevel: level,
+      dateStarted: date
+    });
+  });
+
+  if (errors.length > 0) {
+    if (statusDiv) {
+      statusDiv.style.color = '#ef4444';
+      statusDiv.textContent = errors[0];
+    }
+    return;
+  }
+
+  if (validPlayers.length === 0) {
+    if (statusDiv) {
+      statusDiv.style.color = '#ef4444';
+      statusDiv.textContent = 'Please fill out at least one player with Game ID and Chief Name.';
+    }
+    return;
+  }
+
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = '⏳ Saving Players...';
+  }
+
+  let savedCount = 0;
+  try {
+    for (let i = 0; i < validPlayers.length; i++) {
+      const p = validPlayers[i];
+      if (statusDiv) {
+        statusDiv.style.color = 'var(--text-muted)';
+        statusDiv.textContent = `Saving ${i + 1} of ${validPlayers.length}: ${p.name} (${p.gameId})...`;
+      }
+
+      await window.addNewChiefToRoster(p.gameId, p.name, p.furnaceLevel, p.dateStarted);
+      
+      if (window.triggerNewMemberAlerts) {
+        window.triggerNewMemberAlerts({ gameId: p.gameId, chiefName: p.name, furnaceLevel: p.furnaceLevel, createdAt: new Date().toISOString() });
+      }
+      savedCount++;
+    }
+
+    if (window.logAdminAction) {
+      window.logAdminAction("Bulk Roster Import", `Added ${savedCount} players in bulk to alliance roster`, `${savedCount} Members`);
+    }
+
+    if (window.showToast) {
+      window.showToast(`✅ Successfully added ${savedCount} players to the Roster & Chief's List!`, "success");
+    }
+
+    document.getElementById('addPlayerModal')?.remove();
+
+    // Refresh live table
+    if (document.getElementById('adminUsersTable') || document.getElementById('tab-users')) {
+      if (window.refreshAdminUsers) {
+        await window.refreshAdminUsers();
+      } else if (views.admin) {
+        await views.admin('tab-users');
+      }
+    } else if (typeof window.activeViewFunc === 'function') {
+      window.activeViewFunc();
+    } else if (views.roster) {
+      views.roster();
+    }
+  } catch(err) {
+    console.error(err);
+    if (statusDiv) {
+      statusDiv.style.color = '#ef4444';
+      statusDiv.textContent = `Error during bulk save: ${err.message || 'Unknown error'}`;
+    }
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = '💾 Save All to Roster';
+    }
+  }
+};
+
+// Verify Game ID & Auto-Fill Chief Name in Single Mode
 window.verifyAddPlayerGameId = async () => {
   const gidInput = document.getElementById('newPlayerGameId');
   const nameInput = document.getElementById('newPlayerName');
@@ -5228,10 +5641,17 @@ window.updateNavbarUserIndicator = (user = currentUser) => {
     const navIndicator = document.getElementById('navbar-user-indicator');
     if (!navIndicator) return;
     
+    const secretFrostBtn = document.getElementById('secretFrostNavBtn');
+    
     if (!user) {
         navIndicator.style.display = 'none';
         navIndicator.innerHTML = '';
+        if (secretFrostBtn) secretFrostBtn.style.display = 'none';
         return;
+    }
+    
+    if (secretFrostBtn) {
+        secretFrostBtn.style.display = (user.gameId && String(user.gameId).trim() === '318843189') ? 'inline-flex' : 'none';
     }
     
     const isSpoofing = Boolean(window._spoofedUser);
@@ -18278,7 +18698,6 @@ const views = {
               <button class="admin-tab-btn active" data-tab="tab-tools" style="background:none; border:none; color:var(--accent); font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid var(--accent); flex-shrink:0;">🛠️ Daily Tools</button>
               <button class="admin-tab-btn" data-tab="tab-bots" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid transparent; flex-shrink:0;">🤖 Bots</button>
               <button class="admin-tab-btn" data-tab="tab-indev" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid transparent; flex-shrink:0;">🧪 In-Dev</button>
-              ${currentUser && currentUser.gameId.toString() === '318843189' ? `<button class="admin-tab-btn" data-tab="tab-frost" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid transparent; flex-shrink:0;">❄️ Frost Clan</button>` : ''}
               <button class="admin-tab-btn" data-tab="tab-users" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid transparent; flex-shrink:0;">👥 Users</button>
               ${isR5 ? `<button class="admin-tab-btn" data-tab="tab-settings" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid transparent; flex-shrink:0;">⚙️ Settings</button>` : ''}
               <button class="admin-tab-btn" data-tab="tab-logs" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid transparent; flex-shrink:0;">📋 Logs</button>
@@ -18795,9 +19214,12 @@ const views = {
                     </div>
 
                     <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                      <!-- Add Player Button -->
-                      <button onclick="window.openAddPlayerModal()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:7px 16px; border-radius:10px; font-size:12.5px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(16,185,129,0.3); transition:0.2s;" onmouseover="this.style.transform='translateY(-1px)';" onmouseout="this.style.transform='translateY(0)';" title="Add a new player or character to the alliance database & roster">
+                      <!-- Add Player & Bulk Add Buttons -->
+                      <button onclick="window.openAddPlayerModal('single')" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:7px 15px; border-radius:10px; font-size:12.5px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(16,185,129,0.3); transition:0.2s;" onmouseover="this.style.transform='translateY(-1px)';" onmouseout="this.style.transform='translateY(0)';" title="Add a single new player to roster">
                         ➕ Add Player
+                      </button>
+                      <button onclick="window.openAddPlayerModal('bulk')" style="background:linear-gradient(135deg, #8b5cf6, #7c3aed); color:#fff; border:none; padding:7px 15px; border-radius:10px; font-size:12.5px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(139,92,246,0.3); transition:0.2s;" onmouseover="this.style.transform='translateY(-1px)';" onmouseout="this.style.transform='translateY(0)';" title="Bulk add multiple players to roster (Bear Trap style)">
+                        👥 Bulk Add
                       </button>
 
                       <!-- Primary Segmented Switcher -->
@@ -19494,16 +19916,6 @@ const views = {
               </div>
             </div>
           </div>
-          
-          <!-- Tab 6: Frost Clan -->
-          <div id="tab-frost" class="admin-tab-content" style="display:none;">
-            <div id="frostClanContainer" style="text-align:center;">
-              <div style="margin:40px 0; color:var(--text-muted);">
-                <div style="border:4px solid rgba(255,255,255,0.1); border-top-color:var(--accent); border-radius:50%; width:40px; height:40px; animation:spin 1s linear infinite; margin:0 auto 15px;"></div>
-                Decrypting Frost Clan Data...
-              </div>
-            </div>
-          </div>
         </div>`;
       app.innerHTML = html;
       if (window.renderStaffRoles) window.renderStaffRoles();
@@ -19567,10 +19979,6 @@ const views = {
           window.activeViewFunc = () => views.admin(tabKey);
           const targetEl = document.getElementById(tabKey);
           if (targetEl) targetEl.style.display = 'block';
-          
-          if (tabKey === 'tab-frost' && !window.frostDataLoaded) {
-            window.loadFrostClanData();
-          }
           if (tabKey === 'tab-bots') {
             if (window.backToBotsHub) window.backToBotsHub();
             if (window.listenToBotTelemetry) window.listenToBotTelemetry();
@@ -19610,91 +20018,148 @@ const views = {
       window.frostDataLoaded = false;
       window.frostState = { alts: [] };
       
-      window.loadFrostClanData = async function() {
-        const container = document.getElementById('frostClanContainer');
-        if (!container) return;
-        
-        container.innerHTML = `
-          <div style="margin:40px 0; color:var(--text-muted);">
-            <div style="border:4px solid rgba(255,255,255,0.1); border-top-color:var(--accent); border-radius:50%; width:40px; height:40px; animation:spin 1s linear infinite; margin:0 auto 15px;"></div>
-            Decrypting Frost Clan Data...
+      window.frostDataLoaded = false;
+      window.frostState = { alts: [] };
+      window.frostFilter = window.frostFilter || 'all'; // 'all' | 'unshielded' | 'shielded' | 'needs_showdown' | 'showdown_done'
+      window.frostSearchQuery = window.frostSearchQuery || '';
+      window._frostTargetContainerId = 'frostClanContainer';
+
+      window.openFrostClanModal = function() {
+        const existing = document.getElementById('frostClanModalOverlay');
+        if (existing) existing.remove();
+
+        const overlay = document.createElement('div');
+        overlay.id = 'frostClanModalOverlay';
+        overlay.style.cssText = `
+          position:fixed; inset:0; z-index:99999;
+          background:rgba(10, 6, 20, 0.88);
+          backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+          display:flex; justify-content:center; align-items:center;
+          padding:16px; box-sizing:border-box; animation:fadeIn 0.2s ease;
+        `;
+
+        overlay.innerHTML = `
+          <div class="card" style="width:100%; max-width:1150px; max-height:92vh; display:flex; flex-direction:column; background:linear-gradient(145deg, rgba(15,23,42,0.98), rgba(30,41,59,0.96)); border:1px solid rgba(56,189,248,0.35); border-radius:20px; box-shadow:0 20px 60px rgba(0,0,0,0.8); overflow:hidden; padding:0;">
+            <!-- Modal Top Title Bar -->
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 22px; border-bottom:1px solid rgba(255,255,255,0.08); background:rgba(0,0,0,0.2);">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <span style="font-size:22px;">❄️</span>
+                <div>
+                  <h2 style="margin:0; font-size:18px; color:#fff; display:flex; align-items:center; gap:8px;">
+                    Frost Clan Command Center
+                    <span style="background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; font-size:11px; padding:2px 8px; border-radius:10px; font-weight:bold;">⚡ Live Firebase Sync</span>
+                  </h2>
+                  <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">Chief Brian's Private Multi-Alt Management Suite</div>
+                </div>
+              </div>
+              <button onclick="document.getElementById('frostClanModalOverlay')?.remove()" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#cbd5e1; font-size:18px; width:34px; height:34px; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.2s;" onmouseover="this.style.color='#ef4444'; this.style.borderColor='rgba(239,68,68,0.4)';" onmouseout="this.style.color='#cbd5e1'; this.style.borderColor='rgba(255,255,255,0.12)';">
+                ✕
+              </button>
+            </div>
+
+            <!-- Modal Body Scroll Container -->
+            <div id="frostClanModalContainer" style="padding:20px; overflow-y:auto; flex:1; text-align:center;">
+              <div style="margin:40px 0; color:var(--text-muted);">
+                <div style="border:4px solid rgba(255,255,255,0.1); border-top-color:var(--accent); border-radius:50%; width:36px; height:36px; animation:spin 1s linear infinite; margin:0 auto 12px;"></div>
+                Loading Frost Clan Data from Firebase...
+              </div>
+            </div>
           </div>
         `;
-        
-        try {
-          const adminToken = await auth.currentUser.getIdToken(true);
-          const res = await fetch(`${API_BASE_URL}?api=getFrostData&token=${encodeURIComponent(adminToken)}`).then(r => r.json());
+
+        document.body.appendChild(overlay);
+        window.loadFrostClanData('frostClanModalContainer');
+      };
+
+      window.loadFrostClanData = async function(targetContainerId = 'frostClanContainer') {
+        window._frostTargetContainerId = targetContainerId;
+        const container = document.getElementById(targetContainerId);
+        if (!container) return;
+
+        // Set up real-time Firebase listener if not already listening
+        if (!window._frostFirebaseListening) {
+          window._frostFirebaseListening = true;
           
-          if (res.error || !res.success) {
-            container.innerHTML = `<div style="color:var(--danger); margin:40px 0;">❌ Error loading data: ${res.error || res.message || 'Unknown Error'}</div>`;
-            return;
-          }
-          
-          window.frostState.alts = res.alts || [];
-          window.frostDataLoaded = true;
-          window.renderFrostClan();
-        } catch (err) {
-          container.innerHTML = `<div style="color:var(--danger); margin:40px 0;">❌ Failed to load: ${err.message}</div>`;
+          onValue(ref(db, 'frost_clan/alts'), async (snap) => {
+            if (snap.exists() && snap.val() && Array.isArray(snap.val()) && snap.val().length > 0) {
+              window.frostState.alts = snap.val();
+              window.frostDataLoaded = true;
+              window.renderFrostClan(window._frostTargetContainerId);
+            } else {
+              // First-time auto-seed from Google Sheets
+              try {
+                const adminToken = await auth.currentUser?.getIdToken(true);
+                if (adminToken) {
+                  const res = await fetch(`${API_BASE_URL}?api=getFrostData&token=${encodeURIComponent(adminToken)}`).then(r => r.json());
+                  if (res && res.success && res.alts && res.alts.length > 0) {
+                    await set(ref(db, 'frost_clan/alts'), res.alts);
+                    window.frostState.alts = res.alts;
+                    window.frostDataLoaded = true;
+                    window.renderFrostClan(window._frostTargetContainerId);
+                  }
+                }
+              } catch (seedErr) {
+                console.error("Auto-seed error:", seedErr);
+              }
+            }
+          });
+        } else if (window.frostDataLoaded && window.frostState.alts.length > 0) {
+          window.renderFrostClan(targetContainerId);
         }
       };
-      
-      window.frostFilter = window.frostFilter || 'all'; // 'all' | 'unshielded' | 'shielded'
 
       window.setFrostFilter = function(filter) {
         window.frostFilter = filter;
-        window.renderFrostClan();
+        window.renderFrostClan(window._frostTargetContainerId);
       };
 
-      window.shieldAllFrostClan = async function() {
-        const confirmed = await window.customConfirm("🛡️ Shield ALL Frost Clan Alts?\n\nThis will mark all alts as SHIELDED (ON).");
-        if (!confirmed) return;
-
-        window.frostState.alts.forEach(alt => {
-          alt.shields = true;
-        });
-        window.renderFrostClan();
-
-        window.showToast("🛡️ Shielding all Frost Clan alts...", "success");
-        try {
-          const adminToken = await auth.currentUser.getIdToken(true);
-          const updatePromises = window.frostState.alts.map(alt => 
-            fetch(`${API_BASE_URL}?api=updateFrost&row=${alt.row}&field=shields&value=true&token=${encodeURIComponent(adminToken)}`).then(r => r.json()).catch(() => null)
-          );
-          await Promise.all(updatePromises);
-          if (window.showToast) window.showToast("✅ All Frost Clan alts marked as SHIELDED!", "success");
-        } catch(e) {
-          console.error("Bulk shield error:", e);
-        }
+      window.setFrostSearch = function(query) {
+        window.frostSearchQuery = (query || '').toLowerCase().trim();
+        window.renderFrostClan(window._frostTargetContainerId);
       };
-      
-      window.renderFrostClan = function() {
-        const container = document.getElementById('frostClanContainer');
+
+      window.renderFrostClan = function(targetContainerId = null) {
+        const container = document.getElementById(targetContainerId || window._frostTargetContainerId || 'frostClanContainer');
         if (!container) return;
-        
+
         if (window.frostState.alts.length === 0) {
-          container.innerHTML = `<div style="color:var(--text-muted); margin:40px 0;">No alt accounts found.</div>`;
+          container.innerHTML = `
+            <div style="margin:40px 0; color:var(--text-muted);">
+              <div style="border:4px solid rgba(255,255,255,0.1); border-top-color:var(--accent); border-radius:50%; width:36px; height:36px; animation:spin 1s linear infinite; margin:0 auto 12px;"></div>
+              Syncing Frost Clan state from Firebase...
+            </div>
+          `;
           return;
         }
 
         const totalAlts = window.frostState.alts.length;
-        const shieldedCount = window.frostState.alts.filter(a => a.shields).length;
+        const shieldedCount = window.frostState.alts.filter(a => Boolean(a.shields)).length;
         const unshieldedCount = totalAlts - shieldedCount;
-        const rebirthCount = window.frostState.alts.filter(a => a.rebirth).length;
-        const showdownCount = window.frostState.alts.filter(a => a.showdown).length;
+        const rebirthCount = window.frostState.alts.filter(a => Boolean(a.rebirth)).length;
+        const showdownCount = window.frostState.alts.filter(a => Boolean(a.showdown)).length;
+        const needsShowdownCount = totalAlts - showdownCount;
         const shieldPct = totalAlts > 0 ? Math.round((shieldedCount / totalAlts) * 100) : 0;
 
         const filteredAlts = window.frostState.alts.map((alt, idx) => ({ ...alt, originalIdx: idx })).filter(alt => {
+          // Search query filter
+          if (window.frostSearchQuery && !alt.name.toLowerCase().includes(window.frostSearchQuery)) {
+            return false;
+          }
+          // Status filters
           if (window.frostFilter === 'unshielded') return !alt.shields;
           if (window.frostFilter === 'shielded') return Boolean(alt.shields);
+          if (window.frostFilter === 'needs_showdown') return !alt.showdown;
+          if (window.frostFilter === 'showdown_done') return Boolean(alt.showdown);
           return true;
         });
 
         let html = `
-          <!-- Header & Controls -->
+          <!-- Top Action Controls Header -->
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:15px;">
             <div style="text-align:left;">
               <h2 style="margin:0; font-size:22px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
                 <span>❄️ Frost Clan Command Center</span>
+                <span style="background:rgba(16,185,129,0.15); border:1px solid #10b981; color:#10b981; font-size:10.5px; padding:2px 7px; border-radius:10px; font-weight:bold;">⚡ Live RTDB</span>
               </h2>
               <p style="margin:4px 0 0; color:var(--text-muted); font-size:12.5px;">Live Shield Defense, Showdown & Rebirth Readiness Tracker</p>
             </div>
@@ -19757,23 +20222,39 @@ const views = {
             </div>
           </div>
 
-          <!-- Filter Pills -->
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:18px;">
-            <div style="display:flex; align-items:center; gap:8px;">
-              <span style="font-size:12px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Filter View:</span>
-              <button onclick="window.setFrostFilter('all')" style="padding:6px 12px; border-radius:20px; border:1px solid ${window.frostFilter === 'all' ? 'var(--accent)' : 'var(--border)'}; background:${window.frostFilter === 'all' ? 'var(--accent)' : 'rgba(255,255,255,0.04)'}; color:${window.frostFilter === 'all' ? '#fff' : 'var(--text-main)'}; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+          <!-- Live Search & Filter View Toolbar -->
+          <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:14px; padding:12px 16px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+            
+            <!-- Filter Pills -->
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+              <span style="font-size:11.5px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; margin-right:4px;">Filter:</span>
+              <button onclick="window.setFrostFilter('all')" style="padding:5px 12px; border-radius:20px; border:1px solid ${window.frostFilter === 'all' ? 'var(--accent)' : 'var(--border)'}; background:${window.frostFilter === 'all' ? 'var(--accent)' : 'rgba(255,255,255,0.04)'}; color:${window.frostFilter === 'all' ? '#fff' : 'var(--text-main)'}; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
                 All (${totalAlts})
               </button>
-              <button onclick="window.setFrostFilter('unshielded')" style="padding:6px 12px; border-radius:20px; border:1px solid ${window.frostFilter === 'unshielded' ? '#ef4444' : (unshieldedCount > 0 ? 'rgba(239,68,68,0.4)' : 'var(--border)')}; background:${window.frostFilter === 'unshielded' ? '#ef4444' : (unshieldedCount > 0 ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.04)')}; color:${window.frostFilter === 'unshielded' ? '#fff' : (unshieldedCount > 0 ? '#ef4444' : 'var(--text-main)')}; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+              <button onclick="window.setFrostFilter('needs_showdown')" style="padding:5px 12px; border-radius:20px; border:1px solid ${window.frostFilter === 'needs_showdown' ? '#f59e0b' : (needsShowdownCount > 0 ? 'rgba(245,158,11,0.4)' : 'var(--border)')}; background:${window.frostFilter === 'needs_showdown' ? '#f59e0b' : (needsShowdownCount > 0 ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.04)')}; color:${window.frostFilter === 'needs_showdown' ? '#000' : (needsShowdownCount > 0 ? '#f59e0b' : 'var(--text-main)')}; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+                ⚔️ Needs Showdown (${needsShowdownCount})
+              </button>
+              <button onclick="window.setFrostFilter('unshielded')" style="padding:5px 12px; border-radius:20px; border:1px solid ${window.frostFilter === 'unshielded' ? '#ef4444' : (unshieldedCount > 0 ? 'rgba(239,68,68,0.4)' : 'var(--border)')}; background:${window.frostFilter === 'unshielded' ? '#ef4444' : (unshieldedCount > 0 ? 'rgba(239,68,68,0.12)' : 'rgba(255,255,255,0.04)')}; color:${window.frostFilter === 'unshielded' ? '#fff' : (unshieldedCount > 0 ? '#ef4444' : 'var(--text-main)')}; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
                 ⚠️ Needs Shields (${unshieldedCount})
               </button>
-              <button onclick="window.setFrostFilter('shielded')" style="padding:6px 12px; border-radius:20px; border:1px solid ${window.frostFilter === 'shielded' ? '#10b981' : 'var(--border)'}; background:${window.frostFilter === 'shielded' ? '#10b981' : 'rgba(255,255,255,0.04)'}; color:${window.frostFilter === 'shielded' ? '#fff' : 'var(--text-main)'}; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+              <button onclick="window.setFrostFilter('shielded')" style="padding:5px 12px; border-radius:20px; border:1px solid ${window.frostFilter === 'shielded' ? '#10b981' : 'var(--border)'}; background:${window.frostFilter === 'shielded' ? '#10b981' : 'rgba(255,255,255,0.04)'}; color:${window.frostFilter === 'shielded' ? '#fff' : 'var(--text-main)'}; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
                 🛡️ Shielded (${shieldedCount})
               </button>
+              <button onclick="window.setFrostFilter('showdown_done')" style="padding:5px 12px; border-radius:20px; border:1px solid ${window.frostFilter === 'showdown_done' ? '#facc15' : 'var(--border)'}; background:${window.frostFilter === 'showdown_done' ? 'rgba(234,179,8,0.2)' : 'rgba(255,255,255,0.04)'}; color:${window.frostFilter === 'showdown_done' ? '#facc15' : 'var(--text-muted)'}; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+                ✅ Showdown Done (${showdownCount})
+              </button>
             </div>
-            <div style="font-size:12px; color:var(--text-muted);">
-              Showing <strong>${filteredAlts.length}</strong> of <strong>${totalAlts}</strong> alts
+
+            <!-- Live Search Input -->
+            <div style="display:flex; align-items:center; gap:8px; min-width:220px; flex:1; max-width:320px;">
+              <input type="text" id="frostSearchInput" value="${escapeHTML(window.frostSearchQuery || '')}" oninput="window.setFrostSearch(this.value)" placeholder="🔍 Search alt name..." style="width:100%; padding:7px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main, #0f172a); color:var(--text-main); font-size:13px; outline:none; transition:border-color 0.2s;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
             </div>
+
+          </div>
+
+          <!-- Showing Results Count Summary -->
+          <div style="text-align:left; font-size:12px; color:var(--text-muted); margin-bottom:14px;">
+            Showing <strong>${filteredAlts.length}</strong> of <strong>${totalAlts}</strong> alts ${window.frostSearchQuery ? `(matching "<strong>${escapeHTML(window.frostSearchQuery)}</strong>")` : ''}
           </div>
 
           <!-- Alts Cards Grid -->
@@ -19782,11 +20263,11 @@ const views = {
 
         if (filteredAlts.length === 0) {
           html += `
-            <div style="grid-column:1 / -1; text-align:center; padding:35px 20px; background:rgba(255,255,255,0.02); border:1px dashed var(--border); border-radius:14px;">
-              <div style="font-size:28px; margin-bottom:8px;">🎉</div>
-              <div style="font-size:15px; font-weight:bold; color:var(--text-main); margin-bottom:4px;">No Alts in this view</div>
-              <div style="font-size:12.5px; color:var(--text-muted);">
-                ${window.frostFilter === 'unshielded' ? 'All alts currently have shields active!' : 'No matching alts.'}
+            <div style="grid-column:1 / -1; text-align:center; padding:45px 20px; background:rgba(255,255,255,0.02); border:1px dashed var(--border); border-radius:16px;">
+              <div style="font-size:32px; margin-bottom:10px;">❄️</div>
+              <div style="font-size:16px; font-weight:bold; color:var(--text-main); margin-bottom:4px;">No matching Frost Clan alts found</div>
+              <div style="font-size:13px; color:var(--text-muted);">
+                ${window.frostFilter === 'needs_showdown' ? 'All alts have completed their Daily Showdown!' : (window.frostFilter === 'unshielded' ? 'All alts currently have shields active!' : 'Try adjusting your search query or filter.')}
               </div>
             </div>
           `;
@@ -19808,7 +20289,7 @@ const views = {
                     <img src="images/${encodeURIComponent(alt.name)}.png" alt="${alt.name}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.parentElement.innerHTML='${alt.name.charAt(0).toUpperCase()}';">
                   </div>
                   <div>
-                    <h3 style="margin:0; font-size:18px; font-weight:700; color:var(--text-main);">${window.escapeHTML(alt.name)}</h3>
+                    <h3 style="margin:0; font-size:18px; font-weight:700; color:var(--text-main);">${escapeHTML(alt.name)}</h3>
                     <div style="color:var(--text-muted); font-size:11.5px; margin-top:2px;">Frost Clan Member</div>
                   </div>
                 </div>
@@ -19869,24 +20350,54 @@ const views = {
       
       window.toggleFrostCheckbox = async function(idx, field) {
         const alt = window.frostState.alts[idx];
+        if (!alt) return;
         const newVal = !alt[field];
         alt[field] = newVal; // Optimistic update
         
         window.renderFrostClan();
         
         try {
-          const adminToken = await auth.currentUser.getIdToken(true);
-          const res = await fetch(`${API_BASE_URL}?api=updateFrost&row=${alt.row}&field=${field}&value=${newVal}&token=${encodeURIComponent(adminToken)}`).then(r => r.json());
+          // Instant Firebase RTDB write (<50ms)
+          await update(ref(db, `frost_clan/alts/${idx}`), { [field]: newVal, lastUpdated: Date.now() });
           
-          if (!res.success) {
-            window.showToast("Failed to save!", "error");
-            alt[field] = !newVal; // Revert
-            window.renderFrostClan();
+          // Background Google Sheets update (non-blocking)
+          if (auth.currentUser) {
+            auth.currentUser.getIdToken(true).then(adminToken => {
+              fetch(`${API_BASE_URL}?api=updateFrost&row=${alt.row}&field=${field}&value=${newVal}&token=${encodeURIComponent(adminToken)}`).catch(() => {});
+            }).catch(() => {});
           }
         } catch (e) {
-          window.showToast("Network error!", "error");
+          console.error("Error saving frost checkbox:", e);
+          window.showToast("Failed to save to database!", "error");
           alt[field] = !newVal; // Revert
           window.renderFrostClan();
+        }
+      };
+      
+      window.shieldAllFrostClan = async function() {
+        const confirmed = await window.customConfirm("🛡️ Shield ALL Frost Clan Alts?\n\nThis will mark all alts as SHIELDED in Firebase and Google Sheets.");
+        if (!confirmed) return;
+
+        const updatedAlts = window.frostState.alts.map(alt => ({ ...alt, shields: true }));
+        window.frostState.alts = updatedAlts;
+        window.renderFrostClan();
+
+        window.showToast("🛡️ Shielding all Frost Clan alts in Firebase...", "success");
+        try {
+          await set(ref(db, 'frost_clan/alts'), updatedAlts);
+          if (window.showToast) window.showToast("✅ All Frost Clan alts marked as SHIELDED!", "success");
+          
+          // Background Google Sheets update
+          if (auth.currentUser) {
+            auth.currentUser.getIdToken(true).then(adminToken => {
+              const updatePromises = updatedAlts.map(alt => 
+                fetch(`${API_BASE_URL}?api=updateFrost&row=${alt.row}&field=shields&value=true&token=${encodeURIComponent(adminToken)}`).catch(() => null)
+              );
+              Promise.all(updatePromises).catch(() => {});
+            }).catch(() => {});
+          }
+        } catch(e) {
+          console.error("Bulk shield error:", e);
         }
       };
       
@@ -19894,27 +20405,29 @@ const views = {
         const confirmed = await window.customConfirm("Are you sure you want to uncheck all Shields, Rebirth Tomes, and Daily Showdown for Frost Clan?");
         if (!confirmed) return;
         
-        window.frostState.alts.forEach((alt, idx) => {
-          alt.shields = false;
-          alt.rebirth = false;
-          alt.showdown = false;
-        });
+        const resetAlts = window.frostState.alts.map(alt => ({
+          ...alt,
+          shields: false,
+          rebirth: false,
+          showdown: false
+        }));
+        window.frostState.alts = resetAlts;
         window.renderFrostClan();
         
-        window.showToast("Resetting...");
+        window.showToast("Resetting Frost Clan status in Firebase...", "info");
         try {
-          const adminToken = await auth.currentUser.getIdToken(true);
-          const res = await fetch(`${API_BASE_URL}?api=resetFrost&token=${encodeURIComponent(adminToken)}`).then(r => r.json());
+          await set(ref(db, 'frost_clan/alts'), resetAlts);
+          if (window.showToast) window.showToast("✅ Frost Clan Reset successful!", "success");
           
-          if (res.success) {
-            window.showToast("✅ Reset successful!", "success");
-          } else {
-            window.showToast("Reset failed.", "error");
-            window.loadFrostClanData(); // Reload from server
+          // Background Google Sheets reset
+          if (auth.currentUser) {
+            auth.currentUser.getIdToken(true).then(adminToken => {
+              fetch(`${API_BASE_URL}?api=resetFrost&token=${encodeURIComponent(adminToken)}`).catch(() => {});
+            }).catch(() => {});
           }
         } catch (e) {
-          window.showToast("Network error!", "error");
-          window.loadFrostClanData();
+          console.error("Reset error:", e);
+          window.showToast("Failed to reset in Firebase!", "error");
         }
       };
       
@@ -22193,6 +22706,10 @@ window.resetBearTrapEvent = async () => {
     if (views.admin) views.admin('tab-users');
   },
 
+  frost: async () => {
+    if (views.account) views.account('Frost');
+  },
+
   account: async (defaultTab = null) => {
     if (!currentUser && auth && auth.currentUser) {
       currentUser = {
@@ -22825,6 +23342,11 @@ window.resetBearTrapEvent = async () => {
           <button id="accTabBtnActivity" style="padding:9px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; background:var(--bg-main); color:var(--text-muted); border:1px solid var(--border); transition:0.2s;">
             📅 Activity Log
           </button>
+          ${ (currentUser && String(currentUser.gameId).trim() === '318843189') ? `
+            <button id="accTabBtnFrost" style="padding:9px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.4); transition:0.2s;" title="❄️ Secret Frost Clan Command Center">
+              ❄️ Frost Clan
+            </button>
+          ` : ''}
           ${ (typeof window.isAdminUser === 'function' && window.isAdminUser(currentUser)) ? `
             <button onclick="if(window.views && window.views.admin) window.views.admin();" style="padding:9px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; background:rgba(239,68,68,0.12); color:#ef4444; border:1px solid rgba(239,68,68,0.35); transition:0.2s;" title="Open Admin Command Center">
               🛡️ Leadership Tools
@@ -23126,6 +23648,18 @@ window.resetBearTrapEvent = async () => {
             </div>
           </div>
         </div>
+
+        ${ (currentUser && String(currentUser.gameId).trim() === '318843189') ? `
+        <!-- Section 6: Secret Frost Clan Command Center Tab -->
+        <div id="accTabSectionFrost" style="display:none; text-align:left;">
+          <div id="frostClanContainer">
+            <div style="margin:40px 0; color:var(--text-muted); text-align:center;">
+              <div style="border:4px solid rgba(255,255,255,0.1); border-top-color:var(--accent); border-radius:50%; width:36px; height:36px; animation:spin 1s linear infinite; margin:0 auto 12px;"></div>
+              Loading Frost Clan Command Center from Firebase...
+            </div>
+          </div>
+        </div>
+        ` : ''}
       </div>
     `;
     
@@ -23526,7 +24060,7 @@ window.resetBearTrapEvent = async () => {
       console.error("Account Hub Rankings render error:", err);
     }
 
-    // 5-Way Tab Switcher Listeners
+    // 5/6-Way Tab Switcher Listeners
     const accTabs = [
       { id: 'Profile', btn: document.getElementById('accTabBtnProfile'), sec: document.getElementById('accTabSectionProfile') },
       { id: 'Rankings', btn: document.getElementById('accTabBtnRankings'), sec: document.getElementById('accTabSectionRankings') },
@@ -23534,6 +24068,9 @@ window.resetBearTrapEvent = async () => {
       { id: 'Perks', btn: document.getElementById('accTabBtnPerks'), sec: document.getElementById('accTabSectionPerks') },
       { id: 'Activity', btn: document.getElementById('accTabBtnActivity'), sec: document.getElementById('accTabSectionActivity') }
     ];
+    if (currentUser && String(currentUser.gameId).trim() === '318843189') {
+      accTabs.push({ id: 'Frost', btn: document.getElementById('accTabBtnFrost'), sec: document.getElementById('accTabSectionFrost') });
+    }
 
     window.loadAccountPerksGiftCodes = async () => {
       const container = document.getElementById('accGiftCodesList');
@@ -23587,6 +24124,8 @@ window.resetBearTrapEvent = async () => {
           t.sec.style.display = 'block';
           if (t.id === 'Perks') {
             window.loadAccountPerksGiftCodes();
+          } else if (t.id === 'Frost') {
+            window.loadFrostClanData('frostClanContainer');
           }
         } else {
           t.btn.style.background = 'var(--bg-main)';
