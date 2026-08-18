@@ -17664,17 +17664,10 @@ const views = {
       html += `
           <!-- Tab 2: Users -->
           <div id="tab-users" class="admin-tab-content" style="display:none;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <button onclick="window.openAddPlayerModal()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:9px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13.5px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(16,185,129,0.3); transition:0.2s;">
-                        ➕ Add New Player
-                    </button>
-                </div>
-                <div style="display:flex; gap:8px; align-items:center;">
-                    <button onclick="window.refreshAdminUsers()" style="background:var(--card-bg); border:1px solid var(--border); color:var(--text-main); padding:8px 14px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13px; display:flex; align-items:center; gap:6px; transition:0.2s;">
-                        <span id="adminRefreshIcon">🔄</span> Refresh User List
-                    </button>
-                </div>
+            <div style="display:flex; justify-content:flex-end; align-items:center; margin-bottom:15px;">
+                <button onclick="window.refreshAdminUsers()" style="background:var(--card-bg); border:1px solid var(--border); color:var(--text-main); padding:8px 14px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13px; display:flex; align-items:center; gap:6px; transition:0.2s;">
+                    <span id="adminRefreshIcon">🔄</span> Refresh User List
+                </button>
             </div>
               <div style="background:var(--bg-main); padding:15px; border-radius:12px; border:1px solid var(--accent); margin-bottom:20px; display:flex; justify-content:space-between; align-items:center;">
                 <div>
