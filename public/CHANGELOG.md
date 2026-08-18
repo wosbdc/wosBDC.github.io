@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [2.9.24] - 2026-08-17
+- 👥 **Batched Members Tooltip**: Hovering over the orange `👥 Multiple (N)` pill in Admin Action Audit Logs now displays a formatted, numbered list of all unique member names included in the batched action with smooth hover glow and help cursor.
+
 ## [2.9.23] - 2026-08-17
 - 📋 **Admin Action Audit Logs Overhaul**: Redesigned the audit logs table layout with semantic category badge styling & icons, structured 2-line date/time timestamps, clean NO/YES batch summary pills, responsive horizontal scrolling container, and clean subrow tree hierarchy.
 

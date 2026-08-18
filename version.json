@@ -29,12 +29,12 @@
       "repository": "https://github.com/bdclive/BDClive"
     },
     "wosbdc_alliance_dashboard": {
-      "version": "2.9.23",
+      "version": "2.9.24",
       "repository": "https://github.com/wosbdc/wosBDC.github.io",
       "latestChanges": [
+        "v2.9.24: Added hover tooltip with numbered member names list to the orange batched pill in Admin Logs",
         "v2.9.23: Redesigned Admin Action Audit Logs table layout, semantic category badges, and batch summaries",
-        "v2.9.22: Refined member perks copy for in-game mailbox delivery and furnace sync",
-        "v2.9.21: Unified Member Perks & Auto Redeem into Account Hub and streamlined top navbar"
+        "v2.9.22: Refined member perks copy for in-game mailbox delivery and furnace sync"
       ]
     },
     "google_apps_script_backend": {

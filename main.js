@@ -17210,6 +17210,14 @@ const views = {
                  summaryHtml = parts.join(' ');
               }
 
+              const memberNames = Array.from(new Set(group.map(l => l.target).filter(t => Boolean(t) && t !== '-')));
+              let hoverTitle = '';
+              if (memberNames.length > 0) {
+                hoverTitle = `👥 Batched Target Members (${memberNames.length}):\n` + memberNames.map((m, idx) => `  ${idx + 1}. ${m}`).join('\n');
+              } else {
+                hoverTitle = `${group.length} consecutive actions batched`;
+              }
+
               const actionBadge = window.getAdminActionBadgeHtml(firstLog.action || 'Batch Action', true, group.length);
 
               tbodyHtml += `
@@ -17225,7 +17233,7 @@ const views = {
                   </td>
                   <td style="padding:12px 14px; white-space:nowrap;">${actionBadge}</td>
                   <td style="padding:12px 14px; white-space:nowrap;">
-                    <span style="background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.3); color:#f59e0b; padding:3px 9px; border-radius:8px; font-size:11.5px; font-weight:700; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;">
+                    <span title="${escapeHTML(hoverTitle)}" style="background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.3); color:#f59e0b; padding:3px 9px; border-radius:8px; font-size:11.5px; font-weight:700; display:inline-flex; align-items:center; gap:5px; white-space:nowrap; cursor:help; transition:all 0.15s ease;" onmouseover="this.style.borderColor='rgba(245,158,11,0.6)'; this.style.background='rgba(245,158,11,0.2)';" onmouseout="this.style.borderColor='rgba(245,158,11,0.3)'; this.style.background='rgba(245,158,11,0.12)';">
                       👥 Multiple (${group.length})
                     </span>
                   </td>
