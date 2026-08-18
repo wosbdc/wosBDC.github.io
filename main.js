@@ -8650,14 +8650,16 @@ window.renderChampionshipVaultBody = (activeKey = 'live') => {
         let ourScoreColor = isVictory ? 'color:#10b981; font-weight:900; text-shadow:0 0 12px rgba(16,185,129,0.4);' : 'color:var(--text-muted); opacity:0.75;';
         let enemyScoreColor = isDefeat ? 'color:#ef4444; font-weight:900; text-shadow:0 0 12px rgba(239,68,68,0.4);' : 'color:var(--text-muted); opacity:0.75;';
 
-        let ourBadgeHtml = isVictory ? '<span style="background:rgba(16,185,129,0.2); border:1px solid rgba(16,185,129,0.4); color:#10b981; padding:4px 10px; border-radius:10px; font-weight:bold; font-size:11px; letter-spacing:0.5px;">VICTORY</span>' : '';
-        let enemyBadgeHtml = isDefeat ? '<span style="background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:4px 10px; border-radius:10px; font-weight:bold; font-size:11px; letter-spacing:0.5px;">DEFEAT</span>' : '';
+        let centerStatusHtml = isVictory 
+            ? '<div style="background:rgba(16,185,129,0.2); border:1px solid rgba(16,185,129,0.4); color:#10b981; padding:2px 10px; border-radius:8px; font-weight:900; font-size:10px; letter-spacing:0.5px; margin-bottom:4px;">VICTORY</div>' 
+            : (isDefeat 
+                ? '<div style="background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:2px 10px; border-radius:8px; font-weight:900; font-size:10px; letter-spacing:0.5px; margin-bottom:4px;">DEFEAT</div>' 
+                : '');
 
         return `
             <div style="${cardBg} border-radius:12px; padding:14px 18px; margin-bottom:12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
-                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px; margin-bottom:10px;">
+                <div style="display:flex; justify-content:flex-start; align-items:center; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px; margin-bottom:10px;">
                     <span style="font-weight:900; font-size:12px; color:var(--accent); text-transform:uppercase; letter-spacing:1px;">⚔️ ROUND ${rNum}</span>
-                    <span style="font-size:11px; color:var(--text-muted);">${escapeHTML(r.date || `Match ${rNum}`)}</span>
                 </div>
                 <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
                     <!-- Left: Our Alliance -->
@@ -8667,18 +8669,17 @@ window.renderChampionshipVaultBody = (activeKey = 'live') => {
                             <div style="font-size:14px; font-weight:bold; color:var(--text-main);">[BDC]</div>
                         </div>
                         <span style="font-size:22px; font-family:var(--mono); ${ourScoreColor}">${ourScore.toLocaleString()}</span>
-                        ${ourBadgeHtml}
                     </div>
 
-                    <!-- Center: VS -->
-                    <div style="flex-shrink:0;">
+                    <!-- Center: Status & VS -->
+                    <div style="flex-shrink:0; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+                        ${centerStatusHtml}
                         <div style="width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg, rgba(6,182,212,0.2), rgba(6,182,212,0.05)); border:1.5px solid rgba(6,182,212,0.4); display:flex; align-items:center; justify-content:center; font-weight:900; font-size:12px; font-style:italic; color:var(--accent);">VS</div>
                     </div>
 
                     <!-- Right: Opponent Alliance -->
                     <div style="flex:1; min-width:140px; text-align:left; display:flex; align-items:center; justify-content:flex-start; gap:10px;">
                         <span style="font-size:22px; font-family:var(--mono); ${enemyScoreColor}">${enemyScore.toLocaleString()}</span>
-                        ${enemyBadgeHtml}
                         <div>
                             <div style="font-size:10px; text-transform:uppercase; color:var(--text-muted); font-weight:bold;">Opponent Alliance</div>
                             <div style="font-size:14px; font-weight:bold; color:var(--text-main);">${escapeHTML(enemyName)}</div>
@@ -8690,7 +8691,7 @@ window.renderChampionshipVaultBody = (activeKey = 'live') => {
     }).join('');
 
     body.innerHTML = `
-        <div style="margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; background:rgba(255,255,255,0.03); padding:12px 18px; border-radius:10px; border:1px solid var(--border);">
+        <div style="margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; background:rgba(255,255,200,0.02); padding:12px 18px; border-radius:10px; border:1px solid var(--border);">
             <div style="font-weight:bold; font-size:13px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
                 <span>📅 Select Championship Season:</span>
             </div>
@@ -8701,7 +8702,11 @@ window.renderChampionshipVaultBody = (activeKey = 'live') => {
 
         <div style="text-align:center; padding:16px; margin-bottom:18px; background:linear-gradient(135deg, rgba(6,182,212,0.1) 0%, rgba(6,182,212,0.02) 100%); border:1px solid rgba(6,182,212,0.3); border-radius:12px;">
             <div style="font-size:20px; font-weight:900; color:var(--text-main);">${escapeHTML(displayData.seasonName || 'Season 12 Championship')}</div>
-            <div style="font-size:14px; font-weight:bold; color:#38bdf8; margin-top:4px;">${escapeHTML(recordStr)}</div>
+            <div style="margin-top:8px; display:flex; align-items:center; justify-content:center; gap:10px; font-size:16px; font-weight:900;">
+                <span style="color:#10b981;">${winCount} Wins</span>
+                <span style="color:var(--text-muted); opacity:0.6;">–</span>
+                <span style="color:#ef4444;">${lossCount} ${lossCount === 1 ? 'Loss' : 'Losses'}</span>
+            </div>
         </div>
 
         <div>${matchCardsHtml}</div>
@@ -24807,35 +24812,36 @@ window.resetBearTrapEvent = async () => {
             let ourScoreColor = isVictory ? 'color:#10b981; font-weight:900; text-shadow:0 0 16px rgba(16,185,129,0.5);' : 'color:var(--text-muted); opacity:0.75;';
             let enemyScoreColor = isDefeat ? 'color:#ef4444; font-weight:900; text-shadow:0 0 16px rgba(239,68,68,0.5);' : 'color:var(--text-muted); opacity:0.75;';
 
-            let ourBadgeHtml = isVictory ? '<span style="background:rgba(16,185,129,0.22); border:1px solid rgba(16,185,129,0.45); color:#10b981; padding:4px 12px; border-radius:12px; font-weight:900; font-size:12px; letter-spacing:0.5px; box-shadow:0 0 10px rgba(16,185,129,0.2);">VICTORY</span>' : '';
-            let enemyBadgeHtml = isDefeat ? '<span style="background:rgba(239,68,68,0.22); border:1px solid rgba(239,68,68,0.45); color:#ef4444; padding:4px 12px; border-radius:12px; font-weight:900; font-size:12px; letter-spacing:0.5px; box-shadow:0 0 10px rgba(239,68,68,0.2);">DEFEAT</span>' : '';
+            let centerStatusHtml = isVictory 
+                ? '<div style="background:rgba(16,185,129,0.22); border:1px solid rgba(16,185,129,0.45); color:#10b981; padding:3px 12px; border-radius:10px; font-weight:900; font-size:11px; letter-spacing:0.5px; box-shadow:0 0 10px rgba(16,185,129,0.2); margin-bottom:6px;">VICTORY</div>' 
+                : (isDefeat 
+                    ? '<div style="background:rgba(239,68,68,0.22); border:1px solid rgba(239,68,68,0.45); color:#ef4444; padding:3px 12px; border-radius:10px; font-weight:900; font-size:11px; letter-spacing:0.5px; box-shadow:0 0 10px rgba(239,68,68,0.2); margin-bottom:6px;">DEFEAT</div>' 
+                    : '');
 
             return `
                 <div style="${cardBg} border-radius:14px; padding:16px 22px; box-shadow: 0 4px 20px rgba(0,0,0,0.25); transition: transform 0.2s ease, box-shadow 0.2s ease;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px; margin-bottom:12px;">
+                    <div style="display:flex; justify-content:flex-start; align-items:center; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px; margin-bottom:12px;">
                         <span style="font-weight:900; font-size:13px; color:var(--accent); text-transform:uppercase; letter-spacing:1px; display:flex; align-items:center; gap:6px;">⚔️ ROUND ${rNum}</span>
-                        <span style="font-size:12px; color:var(--text-muted); font-weight:bold;">${escapeHTML(r.date || `Match ${rNum}`)}</span>
                     </div>
                     <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
                         <!-- Left: Our Alliance -->
-                        <div style="flex:1; min-width:160px; text-align:right; display:flex; align-items:center; justify-content:flex-end; gap:14px;">
+                        <div style="flex:1; min-width:140px; text-align:right; display:flex; align-items:center; justify-content:flex-end; gap:14px;">
                             <div>
                                 <div style="font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:bold; letter-spacing:0.5px;">Our Alliance</div>
                                 <div style="font-size:16px; font-weight:bold; color:var(--text-main);">[BDC]</div>
                             </div>
                             <span style="font-size:26px; font-family:var(--mono); ${ourScoreColor}">${ourScore.toLocaleString()}</span>
-                            ${ourBadgeHtml}
                         </div>
 
-                        <!-- Center: VS Medallion -->
-                        <div style="flex-shrink:0;">
+                        <!-- Center: Status & VS Medallion -->
+                        <div style="flex-shrink:0; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+                            ${centerStatusHtml}
                             <div style="width:42px; height:42px; border-radius:50%; background:linear-gradient(135deg, rgba(6,182,212,0.25), rgba(6,182,212,0.05)); border:2px solid rgba(6,182,212,0.4); display:flex; align-items:center; justify-content:center; font-weight:900; font-size:13px; font-style:italic; color:var(--accent); box-shadow:0 0 15px rgba(6,182,212,0.2);">VS</div>
                         </div>
 
                         <!-- Right: Opponent Alliance -->
-                        <div style="flex:1; min-width:160px; text-align:left; display:flex; align-items:center; justify-content:flex-start; gap:14px;">
+                        <div style="flex:1; min-width:140px; text-align:left; display:flex; align-items:center; justify-content:flex-start; gap:14px;">
                             <span style="font-size:26px; font-family:var(--mono); ${enemyScoreColor}">${enemyScore.toLocaleString()}</span>
-                            ${enemyBadgeHtml}
                             <div>
                                 <div style="font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:bold; letter-spacing:0.5px;">Opponent Alliance</div>
                                 <div style="font-size:16px; font-weight:bold; color:var(--text-main);">${escapeHTML(enemyName)}</div>
@@ -24853,11 +24859,10 @@ window.resetBearTrapEvent = async () => {
             <div style="background:linear-gradient(135deg, rgba(6,182,212,0.12) 0%, rgba(6,182,212,0.02) 100%); border:1px solid rgba(6,182,212,0.3); border-radius:16px; padding:24px 20px; text-align:center; box-shadow: 0 6px 25px rgba(0,0,0,0.3);">
                 <div style="font-size:12px; font-weight:bold; color:var(--accent); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:4px;">${escapeHTML(seasonName)}</div>
                 <h1 style="margin:0; font-size:26px; font-weight:900; color:var(--text-main); letter-spacing:1px;">🏆 ALLIANCE CHAMPIONSHIP</h1>
-                <div style="margin-top:8px; font-size:16px; font-weight:bold; display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap;">
-                    <span style="color:#10b981; font-weight:900; font-size:18px;">${winCount} Wins</span>
-                    <span style="color:var(--text-muted);">–</span>
-                    <span style="color:#ef4444; font-weight:900; font-size:18px;">${lossCount} ${lossCount === 1 ? 'Loss' : 'Losses'}</span>
-                    <span style="background:rgba(255,215,0,0.15); color:#FFD700; border:1px solid rgba(255,215,0,0.4); padding:3px 10px; border-radius:12px; font-size:12px; font-weight:bold;">${escapeHTML(statusText)}</span>
+                <div style="margin-top:10px; display:flex; align-items:center; justify-content:center; gap:12px;">
+                    <span style="color:#10b981; font-weight:900; font-size:20px;">${winCount} Wins</span>
+                    <span style="color:var(--text-muted); opacity:0.6; font-size:18px;">–</span>
+                    <span style="color:#ef4444; font-weight:900; font-size:20px;">${lossCount} ${lossCount === 1 ? 'Loss' : 'Losses'}</span>
                 </div>
                 <div style="margin-top:16px; display:flex; justify-content:center; gap:10px; flex-wrap:wrap;">
                     <button onclick="window.openChampionshipArchiveVaultModal('live')" style="background:linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(6,182,212,0.08) 100%); border:1px solid rgba(6,182,212,0.4); color:var(--accent); padding:6px 14px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.3)'" onmouseout="this.style.background='rgba(6,182,212,0.2)'">📜 Championship Archive Vault</button>

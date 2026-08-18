@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.9.19] - 2026-08-17
+- 🏆 **Centered Matchup Status Badges**: Positioned `VICTORY` / `DEFEAT` badges directly in the center column above the `VS` medallion across all 5 Championship matchup cards.
+- 🎯 **Cleaned Tournament Header**: Centered overall win/loss record and removed redundant status pill badge and duplicate round headers for enhanced layout clarity.
+
 ## [2.9.18] - 2026-08-17
 - 🏆 **Alliance Championship 5-Round Clashes**: Brand new public dashboard featuring head-to-head match cards with live scores, custom opponent tags, and dynamic victory/defeat badges for all 5 tournament rounds.
 - ⚔️ **Championship Matchup & Score Manager**: Dedicated R4/R5 admin editor for updating scores, auto-calculating overall win/loss records, archiving completed seasons to the Championship Vault, and seamlessly managing member signups.
