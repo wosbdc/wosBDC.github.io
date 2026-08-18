@@ -1,6 +1,7 @@
 # CHANGELOG
 
 ## [2.9.40] - 2026-08-18
+- 🥶 **Discreet Pure-Icon Secret Launcher**: Updated the root admin launcher button in the top navigation bar and Account Hub to display strictly the discreet icon (`🥶`) with no text name for maximum privacy.
 - 🧹 **Toolbar Clean-up & Streamlined Roster Layout**: Removed the redundant Bulk Add button from the Alliance Members toolbar in `tab-users`, keeping the main window clean and compact.
 - 👥 **Unified Modal Experience**: Both Single Player and Bulk Add workflows remain accessible inside the `➕ Add Player` popup modal tabs (`👤 Single` and `👥 Bulk Add`).
 

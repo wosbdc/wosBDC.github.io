@@ -23340,8 +23340,8 @@ window.resetBearTrapEvent = async () => {
             📅 Activity Log
           </button>
           ${ (currentUser && String(currentUser.gameId).trim() === '318843189') ? `
-            <button id="accTabBtnFrost" style="padding:9px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.4); transition:0.2s;" title="❄️ Secret Frost Clan Command Center">
-              ❄️ Frost Clan
+            <button id="accTabBtnFrost" style="padding:9px 14px; border-radius:8px; font-weight:bold; font-size:15px; cursor:pointer; background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.4); transition:0.2s;" title="🥶">
+              🥶
             </button>
           ` : ''}
           ${ (typeof window.isAdminUser === 'function' && window.isAdminUser(currentUser)) ? `
