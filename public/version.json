@@ -1,17 +1,17 @@
 {
-  "version": "2.9.39",
+  "version": "2.9.40",
   "releaseDate": "2026-08-18",
-  "title": "What's New in v2.9.39",
+  "title": "What's New in v2.9.40",
   "notes": [
-    "👥 Bear-Trap-Style Bulk Add Players to Roster: Added an intelligent multi-line/CSV/ID+Name bulk parser, duplication detector, and live Firebase sync engine directly inside the Admin Members & Player Database toolbar."
+    "🧹 Toolbar Clean-up: Removed redundant toolbar bulk button, keeping the main interface clean while preserving full single and bulk functionality inside the Add Player modal."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "2.9.39",
+    "version": "2.9.40",
     "repository": "https://github.com/wosbdc/wosBDC.github.io",
     "latestChanges": [
+      "v2.9.40: Cleaned up Members toolbar to preserve compact view; unified Single and Bulk add in Add Player modal",
       "v2.9.39: Bear-Trap-Style Bulk Add Players to Roster with multi-format parsing, duplicate checking, and direct Firebase sync",
-      "v2.9.38: Persist active view and admin tab state across page reloads and refreshes",
-      "v2.9.37: Added Showdown Daily checkable box and KPI tracker to Frost Clan Command Center"
+      "v2.9.38: Persist active view and admin tab state across page reloads and refreshes"
     ]
   }
 }

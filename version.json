@@ -29,12 +29,12 @@
       "repository": "https://github.com/bdclive/BDClive"
     },
     "wosbdc_alliance_dashboard": {
-      "version": "2.9.39",
+      "version": "2.9.40",
       "repository": "https://github.com/wosbdc/wosBDC.github.io",
       "latestChanges": [
+        "v2.9.40: Cleaned up Members toolbar to preserve compact view; unified Single and Bulk add in Add Player modal",
         "v2.9.39: Bear-Trap-Style Bulk Add Players to Roster with multi-format parsing, duplicate checking, and direct Firebase sync",
-        "v2.9.38: Persist active view and admin tab state across page reloads and refreshes",
-        "v2.9.37: Added Showdown Daily checkable box and KPI tracker to Frost Clan Command Center"
+        "v2.9.38: Persist active view and admin tab state across page reloads and refreshes"
       ]
     },
     "google_apps_script_backend": {

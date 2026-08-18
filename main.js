@@ -19214,12 +19214,9 @@ const views = {
                     </div>
 
                     <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                      <!-- Add Player & Bulk Add Buttons -->
-                      <button onclick="window.openAddPlayerModal('single')" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:7px 15px; border-radius:10px; font-size:12.5px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(16,185,129,0.3); transition:0.2s;" onmouseover="this.style.transform='translateY(-1px)';" onmouseout="this.style.transform='translateY(0)';" title="Add a single new player to roster">
+                      <!-- Add Player Button -->
+                      <button onclick="window.openAddPlayerModal()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:7px 16px; border-radius:10px; font-size:12.5px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(16,185,129,0.3); transition:0.2s;" onmouseover="this.style.transform='translateY(-1px)';" onmouseout="this.style.transform='translateY(0)';" title="Add a new player or character to the alliance database & roster">
                         ➕ Add Player
-                      </button>
-                      <button onclick="window.openAddPlayerModal('bulk')" style="background:linear-gradient(135deg, #8b5cf6, #7c3aed); color:#fff; border:none; padding:7px 15px; border-radius:10px; font-size:12.5px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(139,92,246,0.3); transition:0.2s;" onmouseover="this.style.transform='translateY(-1px)';" onmouseout="this.style.transform='translateY(0)';" title="Bulk add multiple players to roster (Bear Trap style)">
-                        👥 Bulk Add
                       </button>
 
                       <!-- Primary Segmented Switcher -->

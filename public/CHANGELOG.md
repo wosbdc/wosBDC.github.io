@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.9.40] - 2026-08-18
+- 🧹 **Toolbar Clean-up & Streamlined Roster Layout**: Removed the redundant Bulk Add button from the Alliance Members toolbar in `tab-users`, keeping the main window clean and compact.
+- 👥 **Unified Modal Experience**: Both Single Player and Bulk Add workflows remain accessible inside the `➕ Add Player` popup modal tabs (`👤 Single` and `👥 Bulk Add`).
+
 ## [2.9.39] - 2026-08-18
 - ⚡ **Frost Clan Firebase Realtime Database Migration**: Migrated all Frost Clan Command Center data layer and state management to Firebase RTDB (`/frost_clan/alts`) for sub-50ms instant loading, zero-delay checkbox toggles, and live multi-device synchronization with background Google Sheets sync.
 - 🕵️ **Exclusive Root Admin Secret Launcher**: Removed the Frost Clan tab from the general Admin Menu tab bar and placed it in a discreet **Secret Frosted Crystal Icon (`❄️`)** in the top navigation header and a private **`❄️ Frost Clan`** tab inside **Account Hub** (strictly accessible to Chief Brian / Game ID `318843189`).
