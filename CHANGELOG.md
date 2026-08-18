@@ -1,11 +1,10 @@
 # CHANGELOG
 
 ## [2.9.39] - 2026-08-18
-- 👥 **Bear-Trap-Style Bulk Add Players to Roster**: Implemented an intelligent multi-entry Bulk Add modal and parser in the Admin Chief's List (`👥 Users` tab) allowing leaders to rapidly import multiple members at once.
-- 📋 **Flexible Multi-Format Parser**: Supports line breaks, tab/comma separated data, `ID Name`, `Name ID`, `Name (ID)` syntax, and handles trailing brackets or power numbers.
-- 🛡️ **Real-Time Duplication & Validation Guard**: Automatically highlights duplicate names/IDs against live roster and registered users, flags conflicts, and offers single-click "Remove Duplicates" and row editing.
-- ⚡ **Direct Firebase Sync with Auto FID**: Writes verified members directly into `roster_live` and `members` with automatic 9-digit FID generation when missing, and triggers Google Apps Script sheet sync.
-- 🚀 **One-Click Admin Toolbar Launch**: Added `👥 Bulk Add` action button directly in the Members & Player Database toolbar next to `➕ Add Player`.
+- ⚡ **Frost Clan Firebase Realtime Database Migration**: Migrated all Frost Clan Command Center data layer and state management to Firebase RTDB (`/frost_clan/alts`) for sub-50ms instant loading, zero-delay checkbox toggles, and live multi-device synchronization with background Google Sheets sync.
+- 🕵️ **Exclusive Root Admin Secret Launcher**: Removed the Frost Clan tab from the general Admin Menu tab bar and placed it in a discreet **Secret Frosted Crystal Icon (`❄️`)** in the top navigation header and a private **`❄️ Frost Clan`** tab inside **Account Hub** (strictly accessible to Chief Brian / Game ID `318843189`).
+- 🔍 **Live Instant Search**: Added a real-time instant search filter (`🔍 Search alt name...`) allowing leaders to find specific alts instantly as they type.
+- ⚔️ **Showdown Filter View Suite**: Added 1-tap filter pills (`⚔️ Needs Showdown`, `✅ Showdown Done`, `⚠️ Needs Shields`, `🛡️ Shielded`, `All`) to instantly identify which alts still need daily tasks completed.
 
 ## [2.9.38] - 2026-08-18
 - 🔄 **Active View & Tab State Persistence**: Added `sessionStorage` persistence across all views and admin sub-tabs (`tab-users`, `tab-tools`, `tab-bots`, `tab-frost`, etc.). When refreshing or reloading the page, the user stays on their active view and tab instead of being forcibly routed back to Account Hub.
