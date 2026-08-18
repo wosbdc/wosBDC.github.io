@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.9.21] - 2026-08-17
+- 🎁 **Account Hub Member Perks**: Added a dedicated "Member Perks & Auto Redeem" 5th tab to the Account Hub showing enrolled characters (main + linked alts), 30-day token status, alliance perk breakdown, and recent gift codes with 1-click clipboard copy.
+- 🧹 **Cleaned Navigation Header**: Removed the standalone "Perks ▾" dropdown from the top navbar and automatically route any perks references into the unified Account Hub.
+
 ## [2.9.20] - 2026-08-17
 - 🗺️ **Alliance State Identifiers**: Displayed state numbers (e.g. `State #2089`, `State #2045`) directly under alliance tags across all 5 Championship matchup cards, mobile views, and Vault history.
 - 🥊 **Championship State Admin**: Added Opponent State input fields in the Championship Management Hub editor and save handler for complete match metadata control.

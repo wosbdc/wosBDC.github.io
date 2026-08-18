@@ -22123,6 +22123,9 @@ window.resetBearTrapEvent = async () => {
           <button id="accTabBtnAlts" style="padding:9px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; background:var(--bg-main); color:var(--text-muted); border:1px solid var(--border); transition:0.2s;">
             🔗 Linked Alts (${links.length})
           </button>
+          <button id="accTabBtnPerks" style="padding:9px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; background:var(--bg-main); color:var(--text-muted); border:1px solid var(--border); transition:0.2s;">
+            🎁 Perks
+          </button>
           <button id="accTabBtnActivity" style="padding:9px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; background:var(--bg-main); color:var(--text-muted); border:1px solid var(--border); transition:0.2s;">
             📅 Activity Log
           </button>
@@ -22272,7 +22275,150 @@ window.resetBearTrapEvent = async () => {
           ${linkedHtml}
         </div>
 
-        <!-- Section 4: Personal Activity Log Tab -->
+        <!-- Section 4: Member Perks & Auto Redeem Tab -->
+        <div id="accTabSectionPerks" style="display:none; text-align:left;">
+          <div style="display:flex; flex-direction:column; gap:16px;">
+
+            <!-- Hero Status Card -->
+            <div class="card" style="background:linear-gradient(135deg, rgba(15,23,42,0.95), rgba(30,41,59,0.9)); border:1px solid rgba(56,189,248,0.3); border-radius:16px; padding:22px; box-shadow:0 8px 30px rgba(0,0,0,0.4); text-align:left;">
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:14px;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                  <div style="width:48px; height:48px; border-radius:12px; background:linear-gradient(135deg, rgba(6,182,212,0.2), rgba(59,130,246,0.2)); border:1px solid rgba(6,182,212,0.4); display:flex; align-items:center; justify-content:center; font-size:24px;">
+                    🎁
+                  </div>
+                  <div>
+                    <h3 style="margin:0; font-size:18px; color:#fff;">Automatic Gift Code Redemption</h3>
+                    <p style="margin:2px 0 0 0; font-size:12.5px; color:var(--text-muted);">Exclusive alliance member perk for verified and claimed accounts</p>
+                  </div>
+                </div>
+                <div>
+                  ${ tokenStatus.status === 'active' 
+                    ? `<span style="background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.4); color:#10b981; padding:5px 12px; border-radius:20px; font-weight:bold; font-size:12px; display:inline-flex; align-items:center; gap:5px;">✅ Auto Redeem Active</span>`
+                    : `<span style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.4); color:#f59e0b; padding:5px 12px; border-radius:20px; font-weight:bold; font-size:12px; display:inline-flex; align-items:center; gap:5px;">⚠️ 30-Day Sync Recommended</span>`
+                  }
+                </div>
+              </div>
+
+              <p style="font-size:14px; color:#cbd5e1; line-height:1.6; margin:0 0 16px 0;">
+                As a registered alliance member, Chief <strong>${window.escapeHTML(currentChiefName)}</strong> and all <strong>${links.length} linked alt(s)</strong> automatically receive every newly discovered gift code directly in your in-game mailbox without any manual code entering!
+              </p>
+
+              <!-- Enrolled Lineup Overview -->
+              <div style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:14px 16px; margin-bottom:16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                  <span style="font-size:12px; font-weight:bold; color:var(--accent); text-transform:uppercase; letter-spacing:0.5px;">👥 Enrolled Character Lineup (1 Main + ${links.length} Alts)</span>
+                  <button onclick="let b=document.getElementById('accTabBtnAlts'); if(b) b.click();" style="background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; padding:4px 10px; border-radius:6px; font-size:11.5px; font-weight:bold; cursor:pointer;">
+                    🔗 Manage Alts
+                  </button>
+                </div>
+
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                  <!-- Main Account Row -->
+                  <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05); flex-wrap:wrap; gap:8px;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                      <span style="font-size:14px;">⭐</span>
+                      <div>
+                        <strong style="color:#fff; font-size:13.5px;">${window.escapeHTML(currentChiefName)}</strong>
+                        <span style="font-size:11px; color:var(--text-muted); font-family:monospace; margin-left:6px;">ID: ${currentUser.gameId}</span>
+                      </div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                      ${ tokenStatus.status === 'active' 
+                        ? `<span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:2px 8px; border-radius:6px; font-size:11px; font-weight:bold;">🟢 30d Sync (${tokenStatus.daysLeft}d)</span>`
+                        : `<button onclick="window.openAccountHubVerifyModal()" style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); padding:2px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">⚠️ Setup Sync</button>`
+                      }
+                      <span style="border:1px solid rgba(16,185,129,0.35); color:#10b981; background:rgba(16,185,129,0.1); border-radius:6px; padding:2px 6px; font-size:11px; font-weight:600;">🎁 Enrolled</span>
+                    </div>
+                  </div>
+
+                  <!-- Linked Alts Rows -->
+                  ${altCardsData.map(alt => `
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.04); flex-wrap:wrap; gap:8px;">
+                      <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-size:14px;">🔗</span>
+                        <div>
+                          <span style="color:#e2e8f0; font-size:13px; font-weight:600;">${window.escapeHTML(alt.altName)}</span>
+                          <span style="font-size:11px; color:var(--text-muted); font-family:monospace; margin-left:6px;">ID: ${alt.cleanGid}</span>
+                        </div>
+                      </div>
+                      <div style="display:flex; align-items:center; gap:8px;">
+                        ${ alt.isAltTokenActive 
+                          ? `<span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:2px 8px; border-radius:6px; font-size:11px; font-weight:bold;">🟢 30d Sync (${alt.altTokenDaysRemaining}d)</span>`
+                          : `<button onclick="window.openAltVerifyModal('${alt.cleanGid}')" style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); padding:2px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">⚠️ Setup Sync</button>`
+                        }
+                        <span style="border:1px solid rgba(16,185,129,0.35); color:#10b981; background:rgba(16,185,129,0.1); border-radius:6px; padding:2px 6px; font-size:11px; font-weight:600;">🎁 Enrolled</span>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+
+              <div style="font-size:12.5px; color:var(--text-muted); line-height:1.5;">
+                <em>✨ When leadership or the automated bot dispatches a gift code, all registered characters are redeemed simultaneously. Check your in-game mailbox to collect rewards!</em>
+              </div>
+            </div>
+
+            <!-- Exclusive Member Perks Grid -->
+            <div class="card" style="padding:18px; text-align:left;">
+              <h3 style="margin:0 0 14px 0; font-size:16px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+                <span>🛡️ Member Perks & Features</span>
+              </h3>
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:12px;">
+                <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:14px;">
+                  <div style="font-size:14px; font-weight:bold; color:#10b981; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+                    <span>🤖</span> <span>Zero-Click Gift Code Drops</span>
+                  </div>
+                  <div style="font-size:12.5px; color:var(--text-muted); line-height:1.4;">
+                    Our automated bot sweeps official game feeds and redeems every promo code straight to your mailbox.
+                  </div>
+                </div>
+
+                <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:14px;">
+                  <div style="font-size:14px; font-weight:bold; color:#38bdf8; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+                    <span>🔥</span> <span>Live Furnace & Avatar Sync</span>
+                  </div>
+                  <div style="font-size:12.5px; color:var(--text-muted); line-height:1.4;">
+                    Your custom in-game avatar and Fire Crystal levels sync seamlessly across alliance rosters and profiles.
+                  </div>
+                </div>
+
+                <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:14px;">
+                  <div style="font-size:14px; font-weight:bold; color:#a855f7; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+                    <span>🏆</span> <span>Event Combat Records</span>
+                  </div>
+                  <div style="font-size:12.5px; color:var(--text-muted); line-height:1.4;">
+                    Personal historical analytics for Bear Trap damage, Showdown score leaderboards, and Alliance Championship.
+                  </div>
+                </div>
+
+                <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:14px;">
+                  <div style="font-size:14px; font-weight:bold; color:#f59e0b; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+                    <span>🔔</span> <span>Alliance Event Alerts</span>
+                  </div>
+                  <div style="font-size:12.5px; color:var(--text-muted); line-height:1.4;">
+                    Direct access to alliance announcements, battle callouts, trap schedules, and push notifications.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Active Alliance Codes Container -->
+            <div class="card" style="padding:18px; text-align:left;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+                <h3 style="margin:0; font-size:16px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+                  <span>💎 Recent Alliance Promo Codes</span>
+                </h3>
+                <span style="font-size:12px; color:var(--text-muted);">Auto-delivered to claimed accounts</span>
+              </div>
+              <div id="accGiftCodesList" style="display:flex; flex-direction:column; gap:8px;">
+                <div style="text-align:center; color:var(--text-muted); padding:16px; font-size:13px;">Loading alliance promo codes...</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Section 5: Personal Activity Log Tab -->
         <div id="accTabSectionActivity" style="display:none; text-align:left;">
           <div class="card" style="text-align:left;">
             <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
@@ -22684,13 +22830,52 @@ window.resetBearTrapEvent = async () => {
       console.error("Account Hub Rankings render error:", err);
     }
 
-    // 4-Way Tab Switcher Listeners
+    // 5-Way Tab Switcher Listeners
     const accTabs = [
       { id: 'Profile', btn: document.getElementById('accTabBtnProfile'), sec: document.getElementById('accTabSectionProfile') },
       { id: 'Rankings', btn: document.getElementById('accTabBtnRankings'), sec: document.getElementById('accTabSectionRankings') },
       { id: 'Alts', btn: document.getElementById('accTabBtnAlts'), sec: document.getElementById('accTabSectionAlts') },
+      { id: 'Perks', btn: document.getElementById('accTabBtnPerks'), sec: document.getElementById('accTabSectionPerks') },
       { id: 'Activity', btn: document.getElementById('accTabBtnActivity'), sec: document.getElementById('accTabSectionActivity') }
     ];
+
+    window.loadAccountPerksGiftCodes = async () => {
+      const container = document.getElementById('accGiftCodesList');
+      if (!container) return;
+      try {
+        const list = await window.fetchGiftCodesHistory();
+        if (!list || list.length === 0) {
+          container.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:16px; font-size:13px; font-style:italic;">No active promo codes currently recorded.</div>`;
+          return;
+        }
+
+        const activeCodes = list.filter(c => c.status === 'active');
+        const displayCodes = (activeCodes.length > 0 ? activeCodes : list).slice(0, 5);
+
+        container.innerHTML = displayCodes.map(codeItem => {
+          const isAct = codeItem.status === 'active';
+          return `
+            <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); border:1px solid ${isAct ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.08)'}; border-radius:10px; padding:10px 14px; flex-wrap:wrap; gap:10px;">
+              <div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="font-family:monospace; font-size:15px; font-weight:bold; color:${isAct ? '#38bdf8' : '#cbd5e1'}; letter-spacing:1px;">${window.escapeHTML(codeItem.code)}</span>
+                  <span style="background:${isAct ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.08)'}; color:${isAct ? '#10b981' : 'var(--text-muted)'}; border:1px solid ${isAct ? 'rgba(16,185,129,0.4)' : 'rgba(255,255,255,0.1)'}; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:bold;">
+                    ${isAct ? '🟢 Active' : '⚪ Past'}
+                  </span>
+                </div>
+                ${codeItem.description ? `<div style="font-size:12px; color:var(--text-muted); margin-top:3px;">${window.escapeHTML(codeItem.description)}</div>` : ''}
+              </div>
+              <button onclick="navigator.clipboard.writeText('${window.escapeHTML(codeItem.code)}'); if(window.showToast) window.showToast('Copied ${window.escapeHTML(codeItem.code)} to clipboard!', 'success');" style="background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.35); color:#38bdf8; padding:6px 12px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+                📋 Copy
+              </button>
+            </div>
+          `;
+        }).join('');
+      } catch(err) {
+        console.error("Error loading perks gift codes:", err);
+        container.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:16px; font-size:13px;">Error loading codes.</div>`;
+      }
+    };
 
     const switchAccountHubTab = (activeId) => {
       window.currentAccountHubTab = activeId;
@@ -22702,6 +22887,9 @@ window.resetBearTrapEvent = async () => {
           t.btn.style.border = 'none';
           t.btn.style.boxShadow = '0 4px 12px rgba(14,165,233,0.3)';
           t.sec.style.display = 'block';
+          if (t.id === 'Perks') {
+            window.loadAccountPerksGiftCodes();
+          }
         } else {
           t.btn.style.background = 'var(--bg-main)';
           t.btn.style.color = 'var(--text-muted)';
@@ -25172,58 +25360,9 @@ window.resetBearTrapEvent = async () => {
     } catch(e) { renderError(e.message); }
   },
   giftcodes: async () => {
-    if (!currentUser) {
-      app.innerHTML = `
-        <div class="card" style="display:flex; flex-direction:column; padding:0; overflow:hidden; animation: fadeIn 0.3s ease; max-width: 600px; margin: 40px auto;">
-          <div style="padding:20px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; justify-content:center; background:var(--bg-card);">
-            <span style="font-size:24px;">🎁</span>
-            <h2 style="margin:0; font-size:22px; color:var(--text-main);">Automatic Gift Codes</h2>
-          </div>
-          <div style="padding:40px 20px; text-align:center; background:var(--bg-main);">
-            <div style="font-size:48px; margin-bottom:20px;">🔒</div>
-            <h3 style="color:var(--text-main); margin-bottom:10px;">Claimed Account Perk</h3>
-            <p style="color:var(--text-muted); margin-bottom:25px; font-size:15px; line-height:1.5;">Automatic Gift Code redemption is exclusive to claimed accounts. Sign in or register to activate automatic in-game deliveries!</p>
-            <button onclick="document.getElementById('authModal').style.display='block'; document.getElementById('authModalOverlay').style.display='block';" style="background:var(--accent); color:#fff; border:none; padding:12px 24px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:16px;">Sign In / Register</button>
-          </div>
-        </div>
-      `;
-      return;
+    if (window.views && window.views.account) {
+      return views.account('Perks');
     }
-
-    const chiefName = currentUser.name || (window.idToNameMap && window.idToNameMap[currentUser.gameId]) || "Chief";
-    const altsCount = (currentUser.linkedGameIds || []).length;
-
-    app.innerHTML = `
-      <div class="card" style="display:flex; flex-direction:column; padding:0; overflow:hidden; animation: fadeIn 0.3s ease; max-width: 620px; margin: 40px auto;">
-        <div style="padding:20px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; justify-content:center; background:var(--bg-card);">
-          <span style="font-size:24px;">🎁</span>
-          <h2 style="margin:0; font-size:22px; color:var(--text-main);">Automatic Gift Codes</h2>
-        </div>
-        <div style="padding:32px 24px; text-align:center; background:var(--bg-main);">
-          <div style="display:inline-flex; align-items:center; justify-content:center; width:64px; height:64px; border-radius:50%; background:rgba(16,185,129,0.15); border:2px solid #10b981; margin-bottom:16px; font-size:30px;">
-            ✅
-          </div>
-          <h3 style="color:#10b981; margin:0 0 8px 0; font-size:20px;">Auto Redeem Is Active!</h3>
-          <p style="color:var(--text-muted); margin:0 auto 20px auto; font-size:14.5px; line-height:1.6; max-width:480px;">
-            As a verified claimed account, Chief <strong>${window.escapeHTML(chiefName)}</strong> and all <strong>${altsCount} linked alt(s)</strong> automatically receive every newly released gift code directly in your in-game mailbox.
-          </p>
-
-          <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:16px; margin-bottom:24px; text-align:left; display:flex; justify-content:space-between; align-items:center;">
-            <div>
-              <div style="font-weight:bold; color:#fff; font-size:14px;">Main Character & Linked Alts</div>
-              <div style="font-size:12px; color:#94a3b8; margin-top:2px;">1 Main + ${altsCount} Alt(s) Enrolled</div>
-            </div>
-            <button onclick="if(views.account) views.account('Alts')" style="background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; padding:8px 14px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer;">
-              🔗 Manage Alts
-            </button>
-          </div>
-
-          <div style="font-size:12.5px; color:var(--text-muted);">
-            <em>✨ Zero manual entry needed. When leadership dispatches a gift code, your whole lineup is redeemed simultaneously.</em>
-          </div>
-        </div>
-      </div>
-    `;
   },
   
 

@@ -1,10 +1,10 @@
 {
-  "version": "2.9.20",
+  "version": "2.9.21",
   "releaseDate": "2026-08-17",
-  "title": "What's New in v2.9.20",
+  "title": "What's New in v2.9.21",
   "notes": [
-    "🗺️ Alliance State Identifiers: Displayed state numbers directly beneath alliance tags across all 5 Championship matchup cards and Vault history.",
-    "🥊 Championship State Admin: Added Opponent State input fields in the Championship Management Hub for seamless match metadata tracking."
+    "🎁 Account Hub Member Perks: Unified exclusive perks, promo codes, and 30-day token status directly into the user Account Hub.",
+    "🧹 Streamlined Navigation: Cleaned up the top navigation header by migrating standalone perks dropdown into the centralized Account Hub."
   ]
 }
 
