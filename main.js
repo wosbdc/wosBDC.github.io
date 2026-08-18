@@ -22369,7 +22369,7 @@ window.resetBearTrapEvent = async () => {
                     <span>🤖</span> <span>Zero-Click Gift Code Drops</span>
                   </div>
                   <div style="font-size:12.5px; color:var(--text-muted); line-height:1.4;">
-                    Our automated bot sweeps official game feeds and redeems every promo code straight to your mailbox.
+                    Redeems every promo code straight to your In-Game mailbox.
                   </div>
                 </div>
 
@@ -22378,7 +22378,7 @@ window.resetBearTrapEvent = async () => {
                     <span>🔥</span> <span>Live Furnace & Avatar Sync</span>
                   </div>
                   <div style="font-size:12.5px; color:var(--text-muted); line-height:1.4;">
-                    Your custom in-game avatar and Fire Crystal levels sync seamlessly across alliance rosters and profiles.
+                    Your custom in-game avatar and Furnace levels sync seamlessly across alliance rosters and profiles.
                   </div>
                 </div>
 
@@ -22387,7 +22387,7 @@ window.resetBearTrapEvent = async () => {
                     <span>🏆</span> <span>Event Combat Records</span>
                   </div>
                   <div style="font-size:12.5px; color:var(--text-muted); line-height:1.4;">
-                    Personal historical analytics for Bear Trap damage, Showdown score leaderboards, and Alliance Championship.
+                    Personal analytics for Bear Trap, Showdown leaderboards, and Alliance Championship.
                   </div>
                 </div>
 
@@ -22396,7 +22396,7 @@ window.resetBearTrapEvent = async () => {
                     <span>🔔</span> <span>Alliance Event Alerts</span>
                   </div>
                   <div style="font-size:12.5px; color:var(--text-muted); line-height:1.4;">
-                    Direct access to alliance announcements, battle callouts, trap schedules, and push notifications.
+                    Direct access to alliance announcements, battle callouts, trap schedules, and alerts.
                   </div>
                 </div>
               </div>

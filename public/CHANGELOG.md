@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [2.9.22] - 2026-08-17
+- 📝 **Streamlined Member Perks Copy**: Refined and simplified card descriptions across the Account Hub Member Perks grid (clarifying in-game mailbox delivery and live Furnace level sync).
+
 ## [2.9.21] - 2026-08-17
 - 🎁 **Account Hub Member Perks**: Added a dedicated "Member Perks & Auto Redeem" 5th tab to the Account Hub showing enrolled characters (main + linked alts), 30-day token status, alliance perk breakdown, and recent gift codes with 1-click clipboard copy.
 - 🧹 **Cleaned Navigation Header**: Removed the standalone "Perks ▾" dropdown from the top navbar and automatically route any perks references into the unified Account Hub.

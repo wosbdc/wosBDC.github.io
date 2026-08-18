@@ -29,12 +29,12 @@
       "repository": "https://github.com/bdclive/BDClive"
     },
     "wosbdc_alliance_dashboard": {
-      "version": "2.9.21",
+      "version": "2.9.22",
       "repository": "https://github.com/wosbdc/wosBDC.github.io",
       "latestChanges": [
+        "v2.9.22: Refined member perks copy for in-game mailbox delivery and furnace sync",
         "v2.9.21: Unified Member Perks & Auto Redeem into Account Hub and streamlined top navbar",
-        "v2.9.20: Displayed state numbers under alliance tags in Championship Matchup cards & Vault history",
-        "v2.9.19: Centered VICTORY/DEFEAT status badges above VS medallion and streamlined win/loss header"
+        "v2.9.20: Displayed state numbers under alliance tags in Championship Matchup cards & Vault history"
       ]
     },
     "google_apps_script_backend": {

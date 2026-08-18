@@ -1,10 +1,10 @@
 {
-  "version": "2.9.21",
+  "version": "2.9.22",
   "releaseDate": "2026-08-17",
-  "title": "What's New in v2.9.21",
+  "title": "What's New in v2.9.22",
   "notes": [
-    "🎁 Account Hub Member Perks: Unified exclusive perks, promo codes, and 30-day token status directly into the user Account Hub.",
-    "🧹 Streamlined Navigation: Cleaned up the top navigation header by migrating standalone perks dropdown into the centralized Account Hub."
+    "✨ Refined Member Perks: Streamlined copy and clarified in-game mailbox delivery and furnace sync details.",
+    "🎁 Account Hub Member Perks: Unified exclusive perks, promo codes, and 30-day token status directly into the user Account Hub."
   ]
 }
 
