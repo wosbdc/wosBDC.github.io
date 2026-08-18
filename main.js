@@ -132,7 +132,7 @@ window.fetchRoster = async () => {
 };
 
 
-const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbxZu-vWynJB-Gs2vk5Zc9fl1nuGpMTlL3LKmVmKg5Na_DuhWLNiyilnfVxeQFuHmkE/exec';
+const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbzpQ0MIt3QJ3sco-d5d8PdthaG-g4o9CRZkcnBOyES7LX-8aAaDffvCUt2SOAQL-go/exec';
 const VERIFY_PROXY_URL = 'https://wos-vercel-proxy.vercel.app/api/verify'; // Fallback / secondary proxy
 
 // Get a fresh Firebase ID token for the current user (replaces hardcoded APP_SECRET)
@@ -19663,6 +19663,7 @@ const views = {
         const shieldedCount = window.frostState.alts.filter(a => a.shields).length;
         const unshieldedCount = totalAlts - shieldedCount;
         const rebirthCount = window.frostState.alts.filter(a => a.rebirth).length;
+        const showdownCount = window.frostState.alts.filter(a => a.showdown).length;
         const shieldPct = totalAlts > 0 ? Math.round((shieldedCount / totalAlts) * 100) : 0;
 
         const filteredAlts = window.frostState.alts.map((alt, idx) => ({ ...alt, originalIdx: idx })).filter(alt => {
@@ -19678,7 +19679,7 @@ const views = {
               <h2 style="margin:0; font-size:22px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
                 <span>❄️ Frost Clan Command Center</span>
               </h2>
-              <p style="margin:4px 0 0; color:var(--text-muted); font-size:12.5px;">Live Shield Defense & Rebirth Readiness Tracker</p>
+              <p style="margin:4px 0 0; color:var(--text-muted); font-size:12.5px;">Live Shield Defense, Showdown & Rebirth Readiness Tracker</p>
             </div>
             <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
               <button onclick="window.shieldAllFrostClan()" style="background:linear-gradient(135deg, #10b981, #059669); color:white; border:none; padding:8px 16px; border-radius:10px; font-weight:bold; cursor:pointer; font-size:13px; box-shadow:0 3px 10px rgba(16,185,129,0.3); display:inline-flex; align-items:center; gap:6px; transition:0.2s;">
@@ -19695,7 +19696,7 @@ const views = {
 
           <!-- Live KPI Counter & Coverage Bar -->
           <div style="background:var(--bg-main, #0f172a); border:1px solid var(--border); border-radius:16px; padding:16px 18px; margin-bottom:20px; box-shadow:0 6px 20px rgba(0,0,0,0.2);">
-            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-bottom:14px;">
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:12px; margin-bottom:14px;">
               
               <!-- KPI 1: Shields ON -->
               <div style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.3); border-radius:12px; padding:12px 14px; text-align:center;">
@@ -19711,7 +19712,14 @@ const views = {
                 <div style="font-size:11.5px; color:${unshieldedCount > 0 ? '#ef4444' : '#10b981'}; font-weight:bold; margin-top:2px;">${unshieldedCount === 0 ? '✅ All Alts Safe' : '⚠️ Action Required'}</div>
               </div>
 
-              <!-- KPI 3: Rebirth Tomes -->
+              <!-- KPI 3: Daily Showdown -->
+              <div style="background:rgba(234,179,8,0.08); border:1px solid rgba(234,179,8,0.3); border-radius:12px; padding:12px 14px; text-align:center;">
+                <div style="font-size:11px; color:#facc15; text-transform:uppercase; font-weight:bold; letter-spacing:0.5px; margin-bottom:4px;">⚔️ Daily Showdown</div>
+                <div style="font-size:24px; font-weight:800; color:#facc15;">${showdownCount} <span style="font-size:15px; font-weight:600; color:var(--text-muted);">/ ${totalAlts}</span></div>
+                <div style="font-size:11.5px; color:var(--text-muted); font-weight:bold; margin-top:2px;">${totalAlts > 0 ? Math.round((showdownCount / totalAlts) * 100) : 0}% Completed</div>
+              </div>
+
+              <!-- KPI 4: Rebirth Tomes -->
               <div style="background:rgba(6,182,212,0.08); border:1px solid rgba(6,182,212,0.3); border-radius:12px; padding:12px 14px; text-align:center;">
                 <div style="font-size:11px; color:#38bdf8; text-transform:uppercase; font-weight:bold; letter-spacing:0.5px; margin-bottom:4px;">📖 Rebirth Tomes</div>
                 <div style="font-size:24px; font-weight:800; color:#38bdf8;">${rebirthCount} <span style="font-size:15px; font-weight:600; color:var(--text-muted);">/ ${totalAlts}</span></div>
@@ -19771,6 +19779,7 @@ const views = {
           const idx = alt.originalIdx;
           const isShielded = Boolean(alt.shields);
           const isRebirth = Boolean(alt.rebirth);
+          const isShowdown = Boolean(alt.showdown);
 
           html += `
             <div style="background:var(--bg-card, #1a0b2e); border:1px solid ${isShielded ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.35)'}; border-radius:16px; padding:22px; box-shadow:0 8px 24px rgba(0,0,0,0.2); position:relative; overflow:hidden; transition:transform 0.15s ease, border-color 0.2s ease;">
@@ -19812,12 +19821,18 @@ const views = {
               
               <!-- Quick 1-Tap Toggle Buttons -->
               <div style="font-size:11.5px; color:var(--accent); text-transform:uppercase; font-weight:bold; letter-spacing:0.5px; margin-bottom:8px;">1-Tap Status Updates</div>
-              <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(95px, 1fr)); gap:10px;">
                 
                 <!-- Shield Toggle Card -->
                 <div onclick="window.toggleFrostCheckbox(${idx}, 'shields')" style="background:${isShielded ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.08)'}; border:1px solid ${isShielded ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.35)'}; border-radius:12px; padding:10px 8px; text-align:center; cursor:pointer; transition:transform 0.1s ease;" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
                   <div style="font-size:11px; color:${isShielded ? '#10b981' : '#ef4444'}; font-weight:bold; margin-bottom:4px;">🛡️ Shields</div>
                   <div id="val_${idx}_shields" style="font-size:18px; font-weight:bold; color:${isShielded ? '#10b981' : '#ef4444'}; user-select:none;">${isShielded ? '✅ ON' : '❌ OFF'}</div>
+                </div>
+
+                <!-- Showdown: Daily Toggle Card -->
+                <div onclick="window.toggleFrostCheckbox(${idx}, 'showdown')" style="background:${isShowdown ? 'rgba(234,179,8,0.12)' : 'rgba(255,255,255,0.03)'}; border:1px solid ${isShowdown ? 'rgba(234,179,8,0.4)' : 'var(--border)'}; border-radius:12px; padding:10px 8px; text-align:center; cursor:pointer; transition:transform 0.1s ease;" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
+                  <div style="font-size:11px; color:${isShowdown ? '#facc15' : 'var(--text-muted)'}; font-weight:bold; margin-bottom:4px;">⚔️ Showdown: Daily</div>
+                  <div id="val_${idx}_showdown" style="font-size:18px; font-weight:bold; color:${isShowdown ? '#facc15' : 'var(--text-muted)'}; user-select:none;">${isShowdown ? '✅ ON' : '❌ OFF'}</div>
                 </div>
 
                 <!-- Rebirth Tomes Toggle Card -->
@@ -19859,12 +19874,13 @@ const views = {
       };
       
       window.resetFrostClan = async function() {
-        const confirmed = await window.customConfirm("Are you sure you want to uncheck all Shields and Rebirth Tomes for Frost Clan?");
+        const confirmed = await window.customConfirm("Are you sure you want to uncheck all Shields, Rebirth Tomes, and Daily Showdown for Frost Clan?");
         if (!confirmed) return;
         
         window.frostState.alts.forEach((alt, idx) => {
           alt.shields = false;
           alt.rebirth = false;
+          alt.showdown = false;
         });
         window.renderFrostClan();
         

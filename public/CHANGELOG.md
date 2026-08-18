@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [2.9.37] - 2026-08-18
+- ❄️ **Frost Clan Showdown: Daily Checkable Box**: Added interactive 1-tap `⚔️ Showdown: Daily` tracking toggle box to each alt card in the Frost Clan Command Center (Admin Menu > Frost Clan).
+- 📊 **Daily Showdown Live KPI Counter**: Integrated real-time KPI badge and completion progress tracking (`X / Total Alts`) into the Command Center statistics grid.
+- ⚡ **Backend Deployment (@198)**: Updated Google Apps Script backend `getFrostClanData()`, `saveFrostClanCheckbox()`, and `resetFrostClan()` to synchronize Column E (`showdown`), deployed as version `@198`, and updated `API_BASE_URL` in `main.js`.
+- 🔄 **Frost Clan Reset Extension**: Updated reset handler and confirmation dialogs to safely reset Showdown checkboxes alongside Shields and Rebirth Tomes.
+
 ## [2.9.36] - 2026-08-18
 - 📡 **Real-Time Sync Tracker & Telemetry HUD**: Deployed a dedicated live sync monitoring sidebar to Google Sheets featuring real-time queue detection, automatic 3-second status polling, force sync buttons, and per-sheet telemetry logs.
 - ⚡ **Apps Script Backend Deployment (@197)**: Pushed and deployed Google Apps Script backend update `@197` with `getLiveSyncTelemetry`, `forceFlushSyncQueue`, and automated Firebase RTDB telemetry sync (`sync_telemetry/latest`).
