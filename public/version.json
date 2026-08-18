@@ -1,12 +1,12 @@
 {
-  "version": "2.9.29",
+  "version": "2.9.30",
   "releaseDate": "2026-08-18",
-  "title": "What's New in v2.9.29",
+  "title": "What's New in v2.9.30",
   "notes": [
-    "🏰 Dynamic Alliance Gatekeeper & Live Signup Telemetry: Integrated live roster & database telemetry across Discord alerts and Desktop Command Center. Automatically detects all 42 alliance chiefs and real-time signups without static freezes."
+    "⚙️ Settings Sidebar & Mobile UX Refinement: Improved sidebar close interactions, cleaned up scroll-locks on drawer dismiss, and ensured seamless navigation flow across mobile and desktop devices."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "2.9.29",
+    "version": "2.9.30",
     "repository": "https://github.com/wosbdc/wosBDC.github.io",
     "latestChanges": [
       "v2.9.29: Dynamic Alliance Gatekeeper & Live Signup Telemetry across Discord alerts and Central Command",

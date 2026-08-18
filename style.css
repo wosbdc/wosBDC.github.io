@@ -228,19 +228,22 @@ img, svg, video, canvas {
 }
 .settings-btn:hover, .alerts-nav-btn:hover { background: rgba(168, 85, 247, 0.1); border-color: var(--accent); }
 
-/* Settings Sidebar */
+/* Settings Sidebar & Universal Drawer */
 .sidebar-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
+  inset: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(2px);
-  z-index: 999;
+  height: 100dvh;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 99990;
   opacity: 0;
   visibility: hidden;
-  transition: all 0.3s ease;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+  touch-action: none;
+  overscroll-behavior: contain;
 }
 
 .sidebar-overlay.active {
@@ -251,21 +254,49 @@ img, svg, video, canvas {
 .settings-sidebar {
   position: fixed;
   top: 0;
-  right: -320px;
-  width: 300px;
+  right: 0;
+  transform: translateX(100%);
+  width: min(320px, 85vw);
   height: 100vh;
+  height: 100dvh;
+  height: -webkit-fill-available;
   background: var(--card-bg);
   border-left: 1px solid var(--border);
-  z-index: 1000;
-  box-shadow: -4px 0 15px rgba(0,0,0,0.2);
-  transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 99999;
+  box-shadow: -4px 0 25px rgba(0, 0, 0, 0.5);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 16px);
+  box-sizing: border-box;
 }
 
 .settings-sidebar.open {
-  right: 0;
+  transform: translateX(0);
+}
+
+/* iOS & Mobile Scroll-Lock when Sidebar or Mobile Menu is Open */
+html.sidebar-open,
+body.sidebar-open,
+html.mobile-menu-open,
+body.mobile-menu-open {
+  overflow: hidden !important;
+  height: 100% !important;
+  overscroll-behavior: none !important;
+  touch-action: none !important;
+}
+
+body.sidebar-open .settings-sidebar,
+body.mobile-menu-open .mobile-menu {
+  touch-action: pan-y !important;
+  overscroll-behavior-y: contain !important;
+  -webkit-overflow-scrolling: touch !important;
 }
 
 .sidebar-header {
@@ -459,18 +490,18 @@ tr:hover td {
     flex-direction: column;
     align-items: flex-start;
     padding: 20px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
     border-bottom: 1px solid var(--border);
     margin-left: 0;
     gap: 20px;
     display: none; /* hidden by default on mobile */
-    min-height: calc(100vh - 60px);
-    min-height: calc(100dvh - 60px);
-    max-height: calc(100vh - 60px); /* fallback */
-    max-height: calc(100dvh - 60px);
+    max-height: calc(100vh - 65px);
+    max-height: calc(100dvh - 65px);
     overflow-y: auto;
     overscroll-behavior: contain;
+    overscroll-behavior-y: contain;
     -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
   }
   
   .mobile-menu.open {

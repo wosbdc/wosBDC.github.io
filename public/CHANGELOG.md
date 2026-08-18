@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [2.9.30] - 2026-08-18
+- ⚙️ **Settings Sidebar & Mobile Interaction Polish**: Enhanced drawer dismissal logic, ensured complete cleanup of touch-action and scroll-locks on mobile devices, and improved responsive navigation flow.
+
 ## [2.9.29] - 2026-08-18
 - 🏰 **Dynamic Alliance Gatekeeper & Live Telemetry Overhaul**: Completely overhauled the Gatekeeper Report engine in both the Web Dashboard and Central Command Desktop GUI to dynamically query all 42 alliance chiefs across `roster_live` and `users` in real time.
 - 👥 **Real-Time Signup & Joins Tracking**: Dynamically detects new member signups (`lord319285336`, `Ice Mouse`, `Kit Carson`) with real furnace levels and timestamp sorting, auto-computing joins today (+3) and past 7 days (+7).

@@ -392,22 +392,39 @@ const openSidebar = () => {
   document.querySelectorAll('.custom-autocomplete-dropdown').forEach(d => d.style.display = 'none');
   if(settingsSidebar) settingsSidebar.classList.add('open');
   if(sidebarOverlay) sidebarOverlay.classList.add('active');
+  document.body.classList.add('sidebar-open');
+  document.documentElement.classList.add('sidebar-open');
 };
 
 const closeSidebarFunc = () => {
   if(settingsSidebar) settingsSidebar.classList.remove('open');
   if(sidebarOverlay) sidebarOverlay.classList.remove('active');
+  document.body.classList.remove('sidebar-open');
+  document.documentElement.classList.remove('sidebar-open');
 };
+
+window.openSidebar = openSidebar;
+window.closeSidebarFunc = closeSidebarFunc;
 
 const mobileSettingsBtn = document.getElementById('mobileSettingsBtn');
 if(mobileSettingsBtn) mobileSettingsBtn.addEventListener('click', () => {
   openSidebar();
-  if(mobileMenu) mobileMenu.classList.remove('open'); // close the hamburger menu
+  if(mobileMenu) {
+    mobileMenu.classList.remove('open');
+    document.body.classList.remove('mobile-menu-open');
+    document.documentElement.classList.remove('mobile-menu-open');
+  }
 });
 
 if(settingsBtn) settingsBtn.addEventListener('click', openSidebar);
 if(closeSidebar) closeSidebar.addEventListener('click', closeSidebarFunc);
-if(sidebarOverlay) sidebarOverlay.addEventListener('click', closeSidebarFunc);
+if(sidebarOverlay) {
+  sidebarOverlay.addEventListener('click', closeSidebarFunc);
+  // Prevent iOS touchmove propagation to background body
+  sidebarOverlay.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+  }, { passive: false });
+}
 
 // --- Mobile Menu Logic ---
 const mobileMenuBtn = document.getElementById('mobileMenuBtn');
@@ -417,7 +434,17 @@ if(mobileMenuBtn) {
   mobileMenuBtn.addEventListener('click', () => {
     // Force close any open autocomplete dropdowns
     document.querySelectorAll('.custom-autocomplete-dropdown').forEach(d => d.style.display = 'none');
-    if(mobileMenu) mobileMenu.classList.toggle('open');
+    if(mobileMenu) {
+      const willOpen = !mobileMenu.classList.contains('open');
+      mobileMenu.classList.toggle('open');
+      if (willOpen) {
+        document.body.classList.add('mobile-menu-open');
+        document.documentElement.classList.add('mobile-menu-open');
+      } else {
+        document.body.classList.remove('mobile-menu-open');
+        document.documentElement.classList.remove('mobile-menu-open');
+      }
+    }
   });
 }
 
@@ -5349,16 +5376,15 @@ const closeAuthModal = () => {
 
 if(authSidebarBtn) authSidebarBtn.addEventListener('click', (e) => {
   e.preventDefault();
+  closeSidebarFunc();
   if (currentUser) {
     // Navigate to Account Hub
     document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
     if (mobileMenu) mobileMenu.classList.remove('open');
-    settingsSidebar.classList.remove('open');
-    sidebarOverlay.classList.remove('active');
+    document.body.classList.remove('mobile-menu-open');
+    document.documentElement.classList.remove('mobile-menu-open');
     views.account();
   } else {
-    settingsSidebar.classList.remove('open');
-    sidebarOverlay.classList.remove('active');
     openAuthModal();
   }
 });
@@ -5366,8 +5392,7 @@ if(authSidebarBtn) authSidebarBtn.addEventListener('click', (e) => {
 
 if(signOutSidebarBtn) signOutSidebarBtn.addEventListener('click', (e) => {
   e.preventDefault();
-  settingsSidebar.classList.remove('open');
-  sidebarOverlay.classList.remove('active');
+  closeSidebarFunc();
   logoutUser();
 });
 
@@ -27664,8 +27689,11 @@ allLinks.forEach(link => {
       targetEl.classList.add('active');
     }
     
-    // Auto-close the hamburger menu if it's open
+    // Auto-close the hamburger menu & sidebar if open
     if (mobileMenu) mobileMenu.classList.remove('open');
+    if (typeof closeSidebarFunc === 'function') closeSidebarFunc();
+    document.body.classList.remove('mobile-menu-open', 'sidebar-open');
+    document.documentElement.classList.remove('mobile-menu-open', 'sidebar-open');
     
     // Always restore navbar visibility when navigating between views
     const navbar = document.querySelector('.navbar');
