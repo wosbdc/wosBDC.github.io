@@ -1,10 +1,11 @@
 {
-  "version": "2.9.15",
+  "version": "2.9.16",
   "releaseDate": "2026-08-17",
-  "title": "What's New in v2.9.15",
+  "title": "What's New in v2.9.16",
   "notes": [
-    "👤 Compact Mini User Account Actions: Elevates user account controls to the top of the Settings sidebar with side-by-side mini buttons, preserving full visibility for Alliance Timers without pushing them down.",
-    "🎨 Streamlined Display & Tools Grid: 2-column compact tools grid for instant access to Themes, Mobile Nav, App Installation, and Support."
+    "👑 Dynamic Alliance Rank Hierarchy: Fully integrated R4 (Officials) and R5 (President) leadership tiers with live updates and responsive styling across Alliance Leadership, Member Profile, and User Database.",
+    "🛡️ Leadership Claim Badges: Interactive claim status badges showing verified account states for alliance officers.",
+    "🔄 Seamless State Preservation: Retains active admin/leadership tab states on instant data refresh."
   ]
 }
 

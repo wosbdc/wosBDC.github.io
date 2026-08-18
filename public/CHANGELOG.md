@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.16] - 2026-08-17
+- 👑 **Dynamic R4 & R5 Leadership Tiers**: Integrated real-time leadership detection directly across the Alliance Leadership directory, Member Profile, and User Database.
+- 🛡️ **Interactive Claim Status Badges**: Added visual indicators and clickable direct links for claimed and unclaimed officer profiles.
+- 🔄 **Preserved Admin State**: Seamlessly retains active tabs and sub-tabs during manual or automated live user refreshes.
+
 ## [2.9.15] - 2026-08-17
 - ➕ **Add Player**: Added a quick "Add Player" button in the Alliance Members & Player Database toolbar.
 - 🔍 **Game ID Verification Audit**: Enhanced in-game player ID verification and account lookup.

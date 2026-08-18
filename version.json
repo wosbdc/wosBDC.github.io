@@ -29,11 +29,11 @@
       "repository": "https://github.com/bdclive/BDClive"
     },
     "wosbdc_alliance_dashboard": {
-      "version": "2.9.15",
+      "version": "2.9.16",
       "repository": "https://github.com/wosbdc/wosBDC.github.io",
       "latestChanges": [
-        "v2.9.15: Compact mini buttons for user account & 2-column display tools grid in Settings sidebar",
-        "v2.9.14: Batch Copy Unsynced In-Game Tokens and DM reminder actions in Database"
+        "v2.9.16: Dynamic R4/R5 leadership ranks & claim badges with tab state preservation",
+        "v2.9.15: Compact mini buttons for user account & 2-column display tools grid in Settings sidebar"
       ]
     },
     "google_apps_script_backend": {

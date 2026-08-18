@@ -3293,9 +3293,20 @@ window.submitAddPlayerForm = async (e) => {
         window.triggerNewMemberAlerts({ gameId, chiefName: name, furnaceLevel, createdAt: new Date().toISOString() });
     }
     if (window.showToast) window.showToast(`Added ${name} (${gameId}) to Roster!`, "success");
-    document.getElementById('addPlayerModal').remove();
-    if (typeof window.activeViewFunc === 'function') window.activeViewFunc();
-    else if (views.roster) views.roster();
+    document.getElementById('addPlayerModal')?.remove();
+    
+    // Refresh table in-place if in Admin Hub / Users table
+    if (document.getElementById('adminUsersTable') || document.getElementById('tab-users')) {
+        if (window.refreshAdminUsers) {
+            await window.refreshAdminUsers();
+        } else if (views.admin) {
+            await views.admin('tab-users');
+        }
+    } else if (typeof window.activeViewFunc === 'function') {
+        window.activeViewFunc();
+    } else if (views.roster) {
+        views.roster();
+    }
   } catch(err) {
     console.error(err);
     statusDiv.style.color = '#ef4444';
@@ -16096,6 +16107,7 @@ const views = {
     if (navbar) navbar.style.display = 'block';
     const targetTab = initialTab || window._lastAdminTab || 'tab-tools';
     window._lastAdminTab = targetTab;
+    window.activeViewFunc = () => views.admin(window._lastAdminTab || 'tab-tools');
 
     window.copyUnclaimedRosterList = () => {
         const unclaimedRows = document.querySelectorAll('.admin-user-row[data-is-claimed="false"]');
@@ -16426,7 +16438,7 @@ const views = {
             window.liveListeners["giftcodebot"]();
             delete window.liveListeners["giftcodebot"];
         }
-        await views.admin();
+        await views.admin('tab-users');
         
         // Ensure Users tab stays active
         setTimeout(() => {
@@ -18583,6 +18595,8 @@ const views = {
           } catch(err) {}
           
           const tabKey = clickedBtn.getAttribute('data-tab');
+          window._lastAdminTab = tabKey;
+          window.activeViewFunc = () => views.admin(tabKey);
           const targetEl = document.getElementById(tabKey);
           if (targetEl) targetEl.style.display = 'block';
           
