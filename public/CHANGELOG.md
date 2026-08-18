@@ -1,36 +1,36 @@
 # CHANGELOG
 
 ## [2.9.15] - 2026-08-17
-- ➕ **Add Player to Alliance Database**: Added a prominent **"➕ Add Player"** button directly inside the **👥 Alliance Members & Player Database** header toolbar next to the segmented switcher, enabling instant manual addition of new members to the roster with native Firebase sync, Google Sheets logging, and optional alerts.
-- 🔍 **Century Games Game ID Verification Audit**: Fixed the Game ID verification engine (`Verify ID`) to query active Century Games official server endpoints directly via the backend API instead of deprecated proxies, properly verifying active players (e.g. `811636250`) and checking database records.
-- 👤 **Compact Mini User Account Actions**: Redesigned the User Account section to sit cleanly at the top of the Settings sidebar using side-by-side mini buttons (`👤 Account Hub` & `🚪 Sign Out`), taking minimal vertical space so Alliance Timers and countdowns remain prominently visible without being pushed down.
-- 🎨 **2-Column Display & Preferences Grid**: Compact 2x2 grid layout for Theme Engine, Mobile Navigation, App Installation, and Support actions.
+- ➕ **Add Player**: Added a quick "Add Player" button in the Alliance Members & Player Database toolbar.
+- 🔍 **Game ID Verification Audit**: Enhanced in-game player ID verification and account lookup.
+- 👤 **Compact Account Hub**: Streamlined user account actions in the settings sidebar.
+- 🎨 **Display & Preferences**: Clean 2-column layout for themes, display modes, and preferences.
 
 ## [2.9.14] - 2026-08-17
-- 📋 **Batch Copy Unsynced In-Game Tokens**: Added 1-click **"Copy Unsynced Tokens"** button in the Alliance Members & Player Database to instantly export all members with expired or unverified in-game sync tokens, complete with Game IDs and renewal instructions.
-- 🎯 **Contextual Token Filtering & Export**: Respects active token filter selections (Expired vs Unverified vs Expiring) when copying, or exports all unsynced tokens when in overview mode.
-- ⚡ **Individual Token Reminder Actions**: Added 1-click **"Copy Sync Reminder"** action in member option dropdowns for quick direct messaging.
+- 📋 **Batch Copy Unsynced Tokens**: 1-click export for members needing token sync renewal.
+- 🎯 **Filter & Export**: Smart export matching your active token filter selection.
+- ⚡ **Direct Sync Reminders**: Quick reminder copy tool inside member actions.
 
 ## [2.9.13] - 2026-08-17
-- 🕐 **Sidebar Hierarchy & Clocks at the Top**: Alliance Clocks, UTC/Local time, daily/intel countdowns, and active event cards are now elevated to the very top of the Settings Sidebar for instant glanceability.
-- 👤 **Unified Account Hub Action**: Removed duplicate "View My Profile" and renamed sidebar actions to "Account Hub" for clear, single-point navigation.
-- 🛡️ **Cleaner Sidebar**: Removed redundant Leadership suite cards from the general Settings sidebar now that officers access all administration tools via the dedicated tab in the Account Hub.
+- 🕐 **Sidebar Timers**: Elevated alliance clocks, UTC time, and event countdowns to the top of the sidebar.
+- 👤 **Unified Account Hub**: Consolidated profile and account management into a single hub.
+- 🛡️ **Cleaner Sidebar**: Streamlined navigation for a faster and smoother experience.
 
 ## [2.9.12] - 2026-08-17
-- 🛡️ **Dedicated Leadership Hub in Account Suite**: Moved Admin Command Center entry from the top navigation bar into a seamless, integrated Leadership button and tab directly within the Account Hub and Settings Sidebar.
-- ✨ **Streamlined Navigation Bar**: Cleaned up the public top navigation header and mobile drawer for a polished user experience.
+- 🛡️ **Leadership Hub**: Integrated leadership tools directly inside the Account Hub and Settings.
+- ✨ **Streamlined Navigation**: Polished top navigation header and mobile drawer.
 
 ## [2.9.11] - 2026-08-17
-- 👤 **Automatic Account Hub Routing**: Logging in via email/password or Google now immediately transitions members directly into their personal Account Hub.
-- 🚀 **Instant Character & Alt Overview**: Quick access to linked characters, alts, furnace upgrades, and gift code claim statuses immediately upon login.
+- 👤 **Quick Sign-In**: Faster transition into Account Hub after signing in.
+- 🚀 **Character Overview**: Instant glance at linked characters, alts, and gift code rewards.
 
 ## [2.9.10] - 2026-08-17
-- 🎁 **Smart Gift Code Detection**: Intelligent active vs expired code status detection and persistent candidate blacklist to eliminate repetitive sweeps.
-- 🧪 **Live Code Auditing**: 1-click test suite to audit all tracked promo codes against game servers in real time.
+- 🎁 **Smart Gift Codes**: Improved automatic detection of active alliance promo codes.
+- 🧪 **Live Code Auditing**: 1-click verification tool to test gift codes in real time.
 
 ## [2.9.9] - 2026-08-17
-- 🏰 **Alliance Gatekeeper**: Custom report edits and leadership directives now sync live to Discord in real time.
-- ⚡ **Furnace Level Auto-Sync**: Seamless real-time level tracking across the Alliance Roster and Google Sheets.
+- 🏰 **Alliance Gatekeeper**: Custom report edits and leadership directives now sync live to Discord.
+- ⚡ **Furnace Auto-Sync**: Seamless real-time level tracking across the Alliance Roster.
 - 🚀 **Performance Improvements**: Faster data sync and enhanced reliability across all alliance tools.
 
 ## [2.9.8] - 2026-08-17
@@ -448,28 +448,20 @@
 - Aligned and centered the Furnace Level display inside the Account Hub profile ID card.
 
 ## [2.5.41] - 2026-08-14
-- Added full translation dictionary for Century Games API error code `15030` and `"未登录"` ("30-Day session token expired. Please enter a fresh in-game code to renew.").
-- Resolved duplicate `[Code X]` prefix stacking in alert toasts and added a universal Chinese character fallback translation.
-- Enhanced profile and alt sync handlers to automatically open the 30-day token verification renewal prompt on code 15030 without throwing raw errors.
-- Deployed Google Apps Script backend Version `@160`.
+- 🛡️ **Session Token Alerts**: Clear notifications for 30-day session token renewal.
+- 🔄 **Profile Sync**: Smooth in-game verification renewal prompt.
 
 ## [2.5.40] - 2026-08-14
-- Unified the color scheme across the `⚙️ Options ▾` dropdown and profile modal components to a consistent Whiteout Survival Frost Blue (`#0ea5e9` / `#38bdf8`) and Crisp White (`#ffffff`) palette.
-- Removed mismatched accent colors across modal option cards in favor of a cohesive theme.
+- 🎨 **Unified Styling**: Polished Frost Blue and Crisp White color palette across modals.
 
 ## [2.5.39] - 2026-08-14
-- Streamlined the `⚙️ Options ▾` dropdown menu down to exactly 2 unified buttons: `✏️ Edit Profile` (opens complete profile, avatar & tagline manager) and `🔄 Sync from Game` (live server sync with automated token renewal flow).
+- ⚙️ **Profile Options**: Streamlined profile actions to Edit Profile and Sync from Game.
 
 ## [2.5.38] - 2026-08-14
-- Verified live game server payload structure: standard furnace levels (1–30) are returned directly inside `user.rank` as numeric integers (e.g. `"rank": 21`).
-- Enhanced parser to map `typeof user.rank === 'number'` across both standard furnace levels (`1..30`) and Fire Crystal tiers (`31..80` $\rightarrow$ `FC 1..10`).
-- Deployed backend Version `@159` to live production.
-- Successfully verified live token binding and real-time syncing for `Dragon Frost` (Lv 21) across Account Hub, Roster, Alts, and Chief's List.
+- 🔥 **Furnace Level Sync**: Improved level mapping across all standard and Fire Crystal tiers.
 
 ## [2.5.37] - 2026-08-14
-- Completely eradicated legacy fallbacks that were resetting non-FC furnace levels (e.g. 21, 28) back to 30 on sync.
-- Added automated fallback lookup to the in-game player profile API if the payload lacks detailed furnace level information.
-- Hardened client sync routines (`handleSyncCenturyGamesProfile`, `handleSyncAlt`, `handleSyncAllCharacters`) to preserve the player's current furnace level if the game server response is blank or unpopulated.
+- 🛡️ **Sync Reliability**: Enhanced character sync routines to preserve furnace levels.
 - Deployed backend as Version `@158` and synchronized frontend `API_BASE_URL`.
 
 ## [2.5.36] - 2026-08-14
@@ -580,7 +572,7 @@
 - Added in-game mail verification flow when adding new alts.
 
 ## [2.5.10] - 2026-08-14
-- Translated Century Games API responses and daily rate limit notices into clear English.
+- 🌐 **Game Error Messages**: Translated game server responses and rate limit notices into clear English.
 
 ## [2.5.9] - 2026-08-14
 - Cleaned up registration layout and improved manual verification fallback options.
