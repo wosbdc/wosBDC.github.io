@@ -66,8 +66,19 @@ export function initPresence() {
 
 // Authentication
 export function listenToAuth(callback) {
-  onAuthStateChanged(auth, (user) => {
+  onAuthStateChanged(auth, async (user) => {
     if (user) {
+      // 1. Immediately emit active authenticated user session so UI is never locked in a Sign In loop
+      const initialUser = {
+        uid: user.uid,
+        email: user.email || '',
+        name: user.displayName || (user.email ? user.email.split('@')[0] : 'Chief'),
+        displayName: user.displayName || 'Chief',
+        createdAt: new Date().toISOString()
+      };
+      callback(initialUser);
+
+      // 2. Attach live Realtime Database listener for dynamic updates (alts, badges, furnace, etc.)
       const usersRef = ref(db, `users/${user.uid}`);
       onValue(usersRef, async (snapshot) => {
         if (snapshot.exists()) {
@@ -78,13 +89,7 @@ export function listenToAuth(callback) {
           callback(data);
         } else {
           // If no direct users/{uid} entry exists, lookup in all users by email to find existing profile
-          let fallbackData = {
-            uid: user.uid,
-            email: user.email || '',
-            name: user.displayName || (user.email ? user.email.split('@')[0] : 'Chief'),
-            displayName: user.displayName || 'Chief',
-            createdAt: new Date().toISOString()
-          };
+          let fallbackData = { ...initialUser };
           try {
             const allUsersSnap = await get(ref(db, 'users')).catch(() => null);
             if (allUsersSnap && allUsersSnap.exists()) {
@@ -92,25 +97,22 @@ export function listenToAuth(callback) {
               for (const [k, u] of Object.entries(allUsers)) {
                 if (u && u.email && user.email && u.email.toLowerCase() === user.email.toLowerCase()) {
                   fallbackData = { ...u, uid: user.uid, dbKey: k };
-                  try {
-                    await set(ref(db, `users/${user.uid}`), fallbackData).catch(() => null);
-                  } catch(e) {}
                   break;
                 }
               }
             }
           } catch(e) {}
-          // NEVER return null when user is authenticated with Firebase!
+          
+          // Auto-persist profile under users/{uid}
+          try {
+            await set(ref(db, `users/${user.uid}`), fallbackData).catch(() => null);
+          } catch(e) {}
+          
           callback(fallbackData);
         }
       }, (err) => {
         console.warn("Realtime Database user profile listener error:", err);
-        callback({
-          uid: user.uid,
-          email: user.email || '',
-          name: user.displayName || (user.email ? user.email.split('@')[0] : 'Chief'),
-          createdAt: new Date().toISOString()
-        });
+        callback(initialUser);
       });
     } else {
       callback(null);

@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.34] - 2026-08-18
+- 🛡️ **Account Verification & Token Renewal Enhancement**: Updated `openAccountHubVerifyModal` to support users without a pre-linked Game ID, prompting for numeric Game ID entry and binding directly to their profile upon in-game verification code confirmation.
+- 🔗 **Google Sign-In & Profile Sync Polish**: Enhanced automatic UID-to-profile linking and session state fallback logic to prevent missing character ID states.
+- ⚡ **Build & Static Audit Optimization**: Passed all static AST checks, event binding validations, and production builds.
+
 ## [2.9.33] - 2026-08-18
 - 🖼️ **Interactive App Icon & Emblem Switcher**: Added an icon picker in the Settings Sidebar and Navbar Brand Header allowing chiefs to choose between multiple 3D Amethyst crystal emblems (Amethyst Cosmic Nebula 4b, Radiant Amethyst Glow 4a, Dark Obsidian & Neon 4c, and Frost Amethyst Classic).
 - 🔄 **Real-Time Ecosystem Sync**: Dynamically updates the top navbar brand logo, browser tab favicons, and web app shortcuts with `localStorage` persistence.

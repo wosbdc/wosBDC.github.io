@@ -6546,15 +6546,29 @@ const renderError = (err) => {
 };
 
 window.renderMembersOnlyGuard = (viewName = "Alliance Portal") => {
-  if (!currentUser && auth && auth.currentUser) {
+  if (currentUser) {
+    if (typeof window.activeViewFunc === 'function' && window.activeViewFunc !== window.renderMembersOnlyGuard) {
+      window.activeViewFunc();
+      return;
+    }
+    if (views.account) {
+      views.account();
+      return;
+    }
+  }
+  if (auth && auth.currentUser) {
     currentUser = {
       uid: auth.currentUser.uid,
       email: auth.currentUser.email || '',
       name: auth.currentUser.displayName || (auth.currentUser.email ? auth.currentUser.email.split('@')[0] : 'Chief'),
       displayName: auth.currentUser.displayName || 'Chief'
     };
-    if (typeof window.activeViewFunc === 'function') {
+    if (typeof window.activeViewFunc === 'function' && window.activeViewFunc !== window.renderMembersOnlyGuard) {
       window.activeViewFunc();
+      return;
+    }
+    if (views.account) {
+      views.account();
       return;
     }
   }
@@ -12503,6 +12517,8 @@ window.openAccountHubVerifyModal = () => {
   const oldModal = document.getElementById('accountHubVerifyModalOverlay');
   if (oldModal && oldModal.parentNode) oldModal.parentNode.removeChild(oldModal);
 
+  const hasGid = !!(currentUser.gameId && currentUser.gameId.toString().trim());
+
   const modalOverlay = document.createElement('div');
   modalOverlay.id = 'accountHubVerifyModalOverlay';
   modalOverlay.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.85); backdrop-filter:blur(10px); z-index:99999; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease;';
@@ -12517,8 +12533,17 @@ window.openAccountHubVerifyModal = () => {
       </div>
 
       <p style="font-size:13px; color:var(--text-muted); margin:0 0 16px 0; line-height:1.5;">
-        Verify Game ID <strong>${currentUser.gameId}</strong> to link your character directly to our database for <strong>30-day automatic stats syncing</strong> and in-game avatar loading.
+        ${hasGid ? `Verify Game ID <strong>${currentUser.gameId}</strong> to link your character directly to our database for <strong>30-day automatic stats syncing</strong> and in-game avatar loading.` : `Link your Whiteout Survival character by entering your Game ID to enable <strong>30-day automatic stats syncing</strong>.`}
       </p>
+
+      ${!hasGid ? `
+        <div style="margin-bottom:16px;">
+          <label style="display:block; font-size:12px; font-weight:bold; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase;">
+            Enter Numeric Game ID
+          </label>
+          <input type="text" id="hubTargetGidInput" placeholder="e.g. 319875650" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:#fff; font-size:15px; font-family:monospace; box-sizing:border-box;">
+        </div>
+      ` : ''}
 
       <div style="text-align:center; margin-bottom:16px;">
         <button id="sendHubCodeBtn" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer; box-shadow:0 2px 10px rgba(14,165,233,0.3);">
@@ -12554,13 +12579,27 @@ window.openAccountHubVerifyModal = () => {
   const submitCodeBtn = document.getElementById('submitHubCodeBtn');
   const codeInput = document.getElementById('hubCaptchaInput');
   const feedback = document.getElementById('hubVerifyFeedback');
+  const gidInput = document.getElementById('hubTargetGidInput');
+
+  let activeTargetGid = currentUser.gameId;
 
   if (sendBtn) {
     sendBtn.addEventListener('click', async () => {
+      if (gidInput) {
+        activeTargetGid = gidInput.value.trim();
+      }
+      if (!activeTargetGid || !/^\d{6,14}$/.test(activeTargetGid)) {
+        if (feedback) {
+          feedback.style.display = 'block';
+          feedback.style.color = 'var(--danger)';
+          feedback.textContent = 'Please enter a valid numeric Game ID.';
+        }
+        return;
+      }
       sendBtn.disabled = true;
       sendBtn.textContent = 'Sending Code...';
       try {
-        const res = await fetch(`${API_BASE_URL}?api=sendGameCaptcha&id=${encodeURIComponent(currentUser.gameId)}`);
+        const res = await fetch(`${API_BASE_URL}?api=sendGameCaptcha&id=${encodeURIComponent(activeTargetGid)}`);
         const data = await res.json();
         if (data && data.success) {
           sendBtn.textContent = '🔄 Resend Code';
@@ -12607,11 +12646,12 @@ window.openAccountHubVerifyModal = () => {
       if (feedback) feedback.style.display = 'none';
 
       try {
-        const res = await fetch(`${API_BASE_URL}?api=verifyGameCaptcha&id=${encodeURIComponent(currentUser.gameId)}&code=${encodeURIComponent(code)}`);
+        const res = await fetch(`${API_BASE_URL}?api=verifyGameCaptcha&id=${encodeURIComponent(activeTargetGid)}&code=${encodeURIComponent(code)}`);
         const data = await res.json();
 
         if (data && data.success && data.token) {
           const updates = {
+            gameId: activeTargetGid,
             wos_cg_token: data.token,
             section: data.section || currentUser.section || "2089",
             stove_lv: data.stove_lv || currentUser.stove_lv || "",
@@ -12622,18 +12662,20 @@ window.openAccountHubVerifyModal = () => {
             updates.avatar_image = data.avatar_image;
             if (currentUser.avatarPreference !== 'custom') {
               try {
-                await uploadAvatar(currentUser.gameId, data.avatar_image);
-                avatarMap[currentUser.gameId] = data.avatar_image;
+                await uploadAvatar(activeTargetGid, data.avatar_image);
+                avatarMap[activeTargetGid] = data.avatar_image;
               } catch(e) { console.warn("Failed to auto-sync avatar:", e); }
             }
           }
           if (data.nickname && !/^\d+$/.test(data.nickname)) updates.name = data.nickname;
 
           await update(ref(db, `users/${currentUser.uid}`), updates);
+          currentUser.gameId = activeTargetGid;
           currentUser.wos_cg_token = data.token;
           currentUser.section = updates.section;
           currentUser.stove_lv = updates.stove_lv;
           currentUser.centuryGamesVerified = true;
+          if (updates.name) currentUser.name = updates.name;
 
           modalOverlay.remove();
           window.showToast("🎉 Character verified & 30-day sync token bound!", "success");
@@ -15933,17 +15975,41 @@ const views = {
               btnGoogle.innerHTML = 'Connecting with Google...';
               const userCred = await loginWithGoogle();
               const u = userCred.user;
+              let existingProfile = null;
               const uSnap = await get(ref(db, `users/${u.uid}`)).catch(() => null);
               if (uSnap && uSnap.exists()) {
+                existingProfile = uSnap.val();
+              } else if (u.email) {
+                const allUsersSnap = await get(ref(db, 'users')).catch(() => null);
+                if (allUsersSnap && allUsersSnap.exists()) {
+                  const allUsers = allUsersSnap.val();
+                  for (const [k, obj] of Object.entries(allUsers)) {
+                    if (obj && obj.email && obj.email.toLowerCase() === u.email.toLowerCase()) {
+                      existingProfile = { ...obj, uid: u.uid };
+                      try { await set(ref(db, `users/${u.uid}`), existingProfile).catch(() => null); } catch(e) {}
+                      break;
+                    }
+                  }
+                }
+              }
+
+              if (existingProfile) {
+                currentUser = { ...existingProfile, uid: u.uid };
                 window.showToast("Successfully signed in with Google!", "success");
                 views.account();
               } else {
-                window.showToast("Google connected! Please complete your Chief registration.", "info");
-                mode = 'register';
-                step = 2;
-                isGoogleAuth = true;
-                googleUserData = u;
-                render();
+                // If completely new user, seed initial profile and allow linking
+                const fallbackProfile = {
+                  uid: u.uid,
+                  email: u.email || '',
+                  name: u.displayName || (u.email ? u.email.split('@')[0] : 'Chief'),
+                  displayName: u.displayName || 'Chief',
+                  createdAt: new Date().toISOString()
+                };
+                currentUser = fallbackProfile;
+                try { await set(ref(db, `users/${u.uid}`), fallbackProfile).catch(() => null); } catch(e) {}
+                window.showToast("Successfully connected Google!", "success");
+                views.account();
               }
             } catch(e) {
               console.error("Google Auth error:", e);
@@ -16003,7 +16069,16 @@ const views = {
             submitBtn.disabled = true;
             submitBtn.textContent = "Signing In...";
             try {
-              await loginUser(email, pw);
+              const userCred = await loginUser(email, pw);
+              if (userCred && userCred.user) {
+                currentUser = {
+                  uid: userCred.user.uid,
+                  email: userCred.user.email || email,
+                  name: userCred.user.displayName || email.split('@')[0],
+                  displayName: userCred.user.displayName || 'Chief',
+                  createdAt: new Date().toISOString()
+                };
+              }
               window.showToast("Successfully signed in!", "success");
               views.account();
             } catch(err) {
@@ -16031,13 +16106,31 @@ const views = {
               btnGoogle.innerHTML = 'Connecting with Google...';
               const userCred = await loginWithGoogle();
               const u = userCred.user;
+              let existingProfile = null;
               const uSnap = await get(ref(db, `users/${u.uid}`)).catch(() => null);
               if (uSnap && uSnap.exists()) {
+                existingProfile = uSnap.val();
+              } else if (u.email) {
+                const allUsersSnap = await get(ref(db, 'users')).catch(() => null);
+                if (allUsersSnap && allUsersSnap.exists()) {
+                  const allUsers = allUsersSnap.val();
+                  for (const [k, obj] of Object.entries(allUsers)) {
+                    if (obj && obj.email && obj.email.toLowerCase() === u.email.toLowerCase()) {
+                      existingProfile = { ...obj, uid: u.uid };
+                      try { await set(ref(db, `users/${u.uid}`), existingProfile).catch(() => null); } catch(e) {}
+                      break;
+                    }
+                  }
+                }
+              }
+              if (existingProfile && existingProfile.gameId) {
+                currentUser = { ...existingProfile, uid: u.uid };
                 window.showToast("Google account already registered! Welcome back.", "success");
                 views.account();
               } else {
                 isGoogleAuth = true;
                 googleUserData = u;
+                tempEmail = u.email || '';
                 step = 2;
                 render();
               }
@@ -28596,7 +28689,7 @@ window.closeMobileNavModal = () => {
 };
 
 // ============================================================================
-// APP ICON & BRAND EMBLEM SWITCHER ENGINE (v2.9.33)
+// APP ICON & BRAND EMBLEM SWITCHER ENGINE (v2.9.34)
 // ============================================================================
 window.APP_ICONS = [
   {
