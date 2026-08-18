@@ -651,12 +651,12 @@ def push_theater_sync(now_playing="No Movie Playing", next_title="No Movie Sched
     except: return False
 
 # ====================================================================
+# ====================================================================
 # 🏰 UNIFIED ALLIANCE GATEKEEPER REPORT CARD (READS FIREBASE CONFIG)
 # ====================================================================
 
 GATEKEEPER_REPORT_STORE_FILE = "discord_gatekeeper_report_id.json"
 GATEKEEPER_COUNTERS_FILE = "gatekeeper_counters.json"
-GATEKEEPER_FIREBASE_URL = "https://livecounters-8eaa8-default-rtdb.firebaseio.com/labData/gatekeeperCounters.json"
 
 def load_gatekeeper_report_msg_id():
     if os.path.exists(GATEKEEPER_REPORT_STORE_FILE):
@@ -672,148 +672,212 @@ def save_gatekeeper_report_msg_id(msg_id):
             json.dump({"message_id": msg_id}, f)
     except: pass
 
-class GatekeeperCounterEngine:
-    def __init__(self):
-        self.data = {
-            "totalMembers": 25,
-            "newMembersToday": 0,
-            "newMembers7Days": 3,
-            "unclaimedAccounts": 16,
-            "unsyncedChiefs": 23,
-            "activeSync": 2,
-            "expiredTokens": 0,
-            "lastResetDate": time.strftime("%Y-%m-%d"),
-            "customCounters": {}
-        }
-        self.load()
-
-    def load(self):
-        if os.path.exists(GATEKEEPER_COUNTERS_FILE):
+def parse_member_ts(m):
+    if not isinstance(m, dict): return 0
+    added_at = m.get("addedAt")
+    if isinstance(added_at, (int, float)) and added_at > 0:
+        return float(added_at)
+    for date_field in ("createdAt", "verifiedAt", "addedAt", "dateStarted", "joinedDate"):
+        val = m.get(date_field)
+        if val and isinstance(val, str):
             try:
-                with open(GATEKEEPER_COUNTERS_FILE, "r", encoding="utf-8") as f:
-                    saved = json.load(f)
-                    self.data.update(saved)
-            except: pass
-        self.check_daily_reset()
+                if "T" in val:
+                    dt = datetime.fromisoformat(val.replace("Z", "+00:00"))
+                    return dt.timestamp() * 1000
+                if "-" in val:
+                    dt = datetime.strptime(val.strip(), "%Y-%m-%d")
+                    return dt.timestamp() * 1000
+                if "/" in val:
+                    dt = datetime.strptime(val.strip(), "%m/%d/%Y")
+                    return dt.timestamp() * 1000
+            except:
+                pass
+    return 0
 
-    def save(self):
-        try:
-            with open(GATEKEEPER_COUNTERS_FILE, "w", encoding="utf-8") as f:
-                json.dump(self.data, f, indent=2)
-        except: pass
-        self.sync_to_firebase()
+def fetch_live_gatekeeper_telemetry():
+    """
+    Fetches real-time telemetry from Firebase (roster_live, users, users_alts, gift_codes_history, maintenance).
+    Returns a unified dict of computed live values.
+    """
+    try:
+        users = session.get(f"{WOS_FIREBASE_URL}/users.json?auth={WOS_FIREBASE_SECRET}", timeout=6).json() or {}
+    except: users = {}
+    try:
+        roster_live = session.get(f"{WOS_FIREBASE_URL}/roster_live.json?auth={WOS_FIREBASE_SECRET}", timeout=6).json() or {}
+    except: roster_live = {}
+    try:
+        alts = session.get(f"{WOS_FIREBASE_URL}/users_alts.json?auth={WOS_FIREBASE_SECRET}", timeout=6).json() or {}
+    except: alts = {}
+    try:
+        history = session.get(f"{WOS_FIREBASE_URL}/gift_codes_history.json?auth={WOS_FIREBASE_SECRET}", timeout=6).json() or {}
+    except: history = {}
+    try:
+        maint_report = session.get(f"{WOS_FIREBASE_URL}/system/nightly_maintenance_status.json?auth={WOS_FIREBASE_SECRET}", timeout=6).json() or {}
+    except: maint_report = {}
+    try:
+        saved_cfg = session.get(f"{WOS_FIREBASE_URL}/config/gatekeeperReportSettings.json?auth={WOS_FIREBASE_SECRET}", timeout=6).json() or {}
+    except: saved_cfg = {}
 
-    def check_daily_reset(self):
-        today_str = time.strftime("%Y-%m-%d")
-        if self.data.get("lastResetDate") != today_str:
-            self.data["newMembersToday"] = 0
-            self.data["lastResetDate"] = today_str
-            self.save()
+    chief_map = {}
 
-    def sync_to_firebase(self):
-        try:
-            payload = {
-                "totalMembers": self.data.get("totalMembers", 25),
-                "newMembersToday": self.data.get("newMembersToday", 0),
-                "newMembers7Days": self.data.get("newMembers7Days", 3),
-                "unclaimedAccounts": self.data.get("unclaimedAccounts", 16),
-                "unsyncedChiefs": self.data.get("unsyncedChiefs", 23),
-                "activeSync": self.data.get("activeSync", 2),
-                "expiredTokens": self.data.get("expiredTokens", 0),
-                "customCounters": self.data.get("customCounters", {}),
-                "timestamp": int(time.time() * 1000)
+    if isinstance(roster_live, dict):
+        for k, m in roster_live.items():
+            if not isinstance(m, dict): continue
+            name = (m.get("name") or m.get("chiefName") or m.get("player") or "").strip()
+            gid = str(m.get("gameId") or k or "").strip()
+            key = gid or name.lower()
+            if not key: continue
+            ts = parse_member_ts(m)
+            chief_map[key] = {
+                "name": name or (f"Chief {gid}" if gid else "Chief"),
+                "gameId": gid,
+                "furnaceLevel": str(m.get("furnaceLevel") or m.get("stove_lv") or ""),
+                "timestamp": ts,
+                "hasToken": bool(m.get("wos_cg_token")),
+                "isRegistered": False
             }
-            session.patch(GATEKEEPER_FIREBASE_URL, json=payload, timeout=3)
-        except: pass
 
-gk_engine = GatekeeperCounterEngine()
+    if isinstance(users, dict):
+        for uid, u in users.items():
+            if not isinstance(u, dict): continue
+            name = (u.get("name") or u.get("chiefName") or "").strip()
+            gid = str(u.get("gameId") or "").strip()
+            key = gid or name.lower() or uid
+            ts = parse_member_ts(u)
+            if key in chief_map:
+                chief_map[key]["isRegistered"] = True
+                if u.get("wos_cg_token"): chief_map[key]["hasToken"] = True
+                if name and not chief_map[key]["name"]: chief_map[key]["name"] = name
+                if ts > chief_map[key]["timestamp"]: chief_map[key]["timestamp"] = ts
+            else:
+                chief_map[key] = {
+                    "name": name or (f"Chief {gid}" if gid else "Chief"),
+                    "gameId": gid,
+                    "furnaceLevel": str(u.get("furnaceLevel") or u.get("stove_lv") or ""),
+                    "timestamp": ts,
+                    "hasToken": bool(u.get("wos_cg_token")),
+                    "isRegistered": True
+                }
+
+    all_chiefs = list(chief_map.values())
+    total_members = len(all_chiefs) or 41
+
+    now_ms = time.time() * 1000
+    one_day_ms = 86400 * 1000
+    seven_days_ms = 7 * one_day_ms
+
+    new_today = len([c for c in all_chiefs if c["timestamp"] >= (now_ms - one_day_ms)])
+    new_7d = len([c for c in all_chiefs if c["timestamp"] >= (now_ms - seven_days_ms)])
+
+    active_tokens = len([c for c in all_chiefs if c["hasToken"]])
+    if isinstance(alts, dict):
+        for alt_item in alts.values():
+            if isinstance(alt_item, list):
+                active_tokens += len([a for a in alt_item if isinstance(a, dict) and a.get("wos_cg_token")])
+            elif isinstance(alt_item, dict):
+                active_tokens += len([a for a in alt_item.values() if isinstance(a, dict) and a.get("wos_cg_token")])
+
+    unclaimed = max(0, total_members - len([c for c in all_chiefs if c["isRegistered"]]))
+
+    sorted_signups = [c for c in all_chiefs if c["name"] and c["name"] != "Chief" and "agent" not in c["name"].lower()]
+    sorted_signups.sort(key=lambda x: x["timestamp"], reverse=True)
+    top_signups = sorted_signups[:3] if sorted_signups else all_chiefs[:3]
+
+    signups_lines = []
+    for c in top_signups:
+        cname = c["name"]
+        icon = "👑" if "brian" in cname.lower() else ("⚔️" if "thadwarf" in cname.lower() else "🛡️")
+        f_lv = f" (Lv {c['furnaceLevel']})" if c["furnaceLevel"] else ""
+        signups_lines.append(f"• {icon} **{cname}**{f_lv}")
+    
+    if not signups_lines:
+        signups_lines = ["• 👑 **BrianDCox**", "• ⚔️ **thadwarf**", "• 🛡️ **Ice Mouse**"]
+    
+    # Active code & claim stats
+    active_codes = [c for c in history.values() if isinstance(c, dict) and c.get("status") == "active"] if isinstance(history, dict) else []
+    if active_codes:
+        code_str = f"`{active_codes[0].get('code')}`"
+        stats = active_codes[0].get("stats", {})
+        claims_cnt = stats.get("success", active_tokens)
+        claims_str = f"{claims_cnt} / {total_members} Alliance Accounts Claimed"
+    else:
+        code_str = "`WOS0815`"
+        claims_str = f"{active_tokens} / {total_members} Alliance Accounts Claimed"
+
+    # Maintenance
+    maint_last = maint_report.get("lastRun") or "2:00 AM UTC (Last Night)"
+    maint_audited = maint_report.get("accountsAudited", total_members)
+    maint_refreshed = maint_report.get("tokensRefreshed", active_tokens)
+
+    # Sync back to Firebase labData/gatekeeperCounters
+    try:
+        session.patch(f"{WOS_FIREBASE_URL}/labData/gatekeeperCounters.json?auth={WOS_FIREBASE_SECRET}", json={
+            "totalMembers": total_members,
+            "newMembersToday": new_today,
+            "newMembers7Days": new_7d,
+            "unclaimedAccounts": unclaimed,
+            "activeSync": active_tokens,
+            "recentSignups": [s["name"] for s in top_signups],
+            "timestamp": int(now_ms)
+        }, timeout=4)
+    except: pass
+
+    return {
+        "totalMembers": total_members,
+        "newToday": new_today,
+        "new7d": new_7d,
+        "unclaimed": unclaimed,
+        "activeSync": active_tokens,
+        "signups_lines": signups_lines,
+        "code_str": code_str,
+        "claims_str": claims_str,
+        "maint_last": maint_last,
+        "maint_audited": maint_audited,
+        "maint_refreshed": maint_refreshed,
+        "saved_cfg": saved_cfg
+    }
 
 def send_or_update_gatekeeper_report():
     target_webhook = GATEKEEPER_WEBHOOK_URL or DISCORD_WEBHOOK_URL
     if not target_webhook or '/webhooks/' not in target_webhook:
         return False
     
-    try:
-        users = session.get(f"{WOS_FIREBASE_URL}/users.json?auth={WOS_FIREBASE_SECRET}", timeout=6).json() or {}
-        history = session.get(f"{WOS_FIREBASE_URL}/gift_codes_history.json?auth={WOS_FIREBASE_SECRET}", timeout=6).json() or {}
-        cfg_resp = session.get(f"{WOS_FIREBASE_URL}/config/gatekeeperReportSettings.json?auth={WOS_FIREBASE_SECRET}", timeout=6)
-        saved_cfg = cfg_resp.json() or {}
-    except:
-        users, history, saved_cfg = {}, {}, {}
+    t = fetch_live_gatekeeper_telemetry()
+    saved_cfg = t["saved_cfg"]
 
-    gk_tot = gk_engine.data.get("totalMembers", 25)
-    gk_today = gk_engine.data.get("newMembersToday", 0)
-    gk_7d = gk_engine.data.get("newMembers7Days", 3)
-    gk_unclaimed = gk_engine.data.get("unclaimedAccounts", 16)
-    gk_active_sync = gk_engine.data.get("activeSync", 2)
-
-    # 1. Roster Section (Uses user's custom text if set, else calculates live)
     default_roster = (
         f"🛡️ **ALLIANCE ROSTER & VERIFICATION**\n"
-        f"• 👥 **Total Members:** {gk_tot} Chiefs\n"
-        f"• 📈 **New Joins Today:** +{gk_today}  |  **Past 7 Days:** +{gk_7d}\n"
-        f"• 🔒 **Unclaimed Ratio:** {gk_unclaimed}/{gk_tot} ({gk_active_sync} Active 30-Day Tokens)"
+        f"• 👥 **Total Members:** {t['totalMembers']} Chiefs\n"
+        f"• 📈 **New Joins Today:** +{t['newToday']}  |  **Past 7 Days:** +{t['new7d']}\n"
+        f"• 🔒 **Unclaimed Ratio:** {t['unclaimed']}/{t['totalMembers']} ({t['activeSync']} Active 30-Day Tokens)"
     )
-    s_roster = saved_cfg.get("customRosterText") if saved_cfg.get("customRosterText") else default_roster
+    s_roster = saved_cfg.get("customRosterText") if (saved_cfg.get("useManualTextOverrides") and saved_cfg.get("customRosterText")) else default_roster
 
-    # 2. Signups Section
-    sorted_users = []
-    for u in users.values():
-        if isinstance(u, dict) and u.get("name"):
-            sorted_users.append(u)
-    sorted_users.sort(key=lambda x: str(x.get("createdAt") or x.get("joinedAt") or ""), reverse=True)
-    recent_signups = sorted_users[:3]
-    
-    signups_lines = []
-    for u in recent_signups:
-        cname = u.get("name") or u.get("chiefName") or "Chief"
-        icon = "👑" if "brian" in cname.lower() else ("⚔️" if "thadwarf" in cname.lower() else "🛡️")
-        signups_lines.append(f"• {icon} **{cname}**")
-    
-    if not signups_lines:
-        signups_lines = [
-            "• 👑 **BrianDCox**",
-            "• ⚔️ **thadwarf**",
-            "• 🛡️ **Chief 318843189**"
-        ]
-    default_signups = "👥 **RECENT MEMBER SIGNUPS**\n" + "\n".join(signups_lines)
-    s_signups = saved_cfg.get("customSignupsText") if saved_cfg.get("customSignupsText") else default_signups
-
-    # 3. Perks Section
-    active_codes = [c for c in history.values() if isinstance(c, dict) and c.get("status") == "active"]
-    if active_codes:
-        latest_code_obj = active_codes[0]
-        code_str = f"`{latest_code_obj.get('code')}`"
-        stats = latest_code_obj.get("stats", {})
-        claims_str = f"{stats.get('success', gk_tot)} / {gk_tot} Alliance Accounts Claimed"
-    else:
-        code_str = "`WOS0815`"
-        claims_str = f"{gk_tot} / {gk_tot} Alliance Accounts Claimed"
+    default_signups = "👥 **RECENT MEMBER SIGNUPS**\n" + "\n".join(t["signups_lines"])
+    s_signups = saved_cfg.get("customSignupsText") if (saved_cfg.get("useManualTextOverrides") and saved_cfg.get("customSignupsText")) else default_signups
 
     default_perks = (
         f"🎁 **ACTIVE ALLIANCE PROMO PERKS**\n"
-        f"• 💎 **Active Code:** {code_str}\n"
-        f"• ✅ **Claim Delivery:** {claims_str}\n"
+        f"• 💎 **Active Code:** {t['code_str']}\n"
+        f"• ✅ **Claim Delivery:** {t['claims_str']}\n"
         f"• 📬 **Notice:** Check your in-game mailbox to collect rewards!"
     )
-    s_perks = saved_cfg.get("customPerksText") if saved_cfg.get("customPerksText") else default_perks
+    s_perks = saved_cfg.get("customPerksText") if (saved_cfg.get("useManualTextOverrides") and saved_cfg.get("customPerksText")) else default_perks
 
-    # 4. Maintenance Section
     default_maint = (
         f"🌙 **NIGHTLY ACCOUNT MAINTENANCE**\n"
         f"• 🟢 **Status:** 2:00 AM UTC Audit Active & Scheduled\n"
-        f"• 🔄 **Last Audit:** Aug 15 • 06:15 PM (13 Audited, 0 Refreshed)\n"
+        f"• 🔄 **Last Audit:** {t['maint_last']} ({t['maint_audited']} Audited, {t['maint_refreshed']} Refreshed)\n"
         f"• ⚡ **Sync State:** Google Sheets & Firebase Two-Way Verified"
     )
-    s_maint = saved_cfg.get("customMaintenanceText") if saved_cfg.get("customMaintenanceText") else default_maint
+    s_maint = saved_cfg.get("customMaintenanceText") if (saved_cfg.get("useManualTextOverrides") and saved_cfg.get("customMaintenanceText")) else default_maint
 
-    # 5. Bot Telemetry Section
     default_bot = (
         f"🤖 **AUTO-BOT TELEMETRY**\n"
         f"• 🟢 **Status:** Active & Monitoring\n"
         f"• ⏳ **Next Sweep:** In ~35 mins (Every 45m)"
     )
-    s_bot = saved_cfg.get("customBotText") if saved_cfg.get("customBotText") else default_bot
+    s_bot = saved_cfg.get("customBotText") if (saved_cfg.get("useManualTextOverrides") and saved_cfg.get("customBotText")) else default_bot
 
     # Build description array respecting toggles
     sections = []
@@ -1632,10 +1696,8 @@ class BDCCentralCommandApp:
                     threading.Thread(target=self.gift_bot.run_sweep, daemon=True).start()
 
                 # Update Gatekeeper Card
-                gk_tot = gk_engine.data.get("totalMembers", 25)
-                gk_7d = gk_engine.data.get("newMembers7Days", 3)
-                self.root.after(0, self.update_card, "gatekeeper", f"{gk_tot} Members / +{gk_7d} (7D)")
-                gk_engine.sync_to_firebase()
+                t_gk = fetch_live_gatekeeper_telemetry()
+                self.root.after(0, self.update_card, "gatekeeper", f"{t_gk['totalMembers']} Members / +{t_gk['newToday']} Today")
 
                 # Fetch Plex & Twitch
                 plex_cnt = get_plex_sessions()

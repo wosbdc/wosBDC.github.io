@@ -1,19 +1,19 @@
 {
-  "version": "2.9.28",
-  "releaseDate": "2026-08-17",
-  "title": "What's New in v2.9.28",
+  "version": "2.9.29",
+  "releaseDate": "2026-08-18",
+  "title": "What's New in v2.9.29",
   "notes": [
-    "✨ Compact 4-Column Audit Logs Layout: Merged Target Player and Action Details into a unified 'Target Chief(s) & Details' column with inline styled chief chips, removing horizontal table blowout."
+    "🏰 Dynamic Alliance Gatekeeper & Live Signup Telemetry: Integrated live roster & database telemetry across Discord alerts and Desktop Command Center. Automatically detects all 42 alliance chiefs and real-time signups without static freezes."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "2.9.28",
+    "version": "2.9.29",
     "repository": "https://github.com/wosbdc/wosBDC.github.io",
     "latestChanges": [
+      "v2.9.29: Dynamic Alliance Gatekeeper & Live Signup Telemetry across Discord alerts and Central Command",
       "v2.9.28: Merged Target Player and Action Details into unified 'Target Chief(s) & Details' column with compact badge chips",
       "v2.9.27: Expanded Admin Hub & Audit Logs window to 1300px and added custom high-contrast scrollbars with sticky column headers",
       "v2.9.26: Supported multi-member target & breakdown parsing for single-entry batch logs (such as multi-player Bear Trap donations) with interactive modal details and badges",
-      "v2.9.25: Added interactive Batched Members Modal with copy button for seamless mobile and desktop inspection of grouped actions",
-      "v2.9.24: Added hover tooltip with numbered member names list to the orange batched pill in Admin Logs"
+      "v2.9.25: Added interactive Batched Members Modal with copy button for seamless mobile and desktop inspection of grouped actions"
     ]
   }
 }

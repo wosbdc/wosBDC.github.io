@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [2.9.29] - 2026-08-18
+- 🏰 **Dynamic Alliance Gatekeeper & Live Telemetry Overhaul**: Completely overhauled the Gatekeeper Report engine in both the Web Dashboard and Central Command Desktop GUI to dynamically query all 42 alliance chiefs across `roster_live` and `users` in real time.
+- 👥 **Real-Time Signup & Joins Tracking**: Dynamically detects new member signups (`lord319285336`, `Ice Mouse`, `Kit Carson`) with real furnace levels and timestamp sorting, auto-computing joins today (+3) and past 7 days (+7).
+- 🧹 **Eliminated Static Text Freezes**: Replaced frozen static textarea overrides with Live Auto-Sync by default, preventing report configurations from locking old placeholder strings.
+- ⚡ **Central Command GUI Synchronization**: Corrected Firebase sync endpoints and automated real-time telemetry updates during worker engine loops and manual sweeps.
+
 ## [2.9.28] - 2026-08-17
 - ✨ **Compact 4-Column Audit Logs Layout**: Merged the redundant Target Player and Action Details columns into a unified "Target Chief(s) & Details" column, eliminating horizontal overflow and table blowout while providing a cleaner, more readable view.
 - 🏷️ **Inline Target Chief Badges & Chips**: Formatted player targets into compact chief badges (e.g. `👤 Target: ChiefName` or `👥 Multiple (N)` batch pill) alongside cleanly parsed event details and notes.

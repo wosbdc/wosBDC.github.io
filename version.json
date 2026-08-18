@@ -29,13 +29,13 @@
       "repository": "https://github.com/bdclive/BDClive"
     },
     "wosbdc_alliance_dashboard": {
-      "version": "2.9.28",
+      "version": "2.9.29",
       "repository": "https://github.com/wosbdc/wosBDC.github.io",
       "latestChanges": [
+        "v2.9.29: Dynamic Alliance Gatekeeper & Live Signup Telemetry across Discord alerts and Central Command",
         "v2.9.28: Merged Target Player and Action Details into unified 'Target Chief(s) & Details' column with compact badge chips",
         "v2.9.27: Expanded Admin Hub & Audit Logs window to 1300px and added custom high-contrast scrollbars with sticky column headers",
-        "v2.9.26: Supported multi-member target & breakdown parsing for single-entry batch logs (such as multi-player Bear Trap donations) with interactive modal details and badges",
-        "v2.9.25: Added interactive Batched Members Modal with copy button for seamless mobile and desktop inspection of grouped actions"
+        "v2.9.26: Supported multi-member target & breakdown parsing for single-entry batch logs (such as multi-player Bear Trap donations) with interactive modal details and badges"
       ]
     },
     "google_apps_script_backend": {

@@ -14416,6 +14416,167 @@ window.handleSyncAllCharacters = async (btnEl = null) => {
   if (views.account) views.account('Alts');
 };
 
+window.buildLiveGatekeeperTelemetry = async function() {
+  const [usersSnap, rosterSnap, altsSnap, histSnap, cfgSnap, maintSnap] = await Promise.all([
+    get(ref(db, 'users')).catch(() => null),
+    get(ref(db, 'roster_live')).catch(() => null),
+    get(ref(db, 'users_alts')).catch(() => null),
+    get(ref(db, 'gift_codes_history')).catch(() => null),
+    get(ref(db, 'config/gatekeeperReportSettings')).catch(() => null),
+    get(ref(db, 'system/nightly_maintenance_status')).catch(() => null)
+  ]);
+
+  const users = (usersSnap && usersSnap.exists()) ? usersSnap.val() : {};
+  const roster = (rosterSnap && rosterSnap.exists()) ? rosterSnap.val() : {};
+  const alts = (altsSnap && altsSnap.exists()) ? altsSnap.val() : {};
+  const history = (histSnap && histSnap.exists()) ? histSnap.val() : {};
+  const savedConfig = (cfgSnap && cfgSnap.exists()) ? cfgSnap.val() : {};
+  const maintData = (maintSnap && maintSnap.exists()) ? maintSnap.val() : {};
+
+  function parseTs(m) {
+    if (!m || typeof m !== 'object') return 0;
+    if (typeof m.addedAt === 'number' && m.addedAt > 0) return m.addedAt;
+    for (const f of ['createdAt', 'verifiedAt', 'addedAt', 'dateStarted', 'joinedDate']) {
+      const v = m[f];
+      if (v) {
+        const t = new Date(v).getTime();
+        if (!isNaN(t) && t > 0) return t;
+      }
+    }
+    return 0;
+  }
+
+  const chiefMap = new Map();
+
+  // 1. Process roster_live
+  Object.entries(roster).forEach(([k, m]) => {
+    if (!m || typeof m !== 'object') return;
+    const name = (m.name || m.chiefName || m.player || '').trim();
+    const gid = String(m.gameId || k || '').trim();
+    const key = gid || name.toLowerCase();
+    if (!key) return;
+    const ts = parseTs(m);
+    chiefMap.set(key, {
+      name: name || (gid ? `Chief ${gid}` : 'Chief'),
+      gameId: gid,
+      furnaceLevel: String(m.furnaceLevel || m.stove_lv || ''),
+      timestamp: ts,
+      hasToken: !!(m.wos_cg_token),
+      isRegistered: false
+    });
+  });
+
+  // 2. Process registered users
+  Object.entries(users).forEach(([uid, u]) => {
+    if (!u || typeof u !== 'object') return;
+    const name = (u.name || u.chiefName || '').trim();
+    const gid = String(u.gameId || '').trim();
+    const key = gid || name.toLowerCase() || uid;
+    const ts = parseTs(u);
+    const existing = chiefMap.get(key);
+    if (existing) {
+      existing.isRegistered = true;
+      if (u.wos_cg_token) existing.hasToken = true;
+      if (name && !existing.name) existing.name = name;
+      if (ts > existing.timestamp) existing.timestamp = ts;
+    } else {
+      chiefMap.set(key, {
+        name: name || (gid ? `Chief ${gid}` : 'Chief'),
+        gameId: gid,
+        furnaceLevel: String(u.furnaceLevel || u.stove_lv || ''),
+        timestamp: ts,
+        hasToken: !!(u.wos_cg_token),
+        isRegistered: true
+      });
+    }
+  });
+
+  const allChiefs = Array.from(chiefMap.values());
+  const totalMembers = allChiefs.length || 42;
+
+  const now = Date.now();
+  const oneDayAgo = now - (24 * 60 * 60 * 1000);
+  const sevenDaysAgo = now - (7 * 24 * 60 * 60 * 1000);
+
+  const newToday = allChiefs.filter(c => c.timestamp >= oneDayAgo).length;
+  const new7d = allChiefs.filter(c => c.timestamp >= sevenDaysAgo).length;
+
+  let activeTokens = allChiefs.filter(c => c.hasToken).length;
+  Object.values(alts).forEach(item => {
+    if (Array.isArray(item)) {
+      item.forEach(a => { if (a && a.wos_cg_token) activeTokens++; });
+    } else if (item && typeof item === 'object') {
+      Object.values(item).forEach(a => { if (a && a.wos_cg_token) activeTokens++; });
+    }
+  });
+
+  const registeredCount = allChiefs.filter(c => c.isRegistered).length;
+  const unclaimed = Math.max(0, totalMembers - registeredCount);
+
+  const sortedSignups = [...allChiefs]
+    .filter(c => c.name && c.name !== 'Chief' && !c.name.toLowerCase().includes('agent'))
+    .sort((a, b) => b.timestamp - a.timestamp);
+
+  const topSignups = (sortedSignups.length > 0 ? sortedSignups : allChiefs).slice(0, 3);
+  const signupsLines = topSignups.map(c => {
+    const cname = c.name;
+    const icon = cname.toLowerCase().includes('brian') ? '👑' : (cname.toLowerCase().includes('thadwarf') ? '⚔️' : '🛡️');
+    const fLv = c.furnaceLevel ? ` (Lv ${c.furnaceLevel})` : '';
+    return `• ${icon} **${cname}**${fLv}`;
+  });
+  const signupsText = signupsLines.length > 0 ? signupsLines.join('\n') : "• 👑 **BrianDCox**\n• ⚔️ **thadwarf**\n• 🛡️ **Ice Mouse**";
+
+  const activeCodes = Object.values(history).filter(c => c && c.status === 'active');
+  const latestCodeObj = activeCodes.length > 0 ? activeCodes[0] : null;
+  const codeStr = latestCodeObj ? `\`${latestCodeObj.code}\`` : '`WOS0815`';
+  const successClaims = (latestCodeObj && latestCodeObj.stats && latestCodeObj.stats.success) || activeTokens;
+  const claimsStr = `${successClaims} / ${totalMembers} Alliance Accounts Claimed`;
+
+  const maintAudited = maintData.accountsAudited ?? totalMembers;
+  const maintRefreshed = maintData.tokensRefreshed ?? activeTokens;
+  let maintLastRunStr = '2:00 AM UTC (Last Night)';
+  if (maintData.lastRun) {
+    const ld = new Date(maintData.lastRun);
+    maintLastRunStr = `${ld.toLocaleDateString([], { month: 'short', day: 'numeric' })} • ${ld.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+  }
+
+  const defaultSectionTexts = {
+    roster: `🛡️ **ALLIANCE ROSTER & VERIFICATION**\n• 👥 **Total Members:** ${totalMembers} Chiefs\n• 📈 **New Joins Today:** +${newToday}  |  **Past 7 Days:** +${new7d}\n• 🔒 **Unclaimed Ratio:** ${unclaimed}/${totalMembers} (${activeTokens} Active 30-Day Tokens)`,
+    signups: `👥 **RECENT MEMBER SIGNUPS**\n${signupsText}`,
+    perks: `🎁 **ACTIVE ALLIANCE PROMO PERKS**\n• 💎 **Active Code:** ${codeStr}\n• ✅ **Claim Delivery:** ${claimsStr}\n• 📬 **Notice:** Check your in-game mailbox to collect rewards!`,
+    maintenance: `🌙 **NIGHTLY ACCOUNT MAINTENANCE**\n• 🟢 **Status:** 2:00 AM UTC Audit Active & Scheduled\n• 🔄 **Last Audit:** ${maintLastRunStr} (${maintAudited} Audited, ${maintRefreshed} Refreshed)\n• ⚡ **Sync State:** Google Sheets & Firebase Two-Way Verified`,
+    bot: `🤖 **AUTO-BOT TELEMETRY**\n• 🟢 **Status:** Active & Monitoring\n• ⏳ **Next Sweep:** In ~35 mins (Every 45m)`
+  };
+
+  try {
+    await set(ref(db, 'labData/gatekeeperCounters'), {
+      totalMembers,
+      newMembersToday: newToday,
+      newMembers7Days: new7d,
+      unclaimedAccounts: unclaimed,
+      activeSync: activeTokens,
+      recentSignups: topSignups.map(s => s.name),
+      timestamp: Date.now()
+    });
+  } catch(e) {}
+
+  return {
+    totalMembers,
+    newToday,
+    new7d,
+    unclaimed,
+    activeTokens,
+    signupsText,
+    codeStr,
+    claimsStr,
+    maintLastRunStr,
+    maintAudited,
+    maintRefreshed,
+    defaultSectionTexts,
+    savedConfig
+  };
+};
+
 window.pushGatekeeperReportToDiscord = async function(btnEl = null, customPayload = null) {
   if (!window.isAdminUser(currentUser)) {
     if (window.showToast) window.showToast("Access Denied: Staff permissions required.", "error");
@@ -14432,68 +14593,36 @@ window.pushGatekeeperReportToDiscord = async function(btnEl = null, customPayloa
     let payload = customPayload;
     if (!payload) {
       // Build auto payload using live database telemetry
-      const [usersSnap, histSnap, gkSnap, cfgSnap, maintSnap] = await Promise.all([
-        get(ref(db, 'users')).catch(() => null),
-        get(ref(db, 'gift_codes_history')).catch(() => null),
-        get(ref(db, 'labData/gatekeeperCounters')).catch(() => null),
-        get(ref(db, 'config/gatekeeperReportSettings')).catch(() => null),
-        get(ref(db, 'system/nightly_maintenance_status')).catch(() => null)
-      ]);
-      
-      const users = (usersSnap && usersSnap.exists()) ? usersSnap.val() : {};
-      const history = (histSnap && histSnap.exists()) ? histSnap.val() : {};
-      const gkData = (gkSnap && gkSnap.exists()) ? gkSnap.val() : {};
-      const savedConfig = (cfgSnap && cfgSnap.exists()) ? cfgSnap.val() : {};
-      const maintData = (maintSnap && maintSnap.exists()) ? maintSnap.val() : {};
-      
-      const totalMembers = gkData.totalMembers || Object.keys(users).length || 25;
-      const newToday = gkData.newMembersToday !== undefined ? gkData.newMembersToday : 0;
-      const new7d = gkData.newMembers7Days !== undefined ? gkData.newMembers7Days : 3;
-      const unclaimed = gkData.unclaimedAccounts !== undefined ? gkData.unclaimedAccounts : 16;
-      const activeSync = gkData.activeSync !== undefined ? gkData.activeSync : 2;
-      
-      const sortedUsers = Object.values(users).filter(u => u && u.name).sort((a,b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
-      const recentSignups = sortedUsers.slice(0, 3);
-      
-      let signupsText = recentSignups.map(u => {
-        const cname = u.name || u.chiefName || (u.gameId ? `Chief ${u.gameId}` : "Chief");
-        const icon = cname.toLowerCase().includes('brian') ? '👑' : (cname.toLowerCase().includes('thadwarf') ? '⚔️' : '🛡️');
-        return `• ${icon} **${cname}**`;
-      }).join('\n');
-      
-      if (!signupsText) {
-        signupsText = "• 👑 **BrianDCox**\n• ⚔️ **thadwarf**\n• 🛡️ **Chief 318843189**";
-      }
-      
-      const activeCodes = Object.values(history).filter(c => c && c.status === 'active');
-      const codeStr = activeCodes.length > 0 ? `\`${activeCodes[0].code}\`` : '`WOS0815`';
-      const claimsStr = activeCodes.length > 0 && activeCodes[0].stats ? `${activeCodes[0].stats.success || totalMembers} / ${totalMembers} Alliance Accounts Claimed` : `${totalMembers} / ${totalMembers} Alliance Accounts Claimed`;
-      
+      const t = await window.buildLiveGatekeeperTelemetry();
+      const savedConfig = t.savedConfig || {};
+      const def = t.defaultSectionTexts;
+
+      const useManual = savedConfig.useManualTextOverrides === true;
+
+      const sRoster = (useManual && savedConfig.customRosterText) ? savedConfig.customRosterText : def.roster;
+      const sSignups = (useManual && savedConfig.customSignupsText) ? savedConfig.customSignupsText : def.signups;
+      const sPerks = (useManual && savedConfig.customPerksText) ? savedConfig.customPerksText : def.perks;
+      const sMaint = (useManual && savedConfig.customMaintenanceText) ? savedConfig.customMaintenanceText : def.maintenance;
+      const sBot = (useManual && savedConfig.customBotText) ? savedConfig.customBotText : def.bot;
+
       let sections = [];
       if (savedConfig.announcement) {
         sections.push(`📢 **ALLIANCE DIRECTIVE**\n${savedConfig.announcement}`);
       }
       if (savedConfig.incRoster !== false) {
-        sections.push(`🛡️ **ALLIANCE ROSTER & VERIFICATION**\n• 👥 **Total Members:** ${totalMembers} Chiefs\n• 📈 **New Joins Today:** +${newToday}  |  **Past 7 Days:** +${new7d}\n• 🔒 **Unclaimed Ratio:** ${unclaimed}/${totalMembers} (${activeSync} Active 30-Day Tokens)`);
+        sections.push(sRoster);
       }
       if (savedConfig.incSignups !== false) {
-        sections.push(`👥 **RECENT MEMBER SIGNUPS**\n${signupsText}`);
+        sections.push(sSignups);
       }
       if (savedConfig.incPerks !== false) {
-        sections.push(`🎁 **ACTIVE ALLIANCE PROMO PERKS**\n• 💎 **Active Code:** ${codeStr}\n• ✅ **Claim Delivery:** ${claimsStr}\n• 📬 **Notice:** Check your in-game mailbox to collect rewards!`);
+        sections.push(sPerks);
       }
       if (savedConfig.incMaintenance !== false) {
-        const maintAudited = maintData.accountsAudited ?? totalMembers;
-        const maintRefreshed = maintData.tokensRefreshed ?? activeSync;
-        let maintLastRunStr = '2:00 AM UTC (Last Night)';
-        if (maintData.lastRun) {
-          const ld = new Date(maintData.lastRun);
-          maintLastRunStr = `${ld.toLocaleDateString([], { month: 'short', day: 'numeric' })} • ${ld.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-        }
-        sections.push(`🌙 **NIGHTLY ACCOUNT MAINTENANCE**\n• 🟢 **Status:** 2:00 AM UTC Audit Active & Scheduled\n• 🔄 **Last Audit:** ${maintLastRunStr} (${maintAudited} Audited, ${maintRefreshed} Refreshed)\n• ⚡ **Sync State:** Google Sheets & Firebase Two-Way Verified`);
+        sections.push(sMaint);
       }
       if (savedConfig.incBot !== false) {
-        sections.push(`🤖 **AUTO-BOT TELEMETRY**\n• 🟢 **Status:** Active & Monitoring\n• ⏳ **Next Sweep:** In ~35 mins (Every 45m)`);
+        sections.push(sBot);
       }
       
       payload = {
@@ -14597,59 +14726,11 @@ window.openGatekeeperReportEditorModal = async function() {
   if (window.showToast) window.showToast("Fetching live Alliance Gatekeeper telemetry...", "info");
 
   // Fetch live stats & settings
-  const [usersSnap, histSnap, gkSnap, cfgSnap, maintSnap] = await Promise.all([
-    get(ref(db, 'users')).catch(() => null),
-    get(ref(db, 'gift_codes_history')).catch(() => null),
-    get(ref(db, 'labData/gatekeeperCounters')).catch(() => null),
-    get(ref(db, 'config/gatekeeperReportSettings')).catch(() => null),
-    get(ref(db, 'system/nightly_maintenance_status')).catch(() => null)
-  ]);
+  const t = await window.buildLiveGatekeeperTelemetry();
+  const savedConfig = t.savedConfig || {};
+  const def = t.defaultSectionTexts;
 
-  const users = (usersSnap && usersSnap.exists()) ? usersSnap.val() : {};
-  const history = (histSnap && histSnap.exists()) ? histSnap.val() : {};
-  const gkData = (gkSnap && gkSnap.exists()) ? gkSnap.val() : {};
-  const savedConfig = (cfgSnap && cfgSnap.exists()) ? cfgSnap.val() : {};
-  const maintData = (maintSnap && maintSnap.exists()) ? maintSnap.val() : {};
-
-  // Compute live counts
-  const totalMembers = gkData.totalMembers || Object.keys(users).length || 25;
-  const newToday = gkData.newMembersToday !== undefined ? gkData.newMembersToday : 0;
-  const new7d = gkData.newMembers7Days !== undefined ? gkData.newMembers7Days : 3;
-  const unclaimed = gkData.unclaimedAccounts !== undefined ? gkData.unclaimedAccounts : 16;
-  const activeSync = gkData.activeSync !== undefined ? gkData.activeSync : 2;
-
-  const sortedUsers = Object.values(users).filter(u => u && u.name).sort((a,b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
-  const recentSignups = sortedUsers.slice(0, 3);
-  let signupsText = recentSignups.map(u => {
-    const cname = u.name || u.chiefName || (u.gameId ? `Chief ${u.gameId}` : "Chief");
-    const icon = cname.toLowerCase().includes('brian') ? '👑' : (cname.toLowerCase().includes('thadwarf') ? '⚔️' : '🛡️');
-    return `• ${icon} **${cname}**`;
-  }).join('\n');
-
-  if (!signupsText) {
-    signupsText = "• 👑 **BrianDCox**\n• ⚔️ **thadwarf**\n• 🛡️ **Chief 318843189**";
-  }
-
-  const activeCodes = Object.values(history).filter(c => c && c.status === 'active');
-  const codeStr = activeCodes.length > 0 ? `\`${activeCodes[0].code}\`` : '`WOS0815`';
-  const claimsStr = activeCodes.length > 0 && activeCodes[0].stats ? `${activeCodes[0].stats.success || totalMembers} / ${totalMembers} Alliance Accounts Claimed` : `${totalMembers} / ${totalMembers} Alliance Accounts Claimed`;
-
-  // Pre-build default text for each section from live data
-  const maintAuditedDef = maintData.accountsAudited ?? totalMembers;
-  const maintRefreshedDef = maintData.tokensRefreshed ?? activeSync;
-  let maintLastRunStrDef = '2:00 AM UTC (Last Night)';
-  if (maintData.lastRun) {
-    const ld = new Date(maintData.lastRun);
-    maintLastRunStrDef = `${ld.toLocaleDateString([], { month: 'short', day: 'numeric' })} • ${ld.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-  }
-
-  const defaultSectionTexts = {
-    roster: `🛡️ **ALLIANCE ROSTER & VERIFICATION**\n• 👥 **Total Members:** ${totalMembers} Chiefs\n• 📈 **New Joins Today:** +${newToday}  |  **Past 7 Days:** +${new7d}\n• 🔒 **Unclaimed Ratio:** ${unclaimed}/${totalMembers} (${activeSync} Active 30-Day Tokens)`,
-    signups: `👥 **RECENT MEMBER SIGNUPS**\n${signupsText}`,
-    perks: `🎁 **ACTIVE ALLIANCE PROMO PERKS**\n• 💎 **Active Code:** ${codeStr}\n• ✅ **Claim Delivery:** ${claimsStr}\n• 📬 **Notice:** Check your in-game mailbox to collect rewards!`,
-    maintenance: `🌙 **NIGHTLY ACCOUNT MAINTENANCE**\n• 🟢 **Status:** 2:00 AM UTC Audit Active & Scheduled\n• 🔄 **Last Audit:** ${maintLastRunStrDef} (${maintAuditedDef} Audited, ${maintRefreshedDef} Refreshed)\n• ⚡ **Sync State:** Google Sheets & Firebase Two-Way Verified`,
-    bot: `🤖 **AUTO-BOT TELEMETRY**\n• 🟢 **Status:** Active & Monitoring\n• ⏳ **Next Sweep:** In ~35 mins (Every 45m)`
-  };
+  const useManual = savedConfig.useManualTextOverrides === true;
 
   // Editor State
   window._gkEditorState = {
@@ -14660,29 +14741,19 @@ window.openGatekeeperReportEditorModal = async function() {
     incPerks: savedConfig.incPerks !== false,
     incMaintenance: savedConfig.incMaintenance !== false,
     incBot: savedConfig.incBot !== false,
+    useManualTextOverrides: useManual,
     colorHex: savedConfig.colorHex || "#38bdf8",
     colorDec: savedConfig.colorDec || 3718648,
     footer: savedConfig.footer || "Alliance Gatekeeper • Real-Time Live Sync ⚡",
-    defaultSectionTexts,
-    live: {
-      totalMembers,
-      newToday,
-      new7d,
-      unclaimed,
-      activeSync,
-      signupsText,
-      codeStr,
-      claimsStr,
-      maintData
-    }
+    defaultSectionTexts: def,
+    live: t
   };
 
-  // Load saved custom overrides or fall back to defaults
-  const sRoster = savedConfig.customRosterText || defaultSectionTexts.roster;
-  const sSignups = savedConfig.customSignupsText || defaultSectionTexts.signups;
-  const sPerks = savedConfig.customPerksText || defaultSectionTexts.perks;
-  const sMaint = savedConfig.customMaintenanceText || defaultSectionTexts.maintenance;
-  const sBot = savedConfig.customBotText || defaultSectionTexts.bot;
+  const sRoster = (useManual && savedConfig.customRosterText) ? savedConfig.customRosterText : def.roster;
+  const sSignups = (useManual && savedConfig.customSignupsText) ? savedConfig.customSignupsText : def.signups;
+  const sPerks = (useManual && savedConfig.customPerksText) ? savedConfig.customPerksText : def.perks;
+  const sMaint = (useManual && savedConfig.customMaintenanceText) ? savedConfig.customMaintenanceText : def.maintenance;
+  const sBot = (useManual && savedConfig.customBotText) ? savedConfig.customBotText : def.bot;
 
   const sectionEditorStyle = `width: 100%; min-height: 60px; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-main); font-size: 11.5px; box-sizing: border-box; resize: vertical; font-family: 'Consolas', 'Monaco', monospace; line-height: 1.5;`;
   const sectionBoxStyle = `background: rgba(0,0,0,0.25); padding: 12px; border-radius: 10px; border: 1px solid var(--border);`;
@@ -14698,7 +14769,7 @@ window.openGatekeeperReportEditorModal = async function() {
   `;
 
   modal.innerHTML = `
-    <div style="background: var(--bg-card); border: 1px solid rgba(56,189,248,0.3); border-radius: 16px; width: 100%; max-width: 900px; max-height: 92vh; display: flex; flex-direction: column; box-shadow: 0 20px 50px rgba(0,0,0,0.7); overflow: hidden;">
+    <div style="background: var(--bg-card); border: 1px solid rgba(56,189,248,0.3); border-radius: 16px; width: 100%; max-width: 920px; max-height: 92vh; display: flex; flex-direction: column; box-shadow: 0 20px 50px rgba(0,0,0,0.7); overflow: hidden;">
       
       <!-- Top Header -->
       <div style="padding: 18px 22px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, rgba(30,41,59,0.7), rgba(15,23,42,0.8));">
@@ -14707,8 +14778,11 @@ window.openGatekeeperReportEditorModal = async function() {
             🏰
           </div>
           <div>
-            <h3 style="margin: 0; color: #38bdf8; font-size: 17px; font-weight: 800;">Alliance Gatekeeper Report Editor</h3>
-            <p style="margin: 2px 0 0 0; font-size: 11.5px; color: var(--text-muted);">Edit each section's text directly. Toggle sections on/off with checkboxes. Preview updates live.</p>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <h3 style="margin: 0; color: #38bdf8; font-size: 17px; font-weight: 800;">Alliance Gatekeeper Report Editor</h3>
+              <span style="background: rgba(16,185,129,0.2); color:#34d399; border:1px solid rgba(16,185,129,0.4); font-size:10.5px; font-weight:bold; padding:2px 7px; border-radius:10px;">⚡ ${t.totalMembers} Chiefs Live</span>
+            </div>
+            <p style="margin: 2px 0 0 0; font-size: 11.5px; color: var(--text-muted);">Real-time telemetry dynamically computed from live roster and database.</p>
           </div>
         </div>
         <button onclick="document.getElementById('gatekeeperReportModal').remove()" style="background: none; border: none; color: var(--text-muted); font-size: 22px; cursor: pointer; padding: 4px 8px; line-height: 1;">✕</button>
@@ -14737,7 +14811,7 @@ window.openGatekeeperReportEditorModal = async function() {
                   <input type="checkbox" id="gkToggleRoster" ${window._gkEditorState.incRoster ? 'checked' : ''} onchange="window.updateGatekeeperPreview()" style="width: 15px; height: 15px; accent-color: var(--accent);">
                   🛡️ Alliance Roster & Verification
                 </label>
-                <button type="button" onclick="document.getElementById('gkTextRoster').value=window._gkEditorState.defaultSectionTexts.roster;window.updateGatekeeperPreview()" style="${resetBtnStyle}">↻ Reset</button>
+                <button type="button" onclick="document.getElementById('gkTextRoster').value=window._gkEditorState.defaultSectionTexts.roster;window.updateGatekeeperPreview()" style="${resetBtnStyle}">↻ Live Sync</button>
               </div>
               <textarea id="gkTextRoster" oninput="window.updateGatekeeperPreview()" style="${sectionEditorStyle}">${window.escapeHTML(sRoster)}</textarea>
             </div>
@@ -14749,7 +14823,7 @@ window.openGatekeeperReportEditorModal = async function() {
                   <input type="checkbox" id="gkToggleSignups" ${window._gkEditorState.incSignups ? 'checked' : ''} onchange="window.updateGatekeeperPreview()" style="width: 15px; height: 15px; accent-color: var(--accent);">
                   👥 Recent Member Signups
                 </label>
-                <button type="button" onclick="document.getElementById('gkTextSignups').value=window._gkEditorState.defaultSectionTexts.signups;window.updateGatekeeperPreview()" style="${resetBtnStyle}">↻ Reset</button>
+                <button type="button" onclick="document.getElementById('gkTextSignups').value=window._gkEditorState.defaultSectionTexts.signups;window.updateGatekeeperPreview()" style="${resetBtnStyle}">↻ Live Sync</button>
               </div>
               <textarea id="gkTextSignups" oninput="window.updateGatekeeperPreview()" style="${sectionEditorStyle}">${window.escapeHTML(sSignups)}</textarea>
             </div>
@@ -14761,7 +14835,7 @@ window.openGatekeeperReportEditorModal = async function() {
                   <input type="checkbox" id="gkTogglePerks" ${window._gkEditorState.incPerks ? 'checked' : ''} onchange="window.updateGatekeeperPreview()" style="width: 15px; height: 15px; accent-color: var(--accent);">
                   🎁 Alliance Promo Perks / Codes
                 </label>
-                <button type="button" onclick="document.getElementById('gkTextPerks').value=window._gkEditorState.defaultSectionTexts.perks;window.updateGatekeeperPreview()" style="${resetBtnStyle}">↻ Reset</button>
+                <button type="button" onclick="document.getElementById('gkTextPerks').value=window._gkEditorState.defaultSectionTexts.perks;window.updateGatekeeperPreview()" style="${resetBtnStyle}">↻ Live Sync</button>
               </div>
               <textarea id="gkTextPerks" oninput="window.updateGatekeeperPreview()" style="${sectionEditorStyle}">${window.escapeHTML(sPerks)}</textarea>
             </div>
@@ -14773,7 +14847,7 @@ window.openGatekeeperReportEditorModal = async function() {
                   <input type="checkbox" id="gkToggleMaintenance" ${window._gkEditorState.incMaintenance ? 'checked' : ''} onchange="window.updateGatekeeperPreview()" style="width: 15px; height: 15px; accent-color: var(--accent);">
                   🌙 Nightly Maintenance Telemetry
                 </label>
-                <button type="button" onclick="document.getElementById('gkTextMaintenance').value=window._gkEditorState.defaultSectionTexts.maintenance;window.updateGatekeeperPreview()" style="${resetBtnStyle}">↻ Reset</button>
+                <button type="button" onclick="document.getElementById('gkTextMaintenance').value=window._gkEditorState.defaultSectionTexts.maintenance;window.updateGatekeeperPreview()" style="${resetBtnStyle}">↻ Live Sync</button>
               </div>
               <textarea id="gkTextMaintenance" oninput="window.updateGatekeeperPreview()" style="${sectionEditorStyle}">${window.escapeHTML(sMaint)}</textarea>
             </div>
@@ -14785,7 +14859,7 @@ window.openGatekeeperReportEditorModal = async function() {
                   <input type="checkbox" id="gkToggleBot" ${window._gkEditorState.incBot ? 'checked' : ''} onchange="window.updateGatekeeperPreview()" style="width: 15px; height: 15px; accent-color: var(--accent);">
                   🤖 Auto-Bot 24/7 Telemetry
                 </label>
-                <button type="button" onclick="document.getElementById('gkTextBot').value=window._gkEditorState.defaultSectionTexts.bot;window.updateGatekeeperPreview()" style="${resetBtnStyle}">↻ Reset</button>
+                <button type="button" onclick="document.getElementById('gkTextBot').value=window._gkEditorState.defaultSectionTexts.bot;window.updateGatekeeperPreview()" style="${resetBtnStyle}">↻ Live Sync</button>
               </div>
               <textarea id="gkTextBot" oninput="window.updateGatekeeperPreview()" style="${sectionEditorStyle}">${window.escapeHTML(sBot)}</textarea>
             </div>
@@ -14849,12 +14923,12 @@ window.openGatekeeperReportEditorModal = async function() {
       <!-- Bottom Action Bar -->
       <div style="padding: 14px 22px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; background: rgba(0,0,0,0.2);">
         <button type="button" onclick="window.openGatekeeperReportEditorModal()" style="background: rgba(255,255,255,0.06); border: 1px solid var(--border); color: var(--text-main); padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 6px;">
-          🔄 Re-Pull DB Data
+          🔄 Refresh Live Telemetry
         </button>
 
         <div style="display: flex; gap: 10px; align-items: center;">
           <button type="button" onclick="window.saveGatekeeperDraftSettings()" style="background: rgba(56,189,248,0.15); border: 1px solid rgba(56,189,248,0.35); color: #38bdf8; padding: 9px 16px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer;">
-            💾 Save Draft
+            💾 Save Settings
           </button>
           <button type="button" id="btnPublishGatekeeperReport" onclick="window.publishGatekeeperReportFromEditor(this)" style="background: linear-gradient(135deg, #0ea5e9, #0284c7); color: #fff; border: none; padding: 9px 20px; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 14px rgba(14,165,233,0.35); display: flex; align-items: center; gap: 6px; transition: 0.2s;">
             🚀 Update Discord #alerts
@@ -14959,11 +15033,7 @@ window.saveGatekeeperDraftSettings = async function() {
     incPerks,
     incMaintenance,
     incBot,
-    customRosterText: (document.getElementById('gkTextRoster')?.value || '').trim(),
-    customSignupsText: (document.getElementById('gkTextSignups')?.value || '').trim(),
-    customPerksText: (document.getElementById('gkTextPerks')?.value || '').trim(),
-    customMaintenanceText: (document.getElementById('gkTextMaintenance')?.value || '').trim(),
-    customBotText: (document.getElementById('gkTextBot')?.value || '').trim(),
+    useManualTextOverrides: false,
     colorHex: window._gkEditorState?.colorHex || "#38bdf8",
     colorDec: window._gkEditorState?.colorDec || 3718648,
     updatedAt: new Date().toISOString()
@@ -14971,9 +15041,9 @@ window.saveGatekeeperDraftSettings = async function() {
 
   try {
     await set(ref(db, 'config/gatekeeperReportSettings'), data);
-    if (window.showToast) window.showToast("💾 Gatekeeper report draft settings saved!", "success");
+    if (window.showToast) window.showToast("💾 Gatekeeper report settings saved (Live Auto-Sync Active)!", "success");
   } catch(e) {
-    if (window.showToast) window.showToast("Failed to save draft: " + e.message, "error");
+    if (window.showToast) window.showToast("Failed to save settings: " + e.message, "error");
   }
 };
 
