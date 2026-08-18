@@ -8469,15 +8469,243 @@ window.buildShowdownHistoryCardHtml = (activeFilter = 'all') => {
     </div>`;
 };
 
-window.filterShowdownHistoryView = (selectedVal) => {
-    window._sdHistoryState.activeFilter = selectedVal;
-    const target = document.getElementById('sdHistoryContentArea');
-    if (target) {
-        let tempDiv = document.createElement('div');
-        tempDiv.innerHTML = window.buildShowdownHistoryCardHtml(selectedVal);
-        let newContent = tempDiv.querySelector('#sdHistoryContentArea');
-        if (newContent) target.innerHTML = newContent.innerHTML;
+// 🏆 Alliance Championship 5-Round Matchup & Archive Suite
+window.DEFAULT_CHAMPIONSHIP_MATCHUPS = {
+    seasonName: "Season 12 Championship",
+    statusText: "4 Wins – 1 Loss (Tournament Champions)",
+    rounds: {
+        "r1": { roundNum: 1, date: "Round 1", ourScore: 950, enemyAlliance: { name: "[KOR] KoreaKings", score: 820 } },
+        "r2": { roundNum: 2, date: "Round 2", ourScore: 1020, enemyAlliance: { name: "[000] YellowMaple", score: 750 } },
+        "r3": { roundNum: 3, date: "Round 3", ourScore: 880, enemyAlliance: { name: "[NBD] Murata", score: 790 } },
+        "r4": { roundNum: 4, date: "Round 4", ourScore: 1100, enemyAlliance: { name: "[RED] Army", score: 650 } },
+        "r5": { roundNum: 5, date: "Round 5", ourScore: 720, enemyAlliance: { name: "[WWA] WhiteoutWarriors", score: 880 } }
     }
+};
+
+window.fetchChampionshipMatchups = async () => {
+    try {
+        const snap = await get(ref(db, 'championship_matchups')).catch(() => null);
+        if (snap && snap.exists() && snap.val()) {
+            let val = snap.val();
+            if (val && val.rounds && typeof val.rounds === 'object') {
+                return val;
+            }
+        }
+    } catch(e) {
+        console.warn("fetchChampionshipMatchups error:", e);
+    }
+    return JSON.parse(JSON.stringify(window.DEFAULT_CHAMPIONSHIP_MATCHUPS));
+};
+
+window.saveChampionshipMatchups = async (data) => {
+    if (!data || typeof data !== 'object') return false;
+    await set(ref(db, 'championship_matchups'), data);
+    if (window.logAdminAction) {
+        window.logAdminAction("Championship Matchups Update", `Updated Championship 5-Round matchups and scores (${data.seasonName || 'Current Season'})`);
+    }
+    return true;
+};
+
+window.archiveAndResetChampionshipSeason = async () => {
+    const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+    if (!isManager) {
+        if (window.showToast) window.showToast("Only R4/R5 managers can archive Championship seasons", "error");
+        return;
+    }
+
+    const confirmFirst = await window.customConfirm("🔄 Archive & Reset Current Championship Season?\n\nThis will:\n1. Save a timestamped snapshot of current 5-round matchups to Firebase archives.\n2. Reset all round scores to 0 for the upcoming season.\n\nProceed?");
+    if (!confirmFirst) return;
+
+    if (window.showToast) window.showToast("Archiving Championship season...", "info");
+    try {
+        const currentData = await window.fetchChampionshipMatchups();
+        const timestamp = Date.now();
+        
+        await set(ref(db, `championship_meta/history/${timestamp}`), {
+            ...currentData,
+            archivedAt: timestamp,
+            archivedBy: (currentUser && currentUser.displayName) ? currentUser.displayName : (currentUser?.email || 'Admin')
+        });
+
+        // Reset live matchups
+        const resetData = {
+            seasonName: "Upcoming Season",
+            statusText: "0 Wins – 0 Losses (New Season)",
+            rounds: {
+                "r1": { roundNum: 1, date: "Round 1", ourScore: 0, enemyAlliance: { name: "[TAG] Opponent 1", score: 0 } },
+                "r2": { roundNum: 2, date: "Round 2", ourScore: 0, enemyAlliance: { name: "[TAG] Opponent 2", score: 0 } },
+                "r3": { roundNum: 3, date: "Round 3", ourScore: 0, enemyAlliance: { name: "[TAG] Opponent 3", score: 0 } },
+                "r4": { roundNum: 4, date: "Round 4", ourScore: 0, enemyAlliance: { name: "[TAG] Opponent 4", score: 0 } },
+                "r5": { roundNum: 5, date: "Round 5", ourScore: 0, enemyAlliance: { name: "[TAG] Opponent 5", score: 0 } }
+            }
+        };
+
+        await set(ref(db, 'championship_matchups'), resetData);
+
+        if (window.logAdminAction) {
+            window.logAdminAction("Archive & Reset Championship Season", `Archived ${currentData.seasonName || 'Season'} and initialized new championship round`);
+        }
+
+        if (window.showToast) window.showToast("Championship season archived & reset successfully! 🎉", "success");
+        if (window.views && window.views.championshipAdmin) {
+            window.views.championshipAdmin('matchups');
+        }
+    } catch(err) {
+        console.error("Archive Championship season error:", err);
+        if (window.showToast) window.showToast("Error archiving Championship: " + err.message, "error");
+    }
+};
+
+window.openChampionshipArchiveVaultModal = async (initialKey = 'live') => {
+    let existingModal = document.getElementById('championshipArchiveVaultModal');
+    if (existingModal) existingModal.remove();
+
+    let modal = document.createElement('div');
+    modal.id = 'championshipArchiveVaultModal';
+    modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); z-index:10005; display:flex; justify-content:center; align-items:center; animation:fadeIn 0.2s ease; padding:15px; box-sizing:border-box;';
+
+    modal.innerHTML = `
+        <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:16px; width:100%; max-width:950px; max-height:90vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 10px 40px rgba(0,0,0,0.6);">
+            <div style="padding:18px 24px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02);">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div style="font-size:24px;">🏆</div>
+                    <div>
+                        <div style="font-size:18px; font-weight:bold; color:var(--text-main);">Championship Archive Vault</div>
+                        <div style="font-size:12px; color:var(--text-muted);">Historical 5-Round Matchup & Alliance Records</div>
+                    </div>
+                </div>
+                <button onclick="document.getElementById('championshipArchiveVaultModal').remove()" style="background:rgba(255,255,255,0.1); border:none; color:var(--text-main); width:32px; height:32px; border-radius:50%; font-size:16px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center;">✕</button>
+            </div>
+            <div id="champVaultModalBody" style="padding:24px; overflow-y:auto; flex:1;">
+                <div style="text-align:center; padding:40px 20px; color:var(--text-muted);">⏳ Fetching Championship archives...</div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    try {
+        const [histSnap, liveSnap] = await Promise.all([
+            get(ref(db, 'championship_meta/history')).catch(() => null),
+            get(ref(db, 'championship_matchups')).catch(() => null)
+        ]);
+
+        let historyObj = (histSnap && histSnap.exists() && histSnap.val()) ? histSnap.val() : {};
+        let liveData = (liveSnap && liveSnap.exists() && liveSnap.val()) ? liveSnap.val() : window.DEFAULT_CHAMPIONSHIP_MATCHUPS;
+
+        window._champVaultState = { historyObj, liveData, activeKey: initialKey };
+        window.renderChampionshipVaultBody(initialKey);
+    } catch(err) {
+        console.error("Error loading championship vault:", err);
+        const body = document.getElementById('champVaultModalBody');
+        if (body) body.innerHTML = `<div style="color:var(--error); text-align:center; padding:30px;">❌ Failed to load archives: ${escapeHTML(err.message)}</div>`;
+    }
+};
+
+window.renderChampionshipVaultBody = (activeKey = 'live') => {
+    const body = document.getElementById('champVaultModalBody');
+    if (!body || !window._champVaultState) return;
+
+    const { historyObj, liveData } = window._champVaultState;
+    const historyKeys = Object.keys(historyObj).sort((a,b) => Number(b) - Number(a));
+
+    let optionsHtml = `<option value="live" ${activeKey === 'live' ? 'selected' : ''}>🌟 Current Season: ${escapeHTML(liveData.seasonName || 'Season 12')}</option>`;
+    historyKeys.forEach(k => {
+        let entry = historyObj[k];
+        let sName = entry.seasonName || ('Season ' + new Date(Number(k)).toLocaleDateString());
+        let sRecord = entry.statusText ? ` (${entry.statusText})` : '';
+        optionsHtml += `<option value="${k}" ${activeKey === k ? 'selected' : ''}>📅 Archived: ${escapeHTML(sName)}${escapeHTML(sRecord)}</option>`;
+    });
+
+    let displayData = activeKey === 'live' ? liveData : historyObj[activeKey];
+    if (!displayData) displayData = liveData;
+
+    let rounds = displayData.rounds || {};
+    let roundsList = [1, 2, 3, 4, 5].map(i => rounds['r' + i] || { roundNum: i, date: `Round ${i}`, ourScore: 0, enemyAlliance: { name: 'Opponent Alliance', score: 0 } });
+
+    let winCount = 0;
+    let lossCount = 0;
+    roundsList.forEach(r => {
+        let os = Number(r.ourScore) || 0;
+        let es = Number(r.enemyAlliance?.score) || 0;
+        if (os > es) winCount++;
+        else if (es > os) lossCount++;
+    });
+
+    let recordStr = displayData.statusText || `${winCount} Wins – ${lossCount} ${lossCount === 1 ? 'Loss' : 'Losses'}`;
+
+    let matchCardsHtml = roundsList.map((r, idx) => {
+        let rNum = r.roundNum || (idx + 1);
+        let ourScore = Number(r.ourScore) || 0;
+        let enemyScore = Number(r.enemyAlliance?.score) || 0;
+        let enemyName = (r.enemyAlliance && r.enemyAlliance.name) ? r.enemyAlliance.name : 'Opponent Alliance';
+        let isVictory = ourScore > enemyScore;
+        let isDefeat = enemyScore > ourScore;
+
+        let cardBg = isVictory 
+            ? 'background: linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(16,185,129,0.3);' 
+            : (isDefeat 
+                ? 'background: linear-gradient(135deg, rgba(239,68,68,0.08) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(239,68,68,0.3);' 
+                : 'background: rgba(255,255,255,0.02); border: 1px solid var(--border);');
+
+        let ourScoreColor = isVictory ? 'color:#10b981; font-weight:900; text-shadow:0 0 12px rgba(16,185,129,0.4);' : 'color:var(--text-muted); opacity:0.75;';
+        let enemyScoreColor = isDefeat ? 'color:#ef4444; font-weight:900; text-shadow:0 0 12px rgba(239,68,68,0.4);' : 'color:var(--text-muted); opacity:0.75;';
+
+        let ourBadgeHtml = isVictory ? '<span style="background:rgba(16,185,129,0.2); border:1px solid rgba(16,185,129,0.4); color:#10b981; padding:4px 10px; border-radius:10px; font-weight:bold; font-size:11px; letter-spacing:0.5px;">VICTORY</span>' : '';
+        let enemyBadgeHtml = isDefeat ? '<span style="background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:4px 10px; border-radius:10px; font-weight:bold; font-size:11px; letter-spacing:0.5px;">DEFEAT</span>' : '';
+
+        return `
+            <div style="${cardBg} border-radius:12px; padding:14px 18px; margin-bottom:12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px; margin-bottom:10px;">
+                    <span style="font-weight:900; font-size:12px; color:var(--accent); text-transform:uppercase; letter-spacing:1px;">⚔️ ROUND ${rNum}</span>
+                    <span style="font-size:11px; color:var(--text-muted);">${escapeHTML(r.date || `Match ${rNum}`)}</span>
+                </div>
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+                    <!-- Left: Our Alliance -->
+                    <div style="flex:1; min-width:140px; text-align:right; display:flex; align-items:center; justify-content:flex-end; gap:10px;">
+                        <div>
+                            <div style="font-size:10px; text-transform:uppercase; color:var(--text-muted); font-weight:bold;">Our Alliance</div>
+                            <div style="font-size:14px; font-weight:bold; color:var(--text-main);">[BDC]</div>
+                        </div>
+                        <span style="font-size:22px; font-family:var(--mono); ${ourScoreColor}">${ourScore.toLocaleString()}</span>
+                        ${ourBadgeHtml}
+                    </div>
+
+                    <!-- Center: VS -->
+                    <div style="flex-shrink:0;">
+                        <div style="width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg, rgba(6,182,212,0.2), rgba(6,182,212,0.05)); border:1.5px solid rgba(6,182,212,0.4); display:flex; align-items:center; justify-content:center; font-weight:900; font-size:12px; font-style:italic; color:var(--accent);">VS</div>
+                    </div>
+
+                    <!-- Right: Opponent Alliance -->
+                    <div style="flex:1; min-width:140px; text-align:left; display:flex; align-items:center; justify-content:flex-start; gap:10px;">
+                        <span style="font-size:22px; font-family:var(--mono); ${enemyScoreColor}">${enemyScore.toLocaleString()}</span>
+                        ${enemyBadgeHtml}
+                        <div>
+                            <div style="font-size:10px; text-transform:uppercase; color:var(--text-muted); font-weight:bold;">Opponent Alliance</div>
+                            <div style="font-size:14px; font-weight:bold; color:var(--text-main);">${escapeHTML(enemyName)}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    body.innerHTML = `
+        <div style="margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; background:rgba(255,255,255,0.03); padding:12px 18px; border-radius:10px; border:1px solid var(--border);">
+            <div style="font-weight:bold; font-size:13px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+                <span>📅 Select Championship Season:</span>
+            </div>
+            <select style="padding:8px 14px; border-radius:8px; border:1px solid var(--accent); background:var(--card-bg); color:var(--text-main); font-size:13px; font-weight:bold; cursor:pointer; min-width:280px;" onchange="window.renderChampionshipVaultBody(this.value)">
+                ${optionsHtml}
+            </select>
+        </div>
+
+        <div style="text-align:center; padding:16px; margin-bottom:18px; background:linear-gradient(135deg, rgba(6,182,212,0.1) 0%, rgba(6,182,212,0.02) 100%); border:1px solid rgba(6,182,212,0.3); border-radius:12px;">
+            <div style="font-size:20px; font-weight:900; color:var(--text-main);">${escapeHTML(displayData.seasonName || 'Season 12 Championship')}</div>
+            <div style="font-size:14px; font-weight:bold; color:#38bdf8; margin-top:4px;">${escapeHTML(recordStr)}</div>
+        </div>
+
+        <div>${matchCardsHtml}</div>
+    `;
 };
 
 window.renderMercenaryCaptainsSectionHtml = (clearedCount = null, bossProgress = null) => {
@@ -19422,7 +19650,7 @@ html += `</select>
     }
   },
 
-  championshipAdmin: async () => {
+  championshipAdmin: async (activeTab = 'signups') => {
     const app = document.getElementById('app');
     if (!app) return;
 
@@ -19432,11 +19660,11 @@ html += `</select>
        return;
     }
 
-    const isAlreadyMounted = Boolean(document.getElementById('champTableBody'));
+    const isAlreadyMounted = Boolean(document.getElementById('champTableBody') || document.getElementById('adm_champ_season_name'));
     const savedScrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0;
 
     if (!isAlreadyMounted) {
-        renderLoading("Loading Alliance Championship Tracker...");
+        renderLoading("Loading Alliance Championship Admin Suite...");
     }
 
     if (document.querySelector('.navbar')) {
@@ -19445,9 +19673,10 @@ html += `</select>
 
     try {
         window.championshipCache = null;
-        const [championshipData, rosterData] = await Promise.all([
-            window.fetchChampionshipData(),
-            window.fetchRoster().catch(() => ({}))
+        const [championshipData, rosterData, champMatchupData] = await Promise.all([
+            window.fetchChampionshipData().catch(() => ({})),
+            window.fetchRoster().catch(() => ({})),
+            window.fetchChampionshipMatchups().catch(() => window.DEFAULT_CHAMPIONSHIP_MATCHUPS)
         ]);
 
         let rosterList = [];
@@ -19456,13 +19685,10 @@ html += `</select>
                 if (p.name && p.gameId) rosterList.push(p);
             });
         }
-
-        // Sort roster by name
         rosterList.sort((a,b) => (a.name || '').localeCompare(b.name || ''));
 
         const isT = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
 
-        // Calculate statistics
         let totalCount = rosterList.length;
         let yesCount = 0;
         let noCount = 0;
@@ -19483,102 +19709,218 @@ html += `</select>
 
         let percentSignedUp = totalCount > 0 ? Math.round((yesCount / totalCount) * 100) : 0;
 
+        let tabNavHtml = `
+            <div style="display:flex; gap:10px; margin-bottom:18px; border-bottom:1px solid var(--border); padding-bottom:12px; flex-wrap:wrap;">
+                <button onclick="views.championshipAdmin('signups')" style="padding:10px 18px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:0.2s; ${activeTab === 'signups' ? 'background:var(--accent); color:#fff; border:none; box-shadow:0 4px 12px rgba(6,182,212,0.3);' : 'background:var(--card-bg); color:var(--text-muted); border:1px solid var(--border);'}">
+                    📋 Member Signups & Roster Tracker
+                </button>
+                <button onclick="views.championshipAdmin('matchups')" style="padding:10px 18px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:0.2s; ${activeTab === 'matchups' ? 'background:var(--accent); color:#fff; border:none; box-shadow:0 4px 12px rgba(6,182,212,0.3);' : 'background:var(--card-bg); color:var(--text-muted); border:1px solid var(--border);'}">
+                    ⚔️ 5-Round Matchups & Scores Entry
+                </button>
+            </div>
+        `;
+
+        let mainContentHtml = '';
+
+        if (activeTab === 'signups') {
+            mainContentHtml = `
+                <!-- Summary KPI Cards -->
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:15px; margin-bottom:18px;">
+                  <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:16px; text-align:center;">
+                    <div style="font-size:12px; color:var(--text-muted); text-transform:uppercase; font-weight:bold;">Total Roster</div>
+                    <div id="champStatTotal" style="font-size:28px; font-weight:bold; color:var(--text-main); margin-top:4px;">${totalCount}</div>
+                  </div>
+                  <div style="background:var(--card-bg); border:1px solid rgba(16,185,129,0.3); border-radius:12px; padding:16px; text-align:center;">
+                    <div style="font-size:12px; color:#10b981; text-transform:uppercase; font-weight:bold;">✅ Signed-up (YES)</div>
+                    <div id="champStatYes" style="font-size:28px; font-weight:bold; color:#10b981; margin-top:4px;">${yesCount}</div>
+                  </div>
+                  <div style="background:var(--card-bg); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:16px; text-align:center;">
+                    <div style="font-size:12px; color:#ef4444; text-transform:uppercase; font-weight:bold;">❌ Not Signed up (NO)</div>
+                    <div id="champStatNo" style="font-size:28px; font-weight:bold; color:#ef4444; margin-top:4px;">${noCount}</div>
+                  </div>
+                  <div style="background:var(--card-bg); border:1px solid rgba(59,130,246,0.3); border-radius:12px; padding:16px; text-align:center;">
+                    <div style="font-size:12px; color:#60a5fa; text-transform:uppercase; font-weight:bold;">Response Rate</div>
+                    <div id="champStatPct" style="font-size:28px; font-weight:bold; color:#60a5fa; margin-top:4px;">${percentSignedUp}%</div>
+                  </div>
+                </div>
+
+                <!-- Missing Members Quick-Copy Banner -->
+                <div style="background:linear-gradient(135deg, rgba(239,68,68,0.12), rgba(245,158,11,0.12)); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:16px; margin-bottom:18px;">
+                  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <h3 style="margin:0; color:#ef4444; font-size:16px; display:flex; align-items:center; gap:8px;">
+                      ⚠️ Members Pending / Missing Signup <span id="missingCountTitle">(${missingNames.length})</span>
+                    </h3>
+                    <button onclick="window.copyMissingChampionshipList()" style="background:#ef4444; color:white; border:none; padding:8px 16px; border-radius:6px; font-weight:bold; cursor:pointer; font-size:12px; box-shadow:0 2px 8px rgba(239,68,68,0.3);">
+                      📋 Copy Missing List for Chat
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Search & Filter Controls -->
+                <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:16px; display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:space-between; margin-bottom:18px;">
+                  <input type="text" id="champSearchInput" placeholder="🔍 Filter player name..." style="flex:1; min-width:200px; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:14px;" onkeyup="window.filterChampTable()">
+                  
+                  <div style="display:flex; gap:6px;">
+                    <button id="champFilterBtnAll" class="champ-filter-btn active" data-filter="all" onclick="window.setChampFilter('all')" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--accent); color:white; font-weight:bold; cursor:pointer; font-size:13px;">All (${totalCount})</button>
+                    <button id="champFilterBtnYes" class="champ-filter-btn" data-filter="yes" onclick="window.setChampFilter('yes')" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-weight:bold; cursor:pointer; font-size:13px;">Signed Up (${yesCount})</button>
+                    <button id="champFilterBtnNo" class="champ-filter-btn" data-filter="no" onclick="window.setChampFilter('no')" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-weight:bold; cursor:pointer; font-size:13px;">Missing (${noCount})</button>
+                  </div>
+                </div>
+
+                <!-- Roster Table -->
+                <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; overflow:hidden;">
+                  <table style="width:100%; border-collapse:collapse; text-align:left; font-size:14px;">
+                    <thead>
+                      <tr style="background:var(--bg-main); border-bottom:1px solid var(--border); color:var(--text-muted); font-size:12px; text-transform:uppercase;">
+                        <th style="padding:12px 20px;">Chief Name</th>
+                        <th style="padding:12px 20px; text-align:right;">Signup Status</th>
+                      </tr>
+                    </thead>
+                    <tbody id="champTableBody">
+                      ${rosterList.map(p => {
+                          let gIdStr = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (p.name ? p.name.toLowerCase().replace(/[^a-z0-9]/g, '_') : '');
+                          let nameKey = p.name ? p.name.toLowerCase().replace(/[^a-z0-9]/g, '_') : '';
+                          let record = championshipData[gIdStr] || (nameKey ? championshipData[nameKey] : null) || (p.name ? championshipData[p.name] : null);
+                          let isSignedUp = record && isT(record.signedUp);
+                          return `
+                            <tr class="champ-row" data-name="${escapeHTML((p.name || '').toLowerCase())}" data-gid="${gIdStr}" data-signed="${isSignedUp ? 'yes' : 'no'}" style="border-bottom:1px solid var(--border);">
+                              <td class="champ-name-cell" style="padding:14px 20px; font-weight:bold; color:var(--text-main); font-size:15px;">${escapeHTML(p.name)}</td>
+                              <td style="padding:14px 20px; text-align:right;">
+                                <button class="champ-toggle-btn" onclick="window.onChampToggle('${gIdStr}', this)" style="background:${isSignedUp ? '#10b981' : 'rgba(239,68,68,0.15)'}; color:${isSignedUp ? '#ffffff' : '#ef4444'}; border:${isSignedUp ? 'none' : '1px solid rgba(239,68,68,0.4)'}; padding:6px 20px; border-radius:20px; font-weight:bold; cursor:pointer; font-size:13px; transition:0.2s; box-shadow:${isSignedUp ? '0 2px 8px rgba(16,185,129,0.35)' : 'none'};">
+                                  ${isSignedUp ? '✅ YES' : '❌ NO'}
+                                </button>
+                              </td>
+                            </tr>
+                          `;
+                      }).join('')}
+                    </tbody>
+                  </table>
+                </div>
+            `;
+        } else {
+            // MATCHUPS EDITOR
+            const seasonNameVal = champMatchupData.seasonName || 'Season 12 Championship';
+            const statusTextVal = champMatchupData.statusText || '4 Wins – 1 Loss (Tournament Champions)';
+            const roundsData = champMatchupData.rounds || {};
+
+            let roundsInputsHtml = [1, 2, 3, 4, 5].map(i => {
+                let r = roundsData['r' + i] || { roundNum: i, date: `Round ${i}`, ourScore: 0, enemyAlliance: { name: `Opponent ${i}`, score: 0 } };
+                let ourScore = Number(r.ourScore) || 0;
+                let enemyScore = Number(r.enemyAlliance?.score) || 0;
+                let enemyName = (r.enemyAlliance && r.enemyAlliance.name) ? r.enemyAlliance.name : '';
+                let isVictory = ourScore > enemyScore;
+                let isDefeat = enemyScore > ourScore;
+
+                let liveBadge = isVictory 
+                    ? '<span id="live_badge_r'+i+'" style="background:rgba(16,185,129,0.2); border:1px solid rgba(16,185,129,0.4); color:#10b981; padding:3px 10px; border-radius:10px; font-weight:bold; font-size:11px;">🏆 VICTORY</span>'
+                    : (isDefeat 
+                        ? '<span id="live_badge_r'+i+'" style="background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:3px 10px; border-radius:10px; font-weight:bold; font-size:11px;">💔 DEFEAT</span>' 
+                        : '<span id="live_badge_r'+i+'" style="background:rgba(255,255,255,0.05); color:var(--text-muted); padding:3px 10px; border-radius:10px; font-size:11px;">PENDING</span>');
+
+                return `
+                    <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:16px 20px; display:flex; flex-direction:column; gap:12px; box-shadow:0 4px 15px rgba(0,0,0,0.2);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:8px;">
+                            <span style="font-weight:900; font-size:13px; color:var(--accent); text-transform:uppercase; letter-spacing:1px;">⚔️ ROUND ${i}</span>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                ${liveBadge}
+                                <input type="text" id="adm_champ_r${i}_date" value="${escapeHTML(r.date || `Round ${i}`)}" placeholder="Date / Match Label" style="padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:11px; width:130px;">
+                            </div>
+                        </div>
+
+                        <div style="display:grid; grid-template-columns: 1fr auto 1fr; gap:14px; align-items:center;">
+                            <!-- Left: Our Alliance -->
+                            <div style="background:rgba(16,185,129,0.04); border:1px solid rgba(16,185,129,0.2); border-radius:8px; padding:12px; text-align:right;">
+                                <div style="font-size:11px; color:#10b981; font-weight:bold; text-transform:uppercase; margin-bottom:4px;">Our Alliance [BDC]</div>
+                                <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:3px;">Our Score</label>
+                                <input type="number" id="adm_champ_r${i}_our" value="${ourScore}" oninput="window.updateAdminChampPreview(${i})" style="width:100%; text-align:right; font-size:18px; font-family:var(--mono); font-weight:bold; color:var(--text-main); padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); box-sizing:border-box;">
+                            </div>
+
+                            <!-- Center: VS -->
+                            <div style="font-weight:900; font-style:italic; color:var(--accent); font-size:14px;">VS</div>
+
+                            <!-- Right: Opponent Alliance -->
+                            <div style="background:rgba(239,68,68,0.04); border:1px solid rgba(239,68,68,0.2); border-radius:8px; padding:12px; text-align:left;">
+                                <div style="font-size:11px; color:#ef4444; font-weight:bold; text-transform:uppercase; margin-bottom:4px;">Opponent Alliance</div>
+                                <div style="margin-bottom:6px;">
+                                    <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:2px;">Alliance Tag & Name</label>
+                                    <input type="text" id="adm_champ_r${i}_enemy_name" value="${escapeHTML(enemyName)}" placeholder="e.g. [KOR] KoreaKings" style="width:100%; font-size:13px; font-weight:bold; color:var(--text-main); padding:6px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); box-sizing:border-box;">
+                                </div>
+                                <div>
+                                    <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:2px;">Opponent Score</label>
+                                    <input type="number" id="adm_champ_r${i}_enemy_score" value="${enemyScore}" oninput="window.updateAdminChampPreview(${i})" style="width:100%; text-align:left; font-size:18px; font-family:var(--mono); font-weight:bold; color:var(--text-main); padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); box-sizing:border-box;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            mainContentHtml = `
+                <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:18px; display:flex; flex-direction:column; gap:16px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; border-bottom:1px solid var(--border); padding-bottom:12px;">
+                        <h3 style="margin:0; font-size:17px; color:var(--accent);">⚙️ Season Details & Overall Record</h3>
+                        <button onclick="window.autoCalculateChampRecord()" style="background:rgba(6,182,212,0.15); border:1px solid rgba(6,182,212,0.4); color:var(--accent); padding:6px 12px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">⚡ Auto-Calculate Record</button>
+                    </div>
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap:14px;">
+                        <div>
+                            <label style="display:block; font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:bold; margin-bottom:4px;">Season Name / Title</label>
+                            <input type="text" id="adm_champ_season_name" value="${escapeHTML(seasonNameVal)}" placeholder="e.g. Season 12 Championship" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box; font-weight:bold;">
+                        </div>
+                        <div>
+                            <label style="display:block; font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:bold; margin-bottom:4px;">Status Text / Subtitle</label>
+                            <input type="text" id="adm_champ_status_text" value="${escapeHTML(statusTextVal)}" placeholder="e.g. 4 Wins – 1 Loss (Tournament Champions)" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display:flex; flex-direction:column; gap:14px; margin-bottom:20px;">
+                    ${roundsInputsHtml}
+                </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; background:rgba(255,255,255,0.02); padding:16px 20px; border-radius:12px; border:1px solid var(--border);">
+                    <button onclick="window.saveChampionshipAdminMatchups()" style="background:var(--success); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; box-shadow:0 4px 15px rgba(16,185,129,0.3); display:inline-flex; align-items:center; gap:6px;">
+                        💾 Save 5-Round Matchups to Database
+                    </button>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                        <button onclick="window.openChampionshipArchiveVaultModal('live')" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--accent); padding:10px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px;">
+                            📜 Open Archive Vault
+                        </button>
+                        <button onclick="window.archiveAndResetChampionshipSeason()" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:white; border:none; padding:10px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(239,68,68,0.3);">
+                            🔄 Archive Season & Reset
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
         let html = `
           <div style="display:flex; flex-direction:column; gap:20px; max-width:900px; margin:0 auto; padding-bottom:40px; animation: fadeIn 0.3s ease;">
             
-            <div style="border-bottom: 2px solid var(--accent); padding-bottom: 12px; margin-bottom: 10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+            <div style="border-bottom: 2px solid var(--accent); padding-bottom: 12px; margin-bottom: 5px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
               <div style="display:flex; align-items:center; gap:12px;">
                 <button onclick="if(document.querySelector('.navbar')) document.querySelector('.navbar').style.display='flex'; views.admin()" style="background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); padding:8px 14px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13px; display:inline-flex; align-items:center; gap:6px; transition:0.2s;">
                   ⬅️ Back to Admin
                 </button>
                 <div>
                   <h2 style="margin:0; color:var(--text-main); font-size:22px; display:flex; align-items:center; gap:10px;">
-                    🏆 Alliance Championship Tracker
+                    🏆 Alliance Championship Management Suite
                   </h2>
-                  <p style="margin:4px 0 0 0; color:var(--text-muted); font-size:13px;">Real-time tracking of member event signups & missing roster responses.</p>
+                  <p style="margin:4px 0 0 0; color:var(--text-muted); font-size:13px;">Manage member event signups, track missing responses, and enter 5-Round battle matchup scores.</p>
                 </div>
               </div>
               <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-                <button onclick="window.showEventArchiveRestoreModal('championship')" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--accent); padding:8px 14px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; transition:0.2s;">
-                  ↩️ Restore Archive
-                </button>
-                <button onclick="window.archiveAndResetChampionshipCycle()" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:white; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(239,68,68,0.3); transition:0.2s;">
-                  🔄 Archive & Reset Cycle
+                <button onclick="if(document.querySelector('.navbar')) document.querySelector('.navbar').style.display='flex'; views.championship();" style="background:linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(6,182,212,0.05) 100%); color:var(--accent); border:1px solid rgba(6,182,212,0.4); padding:8px 14px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; transition:0.2s;">
+                  👁️ View Public Dashboard
                 </button>
               </div>
             </div>
 
-            <!-- Summary KPI Cards -->
-            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:15px;">
-              <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:16px; text-align:center;">
-                <div style="font-size:12px; color:var(--text-muted); text-transform:uppercase; font-weight:bold;">Total Roster</div>
-                <div id="champStatTotal" style="font-size:28px; font-weight:bold; color:var(--text-main); margin-top:4px;">${totalCount}</div>
-              </div>
-              <div style="background:var(--card-bg); border:1px solid rgba(16,185,129,0.3); border-radius:12px; padding:16px; text-align:center;">
-                <div style="font-size:12px; color:#10b981; text-transform:uppercase; font-weight:bold;">✅ Signed-up (YES)</div>
-                <div id="champStatYes" style="font-size:28px; font-weight:bold; color:#10b981; margin-top:4px;">${yesCount}</div>
-              </div>
-              <div style="background:var(--card-bg); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:16px; text-align:center;">
-                <div style="font-size:12px; color:#ef4444; text-transform:uppercase; font-weight:bold;">❌ Not Signed up (NO)</div>
-                <div id="champStatNo" style="font-size:28px; font-weight:bold; color:#ef4444; margin-top:4px;">${noCount}</div>
-              </div>
-              <div style="background:var(--card-bg); border:1px solid rgba(59,130,246,0.3); border-radius:12px; padding:16px; text-align:center;">
-                <div style="font-size:12px; color:#60a5fa; text-transform:uppercase; font-weight:bold;">Response Rate</div>
-                <div id="champStatPct" style="font-size:28px; font-weight:bold; color:#60a5fa; margin-top:4px;">${percentSignedUp}%</div>
-              </div>
-            </div>
+            <!-- Dual Tab Selector -->
+            ${tabNavHtml}
 
-            <!-- Missing Members Quick-Copy Banner -->
-            <div style="background:linear-gradient(135deg, rgba(239,68,68,0.12), rgba(245,158,11,0.12)); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:16px;">
-              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-                <h3 style="margin:0; color:#ef4444; font-size:16px; display:flex; align-items:center; gap:8px;">
-                  ⚠️ Members Pending / Missing Signup <span id="missingCountTitle">(${missingNames.length})</span>
-                </h3>
-                <button onclick="window.copyMissingChampionshipList()" style="background:#ef4444; color:white; border:none; padding:8px 16px; border-radius:6px; font-weight:bold; cursor:pointer; font-size:12px; box-shadow:0 2px 8px rgba(239,68,68,0.3);">
-                  📋 Copy Missing List for Chat
-                </button>
-              </div>
-            </div>
-
-            <!-- Search & Filter Controls -->
-            <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:16px; display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:space-between;">
-              <input type="text" id="champSearchInput" placeholder="🔍 Filter player name..." style="flex:1; min-width:200px; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:14px;" onkeyup="window.filterChampTable()">
-              
-              <div style="display:flex; gap:6px;">
-                <button id="champFilterBtnAll" class="champ-filter-btn active" data-filter="all" onclick="window.setChampFilter('all')" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--accent); color:white; font-weight:bold; cursor:pointer; font-size:13px;">All (${totalCount})</button>
-                <button id="champFilterBtnYes" class="champ-filter-btn" data-filter="yes" onclick="window.setChampFilter('yes')" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-weight:bold; cursor:pointer; font-size:13px;">Signed Up (${yesCount})</button>
-                <button id="champFilterBtnNo" class="champ-filter-btn" data-filter="no" onclick="window.setChampFilter('no')" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-weight:bold; cursor:pointer; font-size:13px;">Missing (${noCount})</button>
-              </div>
-            </div>
-
-            <!-- Roster Table -->
-            <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; overflow:hidden;">
-              <table style="width:100%; border-collapse:collapse; text-align:left; font-size:14px;">
-                <thead>
-                  <tr style="background:var(--bg-main); border-bottom:1px solid var(--border); color:var(--text-muted); font-size:12px; text-transform:uppercase;">
-                    <th style="padding:12px 20px;">Chief Name</th>
-                    <th style="padding:12px 20px; text-align:right;">Signup Status</th>
-                  </tr>
-                </thead>
-                <tbody id="champTableBody">
-                  ${rosterList.map(p => {
-                      let gIdStr = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (p.name ? p.name.toLowerCase().replace(/[^a-z0-9]/g, '_') : '');
-                      let nameKey = p.name ? p.name.toLowerCase().replace(/[^a-z0-9]/g, '_') : '';
-                      let record = championshipData[gIdStr] || (nameKey ? championshipData[nameKey] : null) || (p.name ? championshipData[p.name] : null);
-                      let isSignedUp = record && isT(record.signedUp);
-                      return `
-                        <tr class="champ-row" data-name="${escapeHTML((p.name || '').toLowerCase())}" data-gid="${gIdStr}" data-signed="${isSignedUp ? 'yes' : 'no'}" style="border-bottom:1px solid var(--border);">
-                          <td class="champ-name-cell" style="padding:14px 20px; font-weight:bold; color:var(--text-main); font-size:15px;">${escapeHTML(p.name)}</td>
-                          <td style="padding:14px 20px; text-align:right;">
-                            <button class="champ-toggle-btn" onclick="window.onChampToggle('${gIdStr}', this)" style="background:${isSignedUp ? '#10b981' : 'rgba(239,68,68,0.15)'}; color:${isSignedUp ? '#ffffff' : '#ef4444'}; border:${isSignedUp ? 'none' : '1px solid rgba(239,68,68,0.4)'}; padding:6px 20px; border-radius:20px; font-weight:bold; cursor:pointer; font-size:13px; transition:0.2s; box-shadow:${isSignedUp ? '0 2px 8px rgba(16,185,129,0.35)' : 'none'};">
-                              ${isSignedUp ? '✅ YES' : '❌ NO'}
-                            </button>
-                          </td>
-                        </tr>
-                      `;
-                  }).join('')}
-                </tbody>
-              </table>
+            <!-- Tab Content Area -->
+            <div>
+              ${mainContentHtml}
             </div>
 
           </div>
@@ -19653,7 +19995,6 @@ html += `</select>
             const wasSigned = row.getAttribute('data-signed') === 'yes';
             const willSign = !wasSigned;
 
-            // Optimistic in-place update
             btn.disabled = true;
             row.setAttribute('data-signed', willSign ? 'yes' : 'no');
             
@@ -19672,7 +20013,6 @@ html += `</select>
                 const ok = await window.toggleChampionshipStatus(gameId, willSign);
 
                 if (!ok) {
-                    // Revert on write error
                     row.setAttribute('data-signed', wasSigned ? 'yes' : 'no');
                     btn.style.background = wasSigned ? '#10b981' : 'rgba(239,68,68,0.15)';
                     btn.style.color = wasSigned ? '#ffffff' : '#ef4444';
@@ -19733,6 +20073,89 @@ html += `</select>
                     row.style.display = 'none';
                 }
             });
+        };
+
+        window.updateAdminChampPreview = (roundNum) => {
+            let our = Number(document.getElementById('adm_champ_r' + roundNum + '_our')?.value) || 0;
+            let opp = Number(document.getElementById('adm_champ_r' + roundNum + '_enemy_score')?.value) || 0;
+            let badge = document.getElementById('live_badge_r' + roundNum);
+            if (!badge) return;
+
+            if (our > opp) {
+                badge.innerHTML = '🏆 VICTORY';
+                badge.style.background = 'rgba(16,185,129,0.2)';
+                badge.style.border = '1px solid rgba(16,185,129,0.4)';
+                badge.style.color = '#10b981';
+            } else if (opp > our) {
+                badge.innerHTML = '💔 DEFEAT';
+                badge.style.background = 'rgba(239,68,68,0.2)';
+                badge.style.border = '1px solid rgba(239,68,68,0.4)';
+                badge.style.color = '#ef4444';
+            } else {
+                badge.innerHTML = 'PENDING';
+                badge.style.background = 'rgba(255,255,255,0.05)';
+                badge.style.border = '1px solid var(--border)';
+                badge.style.color = 'var(--text-muted)';
+            }
+        };
+
+        window.autoCalculateChampRecord = () => {
+            let wins = 0, losses = 0;
+            for (let i = 1; i <= 5; i++) {
+                let our = Number(document.getElementById('adm_champ_r' + i + '_our')?.value) || 0;
+                let opp = Number(document.getElementById('adm_champ_r' + i + '_enemy_score')?.value) || 0;
+                if (our > opp) wins++;
+                else if (opp > our) losses++;
+            }
+            let statusInput = document.getElementById('adm_champ_status_text');
+            if (statusInput) {
+                let suffix = wins >= 4 ? ' (Tournament Champions)' : (wins >= 3 ? ' (Playoff Finalists)' : ' (Championship Series)');
+                statusInput.value = `${wins} Wins – ${losses} ${losses === 1 ? 'Loss' : 'Losses'}${suffix}`;
+                if (window.showToast) window.showToast("Record updated: " + statusInput.value, "success");
+            }
+        };
+
+        window.saveChampionshipAdminMatchups = async () => {
+            try {
+                let seasonName = document.getElementById('adm_champ_season_name')?.value || 'Season 12 Championship';
+                let statusText = document.getElementById('adm_champ_status_text')?.value || '4 Wins – 1 Loss';
+                
+                let rounds = {};
+                for (let i = 1; i <= 5; i++) {
+                    let date = document.getElementById('adm_champ_r' + i + '_date')?.value || `Round ${i}`;
+                    let ourScore = Number(document.getElementById('adm_champ_r' + i + '_our')?.value) || 0;
+                    let enemyName = document.getElementById('adm_champ_r' + i + '_enemy_name')?.value || `Opponent ${i}`;
+                    let enemyScore = Number(document.getElementById('adm_champ_r' + i + '_enemy_score')?.value) || 0;
+
+                    rounds['r' + i] = {
+                        roundNum: i,
+                        date: date,
+                        ourScore: ourScore,
+                        enemyAlliance: {
+                            name: enemyName,
+                            score: enemyScore
+                        }
+                    };
+                }
+
+                const payload = {
+                    seasonName: seasonName,
+                    statusText: statusText,
+                    rounds: rounds,
+                    updatedAt: Date.now(),
+                    updatedBy: (currentUser && currentUser.displayName) ? currentUser.displayName : (currentUser?.email || 'Admin')
+                };
+
+                const ok = await window.saveChampionshipMatchups(payload);
+                if (ok) {
+                    if (window.showToast) window.showToast("Championship 5-Round Matchups saved live to Firebase! 🎉", "success");
+                } else {
+                    if (window.showToast) window.showToast("Failed to save Championship matchups", "error");
+                }
+            } catch(err) {
+                console.error("saveChampionshipAdminMatchups error:", err);
+                if (window.showToast) window.showToast("Error saving: " + err.message, "error");
+            }
         };
 
     } catch(e) {
@@ -24335,6 +24758,126 @@ window.resetBearTrapEvent = async () => {
       }
       
     } catch(e) { renderError(e.message); }
+  },
+  championship: async () => {
+    if (!currentUser) return window.renderMembersOnlyGuard("Alliance Championship");
+    renderLoading("Loading Alliance Championship...");
+    const app = document.getElementById('app');
+    if (!app) return;
+
+    const navbar = document.querySelector('.navbar');
+    if (navbar) navbar.style.display = 'flex';
+
+    try {
+        const champData = await window.fetchChampionshipMatchups();
+        const seasonName = champData.seasonName || 'Season 12 Championship';
+        const rounds = champData.rounds || {};
+        const roundsList = [1, 2, 3, 4, 5].map(i => rounds['r' + i] || { roundNum: i, date: `Round ${i}`, ourScore: 0, enemyAlliance: { name: 'Opponent Alliance', score: 0 } });
+
+        let winCount = 0;
+        let lossCount = 0;
+        roundsList.forEach(r => {
+            let os = Number(r.ourScore) || 0;
+            let es = Number(r.enemyAlliance?.score) || 0;
+            if (os > es) winCount++;
+            else if (es > os) lossCount++;
+        });
+
+        let statusText = champData.statusText || `${winCount} Wins – ${lossCount} ${lossCount === 1 ? 'Loss' : 'Losses'}`;
+
+        let isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+        let adminActionBtn = isManager ? `
+            <button onclick="if(views.championshipAdmin) views.championshipAdmin('matchups');" style="background:rgba(255,215,0,0.15); border:1px solid rgba(255,215,0,0.4); color:#FFD700; padding:6px 14px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; transition:0.2s;" onmouseover="this.style.background='rgba(255,215,0,0.25)'" onmouseout="this.style.background='rgba(255,215,0,0.15)'" title="Edit 5-round scores and opponent alliances">✏️ Edit Matchups</button>
+        ` : '';
+
+        let matchCardsHtml = roundsList.map((r, idx) => {
+            let rNum = r.roundNum || (idx + 1);
+            let ourScore = Number(r.ourScore) || 0;
+            let enemyScore = Number(r.enemyAlliance?.score) || 0;
+            let enemyName = (r.enemyAlliance && r.enemyAlliance.name) ? r.enemyAlliance.name : 'Opponent Alliance';
+            let isVictory = ourScore > enemyScore;
+            let isDefeat = enemyScore > ourScore;
+
+            let cardBg = isVictory 
+                ? 'background: linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(16,185,129,0.35);' 
+                : (isDefeat 
+                    ? 'background: linear-gradient(135deg, rgba(239,68,68,0.08) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(239,68,68,0.35);' 
+                    : 'background: rgba(255,255,255,0.02); border: 1px solid var(--border);');
+
+            let ourScoreColor = isVictory ? 'color:#10b981; font-weight:900; text-shadow:0 0 16px rgba(16,185,129,0.5);' : 'color:var(--text-muted); opacity:0.75;';
+            let enemyScoreColor = isDefeat ? 'color:#ef4444; font-weight:900; text-shadow:0 0 16px rgba(239,68,68,0.5);' : 'color:var(--text-muted); opacity:0.75;';
+
+            let ourBadgeHtml = isVictory ? '<span style="background:rgba(16,185,129,0.22); border:1px solid rgba(16,185,129,0.45); color:#10b981; padding:4px 12px; border-radius:12px; font-weight:900; font-size:12px; letter-spacing:0.5px; box-shadow:0 0 10px rgba(16,185,129,0.2);">VICTORY</span>' : '';
+            let enemyBadgeHtml = isDefeat ? '<span style="background:rgba(239,68,68,0.22); border:1px solid rgba(239,68,68,0.45); color:#ef4444; padding:4px 12px; border-radius:12px; font-weight:900; font-size:12px; letter-spacing:0.5px; box-shadow:0 0 10px rgba(239,68,68,0.2);">DEFEAT</span>' : '';
+
+            return `
+                <div style="${cardBg} border-radius:14px; padding:16px 22px; box-shadow: 0 4px 20px rgba(0,0,0,0.25); transition: transform 0.2s ease, box-shadow 0.2s ease;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px; margin-bottom:12px;">
+                        <span style="font-weight:900; font-size:13px; color:var(--accent); text-transform:uppercase; letter-spacing:1px; display:flex; align-items:center; gap:6px;">⚔️ ROUND ${rNum}</span>
+                        <span style="font-size:12px; color:var(--text-muted); font-weight:bold;">${escapeHTML(r.date || `Match ${rNum}`)}</span>
+                    </div>
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+                        <!-- Left: Our Alliance -->
+                        <div style="flex:1; min-width:160px; text-align:right; display:flex; align-items:center; justify-content:flex-end; gap:14px;">
+                            <div>
+                                <div style="font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:bold; letter-spacing:0.5px;">Our Alliance</div>
+                                <div style="font-size:16px; font-weight:bold; color:var(--text-main);">[BDC]</div>
+                            </div>
+                            <span style="font-size:26px; font-family:var(--mono); ${ourScoreColor}">${ourScore.toLocaleString()}</span>
+                            ${ourBadgeHtml}
+                        </div>
+
+                        <!-- Center: VS Medallion -->
+                        <div style="flex-shrink:0;">
+                            <div style="width:42px; height:42px; border-radius:50%; background:linear-gradient(135deg, rgba(6,182,212,0.25), rgba(6,182,212,0.05)); border:2px solid rgba(6,182,212,0.4); display:flex; align-items:center; justify-content:center; font-weight:900; font-size:13px; font-style:italic; color:var(--accent); box-shadow:0 0 15px rgba(6,182,212,0.2);">VS</div>
+                        </div>
+
+                        <!-- Right: Opponent Alliance -->
+                        <div style="flex:1; min-width:160px; text-align:left; display:flex; align-items:center; justify-content:flex-start; gap:14px;">
+                            <span style="font-size:26px; font-family:var(--mono); ${enemyScoreColor}">${enemyScore.toLocaleString()}</span>
+                            ${enemyBadgeHtml}
+                            <div>
+                                <div style="font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:bold; letter-spacing:0.5px;">Opponent Alliance</div>
+                                <div style="font-size:16px; font-weight:bold; color:var(--text-main);">${escapeHTML(enemyName)}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        let html = `
+          <div style="max-width:900px; margin:0 auto; padding-bottom:40px; display:flex; flex-direction:column; gap:16px; animation: fadeIn 0.3s ease;">
+            
+            <!-- Tournament Title Banner -->
+            <div style="background:linear-gradient(135deg, rgba(6,182,212,0.12) 0%, rgba(6,182,212,0.02) 100%); border:1px solid rgba(6,182,212,0.3); border-radius:16px; padding:24px 20px; text-align:center; box-shadow: 0 6px 25px rgba(0,0,0,0.3);">
+                <div style="font-size:12px; font-weight:bold; color:var(--accent); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:4px;">${escapeHTML(seasonName)}</div>
+                <h1 style="margin:0; font-size:26px; font-weight:900; color:var(--text-main); letter-spacing:1px;">🏆 ALLIANCE CHAMPIONSHIP</h1>
+                <div style="margin-top:8px; font-size:16px; font-weight:bold; display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap;">
+                    <span style="color:#10b981; font-weight:900; font-size:18px;">${winCount} Wins</span>
+                    <span style="color:var(--text-muted);">–</span>
+                    <span style="color:#ef4444; font-weight:900; font-size:18px;">${lossCount} ${lossCount === 1 ? 'Loss' : 'Losses'}</span>
+                    <span style="background:rgba(255,215,0,0.15); color:#FFD700; border:1px solid rgba(255,215,0,0.4); padding:3px 10px; border-radius:12px; font-size:12px; font-weight:bold;">${escapeHTML(statusText)}</span>
+                </div>
+                <div style="margin-top:16px; display:flex; justify-content:center; gap:10px; flex-wrap:wrap;">
+                    <button onclick="window.openChampionshipArchiveVaultModal('live')" style="background:linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(6,182,212,0.08) 100%); border:1px solid rgba(6,182,212,0.4); color:var(--accent); padding:6px 14px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.3)'" onmouseout="this.style.background='rgba(6,182,212,0.2)'">📜 Championship Archive Vault</button>
+                    ${adminActionBtn}
+                </div>
+            </div>
+
+            <!-- 5-Round Matchup Cards -->
+            <div style="display:flex; flex-direction:column; gap:14px;">
+                ${matchCardsHtml}
+            </div>
+
+          </div>
+        `;
+
+        app.innerHTML = html;
+    } catch(err) {
+        console.error("Error loading championship view:", err);
+        renderError("Failed to load Alliance Championship: " + err.message);
+    }
   },
   mercenary: async () => {
     if (!currentUser) return window.renderMembersOnlyGuard("Mercenary Prestige");

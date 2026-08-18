@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.18] - 2026-08-17
+- 🏆 **Alliance Championship 5-Round Clashes**: Brand new public dashboard featuring head-to-head match cards with live scores, custom opponent tags, and dynamic victory/defeat badges for all 5 tournament rounds.
+- ⚔️ **Championship Matchup & Score Manager**: Dedicated R4/R5 admin editor for updating scores, auto-calculating overall win/loss records, archiving completed seasons to the Championship Vault, and seamlessly managing member signups.
+- 📂 **Championship Archive Vault**: Integrated historical vault for browsing archived seasons, round breakdowns, and historical tournament performance.
+
 ## [2.9.17] - 2026-08-17
 - ⚔️ **All 5 Showdown Historical Battles Restored**: Complete restoration and auto-seeding of all 5 Showdown historical battle records (including Jun 1st – 7th 2026 vs [RED]Army) across the Showdown Leaderboard, Archive Vault, and Member Account event statistics.
 - 🛡️ **Showdown Vault Manager & Seeder**: Auto-seeds default archives on load and adds an explicit "Restore All 5 Cycles" button to Showdown Data Entry for effortless database maintenance.
