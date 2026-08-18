@@ -17941,7 +17941,7 @@ const views = {
       };
       
       let html = `
-        <div id="adminHubView" class="card" style="max-width:800px; margin:0 auto; animation: fadeIn 0.3s ease;">
+        <div id="adminHubView" class="card" style="max-width:1300px; width:100%; margin:0 auto; animation: fadeIn 0.3s ease; box-sizing:border-box;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
             <h2 style="color:var(--danger); margin:0;">🛡️ Admin Menu</h2>
           </div>
@@ -19124,15 +19124,15 @@ const views = {
                    <button class="log-cat-pill" data-cat="events" onclick="window.filterAdminLogs('events')" style="background:rgba(255,255,255,0.05); color:var(--text-muted); border:1px solid var(--border); border-radius:20px; padding:5px 14px; font-size:12px; font-weight:bold; cursor:pointer; transition:all 0.2s;">🐻 Bear Trap & Events</button>
                    <button class="log-cat-pill" data-cat="system" onclick="window.filterAdminLogs('system')" style="background:rgba(255,255,255,0.05); color:var(--text-muted); border:1px solid var(--border); border-radius:20px; padding:5px 14px; font-size:12px; font-weight:bold; cursor:pointer; transition:all 0.2s;">⚙️ System & Syncs</button>
                 </div>
-                <div style="overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:10px; border:1px solid var(--border); background:rgba(0,0,0,0.15);">
-                  <table style="width:100%; min-width:920px; border-collapse:collapse; text-align:left;">
+                 <div class="admin-audit-table-scroll">
+                  <table style="width:100%; min-width:960px; border-collapse:collapse; text-align:left;">
                     <thead>
-                      <tr style="border-bottom:1px solid var(--border); background:rgba(255,255,255,0.03); color:var(--text-muted); font-size:11px; text-transform:uppercase; letter-spacing:0.5px;">
+                      <tr style="border-bottom:1px solid var(--border); background:#1e293b; color:var(--text-muted); font-size:11px; text-transform:uppercase; letter-spacing:0.5px;">
                         <th style="padding:12px 14px; width:180px; min-width:170px;">Date & Time</th>
                         <th style="padding:12px 14px; width:130px; min-width:120px;">Admin</th>
                         <th style="padding:12px 14px; width:190px; min-width:180px;">Action Category</th>
                         <th style="padding:12px 14px; width:160px; min-width:150px;">Target Player</th>
-                        <th style="padding:12px 14px; min-width:280px;">Action Details</th>
+                        <th style="padding:12px 14px; min-width:300px;">Action Details</th>
                       </tr>
                     </thead>
                     <tbody id="adminLogsTableBody">
@@ -19153,10 +19153,10 @@ const views = {
                   </div>
                   <input type="text" id="activityHistorySearch" placeholder="🔍 Search history..." onkeyup="window.filterActivityHistory()" style="padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); width:220px; font-size:12px;">
                 </div>
-                <div style="overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:10px; border:1px solid var(--border); background:rgba(0,0,0,0.15);">
-                  <table style="width:100%; min-width:850px; border-collapse:collapse; text-align:left; font-size:13px;">
+                <div class="admin-audit-table-scroll">
+                  <table style="width:100%; min-width:880px; border-collapse:collapse; text-align:left; font-size:13px;">
                     <thead>
-                      <tr style="border-bottom:1px solid var(--border); background:rgba(255,255,255,0.03); color:var(--text-muted); font-size:11px; text-transform:uppercase; letter-spacing:0.5px;">
+                      <tr style="border-bottom:1px solid var(--border); background:#1e293b; color:var(--text-muted); font-size:11px; text-transform:uppercase; letter-spacing:0.5px;">
                         <th style="padding:12px 14px; width:180px;">Event Category</th>
                         <th style="padding:12px 14px; width:200px;">Target Chief</th>
                         <th style="padding:12px 14px; width:180px;">Participation Status</th>

@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.27] - 2026-08-17
+- 🖥️ **Widescreen Admin Hub Layout (1300px)**: Expanded the maximum width of the Admin Menu container from 800px to 1300px with 100% responsive fluid width, giving the Admin Action Audit Logs and all admin tabs expansive widescreen workspace on desktop and tablets.
+- 📜 **Custom High-Contrast Scrollbars & Sticky Headers**: Implemented `.admin-audit-table-scroll` container with custom styled scrollbars for both horizontal and vertical navigation, fixed 68vh viewport height, and sticky column headers that stay in view while scrolling through historical logs.
+- 🎨 **Universal Modern Scrollbars**: Added modern, theme-consistent scrollbar styling across all scrollable containers and browser viewports.
+
 ## [2.9.26] - 2026-08-17
 - 👥 **Multi-Member Target & Donation Breakdown Parsing**: Single-row batch actions (e.g. multi-player Bear Trap donation submissions with breakdown strings like `Thadwarf (+22 ➔ New Total: 96)...`) are now parsed as batched actions, rendering the interactive `👥 Multiple (N)` pill, detailed hover tooltips, and modal cards with metadata badges and quick copy.
 
