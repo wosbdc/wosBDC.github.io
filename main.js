@@ -8473,12 +8473,13 @@ window.buildShowdownHistoryCardHtml = (activeFilter = 'all') => {
 window.DEFAULT_CHAMPIONSHIP_MATCHUPS = {
     seasonName: "Season 12 Championship",
     statusText: "4 Wins – 1 Loss (Tournament Champions)",
+    ourState: "2089",
     rounds: {
-        "r1": { roundNum: 1, date: "Round 1", ourScore: 950, enemyAlliance: { name: "[KOR] KoreaKings", score: 820 } },
-        "r2": { roundNum: 2, date: "Round 2", ourScore: 1020, enemyAlliance: { name: "[000] YellowMaple", score: 750 } },
-        "r3": { roundNum: 3, date: "Round 3", ourScore: 880, enemyAlliance: { name: "[NBD] Murata", score: 790 } },
-        "r4": { roundNum: 4, date: "Round 4", ourScore: 1100, enemyAlliance: { name: "[RED] Army", score: 650 } },
-        "r5": { roundNum: 5, date: "Round 5", ourScore: 720, enemyAlliance: { name: "[WWA] WhiteoutWarriors", score: 880 } }
+        "r1": { roundNum: 1, date: "Round 1", ourScore: 950, ourState: "2089", enemyAlliance: { name: "[KOR] KoreaKings", state: "2045", score: 820 } },
+        "r2": { roundNum: 2, date: "Round 2", ourScore: 1020, ourState: "2089", enemyAlliance: { name: "[000] YellowMaple", state: "1988", score: 750 } },
+        "r3": { roundNum: 3, date: "Round 3", ourScore: 880, ourState: "2089", enemyAlliance: { name: "[NBD] Murata", state: "2102", score: 790 } },
+        "r4": { roundNum: 4, date: "Round 4", ourScore: 1100, ourState: "2089", enemyAlliance: { name: "[RED] Army", state: "2031", score: 650 } },
+        "r5": { roundNum: 5, date: "Round 5", ourScore: 720, ourState: "2089", enemyAlliance: { name: "[WWA] WhiteoutWarriors", state: "2015", score: 880 } }
     }
 };
 
@@ -8531,12 +8532,13 @@ window.archiveAndResetChampionshipSeason = async () => {
         const resetData = {
             seasonName: "Upcoming Season",
             statusText: "0 Wins – 0 Losses (New Season)",
+            ourState: "2089",
             rounds: {
-                "r1": { roundNum: 1, date: "Round 1", ourScore: 0, enemyAlliance: { name: "[TAG] Opponent 1", score: 0 } },
-                "r2": { roundNum: 2, date: "Round 2", ourScore: 0, enemyAlliance: { name: "[TAG] Opponent 2", score: 0 } },
-                "r3": { roundNum: 3, date: "Round 3", ourScore: 0, enemyAlliance: { name: "[TAG] Opponent 3", score: 0 } },
-                "r4": { roundNum: 4, date: "Round 4", ourScore: 0, enemyAlliance: { name: "[TAG] Opponent 4", score: 0 } },
-                "r5": { roundNum: 5, date: "Round 5", ourScore: 0, enemyAlliance: { name: "[TAG] Opponent 5", score: 0 } }
+                "r1": { roundNum: 1, date: "Round 1", ourScore: 0, ourState: "2089", enemyAlliance: { name: "[TAG] Opponent 1", state: "", score: 0 } },
+                "r2": { roundNum: 2, date: "Round 2", ourScore: 0, ourState: "2089", enemyAlliance: { name: "[TAG] Opponent 2", state: "", score: 0 } },
+                "r3": { roundNum: 3, date: "Round 3", ourScore: 0, ourState: "2089", enemyAlliance: { name: "[TAG] Opponent 3", state: "", score: 0 } },
+                "r4": { roundNum: 4, date: "Round 4", ourScore: 0, ourState: "2089", enemyAlliance: { name: "[TAG] Opponent 4", state: "", score: 0 } },
+                "r5": { roundNum: 5, date: "Round 5", ourScore: 0, ourState: "2089", enemyAlliance: { name: "[TAG] Opponent 5", state: "", score: 0 } }
             }
         };
 
@@ -8633,11 +8635,19 @@ window.renderChampionshipVaultBody = (activeKey = 'live') => {
 
     let recordStr = displayData.statusText || `${winCount} Wins – ${lossCount} ${lossCount === 1 ? 'Loss' : 'Losses'}`;
 
+    let formatStateTag = (st, fallback = '2089') => {
+        let s = (st !== undefined && st !== null && String(st).trim() !== '') ? String(st).trim() : String(fallback);
+        if (/^state/i.test(s)) return s;
+        if (s.startsWith('#')) return 'State ' + s;
+        return 'State #' + s;
+    };
+
     let matchCardsHtml = roundsList.map((r, idx) => {
         let rNum = r.roundNum || (idx + 1);
         let ourScore = Number(r.ourScore) || 0;
         let enemyScore = Number(r.enemyAlliance?.score) || 0;
         let enemyName = (r.enemyAlliance && r.enemyAlliance.name) ? r.enemyAlliance.name : 'Opponent Alliance';
+        let enemyState = (r.enemyAlliance && r.enemyAlliance.state) ? r.enemyAlliance.state : (idx === 0 ? '2045' : idx === 1 ? '1988' : idx === 2 ? '2102' : idx === 3 ? '2031' : '2015');
         let isVictory = ourScore > enemyScore;
         let isDefeat = enemyScore > ourScore;
 
@@ -8665,8 +8675,8 @@ window.renderChampionshipVaultBody = (activeKey = 'live') => {
                     <!-- Left: Our Alliance -->
                     <div style="flex:1; min-width:140px; text-align:right; display:flex; align-items:center; justify-content:flex-end; gap:10px;">
                         <div>
-                            <div style="font-size:10px; text-transform:uppercase; color:var(--text-muted); font-weight:bold;">Our Alliance</div>
                             <div style="font-size:14px; font-weight:bold; color:var(--text-main);">[BDC]</div>
+                            <div style="font-size:10px; color:#38bdf8; font-weight:bold; letter-spacing:0.5px; margin-top:2px;">${escapeHTML(formatStateTag(r.ourState || displayData.ourState, '2089'))}</div>
                         </div>
                         <span style="font-size:22px; font-family:var(--mono); ${ourScoreColor}">${ourScore.toLocaleString()}</span>
                     </div>
@@ -8681,8 +8691,8 @@ window.renderChampionshipVaultBody = (activeKey = 'live') => {
                     <div style="flex:1; min-width:140px; text-align:left; display:flex; align-items:center; justify-content:flex-start; gap:10px;">
                         <span style="font-size:22px; font-family:var(--mono); ${enemyScoreColor}">${enemyScore.toLocaleString()}</span>
                         <div>
-                            <div style="font-size:10px; text-transform:uppercase; color:var(--text-muted); font-weight:bold;">Opponent Alliance</div>
                             <div style="font-size:14px; font-weight:bold; color:var(--text-main);">${escapeHTML(enemyName)}</div>
+                            <div style="font-size:10px; color:#38bdf8; font-weight:bold; letter-spacing:0.5px; margin-top:2px;">${escapeHTML(formatStateTag(enemyState, '2045'))}</div>
                         </div>
                     </div>
                 </div>
@@ -19813,6 +19823,7 @@ html += `</select>
                 let ourScore = Number(r.ourScore) || 0;
                 let enemyScore = Number(r.enemyAlliance?.score) || 0;
                 let enemyName = (r.enemyAlliance && r.enemyAlliance.name) ? r.enemyAlliance.name : '';
+                let enemyState = (r.enemyAlliance && r.enemyAlliance.state) ? r.enemyAlliance.state : '';
                 let isVictory = ourScore > enemyScore;
                 let isDefeat = enemyScore > ourScore;
 
@@ -19835,7 +19846,7 @@ html += `</select>
                         <div style="display:grid; grid-template-columns: 1fr auto 1fr; gap:14px; align-items:center;">
                             <!-- Left: Our Alliance -->
                             <div style="background:rgba(16,185,129,0.04); border:1px solid rgba(16,185,129,0.2); border-radius:8px; padding:12px; text-align:right;">
-                                <div style="font-size:11px; color:#10b981; font-weight:bold; text-transform:uppercase; margin-bottom:4px;">Our Alliance [BDC]</div>
+                                <div style="font-size:11px; color:#10b981; font-weight:bold; text-transform:uppercase; margin-bottom:4px;">Our Alliance [BDC] • State #2089</div>
                                 <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:3px;">Our Score</label>
                                 <input type="number" id="adm_champ_r${i}_our" value="${ourScore}" oninput="window.updateAdminChampPreview(${i})" style="width:100%; text-align:right; font-size:18px; font-family:var(--mono); font-weight:bold; color:var(--text-main); padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); box-sizing:border-box;">
                             </div>
@@ -19846,9 +19857,15 @@ html += `</select>
                             <!-- Right: Opponent Alliance -->
                             <div style="background:rgba(239,68,68,0.04); border:1px solid rgba(239,68,68,0.2); border-radius:8px; padding:12px; text-align:left;">
                                 <div style="font-size:11px; color:#ef4444; font-weight:bold; text-transform:uppercase; margin-bottom:4px;">Opponent Alliance</div>
-                                <div style="margin-bottom:6px;">
-                                    <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:2px;">Alliance Tag & Name</label>
-                                    <input type="text" id="adm_champ_r${i}_enemy_name" value="${escapeHTML(enemyName)}" placeholder="e.g. [KOR] KoreaKings" style="width:100%; font-size:13px; font-weight:bold; color:var(--text-main); padding:6px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); box-sizing:border-box;">
+                                <div style="display:grid; grid-template-columns: 2fr 1fr; gap:8px; margin-bottom:6px;">
+                                    <div>
+                                        <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:2px;">Tag & Name</label>
+                                        <input type="text" id="adm_champ_r${i}_enemy_name" value="${escapeHTML(enemyName)}" placeholder="e.g. [KOR] KoreaKings" style="width:100%; font-size:13px; font-weight:bold; color:var(--text-main); padding:6px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); box-sizing:border-box;">
+                                    </div>
+                                    <div>
+                                        <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:2px;">State #</label>
+                                        <input type="text" id="adm_champ_r${i}_enemy_state" value="${escapeHTML(enemyState)}" placeholder="e.g. 2045" style="width:100%; font-size:13px; font-weight:bold; color:var(--text-main); padding:6px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); box-sizing:border-box;">
+                                    </div>
                                 </div>
                                 <div>
                                     <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:2px;">Opponent Score</label>
@@ -20130,14 +20147,17 @@ html += `</select>
                     let date = document.getElementById('adm_champ_r' + i + '_date')?.value || `Round ${i}`;
                     let ourScore = Number(document.getElementById('adm_champ_r' + i + '_our')?.value) || 0;
                     let enemyName = document.getElementById('adm_champ_r' + i + '_enemy_name')?.value || `Opponent ${i}`;
+                    let enemyState = document.getElementById('adm_champ_r' + i + '_enemy_state')?.value || '';
                     let enemyScore = Number(document.getElementById('adm_champ_r' + i + '_enemy_score')?.value) || 0;
 
                     rounds['r' + i] = {
                         roundNum: i,
                         date: date,
                         ourScore: ourScore,
+                        ourState: '2089',
                         enemyAlliance: {
                             name: enemyName,
+                            state: enemyState,
                             score: enemyScore
                         }
                     };
@@ -20146,6 +20166,7 @@ html += `</select>
                 const payload = {
                     seasonName: seasonName,
                     statusText: statusText,
+                    ourState: '2089',
                     rounds: rounds,
                     updatedAt: Date.now(),
                     updatedBy: (currentUser && currentUser.displayName) ? currentUser.displayName : (currentUser?.email || 'Admin')
@@ -24795,11 +24816,19 @@ window.resetBearTrapEvent = async () => {
             <button onclick="if(views.championshipAdmin) views.championshipAdmin('matchups');" style="background:rgba(255,215,0,0.15); border:1px solid rgba(255,215,0,0.4); color:#FFD700; padding:6px 14px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; transition:0.2s;" onmouseover="this.style.background='rgba(255,215,0,0.25)'" onmouseout="this.style.background='rgba(255,215,0,0.15)'" title="Edit 5-round scores and opponent alliances">✏️ Edit Matchups</button>
         ` : '';
 
+        let formatStateTag = (st, fallback = '2089') => {
+            let s = (st !== undefined && st !== null && String(st).trim() !== '') ? String(st).trim() : String(fallback);
+            if (/^state/i.test(s)) return s;
+            if (s.startsWith('#')) return 'State ' + s;
+            return 'State #' + s;
+        };
+
         let matchCardsHtml = roundsList.map((r, idx) => {
             let rNum = r.roundNum || (idx + 1);
             let ourScore = Number(r.ourScore) || 0;
             let enemyScore = Number(r.enemyAlliance?.score) || 0;
             let enemyName = (r.enemyAlliance && r.enemyAlliance.name) ? r.enemyAlliance.name : 'Opponent Alliance';
+            let enemyState = (r.enemyAlliance && r.enemyAlliance.state) ? r.enemyAlliance.state : (idx === 0 ? '2045' : idx === 1 ? '1988' : idx === 2 ? '2102' : idx === 3 ? '2031' : '2015');
             let isVictory = ourScore > enemyScore;
             let isDefeat = enemyScore > ourScore;
 
@@ -24827,8 +24856,8 @@ window.resetBearTrapEvent = async () => {
                         <!-- Left: Our Alliance -->
                         <div style="flex:1; min-width:140px; text-align:right; display:flex; align-items:center; justify-content:flex-end; gap:14px;">
                             <div>
-                                <div style="font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:bold; letter-spacing:0.5px;">Our Alliance</div>
                                 <div style="font-size:16px; font-weight:bold; color:var(--text-main);">[BDC]</div>
+                                <div style="font-size:11px; color:#38bdf8; font-weight:bold; letter-spacing:0.5px; margin-top:2px;">${escapeHTML(formatStateTag(r.ourState || champData.ourState, '2089'))}</div>
                             </div>
                             <span style="font-size:26px; font-family:var(--mono); ${ourScoreColor}">${ourScore.toLocaleString()}</span>
                         </div>
@@ -24843,8 +24872,8 @@ window.resetBearTrapEvent = async () => {
                         <div style="flex:1; min-width:140px; text-align:left; display:flex; align-items:center; justify-content:flex-start; gap:14px;">
                             <span style="font-size:26px; font-family:var(--mono); ${enemyScoreColor}">${enemyScore.toLocaleString()}</span>
                             <div>
-                                <div style="font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:bold; letter-spacing:0.5px;">Opponent Alliance</div>
                                 <div style="font-size:16px; font-weight:bold; color:var(--text-main);">${escapeHTML(enemyName)}</div>
+                                <div style="font-size:11px; color:#38bdf8; font-weight:bold; letter-spacing:0.5px; margin-top:2px;">${escapeHTML(formatStateTag(enemyState, '2045'))}</div>
                             </div>
                         </div>
                     </div>

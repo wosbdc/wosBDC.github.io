@@ -1,10 +1,10 @@
-# Task: Sidebar Clean Up & Compact Mini Buttons Layout
+# Task: Add State Numbers Under Alliance Names in Championship Matchup Cards
 
-- [x] Create automated project backup archive (`backup_wos_website_v2.9.14_pre_sidebar_cleanup.zip`) <!-- id: 0 -->
-- [x] Elevate User Account to top of sidebar with side-by-side mini buttons layout <!-- id: 1 -->
-- [x] Add compact styling (`.sidebar-mini-btn`, `.sidebar-btn-grid`) to prevent pushing timers down <!-- id: 2 -->
-- [x] Modernize Display & Preferences into a streamlined 2-column mini grid <!-- id: 3 -->
-- [x] Update versioning across `package.json`, `version.json`, `public/version.json`, `public/sw.js`, and `CHANGELOG.md` to `v2.9.15` <!-- id: 4 -->
+- [x] Create automated project backup archive (`backup_wos_website_v2.9.19_pre_state_labels.zip`) <!-- id: 0 -->
+- [x] Update Championship public dashboard match cards to display State labels below alliance names <!-- id: 1 -->
+- [x] Update Championship Vault historical match cards to display State labels below alliance names <!-- id: 2 -->
+- [x] Update Championship Admin Matchups editor with Opponent State input and save handler <!-- id: 3 -->
+- [x] Update versioning across `package.json`, `index.html`, `version.json`, `public/version.json`, `public/sw.js`, `CHANGELOG.md`, and `public/CHANGELOG.md` to `v2.9.20` <!-- id: 4 -->
 - [x] Build & run feature verification test suite (`npm run build`) <!-- id: 5 -->
-- [x] Commit and push changes to GitHub with `v2.9.15 : ...` commit title <!-- id: 6 -->
+- [x] Commit and push changes to GitHub with `v2.9.20 : ...` commit title <!-- id: 6 -->
 

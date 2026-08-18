@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.9.20] - 2026-08-17
+- 🗺️ **Alliance State Identifiers**: Displayed state numbers (e.g. `State #2089`, `State #2045`) directly under alliance tags across all 5 Championship matchup cards, mobile views, and Vault history.
+- 🥊 **Championship State Admin**: Added Opponent State input fields in the Championship Management Hub editor and save handler for complete match metadata control.
+
 ## [2.9.19] - 2026-08-17
 - 🏆 **Centered Matchup Status Badges**: Positioned `VICTORY` / `DEFEAT` badges directly in the center column above the `VS` medallion across all 5 Championship matchup cards.
 - 🎯 **Cleaned Tournament Header**: Centered overall win/loss record and removed redundant status pill badge and duplicate round headers for enhanced layout clarity.

@@ -1,10 +1,10 @@
 {
-  "version": "2.9.19",
+  "version": "2.9.20",
   "releaseDate": "2026-08-17",
-  "title": "What's New in v2.9.19",
+  "title": "What's New in v2.9.20",
   "notes": [
-    "🏆 Centered Matchup Status & Aesthetics: Positioned VICTORY / DEFEAT badges directly above the central VS medallion on all 5 Championship matchup cards.",
-    "✨ Streamlined Tournament Header: Centered tournament win-loss records and eliminated redundant status pills and duplicate round headers for clean scannability."
+    "🗺️ Alliance State Identifiers: Displayed state numbers directly beneath alliance tags across all 5 Championship matchup cards and Vault history.",
+    "🥊 Championship State Admin: Added Opponent State input fields in the Championship Management Hub for seamless match metadata tracking."
   ]
 }
 

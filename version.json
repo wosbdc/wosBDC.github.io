@@ -29,9 +29,10 @@
       "repository": "https://github.com/bdclive/BDClive"
     },
     "wosbdc_alliance_dashboard": {
-      "version": "2.9.19",
+      "version": "2.9.20",
       "repository": "https://github.com/wosbdc/wosBDC.github.io",
       "latestChanges": [
+        "v2.9.20: Displayed state numbers under alliance tags in Championship Matchup cards & Vault history",
         "v2.9.19: Centered VICTORY/DEFEAT status badges above VS medallion and streamlined win/loss header",
         "v2.9.18: Added 5-round Alliance Championship dashboard with score manager & vault archives"
       ]
