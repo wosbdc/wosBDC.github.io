@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.56] - 2026-08-18
+- 👑 **All-Time Championship Leaderboard**: Dynamic aggregation engine computes total tournament Wins, Losses, overall Win Rate %, and flags captured vs opponent flags across all archived seasons in the Vault.
+- 🥇 **Golden Championship Badges**: Every participating chief on the Championship roster receives a glowing golden medal badge (`🥇 GOLD CHAMPION`) styled consistently with Bear Trap and Showdown accolades.
+- 🔍 **Interactive Search & Filter**: Added instant search filtering and active/all tournament participant views on the public championship page.
+
 ## [2.9.55] - 2026-08-18
 - 🔄 **Unified Championship Event Reset**: The Event Reset action in Alliance Championship now comprehensively cleans/wipes battle matchup info (scores, flags, opponent names/states) and resets all member signups in the tracker from YES back to NO.
 - 📜 **Dual Timestamped Archiving**: Automatically captures and stores full historical snapshots of both the 5-round battle records (to `championship_meta/history`) and member attendance signups (to `events_archive/championship`) before resetting.

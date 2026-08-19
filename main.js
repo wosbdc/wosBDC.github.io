@@ -9822,6 +9822,34 @@ window.renderChampionshipVaultBody = (activeKey = 'live') => {
     `;
 };
 
+window.filterChampLeaderboard = () => {
+    const q = (document.getElementById('champLeaderboardSearch')?.value || '').toLowerCase().trim();
+    const filter = window._currentChampLdFilter || 'all';
+    document.querySelectorAll('.champ-participant-card').forEach(card => {
+        const name = (card.getAttribute('data-name') || '').toLowerCase();
+        const isActive = card.getAttribute('data-active') === 'yes';
+        let matchText = !q || name.includes(q);
+        let matchFilter = (filter === 'all') || (filter === 'live' && isActive);
+        card.style.display = (matchText && matchFilter) ? 'flex' : 'none';
+    });
+};
+
+window.setChampLdFilter = (filter) => {
+    window._currentChampLdFilter = filter;
+    document.querySelectorAll('.champ-ld-btn').forEach(btn => {
+        btn.style.background = 'var(--bg-main)';
+        btn.style.color = 'var(--text-main)';
+        btn.style.borderColor = 'var(--border)';
+    });
+    const activeBtn = filter === 'all' ? document.getElementById('champLdFilterAll') : document.getElementById('champLdFilterLive');
+    if (activeBtn) {
+        activeBtn.style.background = 'var(--accent)';
+        activeBtn.style.color = '#fff';
+        activeBtn.style.borderColor = 'var(--accent)';
+    }
+    window.filterChampLeaderboard();
+};
+
 // ==========================================
 // 💡 ALLIANCE FEATURE REQUEST & BUG TRACKER
 // ==========================================
@@ -27638,7 +27666,14 @@ window.resetBearTrapEvent = async () => {
     if (navbar) navbar.style.display = 'flex';
 
     try {
-        const champData = await window.fetchChampionshipMatchups();
+        const [champData, historySnap, archiveSnap, champSignupsSnap, rosterData] = await Promise.all([
+            window.fetchChampionshipMatchups().catch(() => window.DEFAULT_CHAMPIONSHIP_MATCHUPS),
+            get(ref(db, 'championship_meta/history')).catch(() => null),
+            get(ref(db, 'events_archive/championship')).catch(() => null),
+            window.fetchChampionshipData().catch(() => ({})),
+            window.fetchRoster().catch(() => ({}))
+        ]);
+
         const seasonName = champData.seasonName || 'Season 12 Championship';
         const rounds = champData.rounds || {};
         const roundsList = [1, 2, 3, 4, 5].map(i => rounds['r' + i] || { roundNum: i, date: `Round ${i}`, ourScore: 0, ourFlags: 0, enemyAlliance: { name: 'Opponent Alliance', score: 0, flags: 0 } });
@@ -27665,8 +27700,6 @@ window.resetBearTrapEvent = async () => {
         if (champData.enemySeasonFlags !== undefined && champData.enemySeasonFlags !== null && champData.enemySeasonFlags !== '') {
             totalEnemyFlags = Number(champData.enemySeasonFlags);
         }
-
-        let statusText = champData.statusText || `${winCount} Wins – ${lossCount} ${lossCount === 1 ? 'Loss' : 'Losses'}`;
 
         let isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
         let adminActionBtn = isManager ? `
@@ -27743,8 +27776,136 @@ window.resetBearTrapEvent = async () => {
             `;
         }).join('');
 
+        // =========================================================================
+        // 🏆 ALL-TIME LEADERBOARD & VAULT AGGREGATION
+        // =========================================================================
+        const historyObj = (historySnap && historySnap.exists()) ? (historySnap.val() || {}) : {};
+        const archivesObj = (archiveSnap && archiveSnap.exists()) ? (archiveSnap.val() || {}) : {};
+
+        let allTimeWins = 0;
+        let allTimeLosses = 0;
+        let allTimeFlagsOur = 0;
+        let allTimeFlagsEnemy = 0;
+        let allTimeRoundsPlayed = 0;
+
+        const allSeasons = { ...historyObj, live: champData };
+        Object.values(allSeasons).forEach(s => {
+            if (!s || !s.rounds) return;
+            [1, 2, 3, 4, 5].forEach(i => {
+                let r = s.rounds['r' + i];
+                if (!r) return;
+                let os = Number(r.ourScore) || 0;
+                let es = Number(r.enemyAlliance?.score) || 0;
+                let of = (r.ourFlags !== undefined && r.ourFlags !== null && r.ourFlags !== '') ? Number(r.ourFlags) : 0;
+                let ef = (r.enemyAlliance && r.enemyAlliance.flags !== undefined && r.enemyAlliance.flags !== null && r.enemyAlliance.flags !== '') ? Number(r.enemyAlliance.flags) : 0;
+                allTimeFlagsOur += of;
+                allTimeFlagsEnemy += ef;
+                if (os > 0 || es > 0) {
+                    allTimeRoundsPlayed++;
+                    if (os > es) allTimeWins++;
+                    else if (es > os) allTimeLosses++;
+                }
+            });
+        });
+
+        let allTimeWinRate = (allTimeWins + allTimeLosses > 0) ? Math.round((allTimeWins / (allTimeWins + allTimeLosses)) * 100) : 100;
+
+        // Gather Participant Chiefs with Golden Badges
+        const isT = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
+        let participantMap = {};
+
+        // 1. Check historical archive attendance
+        Object.values(archivesObj).forEach(arch => {
+            if (!arch || !Array.isArray(arch.players)) return;
+            arch.players.forEach(p => {
+                if (!p || !p.signedUp) return;
+                let gid = (p.gameId || '').toString().trim();
+                let name = (p.name || '').trim();
+                let key = gid || name.toLowerCase();
+                if (!key) return;
+                if (!participantMap[key]) {
+                    participantMap[key] = {
+                        gameId: gid,
+                        name: name || (window.idToNameMap && window.idToNameMap[gid]) || 'Chief',
+                        seasonsActive: 0,
+                        isLiveSignedUp: false
+                    };
+                }
+                participantMap[key].seasonsActive++;
+            });
+        });
+
+        // 2. Check live signups
+        if (champSignupsSnap && typeof champSignupsSnap === 'object') {
+            Object.entries(champSignupsSnap).forEach(([gid, rec]) => {
+                if (!rec || !isT(rec.signedUp)) return;
+                let gidStr = gid.toString().trim();
+                let name = (rec.name || (window.idToNameMap && window.idToNameMap[gidStr]) || 'Chief').trim();
+                let key = gidStr || name.toLowerCase();
+                if (!participantMap[key]) {
+                    participantMap[key] = {
+                        gameId: gidStr,
+                        name: name,
+                        seasonsActive: 0,
+                        isLiveSignedUp: true
+                    };
+                }
+                participantMap[key].isLiveSignedUp = true;
+                participantMap[key].seasonsActive = Math.max(1, participantMap[key].seasonsActive);
+            });
+        }
+
+        // Fallback to roster if no archives yet
+        if (Object.keys(participantMap).length === 0 && rosterData) {
+            Object.values(rosterData).forEach(p => {
+                if (!p || !p.name) return;
+                let gidStr = (p.gameId || '').toString().trim();
+                let key = gidStr || p.name.toLowerCase();
+                participantMap[key] = {
+                    gameId: gidStr,
+                    name: p.name,
+                    seasonsActive: 1,
+                    isLiveSignedUp: true
+                };
+            });
+        }
+
+        let participantList = Object.values(participantMap).sort((a, b) => {
+            if (b.isLiveSignedUp !== a.isLiveSignedUp) return b.isLiveSignedUp ? -1 : 1;
+            if (b.seasonsActive !== a.seasonsActive) return b.seasonsActive - a.seasonsActive;
+            return (a.name || '').localeCompare(b.name || '');
+        });
+
+        let participantCardsHtml = participantList.map(p => `
+            <div class="champ-participant-card" data-name="${escapeHTML((p.name || '').toLowerCase())}" data-active="${p.isLiveSignedUp ? 'yes' : 'no'}" style="background:linear-gradient(135deg, rgba(255,215,0,0.08) 0%, rgba(255,255,255,0.02) 100%); border:1px solid rgba(255,215,0,0.38); border-radius:14px; padding:14px 18px; display:flex; align-items:center; justify-content:space-between; gap:12px; box-shadow:0 4px 18px rgba(0,0,0,0.25); transition:transform 0.2s ease, box-shadow 0.2s ease;">
+                <div style="display:flex; align-items:center; gap:12px; min-width:0;">
+                    <div style="position:relative; width:44px; height:44px; flex-shrink:0;">
+                        <div style="width:44px; height:44px; border-radius:50%; background:linear-gradient(135deg, #FFD700, #F59E0B); display:flex; align-items:center; justify-content:center; font-size:22px; box-shadow:0 0 12px rgba(255,215,0,0.4);">
+                            🏆
+                        </div>
+                        <div style="position:absolute; bottom:-2px; right:-2px; background:#10b981; border:2px solid var(--bg-main); width:12px; height:12px; border-radius:50%;" title="Verified Participant"></div>
+                    </div>
+                    <div style="min-width:0;">
+                        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                            <span style="font-weight:900; font-size:15px; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHTML(p.name)}</span>
+                            <span style="background:linear-gradient(135deg, #FFD700, #F59E0B); color:#000; font-weight:900; font-size:9.5px; padding:2px 7px; border-radius:10px; text-transform:uppercase; letter-spacing:0.5px; box-shadow:0 0 8px rgba(255,215,0,0.3);">🥇 GOLD CHAMPION</span>
+                        </div>
+                        <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px; display:flex; align-items:center; gap:8px;">
+                            <span>🎖️ ${p.seasonsActive} ${p.seasonsActive === 1 ? 'Tournament' : 'Tournaments'} Active</span>
+                            ${p.isLiveSignedUp ? '<span style="color:#10b981; font-weight:bold;">• ⚡ Current Roster</span>' : ''}
+                        </div>
+                    </div>
+                </div>
+                <div style="text-align:right; flex-shrink:0;">
+                    <span style="background:rgba(255,215,0,0.12); border:1px solid rgba(255,215,0,0.35); color:#FFD700; font-weight:bold; font-size:11px; padding:4px 10px; border-radius:8px; display:inline-flex; align-items:center; gap:4px;">
+                        ⭐ Verified
+                    </span>
+                </div>
+            </div>
+        `).join('');
+
         let html = `
-          <div style="max-width:900px; margin:0 auto; padding-bottom:40px; display:flex; flex-direction:column; gap:16px; animation: fadeIn 0.3s ease;">
+          <div style="max-width:900px; margin:0 auto; padding-bottom:40px; display:flex; flex-direction:column; gap:20px; animation: fadeIn 0.3s ease;">
             
             <!-- Tournament Title Banner -->
             <div style="background:linear-gradient(135deg, rgba(6,182,212,0.12) 0%, rgba(6,182,212,0.02) 100%); border:1px solid rgba(6,182,212,0.3); border-radius:16px; padding:24px 20px; text-align:center; box-shadow: 0 6px 25px rgba(0,0,0,0.3);">
@@ -27769,6 +27930,53 @@ window.resetBearTrapEvent = async () => {
             <!-- 5-Round Matchup Cards -->
             <div style="display:flex; flex-direction:column; gap:14px;">
                 ${matchCardsHtml}
+            </div>
+
+            <!-- ALL-TIME LEADERBOARD & DYNASTY BANNER -->
+            <div style="margin-top:10px; display:flex; flex-direction:column; gap:16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid var(--accent); padding-bottom:10px; flex-wrap:wrap; gap:10px;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <div style="font-size:24px;">👑</div>
+                        <div>
+                            <h2 style="margin:0; font-size:18px; font-weight:900; color:var(--text-main);">ALL-TIME CHAMPIONSHIP LEADERBOARD & HALL OF FAME</h2>
+                            <div style="font-size:12px; color:var(--text-muted);">Historical tournament records from the Vault & Golden Championship badges for participating chiefs</div>
+                        </div>
+                    </div>
+                    <button onclick="window.openChampionshipArchiveVaultModal('live')" style="background:var(--card-bg); border:1px solid var(--accent); color:var(--accent); padding:6px 12px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; gap:5px;">📜 Open Vault</button>
+                </div>
+
+                <!-- All-Time Dynasty Stats Grid -->
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px;">
+                    <div style="background:linear-gradient(135deg, rgba(16,185,129,0.12) 0%, rgba(16,185,129,0.02) 100%); border:1px solid rgba(16,185,129,0.35); border-radius:12px; padding:14px; text-align:center;">
+                        <div style="font-size:11px; color:#10b981; text-transform:uppercase; font-weight:bold;">All-Time Record</div>
+                        <div style="font-size:24px; font-weight:900; color:var(--text-main); margin-top:3px;">${allTimeWins}W – ${allTimeLosses}L</div>
+                        <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${allTimeWinRate}% Overall Win Rate</div>
+                    </div>
+                    <div style="background:linear-gradient(135deg, rgba(6,182,212,0.12) 0%, rgba(6,182,212,0.02) 100%); border:1px solid rgba(6,182,212,0.35); border-radius:12px; padding:14px; text-align:center;">
+                        <div style="font-size:11px; color:var(--accent); text-transform:uppercase; font-weight:bold;">🚩 Total Flags Captured</div>
+                        <div style="font-size:24px; font-weight:900; color:#38bdf8; margin-top:3px;">${allTimeFlagsOur.toLocaleString()}</div>
+                        <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">vs ${allTimeFlagsEnemy.toLocaleString()} Opponent Flags</div>
+                    </div>
+                    <div style="background:linear-gradient(135deg, rgba(255,215,0,0.12) 0%, rgba(255,215,0,0.02) 100%); border:1px solid rgba(255,215,0,0.35); border-radius:12px; padding:14px; text-align:center;">
+                        <div style="font-size:11px; color:#FFD700; text-transform:uppercase; font-weight:bold;">🏆 Championship Chiefs</div>
+                        <div style="font-size:24px; font-weight:900; color:#FFD700; margin-top:3px;">${participantList.length}</div>
+                        <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">Golden Badges Awarded</div>
+                    </div>
+                </div>
+
+                <!-- Search & Filter Controls -->
+                <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:12px 16px; display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between;">
+                    <input type="text" id="champLeaderboardSearch" placeholder="🔍 Search participant name..." onkeyup="window.filterChampLeaderboard()" style="flex:1; min-width:180px; padding:8px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px;">
+                    <div style="display:flex; gap:6px;">
+                        <button id="champLdFilterAll" class="champ-ld-btn active" onclick="window.setChampLdFilter('all')" style="padding:6px 12px; border-radius:8px; border:1px solid var(--accent); background:var(--accent); color:#fff; font-weight:bold; cursor:pointer; font-size:12px;">All (${participantList.length})</button>
+                        <button id="champLdFilterLive" class="champ-ld-btn" onclick="window.setChampLdFilter('live')" style="padding:6px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-weight:bold; cursor:pointer; font-size:12px;">Current Season (${participantList.filter(p => p.isLiveSignedUp).length})</button>
+                    </div>
+                </div>
+
+                <!-- Golden Participant Cards Grid -->
+                <div id="champParticipantsGrid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:12px;">
+                    ${participantCardsHtml}
+                </div>
             </div>
 
           </div>

@@ -1,19 +1,19 @@
 {
-  "version": "2.9.55",
+  "version": "2.9.56",
   "releaseDate": "2026-08-18",
-  "title": "What's New in v2.9.55",
+  "title": "What's New in v2.9.56",
   "notes": [
-    "🔄 Unified Championship Event Reset: The Event Reset command now comprehensively wipes battle matchup info (scores, flags, opponents) and resets all member signups in the tracker from YES back to NO.",
-    "📜 Dual Timestamped Archiving: Both completed 5-round battle records and member signup attendance snapshots are automatically preserved into Firebase history before resetting.",
-    "🛡️ Header & Footer Reset Controls: Added 'Event Reset' quick buttons to the top action header and signups table footer in the Championship Admin Suite."
+    "👑 All-Time Championship Leaderboard: Aggregates historical match data from the Vault to display overall tournament Wins/Losses, total flags captured, and overall win rate %.",
+    "🥇 Golden Championship Badges: Awarded shimmering gold champion badges to all participating chiefs on the Championship Hall of Fame roster.",
+    "🔍 Participant Search & Filtering: Interactive search and filters to easily explore all tournament veterans and current active roster members."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "2.9.55",
+    "version": "2.9.56",
     "latestChanges": [
+      "v2.9.56: Added All-Time Championship Wins/Losses Vault Legacy and Golden Participant Badges to Public Dashboard",
       "v2.9.55: Unified Championship Event Reset to clean battle info and reset signups from YES to NO with dual archiving",
       "v2.9.54: Added Screenshot & Image Attachment support (Upload, Drag-and-Drop, Clipboard Paste, Lightbox Viewer) to Bug Tracker",
-      "v2.9.53: Added dual-sided Season Flag fields to Season Details card and total flags summary banner to public dashboard",
-      "v2.9.52: Launched in-app Feature Request & Bug Tracker with community upvoting and interactive Admin checklist"
+      "v2.9.53: Added dual-sided Season Flag fields to Season Details card and total flags summary banner to public dashboard"
     ]
   }
 }
