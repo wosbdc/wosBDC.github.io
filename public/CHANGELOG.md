@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [2.9.74] - 2026-08-19
+- 👥 **41 Chief Roster**: Synced all 41 alliance chiefs across database views.
+- 🎭 **Linked Alts Visibility**: View all linked alts with owner badges in database.
+- ⭐ **Mains & Alts Tabs**: Switch easily between mains, alts, claimed, and unclaimed.
+- 🗑️ **Delete Player Anywhere**: Instantly delete players or alts with one click.
+
 ## [2.9.73] - 2026-08-19
 - 🛡️ **Live Token Health**: Added real-time token status to player profiles.
 - 🔔 **Token Expiry Alerts**: Receive automatic reminders when tokens are expiring.

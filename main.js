@@ -5649,40 +5649,17 @@ window._executeLogBearTrapWinner = async (name, trap) => {
 };
 
   window.adminDeleteUserRow = async (uid, name) => {
-      let confirmDelete = await window.customConfirm(`Are you sure you want to delete the Firebase account for ${name}?\n\nThis will wipe their website access.`);
-      if (!confirmDelete) return;
-      
-      window.showToast("Deleting Account...", "danger");
-      try {
-          // Fetch user data first to get gameId for giftcode_bot purge
-          const uSnap = await get(ref(db, `users/${uid}`));
-          if (uSnap.exists()) {
-              const u = uSnap.val();
-              const gid = u.gameId ? u.gameId.toString().trim() : "";
-              if (gid) {
-                  await remove(ref(db, `giftcode_bot/${gid}`)).catch(() => null);
-                  delete idToNameMap[gid];
-                  if (window.idToNameMap) delete window.idToNameMap[gid];
-              }
-          }
-          await remove(ref(db, `users/${uid}`));
-          await refreshIdToNameMap();
-          window.showToast(`Successfully deleted account.`, "success");
-          if (document.getElementById('playerDirectoryList')) views.playerEditor();
-          else if (document.getElementById('adminHubView')) views.admin();
-      } catch (e) {
-          if (window.showToast) window.showToast(e.message, "error");
-      }
+      return window.adminDeletePlayer(name, null, uid);
   };
 
-  window.adminDeletePlayer = async (name) => {
-    let confirmDelete = await window.customConfirm(`⚠️ WARNING ⚠️\n\nAre you sure you want to COMPLETELY DELETE ${name}?\n\nThis will remove them from the database, wipe their player cards, AND permanently delete their Firebase account profile & giftcode enrollment.\n\nThis action cannot be undone.`);
+  window.adminDeletePlayer = async (name, passedGid = null, passedUid = null) => {
+    let confirmDelete = await window.customConfirm(`⚠️ WARNING: DELETE PLAYER ⚠️\n\nAre you sure you want to COMPLETELY DELETE ${name || 'this character'}?\n\nThis will remove them from the live alliance roster, wipe player records, and permanently remove account data from the database.\n\nThis action cannot be undone.`);
     if (!confirmDelete) return;
     
-    window.showToast("Deleting Player & Purging Account...", "danger");
+    window.showToast("Deleting Player & Purging Data...", "danger");
     try {
         const normTargetName = (name || "").trim().toLowerCase();
-        let targetGid = window.nameToIdMap ? window.nameToIdMap[name] : null;
+        let targetGid = passedGid ? String(passedGid).trim() : (window.nameToIdMap ? window.nameToIdMap[name] : null);
         if (!targetGid && typeof idToNameMap !== 'undefined') {
             for (const [gid, pName] of Object.entries(idToNameMap)) {
                 if (pName && pName.toString().trim().toLowerCase() === normTargetName) {
@@ -5692,23 +5669,47 @@ window._executeLogBearTrapWinner = async (name, trap) => {
             }
         }
         
-        // 1. Purge from Firebase roster_live node directly by name
-        await Promise.all([
-            remove(ref(db, `roster_live/${name}`)).catch(() => null),
-            remove(ref(db, `roster_live/${encodeURIComponent(name)}`)).catch(() => null)
-        ]);
+        // 1. Purge from Firebase roster_live node directly by name and GID
+        const rosterRemovals = [];
+        if (name) {
+            rosterRemovals.push(remove(ref(db, `roster_live/${name}`)).catch(() => null));
+            rosterRemovals.push(remove(ref(db, `roster_live/${encodeURIComponent(name)}`)).catch(() => null));
+            rosterRemovals.push(remove(ref(db, `sheets/Chief's List/${name}`)).catch(() => null));
+            rosterRemovals.push(remove(ref(db, `sheets/Chief's List/${encodeURIComponent(name)}`)).catch(() => null));
+        }
+        if (targetGid) {
+            rosterRemovals.push(remove(ref(db, `roster_live/${targetGid}`)).catch(() => null));
+            rosterRemovals.push(remove(ref(db, `sheets/Chief's List/${targetGid}`)).catch(() => null));
+            rosterRemovals.push(remove(ref(db, `users_alts/${targetGid}`)).catch(() => null));
+        }
+        await Promise.all(rosterRemovals);
         
-        // 2. Search Firebase users node directly and purge matching accounts
+        // 2. Search Firebase users node directly and purge matching accounts or linked alts
         const usersSnap = await get(ref(db, 'users')).catch(() => null);
         if (usersSnap && usersSnap.exists()) {
             const users = usersSnap.val() || {};
             for (const [uid, u] of Object.entries(users)) {
-                if (u) {
-                    const uName = (u.name || u.chiefName || u.displayName || "").toString().trim().toLowerCase();
-                    const uGid = u.gameId ? u.gameId.toString().trim() : "";
-                    if ((uName && uName === normTargetName) || (targetGid && uGid === String(targetGid))) {
-                        await remove(ref(db, `users/${uid}`)).catch(() => null);
-                        if (!targetGid && uGid) targetGid = uGid;
+                if (!u) continue;
+                const uName = (u.name || u.chiefName || u.displayName || "").toString().trim().toLowerCase();
+                const uGid = u.gameId ? u.gameId.toString().trim() : "";
+                
+                // If direct user account match or passedUid match
+                if ((passedUid && uid === passedUid) || (!passedUid && ((uName && uName === normTargetName) || (targetGid && uGid === String(targetGid))))) {
+                    await remove(ref(db, `users/${uid}`)).catch(() => null);
+                    if (!targetGid && uGid) targetGid = uGid;
+                }
+
+                // If user owns this as an alt account
+                if (targetGid) {
+                    if (u.altTokens && u.altTokens[targetGid]) {
+                        await remove(ref(db, `users/${uid}/altTokens/${targetGid}`)).catch(() => null);
+                    }
+                    if (u.linkedAltsData && u.linkedAltsData[targetGid]) {
+                        await remove(ref(db, `users/${uid}/linkedAltsData/${targetGid}`)).catch(() => null);
+                    }
+                    if (Array.isArray(u.linkedGameIds) && u.linkedGameIds.includes(targetGid)) {
+                        const updatedGids = u.linkedGameIds.filter(id => String(id).trim() !== String(targetGid));
+                        await set(ref(db, `users/${uid}/linkedGameIds`), updatedGids).catch(() => null);
                     }
                 }
             }
@@ -5749,9 +5750,12 @@ window._executeLogBearTrapWinner = async (name, trap) => {
             delete idToNameMap[targetGid];
             if (window.idToNameMap) delete window.idToNameMap[targetGid];
         }
-        delete nameToIdMap[name];
-        if (window.nameToIdMap) delete window.nameToIdMap[name];
-        if (window.rosterCache) delete window.rosterCache[name];
+        if (name) {
+            delete nameToIdMap[name];
+            if (window.nameToIdMap) delete window.nameToIdMap[name];
+            if (window.rosterCache) delete window.rosterCache[name];
+        }
+        window.rosterCache = null;
 
         // Purge global liveData and sheetCache of this player
         if (window.liveData) {
@@ -5778,13 +5782,13 @@ window._executeLogBearTrapWinner = async (name, trap) => {
         // 7. Non-blocking backend delete request to Google Sheets
         try {
             const token = await getAuthToken();
-            const url = `${API_BASE_URL}?api=delete_player&name=${encodeURIComponent(name)}&token=${encodeURIComponent(token)}`;
+            const url = `${API_BASE_URL}?api=delete_player&name=${encodeURIComponent(name || '')}&gid=${encodeURIComponent(targetGid || '')}&token=${encodeURIComponent(token)}`;
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 4000);
             fetch(url, { signal: controller.signal }).catch(() => null).finally(() => clearTimeout(timeoutId));
         } catch(e) {}
         
-        window.showToast(`🗑️ Successfully deleted ${name} & purged account data.`, "success");
+        window.showToast(`🗑️ Successfully deleted ${name || 'player'}.`, "success");
 
         // 8. Refresh UI
         const resDiv = document.getElementById('uniEditorRes');
@@ -5792,8 +5796,8 @@ window._executeLogBearTrapWinner = async (name, trap) => {
         
         if (document.getElementById('playerDirectoryList')) {
             await views.playerEditor();
-        } else if (document.querySelector('.admin-tab-content')) {
-            views.admin();
+        } else if (document.querySelector('.admin-tab-content') || document.getElementById('adminHubView')) {
+            views.admin('tab-users');
         }
     } catch (e) {
         window.showToast(`Error deleting player: ${e.message}`, "error");
@@ -19585,6 +19589,12 @@ const views = {
             } else if (tabName === 'claimed') {
                 btnEl.style.background = '#10b981';
                 btnEl.style.color = '#fff';
+            } else if (tabName === 'mains') {
+                btnEl.style.background = '#3b82f6';
+                btnEl.style.color = '#fff';
+            } else if (tabName === 'alts') {
+                btnEl.style.background = '#a855f7';
+                btnEl.style.color = '#fff';
             } else {
                 btnEl.style.background = 'var(--accent)';
                 btnEl.style.color = '#fff';
@@ -19646,8 +19656,10 @@ const views = {
             const matchesSearch = !searchVal || name.includes(searchVal) || gid.includes(searchVal) || email.includes(searchVal);
 
             let matchesTab = true;
-            if (activeTab === 'unclaimed') matchesTab = !isClaimed && !isAlt;
-            else if (activeTab === 'claimed') matchesTab = isClaimed || isAlt;
+            if (activeTab === 'mains') matchesTab = !isAlt;
+            else if (activeTab === 'alts') matchesTab = isAlt;
+            else if (activeTab === 'unclaimed') matchesTab = !isClaimed && !isAlt;
+            else if (activeTab === 'claimed') matchesTab = isClaimed;
 
             let matchesToken = true;
             if (tokenFilter !== 'all') {
@@ -19675,9 +19687,6 @@ const views = {
             else if (attrFilter === 'staff') matchesAttr = isAdmin && !isAlt;
             else if (attrFilter === 'push_on') matchesAttr = isPushOn && !isAlt;
             else if (attrFilter === 'push_off') matchesAttr = !isPushOn && !isAlt;
-            else if (attrFilter === 'all') {
-                if (isAlt && !searchVal) matchesAttr = false;
-            }
 
             if (matchesSearch && matchesTab && matchesToken && matchesAttr) {
                 row.style.display = '';
@@ -21344,31 +21353,28 @@ const views = {
           <!-- Tab: Feedback & Bug Tracker -->
           <div id="tab-feedback" class="admin-tab-content" style="display:none;">
             <div style="background:var(--bg-main); padding:20px; border-radius:12px; border:1px solid rgba(6,182,212,0.35); margin-bottom:20px;">
-              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px; border-bottom:1px solid rgba(6,182,212,0.25); padding-bottom:12px;">
-                <div style="display:flex; align-items:center; gap:12px;">
-                  <div style="width:40px; height:40px; border-radius:10px; background:linear-gradient(135deg, rgba(6,182,212,0.2), rgba(168,85,247,0.2)); display:flex; align-items:center; justify-content:center; font-size:20px; border:1px solid rgba(6,182,212,0.4);">💡</div>
-                  <div>
-                    <h3 style="margin:0; color:#38bdf8; font-size:18px; font-weight:800;">Alliance Feature & Bug Tracker</h3>
-                    <p style="margin:2px 0 0 0; font-size:12px; color:var(--text-muted);">Manage member feedback, toggle status, and mark tasks completed.</p>
+                  <div style="display:flex; align-items:center; gap:12px;">
+                    <div style="width:40px; height:40px; border-radius:10px; background:linear-gradient(135deg, rgba(6,182,212,0.2), rgba(168,85,247,0.2)); display:flex; align-items:center; justify-content:center; font-size:20px; border:1px solid rgba(6,182,212,0.4);">💡</div>
+                    <div>
+                      <h3 style="margin:0; color:#38bdf8; font-size:18px; font-weight:800;">Alliance Feature & Bug Tracker</h3>
+                      <p style="margin:2px 0 0 0; font-size:12px; color:var(--text-muted);">Manage member feedback, toggle status, and mark tasks completed.</p>
+                    </div>
+                  </div>
+                  <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <button onclick="views.feedback()" style="background:var(--card-bg); border:1px solid var(--border); color:var(--text-main); padding:8px 14px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12px; display:flex; align-items:center; gap:6px;">
+                      👁️ Open Member Hub
+                    </button>
+                    <button onclick="window.openSubmitFeedbackModal()" style="background:linear-gradient(135deg, #06b6d4, #8b5cf6); color:#fff; border:none; padding:8px 16px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12px; display:flex; align-items:center; gap:6px; box-shadow:0 2px 10px rgba(6,182,212,0.3);">
+                      ➕ Add Request / Bug
+                    </button>
                   </div>
                 </div>
-                <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                  <button onclick="views.feedback()" style="background:var(--card-bg); border:1px solid var(--border); color:var(--text-main); padding:8px 14px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12px; display:flex; align-items:center; gap:6px;">
-                    👁️ Open Member Hub
-                  </button>
-                  <button onclick="window.openSubmitFeedbackModal()" style="background:linear-gradient(135deg, #06b6d4, #8b5cf6); color:#fff; border:none; padding:8px 16px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12px; display:flex; align-items:center; gap:6px; box-shadow:0 2px 10px rgba(6,182,212,0.3);">
-                    ➕ Add Request / Bug
-                  </button>
-                </div>
-              </div>
 
-              <!-- Interactive Table Container -->
-              <div id="adminFeedbackTabContainer"></div>
+                <!-- Interactive Table Container -->
+                <div id="adminFeedbackTabContainer"></div>
+              </div>
             </div>
-          </div>
-      `;
-      
-      html += `
+
           <!-- Tab 2: Users -->
           <div id="tab-users" class="admin-tab-content" style="display:none;">
             <div style="display:flex; justify-content:flex-end; align-items:center; margin-bottom:15px;">
@@ -21395,25 +21401,58 @@ const views = {
                    <!-- Rendered by window.renderStaffRoles -->
                 </div>
               </div>
-          
+
           <!-- Registered Users Table Section -->
           <div style="background:var(--bg-main); padding:18px; border-radius:14px; border:1px solid var(--border); margin-bottom:20px;">
             
             ${(() => {
-              // Calculate claimed vs unclaimed roster members
+              // Calculate claimed mains, linked alts, and unclaimed roster members
               const registeredGids = new Set();
-              Object.values(users).forEach(u => {
+              const allAltsList = [];
+              const altOwnerMap = {};
+
+              Object.entries(users).forEach(([uid, u]) => {
                 if (u.gameId) registeredGids.add(String(u.gameId).trim().toLowerCase());
-                if (u.linkedGameIds && Array.isArray(u.linkedGameIds)) {
-                  u.linkedGameIds.forEach(id => registeredGids.add(String(id).trim().toLowerCase()));
+                
+                const ownerName = idToNameMap[u.gameId] || u.chiefName || u.name || 'User';
+
+                const userAltGids = new Set();
+                if (u.altTokens && typeof u.altTokens === 'object') {
+                  Object.keys(u.altTokens).forEach(aid => userAltGids.add(String(aid).trim()));
                 }
+                if (u.linkedAltsData && typeof u.linkedAltsData === 'object') {
+                  Object.keys(u.linkedAltsData).forEach(aid => userAltGids.add(String(aid).trim()));
+                }
+                if (u.linkedGameIds && Array.isArray(u.linkedGameIds)) {
+                  u.linkedGameIds.forEach(aid => userAltGids.add(String(aid).trim()));
+                }
+
+                userAltGids.forEach(altGid => {
+                  if (!altGid) return;
+                  registeredGids.add(altGid.toLowerCase());
+                  altOwnerMap[altGid] = { ownerUid: uid, ownerName, ownerUser: u };
+
+                  const aTok = (u.altTokens && u.altTokens[altGid]) || (u.linkedAltsData && u.linkedAltsData[altGid]) || {};
+                  const altName = aTok.nickname || aTok.name || aTok.chiefName || idToNameMap[altGid] || `Alt (${altGid})`;
+                  const altFurnace = aTok.stove_lv || aTok.furnaceLevel || '';
+
+                  allAltsList.push({
+                    altGid,
+                    altName,
+                    altFurnace,
+                    aTok,
+                    ownerUid: uid,
+                    ownerName,
+                    ownerUser: u
+                  });
+                });
               });
 
               window._currentUnclaimedRosterList = [];
               const claimedRosterGids = new Set();
               const seenUnclaimedKeys = new Set();
 
-              if (rosterRawData) {
+              if (rosterRawData && typeof rosterRawData === 'object') {
                 Object.values(rosterRawData).forEach(p => {
                   if (!p) return;
                   let rawGid = String(p.id || p.gameId || p.gid || '').trim();
@@ -21440,7 +21479,7 @@ const views = {
                   let isClaimed = (pGid && registeredGids.has(pGid));
                   if (!isClaimed) {
                     isClaimed = Object.values(users).some(u => {
-                      const uName = (idToNameMap[u.gameId] || '').trim().toLowerCase();
+                      const uName = (idToNameMap[u.gameId] || u.chiefName || u.name || '').trim().toLowerCase();
                       return uName && uName === pNameLower;
                     });
                   }
@@ -21467,10 +21506,25 @@ const views = {
             ${(() => {
               // Calculate attribute and token counters
               const totalUsersCount = Object.keys(users).length;
-              const unclaimedCount = (window._currentUnclaimedRosterList || []).length;
-              const totalMembersCount = totalUsersCount + unclaimedCount;
+              const userAltGidsSet = new Set();
+              Object.values(users).forEach(u => {
+                if (u.altTokens && typeof u.altTokens === 'object') {
+                  Object.keys(u.altTokens).forEach(aid => userAltGidsSet.add(String(aid).trim()));
+                }
+                if (u.linkedAltsData && typeof u.linkedAltsData === 'object') {
+                  Object.keys(u.linkedAltsData).forEach(aid => userAltGidsSet.add(String(aid).trim()));
+                }
+                if (u.linkedGameIds && Array.isArray(u.linkedGameIds)) {
+                  u.linkedGameIds.forEach(aid => userAltGidsSet.add(String(aid).trim()));
+                }
+              });
 
-              let totalAltsCount = 0;
+              const totalAltsCount = userAltGidsSet.size;
+              const unclaimedCount = (window._currentUnclaimedRosterList || []).length;
+              const totalMainsCount = totalUsersCount + unclaimedCount;
+              const totalMembersCount = totalUsersCount + totalAltsCount + unclaimedCount;
+              const totalClaimedCount = totalUsersCount + totalAltsCount;
+
               let hasAltsCount = 0;
               let tokenActiveCount = 0;
               let tokenExpiringCount = 0;
@@ -21493,14 +21547,9 @@ const views = {
                 let ms = u.createdAt ? new Date(u.createdAt).getTime() : (u.timestamp ? Number(u.timestamp) : 0);
                 if (ms > 0 && (Date.now() - ms) <= (7 * 24 * 60 * 60 * 1000)) newSignupsCount++;
 
-                const isViewerOwnerOfU = currentUser && (
-                  (currentUser.uid && currentUser.uid === u.uid) ||
-                  (currentUser.gameId && u.gameId && Number(currentUser.gameId) === Number(u.gameId))
-                );
-
-                if (isViewerOwnerOfU && u.linkedGameIds && Array.isArray(u.linkedGameIds) && u.linkedGameIds.length > 0) {
+                const uAltCount = ((u.altTokens ? Object.keys(u.altTokens).length : 0) + (u.linkedAltsData ? Object.keys(u.linkedAltsData).length : 0) + (u.linkedGameIds ? u.linkedGameIds.length : 0));
+                if (uAltCount > 0) {
                   hasAltsCount++;
-                  totalAltsCount += u.linkedGameIds.length;
                 }
 
                 const adminLvl = window.getAdminLevel(u);
@@ -21532,7 +21581,7 @@ const views = {
                         👥 Alliance Members & Player Database
                       </div>
                       <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">
-                        ${totalUsersCount} registered account(s) • ${pushEnabledCount} with push enabled • ${unclaimedCount} unclaimed roster member(s) • ${totalAltsCount} linked alt(s)
+                        ${totalMembersCount} total chief(s) • ${totalMainsCount} mains • ${totalAltsCount} linked alt(s) • ${totalUsersCount} registered user(s) • ${unclaimedCount} unclaimed roster
                       </div>
                     </div>
 
@@ -21543,14 +21592,20 @@ const views = {
                       </button>
 
                       <!-- Primary Segmented Switcher -->
-                      <div style="display:inline-flex; background:var(--bg-main); padding:3px; border-radius:10px; border:1px solid var(--border); gap:4px;">
-                        <button class="admin-user-filter-tab active" data-tab="all" onclick="window.setAdminUserPopulationTab('all', this)" style="background:var(--accent); color:#fff; border:none; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+                      <div style="display:inline-flex; background:var(--bg-main); padding:3px; border-radius:10px; border:1px solid var(--border); gap:4px; flex-wrap:wrap;">
+                        <button class="admin-user-filter-tab active" data-tab="all" onclick="window.setAdminUserPopulationTab('all', this)" style="background:var(--accent); color:#fff; border:none; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
                           👥 All (${totalMembersCount})
                         </button>
-                        <button class="admin-user-filter-tab" data-tab="claimed" onclick="window.setAdminUserPopulationTab('claimed', this)" style="background:transparent; color:var(--text-muted); border:none; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
-                          ✅ Claimed (${totalUsersCount})
+                        <button class="admin-user-filter-tab" data-tab="mains" onclick="window.setAdminUserPopulationTab('mains', this)" style="background:transparent; color:var(--text-muted); border:none; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+                          ⭐ Mains (${totalMainsCount})
                         </button>
-                        <button class="admin-user-filter-tab" data-tab="unclaimed" onclick="window.setAdminUserPopulationTab('unclaimed', this)" style="background:transparent; color:var(--text-muted); border:none; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+                        <button class="admin-user-filter-tab" data-tab="alts" onclick="window.setAdminUserPopulationTab('alts', this)" style="background:transparent; color:var(--text-muted); border:none; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+                          🎭 Alts (${totalAltsCount})
+                        </button>
+                        <button class="admin-user-filter-tab" data-tab="claimed" onclick="window.setAdminUserPopulationTab('claimed', this)" style="background:transparent; color:var(--text-muted); border:none; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+                          ✅ Claimed (${totalClaimedCount})
+                        </button>
+                        <button class="admin-user-filter-tab" data-tab="unclaimed" onclick="window.setAdminUserPopulationTab('unclaimed', this)" style="background:transparent; color:var(--text-muted); border:none; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
                           ⚠️ Unclaimed (${unclaimedCount})
                         </button>
                       </div>
@@ -21570,8 +21625,8 @@ const views = {
                       <option value="all">🏷️ Attributes: All (${totalMembersCount})</option>
                       <option value="push_on">🔔 Push: Enabled (${pushEnabledCount})</option>
                       <option value="push_off">🔕 Push: Disabled (${pushDisabledCount})</option>
-                      <option value="alts">👥 Main Accounts with Alts (${hasAltsCount})</option>
-                      <option value="all_alts">🔗 All Linked Alt Characters (${totalAltsCount})</option>
+                      <option value="alts">👥 Accounts with Alts (${hasAltsCount})</option>
+                      <option value="all_alts">🔗 All Linked Alts (${totalAltsCount})</option>
                       <option value="new">🆕 New Signups (${newSignupsCount})</option>
                       <option value="enrolled">🎁 Gift Codes (${giftCodesCount})</option>
                       <option value="staff">👑 R4/R5 Staff (${staffCount})</option>
@@ -21603,7 +21658,7 @@ const views = {
 
                     <!-- Copy Unsynced Tokens Button -->
                     <button onclick="window.copyUnsyncedTokensList()" style="background:rgba(245,158,11,0.12); color:#f59e0b; border:1px solid rgba(245,158,11,0.35); padding:9px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s; white-space:nowrap; flex-shrink:0; display:inline-flex; align-items:center; gap:5px;" onmouseover="this.style.background='rgba(245,158,11,0.22)'" onmouseout="this.style.background='rgba(245,158,11,0.12)'" title="Copy all alliance characters with expired or unverified in-game sync tokens">
-                      📋 Copy Unsynced Tokens (${tokenExpiredCount + tokenUnverifiedCount})
+                      📋 Copy Unsynced (${tokenExpiredCount + tokenUnverifiedCount})
                     </button>
                   </div>
                 </div>
@@ -21648,134 +21703,104 @@ const views = {
         const uGidStr = String(u.gameId || '').trim();
         let cName = idToNameMap[uGidStr] || u.chiefName || u.name || '';
         
-        let p = null;
+        if (!cName || /^\d{6,}$/.test(cName)) {
+          if (uGidStr && idToNameMap[uGidStr]) cName = idToNameMap[uGidStr];
+          else if (uGidStr) cName = `Chief ${uGidStr}`;
+          else cName = 'Unknown User';
+        }
+
+        const isAdminUser = u.role === 'admin' || u.role === 'R5' || (window.getAdminLevel(u) !== false && window.getAdminLevel(u) !== 'User');
+        const hasAvatar = (avatarsData && avatarsData[uGidStr]) || (u.avatar && u.avatar.length > 5);
+        const avatarSrc = window.getAvatarUrl(uGidStr, cName);
+
+        // Collect all alts for this user
+        const altGidsSet = new Set();
+        if (u.altTokens && typeof u.altTokens === 'object') {
+          Object.keys(u.altTokens).forEach(aid => altGidsSet.add(String(aid).trim()));
+        }
+        if (u.linkedAltsData && typeof u.linkedAltsData === 'object') {
+          Object.keys(u.linkedAltsData).forEach(aid => altGidsSet.add(String(aid).trim()));
+        }
+        if (u.linkedGameIds && Array.isArray(u.linkedGameIds)) {
+          u.linkedGameIds.forEach(aid => altGidsSet.add(String(aid).trim()));
+        }
+        const userAltGids = Array.from(altGidsSet);
+        const totalAlts = userAltGids.length;
+
+        // Check if roster entry exists in rosterRawData
+        let rEntry = null;
         if (rosterRawData) {
-          p = Object.values(rosterRawData).find(rp => {
-            if (!rp) return false;
-            const rpGid = String(rp.gameId || rp.id || rp.gid || '').trim();
-            const rpName = String(rp.chiefName || rp.name || '').trim().toLowerCase();
-            if (uGidStr && rpGid && rpGid === uGidStr) return true;
-            if (cName && rpName && rpName === cName.toLowerCase()) return true;
-            return false;
+          rEntry = Object.values(rosterRawData).find(p => {
+            if (!p) return false;
+            const pGid = String(p.id || p.gameId || p.gid || '').trim();
+            const pName = String(p.chiefName || p.name || '').trim().toLowerCase();
+            return (uGidStr && pGid === uGidStr) || (cName && pName === cName.toLowerCase());
           });
         }
 
-        if ((!cName || cName === "Not Found") && p) cName = p.name || p.chiefName || uGidStr;
-        if (!cName || cName === "Not Found") cName = uGidStr ? `Chief ${uGidStr}` : "Registered User";
+        const furnaceLv = (rEntry && rEntry.furnaceLevel) || u.furnaceLevel || u.stove_lv || '';
+        const furnaceScore = window.getFurnaceNumericValue(furnaceLv);
+        const isEnrolled = (rEntry && (rEntry.giftCodes === true || rEntry.giftCodes === 'TRUE' || (typeof rEntry.giftCodes === 'string' && rEntry.giftCodes.toLowerCase().trim() === 'true')));
 
-        const hasAvatar = avatarMap[u.gameId] ? true : false;
-        const avatarSrc = window.getAvatarUrl(u.gameId, cName);
-        const isViewerOwnerOfAccount = currentUser && (
-          (currentUser.uid && currentUser.uid === uid) ||
-          (currentUser.gameId && u.gameId && Number(currentUser.gameId) === Number(u.gameId))
-        );
-        const hasAlts = (isViewerOwnerOfAccount && u.linkedGameIds && Array.isArray(u.linkedGameIds) && u.linkedGameIds.length > 0);
-        const adminLvl = window.getAdminLevel(u);
-        const isAdminUser = (u.role === 'admin' || u.role === 'R5' || (adminLvl !== false && adminLvl !== 'User'));
-        
-        // 30-Day Token Status Calculation
         const tokenStatus = window.getMemberTokenStatus(u);
-        let tokenPillHtml = '';
+        let tokenPill = `<span style="background:rgba(255,255,255,0.06); color:var(--text-muted); border:1px solid var(--border); padding:3px 8px; border-radius:10px; font-size:11px;">⚪ Unverified</span>`;
         if (tokenStatus.status === 'active') {
-          tokenPillHtml = `<span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold; display:inline-flex; align-items:center; gap:4px;" title="30-day token active (${tokenStatus.daysLeft}d left). Auto-syncing stats.">🟢 ${tokenStatus.daysLeft}d Sync</span>`;
+          tokenPill = `<span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:3px 8px; border-radius:10px; font-size:11px; font-weight:bold;">🟢 ${tokenStatus.daysLeft}d Sync</span>`;
         } else if (tokenStatus.status === 'expiring') {
-          tokenPillHtml = `<span style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold; display:inline-flex; align-items:center; gap:4px;" title="Expiring soon: ${tokenStatus.daysLeft} days remaining. Needs mailbox code refresh.">🟠 ${tokenStatus.daysLeft}d Sync</span>`;
+          tokenPill = `<span style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); padding:3px 8px; border-radius:10px; font-size:11px; font-weight:bold;">🟠 ${tokenStatus.daysLeft}d Expiring</span>`;
         } else if (tokenStatus.status === 'expired') {
-          tokenPillHtml = `<span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.4); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold; display:inline-flex; align-items:center; gap:4px;" title="30-day token expired. Needs in-game verification code.">🔴 Expired Sync</span>`;
-        } else {
-          tokenPillHtml = `<span style="background:rgba(255,255,255,0.06); color:var(--text-muted); border:1px solid var(--border); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:normal;" title="Character not verified with in-game code yet.">⚪ Unverified Sync</span>`;
-        }
-
-        // Linked Alts Token Calculation (Only visible to the account owner)
-        let altTokensSyncedCount = 0;
-        let totalAlts = (isViewerOwnerOfAccount && u.linkedGameIds && Array.isArray(u.linkedGameIds)) ? u.linkedGameIds.length : 0;
-        if (totalAlts > 0 && u.altTokens && isViewerOwnerOfAccount) {
-          u.linkedGameIds.forEach(agid => {
-            const aTok = u.altTokens[agid];
-            if (aTok) {
-              const aVerified = (typeof aTok === 'object' && aTok.verifiedAt) ? new Date(aTok.verifiedAt) : null;
-              if (aVerified && !isNaN(aVerified.getTime())) {
-                const elapsed = Math.floor((Date.now() - aVerified.getTime()) / (1000 * 60 * 60 * 24));
-                if (elapsed < 30) altTokensSyncedCount++;
-              }
-            }
-          });
-        }
-        let altPillHtml = '';
-        if (totalAlts > 0 && isViewerOwnerOfAccount) {
-          const altAllSynced = (altTokensSyncedCount === totalAlts);
-          const altColor = altAllSynced ? '#38bdf8' : (altTokensSyncedCount > 0 ? '#f59e0b' : 'var(--text-muted)');
-          const altBg = altAllSynced ? 'rgba(56,189,248,0.12)' : (altTokensSyncedCount > 0 ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.06)');
-          const altBorder = altAllSynced ? 'rgba(56,189,248,0.3)' : (altTokensSyncedCount > 0 ? 'rgba(245,158,11,0.3)' : 'var(--border)');
-          altPillHtml = `<button onclick="window.adminManageAltsPrompt('${uid}')" style="background:${altBg}; color:${altColor}; border:1px solid ${altBorder}; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px;" title="${altTokensSyncedCount} of ${totalAlts} alts have active 30d sync tokens">🔗 ${altTokensSyncedCount}/${totalAlts} Alts</button>`;
+          tokenPill = `<span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.4); padding:3px 8px; border-radius:10px; font-size:11px; font-weight:bold;">🔴 Expired Sync</span>`;
         }
 
         let rosterInfoHtml = '';
-        let isEnrolled = false;
-        let flVal = u.stove_lv || u.furnaceLevel || '';
-        if (p) {
-            flVal = p.furnaceLevel || p.stove_lv || flVal;
-            let gcVal = p.giftCodes;
-            let taVal = p.timeActive || p.dateStarted || p.joinedDate || u.timeActive || u.dateStarted || u.joinedDate;
-            isEnrolled = (gcVal === true || gcVal === 'TRUE' || (typeof gcVal === 'string' && gcVal.toLowerCase().trim() === 'true'));
-            
-            if (flVal) rosterInfoHtml += `<span onclick="window.openAdminEditFurnaceModal('${escapeHTML(cName)}', '${uGidStr}', '${flVal}')" style="cursor:pointer; display:inline-flex; align-items:center;" title="Click to Edit Furnace Level">${window.getFurnaceIconHtml(flVal, 32)}</span>`;
-            if (isEnrolled) rosterInfoHtml += `<span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:3px 8px; border-radius:10px; font-size:11px; font-weight:bold;">🎁 Enrolled</span>`;
-            if (taVal) {
-                const taFormatted = window.formatTimeActiveShort(taVal.toString());
-                if (taFormatted && taFormatted !== 'Unknown') {
-                    rosterInfoHtml += `<span style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-muted); padding:3px 8px; border-radius:10px; font-size:11px;">⏱️ ${escapeHTML(taFormatted)}</span>`;
-                }
+        if (furnaceLv) rosterInfoHtml += `<span onclick="window.openAdminEditFurnaceModal('${escapeHTML(cName)}', '${uGidStr}', '${furnaceLv}')" style="cursor:pointer; display:inline-flex; align-items:center;" title="Click to Edit Furnace Level">${window.getFurnaceIconHtml(furnaceLv, 32)}</span>`;
+        if (isEnrolled) rosterInfoHtml += `<span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:3px 8px; border-radius:10px; font-size:11px; font-weight:bold;">✅ Enrolled</span>`;
+
+        let altSyncedCount = 0;
+        if (totalAlts > 0 && u.altTokens) {
+          Object.values(u.altTokens).forEach(at => {
+            if (at && at.verifiedAt) {
+              const d = Math.floor((Date.now() - new Date(at.verifiedAt).getTime()) / (1000 * 60 * 60 * 24));
+              if (d < 30) altSyncedCount++;
             }
-        } else if (flVal) {
-            rosterInfoHtml += `<span onclick="window.openAdminEditFurnaceModal('${escapeHTML(cName)}', '${uGidStr}', '${flVal}')" style="cursor:pointer; display:inline-flex; align-items:center;" title="Click to Edit Furnace Level">${window.getFurnaceIconHtml(flVal, 32)}</span>`;
+          });
         }
 
-        let dateDisplay = 'Unknown';
-        if (createdMs > 0) {
-            dateDisplay = new Date(createdMs).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-        }
+        const isPush = u.pushEnabled === true || (u.fcmToken && fcmData[u.fcmToken]) || Object.values(fcmData).some(item => item && (item.uid === uid || (item.gameId && u.gameId && String(item.gameId) === String(u.gameId))));
 
-        const furnaceScore = window.getFurnaceNumericValue(flVal);
-        
-        const isPushOn = u.pushEnabled === true || (u.fcmToken && fcmData[u.fcmToken]) || Object.values(fcmData).some(item => item && (item.uid === uid || (item.gameId && u.gameId && String(item.gameId) === String(u.gameId))));
-        const pushPillHtml = isPushOn
-          ? `<span style="background:rgba(168,85,247,0.12); color:#c084fc; border:1px solid rgba(168,85,247,0.35); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold; display:inline-flex; align-items:center; gap:3px;" title="Push notifications active on this Chief's device(s)">🔔 Push ON</span>`
-          : `<span style="background:rgba(255,255,255,0.05); color:var(--text-muted); border:1px solid var(--border); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:normal;" title="Push notifications disabled">🔕 Push OFF</span>`;
-        
         html += `
           <tr class="admin-user-row" 
               data-name="${escapeHTML(cName.toLowerCase())}" 
               data-name-raw="${escapeHTML(cName)}"
-              data-gid="${escapeHTML((u.gameId || '').toString().toLowerCase())}" 
+              data-gid="${escapeHTML(uGidStr.toLowerCase())}" 
               data-email="${escapeHTML((u.email || '').toString().toLowerCase())}" 
               data-is-new="${isNew ? 'true' : 'false'}" 
               data-is-admin="${isAdminUser ? 'true' : 'false'}" 
-              data-has-alts="${hasAlts ? 'true' : 'false'}" 
-              data-alt-synced-count="${altTokensSyncedCount}"
-              data-alt-total-count="${totalAlts}"
+              data-has-alts="${totalAlts > 0 ? 'true' : 'false'}" 
               data-is-enrolled="${isEnrolled ? 'true' : 'false'}" 
-              data-push-enabled="${isPushOn ? 'true' : 'false'}"
               data-token-status="${tokenStatus.status}"
+              data-alt-synced-count="${altSyncedCount}"
               data-is-claimed="true"
               data-is-alt="false"
+              data-push-enabled="${isPush ? 'true' : 'false'}"
               data-furnace-score="${furnaceScore}"
               data-created-ms="${createdMs}"
-              style="border-bottom:1px solid var(--border); background:var(--card-bg);">
+              style="border-bottom:1px solid var(--border); transition:0.2s;">
             
             <td style="padding:12px 10px;">
               <div style="display:flex; align-items:center; gap:12px;">
-                <div style="width:40px; height:40px; border-radius:50%; overflow:hidden; background:var(--accent); flex-shrink:0; border:2px solid var(--border);">
-                  <img src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(cName)}&background=06b6d4&color=fff&bold=true&size=128';">
+                <div style="width:40px; height:40px; border-radius:50%; overflow:hidden; background:var(--card-bg); flex-shrink:0; border:2px solid var(--accent); display:flex; align-items:center; justify-content:center;">
+                  <img src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(cName)}&background=3b82f6&color=fff&bold=true&size=128';">
                 </div>
                 <div style="display:flex; flex-direction:column; gap:2px;">
                   <div style="font-weight:bold; font-size:14px; color:var(--text-main); display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
                     <span>${escapeHTML(cName)}</span>
-                    ${isAdminUser ? `<span style="background:rgba(234,179,8,0.15); color:#eab308; border:1px solid rgba(234,179,8,0.3); padding:2px 6px; border-radius:10px; font-size:10px; font-weight:bold;">👑 ${adminLvl === 'R5' ? 'R5 Staff' : 'R4 Staff'}</span>` : ''}
-                    ${isNew ? `<span style="background:rgba(16,185,129,0.18); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:2px 8px; border-radius:12px; font-size:10px; font-weight:bold; letter-spacing:0.5px;">🆕 NEW</span>` : ''}
+                    ${isAdminUser ? `<span style="background:rgba(234,179,8,0.15); color:#eab308; border:1px solid rgba(234,179,8,0.4); padding:2px 8px; border-radius:12px; font-size:10px; font-weight:bold;">👑 ${u.role === 'R5' ? 'R5 LEADER' : 'R4 STAFF'}</span>` : ''}
+                    ${isNew ? `<span style="background:rgba(59,130,246,0.15); color:#3b82f6; border:1px solid rgba(59,130,246,0.4); padding:2px 8px; border-radius:12px; font-size:10px; font-weight:bold;">✨ NEW</span>` : ''}
+                    ${totalAlts > 0 ? `<span style="background:rgba(168,85,247,0.12); color:#c084fc; border:1px solid rgba(168,85,247,0.3); padding:2px 8px; border-radius:12px; font-size:10px; font-weight:bold;">👥 ${totalAlts} Alt(s)</span>` : ''}
                   </div>
-                  <div style="font-family:monospace; font-size:12px; color:var(--accent); font-weight:bold;">
-                    ID: ${escapeHTML(u.gameId || '')}
+                  <div style="font-family:monospace; font-size:12px; color:var(--text-muted); font-weight:bold;">
+                    ID: ${escapeHTML(uGidStr || 'N/A')}
                   </div>
                 </div>
               </div>
@@ -21783,34 +21808,33 @@ const views = {
 
             <td style="padding:12px 10px;">
               <div style="display:flex; align-items:center; flex-wrap:wrap; gap:6px;">
-                ${tokenPillHtml}
-                ${pushPillHtml}
-                ${altPillHtml}
+                ${tokenPill}
                 ${rosterInfoHtml}
+                ${isPush ? `<span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:3px 8px; border-radius:10px; font-size:11px; font-weight:bold;" title="Push Notifications Enabled">🔔 Push</span>` : `<span style="background:rgba(255,255,255,0.05); color:var(--text-muted); border:1px solid var(--border); padding:3px 8px; border-radius:10px; font-size:11px;" title="Push Notifications Disabled">🔕 No Push</span>`}
               </div>
             </td>
 
             <td style="padding:12px 10px;">
               <div style="display:flex; flex-direction:column; gap:2px;">
-                <div style="color:var(--text-muted); font-size:12px; font-weight:bold;">${escapeHTML(u.email || 'No email')}</div>
-                <div style="color:var(--text-muted); font-size:11px; opacity:0.8;">Registered: ${dateDisplay}</div>
+                <div style="color:var(--text-main); font-size:12.5px; font-weight:500;">${escapeHTML(u.email || 'No email')}</div>
+                <div style="color:var(--text-muted); font-size:11px;">Joined: ${createdMs ? new Date(createdMs).toLocaleDateString() : 'N/A'}</div>
               </div>
             </td>
 
             <td style="padding:12px 10px; text-align:right;">
               <div class="user-actions-container" style="position:relative; display:inline-block; text-align:left;">
-                <button onclick="window.toggleUserActionsMenu('actions-menu-${uid.replace(/[^a-zA-Z0-9_-]/g, '_')}', event)" 
-                        style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); padding:6px 12px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:all 0.15s ease;" 
-                        onmouseover="this.style.background='rgba(56,189,248,0.15)'; this.style.borderColor='rgba(56,189,248,0.4)';" 
-                        onmouseout="this.style.background='rgba(255,255,255,0.06)'; this.style.borderColor='var(--border)';"
+                <button onclick="window.toggleUserActionsMenu('actions-menu-${uid}', event)" 
+                        style="background:var(--card-bg); border:1px solid var(--border); color:var(--text-main); padding:6px 12px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:all 0.15s ease;" 
+                        onmouseover="this.style.borderColor='var(--accent)';" 
+                        onmouseout="this.style.borderColor='var(--border)';"
                         title="Open Actions Menu">
                   ⚡ Actions <span style="font-size:9px; opacity:0.7;">▼</span>
                 </button>
-                <div id="actions-menu-${uid.replace(/[^a-zA-Z0-9_-]/g, '_')}" class="actions-dropdown-content" style="display:none; position:absolute; right:0; top:calc(100% + 4px); background:#0f172a; border:1px solid rgba(255,255,255,0.15); border-radius:10px; box-shadow:0 10px 25px -5px rgba(0,0,0,0.7), 0 0 15px rgba(56,189,248,0.1); min-width:205px; padding:6px; z-index:9999; backdrop-filter:blur(12px);">
-                  <div onclick="window.closeAllUserActionMenus(); views.roster(); setTimeout(() => { const i=document.getElementById('playerLookupSelect'); if(i){ i.value='${escapeHTML(cName)}'; i.dispatchEvent(new Event('input')); const f=document.querySelector('.custom-dropdown-item'); if(f) f.click(); } }, 150);" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:var(--text-main); cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(56,189,248,0.15)'; this.style.color='#38bdf8';" onmouseout="this.style.background='transparent'; this.style.color='var(--text-main)';">
+                <div id="actions-menu-${uid}" class="actions-dropdown-content" style="display:none; position:absolute; right:0; top:calc(100% + 4px); background:#0f172a; border:1px solid rgba(255,255,255,0.15); border-radius:10px; box-shadow:0 10px 25px -5px rgba(0,0,0,0.7), 0 0 15px rgba(0,0,0,0.3); min-width:205px; padding:6px; z-index:9999; backdrop-filter:blur(12px);">
+                  <div onclick="window.closeAllUserActionMenus(); views.roster(); setTimeout(() => { const i=document.getElementById('playerLookupSelect'); if(i){ i.value='${escapeHTML(cName.replace(/'/g, "\\'"))}'; i.dispatchEvent(new Event('input')); const f=document.querySelector('.custom-dropdown-item'); if(f) f.click(); } }, 150);" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:var(--text-main); cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(56,189,248,0.15)'; this.style.color='#38bdf8';" onmouseout="this.style.background='transparent'; this.style.color='var(--text-main)';">
                     <span style="font-size:14px;">👁️</span> View Profile
                   </div>
-                  <div onclick="window.closeAllUserActionMenus(); window.openAdminEditFurnaceModal('${escapeHTML(cName)}', '${uGidStr}', '${flVal || ''}');" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:var(--text-main); cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(249,115,22,0.15)'; this.style.color='#f97316';" onmouseout="this.style.background='transparent'; this.style.color='var(--text-main)';">
+                  <div onclick="window.closeAllUserActionMenus(); window.openAdminEditFurnaceModal('${escapeHTML(cName)}', '${uGidStr}', '${furnaceLv || ''}');" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:var(--text-main); cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(249,115,22,0.15)'; this.style.color='#f97316';" onmouseout="this.style.background='transparent'; this.style.color='var(--text-main)';">
                     <span style="font-size:14px;">🔥</span> Edit Furnace Level
                   </div>
                   <div onclick="window.closeAllUserActionMenus(); window.openAdminRepairUserModal('${uid}');" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:var(--text-main); cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(168,85,247,0.15)'; this.style.color='#c084fc';" onmouseout="this.style.background='transparent'; this.style.color='var(--text-main)';">
@@ -21820,10 +21844,9 @@ const views = {
                   <div onclick="window.closeAllUserActionMenus(); window.copyTokenReminderMessage('${escapeHTML(cName.replace(/'/g, "\\'"))}', '${uGidStr}');" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:#f59e0b; cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(245,158,11,0.15)';" onmouseout="this.style.background='transparent';">
                     <span style="font-size:14px;">📋</span> Copy Sync Reminder
                   </div>` : ''}
-                  ${isViewerOwnerOfAccount ? `
                   <div onclick="window.closeAllUserActionMenus(); window.adminManageAltsPrompt('${uid}');" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:var(--text-main); cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(59,130,246,0.15)'; this.style.color='#3b82f6';" onmouseout="this.style.background='transparent'; this.style.color='var(--text-main)';">
                     <span style="font-size:14px;">🔗</span> Manage Linked Alts
-                  </div>` : ''}
+                  </div>
                   ${(isAdminUser && u.gameId != 318843189) ? `
                   <div style="height:1px; background:rgba(255,255,255,0.08); margin:4px 0;"></div>
                   <div onclick="window.closeAllUserActionMenus(); window.revokeAdmin('${u.gameId}');" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:#eab308; cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(234,179,8,0.15)';" onmouseout="this.style.background='transparent';">
@@ -21838,8 +21861,8 @@ const views = {
                     <span style="font-size:14px;">🖼️</span> Delete Custom Avatar
                   </div>` : ''}
                   <div style="height:1px; background:rgba(255,255,255,0.08); margin:4px 0;"></div>
-                  <div onclick="window.closeAllUserActionMenus(); window.adminDeleteUserRow('${uid}', '${cName.replace(/'/g, "\\'")}');" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:#ef4444; cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(239,68,68,0.18)';" onmouseout="this.style.background='transparent';">
-                    <span style="font-size:14px;">🗑️</span> Delete Member
+                  <div onclick="window.closeAllUserActionMenus(); window.adminDeletePlayer('${escapeHTML(cName.replace(/'/g, "\\'"))}', '${uGidStr}', '${uid}');" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:#ef4444; cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(239,68,68,0.18)';" onmouseout="this.style.background='transparent';">
+                    <span style="font-size:14px;">🗑️</span> Delete Player
                   </div>
                 </div>
               </div>
@@ -21848,13 +21871,13 @@ const views = {
           </tr>
         `;
 
-        // Render dedicated sub-rows for each linked alt character (ONLY if viewer is the owner of this account)
-        if (totalAlts > 0 && isViewerOwnerOfAccount) {
-          u.linkedGameIds.forEach(agid => {
+        // Render dedicated sub-rows for each linked alt character
+        if (totalAlts > 0) {
+          userAltGids.forEach(agid => {
             const altGidStr = String(agid).trim();
-            const aTok = u.altTokens ? u.altTokens[altGidStr] : null;
-            let altName = (aTok && aTok.nickname) || idToNameMap[altGidStr] || `Alt (${altGidStr})`;
-            let altFurnace = (aTok && (aTok.stove_lv || aTok.furnaceLevel)) || '';
+            const aTok = (u.altTokens && u.altTokens[altGidStr]) || (u.linkedAltsData && u.linkedAltsData[altGidStr]) || {};
+            let altName = aTok.nickname || aTok.name || aTok.chiefName || idToNameMap[altGidStr] || `Alt (${altGidStr})`;
+            let altFurnace = aTok.stove_lv || aTok.furnaceLevel || '';
             
             let altTokenStatus = 'unverified';
             let altTokenPill = `<span style="background:rgba(255,255,255,0.06); color:var(--text-muted); border:1px solid var(--border); padding:2px 8px; border-radius:10px; font-size:11px;">⚪ Unverified Alt</span>`;
@@ -21899,13 +21922,13 @@ const views = {
                 <td style="padding:10px 10px 10px 30px;">
                   <div style="display:flex; align-items:center; gap:10px;">
                     <span style="color:var(--text-muted); font-size:16px;">↳</span>
-                    <div style="width:32px; height:32px; border-radius:50%; overflow:hidden; background:rgba(56,189,248,0.15); flex-shrink:0; border:1.5px solid rgba(56,189,248,0.4);">
-                      <img src="${altAvatarSrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(altName)}&background=0284c7&color=fff&bold=true&size=128';">
+                    <div style="width:32px; height:32px; border-radius:50%; overflow:hidden; background:rgba(168,85,247,0.15); flex-shrink:0; border:1.5px solid rgba(168,85,247,0.4);">
+                      <img src="${altAvatarSrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(altName)}&background=a855f7&color=fff&bold=true&size=128';">
                     </div>
                     <div style="display:flex; flex-direction:column; gap:2px;">
                       <div style="font-weight:bold; font-size:13px; color:var(--text-main); display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
                         <span>${escapeHTML(altName)}</span>
-                        <span style="background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:1px 6px; border-radius:10px; font-size:10px; font-weight:bold;">🔗 Alt of ${escapeHTML(cName)}</span>
+                        <span style="background:rgba(168,85,247,0.12); color:#c084fc; border:1px solid rgba(168,85,247,0.3); padding:1px 6px; border-radius:10px; font-size:10px; font-weight:bold;">🎭 Alt of ${escapeHTML(cName)}</span>
                       </div>
                       <div style="font-family:monospace; font-size:11.5px; color:var(--text-muted); font-weight:bold;">
                         ID: ${escapeHTML(altGidStr)}
@@ -21931,14 +21954,14 @@ const views = {
                 <td style="padding:10px 10px; text-align:right;">
                   <div class="user-actions-container" style="position:relative; display:inline-block; text-align:left;">
                     <button onclick="window.toggleUserActionsMenu('actions-menu-alt-${altGidStr}', event)" 
-                            style="background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.25); color:#38bdf8; padding:5px 10px; border-radius:8px; font-size:11.5px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:5px; transition:all 0.15s ease;" 
-                            onmouseover="this.style.background='rgba(56,189,248,0.18)'; this.style.borderColor='rgba(56,189,248,0.5)';" 
-                            onmouseout="this.style.background='rgba(56,189,248,0.08)'; this.style.borderColor='rgba(56,189,248,0.25)';"
+                            style="background:rgba(168,85,247,0.08); border:1px solid rgba(168,85,247,0.25); color:#c084fc; padding:5px 10px; border-radius:8px; font-size:11.5px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:5px; transition:all 0.15s ease;" 
+                            onmouseover="this.style.background='rgba(168,85,247,0.18)'; this.style.borderColor='rgba(168,85,247,0.5)';" 
+                            onmouseout="this.style.background='rgba(168,85,247,0.08)'; this.style.borderColor='rgba(168,85,247,0.25)';"
                             title="Open Alt Options">
                       ⚡ Actions <span style="font-size:9px; opacity:0.7;">▼</span>
                     </button>
-                    <div id="actions-menu-alt-${altGidStr}" class="actions-dropdown-content" style="display:none; position:absolute; right:0; top:calc(100% + 4px); background:#0f172a; border:1px solid rgba(255,255,255,0.15); border-radius:10px; box-shadow:0 10px 25px -5px rgba(0,0,0,0.7), 0 0 15px rgba(56,189,248,0.1); min-width:190px; padding:6px; z-index:9999; backdrop-filter:blur(12px);">
-                      <div onclick="window.closeAllUserActionMenus(); views.roster(); setTimeout(() => { const i=document.getElementById('playerLookupSelect'); if(i){ i.value='${escapeHTML(altName)}'; i.dispatchEvent(new Event('input')); const f=document.querySelector('.custom-dropdown-item'); if(f) f.click(); } }, 150);" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:var(--text-main); cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(56,189,248,0.15)'; this.style.color='#38bdf8';" onmouseout="this.style.background='transparent'; this.style.color='var(--text-main)';">
+                    <div id="actions-menu-alt-${altGidStr}" class="actions-dropdown-content" style="display:none; position:absolute; right:0; top:calc(100% + 4px); background:#0f172a; border:1px solid rgba(255,255,255,0.15); border-radius:10px; box-shadow:0 10px 25px -5px rgba(0,0,0,0.7), 0 0 15px rgba(168,85,247,0.1); min-width:190px; padding:6px; z-index:9999; backdrop-filter:blur(12px);">
+                      <div onclick="window.closeAllUserActionMenus(); views.roster(); setTimeout(() => { const i=document.getElementById('playerLookupSelect'); if(i){ i.value='${escapeHTML(altName.replace(/'/g, "\\'"))}'; i.dispatchEvent(new Event('input')); const f=document.querySelector('.custom-dropdown-item'); if(f) f.click(); } }, 150);" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:var(--text-main); cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(56,189,248,0.15)'; this.style.color='#38bdf8';" onmouseout="this.style.background='transparent'; this.style.color='var(--text-main)';">
                         <span style="font-size:14px;">👁️</span> View Profile
                       </div>
                       <div onclick="window.closeAllUserActionMenus(); window.openAdminEditFurnaceModal('${escapeHTML(altName)}', '${altGidStr}', '${altFurnace}');" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:var(--text-main); cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(249,115,22,0.15)'; this.style.color='#f97316';" onmouseout="this.style.background='transparent'; this.style.color='var(--text-main)';">
@@ -21946,6 +21969,10 @@ const views = {
                       </div>
                       <div onclick="window.closeAllUserActionMenus(); window.adminManageAltsPrompt('${uid}');" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:var(--text-main); cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(59,130,246,0.15)'; this.style.color='#3b82f6';" onmouseout="this.style.background='transparent'; this.style.color='var(--text-main)';">
                         <span style="font-size:14px;">🔗</span> Manage Linked Alts
+                      </div>
+                      <div style="height:1px; background:rgba(255,255,255,0.08); margin:4px 0;"></div>
+                      <div onclick="window.closeAllUserActionMenus(); window.adminDeletePlayer('${escapeHTML(altName.replace(/'/g, "\\'"))}', '${altGidStr}', null);" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:#ef4444; cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(239,68,68,0.18)';" onmouseout="this.style.background='transparent';">
+                        <span style="font-size:14px;">🗑️</span> Delete Alt
                       </div>
                     </div>
                   </div>
@@ -22051,6 +22078,10 @@ const views = {
                     </div>
                     <div onclick="window.closeAllUserActionMenus(); window.openEditRosterMemberModal('${escapeHTML(uName.replace(/'/g, "\\'"))}');" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:#3b82f6; cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(59,130,246,0.15)';" onmouseout="this.style.background='transparent';">
                       <span style="font-size:14px;">✏️</span> Edit Roster Member
+                    </div>
+                    <div style="height:1px; background:rgba(255,255,255,0.08); margin:4px 0;"></div>
+                    <div onclick="window.closeAllUserActionMenus(); window.adminDeletePlayer('${escapeHTML(uName.replace(/'/g, "\\'"))}', '${uGid}', null);" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:#ef4444; cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(239,68,68,0.18)';" onmouseout="this.style.background='transparent';">
+                      <span style="font-size:14px;">🗑️</span> Delete Player
                     </div>
                   </div>
                 </div>
@@ -32104,7 +32135,7 @@ window.generatePlayerProfileHtml = (chiefName, p, headers, colIsUpcoming, roster
           <div style="height:1px; background:var(--border); margin:5px 0;"></div>
           ${playerGameId ? `<button onclick="window.adminSpoofPlayer('${playerGameId}')" style="background:rgba(236,72,153,0.1); color:var(--danger); border:1px solid rgba(236,72,153,0.3); padding:8px 12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:12px; text-align:left; transition: 0.2s;" onmouseover="this.style.background='rgba(236,72,153,0.2)'" onmouseout="this.style.background='rgba(236,72,153,0.1)'">🎭 Spoof Session</button>` : ''}
           <div style="height:1px; background:var(--border); margin:5px 0;"></div>
-          <button onclick="window.adminDeletePlayer('${chiefName.replace(/'/g, "\\'")}')" style="background:rgba(239,68,68,0.1); color:var(--danger); border:1px solid rgba(239,68,68,0.3); padding:8px 12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:12px; text-align:left; transition: 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.2)'" onmouseout="this.style.background='rgba(239,68,68,0.1)'">🗑️ Delete Player</button>
+          <button onclick="window.adminDeletePlayer('${chiefName.replace(/'/g, "\\'")}', '${playerGameId || ''}')" style="background:rgba(239,68,68,0.1); color:var(--danger); border:1px solid rgba(239,68,68,0.3); padding:8px 12px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:12px; text-align:left; transition: 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.2)'" onmouseout="this.style.background='rgba(239,68,68,0.1)'">🗑️ Delete Player</button>
         </div>
       </div>
     `;
