@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.57] - 2026-08-18
+- 🥇 **Championship Gold Badge Victory Rule**: `🥇 GOLD CHAMPION` medals and glowing card borders are now exclusively awarded to participating chiefs when [BDC] wins the entire tournament championship.
+- 🛡️ **Contender & Participant Tier**: Chiefs on active and past tournament rosters who have not yet won an overall championship tournament title are designated with verified `⚔️ CONTENDER` status and attendance counters.
+- 🔍 **Gold Champions Filter**: Added instant filtering on the Championship Leaderboard to view `🥇 Gold Champions` specifically.
+
 ## [2.9.56] - 2026-08-18
 - 👑 **All-Time Championship Leaderboard**: Dynamic aggregation engine computes total tournament Wins, Losses, overall Win Rate %, and flags captured vs opponent flags across all archived seasons in the Vault.
 - 🥇 **Golden Championship Badges**: Every participating chief on the Championship roster receives a glowing golden medal badge (`🥇 GOLD CHAMPION`) styled consistently with Bear Trap and Showdown accolades.

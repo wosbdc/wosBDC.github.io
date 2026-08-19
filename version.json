@@ -1,19 +1,19 @@
 {
-  "version": "2.9.56",
+  "version": "2.9.57",
   "releaseDate": "2026-08-18",
-  "title": "What's New in v2.9.56",
+  "title": "What's New in v2.9.57",
   "notes": [
-    "👑 All-Time Championship Leaderboard: Aggregates historical match data from the Vault to display overall tournament Wins/Losses, total flags captured, and overall win rate %.",
-    "🥇 Golden Championship Badges: Awarded shimmering gold champion badges to all participating chiefs on the Championship Hall of Fame roster.",
-    "🔍 Participant Search & Filtering: Interactive search and filters to easily explore all tournament veterans and current active roster members."
+    "🥇 Gold Championship Badge Victory Rule: Gold Champion badges are now exclusively earned when [BDC] wins the entire Championship tournament event.",
+    "🛡️ Contender Status for Active Chiefs: Active and past participating chiefs receive verified Contender badges and tournament attendance records.",
+    "🧭 Navigation Leaderboards Integration: Alliance Championship is directly accessible from the Leaderboards dropdown with dedicated filters for Gold Champions."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "2.9.56",
+    "version": "2.9.57",
     "latestChanges": [
-      "v2.9.56: Added All-Time Championship Wins/Losses Vault Legacy and Golden Participant Badges to Public Dashboard",
+      "v2.9.57: Refined Championship Gold badges to only be awarded for tournament event victories with Contender tier for roster participants",
+      "v2.9.56: Added Alliance Championship All-Time Leaderboard and Dynasty Stats under Nav Menu Leaderboards",
       "v2.9.55: Unified Championship Event Reset to clean battle info and reset signups from YES to NO with dual archiving",
-      "v2.9.54: Added Screenshot & Image Attachment support (Upload, Drag-and-Drop, Clipboard Paste, Lightbox Viewer) to Bug Tracker",
-      "v2.9.53: Added dual-sided Season Flag fields to Season Details card and total flags summary banner to public dashboard"
+      "v2.9.54: Added Screenshot & Image Attachment support to Bug Tracker"
     ]
   }
 }
