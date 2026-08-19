@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.55] - 2026-08-18
+- 🔄 **Unified Championship Event Reset**: The Event Reset action in Alliance Championship now comprehensively cleans/wipes battle matchup info (scores, flags, opponent names/states) and resets all member signups in the tracker from YES back to NO.
+- 📜 **Dual Timestamped Archiving**: Automatically captures and stores full historical snapshots of both the 5-round battle records (to `championship_meta/history`) and member attendance signups (to `events_archive/championship`) before resetting.
+- 🛡️ **Prominent Reset Controls**: Integrated direct `🔄 Event Reset` buttons on the top action header and signups table footer in the Championship Admin Suite.
+
 ## [2.9.54] - 2026-08-18
 - 📷 **Screenshot & Image Upload in Bug Tracker**: Empowered members and officers to attach screenshots to any feature suggestion or bug report via file selection, drag-and-drop, or instant clipboard pasting (`Ctrl+V`).
 - 🖼️ **Full-Resolution Image Lightbox**: Added high-contrast image thumbnails on feedback cards and admin lists that expand into an HD lightbox viewer with download capabilities.

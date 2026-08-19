@@ -1,19 +1,19 @@
 {
-  "version": "2.9.54",
+  "version": "2.9.55",
   "releaseDate": "2026-08-18",
-  "title": "What's New in v2.9.54",
+  "title": "What's New in v2.9.55",
   "notes": [
-    "📷 Screenshot & Image Upload in Bug Tracker: Members can now upload screenshots, drag & drop image files, or directly paste (Ctrl+V) screenshots from their clipboard when reporting bugs or submitting feature suggestions.",
-    "🖼️ Full-Resolution Image Lightbox: Added interactive image preview thumbnails in feedback cards and admin lists that expand into an HD lightbox modal with download support.",
-    "⚡ Instant Canvas Compression: Automatically optimizes uploaded images client-side for rapid, reliable upload speeds without database bloat."
+    "🔄 Unified Championship Event Reset: The Event Reset command now comprehensively wipes battle matchup info (scores, flags, opponents) and resets all member signups in the tracker from YES back to NO.",
+    "📜 Dual Timestamped Archiving: Both completed 5-round battle records and member signup attendance snapshots are automatically preserved into Firebase history before resetting.",
+    "🛡️ Header & Footer Reset Controls: Added 'Event Reset' quick buttons to the top action header and signups table footer in the Championship Admin Suite."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "2.9.54",
+    "version": "2.9.55",
     "latestChanges": [
+      "v2.9.55: Unified Championship Event Reset to clean battle info and reset signups from YES to NO with dual archiving",
       "v2.9.54: Added Screenshot & Image Attachment support (Upload, Drag-and-Drop, Clipboard Paste, Lightbox Viewer) to Bug Tracker",
       "v2.9.53: Added dual-sided Season Flag fields to Season Details card and total flags summary banner to public dashboard",
-      "v2.9.52: Launched in-app Feature Request & Bug Tracker with community upvoting and interactive Admin checklist",
-      "v2.9.51: Added dual-sided flag entry fields and live flag badges to Alliance Championship matchups and archives"
+      "v2.9.52: Launched in-app Feature Request & Bug Tracker with community upvoting and interactive Admin checklist"
     ]
   }
 }

@@ -1856,124 +1856,7 @@ window.fetchPlayerEventStats = async () => {
 
 // 🏆 Alliance Championship: Dedicated Archive & Reset Engine
 window.archiveAndResetChampionshipCycle = async () => {
-    const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
-    if (!isManager) {
-        if (window.showToast) window.showToast("Only R4/R5 managers can archive & reset Championship cycles", "error");
-        return;
-    }
-
-    const confirmFirst = await window.customConfirm("🔄 Archive & Reset Alliance Championship?\n\nThis will:\n1. Save a timestamped snapshot of current signups to Firebase archives.\n2. Update player lifetime stats (increment miss counters for unsigned members).\n3. Reset all signup statuses back to NO for the new round.\n\nProceed?");
-    if (!confirmFirst) return;
-
-    const confirmSecond = await window.customConfirm("⚠️ FINAL CONFIRMATION:\n\nAre you sure you want to reset Alliance Championship signups now?");
-    if (!confirmSecond) return;
-
-    if (window.showToast) window.showToast("Archiving Championship cycle...", "info");
-
-    try {
-        const timestamp = Date.now();
-        const dateStr = new Date(timestamp).toISOString().split('T')[0];
-        const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name || "Admin") : "Admin";
-        const isT = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
-
-        const [champData, rosterData, statsObj] = await Promise.all([
-            window.fetchChampionshipData(),
-            window.fetchRoster().catch(() => ({})),
-            window.fetchPlayerEventStats()
-        ]);
-
-        let rosterList = [];
-        if (rosterData) {
-            Object.values(rosterData).forEach(p => {
-                if (p.name && p.gameId) rosterList.push(p);
-            });
-        }
-        if (rosterList.length === 0 && window.idToNameMap) {
-            Object.entries(window.idToNameMap).forEach(([gid, name]) => {
-                rosterList.push({ gameId: gid, name: name });
-            });
-        }
-
-        let yesCount = 0, noCount = 0;
-        let playerSnapshots = [];
-
-        rosterList.forEach(p => {
-            const gidStr = p.gameId.toString().trim();
-            const rec = champData[gidStr] || (p.name ? champData[p.name] : null);
-            const isSigned = rec && isT(rec.signedUp);
-            if (isSigned) {
-                yesCount++;
-            } else {
-                noCount++;
-            }
-            playerSnapshots.push({
-                gameId: gidStr,
-                name: p.name,
-                signedUp: Boolean(isSigned)
-            });
-
-            // Update lifetime player event stats
-            const pStats = statsObj[gidStr] || {
-                gameId: gidStr,
-                name: p.name,
-                missedShowdown: 0,
-                missedChampionship: 0,
-                missedMercenary: 0,
-                missedPolarTerrors: 0,
-                missedBearTrap: 0,
-                totalCyclesTracked: 0,
-                totalMisses: 0
-            };
-            pStats.name = p.name;
-            pStats.totalCyclesTracked = (pStats.totalCyclesTracked || 0) + 1;
-            if (!isSigned) {
-                pStats.missedChampionship = (pStats.missedChampionship || 0) + 1;
-            }
-            pStats.totalMisses = (pStats.missedShowdown || 0) + (pStats.missedChampionship || 0) + (pStats.missedMercenary || 0) + (pStats.missedPolarTerrors || 0) + (pStats.missedBearTrap || 0);
-            pStats.lastUpdated = timestamp;
-            statsObj[gidStr] = pStats;
-        });
-
-        // 1. Save Archive to Firebase
-        const archivePayload = {
-            timestamp: timestamp,
-            dateStr: dateStr,
-            archivedBy: adminName,
-            event: 'Alliance Championship',
-            totalMembers: rosterList.length,
-            yesCount: yesCount,
-            noCount: noCount,
-            players: playerSnapshots
-        };
-        await set(ref(db, `events_archive/championship/${timestamp}`), archivePayload);
-
-        // 2. Update player_event_stats
-        await set(ref(db, 'player_event_stats'), statsObj);
-        window._playerEventStatsCache = statsObj;
-
-        // 3. Reset live Championship status in activity_live & championship
-        for (const p of rosterList) {
-            const gidStr = p.gameId.toString().trim();
-            try {
-                await update(ref(db, `activity_live/${gidStr}`), { championship: false, updatedAt: timestamp });
-            } catch(e) {
-                await set(ref(db, `activity_live/${gidStr}/championship`), false).catch(() => null);
-            }
-            await set(ref(db, `championship/${gidStr}`), { gameId: gidStr, name: p.name, signedUp: false, lastUpdated: timestamp, updatedBy: adminName }).catch(() => null);
-        }
-
-        window.clearAllEventCaches();
-
-        if (window.logAdminAction) {
-            window.logAdminAction("Archive & Reset Championship", `Archived cycle ${dateStr} (${yesCount} YES, ${noCount} NO) and reset signups for next round.`);
-        }
-
-        if (window.showToast) window.showToast(`Championship archived & reset successfully! 🎉`, "success");
-        if (window.views && window.views.championshipAdmin) window.views.championshipAdmin();
-    } catch(err) {
-        console.error("Archive Championship error:", err);
-        if (window.showToast) window.showToast("Error archiving Championship: " + err.message, "error");
-    }
+    return await window.archiveAndResetChampionshipSeason();
 };
 
 // ⚔️ Mercenary Prestige: Dedicated Archive & Reset Engine
@@ -9600,53 +9483,155 @@ window.saveChampionshipMatchups = async (data) => {
 window.archiveAndResetChampionshipSeason = async () => {
     const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
     if (!isManager) {
-        if (window.showToast) window.showToast("Only R4/R5 managers can archive Championship seasons", "error");
+        if (window.showToast) window.showToast("Only R4/R5 managers can archive & reset Championship", "error");
         return;
     }
 
-    const confirmFirst = await window.customConfirm("🔄 Archive & Reset Current Championship Season?\n\nThis will:\n1. Save a timestamped snapshot of current 5-round matchups to Firebase archives.\n2. Reset all round scores to 0 for the upcoming season.\n\nProceed?");
+    const confirmFirst = await window.customConfirm("🔄 Archive & Reset Alliance Championship?\n\nThis will:\n1. Save a timestamped snapshot of current 5-round battle matchups and scores to history.\n2. Save a timestamped snapshot of all member signups to attendance archives.\n3. Clean battle info (scores, flags, opponent names) for the upcoming season.\n4. Reset all member signups from YES back to NO in the tracker.\n\nProceed?");
     if (!confirmFirst) return;
 
-    if (window.showToast) window.showToast("Archiving Championship season...", "info");
+    const confirmSecond = await window.customConfirm("⚠️ FINAL CONFIRMATION:\n\nAre you sure you want to reset Alliance Championship signups & battle info now?");
+    if (!confirmSecond) return;
+
+    if (window.showToast) window.showToast("Archiving Championship battle info & resetting signups...", "info");
     try {
-        const currentData = await window.fetchChampionshipMatchups();
         const timestamp = Date.now();
-        
+        const dateStr = new Date(timestamp).toISOString().split('T')[0];
+        const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.displayName || currentUser.name || "Admin") : "Admin";
+        const isT = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
+
+        // 1. Fetch current data in parallel
+        const [currentMatchups, champData, rosterData, statsObj] = await Promise.all([
+            window.fetchChampionshipMatchups().catch(() => window.DEFAULT_CHAMPIONSHIP_MATCHUPS),
+            window.fetchChampionshipData().catch(() => ({})),
+            window.fetchRoster().catch(() => ({})),
+            window.fetchPlayerEventStats().catch(() => ({}))
+        ]);
+
+        // 2. Archive Battle Matchups to championship_meta/history
         await set(ref(db, `championship_meta/history/${timestamp}`), {
-            ...currentData,
+            ...currentMatchups,
             archivedAt: timestamp,
-            archivedBy: (currentUser && currentUser.displayName) ? currentUser.displayName : (currentUser?.email || 'Admin')
+            archivedBy: adminName
         });
 
-        // Reset live matchups
-        const resetData = {
+        // 3. Clean/Reset Live Battle Matchups in Firebase
+        const resetMatchups = {
             seasonName: "Upcoming Season",
             statusText: "0 Wins – 0 Losses (New Season)",
+            ourSeasonFlags: 0,
+            enemySeasonFlags: 0,
             ourState: "2089",
             rounds: {
-                "r1": { roundNum: 1, date: "Round 1", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "[TAG] Opponent 1", state: "", score: 0, flags: 0 } },
-                "r2": { roundNum: 2, date: "Round 2", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "[TAG] Opponent 2", state: "", score: 0, flags: 0 } },
-                "r3": { roundNum: 3, date: "Round 3", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "[TAG] Opponent 3", state: "", score: 0, flags: 0 } },
-                "r4": { roundNum: 4, date: "Round 4", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "[TAG] Opponent 4", state: "", score: 0, flags: 0 } },
-                "r5": { roundNum: 5, date: "Round 5", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "[TAG] Opponent 5", state: "", score: 0, flags: 0 } }
-            }
+                "r1": { roundNum: 1, date: "Round 1", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "", state: "", score: 0, flags: 0 } },
+                "r2": { roundNum: 2, date: "Round 2", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "", state: "", score: 0, flags: 0 } },
+                "r3": { roundNum: 3, date: "Round 3", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "", state: "", score: 0, flags: 0 } },
+                "r4": { roundNum: 4, date: "Round 4", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "", state: "", score: 0, flags: 0 } },
+                "r5": { roundNum: 5, date: "Round 5", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "", state: "", score: 0, flags: 0 } }
+            },
+            updatedAt: timestamp,
+            updatedBy: adminName
         };
+        await set(ref(db, 'championship_matchups'), resetMatchups);
 
-        await set(ref(db, 'championship_matchups'), resetData);
+        // 4. Process Roster and Archive Signups
+        let rosterList = [];
+        if (rosterData) {
+            Object.values(rosterData).forEach(p => {
+                if (p.name && p.gameId) rosterList.push(p);
+            });
+        }
+        if (rosterList.length === 0 && window.idToNameMap) {
+            Object.entries(window.idToNameMap).forEach(([gid, name]) => {
+                rosterList.push({ gameId: gid, name: name });
+            });
+        }
+
+        let yesCount = 0, noCount = 0;
+        let playerSnapshots = [];
+
+        rosterList.forEach(p => {
+            const gidStr = p.gameId.toString().trim();
+            const rec = champData[gidStr] || (p.name ? champData[p.name] : null);
+            const isSigned = rec && isT(rec.signedUp);
+            if (isSigned) {
+                yesCount++;
+            } else {
+                noCount++;
+            }
+            playerSnapshots.push({
+                gameId: gidStr,
+                name: p.name,
+                signedUp: Boolean(isSigned)
+            });
+
+            // Update lifetime player event stats
+            const pStats = statsObj[gidStr] || {
+                gameId: gidStr,
+                name: p.name,
+                missedShowdown: 0,
+                missedChampionship: 0,
+                missedMercenary: 0,
+                missedPolarTerrors: 0,
+                missedBearTrap: 0,
+                totalCyclesTracked: 0,
+                totalMisses: 0
+            };
+            pStats.name = p.name;
+            pStats.totalCyclesTracked = (pStats.totalCyclesTracked || 0) + 1;
+            if (!isSigned) {
+                pStats.missedChampionship = (pStats.missedChampionship || 0) + 1;
+            }
+            pStats.totalMisses = (pStats.missedShowdown || 0) + (pStats.missedChampionship || 0) + (pStats.missedMercenary || 0) + (pStats.missedPolarTerrors || 0) + (pStats.missedBearTrap || 0);
+            pStats.lastUpdated = timestamp;
+            statsObj[gidStr] = pStats;
+        });
+
+        // 5. Save Attendance Archive to Firebase
+        const archivePayload = {
+            timestamp: timestamp,
+            dateStr: dateStr,
+            archivedBy: adminName,
+            event: 'Alliance Championship',
+            totalMembers: rosterList.length,
+            yesCount: yesCount,
+            noCount: noCount,
+            players: playerSnapshots
+        };
+        await set(ref(db, `events_archive/championship/${timestamp}`), archivePayload);
+
+        // 6. Update player_event_stats
+        await set(ref(db, 'player_event_stats'), statsObj);
+        window._playerEventStatsCache = statsObj;
+
+        // 7. Reset live Championship status in activity_live & championship (YES -> NO)
+        for (const p of rosterList) {
+            const gidStr = p.gameId.toString().trim();
+            try {
+                await update(ref(db, `activity_live/${gidStr}`), { championship: false, updatedAt: timestamp });
+            } catch(e) {
+                await set(ref(db, `activity_live/${gidStr}/championship`), false).catch(() => null);
+            }
+            await set(ref(db, `championship/${gidStr}`), { gameId: gidStr, name: p.name, signedUp: false, lastUpdated: timestamp, updatedBy: adminName }).catch(() => null);
+        }
+
+        window.clearAllEventCaches();
 
         if (window.logAdminAction) {
-            window.logAdminAction("Archive & Reset Championship Season", `Archived ${currentData.seasonName || 'Season'} and initialized new championship round`);
+            window.logAdminAction("Archive & Reset Championship", `Archived season (${currentMatchups.seasonName || 'Season'}) & signups (${yesCount} YES, ${noCount} NO), cleaned battle info and reset tracker to NO.`);
         }
 
-        if (window.showToast) window.showToast("Championship season archived & reset successfully! 🎉", "success");
+        if (window.showToast) window.showToast("Championship archived, battle info cleaned & signups reset to NO! 🎉", "success");
         if (window.views && window.views.championshipAdmin) {
-            window.views.championshipAdmin('matchups');
+            window.views.championshipAdmin();
         }
     } catch(err) {
-        console.error("Archive Championship season error:", err);
+        console.error("Archive Championship error:", err);
         if (window.showToast) window.showToast("Error archiving Championship: " + err.message, "error");
     }
 };
+
+window.archiveAndResetChampionshipCycle = window.archiveAndResetChampionshipSeason;
 
 window.openChampionshipArchiveVaultModal = async (initialKey = 'live') => {
     let existingModal = document.getElementById('championshipArchiveVaultModal');
@@ -22138,6 +22123,21 @@ html += `</select>
                     </tbody>
                   </table>
                 </div>
+
+                <!-- Roster Table Footer Actions -->
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; background:rgba(255,255,255,0.02); padding:16px 20px; border-radius:12px; border:1px solid var(--border); margin-top:16px;">
+                    <div style="font-size:12px; color:var(--text-muted);">
+                        ⚠️ <strong>Event Reset</strong> archives current signups & battle info, cleans 5-round scores, and resets all member signups to NO.
+                    </div>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                        <button onclick="window.openChampionshipArchiveVaultModal('live')" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--accent); padding:10px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px;">
+                            📜 Open Archive Vault
+                        </button>
+                        <button onclick="window.archiveAndResetChampionshipSeason()" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:white; border:none; padding:10px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(239,68,68,0.3);">
+                            🔄 Event Reset (Archive & Reset)
+                        </button>
+                    </div>
+                </div>
             `;
         } else {
             // MATCHUPS EDITOR
@@ -22284,6 +22284,9 @@ html += `</select>
               <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
                 <button onclick="if(document.querySelector('.navbar')) document.querySelector('.navbar').style.display='flex'; views.championship();" style="background:linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(6,182,212,0.05) 100%); color:var(--accent); border:1px solid rgba(6,182,212,0.4); padding:8px 14px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; transition:0.2s;">
                   👁️ View Public Dashboard
+                </button>
+                <button onclick="window.archiveAndResetChampionshipSeason()" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:white; border:none; padding:8px 14px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(239,68,68,0.3); transition:0.2s;">
+                  🔄 Event Reset
                 </button>
               </div>
             </div>
