@@ -22676,24 +22676,34 @@ window.resetBearTrapEvent = async () => {
     
     let altProfilesMap = {};
     try {
-        const [altsSnap, profileSnap] = await Promise.all([
-            get(ref(db, 'users_alts')).catch(() => null),
-            get(ref(db, `users/${currentUser.uid}`)).catch(() => null)
-        ]);
-        if (altsSnap && altsSnap.exists()) altProfilesMap = altsSnap.val() || {};
-        let profileData = (profileSnap && profileSnap.exists()) ? profileSnap.val() : null;
-        if (!profileData && currentUser.email) {
-            const allUsersSnap = await get(ref(db, 'users')).catch(() => null);
-            if (allUsersSnap && allUsersSnap.exists()) {
-                const allUsers = allUsersSnap.val();
-                for (const [k, u] of Object.entries(allUsers)) {
-                    if (u && u.email && u.email.toLowerCase() === currentUser.email.toLowerCase()) {
-                        profileData = u;
-                        break;
-                    }
+        // 1. Instant hydration from localStorage cache (<1ms)
+        const cachedUser = localStorage.getItem('cached_current_user');
+        if (cachedUser) {
+            try {
+                const parsedUser = JSON.parse(cachedUser);
+                if (parsedUser && typeof parsedUser === 'object') {
+                    Object.assign(currentUser, parsedUser);
                 }
-            }
+            } catch(e) {}
         }
+        const cachedAlts = localStorage.getItem('cached_users_alts');
+        if (cachedAlts) {
+            try { altProfilesMap = JSON.parse(cachedAlts) || {}; } catch(e) {}
+        }
+
+        // 2. Fast targeted fetch with 1.5s timeout - NEVER scan full /users table!
+        const fetchWithTimeout = (promise, ms = 1500) => 
+            Promise.race([promise, new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))]);
+          
+        const [altsSnap, profileSnap] = await Promise.all([
+            fetchWithTimeout(get(ref(db, 'users_alts'))).catch(() => null),
+            fetchWithTimeout(get(ref(db, `users/${currentUser.uid}`))).catch(() => null)
+        ]);
+        if (altsSnap && altsSnap.exists()) {
+            altProfilesMap = altsSnap.val() || {};
+            try { localStorage.setItem('cached_users_alts', JSON.stringify(altProfilesMap)); } catch(e) {}
+        }
+        let profileData = (profileSnap && profileSnap.exists()) ? profileSnap.val() : null;
         if (profileData) {
             if (profileData.gameId && !currentUser.gameId) currentUser.gameId = profileData.gameId;
             if (profileData.name && !currentUser.name) currentUser.name = profileData.name;
@@ -22709,6 +22719,7 @@ window.resetBearTrapEvent = async () => {
             if (profileData.altTokens) currentUser.altTokens = profileData.altTokens;
             if (profileData.linkedGameIds) currentUser.linkedGameIds = profileData.linkedGameIds;
             if (profileData.linkedAltsData) currentUser.linkedAltsData = profileData.linkedAltsData;
+            try { localStorage.setItem('cached_current_user', JSON.stringify(currentUser)); } catch(e) {}
         }
     } catch(e) {}
 
@@ -28450,7 +28461,18 @@ allLinks.forEach(link => {
   });
 });
 
-// Initial boot view resolver
+// Initial boot view resolver with URL Query Parameter & Hash Deep-Linking
+try {
+  const urlParams = new URLSearchParams(window.location.search);
+  const rawHash = (window.location.hash || '').replace(/^#/, '').trim().toLowerCase();
+  const directParam = (urlParams.get('view') || urlParams.get('page') || urlParams.get('tab') || '').toLowerCase();
+  
+  if (rawHash === 'frost' || directParam === 'frost') {
+    sessionStorage.setItem('activeView', 'account');
+    sessionStorage.setItem('activeAccountTab', 'Frost');
+  }
+} catch(e) {}
+
 const savedBootView = sessionStorage.getItem('activeView');
 const savedBootAdminTab = sessionStorage.getItem('activeAdminTab');
 const savedBootAccountTab = sessionStorage.getItem('activeAccountTab');

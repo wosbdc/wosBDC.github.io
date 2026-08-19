@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.45] - 2026-08-18
+- 🚀 **Eliminated 60-Second Full-Database Scans**: Removed the synchronous `get(ref(db, 'users'))` full-table scan that was triggering in Account Hub during user resolution. Added `localStorage` profile caching and targeted UID lookups with a 1.5s timeout.
+- ⚡ **Direct `#frost` and `?view=frost` Deep-Linking**: Visiting `https://wosbdc.github.io/#frost` or `?view=frost` directly opens the Frost Clan Command Center instantly.
+- ❄️ **Accelerated Google Apps Script `FrostApp.html`**: Replaced slow `google.script.run` RPC queries with direct client-side fetch from Firebase RTDB (`frost_clan/alts`) for sub-50ms execution.
+
 ## [2.9.44] - 2026-08-18
 - ❄️ **Frost Clan Zero-Latency Direct Firebase Loading**: Completely audited the Frost Clan Command Center. Seeded all alt data permanently to `/frost_clan/alts` in Firebase Realtime Database and removed all slow Google Apps Script HTTP calls.
 - ⚡ **Zero-404 Asset Optimization**: Replaced missing image asset requests with fast CSS crystal badges, eliminating network request stalls.
