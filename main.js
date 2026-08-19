@@ -133,7 +133,7 @@ window.fetchRoster = async () => {
 };
 
 
-const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbzpQ0MIt3QJ3sco-d5d8PdthaG-g4o9CRZkcnBOyES7LX-8aAaDffvCUt2SOAQL-go/exec';
+const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbzEDRKqYLW05dris_vyxF-SZEH5917Saa5eRieag0n_gbJeWj3Qo_Zvgch94hBg1tE/exec';
 const VERIFY_PROXY_URL = 'https://wos-vercel-proxy.vercel.app/api/verify'; // Fallback / secondary proxy
 
 // Get a fresh Firebase ID token for the current user (replaces hardcoded APP_SECRET)
