@@ -710,8 +710,8 @@ tr:hover td {
 }
 
 .fc-unified-badge:hover {
-    transform: scale(1.08) translateZ(0);
-    filter: drop-shadow(0 0 12px rgba(255, 140, 0, 0.6));
+    transform: scale(1.12) translateZ(0);
+    filter: drop-shadow(0 0 18px rgba(255, 140, 0, 0.85));
 }
 
 .furnace-metric-box {
@@ -721,46 +721,46 @@ tr:hover td {
     justify-content: center;
     text-align: center;
     padding: 6px 8px;
-    border-radius: 12px;
+    border-radius: 14px;
     position: relative;
     overflow: visible;
-    min-height: 84px;
+    min-height: 92px;
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .furnace-metric-box.gold {
-    background: radial-gradient(circle at 50% 60%, rgba(234, 179, 8, 0.18) 0%, rgba(15, 23, 42, 0.95) 100%);
-    border: 1.5px solid rgba(234, 179, 8, 0.55);
-    box-shadow: 0 4px 18px rgba(234, 179, 8, 0.22), inset 0 0 16px rgba(234, 179, 8, 0.1);
+    background: radial-gradient(circle at 50% 50%, rgba(234, 179, 8, 0.22) 0%, rgba(15, 23, 42, 0.95) 100%);
+    border: 1.5px solid rgba(234, 179, 8, 0.65);
+    box-shadow: 0 4px 22px rgba(234, 179, 8, 0.28), inset 0 0 20px rgba(234, 179, 8, 0.14);
 }
 
 .furnace-metric-box.gold:hover {
-    border-color: rgba(234, 179, 8, 0.85);
-    box-shadow: 0 6px 24px rgba(234, 179, 8, 0.35), inset 0 0 20px rgba(234, 179, 8, 0.18);
+    border-color: rgba(234, 179, 8, 0.95);
+    box-shadow: 0 8px 30px rgba(234, 179, 8, 0.45), inset 0 0 24px rgba(234, 179, 8, 0.22);
     transform: translateY(-2px);
 }
 
 .furnace-metric-box.cyan {
-    background: radial-gradient(circle at 50% 60%, rgba(6, 182, 212, 0.2) 0%, rgba(15, 23, 42, 0.95) 100%);
-    border: 1.5px solid rgba(6, 182, 212, 0.55);
-    box-shadow: 0 4px 18px rgba(6, 182, 212, 0.22), inset 0 0 16px rgba(6, 182, 212, 0.1);
+    background: radial-gradient(circle at 50% 50%, rgba(6, 182, 212, 0.22) 0%, rgba(15, 23, 42, 0.95) 100%);
+    border: 1.5px solid rgba(6, 182, 212, 0.65);
+    box-shadow: 0 4px 22px rgba(6, 182, 212, 0.28), inset 0 0 20px rgba(6, 182, 212, 0.14);
 }
 
 .furnace-metric-box.cyan:hover {
-    border-color: rgba(6, 182, 212, 0.85);
-    box-shadow: 0 6px 24px rgba(6, 182, 212, 0.35), inset 0 0 20px rgba(6, 182, 212, 0.18);
+    border-color: rgba(6, 182, 212, 0.95);
+    box-shadow: 0 8px 30px rgba(6, 182, 212, 0.45), inset 0 0 24px rgba(6, 182, 212, 0.22);
     transform: translateY(-2px);
 }
 
 .furnace-metric-box.blue {
-    background: radial-gradient(circle at 50% 60%, rgba(14, 165, 233, 0.2) 0%, rgba(15, 23, 42, 0.95) 100%);
-    border: 1.5px solid rgba(14, 165, 233, 0.55);
-    box-shadow: 0 4px 18px rgba(14, 165, 233, 0.22), inset 0 0 16px rgba(14, 165, 233, 0.1);
+    background: radial-gradient(circle at 50% 50%, rgba(14, 165, 233, 0.22) 0%, rgba(15, 23, 42, 0.95) 100%);
+    border: 1.5px solid rgba(14, 165, 233, 0.65);
+    box-shadow: 0 4px 22px rgba(14, 165, 233, 0.28), inset 0 0 20px rgba(14, 165, 233, 0.14);
 }
 
 .furnace-metric-box.blue:hover {
-    border-color: rgba(14, 165, 233, 0.85);
-    box-shadow: 0 6px 24px rgba(14, 165, 233, 0.35), inset 0 0 20px rgba(14, 165, 233, 0.18);
+    border-color: rgba(14, 165, 233, 0.95);
+    box-shadow: 0 8px 30px rgba(14, 165, 233, 0.45), inset 0 0 24px rgba(14, 165, 233, 0.22);
     transform: translateY(-2px);
 }
 
@@ -769,12 +769,12 @@ tr:hover td {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 20px 16px;
-    margin: 14px 0;
-    background: radial-gradient(circle at 50% 50%, rgba(234, 179, 8, 0.14) 0%, rgba(15, 23, 42, 0.95) 100%);
-    border: 1.5px solid rgba(234, 179, 8, 0.4);
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6), inset 0 0 24px rgba(234, 179, 8, 0.12);
-    border-radius: 16px;
+    padding: 22px 18px;
+    margin: 12px 0 14px 0;
+    background: radial-gradient(circle at 50% 50%, rgba(234, 179, 8, 0.18) 0%, rgba(15, 23, 42, 0.95) 100%);
+    border: 1.5px solid rgba(234, 179, 8, 0.55);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.65), inset 0 0 28px rgba(234, 179, 8, 0.16);
+    border-radius: 18px;
     position: relative;
     overflow: visible;
     text-align: center;
@@ -782,8 +782,8 @@ tr:hover td {
 }
 
 .id-card-furnace-showcase:hover {
-    border-color: rgba(234, 179, 8, 0.7);
-    box-shadow: 0 10px 36px rgba(234, 179, 8, 0.25), inset 0 0 30px rgba(234, 179, 8, 0.18);
+    border-color: rgba(234, 179, 8, 0.85);
+    box-shadow: 0 10px 40px rgba(234, 179, 8, 0.35), inset 0 0 34px rgba(234, 179, 8, 0.22);
 }
 
 @media (max-width: 450px) {

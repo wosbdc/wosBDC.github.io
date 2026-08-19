@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.50] - 2026-08-18
+- 🗓️ **Standardized Joined Date & Time Active Duration**: Created universal date calculation helpers (`calculateTimeActive`, `formatDateForDisplay`, `formatDateForInput`, `formatTimeActiveShort`) to reliably compute play duration (days, weeks, months, years) and consistently display joined dates across all primary character cards, alt account cards, and admin member profiles.
+- 🔥 **Dynamic Furnace Centerpiece for Characters**: Added prominent, responsive dynamic Furnace Level & Fire Crystal centerpiece icons (`furnace-metric-box`) with glowing ambient borders across Account Hub main profiles and alt accounts.
+- ⚡ **Integrated Profile Editing & Live Time Active Previews**: Dynamic live updates in both Chief Member Profile and Alt Profile modals compute exact Time Active values on keystroke / date-picker changes and live-render furnace badges.
+
 ## [2.9.49] - 2026-08-18
 - 🏆 **Resolved Standings & Medals Lazy-Loading & Error Boundary**: Fully audited `renderAccountRankings` in Account Hub. Scoped `sdFbHistorySnap` and `sdFbLiveSnap` in parallel `Promise.all` queries, wrapped the entire dashboard rendering in a comprehensive error boundary with instant fallback & retry controls.
 - 🔒 **Global `escapeHTML` Security Binding**: Declared `escapeHTML` as a first-class lexical module function to eliminate any possible undefined helper references during dynamic DOM injection.

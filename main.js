@@ -801,6 +801,541 @@ window.clearAllEventCaches = () => {
     window._activityMatrixLoaded = false;
 };
 
+// ==========================================
+// --- Broadcast Push Notification Engine ---
+// ==========================================
+window.broadcastPresets = {
+  shields: {
+    title: "Shields Up!!",
+    body: "Shields up alliance! Sunfire / SvS battle is active. Keep your shields ON and check the dashboard for instructions!"
+  },
+  beartrap: {
+    title: "Bear Trap in 5 Minutes!",
+    body: "Bear Trap opens in 5 minutes! Set your rallies and join promptly for max alliance rewards."
+  },
+  championship: {
+    title: "Alliance Championship Starting!",
+    body: "Championship battles are beginning! Check your matchups and ensure defensive setups are ready."
+  },
+  giftcode: {
+    title: "New Gift Code Released!",
+    body: "A new game gift code is live! Visit the dashboard to auto-claim rewards for all your accounts."
+  },
+  reset: {
+    title: "Daily Reset / Events Updated!",
+    body: "Daily game reset is complete. Check the alliance dashboard for today's active events and schedules."
+  }
+};
+
+window.applyBroadcastPreset = function(presetKey) {
+  const preset = window.broadcastPresets ? window.broadcastPresets[presetKey] : null;
+  if (!preset) return;
+  const titleEl = document.getElementById('adminPushTitle');
+  const bodyEl = document.getElementById('adminPushBody');
+  if (titleEl) titleEl.value = preset.title;
+  if (bodyEl) bodyEl.value = preset.body;
+};
+
+window.openBroadcastPushModalWithPreset = function(presetKey) {
+  if (typeof window.openBroadcastPushModal === 'function') {
+    window.openBroadcastPushModal();
+    setTimeout(() => {
+      if (presetKey && typeof window.applyBroadcastPreset === 'function') {
+        window.applyBroadcastPreset(presetKey);
+      }
+    }, 50);
+  }
+};
+
+window.openBroadcastPushModal = function() {
+  let existing = document.getElementById('broadcastPushModal');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'broadcastPushModal';
+  overlay.style.cssText = `
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(6px);
+      z-index: 99999; display: flex; justify-content: center; align-items: center;
+      padding: 20px; box-sizing: border-box; animation: fadeIn 0.2s ease;
+  `;
+
+  overlay.innerHTML = `
+      <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; width: 100%; max-width: 480px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 15px; text-align: left;">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <h3 style="margin: 0; color: var(--accent); font-size: 18px; display: flex; align-items: center; gap: 8px;">
+                    🚀 Blast Notifications (<span id="bpmHeaderCount">...</span>)
+                </h3>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <button type="button" onclick="document.getElementById('broadcastPushModal').remove(); if(window.openCreateCountdownAlertModal) window.openCreateCountdownAlertModal(null, 'timer');" style="background: linear-gradient(135deg, #a855f7, #6366f1); color: #fff; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11.5px; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 6px rgba(168,85,247,0.3);" title="Create a scheduled announcement with live countdown timer">
+                    ⏳ Countdown Alert
+                </button>
+                <button onclick="document.getElementById('broadcastPushModal').remove()" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#cbd5e1; font-size:18px; width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; line-height:1; transition:0.15s;" onmouseover="this.style.background='rgba(239,68,68,0.2)'; this.style.borderColor='rgba(239,68,68,0.4)'; this.style.color='#ef4444'" onmouseout="this.style.background='rgba(255,255,255,0.06)'; this.style.borderColor='rgba(255,255,255,0.12)'; this.style.color='#cbd5e1'" title="Close Window">✕</button>
+              </div>
+          </div>
+          
+          <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Send an instant <strong>wosBDC Alert</strong> notification to all <strong id="bpmSubCount" style="color:var(--accent);">...</strong> registered devices.</p>
+
+          <!-- Quick Preset Templates -->
+          <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px;">
+              <div style="font-size: 11px; font-weight: bold; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                  <span>⚡ Quick Preset Templates:</span>
+              </div>
+              <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                  <button type="button" onclick="window.applyBroadcastPreset('shields')" style="background: rgba(236,72,153,0.15); border: 1px solid rgba(236,72,153,0.35); color: #f472b6; padding: 4px 9px; border-radius: 6px; font-size: 11.5px; font-weight: bold; cursor: pointer; transition: 0.15s;">🛡️ Shields Up!</button>
+                  <button type="button" onclick="window.applyBroadcastPreset('beartrap')" style="background: rgba(249,115,22,0.15); border: 1px solid rgba(249,115,22,0.35); color: #f97316; padding: 4px 9px; border-radius: 6px; font-size: 11.5px; font-weight: bold; cursor: pointer; transition: 0.15s;">🪤 Bear Trap</button>
+                  <button type="button" onclick="window.applyBroadcastPreset('championship')" style="background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.35); color: #60a5fa; padding: 4px 9px; border-radius: 6px; font-size: 11.5px; font-weight: bold; cursor: pointer; transition: 0.15s;">⚔️ Championship</button>
+                  <button type="button" onclick="window.applyBroadcastPreset('giftcode')" style="background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.35); color: #10b981; padding: 4px 9px; border-radius: 6px; font-size: 11.5px; font-weight: bold; cursor: pointer; transition: 0.15s;">🎁 Gift Code</button>
+                  <button type="button" onclick="window.applyBroadcastPreset('reset')" style="background: rgba(168,85,247,0.15); border: 1px solid rgba(168,85,247,0.35); color: #c084fc; padding: 4px 9px; border-radius: 6px; font-size: 11.5px; font-weight: bold; cursor: pointer; transition: 0.15s;">🔄 Daily Reset</button>
+              </div>
+          </div>
+
+          <div>
+              <label style="font-size: 12px; font-weight: bold; color: var(--text-main); display: block; margin-bottom: 6px;">Notification Title</label>
+              <input type="text" id="adminPushTitle" placeholder="e.g. Bear Trap Starting in 5 Minutes!" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-main); font-weight: bold; box-sizing: border-box;">
+          </div>
+
+          <div>
+              <label style="font-size: 12px; font-weight: bold; color: var(--text-main); display: block; margin-bottom: 6px;">Message Body</label>
+              <textarea id="adminPushBody" placeholder="Enter message details..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-main); min-height: 90px; box-sizing: border-box;"></textarea>
+          </div>
+
+          <div id="adminPushStatus" style="font-size: 12px; font-weight: bold; text-align: center;"></div>
+
+          <div style="display: flex; gap: 10px; margin-top: 5px;">
+              <button onclick="document.getElementById('broadcastPushModal').remove()" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-main); font-weight: bold; cursor: pointer;">Cancel</button>
+              <button onclick="window.sendBroadcastPush()" style="flex: 1; padding: 12px; border-radius: 8px; border: none; background: var(--danger); color: #fff; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(239,68,68,0.3);">Send Alert (<span id="bpmBtnCount">...</span>) 🚀</button>
+          </div>
+      </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  if (typeof window.getPushSubscriberCount === 'function') {
+    window.getPushSubscriberCount().then(res => {
+      const h = document.getElementById('bpmHeaderCount');
+      const s = document.getElementById('bpmSubCount');
+      const b = document.getElementById('bpmBtnCount');
+      if (h) h.textContent = `${res.displayCount}`;
+      if (s) s.textContent = `${res.displayCount}`;
+      if (b) b.textContent = `${res.displayCount}`;
+    });
+  }
+};
+
+window.sendBroadcastPush = async () => {
+  let rawTitle = document.getElementById('adminPushTitle').value.trim();
+  const body = document.getElementById('adminPushBody').value.trim();
+  const statusEl = document.getElementById('adminPushStatus');
+  
+  if (!rawTitle || !body) {
+    statusEl.textContent = "Title and Body are required.";
+    statusEl.style.color = "var(--danger)";
+    return;
+  }
+  
+  const title = /^wosBDC\s*Alert/i.test(rawTitle) ? rawTitle : 'wosBDC Alert: ' + rawTitle;
+
+  const confirmed = await window.customConfirm("Are you sure you want to broadcast this notification to all subscribed users?");
+  if (!confirmed) return;
+  
+  statusEl.textContent = "Sending...";
+  statusEl.style.color = "var(--text-muted)";
+  
+  try {
+    const userToken = await getAuthToken();
+    const pushToken = userToken || "n5fTnxcK5J5ddNsT77AhZIoQGTogW3ROpk4k03Sv";
+    const res = await fetch(API_BASE_URL, {
+      method: 'POST',
+      body: JSON.stringify({ api: 'sendPush', title: title, body: body, secret: pushToken, token: pushToken }),
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+    }).then(r => r.json());
+    
+    if (res.success) {
+      statusEl.textContent = "🚀 " + res.message;
+      statusEl.style.color = "var(--success)";
+      if (window.showToast) window.showToast("🚀 Broadcast Notification Sent!", "success");
+      
+      try {
+        const newAlertRef = push(ref(db, 'broadcastAlerts'));
+        await set(newAlertRef, {
+          id: newAlertRef.key,
+          title: title,
+          body: body,
+          senderName: (currentUser && (currentUser.name || currentUser.chiefName)) || "Leadership",
+          senderId: (currentUser && currentUser.gameId) || "",
+          timestamp: Date.now(),
+          isoDate: new Date().toISOString()
+        });
+      } catch(dbErr) {
+        console.warn("Failed to write broadcast to RTDB:", dbErr);
+      }
+
+      document.getElementById('adminPushTitle').value = "";
+      document.getElementById('adminPushBody').value = "";
+    } else {
+      statusEl.textContent = "Error: " + (res.message || "Failed to send broadcast");
+      statusEl.style.color = "var(--danger)";
+      if (window.showToast) window.showToast("Push failed: " + (res.message || "Error"), "error");
+    }
+  } catch(e) {
+    console.error("Broadcast push error:", e);
+    statusEl.textContent = "Network Error: " + (e.message || e);
+    statusEl.style.color = "var(--danger)";
+    if (window.showToast) window.showToast("Network Error: " + (e.message || e), "error");
+  }
+};
+
+// ==========================================
+// --- Frost Clan Command Center Engine ---
+// ==========================================
+window.frostDataLoaded = false;
+window.frostState = { alts: [] };
+window.frostFilter = window.frostFilter || 'all'; // 'all' | 'unshielded' | 'shielded' | 'needs_showdown' | 'showdown_done'
+window.frostSearchQuery = window.frostSearchQuery || '';
+window._frostTargetContainerId = 'frostClanContainer';
+
+window.loadFrostClanData = async function(targetContainerId = 'frostClanContainer') {
+  window._frostTargetContainerId = targetContainerId;
+  const container = document.getElementById(targetContainerId);
+  if (!container) return;
+
+  // Instant local cache hydration (<1ms zero-spinner display)
+  if (!window.frostDataLoaded) {
+    try {
+      const cached = localStorage.getItem('cached_frost_clan_alts');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          window.frostState.alts = parsed;
+          window.frostDataLoaded = true;
+          window.renderFrostClan(targetContainerId);
+        }
+      }
+    } catch(e) {}
+  } else if (window.frostState.alts && window.frostState.alts.length > 0) {
+    window.renderFrostClan(targetContainerId);
+  }
+
+  // Set up real-time Firebase listener (Exclusively Firebase RTDB)
+  if (!window._frostFirebaseListening) {
+    window._frostFirebaseListening = true;
+    
+    onValue(ref(db, 'frost_clan/alts'), (snap) => {
+      if (snap.exists() && snap.val() && Array.isArray(snap.val()) && snap.val().length > 0) {
+        window.frostState.alts = snap.val();
+        window.frostDataLoaded = true;
+        try { localStorage.setItem('cached_frost_clan_alts', JSON.stringify(snap.val())); } catch(e) {}
+        window.renderFrostClan(window._frostTargetContainerId);
+      }
+    });
+  }
+};
+
+window.setFrostFilter = function(filter) {
+  window.frostFilter = filter;
+  window.renderFrostClan(window._frostTargetContainerId);
+};
+
+window.setFrostSearch = function(query) {
+  window.frostSearchQuery = (query || '').toLowerCase().trim();
+  window.renderFrostClan(window._frostTargetContainerId);
+};
+
+window.renderFrostClan = function(targetContainerId = null) {
+  const container = document.getElementById(targetContainerId || window._frostTargetContainerId || 'frostClanContainer');
+  if (!container) return;
+
+  if (window.frostState.alts.length === 0) {
+    container.innerHTML = `
+      <div style="margin:40px 0; color:var(--text-muted); text-align:center;">
+        <div style="border:4px solid rgba(255,255,255,0.1); border-top-color:var(--accent); border-radius:50%; width:36px; height:36px; animation:spin 1s linear infinite; margin:0 auto 12px;"></div>
+        Loading Frost Clan alts directly from Firebase...
+      </div>
+    `;
+    return;
+  }
+
+  const totalAlts = window.frostState.alts.length;
+  const shieldedCount = window.frostState.alts.filter(a => Boolean(a.shields)).length;
+  const unshieldedCount = totalAlts - shieldedCount;
+  const rebirthCount = window.frostState.alts.filter(a => Boolean(a.rebirth)).length;
+  const showdownCount = window.frostState.alts.filter(a => Boolean(a.showdown)).length;
+  const needsShowdownCount = totalAlts - showdownCount;
+  const shieldPct = totalAlts > 0 ? Math.round((shieldedCount / totalAlts) * 100) : 0;
+
+  const filteredAlts = window.frostState.alts.map((alt, idx) => ({ ...alt, originalIdx: idx })).filter(alt => {
+    // Search query filter
+    if (window.frostSearchQuery && !alt.name.toLowerCase().includes(window.frostSearchQuery)) {
+      return false;
+    }
+    // Status filters
+    if (window.frostFilter === 'unshielded') return !alt.shields;
+    if (window.frostFilter === 'shielded') return Boolean(alt.shields);
+    if (window.frostFilter === 'needs_showdown') return !alt.showdown;
+    if (window.frostFilter === 'showdown_done') return Boolean(alt.showdown);
+    return true;
+  });
+
+  let html = `
+    <!-- Top Action Controls Header -->
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:15px;">
+      <div style="text-align:left;">
+        <h2 style="margin:0; font-size:22px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+          <span>❄️ Frost Clan Command Center</span>
+          <span style="background:rgba(16,185,129,0.15); border:1px solid #10b981; color:#10b981; font-size:10.5px; padding:2px 7px; border-radius:10px; font-weight:bold;">⚡ Live RTDB</span>
+        </h2>
+        <p style="margin:4px 0 0; color:var(--text-muted); font-size:12.5px;">Live Shield Defense, Showdown & Rebirth Readiness Tracker</p>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+        <button onclick="window.shieldAllFrostClan()" style="background:linear-gradient(135deg, #10b981, #059669); color:white; border:none; padding:8px 16px; border-radius:10px; font-weight:bold; cursor:pointer; font-size:13px; box-shadow:0 3px 10px rgba(16,185,129,0.3); display:inline-flex; align-items:center; gap:6px; transition:0.2s;">
+          🛡️ Shield ALL (${totalAlts})
+        </button>
+        <button onclick="window.openBroadcastPushModalWithPreset('shields')" style="background:linear-gradient(135deg, #ec4899, #8b5cf6); color:white; border:none; padding:8px 16px; border-radius:10px; font-weight:bold; cursor:pointer; font-size:13px; box-shadow:0 3px 10px rgba(236,72,153,0.3); display:inline-flex; align-items:center; gap:6px; transition:0.2s;">
+          📢 Send Shield Alert
+        </button>
+        <button onclick="window.resetFrostClan()" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:8px 14px; border-radius:10px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; transition:0.2s;">
+          🔄 Reset / Drop All
+        </button>
+      </div>
+    </div>
+
+    <!-- Live KPI Counter & Coverage Bar -->
+    <div style="background:var(--bg-main, #0f172a); border:1px solid var(--border); border-radius:16px; padding:16px 18px; margin-bottom:20px; box-shadow:0 6px 20px rgba(0,0,0,0.2);">
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:12px; margin-bottom:14px;">
+        
+        <!-- KPI 1: Shields ON -->
+        <div style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.3); border-radius:12px; padding:12px 14px; text-align:center;">
+          <div style="font-size:11px; color:#10b981; text-transform:uppercase; font-weight:bold; letter-spacing:0.5px; margin-bottom:4px;">🛡️ Shields Active (ON)</div>
+          <div style="font-size:24px; font-weight:800; color:#10b981;">${shieldedCount} <span style="font-size:15px; font-weight:600; color:var(--text-muted);">/ ${totalAlts}</span></div>
+          <div style="font-size:11.5px; color:#10b981; font-weight:bold; margin-top:2px;">${shieldPct}% Protected</div>
+        </div>
+
+        <!-- KPI 2: Shields OFF / Vulnerable -->
+        <div style="background:${unshieldedCount > 0 ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.03)'}; border:1px solid ${unshieldedCount > 0 ? 'rgba(239,68,68,0.4)' : 'var(--border)'}; border-radius:12px; padding:12px 14px; text-align:center; ${unshieldedCount > 0 ? 'animation:pulse 2s infinite;' : ''}">
+          <div style="font-size:11px; color:${unshieldedCount > 0 ? '#ef4444' : 'var(--text-muted)'}; text-transform:uppercase; font-weight:bold; letter-spacing:0.5px; margin-bottom:4px;">⚠️ Unshielded / Vulnerable</div>
+          <div style="font-size:24px; font-weight:800; color:${unshieldedCount > 0 ? '#ef4444' : '#10b981'};">${unshieldedCount} <span style="font-size:15px; font-weight:600; color:var(--text-muted);">Alts</span></div>
+          <div style="font-size:11.5px; color:${unshieldedCount > 0 ? '#ef4444' : '#10b981'}; font-weight:bold; margin-top:2px;">${unshieldedCount === 0 ? '✅ All Alts Safe' : '⚠️ Action Required'}</div>
+        </div>
+
+        <!-- KPI 3: Daily Showdown -->
+        <div style="background:rgba(234,179,8,0.08); border:1px solid rgba(234,179,8,0.3); border-radius:12px; padding:12px 14px; text-align:center;">
+          <div style="font-size:11px; color:#facc15; text-transform:uppercase; font-weight:bold; letter-spacing:0.5px; margin-bottom:4px;">⚔️ Daily Showdown</div>
+          <div style="font-size:24px; font-weight:800; color:#facc15;">${showdownCount} <span style="font-size:15px; font-weight:600; color:var(--text-muted);">/ ${totalAlts}</span></div>
+          <div style="font-size:11.5px; color:var(--text-muted); font-weight:bold; margin-top:2px;">${totalAlts > 0 ? Math.round((showdownCount / totalAlts) * 100) : 0}% Completed</div>
+        </div>
+
+        <!-- KPI 4: Rebirth Tomes -->
+        <div style="background:rgba(6,182,212,0.08); border:1px solid rgba(6,182,212,0.3); border-radius:12px; padding:12px 14px; text-align:center;">
+          <div style="font-size:11px; color:#38bdf8; text-transform:uppercase; font-weight:bold; letter-spacing:0.5px; margin-bottom:4px;">📖 Rebirth Tomes</div>
+          <div style="font-size:24px; font-weight:800; color:#38bdf8;">${rebirthCount} <span style="font-size:15px; font-weight:600; color:var(--text-muted);">/ ${totalAlts}</span></div>
+          <div style="font-size:11.5px; color:var(--text-muted); font-weight:bold; margin-top:2px;">${totalAlts > 0 ? Math.round((rebirthCount / totalAlts) * 100) : 0}% Claimed</div>
+        </div>
+
+      </div>
+
+      <!-- Visual Progress Bar -->
+      <div>
+        <div style="display:flex; justify-content:space-between; font-size:11.5px; color:var(--text-muted); margin-bottom:6px; font-weight:bold;">
+          <span>Clan Shield Defense Coverage</span>
+          <span style="color:${shieldPct === 100 ? '#10b981' : (shieldPct > 50 ? '#f59e0b' : '#ef4444')};">${shieldedCount} of ${totalAlts} Shielded (${shieldPct}%)</span>
+        </div>
+        <div style="width:100%; height:10px; background:rgba(255,255,255,0.08); border-radius:10px; overflow:hidden; position:relative;">
+          <div style="width:${shieldPct}%; height:100%; background:linear-gradient(90deg, #10b981, #06b6d4); border-radius:10px; transition:width 0.3s ease; box-shadow:0 0 10px rgba(16,185,129,0.5);"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Search & Filter View Toolbar -->
+    <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:14px; padding:12px 16px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+      
+      <!-- Filter Pills -->
+      <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+        <span style="font-size:11.5px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; margin-right:4px;">Filter:</span>
+        <button onclick="window.setFrostFilter('all')" style="padding:5px 12px; border-radius:20px; border:1px solid ${window.frostFilter === 'all' ? 'var(--accent)' : 'var(--border)'}; background:${window.frostFilter === 'all' ? 'var(--accent)' : 'rgba(255,255,255,0.04)'}; color:${window.frostFilter === 'all' ? '#fff' : 'var(--text-main)'}; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+          All (${totalAlts})
+        </button>
+        <button onclick="window.setFrostFilter('needs_showdown')" style="padding:5px 12px; border-radius:20px; border:1px solid ${window.frostFilter === 'needs_showdown' ? '#f59e0b' : (needsShowdownCount > 0 ? 'rgba(245,158,11,0.4)' : 'var(--border)')}; background:${window.frostFilter === 'needs_showdown' ? '#f59e0b' : (needsShowdownCount > 0 ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.04)')}; color:${window.frostFilter === 'needs_showdown' ? '#000' : (needsShowdownCount > 0 ? '#f59e0b' : 'var(--text-main)')}; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+          ⚔️ Needs Showdown (${needsShowdownCount})
+        </button>
+        <button onclick="window.setFrostFilter('unshielded')" style="padding:5px 12px; border-radius:20px; border:1px solid ${window.frostFilter === 'unshielded' ? '#ef4444' : (unshieldedCount > 0 ? 'rgba(239,68,68,0.4)' : 'var(--border)')}; background:${window.frostFilter === 'unshielded' ? '#ef4444' : (unshieldedCount > 0 ? 'rgba(239,68,68,0.12)' : 'rgba(255,255,255,0.04)')}; color:${window.frostFilter === 'unshielded' ? '#fff' : (unshieldedCount > 0 ? '#ef4444' : 'var(--text-main)')}; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+          ⚠️ Needs Shields (${unshieldedCount})
+        </button>
+        <button onclick="window.setFrostFilter('shielded')" style="padding:5px 12px; border-radius:20px; border:1px solid ${window.frostFilter === 'shielded' ? '#10b981' : 'var(--border)'}; background:${window.frostFilter === 'shielded' ? '#10b981' : 'rgba(255,255,255,0.04)'}; color:${window.frostFilter === 'shielded' ? '#fff' : 'var(--text-main)'}; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+          🛡️ Shielded (${shieldedCount})
+        </button>
+        <button onclick="window.setFrostFilter('showdown_done')" style="padding:5px 12px; border-radius:20px; border:1px solid ${window.frostFilter === 'showdown_done' ? '#facc15' : 'var(--border)'}; background:${window.frostFilter === 'showdown_done' ? 'rgba(234,179,8,0.2)' : 'rgba(255,255,255,0.04)'}; color:${window.frostFilter === 'showdown_done' ? '#facc15' : 'var(--text-muted)'}; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+          ✅ Showdown Done (${showdownCount})
+        </button>
+      </div>
+
+      <!-- Live Search Input -->
+      <div style="display:flex; align-items:center; gap:8px; min-width:220px; flex:1; max-width:320px;">
+        <input type="text" id="frostSearchInput" value="${escapeHTML(window.frostSearchQuery || '')}" oninput="window.setFrostSearch(this.value)" placeholder="🔍 Search alt name..." style="width:100%; padding:7px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main, #0f172a); color:var(--text-main); font-size:13px; outline:none; transition:border-color 0.2s;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+      </div>
+
+    </div>
+
+    <!-- Showing Results Count Summary -->
+    <div style="text-align:left; font-size:12px; color:var(--text-muted); margin-bottom:14px;">
+      Showing <strong>${filteredAlts.length}</strong> of <strong>${totalAlts}</strong> alts ${window.frostSearchQuery ? `(matching "<strong>${escapeHTML(window.frostSearchQuery)}</strong>")` : ''}
+    </div>
+
+    <!-- Alts Cards Grid -->
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:20px; text-align:left;">
+  `;
+
+  if (filteredAlts.length === 0) {
+    html += `
+      <div style="grid-column:1 / -1; text-align:center; padding:45px 20px; background:rgba(255,255,255,0.02); border:1px dashed var(--border); border-radius:16px;">
+        <div style="font-size:32px; margin-bottom:10px;">❄️</div>
+        <div style="font-size:16px; font-weight:bold; color:var(--text-main); margin-bottom:4px;">No matching Frost Clan alts found</div>
+        <div style="font-size:13px; color:var(--text-muted);">
+          ${window.frostFilter === 'needs_showdown' ? 'All alts have completed their Daily Showdown!' : (window.frostFilter === 'unshielded' ? 'All alts currently have shields active!' : 'Try adjusting your search query or filter.')}
+        </div>
+      </div>
+    `;
+  }
+
+  filteredAlts.forEach(alt => {
+    const idx = alt.originalIdx;
+    const isShielded = Boolean(alt.shields);
+    const isRebirth = Boolean(alt.rebirth);
+    const isShowdown = Boolean(alt.showdown);
+
+    html += `
+      <div style="background:var(--bg-card, #1a0b2e); border:1px solid ${isShielded ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.35)'}; border-radius:16px; padding:22px; box-shadow:0 8px 24px rgba(0,0,0,0.2); position:relative; overflow:hidden; transition:transform 0.15s ease, border-color 0.2s ease;">
+        
+        <!-- Top Header -->
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:14px; margin-bottom:16px;">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div style="width:46px; height:46px; border-radius:12px; background:linear-gradient(135deg, #0284c7, #6366f1); display:flex; align-items:center; justify-content:center; color:white; font-weight:800; font-size:18px; flex-shrink:0; box-shadow:0 4px 12px rgba(2,132,199,0.3); border:1px solid rgba(56,189,248,0.4);">
+              ❄️
+            </div>
+            <div>
+              <h3 style="margin:0; font-size:18px; font-weight:700; color:var(--text-main);">${escapeHTML(alt.name)}</h3>
+              <div style="color:var(--text-muted); font-size:11.5px; margin-top:2px;">Frost Clan Member</div>
+            </div>
+          </div>
+          <div>
+            <span style="background:${isShielded ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)'}; color:${isShielded ? '#10b981' : '#ef4444'}; border:1px solid ${isShielded ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.4)'}; padding:3px 10px; border-radius:12px; font-size:11px; font-weight:bold;">
+              ${isShielded ? '🛡️ SHIELDED' : '⚠️ UNSHIELDED'}
+            </span>
+          </div>
+        </div>
+        
+        <!-- Main Alliance Tracked -->
+        <div style="font-size:11.5px; color:var(--text-muted); text-transform:uppercase; font-weight:bold; letter-spacing:0.5px; margin-bottom:8px;">Alliance Events Tracked</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:16px;">
+          <div style="background:rgba(15,23,42,0.5); border:1px solid var(--border); border-radius:10px; padding:8px 4px; text-align:center;">
+            <div style="font-size:10px; color:var(--text-muted); text-transform:uppercase; font-weight:600; margin-bottom:4px;">Championship</div>
+            <div style="font-size:18px;">${alt.champ ? '✅' : '❌'}</div>
+          </div>
+          <div style="background:rgba(15,23,42,0.5); border:1px solid var(--border); border-radius:10px; padding:8px 4px; text-align:center;">
+            <div style="font-size:10px; color:var(--text-muted); text-transform:uppercase; font-weight:600; margin-bottom:4px;">Mercenary</div>
+            <div style="font-size:18px;">${alt.merc ? '✅' : '❌'}</div>
+          </div>
+          <div style="background:rgba(15,23,42,0.5); border:1px solid var(--border); border-radius:10px; padding:8px 4px; text-align:center;">
+            <div style="font-size:10px; color:var(--text-muted); text-transform:uppercase; font-weight:600; margin-bottom:4px;">Polar Terrors</div>
+            <div style="font-size:18px;">${alt.polar ? '✅' : '❌'}</div>
+          </div>
+        </div>
+        
+        <!-- Quick 1-Tap Toggle Buttons -->
+        <div style="font-size:11.5px; color:var(--accent); text-transform:uppercase; font-weight:bold; letter-spacing:0.5px; margin-bottom:8px;">1-Tap Status Updates</div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(95px, 1fr)); gap:10px;">
+          
+          <!-- Shield Toggle Card -->
+          <div onclick="window.toggleFrostCheckbox(${idx}, 'shields')" style="background:${isShielded ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.08)'}; border:1px solid ${isShielded ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.35)'}; border-radius:12px; padding:10px 8px; text-align:center; cursor:pointer; transition:transform 0.1s ease;" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
+            <div style="font-size:11px; color:${isShielded ? '#10b981' : '#ef4444'}; font-weight:bold; margin-bottom:4px;">🛡️ Shields</div>
+            <div id="val_${idx}_shields" style="font-size:18px; font-weight:bold; color:${isShielded ? '#10b981' : '#ef4444'}; user-select:none;">${isShielded ? '✅ ON' : '❌ OFF'}</div>
+          </div>
+
+          <!-- Showdown: Daily Toggle Card -->
+          <div onclick="window.toggleFrostCheckbox(${idx}, 'showdown')" style="background:${isShowdown ? 'rgba(234,179,8,0.12)' : 'rgba(255,255,255,0.03)'}; border:1px solid ${isShowdown ? 'rgba(234,179,8,0.4)' : 'var(--border)'}; border-radius:12px; padding:10px 8px; text-align:center; cursor:pointer; transition:transform 0.1s ease;" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
+            <div style="font-size:11px; color:${isShowdown ? '#facc15' : 'var(--text-muted)'}; font-weight:bold; margin-bottom:4px;">⚔️ Showdown: Daily</div>
+            <div id="val_${idx}_showdown" style="font-size:18px; font-weight:bold; color:${isShowdown ? '#facc15' : 'var(--text-muted)'}; user-select:none;">${isShowdown ? '✅ ON' : '❌ OFF'}</div>
+          </div>
+
+          <!-- Rebirth Tomes Toggle Card -->
+          <div onclick="window.toggleFrostCheckbox(${idx}, 'rebirth')" style="background:${isRebirth ? 'rgba(6,182,212,0.12)' : 'rgba(255,255,255,0.03)'}; border:1px solid ${isRebirth ? 'rgba(6,182,212,0.4)' : 'var(--border)'}; border-radius:12px; padding:10px 8px; text-align:center; cursor:pointer; transition:transform 0.1s ease;" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
+            <div style="font-size:11px; color:${isRebirth ? '#38bdf8' : 'var(--text-muted)'}; font-weight:bold; margin-bottom:4px;">📖 Rebirth Tomes</div>
+            <div id="val_${idx}_rebirth" style="font-size:18px; font-weight:bold; color:${isRebirth ? '#38bdf8' : 'var(--text-muted)'}; user-select:none;">${isRebirth ? '✅ ON' : '❌ OFF'}</div>
+          </div>
+
+        </div>
+      </div>
+    `;
+  });
+  
+  html += `</div>`;
+  container.innerHTML = html;
+};
+
+window.toggleFrostCheckbox = async function(idx, field) {
+  const alt = window.frostState.alts[idx];
+  if (!alt) return;
+  const newVal = !alt[field];
+  alt[field] = newVal; // Optimistic update
+  
+  window.renderFrostClan();
+  
+  try {
+    // Instant Firebase RTDB write (<50ms)
+    await update(ref(db, `frost_clan/alts/${idx}`), { [field]: newVal, lastUpdated: Date.now() });
+    try { localStorage.setItem('cached_frost_clan_alts', JSON.stringify(window.frostState.alts)); } catch(e) {}
+  } catch (e) {
+    console.error("Error saving frost checkbox:", e);
+    window.showToast("Failed to save to database!", "error");
+    alt[field] = !newVal; // Revert
+    window.renderFrostClan();
+  }
+};
+
+window.shieldAllFrostClan = async function() {
+  const confirmed = await window.customConfirm("🛡️ Shield ALL Frost Clan Alts?\n\nThis will mark all alts as SHIELDED in Firebase.");
+  if (!confirmed) return;
+
+  const updatedAlts = window.frostState.alts.map(alt => ({ ...alt, shields: true }));
+  window.frostState.alts = updatedAlts;
+  window.renderFrostClan();
+
+  window.showToast("🛡️ Shielding all Frost Clan alts in Firebase...", "success");
+  try {
+    await set(ref(db, 'frost_clan/alts'), updatedAlts);
+    try { localStorage.setItem('cached_frost_clan_alts', JSON.stringify(updatedAlts)); } catch(e) {}
+    if (window.showToast) window.showToast("✅ All Frost Clan alts marked as SHIELDED!", "success");
+  } catch(e) {
+    console.error("Bulk shield error:", e);
+  }
+};
+
+window.resetFrostClan = async function() {
+  const confirmed = await window.customConfirm("Are you sure you want to uncheck all Shields, Rebirth Tomes, and Daily Showdown for Frost Clan?");
+  if (!confirmed) return;
+  
+  const resetAlts = window.frostState.alts.map(alt => ({
+    ...alt,
+    shields: false,
+    rebirth: false,
+    showdown: false
+  }));
+  window.frostState.alts = resetAlts;
+  window.renderFrostClan();
+  
+  window.showToast("Resetting Frost Clan status in Firebase...", "info");
+  try {
+    await set(ref(db, 'frost_clan/alts'), resetAlts);
+    try { localStorage.setItem('cached_frost_clan_alts', JSON.stringify(resetAlts)); } catch(e) {}
+    if (window.showToast) window.showToast("✅ Frost Clan Reset successful!", "success");
+  } catch (e) {
+    console.error("Reset error:", e);
+    window.showToast("Failed to reset in Firebase!", "error");
+  }
+};
+
 // Fetch Championship Data natively from single master node activity_live
 // Fetch Championship Data natively from master node activity_live with fallback to championship node
 window.fetchChampionshipData = async () => {
@@ -23091,31 +23626,31 @@ window.resetBearTrapEvent = async () => {
                 </div>
             </div>
             <!-- Primary Main Card 3-Column Metrics Bar -->
-            <div style="display:grid; grid-template-columns: 1.15fr 0.9fr 0.95fr; gap:10px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.06); border-radius:14px; padding:10px 12px; align-items:center;">
+            <div style="display:grid; grid-template-columns: 1.35fr 0.82fr 0.83fr; gap:10px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.06); border-radius:14px; padding:10px 12px; align-items:center;">
                 <!-- Featured Centerpiece Furnace Box -->
                 <div class="furnace-metric-box gold">
-                    <div style="font-size:10.5px; color:#fde047; text-transform:uppercase; letter-spacing:0.8px; font-weight:800; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
+                    <div style="font-size:10px; color:#fde047; text-transform:uppercase; letter-spacing:0.8px; font-weight:800; margin-bottom:2px; display:flex; align-items:center; gap:4px;">
                         <span>🔥</span> <span>Furnace</span>
                     </div>
-                    <div style="display:flex; align-items:center; justify-content:center; min-height:48px; width:100%;">
-                        ${window.getFurnaceIconHtml(furnaceLevelStr, 62)}
+                    <div style="display:flex; align-items:center; justify-content:center; min-height:56px; width:100%;">
+                        ${window.getFurnaceIconHtml(furnaceLevelStr, 82)}
                     </div>
                 </div>
                 <!-- Joined Tile -->
-                <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:8px 6px; background:rgba(255,255,255,0.025); border-radius:10px; border:1px solid rgba(255,255,255,0.04); min-height:84px;">
-                    <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; font-weight:700; margin-bottom:6px; display:flex; align-items:center; gap:3px;">
+                <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:8px 6px; background:rgba(255,255,255,0.025); border-radius:10px; border:1px solid rgba(255,255,255,0.04); min-height:86px;">
+                    <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:3px;">
                         <span>🗓️</span> <span>Joined</span>
                     </div>
-                    <div style="font-size:12.5px; font-weight:bold; color:#e2e8f0; line-height:1.2; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; max-width:100%;" title="${(joinedDateStr && joinedDateStr !== 'N/A') ? joinedDateStr : 'Active'}">
+                    <div style="font-size:12px; font-weight:bold; color:#e2e8f0; line-height:1.2; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; max-width:100%;" title="${(joinedDateStr && joinedDateStr !== 'N/A') ? joinedDateStr : 'Active'}">
                         ${(joinedDateStr && joinedDateStr !== 'N/A') ? joinedDateStr : 'Active'}
                     </div>
                 </div>
                 <!-- Active Tile -->
-                <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:8px 6px; background:rgba(255,255,255,0.025); border-radius:10px; border:1px solid rgba(255,255,255,0.04); min-height:84px;">
-                    <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; font-weight:700; margin-bottom:6px; display:flex; align-items:center; gap:3px;">
+                <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:8px 6px; background:rgba(255,255,255,0.025); border-radius:10px; border:1px solid rgba(255,255,255,0.04); min-height:86px;">
+                    <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:3px;">
                         <span>⏱️</span> <span>Active</span>
                     </div>
-                    <div style="font-size:12.5px; font-weight:bold; color:#38bdf8; line-height:1.2; white-space:nowrap;" title="${timeActiveStr}">
+                    <div style="font-size:12px; font-weight:bold; color:#38bdf8; line-height:1.2; white-space:nowrap;" title="${timeActiveStr}">
                         ${timeActiveStr}
                     </div>
                 </div>

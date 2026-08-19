@@ -1,18 +1,18 @@
 {
-  "version": "2.9.49",
+  "version": "2.9.50",
   "releaseDate": "2026-08-18",
-  "title": "What's New in v2.9.49",
+  "title": "What's New in v2.9.50",
   "notes": [
-    "🏆 Standings & Medals Lazy-Loading: Scoped live & historical Showdown snapshots with full error boundary and retry controls.",
-    "🔒 Global EscapeHTML Binding: Hardened DOM string sanitization across all event score displays.",
-    "🥇 Comprehensive Medals: Unified podium medal counts across all alliance combat records."
+    "🗓️ Joined Date & Time Active Synchronization: Standardized play start date calculation and relative active duration (days/weeks/months/years) across all member profiles and alt accounts.",
+    "🔥 Dynamic Furnace Icon Centerpiece: Upgraded primary character and alt account cards with prominent dynamic Fire Crystal/Furnace level badges.",
+    "⚡ Seamless Profile Editing: Integrated live Time Active computation and real-time furnace icon previews when editing main and alt member profiles."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "2.9.49",
+    "version": "2.9.50",
     "latestChanges": [
+      "v2.9.50: Standardized Joined Date, Time Active duration, and dynamic furnace level icons across main and alt cards",
       "v2.9.49: Resolved Standings & Medals lazy-loading and global escapeHTML security binding",
-      "v2.9.48: Fixed Account Hub Standings & Medals loading error and unified Showdown podium tracking",
-      "v2.9.47: Quick Alt Shielding, Showdown Goal Tracking & Combat Telemetry in Frost Clan"
+      "v2.9.48: Fixed Account Hub Standings & Medals loading error and unified Showdown podium tracking"
     ]
   }
 }
