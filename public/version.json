@@ -1,19 +1,19 @@
 {
-  "version": "2.9.60",
+  "version": "2.9.61",
   "releaseDate": "2026-08-19",
-  "title": "What's New in v2.9.60",
+  "title": "What's New in v2.9.61",
   "notes": [
-    "🔔 Feedback & Bug Tracker Alerts in Bell: New submissions and bug reports now automatically trigger alert badges in the top navigation bell icon.",
-    "📋 Interactive Preview in Alerts Modal: The Notifications modal now features a dedicated Community Feedback & Bug Reports section with quick previews and one-click access.",
-    "🧹 Seamless Auto-Clear: Viewing the Feedback Tracker or marking alerts as read automatically synchronizes and clears the bell badge count."
+    "🔕 Pure Attention-Driven Bell Menu: Empty sections (leadership announcements, staff notices, or feedback) now automatically disappear completely when there is nothing needing attention.",
+    "🎉 Seamless All Caught Up State: When no announcements, staff directives, expired tokens, or unread posts exist, the notification modal presents a clean 'All Caught Up' view without any empty boxes.",
+    "🛡️ Dedicated Leadership Tools Access: Leadership broadcast and countdown scheduling remains instantly accessible via the top-right Staff Tools pill button."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "2.9.60",
+    "version": "2.9.61",
     "latestChanges": [
+      "v2.9.61: Streamlined notification bell modal so empty announcement and staff containers disappear when no items need attention",
       "v2.9.60: Added Community Feedback & Bug Tracker alerts to the notification bell with interactive previews",
       "v2.9.59: Deleted Season 12 test archives and added Admin Vault archive deletion controls",
-      "v2.9.58: Consolidated All-Time Championship Leaderboard under Nav Menu Leaderboards with cross-source deduplication",
-      "v2.9.57: Refined Championship Gold badges to only be awarded for tournament event victories with Contender tier for roster participants"
+      "v2.9.58: Consolidated All-Time Championship Leaderboard under Nav Menu Leaderboards with cross-source deduplication"
     ]
   }
 }

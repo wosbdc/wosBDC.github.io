@@ -12173,72 +12173,70 @@ window.openAllianceAlertsModal = async () => {
       `;
     }
 
-    // 2. Standard Broadcasts Section HTML
+    // 2. Standard Broadcasts Section HTML (Only show if announcements exist)
     let broadcastsSectionHtml = '';
-    const bCards = standardBroadcasts.length > 0 ? standardBroadcasts.slice(0, 15).map(b => {
-      const isUnread = Boolean(b.timestamp && b.timestamp > lastSeenBroadcast);
-      const relTime = window.formatRelativeTime ? window.formatRelativeTime(b.timestamp) : '';
-      const deleteBtn = isStaff ? `
-        <button onclick="event.stopPropagation(); window.deleteBroadcastAlert('${b.key}')" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; border-radius:6px; padding:2px 7px; font-size:11px; cursor:pointer; display:inline-flex; align-items:center; gap:2px; transition:0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.25)'" onmouseout="this.style.background='rgba(239,68,68,0.1)'" title="Delete this announcement">
-          🗑️
-        </button>
-      ` : '';
+    if (standardBroadcasts.length > 0) {
+      const bCards = standardBroadcasts.slice(0, 15).map(b => {
+        const isUnread = Boolean(b.timestamp && b.timestamp > lastSeenBroadcast);
+        const relTime = window.formatRelativeTime ? window.formatRelativeTime(b.timestamp) : '';
+        const deleteBtn = isStaff ? `
+          <button onclick="event.stopPropagation(); window.deleteBroadcastAlert('${b.key}')" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; border-radius:6px; padding:2px 7px; font-size:11px; cursor:pointer; display:inline-flex; align-items:center; gap:2px; transition:0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.25)'" onmouseout="this.style.background='rgba(239,68,68,0.1)'" title="Delete this announcement">
+            🗑️
+          </button>
+        ` : '';
 
-      return `
-        <div style="background:rgba(15,23,42,0.6); border:1px solid ${isUnread ? 'rgba(236,72,153,0.45)' : 'rgba(255,255,255,0.08)'}; border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; gap:4px; position:relative;">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
-            <div style="font-weight:bold; font-size:13.5px; color:#fff; display:flex; align-items:center; gap:6px; flex-wrap:wrap; min-width:0;">
-              <span>${window.escapeHTML(b.title || 'Announcement')}</span>
-              ${isUnread ? `<span style="font-size:10px; background:rgba(236,72,153,0.2); color:#ec4899; border:1px solid rgba(236,72,153,0.4); padding:1px 6px; border-radius:8px; font-weight:bold;">NEW</span>` : ''}
+        return `
+          <div style="background:rgba(15,23,42,0.6); border:1px solid ${isUnread ? 'rgba(236,72,153,0.45)' : 'rgba(255,255,255,0.08)'}; border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; gap:4px; position:relative;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+              <div style="font-weight:bold; font-size:13.5px; color:#fff; display:flex; align-items:center; gap:6px; flex-wrap:wrap; min-width:0;">
+                <span>${window.escapeHTML(b.title || 'Announcement')}</span>
+                ${isUnread ? `<span style="font-size:10px; background:rgba(236,72,153,0.2); color:#ec4899; border:1px solid rgba(236,72,153,0.4); padding:1px 6px; border-radius:8px; font-weight:bold;">NEW</span>` : ''}
+              </div>
+              <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+                <span style="font-size:11px; color:var(--text-muted);">${relTime}</span>
+                ${deleteBtn}
+              </div>
             </div>
-            <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
-              <span style="font-size:11px; color:var(--text-muted);">${relTime}</span>
-              ${deleteBtn}
+            <div style="font-size:12.5px; color:var(--text-main); line-height:1.4; white-space:pre-wrap; margin-top:2px;">${window.escapeHTML(b.body || '')}</div>
+            <div style="font-size:11px; color:var(--text-muted); margin-top:3px; display:flex; align-items:center; justify-content:space-between; gap:6px;">
+              <span>📢 ${window.escapeHTML(b.senderName || 'Leadership')}</span>
             </div>
           </div>
-          <div style="font-size:12.5px; color:var(--text-main); line-height:1.4; white-space:pre-wrap; margin-top:2px;">${window.escapeHTML(b.body || '')}</div>
-          <div style="font-size:11px; color:var(--text-muted); margin-top:3px; display:flex; align-items:center; justify-content:space-between; gap:6px;">
-            <span>📢 ${window.escapeHTML(b.senderName || 'Leadership')}</span>
+        `;
+      }).join('');
+
+      broadcastsSectionHtml = `
+        <div id="broadcastsAlertsContainer" style="background:rgba(236,72,153,0.06); border:1px solid rgba(236,72,153,0.25); border-radius:14px; margin-bottom:12px; overflow:hidden; transition:all 0.2s ease;">
+          <div id="broadcastsAccordionHeader" onclick="window.toggleBroadcastsAccordionBanner()" style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; cursor:pointer; user-select:none;">
+            <div>
+              <div style="font-size:13.5px; font-weight:bold; color:#f472b6; display:flex; align-items:center; gap:8px;">
+                <span>📢 Leadership Announcements (${standardBroadcasts.length})</span>
+              </div>
+              <div style="font-size:11.5px; color:var(--text-muted); margin-top:3px;">
+                Alliance broadcasts & general leadership notices
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              ${isStaff ? `
+                <button onclick="event.stopPropagation(); window.openCreateCountdownAlertModal();" style="background:linear-gradient(135deg, #ec4899, #8b5cf6); color:#fff; border:none; padding:3px 9px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:3px; box-shadow:0 2px 6px rgba(236,72,153,0.3);" title="Post a new announcement or scheduled countdown alert">
+                  ➕ New Alert
+                </button>
+                <button onclick="event.stopPropagation(); window.openBroadcastCleanerModal();" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.35); color:#ef4444; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:3px; transition:0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.25)'" onmouseout="this.style.background='rgba(239,68,68,0.15)'" title="Open Announcement Cleaner">
+                  🧹 Cleaner
+                </button>
+              ` : ''}
+              <span style="background:rgba(236,72,153,0.2); color:#f472b6; border:1px solid rgba(236,72,153,0.4); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold;">${unreadBroadcastCount > 0 ? `${unreadBroadcastCount} New` : `${standardBroadcasts.length}`}</span>
+              <span id="broadcastsAccordionChevron" style="font-size:15px; color:var(--text-muted); transition:transform 0.2s ease;">▾</span>
+            </div>
+          </div>
+          <div id="broadcastsAccordionBody" style="display:${unreadBroadcastCount > 0 || (standardBroadcasts.length > 0 && countdownAlerts.length === 0) ? 'block' : 'none'}; padding:0 14px 14px 14px; max-height:260px; overflow-y:auto;">
+            <div style="display:flex; flex-direction:column; gap:8px; border-top:1px solid rgba(255,255,255,0.06); padding-top:10px;">
+              ${bCards}
+            </div>
           </div>
         </div>
       `;
-    }).join('') : `
-      <div style="text-align:center; padding:14px 10px; color:var(--text-muted); font-size:12px;">
-        No standard announcements posted yet.
-      </div>
-    `;
-
-    broadcastsSectionHtml = `
-      <div id="broadcastsAlertsContainer" style="background:rgba(236,72,153,0.06); border:1px solid rgba(236,72,153,0.25); border-radius:14px; margin-bottom:12px; overflow:hidden; transition:all 0.2s ease;">
-        <div id="broadcastsAccordionHeader" onclick="window.toggleBroadcastsAccordionBanner()" style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; cursor:pointer; user-select:none;">
-          <div>
-            <div style="font-size:13.5px; font-weight:bold; color:#f472b6; display:flex; align-items:center; gap:8px;">
-              <span>📢 Leadership Announcements (${standardBroadcasts.length})</span>
-            </div>
-            <div style="font-size:11.5px; color:var(--text-muted); margin-top:3px;">
-              Alliance broadcasts & general leadership notices
-            </div>
-          </div>
-          <div style="display:flex; align-items:center; gap:8px;">
-            ${isStaff ? `
-              <button onclick="event.stopPropagation(); window.openCreateCountdownAlertModal();" style="background:linear-gradient(135deg, #ec4899, #8b5cf6); color:#fff; border:none; padding:3px 9px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:3px; box-shadow:0 2px 6px rgba(236,72,153,0.3);" title="Post a new announcement or scheduled countdown alert">
-                ➕ New Alert
-              </button>
-              <button onclick="event.stopPropagation(); window.openBroadcastCleanerModal();" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.35); color:#ef4444; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:3px; transition:0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.25)'" onmouseout="this.style.background='rgba(239,68,68,0.15)'" title="Open Announcement Cleaner">
-                🧹 Cleaner
-              </button>
-            ` : ''}
-            <span style="background:rgba(236,72,153,0.2); color:#f472b6; border:1px solid rgba(236,72,153,0.4); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold;">${unreadBroadcastCount > 0 ? `${unreadBroadcastCount} New` : `${standardBroadcasts.length}`}</span>
-            <span id="broadcastsAccordionChevron" style="font-size:15px; color:var(--text-muted); transition:transform 0.2s ease;">▾</span>
-          </div>
-        </div>
-        <div id="broadcastsAccordionBody" style="display:${unreadBroadcastCount > 0 || (standardBroadcasts.length > 0 && countdownAlerts.length === 0) ? 'block' : 'none'}; padding:0 14px 14px 14px; max-height:260px; overflow-y:auto;">
-          <div style="display:flex; flex-direction:column; gap:8px; border-top:1px solid rgba(255,255,255,0.06); padding-top:10px;">
-            ${bCards}
-          </div>
-        </div>
-      </div>
-    `;
+    }
 
     // Linked Alts Token Breakdown Section
     let altsSectionHtml = '';
@@ -12344,34 +12342,31 @@ window.openAllianceAlertsModal = async () => {
     }
 
     let staffPlaceholderHtml = '';
-    if (isStaff) {
-      let staffBroadcastsCardsHtml = '';
-      if (staffBroadcasts.length > 0) {
-        staffBroadcastsCardsHtml = staffBroadcasts.map(b => {
-          const relTime = window.formatRelativeTime ? window.formatRelativeTime(b.timestamp) : '';
-          return `
-            <div style="background:rgba(15,23,42,0.7); border:1px solid rgba(168,85,247,0.35); border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; gap:4px;">
-              <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
-                <div style="font-weight:bold; font-size:13.5px; color:#c084fc; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                  <span>🛡️ ${window.escapeHTML(b.title || 'Staff Notice')}</span>
-                  <span style="font-size:10px; background:rgba(168,85,247,0.2); color:#c084fc; border:1px solid rgba(168,85,247,0.4); padding:1px 6px; border-radius:8px; font-weight:bold;">STAFF ONLY</span>
-                  ${b.priority === 'urgent' ? `<span style="font-size:10px; background:rgba(239,68,68,0.2); color:#ef4444; border:1px solid rgba(239,68,68,0.4); padding:1px 6px; border-radius:8px; font-weight:bold;">🚨 URGENT</span>` : ''}
-                </div>
-                <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
-                  <span style="font-size:11px; color:var(--text-muted);">${relTime}</span>
-                  <button onclick="event.stopPropagation(); window.deleteBroadcastAlert('${b.key}')" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; border-radius:6px; padding:2px 7px; font-size:11px; cursor:pointer;" title="Delete staff alert">
-                    🗑️
-                  </button>
-                </div>
+    if (isStaff && staffBroadcasts.length > 0) {
+      const staffBroadcastsCardsHtml = staffBroadcasts.map(b => {
+        const relTime = window.formatRelativeTime ? window.formatRelativeTime(b.timestamp) : '';
+        return `
+          <div style="background:rgba(15,23,42,0.7); border:1px solid rgba(168,85,247,0.35); border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; gap:4px;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+              <div style="font-weight:bold; font-size:13.5px; color:#c084fc; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                <span>🛡️ ${window.escapeHTML(b.title || 'Staff Notice')}</span>
+                <span style="font-size:10px; background:rgba(168,85,247,0.2); color:#c084fc; border:1px solid rgba(168,85,247,0.4); padding:1px 6px; border-radius:8px; font-weight:bold;">STAFF ONLY</span>
+                ${b.priority === 'urgent' ? `<span style="font-size:10px; background:rgba(239,68,68,0.2); color:#ef4444; border:1px solid rgba(239,68,68,0.4); padding:1px 6px; border-radius:8px; font-weight:bold;">🚨 URGENT</span>` : ''}
               </div>
-              ${b.body ? `<div style="font-size:12.5px; color:var(--text-main); line-height:1.4; white-space:pre-wrap; margin-top:2px;">${window.escapeHTML(b.body)}</div>` : ''}
-              <div style="font-size:11px; color:var(--text-muted); margin-top:3px; display:flex; align-items:center; justify-content:space-between; gap:6px;">
-                <span>📢 Posted by ${window.escapeHTML(b.senderName || 'Leadership')}</span>
+              <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+                <span style="font-size:11px; color:var(--text-muted);">${relTime}</span>
+                <button onclick="event.stopPropagation(); window.deleteBroadcastAlert('${b.key}')" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; border-radius:6px; padding:2px 7px; font-size:11px; cursor:pointer;" title="Delete staff alert">
+                  🗑️
+                </button>
               </div>
             </div>
-          `;
-        }).join('');
-      }
+            ${b.body ? `<div style="font-size:12.5px; color:var(--text-main); line-height:1.4; white-space:pre-wrap; margin-top:2px;">${window.escapeHTML(b.body)}</div>` : ''}
+            <div style="font-size:11px; color:var(--text-muted); margin-top:3px; display:flex; align-items:center; justify-content:space-between; gap:6px;">
+              <span>📢 Posted by ${window.escapeHTML(b.senderName || 'Leadership')}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
 
       staffPlaceholderHtml = `
         <div id="staffAlertsContainer" style="background:rgba(168,85,247,0.06); border:1px solid rgba(168,85,247,0.25); border-radius:14px; margin-bottom:12px; overflow:hidden; transition:all 0.2s ease;">
@@ -12394,92 +12389,90 @@ window.openAllianceAlertsModal = async () => {
           </div>
           <div id="staffAccordionBody" style="display:none; padding:0 14px 14px 14px; max-height:260px; overflow-y:auto;">
             <div style="display:flex; flex-direction:column; gap:8px; border-top:1px solid rgba(255,255,255,0.06); padding-top:10px;">
-              ${staffBroadcastsCardsHtml || `<div style="text-align:center; padding:12px; color:var(--text-muted); font-size:12.5px;">No active staff alerts.</div>`}
+              ${staffBroadcastsCardsHtml}
             </div>
           </div>
         </div>
       `;
     }
 
-    // 4. Feature Request & Bug Reports Section HTML
+    // 4. Feature Request & Bug Reports Section HTML (Only show if feedback posts exist)
     let feedbackSectionHtml = '';
-    const fCards = feedbackList.length > 0 ? feedbackList.slice(0, 10).map(f => {
-      const isUnread = Boolean(f.createdAt && f.createdAt > lastSeenFeedback);
-      const relTime = window.formatRelativeTime ? window.formatRelativeTime(f.createdAt) : (window.formatTimeAgo ? window.formatTimeAgo(f.createdAt) : '');
-      const isFeat = f.type === 'feature';
-      const typeBadge = isFeat 
-        ? `<span style="background:rgba(6,182,212,0.18); border:1px solid rgba(6,182,212,0.4); color:#06b6d4; padding:2px 7px; border-radius:6px; font-size:10px; font-weight:800;">💡 FEATURE</span>`
-        : `<span style="background:rgba(239,68,68,0.18); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:2px 7px; border-radius:6px; font-size:10px; font-weight:800;">🐞 BUG</span>`;
-      
-      const isCompleted = f.status === 'completed';
-      const isInProgress = f.status === 'in_progress';
-      const statusBadge = isCompleted
-        ? `<span style="background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:1px 6px; border-radius:6px; font-size:9.5px; font-weight:bold;">✓ Done</span>`
-        : (isInProgress
-            ? `<span style="background:rgba(59,130,246,0.2); color:#3b82f6; border:1px solid rgba(59,130,246,0.4); padding:1px 6px; border-radius:6px; font-size:9.5px; font-weight:bold;">🔵 In Progress</span>`
-            : `<span style="background:rgba(234,179,8,0.15); color:#eab308; border:1px solid rgba(234,179,8,0.35); padding:1px 6px; border-radius:6px; font-size:9.5px; font-weight:bold;">🟡 Review</span>`);
+    if (feedbackList.length > 0) {
+      const fCards = feedbackList.slice(0, 10).map(f => {
+        const isUnread = Boolean(f.createdAt && f.createdAt > lastSeenFeedback);
+        const relTime = window.formatRelativeTime ? window.formatRelativeTime(f.createdAt) : (window.formatTimeAgo ? window.formatTimeAgo(f.createdAt) : '');
+        const isFeat = f.type === 'feature';
+        const typeBadge = isFeat 
+          ? `<span style="background:rgba(6,182,212,0.18); border:1px solid rgba(6,182,212,0.4); color:#06b6d4; padding:2px 7px; border-radius:6px; font-size:10px; font-weight:800;">💡 FEATURE</span>`
+          : `<span style="background:rgba(239,68,68,0.18); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:2px 7px; border-radius:6px; font-size:10px; font-weight:800;">🐞 BUG</span>`;
+        
+        const isCompleted = f.status === 'completed';
+        const isInProgress = f.status === 'in_progress';
+        const statusBadge = isCompleted
+          ? `<span style="background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:1px 6px; border-radius:6px; font-size:9.5px; font-weight:bold;">✓ Done</span>`
+          : (isInProgress
+              ? `<span style="background:rgba(59,130,246,0.2); color:#3b82f6; border:1px solid rgba(59,130,246,0.4); padding:1px 6px; border-radius:6px; font-size:9.5px; font-weight:bold;">🔵 In Progress</span>`
+              : `<span style="background:rgba(234,179,8,0.15); color:#eab308; border:1px solid rgba(234,179,8,0.35); padding:1px 6px; border-radius:6px; font-size:9.5px; font-weight:bold;">🟡 Review</span>`);
 
-      return `
-        <div style="background:rgba(15,23,42,0.6); border:1px solid ${isUnread ? 'rgba(6,182,212,0.5)' : 'rgba(255,255,255,0.08)'}; border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; gap:6px; position:relative;">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap;">
-            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; min-width:0;">
-              ${typeBadge}
-              <span style="font-size:10px; color:var(--text-muted); font-weight:bold; background:rgba(255,255,255,0.05); padding:1px 5px; border-radius:4px;">[${window.escapeHTML(f.category || 'General')}]</span>
-              ${statusBadge}
-              ${isUnread ? `<span style="font-size:9.5px; background:rgba(6,182,212,0.2); color:#38bdf8; border:1px solid rgba(6,182,212,0.4); padding:1px 6px; border-radius:8px; font-weight:bold;">NEW</span>` : ''}
+        return `
+          <div style="background:rgba(15,23,42,0.6); border:1px solid ${isUnread ? 'rgba(6,182,212,0.5)' : 'rgba(255,255,255,0.08)'}; border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; gap:6px; position:relative;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap;">
+              <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; min-width:0;">
+                ${typeBadge}
+                <span style="font-size:10px; color:var(--text-muted); font-weight:bold; background:rgba(255,255,255,0.05); padding:1px 5px; border-radius:4px;">[${window.escapeHTML(f.category || 'General')}]</span>
+                ${statusBadge}
+                ${isUnread ? `<span style="font-size:9.5px; background:rgba(6,182,212,0.2); color:#38bdf8; border:1px solid rgba(6,182,212,0.4); padding:1px 6px; border-radius:8px; font-weight:bold;">NEW</span>` : ''}
+              </div>
+              <span style="font-size:11px; color:var(--text-muted);">${relTime}</span>
             </div>
-            <span style="font-size:11px; color:var(--text-muted);">${relTime}</span>
+            <div style="font-weight:bold; font-size:13.5px; color:#fff; line-height:1.3;">
+              ${window.escapeHTML(f.title || 'Untitled Post')}
+            </div>
+            ${f.description ? `<div style="font-size:12px; color:var(--text-main); line-height:1.4; opacity:0.85; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${window.escapeHTML(f.description)}</div>` : ''}
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2px; padding-top:4px; border-top:1px solid rgba(255,255,255,0.04);">
+              <span style="font-size:11px; color:var(--text-muted);">👤 ${window.escapeHTML(f.submittedBy?.name || 'Chief')} • 👍 ${f.voteCount || 1}</span>
+              <div style="display:flex; align-items:center; gap:8px;">
+                ${f.imageUrl ? '<span style="font-size:11px; color:#38bdf8;">📷 Image</span>' : ''}
+                <button onclick="document.getElementById('notificationsModalOverlay').remove(); if(views.feedback) views.feedback();" style="background:linear-gradient(135deg, rgba(6,182,212,0.2), rgba(6,182,212,0.05)); border:1px solid rgba(6,182,212,0.4); color:#38bdf8; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
+                  🔍 View ➔
+                </button>
+              </div>
+            </div>
           </div>
-          <div style="font-weight:bold; font-size:13.5px; color:#fff; line-height:1.3;">
-            ${window.escapeHTML(f.title || 'Untitled Post')}
-          </div>
-          ${f.description ? `<div style="font-size:12px; color:var(--text-main); line-height:1.4; opacity:0.85; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${window.escapeHTML(f.description)}</div>` : ''}
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2px; padding-top:4px; border-top:1px solid rgba(255,255,255,0.04);">
-            <span style="font-size:11px; color:var(--text-muted);">👤 ${window.escapeHTML(f.submittedBy?.name || 'Chief')} • 👍 ${f.voteCount || 1}</span>
+        `;
+      }).join('');
+
+      feedbackSectionHtml = `
+        <div id="feedbackAlertsContainer" style="background:rgba(6,182,212,0.06); border:1px solid rgba(6,182,212,0.25); border-radius:14px; margin-bottom:12px; overflow:hidden; transition:all 0.2s ease;">
+          <div id="feedbackAccordionHeader" onclick="window.toggleFeedbackAccordionBanner()" style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; cursor:pointer; user-select:none;">
+            <div>
+              <div style="font-size:13.5px; font-weight:bold; color:#38bdf8; display:flex; align-items:center; gap:8px;">
+                <span>💡 Feature & Bug Tracker (${feedbackList.length})</span>
+              </div>
+              <div style="font-size:11.5px; color:var(--text-muted); margin-top:3px;">
+                Member suggestions, feature requests & bug reports
+              </div>
+            </div>
             <div style="display:flex; align-items:center; gap:8px;">
-              ${f.imageUrl ? '<span style="font-size:11px; color:#38bdf8;">📷 Image</span>' : ''}
-              <button onclick="document.getElementById('notificationsModalOverlay').remove(); if(views.feedback) views.feedback();" style="background:linear-gradient(135deg, rgba(6,182,212,0.2), rgba(6,182,212,0.05)); border:1px solid rgba(6,182,212,0.4); color:#38bdf8; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
-                🔍 View ➔
+              <button onclick="event.stopPropagation(); document.getElementById('notificationsModalOverlay').remove(); if(views.feedback) views.feedback();" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:3px 9px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:3px; box-shadow:0 2px 6px rgba(14,165,233,0.3);" title="Open Feature & Bug Tracker">
+                ➕ Submit / View
+              </button>
+              <span style="background:rgba(6,182,212,0.2); color:#38bdf8; border:1px solid rgba(6,182,212,0.4); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold;">${unreadFeedbackCount > 0 ? `${unreadFeedbackCount} New` : `${feedbackList.length}`}</span>
+              <span id="feedbackAccordionChevron" style="font-size:15px; color:var(--text-muted); transition:transform 0.2s ease;">▾</span>
+            </div>
+          </div>
+          <div id="feedbackAccordionBody" style="display:${unreadFeedbackCount > 0 ? 'block' : 'none'}; padding:0 14px 14px 14px; max-height:260px; overflow-y:auto;">
+            <div style="display:flex; flex-direction:column; gap:8px; border-top:1px solid rgba(255,255,255,0.06); padding-top:10px;">
+              ${fCards}
+              <button onclick="document.getElementById('notificationsModalOverlay').remove(); if(views.feedback) views.feedback();" style="width:100%; text-align:center; background:rgba(6,182,212,0.1); border:1px solid rgba(6,182,212,0.3); color:#38bdf8; font-weight:bold; font-size:12px; padding:8px; border-radius:8px; cursor:pointer; margin-top:4px;">
+                🚀 Open Complete Tracker (${feedbackList.length} Submissions) ➔
               </button>
             </div>
           </div>
         </div>
       `;
-    }).join('') : `
-      <div style="text-align:center; padding:14px 10px; color:var(--text-muted); font-size:12px;">
-        No feedback or bug reports submitted yet.
-      </div>
-    `;
-
-    feedbackSectionHtml = `
-      <div id="feedbackAlertsContainer" style="background:rgba(6,182,212,0.06); border:1px solid rgba(6,182,212,0.25); border-radius:14px; margin-bottom:12px; overflow:hidden; transition:all 0.2s ease;">
-        <div id="feedbackAccordionHeader" onclick="window.toggleFeedbackAccordionBanner()" style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; cursor:pointer; user-select:none;">
-          <div>
-            <div style="font-size:13.5px; font-weight:bold; color:#38bdf8; display:flex; align-items:center; gap:8px;">
-              <span>💡 Feature & Bug Tracker (${feedbackList.length})</span>
-            </div>
-            <div style="font-size:11.5px; color:var(--text-muted); margin-top:3px;">
-              Member suggestions, feature requests & bug reports
-            </div>
-          </div>
-          <div style="display:flex; align-items:center; gap:8px;">
-            <button onclick="event.stopPropagation(); document.getElementById('notificationsModalOverlay').remove(); if(views.feedback) views.feedback();" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:3px 9px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:3px; box-shadow:0 2px 6px rgba(14,165,233,0.3);" title="Open Feature & Bug Tracker">
-              ➕ Submit / View
-            </button>
-            <span style="background:rgba(6,182,212,0.2); color:#38bdf8; border:1px solid rgba(6,182,212,0.4); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold;">${unreadFeedbackCount > 0 ? `${unreadFeedbackCount} New` : `${feedbackList.length}`}</span>
-            <span id="feedbackAccordionChevron" style="font-size:15px; color:var(--text-muted); transition:transform 0.2s ease;">▾</span>
-          </div>
-        </div>
-        <div id="feedbackAccordionBody" style="display:${unreadFeedbackCount > 0 ? 'block' : 'none'}; padding:0 14px 14px 14px; max-height:260px; overflow-y:auto;">
-          <div style="display:flex; flex-direction:column; gap:8px; border-top:1px solid rgba(255,255,255,0.06); padding-top:10px;">
-            ${fCards}
-            <button onclick="document.getElementById('notificationsModalOverlay').remove(); if(views.feedback) views.feedback();" style="width:100%; text-align:center; background:rgba(6,182,212,0.1); border:1px solid rgba(6,182,212,0.3); color:#38bdf8; font-weight:bold; font-size:12px; padding:8px; border-radius:8px; cursor:pointer; margin-top:4px;">
-              🚀 Open Complete Tracker (${feedbackList.length} Submissions) ➔
-            </button>
-          </div>
-        </div>
-      </div>
-    `;
+    }
 
     // Main Character Card HTML: ONLY show when action is required (expiring soon <=5d or expired)
     let mainTokenHtml = '';
@@ -12509,13 +12502,21 @@ window.openAllianceAlertsModal = async () => {
       `;
     }
 
-    const hasImmediateAlerts = Boolean(tokenStatus.alert || (rawAlts.length > 0 && unSyncedAltsCount > 0) || broadcastsList.length > 0 || feedbackList.length > 0);
-    let allCaughtUpHtml = (!hasImmediateAlerts && !isStaff) ? `
-      <div id="allCaughtUpNotice" style="text-align:center; padding:28px 16px; background:rgba(16,185,129,0.05); border:1px dashed rgba(16,185,129,0.3); border-radius:14px; margin-bottom:12px;">
-        <div style="font-size:32px; margin-bottom:6px;">🎉</div>
-        <div style="font-size:15px; font-weight:bold; color:#10b981; margin-bottom:4px;">All Caught Up!</div>
+    const hasImmediateAlerts = Boolean(
+      tokenStatus.alert || 
+      (rawAlts.length > 0 && unSyncedAltsCount > 0) || 
+      countdownAlerts.length > 0 || 
+      standardBroadcasts.length > 0 || 
+      (isStaff && staffBroadcasts.length > 0) || 
+      feedbackList.length > 0
+    );
+
+    let allCaughtUpHtml = !hasImmediateAlerts ? `
+      <div id="allCaughtUpNotice" style="text-align:center; padding:32px 16px; background:rgba(16,185,129,0.05); border:1px dashed rgba(16,185,129,0.3); border-radius:14px; margin-bottom:12px;">
+        <div style="font-size:36px; margin-bottom:8px;">🎉</div>
+        <div style="font-size:16px; font-weight:bold; color:#10b981; margin-bottom:4px;">All Caught Up!</div>
         <div style="font-size:12.5px; color:var(--text-muted); line-height:1.4;">
-          You have no pending alerts or expired tokens right now.
+          You have no pending alerts, announcements, or un-synced tokens right now.
         </div>
       </div>
     ` : '';
@@ -12541,7 +12542,7 @@ window.openAllianceAlertsModal = async () => {
         <!-- Spotlight Scheduled Countdown Alerts Section -->
         ${spotlightSectionHtml}
 
-        ${countdownAlerts.length > 0 && (standardBroadcasts.length > 0 || tokenStatus.alert || rawAlts.length > 0 || isStaff || feedbackList.length > 0) ? `
+        ${countdownAlerts.length > 0 && (standardBroadcasts.length > 0 || tokenStatus.alert || (rawAlts.length > 0 && unSyncedAltsCount > 0) || (isStaff && staffBroadcasts.length > 0) || feedbackList.length > 0) ? `
           <!-- Visual Section Divider -->
           <div style="display:flex; align-items:center; gap:12px; margin:16px 0 14px 0;">
             <div style="flex:1; height:1px; background:rgba(255,255,255,0.08);"></div>

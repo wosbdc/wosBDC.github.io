@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.61] - 2026-08-19
+- 🔕 **Attention-Only Bell Modal**: Empty containers (such as leadership announcements with 0 items, staff-only with 0 items, or feedback when none exist) now completely disappear so chiefs and leadership only see items that genuinely require action or attention.
+- 🎉 **Clean 'All Caught Up' Experience**: When there are no active broadcasts, un-synced tokens, or announcements, the modal displays the clean *All Caught Up* card with no empty placeholder containers cluttering the view.
+- 🛡️ **Streamlined Leadership Tools Access**: Leadership broadcast and event creation actions remain fully accessible anytime through the top-right `🛡️ Staff Tools` dropdown in the modal header.
+
 ## [2.9.60] - 2026-08-19
 - 🔔 **Feedback & Bug Tracker Alerts in Notification Bell**: Submissions of feature requests and bug reports are now automatically reflected in the top navigation bell icon counter and pulsing alert indicator.
 - 📋 **Integrated Previews in Alliance Alerts Modal**: Added an interactive, collapsible *Feature & Bug Tracker* section in the notifications modal displaying post titles, category tags, author names, status badges, and direct links.
