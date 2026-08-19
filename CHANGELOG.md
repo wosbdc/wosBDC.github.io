@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.67] - 2026-08-19
+- 🔔 **Live Developer Note Alerts in Notification Bell**: Members now see your custom admin resolution notes directly in the notification modal when their tickets/bugs are updated or closed (`✓ Done (Resolved)`).
+- ⭐ **'YOUR TICKET' Indicator Badge**: Automatically identifies and highlights a user's own submissions with a purple badge.
+- 💬 **Luminous Developer Note Callout**: Displays admin resolution notes in a styled emerald green container preserving multi-line whitespace.
+
 ## [2.9.66] - 2026-08-19
 - 📁 **Roster File Import & Fast Sync**: Built full file upload support (.csv, .json, .txt, .tsv) into the **➕ Add Player to Roster** modal with drag-and-drop support for effortless bulk player list synchronization.
 - 📊 **Intelligent Header Detection & Preview Table**: Automatically maps column headers (Game ID, Chief Name, Furnace Level, Date) and presents a clean scrollable preview table with duplicate detection.

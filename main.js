@@ -12875,18 +12875,34 @@ window.openAllianceAlertsModal = async () => {
         const isCompleted = f.status === 'completed';
         const isInProgress = f.status === 'in_progress';
         const statusBadge = isCompleted
-          ? `<span style="background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:1px 6px; border-radius:6px; font-size:9.5px; font-weight:bold;">✓ Done</span>`
+          ? `<span style="background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:1px 6px; border-radius:6px; font-size:9.5px; font-weight:bold;">✓ Done (Resolved)</span>`
           : (isInProgress
               ? `<span style="background:rgba(59,130,246,0.2); color:#3b82f6; border:1px solid rgba(59,130,246,0.4); padding:1px 6px; border-radius:6px; font-size:9.5px; font-weight:bold;">🔵 In Progress</span>`
               : `<span style="background:rgba(234,179,8,0.15); color:#eab308; border:1px solid rgba(234,179,8,0.35); padding:1px 6px; border-radius:6px; font-size:9.5px; font-weight:bold;">🟡 Review</span>`);
 
+        const isMyTicket = currentUser && (
+          (currentUser.gameId && f.submittedBy?.gameId && String(currentUser.gameId).trim() === String(f.submittedBy.gameId).trim()) ||
+          (currentUser.name && f.submittedBy?.name && String(currentUser.name).trim().toLowerCase() === String(f.submittedBy.name).trim().toLowerCase())
+        );
+        const myTicketBadge = isMyTicket ? `<span style="font-size:9.5px; background:rgba(168,85,247,0.2); color:#c084fc; border:1px solid rgba(168,85,247,0.4); padding:1px 6px; border-radius:8px; font-weight:bold;">⭐ YOUR TICKET</span>` : '';
+
+        const adminNoteHtml = f.adminNote ? `
+          <div style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.3); border-radius:8px; padding:7px 10px; margin-top:4px;">
+            <div style="font-size:10.5px; font-weight:800; color:#10b981; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2px; display:flex; align-items:center; gap:4px;">
+              <span>💬 Developer Note</span>
+            </div>
+            <div style="font-size:12px; color:var(--text-main); line-height:1.4; white-space:pre-wrap;">${window.escapeHTML(f.adminNote)}</div>
+          </div>
+        ` : '';
+
         return `
-          <div style="background:rgba(15,23,42,0.6); border:1px solid ${isUnread ? 'rgba(6,182,212,0.5)' : 'rgba(255,255,255,0.08)'}; border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; gap:6px; position:relative;">
+          <div style="background:rgba(15,23,42,0.6); border:1px solid ${isUnread ? 'rgba(6,182,212,0.5)' : (isMyTicket ? 'rgba(168,85,247,0.35)' : 'rgba(255,255,255,0.08)')}; border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; gap:6px; position:relative;">
             <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap;">
               <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; min-width:0;">
                 ${typeBadge}
                 <span style="font-size:10px; color:var(--text-muted); font-weight:bold; background:rgba(255,255,255,0.05); padding:1px 5px; border-radius:4px;">[${window.escapeHTML(f.category || 'General')}]</span>
                 ${statusBadge}
+                ${myTicketBadge}
                 ${isUnread ? `<span style="font-size:9.5px; background:rgba(6,182,212,0.2); color:#38bdf8; border:1px solid rgba(6,182,212,0.4); padding:1px 6px; border-radius:8px; font-weight:bold;">NEW</span>` : ''}
               </div>
               <span style="font-size:11px; color:var(--text-muted);">${relTime}</span>
@@ -12895,6 +12911,7 @@ window.openAllianceAlertsModal = async () => {
               ${window.escapeHTML(f.title || 'Untitled Post')}
             </div>
             ${f.description ? `<div style="font-size:12px; color:var(--text-main); line-height:1.4; opacity:0.85; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${window.escapeHTML(f.description)}</div>` : ''}
+            ${adminNoteHtml}
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2px; padding-top:4px; border-top:1px solid rgba(255,255,255,0.04);">
               <span style="font-size:11px; color:var(--text-muted);">👤 ${window.escapeHTML(f.submittedBy?.name || 'Chief')} • 👍 ${f.voteCount || 1}</span>
               <div style="display:flex; align-items:center; gap:8px;">

@@ -1,20 +1,19 @@
 {
-  "version": "2.9.66",
+  "version": "2.9.67",
   "releaseDate": "2026-08-19",
-  "title": "What's New in v2.9.66",
+  "title": "What's New in v2.9.67",
   "notes": [
-    "📁 Roster File Import & Fast Sync: Added file upload support (.csv, .json, .txt, .tsv) to the 'Add Player to Roster' modal for instant bulk roster synchronization.",
-    "📊 Smart File Parsing & Table Preview: Automatically detects headers and presents parsed players in a clean scrollable preview table with duplicate filtering.",
-    "⚡ Direct Sync & Bulk Table Populator: Choose between 1-click Direct Sync with live progress bar or loading into the multi-row bulk editor to review before saving.",
-    "📥 Starter Templates: Added 1-click downloads for sample CSV and JSON roster templates."
+    "🔔 Live Developer Note Alerts in Notification Bell: Members can now see your resolution notes directly inside the top notification center when their tickets are closed or updated.",
+    "⭐ Your Ticket Highlight Badge: Members get an exclusive 'YOUR TICKET' highlight badge on their own bug reports and feature requests.",
+    "💬 Styled Developer Callout Box: Notes display in an emerald green luminous container preserving line breaks and formatted tags."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "2.9.66",
+    "version": "2.9.67",
     "latestChanges": [
+      "v2.9.67: Added live Developer Note callout boxes and 'YOUR TICKET' badges to notification bell alerts modal",
       "v2.9.66: Added Roster File Import & Fast Sync (.csv, .json, .txt, .tsv) to Add Player modal with live preview and sample templates",
       "v2.9.65: Upgraded Bug/Feedback resolution note editor to a spacious multi-line textarea with quick templates and pre-wrap formatting",
-      "v2.9.64: Enabled debounced background cloud auto-save and streamlined the Save button with live sync status indicators",
-      "v2.9.63: Added real-time auto-calculation and locked summary inputs in Alliance Championship Admin Suite"
+      "v2.9.64: Enabled debounced background cloud auto-save and streamlined the Save button with live sync status indicators"
     ]
   }
 }
