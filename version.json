@@ -1,19 +1,19 @@
 {
-  "version": "2.9.53",
+  "version": "2.9.54",
   "releaseDate": "2026-08-18",
-  "title": "What's New in v2.9.53",
+  "title": "What's New in v2.9.54",
   "notes": [
-    "🚩 Championship Season Details Flag Fields: Added dedicated flag entry fields for both Our Alliance and Opponent Alliance directly inside the '⚙️ Season Details & Overall Record' top admin card.",
-    "⚡ Auto-Calculate Flags & Records: The 'Auto-Calculate' button now computes total tournament flag totals across all 5 battle rounds automatically alongside win/loss record.",
-    "🏆 Prominent Flag Summary Banner: The Public Alliance Championship header banner now displays a dedicated total flags pill summary (e.g. 🚩 16 Flags Captured | 🚩 9 Opponent Flags), and every round card renders styled flag count badges."
+    "📷 Screenshot & Image Upload in Bug Tracker: Members can now upload screenshots, drag & drop image files, or directly paste (Ctrl+V) screenshots from their clipboard when reporting bugs or submitting feature suggestions.",
+    "🖼️ Full-Resolution Image Lightbox: Added interactive image preview thumbnails in feedback cards and admin lists that expand into an HD lightbox modal with download support.",
+    "⚡ Instant Canvas Compression: Automatically optimizes uploaded images client-side for rapid, reliable upload speeds without database bloat."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "2.9.53",
+    "version": "2.9.54",
     "latestChanges": [
+      "v2.9.54: Added Screenshot & Image Attachment support (Upload, Drag-and-Drop, Clipboard Paste, Lightbox Viewer) to Bug Tracker",
       "v2.9.53: Added dual-sided Season Flag fields to Season Details card and total flags summary banner to public dashboard",
       "v2.9.52: Launched in-app Feature Request & Bug Tracker with community upvoting and interactive Admin checklist",
-      "v2.9.51: Added dual-sided flag entry fields and live flag badges to Alliance Championship matchups and archives",
-      "v2.9.50: Standardized Joined Date, Time Active duration, and dynamic furnace level icons across main and alt cards"
+      "v2.9.51: Added dual-sided flag entry fields and live flag badges to Alliance Championship matchups and archives"
     ]
   }
 }

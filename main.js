@@ -9874,6 +9874,70 @@ window.fetchFeedbackItems = async () => {
     }
 };
 
+window.compressFeedbackImage = (fileOrBlob, maxDim = 1200, quality = 0.8) => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                let width = img.width;
+                let height = img.height;
+                if (width > maxDim || height > maxDim) {
+                    if (width > height) {
+                        height = Math.round((height * maxDim) / width);
+                        width = maxDim;
+                    } else {
+                        width = Math.round((width * maxDim) / height);
+                        height = maxDim;
+                    }
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+                resolve(compressedBase64);
+            };
+            img.onerror = (err) => reject(err);
+            img.src = e.target.result;
+        };
+        reader.onerror = (err) => reject(err);
+        reader.readAsDataURL(fileOrBlob);
+    });
+};
+
+window.openFeedbackImageLightbox = (imageUrl) => {
+    if (!imageUrl) return;
+    const existing = document.getElementById('feedbackLightboxModal');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'feedbackLightboxModal';
+    overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.92); backdrop-filter:blur(8px); z-index:100000; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; box-sizing:border-box; animation: fadeIn 0.2s ease;';
+
+    overlay.innerHTML = `
+        <div style="position:relative; max-width:92vw; max-height:88vh; display:flex; flex-direction:column; align-items:center;">
+            <div style="display:flex; justify-content:space-between; align-items:center; width:100%; margin-bottom:12px;">
+                <span style="color:#fff; font-size:13px; font-weight:bold; display:flex; align-items:center; gap:6px;">📷 Feedback Screenshot Viewer</span>
+                <div style="display:flex; gap:8px;">
+                    <a href="${escapeHTML(imageUrl)}" download="feedback_screenshot.jpg" target="_blank" style="background:rgba(255,255,255,0.15); color:#fff; border:none; padding:6px 14px; border-radius:8px; font-weight:bold; font-size:12px; text-decoration:none; display:inline-flex; align-items:center; gap:6px; transition:0.2s;">
+                        ⬇️ Download Image
+                    </a>
+                    <button onclick="document.getElementById('feedbackLightboxModal')?.remove()" style="background:rgba(255,255,255,0.2); border:none; color:#fff; width:34px; height:34px; border-radius:50%; font-size:18px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center;">✕</button>
+                </div>
+            </div>
+            <img src="${escapeHTML(imageUrl)}" style="max-width:100%; max-height:80vh; border-radius:10px; object-fit:contain; box-shadow:0 10px 40px rgba(0,0,0,0.8); border:1px solid rgba(255,255,255,0.2);">
+        </div>
+    `;
+
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) overlay.remove();
+    });
+
+    document.body.appendChild(overlay);
+};
+
 window.submitFeedbackItem = async (payload) => {
     try {
         const newRef = push(ref(db, 'community_feedback'));
@@ -9886,6 +9950,7 @@ window.submitFeedbackItem = async (payload) => {
             category: payload.category || 'General UI',
             title: payload.title || '',
             description: payload.description || '',
+            imageUrl: payload.imageUrl || null,
             status: 'pending',
             submittedBy: {
                 uid: userUid,
@@ -10061,6 +10126,7 @@ window.openSubmitFeedbackModal = (defaultType = 'feature') => {
     if (existing) existing.remove();
 
     let selectedType = defaultType; // 'feature' or 'bug'
+    let attachedImageDataUrl = null;
 
     const overlay = document.createElement('div');
     overlay.id = 'submitFeedbackModal';
@@ -10122,9 +10188,32 @@ window.openSubmitFeedbackModal = (defaultType = 'feature') => {
             </div>
 
             <!-- Description Textarea -->
-            <div style="margin-bottom:16px;">
+            <div style="margin-bottom:14px;">
                 <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Description / Details</label>
                 <textarea id="fbDescInput" rows="4" placeholder="Explain what feature you'd like to see, or if reporting a bug, what happened and how to reproduce it..." style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; box-sizing:border-box; resize:vertical; line-height:1.4;"></textarea>
+            </div>
+
+            <!-- Image / Screenshot Attachment -->
+            <div style="margin-bottom:16px;">
+                <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Screenshot / Image Attachment (Optional)</label>
+                
+                <div id="fbUploadDropZone" style="border:2px dashed rgba(255,255,255,0.15); border-radius:10px; padding:14px; text-align:center; background:rgba(255,255,255,0.02); transition:0.2s; cursor:pointer;" onclick="document.getElementById('fbImageFileInput')?.click()">
+                    <input type="file" id="fbImageFileInput" accept="image/*" style="display:none;">
+                    <div style="display:flex; align-items:center; justify-content:center; gap:8px; font-size:13px; font-weight:bold; color:var(--accent);">
+                        <span>📷</span> <span>Click to attach, drag & drop, or paste (Ctrl+V) image</span>
+                    </div>
+                    <div style="font-size:11px; color:var(--text-muted); margin-top:3px;">Supported: PNG, JPG, WebP (Auto-compressed)</div>
+                </div>
+
+                <!-- Preview Thumbnail Box -->
+                <div id="fbImagePreviewContainer" style="display:none; margin-top:10px; background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:8px 12px; align-items:center; gap:12px;">
+                    <img id="fbImagePreviewImg" src="" style="width:50px; height:50px; border-radius:6px; object-fit:cover; border:1px solid rgba(255,255,255,0.15);">
+                    <div style="flex:1; overflow:hidden;">
+                        <div id="fbImagePreviewName" style="font-size:12px; font-weight:bold; color:var(--text-main); white-space:nowrap; text-overflow:ellipsis; overflow:hidden;">screenshot.png</div>
+                        <div style="font-size:11px; color:#10b981; font-weight:bold;">✓ Ready to attach</div>
+                    </div>
+                    <button type="button" id="fbRemoveImageBtn" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); color:#ef4444; border-radius:6px; padding:4px 8px; font-size:11px; font-weight:bold; cursor:pointer;">✕ Remove</button>
+                </div>
             </div>
 
             <!-- Submitter Metadata Tag -->
@@ -10144,6 +10233,66 @@ window.openSubmitFeedbackModal = (defaultType = 'feature') => {
     `;
 
     document.body.appendChild(overlay);
+
+    const fileInput = overlay.querySelector('#fbImageFileInput');
+    const handleFile = async (file) => {
+        if (!file || !file.type.startsWith('image/')) return;
+        try {
+            const compressed = await window.compressFeedbackImage(file);
+            attachedImageDataUrl = compressed;
+            const prevContainer = document.getElementById('fbImagePreviewContainer');
+            const prevImg = document.getElementById('fbImagePreviewImg');
+            const prevName = document.getElementById('fbImagePreviewName');
+            if (prevContainer && prevImg) {
+                prevImg.src = compressed;
+                if (prevName) prevName.textContent = file.name || 'Screenshot';
+                prevContainer.style.display = 'flex';
+            }
+        } catch(err) {
+            console.error(err);
+            if (window.showToast) window.showToast("Failed to process image: " + err.message, "error");
+        }
+    };
+
+    fileInput?.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) handleFile(e.target.files[0]);
+    });
+
+    overlay.addEventListener('paste', (e) => {
+        const items = (e.clipboardData || e.originalEvent?.clipboardData)?.items;
+        if (items) {
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf('image') !== -1) {
+                    const blob = items[i].getAsFile();
+                    handleFile(blob);
+                    if (window.showToast) window.showToast("📋 Image pasted from clipboard!", "success");
+                    break;
+                }
+            }
+        }
+    });
+
+    const dropZone = overlay.querySelector('#fbUploadDropZone');
+    if (dropZone) {
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => { e.preventDefault(); dropZone.style.borderColor = 'var(--accent)'; dropZone.style.background = 'rgba(6,182,212,0.1)'; }, false);
+        });
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => { e.preventDefault(); dropZone.style.borderColor = 'rgba(255,255,255,0.15)'; dropZone.style.background = 'rgba(255,255,255,0.02)'; }, false);
+        });
+        dropZone.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files && files[0]) handleFile(files[0]);
+        });
+    }
+
+    overlay.querySelector('#fbRemoveImageBtn')?.addEventListener('click', () => {
+        attachedImageDataUrl = null;
+        const prevContainer = document.getElementById('fbImagePreviewContainer');
+        if (prevContainer) prevContainer.style.display = 'none';
+        if (fileInput) fileInput.value = '';
+    });
 
     window.selectFeedbackType = (t) => {
         selectedType = t;
@@ -10180,6 +10329,7 @@ window.openSubmitFeedbackModal = (defaultType = 'feature') => {
                 category: category,
                 title: title,
                 description: desc,
+                imageUrl: attachedImageDataUrl,
                 authorName: authorName,
                 authorGameId: authorGid
             });
@@ -10243,6 +10393,7 @@ window.renderAdminFeedbackTab = async () => {
                     <td style="padding:12px;">
                         <div style="font-weight:bold; font-size:13px; color:var(--text-main); ${isCompleted ? 'text-decoration:line-through; opacity:0.75;' : ''}">${escapeHTML(item.title || '')}</div>
                         ${item.description ? `<div style="font-size:11.5px; color:var(--text-muted); margin-top:3px; max-width:380px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHTML(item.description)}</div>` : ''}
+                        ${item.imageUrl ? `<div style="margin-top:4px;"><a href="javascript:void(0)" onclick="window.openFeedbackImageLightbox('${escapeHTML(item.imageUrl)}')" style="font-size:11px; color:#38bdf8; font-weight:bold; text-decoration:none; display:inline-flex; align-items:center; gap:4px; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25); padding:2px 8px; border-radius:4px;">🖼️ View Screenshot</a></div>` : ''}
                         ${item.adminNote ? `<div style="font-size:11px; color:#38bdf8; font-weight:bold; margin-top:3px;">✨ ${escapeHTML(item.adminNote)}</div>` : ''}
                     </td>
                     <td style="padding:12px; white-space:nowrap;">
@@ -28713,6 +28864,11 @@ window.resetBearTrapEvent = async () => {
                                     ${escapeHTML(item.title || 'Untitled Request')}
                                 </h3>
                                 ${item.description ? `<p style="margin:0; font-size:13px; color:var(--text-muted); line-height:1.45; white-space:pre-line;">${escapeHTML(item.description)}</p>` : ''}
+                                ${item.imageUrl ? `
+                                    <div style="margin-top:10px;">
+                                        <img src="${escapeHTML(item.imageUrl)}" onclick="window.openFeedbackImageLightbox('${escapeHTML(item.imageUrl)}')" style="max-height:180px; max-width:100%; border-radius:8px; border:1px solid rgba(255,255,255,0.15); cursor:pointer; object-fit:cover; transition:transform 0.2s ease, box-shadow 0.2s ease; box-shadow:0 4px 14px rgba(0,0,0,0.35);" title="Click to view full screenshot" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                                    </div>
+                                ` : ''}
                             </div>
 
                             <!-- Footer: Author, Status & Admin Resolution Note -->

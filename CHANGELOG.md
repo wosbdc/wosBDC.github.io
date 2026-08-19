@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.54] - 2026-08-18
+- 📷 **Screenshot & Image Upload in Bug Tracker**: Empowered members and officers to attach screenshots to any feature suggestion or bug report via file selection, drag-and-drop, or instant clipboard pasting (`Ctrl+V`).
+- 🖼️ **Full-Resolution Image Lightbox**: Added high-contrast image thumbnails on feedback cards and admin lists that expand into an HD lightbox viewer with download capabilities.
+- ⚡ **Auto Canvas Compression**: Client-side canvas compression automatically prepares high-resolution images for sub-second uploads and optimal database performance.
+
 ## [2.9.53] - 2026-08-18
 - 🚩 **Championship Season Details Flag Fields**: Added dedicated flag input fields for both Our Alliance and Opponent Alliance directly inside the **⚙️ Season Details & Overall Record** card (`adm_champ_our_season_flags` and `adm_champ_enemy_season_flags`).
 - ⚡ **Auto-Calculate Season Flags & Match Records**: Clicking `⚡ Auto-Calculate Record & Flags` now dynamically aggregates total flag scores across all 5 battle rounds and auto-fills total season flags.
