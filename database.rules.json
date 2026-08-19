@@ -108,8 +108,8 @@
     "system": { ".read": true, ".write": false },
     "bearTrapLog": { ".read": true, ".write": false },
     "frost_clan": {
-      ".read": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() + '' == '318843189' || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())",
-      ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() + '' == '318843189' || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())"
+      ".read": true,
+      ".write": "auth != null"
     },
     ".read": false,
     ".write": false

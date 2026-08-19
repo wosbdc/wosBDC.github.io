@@ -5642,17 +5642,10 @@ window.updateNavbarUserIndicator = (user = currentUser) => {
     const navIndicator = document.getElementById('navbar-user-indicator');
     if (!navIndicator) return;
     
-    const secretFrostBtn = document.getElementById('secretFrostNavBtn');
-    
     if (!user) {
         navIndicator.style.display = 'none';
         navIndicator.innerHTML = '';
-        if (secretFrostBtn) secretFrostBtn.style.display = 'none';
         return;
-    }
-    
-    if (secretFrostBtn) {
-        secretFrostBtn.style.display = (user.gameId && String(user.gameId).trim() === '318843189') ? 'inline-flex' : 'none';
     }
     
     const isSpoofing = Boolean(window._spoofedUser);
@@ -20094,6 +20087,23 @@ const views = {
         const container = document.getElementById(targetContainerId);
         if (!container) return;
 
+        // Instant local cache hydration (<1ms zero-spinner display)
+        if (!window.frostDataLoaded) {
+          try {
+            const cached = localStorage.getItem('cached_frost_clan_alts');
+            if (cached) {
+              const parsed = JSON.parse(cached);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                window.frostState.alts = parsed;
+                window.frostDataLoaded = true;
+                window.renderFrostClan(targetContainerId);
+              }
+            }
+          } catch(e) {}
+        } else if (window.frostState.alts && window.frostState.alts.length > 0) {
+          window.renderFrostClan(targetContainerId);
+        }
+
         // Set up real-time Firebase listener if not already listening
         if (!window._frostFirebaseListening) {
           window._frostFirebaseListening = true;
@@ -20102,6 +20112,7 @@ const views = {
             if (snap.exists() && snap.val() && Array.isArray(snap.val()) && snap.val().length > 0) {
               window.frostState.alts = snap.val();
               window.frostDataLoaded = true;
+              try { localStorage.setItem('cached_frost_clan_alts', JSON.stringify(snap.val())); } catch(e) {}
               window.renderFrostClan(window._frostTargetContainerId);
             } else {
               // First-time auto-seed from Google Sheets
@@ -20113,6 +20124,7 @@ const views = {
                     await set(ref(db, 'frost_clan/alts'), res.alts);
                     window.frostState.alts = res.alts;
                     window.frostDataLoaded = true;
+                    try { localStorage.setItem('cached_frost_clan_alts', JSON.stringify(res.alts)); } catch(e) {}
                     window.renderFrostClan(window._frostTargetContainerId);
                   }
                 }
@@ -20121,8 +20133,6 @@ const views = {
               }
             }
           });
-        } else if (window.frostDataLoaded && window.frostState.alts.length > 0) {
-          window.renderFrostClan(targetContainerId);
         }
       };
 
@@ -23235,16 +23245,10 @@ window.resetBearTrapEvent = async () => {
       }
       
 
-      const [rosterRawData, lbRawData, fbWinsSnap, fbDonSnap, sdFbHistorySnap, sdFbLiveSnap] = await Promise.all([
-          window.fetchRoster().catch(() => ({})),
-          window.fetchLeaderboardsData().catch(() => []),
-          get(ref(db, 'beartrap_wins')).catch(() => null),
-          get(ref(db, 'beartrap_donations')).catch(() => null),
-          get(ref(db, 'showdown_meta/history')).catch(() => null),
-          get(ref(db, 'showdown_live')).catch(() => null)
-      ]);
-      const fbWins = (fbWinsSnap && fbWinsSnap.exists()) ? fbWinsSnap.val() : {};
-      const fbDonations = (fbDonSnap && fbDonSnap.exists()) ? fbDonSnap.val() : {};
+      const rosterRawData = window.rosterCache || {};
+      if (!window.rosterCache && typeof window.fetchRoster === 'function') {
+          window.fetchRoster().catch(() => ({}));
+      }
       
       if (rosterRawData) {
           const p = Object.values(rosterRawData).find(rp => 
@@ -23683,10 +23687,37 @@ window.resetBearTrapEvent = async () => {
     
     setTimeout(() => window.loadUserPersonalLog(currentChiefName), 100);
 
-    // Render Event Rankings Dashboard helper
-    const renderAccountRankings = (chiefNameTarget) => {
+    let fbWins = {};
+    let fbDonations = {};
+    let lbRawData = [];
+    let rankingsDataLoaded = false;
+
+    // Render Event Rankings Dashboard helper (Lazy loaded on tab open)
+    const renderAccountRankings = async (chiefNameTarget) => {
       const rankingsContainer = document.getElementById('accRankingsContainer');
       if (!rankingsContainer) return;
+
+      if (!rankingsDataLoaded) {
+        rankingsContainer.innerHTML = `
+          <div style="text-align:center; padding:35px 20px; color:var(--text-muted);">
+            <div style="border:3px solid rgba(255,255,255,0.1); border-top-color:var(--accent); border-radius:50%; width:28px; height:28px; animation:spin 1s linear infinite; margin:0 auto 10px;"></div>
+            Loading Event Rankings & Standings...
+          </div>
+        `;
+        try {
+          const [lbData, fbWinsSnap, fbDonSnap] = await Promise.all([
+            (typeof window.fetchLeaderboardsData === 'function') ? window.fetchLeaderboardsData().catch(() => []) : [],
+            get(ref(db, 'beartrap_wins')).catch(() => null),
+            get(ref(db, 'beartrap_donations')).catch(() => null)
+          ]);
+          lbRawData = lbData || [];
+          fbWins = (fbWinsSnap && fbWinsSnap.exists()) ? fbWinsSnap.val() : {};
+          fbDonations = (fbDonSnap && fbDonSnap.exists()) ? fbDonSnap.val() : {};
+          rankingsDataLoaded = true;
+        } catch(e) {
+          console.error("Rankings load error:", e);
+        }
+      }
 
       const liveStatsRes = window.computeLiveFirebasePlayerStats(chiefNameTarget, fbWins, fbDonations, lbRawData);
       let { bearBoth, bear1, bear2, bearAllTime, btDonationsAllTime, btDonationsCurrent, otherLbs } = liveStatsRes;
@@ -24072,10 +24103,12 @@ window.resetBearTrapEvent = async () => {
       }
     };
 
-    try {
-      renderAccountRankings(currentChiefName);
-    } catch(err) {
-      console.error("Account Hub Rankings render error:", err);
+    if (targetTab === 'Rankings') {
+      try {
+        renderAccountRankings(currentChiefName);
+      } catch(err) {
+        console.error("Account Hub Rankings render error:", err);
+      }
     }
 
     // 5/6-Way Tab Switcher Listeners
@@ -24144,6 +24177,8 @@ window.resetBearTrapEvent = async () => {
             window.loadAccountPerksGiftCodes();
           } else if (t.id === 'Frost') {
             window.loadFrostClanData('frostClanContainer');
+          } else if (t.id === 'Rankings') {
+            renderAccountRankings(currentChiefName);
           }
         } else {
           t.btn.style.background = 'var(--bg-main)';

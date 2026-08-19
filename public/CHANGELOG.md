@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## [2.9.43] - 2026-08-18
+- 🚫 **Navbar Clean-Up**: Completely removed the secret Frost Clan button from the main navigation bar. Frost Clan Command Center is now exclusively and privately accessed through the **Account Hub** tab.
+- ⚡ **Instant Account Hub Rendering**: Eliminated blocking pre-render database fetches in Account Hub, allowing the user profile to display in **0ms** while heavy ranking and leaderboard datasets are lazy-loaded on demand.
+- 🚀 **Instant Frost Clan Caching**: Implemented automatic local caching for Frost Clan alts to provide instantaneous, zero-spinner rendering upon tab switch.
+
+## [2.9.42] - 2026-08-18
+- 💾 **Multi-Project Firebase Backup Engine**: Automated nightly full snapshot backups across all Firebase Realtime Databases (`wos-dashboard-38d4c` & `livecounters-8eaa8`).
+- ⚡ **BDC Central Command Integration**: Added 1-click `💾 Backup DB` quick-action button, live DB Backup metric card, and automatic 24h background daemon thread.
+- 🗄️ **Rolling 30-Day Auto-Retention**: Local timestamped archives (`backups/`) with automatic pruning of backups older than 30 days.
+- 🛠️ **CLI & Restore Tools**: Added `tools/firebase_backup_restore.py` supporting `--backup`, `--list`, and `--restore` operations.
+
 ## [2.9.41] - 2026-08-18
 - 📱 **Official Crystal App Icons**: Added high-definition 3D Amethyst crystal app icons for mobile home screens and desktop shortcuts.
 - 📜 **Changelog Improvements**: Polished modal overlay and added 1-tap changelog access across navigation bar and settings.
