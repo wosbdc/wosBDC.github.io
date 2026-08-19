@@ -1,17 +1,18 @@
 {
-  "version": "2.9.41",
+  "version": "2.9.46",
   "releaseDate": "2026-08-18",
-  "title": "What's New in v2.9.41",
+  "title": "What's New in v2.9.46",
   "notes": [
-    "📱 3D Crystal App Icons: High-definition Amethyst crystal icons for home screens and desktop shortcuts.",
-    "📜 Instant Changelog: Real-time changelog viewer with 1-tap access across navbar and settings."
+    "❄️ High-Contrast Custom Checkboxes: Large touch targets with smooth cyan/blue gradients and glowing checkmarks.",
+    "👤 Refined Character Avatars: 48px profile portraits with glowing cyan rings and initial fallbacks.",
+    "🔄 Unified Sync Terminology: Cohesive Sync Data and 30-Day Token actions across Account Hub and Alt Cards."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "2.9.41",
+    "version": "2.9.46",
     "latestChanges": [
-      "v2.9.41: Desktop & mobile app icon overhaul and instant changelog access",
-      "v2.9.40: Unified Single and Bulk add in Add Player modal",
-      "v2.9.39: Streamlined player roster bulk importing and live status sync"
+      "v2.9.46: Enhanced Frost Clan custom checkboxes, glowing avatar rings, and unified sync terminology",
+      "v2.9.45: Eliminated blocking full-users DB scans in Account Hub and added direct #frost URL hash deep-linking",
+      "v2.9.44: Frost Clan full audit & optimization: 100% Firebase RTDB exclusive loading"
     ]
   }
 }

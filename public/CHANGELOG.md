@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.46] - 2026-08-18
+- ❄️ **Frost Clan High-Contrast Custom Checkboxes**: Upgraded all showdown task checkboxes with custom 26px high-contrast touch targets, smooth cyan/blue active gradient fills, and glowing white checkmarks.
+- 👤 **Refined Character Avatars & Glow Rings**: Upgraded avatar portraits to 48px circles with cyan glowing border rings and high-contrast initial badges as clean fallbacks.
+- 🔄 **Account Hub & Alt Sync Terminology Polish**: Unified button labels across Account Hub and Alt Cards to `🔄 Sync Data` and `⚡ Setup 30-Day Token` for clean, cohesive wording.
+
 ## [2.9.45] - 2026-08-18
 - 🚀 **Eliminated 60-Second Full-Database Scans**: Removed the synchronous `get(ref(db, 'users'))` full-table scan that was triggering in Account Hub during user resolution. Added `localStorage` profile caching and targeted UID lookups with a 1.5s timeout.
 - ⚡ **Direct `#frost` and `?view=frost` Deep-Linking**: Visiting `https://wosbdc.github.io/#frost` or `?view=frost` directly opens the Frost Clan Command Center instantly.

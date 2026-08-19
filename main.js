@@ -22723,17 +22723,104 @@ window.resetBearTrapEvent = async () => {
         }
     } catch(e) {}
 
-    let linkedHtml = '';
     let links = currentUser.linkedGameIds || [];
+    let currentChiefName = (currentUser.gameId && idToNameMap[currentUser.gameId] && !/^\d+$/.test(idToNameMap[currentUser.gameId])) 
+        ? idToNameMap[currentUser.gameId] 
+        : (currentUser.name || currentUser.chiefName || currentUser.displayName || (currentUser.gameId ? `Chief ${currentUser.gameId}` : 'Chief'));
+    
+    let adminBadgeHtml = '';
+    let accLevel = window.getAdminLevel(currentUser);
+    if (accLevel) {
+        let lvlColor = (accLevel === "R5") ? "#FFD700" : "var(--accent)";
+        let lvlBg = (accLevel === "R5") ? "rgba(255,215,0,0.1)" : "rgba(52,152,219,0.1)";
+        adminBadgeHtml = `<span style="font-size:12px; color:${lvlColor}; background:${lvlBg}; border:1px solid ${lvlBg}; padding:2px 6px; border-radius:6px; font-weight:bold; display:inline-flex; align-items:center; gap:4px; margin-left:8px; vertical-align:middle; text-shadow:none;">👑 ${accLevel}</span>`;
+    }
+    
+    const tokenStatus = (typeof window.getMemberTokenStatus === 'function') 
+        ? window.getMemberTokenStatus(currentUser) 
+        : { status: 'active', daysLeft: 30, color: '#10b981', icon: '🛡️', label: '30-Day Sync Active' };
+
+    let isMainEnrolled = false;
+    let joinedDateStr = "N/A";
+    let timeActiveStr = "N/A";
+    let furnaceLevelStr = "N/A";
+    
+    const gcb = window.liveData ? window.liveData['giftcodebot'] : null;
+    if (gcb && gcb.length > 1 && currentUser.gameId) {
+        const cleanGameId = currentUser.gameId.toString().trim();
+        for (let i = 1; i < gcb.length; i++) {
+            if (gcb[i] && gcb[i][2] && gcb[i][2].toString().trim() === cleanGameId) {
+                isMainEnrolled = true;
+                if (gcb[i][3]) {
+                    try {
+                        const d = new Date(gcb[i][3]);
+                        if (!isNaN(d)) joinedDateStr = d.toLocaleDateString();
+                    } catch(e) { console.error(e); }
+                }
+                break;
+            }
+        }
+    }
+
+    const rosterRawData = window.rosterCache || {};
+    if (!window.rosterCache && typeof window.fetchRoster === 'function') {
+        window.fetchRoster().catch(() => ({}));
+    }
+    
+    if (rosterRawData) {
+        const p = Object.values(rosterRawData).find(rp => 
+            (rp.name && rp.name.toLowerCase() === currentChiefName.toLowerCase()) ||
+            (rp.gameId && rp.gameId.toString().trim() === (currentUser.gameId || '').toString().trim())
+        );
+        if (p) {
+            if (p.furnaceLevel || p.stove_lv) furnaceLevelStr = (p.furnaceLevel || p.stove_lv).toString();
+            const pDate = p.dateStarted || p.joinedDate;
+            if (pDate) {
+                const fmt = window.formatDateForDisplay(pDate);
+                if (fmt && fmt !== 'N/A') {
+                    joinedDateStr = fmt;
+                    timeActiveStr = window.calculateTimeActive(pDate);
+                }
+            }
+            if (p.timeActive && (!timeActiveStr || timeActiveStr === 'Unknown')) {
+                timeActiveStr = window.formatTimeActiveShort(p.timeActive.toString());
+            }
+        }
+    }
+
+    const userFurnace = currentUser.stove_lv || currentUser.furnaceLevel;
+    if (userFurnace) {
+        furnaceLevelStr = userFurnace.toString();
+    }
+    const userJoined = currentUser.dateStarted || currentUser.joinedDate;
+    if (userJoined) {
+        const fmt = window.formatDateForDisplay(userJoined);
+        if (fmt && fmt !== 'N/A') {
+            joinedDateStr = fmt;
+            timeActiveStr = window.calculateTimeActive(userJoined);
+        }
+    }
+
+    const userBio = currentUser.bio || '';
+    const avatarSrc = window.getAvatarUrl(currentUser.gameId || '', currentChiefName);
+    const isEnrolled = isMainEnrolled || (currentUser.gameId && (
+        (window.enrolledGameIds && window.enrolledGameIds.has(currentUser.gameId.toString())) ||
+        (typeof enrolledGameIds !== 'undefined' && enrolledGameIds && enrolledGameIds.has(currentUser.gameId.toString()))
+    ));
+
+    const botStatusHtml = isEnrolled 
+        ? `<div style="background:rgba(16,185,129,0.1); border:1px solid var(--success); color:var(--success); padding:8px 16px; border-radius:8px; font-weight:bold; font-size:14px; display:inline-flex; align-items:center; gap:8px;">&#x2705; Active Bot Link</div>`
+        : `<div style="background:rgba(239,68,68,0.1); border:1px solid var(--danger); color:var(--danger); padding:8px 16px; border-radius:8px; font-weight:bold; font-size:14px; display:inline-flex; align-items:center; gap:8px;">&#x274C; No Bot Link</div>`;
 
     // Pre-calculate statistics across all linked alts
     let totalAltsCount = links.length;
-    let activeSyncCount = 0;
-    let expiringSyncCount = 0;
-    let expiredSyncCount = 0;
-    let unverifiedCount = 0;
-    let enrolledCount = 0;
-    let notEnrolledCount = 0;
+    let totalCharactersCount = links.length + 1;
+    let activeSyncCount = (tokenStatus.status === 'active') ? 1 : 0;
+    let expiringSyncCount = (tokenStatus.status === 'expiring_soon') ? 1 : 0;
+    let expiredSyncCount = (tokenStatus.status === 'expired') ? 1 : 0;
+    let unverifiedCount = (tokenStatus.status === 'unverified') ? 1 : 0;
+    let enrolledCount = isEnrolled ? 1 : 0;
+    let notEnrolledCount = isEnrolled ? 0 : 1;
 
     const altCardsData = [];
     links.forEach(gid => {
@@ -22823,7 +22910,6 @@ window.resetBearTrapEvent = async () => {
         else unverifiedCount++;
 
         let isAltEnrolled = false;
-        const gcb = window.liveData ? window.liveData['giftcodebot'] : null;
         if (gcb && gcb.length > 1) {
             for (let i = 1; i < gcb.length; i++) {
                 if (gcb[i] && gcb[i][2] && gcb[i][2].toString().trim() === cleanGid) {
@@ -22868,17 +22954,17 @@ window.resetBearTrapEvent = async () => {
         });
     });
 
-    linkedHtml += `
+    let linkedHtml = `
       <div style="text-align:left; padding-top:4px;">
         <!-- Clean Tab Header -->
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:18px; padding-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.08);">
             <div>
                 <h3 style="margin:0; font-size:18px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
-                    <span>🔗 Linked Alt Accounts</span>
-                    <span style="font-size:12px; background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:2px 8px; border-radius:10px; font-weight:bold;">${links.length}</span>
+                    <span>👥 Alliance Characters</span>
+                    <span style="font-size:12px; background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:2px 8px; border-radius:10px; font-weight:bold;">${totalCharactersCount}</span>
                 </h3>
                 <div style="font-size:12px; color:var(--text-muted); margin-top:3px;">
-                    Manage secondary characters, 30-day token status, and gift code perks.
+                    Manage primary & secondary characters, 30-day token statuses, and gift code perks.
                 </div>
             </div>
             <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
@@ -22886,7 +22972,7 @@ window.resetBearTrapEvent = async () => {
                     ➕ Link Alt Account
                 </button>
                 <button id="syncAllCharsBtn" onclick="window.handleSyncAllCharacters(this);" style="background:rgba(6,182,212,0.15); border:1px solid #06b6d4; color:#06b6d4; padding:7px 14px; border-radius:8px; font-size:12.5px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.25)'" onmouseout="this.style.background='rgba(6,182,212,0.15)'" title="Sync stats for main and all linked alt characters">
-                    🔄 Sync All (${links.length + 1})
+                    🔄 Sync All (${totalCharactersCount})
                 </button>
             </div>
         </div>
@@ -22936,6 +23022,57 @@ window.resetBearTrapEvent = async () => {
 
             <div style="display:flex; justify-content:flex-end; margin-top:10px;">
                 <button id="cancelAltBtn" style="background:transparent; border:1px solid var(--border); color:var(--text-muted); padding:6px 14px; border-radius:6px; cursor:pointer; font-size:12px;">Cancel</button>
+            </div>
+        </div>
+
+        <!-- Highlighted Primary Main Character Card -->
+        <div style="background:linear-gradient(135deg, rgba(234,179,8,0.12), rgba(15,23,42,0.9)); border:2px solid rgba(234,179,8,0.45); border-radius:18px; padding:18px; box-shadow:0 8px 30px rgba(0,0,0,0.5); margin-bottom:18px; display:flex; flex-direction:column; gap:14px; position:relative; overflow:hidden;">
+            <div style="position:absolute; top:0; right:0; background:linear-gradient(135deg, #eab308, #ca8a04); color:#000; font-size:10.5px; font-weight:800; padding:3px 12px 3px 14px; border-bottom-left-radius:12px; letter-spacing:0.5px; text-transform:uppercase;">
+                ⭐ Primary Main Character
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
+                <div style="display:flex; gap:12px; align-items:center; min-width:0;">
+                    <div style="width:56px; height:56px; border-radius:14px; border:2px solid #eab308; box-shadow:0 0 14px rgba(234,179,8,0.4); overflow:hidden; background:var(--bg-secondary); position:relative; cursor:pointer; flex-shrink:0;" onclick="window.openAvatarManagerModal('${currentUser.gameId || ''}', '${window.escapeHTML(currentChiefName)}')" title="Change or Sync Avatar">
+                        <img src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(currentChiefName)}&background=eab308&color=000&bold=true&size=128';">
+                        <div style="position:absolute; inset:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0'"><span style="font-size:16px;">✏️</span></div>
+                    </div>
+                    <div style="min-width:0; overflow:hidden;">
+                        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                            <span style="font-size:17px; font-weight:bold; color:#ffffff; white-space:nowrap; text-overflow:ellipsis; overflow:hidden;">${window.escapeHTML(currentChiefName)}</span>
+                            ${adminBadgeHtml}
+                        </div>
+                        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:4px;">
+                            <span style="font-size:11px; color:#cbd5e1; font-family:monospace; background:rgba(0,0,0,0.4); padding:2px 7px; border-radius:6px; border:1px solid rgba(255,255,255,0.1);">
+                                ID: ${currentUser.gameId || 'Not Linked'}
+                            </span>
+                            ${ tokenStatus.status === 'active' 
+                                ? `<span style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:2px 7px; border-radius:6px; font-size:10.5px; font-weight:bold; cursor:pointer;" onclick="window.openAccountHubVerifyModal()" title="30-Day Sync Active (${tokenStatus.daysLeft}d left)">🛡️ 30d Sync (${tokenStatus.daysLeft}d)</span>`
+                                : `<button onclick="window.openAccountHubVerifyModal()" style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); padding:2px 7px; border-radius:6px; font-size:10.5px; font-weight:bold; cursor:pointer;">⚠️ Setup Sync</button>`
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div style="flex-shrink:0;">
+                    <span style="border:1px solid rgba(16,185,129,0.4); color:#10b981; background:rgba(16,185,129,0.15); border-radius:8px; padding:4px 10px; font-size:11.5px; font-weight:700; display:inline-flex; align-items:center; gap:4px;">🎁 Auto Redeem</span>
+                </div>
+            </div>
+            <div style="background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:15px;">🔥</span>
+                    <div>
+                        <span style="font-size:14.5px; font-weight:bold; color:#ffffff; line-height:1; display:flex; align-items:center;">${window.getFurnaceIconHtml(furnaceLevelStr, 50)}</span>
+                        <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; margin-top:2px;">Furnace</div>
+                    </div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-size:13px; font-weight:bold; color:#ffffff; line-height:1;">${timeActiveStr}</div>
+                    <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; margin-top:2px;">Time Active</div>
+                </div>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center; border-top:1px solid rgba(255,255,255,0.06); padding-top:10px; flex-wrap:wrap;">
+                <button onclick="window.openEditProfileHubModal();" style="flex:1; min-width:110px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.18); color:#fff; border-radius:8px; padding:6px 12px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px;">✏️ Edit Profile</button>
+                <button onclick="window.handleSyncCenturyGamesProfile();" style="flex:1; min-width:110px; background:rgba(6,182,212,0.15); border:1px solid #06b6d4; color:#06b6d4; border-radius:8px; padding:6px 12px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px;">🔄 Sync Data</button>
+                <button onclick="window.openAccountHubVerifyModal();" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; border-radius:8px; padding:6px 12px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px;">🔑 30-Day Token</button>
             </div>
         </div>
     `;
@@ -23074,11 +23211,11 @@ window.resetBearTrapEvent = async () => {
                       </div>
                   </div>
 
-                  <!-- Bottom Row: Unified, Perfectly Aligned Action Buttons -->
+                  <!-- Bottom Row: Unified Action Buttons -->
                   <div style="display:flex; gap:6px; align-items:center; border-top:1px solid rgba(255,255,255,0.05); padding-top:12px; flex-wrap:wrap;">
                       ${ isAltTokenActive
-                          ? `<button onclick="window.handleSyncAltProfile('${cleanGid}', this)" style="flex:1; min-width:110px; background:rgba(6,182,212,0.15); border:1px solid #06b6d4; color:#06b6d4; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px; transition:0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.25)'" onmouseout="this.style.background='rgba(6,182,212,0.15)'" title="Token active (${altTokenDaysRemaining}d remaining). Click to sync.">🔄 Sync Stats</button>`
-                          : `<button onclick="window.openAltVerifyModal('${cleanGid}')" style="flex:1; min-width:110px; background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px; box-shadow:0 2px 8px rgba(14,165,233,0.3);" title="Verify via in-game mail to bind 30-day auto-sync token">⚡ Setup 30d Sync</button>`
+                          ? `<button onclick="window.handleSyncAltProfile('${cleanGid}', this)" style="flex:1; min-width:110px; background:rgba(6,182,212,0.15); border:1px solid #06b6d4; color:#06b6d4; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px; transition:0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.25)'" onmouseout="this.style.background='rgba(6,182,212,0.15)'" title="Token active (${altTokenDaysRemaining}d remaining). Click to sync.">🔄 Sync Data</button>`
+                          : `<button onclick="window.openAltVerifyModal('${cleanGid}')" style="flex:1; min-width:110px; background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px; box-shadow:0 2px 8px rgba(14,165,233,0.3);" title="Verify via in-game mail to bind 30-day auto-sync token">⚡ Setup 30-Day Token</button>`
                       }
                       <button onclick="window.promptSwapPrimaryAccount('${cleanGid}', '${window.escapeHTML(altName)}')" style="background:rgba(234,179,8,0.15); border:1px solid rgba(234,179,8,0.4); color:#eab308; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:0.2s;" onmouseover="this.style.background='rgba(234,179,8,0.25)'" onmouseout="this.style.background='rgba(234,179,8,0.15)'" title="Make this alt character your primary chief">
                           ⭐️ Make Primary
@@ -23117,145 +23254,53 @@ window.resetBearTrapEvent = async () => {
                 </button>
             </div>
           `;
-      }
+    }
       
-      let datalistHtml = `<datalist id="rosterAltDatalist" style="display:none;">`;
-      for (const [id, name] of Object.entries(idToNameMap)) {
-          if (id !== currentUser.gameId && !links.includes(id)) {
-              datalistHtml += `<option value="${id}">${name}</option>`;
-          }
-      }
-      datalistHtml += `</datalist>`;
-      linkedHtml += datalistHtml;
-      
-      linkedHtml += `</div>`;
-      
-      let currentChiefName = (currentUser.gameId && idToNameMap[currentUser.gameId] && !/^\d+$/.test(idToNameMap[currentUser.gameId])) 
-          ? idToNameMap[currentUser.gameId] 
-          : (currentUser.name || currentUser.chiefName || currentUser.displayName || (currentUser.gameId ? `Chief ${currentUser.gameId}` : 'Chief'));
-      
-      let adminBadgeHtml = '';
-      let accLevel = window.getAdminLevel(currentUser);
-      if (accLevel) {
-          let lvlColor = (accLevel === "R5") ? "#FFD700" : "var(--accent)";
-          let lvlBg = (accLevel === "R5") ? "rgba(255,215,0,0.1)" : "rgba(52,152,219,0.1)";
-          adminBadgeHtml = `<span style="font-size:12px; color:${lvlColor}; background:${lvlBg}; border:1px solid ${lvlBg}; padding:2px 6px; border-radius:6px; font-weight:bold; display:inline-flex; align-items:center; gap:4px; margin-left:10px; vertical-align:middle; text-shadow:none;">👑 ${accLevel}</span>`;
-      }
-      
-      const tokenStatus = (typeof window.getMemberTokenStatus === 'function') 
-          ? window.getMemberTokenStatus(currentUser) 
-          : { status: 'active', daysLeft: 30, color: '#10b981', icon: '🛡️', label: '30-Day Sync Active' };
+    let datalistHtml = `<datalist id="rosterAltDatalist" style="display:none;">`;
+    for (const [id, name] of Object.entries(idToNameMap)) {
+        if (id !== currentUser.gameId && !links.includes(id)) {
+            datalistHtml += `<option value="${id}">${name}</option>`;
+        }
+    }
+    datalistHtml += `</datalist>`;
+    linkedHtml += datalistHtml;
+    linkedHtml += `</div>`;
 
-      let isMainEnrolled = false;
-      let joinedDateStr = "N/A";
-      let timeActiveStr = "N/A";
-      let furnaceLevelStr = "N/A";
-      
-      const gcb = window.liveData ? window.liveData['giftcodebot'] : null;
-      if (gcb && gcb.length > 1 && currentUser.gameId) {
-          const cleanGameId = currentUser.gameId.toString().trim();
-          for (let i = 1; i < gcb.length; i++) {
-              if (gcb[i] && gcb[i][2] && gcb[i][2].toString().trim() === cleanGameId) {
-                  isMainEnrolled = true;
-                  if (gcb[i][3]) {
-                      try {
-                          const d = new Date(gcb[i][3]);
-                          if (!isNaN(d)) joinedDateStr = d.toLocaleDateString();
-                      } catch(e) { console.error(e); }
-                  }
-                  break;
-              }
-          }
-      }
-      
-
-      const rosterRawData = window.rosterCache || {};
-      if (!window.rosterCache && typeof window.fetchRoster === 'function') {
-          window.fetchRoster().catch(() => ({}));
-      }
-      
-      if (rosterRawData) {
-          const p = Object.values(rosterRawData).find(rp => 
-              (rp.name && rp.name.toLowerCase() === currentChiefName.toLowerCase()) ||
-              (rp.gameId && rp.gameId.toString().trim() === (currentUser.gameId || '').toString().trim())
-          );
-          if (p) {
-              if (p.furnaceLevel || p.stove_lv) furnaceLevelStr = (p.furnaceLevel || p.stove_lv).toString();
-              const pDate = p.dateStarted || p.joinedDate;
-              if (pDate) {
-                  const fmt = window.formatDateForDisplay(pDate);
-                  if (fmt && fmt !== 'N/A') {
-                      joinedDateStr = fmt;
-                      timeActiveStr = window.calculateTimeActive(pDate);
-                  }
-              }
-              if (p.timeActive && (!timeActiveStr || timeActiveStr === 'Unknown')) {
-                  timeActiveStr = window.formatTimeActiveShort(p.timeActive.toString());
-              }
-          }
-      }
-
-      // Override with Firebase user profile data (from Edit Profile / Admin saves)
-      const userFurnace = currentUser.stove_lv || currentUser.furnaceLevel;
-      if (userFurnace) {
-          furnaceLevelStr = userFurnace.toString();
-      }
-      const userJoined = currentUser.dateStarted || currentUser.joinedDate;
-      if (userJoined) {
-          const fmt = window.formatDateForDisplay(userJoined);
-          if (fmt && fmt !== 'N/A') {
-              joinedDateStr = fmt;
-              timeActiveStr = window.calculateTimeActive(userJoined);
-          }
-      }
-
-      const userBio = currentUser.bio || '';
-
-      const avatarSrc = window.getAvatarUrl(currentUser.gameId || '', currentChiefName);
-      const isEnrolled = isMainEnrolled || (currentUser.gameId && (
-          (window.enrolledGameIds && window.enrolledGameIds.has(currentUser.gameId.toString())) ||
-          (typeof enrolledGameIds !== 'undefined' && enrolledGameIds && enrolledGameIds.has(currentUser.gameId.toString()))
-      ));
-
-      const botStatusHtml = isEnrolled 
-          ? `<div style="background:rgba(16,185,129,0.1); border:1px solid var(--success); color:var(--success); padding:8px 16px; border-radius:8px; font-weight:bold; font-size:14px; display:inline-flex; align-items:center; gap:8px;">&#x2705; Active Bot Link</div>`
-          : `<div style="background:rgba(239,68,68,0.1); border:1px solid var(--danger); color:var(--danger); padding:8px 16px; border-radius:8px; font-weight:bold; font-size:14px; display:inline-flex; align-items:center; gap:8px;">&#x274C; No Bot Link</div>`;
-          
-      let staffProfileHtml = '';
-      if (accLevel) { // Only show to admins
-          let p = window.staffProfilesMap && window.staffProfilesMap[currentUser.gameId] ? window.staffProfilesMap[currentUser.gameId] : {department:'', timezone:'', bio:''};
-          staffProfileHtml = `
-          <div id="staffProfileModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.9); backdrop-filter:blur(10px); z-index:99999; align-items:center; justify-content:center;">
-              <div class="modal-content card" style="width:90%; max-width:500px; background:var(--bg-main); border:1px solid rgba(56,189,248,0.3); padding:25px; border-radius:12px; box-shadow:0 10px 40px rgba(0,0,0,0.5); text-align:left;">
-                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                      <h3 style="margin:0; color:var(--text-main); font-size:20px; font-weight:bold;">🛡️ Staff Profile</h3>
-                      <button id="closeStaffProfileBtn" onclick="document.getElementById('staffProfileModal').style.display='none'" style="background:none; border:none; color:var(--text-muted); font-size:28px; cursor:pointer; line-height:1; transition:color 0.2s;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-muted)'">&times;</button>
-                  </div>
-                  <p style="font-size:13px; color:var(--text-muted); margin-bottom:20px;">This information will be displayed publicly on the Staff page.</p>
-                  
-                  <div style="display:flex; flex-direction:column; gap:15px;">
-                      <div>
-                          <label style="display:block; font-size:13px; font-weight:bold; color:var(--text-main); margin-bottom:6px;">Department / Specialty</label>
-                          <textarea id="staffDeptInput" placeholder="e.g. Event Coordinator, Bear Trap Manager" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-secondary); color:var(--text-main); font-size:14px; box-sizing:border-box; resize:vertical; min-height:50px;">${window.escapeHTML(p.department || '')}</textarea>
-                      </div>
-                      <div>
-                          <label style="display:block; font-size:13px; font-weight:bold; color:var(--text-main); margin-bottom:6px;">Timezone</label>
-                          <input type="text" id="staffTzInput" placeholder="e.g. EST" value="${window.escapeHTML(p.timezone || '')}" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-secondary); color:var(--text-main); font-size:14px; box-sizing:border-box;">
-                      </div>
-                      <div>
-                          <label style="display:block; font-size:13px; font-weight:bold; color:var(--text-main); margin-bottom:6px;">Location</label>
-                          <input type="text" id="staffLocInput" placeholder="e.g. Texas, USA" value="${window.escapeHTML(p.location || '')}" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-secondary); color:var(--text-main); font-size:14px; box-sizing:border-box;">
-                      </div>
-                      <div>
-                          <label style="display:block; font-size:13px; font-weight:bold; color:var(--text-main); margin-bottom:6px;">Bio / Tagline</label>
-                          <textarea id="staffBioInput" placeholder="A short fun quote..." style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-secondary); color:var(--text-main); font-size:14px; box-sizing:border-box; resize:vertical; min-height:80px;">${window.escapeHTML(p.bio || '')}</textarea>
-                      </div>
-                      <button id="saveStaffProfileBtn" onclick="window.saveStaffProfileFromModal()" style="background:var(--accent); color:#fff; border:none; padding:12px; border-radius:6px; cursor:pointer; font-weight:bold; margin-top:10px; font-size:15px; transition:0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Save Profile</button>
-                  </div>
-              </div>
-          </div>
-          `;
-      }
+    let staffProfileHtml = '';
+    if (accLevel) { // Only show to admins
+        let p = window.staffProfilesMap && window.staffProfilesMap[currentUser.gameId] ? window.staffProfilesMap[currentUser.gameId] : {department:'', timezone:'', bio:''};
+        staffProfileHtml = `
+        <div id="staffProfileModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.9); backdrop-filter:blur(10px); z-index:99999; align-items:center; justify-content:center;">
+            <div class="modal-content card" style="width:90%; max-width:500px; background:var(--bg-main); border:1px solid rgba(56,189,248,0.3); padding:25px; border-radius:12px; box-shadow:0 10px 40px rgba(0,0,0,0.5); text-align:left;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <h3 style="margin:0; color:var(--text-main); font-size:20px; font-weight:bold;">🛡️ Staff Profile</h3>
+                    <button id="closeStaffProfileBtn" onclick="document.getElementById('staffProfileModal').style.display='none'" style="background:none; border:none; color:var(--text-muted); font-size:28px; cursor:pointer; line-height:1; transition:color 0.2s;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-muted)'">&times;</button>
+                </div>
+                <p style="font-size:13px; color:var(--text-muted); margin-bottom:20px;">This information will be displayed publicly on the Staff page.</p>
+                
+                <div style="display:flex; flex-direction:column; gap:15px;">
+                    <div>
+                        <label style="display:block; font-size:13px; font-weight:bold; color:var(--text-main); margin-bottom:6px;">Department / Specialty</label>
+                        <textarea id="staffDeptInput" placeholder="e.g. Event Coordinator, Bear Trap Manager" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-secondary); color:var(--text-main); font-size:14px; box-sizing:border-box; resize:vertical; min-height:50px;">${window.escapeHTML(p.department || '')}</textarea>
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:13px; font-weight:bold; color:var(--text-main); margin-bottom:6px;">Timezone</label>
+                        <input type="text" id="staffTzInput" placeholder="e.g. EST" value="${window.escapeHTML(p.timezone || '')}" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-secondary); color:var(--text-main); font-size:14px; box-sizing:border-box;">
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:13px; font-weight:bold; color:var(--text-main); margin-bottom:6px;">Location</label>
+                        <input type="text" id="staffLocInput" placeholder="e.g. Texas, USA" value="${window.escapeHTML(p.location || '')}" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-secondary); color:var(--text-main); font-size:14px; box-sizing:border-box;">
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:13px; font-weight:bold; color:var(--text-main); margin-bottom:6px;">Bio / Tagline</label>
+                        <textarea id="staffBioInput" placeholder="A short fun quote..." style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-secondary); color:var(--text-main); font-size:14px; box-sizing:border-box; resize:vertical; min-height:80px;">${window.escapeHTML(p.bio || '')}</textarea>
+                    </div>
+                    <button id="saveStaffProfileBtn" onclick="window.saveStaffProfileFromModal()" style="background:var(--accent); color:#fff; border:none; padding:12px; border-radius:6px; cursor:pointer; font-weight:bold; margin-top:10px; font-size:15px; transition:0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Save Profile</button>
+                </div>
+            </div>
+        </div>
+        `;
+    }
     
     app.innerHTML = `
       <div id="accountHubView" class="card" style="max-width:750px; margin:0 auto; text-align:center;">
@@ -23271,31 +23316,23 @@ window.resetBearTrapEvent = async () => {
           ` : `<div style="width:130px; display:none;" class="acc-header-spacer"></div>`}
         </div>
         
-        <!-- Tab Navigation Bar -->
-        <div style="display:flex; justify-content:center; gap:8px; margin-bottom:24px; border-bottom:1px solid var(--border); padding-bottom:12px; flex-wrap:wrap;">
-          <button id="accTabBtnProfile" style="padding:9px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; background:var(--accent); color:#fff; border:none; transition:0.2s; box-shadow:0 4px 12px rgba(14,165,233,0.3);">
+        <!-- Tab Navigation Bar: 4 Core Pillars + Secret Launcher (Zero Multi-Line Wrapping) -->
+        <div class="account-hub-tabs" style="display:flex; justify-content:center; gap:8px; margin-bottom:22px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:12px; overflow-x:auto; flex-wrap:nowrap; -webkit-overflow-scrolling:touch; scrollbar-width:none; width:100%;">
+          <button id="accTabBtnProfile" style="flex-shrink:0; padding:8px 16px; border-radius:10px; font-weight:bold; font-size:13px; cursor:pointer; background:var(--accent); color:#fff; border:none; transition:0.2s; box-shadow:0 4px 12px rgba(14,165,233,0.3); white-space:nowrap;">
             🆔 Profile
           </button>
-          <button id="accTabBtnRankings" style="padding:9px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; background:var(--bg-main); color:var(--text-muted); border:1px solid var(--border); transition:0.2s;">
-            🏆 Event Rankings
+          <button id="accTabBtnCharacters" style="flex-shrink:0; padding:8px 16px; border-radius:10px; font-weight:bold; font-size:13px; cursor:pointer; background:var(--bg-main); color:var(--text-muted); border:1px solid var(--border); transition:0.2s; white-space:nowrap;">
+            👥 Characters (${totalCharactersCount})
           </button>
-          <button id="accTabBtnAlts" style="padding:9px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; background:var(--bg-main); color:var(--text-muted); border:1px solid var(--border); transition:0.2s;">
-            🔗 Linked Alts (${links.length})
+          <button id="accTabBtnRankings" style="flex-shrink:0; padding:8px 16px; border-radius:10px; font-weight:bold; font-size:13px; cursor:pointer; background:var(--bg-main); color:var(--text-muted); border:1px solid var(--border); transition:0.2s; white-space:nowrap;">
+            🏆 Combat & Records
           </button>
-          <button id="accTabBtnPerks" style="padding:9px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; background:var(--bg-main); color:var(--text-muted); border:1px solid var(--border); transition:0.2s;">
+          <button id="accTabBtnPerks" style="flex-shrink:0; padding:8px 16px; border-radius:10px; font-weight:bold; font-size:13px; cursor:pointer; background:var(--bg-main); color:var(--text-muted); border:1px solid var(--border); transition:0.2s; white-space:nowrap;">
             🎁 Perks
           </button>
-          <button id="accTabBtnActivity" style="padding:9px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; background:var(--bg-main); color:var(--text-muted); border:1px solid var(--border); transition:0.2s;">
-            📅 Activity Log
-          </button>
           ${ (currentUser && String(currentUser.gameId).trim() === '318843189') ? `
-            <button id="accTabBtnFrost" style="padding:9px 14px; border-radius:8px; font-weight:bold; font-size:15px; cursor:pointer; background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.4); transition:0.2s;" title="🥶">
+            <button id="accTabBtnFrost" style="flex-shrink:0; padding:8px 14px; border-radius:10px; font-weight:bold; font-size:15px; cursor:pointer; background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.4); transition:0.2s; white-space:nowrap;" title="🥶">
               🥶
-            </button>
-          ` : ''}
-          ${ (typeof window.isAdminUser === 'function' && window.isAdminUser(currentUser)) ? `
-            <button onclick="if(window.views && window.views.admin) window.views.admin();" style="padding:9px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; background:rgba(239,68,68,0.12); color:#ef4444; border:1px solid rgba(239,68,68,0.35); transition:0.2s;" title="Open Admin Command Center">
-              🛡️ Leadership Tools
             </button>
           ` : ''}
         </div>
@@ -23334,7 +23371,7 @@ window.resetBearTrapEvent = async () => {
               <!-- Glowing accent line at top -->
               <div style="position:absolute; top:0; left:0; width:100%; height:4px; background:var(--accent); box-shadow:0 0 10px var(--accent);"></div>
               
-              <div class="id-card-header" style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:15px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:15px; position:relative; z-index:30;">
+              <div class="id-card-header" style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:14px; position:relative; z-index:30;">
                   <div style="display:flex; align-items:center; gap:14px; min-width:0; flex:1;">
                       <div class="id-card-avatar" style="width:62px; height:62px; border-radius:14px; overflow:hidden; border:2px solid var(--accent); box-shadow:0 4px 15px rgba(0,0,0,0.3); background:var(--bg-secondary); flex-shrink:0; cursor:pointer; position:relative;" onclick="window.openAvatarManagerModal('${currentUser.gameId || ''}', '${window.escapeHTML(currentChiefName)}')" title="Change or Sync Profile Picture">
                           <img id="accountHubAvatarImg" src="${avatarSrc}" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';" style="width:100%; height:100%; object-fit:cover;" />
@@ -23371,24 +23408,9 @@ window.resetBearTrapEvent = async () => {
                           </div>
                       </div>
                   </div>
-
-                  <!-- Options Action Menu Button & Dropdown -->
-                  <div style="position:relative; flex-shrink:0;">
-                      <button id="idCardActionsMenuBtn" type="button" onclick="window.toggleIdCardActionsMenu(event)" style="background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.18); color:#fff; padding:6px 10px; border-radius:10px; cursor:pointer; font-size:13px; font-weight:bold; display:inline-flex; align-items:center; gap:5px; transition:all 0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.2)'; this.style.borderColor='rgba(6,182,212,0.5)';" onmouseout="this.style.background='rgba(255,255,255,0.07)'; this.style.borderColor='rgba(255,255,255,0.18)';" title="Options & Actions">
-                          ⚙️ Options ▾
-                      </button>
-                      <div id="idCardActionsDropdown" style="display:none; position:absolute; right:0; top:38px; width:200px; background:linear-gradient(145deg, rgba(15,23,42,0.98), rgba(30,41,59,0.96)); backdrop-filter:blur(16px); border:1px solid rgba(56,189,248,0.35); border-radius:14px; box-shadow:0 14px 40px rgba(0,0,0,0.75); padding:6px; z-index:999; text-align:left; animation:fadeIn 0.15s ease;">
-                          <button onclick="window.closeIdCardActionsMenu(); window.openEditProfileHubModal();" style="width:100%; display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; border:none; background:transparent; color:#ffffff; font-size:13.5px; font-weight:600; cursor:pointer; text-align:left; transition:all 0.2s;" onmouseover="this.style.background='rgba(56,189,248,0.15)'; this.style.color='#38bdf8';" onmouseout="this.style.background='transparent'; this.style.color='#ffffff';">
-                              <span style="font-size:16px;">✏️</span> <span>Edit Profile</span>
-                          </button>
-                          <button id="btnSyncCgProfile" onclick="window.closeIdCardActionsMenu(); window.handleSyncCenturyGamesProfile();" style="width:100%; display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; border:none; background:transparent; color:#ffffff; font-size:13.5px; font-weight:600; cursor:pointer; text-align:left; transition:all 0.2s;" onmouseover="this.style.background='rgba(56,189,248,0.15)'; this.style.color='#38bdf8';" onmouseout="this.style.background='transparent'; this.style.color='#ffffff';">
-                              <span style="font-size:16px;">🔄</span> <span>Sync from Game</span>
-                          </button>
-                      </div>
-                  </div>
               </div>
               
-              <!-- Dedicated Centered Fire Crystal Showcase (Responsive & Centered on all Screen Sizes) -->
+              <!-- Dedicated Centered Fire Crystal Showcase -->
               <div class="id-card-furnace-showcase">
                   <div style="color:var(--text-muted); font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:1.5px; margin-bottom:10px; display:flex; align-items:center; justify-content:center; gap:6px;">
                       <span>🔥</span> <span>Furnace / Fire Crystal</span>
@@ -23396,6 +23418,19 @@ window.resetBearTrapEvent = async () => {
                   <div style="display:flex; align-items:center; justify-content:center; width:100%; position:relative; overflow:visible;">
                       ${window.getFurnaceIconHtml(furnaceLevelStr, 130)}
                   </div>
+              </div>
+
+              <!-- Unified 3-Button Quick Action Strip -->
+              <div class="id-card-action-strip" style="display:flex; gap:8px; justify-content:center; align-items:center; margin:14px 0 16px 0; position:relative; z-index:10; flex-wrap:wrap;">
+                  <button onclick="window.openEditProfileHubModal();" style="flex:1 1 95px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.18); color:#fff; padding:8px 10px; border-radius:10px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:5px; transition:all 0.2s; white-space:nowrap;" onmouseover="this.style.background='rgba(56,189,248,0.2)'; this.style.borderColor='rgba(56,189,248,0.5)';" onmouseout="this.style.background='rgba(255,255,255,0.08)'; this.style.borderColor='rgba(255,255,255,0.18)';">
+                      <span>✏️</span> <span>Edit Profile</span>
+                  </button>
+                  <button onclick="window.handleSyncCenturyGamesProfile();" style="flex:1 1 95px; background:rgba(6,182,212,0.15); border:1px solid rgba(6,182,212,0.4); color:#38bdf8; padding:8px 10px; border-radius:10px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:5px; transition:all 0.2s; white-space:nowrap;" onmouseover="this.style.background='rgba(6,182,212,0.3)';" onmouseout="this.style.background='rgba(6,182,212,0.15)';">
+                      <span>🔄</span> <span>Sync Data</span>
+                  </button>
+                  <button onclick="window.openAccountHubVerifyModal();" style="flex:1 1 95px; background:linear-gradient(135deg, rgba(14,165,233,0.3), rgba(2,132,199,0.3)); border:1px solid rgba(14,165,233,0.5); color:#fff; padding:8px 10px; border-radius:10px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:5px; transition:all 0.2s; white-space:nowrap;" onmouseover="this.style.transform='translateY(-1px)';" onmouseout="this.style.transform='translateY(0)';">
+                      <span>🔑</span> <span>30-Day Token</span>
+                  </button>
               </div>
 
               <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:15px; position:relative; z-index:2;">
@@ -23429,14 +23464,42 @@ window.resetBearTrapEvent = async () => {
           ${staffProfileHtml}
         </div>
 
-        <!-- Section 2: My Event Rankings Tab -->
-        <div id="accTabSectionRankings" style="display:none; text-align:left;">
-          <div id="accRankingsContainer"></div>
+        <!-- Section 2: Alliance Characters (Main + Alts) Tab -->
+        <div id="accTabSectionCharacters" style="display:none; text-align:left;">
+          ${linkedHtml}
         </div>
 
-        <!-- Section 3: Linked Alt Accounts Tab -->
-        <div id="accTabSectionAlts" style="display:none; text-align:left;">
-          ${linkedHtml}
+        <!-- Section 3: Event Rankings & Battle Log Tab -->
+        <div id="accTabSectionRankings" style="display:none; text-align:left;">
+          <!-- Sub-Pill Segmented Switcher -->
+          <div style="display:flex; justify-content:center; margin-bottom:18px;">
+            <div style="display:inline-flex; background:rgba(15,23,42,0.8); padding:4px; border-radius:12px; border:1px solid rgba(255,255,255,0.1); gap:6px;">
+              <button id="subTabBtnRankingsStandings" onclick="window.switchRankingsSubTab('standings')" style="background:var(--accent); color:#fff; border:none; padding:7px 16px; border-radius:8px; font-size:12.5px; font-weight:bold; cursor:pointer; transition:0.2s; box-shadow:0 2px 8px rgba(14,165,233,0.3);">
+                🏆 Standings & Medals
+              </button>
+              <button id="subTabBtnRankingsLog" onclick="window.switchRankingsSubTab('log')" style="background:transparent; color:var(--text-muted); border:none; padding:7px 16px; border-radius:8px; font-size:12.5px; font-weight:bold; cursor:pointer; transition:0.2s;">
+                📅 Personal Battle Log
+              </button>
+            </div>
+          </div>
+
+          <!-- Sub-Panel 1: Standings & Medals -->
+          <div id="rankingsStandingsSubPanel">
+            <div id="accRankingsContainer"></div>
+          </div>
+
+          <!-- Sub-Panel 2: Personal Battle Log -->
+          <div id="rankingsLogSubPanel" style="display:none;">
+            <div class="card" style="text-align:left;">
+              <div class="card-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                <span>📅 Personal Activity & Bear Trap Log</span>
+                <span id="activityChiefSubtitle" style="font-size:12px; color:var(--text-muted); font-weight:normal;">Filtered for ${escapeHTML(currentChiefName)}</span>
+              </div>
+              <div id="userPersonalLogContainer" style="margin-top:12px;">
+                <div style="text-align:center; color:var(--text-muted); padding:15px; font-size:13px;">Loading today's activity...</div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Section 4: Member Perks & Auto Redeem Tab -->
@@ -23471,8 +23534,8 @@ window.resetBearTrapEvent = async () => {
               <div style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:14px 16px; margin-bottom:16px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                   <span style="font-size:12px; font-weight:bold; color:var(--accent); text-transform:uppercase; letter-spacing:0.5px;">👥 Enrolled Character Lineup (1 Main + ${links.length} Alts)</span>
-                  <button onclick="let b=document.getElementById('accTabBtnAlts'); if(b) b.click();" style="background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; padding:4px 10px; border-radius:6px; font-size:11.5px; font-weight:bold; cursor:pointer;">
-                    🔗 Manage Alts
+                  <button onclick="let b=document.getElementById('accTabBtnCharacters'); if(b) b.click();" style="background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; padding:4px 10px; border-radius:6px; font-size:11.5px; font-weight:bold; cursor:pointer;">
+                    👥 Manage Characters
                   </button>
                 </div>
 
@@ -23582,21 +23645,8 @@ window.resetBearTrapEvent = async () => {
           </div>
         </div>
 
-        <!-- Section 5: Personal Activity Log Tab -->
-        <div id="accTabSectionActivity" style="display:none; text-align:left;">
-          <div class="card" style="text-align:left;">
-            <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
-              <span>📅 Personal Activity & Bear Trap Log</span>
-              <span style="font-size:12px; color:var(--text-muted); font-weight:normal;">Filtered for ${escapeHTML(currentChiefName)}</span>
-            </div>
-            <div id="userPersonalLogContainer" style="margin-top:12px;">
-              <div style="text-align:center; color:var(--text-muted); padding:15px; font-size:13px;">Loading today's activity...</div>
-            </div>
-          </div>
-        </div>
-
         ${ (currentUser && String(currentUser.gameId).trim() === '318843189') ? `
-        <!-- Section 6: Secret Frost Clan Command Center Tab -->
+        <!-- Section 5: Secret Frost Clan Command Center Tab -->
         <div id="accTabSectionFrost" style="display:none; text-align:left;">
           <div id="frostClanContainer">
             <div style="margin:40px 0; color:var(--text-muted); text-align:center;">
@@ -23615,6 +23665,47 @@ window.resetBearTrapEvent = async () => {
     let fbDonations = {};
     let lbRawData = [];
     let rankingsDataLoaded = false;
+
+    window.switchRankingsSubTab = (sub) => {
+      const standingsBtn = document.getElementById('subTabBtnRankingsStandings');
+      const logBtn = document.getElementById('subTabBtnRankingsLog');
+      const standingsPanel = document.getElementById('rankingsStandingsSubPanel');
+      const logPanel = document.getElementById('rankingsLogSubPanel');
+      
+      if (sub === 'log') {
+        if (logBtn) {
+          logBtn.style.background = 'var(--accent)';
+          logBtn.style.color = '#fff';
+          logBtn.style.boxShadow = '0 2px 8px rgba(14,165,233,0.3)';
+        }
+        if (standingsBtn) {
+          standingsBtn.style.background = 'transparent';
+          standingsBtn.style.color = 'var(--text-muted)';
+          standingsBtn.style.boxShadow = 'none';
+        }
+        if (standingsPanel) standingsPanel.style.display = 'none';
+        if (logPanel) logPanel.style.display = 'block';
+        
+        const sel = document.getElementById('accRankingsAccountSelect');
+        const curChief = (sel && sel.value) || currentChiefName;
+        if (typeof window.loadUserPersonalLog === 'function') {
+          window.loadUserPersonalLog(curChief);
+        }
+      } else {
+        if (standingsBtn) {
+          standingsBtn.style.background = 'var(--accent)';
+          standingsBtn.style.color = '#fff';
+          standingsBtn.style.boxShadow = '0 2px 8px rgba(14,165,233,0.3)';
+        }
+        if (logBtn) {
+          logBtn.style.background = 'transparent';
+          logBtn.style.color = 'var(--text-muted)';
+          logBtn.style.boxShadow = 'none';
+        }
+        if (standingsPanel) standingsPanel.style.display = 'block';
+        if (logPanel) logPanel.style.display = 'none';
+      }
+    };
 
     // Render Event Rankings Dashboard helper (Lazy loaded on tab open)
     const renderAccountRankings = async (chiefNameTarget) => {
@@ -24022,6 +24113,8 @@ window.resetBearTrapEvent = async () => {
       if (selectEl) {
         selectEl.addEventListener('change', (e) => {
           renderAccountRankings(e.target.value);
+          const subTitle = document.getElementById('activityChiefSubtitle');
+          if (subTitle) subTitle.textContent = `Filtered for ${e.target.value}`;
           window.loadUserPersonalLog(e.target.value);
         });
       }
@@ -24035,13 +24128,12 @@ window.resetBearTrapEvent = async () => {
       }
     }
 
-    // 5/6-Way Tab Switcher Listeners
+    // 4 Core Pillars + Frost Tab Switcher Listeners
     const accTabs = [
       { id: 'Profile', btn: document.getElementById('accTabBtnProfile'), sec: document.getElementById('accTabSectionProfile') },
+      { id: 'Characters', btn: document.getElementById('accTabBtnCharacters'), sec: document.getElementById('accTabSectionCharacters') },
       { id: 'Rankings', btn: document.getElementById('accTabBtnRankings'), sec: document.getElementById('accTabSectionRankings') },
-      { id: 'Alts', btn: document.getElementById('accTabBtnAlts'), sec: document.getElementById('accTabSectionAlts') },
-      { id: 'Perks', btn: document.getElementById('accTabBtnPerks'), sec: document.getElementById('accTabSectionPerks') },
-      { id: 'Activity', btn: document.getElementById('accTabBtnActivity'), sec: document.getElementById('accTabSectionActivity') }
+      { id: 'Perks', btn: document.getElementById('accTabBtnPerks'), sec: document.getElementById('accTabSectionPerks') }
     ];
     if (currentUser && String(currentUser.gameId).trim() === '318843189') {
       accTabs.push({ id: 'Frost', btn: document.getElementById('accTabBtnFrost'), sec: document.getElementById('accTabSectionFrost') });
@@ -24086,12 +24178,21 @@ window.resetBearTrapEvent = async () => {
     };
 
     const switchAccountHubTab = (activeId) => {
-      window.currentAccountHubTab = activeId;
-      sessionStorage.setItem('activeAccountTab', activeId);
+      let resolvedId = activeId;
+      let selectBattleLog = false;
+      if (activeId === 'Alts') resolvedId = 'Characters';
+      else if (activeId === 'Activity') {
+        resolvedId = 'Rankings';
+        selectBattleLog = true;
+      } else if (activeId === 'Combat') resolvedId = 'Rankings';
+
+      window.currentAccountHubTab = resolvedId;
+      sessionStorage.setItem('activeAccountTab', resolvedId);
       sessionStorage.setItem('activeView', 'account');
+
       accTabs.forEach(t => {
         if (!t.btn || !t.sec) return;
-        if (t.id === activeId) {
+        if (t.id === resolvedId) {
           t.btn.style.background = 'var(--accent)';
           t.btn.style.color = '#fff';
           t.btn.style.border = 'none';
@@ -24103,6 +24204,9 @@ window.resetBearTrapEvent = async () => {
             window.loadFrostClanData('frostClanContainer');
           } else if (t.id === 'Rankings') {
             renderAccountRankings(currentChiefName);
+            if (selectBattleLog && typeof window.switchRankingsSubTab === 'function') {
+              window.switchRankingsSubTab('log');
+            }
           }
         } else {
           t.btn.style.background = 'var(--bg-main)';

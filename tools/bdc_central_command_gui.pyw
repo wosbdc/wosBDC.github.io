@@ -1,10 +1,11 @@
 # ====================================================================
-# ⚡ BDC CENTRAL COMMAND — NATIVE WINDOWS DESKTOP GUI EDITION (v1.0.59)
+# ⚡ BDC CENTRAL COMMAND — NATIVE WINDOWS DESKTOP GUI EDITION (v1.0.60)
 # ====================================================================
-# Continues from Threads Lab Bridge / Central Command v1.0.59:
+# Continues from Threads Lab Bridge / Central Command v1.0.60:
 #  • 🌐 Media & Social Live Bridge (Plex, Twitch, FB, IG, Threads, YT, Snap, TikTok, X)
 #  • 🔥 WoS Account Multi-Maintenance Daemon (4x Daily / 6 Hours - 0 Google Quota)
 #  • 🎁 24/7 Gift Code Auto-Bot & Multi-Account Auto-Redeemer
+#  • 💾 Automated Multi-Project Nightly Firebase RTDB Backup Engine
 #  • 🛡️ Discord Bot RSVP Tracker & Dynamic Alliance Gatekeeper Report (#alerts)
 # ====================================================================
 
@@ -19,6 +20,15 @@ import json
 import hashlib
 import re
 from datetime import datetime, timezone
+
+try:
+    from tools.firebase_backup_restore import backup_all_projects, list_all_backups, format_size, FIREBASE_PROJECTS
+except ImportError:
+    try:
+        from firebase_backup_restore import backup_all_projects, list_all_backups, format_size, FIREBASE_PROJECTS
+    except ImportError:
+        backup_all_projects = None
+        FIREBASE_PROJECTS = {}
 
 # Enable UTF-8 console output on Windows
 if sys.platform == 'win32':
@@ -191,6 +201,7 @@ RETRY_COOLDOWN = 10
 FAST_INTERVAL = 2           
 GIFTCODE_SWEEP_INTERVAL = 45 * 60     # 45 minutes
 WOS_MAINT_INTERVAL = 6 * 60 * 60      # 6 Hours (4x Daily: 00:00, 06:00, 12:00, 18:00 UTC)
+FIREBASE_BACKUP_INTERVAL = 24 * 60 * 60  # 24 Hours (Nightly Automated Cadence)
 
 # --- WHITEOUT SURVIVAL API CONFIG ---
 WOS_PLAYER_INFO_URL = "https://wos-giftcode-api.centurygame.com/api/player"
@@ -1522,13 +1533,44 @@ class PlatformCounterHealthEngine:
             self.log(f"⚠️ Could not dispatch email alert: {e}")
 
 # ====================================================================
-# 🖥️ DESKTOP GUI CLASS — BDC CENTRAL COMMAND (v1.0.59)
+# 💾 FIREBASE BACKUP & SNAPSHOT ENGINE
+# ====================================================================
+
+class FirebaseBackupEngine:
+    def __init__(self, log_callback=None, card_callback=None):
+        self.log_callback = log_callback
+        self.card_callback = card_callback
+
+    def log(self, msg):
+        if self.log_callback: self.log_callback(f"💾 [DB Backup] {msg}")
+
+    def run_sweep(self):
+        if not backup_all_projects:
+            self.log("Backup module not loaded.")
+            return
+
+        self.log(f"Starting Multi-Project Firebase RTDB Backup ({len(FIREBASE_PROJECTS)} projects)...")
+        if self.card_callback: self.card_callback("Backing up...")
+
+        try:
+            res = backup_all_projects(log_callback=self.log)
+            succ = res.get("successCount", 0)
+            tot = res.get("totalProjects", len(FIREBASE_PROJECTS))
+            sz = res.get("totalSizeFormatted", "0 B")
+            card_txt = f"{succ}/{tot} DBs ({sz})"
+            if self.card_callback: self.card_callback(card_txt)
+        except Exception as e:
+            self.log(f"Backup error: {e}")
+            if self.card_callback: self.card_callback("Error")
+
+# ====================================================================
+# 🖥️ DESKTOP GUI CLASS — BDC CENTRAL COMMAND (v1.0.60)
 # ====================================================================
 
 class BDCCentralCommandApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("⚡ BDC Central Command — Master Control Panel v1.0.59")
+        self.root.title("⚡ BDC Central Command — Master Control Panel v1.0.60")
         self.root.geometry("920x720")
         self.root.configure(bg="#0d1117")
 
@@ -1536,6 +1578,7 @@ class BDCCentralCommandApp:
         self.worker_thread = None
         self.last_giftcode_sweep = 0
         self.last_wos_maint_sweep = 0
+        self.last_db_backup_sweep = 0
 
         # Custom Styles
         self.style = ttk.Style()
@@ -1554,6 +1597,9 @@ class BDCCentralCommandApp:
         # Quick Action Buttons
         self.btn_toggle = tk.Button(header_frame, text="▶ START ENGINE", font=("Segoe UI", 10, "bold"), fg="#ffffff", bg="#238636", activebackground="#2ea043", activeforeground="#ffffff", relief="flat", command=self.toggle_engine, width=14, cursor="hand2")
         self.btn_toggle.pack(side="right", padx=6)
+
+        btn_backup = tk.Button(header_frame, text="💾 Backup DB", font=("Segoe UI", 9, "bold"), fg="#a855f7", bg="#1e293b", activebackground="#334155", activeforeground="#a855f7", relief="flat", command=self.btn_trigger_backup, cursor="hand2", padx=8, pady=4)
+        btn_backup.pack(side="right", padx=4)
 
         btn_wos_maint = tk.Button(header_frame, text="🔥 WoS Maint", font=("Segoe UI", 9, "bold"), fg="#f59e0b", bg="#1e293b", activebackground="#334155", activeforeground="#f59e0b", relief="flat", command=self.btn_trigger_wos_maint, cursor="hand2", padx=8, pady=4)
         btn_audit = tk.Button(header_frame, text="🩺 Audit Counters", font=("Segoe UI", 9, "bold"), fg="#3fb950", bg="#1e293b", activebackground="#334155", activeforeground="#3fb950", relief="flat", command=self.btn_trigger_counter_audit, cursor="hand2", padx=8, pady=4)
@@ -1587,6 +1633,7 @@ class BDCCentralCommandApp:
             ("🔥 WoS Maintenance", "wos_maint", "#f59e0b"),
             ("🎁 Gift Code Bot", "giftcode_bot", "#ec4899"),
             ("🩺 Counter Audit", "counter_audit", "#3fb950"),
+            ("💾 DB Backup", "db_backup", "#a855f7"),
             ("Grand Totals", "gt", "#f1e05a")
         ]
 
@@ -1620,6 +1667,11 @@ class BDCCentralCommandApp:
             card_callback=lambda val: self.root.after(0, self.update_card, "wos_maint", val)
         )
 
+        self.backup_engine = FirebaseBackupEngine(
+            log_callback=lambda msg: self.root.after(0, self.log, msg),
+            card_callback=lambda val: self.root.after(0, self.update_card, "db_backup", val)
+        )
+
         # Activity Log Frame
         log_frame = tk.Frame(self.root, bg="#0d1117", padx=10, pady=10)
         log_frame.pack(fill="both", expand=True, side="bottom")
@@ -1630,7 +1682,7 @@ class BDCCentralCommandApp:
         self.log_box = scrolledtext.ScrolledText(log_frame, bg="#161b22", fg="#c9d1d9", font=("Consolas", 9), highlightbackground="#30363d", relief="flat")
         self.log_box.pack(fill="both", expand=True)
 
-        self.log("⚡ BDC Central Command v1.0.59 initialized. Click 'START ENGINE' to begin live bridge, WoS maintenance & gift code monitoring.")
+        self.log("⚡ BDC Central Command v1.0.60 initialized. Click 'START ENGINE' to begin live bridge, WoS maintenance, gift codes & DB backup.")
 
     def log(self, msg):
         timestamp = datetime.now().strftime("%H:%M:%S")
@@ -1659,6 +1711,10 @@ class BDCCentralCommandApp:
     def btn_trigger_gift_sweep(self):
         self.log("🎁 Triggering manual Gift Code sweep...")
         threading.Thread(target=self.gift_bot.run_sweep, daemon=True).start()
+
+    def btn_trigger_backup(self):
+        self.log("💾 Triggering manual Multi-Project Firebase RTDB backup...")
+        threading.Thread(target=self.backup_engine.run_sweep, daemon=True).start()
 
     def toggle_engine(self):
         if not self.running:
@@ -1701,6 +1757,11 @@ class BDCCentralCommandApp:
                 if now - self.last_giftcode_sweep >= GIFTCODE_SWEEP_INTERVAL or self.last_giftcode_sweep == 0:
                     self.last_giftcode_sweep = now
                     threading.Thread(target=self.gift_bot.run_sweep, daemon=True).start()
+
+                # Check Automated Nightly DB Backup (Runs every 24 Hours / Nightly)
+                if now - self.last_db_backup_sweep >= FIREBASE_BACKUP_INTERVAL or self.last_db_backup_sweep == 0:
+                    self.last_db_backup_sweep = now
+                    threading.Thread(target=self.backup_engine.run_sweep, daemon=True).start()
 
                 # Update Gatekeeper Card
                 t_gk = fetch_live_gatekeeper_telemetry()

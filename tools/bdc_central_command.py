@@ -9,7 +9,7 @@ r"""
   | |_) || |_| | |____  | |___|  __/ | | | |_| | | (_| | | |
   |____/ |____/ \_____|  \_____\___|_| |_|\__|_|  \__,_| |_|
                                                              
-   ⚡ B D C   C E N T R A L   C O M M A N D   v 1 . 0 . 0 ⚡
+   ⚡ B D C   C E N T R A L   C O M M A N D   v 1 . 0 . 6 0 ⚡
   Unified Multi-Threaded Server Daemon | 0 Google Quota Architecture
 ================================================================================
 
@@ -17,11 +17,13 @@ Threads & Subsystems:
   [THREAD 1] 🌐 Media & Social Live Bridge (Plex, Twitch, Facebook, IG, Threads -> Livecounters Firebase)
   [THREAD 2] 🔥 WoS Account Multi-Maintenance (Furnace Upgrades, Nicknames, Avatars - 4x Daily / Every 6 Hours)
   [THREAD 3] 🎁 24/7 Gift Code Auto-Bot (Scrapes 5 sources hourly, tests Century Games API, mass auto-redeems)
+  [THREAD 4] 💾 Automated Multi-Project Nightly Firebase RTDB Backup (24h Rolling Cadence)
 
 Usage:
   python bdc_central_command.py                 # Run all subsystems concurrently (Default)
   python bdc_central_command.py --maintenance   # Run single WoS maintenance sweep and exit
   python bdc_central_command.py --giftcodes     # Run single gift code scrape/redeem and exit
+  python bdc_central_command.py --backup        # Run single multi-project Firebase backup and exit
   python bdc_central_command.py --social-only   # Run only the Social/Media bridge
 """
 
@@ -33,8 +35,17 @@ import re
 import hashlib
 import threading
 import signal
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import requests
+
+try:
+    from tools.firebase_backup_restore import backup_all_projects, list_all_backups, format_size, FIREBASE_PROJECTS
+except ImportError:
+    try:
+        from firebase_backup_restore import backup_all_projects, list_all_backups, format_size, FIREBASE_PROJECTS
+    except ImportError:
+        backup_all_projects = None
+        FIREBASE_PROJECTS = {}
 
 # Enable UTF-8 console output on Windows
 if sys.platform == 'win32':
@@ -86,6 +97,7 @@ SOCIAL_FAST_INTERVAL = 2          # 2 seconds (Plex, Twitch live streams)
 SOCIAL_META_INTERVAL = 300        # 5 minutes (Facebook, Instagram, Threads)
 WOS_MAINTENANCE_INTERVAL = 21600  # 6 Hours (4x Daily: 00:00, 06:00, 12:00, 18:00 UTC)
 GIFTCODE_BOT_INTERVAL = 3600      # 1 Hour (24/7 continuous code scraper)
+FIREBASE_BACKUP_INTERVAL = 86400  # 24 Hours (Nightly Automated Full Snapshot)
 
 # ==============================================================================
 # 🌐 SHARED UTILITIES & HTTP SESSION
@@ -114,7 +126,10 @@ live_stats = {
     "maint_upgrades": 0,
     "bot_status": "IDLE",
     "bot_last_run": "Never",
-    "bot_active_codes": 0
+    "bot_active_codes": 0,
+    "backup_status": "IDLE",
+    "backup_last_run": "Never",
+    "backup_size": "--"
 }
 
 def log_event(subsystem, message):
@@ -655,8 +670,6 @@ def execute_giftcode_bot_sweep():
         log_event("GIFTCODE BOT", f"✅ Sweep Complete: {active_cnt} Active, {expired_cnt} Expired, {len(GIFTCODE_BLACKLIST)} Blacklisted.")
     except Exception as e:
         log_event("GIFTCODE BOT", f"Error updating Firebase telemetry: {e}")
-
-def run_giftcode_bot_thread():
     log_event("GIFTCODE BOT", "Initializing 24/7 Gift Code Auto-Bot Thread (Cadence: Hourly)...")
     time.sleep(15) # Stagger launch
     while not shutdown_event.is_set():
@@ -669,6 +682,46 @@ def run_giftcode_bot_thread():
         while slept < GIFTCODE_BOT_INTERVAL and not shutdown_event.is_set():
             time.sleep(5)
             slept += 5
+
+# ==============================================================================
+# 🧵 THREAD 4: AUTOMATED MULTI-PROJECT FIREBASE RTDB BACKUP
+# ==============================================================================
+
+def execute_firebase_backup_sweep():
+    if not backup_all_projects:
+        log_event("DB BACKUP", "Backup module not available.")
+        return None
+
+    log_event("DB BACKUP", f"Starting Multi-Project Firebase RTDB Backup ({len(FIREBASE_PROJECTS)} projects)...")
+    live_stats["backup_status"] = "BACKING UP..."
+    try:
+        res = backup_all_projects(log_callback=lambda m: log_event("DB BACKUP", m))
+        succ = res.get("successCount", 0)
+        tot = res.get("totalProjects", len(FIREBASE_PROJECTS))
+        sz = res.get("totalSizeFormatted", "0 B")
+        live_stats["backup_status"] = f"{succ}/{tot} OK"
+        live_stats["backup_last_run"] = datetime.now().strftime("%H:%M:%S")
+        live_stats["backup_size"] = sz
+        log_event("DB BACKUP", f"✅ Multi-Project Backup Complete: {succ}/{tot} DBs ({sz})")
+        return res
+    except Exception as e:
+        log_event("DB BACKUP", f"❌ Backup sweep error: {e}")
+        live_stats["backup_status"] = "ERR"
+        return None
+
+def run_firebase_backup_thread():
+    log_event("DB BACKUP", "Initializing Automated Nightly Firebase Backup Thread (Cadence: 24h)...")
+    time.sleep(20) # Stagger initial start
+    while not shutdown_event.is_set():
+        try:
+            execute_firebase_backup_sweep()
+        except Exception as e:
+            log_event("DB BACKUP", f"Thread error: {e}")
+
+        slept = 0
+        while slept < FIREBASE_BACKUP_INTERVAL and not shutdown_event.is_set():
+            time.sleep(10)
+            slept += 10
 
 # ==============================================================================
 # 🖥️ LIVE TERMINAL DASHBOARD & CONSOLE UI
@@ -684,13 +737,14 @@ def print_banner():
   | |_) || |_| | |____  | |___|  __/ | | | |_| | | (_| | | |
   |____/ |____/ \_____|  \_____\___|_| |_|\__|_|  \__,_| |_|
                                                              
-     ⚡ B D C   C E N T R A L   C O M M A N D   v 1 . 0 . 0 ⚡
+     ⚡ B D C   C E N T R A L   C O M M A N D   v 1 . 0 . 6 0 ⚡
   Unified Multi-Threaded Server Daemon | 0 Google Quota Architecture
 ================================================================================
 Subsystems Online:
   • [Thread 1] Social & Media Live Stream Bridge (Plex, Twitch, FB, IG, Threads)
   • [Thread 2] Whiteout Survival Multi-Maintenance (4x Daily / 6 Hours)
   • [Thread 3] 24/7 Gift Code Auto-Bot & Auto-Redeemer (Hourly)
+  • [Thread 4] Automated Multi-Project Firebase RTDB Backup (24h Rolling)
 ================================================================================
 """
     print(banner)
@@ -703,9 +757,10 @@ def run_console_dashboard():
             f"Twitch: {live_stats['twitch_viewers']}/{live_stats['twitch_chatters']} | "
             f"FB: {live_stats['fb']} | IG: {live_stats['ig']} | Threads: {live_stats['threads']} | "
             f"WoS Maint: [{live_stats['maint_status']} - Last: {live_stats['maint_last_run']}] | "
-            f"Bot Codes: {live_stats['bot_active_codes']}"
+            f"Bot Codes: {live_stats['bot_active_codes']} | "
+            f"Backup: [{live_stats['backup_status']} - {live_stats['backup_size']}]"
         )
-        sys.stdout.write(status_line.ljust(110))
+        sys.stdout.write(status_line.ljust(130))
         sys.stdout.flush()
         time.sleep(1.5)
 
@@ -735,6 +790,12 @@ if __name__ == "__main__":
         execute_giftcode_bot_sweep()
         sys.exit(0)
 
+    if "--backup" in sys.argv:
+        print_banner()
+        log_event("CLI", "Executing single Multi-Project Firebase RTDB backup sweep...")
+        execute_firebase_backup_sweep()
+        sys.exit(0)
+
     print_banner()
     log_event("MASTER", "Starting BDC Central Command Multi-Threaded Engine...")
 
@@ -742,10 +803,12 @@ if __name__ == "__main__":
     t1 = threading.Thread(target=run_social_bridge_thread, daemon=True, name="SocialBridgeThread")
     t2 = threading.Thread(target=run_wos_maintenance_thread, daemon=True, name="WoSMaintenanceThread")
     t3 = threading.Thread(target=run_giftcode_bot_thread, daemon=True, name="GiftCodeBotThread")
+    t4 = threading.Thread(target=run_firebase_backup_thread, daemon=True, name="FirebaseBackupThread")
 
     t1.start()
     t2.start()
     t3.start()
+    t4.start()
 
     time.sleep(2)
     print("\n[ACTIVE RUNTIME CONSOLE]")
