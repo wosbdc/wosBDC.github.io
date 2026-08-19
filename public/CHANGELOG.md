@@ -1,6 +1,9 @@
 # CHANGELOG
 
-## [2.9.40] - 2026-08-18
+## [2.9.41] - 2026-08-18
+- 📱 **Official Crystal PWA App Icon Overhaul**: Rendered high-resolution 3D Amethyst crystal PWA icons across all device standards (`icon-512.png`, `icon-192.png`, `apple-touch-icon.png`, `favicon.ico`, and `favicon.png`) for crisp display on iOS/Android mobile home screens and Desktop app shortcuts.
+- 📜 **Changelog Modal & Overlay Layering Fix**: Resolved overlay `z-index` conflict so the Changelog modal opens cleanly on top of all page elements with 1-click access via `#versionBadge` and the Settings Sidebar.
+- 🎨 **Navbar Brand Cleanup**: Restored clean, focused "Dashboard for BDC Alliance" text branding in the top navigation header.
 - 🥶 **Discreet Pure-Icon Secret Launcher**: Updated the root admin launcher button in the top navigation bar and Account Hub to display strictly the discreet icon (`🥶`) with no text name for maximum privacy.
 - 🧹 **Toolbar Clean-up & Streamlined Roster Layout**: Removed the redundant Bulk Add button from the Alliance Members toolbar in `tab-users`, keeping the main window clean and compact.
 - 👥 **Unified Modal Experience**: Both Single Player and Bulk Add workflows remain accessible inside the `➕ Add Player` popup modal tabs (`👤 Single` and `👥 Bulk Add`).

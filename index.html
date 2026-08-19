@@ -30,10 +30,7 @@
     <nav class="navbar">
       <div class="nav-inner">
         <div class="nav-brand" style="line-height:1.1; text-align:center;">
-          <div style="display:inline-flex; align-items:center; justify-content:center; gap:8px; cursor:pointer;" onclick="window.openAppIconModal && window.openAppIconModal()" title="Click to Switch App Icon / Brand Emblem">
-            <img id="navbarAppLogo" src="./app-icons/icon-cosmic-4b.jpg" alt="BDC App Icon" style="width:26px; height:26px; border-radius:7px; object-fit:cover; border:1px solid rgba(168,85,247,0.4); box-shadow:0 0 10px rgba(168,85,247,0.3); transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1.0)'" />
-            <span style="font-weight:bold; font-size:18px; color:var(--text-main); letter-spacing:0.5px;">Dashboard</span>
-          </div>
+          <a href="#" class="brand-title" style="font-weight:bold; font-size:18px; color:var(--text-main); letter-spacing:0.5px; text-decoration:none;">Dashboard</a>
           <span style="display:block; font-size:12px; color:var(--text-muted); font-weight:normal; margin-top:2px;">for BDC Alliance</span>
           <div style="font-size: 11px; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 6px;">
             <span title="Currently Online" style="background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 2px 6px; border-radius: 10px; font-weight: bold; display:flex; align-items:center; gap:4px;">
@@ -42,8 +39,8 @@
             <span title="Total Views" style="background: rgba(236, 72, 153, 0.2); color: #ec4899; padding: 2px 6px; border-radius: 10px; font-weight: bold; display:flex; align-items:center; gap:4px;">
               👁️ <span id="views-counter">...</span>
             </span>
-            <span id="versionBadge" title="Click to view Changelog" style="background: rgba(168, 85, 247, 0.2); color: #a855f7; padding: 2px 6px; border-radius: 10px; font-weight: bold; display:flex; align-items:center; gap:4px; cursor:pointer;">
-              v2.9.40
+            <span id="versionBadge" onclick="window.openChangelogModal && window.openChangelogModal()" title="Click to view Changelog" style="background: rgba(168, 85, 247, 0.2); color: #a855f7; padding: 2px 6px; border-radius: 10px; font-weight: bold; display:flex; align-items:center; gap:4px; cursor:pointer;">
+              v2.9.41
             </span>
             <button id="secretFrostNavBtn" onclick="if(window.openFrostClanModal) window.openFrostClanModal(); else if(window.views && window.views.account) window.views.account('Frost');" title="🥶" style="display:none; background:rgba(56, 189, 248, 0.15); border:1px solid rgba(56, 189, 248, 0.4); color:#38bdf8; padding:2px 7px; border-radius:10px; font-weight:bold; font-size:14px; cursor:pointer; align-items:center; justify-content:center; box-shadow:0 0 10px rgba(56, 189, 248, 0.25); transition:all 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
               🥶
@@ -199,8 +196,8 @@
           <button onclick="window.openThemeModal && window.openThemeModal()" class="sidebar-action-btn sidebar-mini-btn" title="Theme Engine">
             🎨 Themes
           </button>
-          <button onclick="window.openAppIconModal && window.openAppIconModal()" class="sidebar-action-btn sidebar-mini-btn" title="App Icon & Brand Emblem Switcher">
-            🖼️ App Icon
+          <button onclick="window.openChangelogModal && window.openChangelogModal()" class="sidebar-action-btn sidebar-mini-btn" title="View Version Changelog & Release Notes">
+            📜 Changelog
           </button>
           <button onclick="window.openMobileNavModal && window.openMobileNavModal()" class="sidebar-action-btn sidebar-mini-btn" title="Mobile Navigation Layout">
             📱 Mobile Nav
@@ -229,8 +226,8 @@
     </div>
 
     <!-- Theme Modal -->
-    <div id="themeModalOverlay" class="sidebar-overlay" onclick="document.getElementById('themeModal').style.display='none'; this.style.display='none';"></div>
-    <div id="themeModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:var(--card-bg); padding:30px; border-radius:12px; border:1px solid var(--accent); box-shadow:0 10px 25px rgba(0,0,0,0.5); z-index:1001; width:90%; max-width:500px;">
+    <div id="themeModalOverlay" class="sidebar-overlay" onclick="document.getElementById('themeModal').style.display='none'; this.style.display='none';" style="z-index:100049;"></div>
+    <div id="themeModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:var(--card-bg); padding:30px; border-radius:12px; border:1px solid var(--accent); box-shadow:0 10px 25px rgba(0,0,0,0.5); z-index:100050; width:90%; max-width:500px;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:10px;">
         <h2 style="margin:0; color:var(--text-main);">🎨 Theme Engine</h2>
         <button onclick="document.getElementById('themeModal').style.display='none'; document.getElementById('themeModalOverlay').style.display='none';" class="close-btn" title="Close Window">✕</button>
@@ -252,13 +249,13 @@
     </div>
     
     <!-- Changelog Modal -->
-    <div id="changelogModalOverlay" class="sidebar-overlay"></div>
-    <div id="changelogModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:var(--card-bg); padding:30px; border-radius:12px; border:1px solid var(--accent); box-shadow:0 10px 25px rgba(0,0,0,0.5); z-index:1001; width:90%; max-width:600px; max-height:80vh; overflow-y:auto;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:10px;">
-        <h2 style="margin:0; color:var(--text-main); display:flex; align-items:center; gap:10px;">📜 Dashboard Changelog</h2>
-        <div style="display:flex; align-items:center; gap:15px;">
-          <button onclick="window.location.reload(true)" style="background:var(--accent); border:none; padding:6px 12px; border-radius:6px; color:#fff; cursor:pointer; font-size:13px; font-weight:bold; transition:0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">↻ Check for Updates</button>
-          <button id="closeChangelogBtn" class="close-btn" title="Close Window">✕</button>
+    <div id="changelogModalOverlay" class="sidebar-overlay" onclick="window.closeChangelogModal && window.closeChangelogModal();" style="z-index:100049;"></div>
+    <div id="changelogModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:var(--card-bg); padding:26px 30px; border-radius:16px; border:1px solid var(--accent); box-shadow:0 25px 60px rgba(0,0,0,0.85); z-index:100050; width:92%; max-width:700px; max-height:85vh; overflow-y:auto;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; border-bottom:1px solid var(--border); padding-bottom:12px; position:sticky; top:-26px; background:var(--card-bg); z-index:10; margin-top:-6px;">
+        <h2 style="margin:0; color:var(--text-main); font-size:20px; display:flex; align-items:center; gap:10px;">📜 Dashboard Changelog</h2>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <button onclick="window.location.reload(true)" style="background:var(--accent); border:none; padding:6px 14px; border-radius:8px; color:#fff; cursor:pointer; font-size:12.5px; font-weight:bold; transition:0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">↻ Check for Updates</button>
+          <button id="closeChangelogBtn" onclick="window.closeChangelogModal && window.closeChangelogModal();" class="close-btn" title="Close Window" style="cursor:pointer;">✕</button>
         </div>
       </div>
       <div id="changelogContent" style="color:var(--text-main); font-size:14px; line-height:1.6;">
@@ -268,11 +265,11 @@
     <!-- Dedicated Authentication view is handled by views.auth in main.js -->
     
     <!-- Forgot Password Modal -->
-    <div id="forgotPasswordModalOverlay" class="sidebar-overlay"></div>
-    <div id="forgotPasswordModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:var(--card-bg); padding:30px; border-radius:12px; border:1px solid var(--border); box-shadow:0 10px 25px rgba(0,0,0,0.5); z-index:1002; width:90%; max-width:400px;">
+    <div id="forgotPasswordModalOverlay" class="sidebar-overlay" onclick="document.getElementById('forgotPasswordModal').style.display='none'; this.style.display='none';" style="z-index:100049;"></div>
+    <div id="forgotPasswordModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:var(--card-bg); padding:30px; border-radius:12px; border:1px solid var(--border); box-shadow:0 10px 25px rgba(0,0,0,0.5); z-index:100050; width:90%; max-width:400px;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
         <h2 style="margin:0; color:var(--text-main);">Reset Password</h2>
-        <button id="closeForgotPwBtn" class="close-btn" title="Close Window">✕</button>
+        <button id="closeForgotPwBtn" onclick="document.getElementById('forgotPasswordModal').style.display='none'; document.getElementById('forgotPasswordModalOverlay').style.display='none';" class="close-btn" title="Close Window">✕</button>
       </div>
       <p style="font-size:13px; color:var(--text-muted); margin-bottom:20px;">Enter the email associated with your account and we'll send you a link to reset your password.</p>
       
@@ -283,11 +280,9 @@
       <button id="forgotPwSubmitBtn" style="width:100%; padding:12px; background:var(--accent); color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer; transition:opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Send Reset Link</button>
     </div>
     
-
-
     <!-- Master Key Modal -->
-    <div id="masterKeyModalOverlay" class="sidebar-overlay"></div>
-    <div id="masterKeyModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:var(--card-bg); padding:30px; border-radius:12px; border:1px solid var(--danger); box-shadow:0 10px 25px rgba(0,0,0,0.5); z-index:1001; width:90%; max-width:400px; overflow:visible;">
+    <div id="masterKeyModalOverlay" class="sidebar-overlay" onclick="document.getElementById('masterKeyModal').style.display='none'; this.style.display='none';" style="z-index:100049;"></div>
+    <div id="masterKeyModal" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:var(--card-bg); padding:30px; border-radius:12px; border:1px solid var(--danger); box-shadow:0 10px 25px rgba(0,0,0,0.5); z-index:100050; width:90%; max-width:400px; overflow:visible;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
         <h2 style="margin:0; color:var(--text-main); display:flex; align-items:center; gap:8px;">🗝️ Master Key</h2>
         <button onclick="document.getElementById('masterKeyModal').style.display='none'; document.getElementById('masterKeyModalOverlay').style.display='none';" class="close-btn" title="Close Window">✕</button>

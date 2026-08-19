@@ -1,17 +1,18 @@
 {
-  "version": "2.9.40",
+  "version": "2.9.41",
   "releaseDate": "2026-08-18",
-  "title": "What's New in v2.9.40",
+  "title": "What's New in v2.9.41",
   "notes": [
-    "🧹 Toolbar Clean-up: Removed redundant toolbar bulk button, keeping the main interface clean while preserving full single and bulk functionality inside the Add Player modal."
+    "📱 Desktop & Mobile Home Screen PWA Icon: Generated high-resolution 3D Amethyst crystal app icons for home screen shortcuts and desktop installs.",
+    "📜 Changelog Modal Fix: Fixed overlay z-index layering so the full Changelog modal opens instantly from navbar or Settings Sidebar."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "2.9.40",
+    "version": "2.9.41",
     "repository": "https://github.com/wosbdc/wosBDC.github.io",
     "latestChanges": [
+      "v2.9.41: Desktop/Home Screen PWA icon generation and full Changelog modal overlay z-index fix",
       "v2.9.40: Cleaned up Members toolbar to preserve compact view; unified Single and Bulk add in Add Player modal",
-      "v2.9.39: Bear-Trap-Style Bulk Add Players to Roster with multi-format parsing, duplicate checking, and direct Firebase sync",
-      "v2.9.38: Persist active view and admin tab state across page reloads and refreshes"
+      "v2.9.39: Bear-Trap-Style Bulk Add Players to Roster with multi-format parsing, duplicate checking, and direct Firebase sync"
     ]
   }
 }

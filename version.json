@@ -29,12 +29,12 @@
       "repository": "https://github.com/bdclive/BDClive"
     },
     "wosbdc_alliance_dashboard": {
-      "version": "2.9.40",
+      "version": "2.9.41",
       "repository": "https://github.com/wosbdc/wosBDC.github.io",
       "latestChanges": [
+        "v2.9.41: Desktop/Home Screen PWA icon generation and full Changelog modal overlay z-index fix",
         "v2.9.40: Cleaned up Members toolbar to preserve compact view; unified Single and Bulk add in Add Player modal",
-        "v2.9.39: Bear-Trap-Style Bulk Add Players to Roster with multi-format parsing, duplicate checking, and direct Firebase sync",
-        "v2.9.38: Persist active view and admin tab state across page reloads and refreshes"
+        "v2.9.39: Bear-Trap-Style Bulk Add Players to Roster with multi-format parsing, duplicate checking, and direct Firebase sync"
       ]
     },
     "google_apps_script_backend": {

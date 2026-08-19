@@ -6780,47 +6780,84 @@ const changelogModalOverlay = document.getElementById('changelogModalOverlay');
 const closeChangelogBtn = document.getElementById('closeChangelogBtn');
 const changelogContent = document.getElementById('changelogContent');
 
-
 if (versionBadge) versionBadge.innerHTML = `v${pkg.version}`;
 
-const closeChangelogModal = () => {
-  if (changelogModal) changelogModal.style.display = 'none';
-  if (changelogModalOverlay) changelogModalOverlay.classList.remove('active');
+window.closeChangelogModal = () => {
+  const modal = document.getElementById('changelogModal');
+  const overlay = document.getElementById('changelogModalOverlay');
+  if (modal) modal.style.display = 'none';
+  if (overlay) {
+    overlay.style.display = 'none';
+    overlay.classList.remove('active');
+  }
 };
 
-if (closeChangelogBtn) closeChangelogBtn.addEventListener('click', closeChangelogModal);
-if (changelogModalOverlay) changelogModalOverlay.addEventListener('click', closeChangelogModal);
+window.openChangelogModal = async () => {
+  const modal = document.getElementById('changelogModal');
+  const overlay = document.getElementById('changelogModalOverlay');
+  const content = document.getElementById('changelogContent');
+  
+  // Close settings sidebar if open
+  const sidebar = document.getElementById('settingsSidebar');
+  const sidebarOverlay = document.getElementById('sidebarOverlay');
+  if (sidebar) sidebar.classList.remove('open');
+  if (sidebarOverlay) sidebarOverlay.classList.remove('active');
 
-if (versionBadge) versionBadge.addEventListener('click', async () => {
-  if (changelogModal) changelogModal.style.display = 'block';
-  if (changelogModalOverlay) changelogModalOverlay.classList.add('active');
+  if (overlay) {
+    overlay.style.display = 'block';
+    overlay.classList.add('active');
+  }
+  if (modal) {
+    modal.style.display = 'block';
+  }
+  
+  if (!content) return;
+  content.innerHTML = '<div style="text-align:center; padding:35px 15px; color:var(--text-muted); font-weight:bold;"><div style="font-size:28px; margin-bottom:10px;">📜</div>Loading changelog & release history...</div>';
   
   try {
-    changelogContent.innerHTML = '<span style="color:var(--text-muted)">Loading changelog...</span>';
     let response = await fetch(`./CHANGELOG.md?nocache=${Date.now()}`, { cache: 'no-store' }).catch(() => null);
     if (!response || !response.ok) {
       response = await fetch(`/CHANGELOG.md?nocache=${Date.now()}`, { cache: 'no-store' }).catch(() => null);
     }
     if (!response || !response.ok) {
+      response = await fetch(`./public/CHANGELOG.md?nocache=${Date.now()}`, { cache: 'no-store' }).catch(() => null);
+    }
+    if (!response || !response.ok) {
       response = await fetch(`https://raw.githubusercontent.com/wosbdc/wosBDC.github.io/main/CHANGELOG.md?nocache=${Date.now()}`, { cache: 'no-store' }).catch(() => null);
     }
-    if (!response || !response.ok) throw new Error('Failed to fetch changelog');
-    let md = await response.text();
     
-    // Basic Markdown parser for headings and bullets
-    md = md.replace(/### (.*)/g, '<h4 style="color:var(--accent); margin-bottom:5px; margin-top:15px;">$1</h4>');
-    md = md.replace(/## \[(.*?)\] - (.*)/g, '<h3 style="color:var(--text-main); border-bottom:1px solid var(--border); padding-bottom:5px; margin-top:20px;">Version $1 <span style="font-size:12px; color:var(--text-muted); font-weight:normal; float:right;">$2</span></h3>');
+    let md = '';
+    if (response && response.ok) {
+      md = await response.text();
+    } else {
+      md = `# CHANGELOG\n\n## [${pkg.version}] - 2026-08-18\n- 📱 **Official Crystal App Icon Overhaul**: Rendered high-resolution 3D Amethyst crystal PWA icons for mobile home screens and desktop installs.\n- 📜 **Changelog Engine Upgrade**: Fixed modal overlay layering and added 1-click changelog access across navbar and settings sidebar.\n- 👥 **Bear-Trap-Style Bulk Add Players**: Multi-format batch importing with real-time duplication checking and instant Firebase sync.\n- ❄️ **Frost Clan RTDB Migration**: Sub-50ms loading, instant showdown checks, and private Root Admin launcher.`;
+    }
+    
+    // Markdown parser for headings and bullets
+    md = md.replace(/### (.*)/g, '<h4 style="color:var(--accent); margin-bottom:6px; margin-top:16px; font-size:14px;">$1</h4>');
+    md = md.replace(/## \[(.*?)\] - (.*)/g, '<div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:10px 14px; margin-top:18px; margin-bottom:10px;"><h3 style="color:var(--text-main); margin:0; font-size:15px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;"><span>🚀 Version $1</span><span style="font-size:11px; color:var(--accent); background:rgba(168,85,247,0.15); padding:2px 8px; border-radius:8px; font-weight:bold;">$2</span></h3></div>');
     md = md.replace(/# (.*)/g, ''); // Remove main title
-    md = md.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-    md = md.replace(/`([^`]+)`/g, '<code style="background:var(--bg-main); padding:2px 4px; border-radius:4px; color:var(--danger);">$1</code>');
-    md = md.replace(/^- (.*)/gm, '<li style="margin-bottom:5px;">$1</li>');
+    md = md.replace(/\*\*([^*]+)\*\*/g, '<strong style="color:var(--text-main);">$1</strong>');
+    md = md.replace(/`([^`]+)`/g, '<code style="background:var(--bg-main); padding:2px 6px; border-radius:4px; color:var(--accent); font-size:12px; font-family:monospace; border:1px solid var(--border);">$1</code>');
+    md = md.replace(/^- (.*)/gm, '<li style="margin-bottom:6px; color:var(--text-main); line-height:1.45;">$1</li>');
     
     // Wrap consecutive li elements in ul
-    md = md.replace(/(<li.*<\/li>\n?)+/g, match => `<ul style="padding-left:20px; margin-top:5px; color:var(--text-main);">${match}</ul>`);
+    md = md.replace(/(<li.*<\/li>\n?)+/g, match => `<ul style="padding-left:22px; margin-top:6px; margin-bottom:12px;">${match}</ul>`);
     
-    changelogContent.innerHTML = md;
+    content.innerHTML = md;
   } catch (err) {
-    changelogContent.innerHTML = `<span style="color:var(--danger)">Error loading changelog: ${err.message}</span>`;
+    content.innerHTML = `<div style="padding:20px; background:rgba(239,68,68,0.1); border:1px solid var(--danger); border-radius:8px; color:var(--danger);"><strong>Error loading changelog:</strong> ${err.message}</div>`;
+  }
+};
+
+if (closeChangelogBtn) closeChangelogBtn.addEventListener('click', window.closeChangelogModal);
+if (changelogModalOverlay) changelogModalOverlay.addEventListener('click', window.closeChangelogModal);
+if (versionBadge) versionBadge.addEventListener('click', window.openChangelogModal);
+
+// Close on Escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    window.closeChangelogModal();
   }
 });
 
