@@ -1,152 +1,120 @@
 # CHANGELOG
 
 ## [2.9.73] - 2026-08-19
-- 🛡️ **Real-Time Token Health & Expiry Badges**: Member and alt sync badges now update in real-time across the website and profile modals driven by live Firebase RTDB listeners, Century Games JWT expiration tracking, and Central Command Token Scanner sweeps.
-- 🔔 **Automated Notification Bell Token Alerts**: Whenever a 30-day game token is expiring soon (<= 3 days) or has expired, members receive dynamic alerts in their notification bell header with 1-click in-game re-sync actions.
-- ⚡ **Central Command v1.0.73 Telemetry Engine**: Updated Central Command's Token Scanner and API Daemon to auto-record structured `tokenStatus` objects (`daysLeft`, `status`, `expiresAt`, `checkedAt`) to `/users` and `/roster_live`.
+- 🛡️ **Live Token Health**: Added real-time token status and expiration badges to member and alt profiles.
+- 🔔 **Token Expiry Alerts**: Receive automatic notification bell reminders when your 30-day game token is expiring.
 
 ## [2.9.72] - 2026-08-19
-- ⚡ **Dual-Mode BDC Backend & Firebase Live Queue**: Migrated backend operations away from Google Apps Script to a dedicated **BDC Central Command API & Queue Engine**. Actions process in real-time via Firebase `/api_queue` (zero-config, zero networking required) with direct REST API support on port 3188.
-- 🎮 **Zero-Timeout Century Games Engine**: Native RSA-OAEP and HMAC-SHA256 crypto engine runs directly on Central Command, eliminating Google Apps Script 6-minute execution limits and daily URL fetch quotas.
-- 🔄 **Instant In-Game Sync & Captchas**: "Sync from Game", "Verify & Bind", and "Set Furnace Level" actions now execute with sub-second latency and direct Firebase RTDB updates.
+- ⚡ **Central Command API Engine**: Migrated backend tasks to Central Command for zero-timeout performance and instant game syncing.
+- 🔄 **Instant In-Game Sync**: Accelerated verification, captchas, and live stats fetching with sub-second response times.
 
 ## [2.9.71] - 2026-08-19
-- 🔥 **Direct Firebase & Google Sheets Furnace Sync**: Changing furnace levels via the Admin Roster Menu, Account Hub Profile, or Alt Manager now immediately persists across Google Sheets ('Chief's List'), Firebase `/roster_live`, `/users`, and `/sheets/Chief's List` data stores.
-- 🛡️ **Alt Account Sync Support**: Editing an alt account's furnace level or start date seamlessly updates `users/${uid}/linkedAltsData/${altGid}`, `altTokens`, `users_alts/${altGid}`, `/roster_live`, and Google Sheets.
-- ⚡ **Non-Destructive Background Sheets Sync**: Fixed the background `syncFirebaseToChiefsListSheet` logic in Google Apps Script so that manually updated furnace levels are preserved and never wiped out for accounts without active Century Games verification tokens.
+- 🔥 **Multi-Store Furnace Sync**: Changing furnace levels now updates Google Sheets and Firebase instantly.
+- 🛡️ **Alt Account Level Editing**: Seamlessly edit furnace levels and start dates for linked alts.
 
 ## [2.9.70] - 2026-08-19
-- 🎮 **In-Game Server Sync in Edit Member Profile**: Added a dedicated *🎮 Live Game Server Sync* card and *🔄 Sync from Game* button directly inside the **✏️ Edit Member Profile** modal, allowing members with registered 30-day tokens to pull live character stats straight from Century Games.
-- ⚡ **Instant Form Auto-Population**: Clicking *Sync from Game* queries Century Games, pulls the member's live furnace level, Chief nickname, and avatar, and automatically updates the furnace dropdown and live preview badge.
-- 🛡️ **Real-Time Token Health Telemetry**: Displays token status (active days remaining or prompt to bind in-game code) with 1-click fallback to the 30-day token verification flow.
+- 🎮 **Sync from Game**: Added a 1-tap "Sync from Game" button in Edit Profile to pull live furnace level, nickname, and avatar directly from the game.
+- ⚡ **Token Status Indicator**: View active token days remaining directly inside your profile.
 
 ## [2.9.69] - 2026-08-19
-- ⭐ **Mains-Only vs Alts-Only Filter in Google Sheets Sidebar**: Added dedicated Account Mode filter (`⭐ Mains Only`, `👥 All`, `🎭 Alts Only`) to the Chief Sync Status Sidebar.
-- 📊 **Dynamic Metric Recalculation**: Switching to *Mains Only* dynamically recalculates the top stat cards (Total Mains, Synced Mains, Not Synced Mains, and Mains Sync Rate) and adapts the status tabs (`All`, `🟢 Synced`, `🟡 Not Synced`).
-- 🎭 **Alt Account Attribution Badges**: Added visual indicators for Alt accounts displaying their main account owner (e.g. `🎭 Alt (BrianDCox)`).
-- 📋 **Smart Unsynced Copy**: Clicking *Copy Not Synced List* automatically copies only the unsynced Main accounts when in *Mains Only* mode.
+- ⭐ **Mains-Only Filter**: Added a 1-tap filter in the Google Sheets Chief Sync sidebar to view only primary accounts.
+- 🎭 **Alt Attribution Badges**: Alt accounts now display their main account owner directly on each card.
 
 ## [2.9.68] - 2026-08-19
-- 👥 **Chief Sync Overview Sidebar in Google Sheets**: Built real-time Chief Sync sidebar in Google Sheets (under `Admin Menu ➔ User Options` & `Tools & Extras`) showing Total Chiefs, Synced (🟢), and Not Synced (🟡) with instant search, interactive status filtering (`All` / `🟢 Synced` / `🟡 Not Synced`), 1-click `Jump to Row` in sheet, one-click bidirectional Firebase sync, and unsynced name export.
-- ⚡ **Real-Time Token Telemetry**: Automatically cross-references sheet entries with Firebase registered users and active token verifications to provide live completion rates and sync status badges.
+- 👥 **Chief Sync Sidebar**: Built a real-time Chief Sync status sidebar in Google Sheets with live metrics and 1-click jump-to-row navigation.
+- 📋 **Copy Unsynced List**: Quickly copy unsynced member names to your clipboard for alliance announcements.
 
 ## [2.9.67] - 2026-08-19
-- 🔔 **Live Developer Note Alerts in Notification Bell**: Members now see your custom admin resolution notes directly in the notification modal when their tickets/bugs are updated or closed (`✓ Done (Resolved)`).
-- ⭐ **'YOUR TICKET' Indicator Badge**: Automatically identifies and highlights a user's own submissions with a purple badge.
-- 💬 **Luminous Developer Note Callout**: Displays admin resolution notes in a styled emerald green container preserving multi-line whitespace.
+- 🔔 **Developer Notes in Bell Alerts**: View admin resolution notes directly in your notification modal when tickets are updated or resolved.
+- ⭐ **Your Ticket Badge**: Highlights your own submitted tickets with a distinct purple badge.
 
 ## [2.9.66] - 2026-08-19
-- 📁 **Roster File Import & Fast Sync**: Built full file upload support (.csv, .json, .txt, .tsv) into the **➕ Add Player to Roster** modal with drag-and-drop support for effortless bulk player list synchronization.
-- 📊 **Intelligent Header Detection & Preview Table**: Automatically maps column headers (Game ID, Chief Name, Furnace Level, Date) and presents a clean scrollable preview table with duplicate detection.
-- ⚡ **Dual Sync Workflows**: Added *Populate into Bulk Table* (to review and fine-tune each player before saving) and *Direct Sync to Roster* (1-click fast batch upload to Firebase & Sheets with live progress bar).
-- 📥 **Starter Templates**: Added 1-click download buttons for Sample CSV and Sample JSON templates formatted for Whiteout Survival alliance rosters.
+- 📁 **Roster File Import**: Import player lists via CSV, JSON, TXT, or TSV with drag-and-drop support.
+- ⚡ **1-Click Bulk Sync**: Preview imported players and sync them directly to Firebase and Google Sheets.
 
 ## [2.9.65] - 2026-08-19
-- 📝 **Spacious Ticket & Bug Note Editor**: Expanded the Admin Note Modal with a generous multi-line textarea (`rows="7"`) that supports full `Enter` key line breaks, indentation, spacing, and bullet points.
-- ⚡ **1-Click Quick Templates & Ctrl+Enter**: Added quick template pills to insert common resolution tags (`[✅ Implemented in vX]`, `[🔍 In Review]`, etc.) and `Ctrl+Enter` keyboard shortcut to save.
-- ✨ **Formatted Public Note Display**: Updated feedback cards to render multi-line developer notes in a dedicated styled card block with `white-space: pre-wrap;` preserving clean paragraph spacing.
+- 📝 **Spacious Note Editor**: Expanded the ticket resolution note editor with multi-line formatting and quick template tags.
+- ✨ **Formatted Public Notes**: Developer resolution notes now display in styled emerald callouts.
 
 ## [2.9.64] - 2026-08-19
-- ☁️ **Background Cloud Auto-Save**: Alliance Championship matchup changes (season title, opponent names, states, match dates, battle scores, and flag counts) automatically save to Firebase with debounced background sync.
-- 💾 **Streamlined Save Button with Live Status**: Simplified the primary action button to `💾 Save` and added dynamic cloud sync status indicators (`☁️ All changes saved live` / `⏳ Auto-saving...`).
+- ☁️ **Background Auto-Save**: Alliance Championship matchups and scores now automatically save in the background.
+- 💾 **Live Save Indicator**: Added dynamic save state indicators showing live cloud synchronization.
 
 ## [2.9.63] - 2026-08-19
-- 🔒 **Real-Time Auto-Calculation in Championship Admin**: Status text and total season flag counters now automatically recalculate in real-time as individual round scores and flags are typed.
-- 🛡️ **Locked Calculation Inputs**: Read-only restrictions applied to Status Text and Season Flags in the Championship Admin Suite to prevent human error and ensure consistency.
+- 🔒 **Auto-Calculated Scores**: Matchup status and total season flags now calculate automatically as scores are entered.
+- 🛡️ **Calculation Safeguards**: Applied read-only safeguards to auto-computed fields to prevent entry errors.
 
 ## [2.9.62] - 2026-08-19
-- ⚖️ **Alliance Championship Draw (Tie) Support**: Added complete support for tied matches across Alliance Championship (`views.championship`), Archive Vault modals, and Admin Matchup editors. Tied rounds display an amber `⚖️ DRAW` badge and amber highlight styling.
-- 📊 **Dynamic Record Calculation**: Auto-calculated records now properly format draws in tournament summaries (e.g. `3 Wins – 1 Loss – 1 Draw`).
-- 🏛️ **Leaderboard Dynasty Sync**: Updated All-Time Alliance Championship leaderboard dynasty statistics to track draws and display format (e.g. `5W – 2L – 1D`).
+- ⚖️ **Match Draw Support**: Added full support for tied rounds across Alliance Championship and tournament archives.
+- 📊 **Updated Records**: Matchup records and dynasty stats now format draws cleanly (e.g. 3W – 1L – 1D).
 
 ## [2.9.61] - 2026-08-19
-- 🔕 **Attention-Only Bell Modal**: Empty containers (such as leadership announcements with 0 items, staff-only with 0 items, or feedback when none exist) now completely disappear so chiefs and leadership only see items that genuinely require action or attention.
-- 🎉 **Clean 'All Caught Up' Experience**: When there are no active broadcasts, un-synced tokens, or announcements, the modal displays the clean *All Caught Up* card with no empty placeholder containers cluttering the view.
-- 🛡️ **Streamlined Leadership Tools Access**: Leadership broadcast and event creation actions remain fully accessible anytime through the top-right `🛡️ Staff Tools` dropdown in the modal header.
+- 🔕 **Cleaner Notification Bell**: Empty notification sections are hidden so you only see items requiring attention.
+- 🎉 **All Caught Up Card**: Clean summary card displays when all broadcasts and alerts are up to date.
 
 ## [2.9.60] - 2026-08-19
-- 🔔 **Feedback & Bug Tracker Alerts in Notification Bell**: Submissions of feature requests and bug reports are now automatically reflected in the top navigation bell icon counter and pulsing alert indicator.
-- 📋 **Integrated Previews in Alliance Alerts Modal**: Added an interactive, collapsible *Feature & Bug Tracker* section in the notifications modal displaying post titles, category tags, author names, status badges, and direct links.
-- 🧹 **Automatic Notification Clearing**: Visiting the Feedback Tracker (`views.feedback`) or selecting *Mark All as Read* automatically updates your timestamp and clears the bell counter.
+- 🔔 **Bug & Suggestion Alerts**: Feature suggestions and bug reports are now included in the notification bell.
+- 📋 **Interactive In-Modal Previews**: Preview and open feedback items directly from the notification window.
 
 ## [2.9.59] - 2026-08-19
-- 🗑️ **Deleted Season 12 Test Archives**: Permanently cleared the test Season 12 record and attendance archive from Firebase database nodes (`championship_meta/history` and `events_archive/championship`).
-- 🛡️ **Admin Vault Archive Deletion**: Added a secure deletion button inside the Championship Archive Vault modal allowing Admins and R4/R5 leadership to remove any test or corrupted season archives.
-- ⚙️ **Clean Initial Matchup Defaults**: Replaced mock "Season 12" defaults with clean initial template scores for future tournaments.
+- 🗑️ **Archive Vault Deletion**: Added an admin deletion tool in the Championship Archive Vault to remove test seasons.
+- ⚙️ **Clean Season Defaults**: Initialized clean match templates for upcoming tournaments.
 
 ## [2.9.58] - 2026-08-18
-- 🏆 **Unified Championship Leaderboard Architecture**: Merged the All-Time Dynasty Leaderboard and Hall of Fame under `Nav ➔ Leaderboards | Alliance Championship` with full dynasty statistics, gold ring counts, and attendance records.
-- 🛡️ **Cross-Source Chief Deduplication**: Fixed key matching between historical archive rosters and live signups so each chief appears strictly once with merged tournament deployments and championship victories.
-- ⚔️ **Streamlined Events War Room**: Cleaned `Events ➔ Alliance Championship` to focus on the live 5-round matchup tracker and flags, with a prominent gateway banner leading directly to the merged Leaderboard.
+- 🏆 **Unified Championship Leaderboard**: Merged the Dynasty Leaderboard and Hall of Fame into a single comprehensive view.
+- 🛡️ **Chief Deduplication**: Resolved duplicate roster entries across historical tournament archives.
 
 ## [2.9.57] - 2026-08-18
-- 🥇 **Championship Gold Badge Victory Rule**: `🥇 GOLD CHAMPION` medals and glowing card borders are now exclusively awarded to participating chiefs when [BDC] wins the entire tournament championship.
-- 🛡️ **Contender & Participant Tier**: Chiefs on active and past tournament rosters who have not yet won an overall championship tournament title are designated with verified `⚔️ CONTENDER` status and attendance counters.
-- 🔍 **Gold Champions Filter**: Added instant filtering on the Championship Leaderboard to view `🥇 Gold Champions` specifically.
+- 🥇 **Championship Victory Medals**: Gold champion medals are awarded exclusively when the alliance wins the tournament title.
+- ⚔️ **Contender Tier**: Added contender status badges and attendance tracking for participating chiefs.
 
 ## [2.9.56] - 2026-08-18
-- 👑 **All-Time Championship Leaderboard**: Dynamic aggregation engine computes total tournament Wins, Losses, overall Win Rate %, and flags captured vs opponent flags across all archived seasons in the Vault.
-- 🥇 **Golden Championship Badges**: Every participating chief on the Championship roster receives a glowing golden medal badge (`🥇 GOLD CHAMPION`) styled consistently with Bear Trap and Showdown accolades.
-- 🔍 **Interactive Search & Filter**: Added instant search filtering and active/all tournament participant views on the public championship page.
+- 👑 **All-Time Championship Ranks**: Added all-time win rates, total tournament wins, and flags captured leaderboards.
+- 🥇 **Golden Medals**: Added golden championship accolades styled consistently with Bear Trap rankings.
 
 ## [2.9.55] - 2026-08-18
-- 🔄 **Unified Championship Event Reset**: The Event Reset action in Alliance Championship now comprehensively cleans/wipes battle matchup info (scores, flags, opponent names/states) and resets all member signups in the tracker from YES back to NO.
-- 📜 **Dual Timestamped Archiving**: Automatically captures and stores full historical snapshots of both the 5-round battle records (to `championship_meta/history`) and member attendance signups (to `events_archive/championship`) before resetting.
-- 🛡️ **Prominent Reset Controls**: Integrated direct `🔄 Event Reset` buttons on the top action header and signups table footer in the Championship Admin Suite.
+- 🔄 **Championship Event Reset**: 1-click reset for tournament matchups and member attendance signups.
+- 📜 **Historical Archiving**: Automatically snapshots match records and rosters to the vault prior to reset.
 
 ## [2.9.54] - 2026-08-18
-- 📷 **Screenshot & Image Upload in Bug Tracker**: Empowered members and officers to attach screenshots to any feature suggestion or bug report via file selection, drag-and-drop, or instant clipboard pasting (`Ctrl+V`).
-- 🖼️ **Full-Resolution Image Lightbox**: Added high-contrast image thumbnails on feedback cards and admin lists that expand into an HD lightbox viewer with download capabilities.
-- ⚡ **Auto Canvas Compression**: Client-side canvas compression automatically prepares high-resolution images for sub-second uploads and optimal database performance.
+- 📷 **Screenshot Attachments**: Attach screenshots to bug reports and suggestions via drag-and-drop or clipboard paste (`Ctrl+V`).
+- 🖼️ **HD Lightbox Viewer**: Tap image thumbnails on feedback cards to view full-resolution screenshots.
 
 ## [2.9.53] - 2026-08-18
-- 🚩 **Championship Season Details Flag Fields**: Added dedicated flag input fields for both Our Alliance and Opponent Alliance directly inside the **⚙️ Season Details & Overall Record** card (`adm_champ_our_season_flags` and `adm_champ_enemy_season_flags`).
-- ⚡ **Auto-Calculate Season Flags & Match Records**: Clicking `⚡ Auto-Calculate Record & Flags` now dynamically aggregates total flag scores across all 5 battle rounds and auto-fills total season flags.
-- 🏆 **Prominent Public Flag Summary Banner**: Added a dedicated flag score pill to the Public Alliance Championship top banner (e.g. `🚩 16 Flags Captured | 🚩 9 Opponent Flags`) and styled flag badges on every round card.
-- 📜 **Historical Vault Flags**: Updated the Championship Archive Vault modal to cleanly render flag badges and total flags across historical seasons.
+- 🚩 **Championship Flag Tracking**: Added flag count fields for both alliances with auto-calculated season totals.
+- 🏆 **Public Flag Badges**: Display captured flags on the live championship banner and round cards.
 
 ## [2.9.52] - 2026-08-18
-- 💡 **Alliance Feature Request & Bug Tracker (`views.feedback`)**: Built a full in-app community suggestion & bug reporting system allowing members to submit new requests, report bugs, and dynamically upvote community ideas (`👍`).
-- 🛡️ **Interactive Admin Checklist**: Added real-time management controls for R4/R5 managers with 1-click completion checkboxes (`[✓] Done`), status dropdown selectors (*🟡 Under Review ➔ 🔵 In Progress ➔ 🟢 Completed ➔ ⚪ Archived*), admin resolution note tags (e.g. `✨ Implemented in v2.9.52`), and ticket deletion.
-- 📱 **Sidebar Menu Integration**: Added a dedicated **💡 Suggestions & Bugs** card in the settings sidebar (`settingsSidebar`) with quick 1-click routing to the tracker on desktop and mobile.
-- ⚡ **Admin Hub Integration**: Added `tab-feedback` checklist in the Admin Management Hub and a quick launcher button under Daily Tools.
+- 💡 **Suggestions & Bug Tracker**: Submit ideas, report bugs, and upvote community suggestions in the new Feedback Hub.
+- 🛡️ **Admin Resolution Checklist**: Manage tickets with status selectors, completion checkboxes, and note tags.
 
 ## [2.9.51] - 2026-08-18
-- 🚩 **Alliance Championship Flags Data Entry**: Added dedicated flag count input fields for both Our Alliance [BDC] and Opponent Alliance across all 5-round battle matchups in the Admin Management Suite (`views.championshipAdmin`).
-- 🏆 **Dynamic Live & Archived Matchup Flag Badges**: Live score cards on the Public Dashboard (`views.championship`) and Historical Season cards in the Championship Archive Vault modal (`openChampionshipArchiveVaultModal`) now cleanly render flag counts (e.g. `🚩 4 Flags`) alongside total score points.
-- 💾 **Automated Cloud Sync & Preservation**: Flag scores are seamlessly structured, validated, and saved into Firebase RTDB (`championship_matchups`) and recorded during season archival (`archiveAndResetChampionshipSeason`).
+- 🚩 **Championship Round Flags**: Added flag tracking to live battle scorecards and archive vault cards.
+- 💾 **Automated Cloud Backup**: Flag scores save automatically into Firebase during tournament play.
 
 ## [2.9.50] - 2026-08-18
-- 🗓️ **Standardized Joined Date & Time Active Duration**: Created universal date calculation helpers (`calculateTimeActive`, `formatDateForDisplay`, `formatDateForInput`, `formatTimeActiveShort`) to reliably compute play duration (days, weeks, months, years) and consistently display joined dates across all primary character cards, alt account cards, and admin member profiles.
-- 🔥 **Dynamic Furnace Centerpiece for Characters**: Added prominent, responsive dynamic Furnace Level & Fire Crystal centerpiece icons (`furnace-metric-box`) with glowing ambient borders across Account Hub main profiles and alt accounts.
-- ⚡ **Integrated Profile Editing & Live Time Active Previews**: Dynamic live updates in both Chief Member Profile and Alt Profile modals compute exact Time Active values on keystroke / date-picker changes and live-render furnace badges.
+- 🗓️ **Time Active Standard**: Unified calculation of member play duration across all profiles and cards.
+- 🔥 **Furnace Centerpiece**: Added glowing dynamic Furnace Level icons on player and alt cards.
 
 ## [2.9.49] - 2026-08-18
-- 🏆 **Resolved Standings & Medals Lazy-Loading & Error Boundary**: Fully audited `renderAccountRankings` in Account Hub. Scoped `sdFbHistorySnap` and `sdFbLiveSnap` in parallel `Promise.all` queries, wrapped the entire dashboard rendering in a comprehensive error boundary with instant fallback & retry controls.
-- 🔒 **Global `escapeHTML` Security Binding**: Declared `escapeHTML` as a first-class lexical module function to eliminate any possible undefined helper references during dynamic DOM injection.
-- 🥇 **Live & Historical Medal Calculation**: Unified Gold, Silver, and Bronze medal aggregations across Bear Trap, Spear Donations, Showdown All-Time & Live, and Alliance Championship leaderboards.
+- 🏆 **Standings & Medals Loading**: Improved data loading speed and error handling in Account Hub rankings.
+- 🥇 **Unified Leaderboard Medals**: Consolidated medal calculations across Bear Trap, Showdown, and Championship.
 
 ## [2.9.48] - 2026-08-18
-- 🏆 **Fixed Account Hub Standings & Medals Loading**: Fixed an undeclared snapshot reference in `renderAccountRankings` that prevented historical event standings, medals, and Bear Trap/Showdown ranks from rendering in Account Hub's Combat & Records tab.
-- 🥇 **Comprehensive Podium Medal Calculation**: Enhanced the gold, silver, and bronze medal tracker to dynamically include live and all-time Showdown leaderboards alongside Bear Trap wins and spear donations.
-- ⚡ **Optimized Parallel Standings Fetch**: Showdown historical archives and live scores now load asynchronously in parallel with Bear Trap and Google Sheets leaderboards.
+- 🏆 **Combat Records Fix**: Resolved standings loading in Account Hub's Combat & Records tab.
+- ⚡ **Parallel Data Fetch**: Leaderboard historical archives and live scores now load simultaneously.
 
 ## [2.9.47] - 2026-08-18
-- 🛡️ **Frost Clan 1-Tap Quick Shield Toggles**: Added interactive `🛡️ 24h` and `🛡️ 8h` shield toggles with dynamic live countdown timers on every Frost Clan alt card and BDC Central Command GUI.
-- 🎯 **Showdown Target Goal Tracking**: Implemented visual progress bars tracking current Showdown score against target points per alt, with live percentage fill and status indicators.
-- 📊 **Combat & Growth Telemetry**: Expanded alt cards with high-contrast, responsive metric cards displaying Power, Kills, Deaths, Total Gathering, and Time Active.
-- ⚙️ **Central Command & Cloud Script Automation**: Added mass-shielding actions (`8h Shield All`, `24h Shield All`) and showdown goal configuration handlers across BDC Central Command and Google Apps Script.
+- 🛡️ **1-Tap Quick Shields**: Added 8h and 24h shield toggles with live countdown timers on Frost Clan alt cards.
+- 🎯 **Showdown Target Goals**: Visual progress bars tracking individual showdown points against target goals.
 
 ## [2.9.46] - 2026-08-18
-- ❄️ **Dedicated Standalone Frost View & Zero-Lag Loading**: Resolved the load-blocking issue on the Frost page by establishing a dedicated `views.frost` standalone route, removing blocking database scans in `listenToAuth`, and fixing `isFrostAdmin` permission checks in Account Hub.
-- ❄️ **Frost Clan High-Contrast Custom Checkboxes**: Upgraded all showdown task checkboxes with custom 26px high-contrast touch targets, smooth cyan/blue active gradient fills, and glowing white checkmarks.
-- 👤 **Refined Character Avatars & Glow Rings**: Upgraded avatar portraits to 48px circles with cyan glowing border rings and high-contrast initial badges as clean fallbacks.
-- 🔄 **Account Hub & Alt Sync Terminology Polish**: Unified button labels across Account Hub and Alt Cards to `🔄 Sync Data` and `⚡ Setup 30-Day Token` for clean, cohesive wording.
+- ❄️ **Dedicated Frost Route**: Instant zero-lag loading for Frost Clan via dedicated standalone route.
+- ❄️ **Touch-Friendly Checkboxes**: Upgraded showdown checkboxes with large, high-contrast touch targets.
 
 ## [2.9.45] - 2026-08-18
-- 🚀 **Eliminated 60-Second Full-Database Scans**: Removed the synchronous `get(ref(db, 'users'))` full-table scan that was triggering in Account Hub during user resolution. Added `localStorage` profile caching and targeted UID lookups with a 1.5s timeout.
-- ⚡ **Direct `#frost` and `?view=frost` Deep-Linking**: Visiting `https://wosbdc.github.io/#frost` or `?view=frost` directly opens the Frost Clan Command Center instantly.
-- ❄️ **Accelerated Google Apps Script `FrostApp.html`**: Replaced slow `google.script.run` RPC queries with direct client-side fetch from Firebase RTDB (`frost_clan/alts`) for sub-50ms execution.
+- 🚀 **Faster Account Hub**: Eliminated full-database scans for instantaneous profile loading.
+- ⚡ **Deep Linking**: Direct `#frost` link support opens Frost Clan Command Center immediately.
 
 ## [2.9.44] - 2026-08-18
 - ❄️ **Frost Clan Zero-Latency Direct Firebase Loading**: Completely audited the Frost Clan Command Center. Seeded all alt data permanently to `/frost_clan/alts` in Firebase Realtime Database and removed all slow Google Apps Script HTTP calls.
