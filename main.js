@@ -22382,7 +22382,7 @@ html += `</select>
                             <span style="font-weight:900; font-size:13px; color:var(--accent); text-transform:uppercase; letter-spacing:1px;">⚔️ ROUND ${i}</span>
                             <div style="display:flex; align-items:center; gap:8px;">
                                 ${liveBadge}
-                                <input type="text" id="adm_champ_r${i}_date" value="${escapeHTML(r.date || `Round ${i}`)}" placeholder="Date / Match Label" style="padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:11px; width:130px;">
+                                <input type="text" id="adm_champ_r${i}_date" value="${escapeHTML(r.date || `Round ${i}`)}" oninput="window.triggerChampAutoSave()" placeholder="Date / Match Label" style="padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:11px; width:130px;">
                             </div>
                         </div>
 
@@ -22393,11 +22393,11 @@ html += `</select>
                                 <div style="display:grid; grid-template-columns: 2fr 1fr; gap:8px;">
                                     <div>
                                         <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:3px;">Our Score</label>
-                                        <input type="number" id="adm_champ_r${i}_our" value="${ourScore}" oninput="window.updateAdminChampPreview(${i}); window.autoCalculateChampRecord(true);" style="width:100%; text-align:right; font-size:18px; font-family:var(--mono); font-weight:bold; color:var(--text-main); padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); box-sizing:border-box;">
+                                        <input type="number" id="adm_champ_r${i}_our" value="${ourScore}" oninput="window.updateAdminChampPreview(${i}); window.autoCalculateChampRecord(true); window.triggerChampAutoSave();" style="width:100%; text-align:right; font-size:18px; font-family:var(--mono); font-weight:bold; color:var(--text-main); padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); box-sizing:border-box;">
                                     </div>
                                     <div>
                                         <label style="font-size:10px; color:#10b981; font-weight:bold; display:block; margin-bottom:3px;">🚩 Our Flags</label>
-                                        <input type="number" id="adm_champ_r${i}_our_flags" value="${ourFlags}" min="0" placeholder="0" oninput="window.updateAdminChampPreview(${i}); window.autoCalculateChampRecord(true);" style="width:100%; text-align:right; font-size:18px; font-family:var(--mono); font-weight:bold; color:#10b981; padding:8px 10px; border-radius:6px; border:1px solid rgba(16,185,129,0.4); background:var(--bg-main); box-sizing:border-box;">
+                                        <input type="number" id="adm_champ_r${i}_our_flags" value="${ourFlags}" min="0" placeholder="0" oninput="window.updateAdminChampPreview(${i}); window.autoCalculateChampRecord(true); window.triggerChampAutoSave();" style="width:100%; text-align:right; font-size:18px; font-family:var(--mono); font-weight:bold; color:#10b981; padding:8px 10px; border-radius:6px; border:1px solid rgba(16,185,129,0.4); background:var(--bg-main); box-sizing:border-box;">
                                     </div>
                                 </div>
                             </div>
@@ -22411,21 +22411,21 @@ html += `</select>
                                 <div style="display:grid; grid-template-columns: 2fr 1fr; gap:8px; margin-bottom:6px;">
                                     <div>
                                         <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:2px;">Tag & Name</label>
-                                        <input type="text" id="adm_champ_r${i}_enemy_name" value="${escapeHTML(enemyName)}" placeholder="e.g. [KOR] KoreaKings" style="width:100%; font-size:13px; font-weight:bold; color:var(--text-main); padding:6px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); box-sizing:border-box;">
+                                        <input type="text" id="adm_champ_r${i}_enemy_name" value="${escapeHTML(enemyName)}" oninput="window.triggerChampAutoSave()" placeholder="e.g. [KOR] KoreaKings" style="width:100%; font-size:13px; font-weight:bold; color:var(--text-main); padding:6px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); box-sizing:border-box;">
                                     </div>
                                     <div>
                                         <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:2px;">State #</label>
-                                        <input type="text" id="adm_champ_r${i}_enemy_state" value="${escapeHTML(enemyState)}" placeholder="e.g. 2045" style="width:100%; font-size:13px; font-weight:bold; color:var(--text-main); padding:6px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); box-sizing:border-box;">
+                                        <input type="text" id="adm_champ_r${i}_enemy_state" value="${escapeHTML(enemyState)}" oninput="window.triggerChampAutoSave()" placeholder="e.g. 2045" style="width:100%; font-size:13px; font-weight:bold; color:var(--text-main); padding:6px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); box-sizing:border-box;">
                                     </div>
                                 </div>
                                 <div style="display:grid; grid-template-columns: 2fr 1fr; gap:8px;">
                                     <div>
                                         <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:2px;">Opponent Score</label>
-                                        <input type="number" id="adm_champ_r${i}_enemy_score" value="${enemyScore}" oninput="window.updateAdminChampPreview(${i}); window.autoCalculateChampRecord(true);" style="width:100%; text-align:left; font-size:18px; font-family:var(--mono); font-weight:bold; color:var(--text-main); padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); box-sizing:border-box;">
+                                        <input type="number" id="adm_champ_r${i}_enemy_score" value="${enemyScore}" oninput="window.updateAdminChampPreview(${i}); window.autoCalculateChampRecord(true); window.triggerChampAutoSave();" style="width:100%; text-align:left; font-size:18px; font-family:var(--mono); font-weight:bold; color:var(--text-main); padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); box-sizing:border-box;">
                                     </div>
                                     <div>
                                         <label style="font-size:10px; color:#ef4444; font-weight:bold; display:block; margin-bottom:2px;">🚩 Opponent Flags</label>
-                                        <input type="number" id="adm_champ_r${i}_enemy_flags" value="${enemyFlags}" min="0" placeholder="0" oninput="window.updateAdminChampPreview(${i}); window.autoCalculateChampRecord(true);" style="width:100%; text-align:left; font-size:18px; font-family:var(--mono); font-weight:bold; color:#ef4444; padding:8px 10px; border-radius:6px; border:1px solid rgba(239,68,68,0.4); background:var(--bg-main); box-sizing:border-box;">
+                                        <input type="number" id="adm_champ_r${i}_enemy_flags" value="${enemyFlags}" min="0" placeholder="0" oninput="window.updateAdminChampPreview(${i}); window.autoCalculateChampRecord(true); window.triggerChampAutoSave();" style="width:100%; text-align:left; font-size:18px; font-family:var(--mono); font-weight:bold; color:#ef4444; padding:8px 10px; border-radius:6px; border:1px solid rgba(239,68,68,0.4); background:var(--bg-main); box-sizing:border-box;">
                                     </div>
                                 </div>
                             </div>
@@ -22438,12 +22438,15 @@ html += `</select>
                 <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:18px; display:flex; flex-direction:column; gap:16px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; border-bottom:1px solid var(--border); padding-bottom:12px;">
                         <h3 style="margin:0; font-size:17px; color:var(--accent);">⚙️ Season Details & Overall Record</h3>
-                        <span style="background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.35); color:#10b981; padding:5px 12px; border-radius:20px; font-size:11.5px; font-weight:bold; display:inline-flex; align-items:center; gap:6px;">⚡ Auto-Calculates in Real-Time</span>
+                        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                            <span style="background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.35); color:#10b981; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:bold; display:inline-flex; align-items:center; gap:5px;">⚡ Auto-Calculates in Real-Time</span>
+                            <span id="adm_champ_save_status" style="font-size:11.5px; color:#10b981; font-weight:bold; display:inline-flex; align-items:center; gap:5px;">☁️ Auto-Save Active</span>
+                        </div>
                     </div>
                     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:14px;">
                         <div>
                             <label style="display:block; font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:bold; margin-bottom:4px;">Season Name / Title</label>
-                            <input type="text" id="adm_champ_season_name" value="${escapeHTML(seasonNameVal)}" placeholder="e.g. Upcoming Season" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box; font-weight:bold;">
+                            <input type="text" id="adm_champ_season_name" value="${escapeHTML(seasonNameVal)}" oninput="window.triggerChampAutoSave()" placeholder="e.g. Upcoming Season" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box; font-weight:bold;">
                         </div>
                         <div>
                             <label style="display:block; font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:bold; margin-bottom:4px;">🔒 Status Text / Record (Auto-Calculated)</label>
@@ -22465,9 +22468,12 @@ html += `</select>
                 </div>
 
                 <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; background:rgba(255,255,255,0.02); padding:16px 20px; border-radius:12px; border:1px solid var(--border);">
-                    <button onclick="window.saveChampionshipAdminMatchups()" style="background:var(--success); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; box-shadow:0 4px 15px rgba(16,185,129,0.3); display:inline-flex; align-items:center; gap:6px;">
-                        💾 Save 5-Round Matchups to Database
-                    </button>
+                    <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+                        <button id="adm_champ_save_btn" onclick="window.saveChampionshipAdminMatchups(false)" style="background:var(--success); color:#fff; border:none; padding:11px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13.5px; box-shadow:0 4px 15px rgba(16,185,129,0.3); display:inline-flex; align-items:center; gap:6px; transition:0.2s;">
+                            💾 Save
+                        </button>
+                        <span id="adm_champ_bottom_save_status" style="font-size:12px; color:#10b981; font-weight:bold; display:inline-flex; align-items:center; gap:5px;">☁️ All changes saved live</span>
+                    </div>
                     <div style="display:flex; gap:10px; flex-wrap:wrap;">
                         <button onclick="window.openChampionshipArchiveVaultModal('live')" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--accent); padding:10px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px;">
                             📜 Open Archive Vault
@@ -22730,7 +22736,43 @@ html += `</select>
             }
         };
 
-        window.saveChampionshipAdminMatchups = async () => {
+        window.triggerChampAutoSave = () => {
+            const headerStatus = document.getElementById('adm_champ_save_status');
+            const bottomStatus = document.getElementById('adm_champ_bottom_save_status');
+            if (headerStatus) {
+                headerStatus.innerHTML = '⏳ Auto-saving...';
+                headerStatus.style.color = '#f59e0b';
+            }
+            if (bottomStatus) {
+                bottomStatus.innerHTML = '⏳ Saving changes...';
+                bottomStatus.style.color = '#f59e0b';
+            }
+
+            clearTimeout(window._champAutoSaveTimer);
+            window._champAutoSaveTimer = setTimeout(async () => {
+                await window.saveChampionshipAdminMatchups(true);
+            }, 1000);
+        };
+
+        window.saveChampionshipAdminMatchups = async (isAuto = false) => {
+            clearTimeout(window._champAutoSaveTimer);
+            const saveBtn = document.getElementById('adm_champ_save_btn');
+            const headerStatus = document.getElementById('adm_champ_save_status');
+            const bottomStatus = document.getElementById('adm_champ_bottom_save_status');
+
+            if (!isAuto && saveBtn) {
+                saveBtn.innerHTML = '💾 Saving...';
+                saveBtn.disabled = true;
+            }
+            if (headerStatus) {
+                headerStatus.innerHTML = '⏳ Saving to cloud...';
+                headerStatus.style.color = '#f59e0b';
+            }
+            if (bottomStatus) {
+                bottomStatus.innerHTML = '⏳ Saving changes...';
+                bottomStatus.style.color = '#f59e0b';
+            }
+
             try {
                 let seasonName = document.getElementById('adm_champ_season_name')?.value || 'Upcoming Season';
                 let statusText = document.getElementById('adm_champ_status_text')?.value || '0 Wins – 0 Losses';
@@ -22775,13 +22817,38 @@ html += `</select>
 
                 const ok = await window.saveChampionshipMatchups(payload);
                 if (ok) {
-                    if (window.showToast) window.showToast("Championship 5-Round Matchups saved live to Firebase! 🎉", "success");
+                    if (headerStatus) {
+                        headerStatus.innerHTML = '☁️ Auto-Save Active';
+                        headerStatus.style.color = '#10b981';
+                    }
+                    if (bottomStatus) {
+                        bottomStatus.innerHTML = '☁️ All changes saved live';
+                        bottomStatus.style.color = '#10b981';
+                    }
+                    if (!isAuto && window.showToast) {
+                        window.showToast("Championship 5-Round Matchups saved live to Firebase! 🎉", "success");
+                    }
                 } else {
-                    if (window.showToast) window.showToast("Failed to save Championship matchups", "error");
+                    if (headerStatus) {
+                        headerStatus.innerHTML = '⚠️ Error saving';
+                        headerStatus.style.color = '#ef4444';
+                    }
+                    if (bottomStatus) {
+                        bottomStatus.innerHTML = '⚠️ Error saving to cloud';
+                        bottomStatus.style.color = '#ef4444';
+                    }
+                    if (!isAuto && window.showToast) {
+                        window.showToast("Failed to save Championship matchups", "error");
+                    }
                 }
             } catch(err) {
                 console.error("saveChampionshipAdminMatchups error:", err);
-                if (window.showToast) window.showToast("Error saving: " + err.message, "error");
+                if (!isAuto && window.showToast) window.showToast("Error saving: " + err.message, "error");
+            } finally {
+                if (!isAuto && saveBtn) {
+                    saveBtn.innerHTML = '💾 Save';
+                    saveBtn.disabled = false;
+                }
             }
         };
 

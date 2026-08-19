@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.9.64] - 2026-08-19
+- ☁️ **Background Cloud Auto-Save**: Alliance Championship matchup changes (season title, opponent names, states, match dates, battle scores, and flag counts) automatically save to Firebase with debounced background sync.
+- 💾 **Streamlined Save Button with Live Status**: Simplified the primary action button to `💾 Save` and added dynamic cloud sync status indicators (`☁️ All changes saved live` / `⏳ Auto-saving...`).
+
 ## [2.9.63] - 2026-08-19
 - 🔒 **Real-Time Auto-Calculation in Championship Admin**: Status text and total season flag counters now automatically recalculate in real-time as individual round scores and flags are typed.
 - 🛡️ **Locked Calculation Inputs**: Read-only restrictions applied to Status Text and Season Flags in the Championship Admin Suite to prevent human error and ensure consistency.

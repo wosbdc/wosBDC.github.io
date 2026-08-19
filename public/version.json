@@ -1,18 +1,18 @@
 {
-  "version": "2.9.63",
+  "version": "2.9.64",
   "releaseDate": "2026-08-19",
-  "title": "What's New in v2.9.63",
+  "title": "What's New in v2.9.64",
   "notes": [
-    "🔒 Real-Time Auto-Calculation in Championship Admin: Status Text, Our Season Flags, and Opponent Season Flags are now automatically calculated in real-time as battle scores or flag counts are entered.",
-    "🛡️ Locked Summary Fields: Status text and total season flag inputs are locked as read-only to eliminate manual calculation errors."
+    "☁️ Seamless Cloud Auto-Save in Championship Admin: All 5-round matchup updates (names, states, dates, scores, flags) automatically save to Firebase in the background.",
+    "💾 Streamlined Save Button & Live Sync Feedback: Simplified the manual button to 'Save' with instant live sync indicators ('☁️ All changes saved live' / '⏳ Auto-saving...')."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "2.9.63",
+    "version": "2.9.64",
     "latestChanges": [
+      "v2.9.64: Enabled debounced background cloud auto-save and streamlined the Save button with live sync status indicators",
       "v2.9.63: Added real-time auto-calculation and locked summary inputs in Alliance Championship Admin Suite",
       "v2.9.62: Added comprehensive Draw (Tie) support across Alliance Championship war room, archive vault, and leaderboards",
-      "v2.9.61: Streamlined notification bell modal so empty announcement and staff containers disappear when no items need attention",
-      "v2.9.60: Added Community Feedback & Bug Tracker alerts to the notification bell with interactive previews"
+      "v2.9.61: Streamlined notification bell modal so empty announcement and staff containers disappear when no items need attention"
     ]
   }
 }
