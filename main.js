@@ -12198,48 +12198,52 @@ window.getMemberTokenStatus = (user) => {
   }
 
   // 2. Direct client-side JWT decoding if token exists
-  if (user.wos_cg_token && typeof user.wos_cg_token === 'string') {
+  const rawTok = user.wos_cg_token || user.token;
+  if (rawTok && typeof rawTok === 'string') {
     try {
-      const parts = user.wos_cg_token.split('.');
-      if (parts.length >= 2) {
-        const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
-        if (payload && payload.exp) {
-          const expMs = payload.exp * 1000;
-          const nowMs = Date.now();
-          const msLeft = expMs - nowMs;
-          const daysLeft = Math.max(0, Math.floor(msLeft / (1000 * 60 * 60 * 24)));
-          if (daysLeft <= 0 || user.tokenExpired === true) {
-            return {
-              status: 'expired',
-              label: '30-Day Sync Token Expired',
-              desc: 'Your 30-day token has expired. Enter a new in-game code to keep stats auto-syncing.',
-              daysLeft: 0,
-              alert: true,
-              color: '#ef4444',
-              icon: '🚨'
-            };
-          } else if (daysLeft <= 3) {
-            return {
-              status: 'expiring_soon',
-              label: `Token Expires in ${daysLeft} Day${daysLeft === 1 ? '' : 's'}`,
-              desc: `Your 30-day sync token will expire in ${daysLeft} day${daysLeft === 1 ? '' : 's'}. Renew early to avoid sync interruption.`,
-              daysLeft: daysLeft,
-              alert: true,
-              color: '#f59e0b',
-              icon: '⏳'
-            };
-          } else {
-            return {
-              status: 'active',
-              label: `30-Day Sync Active (${daysLeft} Days Left)`,
-              desc: 'Your 30-day sync token is verified and syncing normally.',
-              daysLeft: daysLeft,
-              alert: false,
-              color: '#10b981',
-              icon: '🛡️'
-            };
+      const parts = rawTok.split('.');
+      for (const part of parts) {
+        if (!part) continue;
+        try {
+          const payload = JSON.parse(atob(part.replace(/-/g, '+').replace(/_/g, '/')));
+          if (payload && payload.exp) {
+            const expMs = payload.exp * 1000;
+            const nowMs = Date.now();
+            const msLeft = expMs - nowMs;
+            const daysLeft = Math.max(0, Math.floor(msLeft / (1000 * 60 * 60 * 24)));
+            if (daysLeft <= 0 || user.tokenExpired === true) {
+              return {
+                status: 'expired',
+                label: '30-Day Sync Token Expired',
+                desc: 'Your 30-day token has expired. Enter a new in-game code to keep stats auto-syncing.',
+                daysLeft: 0,
+                alert: true,
+                color: '#ef4444',
+                icon: '🚨'
+              };
+            } else if (daysLeft <= 3) {
+              return {
+                status: 'expiring_soon',
+                label: `Token Expires in ${daysLeft} Day${daysLeft === 1 ? '' : 's'}`,
+                desc: `Your 30-day sync token will expire in ${daysLeft} day${daysLeft === 1 ? '' : 's'}. Renew early to avoid sync interruption.`,
+                daysLeft: daysLeft,
+                alert: true,
+                color: '#f59e0b',
+                icon: '⏳'
+              };
+            } else {
+              return {
+                status: 'active',
+                label: `30-Day Sync Active (${daysLeft} Days Left)`,
+                desc: 'Your 30-day sync token is verified and syncing normally.',
+                daysLeft: daysLeft,
+                alert: false,
+                color: '#10b981',
+                icon: '🛡️'
+              };
+            }
           }
-        }
+        } catch (innerErr) {}
       }
     } catch(e) {}
   }
