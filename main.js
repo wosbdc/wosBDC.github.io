@@ -29893,23 +29893,68 @@ if (document.readyState === 'loading') {
     });
   }
 
-  async function checkAppVersion() {
+  async function checkAppVersion(isManualCheck = false, btn = null) {
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '⏳ Checking...';
+    }
     try {
-      const res = await fetch(`/version.json?t=${Date.now()}`, { cache: 'no-store' });
-      if (!res.ok) return;
+      let res = await fetch(`/version.json?t=${Date.now()}`, { cache: 'no-store' }).catch(() => null);
+      if (!res || !res.ok) {
+        res = await fetch(`./version.json?t=${Date.now()}`, { cache: 'no-store' }).catch(() => null);
+      }
+      if (!res || !res.ok) {
+        res = await fetch(`./public/version.json?t=${Date.now()}`, { cache: 'no-store' }).catch(() => null);
+      }
+      if (!res || !res.ok) {
+        if (isManualCheck) {
+          if (btn) {
+            btn.innerHTML = '⚠️ Check Failed';
+            setTimeout(() => { btn.innerHTML = '↻ Check for Updates'; btn.disabled = false; }, 2500);
+          }
+          if (typeof window.showToast === 'function') {
+            window.showToast('Unable to check for updates right now.', 'error');
+          }
+        }
+        return;
+      }
+
       const data = await res.json();
       if (data && data.version) {
-        if (localStorage.getItem('wos_dismissed_update') === data.version) return;
         if (isVersionOutdated(CURRENT_BUILD_VERSION, data.version)) {
           showUpdateBanner(data);
+          if (btn) {
+            btn.innerHTML = '✨ Update Available!';
+            btn.disabled = false;
+          }
         } else {
           localStorage.setItem('wos_app_version', data.version);
+          if (isManualCheck) {
+            if (btn) {
+              btn.innerHTML = '✅ Up to Date!';
+              setTimeout(() => { btn.innerHTML = '↻ Check for Updates'; btn.disabled = false; }, 2500);
+            }
+            if (typeof window.showToast === 'function') {
+              window.showToast(`✅ You're on the latest version (v${CURRENT_BUILD_VERSION})!`, 'success');
+            }
+          }
         }
       }
-    } catch (err) {}
+    } catch (err) {
+      if (isManualCheck) {
+        if (btn) {
+          btn.innerHTML = '↻ Check for Updates';
+          btn.disabled = false;
+        }
+        if (typeof window.showToast === 'function') {
+          window.showToast('Could not verify version update.', 'error');
+        }
+      }
+    }
   }
 
   window.checkAppVersion = checkAppVersion;
+  window.checkForAppUpdates = (btn) => checkAppVersion(true, btn);
 
   // Immediate check & DOMContentLoaded check
   checkAppVersion();

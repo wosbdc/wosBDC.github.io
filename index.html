@@ -254,7 +254,7 @@
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; border-bottom:1px solid var(--border); padding-bottom:12px; position:sticky; top:-26px; background:var(--card-bg); z-index:10; margin-top:-6px;">
         <h2 style="margin:0; color:var(--text-main); font-size:20px; display:flex; align-items:center; gap:10px;">📜 Dashboard Changelog</h2>
         <div style="display:flex; align-items:center; gap:12px;">
-          <button onclick="window.location.reload(true)" style="background:var(--accent); border:none; padding:6px 14px; border-radius:8px; color:#fff; cursor:pointer; font-size:12.5px; font-weight:bold; transition:0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">↻ Check for Updates</button>
+          <button id="btnCheckForUpdates" onclick="window.checkForAppUpdates && window.checkForAppUpdates(this)" style="background:var(--accent); border:none; padding:6px 14px; border-radius:8px; color:#fff; cursor:pointer; font-size:12.5px; font-weight:bold; transition:0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">↻ Check for Updates</button>
           <button id="closeChangelogBtn" onclick="window.closeChangelogModal && window.closeChangelogModal();" class="close-btn" title="Close Window" style="cursor:pointer;">✕</button>
         </div>
       </div>
