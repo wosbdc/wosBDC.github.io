@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## [2.9.49] - 2026-08-18
+- 🏆 **Resolved Standings & Medals Lazy-Loading & Error Boundary**: Fully audited `renderAccountRankings` in Account Hub. Scoped `sdFbHistorySnap` and `sdFbLiveSnap` in parallel `Promise.all` queries, wrapped the entire dashboard rendering in a comprehensive error boundary with instant fallback & retry controls.
+- 🔒 **Global `escapeHTML` Security Binding**: Declared `escapeHTML` as a first-class lexical module function to eliminate any possible undefined helper references during dynamic DOM injection.
+- 🥇 **Live & Historical Medal Calculation**: Unified Gold, Silver, and Bronze medal aggregations across Bear Trap, Spear Donations, Showdown All-Time & Live, and Alliance Championship leaderboards.
+
+## [2.9.48] - 2026-08-18
+- 🏆 **Fixed Account Hub Standings & Medals Loading**: Fixed an undeclared snapshot reference in `renderAccountRankings` that prevented historical event standings, medals, and Bear Trap/Showdown ranks from rendering in Account Hub's Combat & Records tab.
+- 🥇 **Comprehensive Podium Medal Calculation**: Enhanced the gold, silver, and bronze medal tracker to dynamically include live and all-time Showdown leaderboards alongside Bear Trap wins and spear donations.
+- ⚡ **Optimized Parallel Standings Fetch**: Showdown historical archives and live scores now load asynchronously in parallel with Bear Trap and Google Sheets leaderboards.
+
 ## [2.9.47] - 2026-08-18
 - 🛡️ **Frost Clan 1-Tap Quick Shield Toggles**: Added interactive `🛡️ 24h` and `🛡️ 8h` shield toggles with dynamic live countdown timers on every Frost Clan alt card and BDC Central Command GUI.
 - 🎯 **Showdown Target Goal Tracking**: Implemented visual progress bars tracking current Showdown score against target points per alt, with live percentage fill and status indicators.

@@ -1,18 +1,18 @@
 {
-  "version": "2.9.47",
+  "version": "2.9.49",
   "releaseDate": "2026-08-18",
-  "title": "What's New in v2.9.47",
+  "title": "What's New in v2.9.49",
   "notes": [
-    "🛡️ Quick Alt Shield Toggles: 1-tap 8h and 24h shield activation with dynamic countdown timer on all alt cards.",
-    "🎯 Showdown Goal Progress: Visual target progress bars tracking current points vs custom showdown goals.",
-    "📊 Combat & Growth Telemetry: High-contrast expandable stats for Power, Kills, Deaths, and Gathering."
+    "🏆 Standings & Medals Lazy-Loading: Scoped live & historical Showdown snapshots with full error boundary and retry controls.",
+    "🔒 Global EscapeHTML Binding: Hardened DOM string sanitization across all event score displays.",
+    "🥇 Comprehensive Medals: Unified podium medal counts across all alliance combat records."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "2.9.47",
+    "version": "2.9.49",
     "latestChanges": [
+      "v2.9.48: Fixed Account Hub Standings & Medals loading error and unified Showdown podium tracking",
       "v2.9.47: Quick Alt Shielding, Showdown Goal Tracking & Combat Telemetry in Frost Clan",
-      "v2.9.46: Enhanced Frost Clan custom checkboxes, glowing avatar rings, and unified sync terminology",
-      "v2.9.45: Eliminated blocking full-users DB scans in Account Hub and added direct #frost URL hash deep-linking"
+      "v2.9.46: Enhanced Frost Clan custom checkboxes, glowing avatar rings, and unified sync terminology"
     ]
   }
 }

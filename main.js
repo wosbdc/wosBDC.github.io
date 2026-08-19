@@ -150,7 +150,7 @@ window.getAuthToken = getAuthToken;
 
 window.getFurnaceIconHtml = (level, size = 32) => {
   if (!level || level === "N/A" || level === "" || level === "Unlinked" || level === "Pending Setup") {
-    return `<span class="furnace-level-badge unlinked" title="Unlinked / Sync Setup Required" style="display:inline-flex; align-items:center; gap:5px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); padding:3px 8px; border-radius:10px; font-weight:600; font-size:${Math.max(11, Math.round(size*0.36))}px; color:var(--text-muted); white-space:nowrap; vertical-align:middle;"><span style="opacity:0.6;">⚠️</span> Unlinked</span>`;
+    return `<span class="furnace-level-badge unlinked" title="Unlinked / Sync Setup Required" style="display:inline-flex; align-items:center; gap:5px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); padding:4px 10px; border-radius:10px; font-weight:600; font-size:${Math.max(11, Math.round(size*0.34))}px; color:var(--text-muted); white-space:nowrap; vertical-align:middle;"><span style="opacity:0.6;">⚠️</span> Unlinked</span>`;
   }
   
   const rawStr = level.toString().trim().toUpperCase();
@@ -187,17 +187,20 @@ window.getFurnaceIconHtml = (level, size = 32) => {
   if (fcNum && fcNum >= 1 && fcNum <= 10) {
      const canvasDisplaySize = Math.round(size * 1.35);
      const marginOffset = Math.round((canvasDisplaySize - size) / 2);
-     return `<canvas class="fc-unified-badge" data-fc="${fcNum}" data-size="${size}" style="display:inline-block; vertical-align:middle; width:${canvasDisplaySize}px; height:${canvasDisplaySize}px; cursor:pointer; user-select:none; -webkit-user-select:none; margin:-${marginOffset}px 2px; transition:filter 0.25s ease;" title="Fire Crystal ${fcNum} (FC ${fcNum})"></canvas>`;
+     return `<canvas class="fc-unified-badge" data-fc="${fcNum}" data-size="${size}" style="display:inline-block; vertical-align:middle; width:${canvasDisplaySize}px; height:${canvasDisplaySize}px; cursor:pointer; user-select:none; -webkit-user-select:none; margin:-${marginOffset}px 2px; transition:all 0.25s ease;" title="Fire Crystal ${fcNum} (FC ${fcNum})"></canvas>`;
   }
 
   // Render Modern Standard Furnace Badge (Furnace 1 to 30)
   if (furnaceNum && furnaceNum >= 1 && furnaceNum <= 30) {
-    return `<span class="furnace-level-badge" title="Furnace Level ${furnaceNum}" style="display:inline-flex; align-items:center; gap:6px; background:linear-gradient(135deg, rgba(30,41,59,0.8), rgba(15,23,42,0.9)); border:1px solid rgba(249,115,22,0.4); padding:3px 8px; border-radius:10px; font-weight:800; font-size:${Math.max(11, Math.round(size*0.36))}px; color:#ffffff; box-shadow:0 4px 12px rgba(249,115,22,0.15); white-space:nowrap; vertical-align:middle;">
-      <span style="filter:drop-shadow(0 0 4px #f97316);">🔥</span> Lv ${furnaceNum}
+    const fontSize = Math.max(12, Math.round(size * 0.38));
+    const padV = Math.max(3, Math.round(size * 0.08));
+    const padH = Math.max(8, Math.round(size * 0.22));
+    return `<span class="furnace-level-badge" title="Furnace Level ${furnaceNum}" style="display:inline-flex; align-items:center; justify-content:center; gap:6px; background:linear-gradient(135deg, rgba(249,115,22,0.25), rgba(15,23,42,0.95)); border:1.5px solid rgba(249,115,22,0.55); padding:${padV}px ${padH}px; border-radius:12px; font-weight:800; font-size:${fontSize}px; color:#ffffff; box-shadow:0 4px 14px rgba(249,115,22,0.25); white-space:nowrap; vertical-align:middle;">
+      <span style="filter:drop-shadow(0 0 6px #f97316); font-size:${Math.round(fontSize*1.15)}px;">🔥</span> Lv ${furnaceNum}
     </span>`;
   }
 
-  return `<span class="furnace-level-badge unlinked" title="Unlinked / Sync Setup Required" style="display:inline-flex; align-items:center; gap:5px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); padding:3px 8px; border-radius:10px; font-weight:600; font-size:${Math.max(11, Math.round(size*0.36))}px; color:var(--text-muted); white-space:nowrap; vertical-align:middle;"><span style="opacity:0.6;">⚠️</span> Unlinked</span>`;
+  return `<span class="furnace-level-badge unlinked" title="Unlinked / Sync Setup Required" style="display:inline-flex; align-items:center; gap:5px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); padding:4px 10px; border-radius:10px; font-weight:600; font-size:${Math.max(11, Math.round(size*0.34))}px; color:var(--text-muted); white-space:nowrap; vertical-align:middle;"><span style="opacity:0.6;">⚠️</span> Unlinked</span>`;
 };
 
 window.getFurnaceNumericValue = (level) => {
@@ -268,7 +271,7 @@ window.renderFurnaceSelectHtml = (id = 'manualFurnaceLevel', selectedVal = '', e
 };
 
 // --- Security Helpers ---
-window.escapeHTML = (str) => {
+function escapeHTML(str) {
   if (typeof str !== 'string') str = String(str || '');
   return str.replace(/[&<>'"]/g, tag => ({
       '&': '&amp;',
@@ -277,7 +280,8 @@ window.escapeHTML = (str) => {
       "'": '&#39;',
       '"': '&quot;'
   }[tag]));
-};
+}
+window.escapeHTML = escapeHTML;
 
 window.translateWosApiError = (msg, code = null) => {
   if (typeof msg === 'object' && msg !== null) {
@@ -23087,28 +23091,31 @@ window.resetBearTrapEvent = async () => {
                 </div>
             </div>
             <!-- Primary Main Card 3-Column Metrics Bar -->
-            <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:10px 12px;">
-                <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:6px 4px; background:rgba(255,255,255,0.03); border-radius:8px; border:1px solid rgba(255,255,255,0.04);">
-                    <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:3px;">
+            <div style="display:grid; grid-template-columns: 1.15fr 0.9fr 0.95fr; gap:10px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.06); border-radius:14px; padding:10px 12px; align-items:center;">
+                <!-- Featured Centerpiece Furnace Box -->
+                <div class="furnace-metric-box gold">
+                    <div style="font-size:10.5px; color:#fde047; text-transform:uppercase; letter-spacing:0.8px; font-weight:800; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
                         <span>🔥</span> <span>Furnace</span>
                     </div>
-                    <div style="font-size:13.5px; font-weight:bold; color:#ffffff; line-height:1; display:flex; align-items:center; justify-content:center;">
-                        ${window.getFurnaceIconHtml(furnaceLevelStr, 46)}
+                    <div style="display:flex; align-items:center; justify-content:center; min-height:48px; width:100%;">
+                        ${window.getFurnaceIconHtml(furnaceLevelStr, 62)}
                     </div>
                 </div>
-                <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:6px 4px; background:rgba(255,255,255,0.03); border-radius:8px; border:1px solid rgba(255,255,255,0.04);">
-                    <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:3px;">
+                <!-- Joined Tile -->
+                <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:8px 6px; background:rgba(255,255,255,0.025); border-radius:10px; border:1px solid rgba(255,255,255,0.04); min-height:84px;">
+                    <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; font-weight:700; margin-bottom:6px; display:flex; align-items:center; gap:3px;">
                         <span>🗓️</span> <span>Joined</span>
                     </div>
-                    <div style="font-size:12px; font-weight:bold; color:#e2e8f0; line-height:1; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; max-width:100%;" title="${(joinedDateStr && joinedDateStr !== 'N/A') ? joinedDateStr : 'Active'}">
+                    <div style="font-size:12.5px; font-weight:bold; color:#e2e8f0; line-height:1.2; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; max-width:100%;" title="${(joinedDateStr && joinedDateStr !== 'N/A') ? joinedDateStr : 'Active'}">
                         ${(joinedDateStr && joinedDateStr !== 'N/A') ? joinedDateStr : 'Active'}
                     </div>
                 </div>
-                <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:6px 4px; background:rgba(255,255,255,0.03); border-radius:8px; border:1px solid rgba(255,255,255,0.04);">
-                    <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:3px;">
+                <!-- Active Tile -->
+                <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:8px 6px; background:rgba(255,255,255,0.025); border-radius:10px; border:1px solid rgba(255,255,255,0.04); min-height:84px;">
+                    <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; font-weight:700; margin-bottom:6px; display:flex; align-items:center; gap:3px;">
                         <span>⏱️</span> <span>Active</span>
                     </div>
-                    <div style="font-size:12.5px; font-weight:bold; color:#38bdf8; line-height:1; white-space:nowrap;" title="${timeActiveStr}">
+                    <div style="font-size:12.5px; font-weight:bold; color:#38bdf8; line-height:1.2; white-space:nowrap;" title="${timeActiveStr}">
                         ${timeActiveStr}
                     </div>
                 </div>
@@ -23201,7 +23208,7 @@ window.resetBearTrapEvent = async () => {
                           const data = await res.json();
                           if (data.success && data.stove_lv) {
                               const flEl = document.getElementById(flSpanId);
-                              if (flEl) flEl.innerHTML = window.getFurnaceIconHtml(data.stove_lv, 46);
+                              if (flEl) flEl.innerHTML = window.getFurnaceIconHtml(data.stove_lv, 58);
                           }
                       } catch(e) { console.error(e); }
                   }, 100);
@@ -23241,29 +23248,32 @@ window.resetBearTrapEvent = async () => {
                       </div>
                   </div>
 
-                  <!-- Middle Row: 3-Column Metric Tiles (Furnace, Joined Date, Time Active) -->
-                  <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:10px 12px;">
-                      <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:6px 4px; background:rgba(255,255,255,0.02); border-radius:8px; border:1px solid rgba(255,255,255,0.04);">
-                          <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:3px;">
+                  <!-- Middle Row: 3-Column Metric Tiles (Furnace Centerpiece, Joined Date, Time Active) -->
+                  <div style="display:grid; grid-template-columns: 1.15fr 0.9fr 0.95fr; gap:10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:14px; padding:10px 12px; align-items:center;">
+                      <!-- Featured Centerpiece Furnace Box -->
+                      <div class="furnace-metric-box cyan">
+                          <div style="font-size:10.5px; color:#38bdf8; text-transform:uppercase; letter-spacing:0.8px; font-weight:800; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
                               <span>🔥</span> <span>Furnace</span>
                           </div>
-                          <div id="${flSpanId}" style="font-size:13.5px; font-weight:bold; color:#ffffff; line-height:1; display:flex; align-items:center; justify-content:center;">
-                              ${window.getFurnaceIconHtml(flVal, 46)}
+                          <div id="${flSpanId}" style="display:flex; align-items:center; justify-content:center; min-height:46px; width:100%;">
+                              ${window.getFurnaceIconHtml(flVal, 58)}
                           </div>
                       </div>
-                      <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:6px 4px; background:rgba(255,255,255,0.02); border-radius:8px; border:1px solid rgba(255,255,255,0.04);">
-                          <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:3px;">
+                      <!-- Joined Tile -->
+                      <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:8px 6px; background:rgba(255,255,255,0.02); border-radius:10px; border:1px solid rgba(255,255,255,0.04); min-height:80px;">
+                          <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; font-weight:700; margin-bottom:6px; display:flex; align-items:center; gap:3px;">
                               <span>🗓️</span> <span>Joined</span>
                           </div>
-                          <div style="font-size:12px; font-weight:bold; color:#e2e8f0; line-height:1; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; max-width:100%;" title="${joinedDateFormatted}">
+                          <div style="font-size:12.5px; font-weight:bold; color:#e2e8f0; line-height:1.2; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; max-width:100%;" title="${joinedDateFormatted}">
                               ${joinedDateFormatted}
                           </div>
                       </div>
-                      <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:6px 4px; background:rgba(255,255,255,0.02); border-radius:8px; border:1px solid rgba(255,255,255,0.04);">
-                          <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:3px;">
+                      <!-- Active Tile -->
+                      <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:8px 6px; background:rgba(255,255,255,0.02); border-radius:10px; border:1px solid rgba(255,255,255,0.04); min-height:80px;">
+                          <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; font-weight:700; margin-bottom:6px; display:flex; align-items:center; gap:3px;">
                               <span>⏱️</span> <span>Active</span>
                           </div>
-                          <div style="font-size:12.5px; font-weight:bold; color:#38bdf8; line-height:1; white-space:nowrap;" title="${timeActiveVal}">
+                          <div style="font-size:12.5px; font-weight:bold; color:#38bdf8; line-height:1.2; white-space:nowrap;" title="${timeActiveVal}">
                               ${timeActiveVal}
                           </div>
                       </div>
@@ -23722,6 +23732,8 @@ window.resetBearTrapEvent = async () => {
     let fbWins = {};
     let fbDonations = {};
     let lbRawData = [];
+    let sdFbHistorySnap = null;
+    let sdFbLiveSnap = null;
     let rankingsDataLoaded = false;
 
     window.switchRankingsSubTab = (sub) => {
@@ -23770,413 +23782,429 @@ window.resetBearTrapEvent = async () => {
       const rankingsContainer = document.getElementById('accRankingsContainer');
       if (!rankingsContainer) return;
 
-      if (!rankingsDataLoaded) {
-        rankingsContainer.innerHTML = `
-          <div style="text-align:center; padding:35px 20px; color:var(--text-muted);">
-            <div style="border:3px solid rgba(255,255,255,0.1); border-top-color:var(--accent); border-radius:50%; width:28px; height:28px; animation:spin 1s linear infinite; margin:0 auto 10px;"></div>
-            Loading Event Rankings & Standings...
-          </div>
-        `;
-        try {
-          const [lbData, fbWinsSnap, fbDonSnap] = await Promise.all([
-            (typeof window.fetchLeaderboardsData === 'function') ? window.fetchLeaderboardsData().catch(() => []) : [],
-            get(ref(db, 'beartrap_wins')).catch(() => null),
-            get(ref(db, 'beartrap_donations')).catch(() => null)
-          ]);
-          lbRawData = lbData || [];
-          fbWins = (fbWinsSnap && fbWinsSnap.exists()) ? fbWinsSnap.val() : {};
-          fbDonations = (fbDonSnap && fbDonSnap.exists()) ? fbDonSnap.val() : {};
-          rankingsDataLoaded = true;
-        } catch(e) {
-          console.error("Rankings load error:", e);
-        }
-      }
-
-      const liveStatsRes = window.computeLiveFirebasePlayerStats(chiefNameTarget, fbWins, fbDonations, lbRawData);
-      let { bearBoth, bear1, bear2, bearAllTime, btDonationsAllTime, btDonationsCurrent, otherLbs } = liveStatsRes;
-
-      let accountOptionsHtml = `<option value="${escapeHTML(currentChiefName)}">⭐ Main Chief: ${escapeHTML(currentChiefName)}</option>`;
-      if (links && links.length > 0) {
-        links.forEach(gid => {
-          let altName = idToNameMap[gid] || `Game ID: ${gid}`;
-          let isSelected = (altName.toLowerCase().trim() === chiefNameTarget.toLowerCase().trim()) ? 'selected' : '';
-          accountOptionsHtml += `<option value="${escapeHTML(altName)}" ${isSelected}>🔗 Alt: ${escapeHTML(altName)} (ID: ${gid})</option>`;
-        });
-      }
-
-      let goldMedals = 0, silverMedals = 0, bronzeMedals = 0;
-      const allStatsList = [bearBoth, bear1, bear2, bearAllTime, btDonationsAllTime, btDonationsCurrent, ...otherLbs].filter(Boolean);
-
-      allStatsList.forEach(lb => {
-        let r = lb.rank;
-        if (r === 1 || r === "1" || String(r).includes("1st")) goldMedals++;
-        else if (r === 2 || r === "2" || String(r).includes("2nd")) silverMedals++;
-        else if (r === 3 || r === "3" || String(r).includes("3rd")) bronzeMedals++;
-      });
-
-      const bearWinsCount = (fbWins && fbWins[chiefNameTarget.toLowerCase().trim()]) ? (fbWins[chiefNameTarget.toLowerCase().trim()].wins || 0) : (bearAllTime ? (bearAllTime.score || 0) : 0);
-      
-      const fbDonObj = (fbDonations && fbDonations[chiefNameTarget.toLowerCase().trim()]) ? fbDonations[chiefNameTarget.toLowerCase().trim()] : {};
-      
-      const parseNumVal = (v) => {
-        if (v === null || v === undefined || v === '') return 0;
-        if (typeof v === 'number') return isNaN(v) ? 0 : v;
-        if (typeof v === 'string') {
-          const cleaned = v.replace(/,/g, '').trim();
-          const n = Number(cleaned);
-          return isNaN(n) ? 0 : n;
-        }
-        return 0;
-      };
-
-      const rawCurVal = fbDonObj.current !== undefined ? fbDonObj.current : (fbDonObj.amount !== undefined ? fbDonObj.amount : (btDonationsCurrent ? btDonationsCurrent.score : 0));
-      const rawAllVal = fbDonObj.allTime !== undefined ? fbDonObj.allTime : (btDonationsAllTime ? btDonationsAllTime.score : 0);
-
-      const currentDonNum = parseNumVal(rawCurVal);
-      const allTimeDonNum = parseNumVal(rawAllVal);
-
-      // Build All-Time Showdown Map 100% from Firebase (showdown_meta/history & showdown_live)
-      const sdAllTimeMap = {};
-      let fetchedHist = (sdFbHistorySnap && sdFbHistorySnap.exists() && sdFbHistorySnap.val()) ? sdFbHistorySnap.val() : {};
-      
-      const historyObj = (typeof window.getMergedShowdownHistoryObj === 'function') 
-        ? window.getMergedShowdownHistoryObj(fetchedHist) 
-        : fetchedHist;
-
-      let allTimePlayers = (typeof window.calculateAllTimeShowdown === 'function') 
-        ? window.calculateAllTimeShowdown(historyObj) 
-        : [];
-
-      let combinedMap = {};
-      allTimePlayers.forEach(p => {
-        if (p && p.name) {
-          const kTrim = p.name.toLowerCase().trim();
-          const kSan = p.name.toLowerCase().replace(/[^a-z0-9]/g, '');
-          let targetEntry = combinedMap[kSan] || combinedMap[kTrim];
-          if (!targetEntry) {
-            targetEntry = { name: p.name, horns: 0, wins: 0, total: 0 };
-            combinedMap[kSan] = targetEntry;
-            combinedMap[kTrim] = targetEntry;
+      try {
+        if (!rankingsDataLoaded) {
+          rankingsContainer.innerHTML = `
+            <div style="text-align:center; padding:35px 20px; color:var(--text-muted);">
+              <div style="border:3px solid rgba(255,255,255,0.1); border-top-color:var(--accent); border-radius:50%; width:28px; height:28px; animation:spin 1s linear infinite; margin:0 auto 10px;"></div>
+              Loading Event Rankings & Standings...
+            </div>
+          `;
+          try {
+            const [lbData, fbWinsSnap, fbDonSnap, histSnap, liveSnap] = await Promise.all([
+              (typeof window.fetchLeaderboardsData === 'function') ? window.fetchLeaderboardsData().catch(() => []) : [],
+              get(ref(db, 'beartrap_wins')).catch(() => null),
+              get(ref(db, 'beartrap_donations')).catch(() => null),
+              get(ref(db, 'showdown_meta/history')).catch(() => null),
+              get(ref(db, 'showdown_live')).catch(() => null)
+            ]);
+            lbRawData = lbData || [];
+            fbWins = (fbWinsSnap && fbWinsSnap.exists && fbWinsSnap.exists()) ? fbWinsSnap.val() : {};
+            fbDonations = (fbDonSnap && fbDonSnap.exists && fbDonSnap.exists()) ? fbDonSnap.val() : {};
+            sdFbHistorySnap = histSnap;
+            sdFbLiveSnap = liveSnap;
+            rankingsDataLoaded = true;
+          } catch(e) {
+            console.error("Rankings load error:", e);
           }
-          targetEntry.total += (p.total || 0);
-          targetEntry.horns += (p.horns || 0);
-          targetEntry.wins += (p.wins || 0);
         }
-      });
 
-      // Establish baseline historical floor for Guardian (2 Horns, 1 Day Win, 7,036,858 Total)
-      const gKey = 'guardian';
-      if (!combinedMap[gKey]) {
-        combinedMap[gKey] = { name: 'Guardian', horns: 2, wins: 1, total: 7036858 };
-      } else {
-        if (combinedMap[gKey].total < 7036858) combinedMap[gKey].total = 7036858;
-        if (combinedMap[gKey].horns < 2) combinedMap[gKey].horns = 2;
-        if (combinedMap[gKey].wins < 1) combinedMap[gKey].wins = 1;
-      }
+        const targetChief = (chiefNameTarget || currentChiefName || 'Chief').toString().trim();
+        const liveStatsRes = (typeof window.computeLiveFirebasePlayerStats === 'function')
+          ? window.computeLiveFirebasePlayerStats(targetChief, fbWins || {}, fbDonations || {}, lbRawData || [])
+          : {};
+        let { bearBoth, bear1, bear2, bearAllTime, btDonationsAllTime, btDonationsCurrent, otherLbs } = liveStatsRes || {};
+        otherLbs = Array.isArray(otherLbs) ? otherLbs : [];
 
-      // Establish baseline historical floor for Dragon Frost (0 Horns, 0 Day Wins, 1,800,952 Total)
-      const dfKey = 'dragonfrost';
-      if (!combinedMap['dragon frost'] && !combinedMap[dfKey]) {
-        combinedMap['dragon frost'] = { name: 'Dragon Frost', horns: 0, wins: 0, total: 1800952 };
-      }
+        let accountOptionsHtml = `<option value="${escapeHTML(currentChiefName)}">⭐ Main Chief: ${escapeHTML(currentChiefName)}</option>`;
+        if (links && Array.isArray(links) && links.length > 0) {
+          links.forEach(gid => {
+            let altName = (idToNameMap && idToNameMap[gid]) || `Game ID: ${gid}`;
+            let isSelected = (altName.toLowerCase().trim() === targetChief.toLowerCase().trim()) ? 'selected' : '';
+            accountOptionsHtml += `<option value="${escapeHTML(altName)}" ${isSelected}>🔗 Alt: ${escapeHTML(altName)} (ID: ${gid})</option>`;
+          });
+        }
 
-      const sdLiveData = (sdFbLiveSnap && sdFbLiveSnap.exists() && sdFbLiveSnap.val()) ? sdFbLiveSnap.val() : {};
-      for (const [pKey, scores] of Object.entries(sdLiveData)) {
-        if (!scores || typeof scores !== 'object') continue;
-        let realName = scores.name || pKey;
-        let kTrim = realName.toLowerCase().trim();
-        let kSan = realName.toLowerCase().replace(/[^a-z0-9]/g, '');
-        let pTotal = Number(scores.total !== undefined ? scores.total : ((scores.d1||0) + (scores.d2||0) + (scores.d3||0) + (scores.d4||0) + (scores.d5||0) + (scores.d6||0)));
+        const targetKey = targetChief.toLowerCase().trim();
+        const bearWinsCount = (fbWins && fbWins[targetKey]) ? (fbWins[targetKey].wins || 0) : (bearAllTime ? (bearAllTime.score || 0) : 0);
         
-        let targetEntry = combinedMap[kTrim] || combinedMap[kSan];
-        if (!targetEntry) {
-          targetEntry = { name: realName, horns: 0, wins: 0, total: 0 };
-          combinedMap[kTrim] = targetEntry;
-          if (kSan) combinedMap[kSan] = targetEntry;
-        }
-        targetEntry.total += pTotal;
-      }
+        const fbDonObj = (fbDonations && fbDonations[targetKey]) ? fbDonations[targetKey] : {};
+        
+        const parseNumVal = (v) => {
+          if (v === null || v === undefined || v === '') return 0;
+          if (typeof v === 'number') return isNaN(v) ? 0 : v;
+          if (typeof v === 'string') {
+            const cleaned = v.replace(/,/g, '').trim();
+            const n = Number(cleaned);
+            return isNaN(n) ? 0 : n;
+          }
+          return 0;
+        };
 
-      // De-duplicate unique player records by sanitized key before ranking
-      const dedupedSdMap = {};
-      Object.values(combinedMap).forEach(p => {
-        if (p && p.name) {
-          const sanKey = p.name.toLowerCase().replace(/[^a-z0-9]/g, '');
-          const sKey = sanKey.length > 0 ? sanKey : p.name.toLowerCase().trim();
-          if (!dedupedSdMap[sKey]) {
-            dedupedSdMap[sKey] = { name: p.name, horns: p.horns || 0, wins: p.wins || 0, total: p.total || 0 };
-          } else {
-            dedupedSdMap[sKey].total = Math.max(dedupedSdMap[sKey].total, p.total || 0);
-            dedupedSdMap[sKey].horns = Math.max(dedupedSdMap[sKey].horns, p.horns || 0);
-            dedupedSdMap[sKey].wins = Math.max(dedupedSdMap[sKey].wins, p.wins || 0);
+        const rawCurVal = fbDonObj.current !== undefined ? fbDonObj.current : (fbDonObj.amount !== undefined ? fbDonObj.amount : (btDonationsCurrent ? btDonationsCurrent.score : 0));
+        const rawAllVal = fbDonObj.allTime !== undefined ? fbDonObj.allTime : (btDonationsAllTime ? btDonationsAllTime.score : 0);
+
+        const currentDonNum = parseNumVal(rawCurVal);
+        const allTimeDonNum = parseNumVal(rawAllVal);
+
+        // Build All-Time Showdown Map 100% from Firebase (showdown_meta/history & showdown_live)
+        const sdAllTimeMap = {};
+        let fetchedHist = (sdFbHistorySnap && sdFbHistorySnap.exists && sdFbHistorySnap.exists() && sdFbHistorySnap.val()) ? sdFbHistorySnap.val() : {};
+        
+        const historyObj = (typeof window.getMergedShowdownHistoryObj === 'function') 
+          ? window.getMergedShowdownHistoryObj(fetchedHist) 
+          : fetchedHist;
+
+        let allTimePlayers = (typeof window.calculateAllTimeShowdown === 'function') 
+          ? window.calculateAllTimeShowdown(historyObj) 
+          : [];
+        if (!Array.isArray(allTimePlayers)) allTimePlayers = [];
+
+        let combinedMap = {};
+        allTimePlayers.forEach(p => {
+          if (p && p.name) {
+            const kSan = p.name.toLowerCase().replace(/[^a-z0-9]/g, '') || p.name.toLowerCase().trim();
+            if (!combinedMap[kSan]) {
+              combinedMap[kSan] = { name: p.name, horns: 0, wins: 0, total: 0 };
+            }
+            combinedMap[kSan].total += (p.total || 0);
+            combinedMap[kSan].horns += (p.horns || 0);
+            combinedMap[kSan].wins += (p.wins || 0);
+          }
+        });
+
+        // Establish baseline historical floor for Guardian (2 Horns, 1 Day Win, 7,036,858 Total)
+        const gKey = 'guardian';
+        if (!combinedMap[gKey]) {
+          combinedMap[gKey] = { name: 'Guardian', horns: 2, wins: 1, total: 7036858 };
+        } else {
+          if (combinedMap[gKey].total < 7036858) combinedMap[gKey].total = 7036858;
+          if (combinedMap[gKey].horns < 2) combinedMap[gKey].horns = 2;
+          if (combinedMap[gKey].wins < 1) combinedMap[gKey].wins = 1;
+        }
+
+        // Establish baseline historical floor for Dragon Frost (0 Horns, 0 Day Wins, 1,800,952 Total)
+        const dfKey = 'dragonfrost';
+        if (!combinedMap[dfKey]) {
+          combinedMap[dfKey] = { name: 'Dragon Frost', horns: 0, wins: 0, total: 1800952 };
+        }
+
+        const sdLiveData = (sdFbLiveSnap && sdFbLiveSnap.exists && sdFbLiveSnap.exists() && sdFbLiveSnap.val()) ? sdFbLiveSnap.val() : {};
+        if (sdLiveData && typeof sdLiveData === 'object') {
+          for (const [pKey, scores] of Object.entries(sdLiveData)) {
+            if (!scores || typeof scores !== 'object') continue;
+            let realName = scores.name || pKey;
+            let kSan = realName.toLowerCase().replace(/[^a-z0-9]/g, '') || realName.toLowerCase().trim();
+            let pTotal = Number(scores.total !== undefined ? scores.total : ((scores.d1||0) + (scores.d2||0) + (scores.d3||0) + (scores.d4||0) + (scores.d5||0) + (scores.d6||0)));
+            
+            if (!combinedMap[kSan]) {
+              combinedMap[kSan] = { name: realName, horns: 0, wins: 0, total: 0 };
+            }
+            combinedMap[kSan].total += pTotal;
           }
         }
-      });
-      let sortedSdList = Object.values(dedupedSdMap).sort((a, b) => (b.horns !== a.horns) ? (b.horns - a.horns) : (b.total - a.total));
 
-      sortedSdList.forEach((p, index) => {
-        if (p && p.name) {
-          let formatRank = (num) => {
+        let sortedSdList = Object.values(combinedMap).sort((a, b) => (b.horns !== a.horns) ? (b.horns - a.horns) : (b.total - a.total));
+
+        sortedSdList.forEach((p, index) => {
+          if (p && p.name) {
+            let formatRank = (num) => {
+              if (num === 1) return '🥇 1st';
+              if (num === 2) return '🥈 2nd';
+              if (num === 3) return '🥉 3rd';
+              return `#${num}`;
+            };
+            const statObj = {
+              rank: formatRank(index + 1),
+              horns: p.horns || 0,
+              wins: p.wins || 0,
+              total: p.total || 0
+            };
+            const sanKey = p.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const trimKey = p.name.toLowerCase().trim();
+            if (trimKey) sdAllTimeMap[trimKey] = statObj;
+            if (sanKey) sdAllTimeMap[sanKey] = statObj;
+          }
+        });
+
+        // Group additional leaderboards by base event name (filtering out Bear Trap & Showdown which are calculated 100% live from Firebase)
+        const eventGroups = {};
+        otherLbs.forEach(lb => {
+          if (!lb || !lb.title) return;
+          let tLower = (lb.title || '').toLowerCase();
+          if (tLower.includes('bear') || tLower.includes('bt') || tLower.includes('donation') || tLower.includes('showdown')) {
+            return; // Skip raw sheet Bear Trap & Showdown rows to prevent outdated Google Sheets duplicates
+          }
+
+          let baseTitle = lb.title.replace(/All-Time|All Time|Current|Overall/gi, '').trim();
+          if (!baseTitle) baseTitle = lb.title;
+
+          if (!eventGroups[baseTitle]) {
+            eventGroups[baseTitle] = {
+              baseTitle: baseTitle,
+              emoji: lb.emoji || '🏆',
+              current: null,
+              allTime: null,
+              others: []
+            };
+          }
+
+          const isAllTime = lb.title.toLowerCase().includes('all-time') || lb.title.toLowerCase().includes('all time');
+          if (isAllTime) {
+            eventGroups[baseTitle].allTime = lb;
+          } else {
+            if (!eventGroups[baseTitle].current) {
+              eventGroups[baseTitle].current = lb;
+            } else {
+              eventGroups[baseTitle].others.push(lb);
+            }
+          }
+        });
+
+        // Calculate Current Live Showdown rank and score from Firebase showdown_live
+        let curSdStat = null;
+        const sdLiveObj = (sdFbLiveSnap && sdFbLiveSnap.exists && sdFbLiveSnap.exists() && sdFbLiveSnap.val()) ? sdFbLiveSnap.val() : {};
+
+        const liveSdMap = {};
+        if (sdLiveObj && typeof sdLiveObj === 'object') {
+          for (const [pKey, pVal] of Object.entries(sdLiveObj)) {
+            if (!pVal || typeof pVal !== 'object') continue;
+            let pName = pVal.name || pKey;
+            let score = Number(pVal.total !== undefined ? pVal.total : ((pVal.d1||0) + (pVal.d2||0) + (pVal.d3||0) + (pVal.d4||0) + (pVal.d5||0) + (pVal.d6||0)));
+            if (score > 0) {
+              const sKey = pName.toLowerCase().replace(/[^a-z0-9]/g, '') || pName.toLowerCase().trim();
+              if (!liveSdMap[sKey] || score > liveSdMap[sKey].score) {
+                liveSdMap[sKey] = { name: pName, key: pKey, score };
+              }
+            }
+          }
+        }
+
+        const liveSdPlayers = Object.values(liveSdMap);
+        liveSdPlayers.sort((a, b) => b.score - a.score);
+
+        const targetSanitized = targetChief.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const targetTrim = targetChief.toLowerCase().trim();
+        const curSdIndex = liveSdPlayers.findIndex(p => {
+          const pSan = (p.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+          const pKeySan = (p.key || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+          return (pSan && pSan === targetSanitized) || (pKeySan && pKeySan === targetSanitized) || ((p.name || '').toLowerCase().trim() === targetTrim);
+        });
+
+        if (curSdIndex !== -1) {
+          const pObj = liveSdPlayers[curSdIndex];
+          const formatRank = (num) => {
             if (num === 1) return '🥇 1st';
             if (num === 2) return '🥈 2nd';
             if (num === 3) return '🥉 3rd';
             return `#${num}`;
           };
-          const statObj = {
-            rank: formatRank(index + 1),
-            horns: p.horns || 0,
-            wins: p.wins || 0,
-            total: p.total || 0
+          curSdStat = {
+            rank: formatRank(curSdIndex + 1),
+            score: pObj.score.toLocaleString()
           };
-          sdAllTimeMap[p.name.toLowerCase().trim()] = statObj;
-          sdAllTimeMap[p.name.toLowerCase().replace(/[^a-z0-9]/g, '')] = statObj;
-        }
-      });
-
-      // Group additional leaderboards by base event name (filtering out Bear Trap & Showdown which are calculated 100% live from Firebase)
-      const eventGroups = {};
-      otherLbs.forEach(lb => {
-        let tLower = (lb.title || '').toLowerCase();
-        if (tLower.includes('bear') || tLower.includes('bt') || tLower.includes('donation') || tLower.includes('showdown')) {
-          return; // Skip raw sheet Bear Trap & Showdown rows to prevent outdated Google Sheets duplicates
+        } else {
+          curSdStat = {
+            rank: "Event hasn't started",
+            score: null
+          };
         }
 
-        let baseTitle = lb.title.replace(/All-Time|All Time|Current|Overall/gi, '').trim();
-        if (!baseTitle) baseTitle = lb.title;
-
-        if (!eventGroups[baseTitle]) {
-          eventGroups[baseTitle] = {
-            baseTitle: baseTitle,
-            emoji: lb.emoji || '🏆',
-            current: null,
-            allTime: null,
+        // Ensure Showdown All-Time and Current are always included in Event Leaderboards Ranks
+        const sdStat = sdAllTimeMap[targetTrim] || sdAllTimeMap[targetSanitized];
+        
+        if (!eventGroups['Showdown']) {
+          eventGroups['Showdown'] = {
+            baseTitle: 'Showdown',
+            emoji: '⚔️',
+            current: { title: 'Current Showdown', rank: curSdStat.rank, score: curSdStat.score },
+            allTime: sdStat ? { title: 'All-Time Showdown', rank: sdStat.rank, score: '' } : null,
             others: []
           };
-        }
-
-        const isAllTime = lb.title.toLowerCase().includes('all-time') || lb.title.toLowerCase().includes('all time');
-        if (isAllTime) {
-          eventGroups[baseTitle].allTime = lb;
         } else {
-          if (!eventGroups[baseTitle].current) {
-            eventGroups[baseTitle].current = lb;
-          } else {
-            eventGroups[baseTitle].others.push(lb);
-          }
+          eventGroups['Showdown'].current = { title: 'Current Showdown', rank: curSdStat.rank, score: curSdStat.score };
+          if (sdStat) eventGroups['Showdown'].allTime = { title: 'All-Time Showdown', rank: sdStat.rank, score: '' };
         }
-      });
 
-      // Calculate Current Live Showdown rank and score from Firebase showdown_live
-      let curSdStat = null;
-      const sdLiveObj = (sdFbLiveSnap && sdFbLiveSnap.exists() && sdFbLiveSnap.val()) ? sdFbLiveSnap.val() : {};
+        const groupedEventList = Object.values(eventGroups);
 
-      const liveSdMap = {};
-      for (const [pKey, pVal] of Object.entries(sdLiveObj)) {
-        if (!pVal || typeof pVal !== 'object') continue;
-        let pName = pVal.name || pKey;
-        let score = Number(pVal.total !== undefined ? pVal.total : ((pVal.d1||0) + (pVal.d2||0) + (pVal.d3||0) + (pVal.d4||0) + (pVal.d5||0) + (pVal.d6||0)));
-        if (score > 0) {
-          const sKey = pName.toLowerCase().replace(/[^a-z0-9]/g, '');
-          if (!liveSdMap[sKey] || score > liveSdMap[sKey].score) {
-            liveSdMap[sKey] = { name: pName, key: pKey, score };
-          }
-        }
-      }
+        // Calculate Gold, Silver, Bronze medals across all leaderboards (including Bear Trap & Showdown)
+        let goldMedals = 0, silverMedals = 0, bronzeMedals = 0;
+        const allStatsList = [bearBoth, bear1, bear2, bearAllTime, btDonationsAllTime, btDonationsCurrent, curSdStat, sdStat, ...otherLbs].filter(Boolean);
 
-      const liveSdPlayers = Object.values(liveSdMap);
-      liveSdPlayers.sort((a, b) => b.score - a.score);
-
-      const targetSanitized = chiefNameTarget.toLowerCase().replace(/[^a-z0-9]/g, '');
-      const curSdIndex = liveSdPlayers.findIndex(p => p.name.toLowerCase().replace(/[^a-z0-9]/g, '') === targetSanitized || p.key.toLowerCase().replace(/[^a-z0-9]/g, '') === targetSanitized);
-
-      if (curSdIndex !== -1) {
-        const pObj = liveSdPlayers[curSdIndex];
-        const formatRank = (num) => {
-          if (num === 1) return '🥇 1st';
-          if (num === 2) return '🥈 2nd';
-          if (num === 3) return '🥉 3rd';
-          return `#${num}`;
-        };
-        curSdStat = {
-          rank: formatRank(curSdIndex + 1),
-          score: pObj.score.toLocaleString()
-        };
-      } else {
-        curSdStat = {
-          rank: "Event hasn't started",
-          score: null
-        };
-      }
-
-      // Ensure Showdown All-Time and Current are always included in Event Leaderboards Ranks
-      const targetLowerName = chiefNameTarget.toLowerCase().trim();
-      const sdStat = sdAllTimeMap[targetLowerName] || sdAllTimeMap[targetSanitized];
-      
-      if (!eventGroups['Showdown']) {
-        eventGroups['Showdown'] = {
-          baseTitle: 'Showdown',
-          emoji: '⚔️',
-          current: { title: 'Current Showdown', rank: curSdStat.rank, score: curSdStat.score },
-          allTime: sdStat ? { title: 'All-Time Showdown', rank: sdStat.rank, score: '' } : null,
-          others: []
-        };
-      } else {
-        eventGroups['Showdown'].current = { title: 'Current Showdown', rank: curSdStat.rank, score: curSdStat.score };
-        if (sdStat) eventGroups['Showdown'].allTime = { title: 'All-Time Showdown', rank: sdStat.rank, score: '' };
-      }
-
-      const groupedEventList = Object.values(eventGroups);
-
-      let rankingsHtml = `
-        <!-- Account Switcher Bar -->
-        <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:12px; padding:12px 16px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-          <div style="font-weight:bold; font-size:14px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
-            <span>👤 Select Account View:</span>
-          </div>
-          <select id="accRankingsAccountSelect" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; cursor:pointer;">
-            ${accountOptionsHtml}
-          </select>
-        </div>
-
-        <!-- Hero Medal Showcase Cards -->
-        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:12px; margin-bottom:20px;">
-          <div style="background:linear-gradient(135deg, rgba(234,179,8,0.15), rgba(234,179,8,0.05)); border:1px solid rgba(234,179,8,0.3); border-radius:12px; padding:14px; text-align:center;">
-            <div style="font-size:24px; margin-bottom:4px;">🥇</div>
-            <div style="font-size:20px; font-weight:bold; color:#FFD700;">${goldMedals}</div>
-            <div style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Gold Medals</div>
-          </div>
-          <div style="background:linear-gradient(135deg, rgba(148,163,184,0.15), rgba(148,163,184,0.05)); border:1px solid rgba(148,163,184,0.3); border-radius:12px; padding:14px; text-align:center;">
-            <div style="font-size:24px; margin-bottom:4px;">🥈</div>
-            <div style="font-size:20px; font-weight:bold; color:#C0C0C0;">${silverMedals}</div>
-            <div style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Silver Medals</div>
-          </div>
-          <div style="background:linear-gradient(135deg, rgba(205,127,50,0.15), rgba(205,127,50,0.05)); border:1px solid rgba(205,127,50,0.3); border-radius:12px; padding:14px; text-align:center;">
-            <div style="font-size:24px; margin-bottom:4px;">🥉</div>
-            <div style="font-size:20px; font-weight:bold; color:#CD7F32;">${bronzeMedals}</div>
-            <div style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Bronze Medals</div>
-          </div>
-        </div>
-
-        <!-- Bear Trap & Spear Donation Grouped Cards -->
-        <div class="card" style="margin-bottom:20px; padding:16px;">
-          <div style="font-weight:bold; font-size:16px; color:var(--text-main); margin-bottom:12px; display:flex; align-items:center; gap:8px;">
-            <span>🪤 Bear Trap & Spear Donation Ranks</span>
-          </div>
-          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:12px;">
-            
-            <!-- Spear Donations Box -->
-            <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:14px;">
-              <div style="font-size:12px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
-                <span>🗡️ Spear Donations</span>
-              </div>
-              <div style="display:flex; flex-wrap:wrap; gap:14px; align-items:center;">
-                <div style="display:flex; align-items:center; gap:6px;">
-                  <span style="font-size:11px; font-weight:bold; color:var(--text-muted);">CURRENT:</span>
-                  <span style="font-size:13px; font-weight:bold; color:#eab308;">${btDonationsCurrent ? `${window.formatRankBadgeHtml(btDonationsCurrent.rank)} ` : ''}${currentDonNum.toLocaleString()} 🗡️</span>
-                </div>
-                <div style="width:1px; height:18px; background:var(--border);"></div>
-                <div style="display:flex; align-items:center; gap:6px;">
-                  <span style="font-size:11px; font-weight:bold; color:var(--text-muted);">ALL-TIME:</span>
-                  <span style="font-size:13px; font-weight:bold; color:#10b981;">${btDonationsAllTime ? `${window.formatRankBadgeHtml(btDonationsAllTime.rank)} ` : ''}${allTimeDonNum.toLocaleString()} 🗡️</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Bear Trap Wins Box -->
-            <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:14px;">
-              <div style="font-size:12px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
-                <span>🪤 Bear Trap Wins</span>
-              </div>
-              <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
-                <div style="display:flex; align-items:center; gap:6px;">
-                  <span style="font-size:11px; font-weight:bold; color:var(--text-muted);">TRAP 1:</span>
-                  <span style="font-size:13px; font-weight:bold;">${bear1 ? `${window.formatRankBadgeHtml(bear1.rank)}` : '<span style="color:var(--text-muted); font-size:12px;">Unranked</span>'}</span>
-                </div>
-                <div style="width:1px; height:18px; background:var(--border);"></div>
-                <div style="display:flex; align-items:center; gap:6px;">
-                  <span style="font-size:11px; font-weight:bold; color:var(--text-muted);">TRAP 2:</span>
-                  <span style="font-size:13px; font-weight:bold;">${bear2 ? `${window.formatRankBadgeHtml(bear2.rank)}` : '<span style="color:var(--text-muted); font-size:12px;">Unranked</span>'}</span>
-                </div>
-                <div style="width:1px; height:18px; background:var(--border);"></div>
-                <div style="display:flex; align-items:center; gap:6px;">
-                  <span style="font-size:11px; font-weight:bold; color:var(--text-muted);">BOTH:</span>
-                  <span style="font-size:13px; font-weight:bold; color:#10b981;">${bearBoth ? `${window.formatRankBadgeHtml(bearBoth.rank)}` : '<span style="color:var(--text-muted); font-size:12px;">Unranked</span>'}</span>
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        <!-- All Event Leaderboards Grid (Grouped by Event) -->
-        <div class="card" style="padding:16px;">
-          <div style="font-weight:bold; font-size:16px; color:var(--text-main); margin-bottom:12px; display:flex; align-items:center; gap:8px;">
-            <span>🏆 All Event Leaderboard Ranks (${groupedEventList.length})</span>
-          </div>
-          ${groupedEventList.length === 0 ? `
-            <div style="text-align:center; color:var(--text-muted); padding:20px; font-size:13px; font-style:italic;">No additional leaderboard ranks recorded yet for this chief.</div>
-          ` : `
-            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:12px;">
-              ${groupedEventList.map(grp => `
-                <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:12px 14px;">
-                  <div style="font-size:13px; font-weight:bold; color:var(--text-main); margin-bottom:6px; display:flex; align-items:center; gap:6px;">
-                    <span>${grp.emoji} ${escapeHTML(grp.baseTitle)}</span>
-                  </div>
-                  <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
-                    ${grp.current ? `
-                      <div style="display:flex; align-items:center; gap:6px;">
-                        <span style="font-size:11px; font-weight:bold; color:var(--text-muted);">CURRENT:</span>
-                        <span style="font-size:13px; font-weight:bold;">${window.formatRankBadgeHtml(grp.current.rank)}${grp.current.score ? ` <span style="font-size:11px; color:var(--text-muted);">(${grp.current.score})</span>` : ''}</span>
-                      </div>
-                    ` : ''}
-                    ${grp.current && grp.allTime ? `<div style="width:1px; height:16px; background:var(--border);"></div>` : ''}
-                    ${grp.allTime ? `
-                      <div style="display:flex; align-items:center; gap:6px;">
-                        <span style="font-size:11px; font-weight:bold; color:var(--text-muted);">ALL-TIME:</span>
-                        <span style="font-size:13px; font-weight:bold;">
-                          ${(() => {
-                            const tLower = chiefNameTarget.toLowerCase().trim();
-                            if (grp.baseTitle.toLowerCase().includes('showdown') && sdAllTimeMap[tLower] && (sdAllTimeMap[tLower].horns > 0 || sdAllTimeMap[tLower].total > 0)) {
-                              const st = sdAllTimeMap[tLower];
-                              const totStr = (st.total || 0).toLocaleString();
-                              let detailParts = [];
-                              if (st.horns > 0) detailParts.push(`${st.horns} ${st.horns === 1 ? 'Horn' : 'Horns'}`);
-                              if (st.wins > 0) detailParts.push(`${st.wins} ${st.wins === 1 ? 'Day Win' : 'Day Wins'}`);
-                              detailParts.push(`${totStr} Total`);
-                              const detailsHtml = detailParts.map(p => `(${p})`).join(' ');
-                              return `${window.formatRankBadgeHtml(st.rank)} <span style="font-size:11px; color:var(--text-muted);">${detailsHtml}</span>`;
-                            }
-                            return `${window.formatRankBadgeHtml(grp.allTime.rank)}${grp.allTime.score ? ` <span style="font-size:11px; color:var(--text-muted);">(${grp.allTime.score})</span>` : ''}`;
-                          })()}
-                        </span>
-                      </div>
-                    ` : ''}
-                    ${!grp.current && !grp.allTime && grp.others.length > 0 ? grp.others.map(o => `
-                      <div style="display:flex; align-items:center; gap:6px;">
-                        <span style="font-size:11px; font-weight:bold; color:var(--text-muted);">${escapeHTML(o.title)}:</span>
-                        <span style="font-size:13px; font-weight:bold;">${window.formatRankBadgeHtml(o.rank)}</span>
-                      </div>
-                    `).join('') : ''}
-                  </div>
-                </div>
-              `).join('')}
-            </div>
-          `}
-        </div>
-      `;
-
-      rankingsContainer.innerHTML = rankingsHtml;
-
-      const selectEl = document.getElementById('accRankingsAccountSelect');
-      if (selectEl) {
-        selectEl.addEventListener('change', (e) => {
-          renderAccountRankings(e.target.value);
-          const subTitle = document.getElementById('activityChiefSubtitle');
-          if (subTitle) subTitle.textContent = `Filtered for ${e.target.value}`;
-          window.loadUserPersonalLog(e.target.value);
+        allStatsList.forEach(lb => {
+          let r = lb.rank;
+          if (!r) return;
+          let rStr = String(r).toLowerCase();
+          if (r === 1 || r === "1" || rStr.includes("1st") || rStr.includes("🥇")) goldMedals++;
+          else if (r === 2 || r === "2" || rStr.includes("2nd") || rStr.includes("🥈")) silverMedals++;
+          else if (r === 3 || r === "3" || rStr.includes("3rd") || rStr.includes("🥉")) bronzeMedals++;
         });
+
+        let rankingsHtml = `
+          <!-- Account Switcher Bar -->
+          <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:12px; padding:12px 16px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <div style="font-weight:bold; font-size:14px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+              <span>👤 Select Account View:</span>
+            </div>
+            <select id="accRankingsAccountSelect" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; cursor:pointer;">
+              ${accountOptionsHtml}
+            </select>
+          </div>
+
+          <!-- Hero Medal Showcase Cards -->
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:12px; margin-bottom:20px;">
+            <div style="background:linear-gradient(135deg, rgba(234,179,8,0.15), rgba(234,179,8,0.05)); border:1px solid rgba(234,179,8,0.3); border-radius:12px; padding:14px; text-align:center;">
+              <div style="font-size:24px; margin-bottom:4px;">🥇</div>
+              <div style="font-size:20px; font-weight:bold; color:#FFD700;">${goldMedals}</div>
+              <div style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Gold Medals</div>
+            </div>
+            <div style="background:linear-gradient(135deg, rgba(148,163,184,0.15), rgba(148,163,184,0.05)); border:1px solid rgba(148,163,184,0.3); border-radius:12px; padding:14px; text-align:center;">
+              <div style="font-size:24px; margin-bottom:4px;">🥈</div>
+              <div style="font-size:20px; font-weight:bold; color:#C0C0C0;">${silverMedals}</div>
+              <div style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Silver Medals</div>
+            </div>
+            <div style="background:linear-gradient(135deg, rgba(205,127,50,0.15), rgba(205,127,50,0.05)); border:1px solid rgba(205,127,50,0.3); border-radius:12px; padding:14px; text-align:center;">
+              <div style="font-size:24px; margin-bottom:4px;">🥉</div>
+              <div style="font-size:20px; font-weight:bold; color:#CD7F32;">${bronzeMedals}</div>
+              <div style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Bronze Medals</div>
+            </div>
+          </div>
+
+          <!-- Bear Trap & Spear Donation Grouped Cards -->
+          <div class="card" style="margin-bottom:20px; padding:16px;">
+            <div style="font-weight:bold; font-size:16px; color:var(--text-main); margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+              <span>🪤 Bear Trap & Spear Donation Ranks</span>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:12px;">
+              
+              <!-- Spear Donations Box -->
+              <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:14px;">
+                <div style="font-size:12px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+                  <span>🗡️ Spear Donations</span>
+                </div>
+                <div style="display:flex; flex-wrap:wrap; gap:14px; align-items:center;">
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    <span style="font-size:11px; font-weight:bold; color:var(--text-muted);">CURRENT:</span>
+                    <span style="font-size:13px; font-weight:bold; color:#eab308;">${btDonationsCurrent ? `${window.formatRankBadgeHtml(btDonationsCurrent.rank)} ` : ''}${currentDonNum.toLocaleString()} 🗡️</span>
+                  </div>
+                  <div style="width:1px; height:18px; background:var(--border);"></div>
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    <span style="font-size:11px; font-weight:bold; color:var(--text-muted);">ALL-TIME:</span>
+                    <span style="font-size:13px; font-weight:bold; color:#10b981;">${btDonationsAllTime ? `${window.formatRankBadgeHtml(btDonationsAllTime.rank)} ` : ''}${allTimeDonNum.toLocaleString()} 🗡️</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Bear Trap Wins Box -->
+              <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:14px;">
+                <div style="font-size:12px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+                  <span>🪤 Bear Trap Wins</span>
+                </div>
+                <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    <span style="font-size:11px; font-weight:bold; color:var(--text-muted);">TRAP 1:</span>
+                    <span style="font-size:13px; font-weight:bold;">${bear1 ? `${window.formatRankBadgeHtml(bear1.rank)}` : '<span style="color:var(--text-muted); font-size:12px;">Unranked</span>'}</span>
+                  </div>
+                  <div style="width:1px; height:18px; background:var(--border);"></div>
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    <span style="font-size:11px; font-weight:bold; color:var(--text-muted);">TRAP 2:</span>
+                    <span style="font-size:13px; font-weight:bold;">${bear2 ? `${window.formatRankBadgeHtml(bear2.rank)}` : '<span style="color:var(--text-muted); font-size:12px;">Unranked</span>'}</span>
+                  </div>
+                  <div style="width:1px; height:18px; background:var(--border);"></div>
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    <span style="font-size:11px; font-weight:bold; color:var(--text-muted);">BOTH:</span>
+                    <span style="font-size:13px; font-weight:bold; color:#10b981;">${bearBoth ? `${window.formatRankBadgeHtml(bearBoth.rank)}` : '<span style="color:var(--text-muted); font-size:12px;">Unranked</span>'}</span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- All Event Leaderboards Grid (Grouped by Event) -->
+          <div class="card" style="padding:16px;">
+            <div style="font-weight:bold; font-size:16px; color:var(--text-main); margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+              <span>🏆 All Event Leaderboard Ranks (${groupedEventList.length})</span>
+            </div>
+            ${groupedEventList.length === 0 ? `
+              <div style="text-align:center; color:var(--text-muted); padding:20px; font-size:13px; font-style:italic;">No additional leaderboard ranks recorded yet for this chief.</div>
+            ` : `
+              <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:12px;">
+                ${groupedEventList.map(grp => `
+                  <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:12px 14px;">
+                    <div style="font-size:13px; font-weight:bold; color:var(--text-main); margin-bottom:6px; display:flex; align-items:center; gap:6px;">
+                      <span>${grp.emoji} ${escapeHTML(grp.baseTitle)}</span>
+                    </div>
+                    <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
+                      ${grp.current ? `
+                        <div style="display:flex; align-items:center; gap:6px;">
+                          <span style="font-size:11px; font-weight:bold; color:var(--text-muted);">CURRENT:</span>
+                          <span style="font-size:13px; font-weight:bold;">${window.formatRankBadgeHtml(grp.current.rank)}${grp.current.score ? ` <span style="font-size:11px; color:var(--text-muted);">(${grp.current.score})</span>` : ''}</span>
+                        </div>
+                      ` : ''}
+                      ${grp.current && grp.allTime ? `<div style="width:1px; height:16px; background:var(--border);"></div>` : ''}
+                      ${grp.allTime ? `
+                        <div style="display:flex; align-items:center; gap:6px;">
+                          <span style="font-size:11px; font-weight:bold; color:var(--text-muted);">ALL-TIME:</span>
+                          <span style="font-size:13px; font-weight:bold;">
+                            ${(() => {
+                              const tLower = targetChief.toLowerCase().trim();
+                              if (grp.baseTitle.toLowerCase().includes('showdown') && sdAllTimeMap[tLower] && (sdAllTimeMap[tLower].horns > 0 || sdAllTimeMap[tLower].total > 0)) {
+                                const st = sdAllTimeMap[tLower];
+                                const totStr = (st.total || 0).toLocaleString();
+                                let detailParts = [];
+                                if (st.horns > 0) detailParts.push(`${st.horns} ${st.horns === 1 ? 'Horn' : 'Horns'}`);
+                                if (st.wins > 0) detailParts.push(`${st.wins} ${st.wins === 1 ? 'Day Win' : 'Day Wins'}`);
+                                detailParts.push(`${totStr} Total`);
+                                const detailsHtml = detailParts.map(p => `(${p})`).join(' ');
+                                return `${window.formatRankBadgeHtml(st.rank)} <span style="font-size:11px; color:var(--text-muted);">${detailsHtml}</span>`;
+                              }
+                              return `${window.formatRankBadgeHtml(grp.allTime.rank)}${grp.allTime.score ? ` <span style="font-size:11px; color:var(--text-muted);">(${grp.allTime.score})</span>` : ''}`;
+                            })()}
+                          </span>
+                        </div>
+                      ` : ''}
+                      ${!grp.current && !grp.allTime && grp.others.length > 0 ? grp.others.map(o => `
+                        <div style="display:flex; align-items:center; gap:6px;">
+                          <span style="font-size:11px; font-weight:bold; color:var(--text-muted);">${escapeHTML(o.title)}:</span>
+                          <span style="font-size:13px; font-weight:bold;">${window.formatRankBadgeHtml(o.rank)}</span>
+                        </div>
+                      `).join('') : ''}
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            `}
+          </div>
+        `;
+
+        rankingsContainer.innerHTML = rankingsHtml;
+
+        const selectEl = document.getElementById('accRankingsAccountSelect');
+        if (selectEl) {
+          selectEl.addEventListener('change', (e) => {
+            renderAccountRankings(e.target.value);
+            const subTitle = document.getElementById('activityChiefSubtitle');
+            if (subTitle) subTitle.textContent = `Filtered for ${e.target.value}`;
+            window.loadUserPersonalLog(e.target.value);
+          });
+        }
+      } catch(err) {
+        console.error("Critical error in renderAccountRankings:", err);
+        if (rankingsContainer) {
+          rankingsContainer.innerHTML = `
+            <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:20px; text-align:center; color:#ef4444;">
+              <div style="font-size:24px; margin-bottom:8px;">⚠️</div>
+              <div style="font-weight:bold; font-size:15px; margin-bottom:4px;">Unable to load standings</div>
+              <div style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">${escapeHTML(err.message || 'Unknown error')}</div>
+              <button onclick="window.renderAccountRankings && window.renderAccountRankings('${escapeHTML(chiefNameTarget)}')" style="background:var(--accent); color:#fff; border:none; padding:6px 14px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">🔄 Retry Loading</button>
+            </div>
+          `;
+        }
       }
     };
+    window.renderAccountRankings = renderAccountRankings;
 
     if (targetTab === 'Rankings') {
       try {
@@ -28984,7 +29012,7 @@ window.generatePlayerProfileHtml = (chiefName, p, headers, colIsUpcoming, roster
             let enrolledBadge = isAltEnrolled ? `<span style="border:1px solid #10b981; color:#10b981; background:rgba(16,185,129,0.1); border-radius:9999px; padding:4px 12px; font-size:12px; font-weight:500; display:inline-flex; align-items:center; gap:6px; margin-top:8px;">&#x2705; Code Enrolled</span>` : '';
             
             let flSpanId = `admin-alt-fl-${gid}`;
-            let flDisplay = window.getFurnaceIconHtml ? window.getFurnaceIconHtml(flVal, 46) : flVal;
+            let flDisplay = window.getFurnaceIconHtml ? window.getFurnaceIconHtml(flVal, 58) : flVal;
             
             if (flVal === 'N/A') {
                 flDisplay += `<img src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" onload="if(window.adminFetchAltFurnace) window.adminFetchAltFurnace('${gid}', '${flSpanId}')" style="display:none;">`;
@@ -29009,28 +29037,31 @@ window.generatePlayerProfileHtml = (chiefName, p, headers, colIsUpcoming, roster
                 </div>
                 
                 <!-- 3-Column Metric Tiles -->
-                <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:10px 12px; display:grid; grid-template-columns: repeat(3, 1fr); gap:8px;">
-                    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:6px 4px; background:rgba(255,255,255,0.02); border-radius:8px; border:1px solid rgba(255,255,255,0.04);">
-                        <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:3px;">
+                <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:14px; padding:10px 12px; display:grid; grid-template-columns: 1.15fr 0.9fr 0.95fr; gap:10px; align-items:center;">
+                    <!-- Featured Centerpiece Furnace Box -->
+                    <div class="furnace-metric-box cyan">
+                        <div style="font-size:10.5px; color:#38bdf8; text-transform:uppercase; letter-spacing:0.8px; font-weight:800; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
                             <span>🔥</span> <span>Furnace</span>
                         </div>
-                        <div id="${flSpanId}" style="font-size:13.5px; font-weight:bold; color:#ffffff; line-height:1; display:flex; align-items:center; justify-content:center;">
+                        <div id="${flSpanId}" style="display:flex; align-items:center; justify-content:center; min-height:46px; width:100%;">
                             ${flDisplay}
                         </div>
                     </div>
-                    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:6px 4px; background:rgba(255,255,255,0.02); border-radius:8px; border:1px solid rgba(255,255,255,0.04);">
-                        <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:3px;">
+                    <!-- Joined Tile -->
+                    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:8px 6px; background:rgba(255,255,255,0.02); border-radius:10px; border:1px solid rgba(255,255,255,0.04); min-height:80px;">
+                        <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; font-weight:700; margin-bottom:6px; display:flex; align-items:center; gap:3px;">
                             <span>🗓️</span> <span>Joined</span>
                         </div>
-                        <div style="font-size:12px; font-weight:bold; color:#e2e8f0; line-height:1; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; max-width:100%;" title="${joinedDateFormatted}">
+                        <div style="font-size:12.5px; font-weight:bold; color:#e2e8f0; line-height:1.2; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; max-width:100%;" title="${joinedDateFormatted}">
                             ${joinedDateFormatted}
                         </div>
                     </div>
-                    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:6px 4px; background:rgba(255,255,255,0.02); border-radius:8px; border:1px solid rgba(255,255,255,0.04);">
-                        <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:3px;">
+                    <!-- Active Tile -->
+                    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:8px 6px; background:rgba(255,255,255,0.02); border-radius:10px; border:1px solid rgba(255,255,255,0.04); min-height:80px;">
+                        <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; font-weight:700; margin-bottom:6px; display:flex; align-items:center; gap:3px;">
                             <span>⏱️</span> <span>Active</span>
                         </div>
-                        <div style="font-size:12.5px; font-weight:bold; color:#38bdf8; line-height:1; white-space:nowrap;" title="${timeActiveVal}">
+                        <div style="font-size:12.5px; font-weight:bold; color:#38bdf8; line-height:1.2; white-space:nowrap;" title="${timeActiveVal}">
                             ${timeActiveVal}
                         </div>
                     </div>
