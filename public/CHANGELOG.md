@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.9.63] - 2026-08-19
+- 🔒 **Real-Time Auto-Calculation in Championship Admin**: Status text and total season flag counters now automatically recalculate in real-time as individual round scores and flags are typed.
+- 🛡️ **Locked Calculation Inputs**: Read-only restrictions applied to Status Text and Season Flags in the Championship Admin Suite to prevent human error and ensure consistency.
+
 ## [2.9.62] - 2026-08-19
 - ⚖️ **Alliance Championship Draw (Tie) Support**: Added complete support for tied matches across Alliance Championship (`views.championship`), Archive Vault modals, and Admin Matchup editors. Tied rounds display an amber `⚖️ DRAW` badge and amber highlight styling.
 - 📊 **Dynamic Record Calculation**: Auto-calculated records now properly format draws in tournament summaries (e.g. `3 Wins – 1 Loss – 1 Draw`).

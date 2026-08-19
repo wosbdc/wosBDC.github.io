@@ -1,19 +1,18 @@
 {
-  "version": "2.9.62",
+  "version": "2.9.63",
   "releaseDate": "2026-08-19",
-  "title": "What's New in v2.9.62",
+  "title": "What's New in v2.9.63",
   "notes": [
-    "⚖️ Draw / Tie Support in Alliance Championship: AC match cards across the main war room, Vault archive viewer, and Admin match editor now support and display Draw outcomes (⚖️ DRAW).",
-    "📊 Dynamic Record Calculation: Tournament records automatically calculate wins, losses, and draws (e.g. 3 Wins – 1 Loss – 1 Draw).",
-    "🏛️ All-Time Dynasty Leaderboard Sync: Leaderboard dynasty statistics and quick stat cards now seamlessly track and display all-time draws alongside wins and losses."
+    "🔒 Real-Time Auto-Calculation in Championship Admin: Status Text, Our Season Flags, and Opponent Season Flags are now automatically calculated in real-time as battle scores or flag counts are entered.",
+    "🛡️ Locked Summary Fields: Status text and total season flag inputs are locked as read-only to eliminate manual calculation errors."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "2.9.62",
+    "version": "2.9.63",
     "latestChanges": [
+      "v2.9.63: Added real-time auto-calculation and locked summary inputs in Alliance Championship Admin Suite",
       "v2.9.62: Added comprehensive Draw (Tie) support across Alliance Championship war room, archive vault, and leaderboards",
       "v2.9.61: Streamlined notification bell modal so empty announcement and staff containers disappear when no items need attention",
-      "v2.9.60: Added Community Feedback & Bug Tracker alerts to the notification bell with interactive previews",
-      "v2.9.59: Deleted Season 12 test archives and added Admin Vault archive deletion controls"
+      "v2.9.60: Added Community Feedback & Bug Tracker alerts to the notification bell with interactive previews"
     ]
   }
 }

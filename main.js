@@ -22393,11 +22393,11 @@ html += `</select>
                                 <div style="display:grid; grid-template-columns: 2fr 1fr; gap:8px;">
                                     <div>
                                         <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:3px;">Our Score</label>
-                                        <input type="number" id="adm_champ_r${i}_our" value="${ourScore}" oninput="window.updateAdminChampPreview(${i})" style="width:100%; text-align:right; font-size:18px; font-family:var(--mono); font-weight:bold; color:var(--text-main); padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); box-sizing:border-box;">
+                                        <input type="number" id="adm_champ_r${i}_our" value="${ourScore}" oninput="window.updateAdminChampPreview(${i}); window.autoCalculateChampRecord(true);" style="width:100%; text-align:right; font-size:18px; font-family:var(--mono); font-weight:bold; color:var(--text-main); padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); box-sizing:border-box;">
                                     </div>
                                     <div>
                                         <label style="font-size:10px; color:#10b981; font-weight:bold; display:block; margin-bottom:3px;">🚩 Our Flags</label>
-                                        <input type="number" id="adm_champ_r${i}_our_flags" value="${ourFlags}" min="0" placeholder="0" style="width:100%; text-align:right; font-size:18px; font-family:var(--mono); font-weight:bold; color:#10b981; padding:8px 10px; border-radius:6px; border:1px solid rgba(16,185,129,0.4); background:var(--bg-main); box-sizing:border-box;">
+                                        <input type="number" id="adm_champ_r${i}_our_flags" value="${ourFlags}" min="0" placeholder="0" oninput="window.updateAdminChampPreview(${i}); window.autoCalculateChampRecord(true);" style="width:100%; text-align:right; font-size:18px; font-family:var(--mono); font-weight:bold; color:#10b981; padding:8px 10px; border-radius:6px; border:1px solid rgba(16,185,129,0.4); background:var(--bg-main); box-sizing:border-box;">
                                     </div>
                                 </div>
                             </div>
@@ -22421,11 +22421,11 @@ html += `</select>
                                 <div style="display:grid; grid-template-columns: 2fr 1fr; gap:8px;">
                                     <div>
                                         <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:2px;">Opponent Score</label>
-                                        <input type="number" id="adm_champ_r${i}_enemy_score" value="${enemyScore}" oninput="window.updateAdminChampPreview(${i})" style="width:100%; text-align:left; font-size:18px; font-family:var(--mono); font-weight:bold; color:var(--text-main); padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); box-sizing:border-box;">
+                                        <input type="number" id="adm_champ_r${i}_enemy_score" value="${enemyScore}" oninput="window.updateAdminChampPreview(${i}); window.autoCalculateChampRecord(true);" style="width:100%; text-align:left; font-size:18px; font-family:var(--mono); font-weight:bold; color:var(--text-main); padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); box-sizing:border-box;">
                                     </div>
                                     <div>
                                         <label style="font-size:10px; color:#ef4444; font-weight:bold; display:block; margin-bottom:2px;">🚩 Opponent Flags</label>
-                                        <input type="number" id="adm_champ_r${i}_enemy_flags" value="${enemyFlags}" min="0" placeholder="0" style="width:100%; text-align:left; font-size:18px; font-family:var(--mono); font-weight:bold; color:#ef4444; padding:8px 10px; border-radius:6px; border:1px solid rgba(239,68,68,0.4); background:var(--bg-main); box-sizing:border-box;">
+                                        <input type="number" id="adm_champ_r${i}_enemy_flags" value="${enemyFlags}" min="0" placeholder="0" oninput="window.updateAdminChampPreview(${i}); window.autoCalculateChampRecord(true);" style="width:100%; text-align:left; font-size:18px; font-family:var(--mono); font-weight:bold; color:#ef4444; padding:8px 10px; border-radius:6px; border:1px solid rgba(239,68,68,0.4); background:var(--bg-main); box-sizing:border-box;">
                                     </div>
                                 </div>
                             </div>
@@ -22438,7 +22438,7 @@ html += `</select>
                 <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:18px; display:flex; flex-direction:column; gap:16px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; border-bottom:1px solid var(--border); padding-bottom:12px;">
                         <h3 style="margin:0; font-size:17px; color:var(--accent);">⚙️ Season Details & Overall Record</h3>
-                        <button onclick="window.autoCalculateChampRecord()" style="background:rgba(6,182,212,0.15); border:1px solid rgba(6,182,212,0.4); color:var(--accent); padding:6px 12px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">⚡ Auto-Calculate Record & Flags</button>
+                        <span style="background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.35); color:#10b981; padding:5px 12px; border-radius:20px; font-size:11.5px; font-weight:bold; display:inline-flex; align-items:center; gap:6px;">⚡ Auto-Calculates in Real-Time</span>
                     </div>
                     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:14px;">
                         <div>
@@ -22446,16 +22446,16 @@ html += `</select>
                             <input type="text" id="adm_champ_season_name" value="${escapeHTML(seasonNameVal)}" placeholder="e.g. Upcoming Season" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box; font-weight:bold;">
                         </div>
                         <div>
-                            <label style="display:block; font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:bold; margin-bottom:4px;">Status Text / Subtitle</label>
-                            <input type="text" id="adm_champ_status_text" value="${escapeHTML(statusTextVal)}" placeholder="e.g. 4 Wins – 1 Loss (Tournament Champions)" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
+                            <label style="display:block; font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:bold; margin-bottom:4px;">🔒 Status Text / Record (Auto-Calculated)</label>
+                            <input type="text" id="adm_champ_status_text" value="${escapeHTML(statusTextVal)}" readonly placeholder="0 Wins – 0 Losses" style="width:100%; padding:10px; border-radius:6px; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.03); color:var(--text-main); font-weight:bold; cursor:not-allowed; box-sizing:border-box;" title="This field automatically updates as scores are entered below">
                         </div>
                         <div>
-                            <label style="display:block; font-size:11px; text-transform:uppercase; color:#10b981; font-weight:bold; margin-bottom:4px;">🚩 Our Season Flags (Total)</label>
-                            <input type="number" id="adm_champ_our_season_flags" value="${champMatchupData.ourSeasonFlags !== undefined ? champMatchupData.ourSeasonFlags : ''}" placeholder="0 (or auto-calculate)" style="width:100%; padding:10px; border-radius:6px; border:1px solid rgba(16,185,129,0.4); background:var(--bg-main); color:#10b981; box-sizing:border-box; font-weight:bold;">
+                            <label style="display:block; font-size:11px; text-transform:uppercase; color:#10b981; font-weight:bold; margin-bottom:4px;">🔒 🚩 Our Season Flags (Auto-Calculated)</label>
+                            <input type="number" id="adm_champ_our_season_flags" value="${champMatchupData.ourSeasonFlags !== undefined ? champMatchupData.ourSeasonFlags : ''}" readonly placeholder="0" style="width:100%; padding:10px; border-radius:6px; border:1px solid rgba(16,185,129,0.3); background:rgba(16,185,129,0.05); color:#10b981; box-sizing:border-box; font-weight:900; font-family:var(--mono); font-size:16px; cursor:not-allowed;" title="Sum of all our round flags">
                         </div>
                         <div>
-                            <label style="display:block; font-size:11px; text-transform:uppercase; color:#ef4444; font-weight:bold; margin-bottom:4px;">🚩 Opponent Season Flags (Total)</label>
-                            <input type="number" id="adm_champ_enemy_season_flags" value="${champMatchupData.enemySeasonFlags !== undefined ? champMatchupData.enemySeasonFlags : ''}" placeholder="0 (or auto-calculate)" style="width:100%; padding:10px; border-radius:6px; border:1px solid rgba(239,68,68,0.4); background:var(--bg-main); color:#ef4444; box-sizing:border-box; font-weight:bold;">
+                            <label style="display:block; font-size:11px; text-transform:uppercase; color:#ef4444; font-weight:bold; margin-bottom:4px;">🔒 🚩 Opponent Season Flags (Auto-Calculated)</label>
+                            <input type="number" id="adm_champ_enemy_season_flags" value="${champMatchupData.enemySeasonFlags !== undefined ? champMatchupData.enemySeasonFlags : ''}" readonly placeholder="0" style="width:100%; padding:10px; border-radius:6px; border:1px solid rgba(239,68,68,0.3); background:rgba(239,68,68,0.05); color:#ef4444; box-sizing:border-box; font-weight:900; font-family:var(--mono); font-size:16px; cursor:not-allowed;" title="Sum of all opponent round flags">
                         </div>
                     </div>
                 </div>
@@ -22519,6 +22519,9 @@ html += `</select>
         app.innerHTML = html;
         if (isAlreadyMounted && savedScrollY > 0) {
             window.scrollTo({ top: savedScrollY, behavior: 'instant' });
+        }
+        if (activeTab === 'matchups' && typeof window.autoCalculateChampRecord === 'function') {
+            window.autoCalculateChampRecord(true);
         }
         window.champMissingNames = missingNames;
 
@@ -22696,7 +22699,7 @@ html += `</select>
             }
         };
 
-        window.autoCalculateChampRecord = () => {
+        window.autoCalculateChampRecord = (silent = false) => {
             let wins = 0, losses = 0, draws = 0;
             let ourTotalFlags = 0, enemyTotalFlags = 0;
             for (let i = 1; i <= 5; i++) {
@@ -22722,7 +22725,9 @@ html += `</select>
             let enemyFlagsInput = document.getElementById('adm_champ_enemy_season_flags');
             if (enemyFlagsInput) enemyFlagsInput.value = enemyTotalFlags;
 
-            if (window.showToast) window.showToast(`Record updated: ${wins}W-${losses}L${draws > 0 ? `-${draws}D` : ''} • Flags: ${ourTotalFlags}-${enemyTotalFlags}`, "success");
+            if (!silent && window.showToast) {
+                window.showToast(`Record updated: ${wins}W-${losses}L${draws > 0 ? `-${draws}D` : ''} • Flags: ${ourTotalFlags}-${enemyTotalFlags}`, "success");
+            }
         };
 
         window.saveChampionshipAdminMatchups = async () => {
