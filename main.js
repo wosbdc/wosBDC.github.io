@@ -20027,60 +20027,11 @@ const views = {
       }, 50);
       
       window.frostDataLoaded = false;
-      window.frostState = { alts: [] };
-      
       window.frostDataLoaded = false;
       window.frostState = { alts: [] };
       window.frostFilter = window.frostFilter || 'all'; // 'all' | 'unshielded' | 'shielded' | 'needs_showdown' | 'showdown_done'
       window.frostSearchQuery = window.frostSearchQuery || '';
       window._frostTargetContainerId = 'frostClanContainer';
-
-      window.openFrostClanModal = function() {
-        const existing = document.getElementById('frostClanModalOverlay');
-        if (existing) existing.remove();
-
-        const overlay = document.createElement('div');
-        overlay.id = 'frostClanModalOverlay';
-        overlay.style.cssText = `
-          position:fixed; inset:0; z-index:99999;
-          background:rgba(10, 6, 20, 0.88);
-          backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
-          display:flex; justify-content:center; align-items:center;
-          padding:16px; box-sizing:border-box; animation:fadeIn 0.2s ease;
-        `;
-
-        overlay.innerHTML = `
-          <div class="card" style="width:100%; max-width:1150px; max-height:92vh; display:flex; flex-direction:column; background:linear-gradient(145deg, rgba(15,23,42,0.98), rgba(30,41,59,0.96)); border:1px solid rgba(56,189,248,0.35); border-radius:20px; box-shadow:0 20px 60px rgba(0,0,0,0.8); overflow:hidden; padding:0;">
-            <!-- Modal Top Title Bar -->
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 22px; border-bottom:1px solid rgba(255,255,255,0.08); background:rgba(0,0,0,0.2);">
-              <div style="display:flex; align-items:center; gap:10px;">
-                <span style="font-size:22px;">❄️</span>
-                <div>
-                  <h2 style="margin:0; font-size:18px; color:#fff; display:flex; align-items:center; gap:8px;">
-                    Frost Clan Command Center
-                    <span style="background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; font-size:11px; padding:2px 8px; border-radius:10px; font-weight:bold;">⚡ Live Firebase Sync</span>
-                  </h2>
-                  <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">Chief Brian's Private Multi-Alt Management Suite</div>
-                </div>
-              </div>
-              <button onclick="document.getElementById('frostClanModalOverlay')?.remove()" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#cbd5e1; font-size:18px; width:34px; height:34px; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.2s;" onmouseover="this.style.color='#ef4444'; this.style.borderColor='rgba(239,68,68,0.4)';" onmouseout="this.style.color='#cbd5e1'; this.style.borderColor='rgba(255,255,255,0.12)';">
-                ✕
-              </button>
-            </div>
-
-            <!-- Modal Body Scroll Container -->
-            <div id="frostClanModalContainer" style="padding:20px; overflow-y:auto; flex:1; text-align:center;">
-              <div style="margin:40px 0; color:var(--text-muted);">
-                <div style="border:4px solid rgba(255,255,255,0.1); border-top-color:var(--accent); border-radius:50%; width:36px; height:36px; animation:spin 1s linear infinite; margin:0 auto 12px;"></div>
-                Loading Frost Clan Data from Firebase...
-              </div>
-            </div>
-          </div>
-        `;
-
-        document.body.appendChild(overlay);
-        window.loadFrostClanData('frostClanModalContainer');
-      };
 
       window.loadFrostClanData = async function(targetContainerId = 'frostClanContainer') {
         window._frostTargetContainerId = targetContainerId;
@@ -20104,33 +20055,16 @@ const views = {
           window.renderFrostClan(targetContainerId);
         }
 
-        // Set up real-time Firebase listener if not already listening
+        // Set up real-time Firebase listener (Exclusively Firebase RTDB)
         if (!window._frostFirebaseListening) {
           window._frostFirebaseListening = true;
           
-          onValue(ref(db, 'frost_clan/alts'), async (snap) => {
+          onValue(ref(db, 'frost_clan/alts'), (snap) => {
             if (snap.exists() && snap.val() && Array.isArray(snap.val()) && snap.val().length > 0) {
               window.frostState.alts = snap.val();
               window.frostDataLoaded = true;
               try { localStorage.setItem('cached_frost_clan_alts', JSON.stringify(snap.val())); } catch(e) {}
               window.renderFrostClan(window._frostTargetContainerId);
-            } else {
-              // First-time auto-seed from Google Sheets
-              try {
-                const adminToken = await auth.currentUser?.getIdToken(true);
-                if (adminToken) {
-                  const res = await fetch(`${API_BASE_URL}?api=getFrostData&token=${encodeURIComponent(adminToken)}`).then(r => r.json());
-                  if (res && res.success && res.alts && res.alts.length > 0) {
-                    await set(ref(db, 'frost_clan/alts'), res.alts);
-                    window.frostState.alts = res.alts;
-                    window.frostDataLoaded = true;
-                    try { localStorage.setItem('cached_frost_clan_alts', JSON.stringify(res.alts)); } catch(e) {}
-                    window.renderFrostClan(window._frostTargetContainerId);
-                  }
-                }
-              } catch (seedErr) {
-                console.error("Auto-seed error:", seedErr);
-              }
             }
           });
         }
@@ -20152,9 +20086,9 @@ const views = {
 
         if (window.frostState.alts.length === 0) {
           container.innerHTML = `
-            <div style="margin:40px 0; color:var(--text-muted);">
+            <div style="margin:40px 0; color:var(--text-muted); text-align:center;">
               <div style="border:4px solid rgba(255,255,255,0.1); border-top-color:var(--accent); border-radius:50%; width:36px; height:36px; animation:spin 1s linear infinite; margin:0 auto 12px;"></div>
-              Syncing Frost Clan state from Firebase...
+              Loading Frost Clan alts directly from Firebase...
             </div>
           `;
           return;
@@ -20313,8 +20247,8 @@ const views = {
               <!-- Top Header -->
               <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:14px; margin-bottom:16px;">
                 <div style="display:flex; align-items:center; gap:12px;">
-                  <div style="width:46px; height:46px; border-radius:12px; background:linear-gradient(135deg, var(--accent), #8b5cf6); overflow:hidden; display:flex; align-items:center; justify-content:center; color:white; font-weight:800; font-size:20px; flex-shrink:0;">
-                    <img src="images/${encodeURIComponent(alt.name)}.png" alt="${alt.name}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.parentElement.innerHTML='${alt.name.charAt(0).toUpperCase()}';">
+                  <div style="width:46px; height:46px; border-radius:12px; background:linear-gradient(135deg, #0284c7, #6366f1); display:flex; align-items:center; justify-content:center; color:white; font-weight:800; font-size:18px; flex-shrink:0; box-shadow:0 4px 12px rgba(2,132,199,0.3); border:1px solid rgba(56,189,248,0.4);">
+                    ❄️
                   </div>
                   <div>
                     <h3 style="margin:0; font-size:18px; font-weight:700; color:var(--text-main);">${escapeHTML(alt.name)}</h3>
@@ -20387,13 +20321,7 @@ const views = {
         try {
           // Instant Firebase RTDB write (<50ms)
           await update(ref(db, `frost_clan/alts/${idx}`), { [field]: newVal, lastUpdated: Date.now() });
-          
-          // Background Google Sheets update (non-blocking)
-          if (auth.currentUser) {
-            auth.currentUser.getIdToken(true).then(adminToken => {
-              fetch(`${API_BASE_URL}?api=updateFrost&row=${alt.row}&field=${field}&value=${newVal}&token=${encodeURIComponent(adminToken)}`).catch(() => {});
-            }).catch(() => {});
-          }
+          try { localStorage.setItem('cached_frost_clan_alts', JSON.stringify(window.frostState.alts)); } catch(e) {}
         } catch (e) {
           console.error("Error saving frost checkbox:", e);
           window.showToast("Failed to save to database!", "error");
@@ -20403,7 +20331,7 @@ const views = {
       };
       
       window.shieldAllFrostClan = async function() {
-        const confirmed = await window.customConfirm("🛡️ Shield ALL Frost Clan Alts?\n\nThis will mark all alts as SHIELDED in Firebase and Google Sheets.");
+        const confirmed = await window.customConfirm("🛡️ Shield ALL Frost Clan Alts?\n\nThis will mark all alts as SHIELDED in Firebase.");
         if (!confirmed) return;
 
         const updatedAlts = window.frostState.alts.map(alt => ({ ...alt, shields: true }));
@@ -20413,17 +20341,8 @@ const views = {
         window.showToast("🛡️ Shielding all Frost Clan alts in Firebase...", "success");
         try {
           await set(ref(db, 'frost_clan/alts'), updatedAlts);
+          try { localStorage.setItem('cached_frost_clan_alts', JSON.stringify(updatedAlts)); } catch(e) {}
           if (window.showToast) window.showToast("✅ All Frost Clan alts marked as SHIELDED!", "success");
-          
-          // Background Google Sheets update
-          if (auth.currentUser) {
-            auth.currentUser.getIdToken(true).then(adminToken => {
-              const updatePromises = updatedAlts.map(alt => 
-                fetch(`${API_BASE_URL}?api=updateFrost&row=${alt.row}&field=shields&value=true&token=${encodeURIComponent(adminToken)}`).catch(() => null)
-              );
-              Promise.all(updatePromises).catch(() => {});
-            }).catch(() => {});
-          }
         } catch(e) {
           console.error("Bulk shield error:", e);
         }
@@ -20445,14 +20364,8 @@ const views = {
         window.showToast("Resetting Frost Clan status in Firebase...", "info");
         try {
           await set(ref(db, 'frost_clan/alts'), resetAlts);
+          try { localStorage.setItem('cached_frost_clan_alts', JSON.stringify(resetAlts)); } catch(e) {}
           if (window.showToast) window.showToast("✅ Frost Clan Reset successful!", "success");
-          
-          // Background Google Sheets reset
-          if (auth.currentUser) {
-            auth.currentUser.getIdToken(true).then(adminToken => {
-              fetch(`${API_BASE_URL}?api=resetFrost&token=${encodeURIComponent(adminToken)}`).catch(() => {});
-            }).catch(() => {});
-          }
         } catch (e) {
           console.error("Reset error:", e);
           window.showToast("Failed to reset in Firebase!", "error");

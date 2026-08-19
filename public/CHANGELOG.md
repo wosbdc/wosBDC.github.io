@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.44] - 2026-08-18
+- ❄️ **Frost Clan Zero-Latency Direct Firebase Loading**: Completely audited the Frost Clan Command Center. Seeded all alt data permanently to `/frost_clan/alts` in Firebase Realtime Database and removed all slow Google Apps Script HTTP calls.
+- ⚡ **Zero-404 Asset Optimization**: Replaced missing image asset requests with fast CSS crystal badges, eliminating network request stalls.
+- 🚀 **Instant Offline-Ready Cache**: Added `localStorage` cache-first hydration so opening Frost Clan renders all alts in **0ms**.
+
 ## [2.9.43] - 2026-08-18
 - 🚫 **Navbar Clean-Up**: Completely removed the secret Frost Clan button from the main navigation bar. Frost Clan Command Center is now exclusively and privately accessed through the **Account Hub** tab.
 - ⚡ **Instant Account Hub Rendering**: Eliminated blocking pre-render database fetches in Account Hub, allowing the user profile to display in **0ms** while heavy ranking and leaderboard datasets are lazy-loaded on demand.
