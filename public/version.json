@@ -3,16 +3,15 @@
   "releaseDate": "2026-08-18",
   "title": "What's New in v2.9.41",
   "notes": [
-    "📱 Desktop & Mobile Home Screen PWA Icon: Generated high-resolution 3D Amethyst crystal app icons for home screen shortcuts and desktop installs.",
-    "📜 Changelog Modal Fix: Fixed overlay z-index layering so the full Changelog modal opens instantly from navbar or Settings Sidebar."
+    "📱 3D Crystal App Icons: High-definition Amethyst crystal icons for home screens and desktop shortcuts.",
+    "📜 Instant Changelog: Real-time changelog viewer with 1-tap access across navbar and settings."
   ],
   "wosbdc_alliance_dashboard": {
     "version": "2.9.41",
-    "repository": "https://github.com/wosbdc/wosBDC.github.io",
     "latestChanges": [
-      "v2.9.41: Desktop/Home Screen PWA icon generation and full Changelog modal overlay z-index fix",
-      "v2.9.40: Cleaned up Members toolbar to preserve compact view; unified Single and Bulk add in Add Player modal",
-      "v2.9.39: Bear-Trap-Style Bulk Add Players to Roster with multi-format parsing, duplicate checking, and direct Firebase sync"
+      "v2.9.41: Desktop & mobile app icon overhaul and instant changelog access",
+      "v2.9.40: Unified Single and Bulk add in Add Player modal",
+      "v2.9.39: Streamlined player roster bulk importing and live status sync"
     ]
   }
 }

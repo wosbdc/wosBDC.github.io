@@ -1,144 +1,127 @@
 # CHANGELOG
 
 ## [2.9.41] - 2026-08-18
-- 📱 **Official Crystal PWA App Icon Overhaul**: Rendered high-resolution 3D Amethyst crystal PWA icons across all device standards (`icon-512.png`, `icon-192.png`, `apple-touch-icon.png`, `favicon.ico`, and `favicon.png`) for crisp display on iOS/Android mobile home screens and Desktop app shortcuts.
-- 📜 **Changelog Modal & Overlay Layering Fix**: Resolved overlay `z-index` conflict so the Changelog modal opens cleanly on top of all page elements with 1-click access via `#versionBadge` and the Settings Sidebar.
-- 🎨 **Navbar Brand Cleanup**: Restored clean, focused "Dashboard for BDC Alliance" text branding in the top navigation header.
-- 🥶 **Discreet Pure-Icon Secret Launcher**: Updated the root admin launcher button in the top navigation bar and Account Hub to display strictly the discreet icon (`🥶`) with no text name for maximum privacy.
-- 🧹 **Toolbar Clean-up & Streamlined Roster Layout**: Removed the redundant Bulk Add button from the Alliance Members toolbar in `tab-users`, keeping the main window clean and compact.
-- 👥 **Unified Modal Experience**: Both Single Player and Bulk Add workflows remain accessible inside the `➕ Add Player` popup modal tabs (`👤 Single` and `👥 Bulk Add`).
+- 📱 **Official Crystal App Icons**: Added high-definition 3D Amethyst crystal app icons for mobile home screens and desktop shortcuts.
+- 📜 **Changelog Improvements**: Polished modal overlay and added 1-tap changelog access across navigation bar and settings.
+- 👥 **Streamlined Player Management**: Cleaned up the Alliance Members toolbar and unified single and bulk player workflows.
+- 🎨 **Header & Navigation Polish**: Restored clean alliance branding and streamlined launcher icons.
+
+## [2.9.40] - 2026-08-18
+- 👥 **Unified Add Player Modal**: Consolidated single player entry and bulk roster importing into one clean popup.
+- 🧹 **Alliance Roster Toolbar**: Removed redundant toolbar buttons to keep the roster view compact and focused.
 
 ## [2.9.39] - 2026-08-18
-- ⚡ **Frost Clan Firebase Realtime Database Migration**: Migrated all Frost Clan Command Center data layer and state management to Firebase RTDB (`/frost_clan/alts`) for sub-50ms instant loading, zero-delay checkbox toggles, and live multi-device synchronization with background Google Sheets sync.
-- 🕵️ **Exclusive Root Admin Secret Launcher**: Removed the Frost Clan tab from the general Admin Menu tab bar and placed it in a discreet **Secret Frosted Crystal Icon (`❄️`)** in the top navigation header and a private **`❄️ Frost Clan`** tab inside **Account Hub** (strictly accessible to Chief Brian / Game ID `318843189`).
-- 🔍 **Live Instant Search**: Added a real-time instant search filter (`🔍 Search alt name...`) allowing leaders to find specific alts instantly as they type.
-- ⚔️ **Showdown Filter View Suite**: Added 1-tap filter pills (`⚔️ Needs Showdown`, `✅ Showdown Done`, `⚠️ Needs Shields`, `🛡️ Shielded`, `All`) to instantly identify which alts still need daily tasks completed.
+- ⚡ **Frost Clan Hub Performance**: Instant loading and zero-delay checkbox updates across all devices.
+- 🔍 **Live Alt Search**: Quickly search and filter alts by name in real time.
+- ⚔️ **Task Quick-Filters**: 1-tap filters to easily check which alts need daily showdown tasks or shields.
+- 🕵️ **Discreet Launcher**: Added a private, streamlined launcher for Frost Clan operations.
 
 ## [2.9.38] - 2026-08-18
-- 🔄 **Active View & Tab State Persistence**: Added `sessionStorage` persistence across all views and admin sub-tabs (`tab-users`, `tab-tools`, `tab-bots`, `tab-frost`, etc.). When refreshing or reloading the page, the user stays on their active view and tab instead of being forcibly routed back to Account Hub.
-- 👥 **Manager / Admin Workflow Streamlining**: Allows managers to seamlessly work inside the Users tab (`👥 Users`) and add/edit multiple members without having to navigate back into the admin menu on every reload.
+- 🔄 **Active View Persistence**: The dashboard now remembers your active view and tab across page refreshes.
+- 👥 **Manager Workflow Enhancements**: Smooth navigation when adding or updating multiple alliance members.
 
 ## [2.9.37] - 2026-08-18
-- ❄️ **Frost Clan Showdown: Daily Checkable Box**: Added interactive 1-tap `⚔️ Showdown: Daily` tracking toggle box to each alt card in the Frost Clan Command Center (Admin Menu > Frost Clan).
-- 📊 **Daily Showdown Live KPI Counter**: Integrated real-time KPI badge and completion progress tracking (`X / Total Alts`) into the Command Center statistics grid.
-- ⚡ **Backend Deployment (@198)**: Updated Google Apps Script backend `getFrostClanData()`, `saveFrostClanCheckbox()`, and `resetFrostClan()` to synchronize Column E (`showdown`), deployed as version `@198`, and updated `API_BASE_URL` in `main.js`.
-- 🔄 **Frost Clan Reset Extension**: Updated reset handler and confirmation dialogs to safely reset Showdown checkboxes alongside Shields and Rebirth Tomes.
+- ❄️ **Frost Clan Showdown Tracker**: Added 1-tap daily showdown checkable boxes for each alt card.
+- 📊 **Showdown Progress Counters**: Real-time completion progress tracking for alliance tasks.
 
 ## [2.9.36] - 2026-08-18
-- 📡 **Real-Time Sync Tracker & Telemetry HUD**: Deployed a dedicated live sync monitoring sidebar to Google Sheets featuring real-time queue detection, automatic 3-second status polling, force sync buttons, and per-sheet telemetry logs.
-- ⚡ **Apps Script Backend Deployment (@197)**: Pushed and deployed Google Apps Script backend update `@197` with `getLiveSyncTelemetry`, `forceFlushSyncQueue`, and automated Firebase RTDB telemetry sync (`sync_telemetry/latest`).
-- 🔗 **Updated API Base Endpoint**: Synchronized `API_BASE_URL` in `main.js` with deployment `AKfycbxZu-vWynJB-Gs2vk5Zc9fl1nuGpMTlL3LKmVmKg5Na_DuhWLNiyilnfVxeQFuHmkE`.
+- 📡 **Live Sync Tracker**: Added real-time telemetry and background data sync status monitoring.
+- ⚡ **Enhanced Connectivity**: Improved data freshness and live synchronization reliability.
 
 ## [2.9.35] - 2026-08-18
-- 🛡️ **Account Hub & Formatter Hardening**: Added resilient `window.formatDateForDisplay` and `window.parseDateSafe` fallback handlers to gracefully catch null/invalid date inputs and prevent runtime exceptions across all Account Hub profile cards.
-- ⚡ **Enrolled Game ID Safe Set References**: Added universal defensive checks across `enrolledGameIds` and `window.enrolledGameIds` lookups in Bear Trap alt managers, live member rosters, and bot link indicators.
-- 🧪 **Ecosystem Audit & Zero-Error Validation**: Passed all automated window binding tests and AST syntax audits across all 627 exported global methods.
+- 🛡️ **Account Hub Polish**: Improved date and profile display handling for all player profiles.
+- ⚡ **Roster Reliability**: Hardened member lookups and status indicators across alliance event managers.
 
 ## [2.9.34] - 2026-08-18
-- 🛡️ **Account Verification & Token Renewal Enhancement**: Updated `openAccountHubVerifyModal` to support users without a pre-linked Game ID, prompting for numeric Game ID entry and binding directly to their profile upon in-game verification code confirmation.
-- 🔗 **Google Sign-In & Profile Sync Polish**: Enhanced automatic UID-to-profile linking and session state fallback logic to prevent missing character ID states.
-- ⚡ **Build & Static Audit Optimization**: Passed all static AST checks, event binding validations, and production builds.
+- 🛡️ **Account Verification Flow**: Streamlined verification and character binding for new and returning chiefs.
+- 🔗 **Google Sign-In Polish**: Enhanced automatic profile linking and session state handling.
 
 ## [2.9.33] - 2026-08-18
-- 🖼️ **Interactive App Icon & Emblem Switcher**: Added an icon picker in the Settings Sidebar and Navbar Brand Header allowing chiefs to choose between multiple 3D Amethyst crystal emblems (Amethyst Cosmic Nebula 4b, Radiant Amethyst Glow 4a, Dark Obsidian & Neon 4c, and Frost Amethyst Classic).
-- 🔄 **Real-Time Ecosystem Sync**: Dynamically updates the top navbar brand logo, browser tab favicons, and web app shortcuts with `localStorage` persistence.
-- 🎨 **Glassmorphic Preview Modal**: Added an interactive gallery modal with active badges and descriptions.
+- 🖼️ **Interactive App Icon Switcher**: Choose from multiple 3D Amethyst crystal emblems in Settings.
+- 🔄 **Real-Time Visual Customization**: Instant dynamic updates for brand emblems and browser icons.
 
 ## [2.9.32] - 2026-08-18
-- ⏱️ **Dynamic Time Active Duration Calculation**: Implemented an automated time-elapsed calculation engine (`window.calculateTimeActive`) that computes the exact active duration (e.g., `1y 9m`, `3w 2d`, or `5d`) dynamically from a player's start/joined date.
-- 📅 **Multi-Format Date Parsing & Normalization**: Added `window.parseDateSafe`, `window.formatDateForDisplay`, and `window.formatDateForInput` to robustly parse all standard date formats (`YYYY/MM/DD`, `YYYY-MM-DD`, `MM/DD/YYYY`, and ISO strings) across local timezones and browsers.
-- 👤 **Account Hub & Profile View Polish**: Separated the Joined Date display (formatted date e.g. `Nov 18, 2024`) from the Time Active badge (elapsed duration e.g. `1y 9m`).
-- ✏️ **Edit Profile Modal Integration**: Enhanced profile editing so selecting or changing a start date instantly re-calculates and synchronizes both `dateStarted`, `joinedDate`, and `timeActive` in Firebase and local state.
-- 👥 **Ecosystem-Wide Consistency**: Updated Alt Manager cards, Member Profiles, and Registered Users administration tables to dynamically format active duration.
+- ⏱️ **Dynamic Time Active Tracker**: Automatically calculates your exact playing duration directly from your join date.
+- 📅 **Smarter Date Display**: Formats join dates and time active durations cleanly across all profile cards.
 
 ## [2.9.31] - 2026-08-18
-- 📱 **Amethyst Radiant Glow Mobile App Icons**: Deployed custom high-resolution 3D Amethyst BDC app icons across the ecosystem.
-- 🍏 **iOS Home Screen Apple Touch Support**: Integrated dedicated 180×180px PNG `apple-touch-icon.png` so iPhones and iPads render crisp, vibrant app tiles when added to the home screen.
-- 🤖 **PWA Manifest & Favicon Overhaul**: Upgraded `manifest.json` with 192×192 and 512×512 maskable PNG assets and multi-resolution `favicon.ico`.
+- 📱 **Amethyst Crystal Mobile Icons**: Added vibrant high-definition app icons for mobile home screens.
+- 🍏 **iOS Home Screen Support**: Crisp, high-resolution app tiles on iPhones and iPads.
 
 ## [2.9.30] - 2026-08-18
-- ⚙️ **Settings Sidebar & Mobile Interaction Polish**: Enhanced drawer dismissal logic, ensured complete cleanup of touch-action and scroll-locks on mobile devices, and improved responsive navigation flow.
+- ⚙️ **Settings & Mobile Polish**: Improved navigation drawer behavior and smooth mobile scrolling.
 
 ## [2.9.29] - 2026-08-18
-- 🏰 **Dynamic Alliance Gatekeeper & Live Telemetry Overhaul**: Completely overhauled the Gatekeeper Report engine in both the Web Dashboard and Central Command Desktop GUI to dynamically query all 42 alliance chiefs across `roster_live` and `users` in real time.
-- 👥 **Real-Time Signup & Joins Tracking**: Dynamically detects new member signups (`lord319285336`, `Ice Mouse`, `Kit Carson`) with real furnace levels and timestamp sorting, auto-computing joins today (+3) and past 7 days (+7).
-- 🧹 **Eliminated Static Text Freezes**: Replaced frozen static textarea overrides with Live Auto-Sync by default, preventing report configurations from locking old placeholder strings.
-- ⚡ **Central Command GUI Synchronization**: Corrected Firebase sync endpoints and automated real-time telemetry updates during worker engine loops and manual sweeps.
+- 🏰 **Live Gatekeeper Reports**: Real-time member tracking and live signup updates for alliance leadership.
+- 👥 **New Member Highlights**: Highlights new joins and alliance growth over the past 7 days.
 
 ## [2.9.28] - 2026-08-17
-- ✨ **Compact 4-Column Audit Logs Layout**: Merged the redundant Target Player and Action Details columns into a unified "Target Chief(s) & Details" column, eliminating horizontal overflow and table blowout while providing a cleaner, more readable view.
-- 🏷️ **Inline Target Chief Badges & Chips**: Formatted player targets into compact chief badges (e.g. `👤 Target: ChiefName` or `👥 Multiple (N)` batch pill) alongside cleanly parsed event details and notes.
-- 🎨 **Enhanced Category Badges & Typography**: Polished action category badges with semantic icons, consistent pill tags, and modern contrast for instant visual categorization.
+- ✨ **Streamlined Audit Logs**: Clean 4-column layout for clearer review of leadership actions.
+- 🏷️ **Target Chief Badges**: Clear visual chips and badges for multi-member actions.
 
 ## [2.9.27] - 2026-08-17
-- 🖥️ **Widescreen Admin Hub Layout (1300px)**: Expanded the maximum width of the Admin Menu container from 800px to 1300px with 100% responsive fluid width, giving the Admin Action Audit Logs and all admin tabs expansive widescreen workspace on desktop and tablets.
-- 📜 **Custom High-Contrast Scrollbars & Sticky Headers**: Implemented `.admin-audit-table-scroll` container with custom styled scrollbars for both horizontal and vertical navigation, fixed 68vh viewport height, and sticky column headers that stay in view while scrolling through historical logs.
-- 🎨 **Universal Modern Scrollbars**: Added modern, theme-consistent scrollbar styling across all scrollable containers and browser viewports.
+- 🖥️ **Widescreen Admin Workspace**: Expanded layout for viewing detailed alliance logs on desktops and tablets.
+- 📜 **Smooth Navigation**: High-contrast scrollbars and sticky column headers for easier browsing.
 
 ## [2.9.26] - 2026-08-17
-- 👥 **Multi-Member Target & Donation Breakdown Parsing**: Single-row batch actions (e.g. multi-player Bear Trap donation submissions with breakdown strings like `Thadwarf (+22 ➔ New Total: 96)...`) are now parsed as batched actions, rendering the interactive `👥 Multiple (N)` pill, detailed hover tooltips, and modal cards with metadata badges and quick copy.
+- 👥 **Batch Action Summaries**: Consolidated multi-member donation logs into interactive summary badges.
 
 ## [2.9.25] - 2026-08-17
-- 👥 **Batched Members Detail Modal**: Added an interactive glassmorphic modal for batched audit log entries triggered on click/tap of the `👥 Multiple (N)` pill. Features a numbered member list, copy list to clipboard button, action badges, and complete mobile touch support.
-- 💡 **Hover & Tap Guidance**: Enhanced batched member pill styling with info indicator and explanatory tooltip text for cross-device accessibility.
+- 👥 **Batch Action Inspector**: View detailed breakdown cards for batch donations with 1-click clipboard copy.
 
 ## [2.9.24] - 2026-08-17
-- 👥 **Batched Members Tooltip**: Hovering over the orange `👥 Multiple (N)` pill in Admin Action Audit Logs now displays a formatted, numbered list of all unique member names included in the batched action with smooth hover glow and help cursor.
+- 💡 **Audit Hover Previews**: Quick hover previews showing affected members in batch actions.
 
 ## [2.9.23] - 2026-08-17
-- 📋 **Admin Action Audit Logs Overhaul**: Redesigned the audit logs table layout with semantic category badge styling & icons, structured 2-line date/time timestamps, clean NO/YES batch summary pills, responsive horizontal scrolling container, and clean subrow tree hierarchy.
+- 📋 **Redesigned Audit Logs**: Structured timestamps, semantic category icons, and clean hierarchical views.
 
 ## [2.9.22] - 2026-08-17
-- 📝 **Streamlined Member Perks Copy**: Refined and simplified card descriptions across the Account Hub Member Perks grid (clarifying in-game mailbox delivery and live Furnace level sync).
+- 📝 **Member Perks Descriptions**: Clearer explanations of automated rewards and in-game deliveries.
 
 ## [2.9.21] - 2026-08-17
-- 🎁 **Account Hub Member Perks**: Added a dedicated "Member Perks & Auto Redeem" 5th tab to the Account Hub showing enrolled characters (main + linked alts), 30-day token status, alliance perk breakdown, and recent gift codes with 1-click clipboard copy.
-- 🧹 **Cleaned Navigation Header**: Removed the standalone "Perks ▾" dropdown from the top navbar and automatically route any perks references into the unified Account Hub.
+- 🎁 **Account Hub Member Perks**: Dedicated perks tab showing enrolled characters, sync status, and recent gift codes.
+- 🧹 **Cleaned Header**: Streamlined top navigation by unifying perks into Account Hub.
 
 ## [2.9.20] - 2026-08-17
-- 🗺️ **Alliance State Identifiers**: Displayed state numbers (e.g. `State #2089`, `State #2045`) directly under alliance tags across all 5 Championship matchup cards, mobile views, and Vault history.
-- 🥊 **Championship State Admin**: Added Opponent State input fields in the Championship Management Hub editor and save handler for complete match metadata control.
+- 🗺️ **Alliance State Identifiers**: Clear state numbers displayed on Championship matchup cards.
+- 🥊 **Championship Opponent Management**: Officers can configure opponent states and match details easily.
 
 ## [2.9.19] - 2026-08-17
-- 🏆 **Centered Matchup Status Badges**: Positioned `VICTORY` / `DEFEAT` badges directly in the center column above the `VS` medallion across all 5 Championship matchup cards.
-- 🎯 **Cleaned Tournament Header**: Centered overall win/loss record and removed redundant status pill badge and duplicate round headers for enhanced layout clarity.
+- 🏆 **Centered Matchup Badges**: Polished Victory and Defeat badges across tournament match cards.
+- 🎯 **Streamlined Tournament Header**: Clean win/loss record overview without duplicate headers.
 
 ## [2.9.18] - 2026-08-17
-- 🏆 **Alliance Championship 5-Round Clashes**: Brand new public dashboard featuring head-to-head match cards with live scores, custom opponent tags, and dynamic victory/defeat badges for all 5 tournament rounds.
-- ⚔️ **Championship Matchup & Score Manager**: Dedicated R4/R5 admin editor for updating scores, auto-calculating overall win/loss records, archiving completed seasons to the Championship Vault, and seamlessly managing member signups.
-- 📂 **Championship Archive Vault**: Integrated historical vault for browsing archived seasons, round breakdowns, and historical tournament performance.
+- 🏆 **Alliance Championship Dashboard**: 5-round clash tracking with live scores, opponent tags, and outcome badges.
+- ⚔️ **Championship Score Manager**: Officer tools for managing tournament signups, scores, and seasonal archives.
+- 📂 **Championship History Vault**: Browse historical tournament performances and season summaries.
 
 ## [2.9.17] - 2026-08-17
-- ⚔️ **All 5 Showdown Historical Battles Restored**: Complete restoration and auto-seeding of all 5 Showdown historical battle records (including Jun 1st – 7th 2026 vs [RED]Army) across the Showdown Leaderboard, Archive Vault, and Member Account event statistics.
-- 🛡️ **Showdown Vault Manager & Seeder**: Auto-seeds default archives on load and adds an explicit "Restore All 5 Cycles" button to Showdown Data Entry for effortless database maintenance.
+- ⚔️ **Showdown Battle Archives**: Complete history and leaderboards for past alliance showdown battles.
+- 🛡️ **Showdown Vault Tools**: 1-click database restore and archive maintenance tools.
 
 ## [2.9.16] - 2026-08-17
-- 👑 **Dynamic R4 & R5 Leadership Tiers**: Integrated real-time leadership detection directly across the Alliance Leadership directory, Member Profile, and User Database.
-- 🛡️ **Interactive Claim Status Badges**: Added visual indicators and clickable direct links for claimed and unclaimed officer profiles.
-- 🔄 **Preserved Admin State**: Seamlessly retains active tabs and sub-tabs during manual or automated live user refreshes.
+- 👑 **Dynamic Leadership Tiers**: Real-time officer detection across the directory and member profiles.
+- 🛡️ **Profile Claim Badges**: Visual indicators and quick links for claimed officer profiles.
 
 ## [2.9.15] - 2026-08-17
-- ➕ **Add Player**: Added a quick "Add Player" button in the Alliance Members & Player Database toolbar.
-- 🔍 **Game ID Verification Audit**: Enhanced in-game player ID verification and account lookup.
-- 👤 **Compact Account Hub**: Streamlined user account actions in the settings sidebar.
-- 🎨 **Display & Preferences**: Clean 2-column layout for themes, display modes, and preferences.
+- ➕ **Add Player Shortcut**: Quick-access button in the player database toolbar.
+- 🔍 **Player ID Lookup**: Improved in-game player ID verification.
+- 🎨 **Settings Layout**: Clean 2-column layout for themes, modes, and display preferences.
 
 ## [2.9.14] - 2026-08-17
-- 📋 **Batch Copy Unsynced Tokens**: 1-click export for members needing token sync renewal.
-- 🎯 **Filter & Export**: Smart export matching your active token filter selection.
-- ⚡ **Direct Sync Reminders**: Quick reminder copy tool inside member actions.
+- 📋 **Batch Copy Token Reminders**: 1-click export to remind members when character tokens need renewal.
+- 🎯 **Smart Filter Export**: Export lists matching your active member filter selection.
 
 ## [2.9.13] - 2026-08-17
-- 🕐 **Sidebar Timers**: Elevated alliance clocks, UTC time, and event countdowns to the top of the sidebar.
-- 👤 **Unified Account Hub**: Consolidated profile and account management into a single hub.
-- 🛡️ **Cleaner Sidebar**: Streamlined navigation for a faster and smoother experience.
+- 🕐 **Sidebar Event Clocks**: Alliance clocks, UTC time, and event countdowns positioned at the top of the sidebar.
+- 👤 **Unified Account Hub**: Consolidated profile and character settings into a single place.
 
 ## [2.9.12] - 2026-08-17
-- 🛡️ **Leadership Hub**: Integrated leadership tools directly inside the Account Hub and Settings.
+- 🛡️ **Officer Tools**: Integrated leadership tools directly inside the Account Hub and Settings.
 - ✨ **Streamlined Navigation**: Polished top navigation header and mobile drawer.
 
 ## [2.9.11] - 2026-08-17
-- 👤 **Quick Sign-In**: Faster transition into Account Hub after signing in.
+- 👤 **Quick Sign-In**: Faster transition into your account hub after logging in.
 - 🚀 **Character Overview**: Instant glance at linked characters, alts, and gift code rewards.
 
 ## [2.9.10] - 2026-08-17
@@ -146,13 +129,13 @@
 - 🧪 **Live Code Auditing**: 1-click verification tool to test gift codes in real time.
 
 ## [2.9.9] - 2026-08-17
-- 🏰 **Alliance Gatekeeper**: Custom report edits and leadership directives now sync live to Discord.
-- ⚡ **Furnace Auto-Sync**: Seamless real-time level tracking across the Alliance Roster.
-- 🚀 **Performance Improvements**: Faster data sync and enhanced reliability across all alliance tools.
+- 🏰 **Alliance Gatekeeper**: Custom report edits and leadership directives now sync live to alliance channels.
+- ⚡ **Furnace Level Sync**: Seamless real-time level tracking across the Alliance Roster.
+- 🚀 **Performance Improvements**: Faster data sync and enhanced reliability across all tools.
 
 ## [2.9.8] - 2026-08-17
-- 🔐 **Enhanced Google Login**: Smoother sign-in experience across all mobile and desktop browsers.
-- 🛠️ **Account Diagnostics**: Improved account connection and troubleshooting guidance.
+- 🔐 **Enhanced Login Experience**: Smoother sign-in across mobile and desktop browsers.
+- 🛠️ **Account Diagnostics**: Clearer connection troubleshooting and guidance.
 
 ## [2.9.7] - 2026-08-17
 - 🎯 **Cleaner Navigation**: Streamlined toolbar and quick-access admin controls.
@@ -163,602 +146,193 @@
 - 🛡️ **Table Hierarchy**: Streamlined roster overview for alliance officers.
 
 ## [2.9.5] - 2026-08-16
-- 🛡️ Clean Separation of User & Admin Features: Dedicated Leadership Suite and 1-click Admin Hub in navbar and mobile drawer for R4/R5 Staff
-- 📱 Streamlined Device Push Dropdown: Push: ON pill in alerts header is now strictly dedicated to user device status, testing, and settings
-- 👑 Dedicated Staff Tools Dropdown: Staff officers get their own broadcast, instant push blast, and cleaner toolkit
-- ⚙️ Restructured 4-Card Settings Sidebar: Clean, logical separation for My Account, Display/Preferences, Clocks & Timers, and Leadership Suite
+- 🛡️ **Leadership Suite**: Dedicated 1-click Admin Hub in navbar and mobile drawer for officers.
+- 📱 **Streamlined Push Notifications**: Dedicated status pill for device alerts and testing.
+- 👑 **Officer Broadcasts**: Quick-access tools for sending instant push announcements.
+- ⚙️ **4-Card Settings Sidebar**: Organized sections for Account, Preferences, Clocks, and Leadership.
 
 ## [2.9.4] - 2026-08-16
-- ⚡ Unified 3-in-1 Alert Hub: Dedicated structured cards for Scheduled Live Timers, Public Leadership Announcements, and Confidential Staff-Only Alerts
-- 🚀 Unified 3-in-1 Alert Creator: Single modal with seamless segmented control for Announcements, Timers, and Staff Alerts
-- ✨ Clean Alert Headers: Removed noisy inline badge counts on each announcement for clean, professional display with clear event timing and actions
+- ⚡ **Unified Alert Hub**: Structured cards for Scheduled Timers, Leadership Announcements, and Staff Alerts.
+- 🚀 **Alert Creator**: Single streamlined popup for scheduling announcements and event timers.
 
 ## [2.9.3] - 2026-08-16
-- ⚡ Added dedicated blocked-off Live Timers & Scheduled Events card container to Bell Notifications
-- 🏷️ Added dynamic top header banner with live status badges (🔴 LIVE NOW / ⏳ Active)
-- ✨ Added visual divider cleanly separating live countdown clocks from standard announcements
+- ⚡ **Live Timers & Events**: Added dedicated countdown timers container to notification alerts.
+- 🏷️ **Live Status Badges**: Dynamic status badges for active and ongoing alliance events.
 
 ## [2.9.2] - 2026-08-16
-- 🛠️ Fixed alert system push notification import bug (`push is not defined`)
-- 🔔 Added Push Notification status badges (Push ON/OFF) to Admin Hub member management
-- 🎯 Added live push notification attribute filters (Push Enabled vs Push Disabled) with device counters in Admin Hub
+- 🔔 **Push Notification Badges**: Added push notification status indicators to member management.
+- 🎯 **Notification Filters**: Easily filter members by notification enablement status.
 
 ## [2.9.1] - 2026-08-16
-- 🌐 Added UTC game time entry with instant conversion to your local time
-- ⚡ Added 1-click UTC quick-fill presets (Reset, Maintenance, Bear Trap)
-- 🔄 Added seamless toggle between UTC Game Time and Local Time modes
+- 🌐 **Game Time Clocks**: Added UTC game time entry with instant conversion to your local time.
+- ⚡ **Quick-Fill Presets**: 1-click presets for Daily Reset, Maintenance, and Bear Trap.
 
 ## [2.9.0] - 2026-08-16
-- 🔔 Added live device subscriber counts to leadership broadcast tools
-- 🚀 Added 1-click preset alert templates for Bear Trap, Shields Up, and Events
-- 📱 Improved multi-device push notification sync and token cleanup
+- 🔔 **Broadcast Metrics**: Live device subscriber counts for leadership broadcast tools.
+- 🚀 **Preset Alert Templates**: 1-click templates for Bear Trap, Shields Up, and Alliance Events.
 
 ## [2.8.0] - 2026-08-16
-- ⏳ Added live countdown timers for game updates, maintenance, and alliance events
-- 🚨 Added pulsing countdown pills to the notification bell and mobile menu
-- ✏️ Added event scheduling suite with custom durations and priority badges
+- ⏳ **Live Countdown Timers**: Countdown timers for game updates, maintenance, and alliance events.
+- 🚨 **Notification Badges**: Pulsing countdown indicators in the top navigation bar.
 
 ## [2.7.2] - 2026-08-16
-- ⚡ Added single streamlined Actions menu for every player row
-- 📱 Improved mobile table layout and prevented menu clipping
+- ⚡ **Quick Member Actions**: Streamlined actions menu for every player row.
+- 📱 **Mobile Table Polish**: Improved layout and prevented clipping on smaller screens.
 
 ## [2.7.1] - 2026-08-16
-- 🔒 Strict privacy: Linked alt accounts are now visible only to account owners
-- 🛡️ Hidden alt account details from public lookups and admin directories
+- 🔒 **Enhanced Privacy**: Linked alt accounts are kept strictly private to account owners.
 
 ## [2.7.0] - 2026-08-16
-- 👥 Unified Member Database and Player Command Center
-- ➕ Added 1-click player verification to auto-fill Chief Name and Furnace Level
-- 🔍 Added multi-mode sorting (Name, Furnace Level, Signups) and quick actions
+- 👥 **Player Command Center**: Unified member database with verification to auto-fill Chief Name and Furnace Level.
+- 🔍 **Smart Sorting**: Sort members by Name, Furnace Level, and Event Signups.
 
 ## [2.6.2] - 2026-08-16
-- 🎁 Moved Alliance Gift Codes Manager into the Bots hub
-- 🧹 Cleaned up admin navigation menu bar
+- 🎁 **Alliance Gift Codes**: Integrated gift codes management into the automated tools hub.
+- 🧹 **Menu Polish**: Cleaned up top navigation controls.
 
 ## [2.6.1] - 2026-08-16
-- 🛡️ Streamlined Showdown Data Entry header navigation
+- 🛡️ **Showdown Navigation**: Streamlined Showdown data entry headers and shortcuts.
 
 ## [2.6.0] - 2026-08-16
-- 🔄 Added 1-click Archive & Reset for Bear Trap, Championship, Mercenary, and Polar Terrors
-- ↩️ Added 1-click cycle restoration from historical snapshots
-- 📊 Added comprehensive Multi-Event Activity Matrix dashboard
+- 🔄 **Event Archive & Reset**: 1-click archive and reset for Bear Trap, Championship, and Mercenary events.
+- 📊 **Multi-Event Activity Matrix**: Comprehensive participation and activity overview.
 
 ## [2.5.119] - 2026-08-16
-- 🖥️ Added mouse wheel horizontal scrolling and drag gestures to Admin Menu
-- 📱 Restored smooth single-line scrolling menu on mobile
+- 🖥️ **Admin Menu Gestures**: Added smooth horizontal scroll and touch gestures for admin controls.
 
 ## [2.5.118] - 2026-08-16
-- 🖥️ Improved Admin Menu layout on desktop screens
+- 🖥️ **Desktop Layout**: Improved admin navigation across widescreen displays.
 
 ## [2.5.117] - 2026-08-16
-- ⚡ Fixed page scroll position jumping when toggling tracker rows
+- ⚡ **Scroll Stability**: Fixed page scroll position jumping when toggling tracker rows.
 
 ## [2.5.116] - 2026-08-16
-- 🛡️ Fixed Alliance Championship signup toggle button
+- 🛡️ **Championship Signups**: Polished tournament signup toggle buttons.
 
 ## [2.5.115] - 2026-08-16
-- 🔄 Added real-time cross-event sync for Championship, Mercenary, and Showdown
-- 🧭 Modernized tracker headers and navigation shortcuts
+- 🔄 **Cross-Event Sync**: Real-time sync for Championship, Mercenary, and Showdown events.
 
 ## [2.5.114] - 2026-08-15
-- ✏️ Added editable text sections to Gatekeeper Report Editor
-- 🔄 Added Reset to Live Data button for each report section
+- ✏️ **Report Editor**: Added customizable text sections to alliance reports.
 
 ## [2.5.113] - 2026-08-15
-- 🤖 Enhanced Discord webhook report publishing and reliability
+- 🤖 **Alliance Alerts Reliability**: Enhanced delivery and formatting for automated broadcast reports.
 
 ## [2.5.112] - 2026-08-15
-- ⚙️ Added Nightly Account Maintenance telemetry to Discord alerts
+- ⚙️ **Automated Maintenance**: Added nightly maintenance status and health reporting.
 
 ## [2.5.111] - 2026-08-15
-- 📊 Added interactive Alliance Gatekeeper Report Editor with live Discord preview
+- 📊 **Interactive Report Editor**: Preview and edit alliance reports before publishing.
 
 ## [2.5.110] - 2026-08-15
-- 📱 Fixed card layout and text clipping on mobile devices
+- 📱 **Mobile Card Polish**: Fixed card layout and text alignment on mobile screens.
 
 ## [2.5.109] - 2026-08-15
-- 🤖 Consolidated Discord Webhook settings into the Bots hub
+- 🤖 **Automated Bots Hub**: Centralized bot settings and webhook management.
 
 ## [2.5.108] - 2026-08-15
-- 🤖 Added dedicated Bots & Daemons Hub
-- 🔗 Added Alt Accounts attribute filtering in member list
-
-## [2.5.107] - 2026-08-15
-- Patches to members perk system.
-
-## [2.5.106] - 2026-08-15
-- Patches to members perk system.
-
-## [2.5.105] - 2026-08-15
-- Patches to members perk system.
-
-## [2.5.104] - 2026-08-15
-- Patches to members perk system.
-
-## [2.5.103] - 2026-08-15
-- Patches to members perk system.
-
-## [2.5.102] - 2026-08-15
-- Patches to members perk system.
-
-## [2.5.101] - 2026-08-15
-- Patches to members perk system.
-
-## [2.5.100] - 2026-08-15
-- Patches to members perk system.
-
-## [2.5.99] - 2026-08-15
-- Patches to members perk system.
-
-## [2.5.98] - 2026-08-15
-- Patches to members perk system.
-
-## [2.5.97] - 2026-08-15
-- Patches to members perk system.
-
-## [2.5.96] - 2026-08-15
-- Patches to members perk system.
-
-## [2.5.95] - 2026-08-15
-- Patches to members perk system.
-
-## [2.5.94] - 2026-08-15
-- Patches to members perk system.
-
-## [2.5.93] - 2026-08-15
-- Patches to members perk system.
-
-## [2.5.92] - 2026-08-15
-- Patches to members perk system.
+- 🤖 **Bots Hub & Alt Filters**: Added dedicated bots management and alt account filters.
 
 ## [2.5.91] - 2026-08-15
-- 🔍 **Resilient Player Search & Lookup:**
-  - Resolved non-breaking space (`\u00a0`) mismatches in `roster_live` and player lookup indexes.
-  - Added robust Unicode whitespace normalization, Game ID lookup, and multi-database fallback in player profile search.
-
-## [2.5.90] - 2026-08-15
-- 🎁 **Streamlined Automatic Gift Code Perks:**
-  - Removed outdated manual "Perks Opt-In" modal and standalone buttons.
-  - Added automatic `🎁 Auto Redeem` status badge across all claimed main characters and linked alts.
-  - Upgraded Gift Codes overview into a live automatic status hub.
-
-## [2.5.89] - 2026-08-15
-- 🧹 **Database User Deduplication:**
-  - Removed duplicate account record from database.
-  - Verified active account with complete 5/6 verified alt tokens.
-
-## [2.5.88] - 2026-08-15
-- 🔒 **Claimed Accounts Gift Code Enforcement:**
-  - Added `🔒 Only Claimed Accounts` toggle to the Mass Gift Code Dispatcher (default: ON).
-  - Restricted backend batch redemption to claimed primary accounts and verified linked alts in Firebase.
+- 🔍 **Resilient Player Lookup**: Improved search matching for player names and character IDs.
+- 🎁 **Automatic Gift Code Perks**: Enrolled characters now automatically receive verified gift code perks.
 
 ## [2.5.87] - 2026-08-15
-- 🧹 **Announcement Cleaner & Alert Management:**
-  - Added delete button (`🗑️`) to individual leadership announcements in the Notifications modal.
-  - Added Announcement Cleaner modal to batch purge old alerts by age (3+ days, 7+ days, or clear all).
-
-## [2.5.86] - 2026-08-15
-- 📧 **Account Email Restored:**
-  - Restored primary account email in Firebase database.
-  - Prevented test spoof emails from overwriting user records.
+- 🧹 **Announcement Management**: Added 1-click removal and batch cleaning for outdated alerts.
+- 🔒 **Claimed Accounts Protection**: Verified rewards dispatch to claimed characters and alts.
 
 ## [2.5.85] - 2026-08-15
-- 🔍 **Advanced Filter & Search System for Linked Alt Accounts:**
-  - 🎛️ **Registered Users DB Style Controls:** Added top segmented switcher to instantly filter alts by `👥 All`, `🟢 Active Sync`, `⚠️ Needs Sync`, and `🎁 Enrolled Perks`.
-  - 🔎 **Instant Search & Clear:** Search linked alts in real-time by character name or numerical Game ID with a 1-click `✕` clear button.
-  - 🛡️ **Fine-Grained Token & Perks Filtering:** Filter specifically by active, expiring (≤5d), expired, or unverified 30-day tokens, as well as automatic Gift Code Bot enrollment.
-  - ↕️ **Smart Sorting & Empty State:** Sort alts by Furnace level (High/Low), Alphabetical Name (A–Z), or Token Days remaining with dynamic result counters and fallback state.
-
-## [2.5.84] - 2026-08-15
-- ⏱️ **Restored Time Active for Linked Alt Accounts:**
-  - 🔄 **Comprehensive Firebase Data Binding:** Linked Alt cards in Account Hub now synchronize directly with `currentUser.linkedAltsData`, `users_alts`, and `altTokens` metadata in Firebase RTDB.
-  - 📅 **Intelligent Start Date Resolution:** Seamlessly calculates time active using stored start dates, avatar upload timestamps, in-game verification dates, or alliance roster logs.
-  - ✏️ **Full Alt Profile Editing:** Resolved missing name parameter when clicking `✏️` so players can configure and customize any alt's start date and furnace level.
-
-## [2.5.83] - 2026-08-15
-- 🔗 **Fixed Manage Alt Accounts Navigation:**
-  - 🛠️ **Seamless Alts Hub Access:** Bound `window.openAltManagerModal` to directly dismiss the alerts overlay and navigate straight to the `🔗 Linked Alt Accounts` manager in Account Hub.
-  - ⚡ **Instant Token Setup:** Enables 1-click access to link new alts, verify in-game tokens, and manage secondary character perks.
+- 🔍 **Alt Account Search & Filters**: Search alts in real time by name or ID, with filters for active sync and perks.
+- ⏱️ **Time Active for Alts**: Accurate time-active duration calculations for all linked characters.
 
 ## [2.5.82] - 2026-08-15
-- 🔔 **Streamlined Alliance Notifications & Alerts (Option 1):**
-  - 🌟 **Header-Integrated Push Status Pill:** Replaced the bulky "set-and-forget" push banner with a compact glowing status badge (`[ 🟢 Push: ON ▾ ]` / `[ 🔔 Turn ON Push ]`) in the modal header next to the close button.
-  - ⚙️ **Quick Diagnostic Dropdown:** 1-click access to test push notifications, re-sync device tokens, and clear unread alert badge counters.
-  - 📋 **Prioritized Action Items:** Expiring sync tokens and un-synced alt accounts are prominently surfaced at the top of the feed before general announcements.
-
-## [2.5.81] - 2026-08-15
-- 🏰 **Backend Discord Webhook Proxy Deployment:**
-  - ⚡ **Seamless Cloud Dispatch:** Routed `#alerts` Gatekeeper Report updates through backend proxy to completely eliminate browser CORS restrictions.
-  - 🔗 **Updated Deployment Endpoint:** Linked frontend to live Apps Script deployment `@174`.
+- 🔔 **Streamlined Notification Bell**: Compact push notification toggle and quick device test options.
+- 📋 **Prioritized Action Items**: Prominently highlights expiring sync tokens and pending actions.
 
 ## [2.5.80] - 2026-08-15
-- 🏰 **Unified Alliance Gatekeeper Report (#alerts):**
-  - 📊 **Living Discord Dashboard Card:** Self-updating master post in `#alerts` showcasing total alliance members, new joins, unclaimed ratios, recent signups, and active perks.
-  - ⚡ **1-Click Web & Bridge Refresh:** Push real-time dashboard updates to Discord anytime directly from the Admin Hub or Bridge GUI.
-
-## [2.5.79] - 2026-08-15
-- 📢 **Alliance Gatekeeper Perks Alerts:**
-  - 🛡️ **Clean Discord Embed Format:** Streamlined embed alerts directly under the Alliance Gatekeeper banner.
-  - ⚡ **Direct Webhook Routing:** Delivers new gift code announcements and mass-claim counts to the Gatekeeper channel.
-
-## [2.5.78] - 2026-08-15
-- 📢 **Alliance Discord Perks Alerts:**
-  - 🎁 **Automated Embed Broadcasts:** Auto-posts a styled embed alert to the alliance Discord channel upon discovering and mass-claiming new gift codes.
-  - 📊 **Instant Claim Delivery Reports:** Details total accounts rewarded, active targets, and mail pickup reminders directly in Discord.
-
-## [2.5.77] - 2026-08-15
-- 🎁 **Improved Alliance Perks Systems:**
-  - 🤖 **Auto-Scraper Daemon:** Monitors web feeds and auto-discovers newly released promo codes.
-  - ⚡ **Instant Server Verification:** Verifies codes live and auto-registers active perks for the alliance.
-  - 📊 **Real-Time Telemetry:** Live heartbeat status, scheduled sweep timer, and activity logs.
-  - 🚀 **1-Tap Mass Dispatch:** Distributes rewards to all enrolled members and alts in seconds.
-
-## [2.5.76] - 2026-08-15
-- 🎁 **Improved Alliance Perks Systems:**
-  - 🤖 **Auto-Perks Scraping & Verification:** Autonomous background daemon sweeps game feeds and claims rewards for all enrolled alliance members.
-  - 🗂️ **Gift Codes Manager:** Centralized admin hub to manage active codes, monitor live server validity, and review alliance claim history.
-  - 📊 **Real-Time Telemetry:** Live heartbeat tracking, scheduled sweep countdowns, and 1-tap instant dispatch.
+- 🏰 **Alliance Gatekeeper Hub**: Master alliance overview showcasing total members, recent signups, and active perks.
 
 ## [2.5.75] - 2026-08-15
-- 🎁 **Improved Alliance Perks System:**
-  - 🏰 **Unified Alliance Perks Hub:** Rebranded and enhanced the Admin Hub with dedicated Alliance Perks & Rewards controls.
-  - 🤖 **Auto-Claim Daemon Integration:** Background perks bot actively sweeps promo feeds and redeems loot for all enrolled alliance members.
-  - 📊 **Live Perks Telemetry:** Real-time visibility into active perks, expired drops, total claims delivered, and bot heartbeat.
-  - ⚡ **1-Click Mass Dispatch:** Deliver all active alliance perk rewards to all main accounts and verified linked alts instantly.
-
-## [2.5.74] - 2026-08-15
-- 🤖 **Autonomous Gift Code Bot & Live Metrics:**
-  - 🌐 **Multi-Source Scraper Daemon:** Autonomous scraper monitoring DotGG, ProGameGuides, and PocketGamer feeds for new promo drops.
-  - ⚡ **Auto-Discovery & Validation:** Tests new codes against official game servers and auto-registers active codes into the alliance database.
-  - 📊 **Live Telemetry Box:** Real-time bot heartbeat, sweep schedule countdown, and activity logs right in the Admin Hub.
-  - ▶️ **1-Tap Live Sweep:** Trigger on-demand web sweeps directly from the Gift Codes Manager.
-
-## [2.5.73] - 2026-08-15
-- 🎁 **Alliance Gift Codes Manager (Admin Hub):**
-  - 🗂️ **Centralized Code Management:** Dedicated admin tab to organize, search, and track active vs expired promotional codes.
-  - 🧪 **Live Validation & Auto-Pruning:** Instant live testing against game servers with automated expiration detection.
-  - 📊 **Redemption Analytics:** Real-time tracking of alliance-wide claim counts, player coverage, and dispatch history.
-  - ⚡ **1-Click Batch Dispatch:** Launch single-code or sequential all-active mass redemptions for all enrolled members & alts.
-
-## [2.5.72] - 2026-08-15
-- 🎁 **Smart Gift Code Recovery:**
-  - 🔁 **Targeted 1-Tap Retry:** Instantly retry failed or timed-out redemptions without re-running successful accounts.
-  - ⚡ **Auto-Retry Protection:** Built-in auto-retry handles game server lag and timeouts automatically.
-  - 📋 **1-Click Error Reports:** Quickly copy diagnostic logs for any unresolved accounts.
-
-## [2.5.71] - 2026-08-15
-- **Streamlined Push Notifications Controls in Bell Modal:**
-  - Removed topic category checkboxes to ensure members always receive essential alliance event and war alerts.
-  - Placed `[🧪 Test Push Alert]`, `[🔄 Re-sync Device Token]`, and `[🧹 Clear Unread Badges]` buttons inside the clean `[⚙️ Options]` dropdown.
+- 🎁 **Automated Perks Discovery**: Autonomous detection and verification of new promotional rewards.
+- ⚡ **1-Tap Reward Dispatch**: Distribute active promo rewards to enrolled alliance members in seconds.
 
 ## [2.5.70] - 2026-08-15
-- **Streamlined Settings Sidebar:** Removed duplicate push notification button and deleted legacy modal markup for a cleaner navigation experience.
-- **Classic Push Notification Options Menu in Bell Modal:**
-  - Added integrated Master Status Header (`ACTIVE (ON)` / `OFF`) with instant 1-tap activation.
-  - Added `[🧪 Test Alert]` device notification tester.
-  - Added `[🔄 Re-sync]` device token refresh.
-  - Added collapsible `[⚙️ Options]` topic preferences menu (Bear Trap, Shields/SvS, Championship, Broadcasts, Gift Codes, Sync Alerts) with local persistence.
-  - Added `[🧹 Clear unread alert badges]` shortcut.
+- 🔔 **Push Notification Controls**: Master status toggle with instant test alerts and topic preferences.
+- ⚙️ **Cleaner Sidebar**: Streamlined settings menu for a faster and smoother navigation experience.
 
 ## [2.5.69] - 2026-08-15
-- **Frost Clan Command Center Shield Counter & Coverage Bar:** Added live KPI counters for Shields Active (`ON`), Unshielded Alts (`OFF / Vulnerable`), Rebirth Tomes, and dynamic Shield Defense coverage progress bar.
-- **Roster Quick Filters:** Added 1-tap view filters (`All`, `⚠️ Needs Shields`, `🛡️ Shielded`) to instantly isolate vulnerable accounts.
-- **1-Tap Bulk Shielding:** Added `[🛡️ Shield ALL]` bulk action to immediately mark all alts protected during wars/SvS.
-- **Broadcast Preset Templates:** Added 1-click preset message buttons (`🛡️ Shields Up!`, `🪤 Bear Trap`, `⚔️ Championship`, `🎁 Gift Code`, `🔄 Daily Reset`) inside the Broadcast Alert modal.
-
-## [2.5.68] - 2026-08-15
-- Integrated the **Device Push Notifications Switch** directly inside the **Bell Alert Window** for seamless 1-tap activation.
-- Added live status detection (`ON` / `OFF`) and device token re-sync capability.
-- Directed settings drawer push notifications trigger straight to the Bell modal.
-
-## [2.5.67] - 2026-08-15
-- Fixed gift code redemption by including kingdom identifier in API payload and signature.
-- Resolved validation error for gift code testing and mass dispatch operations.
-- Updated status detection for accurate code state reporting (claimed, expired, invalid).
-- Backend deployment updated to @172.
-
-## [2.5.66] - 2026-08-15
-- Connected the broadcast announcements tray to live realtime database sync.
-- Enabled instant display of alliance broadcasts inside the **Bell Alert Window**.
-
-## [2.5.65] - 2026-08-15
-- Updated push notification formatting to display as **wosBDC Alert**.
-- Configured direct dashboard deep-linking on alert click.
-
-## [2.5.64] - 2026-08-15
-- Made the **Notification Bell** always visible in the navbar for all visitors and alliance members.
-- Added live unread message badges and announcements tray.
-
-## [2.5.63] - 2026-08-15
-- Added live message count badge to the **Notification Bell**.
-- Added leadership broadcast history directly inside the **Bell Alert Window**.
-
-## [2.5.62] - 2026-08-15
-- Connected the **Alliance Mass Gift Code Dispatcher** directly to the live game redemption server.
-- Improved live error handling and response status parsing.
-
-## [2.5.61] - 2026-08-15
-- Fixed authentication token handling in the **Alliance Mass Gift Code Dispatcher**.
+- 🛡️ **Frost Clan Shield Coverage**: Live shield defense counters, quick-filter tags, and 1-tap bulk shielding.
+- 📢 **Broadcast Quick-Templates**: 1-click alert templates for Shields Up, Bear Trap, and Daily Reset.
 
 ## [2.5.60] - 2026-08-15
-- Added **"🎁 Alliance Mass Gift Code Dispatcher"** in Admin Daily Tools.
-- Added **"🧪 Test Code Validity"** with live game server check (detects Active, Already Claimed, Expired, or Limit Reached).
-- Added real-time progress bar, summary counters, and live activity log for batch redemptions.
-- Added automated target selection for all enrolled alliance members and verified alts.
+- 🎁 **Mass Gift Code Dispatcher**: Automated reward testing, progress tracking, and batch redemption for alliance members.
 
 ## [2.5.59] - 2026-08-14
-- Added 1-Click **"⭐️ Make Primary"** Character Switcher on all linked alt cards in the Account Hub.
-- Added **"🛠️ Account Character & ID Repair Wizard"** in Registered Users and Admin Tools.
-- Added real-time character lookup to preview chief name, level, and stats when correcting IDs.
-- Preserved all 30-day sync tokens, avatars, and character levels when switching primary chiefs.
-
-## [2.5.58] - 2026-08-14
-- Fixed Fire Crystal badge sizing inside the Registered Users Database and member tables.
-- Removed redundant outer bordered wrapper spans that caused double/misaligned boxes around FC badges.
-- Optimized inline badge proportions (`size = 32`) and added `flex-shrink: 0` for responsive alignment.
-- Added automatic canvas badge initialization upon switching Admin tabs.
-
-## [2.5.57] - 2026-08-14
-- Fixed Account Hub failing to re-open on repeated clicks from the navbar user indicator (`#navbar-user-indicator`).
-- Added safe null guarding for all dynamic Account Hub DOM event listeners (`cancelAltBtn`, `uploadInput`, `submitAltBtn`, `selectEl`).
-- Added an explicit `← Back to Dashboard` exit button directly inside the Account Hub header.
-- Synchronized `#navbar-user-indicator` to always open the default `Profile` tab on direct click.
+- ⭐️ **Primary Character Switcher**: 1-click switcher to set your active primary character.
+- 🛠️ **Character ID Repair Wizard**: Real-time character lookup and profile preview when adjusting IDs.
 
 ## [2.5.56] - 2026-08-14
-- Re-architected Fire Crystal badge renderer to a **Unified Single-Canvas Engine** where both the badge sprite and flame particle system render in the exact same 2D Canvas context.
-- Fixed PWA Service Worker caching (`sw.js`) to ensure all badge image updates are fetched fresh from the network.
-- Added high-DPI Retina display scaling via `devicePixelRatio` for sharp rendering on mobile and desktop screens.
-
-## [2.5.55] - 2026-08-14
-- Re-centered solid shield bodies for all 10 badge PNG files (`FC 1` through `FC 10`) to the exact pixel (136px to 887px, center 511.5px), fixing the 44px left offset caused by corner sparkle artifacts.
-- Synchronized `FlameWisp` shield contour polygon to match the true solid shield perimeter (`(0, -0.433)`, `(±0.367, -0.226)`, `(±0.367, +0.226)`, `(0, +0.433)`).
-
-## [2.5.54] - 2026-08-14
-- Expanded flame canvas bounds to 1.85x badge size, preventing particle clipping on all 4 borders.
-- Replaced approximate hexagon math with exact pixel-measured shield contour polygon coordinates (`(0, -0.441)`, `(±0.359, -0.231)`, `(±0.359, +0.223)`, `(0, +0.433)`).
-- Embers now spawn flush against the shield facets and radiate outward with bilateral symmetry.
+- 🔥 **Fire Crystal Badge Engine**: Smooth animated flame effects and high-DPI display rendering across all badge tiers.
 
 ## [2.5.53] - 2026-08-14
-- Redesigned Furnace / Fire Crystal display into a dedicated centered showcase in Chief Profile ID card.
-- Updated `style.css` mobile styles to keep the Fire Crystal badge 100% centered horizontally on smartphones and tablets.
-
-## [2.5.52] - 2026-08-14
-- Re-centered all Fire Crystal badge PNG files (`FC 2` to `FC 10`) to the exact geometric center `(512, 511)` to eliminate the baked-in 43px horizontal offset.
-- Implemented exact pointy-topped shield polygon geometry in `FlameWisp` so embers trace all 6 facets of the shield symmetrically.
-- Added `line-height: 0` and `display: block` to eliminate browser font metric descent offset.
-
-## [2.5.51] - 2026-08-14
-- Added live Move Image X and Move Image Y offset sliders in `fc_flame_studio.html` to allow real-time shifting and alignment between the badge image and the flame canvas.
-
-## [2.5.50] - 2026-08-14
-- Applied updated user-tuned flame particle physics: 0.65 spawn rate, 36% hexagon perimeter radius, 1.5 outward spread velocity, 1.3 wave wiggle shimmer, 10px ember size, and 0.016 extended decay lifespan.
-
-## [2.5.49] - 2026-08-14
-- Enlarged Fire Crystal furnace badge from 76px to 120px in Account Hub profile ID card.
-- Enlarged badge preview to 110px in the Edit Profile modal for clear, crisp inspection.
-
-## [2.5.48] - 2026-08-14
-- Applied updated fine-tuned flame settings across the entire platform: 0.8 spawn rate density, 35% hexagon perimeter radius, and 8px glowing ember particles.
-
-## [2.5.47] - 2026-08-14
-- Applied custom user-tuned flame particle physics into the live website: refined 5px ember radius, balanced 32% hexagonal perimeter radius, 2.2 buoyant upward speed, and 0.6 wave shimmer.
-
-## [2.5.46] - 2026-08-14
-- Implemented symmetrical hexagonal perimeter particle spawning so flames rise and radiate evenly across all 6 facets of the badge without one-sided drift.
-- Scaled particle shimmer and wave amplitude mathematically to the canvas size for consistent rendering at 48px, 80px, and 180px.
-- Released [`fc_flame_studio.html`](public/fc_flame_studio.html) with real-time sliders for live particle parameter tuning and instant JSON configuration export.
-
-## [2.5.45] - 2026-08-14
-- Restored original pristine Fire Crystal badge graphics directly from `fc_demo.html`.
-- Restored the authentic 3D Solar Fire Wisps particle physics, sinusoidal wave motion, and haptic burst mechanics exactly as designed in `fc_demo.html`.
-
-## [2.5.44] - 2026-08-14
-- Upgraded the Fire Crystal interactive flame particle engine to generate continuous 360° omnidirectional radial plasma embers spanning all 6 facets of the shield evenly without vertical or horizontal bias.
-
-## [2.5.43] - 2026-08-14
-- Seamlessly realigned and centered the inner white digits (`1` through `10`) to exact geometric center `(512, 512)` within the metallic hexagon plates across all 10 Fire Crystal badge PNG files.
-- Upgraded the Fire Crystal interactive particle engine to emanate a 360° balanced radiant ember aura symmetrically around the shield, eliminating particle drift and left-side clustering.
-
-## [2.5.42] - 2026-08-14
-- Removed off-center stray sparkle pixels in the transparent borders of Fire Crystal badge images `fc1.png` through `fc10.png`.
-- Re-encoded and recalibrated all 10 Fire Crystal badge PNG graphics to exact `(512.0, 512.0)` geometric dead center.
-- Aligned and centered the Furnace Level display inside the Account Hub profile ID card.
+- 👤 **Chief Profile Showcase**: Centered showcase for Furnace and Fire Crystal badges on mobile and desktop.
 
 ## [2.5.41] - 2026-08-14
-- 🛡️ **Session Token Alerts**: Clear notifications for 30-day session token renewal.
-- 🔄 **Profile Sync**: Smooth in-game verification renewal prompt.
-
-## [2.5.40] - 2026-08-14
-- 🎨 **Unified Styling**: Polished Frost Blue and Crisp White color palette across modals.
-
-## [2.5.39] - 2026-08-14
-- ⚙️ **Profile Options**: Streamlined profile actions to Edit Profile and Sync from Game.
-
-## [2.5.38] - 2026-08-14
-- 🔥 **Furnace Level Sync**: Improved level mapping across all standard and Fire Crystal tiers.
-
-## [2.5.37] - 2026-08-14
-- 🛡️ **Sync Reliability**: Enhanced character sync routines to preserve furnace levels.
-- Deployed backend as Version `@158` and synchronized frontend `API_BASE_URL`.
+- 🛡️ **Session Token Alerts**: Clear notifications when character sync tokens need renewal.
+- 🎨 **Visual Refresh**: Polished frost blue and crisp white styling across all dialogs.
 
 ## [2.5.36] - 2026-08-14
-- Removed redundant bottom buttons below the Account Hub ID card to keep the profile card streamlined and clean.
-- Integrated all actions exclusively into the sleek `⚙️ Options ▾` menu near the Chief Name.
-- Added interactive loading states on the Options button during game profile syncing.
-
-## [2.5.35] - 2026-08-14
-- Fixed non-FC furnace level overwrite in `WosApi.js` where players with normal furnace levels (e.g. 21, 28) were overwritten to 30 upon clicking "Sync from Game".
-- Upgraded Fire Crystal (FC 1–10) multi-stage ladder parsing across backend and frontend helpers.
-- Added interactive `⚙️ Options ▾` dropdown menu in the Account Hub ID Card header directly next to the Chief Name for instant access to Edit Profile, Sync from Game, Token Renewal, and Avatar management.
-- Synchronized `stove_lv` and `furnaceLevel` concurrently across Firebase user records, alts, and live roster caches.
-- Deployed backend Apps Script `@157` to live environment.
-
-## [2.5.34] - 2026-08-14
-- Unified button styling and interactive visual effects (FX) across all Sign In, Claim / Register, and action buttons.
-- Added smooth scale transitions (`scale(1.03)` on hover, `scale(0.98)` on active press), gradient glows, and glassmorphism borders for all secondary and mode toggle buttons.
+- ⚙️ **Streamlined Profile Card**: Integrated profile actions into a clean options menu.
+- 🔥 **Furnace Level Sync**: Improved level mapping across standard and Fire Crystal tiers.
 
 ## [2.5.33] - 2026-08-14
-- Converted the Sign In and 3-Step Chief Registration wizard from a floating modal popup into a first-class, full-page view (`views.auth`).
-- Routed all navbar, sidebar, and member guard actions directly to the full-page experience, eliminating all backdrop clipping and accidental closure.
-- Preserved full 1-click Google authentication, interactive calendar start-date picker, and Whiteout Survival mailbox verification code workflow.
-
-## [2.5.32] - 2026-08-14
-- Enlarged and enhanced the Sign In & Multi-Step Registration modal dimensions with fluid responsive padding and max-width.
-- Prevented accidental dismissal of the signup modal on side backdrop clicks so in-progress registrations are never lost.
+- 🚪 **Full-Page Sign In & Registration**: Seamless multi-step onboarding wizard for new chiefs.
+- 🔐 **Secure Verification**: Verify game ownership with in-game mailbox confirmation codes.
 
 ## [2.5.31] - 2026-08-14
-- Implemented persistent tab state management for Account Hub (`views.account(defaultTab)`).
-- Bound all Alt operations (30-day token binding, code verification, manual linking, profile editing, syncing, and perks enrollment) to retain the **🔗 Linked Alts** tab automatically without jumping back to the Main Profile tab.
-
-## [2.5.30] - 2026-08-14
-- added support for error codes
-
-## [2.5.29] - 2026-08-14
-- Fixed JavaScript syntax error caused by unescaped character names in inline HTML `onclick` handlers for alt token verification.
-- Added explicit error banners and real-time toast alerts for all token dispatch, token verification, and profile sync actions.
-- Clarified button labeling between active character sync (`🔄 Sync Stats`) and unverified/expired token binding (`⚡ Setup 30d Sync`).
-
-## [2.5.28] - 2026-08-14
-- Removed redundant nested `<details>` accordion and dropdown arrow from the Account Hub Linked Alts tab.
-- Created dedicated header bar with separated `[ ➕ Link Alt Account ]` and `[ 🔄 Sync All ]` buttons to prevent accidental clicks.
-- Redesigned alt cards with 3 distinct, perfectly aligned vertical zones (Header, Stats strip, Bottom action bar).
-
-## [2.5.27] - 2026-08-14
-- Completely hidden active Main Character 30-day token card and healthy alts from the Alliance Notifications modal.
-- Added clean "🎉 All Caught Up!" empty state when there are 0 pending alerts or expired tokens.
-
-## [2.5.26] - 2026-08-14
-- Replaced prominent warning box with a quiet green status bar for active 30-day tokens in Alliance Alerts modal.
-- Adjusted notification bell trigger so active tokens and manually linked alts do not set off red alert alarms.
+- 🔗 **Linked Alts Hub**: Dedicated tab for linking secondary characters, checking sync status, and managing perks.
 
 ## [2.5.25] - 2026-08-14
-- Streamlined Alliance Notifications modal with compact Main Character Token Status card.
-- Implemented collapsible `🔗 Alt Accounts Un-Sync Status (X)` accordion banner with 1-click `[ ⚡ Setup / Renew ]` for un-synced alts.
-- Implemented collapsible `🛡️ Staff Alerts: Recent Signups (X)` banner with counter badge and expandable member list to prevent scrollbar clutter.
-
-## [2.5.24] - 2026-08-14
-- Added live 30-day token countdown to the Chief ID card badge in Account Hub (`🛡️ 30-Day Sync Active (X days left) (#State)`).
-- Added live 30-day token sync countdown pill to linked alt account cards.
+- 🔔 **Alliance Alerts Overhaul**: Compact token status cards and clean "All Caught Up" notifications view.
+- 🛡️ **Staff Signup Feed**: Expandable new-member activity feed for alliance officers.
 
 ## [2.5.23] - 2026-08-14
-- Live Chief name indicator next to the version badge in the top navbar with interactive Account Hub shortcut.
-- Clean sign-in experience: removed disruptive login pop-up banner.
-
-## [2.5.22] - 2026-08-14
-- Fixed Notification Bell so the Alliance Alerts modal renders instantly with 0ms delay.
-- Fixed mobile navbar hiding the bell and added a dedicated `🔔 Alerts` link to the mobile drawer.
-
-## [2.5.21] - 2026-08-14
-- Implemented Universal Smartphone & Screen Size responsive optimizations with fluid `clamp()` spacing, notch safe areas (`viewport-fit=cover`), iOS input auto-zoom fixes, and fluid modal clamping.
-
-## [2.5.20] - 2026-08-14
-- Streamlined Notification Bell badge to detect unverified, expiring (≤5d), and expired 30-day tokens across main and alt accounts.
-- Modernized Alliance Alerts modal by removing obsolete gift code card and keeping staff signup alerts.
-
-## [2.5.19] - 2026-08-14
-- Enabled the `👥 Users` tab in the Admin Menu for all Alliance Managers and R4 Officers.
-- Allowed managers to access the Global Chief List filter, Staff Roles overview, and Registered/Unclaimed member rosters.
-
-## [2.5.18] - 2026-08-14
-- Upgraded Alert Toaster with Universal Fluid Sizing (92vw width scaling, 15px font, and glassmorphism) for smartphones.
-
-## [2.5.17] - 2026-08-14
-- Added live member count badges to all Token Status and Attribute filter options.
-- Polished control bar layout alignment to prevent wrapping and eliminate empty spacing.
+- 👤 **Navbar Chief Indicator**: Quick-access profile indicator in the top navigation bar.
+- 📱 **Mobile Optimization**: Responsive spacing, notch safe areas, and touch-friendly controls.
 
 ## [2.5.16] - 2026-08-14
-- Streamlined Registered Users Database with consolidated Segmented Switcher and Attribute dropdowns.
-- Added 30-day sync token tracking and countdown badges for main characters and linked alts.
-
-## [2.5.15] - 2026-08-14
-- Configured Alliance Gatekeeper Discord integration to maintain a single live-updating 7-day member roster card.
-
-## [2.5.14] - 2026-08-14
-- Restored individual notification cards for Alliance Gatekeeper Discord webhooks on new member signups.
-
-## [2.5.13] - 2026-08-14
-- Simplified and condensed full Changelog into clean, easy-to-read release highlights.
-
-## [2.5.12] - 2026-08-14
-- Cleaned up Alt Card action controls with a single unified `[Sync]` button.
-- Streamlined action button row alignment across all screen sizes.
+- 👥 **Registered Users Database**: Clean filter controls and token countdown indicators for alliance managers.
 
 ## [2.5.11] - 2026-08-14
-- Added 30-day session token binding and 1-click sync for Linked Alt Accounts.
-- Added "Sync All Characters" batch button in Account Hub.
-- Added in-game mail verification flow when adding new alts.
-
-## [2.5.10] - 2026-08-14
-- 🌐 **Game Error Messages**: Translated game server responses and rate limit notices into clear English.
-
-## [2.5.9] - 2026-08-14
-- Cleaned up registration layout and improved manual verification fallback options.
-
-## [2.5.8] - 2026-08-14
-- Added in-game avatar syncing during signup and in the Profile Picture modal.
-- Enabled avatar sync and management support for linked Alt accounts.
-
-## [2.5.6] - 2026-08-14
-- Updated token labels to "30-Day Sync Token" across all cards and modals.
-
-## [2.5.5] - 2026-08-14
-- Added navbar notification bell with proactive 30-day token expiration alerts.
-- Integrated Gift Code Bot status and new member signup alerts.
-
-## [2.5.4] - 2026-08-14
-- Fixed Schedule column resolution and synced Home page event countdown.
-
-## [2.5.3] - 2026-08-14
-- Fixed Today's View and Calendar Schedule views with universal time parser.
-
-## [2.5.2] - 2026-08-14
-- Resolved Google auth button variable reference and added static scope audit.
-
-## [2.5.1] - 2026-08-14
-- Added theme-adaptive Google & Email sign-in cards (Midnight, Light, Ombre).
+- 🔗 **Character Sync Tokens**: 30-day session tokens with 1-click refresh for main and alt accounts.
+- 🌐 **Clear Status Messages**: Friendly English notifications for server statuses and updates.
 
 ## [2.5.0] - 2026-08-14
-- Unified authentication method selection for both Registration and Sign-In.
-
-## [2.4.0] - 2026-08-14
-- Streamlined Google Sign-Up into the 3-step onboarding wizard.
+- 🔑 **Unified Sign-In**: Quick Google and email authentication with theme-adaptive styles.
 
 ## [2.3.0] - 2026-08-14
-- Launched 3-step Chief Registration & Verification Wizard with in-game character link.
-
-## [2.2.0] - 2026-08-14
-- Added multi-step registration flow with required playing start date.
+- 🧙 **Chief Onboarding Wizard**: 3-step character registration and verification with in-game code confirmation.
 
 ## [2.1.0] - 2026-08-14
-- Added real-time in-game character verification via Whiteout Survival game mailbox codes.
-- Added live furnace level detection and avatar syncing.
+- 🎮 **In-Game Verification**: Real-time character ownership verification, furnace level detection, and avatar syncing.
 
 ## [2.0.0] - 2026-08-13
-- Upgraded alliance core dashboard architecture with optimized performance.
-- Modernized user interface, responsive layout, and theme styling.
-
-## [1.99.0] - 2026-08-13
-- Added Alliance Gatekeeper Discord integration for new member signups.
-- Added single-updating Discord roster card with automatic edits.
+- 🚀 **Next-Gen Dashboard**: Major architecture upgrade with faster loading, modern responsive design, and fluid themes.
 
 ## [1.98.0] - 2026-08-13
-- Added Bear Trap event win tracking and automated spreadsheet sync.
-- Enhanced profile stats and personal activity logging.
+- 🐻 **Bear Trap & Event Tracking**: Live event logs, personal damage statistics, and participation history.
 
 ## [1.95.0] - 2026-08-12
-- Added Gift Code Auto-Redeem Bot enrollment for main and alt accounts.
-- Added gift code history and reward status tracking.
+- 🎁 **Automated Perks Enrollment**: Auto-claim rewards for enrolled main and secondary characters.
 
 ## [1.90.0] - 2026-08-11
-- Enhanced member search with fuzzy matching and furnace level filters.
-- Added R4/R5 admin management controls.
+- 👥 **Alliance Directory**: Searchable member directory with furnace level filters and officer controls.
 
 ## [1.80.0] - 2026-08-10
-- Added PWA install support with dual Android and iOS install guides.
-- Added offline caching and auto-update prompts.
+- 📱 **Installable Web App**: PWA support with offline caching, mobile installation guides, and auto-updates.
 
 ## [1.50.0] - 2026-08-08
-- Added live leaderboard rankings, Bear Trap damage stats, and alliance donations.
+- 🏆 **Leaderboards & Activity**: Live alliance rankings, damage stats, and donation tracking.
 
 ## [1.0.0] - 2026-08-01
-- Initial public release of the Whiteout Survival Alliance Dashboard.
+- ❄️ **Initial Release**: The official dashboard and companion app for the BDC Alliance.

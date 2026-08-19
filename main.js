@@ -2,6 +2,7 @@ import './style.css'
 import { initPresence, listenToAuth, loginUser, logoutUser, registerUser, uploadAvatar, deleteAvatar, db, auth, requestPushPermission, listenForForegroundMessages, linkAltAccount, unlinkAltAccount, loginWithGoogle, resetPassword } from './src/firebase.js'
 import { ref, onValue, get, set, remove, update, push } from 'firebase/database'
 import pkg from './package.json'
+import changelogRaw from './CHANGELOG.md?raw'
 
 
 // adminDeletePlayer is defined below at line ~1703 (single canonical definition)
@@ -6792,7 +6793,7 @@ window.closeChangelogModal = () => {
   }
 };
 
-window.openChangelogModal = async () => {
+window.openChangelogModal = () => {
   const modal = document.getElementById('changelogModal');
   const overlay = document.getElementById('changelogModalOverlay');
   const content = document.getElementById('changelogContent');
@@ -6812,26 +6813,9 @@ window.openChangelogModal = async () => {
   }
   
   if (!content) return;
-  content.innerHTML = '<div style="text-align:center; padding:35px 15px; color:var(--text-muted); font-weight:bold;"><div style="font-size:28px; margin-bottom:10px;">📜</div>Loading changelog & release history...</div>';
   
   try {
-    let response = await fetch(`./CHANGELOG.md?nocache=${Date.now()}`, { cache: 'no-store' }).catch(() => null);
-    if (!response || !response.ok) {
-      response = await fetch(`/CHANGELOG.md?nocache=${Date.now()}`, { cache: 'no-store' }).catch(() => null);
-    }
-    if (!response || !response.ok) {
-      response = await fetch(`./public/CHANGELOG.md?nocache=${Date.now()}`, { cache: 'no-store' }).catch(() => null);
-    }
-    if (!response || !response.ok) {
-      response = await fetch(`https://raw.githubusercontent.com/wosbdc/wosBDC.github.io/main/CHANGELOG.md?nocache=${Date.now()}`, { cache: 'no-store' }).catch(() => null);
-    }
-    
-    let md = '';
-    if (response && response.ok) {
-      md = await response.text();
-    } else {
-      md = `# CHANGELOG\n\n## [${pkg.version}] - 2026-08-18\n- 📱 **Official Crystal App Icon Overhaul**: Rendered high-resolution 3D Amethyst crystal PWA icons for mobile home screens and desktop installs.\n- 📜 **Changelog Engine Upgrade**: Fixed modal overlay layering and added 1-click changelog access across navbar and settings sidebar.\n- 👥 **Bear-Trap-Style Bulk Add Players**: Multi-format batch importing with real-time duplication checking and instant Firebase sync.\n- ❄️ **Frost Clan RTDB Migration**: Sub-50ms loading, instant showdown checks, and private Root Admin launcher.`;
-    }
+    let md = changelogRaw;
     
     // Markdown parser for headings and bullets
     md = md.replace(/### (.*)/g, '<h4 style="color:var(--accent); margin-bottom:6px; margin-top:16px; font-size:14px;">$1</h4>');

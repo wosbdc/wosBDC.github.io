@@ -1,45 +1,17 @@
 {
-  "name": "BDC Ecosystem Master Version Registry",
-  "lastUpdated": "2026-08-17T15:48:00-07:00",
-  "components": {
-    "bdc_central_command_desktop": {
-      "version": "1.0.59",
-      "folder": "BDC_Central_Command/",
-      "guiFile": "BDC_Central_Command/bdc_central_command_gui_v1.0.59_(windows).pyw",
-      "cliFile": "BDC_Central_Command/bdc_central_command_cli_v1.0.59_(terminal).py",
-      "blacklistFile": "BDC_Central_Command/scraped_candidates_blacklist.json",
-      "latestChanges": [
-        "v1.0.59: Smart 3-Tier Gift Code Detection with persistent candidate blacklist",
-        "v1.0.58: Authenticated Firebase REST requests via WOS_FIREBASE_SECRET for gift code uploads",
-        "v1.0.57: Added PLATFORM_REPAIR_GUIDES and HTML email alerts for expired social tokens"
-      ]
-    },
-    "daemons": {
-      "folder": "Daemons/",
-      "counterChecker": "Daemons/counter_checker_daemon.py",
-      "githubAutoDiscovery": "Daemons/github_auto_discovery_daemon.py"
-    },
-    "threads_bridge": {
-      "folder": "Threads_Bridge/",
-      "guiFile": "Threads_Bridge/threads_bridge_gui_v1.0.59_(windows).pyw",
-      "cliFile": "Threads_Bridge/threads_bridge_cli_v1.0.59_(terminal).py"
-    },
-    "bdclive_web_dashboard": {
-      "version": "10.2.77",
-      "repository": "https://github.com/bdclive/BDClive"
-    },
-    "wosbdc_alliance_dashboard": {
-      "version": "2.9.41",
-      "repository": "https://github.com/wosbdc/wosBDC.github.io",
-      "latestChanges": [
-        "v2.9.41: Desktop/Home Screen PWA icon generation and full Changelog modal overlay z-index fix",
-        "v2.9.40: Cleaned up Members toolbar to preserve compact view; unified Single and Bulk add in Add Player modal",
-        "v2.9.39: Bear-Trap-Style Bulk Add Players to Roster with multi-format parsing, duplicate checking, and direct Firebase sync"
-      ]
-    },
-    "google_apps_script_backend": {
-      "deploymentId": "AKfycbzpQ0MIt3QJ3sco-d5d8PdthaG-g4o9CRZkcnBOyES7LX-8aAaDffvCUt2SOAQL-go",
-      "versionNumber": "@198"
-    }
+  "version": "2.9.41",
+  "releaseDate": "2026-08-18",
+  "title": "What's New in v2.9.41",
+  "notes": [
+    "📱 3D Crystal App Icons: High-definition Amethyst crystal icons for home screens and desktop shortcuts.",
+    "📜 Instant Changelog: Real-time changelog viewer with 1-tap access across navbar and settings."
+  ],
+  "wosbdc_alliance_dashboard": {
+    "version": "2.9.41",
+    "latestChanges": [
+      "v2.9.41: Desktop & mobile app icon overhaul and instant changelog access",
+      "v2.9.40: Unified Single and Bulk add in Add Player modal",
+      "v2.9.39: Streamlined player roster bulk importing and live status sync"
+    ]
   }
 }
