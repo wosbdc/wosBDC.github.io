@@ -186,7 +186,19 @@
         </div>
       </div>
 
-      <!-- Section 3: Preferences & Appearance (Mini Grid) -->
+      <!-- Section 3: Suggestions & Bug Tracker -->
+      <div class="sidebar-section" id="sidebarFeedbackSection" style="margin-bottom:14px; background:var(--bg-main); padding:12px; border-radius:10px; border:1px solid rgba(6,182,212,0.35); box-shadow:0 4px 15px rgba(6,182,212,0.08);">
+        <h3 style="margin-top:0; margin-bottom:6px; font-size:12px; color:var(--text-muted); border-bottom:1px solid var(--border); padding-bottom:5px; display:flex; align-items:center; justify-content:space-between; text-transform:uppercase; letter-spacing:0.5px;">
+          <span style="display:flex; align-items:center; gap:5px; color:var(--accent);">💡 Suggestions & Bugs</span>
+          <span style="background:rgba(6,182,212,0.15); color:var(--accent); font-size:9px; font-weight:bold; padding:1px 6px; border-radius:8px; border:1px solid rgba(6,182,212,0.3);">COMMUNITY</span>
+        </h3>
+        <p style="margin:4px 0 10px 0; font-size:11px; color:var(--text-muted); line-height:1.4;">Submit feature requests, report bugs, and vote on community ideas!</p>
+        <button id="feedbackSidebarBtn" onclick="if(window.closeSidebarFunc) window.closeSidebarFunc(); if(window.views && window.views.feedback) window.views.feedback();" class="sidebar-action-btn primary sidebar-mini-btn" style="width:100%; display:flex; align-items:center; justify-content:center; gap:6px; font-weight:bold; background:linear-gradient(135deg, rgba(6,182,212,0.2), rgba(168,85,247,0.2)); border:1px solid rgba(6,182,212,0.4); color:var(--text-main);">
+          💡 Feature & Bug Tracker
+        </button>
+      </div>
+
+      <!-- Section 4: Preferences & Appearance (Mini Grid) -->
       <div class="sidebar-section" id="sidebarPrefsSection" style="margin-bottom:16px; background:var(--bg-main); padding:12px; border-radius:10px; border:1px solid var(--border);">
         <h3 style="margin-top:0; margin-bottom:8px; font-size:12px; color:var(--text-muted); border-bottom:1px solid var(--border); padding-bottom:5px; display:flex; align-items:center; gap:6px; text-transform:uppercase; letter-spacing:0.5px;">🎨 Display & Preferences</h3>
         <div class="sidebar-btn-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">

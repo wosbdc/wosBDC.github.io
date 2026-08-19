@@ -9565,11 +9565,11 @@ window.DEFAULT_CHAMPIONSHIP_MATCHUPS = {
     statusText: "4 Wins – 1 Loss (Tournament Champions)",
     ourState: "2089",
     rounds: {
-        "r1": { roundNum: 1, date: "Round 1", ourScore: 950, ourState: "2089", enemyAlliance: { name: "[KOR] KoreaKings", state: "2045", score: 820 } },
-        "r2": { roundNum: 2, date: "Round 2", ourScore: 1020, ourState: "2089", enemyAlliance: { name: "[000] YellowMaple", state: "1988", score: 750 } },
-        "r3": { roundNum: 3, date: "Round 3", ourScore: 880, ourState: "2089", enemyAlliance: { name: "[NBD] Murata", state: "2102", score: 790 } },
-        "r4": { roundNum: 4, date: "Round 4", ourScore: 1100, ourState: "2089", enemyAlliance: { name: "[RED] Army", state: "2031", score: 650 } },
-        "r5": { roundNum: 5, date: "Round 5", ourScore: 720, ourState: "2089", enemyAlliance: { name: "[WWA] WhiteoutWarriors", state: "2015", score: 880 } }
+        "r1": { roundNum: 1, date: "Round 1", ourScore: 950, ourFlags: 3, ourState: "2089", enemyAlliance: { name: "[KOR] KoreaKings", state: "2045", score: 820, flags: 2 } },
+        "r2": { roundNum: 2, date: "Round 2", ourScore: 1020, ourFlags: 4, ourState: "2089", enemyAlliance: { name: "[000] YellowMaple", state: "1988", score: 750, flags: 1 } },
+        "r3": { roundNum: 3, date: "Round 3", ourScore: 880, ourFlags: 3, ourState: "2089", enemyAlliance: { name: "[NBD] Murata", state: "2102", score: 790, flags: 2 } },
+        "r4": { roundNum: 4, date: "Round 4", ourScore: 1100, ourFlags: 5, ourState: "2089", enemyAlliance: { name: "[RED] Army", state: "2031", score: 650, flags: 0 } },
+        "r5": { roundNum: 5, date: "Round 5", ourScore: 720, ourFlags: 1, ourState: "2089", enemyAlliance: { name: "[WWA] WhiteoutWarriors", state: "2015", score: 880, flags: 4 } }
     }
 };
 
@@ -9624,11 +9624,11 @@ window.archiveAndResetChampionshipSeason = async () => {
             statusText: "0 Wins – 0 Losses (New Season)",
             ourState: "2089",
             rounds: {
-                "r1": { roundNum: 1, date: "Round 1", ourScore: 0, ourState: "2089", enemyAlliance: { name: "[TAG] Opponent 1", state: "", score: 0 } },
-                "r2": { roundNum: 2, date: "Round 2", ourScore: 0, ourState: "2089", enemyAlliance: { name: "[TAG] Opponent 2", state: "", score: 0 } },
-                "r3": { roundNum: 3, date: "Round 3", ourScore: 0, ourState: "2089", enemyAlliance: { name: "[TAG] Opponent 3", state: "", score: 0 } },
-                "r4": { roundNum: 4, date: "Round 4", ourScore: 0, ourState: "2089", enemyAlliance: { name: "[TAG] Opponent 4", state: "", score: 0 } },
-                "r5": { roundNum: 5, date: "Round 5", ourScore: 0, ourState: "2089", enemyAlliance: { name: "[TAG] Opponent 5", state: "", score: 0 } }
+                "r1": { roundNum: 1, date: "Round 1", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "[TAG] Opponent 1", state: "", score: 0, flags: 0 } },
+                "r2": { roundNum: 2, date: "Round 2", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "[TAG] Opponent 2", state: "", score: 0, flags: 0 } },
+                "r3": { roundNum: 3, date: "Round 3", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "[TAG] Opponent 3", state: "", score: 0, flags: 0 } },
+                "r4": { roundNum: 4, date: "Round 4", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "[TAG] Opponent 4", state: "", score: 0, flags: 0 } },
+                "r5": { roundNum: 5, date: "Round 5", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "[TAG] Opponent 5", state: "", score: 0, flags: 0 } }
             }
         };
 
@@ -9712,16 +9712,30 @@ window.renderChampionshipVaultBody = (activeKey = 'live') => {
     if (!displayData) displayData = liveData;
 
     let rounds = displayData.rounds || {};
-    let roundsList = [1, 2, 3, 4, 5].map(i => rounds['r' + i] || { roundNum: i, date: `Round ${i}`, ourScore: 0, enemyAlliance: { name: 'Opponent Alliance', score: 0 } });
+    let roundsList = [1, 2, 3, 4, 5].map(i => rounds['r' + i] || { roundNum: i, date: `Round ${i}`, ourScore: 0, ourFlags: 0, enemyAlliance: { name: 'Opponent Alliance', score: 0, flags: 0 } });
 
     let winCount = 0;
     let lossCount = 0;
+    let totalOurFlags = 0;
+    let totalEnemyFlags = 0;
+
     roundsList.forEach(r => {
         let os = Number(r.ourScore) || 0;
         let es = Number(r.enemyAlliance?.score) || 0;
+        let of = (r.ourFlags !== undefined && r.ourFlags !== null && r.ourFlags !== '') ? Number(r.ourFlags) : 0;
+        let ef = (r.enemyAlliance && r.enemyAlliance.flags !== undefined && r.enemyAlliance.flags !== null && r.enemyAlliance.flags !== '') ? Number(r.enemyAlliance.flags) : 0;
+        totalOurFlags += of;
+        totalEnemyFlags += ef;
         if (os > es) winCount++;
         else if (es > os) lossCount++;
     });
+
+    if (displayData.ourSeasonFlags !== undefined && displayData.ourSeasonFlags !== null && displayData.ourSeasonFlags !== '') {
+        totalOurFlags = Number(displayData.ourSeasonFlags);
+    }
+    if (displayData.enemySeasonFlags !== undefined && displayData.enemySeasonFlags !== null && displayData.enemySeasonFlags !== '') {
+        totalEnemyFlags = Number(displayData.enemySeasonFlags);
+    }
 
     let recordStr = displayData.statusText || `${winCount} Wins – ${lossCount} ${lossCount === 1 ? 'Loss' : 'Losses'}`;
 
@@ -9735,7 +9749,9 @@ window.renderChampionshipVaultBody = (activeKey = 'live') => {
     let matchCardsHtml = roundsList.map((r, idx) => {
         let rNum = r.roundNum || (idx + 1);
         let ourScore = Number(r.ourScore) || 0;
+        let ourFlags = (r.ourFlags !== undefined && r.ourFlags !== null && r.ourFlags !== '') ? Number(r.ourFlags) : 0;
         let enemyScore = Number(r.enemyAlliance?.score) || 0;
+        let enemyFlags = (r.enemyAlliance && r.enemyAlliance.flags !== undefined && r.enemyAlliance.flags !== null && r.enemyAlliance.flags !== '') ? Number(r.enemyAlliance.flags) : 0;
         let enemyName = (r.enemyAlliance && r.enemyAlliance.name) ? r.enemyAlliance.name : 'Opponent Alliance';
         let enemyState = (r.enemyAlliance && r.enemyAlliance.state) ? r.enemyAlliance.state : (idx === 0 ? '2045' : idx === 1 ? '1988' : idx === 2 ? '2102' : idx === 3 ? '2031' : '2015');
         let isVictory = ourScore > enemyScore;
@@ -9758,8 +9774,9 @@ window.renderChampionshipVaultBody = (activeKey = 'live') => {
 
         return `
             <div style="${cardBg} border-radius:12px; padding:14px 18px; margin-bottom:12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
-                <div style="display:flex; justify-content:flex-start; align-items:center; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px; margin-bottom:10px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px; margin-bottom:10px;">
                     <span style="font-weight:900; font-size:12px; color:var(--accent); text-transform:uppercase; letter-spacing:1px;">⚔️ ROUND ${rNum}</span>
+                    <span style="font-size:11px; color:var(--text-muted); font-weight:bold;">${escapeHTML(r.date || `Round ${rNum}`)}</span>
                 </div>
                 <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
                     <!-- Left: Our Alliance -->
@@ -9767,6 +9784,7 @@ window.renderChampionshipVaultBody = (activeKey = 'live') => {
                         <div>
                             <div style="font-size:14px; font-weight:bold; color:var(--text-main);">[BDC]</div>
                             <div style="font-size:10px; color:#38bdf8; font-weight:bold; letter-spacing:0.5px; margin-top:2px;">${escapeHTML(formatStateTag(r.ourState || displayData.ourState, '2089'))}</div>
+                            <div style="font-size:10px; color:#10b981; font-weight:bold; margin-top:3px; display:inline-flex; align-items:center; gap:3px; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); padding:1px 6px; border-radius:4px;"><span style="font-size:11px;">🚩</span> ${ourFlags} Flags</div>
                         </div>
                         <span style="font-size:22px; font-family:var(--mono); ${ourScoreColor}">${ourScore.toLocaleString()}</span>
                     </div>
@@ -9783,6 +9801,7 @@ window.renderChampionshipVaultBody = (activeKey = 'live') => {
                         <div>
                             <div style="font-size:14px; font-weight:bold; color:var(--text-main);">${escapeHTML(enemyName)}</div>
                             <div style="font-size:10px; color:#38bdf8; font-weight:bold; letter-spacing:0.5px; margin-top:2px;">${escapeHTML(formatStateTag(enemyState, '2045'))}</div>
+                            <div style="font-size:10px; color:#ef4444; font-weight:bold; margin-top:3px; display:inline-flex; align-items:center; gap:3px; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); padding:1px 6px; border-radius:4px;"><span style="font-size:11px;">🚩</span> ${enemyFlags} Flags</div>
                         </div>
                     </div>
                 </div>
@@ -9802,15 +9821,485 @@ window.renderChampionshipVaultBody = (activeKey = 'live') => {
 
         <div style="text-align:center; padding:16px; margin-bottom:18px; background:linear-gradient(135deg, rgba(6,182,212,0.1) 0%, rgba(6,182,212,0.02) 100%); border:1px solid rgba(6,182,212,0.3); border-radius:12px;">
             <div style="font-size:20px; font-weight:900; color:var(--text-main);">${escapeHTML(displayData.seasonName || 'Season 12 Championship')}</div>
-            <div style="margin-top:8px; display:flex; align-items:center; justify-content:center; gap:10px; font-size:16px; font-weight:900;">
+            <div style="margin-top:8px; display:flex; align-items:center; justify-content:center; gap:10px; font-size:16px; font-weight:900; flex-wrap:wrap;">
                 <span style="color:#10b981;">${winCount} Wins</span>
                 <span style="color:var(--text-muted); opacity:0.6;">–</span>
                 <span style="color:#ef4444;">${lossCount} ${lossCount === 1 ? 'Loss' : 'Losses'}</span>
+            </div>
+            <div style="margin-top:8px; display:inline-flex; align-items:center; justify-content:center; gap:14px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); padding:4px 14px; border-radius:16px; font-size:12px; flex-wrap:wrap;">
+                <span style="color:#10b981; font-weight:bold;">🚩 <strong>${totalOurFlags}</strong> Flags Captured</span>
+                <span style="color:var(--text-muted); opacity:0.4;">|</span>
+                <span style="color:#ef4444; font-weight:bold;">🚩 <strong>${totalEnemyFlags}</strong> Opponent Flags</span>
             </div>
         </div>
 
         <div>${matchCardsHtml}</div>
     `;
+};
+
+// ==========================================
+// 💡 ALLIANCE FEATURE REQUEST & BUG TRACKER
+// ==========================================
+
+window.formatTimeAgo = (timestamp) => {
+    if (!timestamp) return 'recently';
+    const now = Date.now();
+    const diffSec = Math.max(0, Math.floor((now - Number(timestamp)) / 1000));
+    if (diffSec < 60) return 'just now';
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHour = Math.floor(diffMin / 60);
+    if (diffHour < 24) return `${diffHour}h ago`;
+    const diffDay = Math.floor(diffHour / 24);
+    if (diffDay < 30) return `${diffDay}d ago`;
+    const diffMonth = Math.floor(diffDay / 30);
+    if (diffMonth < 12) return `${diffMonth}mo ago`;
+    return `${Math.floor(diffDay / 365)}y ago`;
+};
+
+window.fetchFeedbackItems = async () => {
+    try {
+        const snap = await get(ref(db, 'community_feedback'));
+        if (!snap || !snap.exists()) return [];
+        const data = snap.val() || {};
+        const list = Object.keys(data).map(k => ({
+            id: k,
+            ...data[k]
+        }));
+        list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        return list;
+    } catch (e) {
+        console.error("Error fetching feedback items:", e);
+        return [];
+    }
+};
+
+window.submitFeedbackItem = async (payload) => {
+    try {
+        const newRef = push(ref(db, 'community_feedback'));
+        const ticketId = newRef.key;
+        const now = Date.now();
+        const userUid = currentUser?.uid || ('anon_' + Math.random().toString(36).substr(2, 6));
+        const item = {
+            id: ticketId,
+            type: payload.type || 'feature',
+            category: payload.category || 'General UI',
+            title: payload.title || '',
+            description: payload.description || '',
+            status: 'pending',
+            submittedBy: {
+                uid: userUid,
+                name: payload.authorName || currentUser?.displayName || 'Alliance Member',
+                gameId: payload.authorGameId || '',
+                avatar: currentUser?.photoURL || ''
+            },
+            votes: {
+                [userUid]: true
+            },
+            voteCount: 1,
+            adminNote: '',
+            createdAt: now,
+            updatedAt: now
+        };
+        await set(newRef, item);
+        return item;
+    } catch(e) {
+        console.error("submitFeedbackItem error:", e);
+        throw e;
+    }
+};
+
+window.toggleFeedbackVote = async (itemId) => {
+    if (!currentUser) {
+        if (window.showToast) window.showToast("Please sign in to upvote suggestions!", "warning");
+        if (views.login) views.login();
+        return;
+    }
+    try {
+        const userUid = currentUser.uid;
+        const itemRef = ref(db, `community_feedback/${itemId}`);
+        const snap = await get(itemRef);
+        if (!snap || !snap.exists()) return;
+        const item = snap.val();
+        const votes = item.votes || {};
+        
+        let hasVoted = !!votes[userUid];
+        if (hasVoted) {
+            delete votes[userUid];
+        } else {
+            votes[userUid] = true;
+        }
+        
+        const voteCount = Object.keys(votes).filter(k => votes[k]).length;
+        await update(itemRef, {
+            votes: votes,
+            voteCount: voteCount,
+            updatedAt: Date.now()
+        });
+
+        if (window.showToast) {
+            window.showToast(hasVoted ? "Upvote removed" : "👍 Upvoted suggestion!", "success");
+        }
+        
+        if (typeof window.activeFeedbackRender === 'function') {
+            window.activeFeedbackRender();
+        }
+        if (typeof window.renderAdminFeedbackTab === 'function') {
+            window.renderAdminFeedbackTab();
+        }
+    } catch (e) {
+        console.error("toggleFeedbackVote error:", e);
+        if (window.showToast) window.showToast("Failed to register vote: " + e.message, "error");
+    }
+};
+
+window.updateFeedbackStatus = async (itemId, newStatus, adminNote = null) => {
+    if (!itemId) return;
+    const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+    if (!isManager) {
+        if (window.showToast) window.showToast("Only R4/R5 managers can update status.", "error");
+        return;
+    }
+    try {
+        const updates = {
+            status: newStatus,
+            updatedAt: Date.now(),
+            updatedBy: currentUser.displayName || currentUser.email || 'Admin'
+        };
+        if (newStatus === 'completed') {
+            updates.completedAt = Date.now();
+            updates.completedBy = currentUser.displayName || currentUser.email || 'Admin';
+        }
+        if (adminNote !== null && adminNote !== undefined) {
+            updates.adminNote = adminNote;
+        }
+        await update(ref(db, `community_feedback/${itemId}`), updates);
+        if (window.showToast) window.showToast(`Updated status to ${newStatus.toUpperCase()}!`, "success");
+        if (typeof window.activeFeedbackRender === 'function') window.activeFeedbackRender();
+        if (typeof window.renderAdminFeedbackTab === 'function') window.renderAdminFeedbackTab();
+    } catch (e) {
+        console.error("updateFeedbackStatus error:", e);
+        if (window.showToast) window.showToast("Failed to update status: " + e.message, "error");
+    }
+};
+
+window.toggleFeedbackCompleted = async (itemId, isChecked) => {
+    if (!itemId) return;
+    const newStatus = isChecked ? 'completed' : 'in_progress';
+    await window.updateFeedbackStatus(itemId, newStatus);
+};
+
+window.deleteFeedbackItem = async (itemId) => {
+    if (!itemId) return;
+    const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+    if (!isManager) {
+        if (window.showToast) window.showToast("Only R4/R5 managers can delete tickets.", "error");
+        return;
+    }
+    if (!confirm("Are you sure you want to delete this feedback ticket?")) return;
+    try {
+        await remove(ref(db, `community_feedback/${itemId}`));
+        if (window.showToast) window.showToast("Ticket deleted from database.", "info");
+        if (typeof window.activeFeedbackRender === 'function') window.activeFeedbackRender();
+        if (typeof window.renderAdminFeedbackTab === 'function') window.renderAdminFeedbackTab();
+    } catch (e) {
+        console.error("deleteFeedbackItem error:", e);
+        if (window.showToast) window.showToast("Failed to delete ticket: " + e.message, "error");
+    }
+};
+
+window.openAdminNoteModal = (itemId, currentNote = '') => {
+    const existing = document.getElementById('feedbackAdminNoteModal');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'feedbackAdminNoteModal';
+    overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:99999; display:flex; align-items:center; justify-content:center; padding:16px; box-sizing:border-box; animation: fadeIn 0.2s ease;';
+
+    overlay.innerHTML = `
+        <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:14px; padding:24px; max-width:460px; width:100%; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid var(--border); padding-bottom:10px;">
+                <h3 style="margin:0; font-size:16px; color:var(--accent); display:flex; align-items:center; gap:8px;">
+                    <span>✨ Admin Resolution Note</span>
+                </h3>
+                <button onclick="document.getElementById('feedbackAdminNoteModal')?.remove()" style="background:none; border:none; color:var(--text-muted); font-size:18px; cursor:pointer;">✕</button>
+            </div>
+            <p style="margin:0 0 12px 0; font-size:12px; color:var(--text-muted);">Add a short resolution note or version tag (e.g., <em>Implemented in v2.9.52</em> or <em>Fixed in latest patch</em>).</p>
+            <input type="text" id="adminNoteInput" value="${escapeHTML(currentNote || '')}" placeholder="e.g. Implemented in v2.9.52" style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--accent); background:var(--bg-main); color:var(--text-main); font-size:13px; box-sizing:border-box; margin-bottom:16px;">
+            <div style="display:flex; justify-content:flex-end; gap:8px;">
+                <button onclick="document.getElementById('feedbackAdminNoteModal')?.remove()" style="background:var(--bg-main); border:1px solid var(--border); color:var(--text-muted); padding:8px 14px; border-radius:8px; font-weight:bold; cursor:pointer;">Cancel</button>
+                <button id="saveAdminNoteBtn" style="background:var(--accent); border:none; color:#fff; padding:8px 18px; border-radius:8px; font-weight:bold; cursor:pointer;">Save Note</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+    const saveBtn = overlay.querySelector('#saveAdminNoteBtn');
+    if (saveBtn) {
+        saveBtn.onclick = async () => {
+            const noteVal = document.getElementById('adminNoteInput')?.value.trim() || '';
+            await update(ref(db, `community_feedback/${itemId}`), {
+                adminNote: noteVal,
+                updatedAt: Date.now()
+            });
+            overlay.remove();
+            if (window.showToast) window.showToast("Admin note saved!", "success");
+            if (typeof window.activeFeedbackRender === 'function') window.activeFeedbackRender();
+            if (typeof window.renderAdminFeedbackTab === 'function') window.renderAdminFeedbackTab();
+        };
+    }
+};
+
+window.openSubmitFeedbackModal = (defaultType = 'feature') => {
+    if (!currentUser) {
+        if (window.showToast) window.showToast("Please sign in to submit suggestions or bugs!", "warning");
+        if (views.login) views.login();
+        return;
+    }
+
+    const existing = document.getElementById('submitFeedbackModal');
+    if (existing) existing.remove();
+
+    let selectedType = defaultType; // 'feature' or 'bug'
+
+    const overlay = document.createElement('div');
+    overlay.id = 'submitFeedbackModal';
+    overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:99999; display:flex; align-items:center; justify-content:center; padding:16px; box-sizing:border-box; animation: fadeIn 0.2s ease;';
+
+    const authorName = (window.idToNameMap && currentUser?.gameId && window.idToNameMap[currentUser.gameId]) || currentUser?.displayName || 'Chief';
+    const authorGid = currentUser?.gameId || '';
+
+    overlay.innerHTML = `
+        <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:16px; padding:24px; max-width:540px; width:100%; box-shadow:0 12px 40px rgba(0,0,0,0.6); max-height:90vh; overflow-y:auto;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:12px;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg, rgba(6,182,212,0.2), rgba(168,85,247,0.2)); border:1px solid rgba(6,182,212,0.4); display:flex; align-items:center; justify-content:center; font-size:18px;">
+                        💡
+                    </div>
+                    <div>
+                        <h3 style="margin:0; font-size:17px; color:var(--text-main); font-weight:800;">Submit Idea or Report Bug</h3>
+                        <p style="margin:2px 0 0 0; font-size:11px; color:var(--text-muted);">Share your feedback directly with alliance developers & managers</p>
+                    </div>
+                </div>
+                <button onclick="document.getElementById('submitFeedbackModal')?.remove()" style="background:none; border:none; color:var(--text-muted); font-size:20px; cursor:pointer;">✕</button>
+            </div>
+
+            <!-- Type Selector Toggle -->
+            <div style="margin-bottom:16px;">
+                <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Select Type</label>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                    <button type="button" id="fbTypeFeatureBtn" onclick="window.selectFeedbackType('feature')" style="padding:12px; border-radius:10px; border:2px solid #06b6d4; background:rgba(6,182,212,0.15); color:#06b6d4; font-weight:bold; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:0.2s;">
+                        <span>💡</span> Feature Request
+                    </button>
+                    <button type="button" id="fbTypeBugBtn" onclick="window.selectFeedbackType('bug')" style="padding:12px; border-radius:10px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-muted); font-weight:bold; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:0.2s;">
+                        <span>🐞</span> Bug Report
+                    </button>
+                </div>
+            </div>
+
+            <!-- Category Picker -->
+            <div style="margin-bottom:14px;">
+                <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Category / Area</label>
+                <select id="fbCategoryInput" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; font-weight:bold; box-sizing:border-box;">
+                    <option value="Alliance Championship">🏆 Alliance Championship</option>
+                    <option value="Bear Trap">🐻 Bear Trap & Attendance</option>
+                    <option value="Showdown">⚔️ ShowDown</option>
+                    <option value="Mercenary Prestige">🛡️ Mercenary Prestige</option>
+                    <option value="Account Hub">👤 Account Hub & Profiles</option>
+                    <option value="Shield Alerts">🔔 Shield & Discord Alerts</option>
+                    <option value="Leaderboards">📊 Leaderboards & Medals</option>
+                    <option value="Schedule">📅 Schedule & Clocks</option>
+                    <option value="Mobile UI">📱 Mobile Layout & Navigation</option>
+                    <option value="Gift Codes">🎁 Gift Code Engine</option>
+                    <option value="General UI">🎨 General UI / Other</option>
+                </select>
+            </div>
+
+            <!-- Title Input -->
+            <div style="margin-bottom:14px;">
+                <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Title</label>
+                <input type="text" id="fbTitleInput" placeholder="e.g. Add flag counts to Championship 5-round cards..." style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; font-weight:bold; box-sizing:border-box;">
+            </div>
+
+            <!-- Description Textarea -->
+            <div style="margin-bottom:16px;">
+                <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Description / Details</label>
+                <textarea id="fbDescInput" rows="4" placeholder="Explain what feature you'd like to see, or if reporting a bug, what happened and how to reproduce it..." style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; box-sizing:border-box; resize:vertical; line-height:1.4;"></textarea>
+            </div>
+
+            <!-- Submitter Metadata Tag -->
+            <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:8px; padding:10px 14px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:11px; color:var(--text-muted);">Submitting as:</span>
+                <span style="font-size:12px; font-weight:bold; color:#38bdf8;">👤 ${escapeHTML(authorName)} ${authorGid ? `(#${escapeHTML(authorGid)})` : ''}</span>
+            </div>
+
+            <!-- Actions -->
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button type="button" onclick="document.getElementById('submitFeedbackModal')?.remove()" style="background:var(--bg-main); border:1px solid var(--border); color:var(--text-muted); padding:10px 18px; border-radius:8px; font-weight:bold; cursor:pointer;">Cancel</button>
+                <button type="button" id="btnSubmitFeedbackSend" onclick="window.handleFeedbackSubmit()" style="background:linear-gradient(135deg, #06b6d4, #8b5cf6); border:none; color:#fff; padding:10px 24px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 3px 12px rgba(6,182,212,0.35);">
+                    🚀 Submit Ticket
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    window.selectFeedbackType = (t) => {
+        selectedType = t;
+        const featBtn = document.getElementById('fbTypeFeatureBtn');
+        const bugBtn = document.getElementById('fbTypeBugBtn');
+        if (t === 'feature') {
+            if (featBtn) { featBtn.style.border = '2px solid #06b6d4'; featBtn.style.background = 'rgba(6,182,212,0.15)'; featBtn.style.color = '#06b6d4'; }
+            if (bugBtn) { bugBtn.style.border = '1px solid var(--border)'; bugBtn.style.background = 'var(--bg-main)'; bugBtn.style.color = 'var(--text-muted)'; }
+        } else {
+            if (bugBtn) { bugBtn.style.border = '2px solid #ef4444'; bugBtn.style.background = 'rgba(239,68,68,0.15)'; bugBtn.style.color = '#ef4444'; }
+            if (featBtn) { featBtn.style.border = '1px solid var(--border)'; featBtn.style.background = 'var(--bg-main)'; featBtn.style.color = 'var(--text-muted)'; }
+        }
+    };
+
+    window.handleFeedbackSubmit = async () => {
+        const title = document.getElementById('fbTitleInput')?.value.trim();
+        const desc = document.getElementById('fbDescInput')?.value.trim();
+        const category = document.getElementById('fbCategoryInput')?.value || 'General UI';
+        const submitBtn = document.getElementById('btnSubmitFeedbackSend');
+
+        if (!title) {
+            if (window.showToast) window.showToast("Please enter a title for your request.", "warning");
+            return;
+        }
+
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = 'Submitting...';
+        }
+
+        try {
+            await window.submitFeedbackItem({
+                type: selectedType,
+                category: category,
+                title: title,
+                description: desc,
+                authorName: authorName,
+                authorGameId: authorGid
+            });
+
+            overlay.remove();
+            if (window.showToast) window.showToast("🎉 Thank you! Your submission is now live.", "success");
+            if (typeof window.activeFeedbackRender === 'function') window.activeFeedbackRender();
+            if (typeof window.renderAdminFeedbackTab === 'function') window.renderAdminFeedbackTab();
+        } catch(err) {
+            console.error(err);
+            if (window.showToast) window.showToast("Failed to submit: " + err.message, "error");
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '🚀 Submit Ticket';
+            }
+        }
+    };
+};
+
+window.renderAdminFeedbackTab = async () => {
+    const container = document.getElementById('adminFeedbackTabContainer');
+    if (!container) return;
+
+    container.innerHTML = `
+        <div style="text-align:center; padding:30px; color:var(--text-muted);">
+            <div style="border:3px solid rgba(255,255,255,0.1); border-top-color:#06b6d4; border-radius:50%; width:28px; height:28px; animation:spin 1s linear infinite; margin:0 auto 10px;"></div>
+            Loading Feature & Bug Tracker tickets...
+        </div>
+    `;
+
+    try {
+        const items = await window.fetchFeedbackItems();
+        if (items.length === 0) {
+            container.innerHTML = `
+                <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:30px; text-align:center; color:var(--text-muted);">
+                    <div style="font-size:32px; margin-bottom:8px;">💡</div>
+                    <div style="font-size:15px; font-weight:bold; color:var(--text-main);">No feature requests or bug reports logged yet!</div>
+                    <button onclick="window.openSubmitFeedbackModal()" style="margin-top:12px; background:var(--accent); color:#fff; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; cursor:pointer;">➕ Submit First Ticket</button>
+                </div>
+            `;
+            return;
+        }
+
+        let rowsHtml = items.map(item => {
+            const isFeat = item.type === 'feature';
+            const isCompleted = item.status === 'completed';
+            const isInProgress = item.status === 'in_progress';
+            const isPending = !item.status || item.status === 'pending';
+            const typeBadge = isFeat 
+                ? '<span style="background:rgba(6,182,212,0.15); color:#06b6d4; border:1px solid rgba(6,182,212,0.3); padding:2px 8px; border-radius:6px; font-size:11px; font-weight:bold;">💡 FEATURE</span>'
+                : '<span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:2px 8px; border-radius:6px; font-size:11px; font-weight:bold;">🐞 BUG</span>';
+
+            return `
+                <tr style="border-bottom:1px solid var(--border); background:${isCompleted ? 'rgba(16,185,129,0.03)' : 'transparent'};">
+                    <td style="padding:12px; text-align:center;">
+                        <input type="checkbox" onchange="window.toggleFeedbackCompleted('${item.id}', this.checked)" ${isCompleted ? 'checked' : ''} style="width:18px; height:18px; accent-color:#10b981; cursor:pointer;" title="Mark Completed / Done">
+                    </td>
+                    <td style="padding:12px; white-space:nowrap;">
+                        ${typeBadge}
+                    </td>
+                    <td style="padding:12px;">
+                        <div style="font-weight:bold; font-size:13px; color:var(--text-main); ${isCompleted ? 'text-decoration:line-through; opacity:0.75;' : ''}">${escapeHTML(item.title || '')}</div>
+                        ${item.description ? `<div style="font-size:11.5px; color:var(--text-muted); margin-top:3px; max-width:380px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHTML(item.description)}</div>` : ''}
+                        ${item.adminNote ? `<div style="font-size:11px; color:#38bdf8; font-weight:bold; margin-top:3px;">✨ ${escapeHTML(item.adminNote)}</div>` : ''}
+                    </td>
+                    <td style="padding:12px; white-space:nowrap;">
+                        <span style="font-size:11px; color:var(--text-muted); background:var(--bg-main); border:1px solid var(--border); padding:2px 8px; border-radius:6px;">${escapeHTML(item.category || 'General')}</span>
+                    </td>
+                    <td style="padding:12px; white-space:nowrap; font-size:12px; color:var(--text-muted);">
+                        <strong style="color:var(--text-main);">${escapeHTML(item.submittedBy?.name || 'Chief')}</strong><br>
+                        <span style="font-size:10.5px;">${window.formatTimeAgo(item.createdAt)}</span>
+                    </td>
+                    <td style="padding:12px; text-align:center; font-weight:bold; color:var(--accent); font-family:var(--mono);">
+                        👍 ${item.voteCount || 0}
+                    </td>
+                    <td style="padding:12px; white-space:nowrap;">
+                        <select onchange="window.updateFeedbackStatus('${item.id}', this.value)" style="padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:11px; font-weight:bold;">
+                            <option value="pending" ${isPending ? 'selected' : ''}>🟡 Under Review</option>
+                            <option value="in_progress" ${isInProgress ? 'selected' : ''}>🔵 In Progress</option>
+                            <option value="completed" ${isCompleted ? 'selected' : ''}>✅ Completed</option>
+                            <option value="archived" ${item.status === 'archived' ? 'selected' : ''}>⚪ Archived</option>
+                        </select>
+                    </td>
+                    <td style="padding:12px; white-space:nowrap; text-align:right;">
+                        <button onclick="window.openAdminNoteModal('${item.id}', '${escapeHTML(item.adminNote || '')}')" style="background:rgba(6,182,212,0.12); border:1px solid rgba(6,182,212,0.3); color:var(--accent); padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;" title="Add or edit resolution note">
+                            ✏️ Note
+                        </button>
+                        <button onclick="window.deleteFeedbackItem('${item.id}')" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; margin-left:4px;" title="Delete ticket">
+                            🗑️
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        container.innerHTML = `
+            <div style="overflow-x:auto;">
+                <table style="width:100%; border-collapse:collapse; text-align:left; font-size:13px;">
+                    <thead>
+                        <tr style="border-bottom:2px solid var(--border); color:var(--text-muted); font-size:11px; text-transform:uppercase; letter-spacing:0.5px;">
+                            <th style="padding:10px 12px; text-align:center; width:40px;">Done</th>
+                            <th style="padding:10px 12px; width:90px;">Type</th>
+                            <th style="padding:10px 12px;">Title & Details</th>
+                            <th style="padding:10px 12px; width:130px;">Category</th>
+                            <th style="padding:10px 12px; width:120px;">Submitted By</th>
+                            <th style="padding:10px 12px; text-align:center; width:60px;">Votes</th>
+                            <th style="padding:10px 12px; width:130px;">Status</th>
+                            <th style="padding:10px 12px; text-align:right; width:100px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rowsHtml}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    } catch(err) {
+        console.error("renderAdminFeedbackTab error:", err);
+        container.innerHTML = `<div style="padding:20px; text-align:center; color:var(--danger);">Error loading Feedback tickets: ${escapeHTML(err.message)}</div>`;
+    }
 };
 
 window.renderMercenaryCaptainsSectionHtml = (clearedCount = null, bossProgress = null) => {
@@ -19251,6 +19740,7 @@ const views = {
               <button class="admin-tab-btn active" data-tab="tab-tools" style="background:none; border:none; color:var(--accent); font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid var(--accent); flex-shrink:0;">🛠️ Daily Tools</button>
               <button class="admin-tab-btn" data-tab="tab-bots" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid transparent; flex-shrink:0;">🤖 Bots</button>
               <button class="admin-tab-btn" data-tab="tab-indev" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid transparent; flex-shrink:0;">🧪 In-Dev</button>
+              <button class="admin-tab-btn" data-tab="tab-feedback" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid transparent; flex-shrink:0;">💡 Feedback</button>
               <button class="admin-tab-btn" data-tab="tab-users" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid transparent; flex-shrink:0;">👥 Users</button>
               ${isR5 ? `<button class="admin-tab-btn" data-tab="tab-settings" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid transparent; flex-shrink:0;">⚙️ Settings</button>` : ''}
               <button class="admin-tab-btn" data-tab="tab-logs" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid transparent; flex-shrink:0;">📋 Logs</button>
@@ -19280,6 +19770,7 @@ const views = {
               <p style="margin:0 0 15px 0; font-size:12px; color:var(--text-muted); text-align:left;">Manage Chief profiles, fix game IDs, review signups, and sync master sheets.</p>
               
               <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:12px;">
+                <button onclick="views.feedback()" style="background:linear-gradient(135deg, #06b6d4, #8b5cf6); color:#fff; border:none; padding:12px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; box-shadow:0 4px 12px rgba(6,182,212,0.3); display:flex; align-items:center; justify-content:center; gap:8px;">💡 Feature & Bug Tracker</button>
                 <button onclick="views.admin('tab-users')" style="background:linear-gradient(135deg, #6366f1, #4f46e5); color:#fff; border:none; padding:12px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; box-shadow:0 4px 12px rgba(99,102,241,0.3); display:flex; align-items:center; justify-content:center; gap:8px;">👥 Member Database & User Hub</button>
                 <button onclick="document.querySelector('.admin-tab-btn[data-tab=\'tab-users\']')?.click(); if(window.showToast) window.showToast('Click 🛠️ Repair ID next to any member in the table to swap or fix IDs!', 'info');" style="background:linear-gradient(135deg, #a855f7, #9333ea); color:#fff; border:none; padding:12px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; box-shadow:0 4px 12px rgba(168,85,247,0.3); display:flex; align-items:center; justify-content:center; gap:8px;">🛠️ Chief Character & ID Repair</button>
                 <button onclick="window.openNewMembersModal()" style="background:linear-gradient(135deg, #06b6d4, #3b82f6); color:#fff; border:none; padding:12px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; box-shadow:0 4px 12px rgba(6,182,212,0.3); display:flex; align-items:center; justify-content:center; gap:8px;">🔔 Recent Member Signups</button>
@@ -19594,6 +20085,32 @@ const views = {
               <div style="background:var(--card-bg); padding:20px; border-radius:12px; border:1px solid var(--border); text-align:center; display:flex; flex-direction:column; gap:15px; align-items:center;">
                 <button onclick="window.openScheduleEditorModal()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:12px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:16px; width:100%; max-width:300px; box-shadow:0 4px 12px rgba(16,185,129,0.3);">📅 Live Schedule Manager</button>
               </div>
+            </div>
+          </div>
+
+          <!-- Tab: Feedback & Bug Tracker -->
+          <div id="tab-feedback" class="admin-tab-content" style="display:none;">
+            <div style="background:var(--bg-main); padding:20px; border-radius:12px; border:1px solid rgba(6,182,212,0.35); margin-bottom:20px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px; border-bottom:1px solid rgba(6,182,212,0.25); padding-bottom:12px;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                  <div style="width:40px; height:40px; border-radius:10px; background:linear-gradient(135deg, rgba(6,182,212,0.2), rgba(168,85,247,0.2)); display:flex; align-items:center; justify-content:center; font-size:20px; border:1px solid rgba(6,182,212,0.4);">💡</div>
+                  <div>
+                    <h3 style="margin:0; color:#38bdf8; font-size:18px; font-weight:800;">Alliance Feature & Bug Tracker</h3>
+                    <p style="margin:2px 0 0 0; font-size:12px; color:var(--text-muted);">Manage member feedback, toggle status, and mark tasks completed.</p>
+                  </div>
+                </div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                  <button onclick="views.feedback()" style="background:var(--card-bg); border:1px solid var(--border); color:var(--text-main); padding:8px 14px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12px; display:flex; align-items:center; gap:6px;">
+                    👁️ Open Member Hub
+                  </button>
+                  <button onclick="window.openSubmitFeedbackModal()" style="background:linear-gradient(135deg, #06b6d4, #8b5cf6); color:#fff; border:none; padding:8px 16px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12px; display:flex; align-items:center; gap:6px; box-shadow:0 2px 10px rgba(6,182,212,0.3);">
+                    ➕ Add Request / Bug
+                  </button>
+                </div>
+              </div>
+
+              <!-- Interactive Table Container -->
+              <div id="adminFeedbackTabContainer"></div>
             </div>
           </div>
       `;
@@ -20539,6 +21056,9 @@ const views = {
             if (botsBtn) botsBtn.click();
             if (window.openAllianceGiftCodesManager) window.openAllianceGiftCodesManager();
           }
+          if (tabKey === 'tab-feedback') {
+            if (window.renderAdminFeedbackTab) window.renderAdminFeedbackTab();
+          }
           if (tabKey === 'tab-system') {
             if (window.refreshSystemStats) setTimeout(window.refreshSystemStats, 100);
           }
@@ -21475,9 +21995,11 @@ html += `</select>
             const roundsData = champMatchupData.rounds || {};
 
             let roundsInputsHtml = [1, 2, 3, 4, 5].map(i => {
-                let r = roundsData['r' + i] || { roundNum: i, date: `Round ${i}`, ourScore: 0, enemyAlliance: { name: `Opponent ${i}`, score: 0 } };
+                let r = roundsData['r' + i] || { roundNum: i, date: `Round ${i}`, ourScore: 0, ourFlags: 0, enemyAlliance: { name: `Opponent ${i}`, score: 0, flags: 0 } };
                 let ourScore = Number(r.ourScore) || 0;
+                let ourFlags = (r.ourFlags !== undefined && r.ourFlags !== null && r.ourFlags !== '') ? Number(r.ourFlags) : 0;
                 let enemyScore = Number(r.enemyAlliance?.score) || 0;
+                let enemyFlags = (r.enemyAlliance && r.enemyAlliance.flags !== undefined && r.enemyAlliance.flags !== null && r.enemyAlliance.flags !== '') ? Number(r.enemyAlliance.flags) : 0;
                 let enemyName = (r.enemyAlliance && r.enemyAlliance.name) ? r.enemyAlliance.name : '';
                 let enemyState = (r.enemyAlliance && r.enemyAlliance.state) ? r.enemyAlliance.state : '';
                 let isVictory = ourScore > enemyScore;
@@ -21503,8 +22025,16 @@ html += `</select>
                             <!-- Left: Our Alliance -->
                             <div style="background:rgba(16,185,129,0.04); border:1px solid rgba(16,185,129,0.2); border-radius:8px; padding:12px; text-align:right;">
                                 <div style="font-size:11px; color:#10b981; font-weight:bold; text-transform:uppercase; margin-bottom:4px;">Our Alliance [BDC] • State #2089</div>
-                                <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:3px;">Our Score</label>
-                                <input type="number" id="adm_champ_r${i}_our" value="${ourScore}" oninput="window.updateAdminChampPreview(${i})" style="width:100%; text-align:right; font-size:18px; font-family:var(--mono); font-weight:bold; color:var(--text-main); padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); box-sizing:border-box;">
+                                <div style="display:grid; grid-template-columns: 2fr 1fr; gap:8px;">
+                                    <div>
+                                        <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:3px;">Our Score</label>
+                                        <input type="number" id="adm_champ_r${i}_our" value="${ourScore}" oninput="window.updateAdminChampPreview(${i})" style="width:100%; text-align:right; font-size:18px; font-family:var(--mono); font-weight:bold; color:var(--text-main); padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); box-sizing:border-box;">
+                                    </div>
+                                    <div>
+                                        <label style="font-size:10px; color:#10b981; font-weight:bold; display:block; margin-bottom:3px;">🚩 Our Flags</label>
+                                        <input type="number" id="adm_champ_r${i}_our_flags" value="${ourFlags}" min="0" placeholder="0" style="width:100%; text-align:right; font-size:18px; font-family:var(--mono); font-weight:bold; color:#10b981; padding:8px 10px; border-radius:6px; border:1px solid rgba(16,185,129,0.4); background:var(--bg-main); box-sizing:border-box;">
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- Center: VS -->
@@ -21523,9 +22053,15 @@ html += `</select>
                                         <input type="text" id="adm_champ_r${i}_enemy_state" value="${escapeHTML(enemyState)}" placeholder="e.g. 2045" style="width:100%; font-size:13px; font-weight:bold; color:var(--text-main); padding:6px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); box-sizing:border-box;">
                                     </div>
                                 </div>
-                                <div>
-                                    <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:2px;">Opponent Score</label>
-                                    <input type="number" id="adm_champ_r${i}_enemy_score" value="${enemyScore}" oninput="window.updateAdminChampPreview(${i})" style="width:100%; text-align:left; font-size:18px; font-family:var(--mono); font-weight:bold; color:var(--text-main); padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); box-sizing:border-box;">
+                                <div style="display:grid; grid-template-columns: 2fr 1fr; gap:8px;">
+                                    <div>
+                                        <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:2px;">Opponent Score</label>
+                                        <input type="number" id="adm_champ_r${i}_enemy_score" value="${enemyScore}" oninput="window.updateAdminChampPreview(${i})" style="width:100%; text-align:left; font-size:18px; font-family:var(--mono); font-weight:bold; color:var(--text-main); padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); box-sizing:border-box;">
+                                    </div>
+                                    <div>
+                                        <label style="font-size:10px; color:#ef4444; font-weight:bold; display:block; margin-bottom:2px;">🚩 Opponent Flags</label>
+                                        <input type="number" id="adm_champ_r${i}_enemy_flags" value="${enemyFlags}" min="0" placeholder="0" style="width:100%; text-align:left; font-size:18px; font-family:var(--mono); font-weight:bold; color:#ef4444; padding:8px 10px; border-radius:6px; border:1px solid rgba(239,68,68,0.4); background:var(--bg-main); box-sizing:border-box;">
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -21537,9 +22073,9 @@ html += `</select>
                 <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:18px; display:flex; flex-direction:column; gap:16px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; border-bottom:1px solid var(--border); padding-bottom:12px;">
                         <h3 style="margin:0; font-size:17px; color:var(--accent);">⚙️ Season Details & Overall Record</h3>
-                        <button onclick="window.autoCalculateChampRecord()" style="background:rgba(6,182,212,0.15); border:1px solid rgba(6,182,212,0.4); color:var(--accent); padding:6px 12px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">⚡ Auto-Calculate Record</button>
+                        <button onclick="window.autoCalculateChampRecord()" style="background:rgba(6,182,212,0.15); border:1px solid rgba(6,182,212,0.4); color:var(--accent); padding:6px 12px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">⚡ Auto-Calculate Record & Flags</button>
                     </div>
-                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap:14px;">
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:14px;">
                         <div>
                             <label style="display:block; font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:bold; margin-bottom:4px;">Season Name / Title</label>
                             <input type="text" id="adm_champ_season_name" value="${escapeHTML(seasonNameVal)}" placeholder="e.g. Season 12 Championship" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box; font-weight:bold;">
@@ -21547,6 +22083,14 @@ html += `</select>
                         <div>
                             <label style="display:block; font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:bold; margin-bottom:4px;">Status Text / Subtitle</label>
                             <input type="text" id="adm_champ_status_text" value="${escapeHTML(statusTextVal)}" placeholder="e.g. 4 Wins – 1 Loss (Tournament Champions)" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <label style="display:block; font-size:11px; text-transform:uppercase; color:#10b981; font-weight:bold; margin-bottom:4px;">🚩 Our Season Flags (Total)</label>
+                            <input type="number" id="adm_champ_our_season_flags" value="${champMatchupData.ourSeasonFlags !== undefined ? champMatchupData.ourSeasonFlags : ''}" placeholder="0 (or auto-calculate)" style="width:100%; padding:10px; border-radius:6px; border:1px solid rgba(16,185,129,0.4); background:var(--bg-main); color:#10b981; box-sizing:border-box; font-weight:bold;">
+                        </div>
+                        <div>
+                            <label style="display:block; font-size:11px; text-transform:uppercase; color:#ef4444; font-weight:bold; margin-bottom:4px;">🚩 Opponent Season Flags (Total)</label>
+                            <input type="number" id="adm_champ_enemy_season_flags" value="${champMatchupData.enemySeasonFlags !== undefined ? champMatchupData.enemySeasonFlags : ''}" placeholder="0 (or auto-calculate)" style="width:100%; padding:10px; border-radius:6px; border:1px solid rgba(239,68,68,0.4); background:var(--bg-main); color:#ef4444; box-sizing:border-box; font-weight:bold;">
                         </div>
                     </div>
                 </div>
@@ -21779,9 +22323,14 @@ html += `</select>
 
         window.autoCalculateChampRecord = () => {
             let wins = 0, losses = 0;
+            let ourTotalFlags = 0, enemyTotalFlags = 0;
             for (let i = 1; i <= 5; i++) {
                 let our = Number(document.getElementById('adm_champ_r' + i + '_our')?.value) || 0;
                 let opp = Number(document.getElementById('adm_champ_r' + i + '_enemy_score')?.value) || 0;
+                let oFlags = Number(document.getElementById('adm_champ_r' + i + '_our_flags')?.value) || 0;
+                let eFlags = Number(document.getElementById('adm_champ_r' + i + '_enemy_flags')?.value) || 0;
+                ourTotalFlags += oFlags;
+                enemyTotalFlags += eFlags;
                 if (our > opp) wins++;
                 else if (opp > our) losses++;
             }
@@ -21789,32 +22338,43 @@ html += `</select>
             if (statusInput) {
                 let suffix = wins >= 4 ? ' (Tournament Champions)' : (wins >= 3 ? ' (Playoff Finalists)' : ' (Championship Series)');
                 statusInput.value = `${wins} Wins – ${losses} ${losses === 1 ? 'Loss' : 'Losses'}${suffix}`;
-                if (window.showToast) window.showToast("Record updated: " + statusInput.value, "success");
             }
+            let ourFlagsInput = document.getElementById('adm_champ_our_season_flags');
+            if (ourFlagsInput) ourFlagsInput.value = ourTotalFlags;
+            let enemyFlagsInput = document.getElementById('adm_champ_enemy_season_flags');
+            if (enemyFlagsInput) enemyFlagsInput.value = enemyTotalFlags;
+
+            if (window.showToast) window.showToast(`Record updated: ${wins}W-${losses}L • Flags: ${ourTotalFlags}-${enemyTotalFlags}`, "success");
         };
 
         window.saveChampionshipAdminMatchups = async () => {
             try {
                 let seasonName = document.getElementById('adm_champ_season_name')?.value || 'Season 12 Championship';
                 let statusText = document.getElementById('adm_champ_status_text')?.value || '4 Wins – 1 Loss';
+                let ourSeasonFlags = Number(document.getElementById('adm_champ_our_season_flags')?.value) || 0;
+                let enemySeasonFlags = Number(document.getElementById('adm_champ_enemy_season_flags')?.value) || 0;
                 
                 let rounds = {};
                 for (let i = 1; i <= 5; i++) {
                     let date = document.getElementById('adm_champ_r' + i + '_date')?.value || `Round ${i}`;
                     let ourScore = Number(document.getElementById('adm_champ_r' + i + '_our')?.value) || 0;
+                    let ourFlags = Number(document.getElementById('adm_champ_r' + i + '_our_flags')?.value) || 0;
                     let enemyName = document.getElementById('adm_champ_r' + i + '_enemy_name')?.value || `Opponent ${i}`;
                     let enemyState = document.getElementById('adm_champ_r' + i + '_enemy_state')?.value || '';
                     let enemyScore = Number(document.getElementById('adm_champ_r' + i + '_enemy_score')?.value) || 0;
+                    let enemyFlags = Number(document.getElementById('adm_champ_r' + i + '_enemy_flags')?.value) || 0;
 
                     rounds['r' + i] = {
                         roundNum: i,
                         date: date,
                         ourScore: ourScore,
+                        ourFlags: ourFlags,
                         ourState: '2089',
                         enemyAlliance: {
                             name: enemyName,
                             state: enemyState,
-                            score: enemyScore
+                            score: enemyScore,
+                            flags: enemyFlags
                         }
                     };
                 }
@@ -21822,6 +22382,8 @@ html += `</select>
                 const payload = {
                     seasonName: seasonName,
                     statusText: statusText,
+                    ourSeasonFlags: ourSeasonFlags,
+                    enemySeasonFlags: enemySeasonFlags,
                     ourState: '2089',
                     rounds: rounds,
                     updatedAt: Date.now(),
@@ -26925,16 +27487,30 @@ window.resetBearTrapEvent = async () => {
         const champData = await window.fetchChampionshipMatchups();
         const seasonName = champData.seasonName || 'Season 12 Championship';
         const rounds = champData.rounds || {};
-        const roundsList = [1, 2, 3, 4, 5].map(i => rounds['r' + i] || { roundNum: i, date: `Round ${i}`, ourScore: 0, enemyAlliance: { name: 'Opponent Alliance', score: 0 } });
+        const roundsList = [1, 2, 3, 4, 5].map(i => rounds['r' + i] || { roundNum: i, date: `Round ${i}`, ourScore: 0, ourFlags: 0, enemyAlliance: { name: 'Opponent Alliance', score: 0, flags: 0 } });
 
         let winCount = 0;
         let lossCount = 0;
+        let totalOurFlags = 0;
+        let totalEnemyFlags = 0;
+
         roundsList.forEach(r => {
             let os = Number(r.ourScore) || 0;
             let es = Number(r.enemyAlliance?.score) || 0;
+            let of = (r.ourFlags !== undefined && r.ourFlags !== null && r.ourFlags !== '') ? Number(r.ourFlags) : 0;
+            let ef = (r.enemyAlliance && r.enemyAlliance.flags !== undefined && r.enemyAlliance.flags !== null && r.enemyAlliance.flags !== '') ? Number(r.enemyAlliance.flags) : 0;
+            totalOurFlags += of;
+            totalEnemyFlags += ef;
             if (os > es) winCount++;
             else if (es > os) lossCount++;
         });
+
+        if (champData.ourSeasonFlags !== undefined && champData.ourSeasonFlags !== null && champData.ourSeasonFlags !== '') {
+            totalOurFlags = Number(champData.ourSeasonFlags);
+        }
+        if (champData.enemySeasonFlags !== undefined && champData.enemySeasonFlags !== null && champData.enemySeasonFlags !== '') {
+            totalEnemyFlags = Number(champData.enemySeasonFlags);
+        }
 
         let statusText = champData.statusText || `${winCount} Wins – ${lossCount} ${lossCount === 1 ? 'Loss' : 'Losses'}`;
 
@@ -26953,7 +27529,9 @@ window.resetBearTrapEvent = async () => {
         let matchCardsHtml = roundsList.map((r, idx) => {
             let rNum = r.roundNum || (idx + 1);
             let ourScore = Number(r.ourScore) || 0;
+            let ourFlags = (r.ourFlags !== undefined && r.ourFlags !== null && r.ourFlags !== '') ? Number(r.ourFlags) : 0;
             let enemyScore = Number(r.enemyAlliance?.score) || 0;
+            let enemyFlags = (r.enemyAlliance && r.enemyAlliance.flags !== undefined && r.enemyAlliance.flags !== null && r.enemyAlliance.flags !== '') ? Number(r.enemyAlliance.flags) : 0;
             let enemyName = (r.enemyAlliance && r.enemyAlliance.name) ? r.enemyAlliance.name : 'Opponent Alliance';
             let enemyState = (r.enemyAlliance && r.enemyAlliance.state) ? r.enemyAlliance.state : (idx === 0 ? '2045' : idx === 1 ? '1988' : idx === 2 ? '2102' : idx === 3 ? '2031' : '2015');
             let isVictory = ourScore > enemyScore;
@@ -26976,8 +27554,9 @@ window.resetBearTrapEvent = async () => {
 
             return `
                 <div style="${cardBg} border-radius:14px; padding:16px 22px; box-shadow: 0 4px 20px rgba(0,0,0,0.25); transition: transform 0.2s ease, box-shadow 0.2s ease;">
-                    <div style="display:flex; justify-content:flex-start; align-items:center; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px; margin-bottom:12px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px; margin-bottom:12px;">
                         <span style="font-weight:900; font-size:13px; color:var(--accent); text-transform:uppercase; letter-spacing:1px; display:flex; align-items:center; gap:6px;">⚔️ ROUND ${rNum}</span>
+                        <span style="font-size:11.5px; color:var(--text-muted); font-weight:bold;">${escapeHTML(r.date || `Round ${rNum}`)}</span>
                     </div>
                     <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
                         <!-- Left: Our Alliance -->
@@ -26985,6 +27564,7 @@ window.resetBearTrapEvent = async () => {
                             <div>
                                 <div style="font-size:16px; font-weight:bold; color:var(--text-main);">[BDC]</div>
                                 <div style="font-size:11px; color:#38bdf8; font-weight:bold; letter-spacing:0.5px; margin-top:2px;">${escapeHTML(formatStateTag(r.ourState || champData.ourState, '2089'))}</div>
+                                <div style="font-size:11px; color:#10b981; font-weight:bold; margin-top:4px; display:inline-flex; align-items:center; gap:4px; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); padding:2px 8px; border-radius:6px;"><span style="font-size:12px;">🚩</span> ${ourFlags} Flags</div>
                             </div>
                             <span style="font-size:26px; font-family:var(--mono); ${ourScoreColor}">${ourScore.toLocaleString()}</span>
                         </div>
@@ -27001,6 +27581,7 @@ window.resetBearTrapEvent = async () => {
                             <div>
                                 <div style="font-size:16px; font-weight:bold; color:var(--text-main);">${escapeHTML(enemyName)}</div>
                                 <div style="font-size:11px; color:#38bdf8; font-weight:bold; letter-spacing:0.5px; margin-top:2px;">${escapeHTML(formatStateTag(enemyState, '2045'))}</div>
+                                <div style="font-size:11px; color:#ef4444; font-weight:bold; margin-top:4px; display:inline-flex; align-items:center; gap:4px; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); padding:2px 8px; border-radius:6px;"><span style="font-size:12px;">🚩</span> ${enemyFlags} Flags</div>
                             </div>
                         </div>
                     </div>
@@ -27015,10 +27596,15 @@ window.resetBearTrapEvent = async () => {
             <div style="background:linear-gradient(135deg, rgba(6,182,212,0.12) 0%, rgba(6,182,212,0.02) 100%); border:1px solid rgba(6,182,212,0.3); border-radius:16px; padding:24px 20px; text-align:center; box-shadow: 0 6px 25px rgba(0,0,0,0.3);">
                 <div style="font-size:12px; font-weight:bold; color:var(--accent); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:4px;">${escapeHTML(seasonName)}</div>
                 <h1 style="margin:0; font-size:26px; font-weight:900; color:var(--text-main); letter-spacing:1px;">🏆 ALLIANCE CHAMPIONSHIP</h1>
-                <div style="margin-top:10px; display:flex; align-items:center; justify-content:center; gap:12px;">
+                <div style="margin-top:10px; display:flex; align-items:center; justify-content:center; gap:12px; flex-wrap:wrap;">
                     <span style="color:#10b981; font-weight:900; font-size:20px;">${winCount} Wins</span>
                     <span style="color:var(--text-muted); opacity:0.6; font-size:18px;">–</span>
                     <span style="color:#ef4444; font-weight:900; font-size:20px;">${lossCount} ${lossCount === 1 ? 'Loss' : 'Losses'}</span>
+                </div>
+                <div style="margin-top:8px; display:inline-flex; align-items:center; justify-content:center; gap:16px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); padding:6px 18px; border-radius:20px; flex-wrap:wrap;">
+                    <span style="color:#10b981; font-weight:bold; font-size:13px; display:inline-flex; align-items:center; gap:5px;">🚩 <strong>${totalOurFlags}</strong> Flags Captured</span>
+                    <span style="color:var(--text-muted); opacity:0.4;">|</span>
+                    <span style="color:#ef4444; font-weight:bold; font-size:13px; display:inline-flex; align-items:center; gap:5px;">🚩 <strong>${totalEnemyFlags}</strong> Opponent Flags</span>
                 </div>
                 <div style="margin-top:16px; display:flex; justify-content:center; gap:10px; flex-wrap:wrap;">
                     <button onclick="window.openChampionshipArchiveVaultModal('live')" style="background:linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(6,182,212,0.08) 100%); border:1px solid rgba(6,182,212,0.4); color:var(--accent); padding:6px 14px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.3)'" onmouseout="this.style.background='rgba(6,182,212,0.2)'">📜 Championship Archive Vault</button>
@@ -27977,6 +28563,278 @@ window.resetBearTrapEvent = async () => {
   },
 
   
+  feedback: async (initialFilter = 'all') => {
+    if (!currentUser) return window.renderMembersOnlyGuard("Feature Request & Bug Tracker");
+    const navbar = document.querySelector('.navbar');
+    if (navbar) navbar.style.display = 'flex';
+
+    renderLoading("Loading Feature & Bug Tracker...");
+    const app = document.getElementById('app');
+    if (!app) return;
+
+    try {
+        let activeFilter = initialFilter || 'all';
+        let searchQuery = '';
+        let activeSort = 'top';
+
+        let items = await window.fetchFeedbackItems();
+        const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+
+        const getPillStyle = (isActive, color) => {
+            if (isActive) {
+                return `background:${color}; color:#fff; border:1px solid ${color}; padding:6px 14px; border-radius:20px; font-weight:bold; font-size:12px; cursor:pointer; transition:0.2s; box-shadow:0 2px 8px rgba(0,0,0,0.3);`;
+            } else {
+                return `background:var(--card-bg); color:var(--text-muted); border:1px solid var(--border); padding:6px 14px; border-radius:20px; font-weight:bold; font-size:12px; cursor:pointer; transition:0.2s;`;
+            }
+        };
+
+        const renderFeedbackUI = () => {
+            const counts = {
+                all: items.length,
+                feature: items.filter(i => i.type === 'feature').length,
+                bug: items.filter(i => i.type === 'bug').length,
+                pending: items.filter(i => i.status === 'pending' || !i.status).length,
+                in_progress: items.filter(i => i.status === 'in_progress').length,
+                completed: items.filter(i => i.status === 'completed').length
+            };
+
+            let filtered = items.filter(item => {
+                if (activeFilter === 'feature' && item.type !== 'feature') return false;
+                if (activeFilter === 'bug' && item.type !== 'bug') return false;
+                if (activeFilter === 'pending' && item.status !== 'pending' && item.status) return false;
+                if (activeFilter === 'in_progress' && item.status !== 'in_progress') return false;
+                if (activeFilter === 'completed' && item.status !== 'completed') return false;
+
+                if (searchQuery) {
+                    const q = searchQuery.toLowerCase();
+                    const titleMatch = (item.title || '').toLowerCase().includes(q);
+                    const descMatch = (item.description || '').toLowerCase().includes(q);
+                    const catMatch = (item.category || '').toLowerCase().includes(q);
+                    const authorMatch = (item.submittedBy?.name || '').toLowerCase().includes(q);
+                    if (!titleMatch && !descMatch && !catMatch && !authorMatch) return false;
+                }
+                return true;
+            });
+
+            if (activeSort === 'top') {
+                filtered.sort((a, b) => (b.voteCount || 0) - (a.voteCount || 0) || (b.createdAt || 0) - (a.createdAt || 0));
+            } else if (activeSort === 'newest') {
+                filtered.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+            } else if (activeSort === 'oldest') {
+                filtered.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+            }
+
+            let cardsHtml = '';
+            if (filtered.length === 0) {
+                cardsHtml = `
+                    <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:14px; padding:40px 20px; text-align:center; color:var(--text-muted);">
+                        <div style="font-size:36px; margin-bottom:10px;">🔍</div>
+                        <div style="font-size:16px; font-weight:bold; color:var(--text-main);">No submissions match your filter</div>
+                        <p style="font-size:12px; margin-top:4px;">Try selecting a different filter or click "➕ Submit Request / Bug" to add one!</p>
+                    </div>
+                `;
+            } else {
+                cardsHtml = filtered.map(item => {
+                    const isFeat = item.type === 'feature';
+                    const userUid = currentUser?.uid;
+                    const hasVoted = !!(item.votes && userUid && item.votes[userUid]);
+                    const voteCount = item.voteCount || (item.votes ? Object.keys(item.votes).filter(k => item.votes[k]).length : 0);
+                    
+                    const isCompleted = item.status === 'completed';
+                    const isInProgress = item.status === 'in_progress';
+                    const isPending = !item.status || item.status === 'pending';
+
+                    let typeBadge = isFeat
+                        ? `<span style="background:rgba(6,182,212,0.18); border:1px solid rgba(6,182,212,0.4); color:#06b6d4; padding:3px 10px; border-radius:8px; font-size:11px; font-weight:900; letter-spacing:0.5px; display:inline-flex; align-items:center; gap:4px; box-shadow:0 0 10px rgba(6,182,212,0.2);">💡 FEATURE</span>`
+                        : `<span style="background:rgba(239,68,68,0.18); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:3px 10px; border-radius:8px; font-size:11px; font-weight:900; letter-spacing:0.5px; display:inline-flex; align-items:center; gap:4px; box-shadow:0 0 10px rgba(239,68,68,0.2);">🐞 BUG</span>`;
+
+                    let statusBadge = isCompleted
+                        ? `<span style="background:rgba(16,185,129,0.2); border:1px solid rgba(16,185,129,0.45); color:#10b981; padding:4px 12px; border-radius:8px; font-size:11px; font-weight:900; letter-spacing:0.5px; display:inline-flex; align-items:center; gap:5px; box-shadow:0 0 12px rgba(16,185,129,0.3);">✓ COMPLETED</span>`
+                        : (isInProgress
+                            ? `<span style="background:rgba(59,130,246,0.2); border:1px solid rgba(59,130,246,0.45); color:#3b82f6; padding:4px 12px; border-radius:8px; font-size:11px; font-weight:900; letter-spacing:0.5px; display:inline-flex; align-items:center; gap:5px; box-shadow:0 0 12px rgba(59,130,246,0.25);">🔵 IN PROGRESS</span>`
+                            : `<span style="background:rgba(234,179,8,0.15); border:1px solid rgba(234,179,8,0.35); color:#eab308; padding:4px 12px; border-radius:8px; font-size:11px; font-weight:bold; letter-spacing:0.5px; display:inline-flex; align-items:center; gap:5px;">🟡 UNDER REVIEW</span>`);
+
+                    let cardBorder = isCompleted
+                        ? 'border:1px solid rgba(16,185,129,0.35); background:linear-gradient(135deg, rgba(16,185,129,0.04) 0%, rgba(255,255,255,0.01) 100%);'
+                        : (isInProgress
+                            ? 'border:1px solid rgba(59,130,246,0.35); background:linear-gradient(135deg, rgba(59,130,246,0.04) 0%, rgba(255,255,255,0.01) 100%);'
+                            : 'border:1px solid var(--border); background:var(--card-bg);');
+
+                    let authorText = escapeHTML(item.submittedBy?.name || 'Chief');
+                    let timeAgoText = window.formatTimeAgo(item.createdAt);
+
+                    let upvoteBtnStyle = hasVoted
+                        ? 'background:linear-gradient(135deg, rgba(6,182,212,0.3), rgba(168,85,247,0.3)); border:1.5px solid #06b6d4; color:#38bdf8; box-shadow:0 0 12px rgba(6,182,212,0.4);'
+                        : 'background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--text-main);';
+
+                    let adminControlsHtml = isManager ? `
+                        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; border-top:1px solid rgba(255,255,255,0.06); padding-top:10px; margin-top:10px;">
+                            <label style="display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:bold; color:${isCompleted ? '#10b981' : 'var(--text-muted)'}; cursor:pointer;">
+                                <input type="checkbox" onchange="window.toggleFeedbackCompleted('${item.id}', this.checked)" ${isCompleted ? 'checked' : ''} style="width:16px; height:16px; accent-color:#10b981; cursor:pointer;">
+                                <span>Done</span>
+                            </label>
+                            
+                            <select onchange="window.updateFeedbackStatus('${item.id}', this.value)" style="padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:11px; font-weight:bold;">
+                                <option value="pending" ${isPending ? 'selected' : ''}>🟡 Under Review</option>
+                                <option value="in_progress" ${isInProgress ? 'selected' : ''}>🔵 In Progress</option>
+                                <option value="completed" ${isCompleted ? 'selected' : ''}>✅ Completed</option>
+                                <option value="archived" ${item.status === 'archived' ? 'selected' : ''}>⚪ Archived</option>
+                            </select>
+
+                            <button onclick="window.openAdminNoteModal('${item.id}', '${escapeHTML(item.adminNote || '')}')" style="background:rgba(6,182,212,0.12); border:1px solid rgba(6,182,212,0.3); color:var(--accent); padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+                                ✏️ ${item.adminNote ? 'Edit Note' : 'Add Note'}
+                            </button>
+
+                            <button onclick="window.deleteFeedbackItem('${item.id}')" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; margin-left:auto;">
+                                🗑️ Delete
+                            </button>
+                        </div>
+                    ` : '';
+
+                    return `
+                        <div class="feedback-card" style="${cardBorder} border-radius:14px; padding:18px 22px; display:flex; flex-direction:column; gap:10px; box-shadow:0 4px 20px rgba(0,0,0,0.25); transition:transform 0.2s ease, box-shadow 0.2s ease;">
+                            <!-- Card Header: Badges & Upvote -->
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;">
+                                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                    ${typeBadge}
+                                    <span style="font-size:11px; color:var(--text-muted); font-weight:bold; background:var(--bg-main); border:1px solid var(--border); padding:2px 8px; border-radius:6px;">[${escapeHTML(item.category || 'General')}]</span>
+                                </div>
+
+                                <div style="display:flex; align-items:center; gap:10px;">
+                                    <button onclick="window.toggleFeedbackVote('${item.id}')" style="${upvoteBtnStyle} padding:6px 14px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13px; display:inline-flex; align-items:center; gap:6px; transition:0.2s;" title="Upvote this idea">
+                                        <span>👍</span> <span>${voteCount}</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Title & Description -->
+                            <div>
+                                <h3 style="margin:0 0 6px 0; font-size:16px; font-weight:bold; color:var(--text-main); line-height:1.3;">
+                                    ${escapeHTML(item.title || 'Untitled Request')}
+                                </h3>
+                                ${item.description ? `<p style="margin:0; font-size:13px; color:var(--text-muted); line-height:1.45; white-space:pre-line;">${escapeHTML(item.description)}</p>` : ''}
+                            </div>
+
+                            <!-- Footer: Author, Status & Admin Resolution Note -->
+                            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.04);">
+                                <div style="font-size:11.5px; color:var(--text-muted); display:flex; align-items:center; gap:6px;">
+                                    <span>👤 <strong style="color:var(--text-main);">${authorText}</strong></span>
+                                    <span>•</span>
+                                    <span>${timeAgoText}</span>
+                                </div>
+
+                                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                    ${item.adminNote ? `<span style="font-size:11.5px; font-weight:bold; color:#38bdf8; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25); padding:3px 10px; border-radius:6px; display:inline-flex; align-items:center; gap:4px;">✨ ${escapeHTML(item.adminNote)}</span>` : ''}
+                                    ${statusBadge}
+                                </div>
+                            </div>
+
+                            ${adminControlsHtml}
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            let html = `
+                <div style="max-width:960px; margin:0 auto; padding-bottom:50px; display:flex; flex-direction:column; gap:18px; animation: fadeIn 0.3s ease;">
+                    
+                    <!-- Title & Action Banner -->
+                    <div style="background:linear-gradient(135deg, rgba(6,182,212,0.12) 0%, rgba(168,85,247,0.06) 100%); border:1px solid rgba(6,182,212,0.35); border-radius:16px; padding:22px 24px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; box-shadow:0 6px 25px rgba(0,0,0,0.3);">
+                        <div style="display:flex; align-items:center; gap:14px;">
+                            <div style="width:44px; height:44px; border-radius:12px; background:linear-gradient(135deg, #06b6d4, #8b5cf6); display:flex; align-items:center; justify-content:center; font-size:22px; box-shadow:0 4px 15px rgba(6,182,212,0.4); flex-shrink:0;">
+                                💡
+                            </div>
+                            <div>
+                                <h1 style="margin:0; font-size:22px; font-weight:900; color:var(--text-main); letter-spacing:0.5px;">Alliance Feature & Bug Tracker</h1>
+                                <p style="margin:2px 0 0 0; font-size:12px; color:var(--text-muted);">Suggest new features, report game/website bugs, and vote on community priorities.</p>
+                            </div>
+                        </div>
+
+                        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                            <button onclick="window.openSubmitFeedbackModal()" style="background:linear-gradient(135deg, #06b6d4, #8b5cf6); color:#fff; border:none; padding:10px 18px; border-radius:10px; font-weight:bold; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 4px 14px rgba(6,182,212,0.35); transition:0.2s;">
+                                ➕ Submit Request / Bug
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Search Bar & Filters -->
+                    <div style="display:flex; flex-direction:column; gap:12px;">
+                        
+                        <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+                            <!-- Search Bar -->
+                            <div style="flex:1; min-width:240px; position:relative;">
+                                <input type="text" id="feedbackSearchInput" value="${escapeHTML(searchQuery)}" placeholder="🔍 Search suggestions, bugs, or categories..." style="width:100%; padding:10px 14px; border-radius:10px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:13px; box-sizing:border-box;">
+                            </div>
+
+                            <!-- Sort Dropdown -->
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Sort:</span>
+                                <select id="feedbackSortSelect" style="padding:8px 12px; border-radius:8px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">
+                                    <option value="top" ${activeSort === 'top' ? 'selected' : ''}>🔥 Top Upvoted</option>
+                                    <option value="newest" ${activeSort === 'newest' ? 'selected' : ''}>🆕 Newest First</option>
+                                    <option value="oldest" ${activeSort === 'oldest' ? 'selected' : ''}>🕒 Oldest First</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Filter Pills -->
+                        <div style="display:flex; gap:8px; flex-wrap:wrap; overflow-x:auto; padding-bottom:4px;">
+                            <button class="fb-pill ${activeFilter === 'all' ? 'active' : ''}" data-filter="all" style="${getPillStyle(activeFilter === 'all', '#06b6d4')}">All (${counts.all})</button>
+                            <button class="fb-pill ${activeFilter === 'feature' ? 'active' : ''}" data-filter="feature" style="${getPillStyle(activeFilter === 'feature', '#06b6d4')}">💡 Features (${counts.feature})</button>
+                            <button class="fb-pill ${activeFilter === 'bug' ? 'active' : ''}" data-filter="bug" style="${getPillStyle(activeFilter === 'bug', '#ef4444')}">🐞 Bugs (${counts.bug})</button>
+                            <button class="fb-pill ${activeFilter === 'pending' ? 'active' : ''}" data-filter="pending" style="${getPillStyle(activeFilter === 'pending', '#eab308')}">🟡 Under Review (${counts.pending})</button>
+                            <button class="fb-pill ${activeFilter === 'in_progress' ? 'active' : ''}" data-filter="in_progress" style="${getPillStyle(activeFilter === 'in_progress', '#3b82f6')}">🔵 In Progress (${counts.in_progress})</button>
+                            <button class="fb-pill ${activeFilter === 'completed' ? 'active' : ''}" data-filter="completed" style="${getPillStyle(activeFilter === 'completed', '#10b981')}">✅ Completed (${counts.completed})</button>
+                        </div>
+                    </div>
+
+                    <!-- Cards Container -->
+                    <div style="display:flex; flex-direction:column; gap:12px;" id="feedbackCardsContainer">
+                        ${cardsHtml}
+                    </div>
+
+                </div>
+            `;
+
+            app.innerHTML = html;
+
+            const searchEl = document.getElementById('feedbackSearchInput');
+            if (searchEl) {
+                searchEl.addEventListener('input', (e) => {
+                    searchQuery = e.target.value;
+                    renderFeedbackUI();
+                });
+            }
+
+            const sortEl = document.getElementById('feedbackSortSelect');
+            if (sortEl) {
+                sortEl.addEventListener('change', (e) => {
+                    activeSort = e.target.value;
+                    renderFeedbackUI();
+                });
+            }
+
+            document.querySelectorAll('.fb-pill').forEach(pill => {
+                pill.addEventListener('click', () => {
+                    activeFilter = pill.getAttribute('data-filter') || 'all';
+                    renderFeedbackUI();
+                });
+            });
+        };
+
+        window.activeFeedbackRender = async () => {
+            items = await window.fetchFeedbackItems();
+            renderFeedbackUI();
+        };
+
+        renderFeedbackUI();
+
+    } catch(err) {
+        console.error("Error loading feedback view:", err);
+        renderError("Failed to load Feature & Bug Tracker: " + err.message);
+    }
+  },
+
   analytics: async () => {
     renderLoading("Loading Analytics");
     try {

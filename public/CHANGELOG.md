@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## [2.9.53] - 2026-08-18
+- 🚩 **Championship Season Details Flag Fields**: Added dedicated flag input fields for both Our Alliance and Opponent Alliance directly inside the **⚙️ Season Details & Overall Record** card (`adm_champ_our_season_flags` and `adm_champ_enemy_season_flags`).
+- ⚡ **Auto-Calculate Season Flags & Match Records**: Clicking `⚡ Auto-Calculate Record & Flags` now dynamically aggregates total flag scores across all 5 battle rounds and auto-fills total season flags.
+- 🏆 **Prominent Public Flag Summary Banner**: Added a dedicated flag score pill to the Public Alliance Championship top banner (e.g. `🚩 16 Flags Captured | 🚩 9 Opponent Flags`) and styled flag badges on every round card.
+- 📜 **Historical Vault Flags**: Updated the Championship Archive Vault modal to cleanly render flag badges and total flags across historical seasons.
+
+## [2.9.52] - 2026-08-18
+- 💡 **Alliance Feature Request & Bug Tracker (`views.feedback`)**: Built a full in-app community suggestion & bug reporting system allowing members to submit new requests, report bugs, and dynamically upvote community ideas (`👍`).
+- 🛡️ **Interactive Admin Checklist**: Added real-time management controls for R4/R5 managers with 1-click completion checkboxes (`[✓] Done`), status dropdown selectors (*🟡 Under Review ➔ 🔵 In Progress ➔ 🟢 Completed ➔ ⚪ Archived*), admin resolution note tags (e.g. `✨ Implemented in v2.9.52`), and ticket deletion.
+- 📱 **Sidebar Menu Integration**: Added a dedicated **💡 Suggestions & Bugs** card in the settings sidebar (`settingsSidebar`) with quick 1-click routing to the tracker on desktop and mobile.
+- ⚡ **Admin Hub Integration**: Added `tab-feedback` checklist in the Admin Management Hub and a quick launcher button under Daily Tools.
+
+## [2.9.51] - 2026-08-18
+- 🚩 **Alliance Championship Flags Data Entry**: Added dedicated flag count input fields for both Our Alliance [BDC] and Opponent Alliance across all 5-round battle matchups in the Admin Management Suite (`views.championshipAdmin`).
+- 🏆 **Dynamic Live & Archived Matchup Flag Badges**: Live score cards on the Public Dashboard (`views.championship`) and Historical Season cards in the Championship Archive Vault modal (`openChampionshipArchiveVaultModal`) now cleanly render flag counts (e.g. `🚩 4 Flags`) alongside total score points.
+- 💾 **Automated Cloud Sync & Preservation**: Flag scores are seamlessly structured, validated, and saved into Firebase RTDB (`championship_matchups`) and recorded during season archival (`archiveAndResetChampionshipSeason`).
+
 ## [2.9.50] - 2026-08-18
 - 🗓️ **Standardized Joined Date & Time Active Duration**: Created universal date calculation helpers (`calculateTimeActive`, `formatDateForDisplay`, `formatDateForInput`, `formatTimeActiveShort`) to reliably compute play duration (days, weeks, months, years) and consistently display joined dates across all primary character cards, alt account cards, and admin member profiles.
 - 🔥 **Dynamic Furnace Centerpiece for Characters**: Added prominent, responsive dynamic Furnace Level & Fire Crystal centerpiece icons (`furnace-metric-box`) with glowing ambient borders across Account Hub main profiles and alt accounts.

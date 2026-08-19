@@ -1,18 +1,19 @@
 {
-  "version": "2.9.50",
+  "version": "2.9.53",
   "releaseDate": "2026-08-18",
-  "title": "What's New in v2.9.50",
+  "title": "What's New in v2.9.53",
   "notes": [
-    "🗓️ Joined Date & Time Active Synchronization: Standardized play start date calculation and relative active duration (days/weeks/months/years) across all member profiles and alt accounts.",
-    "🔥 Dynamic Furnace Icon Centerpiece: Upgraded primary character and alt account cards with prominent dynamic Fire Crystal/Furnace level badges.",
-    "⚡ Seamless Profile Editing: Integrated live Time Active computation and real-time furnace icon previews when editing main and alt member profiles."
+    "🚩 Championship Season Details Flag Fields: Added dedicated flag entry fields for both Our Alliance and Opponent Alliance directly inside the '⚙️ Season Details & Overall Record' top admin card.",
+    "⚡ Auto-Calculate Flags & Records: The 'Auto-Calculate' button now computes total tournament flag totals across all 5 battle rounds automatically alongside win/loss record.",
+    "🏆 Prominent Flag Summary Banner: The Public Alliance Championship header banner now displays a dedicated total flags pill summary (e.g. 🚩 16 Flags Captured | 🚩 9 Opponent Flags), and every round card renders styled flag count badges."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "2.9.50",
+    "version": "2.9.53",
     "latestChanges": [
-      "v2.9.50: Standardized Joined Date, Time Active duration, and dynamic furnace level icons across main and alt cards",
-      "v2.9.49: Resolved Standings & Medals lazy-loading and global escapeHTML security binding",
-      "v2.9.48: Fixed Account Hub Standings & Medals loading error and unified Showdown podium tracking"
+      "v2.9.53: Added dual-sided Season Flag fields to Season Details card and total flags summary banner to public dashboard",
+      "v2.9.52: Launched in-app Feature Request & Bug Tracker with community upvoting and interactive Admin checklist",
+      "v2.9.51: Added dual-sided flag entry fields and live flag badges to Alliance Championship matchups and archives",
+      "v2.9.50: Standardized Joined Date, Time Active duration, and dynamic furnace level icons across main and alt cards"
     ]
   }
 }
