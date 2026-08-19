@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.9.68] - 2026-08-19
+- 👥 **Chief Sync Overview Sidebar in Google Sheets**: Built real-time Chief Sync sidebar in Google Sheets (under `Admin Menu ➔ User Options` & `Tools & Extras`) showing Total Chiefs, Synced (🟢), and Not Synced (🟡) with instant search, interactive status filtering (`All` / `🟢 Synced` / `🟡 Not Synced`), 1-click `Jump to Row` in sheet, one-click bidirectional Firebase sync, and unsynced name export.
+- ⚡ **Real-Time Token Telemetry**: Automatically cross-references sheet entries with Firebase registered users and active token verifications to provide live completion rates and sync status badges.
+
 ## [2.9.67] - 2026-08-19
 - 🔔 **Live Developer Note Alerts in Notification Bell**: Members now see your custom admin resolution notes directly in the notification modal when their tickets/bugs are updated or closed (`✓ Done (Resolved)`).
 - ⭐ **'YOUR TICKET' Indicator Badge**: Automatically identifies and highlights a user's own submissions with a purple badge.
