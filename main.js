@@ -26281,6 +26281,197 @@ window.resetBearTrapEvent = async () => {
             }
          } catch(e) { console.warn("Showdown history fetch error", e); }
       }
+
+      // Fetch Championship Firebase Nodes for All-Time Leaderboards
+      let allTimeChampionshipHtml = "";
+      if (!filterString || filterString.toLowerCase().includes('champ') || filterString.toLowerCase() === 'championship') {
+         try {
+            const [cLiveSnap, cHistSnap, cArchSnap, cSignupsSnap, cRosterSnap] = await Promise.all([
+               window.fetchChampionshipMatchups().catch(() => window.DEFAULT_CHAMPIONSHIP_MATCHUPS),
+               get(ref(db, 'championship_meta/history')).catch(() => null),
+               get(ref(db, 'events_archive/championship')).catch(() => null),
+               window.fetchChampionshipData().catch(() => ({})),
+               window.fetchRoster().catch(() => ({}))
+            ]);
+
+            const cHistoryObj = (cHistSnap && cHistSnap.exists()) ? (cHistSnap.val() || {}) : {};
+            const cArchivesObj = (cArchSnap && cArchSnap.exists()) ? (cArchSnap.val() || {}) : {};
+
+            let cWins = 0, cLosses = 0, cFlagsOur = 0, cFlagsEnemy = 0;
+            const cAllSeasons = { ...cHistoryObj, live: cLiveSnap };
+            Object.values(cAllSeasons).forEach(s => {
+               if (!s || !s.rounds) return;
+               [1, 2, 3, 4, 5].forEach(i => {
+                  let r = s.rounds['r' + i];
+                  if (!r) return;
+                  let os = Number(r.ourScore) || 0;
+                  let es = Number(r.enemyAlliance?.score) || 0;
+                  let of = (r.ourFlags !== undefined && r.ourFlags !== null && r.ourFlags !== '') ? Number(r.ourFlags) : 0;
+                  let ef = (r.enemyAlliance && r.enemyAlliance.flags !== undefined && r.enemyAlliance.flags !== null && r.enemyAlliance.flags !== '') ? Number(r.enemyAlliance.flags) : 0;
+                  cFlagsOur += of;
+                  cFlagsEnemy += ef;
+                  if (os > 0 || es > 0) {
+                     if (os > es) cWins++;
+                     else if (es > os) cLosses++;
+                  }
+               });
+            });
+
+            let cWinRate = (cWins + cLosses > 0) ? Math.round((cWins / (cWins + cLosses)) * 100) : 100;
+
+            const isT = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
+            let cParticipantMap = {};
+
+            Object.values(cArchivesObj).forEach(arch => {
+               if (!arch || !Array.isArray(arch.players)) return;
+               arch.players.forEach(p => {
+                  if (!p || !p.signedUp) return;
+                  let gid = (p.gameId || '').toString().trim();
+                  let name = (p.name || '').trim();
+                  let key = gid || name.toLowerCase();
+                  if (!key) return;
+                  if (!cParticipantMap[key]) {
+                     cParticipantMap[key] = {
+                        gameId: gid,
+                        name: name || (window.idToNameMap && window.idToNameMap[gid]) || 'Chief',
+                        seasonsActive: 0,
+                        isLiveSignedUp: false
+                     };
+                  }
+                  cParticipantMap[key].seasonsActive++;
+               });
+            });
+
+            if (cSignupsSnap && typeof cSignupsSnap === 'object') {
+               Object.entries(cSignupsSnap).forEach(([gid, rec]) => {
+                  if (!rec || !isT(rec.signedUp)) return;
+                  let gidStr = gid.toString().trim();
+                  let name = (rec.name || (window.idToNameMap && window.idToNameMap[gidStr]) || 'Chief').trim();
+                  let key = gidStr || name.toLowerCase();
+                  if (!cParticipantMap[key]) {
+                     cParticipantMap[key] = {
+                        gameId: gidStr,
+                        name: name,
+                        seasonsActive: 0,
+                        isLiveSignedUp: true
+                     };
+                  }
+                  cParticipantMap[key].isLiveSignedUp = true;
+                  cParticipantMap[key].seasonsActive = Math.max(1, cParticipantMap[key].seasonsActive);
+               });
+            }
+
+            if (Object.keys(cParticipantMap).length === 0 && cRosterSnap) {
+               Object.values(cRosterSnap).forEach(p => {
+                  if (!p || !p.name) return;
+                  let gidStr = (p.gameId || '').toString().trim();
+                  let key = gidStr || p.name.toLowerCase();
+                  cParticipantMap[key] = {
+                     gameId: gidStr,
+                     name: p.name,
+                     seasonsActive: 1,
+                     isLiveSignedUp: true
+                  };
+               });
+            }
+
+            let cParticipantList = Object.values(cParticipantMap).sort((a, b) => {
+               if (b.isLiveSignedUp !== a.isLiveSignedUp) return b.isLiveSignedUp ? -1 : 1;
+               if (b.seasonsActive !== a.seasonsActive) return b.seasonsActive - a.seasonsActive;
+               return (a.name || '').localeCompare(b.name || '');
+            });
+
+            let topVeterans = cParticipantList.slice(0, 10);
+
+            let topChiefHtml = "";
+            if (cParticipantList.length > 0) {
+               let maxSeasons = cParticipantList[0].seasonsActive || 1;
+               let topLeaders = cParticipantList.filter(p => p.seasonsActive === maxSeasons).slice(0, 3);
+               let champDisplayNames = topLeaders.map(p => escapeHTML(p.name)).join(" & ");
+               let avatarStackHtml = (typeof renderAvatarStack === 'function') ? renderAvatarStack(topLeaders) : '';
+               topChiefHtml = `
+                  <div style="background: linear-gradient(135deg, rgba(255,215,0,0.12) 0%, rgba(255,215,0,0.02) 100%); border: 1px solid rgba(255,215,0,0.35); border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; display: flex; align-items: center; justify-content:space-between; flex-wrap:wrap; gap: 12px; box-shadow: 0 4px 15px rgba(255,215,0,0.05);">
+                     <div style="display:flex; align-items:center; gap:12px;">
+                        ${avatarStackHtml || '<div style="font-size:26px;">🏆</div>'}
+                        <div>
+                           <div style="color: #FFD700; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">🥇 Tournament Veteran Chiefs</div>
+                           <div style="color: var(--text-main); font-size: 16px; font-weight: bold; margin-top:2px;">${champDisplayNames}</div>
+                        </div>
+                     </div>
+                     <div style="text-align: right;">
+                        <div style="color: var(--text-muted); font-size: 10px; text-transform: uppercase;">All-Time Record</div>
+                        <div style="color: #10b981; font-size: 18px; font-weight: 900;">${cWins}W – ${cLosses}L (${cWinRate}%)</div>
+                     </div>
+                  </div>
+               `;
+            }
+
+            let rowsHtml = "";
+            if (topVeterans.length === 0) {
+               rowsHtml = `<tr><td colspan="4" style="text-align:center; padding:18px; color:var(--text-muted); font-style:italic; font-size:13px;">No championship records saved in the Vault yet.</td></tr>`;
+            } else {
+               topVeterans.forEach((p, idx) => {
+                  let rankBadge = (idx === 0) ? '🥇 1' : ((idx === 1) ? '🥈 2' : ((idx === 2) ? '🥉 3' : `${idx + 1}`));
+                  let statusPill = p.isLiveSignedUp 
+                     ? '<span style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold;">⚡ Active</span>'
+                     : '<span style="background:rgba(255,215,0,0.12); color:#FFD700; border:1px solid rgba(255,215,0,0.35); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold;">🏆 Veteran</span>';
+                  rowsHtml += `
+                     <tr>
+                        <td style="font-weight:bold; color:var(--text-muted);">${rankBadge}</td>
+                        <td>
+                           <div style="display:flex; align-items:center; gap:6px;">
+                              <span style="font-weight:bold; color:var(--text-main);">${escapeHTML(p.name)}</span>
+                              <span style="background:linear-gradient(135deg, #FFD700, #F59E0B); color:#000; font-weight:900; font-size:9px; padding:1px 5px; border-radius:6px; text-transform:uppercase;">🥇 GOLD</span>
+                           </div>
+                        </td>
+                        <td style="font-weight:bold; color:var(--accent); text-align:center;">${p.seasonsActive} ${p.seasonsActive === 1 ? 'Season' : 'Seasons'}</td>
+                        <td style="text-align:right;">${statusPill}</td>
+                     </tr>
+                  `;
+               });
+            }
+
+            allTimeChampionshipHtml = `
+               <div class="card" style="flex: 1 1 0px; min-width: 320px; animation: fadeIn 0.3s ease;">
+                  <div class="card-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                     <span>🏆 All-Time - Alliance Championship</span>
+                     <button onclick="window.openChampionshipArchiveVaultModal('live')" style="background:linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(6,182,212,0.05) 100%); border:1px solid rgba(6,182,212,0.4); color:var(--accent); padding:4px 10px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; gap:5px;">📜 View Archive Vault</button>
+                  </div>
+                  ${topChiefHtml}
+                  <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:14px;">
+                     <div style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.25); border-radius:8px; padding:10px; text-align:center;">
+                        <div style="font-size:10px; color:#10b981; font-weight:bold; text-transform:uppercase;">Tournament Record</div>
+                        <div style="font-size:17px; font-weight:900; color:var(--text-main); margin-top:2px;">${cWins}W – ${cLosses}L</div>
+                     </div>
+                     <div style="background:rgba(6,182,212,0.08); border:1px solid rgba(6,182,212,0.25); border-radius:8px; padding:10px; text-align:center;">
+                        <div style="font-size:10px; color:var(--accent); font-weight:bold; text-transform:uppercase;">Flags Captured</div>
+                        <div style="font-size:17px; font-weight:900; color:#38bdf8; margin-top:2px;">🚩 ${cFlagsOur.toLocaleString()}</div>
+                     </div>
+                  </div>
+                  <div class="card-table-scroll">
+                     <table style="min-width: max-content; width: 100%; text-align:left;">
+                        <thead>
+                           <tr>
+                              <th>RANK</th>
+                              <th>CHIEF NAME</th>
+                              <th style="text-align:center;">TOURNAMENTS</th>
+                              <th style="text-align:right;">STATUS</th>
+                           </tr>
+                        </thead>
+                        <tbody>
+                           ${rowsHtml}
+                        </tbody>
+                     </table>
+                  </div>
+                  <div style="margin-top:12px; text-align:right;">
+                     <button onclick="if(views.championship) views.championship();" style="background:transparent; border:none; color:var(--accent); font-weight:bold; font-size:12px; cursor:pointer; text-decoration:underline;">View Complete Championship Dashboard ➔</button>
+                  </div>
+               </div>
+            `;
+         } catch(e) {
+            console.warn("Could not fetch championship for leaderboards view", e);
+         }
+      }
       
       try {
          const [liveSnap, metaSnap, historySnap] = await Promise.all([
@@ -26593,6 +26784,10 @@ window.resetBearTrapEvent = async () => {
       if (!filterString || filterString.toLowerCase() === 'showdown') {
           if (liveShowdownHtml) html += liveShowdownHtml;
           if (allTimeShowdownHtml) html += allTimeShowdownHtml;
+      }
+
+      if (!filterString || filterString.toLowerCase().includes('champ') || filterString.toLowerCase().includes('alliance championship')) {
+          if (allTimeChampionshipHtml) html += allTimeChampionshipHtml;
       }
       
       boards.forEach(board => {
