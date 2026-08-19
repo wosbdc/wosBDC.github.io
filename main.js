@@ -3640,7 +3640,7 @@ window.openAddPlayerModal = (initialMode = 'single') => {
 
   const modalHtml = `
     <div id="addPlayerModal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); backdrop-filter:blur(6px); z-index:100050; display:flex; align-items:center; justify-content:center; padding:16px; animation:fadeIn 0.2s ease;">
-      <div id="addPlayerModalCard" style="background:var(--card-bg); border:1px solid var(--accent); border-radius:16px; padding:24px; width:100%; max-width:${initialMode === 'bulk' ? '880px' : '500px'}; max-height:92vh; display:flex; flex-direction:column; box-shadow:0 25px 60px rgba(0,0,0,0.85); position:relative; transition:max-width 0.3s ease;">
+      <div id="addPlayerModalCard" style="background:var(--card-bg); border:1px solid var(--accent); border-radius:16px; padding:24px; width:100%; max-width:${initialMode === 'single' ? '500px' : '880px'}; max-height:92vh; display:flex; flex-direction:column; box-shadow:0 25px 60px rgba(0,0,0,0.85); position:relative; transition:max-width 0.3s ease;">
         
         <!-- Header & Mode Switcher -->
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:14px; flex-shrink:0;">
@@ -3656,6 +3656,9 @@ window.openAddPlayerModal = (initialMode = 'single') => {
               </button>
               <button type="button" id="tabBtnBulkPlayer" onclick="window.switchAddPlayerMode('bulk')" style="background:${initialMode === 'bulk' ? 'var(--accent)' : 'transparent'}; color:${initialMode === 'bulk' ? '#ffffff' : 'var(--text-muted)'}; border:none; padding:5px 14px; border-radius:7px; font-weight:bold; font-size:12px; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.2s;">
                 👥 Bulk Add
+              </button>
+              <button type="button" id="tabBtnFilePlayer" onclick="window.switchAddPlayerMode('file')" style="background:${initialMode === 'file' ? 'var(--accent)' : 'transparent'}; color:${initialMode === 'file' ? '#ffffff' : 'var(--text-muted)'}; border:none; padding:5px 14px; border-radius:7px; font-weight:bold; font-size:12px; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.2s;">
+                📁 File Sync
               </button>
             </div>
           </div>
@@ -3703,11 +3706,14 @@ window.openAddPlayerModal = (initialMode = 'single') => {
         <!-- ================= BULK ADD PLAYERS VIEW (BEAR TRAP MULTI-ROW STYLE) ================= -->
         <div id="addPlayerBulkView" style="display:${initialMode === 'bulk' ? 'flex' : 'none'}; flex-direction:column; flex:1; min-height:0; gap:12px;">
           
-          <!-- Action Bar: Add Extra Person & Quick Paste -->
+          <!-- Action Bar: Add Extra Person, Upload File & Quick Paste -->
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; flex-shrink:0;">
-            <div style="display:flex; gap:8px; align-items:center;">
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
               <button type="button" onclick="window.addBulkPlayerRow()" style="background:rgba(168,85,247,0.15); color:var(--accent); border:1px solid var(--accent); padding:7px 14px; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.2s;" onmouseover="this.style.background='rgba(168,85,247,0.25)'" onmouseout="this.style.background='rgba(168,85,247,0.15)'">
                 ➕ Add Extra Player
+              </button>
+              <button type="button" onclick="window.switchAddPlayerMode('file')" style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:7px 14px; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.2s;" onmouseover="this.style.background='rgba(16,185,129,0.25)'" onmouseout="this.style.background='rgba(16,185,129,0.15)'">
+                📁 Upload File
               </button>
               <button type="button" onclick="window.toggleBulkPasteDrawer()" style="background:rgba(59,130,246,0.15); color:#60a5fa; border:1px solid rgba(59,130,246,0.4); padding:7px 14px; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.2s;" onmouseover="this.style.background='rgba(59,130,246,0.25)'" onmouseout="this.style.background='rgba(59,130,246,0.15)'">
                 📋 Paste Raw List
@@ -3760,6 +3766,66 @@ window.openAddPlayerModal = (initialMode = 'single') => {
 
         </div>
 
+        <!-- ================= FILE IMPORT & ROSTER SYNC VIEW ================= -->
+        <div id="addPlayerFileView" style="display:${initialMode === 'file' ? 'flex' : 'none'}; flex-direction:column; flex:1; min-height:0; gap:14px; overflow-y:auto;">
+          
+          <!-- Upload Drop Zone -->
+          <div id="rosterFileDropZone" onclick="document.getElementById('rosterFileInput')?.click()" style="border:2px dashed rgba(6,182,212,0.45); border-radius:12px; padding:22px 20px; text-align:center; background:rgba(6,182,212,0.04); cursor:pointer; transition:0.2s;" ondragover="event.preventDefault(); this.style.borderColor='var(--accent)'; this.style.background='rgba(6,182,212,0.1)';" ondragleave="this.style.borderColor='rgba(6,182,212,0.45)'; this.style.background='rgba(6,182,212,0.04)';" ondrop="window.handleRosterFileDrop(event)">
+            <input type="file" id="rosterFileInput" accept=".csv,.json,.txt,.tsv" style="display:none;" onchange="window.handleRosterFileInputChange(event)">
+            <div style="font-size:36px; line-height:1; margin-bottom:8px;">📁</div>
+            <div style="font-size:15px; font-weight:800; color:var(--text-main); margin-bottom:4px;">Click to Browse or Drag & Drop Roster File</div>
+            <div style="font-size:12px; color:var(--text-muted);">Supports <strong>.CSV</strong>, <strong>.JSON</strong>, <strong>.TXT</strong>, or <strong>.TSV</strong> spreadsheets & bot exports</div>
+          </div>
+
+          <!-- Template Helper Links -->
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:8px; padding:8px 12px; flex-shrink:0;">
+            <span style="font-size:11.5px; color:var(--text-muted);">Need a format example?</span>
+            <div style="display:flex; gap:8px;">
+              <button type="button" onclick="window.downloadSampleRosterCsv()" style="background:transparent; border:1px solid rgba(6,182,212,0.4); color:var(--accent); padding:4px 10px; border-radius:6px; font-size:11.5px; font-weight:bold; cursor:pointer;">📥 Sample CSV</button>
+              <button type="button" onclick="window.downloadSampleRosterJson()" style="background:transparent; border:1px solid rgba(168,85,247,0.4); color:#c084fc; padding:4px 10px; border-radius:6px; font-size:11.5px; font-weight:bold; cursor:pointer;">📥 Sample JSON</button>
+            </div>
+          </div>
+
+          <!-- Parsed File Preview Section -->
+          <div id="rosterFilePreviewSection" style="display:none; flex-direction:column; flex:1; min-height:0; gap:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; border-bottom:1px solid var(--border); padding-bottom:8px; flex-shrink:0;">
+              <div id="rosterFileSummaryBadge" style="font-size:12.5px; font-weight:bold; color:var(--text-main); display:flex; align-items:center; gap:6px;">
+              </div>
+              <div style="display:flex; gap:8px;">
+                <button type="button" onclick="window.transferParsedFileToBulkRows()" style="background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.4); color:#60a5fa; padding:6px 12px; border-radius:7px; font-size:12px; font-weight:bold; cursor:pointer;" title="Load into editable multi-row grid">
+                  📥 Populate into Bulk Table
+                </button>
+              </div>
+            </div>
+
+            <!-- Scrollable Parsed Table -->
+            <div id="rosterFileParsedTableContainer" style="max-height:36vh; overflow-y:auto; border:1px solid var(--border); border-radius:8px; background:rgba(0,0,0,0.2);">
+            </div>
+          </div>
+
+          <!-- Progress Bar Container -->
+          <div id="rosterSyncProgressContainer" style="display:none; flex-direction:column; gap:6px; flex-shrink:0;">
+            <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:bold;">
+              <span id="rosterSyncProgressText" style="color:var(--text-main);">⏳ Syncing players to roster...</span>
+              <span id="rosterSyncProgressPct" style="color:var(--accent);">0%</span>
+            </div>
+            <div style="width:100%; height:8px; background:rgba(255,255,255,0.1); border-radius:4px; overflow:hidden;">
+              <div id="rosterSyncProgressBar" style="width:0%; height:100%; background:linear-gradient(90deg, #06b6d4, #10b981); transition:width 0.15s ease;"></div>
+            </div>
+          </div>
+
+          <!-- Status & Footer Actions -->
+          <div id="rosterFileStatus" style="font-size:13px; font-weight:bold; text-align:center; min-height:18px; flex-shrink:0;"></div>
+
+          <div style="display:flex; gap:10px; flex-shrink:0; margin-top:4px;">
+            <button type="button" onclick="document.getElementById('addPlayerModal')?.remove()" style="flex:1; padding:12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-weight:bold; cursor:pointer;">Cancel</button>
+            <button type="button" id="rosterFileSubmitBtn" onclick="window.directSyncParsedRosterToFirebase()" disabled style="flex:2; padding:12px; border-radius:8px; border:none; background:var(--success); color:white; font-weight:bold; cursor:pointer; font-size:15px; display:flex; align-items:center; justify-content:center; gap:8px; opacity:0.5;">
+              ⚡ Direct Sync to Roster
+            </button>
+          </div>
+
+        </div>
+
       </div>
     </div>
   `;
@@ -3772,34 +3838,47 @@ window.openAddPlayerModal = (initialMode = 'single') => {
   }
 };
 
-// Switch between Single Player and Bulk Add views
+// Switch between Single Player, Bulk Add, and File Sync views
 window.switchAddPlayerMode = (mode) => {
   const modal = document.getElementById('addPlayerModalCard');
   const singleView = document.getElementById('addPlayerSingleView');
   const bulkView = document.getElementById('addPlayerBulkView');
+  const fileView = document.getElementById('addPlayerFileView');
   const tabSingle = document.getElementById('tabBtnSinglePlayer');
   const tabBulk = document.getElementById('tabBtnBulkPlayer');
+  const tabFile = document.getElementById('tabBtnFilePlayer');
 
-  if (!modal || !singleView || !bulkView) return;
+  if (!modal || !singleView || !bulkView || !fileView) return;
 
   if (mode === 'bulk') {
     modal.style.maxWidth = '880px';
     singleView.style.display = 'none';
     bulkView.style.display = 'flex';
+    fileView.style.display = 'none';
     if (tabSingle) { tabSingle.style.background = 'transparent'; tabSingle.style.color = 'var(--text-muted)'; }
     if (tabBulk) { tabBulk.style.background = 'var(--accent)'; tabBulk.style.color = '#ffffff'; }
+    if (tabFile) { tabFile.style.background = 'transparent'; tabFile.style.color = 'var(--text-muted)'; }
     
-    // If container is empty, populate 2 default rows
     const list = document.getElementById('bulkPlayersList');
     if (list && list.children.length === 0) {
       window.clearBulkPlayerRows();
     }
+  } else if (mode === 'file') {
+    modal.style.maxWidth = '880px';
+    singleView.style.display = 'none';
+    bulkView.style.display = 'none';
+    fileView.style.display = 'flex';
+    if (tabSingle) { tabSingle.style.background = 'transparent'; tabSingle.style.color = 'var(--text-muted)'; }
+    if (tabBulk) { tabBulk.style.background = 'transparent'; tabBulk.style.color = 'var(--text-muted)'; }
+    if (tabFile) { tabFile.style.background = 'var(--accent)'; tabFile.style.color = '#ffffff'; }
   } else {
     modal.style.maxWidth = '500px';
     singleView.style.display = 'flex';
     bulkView.style.display = 'none';
+    fileView.style.display = 'none';
     if (tabSingle) { tabSingle.style.background = 'var(--accent)'; tabSingle.style.color = '#ffffff'; }
     if (tabBulk) { tabBulk.style.background = 'transparent'; tabBulk.style.color = 'var(--text-muted)'; }
+    if (tabFile) { tabFile.style.background = 'transparent'; tabFile.style.color = 'var(--text-muted)'; }
   }
 };
 
@@ -4102,6 +4181,324 @@ window.submitBulkAddPlayers = async () => {
       submitBtn.textContent = '💾 Save All to Roster';
     }
   }
+};
+
+// ====================================================================
+// 📁 FILE IMPORT & DIRECT ROSTER SYNC ENGINE
+// ====================================================================
+
+window._parsedRosterUploadData = [];
+
+window.handleRosterFileInputChange = (e) => {
+  const file = e.target.files?.[0];
+  if (file) window.parseAndPreviewRosterFile(file);
+};
+
+window.handleRosterFileDrop = (e) => {
+  e.preventDefault();
+  const dropZone = document.getElementById('rosterFileDropZone');
+  if (dropZone) {
+    dropZone.style.borderColor = 'rgba(6,182,212,0.45)';
+    dropZone.style.background = 'rgba(6,182,212,0.04)';
+  }
+  const file = e.dataTransfer?.files?.[0];
+  if (file) window.parseAndPreviewRosterFile(file);
+};
+
+window.parseAndPreviewRosterFile = (file) => {
+  const statusDiv = document.getElementById('rosterFileStatus');
+  if (statusDiv) {
+    statusDiv.style.color = 'var(--text-muted)';
+    statusDiv.textContent = `Reading ${file.name}...`;
+  }
+  const reader = new FileReader();
+  reader.onload = (evt) => {
+    const text = evt.target.result;
+    window.parseRosterText(text, file.name);
+  };
+  reader.onerror = () => {
+    if (statusDiv) {
+      statusDiv.style.color = '#ef4444';
+      statusDiv.textContent = 'Failed to read file.';
+    }
+  };
+  reader.readAsText(file);
+};
+
+window.parseRosterText = (rawText, fileName = 'uploaded_file') => {
+  const statusDiv = document.getElementById('rosterFileStatus');
+  const previewSec = document.getElementById('rosterFilePreviewSection');
+  const badge = document.getElementById('rosterFileSummaryBadge');
+  const tableContainer = document.getElementById('rosterFileParsedTableContainer');
+  const submitBtn = document.getElementById('rosterFileSubmitBtn');
+
+  if (!rawText || !rawText.trim()) {
+    if (statusDiv) {
+      statusDiv.style.color = '#ef4444';
+      statusDiv.textContent = 'The uploaded file is empty.';
+    }
+    return;
+  }
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  let parsed = [];
+  const trimmed = rawText.trim();
+
+  // 1. JSON format check
+  if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+    try {
+      const json = JSON.parse(trimmed);
+      const items = Array.isArray(json) ? json : (json.roster || json.users || json.members || json.players || Object.values(json));
+      if (Array.isArray(items)) {
+        items.forEach(item => {
+          if (typeof item === 'object' && item !== null) {
+            const gid = (item.gameId || item.id || item.fid || item.player_id || '').toString().trim();
+            const name = (item.name || item.chiefName || item.nickname || item.stove_name || '').toString().trim();
+            const furnace = (item.furnaceLevel || item.stove_lv || item.level || item.furnace || '30').toString().trim();
+            const date = (item.dateStarted || item.dateJoined || item.date || todayStr).toString().trim();
+            if (gid) {
+              parsed.push({ gameId: gid, name: name || `Chief ${gid}`, furnaceLevel: furnace, dateStarted: date });
+            }
+          } else if (typeof item === 'string' && /^\d{5,15}$/.test(item.trim())) {
+            parsed.push({ gameId: item.trim(), name: `Chief ${item.trim()}`, furnaceLevel: '30', dateStarted: todayStr });
+          }
+        });
+      }
+    } catch(e) {
+      console.warn("JSON parse attempt failed, falling back to line-by-line CSV parser:", e);
+    }
+  }
+
+  // 2. CSV / TSV / Delimited line-by-line check
+  if (parsed.length === 0) {
+    const lines = trimmed.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    if (lines.length > 0) {
+      let gidIdx = 0, nameIdx = 1, furnaceIdx = 2, dateIdx = 3;
+      let startRow = 0;
+
+      // Check for header in line 0
+      const headerParts = lines[0].toLowerCase().split(/[,|\t;]+/).map(p => p.trim());
+      const hasHeader = headerParts.some(p => p.includes('id') || p.includes('name') || p.includes('chief') || p.includes('furnace') || p.includes('player'));
+      
+      if (hasHeader) {
+        startRow = 1;
+        headerParts.forEach((h, i) => {
+          if (h.includes('id') && !h.includes('discord') && !h.includes('steam')) gidIdx = i;
+          else if (h.includes('name') || h.includes('chief') || h.includes('nick')) nameIdx = i;
+          else if (h.includes('furnace') || h.includes('level') || h.includes('stove')) furnaceIdx = i;
+          else if (h.includes('date') || h.includes('join') || h.includes('start')) dateIdx = i;
+        });
+      }
+
+      for (let i = startRow; i < lines.length; i++) {
+        const line = lines[i];
+        const parts = line.split(/[,|\t;]+/).map(p => p.trim());
+        if (parts.length === 0 || (parts.length === 1 && !parts[0])) continue;
+
+        let gid = '', name = '', furnace = '30', date = todayStr;
+
+        if (hasHeader) {
+          gid = parts[gidIdx] || '';
+          name = parts[nameIdx] || '';
+          furnace = parts[furnaceIdx] || '30';
+          date = parts[dateIdx] || todayStr;
+        } else {
+          // Smart auto-detect
+          if (/^\d{5,15}$/.test(parts[0])) {
+            gid = parts[0];
+            name = parts[1] || `Chief ${gid}`;
+            if (parts[2]) furnace = parts[2];
+            if (parts[3]) date = parts[3];
+          } else if (parts.length >= 2 && /^\d{5,15}$/.test(parts[1])) {
+            name = parts[0];
+            gid = parts[1];
+            if (parts[2]) furnace = parts[2];
+            if (parts[3]) date = parts[3];
+          } else {
+            gid = parts[0].replace(/\D/g, '');
+            name = parts[1] || parts[0];
+          }
+        }
+
+        gid = gid.replace(/[^0-9]/g, '');
+        if (gid) {
+          furnace = furnace.replace(/[^0-9A-Za-z\s]/g, '') || '30';
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) date = todayStr;
+          parsed.push({ gameId: gid, name: name || `Chief ${gid}`, furnaceLevel: furnace, dateStarted: date });
+        }
+      }
+    }
+  }
+
+  // Deduplicate by Game ID
+  const uniqueMap = new Map();
+  parsed.forEach(p => {
+    if (!uniqueMap.has(p.gameId)) uniqueMap.set(p.gameId, p);
+  });
+  parsed = Array.from(uniqueMap.values());
+
+  window._parsedRosterUploadData = parsed;
+
+  if (parsed.length === 0) {
+    if (statusDiv) {
+      statusDiv.style.color = '#ef4444';
+      statusDiv.textContent = `❌ Could not find valid numeric Game IDs in ${fileName}. Please check the file format.`;
+    }
+    if (previewSec) previewSec.style.display = 'none';
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.style.opacity = '0.5';
+    }
+    return;
+  }
+
+  if (badge) {
+    badge.innerHTML = `<span>📊 <strong>${parsed.length}</strong> Players Detected from <code>${escapeHTML(fileName)}</code></span>`;
+  }
+
+  if (tableContainer) {
+    let rowsHtml = parsed.map((p, idx) => `
+      <tr style="border-bottom:1px solid var(--border); font-size:12px;">
+        <td style="padding:6px 10px; color:var(--text-muted); text-align:center;">${idx + 1}</td>
+        <td style="padding:6px 10px; font-family:monospace; font-weight:bold; color:var(--accent);">${escapeHTML(p.gameId)}</td>
+        <td style="padding:6px 10px; font-weight:bold; color:var(--text-main);">${escapeHTML(p.name)}</td>
+        <td style="padding:6px 10px; color:#f59e0b; font-weight:bold;">${escapeHTML(p.furnaceLevel)}</td>
+        <td style="padding:6px 10px; color:var(--text-muted);">${escapeHTML(p.dateStarted)}</td>
+      </tr>
+    `).join('');
+
+    tableContainer.innerHTML = `
+      <table style="width:100%; border-collapse:collapse; text-align:left;">
+        <thead>
+          <tr style="background:rgba(255,255,255,0.06); font-size:11px; text-transform:uppercase; color:var(--text-muted);">
+            <th style="padding:8px 10px; text-align:center; width:36px;">#</th>
+            <th style="padding:8px 10px;">Game ID</th>
+            <th style="padding:8px 10px;">Chief Name</th>
+            <th style="padding:8px 10px;">Furnace</th>
+            <th style="padding:8px 10px;">Date Joined</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHtml}
+        </tbody>
+      </table>
+    `;
+  }
+
+  if (previewSec) previewSec.style.display = 'flex';
+  if (statusDiv) {
+    statusDiv.style.color = '#10b981';
+    statusDiv.textContent = `✅ Ready! Choose 'Populate into Bulk Table' to edit or 'Direct Sync' to write immediately.`;
+  }
+  if (submitBtn) {
+    submitBtn.disabled = false;
+    submitBtn.style.opacity = '1';
+    submitBtn.textContent = `⚡ Direct Sync ${parsed.length} Players to Roster`;
+  }
+};
+
+window.transferParsedFileToBulkRows = () => {
+  const data = window._parsedRosterUploadData;
+  if (!data || data.length === 0) return;
+
+  window.switchAddPlayerMode('bulk');
+  const container = document.getElementById('bulkPlayersList');
+  if (!container) return;
+
+  container.innerHTML = '';
+  data.forEach(p => {
+    window.addBulkPlayerRow(p);
+  });
+
+  if (window.showToast) {
+    window.showToast(`Populated ${data.length} player rows into the Bulk Editor!`, "success");
+  }
+};
+
+window.directSyncParsedRosterToFirebase = async () => {
+  const data = window._parsedRosterUploadData;
+  if (!data || data.length === 0) return;
+
+  const statusDiv = document.getElementById('rosterFileStatus');
+  const submitBtn = document.getElementById('rosterFileSubmitBtn');
+  const progressContainer = document.getElementById('rosterSyncProgressContainer');
+  const progressBar = document.getElementById('rosterSyncProgressBar');
+  const progressText = document.getElementById('rosterSyncProgressText');
+  const progressPct = document.getElementById('rosterSyncProgressPct');
+
+  if (submitBtn) submitBtn.disabled = true;
+  if (progressContainer) progressContainer.style.display = 'flex';
+
+  let successCount = 0;
+  try {
+    for (let i = 0; i < data.length; i++) {
+      const p = data[i];
+      const pct = Math.round(((i + 1) / data.length) * 100);
+      
+      if (progressBar) progressBar.style.width = `${pct}%`;
+      if (progressPct) progressPct.textContent = `${pct}%`;
+      if (progressText) progressText.textContent = `Syncing ${i + 1} of ${data.length}: ${p.name} (${p.gameId})...`;
+
+      await window.addNewChiefToRoster(p.gameId, p.name, p.furnaceLevel, p.dateStarted);
+      successCount++;
+    }
+
+    if (window.logAdminAction) {
+      window.logAdminAction("File Roster Sync", `Synced ${successCount} players from file import to alliance roster`, `${successCount} Members`);
+    }
+
+    if (window.showToast) {
+      window.showToast(`🎉 Successfully synced ${successCount} players to Alliance Roster!`, "success");
+    }
+
+    document.getElementById('addPlayerModal')?.remove();
+
+    if (document.getElementById('adminUsersTable') || document.getElementById('tab-users')) {
+      if (window.refreshAdminUsers) await window.refreshAdminUsers();
+      else if (views.admin) await views.admin('tab-users');
+    } else if (typeof window.activeViewFunc === 'function') {
+      window.activeViewFunc();
+    } else if (views.roster) {
+      views.roster();
+    }
+  } catch(err) {
+    console.error("directSyncParsedRosterToFirebase error:", err);
+    if (statusDiv) {
+      statusDiv.style.color = '#ef4444';
+      statusDiv.textContent = `Error during direct sync: ${err.message}`;
+    }
+    if (submitBtn) submitBtn.disabled = false;
+  }
+};
+
+window.downloadSampleRosterCsv = () => {
+  const csvContent = `Game ID,Chief Name,Furnace Level,Date Joined\n318843189,BrianDCox,FC 5,2026-08-19\n159982424,LordBrian,FC 3,2026-08-19\n156455325,IceMouse,30,2026-08-19`;
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'wos_roster_sample_template.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+window.downloadSampleRosterJson = () => {
+  const jsonContent = JSON.stringify([
+    { "gameId": "318843189", "name": "BrianDCox", "furnaceLevel": "FC 5", "dateStarted": "2026-08-19" },
+    { "gameId": "159982424", "name": "LordBrian", "furnaceLevel": "FC 3", "dateStarted": "2026-08-19" },
+    { "gameId": "156455325", "name": "IceMouse", "furnaceLevel": "30", "dateStarted": "2026-08-19" }
+  ], null, 2);
+  const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'wos_roster_sample_template.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 };
 
 // Verify Game ID & Auto-Fill Chief Name in Single Mode

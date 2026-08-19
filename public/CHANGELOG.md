@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [2.9.66] - 2026-08-19
+- 📁 **Roster File Import & Fast Sync**: Built full file upload support (.csv, .json, .txt, .tsv) into the **➕ Add Player to Roster** modal with drag-and-drop support for effortless bulk player list synchronization.
+- 📊 **Intelligent Header Detection & Preview Table**: Automatically maps column headers (Game ID, Chief Name, Furnace Level, Date) and presents a clean scrollable preview table with duplicate detection.
+- ⚡ **Dual Sync Workflows**: Added *Populate into Bulk Table* (to review and fine-tune each player before saving) and *Direct Sync to Roster* (1-click fast batch upload to Firebase & Sheets with live progress bar).
+- 📥 **Starter Templates**: Added 1-click download buttons for Sample CSV and Sample JSON templates formatted for Whiteout Survival alliance rosters.
+
 ## [2.9.65] - 2026-08-19
 - 📝 **Spacious Ticket & Bug Note Editor**: Expanded the Admin Note Modal with a generous multi-line textarea (`rows="7"`) that supports full `Enter` key line breaks, indentation, spacing, and bullet points.
 - ⚡ **1-Click Quick Templates & Ctrl+Enter**: Added quick template pills to insert common resolution tags (`[✅ Implemented in vX]`, `[🔍 In Review]`, etc.) and `Ctrl+Enter` keyboard shortcut to save.

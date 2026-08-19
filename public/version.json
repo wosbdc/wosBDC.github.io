@@ -1,19 +1,20 @@
 {
-  "version": "2.9.65",
+  "version": "2.9.66",
   "releaseDate": "2026-08-19",
-  "title": "What's New in v2.9.65",
+  "title": "What's New in v2.9.66",
   "notes": [
-    "📝 Spacious Ticket & Bug Note Editor: Replaced cramped single-line input with a generous multi-line textarea supporting full Enter/Return keys, spacing, and bullet points.",
-    "⚡ Quick Template Pills & Shortcut: Added 1-click resolution template buttons and Ctrl+Enter quick-save shortcut.",
-    "✨ Dedicated Admin Resolution Box: Public feedback cards now render developer notes in a styled, formatted card block preserving custom whitespace and paragraphs."
+    "📁 Roster File Import & Fast Sync: Added file upload support (.csv, .json, .txt, .tsv) to the 'Add Player to Roster' modal for instant bulk roster synchronization.",
+    "📊 Smart File Parsing & Table Preview: Automatically detects headers and presents parsed players in a clean scrollable preview table with duplicate filtering.",
+    "⚡ Direct Sync & Bulk Table Populator: Choose between 1-click Direct Sync with live progress bar or loading into the multi-row bulk editor to review before saving.",
+    "📥 Starter Templates: Added 1-click downloads for sample CSV and JSON roster templates."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "2.9.65",
+    "version": "2.9.66",
     "latestChanges": [
+      "v2.9.66: Added Roster File Import & Fast Sync (.csv, .json, .txt, .tsv) to Add Player modal with live preview and sample templates",
       "v2.9.65: Upgraded Bug/Feedback resolution note editor to a spacious multi-line textarea with quick templates and pre-wrap formatting",
       "v2.9.64: Enabled debounced background cloud auto-save and streamlined the Save button with live sync status indicators",
-      "v2.9.63: Added real-time auto-calculation and locked summary inputs in Alliance Championship Admin Suite",
-      "v2.9.62: Added comprehensive Draw (Tie) support across Alliance Championship war room, archive vault, and leaderboards"
+      "v2.9.63: Added real-time auto-calculation and locked summary inputs in Alliance Championship Admin Suite"
     ]
   }
 }
