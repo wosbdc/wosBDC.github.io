@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.73] - 2026-08-19
+- 🛡️ **Real-Time Token Health & Expiry Badges**: Member and alt sync badges now update in real-time across the website and profile modals driven by live Firebase RTDB listeners, Century Games JWT expiration tracking, and Central Command Token Scanner sweeps.
+- 🔔 **Automated Notification Bell Token Alerts**: Whenever a 30-day game token is expiring soon (<= 3 days) or has expired, members receive dynamic alerts in their notification bell header with 1-click in-game re-sync actions.
+- ⚡ **Central Command v1.0.73 Telemetry Engine**: Updated Central Command's Token Scanner and API Daemon to auto-record structured `tokenStatus` objects (`daysLeft`, `status`, `expiresAt`, `checkedAt`) to `/users` and `/roster_live`.
+
 ## [2.9.72] - 2026-08-19
 - ⚡ **Dual-Mode BDC Backend & Firebase Live Queue**: Migrated backend operations away from Google Apps Script to a dedicated **BDC Central Command API & Queue Engine**. Actions process in real-time via Firebase `/api_queue` (zero-config, zero networking required) with direct REST API support on port 3188.
 - 🎮 **Zero-Timeout Century Games Engine**: Native RSA-OAEP and HMAC-SHA256 crypto engine runs directly on Central Command, eliminating Google Apps Script 6-minute execution limits and daily URL fetch quotas.

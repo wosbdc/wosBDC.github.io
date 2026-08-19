@@ -1,11 +1,11 @@
 {
-  "version": "2.9.72",
+  "version": "2.9.73",
   "releaseDate": "2026-08-19",
-  "title": "What's New in v2.9.72",
+  "title": "What's New in v2.9.73",
   "notes": [
-    "⚡ Dual-Mode BDC Backend & Firebase Live Queue: Migrated backend operations away from Google Apps Script to BDC Central Command with instant real-time processing via /api_queue and direct REST API.",
-    "🎮 Instant Century Games Stats & Captchas: Member token verifications, captcha dispatches, and live profile syncs now process in milliseconds with zero Google quota limits or timeouts.",
-    "🔥 Real-Time Database Sync: Member and Alt furnace levels, start dates, and avatars sync instantly across Firebase RTDB and BDC Central Command."
+    "🛡️ Real-Time Token Health & Expiry Badges: Sync badges update dynamically based on live token scan telemetry, JWT crypto expiry dates, and real-time Firebase listeners.",
+    "🔔 Automated Notification Bell Token Alerts: Notification bell alerts trigger automatically when 30-day tokens are expiring soon (<= 3 days) or expired with 1-click in-game renewal actions.",
+    "⚡ Instant Multi-Maintenance Sync: BDC Central Command v1.0.73 continuously syncs member tokens, furnace upgrades, and avatars directly to Firebase and Google Sheets."
   ],
   "wosbdc_alliance_dashboard": {
     "version": "2.9.67",

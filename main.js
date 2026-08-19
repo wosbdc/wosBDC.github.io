@@ -3091,6 +3091,33 @@ onValue(ref(db, 'broadcastAlerts'), () => {
   }
 });
 
+// Realtime listener for live roster and token health updates from Central Command
+onValue(ref(db, 'roster_live'), () => {
+  if (typeof window.updateNewMemberBadge === 'function') {
+    window.updateNewMemberBadge();
+  }
+  if (document.querySelector('.roster-view-container') && typeof views.roster === 'function') {
+    views.roster();
+  }
+});
+
+window.setupUserRealtimeSync = (uid) => {
+  if (!uid || window._userRealtimeUnsub) return;
+  window._userRealtimeUnsub = onValue(ref(db, `users/${uid}`), (snap) => {
+    if (snap.exists()) {
+      const updatedUser = snap.val();
+      currentUser = { ...currentUser, ...updatedUser };
+      window.currentUser = currentUser;
+      if (typeof window.updateNewMemberBadge === 'function') {
+        window.updateNewMemberBadge();
+      }
+      if (document.getElementById('profileModalOverlay') && typeof window.renderProfileModalContent === 'function') {
+        window.renderProfileModalContent();
+      }
+    }
+  });
+};
+
 // Global Realtime Master Listener for Live Event Status across all devices
 let _isFirstActivityLoad = true;
 onValue(ref(db, 'activity_live'), async (snap) => {
@@ -6667,6 +6694,9 @@ listenToAuth((user) => {
   const adminAlertsNavBtn = document.getElementById('adminAlertsNavBtn');
 
   if (currentUser) {
+    if (currentUser.uid && typeof window.setupUserRealtimeSync === 'function') {
+      window.setupUserRealtimeSync(currentUser.uid);
+    }
     let name = (currentUser.gameId && window.idToNameMap && window.idToNameMap[currentUser.gameId]) 
       ? window.idToNameMap[currentUser.gameId] 
       : (currentUser.name || currentUser.chiefName || currentUser.displayName || 'Chief');
@@ -12118,7 +12148,103 @@ window.getRecentNewMembers = async () => {
 };
 
 window.getMemberTokenStatus = (user) => {
-  if (!user || (!user.wos_cg_token && !user.centuryGamesVerified)) {
+  if (!user) {
+    return {
+      status: 'unverified',
+      label: 'Character Unverified',
+      desc: 'Verify your in-game mailbox code to enable 30-day automatic stats, furnace level, and avatar syncing.',
+      daysLeft: 0,
+      alert: true,
+      color: '#f59e0b',
+      icon: '⚠️'
+    };
+  }
+
+  // 1. Direct explicit tokenStatus object written by Central Command scanner
+  if (user.tokenStatus && typeof user.tokenStatus === 'object') {
+    const ts = user.tokenStatus;
+    const days = typeof ts.daysLeft === 'number' ? ts.daysLeft : 0;
+    if (ts.status === 'expired' || user.tokenExpired === true || days <= 0) {
+      return {
+        status: 'expired',
+        label: '30-Day Sync Token Expired',
+        desc: 'Your 30-day token has expired. Enter a new in-game code to keep stats auto-syncing.',
+        daysLeft: 0,
+        alert: true,
+        color: '#ef4444',
+        icon: '🚨'
+      };
+    } else if (ts.status === 'expiring_soon' || days <= 3) {
+      return {
+        status: 'expiring_soon',
+        label: `Token Expires in ${days} Day${days === 1 ? '' : 's'}`,
+        desc: `Your 30-day sync token will expire in ${days} day${days === 1 ? '' : 's'}. Renew early to avoid sync interruption.`,
+        daysLeft: days,
+        alert: true,
+        color: '#f59e0b',
+        icon: '⏳'
+      };
+    } else {
+      return {
+        status: 'active',
+        label: `30-Day Sync Active (${days} Days Left)`,
+        desc: 'Your 30-day sync token is verified and syncing normally.',
+        daysLeft: days,
+        alert: false,
+        color: '#10b981',
+        icon: '🛡️'
+      };
+    }
+  }
+
+  // 2. Direct client-side JWT decoding if token exists
+  if (user.wos_cg_token && typeof user.wos_cg_token === 'string') {
+    try {
+      const parts = user.wos_cg_token.split('.');
+      if (parts.length >= 2) {
+        const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+        if (payload && payload.exp) {
+          const expMs = payload.exp * 1000;
+          const nowMs = Date.now();
+          const msLeft = expMs - nowMs;
+          const daysLeft = Math.max(0, Math.floor(msLeft / (1000 * 60 * 60 * 24)));
+          if (daysLeft <= 0 || user.tokenExpired === true) {
+            return {
+              status: 'expired',
+              label: '30-Day Sync Token Expired',
+              desc: 'Your 30-day token has expired. Enter a new in-game code to keep stats auto-syncing.',
+              daysLeft: 0,
+              alert: true,
+              color: '#ef4444',
+              icon: '🚨'
+            };
+          } else if (daysLeft <= 3) {
+            return {
+              status: 'expiring_soon',
+              label: `Token Expires in ${daysLeft} Day${daysLeft === 1 ? '' : 's'}`,
+              desc: `Your 30-day sync token will expire in ${daysLeft} day${daysLeft === 1 ? '' : 's'}. Renew early to avoid sync interruption.`,
+              daysLeft: daysLeft,
+              alert: true,
+              color: '#f59e0b',
+              icon: '⏳'
+            };
+          } else {
+            return {
+              status: 'active',
+              label: `30-Day Sync Active (${daysLeft} Days Left)`,
+              desc: 'Your 30-day sync token is verified and syncing normally.',
+              daysLeft: daysLeft,
+              alert: false,
+              color: '#10b981',
+              icon: '🛡️'
+            };
+          }
+        }
+      }
+    } catch(e) {}
+  }
+
+  if (!user.wos_cg_token && !user.centuryGamesVerified) {
     return {
       status: 'unverified',
       label: 'Character Unverified',
@@ -12147,7 +12273,7 @@ window.getMemberTokenStatus = (user) => {
   const elapsedDays = Math.floor((Date.now() - verifiedMs) / (1000 * 60 * 60 * 24));
   const daysLeft = Math.max(0, 30 - elapsedDays);
 
-  if (daysLeft <= 0) {
+  if (daysLeft <= 0 || user.tokenExpired === true) {
     return {
       status: 'expired',
       label: '30-Day Sync Token Expired',
@@ -12157,7 +12283,7 @@ window.getMemberTokenStatus = (user) => {
       color: '#ef4444',
       icon: '🚨'
     };
-  } else if (daysLeft <= 5) {
+  } else if (daysLeft <= 3) {
     return {
       status: 'expiring_soon',
       label: `Token Expires in ${daysLeft} Day${daysLeft === 1 ? '' : 's'}`,
@@ -12171,7 +12297,7 @@ window.getMemberTokenStatus = (user) => {
     return {
       status: 'active',
       label: `30-Day Sync Active (${daysLeft} Days Left)`,
-      desc: `Your 30-day sync token is verified and syncing normally.`,
+      desc: 'Your 30-day sync token is verified and syncing normally.',
       daysLeft: daysLeft,
       alert: false,
       color: '#10b981',
