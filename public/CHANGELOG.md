@@ -1,52 +1,52 @@
 # CHANGELOG
 
 ## [2.9.73] - 2026-08-19
-- 🛡️ **Live Token Health**: Added real-time token status and expiration badges to member and alt profiles.
-- 🔔 **Token Expiry Alerts**: Receive automatic notification bell reminders when your 30-day game token is expiring.
+- 🛡️ **Live Token Health**: Added real-time token status to player profiles.
+- 🔔 **Token Expiry Alerts**: Receive automatic reminders when tokens are expiring.
 
 ## [2.9.72] - 2026-08-19
-- ⚡ **Central Command API Engine**: Migrated backend tasks to Central Command for zero-timeout performance and instant game syncing.
-- 🔄 **Instant In-Game Sync**: Accelerated verification, captchas, and live stats fetching with sub-second response times.
+- ⚡ **Central Command API**: Fast zero-timeout backend for instant game sync.
+- 🔄 **Instant Game Sync**: Sub-second character verification and stat updates.
 
 ## [2.9.71] - 2026-08-19
-- 🔥 **Multi-Store Furnace Sync**: Changing furnace levels now updates Google Sheets and Firebase instantly.
-- 🛡️ **Alt Account Level Editing**: Seamlessly edit furnace levels and start dates for linked alts.
+- 🔥 **Furnace Sync**: Changing furnace levels updates Sheets and Firebase instantly.
+- 🛡️ **Alt Editing**: Edit furnace levels and dates for linked alts.
 
 ## [2.9.70] - 2026-08-19
-- 🎮 **Sync from Game**: Added a 1-tap "Sync from Game" button in Edit Profile to pull live furnace level, nickname, and avatar directly from the game.
-- ⚡ **Token Status Indicator**: View active token days remaining directly inside your profile.
+- 🎮 **Sync from Game**: Pull live game stats directly inside your profile.
+- ⚡ **Token Days Indicator**: View active token days remaining inside your profile.
 
 ## [2.9.69] - 2026-08-19
-- ⭐ **Mains-Only Filter**: Added a 1-tap filter in the Google Sheets Chief Sync sidebar to view only primary accounts.
-- 🎭 **Alt Attribution Badges**: Alt accounts now display their main account owner directly on each card.
+- ⭐ **Mains-Only Filter**: View only primary accounts in Chief Sync sidebar.
+- 🎭 **Alt Badges**: Alt cards display their main account owner.
 
 ## [2.9.68] - 2026-08-19
-- 👥 **Chief Sync Sidebar**: Built a real-time Chief Sync status sidebar in Google Sheets with live metrics and 1-click jump-to-row navigation.
-- 📋 **Copy Unsynced List**: Quickly copy unsynced member names to your clipboard for alliance announcements.
+- 👥 **Chief Sync Sidebar**: Real-time chief sync sidebar in Google Sheets.
+- 📋 **Copy Unsynced**: 1-click copy unsynced member names to clipboard.
 
 ## [2.9.67] - 2026-08-19
-- 🔔 **Developer Notes in Bell Alerts**: View admin resolution notes directly in your notification modal when tickets are updated or resolved.
-- ⭐ **Your Ticket Badge**: Highlights your own submitted tickets with a distinct purple badge.
+- 🔔 **Developer Notes**: View resolution notes directly inside notification modal.
+- ⭐ **Your Ticket Badge**: Highlights your own submitted tickets.
 
 ## [2.9.66] - 2026-08-19
-- 📁 **Roster File Import**: Import player lists via CSV, JSON, TXT, or TSV with drag-and-drop support.
-- ⚡ **1-Click Bulk Sync**: Preview imported players and sync them directly to Firebase and Google Sheets.
+- 📁 **Roster Import**: Drag-and-drop roster import via CSV, JSON, TXT.
+- ⚡ **Bulk Sync**: 1-click sync imported players to Firebase.
 
 ## [2.9.65] - 2026-08-19
-- 📝 **Spacious Note Editor**: Expanded the ticket resolution note editor with multi-line formatting and quick template tags.
-- ✨ **Formatted Public Notes**: Developer resolution notes now display in styled emerald callouts.
+- 📝 **Spacious Note Editor**: Multi-line resolution note editor with template tags.
+- ✨ **Styled Notes Display**: Developer notes display in styled emerald callouts.
 
 ## [2.9.64] - 2026-08-19
-- ☁️ **Background Auto-Save**: Alliance Championship matchups and scores now automatically save in the background.
-- 💾 **Live Save Indicator**: Added dynamic save state indicators showing live cloud synchronization.
+- ☁️ **Background Auto-Save**: Championship matchups and scores auto-save in background.
+- 💾 **Live Save Indicator**: Added live cloud synchronization status indicator.
 
 ## [2.9.63] - 2026-08-19
-- 🔒 **Auto-Calculated Scores**: Matchup status and total season flags now calculate automatically as scores are entered.
-- 🛡️ **Calculation Safeguards**: Applied read-only safeguards to auto-computed fields to prevent entry errors.
+- 🔒 **Auto-Calculated Scores**: Matchup status and season flags calculate automatically.
+- 🛡️ **Entry Safeguards**: Read-only safeguards prevent accidental score calculation errors.
 
 ## [2.9.62] - 2026-08-19
-- ⚖️ **Match Draw Support**: Added full support for tied rounds across Alliance Championship and tournament archives.
-- 📊 **Updated Records**: Matchup records and dynasty stats now format draws cleanly (e.g. 3W – 1L – 1D).
+- ⚖️ **Match Draw Support**: Full support for tied rounds across tournaments.
+- 📊 **Updated Records**: Tournament summaries format draws cleanly (e.g. 3W–1L–1D).
 
 ## [2.9.61] - 2026-08-19
 - 🔕 **Cleaner Notification Bell**: Empty notification sections are hidden so you only see items requiring attention.
