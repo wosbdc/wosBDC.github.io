@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.59] - 2026-08-19
+- 🗑️ **Deleted Season 12 Test Archives**: Permanently cleared the test Season 12 record and attendance archive from Firebase database nodes (`championship_meta/history` and `events_archive/championship`).
+- 🛡️ **Admin Vault Archive Deletion**: Added a secure deletion button inside the Championship Archive Vault modal allowing Admins and R4/R5 leadership to remove any test or corrupted season archives.
+- ⚙️ **Clean Initial Matchup Defaults**: Replaced mock "Season 12" defaults with clean initial template scores for future tournaments.
+
 ## [2.9.58] - 2026-08-18
 - 🏆 **Unified Championship Leaderboard Architecture**: Merged the All-Time Dynasty Leaderboard and Hall of Fame under `Nav ➔ Leaderboards | Alliance Championship` with full dynasty statistics, gold ring counts, and attendance records.
 - 🛡️ **Cross-Source Chief Deduplication**: Fixed key matching between historical archive rosters and live signups so each chief appears strictly once with merged tournament deployments and championship victories.

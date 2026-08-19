@@ -9444,15 +9444,15 @@ window.buildShowdownHistoryCardHtml = (activeFilter = 'all') => {
 
 // 🏆 Alliance Championship 5-Round Matchup & Archive Suite
 window.DEFAULT_CHAMPIONSHIP_MATCHUPS = {
-    seasonName: "Season 12 Championship",
-    statusText: "4 Wins – 1 Loss (Tournament Champions)",
+    seasonName: "Upcoming Season",
+    statusText: "0 Wins – 0 Losses (New Season)",
     ourState: "2089",
     rounds: {
-        "r1": { roundNum: 1, date: "Round 1", ourScore: 950, ourFlags: 3, ourState: "2089", enemyAlliance: { name: "[KOR] KoreaKings", state: "2045", score: 820, flags: 2 } },
-        "r2": { roundNum: 2, date: "Round 2", ourScore: 1020, ourFlags: 4, ourState: "2089", enemyAlliance: { name: "[000] YellowMaple", state: "1988", score: 750, flags: 1 } },
-        "r3": { roundNum: 3, date: "Round 3", ourScore: 880, ourFlags: 3, ourState: "2089", enemyAlliance: { name: "[NBD] Murata", state: "2102", score: 790, flags: 2 } },
-        "r4": { roundNum: 4, date: "Round 4", ourScore: 1100, ourFlags: 5, ourState: "2089", enemyAlliance: { name: "[RED] Army", state: "2031", score: 650, flags: 0 } },
-        "r5": { roundNum: 5, date: "Round 5", ourScore: 720, ourFlags: 1, ourState: "2089", enemyAlliance: { name: "[WWA] WhiteoutWarriors", state: "2015", score: 880, flags: 4 } }
+        "r1": { roundNum: 1, date: "Round 1", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "Opponent 1", state: "2045", score: 0, flags: 0 } },
+        "r2": { roundNum: 2, date: "Round 2", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "Opponent 2", state: "1988", score: 0, flags: 0 } },
+        "r3": { roundNum: 3, date: "Round 3", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "Opponent 3", state: "2102", score: 0, flags: 0 } },
+        "r4": { roundNum: 4, date: "Round 4", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "Opponent 4", state: "2031", score: 0, flags: 0 } },
+        "r5": { roundNum: 5, date: "Round 5", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "Opponent 5", state: "2015", score: 0, flags: 0 } }
     }
 };
 
@@ -9678,6 +9678,31 @@ window.openChampionshipArchiveVaultModal = async (initialKey = 'live') => {
     }
 };
 
+window.deleteChampionshipArchive = async (tsKey) => {
+    if (!tsKey || tsKey === 'live') return;
+    const isAllowed = currentUser && (currentUser.isAdmin || currentUser.isR4R5);
+    if (!isAllowed) {
+        alert("Permission denied. Only Admins and R4/R5 leadership can delete archived seasons.");
+        return;
+    }
+    if (!confirm("Are you sure you want to permanently delete this archived Championship season from the Vault and Leaderboards?")) return;
+    try {
+        await Promise.all([
+            set(ref(db, `championship_meta/history/${tsKey}`), null),
+            set(ref(db, `events_archive/championship/${tsKey}`), null)
+        ]);
+        if (typeof showToast === 'function') showToast('Championship archive deleted successfully!', 'success');
+        if (window._champVaultState && window._champVaultState.historyObj) {
+            delete window._champVaultState.historyObj[tsKey];
+        }
+        window.renderChampionshipVaultBody('live');
+        if (views && views.leaderboards) views.leaderboards('Alliance Championship');
+    } catch(err) {
+        console.error("Error deleting championship archive:", err);
+        alert("Failed to delete archive: " + err.message);
+    }
+};
+
 window.renderChampionshipVaultBody = (activeKey = 'live') => {
     const body = document.getElementById('champVaultModalBody');
     if (!body || !window._champVaultState) return;
@@ -9685,7 +9710,7 @@ window.renderChampionshipVaultBody = (activeKey = 'live') => {
     const { historyObj, liveData } = window._champVaultState;
     const historyKeys = Object.keys(historyObj).sort((a,b) => Number(b) - Number(a));
 
-    let optionsHtml = `<option value="live" ${activeKey === 'live' ? 'selected' : ''}>🌟 Current Season: ${escapeHTML(liveData.seasonName || 'Season 12')}</option>`;
+    let optionsHtml = `<option value="live" ${activeKey === 'live' ? 'selected' : ''}>🌟 Current Season: ${escapeHTML(liveData.seasonName || 'Upcoming Season')}</option>`;
     historyKeys.forEach(k => {
         let entry = historyObj[k];
         let sName = entry.seasonName || ('Season ' + new Date(Number(k)).toLocaleDateString());
@@ -9794,18 +9819,25 @@ window.renderChampionshipVaultBody = (activeKey = 'live') => {
         `;
     }).join('');
 
+    let deleteArchiveBtn = (activeKey !== 'live' && currentUser && (currentUser.isAdmin || currentUser.isR4R5))
+        ? `<button onclick="window.deleteChampionshipArchive('${escapeHTML(activeKey)}')" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:6px 14px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.3)'" onmouseout="this.style.background='rgba(239,68,68,0.15)'">🗑️ Delete Archive Season</button>`
+        : '';
+
     body.innerHTML = `
         <div style="margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; background:rgba(255,255,200,0.02); padding:12px 18px; border-radius:10px; border:1px solid var(--border);">
             <div style="font-weight:bold; font-size:13px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
                 <span>📅 Select Championship Season:</span>
             </div>
-            <select style="padding:8px 14px; border-radius:8px; border:1px solid var(--accent); background:var(--card-bg); color:var(--text-main); font-size:13px; font-weight:bold; cursor:pointer; min-width:280px;" onchange="window.renderChampionshipVaultBody(this.value)">
-                ${optionsHtml}
-            </select>
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                <select style="padding:8px 14px; border-radius:8px; border:1px solid var(--accent); background:var(--card-bg); color:var(--text-main); font-size:13px; font-weight:bold; cursor:pointer; min-width:280px;" onchange="window.renderChampionshipVaultBody(this.value)">
+                    ${optionsHtml}
+                </select>
+                ${deleteArchiveBtn}
+            </div>
         </div>
 
         <div style="text-align:center; padding:16px; margin-bottom:18px; background:linear-gradient(135deg, rgba(6,182,212,0.1) 0%, rgba(6,182,212,0.02) 100%); border:1px solid rgba(6,182,212,0.3); border-radius:12px;">
-            <div style="font-size:20px; font-weight:900; color:var(--text-main);">${escapeHTML(displayData.seasonName || 'Season 12 Championship')}</div>
+            <div style="font-size:20px; font-weight:900; color:var(--text-main);">${escapeHTML(displayData.seasonName || 'Alliance Championship')}</div>
             <div style="margin-top:8px; display:flex; align-items:center; justify-content:center; gap:10px; font-size:16px; font-weight:900; flex-wrap:wrap;">
                 <span style="color:#10b981;">${winCount} Wins</span>
                 <span style="color:var(--text-muted); opacity:0.6;">–</span>
@@ -22172,8 +22204,8 @@ html += `</select>
             `;
         } else {
             // MATCHUPS EDITOR
-            const seasonNameVal = champMatchupData.seasonName || 'Season 12 Championship';
-            const statusTextVal = champMatchupData.statusText || '4 Wins – 1 Loss (Tournament Champions)';
+            const seasonNameVal = champMatchupData.seasonName || 'Upcoming Season';
+            const statusTextVal = champMatchupData.statusText || '0 Wins – 0 Losses (New Season)';
             const roundsData = champMatchupData.rounds || {};
 
             let roundsInputsHtml = [1, 2, 3, 4, 5].map(i => {
@@ -22260,7 +22292,7 @@ html += `</select>
                     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:14px;">
                         <div>
                             <label style="display:block; font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:bold; margin-bottom:4px;">Season Name / Title</label>
-                            <input type="text" id="adm_champ_season_name" value="${escapeHTML(seasonNameVal)}" placeholder="e.g. Season 12 Championship" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box; font-weight:bold;">
+                            <input type="text" id="adm_champ_season_name" value="${escapeHTML(seasonNameVal)}" placeholder="e.g. Upcoming Season" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box; font-weight:bold;">
                         </div>
                         <div>
                             <label style="display:block; font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:bold; margin-bottom:4px;">Status Text / Subtitle</label>
@@ -22534,8 +22566,8 @@ html += `</select>
 
         window.saveChampionshipAdminMatchups = async () => {
             try {
-                let seasonName = document.getElementById('adm_champ_season_name')?.value || 'Season 12 Championship';
-                let statusText = document.getElementById('adm_champ_status_text')?.value || '4 Wins – 1 Loss';
+                let seasonName = document.getElementById('adm_champ_season_name')?.value || 'Upcoming Season';
+                let statusText = document.getElementById('adm_champ_status_text')?.value || '0 Wins – 0 Losses';
                 let ourSeasonFlags = Number(document.getElementById('adm_champ_our_season_flags')?.value) || 0;
                 let enemySeasonFlags = Number(document.getElementById('adm_champ_enemy_season_flags')?.value) || 0;
                 
@@ -28038,7 +28070,7 @@ window.resetBearTrapEvent = async () => {
             window.fetchRoster().catch(() => ({}))
         ]);
 
-        const seasonName = champData.seasonName || 'Season 12 Championship';
+        const seasonName = champData.seasonName || 'Upcoming Season';
         const rounds = champData.rounds || {};
         const roundsList = [1, 2, 3, 4, 5].map(i => rounds['r' + i] || { roundNum: i, date: `Round ${i}`, ourScore: 0, ourFlags: 0, enemyAlliance: { name: 'Opponent Alliance', score: 0, flags: 0 } });
 

@@ -1,19 +1,19 @@
 {
-  "version": "2.9.58",
-  "releaseDate": "2026-08-18",
-  "title": "What's New in v2.9.58",
+  "version": "2.9.59",
+  "releaseDate": "2026-08-19",
+  "title": "What's New in v2.9.59",
   "notes": [
-    "🏆 Merged Championship Leaderboard Architecture: Consolidated the All-Time Dynasty Leaderboard and Hall of Fame under Nav ➔ Leaderboards | Alliance Championship.",
-    "🛡️ Cross-Source Chief Deduplication: Unified historical attendance archives and live signups so each chief appears strictly once with combined tournament attendance and gold rings.",
-    "⚔️ Clean Matchups War Room: Streamlined Events ➔ Alliance Championship to focus exclusively on live 5-round battle cards and flag tracking with a one-click gateway to the full Hall of Fame."
+    "🗑️ Deleted Season 12 Test Archives: Permanently removed the test Season 12 archive and attendance history from the Vault and Leaderboard nodes in Firebase.",
+    "🛡️ Admin Vault Delete Controls: Added direct deletion controls inside the Championship Archive Vault modal for Admins and R4/R5 leadership.",
+    "⚙️ Clean Season Fallback Defaults: Replaced hardcoded Season 12 templates with clean Upcoming Season initial match configurations."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "2.9.58",
+    "version": "2.9.59",
     "latestChanges": [
+      "v2.9.59: Deleted Season 12 test archives and added Admin Vault archive deletion controls",
       "v2.9.58: Consolidated All-Time Championship Leaderboard under Nav Menu Leaderboards with cross-source deduplication",
       "v2.9.57: Refined Championship Gold badges to only be awarded for tournament event victories with Contender tier for roster participants",
-      "v2.9.56: Added Alliance Championship All-Time Leaderboard and Dynasty Stats under Nav Menu Leaderboards",
-      "v2.9.55: Unified Championship Event Reset to clean battle info and reset signups from YES to NO with dual archiving"
+      "v2.9.56: Added Alliance Championship All-Time Leaderboard and Dynasty Stats under Nav Menu Leaderboards"
     ]
   }
 }
