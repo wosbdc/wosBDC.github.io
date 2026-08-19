@@ -14595,6 +14595,9 @@ window.openEditProfileModal = async () => {
 
   const furnaceSelectHtml = window.renderFurnaceSelectHtml('editProfileFurnaceSelect', currentFurnace, 'margin-top:6px;');
 
+  const tokenStatus = window.getTokenExpiryStatus ? window.getTokenExpiryStatus(currentUser.wos_cg_token) : { expired: true, daysLeft: 0 };
+  const hasValidToken = !!(currentUser.wos_cg_token && !tokenStatus.expired);
+
   modalOverlay.innerHTML = `
     <div class="card" style="width:90%; max-width:520px; background:linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.9)); border:1px solid rgba(56,189,248,0.3); padding:30px; border-radius:20px; box-shadow:0 20px 50px rgba(0,0,0,0.6); text-align:left; animation:zoomIn 0.2s forwards;">
        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:12px;">
@@ -14603,6 +14606,21 @@ window.openEditProfileModal = async () => {
        </div>
 
        <div style="display:flex; flex-direction:column; gap:18px;">
+          <!-- 🎮 Live Game Server Sync Header Card -->
+          <div style="background:linear-gradient(135deg, rgba(14,165,233,0.12), rgba(6,182,212,0.06)); border:1px solid rgba(14,165,233,0.35); border-radius:14px; padding:14px 16px; display:flex; justify-content:space-between; align-items:center; gap:12px;">
+             <div style="display:flex; flex-direction:column; gap:3px;">
+                <div style="font-size:13.5px; font-weight:800; color:#fff; display:flex; align-items:center; gap:6px;">
+                   🎮 Live Game Server Sync
+                </div>
+                <div id="editProfileSyncStatusText" style="font-size:11.5px; font-weight:600; color:${hasValidToken ? '#10b981' : '#f59e0b'};">
+                   ${hasValidToken ? `🛡️ 30-Day Token Active (${tokenStatus.daysLeft}d left)` : '⚠️ 30-Day Game Token needed'}
+                </div>
+             </div>
+             <button type="button" id="btnEditProfileSyncFromGame" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:8px 15px; border-radius:10px; font-weight:bold; font-size:12.5px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 12px rgba(14,165,233,0.35); transition:all 0.2s; white-space:nowrap;" onmouseover="this.style.transform='translateY(-1px)';" onmouseout="this.style.transform='translateY(0)';">
+                🔄 Sync from Game
+             </button>
+          </div>
+
           <div>
              <label style="display:block; font-size:13px; font-weight:bold; color:#cbd5e1; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">📅 Date You Started Playing</label>
              <div style="display:flex; gap:8px; align-items:center;">
@@ -14641,8 +14659,79 @@ window.openEditProfileModal = async () => {
   const bPreview = document.getElementById('editProfileBadgePreview');
   if (fSelect && bPreview) {
      fSelect.addEventListener('change', (e) => {
-        bPreview.innerHTML = window.getFurnaceIconHtml(e.target.value, 52);
+        bPreview.innerHTML = window.getFurnaceIconHtml(e.target.value, 76);
      });
+  }
+
+  const syncFromGameBtn = document.getElementById('btnEditProfileSyncFromGame');
+  if (syncFromGameBtn) {
+     syncFromGameBtn.onclick = async () => {
+        const snap = await get(ref(db, `users/${currentUser.uid}`)).catch(() => null);
+        const uData = (snap && snap.exists()) ? snap.val() : {};
+        const token = uData.wos_cg_token || currentUser.wos_cg_token;
+
+        if (!token) {
+           window.showToast("No 30-Day Token found. Please link your character first.", "warning");
+           window.openAccountHubVerifyModal();
+           return;
+        }
+
+        const origBtnText = syncFromGameBtn.innerHTML;
+        syncFromGameBtn.disabled = true;
+        syncFromGameBtn.innerHTML = '⏳ Syncing...';
+
+        try {
+           const res = await fetch(`${API_BASE_URL}?api=syncProfileWithToken&id=${encodeURIComponent(currentUser.gameId)}&cgToken=${encodeURIComponent(token)}`);
+           const data = await res.json();
+
+           if (data && data.success) {
+              const finalStove = data.stove_lv || "";
+              if (finalStove) {
+                 const fSelectEl = document.getElementById('editProfileFurnaceSelect');
+                 const bPreviewEl = document.getElementById('editProfileBadgePreview');
+                 if (fSelectEl) {
+                    fSelectEl.value = finalStove;
+                 }
+                 if (bPreviewEl) {
+                    bPreviewEl.innerHTML = window.getFurnaceIconHtml(finalStove, 76);
+                 }
+              }
+
+              // Update user object & Firebase
+              const updates = {
+                 stove_lv: finalStove || currentUser.stove_lv,
+                 furnaceLevel: finalStove || currentUser.furnaceLevel,
+                 lastSyncedAt: new Date().toISOString(),
+                 centuryGamesVerified: true
+              };
+              if (data.avatar_image) updates.avatar_image = data.avatar_image;
+              if (data.nickname && !/^\d+$/.test(data.nickname)) updates.name = data.nickname;
+
+              await update(ref(db, `users/${currentUser.uid}`), updates);
+              Object.assign(currentUser, updates);
+
+              const statusTextEl = document.getElementById('editProfileSyncStatusText');
+              if (statusTextEl) {
+                 statusTextEl.style.color = '#10b981';
+                 statusTextEl.innerHTML = '🛡️ Live data synced with Century Games!';
+              }
+
+              window.showToast(`✅ Synced from game! Furnace updated to ${finalStove || 'current'}`, "success");
+           } else if (data && (data.expired || data.code === 15030 || data.code === 101031008 || data.code === 15006 || (data.message && data.message.includes('未登录')))) {
+              window.showToast("30-Day session expired. Please enter new in-game code to refresh.", "warning");
+              window.openAccountHubVerifyModal();
+           } else {
+              const errMsg = window.translateWosApiError ? window.translateWosApiError(data ? data.message : "Failed to sync", data ? data.code : null) : "Failed to sync from game";
+              window.showToast(errMsg, "error");
+           }
+        } catch(err) {
+           console.error("Edit profile sync from game error:", err);
+           window.showToast("Error connecting to game servers. Please try again.", "error");
+        } finally {
+           syncFromGameBtn.disabled = false;
+           syncFromGameBtn.innerHTML = origBtnText;
+        }
+     };
   }
 
   const closeBtn = document.getElementById('closeEditProfileBtn');

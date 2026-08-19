@@ -1,11 +1,11 @@
 {
-  "version": "2.9.67",
+  "version": "2.9.70",
   "releaseDate": "2026-08-19",
-  "title": "What's New in v2.9.67",
+  "title": "What's New in v2.9.70",
   "notes": [
-    "🔔 Live Developer Note Alerts in Notification Bell: Members can now see your resolution notes directly inside the top notification center when their tickets are closed or updated.",
-    "⭐ Your Ticket Highlight Badge: Members get an exclusive 'YOUR TICKET' highlight badge on their own bug reports and feature requests.",
-    "💬 Styled Developer Callout Box: Notes display in an emerald green luminous container preserving line breaks and formatted tags."
+    "🎮 In-Game Server Sync in Edit Member Profile: Members can now click '🔄 Sync from Game' right inside the Edit Profile modal to instantly fetch their live furnace level, Chief name, and avatar directly from Century Games.",
+    "🛡️ Live Token Status Indicator: Edit Profile modal displays real-time 30-day token health with remaining days left.",
+    "⚡ Instant Form Auto-Population: Syncing automatically updates the furnace level dropdown, badge preview, and cloud database."
   ],
   "wosbdc_alliance_dashboard": {
     "version": "2.9.67",

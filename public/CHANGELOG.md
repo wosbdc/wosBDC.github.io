@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.70] - 2026-08-19
+- 🎮 **In-Game Server Sync in Edit Member Profile**: Added a dedicated *🎮 Live Game Server Sync* card and *🔄 Sync from Game* button directly inside the **✏️ Edit Member Profile** modal, allowing members with registered 30-day tokens to pull live character stats straight from Century Games.
+- ⚡ **Instant Form Auto-Population**: Clicking *Sync from Game* queries Century Games, pulls the member's live furnace level, Chief nickname, and avatar, and automatically updates the furnace dropdown and live preview badge.
+- 🛡️ **Real-Time Token Health Telemetry**: Displays token status (active days remaining or prompt to bind in-game code) with 1-click fallback to the 30-day token verification flow.
+
 ## [2.9.69] - 2026-08-19
 - ⭐ **Mains-Only vs Alts-Only Filter in Google Sheets Sidebar**: Added dedicated Account Mode filter (`⭐ Mains Only`, `👥 All`, `🎭 Alts Only`) to the Chief Sync Status Sidebar.
 - 📊 **Dynamic Metric Recalculation**: Switching to *Mains Only* dynamically recalculates the top stat cards (Total Mains, Synced Mains, Not Synced Mains, and Mains Sync Rate) and adapts the status tabs (`All`, `🟢 Synced`, `🟡 Not Synced`).
