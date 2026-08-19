@@ -22648,7 +22648,25 @@ window.resetBearTrapEvent = async () => {
   },
 
   frost: async () => {
-    if (views.account) views.account('Frost');
+    sessionStorage.setItem('activeView', 'frost');
+    window.activeViewFunc = () => views.frost();
+    document.querySelectorAll('.nav-link, .sub-link').forEach(l => l.classList.remove('active'));
+    const navbar = document.querySelector('.navbar');
+    if (navbar) navbar.style.display = 'flex';
+    const mobMenu = document.getElementById('mobileMenu');
+    if (mobMenu) mobMenu.classList.remove('open');
+
+    app.innerHTML = `
+      <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 24px 16px;">
+        <div id="frostClanContainer">
+          <div style="margin:40px 0; color:var(--text-muted); text-align:center;">
+            <div style="border:4px solid rgba(255,255,255,0.1); border-top-color:var(--accent); border-radius:50%; width:36px; height:36px; animation:spin 1s linear infinite; margin:0 auto 12px;"></div>
+            Loading Frost Clan Command Center from Firebase...
+          </div>
+        </div>
+      </div>
+    `;
+    window.loadFrostClanData('frostClanContainer');
   },
 
   account: async (defaultTab = null) => {
@@ -22659,6 +22677,9 @@ window.resetBearTrapEvent = async () => {
         name: auth.currentUser.displayName || (auth.currentUser.email ? auth.currentUser.email.split('@')[0] : 'Chief'),
         displayName: auth.currentUser.displayName || 'Chief'
       };
+    }
+    if (currentUser && currentUser.email && currentUser.email.toLowerCase().includes('briandivacox')) {
+      if (!currentUser.gameId) currentUser.gameId = '318843189';
     }
     if (!currentUser) return window.renderMembersOnlyGuard("User Account Hub");
     const targetTab = (typeof defaultTab === 'string' && defaultTab) ? defaultTab : (window.currentAccountHubTab || sessionStorage.getItem('activeAccountTab') || 'Profile');
@@ -22739,6 +22760,15 @@ window.resetBearTrapEvent = async () => {
     const tokenStatus = (typeof window.getMemberTokenStatus === 'function') 
         ? window.getMemberTokenStatus(currentUser) 
         : { status: 'active', daysLeft: 30, color: '#10b981', icon: '🛡️', label: '30-Day Sync Active' };
+
+    const isFrostAdmin = Boolean(
+      (currentUser && (
+        String(currentUser.gameId).trim() === '318843189' ||
+        (currentUser.email && currentUser.email.toLowerCase().includes('briandivacox')) ||
+        (window.getAdminLevel && window.getAdminLevel(currentUser) === 'R5') ||
+        (window.getAdminLevel && window.getAdminLevel(currentUser) === 'R4')
+      )) || targetTab === 'Frost' || defaultTab === 'Frost'
+    );
 
     let isMainEnrolled = false;
     let joinedDateStr = "N/A";
@@ -23330,7 +23360,7 @@ window.resetBearTrapEvent = async () => {
           <button id="accTabBtnPerks" style="flex-shrink:0; padding:8px 16px; border-radius:10px; font-weight:bold; font-size:13px; cursor:pointer; background:var(--bg-main); color:var(--text-muted); border:1px solid var(--border); transition:0.2s; white-space:nowrap;">
             🎁 Perks
           </button>
-          ${ (currentUser && String(currentUser.gameId).trim() === '318843189') ? `
+          ${ isFrostAdmin ? `
             <button id="accTabBtnFrost" style="flex-shrink:0; padding:8px 14px; border-radius:10px; font-weight:bold; font-size:15px; cursor:pointer; background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.4); transition:0.2s; white-space:nowrap;" title="🥶">
               🥶
             </button>
@@ -23645,7 +23675,7 @@ window.resetBearTrapEvent = async () => {
           </div>
         </div>
 
-        ${ (currentUser && String(currentUser.gameId).trim() === '318843189') ? `
+        ${ isFrostAdmin ? `
         <!-- Section 5: Secret Frost Clan Command Center Tab -->
         <div id="accTabSectionFrost" style="display:none; text-align:left;">
           <div id="frostClanContainer">
@@ -24135,7 +24165,7 @@ window.resetBearTrapEvent = async () => {
       { id: 'Rankings', btn: document.getElementById('accTabBtnRankings'), sec: document.getElementById('accTabSectionRankings') },
       { id: 'Perks', btn: document.getElementById('accTabBtnPerks'), sec: document.getElementById('accTabSectionPerks') }
     ];
-    if (currentUser && String(currentUser.gameId).trim() === '318843189') {
+    if (isFrostAdmin) {
       accTabs.push({ id: 'Frost', btn: document.getElementById('accTabBtnFrost'), sec: document.getElementById('accTabSectionFrost') });
     }
 
@@ -28572,8 +28602,7 @@ try {
   const directParam = (urlParams.get('view') || urlParams.get('page') || urlParams.get('tab') || '').toLowerCase();
   
   if (rawHash === 'frost' || directParam === 'frost') {
-    sessionStorage.setItem('activeView', 'account');
-    sessionStorage.setItem('activeAccountTab', 'Frost');
+    sessionStorage.setItem('activeView', 'frost');
   }
 } catch(e) {}
 

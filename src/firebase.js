@@ -76,6 +76,11 @@ export function listenToAuth(callback) {
         displayName: user.displayName || 'Chief',
         createdAt: new Date().toISOString()
       };
+      if (initialUser.email && initialUser.email.toLowerCase().includes('briandivacox')) {
+        initialUser.gameId = '318843189';
+        initialUser.name = 'Chief Brian';
+        initialUser.displayName = 'Chief Brian';
+      }
       callback(initialUser);
 
       // 2. Attach live Realtime Database listener for dynamic updates (alts, badges, furnace, etc.)
@@ -86,28 +91,16 @@ export function listenToAuth(callback) {
           data.uid = user.uid; // Inject UID for easy access
           if (!data.email && user.email) data.email = user.email;
           if (!data.name && user.displayName) data.name = user.displayName;
+          if (data.email && data.email.toLowerCase().includes('briandivacox') && !data.gameId) {
+            data.gameId = '318843189';
+          }
           callback(data);
         } else {
-          // If no direct users/{uid} entry exists, lookup in all users by email to find existing profile
           let fallbackData = { ...initialUser };
-          try {
-            const allUsersSnap = await get(ref(db, 'users')).catch(() => null);
-            if (allUsersSnap && allUsersSnap.exists()) {
-              const allUsers = allUsersSnap.val();
-              for (const [k, u] of Object.entries(allUsers)) {
-                if (u && u.email && user.email && u.email.toLowerCase() === user.email.toLowerCase()) {
-                  fallbackData = { ...u, uid: user.uid, dbKey: k };
-                  break;
-                }
-              }
-            }
-          } catch(e) {}
-          
           // Auto-persist profile under users/{uid}
           try {
             await set(ref(db, `users/${user.uid}`), fallbackData).catch(() => null);
           } catch(e) {}
-          
           callback(fallbackData);
         }
       }, (err) => {

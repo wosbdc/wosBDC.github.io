@@ -1,6 +1,7 @@
 # CHANGELOG
 
 ## [2.9.46] - 2026-08-18
+- ❄️ **Dedicated Standalone Frost View & Zero-Lag Loading**: Resolved the load-blocking issue on the Frost page by establishing a dedicated `views.frost` standalone route, removing blocking database scans in `listenToAuth`, and fixing `isFrostAdmin` permission checks in Account Hub.
 - ❄️ **Frost Clan High-Contrast Custom Checkboxes**: Upgraded all showdown task checkboxes with custom 26px high-contrast touch targets, smooth cyan/blue active gradient fills, and glowing white checkmarks.
 - 👤 **Refined Character Avatars & Glow Rings**: Upgraded avatar portraits to 48px circles with cyan glowing border rings and high-contrast initial badges as clean fallbacks.
 - 🔄 **Account Hub & Alt Sync Terminology Polish**: Unified button labels across Account Hub and Alt Cards to `🔄 Sync Data` and `⚡ Setup 30-Day Token` for clean, cohesive wording.
