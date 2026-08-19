@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [2.9.69] - 2026-08-19
+- ⭐ **Mains-Only vs Alts-Only Filter in Google Sheets Sidebar**: Added dedicated Account Mode filter (`⭐ Mains Only`, `👥 All`, `🎭 Alts Only`) to the Chief Sync Status Sidebar.
+- 📊 **Dynamic Metric Recalculation**: Switching to *Mains Only* dynamically recalculates the top stat cards (Total Mains, Synced Mains, Not Synced Mains, and Mains Sync Rate) and adapts the status tabs (`All`, `🟢 Synced`, `🟡 Not Synced`).
+- 🎭 **Alt Account Attribution Badges**: Added visual indicators for Alt accounts displaying their main account owner (e.g. `🎭 Alt (BrianDCox)`).
+- 📋 **Smart Unsynced Copy**: Clicking *Copy Not Synced List* automatically copies only the unsynced Main accounts when in *Mains Only* mode.
+
 ## [2.9.68] - 2026-08-19
 - 👥 **Chief Sync Overview Sidebar in Google Sheets**: Built real-time Chief Sync sidebar in Google Sheets (under `Admin Menu ➔ User Options` & `Tools & Extras`) showing Total Chiefs, Synced (🟢), and Not Synced (🟡) with instant search, interactive status filtering (`All` / `🟢 Synced` / `🟡 Not Synced`), 1-click `Jump to Row` in sheet, one-click bidirectional Firebase sync, and unsynced name export.
 - ⚡ **Real-Time Token Telemetry**: Automatically cross-references sheet entries with Firebase registered users and active token verifications to provide live completion rates and sync status badges.
