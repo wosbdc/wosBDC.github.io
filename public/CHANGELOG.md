@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.58] - 2026-08-18
+- 🏆 **Unified Championship Leaderboard Architecture**: Merged the All-Time Dynasty Leaderboard and Hall of Fame under `Nav ➔ Leaderboards | Alliance Championship` with full dynasty statistics, gold ring counts, and attendance records.
+- 🛡️ **Cross-Source Chief Deduplication**: Fixed key matching between historical archive rosters and live signups so each chief appears strictly once with merged tournament deployments and championship victories.
+- ⚔️ **Streamlined Events War Room**: Cleaned `Events ➔ Alliance Championship` to focus on the live 5-round matchup tracker and flags, with a prominent gateway banner leading directly to the merged Leaderboard.
+
 ## [2.9.57] - 2026-08-18
 - 🥇 **Championship Gold Badge Victory Rule**: `🥇 GOLD CHAMPION` medals and glowing card borders are now exclusively awarded to participating chiefs when [BDC] wins the entire tournament championship.
 - 🛡️ **Contender & Participant Tier**: Chiefs on active and past tournament rosters who have not yet won an overall championship tournament title are designated with verified `⚔️ CONTENDER` status and attendance counters.
