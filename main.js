@@ -10141,26 +10141,81 @@ window.openAdminNoteModal = (itemId, currentNote = '') => {
 
     const overlay = document.createElement('div');
     overlay.id = 'feedbackAdminNoteModal';
-    overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:99999; display:flex; align-items:center; justify-content:center; padding:16px; box-sizing:border-box; animation: fadeIn 0.2s ease;';
+    overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:99999; display:flex; align-items:center; justify-content:center; padding:16px; box-sizing:border-box; animation: fadeIn 0.2s ease;';
 
     overlay.innerHTML = `
-        <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:14px; padding:24px; max-width:460px; width:100%; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid var(--border); padding-bottom:10px;">
-                <h3 style="margin:0; font-size:16px; color:var(--accent); display:flex; align-items:center; gap:8px;">
-                    <span>✨ Admin Resolution Note</span>
-                </h3>
-                <button onclick="document.getElementById('feedbackAdminNoteModal')?.remove()" style="background:none; border:none; color:var(--text-muted); font-size:18px; cursor:pointer;">✕</button>
+        <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:16px; padding:24px 28px; max-width:640px; width:100%; box-shadow:0 12px 40px rgba(0,0,0,0.6); display:flex; flex-direction:column; gap:14px; max-height:90vh; overflow-y:auto;">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:12px;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="width:36px; height:36px; border-radius:10px; background:rgba(6,182,212,0.15); border:1px solid rgba(6,182,212,0.35); display:flex; align-items:center; justify-content:center; font-size:18px; color:var(--accent);">
+                        ✨
+                    </div>
+                    <div>
+                        <h3 style="margin:0; font-size:17px; color:var(--text-main); font-weight:800;">Admin Resolution & Developer Notes</h3>
+                        <p style="margin:2px 0 0 0; font-size:11.5px; color:var(--text-muted);">Add multi-line developer updates, changelog tags, or resolution details.</p>
+                    </div>
+                </div>
+                <button onclick="document.getElementById('feedbackAdminNoteModal')?.remove()" style="background:none; border:none; color:var(--text-muted); font-size:20px; cursor:pointer; padding:4px 8px; border-radius:6px;">✕</button>
             </div>
-            <p style="margin:0 0 12px 0; font-size:12px; color:var(--text-muted);">Add a short resolution note or version tag (e.g., <em>Implemented in v2.9.52</em> or <em>Fixed in latest patch</em>).</p>
-            <input type="text" id="adminNoteInput" value="${escapeHTML(currentNote || '')}" placeholder="e.g. Implemented in v2.9.52" style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--accent); background:var(--bg-main); color:var(--text-main); font-size:13px; box-sizing:border-box; margin-bottom:16px;">
-            <div style="display:flex; justify-content:flex-end; gap:8px;">
-                <button onclick="document.getElementById('feedbackAdminNoteModal')?.remove()" style="background:var(--bg-main); border:1px solid var(--border); color:var(--text-muted); padding:8px 14px; border-radius:8px; font-weight:bold; cursor:pointer;">Cancel</button>
-                <button id="saveAdminNoteBtn" style="background:var(--accent); border:none; color:#fff; padding:8px 18px; border-radius:8px; font-weight:bold; cursor:pointer;">Save Note</button>
+
+            <!-- Quick Template Insert Pills -->
+            <div>
+                <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Quick Templates (Click to insert):</label>
+                <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                    <button type="button" onclick="window.insertAdminNoteTemplate('✅ Implemented in v2.9.64')" style="background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); color:#10b981; padding:3px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">✅ Implemented in v2.9.64</button>
+                    <button type="button" onclick="window.insertAdminNoteTemplate('🔍 Under Review / Testing')" style="background:rgba(234,179,8,0.12); border:1px solid rgba(234,179,8,0.3); color:#eab308; padding:3px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">🔍 In Review / Testing</button>
+                    <button type="button" onclick="window.insertAdminNoteTemplate('🛠️ Fix Scheduled for Next Update')" style="background:rgba(6,182,212,0.12); border:1px solid rgba(6,182,212,0.3); color:#38bdf8; padding:3px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">🛠️ Scheduled in Next Update</button>
+                    <button type="button" onclick="window.insertAdminNoteTemplate('ℹ️ Works as Intended (Game Mechanic)')" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); padding:3px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">ℹ️ Game Mechanic</button>
+                </div>
+            </div>
+
+            <!-- Spacious Textarea Input -->
+            <div>
+                <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Resolution Note (Supports multiple lines, bullet points & spacing):</label>
+                <textarea id="adminNoteInput" rows="7" placeholder="Type your notes here...&#10;• Line breaks and spaces are neatly preserved&#10;• Press Enter for new lines&#10;• Press Ctrl+Enter to save" style="width:100%; padding:14px 16px; border-radius:10px; border:1.5px solid var(--accent); background:var(--bg-main); color:var(--text-main); font-size:13.5px; line-height:1.55; box-sizing:border-box; resize:vertical; font-family:inherit; min-height:140px; white-space:pre-wrap;">${escapeHTML(currentNote || '')}</textarea>
+            </div>
+
+            <!-- Footer: Shortcut Tip & Action Buttons -->
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; border-top:1px solid var(--border); padding-top:14px; margin-top:4px;">
+                <span style="font-size:11.5px; color:var(--text-muted); display:flex; align-items:center; gap:4px;">
+                    💡 <em>Press <strong>Enter</strong> for new line, <strong>Ctrl+Enter</strong> to save</em>
+                </span>
+                <div style="display:flex; gap:10px;">
+                    <button type="button" onclick="document.getElementById('feedbackAdminNoteModal')?.remove()" style="background:var(--bg-main); border:1px solid var(--border); color:var(--text-muted); padding:9px 18px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px;">Cancel</button>
+                    <button type="button" id="saveAdminNoteBtn" style="background:linear-gradient(135deg, #06b6d4, #8b5cf6); border:none; color:#fff; padding:9px 22px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; box-shadow:0 3px 12px rgba(6,182,212,0.35); display:inline-flex; align-items:center; gap:6px;">
+                        💾 Save Note
+                    </button>
+                </div>
             </div>
         </div>
     `;
 
     document.body.appendChild(overlay);
+
+    const txtInput = overlay.querySelector('#adminNoteInput');
+    if (txtInput) {
+        txtInput.focus();
+        txtInput.setSelectionRange(txtInput.value.length, txtInput.value.length);
+        txtInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                saveBtn?.click();
+            }
+        });
+    }
+
+    window.insertAdminNoteTemplate = (tmpl) => {
+        const input = document.getElementById('adminNoteInput');
+        if (!input) return;
+        if (input.value.trim().length > 0) {
+            input.value = `${input.value.trim()}\n${tmpl}`;
+        } else {
+            input.value = tmpl;
+        }
+        input.focus();
+        input.setSelectionRange(input.value.length, input.value.length);
+    };
+
     const saveBtn = overlay.querySelector('#saveAdminNoteBtn');
     if (saveBtn) {
         saveBtn.onclick = async () => {
@@ -10456,7 +10511,7 @@ window.renderAdminFeedbackTab = async () => {
                         <div style="font-weight:bold; font-size:13px; color:var(--text-main); ${isCompleted ? 'text-decoration:line-through; opacity:0.75;' : ''}">${escapeHTML(item.title || '')}</div>
                         ${item.description ? `<div style="font-size:11.5px; color:var(--text-muted); margin-top:3px; max-width:380px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHTML(item.description)}</div>` : ''}
                         ${item.imageUrl ? `<div style="margin-top:4px;"><a href="javascript:void(0)" onclick="window.openFeedbackImageLightbox('${escapeHTML(item.imageUrl)}')" style="font-size:11px; color:#38bdf8; font-weight:bold; text-decoration:none; display:inline-flex; align-items:center; gap:4px; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25); padding:2px 8px; border-radius:4px;">🖼️ View Screenshot</a></div>` : ''}
-                        ${item.adminNote ? `<div style="font-size:11px; color:#38bdf8; font-weight:bold; margin-top:3px;">✨ ${escapeHTML(item.adminNote)}</div>` : ''}
+                        ${item.adminNote ? `<div style="font-size:11.5px; color:#38bdf8; font-weight:bold; margin-top:5px; white-space:pre-wrap; word-break:break-word; background:rgba(56,189,248,0.06); border:1px solid rgba(56,189,248,0.2); padding:5px 10px; border-radius:6px; line-height:1.45;">✨ ${escapeHTML(item.adminNote)}</div>` : ''}
                     </td>
                     <td style="padding:12px; white-space:nowrap;">
                         <span style="font-size:11px; color:var(--text-muted); background:var(--bg-main); border:1px solid var(--border); padding:2px 8px; border-radius:6px;">${escapeHTML(item.category || 'General')}</span>
@@ -29571,7 +29626,17 @@ window.resetBearTrapEvent = async () => {
                                 ` : ''}
                             </div>
 
-                            <!-- Footer: Author, Status & Admin Resolution Note -->
+                            <!-- Admin Resolution Note Block -->
+                            ${item.adminNote ? `
+                                <div style="background:rgba(56,189,248,0.07); border:1px solid rgba(56,189,248,0.25); border-radius:10px; padding:10px 14px; margin-top:2px;">
+                                    <div style="font-size:11px; font-weight:bold; color:#38bdf8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; display:flex; align-items:center; gap:5px;">
+                                        <span>✨</span> Admin / Developer Note
+                                    </div>
+                                    <div style="font-size:12.5px; color:var(--text-main); line-height:1.5; white-space:pre-wrap; word-break:break-word;">${escapeHTML(item.adminNote)}</div>
+                                </div>
+                            ` : ''}
+
+                            <!-- Footer: Author & Status -->
                             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.04);">
                                 <div style="font-size:11.5px; color:var(--text-muted); display:flex; align-items:center; gap:6px;">
                                     <span>👤 <strong style="color:var(--text-main);">${authorText}</strong></span>
@@ -29580,7 +29645,6 @@ window.resetBearTrapEvent = async () => {
                                 </div>
 
                                 <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                                    ${item.adminNote ? `<span style="font-size:11.5px; font-weight:bold; color:#38bdf8; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25); padding:3px 10px; border-radius:6px; display:inline-flex; align-items:center; gap:4px;">✨ ${escapeHTML(item.adminNote)}</span>` : ''}
                                     ${statusBadge}
                                 </div>
                             </div>

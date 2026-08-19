@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.65] - 2026-08-19
+- 📝 **Spacious Ticket & Bug Note Editor**: Expanded the Admin Note Modal with a generous multi-line textarea (`rows="7"`) that supports full `Enter` key line breaks, indentation, spacing, and bullet points.
+- ⚡ **1-Click Quick Templates & Ctrl+Enter**: Added quick template pills to insert common resolution tags (`[✅ Implemented in vX]`, `[🔍 In Review]`, etc.) and `Ctrl+Enter` keyboard shortcut to save.
+- ✨ **Formatted Public Note Display**: Updated feedback cards to render multi-line developer notes in a dedicated styled card block with `white-space: pre-wrap;` preserving clean paragraph spacing.
+
 ## [2.9.64] - 2026-08-19
 - ☁️ **Background Cloud Auto-Save**: Alliance Championship matchup changes (season title, opponent names, states, match dates, battle scores, and flag counts) automatically save to Firebase with debounced background sync.
 - 💾 **Streamlined Save Button with Live Status**: Simplified the primary action button to `💾 Save` and added dynamic cloud sync status indicators (`☁️ All changes saved live` / `⏳ Auto-saving...`).
