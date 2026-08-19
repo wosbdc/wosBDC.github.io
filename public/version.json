@@ -1,11 +1,11 @@
 {
-  "version": "2.9.71",
+  "version": "2.9.72",
   "releaseDate": "2026-08-19",
-  "title": "What's New in v2.9.71",
+  "title": "What's New in v2.9.72",
   "notes": [
-    "🔥 Direct Firebase & Google Sheets Furnace Sync: Changing furnace levels via the Admin Roster Menu, Account Hub Profile, or Alt Manager now immediately persists across Google Sheets ('Chief's List'), Firebase /roster_live, /users, and /sheets data stores.",
-    "🛡️ Alt Account Support: Admins and members can now edit alt account furnace levels and start dates seamlessly with live persistence to linked alt datasets.",
-    "⚡ Non-Destructive Background Sync: Resolved issue where background sheets sync cleared manually entered furnace levels for accounts without Century Games verification tokens."
+    "⚡ Dual-Mode BDC Backend & Firebase Live Queue: Migrated backend operations away from Google Apps Script to BDC Central Command with instant real-time processing via /api_queue and direct REST API.",
+    "🎮 Instant Century Games Stats & Captchas: Member token verifications, captcha dispatches, and live profile syncs now process in milliseconds with zero Google quota limits or timeouts.",
+    "🔥 Real-Time Database Sync: Member and Alt furnace levels, start dates, and avatars sync instantly across Firebase RTDB and BDC Central Command."
   ],
   "wosbdc_alliance_dashboard": {
     "version": "2.9.67",

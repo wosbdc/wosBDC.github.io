@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.72] - 2026-08-19
+- ⚡ **Dual-Mode BDC Backend & Firebase Live Queue**: Migrated backend operations away from Google Apps Script to a dedicated **BDC Central Command API & Queue Engine**. Actions process in real-time via Firebase `/api_queue` (zero-config, zero networking required) with direct REST API support on port 3188.
+- 🎮 **Zero-Timeout Century Games Engine**: Native RSA-OAEP and HMAC-SHA256 crypto engine runs directly on Central Command, eliminating Google Apps Script 6-minute execution limits and daily URL fetch quotas.
+- 🔄 **Instant In-Game Sync & Captchas**: "Sync from Game", "Verify & Bind", and "Set Furnace Level" actions now execute with sub-second latency and direct Firebase RTDB updates.
+
 ## [2.9.71] - 2026-08-19
 - 🔥 **Direct Firebase & Google Sheets Furnace Sync**: Changing furnace levels via the Admin Roster Menu, Account Hub Profile, or Alt Manager now immediately persists across Google Sheets ('Chief's List'), Firebase `/roster_live`, `/users`, and `/sheets/Chief's List` data stores.
 - 🛡️ **Alt Account Sync Support**: Editing an alt account's furnace level or start date seamlessly updates `users/${uid}/linkedAltsData/${altGid}`, `altTokens`, `users_alts/${altGid}`, `/roster_live`, and Google Sheets.

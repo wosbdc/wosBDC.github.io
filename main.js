@@ -135,6 +135,88 @@ window.fetchRoster = async () => {
 
 const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbzEDRKqYLW05dris_vyxF-SZEH5917Saa5eRieag0n_gbJeWj3Qo_Zvgch94hBg1tE/exec';
 const VERIFY_PROXY_URL = 'https://wos-vercel-proxy.vercel.app/api/verify'; // Fallback / secondary proxy
+window.BDC_API_URL = window.BDC_API_URL || 'http://localhost:3188/api';
+
+/**
+ * ⚡ Dual-Mode BDC Backend Caller
+ * Mode 1: Fast direct REST API to BDC Central Command (Port 3188)
+ * Mode 2: Real-time WebSocket Event Queue via Firebase (/api_queue) (Zero-Config)
+ */
+window.callBdcBackend = async (action, payload = {}, options = {}) => {
+  const timeoutMs = options.timeoutMs || 8000;
+
+  // 1. Attempt Direct REST API to BDC Central Command
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 1200);
+    const endpoint = `${window.BDC_API_URL}/${action}`;
+    const restRes = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+    clearTimeout(timer);
+    if (restRes && restRes.ok) {
+      const restData = await restRes.json();
+      if (restData) return restData;
+    }
+  } catch (restErr) {
+    // REST unreachable, seamlessly proceed to Firebase Queue
+  }
+
+  // 2. Real-Time Firebase Event Queue (/api_queue)
+  try {
+    const jobId = 'req_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
+    const reqRef = ref(db, `api_queue/requests/${jobId}`);
+    const respRef = ref(db, `api_queue/responses/${jobId}`);
+
+    await set(reqRef, {
+      action: action,
+      payload: payload,
+      status: 'pending',
+      createdAt: Date.now()
+    });
+
+    return await new Promise((resolve) => {
+      let resolved = false;
+      const timer = setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          resolve(null);
+        }
+      }, timeoutMs);
+
+      const checkResponse = async () => {
+        try {
+          const snap = await get(respRef);
+          if (snap && snap.exists()) {
+            const respVal = snap.val();
+            if (respVal && (respVal.status === 'completed' || respVal.status === 'error')) {
+              if (!resolved) {
+                resolved = true;
+                clearTimeout(timer);
+                resolve(respVal.result || respVal);
+              }
+            }
+          }
+        } catch (e) {}
+      };
+
+      const pollInterval = setInterval(async () => {
+        if (resolved) {
+          clearInterval(pollInterval);
+          return;
+        }
+        await checkResponse();
+      }, 350);
+    });
+  } catch (queueErr) {
+    console.warn('Firebase Live Queue dispatch error:', queueErr);
+  }
+
+  return null;
+};
 
 // Get a fresh Firebase ID token for the current user (replaces hardcoded APP_SECRET)
 const getAuthToken = async () => {
@@ -4895,6 +4977,13 @@ window.openAdminEditFurnaceModal = async (chiefName, gameId = '', currentFurnace
                  }).catch(() => null);
               } catch(e) {}
            }
+
+           // Sync with BDC Central Command Backend
+           window.callBdcBackend('update_furnace', {
+              gameId: cleanGid,
+              name: chiefName,
+              level: newFurnace
+           }).catch(() => null);
 
            // 5. Update in-memory liveData Chief's List row if loaded
            if (window.liveData && window.liveData["Chief's List"]) {
@@ -14732,8 +14821,18 @@ window.openEditProfileModal = async () => {
         syncFromGameBtn.innerHTML = '⏳ Syncing...';
 
         try {
-           const res = await fetch(`${API_BASE_URL}?api=syncProfileWithToken&id=${encodeURIComponent(currentUser.gameId)}&cgToken=${encodeURIComponent(token)}`);
-           const data = await res.json();
+           // 1. Try BDC Central Command / Firebase Live Queue first
+           let data = await window.callBdcBackend('syncPlayer', {
+              gameId: currentUser.gameId,
+              token: token,
+              uid: currentUser.uid
+           });
+
+           // 2. Fallback to legacy GAS API if Central Command is offline
+           if (!data) {
+              const res = await fetch(`${API_BASE_URL}?api=syncProfileWithToken&id=${encodeURIComponent(currentUser.gameId)}&cgToken=${encodeURIComponent(token)}`).catch(() => null);
+              data = res ? await res.json().catch(() => null) : null;
+           }
 
            if (data && data.success) {
               const finalStove = data.stove_lv || "";
@@ -14915,8 +15014,18 @@ window.handleSyncCenturyGamesProfile = async () => {
       return;
     }
 
-    const res = await fetch(`${API_BASE_URL}?api=syncProfileWithToken&id=${encodeURIComponent(currentUser.gameId)}&cgToken=${encodeURIComponent(token)}`);
-    const data = await res.json();
+    // 1. Try BDC Central Command / Firebase Live Queue first
+    let data = await window.callBdcBackend('syncPlayer', {
+      gameId: currentUser.gameId,
+      token: token,
+      uid: currentUser.uid
+    });
+
+    // 2. Fallback to legacy GAS API if Central Command is offline
+    if (!data) {
+      const res = await fetch(`${API_BASE_URL}?api=syncProfileWithToken&id=${encodeURIComponent(currentUser.gameId)}&cgToken=${encodeURIComponent(token)}`).catch(() => null);
+      data = res ? await res.json().catch(() => null) : null;
+    }
 
     if (data && data.success) {
       const finalStove = data.stove_lv || currentUser.stove_lv || "";
@@ -15075,8 +15184,11 @@ window.openAccountHubVerifyModal = () => {
       sendBtn.disabled = true;
       sendBtn.textContent = 'Sending Code...';
       try {
-        const res = await fetch(`${API_BASE_URL}?api=sendGameCaptcha&id=${encodeURIComponent(activeTargetGid)}`);
-        const data = await res.json();
+        let data = await window.callBdcBackend('send_code', { gameId: activeTargetGid });
+        if (!data) {
+          const res = await fetch(`${API_BASE_URL}?api=sendGameCaptcha&id=${encodeURIComponent(activeTargetGid)}`).catch(() => null);
+          data = res ? await res.json().catch(() => null) : null;
+        }
         if (data && data.success) {
           sendBtn.textContent = '🔄 Resend Code';
           sendBtn.disabled = false;
@@ -15089,7 +15201,7 @@ window.openAccountHubVerifyModal = () => {
           window.showToast("📩 Verification code sent to your in-game mailbox!", "info");
           if (codeInput) setTimeout(() => codeInput.focus(), 60);
         } else {
-          throw new Error(window.translateWosApiError(data.message || 'Failed to dispatch in-game code.', data.code));
+          throw new Error(window.translateWosApiError(data ? data.message : 'Failed to dispatch in-game code.', data ? data.code : null));
         }
       } catch (err) {
         sendBtn.disabled = false;
@@ -15122,8 +15234,15 @@ window.openAccountHubVerifyModal = () => {
       if (feedback) feedback.style.display = 'none';
 
       try {
-        const res = await fetch(`${API_BASE_URL}?api=verifyGameCaptcha&id=${encodeURIComponent(activeTargetGid)}&code=${encodeURIComponent(code)}`);
-        const data = await res.json();
+        let data = await window.callBdcBackend('verify_code', {
+          gameId: activeTargetGid,
+          code: code,
+          uid: currentUser.uid
+        });
+        if (!data) {
+          const res = await fetch(`${API_BASE_URL}?api=verifyGameCaptcha&id=${encodeURIComponent(activeTargetGid)}&code=${encodeURIComponent(code)}`).catch(() => null);
+          data = res ? await res.json().catch(() => null) : null;
+        }
 
         if (data && data.success && data.token) {
           const updates = {
@@ -18067,6 +18186,14 @@ window.openEditAltProfileModal = async (gameId, chiefName) => {
                   }
                }
             }
+
+            // Sync with BDC Central Command Backend
+            window.callBdcBackend('update_furnace', {
+               gameId: cleanGid,
+               name: chiefName,
+               level: newFurnace,
+               joinedDate: newJoinedDate
+            }).catch(() => null);
 
             try {
                const token = await getAuthToken();
