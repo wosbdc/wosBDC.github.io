@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [2.9.47] - 2026-08-18
+- 🛡️ **Frost Clan 1-Tap Quick Shield Toggles**: Added interactive `🛡️ 24h` and `🛡️ 8h` shield toggles with dynamic live countdown timers on every Frost Clan alt card and BDC Central Command GUI.
+- 🎯 **Showdown Target Goal Tracking**: Implemented visual progress bars tracking current Showdown score against target points per alt, with live percentage fill and status indicators.
+- 📊 **Combat & Growth Telemetry**: Expanded alt cards with high-contrast, responsive metric cards displaying Power, Kills, Deaths, Total Gathering, and Time Active.
+- ⚙️ **Central Command & Cloud Script Automation**: Added mass-shielding actions (`8h Shield All`, `24h Shield All`) and showdown goal configuration handlers across BDC Central Command and Google Apps Script.
+
 ## [2.9.46] - 2026-08-18
 - ❄️ **Dedicated Standalone Frost View & Zero-Lag Loading**: Resolved the load-blocking issue on the Frost page by establishing a dedicated `views.frost` standalone route, removing blocking database scans in `listenToAuth`, and fixing `isFrostAdmin` permission checks in Account Hub.
 - ❄️ **Frost Clan High-Contrast Custom Checkboxes**: Upgraded all showdown task checkboxes with custom 26px high-contrast touch targets, smooth cyan/blue active gradient fills, and glowing white checkmarks.

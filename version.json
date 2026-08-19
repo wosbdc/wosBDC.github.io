@@ -1,17 +1,18 @@
 {
-  "version": "2.9.41",
+  "version": "2.9.47",
   "releaseDate": "2026-08-18",
-  "title": "What's New in v2.9.41",
+  "title": "What's New in v2.9.47",
   "notes": [
-    "📱 3D Crystal App Icons: High-definition Amethyst crystal icons for home screens and desktop shortcuts.",
-    "📜 Instant Changelog: Real-time changelog viewer with 1-tap access across navbar and settings."
+    "🛡️ Quick Alt Shield Toggles: 1-tap 8h and 24h shield activation with dynamic countdown timer on all alt cards.",
+    "🎯 Showdown Goal Progress: Visual target progress bars tracking current points vs custom showdown goals.",
+    "📊 Combat & Growth Telemetry: High-contrast expandable stats for Power, Kills, Deaths, and Gathering."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "2.9.41",
+    "version": "2.9.47",
     "latestChanges": [
-      "v2.9.41: Desktop & mobile app icon overhaul and instant changelog access",
-      "v2.9.40: Unified Single and Bulk add in Add Player modal",
-      "v2.9.39: Streamlined player roster bulk importing and live status sync"
+      "v2.9.47: Quick Alt Shielding, Showdown Goal Tracking & Combat Telemetry in Frost Clan",
+      "v2.9.46: Enhanced Frost Clan custom checkboxes, glowing avatar rings, and unified sync terminology",
+      "v2.9.45: Eliminated blocking full-users DB scans in Account Hub and added direct #frost URL hash deep-linking"
     ]
   }
 }

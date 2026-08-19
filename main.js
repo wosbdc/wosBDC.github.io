@@ -23086,17 +23086,31 @@ window.resetBearTrapEvent = async () => {
                     <span style="border:1px solid rgba(16,185,129,0.4); color:#10b981; background:rgba(16,185,129,0.15); border-radius:8px; padding:4px 10px; font-size:11.5px; font-weight:700; display:inline-flex; align-items:center; gap:4px;">🎁 Auto Redeem</span>
                 </div>
             </div>
-            <div style="background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center;">
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <span style="font-size:15px;">🔥</span>
-                    <div>
-                        <span style="font-size:14.5px; font-weight:bold; color:#ffffff; line-height:1; display:flex; align-items:center;">${window.getFurnaceIconHtml(furnaceLevelStr, 50)}</span>
-                        <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; margin-top:2px;">Furnace</div>
+            <!-- Primary Main Card 3-Column Metrics Bar -->
+            <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:10px 12px;">
+                <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:6px 4px; background:rgba(255,255,255,0.03); border-radius:8px; border:1px solid rgba(255,255,255,0.04);">
+                    <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:3px;">
+                        <span>🔥</span> <span>Furnace</span>
+                    </div>
+                    <div style="font-size:13.5px; font-weight:bold; color:#ffffff; line-height:1; display:flex; align-items:center; justify-content:center;">
+                        ${window.getFurnaceIconHtml(furnaceLevelStr, 46)}
                     </div>
                 </div>
-                <div style="text-align:right;">
-                    <div style="font-size:13px; font-weight:bold; color:#ffffff; line-height:1;">${timeActiveStr}</div>
-                    <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; margin-top:2px;">Time Active</div>
+                <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:6px 4px; background:rgba(255,255,255,0.03); border-radius:8px; border:1px solid rgba(255,255,255,0.04);">
+                    <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:3px;">
+                        <span>🗓️</span> <span>Joined</span>
+                    </div>
+                    <div style="font-size:12px; font-weight:bold; color:#e2e8f0; line-height:1; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; max-width:100%;" title="${(joinedDateStr && joinedDateStr !== 'N/A') ? joinedDateStr : 'Active'}">
+                        ${(joinedDateStr && joinedDateStr !== 'N/A') ? joinedDateStr : 'Active'}
+                    </div>
+                </div>
+                <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:6px 4px; background:rgba(255,255,255,0.03); border-radius:8px; border:1px solid rgba(255,255,255,0.04);">
+                    <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:3px;">
+                        <span>⏱️</span> <span>Active</span>
+                    </div>
+                    <div style="font-size:12.5px; font-weight:bold; color:#38bdf8; line-height:1; white-space:nowrap;" title="${timeActiveStr}">
+                        ${timeActiveStr}
+                    </div>
                 </div>
             </div>
             <div style="display:flex; gap:8px; align-items:center; border-top:1px solid rgba(255,255,255,0.06); padding-top:10px; flex-wrap:wrap;">
@@ -23176,8 +23190,9 @@ window.resetBearTrapEvent = async () => {
         `;
 
         altCardsData.forEach(item => {
-              const { cleanGid, altName, flVal, flNumeric, timeActiveVal, foundInRoster, altTokenDaysRemaining, isAltTokenActive, tokenState, isAltEnrolled } = item;
+              const { cleanGid, altName, flVal, flNumeric, joinedDateVal, timeActiveVal, foundInRoster, altTokenDaysRemaining, isAltTokenActive, tokenState, isAltEnrolled } = item;
               let flSpanId = `alt-fl-${cleanGid}`;
+              const joinedDateFormatted = joinedDateVal ? window.formatDateForDisplay(joinedDateVal) : (timeActiveVal !== 'Unknown' ? 'Active' : 'N/A');
               
               if (!foundInRoster && flVal === 'N/A') {
                   setTimeout(async () => {
@@ -23186,7 +23201,7 @@ window.resetBearTrapEvent = async () => {
                           const data = await res.json();
                           if (data.success && data.stove_lv) {
                               const flEl = document.getElementById(flSpanId);
-                              if (flEl) flEl.innerHTML = window.getFurnaceIconHtml(data.stove_lv, 50);
+                              if (flEl) flEl.innerHTML = window.getFurnaceIconHtml(data.stove_lv, 46);
                           }
                       } catch(e) { console.error(e); }
                   }, 100);
@@ -23226,18 +23241,31 @@ window.resetBearTrapEvent = async () => {
                       </div>
                   </div>
 
-                  <!-- Middle Row: Furnace Level + Time Active (Sleek Stats Strip) -->
-                  <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center;">
-                      <div style="display:flex; align-items:center; gap:8px;">
-                          <span style="font-size:14px;">🔥</span>
-                          <div>
-                              <span id="${flSpanId}" style="font-size:14px; font-weight:bold; color:#ffffff; line-height:1; display:flex; align-items:center;">${window.getFurnaceIconHtml(flVal, 50)}</span>
-                              <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; margin-top:2px;">Furnace</div>
+                  <!-- Middle Row: 3-Column Metric Tiles (Furnace, Joined Date, Time Active) -->
+                  <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:10px 12px;">
+                      <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:6px 4px; background:rgba(255,255,255,0.02); border-radius:8px; border:1px solid rgba(255,255,255,0.04);">
+                          <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:3px;">
+                              <span>🔥</span> <span>Furnace</span>
+                          </div>
+                          <div id="${flSpanId}" style="font-size:13.5px; font-weight:bold; color:#ffffff; line-height:1; display:flex; align-items:center; justify-content:center;">
+                              ${window.getFurnaceIconHtml(flVal, 46)}
                           </div>
                       </div>
-                      <div style="text-align:right;">
-                          <div style="font-size:13px; font-weight:bold; color:#ffffff; line-height:1;">${timeActiveVal}</div>
-                          <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; margin-top:2px;">Time Active</div>
+                      <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:6px 4px; background:rgba(255,255,255,0.02); border-radius:8px; border:1px solid rgba(255,255,255,0.04);">
+                          <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:3px;">
+                              <span>🗓️</span> <span>Joined</span>
+                          </div>
+                          <div style="font-size:12px; font-weight:bold; color:#e2e8f0; line-height:1; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; max-width:100%;" title="${joinedDateFormatted}">
+                              ${joinedDateFormatted}
+                          </div>
+                      </div>
+                      <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:6px 4px; background:rgba(255,255,255,0.02); border-radius:8px; border:1px solid rgba(255,255,255,0.04);">
+                          <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:3px;">
+                              <span>⏱️</span> <span>Active</span>
+                          </div>
+                          <div style="font-size:12.5px; font-weight:bold; color:#38bdf8; line-height:1; white-space:nowrap;" title="${timeActiveVal}">
+                              ${timeActiveVal}
+                          </div>
                       </div>
                   </div>
 
@@ -28926,12 +28954,16 @@ window.generatePlayerProfileHtml = (chiefName, p, headers, colIsUpcoming, roster
             let altName = idToNameMap[gid] || `Game ID: ${gid}`;
             let flVal = 'N/A';
             let timeActiveVal = 'Unknown';
+            let joinedDateFormatted = 'Active';
             const rosterData = window.liveData ? window.liveData["Chief's List"] : null;
             if (rosterData && rosterData.length > 1) {
                 for (let i = 1; i < rosterData.length; i++) {
                     if (rosterData[i][1] && rosterData[i][1].toString().trim() === gid.toString().trim()) {
                         flVal = rosterData[i][2] !== undefined && rosterData[i][2] !== "" ? rosterData[i][2] : 'N/A';
                         let rawDateOrTa = (rosterData[i][4] || rosterData[i][5] || '');
+                        if (rosterData[i][4]) {
+                            joinedDateFormatted = window.formatDateForDisplay(rosterData[i][4]);
+                        }
                         timeActiveVal = rawDateOrTa ? window.formatTimeActiveShort(rawDateOrTa.toString()) : 'Unknown';
                         break;
                     }
@@ -28951,47 +28983,55 @@ window.generatePlayerProfileHtml = (chiefName, p, headers, colIsUpcoming, roster
             
             let enrolledBadge = isAltEnrolled ? `<span style="border:1px solid #10b981; color:#10b981; background:rgba(16,185,129,0.1); border-radius:9999px; padding:4px 12px; font-size:12px; font-weight:500; display:inline-flex; align-items:center; gap:6px; margin-top:8px;">&#x2705; Code Enrolled</span>` : '';
             
-            let furnaceIcon = `<svg class="w-6 h-6 text-orange-500" style="width:24px; height:24px; color:#f97316;" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z" /></svg>`;
-            let timerIcon = `<svg class="w-6 h-6 text-cyan-400" style="width:24px; height:24px; color:#06b6d4;" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`;
-            
             let flSpanId = `admin-alt-fl-${gid}`;
-            let flDisplay = window.getFurnaceIconHtml ? window.getFurnaceIconHtml(flVal) : flVal;
+            let flDisplay = window.getFurnaceIconHtml ? window.getFurnaceIconHtml(flVal, 46) : flVal;
             
             if (flVal === 'N/A') {
                 flDisplay += `<img src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" onload="if(window.adminFetchAltFurnace) window.adminFetchAltFurnace('${gid}', '${flSpanId}')" style="display:none;">`;
             }
 
             html += `
-            <div style="background:rgba(15,23,42,0.6); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.1); border-radius:24px; padding:24px; box-shadow:0 10px 30px -10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1); display:flex; flex-direction:column; justify-content:space-between;">
+            <div style="background:rgba(15,23,42,0.6); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.1); border-radius:24px; padding:20px; box-shadow:0 10px 30px -10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1); display:flex; flex-direction:column; justify-content:space-between; gap:16px;">
                 
                 <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                    <div style="display:flex; gap:16px;">
-                        <div style="width:70px; height:70px; border-radius:50%; border:2px solid #06b6d4; box-shadow:0 0 15px rgba(6,182,212,0.5); overflow:hidden; background:var(--bg-secondary); position:relative;">
+                    <div style="display:flex; gap:14px; align-items:center;">
+                        <div style="width:56px; height:56px; border-radius:50%; border:2px solid #06b6d4; box-shadow:0 0 15px rgba(6,182,212,0.5); overflow:hidden; background:var(--bg-secondary); position:relative; flex-shrink:0;">
                             <img id="altAvatarImg-${gid}" src="${avatarMap ? avatarMap[gid] || `images/${altName}.png` : `images/${altName}.png`}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
                             <div id="altAvatarFallback-${gid}" style="display:none; align-items:center; justify-content:center; width:100%; height:100%; font-size:24px; font-weight:bold; color:#fff;">${altName.charAt(0).toUpperCase()}</div>
                         </div>
                         <div style="display:flex; flex-direction:column; justify-content:center;">
-                            <span style="font-size:20px; font-weight:600; color:#ffffff; line-height:1.2;">${altName}</span>
-                            <span style="font-size:13px; color:#94a3b8; margin-top:4px;">ID: ${gid}</span>
+                            <span style="font-size:18px; font-weight:600; color:#ffffff; line-height:1.2;">${altName}</span>
+                            <span style="font-size:12px; color:#94a3b8; margin-top:2px;">ID: ${gid}</span>
                             ${enrolledBadge}
                         </div>
                     </div>
                     <button onclick="window.adminUnlinkAltAccountPrompt('${chiefName.replace(/'/g, "\\'")}', '${gid}')" style="border:1px solid #f87171; color:#f87171; border-radius:8px; padding:6px 12px; font-size:12px; font-weight:600; cursor:pointer; background:transparent; transition:background 0.2s; flex-shrink:0;" onmouseover="this.style.background='rgba(248,113,113,0.1)'" onmouseout="this.style.background='transparent'">UNLINK</button>
                 </div>
                 
-                <div style="margin-top:24px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.05); border-radius:16px; padding:16px; display:flex; justify-content:space-between; align-items:center;">
-                    <div style="display:flex; align-items:center; gap:12px;">
-                        ${furnaceIcon}
-                        <div style="display:flex; flex-direction:column;">
-                            <span id="${flSpanId}" style="font-size:22px; font-weight:bold; color:#ffffff; line-height:1; display:flex; align-items:center;">${flDisplay}</span>
-                            <span style="font-size:11px; color:#94a3b8; margin-top:4px; text-transform:uppercase; letter-spacing:0.5px;">Furnace Level</span>
+                <!-- 3-Column Metric Tiles -->
+                <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:10px 12px; display:grid; grid-template-columns: repeat(3, 1fr); gap:8px;">
+                    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:6px 4px; background:rgba(255,255,255,0.02); border-radius:8px; border:1px solid rgba(255,255,255,0.04);">
+                        <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:3px;">
+                            <span>🔥</span> <span>Furnace</span>
+                        </div>
+                        <div id="${flSpanId}" style="font-size:13.5px; font-weight:bold; color:#ffffff; line-height:1; display:flex; align-items:center; justify-content:center;">
+                            ${flDisplay}
                         </div>
                     </div>
-                    <div style="display:flex; align-items:center; gap:12px;">
-                        ${timerIcon}
-                        <div style="display:flex; flex-direction:column;">
-                            <span style="font-size:16px; font-weight:bold; color:#ffffff; line-height:1;">${timeActiveVal}</span>
-                            <span style="font-size:11px; color:#94a3b8; margin-top:4px; text-transform:uppercase; letter-spacing:0.5px;">Time Active</span>
+                    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:6px 4px; background:rgba(255,255,255,0.02); border-radius:8px; border:1px solid rgba(255,255,255,0.04);">
+                        <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:3px;">
+                            <span>🗓️</span> <span>Joined</span>
+                        </div>
+                        <div style="font-size:12px; font-weight:bold; color:#e2e8f0; line-height:1; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; max-width:100%;" title="${joinedDateFormatted}">
+                            ${joinedDateFormatted}
+                        </div>
+                    </div>
+                    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:6px 4px; background:rgba(255,255,255,0.02); border-radius:8px; border:1px solid rgba(255,255,255,0.04);">
+                        <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:3px;">
+                            <span>⏱️</span> <span>Active</span>
+                        </div>
+                        <div style="font-size:12.5px; font-weight:bold; color:#38bdf8; line-height:1; white-space:nowrap;" title="${timeActiveVal}">
+                            ${timeActiveVal}
                         </div>
                     </div>
                 </div>
