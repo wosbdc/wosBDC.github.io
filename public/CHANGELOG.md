@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.62] - 2026-08-19
+- ⚖️ **Alliance Championship Draw (Tie) Support**: Added complete support for tied matches across Alliance Championship (`views.championship`), Archive Vault modals, and Admin Matchup editors. Tied rounds display an amber `⚖️ DRAW` badge and amber highlight styling.
+- 📊 **Dynamic Record Calculation**: Auto-calculated records now properly format draws in tournament summaries (e.g. `3 Wins – 1 Loss – 1 Draw`).
+- 🏛️ **Leaderboard Dynasty Sync**: Updated All-Time Alliance Championship leaderboard dynasty statistics to track draws and display format (e.g. `5W – 2L – 1D`).
+
 ## [2.9.61] - 2026-08-19
 - 🔕 **Attention-Only Bell Modal**: Empty containers (such as leadership announcements with 0 items, staff-only with 0 items, or feedback when none exist) now completely disappear so chiefs and leadership only see items that genuinely require action or attention.
 - 🎉 **Clean 'All Caught Up' Experience**: When there are no active broadcasts, un-synced tokens, or announcements, the modal displays the clean *All Caught Up* card with no empty placeholder containers cluttering the view.

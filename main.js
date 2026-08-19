@@ -9726,6 +9726,7 @@ window.renderChampionshipVaultBody = (activeKey = 'live') => {
 
     let winCount = 0;
     let lossCount = 0;
+    let drawCount = 0;
     let totalOurFlags = 0;
     let totalEnemyFlags = 0;
 
@@ -9736,8 +9737,11 @@ window.renderChampionshipVaultBody = (activeKey = 'live') => {
         let ef = (r.enemyAlliance && r.enemyAlliance.flags !== undefined && r.enemyAlliance.flags !== null && r.enemyAlliance.flags !== '') ? Number(r.enemyAlliance.flags) : 0;
         totalOurFlags += of;
         totalEnemyFlags += ef;
-        if (os > es) winCount++;
-        else if (es > os) lossCount++;
+        if (os > 0 || es > 0 || of > 0 || ef > 0) {
+            if (os > es) winCount++;
+            else if (es > os) lossCount++;
+            else if (os === es) drawCount++;
+        }
     });
 
     if (displayData.ourSeasonFlags !== undefined && displayData.ourSeasonFlags !== null && displayData.ourSeasonFlags !== '') {
@@ -9747,7 +9751,7 @@ window.renderChampionshipVaultBody = (activeKey = 'live') => {
         totalEnemyFlags = Number(displayData.enemySeasonFlags);
     }
 
-    let recordStr = displayData.statusText || `${winCount} Wins – ${lossCount} ${lossCount === 1 ? 'Loss' : 'Losses'}`;
+    let recordStr = displayData.statusText || `${winCount} Wins – ${lossCount} ${lossCount === 1 ? 'Loss' : 'Losses'}${drawCount > 0 ? ` – ${drawCount} ${drawCount === 1 ? 'Draw' : 'Draws'}` : ''}`;
 
     let formatStateTag = (st, fallback = '2089') => {
         let s = (st !== undefined && st !== null && String(st).trim() !== '') ? String(st).trim() : String(fallback);
@@ -9766,21 +9770,26 @@ window.renderChampionshipVaultBody = (activeKey = 'live') => {
         let enemyState = (r.enemyAlliance && r.enemyAlliance.state) ? r.enemyAlliance.state : (idx === 0 ? '2045' : idx === 1 ? '1988' : idx === 2 ? '2102' : idx === 3 ? '2031' : '2015');
         let isVictory = ourScore > enemyScore;
         let isDefeat = enemyScore > ourScore;
+        let isDraw = (ourScore === enemyScore) && (ourScore > 0 || enemyScore > 0 || (ourFlags > 0 && enemyFlags > 0));
 
         let cardBg = isVictory 
             ? 'background: linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(16,185,129,0.3);' 
             : (isDefeat 
                 ? 'background: linear-gradient(135deg, rgba(239,68,68,0.08) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(239,68,68,0.3);' 
-                : 'background: rgba(255,255,255,0.02); border: 1px solid var(--border);');
+                : (isDraw 
+                    ? 'background: linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(245,158,11,0.3);'
+                    : 'background: rgba(255,255,255,0.02); border: 1px solid var(--border);'));
 
-        let ourScoreColor = isVictory ? 'color:#10b981; font-weight:900; text-shadow:0 0 12px rgba(16,185,129,0.4);' : 'color:var(--text-muted); opacity:0.75;';
-        let enemyScoreColor = isDefeat ? 'color:#ef4444; font-weight:900; text-shadow:0 0 12px rgba(239,68,68,0.4);' : 'color:var(--text-muted); opacity:0.75;';
+        let ourScoreColor = isVictory ? 'color:#10b981; font-weight:900; text-shadow:0 0 12px rgba(16,185,129,0.4);' : (isDraw ? 'color:#f59e0b; font-weight:900; text-shadow:0 0 12px rgba(245,158,11,0.4);' : 'color:var(--text-muted); opacity:0.75;');
+        let enemyScoreColor = isDefeat ? 'color:#ef4444; font-weight:900; text-shadow:0 0 12px rgba(239,68,68,0.4);' : (isDraw ? 'color:#f59e0b; font-weight:900; text-shadow:0 0 12px rgba(245,158,11,0.4);' : 'color:var(--text-muted); opacity:0.75;');
 
         let centerStatusHtml = isVictory 
             ? '<div style="background:rgba(16,185,129,0.2); border:1px solid rgba(16,185,129,0.4); color:#10b981; padding:2px 10px; border-radius:8px; font-weight:900; font-size:10px; letter-spacing:0.5px; margin-bottom:4px;">VICTORY</div>' 
             : (isDefeat 
                 ? '<div style="background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:2px 10px; border-radius:8px; font-weight:900; font-size:10px; letter-spacing:0.5px; margin-bottom:4px;">DEFEAT</div>' 
-                : '');
+                : (isDraw 
+                    ? '<div style="background:rgba(245,158,11,0.2); border:1px solid rgba(245,158,11,0.4); color:#f59e0b; padding:2px 10px; border-radius:8px; font-weight:900; font-size:10px; letter-spacing:0.5px; margin-bottom:4px;">DRAW</div>'
+                    : ''));
 
         return `
             <div style="${cardBg} border-radius:12px; padding:14px 18px; margin-bottom:12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
@@ -9842,6 +9851,10 @@ window.renderChampionshipVaultBody = (activeKey = 'live') => {
                 <span style="color:#10b981;">${winCount} Wins</span>
                 <span style="color:var(--text-muted); opacity:0.6;">–</span>
                 <span style="color:#ef4444;">${lossCount} ${lossCount === 1 ? 'Loss' : 'Losses'}</span>
+                ${drawCount > 0 ? `
+                    <span style="color:var(--text-muted); opacity:0.6;">–</span>
+                    <span style="color:#f59e0b;">${drawCount} ${drawCount === 1 ? 'Draw' : 'Draws'}</span>
+                ` : ''}
             </div>
             <div style="margin-top:8px; display:inline-flex; align-items:center; justify-content:center; gap:14px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); padding:4px 14px; border-radius:16px; font-size:12px; flex-wrap:wrap;">
                 <span style="color:#10b981; font-weight:bold;">🚩 <strong>${totalOurFlags}</strong> Flags Captured</span>
@@ -22353,12 +22366,15 @@ html += `</select>
                 let enemyState = (r.enemyAlliance && r.enemyAlliance.state) ? r.enemyAlliance.state : '';
                 let isVictory = ourScore > enemyScore;
                 let isDefeat = enemyScore > ourScore;
+                let isDraw = (ourScore === enemyScore) && (ourScore > 0 || enemyScore > 0 || (ourFlags > 0 && enemyFlags > 0));
 
                 let liveBadge = isVictory 
                     ? '<span id="live_badge_r'+i+'" style="background:rgba(16,185,129,0.2); border:1px solid rgba(16,185,129,0.4); color:#10b981; padding:3px 10px; border-radius:10px; font-weight:bold; font-size:11px;">🏆 VICTORY</span>'
                     : (isDefeat 
                         ? '<span id="live_badge_r'+i+'" style="background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:3px 10px; border-radius:10px; font-weight:bold; font-size:11px;">💔 DEFEAT</span>' 
-                        : '<span id="live_badge_r'+i+'" style="background:rgba(255,255,255,0.05); color:var(--text-muted); padding:3px 10px; border-radius:10px; font-size:11px;">PENDING</span>');
+                        : (isDraw 
+                            ? '<span id="live_badge_r'+i+'" style="background:rgba(245,158,11,0.2); border:1px solid rgba(245,158,11,0.4); color:#f59e0b; padding:3px 10px; border-radius:10px; font-weight:bold; font-size:11px;">⚖️ DRAW</span>'
+                            : '<span id="live_badge_r'+i+'" style="background:rgba(255,255,255,0.05); color:var(--text-muted); padding:3px 10px; border-radius:10px; font-size:11px;">PENDING</span>'));
 
                 return `
                     <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:16px 20px; display:flex; flex-direction:column; gap:12px; box-shadow:0 4px 15px rgba(0,0,0,0.2);">
@@ -22652,6 +22668,8 @@ html += `</select>
         window.updateAdminChampPreview = (roundNum) => {
             let our = Number(document.getElementById('adm_champ_r' + roundNum + '_our')?.value) || 0;
             let opp = Number(document.getElementById('adm_champ_r' + roundNum + '_enemy_score')?.value) || 0;
+            let oFlags = Number(document.getElementById('adm_champ_r' + roundNum + '_our_flags')?.value) || 0;
+            let eFlags = Number(document.getElementById('adm_champ_r' + roundNum + '_enemy_flags')?.value) || 0;
             let badge = document.getElementById('live_badge_r' + roundNum);
             if (!badge) return;
 
@@ -22665,6 +22683,11 @@ html += `</select>
                 badge.style.background = 'rgba(239,68,68,0.2)';
                 badge.style.border = '1px solid rgba(239,68,68,0.4)';
                 badge.style.color = '#ef4444';
+            } else if (our > 0 || opp > 0 || oFlags > 0 || eFlags > 0) {
+                badge.innerHTML = '⚖️ DRAW';
+                badge.style.background = 'rgba(245,158,11,0.2)';
+                badge.style.border = '1px solid rgba(245,158,11,0.4)';
+                badge.style.color = '#f59e0b';
             } else {
                 badge.innerHTML = 'PENDING';
                 badge.style.background = 'rgba(255,255,255,0.05)';
@@ -22674,7 +22697,7 @@ html += `</select>
         };
 
         window.autoCalculateChampRecord = () => {
-            let wins = 0, losses = 0;
+            let wins = 0, losses = 0, draws = 0;
             let ourTotalFlags = 0, enemyTotalFlags = 0;
             for (let i = 1; i <= 5; i++) {
                 let our = Number(document.getElementById('adm_champ_r' + i + '_our')?.value) || 0;
@@ -22683,20 +22706,23 @@ html += `</select>
                 let eFlags = Number(document.getElementById('adm_champ_r' + i + '_enemy_flags')?.value) || 0;
                 ourTotalFlags += oFlags;
                 enemyTotalFlags += eFlags;
-                if (our > opp) wins++;
-                else if (opp > our) losses++;
+                if (our > 0 || opp > 0 || oFlags > 0 || eFlags > 0) {
+                    if (our > opp) wins++;
+                    else if (opp > our) losses++;
+                    else if (our === opp) draws++;
+                }
             }
             let statusInput = document.getElementById('adm_champ_status_text');
             if (statusInput) {
                 let suffix = wins >= 4 ? ' (Tournament Champions)' : (wins >= 3 ? ' (Playoff Finalists)' : ' (Championship Series)');
-                statusInput.value = `${wins} Wins – ${losses} ${losses === 1 ? 'Loss' : 'Losses'}${suffix}`;
+                statusInput.value = `${wins} Wins – ${losses} ${losses === 1 ? 'Loss' : 'Losses'}${draws > 0 ? ` – ${draws} ${draws === 1 ? 'Draw' : 'Draws'}` : ''}${suffix}`;
             }
             let ourFlagsInput = document.getElementById('adm_champ_our_season_flags');
             if (ourFlagsInput) ourFlagsInput.value = ourTotalFlags;
             let enemyFlagsInput = document.getElementById('adm_champ_enemy_season_flags');
             if (enemyFlagsInput) enemyFlagsInput.value = enemyTotalFlags;
 
-            if (window.showToast) window.showToast(`Record updated: ${wins}W-${losses}L • Flags: ${ourTotalFlags}-${enemyTotalFlags}`, "success");
+            if (window.showToast) window.showToast(`Record updated: ${wins}W-${losses}L${draws > 0 ? `-${draws}D` : ''} • Flags: ${ourTotalFlags}-${enemyTotalFlags}`, "success");
         };
 
         window.saveChampionshipAdminMatchups = async () => {
@@ -26493,7 +26519,7 @@ window.resetBearTrapEvent = async () => {
             const isLiveWon = isTournamentWon(cLiveSnap);
             let totalGoldTournaments = winningArchiveTimestamps.size + (isLiveWon ? 1 : 0);
 
-            let cWins = 0, cLosses = 0, cFlagsOur = 0, cFlagsEnemy = 0;
+            let cWins = 0, cLosses = 0, cDraws = 0, cFlagsOur = 0, cFlagsEnemy = 0;
             const cAllSeasons = { ...cHistoryObj, live: cLiveSnap };
             Object.values(cAllSeasons).forEach(s => {
                if (!s || !s.rounds) return;
@@ -26509,11 +26535,12 @@ window.resetBearTrapEvent = async () => {
                   if (os > 0 || es > 0) {
                      if (os > es) cWins++;
                      else if (es > os) cLosses++;
+                     else if (os === es) cDraws++;
                   }
                });
             });
 
-            let cWinRate = (cWins + cLosses > 0) ? Math.round((cWins / (cWins + cLosses)) * 100) : 100;
+            let cWinRate = (cWins + cLosses + cDraws > 0) ? Math.round((cWins / (cWins + cLosses + cDraws)) * 100) : 100;
 
             const isT = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
             
@@ -26670,7 +26697,7 @@ window.resetBearTrapEvent = async () => {
                      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px;">
                         <div style="background:linear-gradient(135deg, rgba(16,185,129,0.12) 0%, rgba(16,185,129,0.02) 100%); border:1px solid rgba(16,185,129,0.35); border-radius:12px; padding:14px; text-align:center;">
                            <div style="font-size:11px; color:#10b981; text-transform:uppercase; font-weight:bold;">All-Time Record</div>
-                           <div style="font-size:24px; font-weight:900; color:var(--text-main); margin-top:3px;">${cWins}W – ${cLosses}L</div>
+                           <div style="font-size:24px; font-weight:900; color:var(--text-main); margin-top:3px;">${cWins}W – ${cLosses}L${cDraws > 0 ? ` – ${cDraws}D` : ''}</div>
                            <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${cWinRate}% Overall Win Rate</div>
                         </div>
                         <div style="background:linear-gradient(135deg, rgba(6,182,212,0.12) 0%, rgba(6,182,212,0.02) 100%); border:1px solid rgba(6,182,212,0.35); border-radius:12px; padding:14px; text-align:center;">
@@ -26731,7 +26758,7 @@ window.resetBearTrapEvent = async () => {
                      </div>
                      <div style="text-align: right;">
                         <div style="color: var(--text-muted); font-size: 10px; text-transform: uppercase;">All-Time Record</div>
-                        <div style="color: #10b981; font-size: 18px; font-weight: 900;">${cWins}W – ${cLosses}L (${cWinRate}%)</div>
+                        <div style="color: #10b981; font-size: 18px; font-weight: 900;">${cWins}W – ${cLosses}L${cDraws > 0 ? ` – ${cDraws}D` : ''} (${cWinRate}%)</div>
                      </div>
                   </div>
                `;
@@ -26777,7 +26804,7 @@ window.resetBearTrapEvent = async () => {
                   <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:14px;">
                      <div style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.25); border-radius:8px; padding:10px; text-align:center;">
                         <div style="font-size:10px; color:#10b981; font-weight:bold; text-transform:uppercase;">Tournament Record</div>
-                        <div style="font-size:17px; font-weight:900; color:var(--text-main); margin-top:2px;">${cWins}W – ${cLosses}L</div>
+                        <div style="font-size:17px; font-weight:900; color:var(--text-main); margin-top:2px;">${cWins}W – ${cLosses}L${cDraws > 0 ? ` – ${cDraws}D` : ''}</div>
                      </div>
                      <div style="background:rgba(6,182,212,0.08); border:1px solid rgba(6,182,212,0.25); border-radius:8px; padding:10px; text-align:center;">
                         <div style="font-size:10px; color:var(--accent); font-weight:bold; text-transform:uppercase;">Flags Captured</div>
@@ -28211,6 +28238,7 @@ window.resetBearTrapEvent = async () => {
 
         let winCount = 0;
         let lossCount = 0;
+        let drawCount = 0;
         let totalOurFlags = 0;
         let totalEnemyFlags = 0;
 
@@ -28221,8 +28249,11 @@ window.resetBearTrapEvent = async () => {
             let ef = (r.enemyAlliance && r.enemyAlliance.flags !== undefined && r.enemyAlliance.flags !== null && r.enemyAlliance.flags !== '') ? Number(r.enemyAlliance.flags) : 0;
             totalOurFlags += of;
             totalEnemyFlags += ef;
-            if (os > es) winCount++;
-            else if (es > os) lossCount++;
+            if (os > 0 || es > 0 || of > 0 || ef > 0) {
+                if (os > es) winCount++;
+                else if (es > os) lossCount++;
+                else if (os === es) drawCount++;
+            }
         });
 
         if (champData.ourSeasonFlags !== undefined && champData.ourSeasonFlags !== null && champData.ourSeasonFlags !== '') {
@@ -28254,21 +28285,26 @@ window.resetBearTrapEvent = async () => {
             let enemyState = (r.enemyAlliance && r.enemyAlliance.state) ? r.enemyAlliance.state : (idx === 0 ? '2045' : idx === 1 ? '1988' : idx === 2 ? '2102' : idx === 3 ? '2031' : '2015');
             let isVictory = ourScore > enemyScore;
             let isDefeat = enemyScore > ourScore;
+            let isDraw = (ourScore === enemyScore) && (ourScore > 0 || enemyScore > 0 || (ourFlags > 0 && enemyFlags > 0));
 
             let cardBg = isVictory 
                 ? 'background: linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(16,185,129,0.35);' 
                 : (isDefeat 
                     ? 'background: linear-gradient(135deg, rgba(239,68,68,0.08) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(239,68,68,0.35);' 
-                    : 'background: rgba(255,255,255,0.02); border: 1px solid var(--border);');
+                    : (isDraw 
+                        ? 'background: linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(245,158,11,0.35);'
+                        : 'background: rgba(255,255,255,0.02); border: 1px solid var(--border);'));
 
-            let ourScoreColor = isVictory ? 'color:#10b981; font-weight:900; text-shadow:0 0 16px rgba(16,185,129,0.5);' : 'color:var(--text-muted); opacity:0.75;';
-            let enemyScoreColor = isDefeat ? 'color:#ef4444; font-weight:900; text-shadow:0 0 16px rgba(239,68,68,0.5);' : 'color:var(--text-muted); opacity:0.75;';
+            let ourScoreColor = isVictory ? 'color:#10b981; font-weight:900; text-shadow:0 0 16px rgba(16,185,129,0.5);' : (isDraw ? 'color:#f59e0b; font-weight:900; text-shadow:0 0 16px rgba(245,158,11,0.5);' : 'color:var(--text-muted); opacity:0.75;');
+            let enemyScoreColor = isDefeat ? 'color:#ef4444; font-weight:900; text-shadow:0 0 16px rgba(239,68,68,0.5);' : (isDraw ? 'color:#f59e0b; font-weight:900; text-shadow:0 0 16px rgba(245,158,11,0.5);' : 'color:var(--text-muted); opacity:0.75;');
 
             let centerStatusHtml = isVictory 
                 ? '<div style="background:rgba(16,185,129,0.22); border:1px solid rgba(16,185,129,0.45); color:#10b981; padding:3px 12px; border-radius:10px; font-weight:900; font-size:11px; letter-spacing:0.5px; box-shadow:0 0 10px rgba(16,185,129,0.2); margin-bottom:6px;">VICTORY</div>' 
                 : (isDefeat 
                     ? '<div style="background:rgba(239,68,68,0.22); border:1px solid rgba(239,68,68,0.45); color:#ef4444; padding:3px 12px; border-radius:10px; font-weight:900; font-size:11px; letter-spacing:0.5px; box-shadow:0 0 10px rgba(239,68,68,0.2); margin-bottom:6px;">DEFEAT</div>' 
-                    : '');
+                    : (isDraw 
+                        ? '<div style="background:rgba(245,158,11,0.22); border:1px solid rgba(245,158,11,0.45); color:#f59e0b; padding:3px 12px; border-radius:10px; font-weight:900; font-size:11px; letter-spacing:0.5px; box-shadow:0 0 10px rgba(245,158,11,0.2); margin-bottom:6px;">DRAW</div>'
+                        : ''));
 
             return `
                 <div style="${cardBg} border-radius:14px; padding:16px 22px; box-shadow: 0 4px 20px rgba(0,0,0,0.25); transition: transform 0.2s ease, box-shadow 0.2s ease;">
@@ -28318,6 +28354,10 @@ window.resetBearTrapEvent = async () => {
                     <span style="color:#10b981; font-weight:900; font-size:20px;">${winCount} Wins</span>
                     <span style="color:var(--text-muted); opacity:0.6; font-size:18px;">–</span>
                     <span style="color:#ef4444; font-weight:900; font-size:20px;">${lossCount} ${lossCount === 1 ? 'Loss' : 'Losses'}</span>
+                    ${drawCount > 0 ? `
+                        <span style="color:var(--text-muted); opacity:0.6; font-size:18px;">–</span>
+                        <span style="color:#f59e0b; font-weight:900; font-size:20px;">${drawCount} ${drawCount === 1 ? 'Draw' : 'Draws'}</span>
+                    ` : ''}
                 </div>
                 <div style="margin-top:8px; display:inline-flex; align-items:center; justify-content:center; gap:16px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); padding:6px 18px; border-radius:20px; flex-wrap:wrap;">
                     <span style="color:#10b981; font-weight:bold; font-size:13px; display:inline-flex; align-items:center; gap:5px;">🚩 <strong>${totalOurFlags}</strong> Flags Captured</span>

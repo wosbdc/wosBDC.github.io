@@ -1,19 +1,19 @@
 {
-  "version": "2.9.61",
+  "version": "2.9.62",
   "releaseDate": "2026-08-19",
-  "title": "What's New in v2.9.61",
+  "title": "What's New in v2.9.62",
   "notes": [
-    "🔕 Pure Attention-Driven Bell Menu: Empty sections (leadership announcements, staff notices, or feedback) now automatically disappear completely when there is nothing needing attention.",
-    "🎉 Seamless All Caught Up State: When no announcements, staff directives, expired tokens, or unread posts exist, the notification modal presents a clean 'All Caught Up' view without any empty boxes.",
-    "🛡️ Dedicated Leadership Tools Access: Leadership broadcast and countdown scheduling remains instantly accessible via the top-right Staff Tools pill button."
+    "⚖️ Draw / Tie Support in Alliance Championship: AC match cards across the main war room, Vault archive viewer, and Admin match editor now support and display Draw outcomes (⚖️ DRAW).",
+    "📊 Dynamic Record Calculation: Tournament records automatically calculate wins, losses, and draws (e.g. 3 Wins – 1 Loss – 1 Draw).",
+    "🏛️ All-Time Dynasty Leaderboard Sync: Leaderboard dynasty statistics and quick stat cards now seamlessly track and display all-time draws alongside wins and losses."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "2.9.61",
+    "version": "2.9.62",
     "latestChanges": [
+      "v2.9.62: Added comprehensive Draw (Tie) support across Alliance Championship war room, archive vault, and leaderboards",
       "v2.9.61: Streamlined notification bell modal so empty announcement and staff containers disappear when no items need attention",
       "v2.9.60: Added Community Feedback & Bug Tracker alerts to the notification bell with interactive previews",
-      "v2.9.59: Deleted Season 12 test archives and added Admin Vault archive deletion controls",
-      "v2.9.58: Consolidated All-Time Championship Leaderboard under Nav Menu Leaderboards with cross-source deduplication"
+      "v2.9.59: Deleted Season 12 test archives and added Admin Vault archive deletion controls"
     ]
   }
 }
