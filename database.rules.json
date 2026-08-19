@@ -10,7 +10,15 @@
     },
     "roster_live": {
       ".read": true,
-      ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() + '' == '318843189' || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())"
+      ".write": "auth != null"
+    },
+    "users_alts": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+    "giftcode_bot": {
+      ".read": true,
+      ".write": "auth != null"
     },
     "championship": {
       ".read": true,

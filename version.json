@@ -1,11 +1,11 @@
 {
-  "version": "2.9.70",
+  "version": "2.9.71",
   "releaseDate": "2026-08-19",
-  "title": "What's New in v2.9.70",
+  "title": "What's New in v2.9.71",
   "notes": [
-    "🎮 In-Game Server Sync in Edit Member Profile: Members can now click '🔄 Sync from Game' right inside the Edit Profile modal to instantly fetch their live furnace level, Chief name, and avatar directly from Century Games.",
-    "🛡️ Live Token Status Indicator: Edit Profile modal displays real-time 30-day token health with remaining days left.",
-    "⚡ Instant Form Auto-Population: Syncing automatically updates the furnace level dropdown, badge preview, and cloud database."
+    "🔥 Direct Firebase & Google Sheets Furnace Sync: Changing furnace levels via the Admin Roster Menu, Account Hub Profile, or Alt Manager now immediately persists across Google Sheets ('Chief's List'), Firebase /roster_live, /users, and /sheets data stores.",
+    "🛡️ Alt Account Support: Admins and members can now edit alt account furnace levels and start dates seamlessly with live persistence to linked alt datasets.",
+    "⚡ Non-Destructive Background Sync: Resolved issue where background sheets sync cleared manually entered furnace levels for accounts without Century Games verification tokens."
   ],
   "wosbdc_alliance_dashboard": {
     "version": "2.9.67",

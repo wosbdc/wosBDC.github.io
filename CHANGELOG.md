@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.71] - 2026-08-19
+- 🔥 **Direct Firebase & Google Sheets Furnace Sync**: Changing furnace levels via the Admin Roster Menu, Account Hub Profile, or Alt Manager now immediately persists across Google Sheets ('Chief's List'), Firebase `/roster_live`, `/users`, and `/sheets/Chief's List` data stores.
+- 🛡️ **Alt Account Sync Support**: Editing an alt account's furnace level or start date seamlessly updates `users/${uid}/linkedAltsData/${altGid}`, `altTokens`, `users_alts/${altGid}`, `/roster_live`, and Google Sheets.
+- ⚡ **Non-Destructive Background Sheets Sync**: Fixed the background `syncFirebaseToChiefsListSheet` logic in Google Apps Script so that manually updated furnace levels are preserved and never wiped out for accounts without active Century Games verification tokens.
+
 ## [2.9.70] - 2026-08-19
 - 🎮 **In-Game Server Sync in Edit Member Profile**: Added a dedicated *🎮 Live Game Server Sync* card and *🔄 Sync from Game* button directly inside the **✏️ Edit Member Profile** modal, allowing members with registered 30-day tokens to pull live character stats straight from Century Games.
 - ⚡ **Instant Form Auto-Population**: Clicking *Sync from Game* queries Century Games, pulls the member's live furnace level, Chief nickname, and avatar, and automatically updates the furnace dropdown and live preview badge.

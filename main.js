@@ -4795,7 +4795,7 @@ window.openAdminEditFurnaceModal = async (chiefName, gameId = '', currentFurnace
            // 1. Invalidate rosterCache so any future query pulls fresh data
            window.rosterCache = null;
 
-           // 2. Read & update roster_live in Firebase safely
+           // 2. Read & update roster_live in Firebase directly
            try {
               const rosterSnap = await get(ref(db, 'roster_live')).catch(() => null);
               let rosterObj = (rosterSnap && rosterSnap.exists()) ? rosterSnap.val() : {};
@@ -4810,7 +4810,7 @@ window.openAdminEditFurnaceModal = async (chiefName, gameId = '', currentFurnace
                     break;
                  }
               }
-              const saveKey = foundKey || chiefName;
+              const saveKey = foundKey || (cleanGid ? cleanGid : chiefName);
               const updatedEntry = {
                  ...(rosterObj[saveKey] || {}),
                  name: chiefName,
@@ -4822,11 +4822,14 @@ window.openAdminEditFurnaceModal = async (chiefName, gameId = '', currentFurnace
 
               rosterObj[saveKey] = updatedEntry;
 
-              await set(ref(db, 'roster_live'), rosterObj);
+              await set(ref(db, `roster_live/${saveKey}`), updatedEntry);
+              if (cleanGid && cleanGid !== saveKey) {
+                 await set(ref(db, `roster_live/${cleanGid}`), updatedEntry);
+              }
               window.rosterCache = rosterObj;
            } catch(e) { console.warn("roster_live save error:", e); }
 
-           // 3. Update users/ node if user account exists
+           // 3. Update users/ node in Firebase if user account exists (main or alt)
            try {
               const usersSnap = await get(ref(db, 'users'));
               if (usersSnap.exists()) {
@@ -4834,6 +4837,8 @@ window.openAdminEditFurnaceModal = async (chiefName, gameId = '', currentFurnace
                  for (const [uid, uData] of Object.entries(allUsers)) {
                     const uGid = (uData.gameId || '').toString().trim();
                     const uName = (uData.name || uData.chiefName || '').toString().trim();
+                    
+                    // Check if this is the user's primary character
                     if ((cleanGid && uGid === cleanGid) || (chiefName && uName.toLowerCase() === chiefName.toLowerCase())) {
                        await update(ref(db, `users/${uid}`), {
                           stove_lv: newFurnace,
@@ -4843,6 +4848,34 @@ window.openAdminEditFurnaceModal = async (chiefName, gameId = '', currentFurnace
                        if (currentUser && currentUser.uid === uid) {
                           currentUser.stove_lv = newFurnace;
                           currentUser.furnaceLevel = newFurnace;
+                          try { localStorage.setItem('cached_current_user', JSON.stringify(currentUser)); } catch(e) {}
+                       }
+                       break;
+                    }
+
+                    // Check if this is an Alt account of this user
+                    if (cleanGid && ((uData.linkedGameIds && uData.linkedGameIds.includes(cleanGid)) || (uData.linkedAltsData && uData.linkedAltsData[cleanGid]) || (uData.altTokens && uData.altTokens[cleanGid]))) {
+                       const altUpdates = {};
+                       altUpdates[`linkedAltsData/${cleanGid}/stove_lv`] = newFurnace;
+                       altUpdates[`linkedAltsData/${cleanGid}/furnaceLevel`] = newFurnace;
+                       altUpdates[`linkedAltsData/${cleanGid}/updatedAt`] = new Date().toISOString();
+                       if (uData.altTokens && uData.altTokens[cleanGid]) {
+                          altUpdates[`altTokens/${cleanGid}/stove_lv`] = newFurnace;
+                          altUpdates[`altTokens/${cleanGid}/furnaceLevel`] = newFurnace;
+                       }
+                       await update(ref(db, `users/${uid}`), altUpdates).catch(() => null);
+                       
+                       if (currentUser && currentUser.uid === uid) {
+                          currentUser.linkedAltsData = currentUser.linkedAltsData || {};
+                          if (currentUser.linkedAltsData[cleanGid]) {
+                             currentUser.linkedAltsData[cleanGid].stove_lv = newFurnace;
+                             currentUser.linkedAltsData[cleanGid].furnaceLevel = newFurnace;
+                          }
+                          if (currentUser.altTokens && currentUser.altTokens[cleanGid]) {
+                             currentUser.altTokens[cleanGid].stove_lv = newFurnace;
+                             currentUser.altTokens[cleanGid].furnaceLevel = newFurnace;
+                          }
+                          try { localStorage.setItem('cached_current_user', JSON.stringify(currentUser)); } catch(e) {}
                        }
                        break;
                     }
@@ -4850,12 +4883,30 @@ window.openAdminEditFurnaceModal = async (chiefName, gameId = '', currentFurnace
               }
            } catch(e) { console.warn("Failed to update user node:", e); }
 
-           // 4. Ping GAS API
-           try {
-              const token = await getAuthToken();
-              const url = `${API_BASE_URL}?api=registerNewPlayer&gameId=${encodeURIComponent(cleanGid)}&name=${encodeURIComponent(chiefName)}&level=${encodeURIComponent(newFurnace)}&stove_lv=${encodeURIComponent(newFurnace)}&token=${encodeURIComponent(token)}`;
-              fetch(url, { mode: 'no-cors' }).catch(e => null);
-           } catch(e) {}
+           // 4. Update users_alts/${cleanGid} node directly in Firebase
+           if (cleanGid) {
+              try {
+                 await update(ref(db, `users_alts/${cleanGid}`), {
+                    gameId: cleanGid,
+                    name: chiefName,
+                    stove_lv: newFurnace,
+                    furnaceLevel: newFurnace,
+                    updatedAt: new Date().toISOString()
+                 }).catch(() => null);
+              } catch(e) {}
+           }
+
+           // 5. Update in-memory liveData Chief's List row if loaded
+           if (window.liveData && window.liveData["Chief's List"]) {
+              const cList = window.liveData["Chief's List"];
+              for (let i = 1; i < cList.length; i++) {
+                 if ((cleanGid && cList[i][1] && cList[i][1].toString().trim() === cleanGid) ||
+                     (chiefName && cList[i][0] && cList[i][0].toString().toLowerCase().trim() === chiefName.toLowerCase())) {
+                    cList[i][2] = newFurnace;
+                    break;
+                 }
+              }
+           }
 
            if (window.logAdminAction) {
               window.logAdminAction("Set Furnace Level", `Updated '${chiefName}' (ID: ${cleanGid}) furnace level to ${newFurnace}`, chiefName);
@@ -14754,10 +14805,8 @@ window.openEditProfileModal = async () => {
            const chiefName = (idToNameMap[currentUser.gameId] || currentUser.name || currentUser.chiefName || '').toString().trim();
            const cleanGid = (currentUser.gameId || '').toString().trim();
 
-           // 0. Invalidate in-memory roster cache
            window.rosterCache = null;
 
-           // 1. Update user node in Firebase
            const userRef = ref(db, `users/${currentUser.uid}`);
            await update(userRef, {
               stove_lv: newFurnace,
@@ -14769,7 +14818,6 @@ window.openEditProfileModal = async () => {
               updatedAt: new Date().toISOString()
            });
 
-           // 2. Update roster_live in Firebase by Chief Name & Game ID
            try {
               const rosterSnap = await get(ref(db, 'roster_live')).catch(() => null);
               let rosterObj = (rosterSnap && rosterSnap.exists()) ? rosterSnap.val() : {};
@@ -14796,7 +14844,10 @@ window.openEditProfileModal = async () => {
                  updatedAt: Date.now()
               };
 
-              await set(ref(db, 'roster_live'), rosterObj);
+              await set(ref(db, `roster_live/${saveKey}`), rosterObj[saveKey]);
+              if (cleanGid && cleanGid !== saveKey) {
+                 await set(ref(db, `roster_live/${cleanGid}`), rosterObj[saveKey]);
+              }
               window.rosterCache = rosterObj;
            } catch(e) { console.warn("roster_live profile save error:", e); }
 
@@ -14806,6 +14857,20 @@ window.openEditProfileModal = async () => {
            currentUser.joinedDate = newJoinedDate;
            currentUser.timeActive = window.calculateTimeActive(newJoinedDate);
            currentUser.bio = newBio;
+           try { localStorage.setItem('cached_current_user', JSON.stringify(currentUser)); } catch(e) {}
+
+           // Update in-memory liveData Chief's List row if present
+           if (window.liveData && window.liveData["Chief's List"]) {
+              const cList = window.liveData["Chief's List"];
+              for (let i = 1; i < cList.length; i++) {
+                 if ((cleanGid && cList[i][1] && cList[i][1].toString().trim() === cleanGid) ||
+                     (chiefName && cList[i][0] && cList[i][0].toString().toLowerCase().trim() === chiefName.toLowerCase())) {
+                    cList[i][2] = newFurnace;
+                    if (newJoinedDate) cList[i][4] = window.formatDateForDisplay(newJoinedDate);
+                    break;
+                 }
+              }
+           }
 
            try {
               const token = await getAuthToken();
@@ -17924,6 +17989,16 @@ window.openEditAltProfileModal = async (gameId, chiefName) => {
                   updatedAt: new Date().toISOString()
                }).catch(e => console.warn("linkedAltsData save error:", e));
 
+               if (currentUser.altTokens && currentUser.altTokens[cleanGid]) {
+                  await update(ref(db, `users/${currentUser.uid}/altTokens/${cleanGid}`), {
+                     stove_lv: newFurnace,
+                     furnaceLevel: newFurnace,
+                     nickname: chiefName
+                  }).catch(() => null);
+                  currentUser.altTokens[cleanGid].stove_lv = newFurnace;
+                  currentUser.altTokens[cleanGid].furnaceLevel = newFurnace;
+               }
+
                currentUser.linkedAltsData = currentUser.linkedAltsData || {};
                currentUser.linkedAltsData[cleanGid] = {
                   gameId: cleanGid,
@@ -17933,6 +18008,7 @@ window.openEditAltProfileModal = async (gameId, chiefName) => {
                   joinedDate: newJoinedDate,
                   timeActive: calculatedTimeActive
                };
+               try { localStorage.setItem('cached_current_user', JSON.stringify(currentUser)); } catch(e) {}
             }
 
             // 2. Save to users_alts/${cleanGid} in Firebase
@@ -17972,25 +18048,40 @@ window.openEditAltProfileModal = async (gameId, chiefName) => {
                   updatedAt: Date.now()
                };
 
-               // 5. Log Admin / Profile action with target Alt details
-               if (window.logAdminAction) {
-                  window.logAdminAction(
-                     "Alt Profile Update", 
-                     `Updated Alt account '${chiefName}' (ID: ${cleanGid}) Furnace to ${newFurnace}${newJoinedDate ? `, Start Date to ${newJoinedDate}` : ''}`, 
-                     chiefName
-                  );
+               await set(ref(db, `roster_live/${saveKey}`), rosterObj[saveKey]);
+               if (cleanGid && cleanGid !== saveKey) {
+                  await set(ref(db, `roster_live/${cleanGid}`), rosterObj[saveKey]);
                }
-
-               await set(ref(db, 'roster_live'), rosterObj);
                window.rosterCache = rosterObj;
             } catch(e) { console.warn("roster_live alt save error:", e); }
 
-            // 4. Ping backend API
+            // 4. Update in-memory liveData Chief's List row if present
+            if (window.liveData && window.liveData["Chief's List"]) {
+               const cList = window.liveData["Chief's List"];
+               for (let i = 1; i < cList.length; i++) {
+                  if ((cleanGid && cList[i][1] && cList[i][1].toString().trim() === cleanGid) ||
+                      (chiefName && cList[i][0] && cList[i][0].toString().toLowerCase().trim() === chiefName.toLowerCase())) {
+                     cList[i][2] = newFurnace;
+                     if (newJoinedDate) cList[i][4] = window.formatDateForDisplay(newJoinedDate);
+                     break;
+                  }
+               }
+            }
+
             try {
                const token = await getAuthToken();
-               const url = `${API_BASE_URL}?api=registerNewPlayer&gameId=${encodeURIComponent(cleanGid)}&name=${encodeURIComponent(chiefName)}&stove_lv=${encodeURIComponent(newFurnace)}&dateStarted=${encodeURIComponent(newJoinedDate)}&token=${encodeURIComponent(token)}`;
+               const url = `${API_BASE_URL}?api=updateChiefLevel&gameId=${encodeURIComponent(cleanGid)}&name=${encodeURIComponent(chiefName)}&level=${encodeURIComponent(newFurnace)}&joinedDate=${encodeURIComponent(newJoinedDate)}&token=${encodeURIComponent(token)}`;
                fetch(url, { mode: 'no-cors' }).catch(e => null);
             } catch(e) {}
+
+            // 5. Log Admin / Profile action with target Alt details
+            if (window.logAdminAction) {
+               window.logAdminAction(
+                  "Alt Profile Update", 
+                  `Updated Alt account '${chiefName}' (ID: ${cleanGid}) Furnace to ${newFurnace}${newJoinedDate ? `, Start Date to ${newJoinedDate}` : ''}`, 
+                  chiefName
+               );
+            }
 
             window.showToast(`Updated alt profile for ${chiefName}!`, "success");
             closeModal();
