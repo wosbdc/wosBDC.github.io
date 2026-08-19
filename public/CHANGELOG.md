@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.60] - 2026-08-19
+- 🔔 **Feedback & Bug Tracker Alerts in Notification Bell**: Submissions of feature requests and bug reports are now automatically reflected in the top navigation bell icon counter and pulsing alert indicator.
+- 📋 **Integrated Previews in Alliance Alerts Modal**: Added an interactive, collapsible *Feature & Bug Tracker* section in the notifications modal displaying post titles, category tags, author names, status badges, and direct links.
+- 🧹 **Automatic Notification Clearing**: Visiting the Feedback Tracker (`views.feedback`) or selecting *Mark All as Read* automatically updates your timestamp and clears the bell counter.
+
 ## [2.9.59] - 2026-08-19
 - 🗑️ **Deleted Season 12 Test Archives**: Permanently cleared the test Season 12 record and attendance archive from Firebase database nodes (`championship_meta/history` and `events_archive/championship`).
 - 🛡️ **Admin Vault Archive Deletion**: Added a secure deletion button inside the Championship Archive Vault modal allowing Admins and R4/R5 leadership to remove any test or corrupted season archives.

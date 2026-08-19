@@ -1,19 +1,19 @@
 {
-  "version": "2.9.59",
+  "version": "2.9.60",
   "releaseDate": "2026-08-19",
-  "title": "What's New in v2.9.59",
+  "title": "What's New in v2.9.60",
   "notes": [
-    "🗑️ Deleted Season 12 Test Archives: Permanently removed the test Season 12 archive and attendance history from the Vault and Leaderboard nodes in Firebase.",
-    "🛡️ Admin Vault Delete Controls: Added direct deletion controls inside the Championship Archive Vault modal for Admins and R4/R5 leadership.",
-    "⚙️ Clean Season Fallback Defaults: Replaced hardcoded Season 12 templates with clean Upcoming Season initial match configurations."
+    "🔔 Feedback & Bug Tracker Alerts in Bell: New submissions and bug reports now automatically trigger alert badges in the top navigation bell icon.",
+    "📋 Interactive Preview in Alerts Modal: The Notifications modal now features a dedicated Community Feedback & Bug Reports section with quick previews and one-click access.",
+    "🧹 Seamless Auto-Clear: Viewing the Feedback Tracker or marking alerts as read automatically synchronizes and clears the bell badge count."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "2.9.59",
+    "version": "2.9.60",
     "latestChanges": [
+      "v2.9.60: Added Community Feedback & Bug Tracker alerts to the notification bell with interactive previews",
       "v2.9.59: Deleted Season 12 test archives and added Admin Vault archive deletion controls",
       "v2.9.58: Consolidated All-Time Championship Leaderboard under Nav Menu Leaderboards with cross-source deduplication",
-      "v2.9.57: Refined Championship Gold badges to only be awarded for tournament event victories with Contender tier for roster participants",
-      "v2.9.56: Added Alliance Championship All-Time Leaderboard and Dynasty Stats under Nav Menu Leaderboards"
+      "v2.9.57: Refined Championship Gold badges to only be awarded for tournament event victories with Contender tier for roster participants"
     ]
   }
 }

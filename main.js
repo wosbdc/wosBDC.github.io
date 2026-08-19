@@ -10015,6 +10015,7 @@ window.submitFeedbackItem = async (payload) => {
             updatedAt: now
         };
         await set(newRef, item);
+        if (typeof window.updateNewMemberBadge === 'function') window.updateNewMemberBadge();
         return item;
     } catch(e) {
         console.error("submitFeedbackItem error:", e);
@@ -11791,7 +11792,25 @@ window.updateNewMemberBadge = async () => {
     console.warn("Failed to count unread broadcasts:", e);
   }
 
-  const totalAlerts = mainAlert + (altAlertsCount > 0 ? 1 : 0) + broadcastUnreadCount;
+  // 4. Check unread community feedback & bug reports
+  let feedbackUnreadCount = 0;
+  try {
+    const lastSeenFeedback = Number(localStorage.getItem('last_seen_feedback_timestamp') || '0');
+    const fSnap = await get(ref(db, 'community_feedback'));
+    if (fSnap.exists()) {
+      const fVal = fSnap.val() || {};
+      for (const item of Object.values(fVal)) {
+        if (!item) continue;
+        if (item.createdAt && item.createdAt > lastSeenFeedback) {
+          feedbackUnreadCount++;
+        }
+      }
+    }
+  } catch(e) {
+    console.warn("Failed to count unread feedback:", e);
+  }
+
+  const totalAlerts = mainAlert + (altAlertsCount > 0 ? 1 : 0) + broadcastUnreadCount + feedbackUnreadCount;
 
   if (mobileAlertsBtn) {
     if (liveCountdownCount > 0) {
@@ -11941,6 +11960,25 @@ window.openAllianceAlertsModal = async () => {
       }
     } catch(err) {
       console.warn("Failed to load broadcasts:", err);
+    }
+
+    // Fetch Feedback & Bug Tracker submissions from Firebase
+    let feedbackList = [];
+    const lastSeenFeedback = Number(localStorage.getItem('last_seen_feedback_timestamp') || '0');
+    let unreadFeedbackCount = 0;
+    try {
+      const fSnap = await get(ref(db, 'community_feedback'));
+      if (fSnap.exists()) {
+        const fVal = fSnap.val() || {};
+        feedbackList = Object.entries(fVal).map(([k, v]) => ({
+          ...v,
+          id: k
+        })).filter(Boolean);
+        feedbackList.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        unreadFeedbackCount = feedbackList.filter(f => f.createdAt && f.createdAt > lastSeenFeedback).length;
+      }
+    } catch(err) {
+      console.warn("Failed to load feedback for alerts modal:", err);
     }
 
     // Immediately mark broadcasts as seen to clear badge counter
@@ -12363,6 +12401,86 @@ window.openAllianceAlertsModal = async () => {
       `;
     }
 
+    // 4. Feature Request & Bug Reports Section HTML
+    let feedbackSectionHtml = '';
+    const fCards = feedbackList.length > 0 ? feedbackList.slice(0, 10).map(f => {
+      const isUnread = Boolean(f.createdAt && f.createdAt > lastSeenFeedback);
+      const relTime = window.formatRelativeTime ? window.formatRelativeTime(f.createdAt) : (window.formatTimeAgo ? window.formatTimeAgo(f.createdAt) : '');
+      const isFeat = f.type === 'feature';
+      const typeBadge = isFeat 
+        ? `<span style="background:rgba(6,182,212,0.18); border:1px solid rgba(6,182,212,0.4); color:#06b6d4; padding:2px 7px; border-radius:6px; font-size:10px; font-weight:800;">💡 FEATURE</span>`
+        : `<span style="background:rgba(239,68,68,0.18); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:2px 7px; border-radius:6px; font-size:10px; font-weight:800;">🐞 BUG</span>`;
+      
+      const isCompleted = f.status === 'completed';
+      const isInProgress = f.status === 'in_progress';
+      const statusBadge = isCompleted
+        ? `<span style="background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:1px 6px; border-radius:6px; font-size:9.5px; font-weight:bold;">✓ Done</span>`
+        : (isInProgress
+            ? `<span style="background:rgba(59,130,246,0.2); color:#3b82f6; border:1px solid rgba(59,130,246,0.4); padding:1px 6px; border-radius:6px; font-size:9.5px; font-weight:bold;">🔵 In Progress</span>`
+            : `<span style="background:rgba(234,179,8,0.15); color:#eab308; border:1px solid rgba(234,179,8,0.35); padding:1px 6px; border-radius:6px; font-size:9.5px; font-weight:bold;">🟡 Review</span>`);
+
+      return `
+        <div style="background:rgba(15,23,42,0.6); border:1px solid ${isUnread ? 'rgba(6,182,212,0.5)' : 'rgba(255,255,255,0.08)'}; border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; gap:6px; position:relative;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap;">
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; min-width:0;">
+              ${typeBadge}
+              <span style="font-size:10px; color:var(--text-muted); font-weight:bold; background:rgba(255,255,255,0.05); padding:1px 5px; border-radius:4px;">[${window.escapeHTML(f.category || 'General')}]</span>
+              ${statusBadge}
+              ${isUnread ? `<span style="font-size:9.5px; background:rgba(6,182,212,0.2); color:#38bdf8; border:1px solid rgba(6,182,212,0.4); padding:1px 6px; border-radius:8px; font-weight:bold;">NEW</span>` : ''}
+            </div>
+            <span style="font-size:11px; color:var(--text-muted);">${relTime}</span>
+          </div>
+          <div style="font-weight:bold; font-size:13.5px; color:#fff; line-height:1.3;">
+            ${window.escapeHTML(f.title || 'Untitled Post')}
+          </div>
+          ${f.description ? `<div style="font-size:12px; color:var(--text-main); line-height:1.4; opacity:0.85; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${window.escapeHTML(f.description)}</div>` : ''}
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2px; padding-top:4px; border-top:1px solid rgba(255,255,255,0.04);">
+            <span style="font-size:11px; color:var(--text-muted);">👤 ${window.escapeHTML(f.submittedBy?.name || 'Chief')} • 👍 ${f.voteCount || 1}</span>
+            <div style="display:flex; align-items:center; gap:8px;">
+              ${f.imageUrl ? '<span style="font-size:11px; color:#38bdf8;">📷 Image</span>' : ''}
+              <button onclick="document.getElementById('notificationsModalOverlay').remove(); if(views.feedback) views.feedback();" style="background:linear-gradient(135deg, rgba(6,182,212,0.2), rgba(6,182,212,0.05)); border:1px solid rgba(6,182,212,0.4); color:#38bdf8; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
+                🔍 View ➔
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('') : `
+      <div style="text-align:center; padding:14px 10px; color:var(--text-muted); font-size:12px;">
+        No feedback or bug reports submitted yet.
+      </div>
+    `;
+
+    feedbackSectionHtml = `
+      <div id="feedbackAlertsContainer" style="background:rgba(6,182,212,0.06); border:1px solid rgba(6,182,212,0.25); border-radius:14px; margin-bottom:12px; overflow:hidden; transition:all 0.2s ease;">
+        <div id="feedbackAccordionHeader" onclick="window.toggleFeedbackAccordionBanner()" style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; cursor:pointer; user-select:none;">
+          <div>
+            <div style="font-size:13.5px; font-weight:bold; color:#38bdf8; display:flex; align-items:center; gap:8px;">
+              <span>💡 Feature & Bug Tracker (${feedbackList.length})</span>
+            </div>
+            <div style="font-size:11.5px; color:var(--text-muted); margin-top:3px;">
+              Member suggestions, feature requests & bug reports
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button onclick="event.stopPropagation(); document.getElementById('notificationsModalOverlay').remove(); if(views.feedback) views.feedback();" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:3px 9px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:3px; box-shadow:0 2px 6px rgba(14,165,233,0.3);" title="Open Feature & Bug Tracker">
+              ➕ Submit / View
+            </button>
+            <span style="background:rgba(6,182,212,0.2); color:#38bdf8; border:1px solid rgba(6,182,212,0.4); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold;">${unreadFeedbackCount > 0 ? `${unreadFeedbackCount} New` : `${feedbackList.length}`}</span>
+            <span id="feedbackAccordionChevron" style="font-size:15px; color:var(--text-muted); transition:transform 0.2s ease;">▾</span>
+          </div>
+        </div>
+        <div id="feedbackAccordionBody" style="display:${unreadFeedbackCount > 0 ? 'block' : 'none'}; padding:0 14px 14px 14px; max-height:260px; overflow-y:auto;">
+          <div style="display:flex; flex-direction:column; gap:8px; border-top:1px solid rgba(255,255,255,0.06); padding-top:10px;">
+            ${fCards}
+            <button onclick="document.getElementById('notificationsModalOverlay').remove(); if(views.feedback) views.feedback();" style="width:100%; text-align:center; background:rgba(6,182,212,0.1); border:1px solid rgba(6,182,212,0.3); color:#38bdf8; font-weight:bold; font-size:12px; padding:8px; border-radius:8px; cursor:pointer; margin-top:4px;">
+              🚀 Open Complete Tracker (${feedbackList.length} Submissions) ➔
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
     // Main Character Card HTML: ONLY show when action is required (expiring soon <=5d or expired)
     let mainTokenHtml = '';
     if (tokenStatus.alert) {
@@ -12391,7 +12509,7 @@ window.openAllianceAlertsModal = async () => {
       `;
     }
 
-    const hasImmediateAlerts = Boolean(tokenStatus.alert || (rawAlts.length > 0 && unSyncedAltsCount > 0) || broadcastsList.length > 0);
+    const hasImmediateAlerts = Boolean(tokenStatus.alert || (rawAlts.length > 0 && unSyncedAltsCount > 0) || broadcastsList.length > 0 || feedbackList.length > 0);
     let allCaughtUpHtml = (!hasImmediateAlerts && !isStaff) ? `
       <div id="allCaughtUpNotice" style="text-align:center; padding:28px 16px; background:rgba(16,185,129,0.05); border:1px dashed rgba(16,185,129,0.3); border-radius:14px; margin-bottom:12px;">
         <div style="font-size:32px; margin-bottom:6px;">🎉</div>
@@ -12423,7 +12541,7 @@ window.openAllianceAlertsModal = async () => {
         <!-- Spotlight Scheduled Countdown Alerts Section -->
         ${spotlightSectionHtml}
 
-        ${countdownAlerts.length > 0 && (standardBroadcasts.length > 0 || tokenStatus.alert || rawAlts.length > 0 || isStaff) ? `
+        ${countdownAlerts.length > 0 && (standardBroadcasts.length > 0 || tokenStatus.alert || rawAlts.length > 0 || isStaff || feedbackList.length > 0) ? `
           <!-- Visual Section Divider -->
           <div style="display:flex; align-items:center; gap:12px; margin:16px 0 14px 0;">
             <div style="flex:1; height:1px; background:rgba(255,255,255,0.08);"></div>
@@ -12442,6 +12560,9 @@ window.openAllianceAlertsModal = async () => {
 
         <!-- Broadcast Announcements Section -->
         ${broadcastsSectionHtml}
+
+        <!-- Feature Requests & Bug Reports Section -->
+        ${feedbackSectionHtml}
 
         <!-- Collapsible Staff Section (For Staff) -->
         ${staffPlaceholderHtml}
@@ -12542,6 +12663,15 @@ window.toggleAltAccordionBanner = () => {
 window.toggleStaffAccordionBanner = () => {
   const body = document.getElementById('staffAccordionBody');
   const chevron = document.getElementById('staffAccordionChevron');
+  if (!body) return;
+  const isHidden = (body.style.display === 'none' || !body.style.display);
+  body.style.display = isHidden ? 'block' : 'none';
+  if (chevron) chevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+};
+
+window.toggleFeedbackAccordionBanner = () => {
+  const body = document.getElementById('feedbackAccordionBody');
+  const chevron = document.getElementById('feedbackAccordionChevron');
   if (!body) return;
   const isHidden = (body.style.display === 'none' || !body.style.display);
   body.style.display = isHidden ? 'block' : 'none';
@@ -12736,6 +12866,10 @@ window.testLocalPushNotification = function() {
 
 window.markAllBroadcastsRead = function() {
   localStorage.setItem('last_seen_broadcast_timestamp', String(Date.now()));
+  localStorage.setItem('last_seen_feedback_timestamp', String(Date.now()));
+  if (typeof window.updateNewMemberBadge === 'function') {
+    window.updateNewMemberBadge();
+  }
   if (typeof window.updateBroadcastBellCount === 'function') {
     window.updateBroadcastBellCount();
   }
@@ -29167,6 +29301,10 @@ window.resetBearTrapEvent = async () => {
     if (!currentUser) return window.renderMembersOnlyGuard("Feature Request & Bug Tracker");
     const navbar = document.querySelector('.navbar');
     if (navbar) navbar.style.display = 'flex';
+
+    // Mark feedback as seen to clear bell alerts counter
+    localStorage.setItem('last_seen_feedback_timestamp', String(Date.now()));
+    if (typeof window.updateNewMemberBadge === 'function') window.updateNewMemberBadge();
 
     renderLoading("Loading Feature & Bug Tracker...");
     const app = document.getElementById('app');
