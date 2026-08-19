@@ -21710,7 +21710,7 @@ const views = {
         }
 
         const isAdminUser = u.role === 'admin' || u.role === 'R5' || (window.getAdminLevel(u) !== false && window.getAdminLevel(u) !== 'User');
-        const hasAvatar = (avatarsData && avatarsData[uGidStr]) || (u.avatar && u.avatar.length > 5);
+        const hasAvatar = (typeof avatarMap !== 'undefined' && avatarMap && avatarMap[uGidStr]) || (u.avatar && u.avatar.length > 5);
         const avatarSrc = window.getAvatarUrl(uGidStr, cName);
 
         // Collect all alts for this user
