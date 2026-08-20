@@ -1,19 +1,19 @@
 {
-  "version": "2.9.88",
+  "version": "2.9.89",
   "releaseDate": "2026-08-20",
-  "title": "What's New in v2.9.88",
+  "title": "What's New in v2.9.89",
   "notes": [
-    "🐛 Fixed: Ticket actions no longer navigate away from admin panel.",
-    "✅ Done checkbox stays in admin — no more redirects to public view.",
-    "🗑️ Delete & 🗳️ Vote also fixed to stay in admin panel."
+    "🛡️ Automated test suite now verifies triple-version synchronization.",
+    "📋 Added TESTING.md QA protocol for view isolation and safety.",
+    "⚡ Fixed core AST syntax handling in ID name mapping."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "2.9.88",
+    "version": "2.9.89",
     "latestChanges": [
+      "v2.9.89: Automated version sync validation & TESTING.md QA protocol",
       "v2.9.88: Fixed admin ticket actions navigating away from admin panel",
       "v2.9.87: Admin ticket status tab bar - Open, In Progress, Done, Archived, All with live counts",
-      "v2.9.86: Dynamic real-time synchronization for all dropdown filter options and action button counters",
-      "v2.9.85: Dynamic real-time filter and population tab counter synchronization in Member Database"
+      "v2.9.86: Dynamic real-time synchronization for all dropdown filter options and action button counters"
     ]
   }
 }

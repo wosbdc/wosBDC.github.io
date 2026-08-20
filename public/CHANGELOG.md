@@ -1,5 +1,27 @@
 # CHANGELOG
 
+## [2.9.89] - 2026-08-20
+- 🛡️ **Automated Tests**: Auto-verifies version sync across all configuration files.
+- 📋 **QA Protocol**: Added comprehensive TESTING.md safety checklist for releases.
+- ⚡ **Core Fixes**: Hardened JavaScript AST syntax in ID name mapping.
+
+## [2.9.88] - 2026-08-20
+- 🐛 **Admin redirect bug fixed**: Actions stay in admin panel.
+- ✅ **Done checkbox**: No longer jumps to public tracker.
+- 🗑️ **Delete & vote**: Both fixed to stay in admin view.
+
+## [2.9.87] - 2026-08-20
+- 🎫 **Admin Ticket Tabs**: Open, In Progress, Done, Archived, All.
+- 🟡 **Open is Default**: Closed tickets hidden from main view.
+- 📋 **Live Tab Counts**: Each tab shows real-time ticket count.
+- 🚫 **Public Hides Closed**: Completed tickets off by default for members.
+
+## [2.9.83] - 2026-08-19
+- 🧠 **Smart Name Sync**: Picks up in-game renames, ignores bad API values.
+- 📡 **Discord Token Report**: Scan results post as rich embeds to Discord.
+- ❓ **Unclaimed Accounts**: Gatekeeper now lists who hasn't registered.
+- 🔢 **Discord 4096 Guard**: Embed auto-truncates if over Discord's limit.
+
 ## [2.9.82] - 2026-08-19
 - 🛡️ **Name Protection**: Token renewal never overwrites your display name.
 - 📋 **Healthy Token List**: Email report now lists all active sync tokens.

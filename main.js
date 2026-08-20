@@ -871,6 +871,8 @@ export const refreshIdToNameMap = async () => {
             window.updateNavbarUserIndicator(currentUser);
         }
     } catch(e) { console.error("Error refreshing ID map:", e); }
+};
+
 // Real-Time Firebase Listeners for Master Store & Filter Reactivity
 onValue(ref(db, 'users'), () => {
     refreshIdToNameMap().then(() => {

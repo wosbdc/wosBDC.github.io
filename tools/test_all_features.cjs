@@ -81,6 +81,32 @@ function testAllFeatures() {
     const windowExportMatches = c.match(/window\.([a-zA-Z0-9_]+)\s*=/g) || [];
     console.log(`✓ Audited ${windowExportMatches.length} window exported functions.`);
 
+    // 5. Automated Version Synchronization Audit (package.json, version.json, public/version.json)
+    try {
+        const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
+        const vJson = JSON.parse(fs.readFileSync(path.join(__dirname, '../version.json'), 'utf8'));
+        const pubVJson = JSON.parse(fs.readFileSync(path.join(__dirname, '../public/version.json'), 'utf8'));
+
+        if (pkg.version !== vJson.version) {
+            errors.push(`Version mismatch: package.json has '${pkg.version}' but version.json has '${vJson.version}'!`);
+        }
+        if (vJson.version !== pubVJson.version) {
+            errors.push(`Version mismatch: version.json has '${vJson.version}' but public/version.json has '${pubVJson.version}'!`);
+        }
+        if (vJson.wosbdc_alliance_dashboard && vJson.wosbdc_alliance_dashboard.version !== vJson.version) {
+            errors.push(`Version mismatch: version.json dashboard version '${vJson.wosbdc_alliance_dashboard.version}' does not match root version '${vJson.version}'!`);
+        }
+
+        // 6. Changelog presence check
+        const changelog = fs.readFileSync(path.join(__dirname, '../CHANGELOG.md'), 'utf8');
+        if (!changelog.includes(`[${pkg.version}]`)) {
+            errors.push(`CHANGELOG.md is missing an entry for the current version [${pkg.version}]!`);
+        }
+        console.log(`✓ Version synchronization audit passed across package.json, version.json, and public/version.json (v${pkg.version}).`);
+    } catch (e) {
+        errors.push(`Version audit error: ${e.message}`);
+    }
+
     if (errors.length > 0) {
         console.error("❌ ELITE TEST SUITE FAILED:");
         errors.forEach(e => console.error("  - " + e));

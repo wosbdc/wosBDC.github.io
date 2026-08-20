@@ -4,12 +4,17 @@ const path = require('path');
 const mainJsPath = path.join(__dirname, '../main.js');
 const code = fs.readFileSync(mainJsPath, 'utf-8');
 
-// Auto-sync CHANGELOG.md to public/ folder so it's instantly available without CDN delay
+// Auto-sync CHANGELOG.md and version.json to public/ folder so it's instantly available without CDN delay
 try {
   const rootChangelog = path.join(__dirname, '../CHANGELOG.md');
   const publicChangelog = path.join(__dirname, '../public/CHANGELOG.md');
   if (fs.existsSync(rootChangelog)) {
     fs.copyFileSync(rootChangelog, publicChangelog);
+  }
+  const rootVersion = path.join(__dirname, '../version.json');
+  const publicVersion = path.join(__dirname, '../public/version.json');
+  if (fs.existsSync(rootVersion)) {
+    fs.copyFileSync(rootVersion, publicVersion);
   }
 } catch(e) {}
 

@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.89] - 2026-08-20
+- 🛡️ **Automated Tests**: Auto-verifies version sync across all configuration files.
+- 📋 **QA Protocol**: Added comprehensive TESTING.md safety checklist for releases.
+- ⚡ **Core Fixes**: Hardened JavaScript AST syntax in ID name mapping.
+
 ## [2.9.88] - 2026-08-20
 - 🐛 **Admin redirect bug fixed**: Actions stay in admin panel.
 - ✅ **Done checkbox**: No longer jumps to public tracker.
