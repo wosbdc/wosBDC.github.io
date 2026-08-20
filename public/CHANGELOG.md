@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.79] - 2026-08-19
+- 🛡️ **Instant Token Renewal**: Token renewal refreshes profile status and badges immediately.
+- 🔄 **Live Expiry Clear**: Clears stale tokenExpired flag upon binding new token.
+- ⚡ **Real-Time Account Hub**: Live status re-renders seamlessly without page reload.
+
 ## [2.9.78] - 2026-08-19
 - 🔑 **Instant Code Entry**: Input active in-game mailbox codes directly.
 - 🛡️ **Zero Quota Bypass**: Completely removed Google Apps Script urlfetch fallbacks.

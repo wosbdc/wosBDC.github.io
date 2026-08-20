@@ -1,11 +1,11 @@
 {
-  "version": "2.9.78",
+  "version": "2.9.79",
   "releaseDate": "2026-08-19",
-  "title": "What's New in v2.9.78",
+  "title": "What's New in v2.9.79",
   "notes": [
-    "🔑 Direct In-Game Code Entry: Enter mailbox verification codes instantly.",
-    "🛡️ Permanent Zero-Quota Bypass: Direct serverless routing for tokens.",
-    "⚡ Enhanced Alt Linking: Instant verification code entry for alts."
+    "🛡️ Instant Token Renewal Sync: Immediate UI status and badge updates.",
+    "🔄 Live Session Refresh: Automatically resets expired flags upon binding.",
+    "⚡ Seamless Real-Time Account Hub: Zero page reload needed."
   ],
   "wosbdc_alliance_dashboard": {
     "version": "2.9.67",

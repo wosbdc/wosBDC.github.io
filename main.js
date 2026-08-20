@@ -12320,7 +12320,7 @@ window.getMemberTokenStatus = (user) => {
             const nowMs = Date.now();
             const msLeft = expMs - nowMs;
             const daysLeft = Math.max(0, Math.floor(msLeft / (1000 * 60 * 60 * 24)));
-            if (daysLeft <= 0 || user.tokenExpired === true) {
+            if (daysLeft <= 0) {
               return {
                 status: 'expired',
                 label: '30-Day Sync Token Expired',
@@ -15516,12 +15516,21 @@ window.openAccountHubVerifyModal = () => {
         let data = await window.apiVerifyGameCaptcha(activeTargetGid, code, currentUser.uid);
 
         if (data && (data.success || data.token) && (data.token || data.data?.token)) {
+          const tokenStr = data.token || data.data?.token;
+          const nowIso = new Date().toISOString();
           const updates = {
             gameId: activeTargetGid,
-            wos_cg_token: data.token,
+            wos_cg_token: tokenStr,
+            tokenExpired: false,
+            tokenStatus: {
+              status: 'active',
+              daysLeft: 30,
+              verifiedAt: nowIso
+            },
             section: data.section || currentUser.section || "2089",
             stove_lv: data.stove_lv || currentUser.stove_lv || "",
-            verifiedAt: new Date().toISOString(),
+            verifiedAt: nowIso,
+            lastSyncedAt: nowIso,
             centuryGamesVerified: true
           };
           if (data.avatar_image) {
@@ -15537,14 +15546,21 @@ window.openAccountHubVerifyModal = () => {
 
           await update(ref(db, `users/${currentUser.uid}`), updates);
           currentUser.gameId = activeTargetGid;
-          currentUser.wos_cg_token = data.token;
+          currentUser.wos_cg_token = tokenStr;
+          currentUser.tokenExpired = false;
+          currentUser.tokenStatus = updates.tokenStatus;
           currentUser.section = updates.section;
           currentUser.stove_lv = updates.stove_lv;
+          currentUser.verifiedAt = nowIso;
+          currentUser.lastSyncedAt = nowIso;
           currentUser.centuryGamesVerified = true;
           if (updates.name) currentUser.name = updates.name;
+          if (updates.avatar_image) currentUser.avatar_image = updates.avatar_image;
+          try { localStorage.setItem('cached_current_user', JSON.stringify(currentUser)); } catch(e) {}
 
           modalOverlay.remove();
           window.showToast("🎉 Character verified & 30-day sync token bound!", "success");
+          if (window.renderNavbarUserIndicator) window.renderNavbarUserIndicator();
           if (views.account) views.account();
         } else {
           throw new Error(window.translateWosApiError(data.message || 'Invalid or expired code.', data.code));
