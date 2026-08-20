@@ -1,20 +1,19 @@
 {
-  "version": "2.9.87",
+  "version": "2.9.88",
   "releaseDate": "2026-08-20",
-  "title": "What's New in v2.9.87",
+  "title": "What's New in v2.9.88",
   "notes": [
-    "🎫 Admin Ticket Tabs: Open, In Progress, Done, Archived, All.",
-    "🟡 Open is Default: Closed tickets hidden from main view.",
-    "📋 Live Tab Counts: Each tab shows real-time ticket count.",
-    "🚫 Public Hides Closed: Completed tickets off by default for members."
+    "🐛 Fixed: Ticket actions no longer navigate away from admin panel.",
+    "✅ Done checkbox stays in admin — no more redirects to public view.",
+    "🗑️ Delete & 🗳️ Vote also fixed to stay in admin panel."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "2.9.87",
+    "version": "2.9.88",
     "latestChanges": [
+      "v2.9.88: Fixed admin ticket actions navigating away from admin panel",
       "v2.9.87: Admin ticket status tab bar - Open, In Progress, Done, Archived, All with live counts",
       "v2.9.86: Dynamic real-time synchronization for all dropdown filter options and action button counters",
-      "v2.9.85: Dynamic real-time filter and population tab counter synchronization in Member Database",
-      "v2.9.84: Unified real-time alliance master store and instant database sync for all badges"
+      "v2.9.85: Dynamic real-time filter and population tab counter synchronization in Member Database"
     ]
   }
 }

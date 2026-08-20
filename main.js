@@ -10759,7 +10759,8 @@ window.toggleFeedbackVote = async (itemId) => {
             window.showToast(hasVoted ? "Upvote removed" : "👍 Upvoted suggestion!", "success");
         }
         
-        if (typeof window.activeFeedbackRender === 'function') {
+        const inAdminPanel = !!document.getElementById('adminFeedbackTabContainer');
+        if (!inAdminPanel && typeof window.activeFeedbackRender === 'function') {
             window.activeFeedbackRender();
         }
         if (typeof window.renderAdminFeedbackTab === 'function') {
@@ -10793,7 +10794,9 @@ window.updateFeedbackStatus = async (itemId, newStatus, adminNote = null) => {
         }
         await update(ref(db, `community_feedback/${itemId}`), updates);
         if (window.showToast) window.showToast(`Updated status to ${newStatus.toUpperCase()}!`, "success");
-        if (typeof window.activeFeedbackRender === 'function') window.activeFeedbackRender();
+        // Only re-render public view if admin panel is NOT currently open
+        const inAdminPanel = !!document.getElementById('adminFeedbackTabContainer');
+        if (!inAdminPanel && typeof window.activeFeedbackRender === 'function') window.activeFeedbackRender();
         if (typeof window.renderAdminFeedbackTab === 'function') window.renderAdminFeedbackTab();
     } catch (e) {
         console.error("updateFeedbackStatus error:", e);
@@ -10818,7 +10821,8 @@ window.deleteFeedbackItem = async (itemId) => {
     try {
         await remove(ref(db, `community_feedback/${itemId}`));
         if (window.showToast) window.showToast("Ticket deleted from database.", "info");
-        if (typeof window.activeFeedbackRender === 'function') window.activeFeedbackRender();
+        const inAdminPanel = !!document.getElementById('adminFeedbackTabContainer');
+        if (!inAdminPanel && typeof window.activeFeedbackRender === 'function') window.activeFeedbackRender();
         if (typeof window.renderAdminFeedbackTab === 'function') window.renderAdminFeedbackTab();
     } catch (e) {
         console.error("deleteFeedbackItem error:", e);

@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.88] - 2026-08-20
+- 🐛 **Admin redirect bug fixed**: Actions stay in admin panel.
+- ✅ **Done checkbox**: No longer jumps to public tracker.
+- 🗑️ **Delete & vote**: Both fixed to stay in admin view.
+
 ## [2.9.87] - 2026-08-20
 - 🎫 **Admin Ticket Tabs**: Open, In Progress, Done, Archived, All.
 - 🟡 **Open is Default**: Closed tickets hidden from main view.
