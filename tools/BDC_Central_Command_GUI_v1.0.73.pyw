@@ -2175,94 +2175,143 @@ class AllianceTokenScannerEngine:
         self.last_scan_time = time.time()
 
     def _post_token_health_to_discord(self, total, healthy, expired, upgrades):
-        """Posts Token Health Report to Discord as rich multi-embed message."""
+        """Posts full Token Health Report to Discord — splits large lists across multiple messages."""
         target_webhook = GATEKEEPER_WEBHOOK_URL or DISCORD_WEBHOOK_URL
         if not target_webhook:
-            self.log("⚠️ No Discord webhook URL set — skipping token health Discord post.")
+            self.log("No Discord webhook URL set — skipping token health Discord post.")
             return
 
-        scan_time = datetime.now().strftime('%B %d, %Y at %I:%M %p')
-        color_ok = 0x3fb950    # green
-        color_warn = 0xf85149  # red
-        color_gold = 0xf59e0b  # gold
+        scan_time  = datetime.now().strftime('%B %d, %Y at %I:%M %p')
+        color_ok   = 0x3fb950   # green
+        color_warn = 0xf85149   # red
+        color_gold = 0xf59e0b   # gold
+        EMBED_DESC_LIMIT = 3900  # Safe margin under Discord's 4096 limit
 
-        embeds = []
+        def make_line_healthy(h):
+            tag  = "Alt" if h.get("is_alt") else "Main"
+            lv   = f" Lv {h['stove_lv']}" if h.get("stove_lv") else ""
+            days = h.get("days_left", 30)
+            return f"[{tag}] {h['name']} | ID: {h['fid']}{lv} | {days}d left"
 
-        # --- Embed 1: Summary Stats ---
-        summary_embed = {
-            "title": "🛡️ Alliance Token Health Report",
+        def make_line_expired(e):
+            tag    = "Alt" if e.get("is_alt") else "Main"
+            reason = e.get("reason", "Expired")
+            if "30-Day limit" in reason or "Session Expired" in reason or "15030" in reason:
+                reason = "30-day session expired"
+            elif "No token" in reason:
+                reason = "No token registered"
+            return f"[{tag}] {e['name']} | ID: {e['fid']} | {reason}"
+
+        def chunk_lines(lines, limit):
+            """Split a list of lines into groups that each fit within the char limit."""
+            chunks, current, cur_len = [], [], 0
+            for line in lines:
+                # +1 for newline
+                if cur_len + len(line) + 1 > limit and current:
+                    chunks.append(current)
+                    current, cur_len = [], 0
+                current.append(line)
+                cur_len += len(line) + 1
+            if current:
+                chunks.append(current)
+            return chunks
+
+        def post_message(embeds_batch):
+            payload = {
+                "username": "Alliance Token Scanner",
+                "embeds": embeds_batch
+            }
+            try:
+                r = session.post(target_webhook, json=payload, timeout=10)
+                if r.status_code in (200, 204):
+                    return True
+                else:
+                    self.log(f"Discord post returned {r.status_code}: {r.text[:200]}")
+                    return False
+            except Exception as e:
+                self.log(f"Discord post failed: {e}")
+                return False
+
+        # ── Message 1: Summary + Healthy list (all pages) ─────────────────────
+        msg1_embeds = []
+
+        # Summary embed
+        msg1_embeds.append({
+            "title": "Alliance Token Health Report",
             "description": (
-                f"**BDC Central Command** • Automated Token Scanner\n"
-                f"*{scan_time}*\n\n"
-                f"📊 **{total}** Total Scanned  •  "
-                f"🟢 **{len(healthy)}** Healthy  •  "
-                f"🔴 **{len(expired)}** Expired  •  "
-                f"🔥 **{len(upgrades)}** Upgrades"
+                f"BDC Central Command | Automated Token Scanner\n"
+                f"{scan_time}\n\n"
+                f"Total Scanned: {total}  |  "
+                f"Healthy: {len(healthy)}  |  "
+                f"Expired: {len(expired)}  |  "
+                f"Upgrades: {len(upgrades)}"
             ),
             "color": color_ok if len(expired) == 0 else color_warn
-        }
-        embeds.append(summary_embed)
+        })
 
-        # --- Embed 2: Healthy Tokens ---
+        # Healthy list — chunked across multiple embeds
         if healthy:
-            healthy_lines = []
-            for h in healthy[:20]:  # Discord field value limit
-                tag = "🏮" if h.get("is_alt") else "👑"
-                lv = f" Lv {h['stove_lv']}" if h.get("stove_lv") else ""
-                days = h.get("days_left", 30)
-                healthy_lines.append(f"{tag} **{h['name']}** ({h['fid']}){lv} — 🛡️ {days}d left")
-            suffix = f"\n*...and {len(healthy) - 20} more*" if len(healthy) > 20 else ""
-            embeds.append({
-                "title": f"🟢 Healthy & Active Sync Tokens ({len(healthy)})",
-                "description": "\n".join(healthy_lines) + suffix,
-                "color": color_ok
-            })
+            all_healthy_lines = [make_line_healthy(h) for h in healthy]
+            chunks = chunk_lines(all_healthy_lines, EMBED_DESC_LIMIT)
+            for i, chunk in enumerate(chunks):
+                page = f" (Part {i+1}/{len(chunks)})" if len(chunks) > 1 else ""
+                msg1_embeds.append({
+                    "title": f"Healthy & Active Sync Tokens ({len(healthy)}){page}",
+                    "description": "\n".join(chunk),
+                    "color": color_ok
+                })
 
-        # --- Embed 3: Expired Tokens ---
+        # Send message 1 in batches of 10 embeds (Discord max per message)
+        for i in range(0, len(msg1_embeds), 10):
+            post_message(msg1_embeds[i:i+10])
+            time.sleep(0.5)  # small rate-limit buffer between messages
+
+        # ── Message 2: Expired list (all pages) ───────────────────────────────
         if expired:
-            expired_lines = []
-            for e in expired[:20]:
-                tag = "🏮" if e.get("is_alt") else "👑"
-                reason = e.get("reason", "Expired")
-                # Shorten common reason for compactness
-                if "30-Day limit" in reason or "Session Expired" in reason:
-                    reason = "30-Day session expired"
-                elif "No token" in reason:
-                    reason = "No token registered"
-                expired_lines.append(f"{tag} **{e['name']}** ({e['fid']}) — ⚠️ {reason}")
-            suffix = f"\n*...and {len(expired) - 20} more*" if len(expired) > 20 else ""
-            embeds.append({
-                "title": f"🔴 Expired / Needs Re-Sync ({len(expired)})",
-                "description": "\n".join(expired_lines) + suffix,
-                "color": color_warn,
-                "footer": {"text": "These Chiefs need to re-verify in Account Hub → In-Game Sync"}
-            })
+            exp_embeds = []
+            all_expired_lines = [make_line_expired(e) for e in expired]
+            chunks = chunk_lines(all_expired_lines, EMBED_DESC_LIMIT)
+            for i, chunk in enumerate(chunks):
+                page   = f" (Part {i+1}/{len(chunks)})" if len(chunks) > 1 else ""
+                footer = {"text": "Chiefs need to re-verify in Account Hub > In-Game Sync"} if i == len(chunks)-1 else {}
+                embed  = {
+                    "title": f"Expired / Needs Re-Sync ({len(expired)}){page}",
+                    "description": "\n".join(chunk),
+                    "color": color_warn
+                }
+                if footer:
+                    embed["footer"] = footer
+                exp_embeds.append(embed)
 
-        # --- Embed 4: Upgrades (if any) ---
+            for i in range(0, len(exp_embeds), 10):
+                post_message(exp_embeds[i:i+10])
+                time.sleep(0.5)
+
+        # ── Message 3: Upgrades ────────────────────────────────────────────────
         if upgrades:
             upgrade_lines = [
-                f"🔥 **{u['name']}** ({u['fid']}) — {u['oldLevel']} ➜ **{u['newLevel']}**"
-                for u in upgrades[:15]
+                f"{u['name']} | ID: {u['fid']} | {u['oldLevel']} -> {u['newLevel']}"
+                for u in upgrades
             ]
-            embeds.append({
-                "title": f"🔥 Furnace Upgrades Detected ({len(upgrades)})",
-                "description": "\n".join(upgrade_lines),
-                "color": color_gold
-            })
+            chunks = chunk_lines(upgrade_lines, EMBED_DESC_LIMIT)
+            upg_embeds = []
+            for i, chunk in enumerate(chunks):
+                page = f" (Part {i+1}/{len(chunks)})" if len(chunks) > 1 else ""
+                upg_embeds.append({
+                    "title": f"Furnace Upgrades Detected ({len(upgrades)}){page}",
+                    "description": "\n".join(chunk),
+                    "color": color_gold
+                })
+            for i in range(0, len(upg_embeds), 10):
+                post_message(upg_embeds[i:i+10])
+                time.sleep(0.5)
 
-        # Post — Discord allows max 10 embeds per message
-        payload = {
-            "username": "Alliance Token Scanner 🛡️",
-            "embeds": embeds[:10]
-        }
-        try:
-            r = session.post(target_webhook, json=payload, timeout=10)
-            if r.status_code in (200, 204):
-                self.log(f"📡 Token Health Report posted to Discord ({len(embeds)} embeds).")
-            else:
-                self.log(f"⚠️ Discord token health post returned: {r.status_code} — {r.text[:200]}")
-        except Exception as e:
-            self.log(f"⚠️ Discord token health post failed: {e}")
+        total_embeds = (
+            len(msg1_embeds) +
+            (len(chunks) if expired else 0) +
+            (len(upg_embeds) if upgrades else 0)
+        )
+        self.log(f"Token Health Report posted to Discord (full list, no cap).")
 
     def _send_token_email_report(self, total, healthy, expired, upgrades, name_changes):
         try:
