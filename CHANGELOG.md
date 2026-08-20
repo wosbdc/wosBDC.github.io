@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.76] - 2026-08-19
+- ⚡ **Seamless In-Game Verification**: Zero timeout verification across all devices.
+- 🛡️ **Dual Backend Redundancy**: Central Command and Google Sheets sync automatically.
+- 🎁 **Live Gift Code Testing**: Real-time gift code validation directly in admin.
+
 ## [2.9.75] - 2026-08-19
 - Fixed alt token calculation to reflect true expired status.
 - Synchronized Firebase token health with website account manager.

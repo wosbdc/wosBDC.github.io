@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [2.9.76] - 2026-08-19
+- ⚡ **Seamless In-Game Verification**: Zero timeout verification across all devices.
+- 🛡️ **Dual Backend Redundancy**: Central Command and Google Sheets sync automatically.
+- 🎁 **Live Gift Code Testing**: Real-time gift code validation directly in admin.
+
+## [2.9.75] - 2026-08-19
+- Fixed alt token calculation to reflect true expired status.
+- Synchronized Firebase token health with website account manager.
+
 ## [2.9.74] - 2026-08-19
 - 👥 **41 Chief Roster**: Synced all 41 alliance chiefs across database views.
 - 🎭 **Linked Alts Visibility**: View all linked alts with owner badges in database.

@@ -1,11 +1,11 @@
 {
-  "version": "2.9.73",
+  "version": "2.9.76",
   "releaseDate": "2026-08-19",
-  "title": "What's New in v2.9.73",
+  "title": "What's New in v2.9.76",
   "notes": [
-    "🛡️ Real-Time Token Health & Expiry Badges: Sync badges update dynamically based on live token scan telemetry, JWT crypto expiry dates, and real-time Firebase listeners.",
-    "🔔 Automated Notification Bell Token Alerts: Notification bell alerts trigger automatically when 30-day tokens are expiring soon (<= 3 days) or expired with 1-click in-game renewal actions.",
-    "⚡ Instant Multi-Maintenance Sync: BDC Central Command v1.0.73 continuously syncs member tokens, furnace upgrades, and avatars directly to Firebase and Google Sheets."
+    "⚡ Seamless In-Game Verification: Ultra-fast verification with zero network timeouts.",
+    "🛡️ Live Backend Redundancy: Central Command and Google Apps Script sync.",
+    "🎁 Instant Gift Code Validator: Live testing with automatic status sync."
   ],
   "wosbdc_alliance_dashboard": {
     "version": "2.9.67",

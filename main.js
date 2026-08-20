@@ -218,6 +218,84 @@ window.callBdcBackend = async (action, payload = {}, options = {}) => {
   return null;
 };
 
+window.apiSendGameCaptcha = async (gameId) => {
+  const cleanId = String(gameId || '').trim();
+  if (!cleanId) return { success: false, error: 'Missing game ID' };
+  try {
+    const bdcRes = await window.callBdcBackend('send_code', { gameId: cleanId, roleId: cleanId });
+    if (bdcRes && (bdcRes.success || bdcRes.code === 0 || bdcRes.code === 1)) return bdcRes;
+  } catch (e) {}
+  try {
+    const res = await fetch(`${API_BASE_URL}?api=sendGameCaptcha&id=${encodeURIComponent(cleanId)}`);
+    return await res.json();
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+};
+
+window.apiVerifyGameCaptcha = async (gameId, code, uid = '') => {
+  const cleanId = String(gameId || '').trim();
+  const cleanCode = String(code || '').trim();
+  if (!cleanId || !cleanCode) return { success: false, error: 'Missing game ID or code' };
+  try {
+    const bdcRes = await window.callBdcBackend('verify_code', { gameId: cleanId, roleId: cleanId, code: cleanCode, uid: uid || (currentUser && currentUser.uid) || '' });
+    if (bdcRes && (bdcRes.success || bdcRes.token || bdcRes.data?.token)) return bdcRes;
+  } catch (e) {}
+  try {
+    const res = await fetch(`${API_BASE_URL}?api=verifyGameCaptcha&id=${encodeURIComponent(cleanId)}&code=${encodeURIComponent(cleanCode)}`);
+    return await res.json();
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+};
+
+window.apiLookupPlayer = async (gameId) => {
+  const cleanId = String(gameId || '').trim();
+  if (!cleanId) return { success: false, error: 'Missing game ID' };
+  try {
+    const bdcRes = await window.callBdcBackend('lookup_player', { gameId: cleanId, roleId: cleanId });
+    if (bdcRes && (bdcRes.success || bdcRes.nickname)) return bdcRes;
+  } catch (e) {}
+  try {
+    const res = await fetch(`${API_BASE_URL}?api=lookupPlayer&id=${encodeURIComponent(cleanId)}`);
+    return await res.json();
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+};
+
+window.apiSyncProfileWithToken = async (gameId, token, uid = '') => {
+  const cleanId = String(gameId || '').trim();
+  if (!cleanId) return { success: false, error: 'Missing game ID' };
+  try {
+    const bdcRes = await window.callBdcBackend('get_role', { gameId: cleanId, roleId: cleanId, token: token || '', uid: uid || (currentUser && currentUser.uid) || '' });
+    if (bdcRes && (bdcRes.success || bdcRes.nickname)) return bdcRes;
+  } catch (e) {}
+  try {
+    const res = await fetch(`${API_BASE_URL}?api=syncProfileWithToken&id=${encodeURIComponent(cleanId)}&cgToken=${encodeURIComponent(token || '')}`);
+    return await res.json();
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+};
+
+window.apiRedeemGiftCode = async (gameId, code, kid = '2089') => {
+  const cleanId = String(gameId || '').trim();
+  const cleanCode = String(code || '').trim().toUpperCase();
+  if (!cleanId || !cleanCode) return { success: false, error: 'Missing game ID or code' };
+  try {
+    const bdcRes = await window.callBdcBackend('redeem_gift_code', { gameId: cleanId, code: cleanCode, kid });
+    if (bdcRes && (bdcRes.success !== undefined || bdcRes.status)) return bdcRes;
+  } catch (e) {}
+  try {
+    const token = (currentUser && currentUser.token) || '';
+    const res = await fetch(`${API_BASE_URL}?api=redeemGiftCode&gameId=${encodeURIComponent(cleanId)}&code=${encodeURIComponent(cleanCode)}&kid=${encodeURIComponent(kid)}&token=${encodeURIComponent(token)}`);
+    return await res.json();
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+};
+
 // Get a fresh Firebase ID token for the current user (replaces hardcoded APP_SECRET)
 const getAuthToken = async () => {
   try {
@@ -3490,17 +3568,17 @@ window.openAdminRepairUserModal = async (uid) => {
                 }
 
                 try {
-                    const res = await fetch(`${API_BASE_URL}?api=lookupPlayer&id=${encodeURIComponent(targetGid)}`);
-                    const data = await res.json();
+                    const data = await window.apiLookupPlayer(targetGid);
 
-                    if (data && data.success && data.player) {
+                    if (data && (data.success || data.nickname || data.player)) {
+                        const p = data.player || data;
                         fetchedData = {
                             gameId: targetGid,
-                            name: data.player.nickname || data.player.name || `Chief ${targetGid}`,
-                            stove_lv: data.player.stove_lv_content || data.player.stove_lv || '30',
-                            furnaceLevel: data.player.stove_lv_content || data.player.stove_lv || '30',
-                            section: data.player.sid || data.player.section || '',
-                            avatar_image: data.player.avatar_image || ''
+                            name: p.nickname || p.name || `Chief ${targetGid}`,
+                            stove_lv: p.stove_lv_content || p.stove_lv || p.furnaceLevel || '30',
+                            furnaceLevel: p.stove_lv_content || p.stove_lv || p.furnaceLevel || '30',
+                            section: p.sid || p.section || p.kid || '',
+                            avatar_image: p.avatar_image || ''
                         };
 
                         document.getElementById('adminRepairPreviewName').textContent = fetchedData.name;
@@ -4658,10 +4736,9 @@ window.verifyAddPlayerGameId = async () => {
 
   // 2. Query official Century Games server via backend API
   try {
-    const response = await fetch(`${API_BASE_URL}?api=sendGameCaptcha&id=${encodeURIComponent(val)}`);
-    const data = await response.json();
+    const data = await window.apiSendGameCaptcha(val);
 
-    if (data.success || data.code === 1) {
+    if (data.success || data.code === 1 || data.code === 0) {
        if (!nameInput.value.trim()) {
          nameInput.value = `Chief ${val}`;
        }
@@ -7366,7 +7443,7 @@ if (authVerifyGameIdBtn && authChiefConfirm) {
                 resendBtn.disabled = true;
                 resendBtn.textContent = 'Sending...';
                 try {
-                    await fetch(`${API_BASE_URL}?api=sendGameCaptcha&id=${encodeURIComponent(val)}`);
+                    await window.apiSendGameCaptcha(val);
                     if (feedback) {
                         feedback.style.display = 'block';
                         feedback.style.color = '#38bdf8';
@@ -7395,10 +7472,9 @@ if (authVerifyGameIdBtn && authChiefConfirm) {
                 if (feedback) feedback.style.display = 'none';
 
                 try {
-                    const res = await fetch(`${API_BASE_URL}?api=verifyGameCaptcha&id=${encodeURIComponent(val)}&code=${encodeURIComponent(code)}`);
-                    const data = await res.json();
+                    const data = await window.apiVerifyGameCaptcha(val, code);
 
-                    if (data && data.success && data.nickname) {
+                    if (data && (data.success || data.nickname || data.token)) {
                         verifiedChiefName = data.nickname;
                         verifiedFurnaceLevel = data.stove_lv || "";
                         window.verifiedCgToken = data.token || "";
@@ -7464,13 +7540,12 @@ if (authVerifyGameIdBtn && authChiefConfirm) {
     };
 
     try {
-        const sendRes = await fetch(`${API_BASE_URL}?api=sendGameCaptcha&id=${encodeURIComponent(val)}`);
-        const sendData = await sendRes.json();
+        const sendData = await window.apiSendGameCaptcha(val);
         
         authVerifyGameIdBtn.disabled = false;
         authVerifyGameIdBtn.textContent = 'Verify';
         
-        if (sendData && sendData.success) {
+        if (sendData && (sendData.success || sendData.code === 0 || sendData.code === 1)) {
             renderVerificationBox();
         } else {
             console.warn("Send captcha notice:", sendData);
@@ -14719,8 +14794,7 @@ window.applyInGameAvatar = async (gameId) => {
     let avatarUrl = (currentUser && currentUser.gameId === gid && currentUser.avatar_image) ? currentUser.avatar_image : '';
     
     if (!avatarUrl && currentUser && currentUser.wos_cg_token) {
-      const res = await fetch(`${API_BASE_URL}?api=syncProfileWithToken&id=${encodeURIComponent(gid)}&cgToken=${encodeURIComponent(currentUser.wos_cg_token)}`);
-      const data = await res.json();
+      const data = await window.apiSyncProfileWithToken(gid, currentUser.wos_cg_token, currentUser.uid);
       if (data && data.success && data.avatar_image) {
         avatarUrl = data.avatar_image;
         if (currentUser.uid) {
@@ -15019,18 +15093,7 @@ window.openEditProfileModal = async () => {
         syncFromGameBtn.innerHTML = '⏳ Syncing...';
 
         try {
-           // 1. Try BDC Central Command / Firebase Live Queue first
-           let data = await window.callBdcBackend('syncPlayer', {
-              gameId: currentUser.gameId,
-              token: token,
-              uid: currentUser.uid
-           });
-
-           // 2. Fallback to legacy GAS API if Central Command is offline
-           if (!data) {
-              const res = await fetch(`${API_BASE_URL}?api=syncProfileWithToken&id=${encodeURIComponent(currentUser.gameId)}&cgToken=${encodeURIComponent(token)}`).catch(() => null);
-              data = res ? await res.json().catch(() => null) : null;
-           }
+           let data = await window.apiSyncProfileWithToken(currentUser.gameId, token, currentUser.uid);
 
            if (data && data.success) {
               const finalStove = data.stove_lv || "";
@@ -15212,18 +15275,7 @@ window.handleSyncCenturyGamesProfile = async () => {
       return;
     }
 
-    // 1. Try BDC Central Command / Firebase Live Queue first
-    let data = await window.callBdcBackend('syncPlayer', {
-      gameId: currentUser.gameId,
-      token: token,
-      uid: currentUser.uid
-    });
-
-    // 2. Fallback to legacy GAS API if Central Command is offline
-    if (!data) {
-      const res = await fetch(`${API_BASE_URL}?api=syncProfileWithToken&id=${encodeURIComponent(currentUser.gameId)}&cgToken=${encodeURIComponent(token)}`).catch(() => null);
-      data = res ? await res.json().catch(() => null) : null;
-    }
+    let data = await window.apiSyncProfileWithToken(currentUser.gameId, token, currentUser.uid);
 
     if (data && data.success) {
       const finalStove = data.stove_lv || currentUser.stove_lv || "";
@@ -15382,12 +15434,8 @@ window.openAccountHubVerifyModal = () => {
       sendBtn.disabled = true;
       sendBtn.textContent = 'Sending Code...';
       try {
-        let data = await window.callBdcBackend('send_code', { gameId: activeTargetGid });
-        if (!data) {
-          const res = await fetch(`${API_BASE_URL}?api=sendGameCaptcha&id=${encodeURIComponent(activeTargetGid)}`).catch(() => null);
-          data = res ? await res.json().catch(() => null) : null;
-        }
-        if (data && data.success) {
+        let data = await window.apiSendGameCaptcha(activeTargetGid);
+        if (data && (data.success || data.code === 0 || data.code === 1)) {
           sendBtn.textContent = '🔄 Resend Code';
           sendBtn.disabled = false;
           if (codeSection) codeSection.style.display = 'block';
@@ -15432,17 +15480,9 @@ window.openAccountHubVerifyModal = () => {
       if (feedback) feedback.style.display = 'none';
 
       try {
-        let data = await window.callBdcBackend('verify_code', {
-          gameId: activeTargetGid,
-          code: code,
-          uid: currentUser.uid
-        });
-        if (!data) {
-          const res = await fetch(`${API_BASE_URL}?api=verifyGameCaptcha&id=${encodeURIComponent(activeTargetGid)}&code=${encodeURIComponent(code)}`).catch(() => null);
-          data = res ? await res.json().catch(() => null) : null;
-        }
+        let data = await window.apiVerifyGameCaptcha(activeTargetGid, code, currentUser.uid);
 
-        if (data && data.success && data.token) {
+        if (data && (data.success || data.token) && (data.token || data.data?.token)) {
           const updates = {
             gameId: activeTargetGid,
             wos_cg_token: data.token,
@@ -15771,9 +15811,7 @@ window.openGiftCodeDispatcherModal = async (initialCode = '') => {
 
       try {
         const testId = currentUser.gameId || '318843189';
-        const adminToken = await getAuthToken();
-        const res = await fetch(`${API_BASE_URL}?api=redeemGiftCode&gameId=${encodeURIComponent(testId)}&code=${encodeURIComponent(code)}&kid=2089&token=${encodeURIComponent(adminToken)}`);
-        const data = await res.json();
+        const data = await window.apiRedeemGiftCode(testId, code, '2089');
 
         resultBox.style.display = 'block';
         if (data.code === 0 || data.status === 'success') {
@@ -15875,9 +15913,7 @@ window.openGiftCodeDispatcherModal = async (initialCode = '') => {
     }
 
     try {
-      const adminToken = await getAuthToken();
-      const res = await fetch(`${API_BASE_URL}?api=redeemGiftCode&gameId=${encodeURIComponent(cleanGid)}&code=${encodeURIComponent(cleanCode)}&kid=2089&token=${encodeURIComponent(adminToken)}`);
-      const data = await res.json();
+      const data = await window.apiRedeemGiftCode(cleanGid, cleanCode, '2089');
 
       const kpiSuccess = document.getElementById('gcKpiSuccess');
       const kpiAlready = document.getElementById('gcKpiAlready');
@@ -15972,8 +16008,7 @@ window.openGiftCodeDispatcherModal = async (initialCode = '') => {
       if (pTitle) pTitle.textContent = `🔁 Retrying [${i + 1}/${failedList.length}] - ${name}...`;
 
       try {
-        const res = await fetch(`${API_BASE_URL}?api=redeemGiftCode&gameId=${encodeURIComponent(gid)}&code=${encodeURIComponent(code)}&kid=2089&token=${encodeURIComponent(adminToken)}`);
-        const data = await res.json();
+        const data = await window.apiRedeemGiftCode(gid, code, '2089');
 
         const row = document.getElementById(rowId);
 
@@ -16121,8 +16156,7 @@ window.openGiftCodeDispatcherModal = async (initialCode = '') => {
         if (pTitle) pTitle.textContent = `🚀 Processing [${i + 1}/${targets.length}] - ${name}...`;
 
         try {
-          const res = await fetch(`${API_BASE_URL}?api=redeemGiftCode&gameId=${encodeURIComponent(gid)}&code=${encodeURIComponent(code)}&kid=2089&token=${encodeURIComponent(adminToken)}`);
-          const data = await res.json();
+          const data = await window.apiRedeemGiftCode(gid, code, '2089');
 
           let logLine = '';
           if (data.code === 0 || data.status === 'success') {
@@ -16744,9 +16778,7 @@ window.openAddGiftCodeModal = () => {
 
       try {
         const testId = currentUser.gameId || '318843189';
-        const adminToken = await getAuthToken();
-        const res = await fetch(`${API_BASE_URL}?api=redeemGiftCode&gameId=${encodeURIComponent(testId)}&code=${encodeURIComponent(code)}&kid=2089&token=${encodeURIComponent(adminToken)}`);
-        const data = await res.json();
+        const data = await window.apiRedeemGiftCode(testId, code, '2089');
 
         feedback.style.display = 'block';
         if (data.code === 0 || data.status === 'success' || data.status === 'already_claimed') {
@@ -16912,9 +16944,7 @@ window.testSingleGiftCodeLive = async (code, btnEl = null) => {
 
   try {
     const testId = currentUser.gameId || '318843189';
-    const adminToken = await getAuthToken();
-    const res = await fetch(`${API_BASE_URL}?api=redeemGiftCode&gameId=${encodeURIComponent(testId)}&code=${encodeURIComponent(cleanCode)}&kid=2089&token=${encodeURIComponent(adminToken)}`);
-    const data = await res.json();
+    const data = await window.apiRedeemGiftCode(testId, cleanCode, '2089');
 
     const cleanKey = cleanCode.replace(/[^A-Za-z0-9_-]/g, '_');
     let newStatus = 'active';
@@ -16968,7 +16998,6 @@ window.testAllGiftCodesLive = async (btnEl = null) => {
   let expiredCount = 0;
 
   const testId = currentUser.gameId || '318843189';
-  const adminToken = await getAuthToken();
 
   for (let i = 0; i < list.length; i++) {
     const item = list[i];
@@ -16976,8 +17005,7 @@ window.testAllGiftCodesLive = async (btnEl = null) => {
     const cleanKey = code.replace(/[^A-Za-z0-9_-]/g, '_');
 
     try {
-      const res = await fetch(`${API_BASE_URL}?api=redeemGiftCode&gameId=${encodeURIComponent(testId)}&code=${encodeURIComponent(code)}&kid=2089&token=${encodeURIComponent(adminToken)}`);
-      const data = await res.json();
+      const data = await window.apiRedeemGiftCode(testId, code, '2089');
       const msgUpper = (data.msg || '').toUpperCase();
 
       if (data.code === 0 || data.status === 'success' || data.status === 'already_claimed' || msgUpper.includes('SUCCESS') || msgUpper.includes('RECEIVED') || msgUpper.includes('USED') || msgUpper.includes('CLAIMED')) {
@@ -17047,8 +17075,7 @@ window.handleSyncAltProfile = async (gid, btnEl = null) => {
   }
 
   try {
-    const res = await fetch(`${API_BASE_URL}?api=syncProfileWithToken&id=${encodeURIComponent(cleanGid)}&cgToken=${encodeURIComponent(token)}`);
-    const data = await res.json();
+    const data = await window.apiSyncProfileWithToken(cleanGid, token, currentUser.uid);
 
     if (data && data.success) {
       const existingAltFurnace = (typeof tokenData === 'object' && tokenData ? (tokenData.stove_lv || tokenData.furnaceLevel) : '') || '';
@@ -17156,8 +17183,7 @@ window.handleSyncAllCharacters = async (btnEl = null) => {
   if (currentUser.wos_cg_token) {
     attemptedCount++;
     try {
-      const res = await fetch(`${API_BASE_URL}?api=syncProfileWithToken&id=${encodeURIComponent(currentUser.gameId)}&cgToken=${encodeURIComponent(currentUser.wos_cg_token)}`);
-      const data = await res.json();
+      const data = await window.apiSyncProfileWithToken(currentUser.gameId, currentUser.wos_cg_token, currentUser.uid);
       if (data && data.success) {
         const finalStove = data.stove_lv || currentUser.stove_lv || "";
         const updates = {
@@ -17225,8 +17251,7 @@ window.handleSyncAllCharacters = async (btnEl = null) => {
     if (token) {
       attemptedCount++;
       try {
-        const res = await fetch(`${API_BASE_URL}?api=syncProfileWithToken&id=${encodeURIComponent(gid)}&cgToken=${encodeURIComponent(token)}`);
-        const data = await res.json();
+        const data = await window.apiSyncProfileWithToken(gid, token, currentUser.uid);
         if (data && data.success) {
           const existingAltFurnace = (typeof tokenData === 'object' && tokenData ? (tokenData.stove_lv || tokenData.furnaceLevel) : '') || '';
           const finalStove = data.stove_lv || existingAltFurnace || "";
@@ -18036,9 +18061,8 @@ window.openAltVerifyModal = (gid, altName = '') => {
       sendBtn.disabled = true;
       sendBtn.textContent = 'Sending Code...';
       try {
-        const res = await fetch(`${API_BASE_URL}?api=sendGameCaptcha&id=${encodeURIComponent(cleanGid)}`);
-        const data = await res.json();
-        if (data && data.success) {
+        const data = await window.apiSendGameCaptcha(cleanGid);
+        if (data && (data.success || data.code === 0 || data.code === 1)) {
           sendBtn.textContent = '🔄 Resend Code';
           sendBtn.disabled = false;
           if (codeSection) codeSection.style.display = 'block';
@@ -18050,7 +18074,7 @@ window.openAltVerifyModal = (gid, altName = '') => {
           window.showToast(`📩 Verification code sent to ${cleanName}'s mail!`, 'info');
           if (codeInput) setTimeout(() => codeInput.focus(), 60);
         } else {
-          throw new Error(window.translateWosApiError(data.message || 'Failed to dispatch in-game code.', data.code));
+          throw new Error(window.translateWosApiError(data?.message || 'Failed to dispatch in-game code.', data?.code));
         }
       } catch (err) {
         sendBtn.disabled = false;
@@ -18083,10 +18107,9 @@ window.openAltVerifyModal = (gid, altName = '') => {
       if (feedback) feedback.style.display = 'none';
 
       try {
-        const res = await fetch(`${API_BASE_URL}?api=verifyGameCaptcha&id=${encodeURIComponent(cleanGid)}&code=${encodeURIComponent(code)}`);
-        const data = await res.json();
+        const data = await window.apiVerifyGameCaptcha(cleanGid, code, currentUser.uid);
 
-        if (data && data.success && data.token) {
+        if (data && (data.success || data.token) && (data.token || data.data?.token)) {
           const nowIso = new Date().toISOString();
           const altTokenObj = {
             token: data.token,
@@ -19116,7 +19139,7 @@ const views = {
                 resendBtn.disabled = true;
                 resendBtn.textContent = 'Sending...';
                 try {
-                  await fetch(`${API_BASE_URL}?api=sendGameCaptcha&id=${encodeURIComponent(val)}`);
+                  await window.apiSendGameCaptcha(val);
                   if (feedback) {
                     feedback.style.display = 'block';
                     feedback.style.color = '#38bdf8';
@@ -19143,39 +19166,38 @@ const views = {
                 if (feedback) feedback.style.display = 'none';
 
                 try {
-                  const res = await fetch(`${API_BASE_URL}?api=verifyGameCaptcha&id=${encodeURIComponent(val)}&code=${encodeURIComponent(code)}`);
-                  const data = await res.json();
+                  const data = await window.apiVerifyGameCaptcha(val, code);
 
-                  if (data && data.success && data.nickname) {
-                    verifiedChiefName = data.nickname;
-                    verifiedFurnaceLevel = data.stove_lv || "";
-                    verifiedCgToken = data.token || "";
-                    verifiedStateKid = data.section || "";
-                    verifiedAvatarUrl = data.avatar_image || "";
+                  if (data && (data.success || data.nickname) && (data.nickname || data.data?.nickname)) {
+                    verifiedChiefName = data.nickname || data.data?.nickname;
+                    verifiedFurnaceLevel = data.stove_lv || data.data?.stove_lv || "";
+                    verifiedCgToken = data.token || data.data?.token || "";
+                    verifiedStateKid = data.section || data.data?.section || "";
+                    verifiedAvatarUrl = data.avatar_image || data.data?.avatar_image || "";
                     isManualFallback = false;
 
                     verificationArea.innerHTML = `
                       <div style="background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.4); border-radius:12px; padding:14px; margin-top:10px;">
                         <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
                           <div style="display:flex; align-items:center; gap:10px;">
-                            ${data.avatar_image ? `
+                            ${verifiedAvatarUrl ? `
                               <div style="width:44px; height:44px; border-radius:50%; overflow:hidden; border:2px solid #10b981; flex-shrink:0; background:rgba(0,0,0,0.3);">
-                                <img src="${data.avatar_image}" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none';" />
+                                <img src="${verifiedAvatarUrl}" style="width:100%; height:100%; object-fit:cover;" onerror="this.style.display='none';" />
                               </div>
                             ` : ''}
                             <div>
                               <div style="font-size:12px; color:#10b981; font-weight:bold;">✅ Character Verified!</div>
                               <div style="font-size:15px; font-weight:800; color:#fff; margin-top:2px;">
-                                ${window.escapeHTML(data.nickname)}
-                                <span style="font-size:11px; color:#38bdf8; font-weight:bold; background:rgba(56,189,248,0.15); padding:2px 6px; border-radius:4px; margin-left:6px;">State #${window.escapeHTML(data.section || '2089')}</span>
+                                ${window.escapeHTML(verifiedChiefName)}
+                                <span style="font-size:11px; color:#38bdf8; font-weight:bold; background:rgba(56,189,248,0.15); padding:2px 6px; border-radius:4px; margin-left:6px;">State #${window.escapeHTML(verifiedStateKid || '2089')}</span>
                               </div>
                             </div>
                           </div>
                           <div style="display:flex; align-items:center; flex-shrink:0;">
-                            ${window.getFurnaceIconHtml(data.stove_lv, 42)}
+                            ${window.getFurnaceIconHtml(verifiedFurnaceLevel, 42)}
                           </div>
                         </div>
-                        ${data.avatar_image ? `
+                        ${verifiedAvatarUrl ? `
                           <div style="margin-top:10px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.08); font-size:12px; color:var(--text-muted); display:flex; align-items:center; gap:8px;">
                             <input type="checkbox" id="authPageUseWosAvatar" checked style="accent-color:#10b981; cursor:pointer;" />
                             <label for="authPageUseWosAvatar" style="cursor:pointer; color:#e2e8f0;">Use in-game Whiteout Survival avatar as site profile picture</label>
@@ -19188,7 +19210,7 @@ const views = {
                       verifyBtn.textContent = 'Verified ✅';
                     }
                   } else {
-                    throw new Error(window.translateWosApiError(data.message || 'Invalid or expired code.', data.code));
+                    throw new Error(window.translateWosApiError(data?.message || 'Invalid or expired code.', data?.code));
                   }
                 } catch(err) {
                   confirmBtn.disabled = false;
@@ -19221,14 +19243,13 @@ const views = {
                 verificationArea.innerHTML = `<div style="color:#38bdf8; font-size:12.5px; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.3); padding:10px 14px; border-radius:10px; margin-top:8px;">📩 Sending verification code to in-game mailbox in Whiteout Survival...</div>`;
               }
               try {
-                const sendRes = await fetch(`${API_BASE_URL}?api=sendGameCaptcha&id=${encodeURIComponent(val)}`);
-                const sendData = await sendRes.json();
+                const sendData = await window.apiSendGameCaptcha(val);
                 verifyBtn.disabled = false;
                 verifyBtn.textContent = "📩 Verify ID";
-                if (sendData && sendData.success) {
+                if (sendData && (sendData.success || sendData.code === 0 || sendData.code === 1)) {
                   renderInGameCodeBox(val);
                 } else {
-                  const translatedMsg = window.translateWosApiError(sendData.message || "Could not send in-game code. Check Game ID.", sendData.code);
+                  const translatedMsg = window.translateWosApiError(sendData?.message || "Could not send in-game code. Check Game ID.", sendData?.code);
                   if (verificationArea) {
                     verificationArea.innerHTML = `
                       <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:12px; margin-top:8px; font-size:12.5px; color:#f87171; text-align:left;">
@@ -26938,9 +26959,8 @@ window.resetBearTrapEvent = async () => {
                   if (altAutoFeedback) altAutoFeedback.style.display = 'none';
 
                   try {
-                      const res = await fetch(`${API_BASE_URL}?api=sendGameCaptcha&id=${encodeURIComponent(gid)}`);
-                      const data = await res.json();
-                      if (data && data.success) {
+                      const data = await window.apiSendGameCaptcha(gid);
+                      if (data && (data.success || data.code === 0 || data.code === 1)) {
                           altAutoSendCodeBtn.textContent = "Resend";
                           altAutoSendCodeBtn.disabled = false;
                           if (altAutoCodeBox) altAutoCodeBox.style.display = 'block';
@@ -26951,7 +26971,7 @@ window.resetBearTrapEvent = async () => {
                           }
                           if (altAutoCodeInput) setTimeout(() => altAutoCodeInput.focus(), 60);
                       } else {
-                          throw new Error(window.translateWosApiError(data.message || "Failed to dispatch code.", data.code));
+                          throw new Error(window.translateWosApiError(data?.message || "Failed to dispatch code.", data?.code));
                       }
                   } catch(err) {
                       altAutoSendCodeBtn.disabled = false;
@@ -26984,10 +27004,9 @@ window.resetBearTrapEvent = async () => {
                   if (altAutoFeedback) altAutoFeedback.style.display = 'none';
 
                   try {
-                      const res = await fetch(`${API_BASE_URL}?api=verifyGameCaptcha&id=${encodeURIComponent(gid)}&code=${encodeURIComponent(code)}`);
-                      const data = await res.json();
+                      const data = await window.apiVerifyGameCaptcha(gid, code, currentUser.uid);
 
-                      if (data && data.success && data.token) {
+                      if (data && (data.success || data.token) && (data.token || data.data?.token)) {
                           const nowIso = new Date().toISOString();
                           const altTokenObj = {
                               token: data.token,
