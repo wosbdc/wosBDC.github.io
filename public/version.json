@@ -1,19 +1,20 @@
 {
-  "version": "2.9.82",
-  "releaseDate": "2026-08-19",
-  "title": "What's New in v2.9.82",
+  "version": "2.9.87",
+  "releaseDate": "2026-08-20",
+  "title": "What's New in v2.9.87",
   "notes": [
-    "🛡️ Name Protection: Token renewal never overwrites your display name.",
-    "📋 Healthy Token List: Email report now lists all active sync tokens.",
-    "⚡ Days Remaining: Healthy token report shows days left per token."
+    "🎫 Admin Ticket Tabs: Open, In Progress, Done, Archived, All.",
+    "🟡 Open is Default: Closed tickets hidden from main view.",
+    "📋 Live Tab Counts: Each tab shows real-time ticket count.",
+    "🚫 Public Hides Closed: Completed tickets off by default for members."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "2.9.67",
+    "version": "2.9.87",
     "latestChanges": [
-      "v2.9.67: Added live Developer Note callout boxes and 'YOUR TICKET' badges to notification bell alerts modal",
-      "v2.9.66: Added Roster File Import & Fast Sync (.csv, .json, .txt, .tsv) to Add Player modal with live preview and sample templates",
-      "v2.9.65: Upgraded Bug/Feedback resolution note editor to a spacious multi-line textarea with quick templates and pre-wrap formatting",
-      "v2.9.64: Enabled debounced background cloud auto-save and streamlined the Save button with live sync status indicators"
+      "v2.9.87: Admin ticket status tab bar - Open, In Progress, Done, Archived, All with live counts",
+      "v2.9.86: Dynamic real-time synchronization for all dropdown filter options and action button counters",
+      "v2.9.85: Dynamic real-time filter and population tab counter synchronization in Member Database",
+      "v2.9.84: Unified real-time alliance master store and instant database sync for all badges"
     ]
   }
 }
