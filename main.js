@@ -134,7 +134,8 @@ window.fetchRoster = async () => {
 
 
 const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbzEDRKqYLW05dris_vyxF-SZEH5917Saa5eRieag0n_gbJeWj3Qo_Zvgch94hBg1tE/exec';
-const VERIFY_PROXY_URL = 'https://wos-vercel-proxy.vercel.app/api/verify'; // Fallback / secondary proxy
+const VERCEL_API_BASE = 'https://wos-vercel-proxy.vercel.app/api';
+const VERIFY_PROXY_URL = `${VERCEL_API_BASE}/verify`; // Fallback / secondary proxy
 window.BDC_API_URL = window.BDC_API_URL || 'http://localhost:3188/api';
 
 /**
@@ -143,7 +144,8 @@ window.BDC_API_URL = window.BDC_API_URL || 'http://localhost:3188/api';
  * Mode 2: Real-time WebSocket Event Queue via Firebase (/api_queue) (Zero-Config)
  */
 window.callBdcBackend = async (action, payload = {}, options = {}) => {
-  const timeoutMs = options.timeoutMs || 8000;
+  if (!action) return null;
+  const timeoutMs = options.timeoutMs || options.timeout || 3500;
 
   // 1. Attempt Direct REST API to BDC Central Command
   try {
@@ -218,13 +220,29 @@ window.callBdcBackend = async (action, payload = {}, options = {}) => {
   return null;
 };
 
+// ⚡ 3-TIER MULTI-CLOUD REDUNDANCY WATERFALL
+// Tier 1: BDC Central Command (Local REST + Firebase RTDB Queue)
+// Tier 2: Vercel Serverless Edge Proxy (wos-vercel-proxy)
+// Tier 3: Google Apps Script Web App (GAS Safety Net)
+
 window.apiSendGameCaptcha = async (gameId) => {
   const cleanId = String(gameId || '').trim();
   if (!cleanId) return { success: false, error: 'Missing game ID' };
+
+  // Tier 1: BDC Central Command
   try {
     const bdcRes = await window.callBdcBackend('send_code', { gameId: cleanId, roleId: cleanId });
     if (bdcRes && (bdcRes.success || bdcRes.code === 0 || bdcRes.code === 1)) return bdcRes;
   } catch (e) {}
+
+  // Tier 2: Vercel Serverless Edge Proxy
+  try {
+    const vRes = await fetch(`${VERCEL_API_BASE}/send_code?id=${encodeURIComponent(cleanId)}`);
+    const vData = await vRes.json();
+    if (vData && (vData.success || vData.code !== undefined)) return vData;
+  } catch (e) {}
+
+  // Tier 3: Google Apps Script Web App
   try {
     const res = await fetch(`${API_BASE_URL}?api=sendGameCaptcha&id=${encodeURIComponent(cleanId)}`);
     return await res.json();
@@ -237,10 +255,21 @@ window.apiVerifyGameCaptcha = async (gameId, code, uid = '') => {
   const cleanId = String(gameId || '').trim();
   const cleanCode = String(code || '').trim();
   if (!cleanId || !cleanCode) return { success: false, error: 'Missing game ID or code' };
+
+  // Tier 1: BDC Central Command
   try {
     const bdcRes = await window.callBdcBackend('verify_code', { gameId: cleanId, roleId: cleanId, code: cleanCode, uid: uid || (currentUser && currentUser.uid) || '' });
     if (bdcRes && (bdcRes.success || bdcRes.token || bdcRes.data?.token)) return bdcRes;
   } catch (e) {}
+
+  // Tier 2: Vercel Serverless Edge Proxy
+  try {
+    const vRes = await fetch(`${VERCEL_API_BASE}/verify_code?id=${encodeURIComponent(cleanId)}&code=${encodeURIComponent(cleanCode)}`);
+    const vData = await vRes.json();
+    if (vData && (vData.success || vData.token || vData.code !== undefined)) return vData;
+  } catch (e) {}
+
+  // Tier 3: Google Apps Script Web App
   try {
     const res = await fetch(`${API_BASE_URL}?api=verifyGameCaptcha&id=${encodeURIComponent(cleanId)}&code=${encodeURIComponent(cleanCode)}`);
     return await res.json();
@@ -252,10 +281,21 @@ window.apiVerifyGameCaptcha = async (gameId, code, uid = '') => {
 window.apiLookupPlayer = async (gameId) => {
   const cleanId = String(gameId || '').trim();
   if (!cleanId) return { success: false, error: 'Missing game ID' };
+
+  // Tier 1: BDC Central Command
   try {
     const bdcRes = await window.callBdcBackend('lookup_player', { gameId: cleanId, roleId: cleanId });
     if (bdcRes && (bdcRes.success || bdcRes.nickname)) return bdcRes;
   } catch (e) {}
+
+  // Tier 2: Vercel Serverless Edge Proxy
+  try {
+    const vRes = await fetch(`${VERCEL_API_BASE}/verify?id=${encodeURIComponent(cleanId)}`);
+    const vData = await vRes.json();
+    if (vData && (vData.success || vData.nickname)) return vData;
+  } catch (e) {}
+
+  // Tier 3: Google Apps Script Web App
   try {
     const res = await fetch(`${API_BASE_URL}?api=lookupPlayer&id=${encodeURIComponent(cleanId)}`);
     return await res.json();
@@ -267,10 +307,21 @@ window.apiLookupPlayer = async (gameId) => {
 window.apiSyncProfileWithToken = async (gameId, token, uid = '') => {
   const cleanId = String(gameId || '').trim();
   if (!cleanId) return { success: false, error: 'Missing game ID' };
+
+  // Tier 1: BDC Central Command
   try {
     const bdcRes = await window.callBdcBackend('get_role', { gameId: cleanId, roleId: cleanId, token: token || '', uid: uid || (currentUser && currentUser.uid) || '' });
     if (bdcRes && (bdcRes.success || bdcRes.nickname)) return bdcRes;
   } catch (e) {}
+
+  // Tier 2: Vercel Serverless Edge Proxy
+  try {
+    const vRes = await fetch(`${VERCEL_API_BASE}/sync_profile?id=${encodeURIComponent(cleanId)}&cgToken=${encodeURIComponent(token || '')}`);
+    const vData = await vRes.json();
+    if (vData && (vData.success || vData.nickname || vData.code !== undefined)) return vData;
+  } catch (e) {}
+
+  // Tier 3: Google Apps Script Web App
   try {
     const res = await fetch(`${API_BASE_URL}?api=syncProfileWithToken&id=${encodeURIComponent(cleanId)}&cgToken=${encodeURIComponent(token || '')}`);
     return await res.json();
@@ -283,10 +334,21 @@ window.apiRedeemGiftCode = async (gameId, code, kid = '2089') => {
   const cleanId = String(gameId || '').trim();
   const cleanCode = String(code || '').trim().toUpperCase();
   if (!cleanId || !cleanCode) return { success: false, error: 'Missing game ID or code' };
+
+  // Tier 1: BDC Central Command
   try {
     const bdcRes = await window.callBdcBackend('redeem_gift_code', { gameId: cleanId, code: cleanCode, kid });
     if (bdcRes && (bdcRes.success !== undefined || bdcRes.status)) return bdcRes;
   } catch (e) {}
+
+  // Tier 2: Vercel Serverless Edge Proxy
+  try {
+    const vRes = await fetch(`${VERCEL_API_BASE}/redeem?gameId=${encodeURIComponent(cleanId)}&code=${encodeURIComponent(cleanCode)}&kid=${encodeURIComponent(kid)}`);
+    const vData = await vRes.json();
+    if (vData && (vData.success !== undefined || vData.status || vData.code !== undefined)) return vData;
+  } catch (e) {}
+
+  // Tier 3: Google Apps Script Web App
   try {
     const token = (currentUser && currentUser.token) || '';
     const res = await fetch(`${API_BASE_URL}?api=redeemGiftCode&gameId=${encodeURIComponent(cleanId)}&code=${encodeURIComponent(cleanCode)}&kid=${encodeURIComponent(kid)}&token=${encodeURIComponent(token)}`);

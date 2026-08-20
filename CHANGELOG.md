@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.77] - 2026-08-19
+- 🌐 **3-Tier API Waterfall**: Added Vercel Edge Serverless backup proxy tier.
+- ⚡ **Zero Quota Exhaustion**: Direct Century Games communication bypasses Google limits.
+- 🛡️ **Instant Fallover**: Seamless automatic failover across all verification endpoints.
+
 ## [2.9.76] - 2026-08-19
 - ⚡ **Seamless In-Game Verification**: Zero timeout verification across all devices.
 - 🛡️ **Dual Backend Redundancy**: Central Command and Google Sheets sync automatically.

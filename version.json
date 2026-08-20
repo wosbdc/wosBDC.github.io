@@ -1,11 +1,11 @@
 {
-  "version": "2.9.76",
+  "version": "2.9.77",
   "releaseDate": "2026-08-19",
-  "title": "What's New in v2.9.76",
+  "title": "What's New in v2.9.77",
   "notes": [
-    "⚡ Seamless In-Game Verification: Ultra-fast verification with zero network timeouts.",
-    "🛡️ Live Backend Redundancy: Central Command and Google Apps Script sync.",
-    "🎁 Instant Gift Code Validator: Live testing with automatic status sync."
+    "🌐 3-Tier Multi-Cloud Waterfall: Zero Google Apps Script quota rate-limiting.",
+    "⚡ Vercel Edge Serverless Backup: Lightning fast character validation and sync.",
+    "🛡️ Seamless Century Games Routing: Automatic failover between Central Command and Vercel."
   ],
   "wosbdc_alliance_dashboard": {
     "version": "2.9.67",
