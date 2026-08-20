@@ -25648,17 +25648,20 @@ window.resetBearTrapEvent = async () => {
         else if (tokenState === 'expired') expiredSyncCount++;
         else unverifiedCount++;
 
-        let isAltEnrolled = false;
-        if (gcb && gcb.length > 1) {
+        let isAltEnrolled = Boolean(
+            (altSaved && (altSaved.giftCodesEnabled === true || altSaved.giftCodes === true)) ||
+            (altTokenData && (altTokenData.giftCodesEnabled === true || altTokenData.giftCodes === true)) ||
+            (window.enrolledGameIds && window.enrolledGameIds.has(cleanGid)) ||
+            (typeof enrolledGameIds !== 'undefined' && enrolledGameIds && enrolledGameIds.has(cleanGid))
+        );
+
+        if (!isAltEnrolled && gcb && gcb.length > 1) {
             for (let i = 1; i < gcb.length; i++) {
                 if (gcb[i] && gcb[i][2] && gcb[i][2].toString().trim() === cleanGid) {
                     isAltEnrolled = true;
                     break;
                 }
             }
-        }
-        if (!isAltEnrolled && ((window.enrolledGameIds && window.enrolledGameIds.has(cleanGid)) || (typeof enrolledGameIds !== 'undefined' && enrolledGameIds && enrolledGameIds.has(cleanGid)))) {
-            isAltEnrolled = true;
         }
 
         if (isAltEnrolled) enrolledCount++;
@@ -32411,14 +32414,16 @@ window.generatePlayerProfileHtml = (chiefName, p, headers, colIsUpcoming, roster
                     }
                 }
             }
-            let isAltEnrolled = false;
+            let isAltEnrolled = (enrolledGameIds && enrolledGameIds.has(gid.toString().trim()));
             
-            const gcb = window.liveData ? window.liveData['giftcodebot'] : null;
-            if (gcb && gcb.length > 1) {
-                for (let i = 1; i < gcb.length; i++) {
-                    if (gcb[i][1] && gcb[i][1].toString().trim() === gid.toString().trim()) {
-                        isAltEnrolled = true;
-                        break;
+            if (!isAltEnrolled) {
+                const gcb = window.liveData ? window.liveData['giftcodebot'] : null;
+                if (gcb && gcb.length > 1) {
+                    for (let i = 1; i < gcb.length; i++) {
+                        if (gcb[i][1] && gcb[i][1].toString().trim() === gid.toString().trim()) {
+                            isAltEnrolled = true;
+                            break;
+                        }
                     }
                 }
             }
