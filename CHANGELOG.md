@@ -2,7 +2,7 @@
 
 ## [2.9.77] - 2026-08-19
 - 🌐 **3-Tier API Waterfall**: Added Vercel Edge Serverless backup proxy tier.
-- ⚡ **Zero Quota Exhaustion**: Direct Century Games communication bypasses Google limits.
+- ⚡ **Zero Quota Exhaustion**: Direct in-game server communication bypasses Google limits.
 - 🛡️ **Instant Fallover**: Seamless automatic failover across all verification endpoints.
 
 ## [2.9.76] - 2026-08-19

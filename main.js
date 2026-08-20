@@ -15186,7 +15186,7 @@ window.openEditProfileModal = async () => {
               const statusTextEl = document.getElementById('editProfileSyncStatusText');
               if (statusTextEl) {
                  statusTextEl.style.color = '#10b981';
-                 statusTextEl.innerHTML = '🛡️ Live data synced with Century Games!';
+                 statusTextEl.innerHTML = '🛡️ Live data synced with game servers!';
               }
 
               window.showToast(`✅ Synced from game! Furnace updated to ${finalStove || 'current'}`, "success");
@@ -17054,7 +17054,7 @@ window.testAllGiftCodesLive = async (btnEl = null) => {
     btnEl.innerHTML = '🧪 Testing All...';
   }
 
-  if (window.showToast) window.showToast(`🧪 Testing ${list.length} code(s) against Century Games servers...`, "info");
+  if (window.showToast) window.showToast(`🧪 Testing ${list.length} code(s) against game servers...`, "info");
 
   let validCount = 0;
   let expiredCount = 0;
