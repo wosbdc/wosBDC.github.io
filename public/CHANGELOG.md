@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.80] - 2026-08-19
+- 🛡️ **Main Account Protection**: Completely isolates main account during alt token renewals.
+- 🔑 **Safe Alt Binding**: Binds tokens directly to specific alt account records.
+- ⚡ **Dual Modal Isolation**: Dedicated independent verification modals for mains and alts.
+
 ## [2.9.79] - 2026-08-19
 - 🛡️ **Instant Token Renewal**: Token renewal refreshes profile status and badges immediately.
 - 🔄 **Live Expiry Clear**: Clears stale tokenExpired flag upon binding new token.

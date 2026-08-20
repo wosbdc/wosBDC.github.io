@@ -15518,50 +15518,104 @@ window.openAccountHubVerifyModal = () => {
         if (data && (data.success || data.token) && (data.token || data.data?.token)) {
           const tokenStr = data.token || data.data?.token;
           const nowIso = new Date().toISOString();
-          const updates = {
-            gameId: activeTargetGid,
-            wos_cg_token: tokenStr,
-            tokenExpired: false,
-            tokenStatus: {
-              status: 'active',
-              daysLeft: 30,
-              verifiedAt: nowIso
-            },
-            section: data.section || currentUser.section || "2089",
-            stove_lv: data.stove_lv || currentUser.stove_lv || "",
-            verifiedAt: nowIso,
-            lastSyncedAt: nowIso,
-            centuryGamesVerified: true
-          };
-          if (data.avatar_image) {
-            updates.avatar_image = data.avatar_image;
-            if (currentUser.avatarPreference !== 'custom') {
+          const isMainAccount = (!currentUser.gameId || activeTargetGid === currentUser.gameId);
+
+          if (isMainAccount) {
+            // Update Primary Main Account
+            const updates = {
+              gameId: activeTargetGid,
+              wos_cg_token: tokenStr,
+              tokenExpired: false,
+              tokenStatus: {
+                status: 'active',
+                daysLeft: 30,
+                verifiedAt: nowIso
+              },
+              section: data.section || currentUser.section || "2089",
+              stove_lv: data.stove_lv || currentUser.stove_lv || "",
+              verifiedAt: nowIso,
+              lastSyncedAt: nowIso,
+              centuryGamesVerified: true
+            };
+            if (data.avatar_image) {
+              updates.avatar_image = data.avatar_image;
+              if (currentUser.avatarPreference !== 'custom') {
+                try {
+                  await uploadAvatar(activeTargetGid, data.avatar_image);
+                  avatarMap[activeTargetGid] = data.avatar_image;
+                } catch(e) { console.warn("Failed to auto-sync avatar:", e); }
+              }
+            }
+            if (data.nickname && !/^\d+$/.test(data.nickname)) updates.name = data.nickname;
+
+            await update(ref(db, `users/${currentUser.uid}`), updates);
+            currentUser.gameId = activeTargetGid;
+            currentUser.wos_cg_token = tokenStr;
+            currentUser.tokenExpired = false;
+            currentUser.tokenStatus = updates.tokenStatus;
+            currentUser.section = updates.section;
+            currentUser.stove_lv = updates.stove_lv;
+            currentUser.verifiedAt = nowIso;
+            currentUser.lastSyncedAt = nowIso;
+            currentUser.centuryGamesVerified = true;
+            if (updates.name) currentUser.name = updates.name;
+            if (updates.avatar_image) currentUser.avatar_image = updates.avatar_image;
+            try { localStorage.setItem('cached_current_user', JSON.stringify(currentUser)); } catch(e) {}
+
+            modalOverlay.remove();
+            window.showToast("🎉 Main character verified & 30-day sync token bound!", "success");
+            if (window.renderNavbarUserIndicator) window.renderNavbarUserIndicator();
+            if (views.account) views.account();
+          } else {
+            // Safe Alt Account Token Update (Protects Main Account Data from being overwritten!)
+            const altChiefName = data.nickname || (window.idToNameMap && window.idToNameMap[activeTargetGid]) || `Alt (${activeTargetGid})`;
+            const altTokenObj = {
+              token: tokenStr,
+              section: data.section || "2089",
+              stove_lv: data.stove_lv || "",
+              nickname: altChiefName,
+              avatar_image: data.avatar_image || "",
+              tokenExpired: false,
+              tokenStatus: {
+                status: 'active',
+                daysLeft: 30,
+                verifiedAt: nowIso
+              },
+              verifiedAt: nowIso,
+              lastSyncedAt: nowIso,
+              centuryGamesVerified: true
+            };
+
+            await update(ref(db, `users/${currentUser.uid}/altTokens/${activeTargetGid}`), altTokenObj);
+            if (!currentUser.altTokens) currentUser.altTokens = {};
+            currentUser.altTokens[activeTargetGid] = altTokenObj;
+
+            if (!currentUser.linkedAlts) currentUser.linkedAlts = [];
+            if (!currentUser.linkedAlts.includes(activeTargetGid)) {
+              currentUser.linkedAlts.push(activeTargetGid);
+              await update(ref(db, `users/${currentUser.uid}`), { linkedAlts: currentUser.linkedAlts });
+            }
+
+            const altUpdates = {
+              stove_lv: data.stove_lv || "",
+              section: data.section || "2089",
+              lastSyncedAt: nowIso,
+              centuryGamesVerified: true
+            };
+            if (data.avatar_image) {
+              altUpdates.avatar_image = data.avatar_image;
               try {
                 await uploadAvatar(activeTargetGid, data.avatar_image);
                 avatarMap[activeTargetGid] = data.avatar_image;
-              } catch(e) { console.warn("Failed to auto-sync avatar:", e); }
+              } catch(e) {}
             }
+            if (data.nickname && !/^\d+$/.test(data.nickname)) altUpdates.name = data.nickname;
+            await update(ref(db, `users_alts/${activeTargetGid}`), altUpdates);
+
+            modalOverlay.remove();
+            window.showToast(`🎉 30-Day token bound for Alt (${altChiefName})! Main account unchanged.`, "success");
+            if (views.account) views.account('Alts');
           }
-          if (data.nickname && !/^\d+$/.test(data.nickname)) updates.name = data.nickname;
-
-          await update(ref(db, `users/${currentUser.uid}`), updates);
-          currentUser.gameId = activeTargetGid;
-          currentUser.wos_cg_token = tokenStr;
-          currentUser.tokenExpired = false;
-          currentUser.tokenStatus = updates.tokenStatus;
-          currentUser.section = updates.section;
-          currentUser.stove_lv = updates.stove_lv;
-          currentUser.verifiedAt = nowIso;
-          currentUser.lastSyncedAt = nowIso;
-          currentUser.centuryGamesVerified = true;
-          if (updates.name) currentUser.name = updates.name;
-          if (updates.avatar_image) currentUser.avatar_image = updates.avatar_image;
-          try { localStorage.setItem('cached_current_user', JSON.stringify(currentUser)); } catch(e) {}
-
-          modalOverlay.remove();
-          window.showToast("🎉 Character verified & 30-day sync token bound!", "success");
-          if (window.renderNavbarUserIndicator) window.renderNavbarUserIndicator();
-          if (views.account) views.account();
         } else {
           throw new Error(window.translateWosApiError(data.message || 'Invalid or expired code.', data.code));
         }
@@ -18070,19 +18124,22 @@ window.openAltVerifyModal = (gid, altName = '') => {
         Send a verification code to <strong>${window.escapeHTML(cleanName)}</strong> (Game ID: <strong>${window.escapeHTML(cleanGid)}</strong>) to bind a <strong>30-day automatic sync token</strong> for stats and in-game avatars.
       </p>
 
-      <div style="text-align:center; margin-bottom:16px;">
-        <button id="sendAltCodeBtn" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer; box-shadow:0 2px 10px rgba(14,165,233,0.3);">
+      <div style="text-align:center; margin-bottom:14px;">
+        <button id="sendAltCodeBtn" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer; box-shadow:0 2px 10px rgba(14,165,233,0.3); width:100%;">
           📩 Send Code to In-Game Mail
         </button>
       </div>
 
-      <div id="altVerifyCodeSection" style="display:none; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px; padding:14px; margin-bottom:14px;">
-        <label style="display:block; font-size:12px; font-weight:bold; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase;">
-          Enter 6-Digit In-Game Code
+      <div id="altVerifyCodeSection" style="background:rgba(255,255,255,0.03); border:1px solid rgba(56,189,248,0.3); border-radius:12px; padding:14px; margin-bottom:14px;">
+        <label style="display:block; font-size:12px; font-weight:bold; color:#38bdf8; margin-bottom:6px; text-transform:uppercase;">
+          🔑 Enter 6-Digit In-Game Code
         </label>
+        <p style="font-size:11.5px; color:var(--text-muted); margin:0 0 10px 0;">
+          Check <strong>${window.escapeHTML(cleanName)}</strong>'s in-game system mail for the code, or enter any active code from today:
+        </p>
         <div style="display:flex; gap:8px;">
-          <input type="text" id="altCaptchaInput" maxlength="8" placeholder="e.g. 123456" style="flex:1; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:#fff; font-size:15px; font-family:monospace; letter-spacing:2px; text-align:center;">
-          <button id="submitAltCodeBtn" style="background:var(--accent); color:#fff; border:none; padding:9px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer;">
+          <input type="text" id="altCaptchaInput" maxlength="8" placeholder="e.g. 123456" style="flex:1; padding:10px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:#fff; font-size:16px; font-family:monospace; letter-spacing:3px; text-align:center; font-weight:bold;">
+          <button id="submitAltCodeBtn" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:10px 18px; border-radius:8px; font-weight:bold; font-size:13.5px; cursor:pointer; flex-shrink:0;">
             Verify & Bind
           </button>
         </div>
@@ -18160,13 +18217,21 @@ window.openAltVerifyModal = (gid, altName = '') => {
 
         if (data && (data.success || data.token) && (data.token || data.data?.token)) {
           const nowIso = new Date().toISOString();
+          const altChiefName = data.nickname || cleanName;
           const altTokenObj = {
             token: data.token,
             section: data.section || "2089",
             stove_lv: data.stove_lv || "",
-            nickname: data.nickname || cleanName,
+            nickname: altChiefName,
             avatar_image: data.avatar_image || "",
+            tokenExpired: false,
+            tokenStatus: {
+              status: 'active',
+              daysLeft: 30,
+              verifiedAt: nowIso
+            },
             verifiedAt: nowIso,
+            lastSyncedAt: nowIso,
             centuryGamesVerified: true
           };
 

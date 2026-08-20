@@ -1,11 +1,11 @@
 {
-  "version": "2.9.79",
+  "version": "2.9.80",
   "releaseDate": "2026-08-19",
-  "title": "What's New in v2.9.79",
+  "title": "What's New in v2.9.80",
   "notes": [
-    "🛡️ Instant Token Renewal Sync: Immediate UI status and badge updates.",
-    "🔄 Live Session Refresh: Automatically resets expired flags upon binding.",
-    "⚡ Seamless Real-Time Account Hub: Zero page reload needed."
+    "🛡️ Main Account Protection: Safeguards main data during alt token renewals.",
+    "🔑 Seamless Alt Token Binding: Binds alt tokens directly to alts.",
+    "⚡ Dual Verification Modals: Dedicated independent handlers for mains and alts."
   ],
   "wosbdc_alliance_dashboard": {
     "version": "2.9.67",
