@@ -871,7 +871,22 @@ export const refreshIdToNameMap = async () => {
             window.updateNavbarUserIndicator(currentUser);
         }
     } catch(e) { console.error("Error refreshing ID map:", e); }
-};
+// Real-Time Firebase Listeners for Master Store & Filter Reactivity
+onValue(ref(db, 'users'), () => {
+    refreshIdToNameMap().then(() => {
+        if (typeof window.filterAdminUsersList === 'function' && document.querySelector('.admin-user-row')) {
+            window.filterAdminUsersList();
+        }
+    });
+});
+
+onValue(ref(db, 'giftcode_bot'), () => {
+    refreshIdToNameMap().then(() => {
+        if (typeof window.filterAdminUsersList === 'function' && document.querySelector('.admin-user-row')) {
+            window.filterAdminUsersList();
+        }
+    });
+});
 
 // Fetch all Gift Code enrollments natively from Firebase Realtime Database
 window.fetchGiftcodeEnrollments = async () => {
@@ -19873,6 +19888,14 @@ const views = {
         const attrFilter = document.getElementById('adminUserAttrFilter')?.value || 'all';
 
         const rows = document.querySelectorAll('.admin-user-row');
+        let visibleCount = 0;
+
+        let countAll = 0;
+        let countMains = 0;
+        let countAlts = 0;
+        let countClaimed = 0;
+        let countUnclaimed = 0;
+
         rows.forEach(row => {
             const name = row.getAttribute('data-name') || '';
             const gid = row.getAttribute('data-gid') || '';
@@ -19885,6 +19908,7 @@ const views = {
             const isEnrolled = row.getAttribute('data-is-enrolled') === 'true';
             const isClaimed = row.getAttribute('data-is-claimed') === 'true';
             const tokenStatus = row.getAttribute('data-token-status') || 'unverified';
+            const isPushOn = row.getAttribute('data-push-enabled') === 'true';
 
             const matchesSearch = !searchVal || name.includes(searchVal) || gid.includes(searchVal) || email.includes(searchVal);
 
@@ -19912,7 +19936,6 @@ const views = {
             }
 
             let matchesAttr = true;
-            const isPushOn = row.getAttribute('data-push-enabled') === 'true';
             if (attrFilter === 'new') matchesAttr = isNew && !isAlt;
             else if (attrFilter === 'alts') matchesAttr = hasAlts && !isAlt;
             else if (attrFilter === 'all_alts') matchesAttr = isAlt;
@@ -19921,12 +19944,48 @@ const views = {
             else if (attrFilter === 'push_on') matchesAttr = isPushOn && !isAlt;
             else if (attrFilter === 'push_off') matchesAttr = !isPushOn && !isAlt;
 
+            // Compute dynamic category counts matching search query
+            if (matchesSearch) {
+                countAll++;
+                if (!isAlt) countMains++;
+                if (isAlt) countAlts++;
+                if (isClaimed) countClaimed++;
+                if (!isClaimed && !isAlt) countUnclaimed++;
+            }
+
             if (matchesSearch && matchesTab && matchesToken && matchesAttr) {
                 row.style.display = '';
+                visibleCount++;
             } else {
                 row.style.display = 'none';
             }
         });
+
+        // Dynamically update Tab button counters
+        const btnAll = document.querySelector('.admin-user-filter-tab[data-tab="all"]');
+        if (btnAll) btnAll.textContent = `👥 All (${countAll})`;
+
+        const btnMains = document.querySelector('.admin-user-filter-tab[data-tab="mains"]');
+        if (btnMains) btnMains.textContent = `⭐ Mains (${countMains})`;
+
+        const btnAlts = document.querySelector('.admin-user-filter-tab[data-tab="alts"]');
+        if (btnAlts) btnAlts.textContent = `🎭 Alts (${countAlts})`;
+
+        const btnClaimed = document.querySelector('.admin-user-filter-tab[data-tab="claimed"]');
+        if (btnClaimed) btnClaimed.textContent = `✅ Claimed (${countClaimed})`;
+
+        const btnUnclaimed = document.querySelector('.admin-user-filter-tab[data-tab="unclaimed"]');
+        if (btnUnclaimed) btnUnclaimed.textContent = `⚠️ Unclaimed (${countUnclaimed})`;
+
+        // Dynamically update subtitle summary counter
+        const subEl = document.getElementById('adminUserSubtitleCounter');
+        if (subEl) {
+            if (searchVal || activeTab !== 'all' || tokenFilter !== 'all' || attrFilter !== 'all') {
+                subEl.innerHTML = `<span style="color:var(--accent); font-weight:bold;">Showing ${visibleCount} of ${rows.length} member(s)</span> • ${countMains} mains • ${countAlts} alts • ${countClaimed} claimed • ${countUnclaimed} unclaimed`;
+            } else {
+                subEl.textContent = `${rows.length} total chief(s) • ${countMains} mains • ${countAlts} linked alt(s) • ${countClaimed} registered user(s) • ${countUnclaimed} unclaimed roster`;
+            }
+        }
     };
 
     window.sortAdminUsersList = () => {
@@ -21813,7 +21872,7 @@ const views = {
                       <div style="font-weight:bold; font-size:16px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
                         👥 Alliance Members & Player Database
                       </div>
-                      <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">
+                      <div id="adminUserSubtitleCounter" style="font-size:12px; color:var(--text-muted); margin-top:2px;">
                         ${totalMembersCount} total chief(s) • ${totalMainsCount} mains • ${totalAltsCount} linked alt(s) • ${totalUsersCount} registered user(s) • ${unclaimedCount} unclaimed roster
                       </div>
                     </div>

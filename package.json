@@ -1,7 +1,7 @@
 {
   "name": "wos-public-website",
   "private": true,
-  "version": "2.9.75",
+  "version": "2.9.85",
   "type": "module",
   "scripts": {
     "dev": "vite --host",
