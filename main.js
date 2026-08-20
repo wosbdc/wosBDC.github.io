@@ -220,10 +220,9 @@ window.callBdcBackend = async (action, payload = {}, options = {}) => {
   return null;
 };
 
-// ⚡ 3-TIER MULTI-CLOUD REDUNDANCY WATERFALL
+// ⚡ 2-TIER HIGH-SPEED MULTI-CLOUD ARCHITECTURE (0 Google Quota Impact)
 // Tier 1: BDC Central Command (Local REST + Firebase RTDB Queue)
 // Tier 2: Vercel Serverless Edge Proxy (wos-vercel-proxy)
-// Tier 3: Google Apps Script Web App (GAS Safety Net)
 
 window.apiSendGameCaptcha = async (gameId) => {
   const cleanId = String(gameId || '').trim();
@@ -239,16 +238,10 @@ window.apiSendGameCaptcha = async (gameId) => {
   try {
     const vRes = await fetch(`${VERCEL_API_BASE}/send_code?id=${encodeURIComponent(cleanId)}`);
     const vData = await vRes.json();
-    if (vData && (vData.success || vData.code !== undefined)) return vData;
+    if (vData) return vData;
   } catch (e) {}
 
-  // Tier 3: Google Apps Script Web App
-  try {
-    const res = await fetch(`${API_BASE_URL}?api=sendGameCaptcha&id=${encodeURIComponent(cleanId)}`);
-    return await res.json();
-  } catch (e) {
-    return { success: false, error: e.message };
-  }
+  return { success: false, error: 'In-game verification service is temporarily busy. Please retry.' };
 };
 
 window.apiVerifyGameCaptcha = async (gameId, code, uid = '') => {
@@ -266,16 +259,10 @@ window.apiVerifyGameCaptcha = async (gameId, code, uid = '') => {
   try {
     const vRes = await fetch(`${VERCEL_API_BASE}/verify_code?id=${encodeURIComponent(cleanId)}&code=${encodeURIComponent(cleanCode)}`);
     const vData = await vRes.json();
-    if (vData && (vData.success || vData.token || vData.code !== undefined)) return vData;
+    if (vData) return vData;
   } catch (e) {}
 
-  // Tier 3: Google Apps Script Web App
-  try {
-    const res = await fetch(`${API_BASE_URL}?api=verifyGameCaptcha&id=${encodeURIComponent(cleanId)}&code=${encodeURIComponent(cleanCode)}`);
-    return await res.json();
-  } catch (e) {
-    return { success: false, error: e.message };
-  }
+  return { success: false, error: 'In-game verification service is temporarily busy. Please retry.' };
 };
 
 window.apiLookupPlayer = async (gameId) => {
@@ -292,16 +279,10 @@ window.apiLookupPlayer = async (gameId) => {
   try {
     const vRes = await fetch(`${VERCEL_API_BASE}/verify?id=${encodeURIComponent(cleanId)}`);
     const vData = await vRes.json();
-    if (vData && (vData.success || vData.nickname)) return vData;
+    if (vData) return vData;
   } catch (e) {}
 
-  // Tier 3: Google Apps Script Web App
-  try {
-    const res = await fetch(`${API_BASE_URL}?api=lookupPlayer&id=${encodeURIComponent(cleanId)}`);
-    return await res.json();
-  } catch (e) {
-    return { success: false, error: e.message };
-  }
+  return { success: false, error: 'Player lookup service unavailable.' };
 };
 
 window.apiSyncProfileWithToken = async (gameId, token, uid = '') => {
@@ -318,16 +299,10 @@ window.apiSyncProfileWithToken = async (gameId, token, uid = '') => {
   try {
     const vRes = await fetch(`${VERCEL_API_BASE}/sync_profile?id=${encodeURIComponent(cleanId)}&cgToken=${encodeURIComponent(token || '')}`);
     const vData = await vRes.json();
-    if (vData && (vData.success || vData.nickname || vData.code !== undefined)) return vData;
+    if (vData) return vData;
   } catch (e) {}
 
-  // Tier 3: Google Apps Script Web App
-  try {
-    const res = await fetch(`${API_BASE_URL}?api=syncProfileWithToken&id=${encodeURIComponent(cleanId)}&cgToken=${encodeURIComponent(token || '')}`);
-    return await res.json();
-  } catch (e) {
-    return { success: false, error: e.message };
-  }
+  return { success: false, error: 'Token synchronization service unavailable.' };
 };
 
 window.apiRedeemGiftCode = async (gameId, code, kid = '2089') => {
@@ -345,17 +320,10 @@ window.apiRedeemGiftCode = async (gameId, code, kid = '2089') => {
   try {
     const vRes = await fetch(`${VERCEL_API_BASE}/redeem?gameId=${encodeURIComponent(cleanId)}&code=${encodeURIComponent(cleanCode)}&kid=${encodeURIComponent(kid)}`);
     const vData = await vRes.json();
-    if (vData && (vData.success !== undefined || vData.status || vData.code !== undefined)) return vData;
+    if (vData) return vData;
   } catch (e) {}
 
-  // Tier 3: Google Apps Script Web App
-  try {
-    const token = (currentUser && currentUser.token) || '';
-    const res = await fetch(`${API_BASE_URL}?api=redeemGiftCode&gameId=${encodeURIComponent(cleanId)}&code=${encodeURIComponent(cleanCode)}&kid=${encodeURIComponent(kid)}&token=${encodeURIComponent(token)}`);
-    return await res.json();
-  } catch (e) {
-    return { success: false, error: e.message };
-  }
+  return { success: false, error: 'Gift code service unavailable.' };
 };
 
 // Get a fresh Firebase ID token for the current user (replaces hardcoded APP_SECRET)
