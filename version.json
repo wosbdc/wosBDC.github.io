@@ -1,11 +1,11 @@
 {
-  "version": "2.9.80",
+  "version": "2.9.81",
   "releaseDate": "2026-08-19",
-  "title": "What's New in v2.9.80",
+  "title": "What's New in v2.9.81",
   "notes": [
-    "🛡️ Main Account Protection: Safeguards main data during alt token renewals.",
-    "🔑 Seamless Alt Token Binding: Binds alt tokens directly to alts.",
-    "⚡ Dual Verification Modals: Dedicated independent handlers for mains and alts."
+    "🛡️ Live Gatekeeper Telemetry: Fixed active token counting across mains and alts.",
+    "📊 Accurate Sync Counting: Scans and aggregates full Firebase token records.",
+    "⚡ Real-Time Discord Sync: Roster report displays true live token numbers."
   ],
   "wosbdc_alliance_dashboard": {
     "version": "2.9.67",

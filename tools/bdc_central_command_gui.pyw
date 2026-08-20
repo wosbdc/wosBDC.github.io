@@ -748,6 +748,9 @@ def fetch_live_gatekeeper_telemetry():
                 "isRegistered": False
             }
 
+    active_tokens = 0
+    active_gids = set()
+
     if isinstance(users, dict):
         for uid, u in users.items():
             if not isinstance(u, dict): continue
@@ -755,20 +758,46 @@ def fetch_live_gatekeeper_telemetry():
             gid = str(u.get("gameId") or "").strip()
             key = gid or name.lower() or uid
             ts = parse_member_ts(u)
-            if key in chief_map:
-                chief_map[key]["isRegistered"] = True
-                if u.get("wos_cg_token"): chief_map[key]["hasToken"] = True
-                if name and not chief_map[key]["name"]: chief_map[key]["name"] = name
-                if ts > chief_map[key]["timestamp"]: chief_map[key]["timestamp"] = ts
+            has_main = bool(u.get("wos_cg_token") or u.get("token")) and u.get("tokenExpired") is not True
+
+            if has_main:
+                active_tokens += 1
+                if gid: active_gids.add(gid)
+
+            if key in chief_map or (gid and gid in chief_map) or (name and name.lower() in chief_map):
+                match_k = key if key in chief_map else (gid if gid in chief_map else name.lower())
+                chief_map[match_k]["isRegistered"] = True
+                if has_main: chief_map[match_k]["hasToken"] = True
+                if name and not chief_map[match_k]["name"]: chief_map[match_k]["name"] = name
+                if ts > chief_map[match_k]["timestamp"]: chief_map[match_k]["timestamp"] = ts
             else:
                 chief_map[key] = {
                     "name": name or (f"Chief {gid}" if gid else "Chief"),
                     "gameId": gid,
                     "furnaceLevel": str(u.get("furnaceLevel") or u.get("stove_lv") or ""),
                     "timestamp": ts,
-                    "hasToken": bool(u.get("wos_cg_token")),
+                    "hasToken": has_main,
                     "isRegistered": True
                 }
+
+            # Process alt tokens in users/{uid}/altTokens
+            alt_toks = u.get("altTokens", {})
+            if isinstance(alt_toks, dict):
+                for agid, at in alt_toks.items():
+                    if isinstance(at, dict) and (at.get("token") or at.get("wos_cg_token")) and at.get("tokenExpired") is not True:
+                        clean_agid = str(agid).strip()
+                        if clean_agid not in active_gids:
+                            active_tokens += 1
+                            active_gids.add(clean_agid)
+
+    # Process users_alts
+    if isinstance(alts, dict):
+        for agid, a in alts.items():
+            if isinstance(a, dict) and (a.get("token") or a.get("wos_cg_token")) and a.get("tokenExpired") is not True:
+                clean_agid = str(agid).strip()
+                if clean_agid not in active_gids:
+                    active_tokens += 1
+                    active_gids.add(clean_agid)
 
     all_chiefs = list(chief_map.values())
     total_members = len(all_chiefs) or 41
@@ -779,15 +808,6 @@ def fetch_live_gatekeeper_telemetry():
 
     new_today = len([c for c in all_chiefs if c["timestamp"] >= (now_ms - one_day_ms)])
     new_7d = len([c for c in all_chiefs if c["timestamp"] >= (now_ms - seven_days_ms)])
-
-    active_tokens = len([c for c in all_chiefs if c["hasToken"]])
-    if isinstance(alts, dict):
-        for alt_item in alts.values():
-            if isinstance(alt_item, list):
-                active_tokens += len([a for a in alt_item if isinstance(a, dict) and a.get("wos_cg_token")])
-            elif isinstance(alt_item, dict):
-                active_tokens += len([a for a in alt_item.values() if isinstance(a, dict) and a.get("wos_cg_token")])
-
     unclaimed = max(0, total_members - len([c for c in all_chiefs if c["isRegistered"]]))
 
     sorted_signups = [c for c in all_chiefs if c["name"] and c["name"] != "Chief" and "agent" not in c["name"].lower()]

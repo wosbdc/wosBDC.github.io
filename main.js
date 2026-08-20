@@ -17489,6 +17489,9 @@ window.buildLiveGatekeeperTelemetry = async function() {
     });
   });
 
+  let activeTokens = 0;
+  const activeGids = new Set();
+
   // 2. Process registered users
   Object.entries(users).forEach(([uid, u]) => {
     if (!u || typeof u !== 'object') return;
@@ -17496,10 +17499,17 @@ window.buildLiveGatekeeperTelemetry = async function() {
     const gid = String(u.gameId || '').trim();
     const key = gid || name.toLowerCase() || uid;
     const ts = parseTs(u);
-    const existing = chiefMap.get(key);
+    const hasMainToken = !!(u.wos_cg_token || u.token) && u.tokenExpired !== true;
+
+    if (hasMainToken) {
+      activeTokens++;
+      if (gid) activeGids.add(gid);
+    }
+
+    const existing = chiefMap.get(key) || (gid ? chiefMap.get(gid) : null) || (name ? chiefMap.get(name.toLowerCase()) : null);
     if (existing) {
       existing.isRegistered = true;
-      if (u.wos_cg_token) existing.hasToken = true;
+      if (hasMainToken) existing.hasToken = true;
       if (name && !existing.name) existing.name = name;
       if (ts > existing.timestamp) existing.timestamp = ts;
     } else {
@@ -17508,11 +17518,37 @@ window.buildLiveGatekeeperTelemetry = async function() {
         gameId: gid,
         furnaceLevel: String(u.furnaceLevel || u.stove_lv || ''),
         timestamp: ts,
-        hasToken: !!(u.wos_cg_token),
+        hasToken: hasMainToken,
         isRegistered: true
       });
     }
+
+    // Process Alt Tokens under users/${uid}/altTokens
+    if (u.altTokens && typeof u.altTokens === 'object') {
+      Object.entries(u.altTokens).forEach(([agid, at]) => {
+        if (at && typeof at === 'object' && (at.token || at.wos_cg_token) && at.tokenExpired !== true) {
+          const cleanAgid = String(agid).trim();
+          if (!activeGids.has(cleanAgid)) {
+            activeTokens++;
+            activeGids.add(cleanAgid);
+          }
+        }
+      });
+    }
   });
+
+  // 3. Process users_alts
+  if (alts && typeof alts === 'object') {
+    Object.entries(alts).forEach(([agid, a]) => {
+      if (a && typeof a === 'object' && (a.token || a.wos_cg_token) && a.tokenExpired !== true) {
+        const cleanAgid = String(agid).trim();
+        if (!activeGids.has(cleanAgid)) {
+          activeTokens++;
+          activeGids.add(cleanAgid);
+        }
+      }
+    });
+  }
 
   const allChiefs = Array.from(chiefMap.values());
   const totalMembers = allChiefs.length || 42;
@@ -17523,15 +17559,6 @@ window.buildLiveGatekeeperTelemetry = async function() {
 
   const newToday = allChiefs.filter(c => c.timestamp >= oneDayAgo).length;
   const new7d = allChiefs.filter(c => c.timestamp >= sevenDaysAgo).length;
-
-  let activeTokens = allChiefs.filter(c => c.hasToken).length;
-  Object.values(alts).forEach(item => {
-    if (Array.isArray(item)) {
-      item.forEach(a => { if (a && a.wos_cg_token) activeTokens++; });
-    } else if (item && typeof item === 'object') {
-      Object.values(item).forEach(a => { if (a && a.wos_cg_token) activeTokens++; });
-    }
-  });
 
   const registeredCount = allChiefs.filter(c => c.isRegistered).length;
   const unclaimed = Math.max(0, totalMembers - registeredCount);

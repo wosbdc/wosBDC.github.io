@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.81] - 2026-08-19
+- 🛡️ **Live Gatekeeper Telemetry**: Fixed active token counting across mains and alts.
+- 📊 **Accurate Sync Metrics**: Scans full Firebase user and alt token records.
+- ⚡ **Real-Time Discord Sync**: Roster reports display live active token counts.
+
 ## [2.9.80] - 2026-08-19
 - 🛡️ **Main Account Protection**: Completely isolates main account during alt token renewals.
 - 🔑 **Safe Alt Binding**: Binds tokens directly to specific alt account records.
