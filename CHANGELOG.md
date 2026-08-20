@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [2.9.83] - 2026-08-19
+- 🧠 **Smart Name Sync**: Picks up in-game renames, ignores bad API values.
+- 📡 **Discord Token Report**: Scan results post as rich embeds to Discord.
+- ❓ **Unclaimed Accounts**: Gatekeeper now lists who hasn't registered.
+- 🔢 **Discord 4096 Guard**: Embed auto-truncates if over Discord's limit.
+
 ## [2.9.82] - 2026-08-19
 - 🛡️ **Name Protection**: Token renewal never overwrites your display name.
 - 📋 **Healthy Token List**: Email report now lists all active sync tokens.

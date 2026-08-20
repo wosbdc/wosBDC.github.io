@@ -1194,13 +1194,26 @@ class GatekeeperCounterEngine:
                     if t >= seven_days_ago: new_7d += 1
                 except: pass
 
-        unclaimed = sum(1 for r in roster.values() if isinstance(r, dict) and str(r.get('gameId') or '').strip() not in registered_game_ids)
+        # Build unclaimed list: roster members whose gameId isn't in any Firebase user account
+        unclaimed_list = []
+        for rk, rv in roster.items():
+            if not isinstance(rv, dict): continue
+            rgid = str(rv.get('gameId') or '').strip()
+            rname = rv.get('name') or rv.get('chiefName') or rk
+            if rgid and rgid not in registered_game_ids:
+                unclaimed_list.append({"name": rname, "gameId": rgid})
+            elif not rgid:
+                # No gameId in roster entry — also unclaimed
+                unclaimed_list.append({"name": rname, "gameId": "—"})
+
+        unclaimed = len(unclaimed_list)
         unsynced = max(0, total_members - len(verified_game_ids))
 
         self.data["totalMembers"] = total_members
         self.data["newMembersToday"] = new_today
         self.data["newMembers7Days"] = max(new_7d, self.data.get("newMembers7Days", 0))
         self.data["unclaimedAccounts"] = unclaimed
+        self.data["unclaimedList"] = unclaimed_list  # Full list for Discord report
         self.data["unsyncedChiefs"] = unsynced
         self.data["activeSync"] = len(verified_game_ids)
         self.data["expiredTokens"] = expired_tokens
@@ -1250,16 +1263,24 @@ def send_or_update_gatekeeper_report():
     gk_unclaimed = gk_engine.data.get("unclaimedAccounts", 24)
     gk_active_sync = gk_engine.data.get("activeSync", 1)
     gk_expired = gk_engine.data.get("expiredTokens", 0)
+    gk_unclaimed_list = gk_engine.data.get("unclaimedList", [])
 
     # 1. Roster Section (Uses user's custom text if set, else calculates live)
     default_roster = (
         f"🛡️ **ALLIANCE ROSTER & VERIFICATION**\n"
         f"• 👥 **Total Members:** {gk_tot} Chiefs\n"
         f"• 📈 **New Joins Today:** +{gk_today}  |  **Past 7 Days:** +{gk_7d}\n"
-        f"• 🔒 **Unclaimed Ratio:** {gk_unclaimed}/{gk_tot}\n"
-        f"• ⚡ **Active Sync:** {gk_active_sync} Active  |  {gk_expired} Expired"
+        f"• 🔒 **Unclaimed Accounts:** {gk_unclaimed}/{gk_tot}  |  **Active Sync:** {gk_active_sync}  |  **Expired:** {gk_expired}"
     )
     s_roster = saved_cfg.get("customRosterText") if saved_cfg.get("customRosterText") else default_roster
+
+    # 1b. Unclaimed Accounts sub-section
+    if gk_unclaimed_list:
+        unclaimed_names = [f"• ❓ **{u['name']}** `{u['gameId']}`" for u in gk_unclaimed_list[:20]]
+        suffix = f"\n*...and {len(gk_unclaimed_list) - 20} more*" if len(gk_unclaimed_list) > 20 else ""
+        s_unclaimed = "🔒 **UNCLAIMED ACCOUNTS** *(Haven't registered on the website)*\n" + "\n".join(unclaimed_names) + suffix
+    else:
+        s_unclaimed = "🔒 **UNCLAIMED ACCOUNTS**\n• ✅ All alliance members have claimed their accounts!"
 
     # 2. Signups Section
     sorted_users = []
@@ -1328,6 +1349,10 @@ def send_or_update_gatekeeper_report():
     if saved_cfg.get("incRoster") is not False:
         sections.append(s_roster.strip())
 
+    # Unclaimed accounts list (shown by default, can be hidden via config)
+    if saved_cfg.get("incUnclaimed") is not False:
+        sections.append(s_unclaimed.strip())
+
     if saved_cfg.get("incSignups") is not False:
         sections.append(s_signups.strip())
 
@@ -1341,6 +1366,9 @@ def send_or_update_gatekeeper_report():
         sections.append(s_bot.strip())
 
     description = "\n\n".join(sections) if sections else "No active sections selected."
+    # Discord embed description limit is 4096 characters
+    if len(description) > 4090:
+        description = description[:4087] + "…"
 
     embed_title = saved_cfg.get("title") or "🏰 ALLIANCE GATEKEEPER REPORT"
     embed_color = saved_cfg.get("colorDec") or 3908861
@@ -2134,11 +2162,107 @@ class AllianceTokenScannerEngine:
         if send_email and ALERT_EMAIL and len(expired) > 0:
             self._send_token_email_report(total, healthy, expired, upgrades, name_changes)
 
+        # --- Post Token Health Report to Discord as rich embeds ---
+        try:
+            self._post_token_health_to_discord(total, healthy, expired, upgrades)
+        except Exception as e:
+            self.log(f"⚠️ Discord token health post error: {e}")
+
         summary = f"{len(healthy)} Healthy / {len(expired)} Expired"
         if self.card_callback:
             self.card_callback(summary)
         self.log(f"✅ Token Scan complete: {total} scanned | {len(healthy)} healthy | {len(expired)} expired | {len(upgrades)} upgrades.")
         self.last_scan_time = time.time()
+
+    def _post_token_health_to_discord(self, total, healthy, expired, upgrades):
+        """Posts Token Health Report to Discord as rich multi-embed message."""
+        target_webhook = GATEKEEPER_WEBHOOK_URL or DISCORD_WEBHOOK_URL
+        if not target_webhook:
+            self.log("⚠️ No Discord webhook URL set — skipping token health Discord post.")
+            return
+
+        scan_time = datetime.now().strftime('%B %d, %Y at %I:%M %p')
+        color_ok = 0x3fb950    # green
+        color_warn = 0xf85149  # red
+        color_gold = 0xf59e0b  # gold
+
+        embeds = []
+
+        # --- Embed 1: Summary Stats ---
+        summary_embed = {
+            "title": "🛡️ Alliance Token Health Report",
+            "description": (
+                f"**BDC Central Command** • Automated Token Scanner\n"
+                f"*{scan_time}*\n\n"
+                f"📊 **{total}** Total Scanned  •  "
+                f"🟢 **{len(healthy)}** Healthy  •  "
+                f"🔴 **{len(expired)}** Expired  •  "
+                f"🔥 **{len(upgrades)}** Upgrades"
+            ),
+            "color": color_ok if len(expired) == 0 else color_warn
+        }
+        embeds.append(summary_embed)
+
+        # --- Embed 2: Healthy Tokens ---
+        if healthy:
+            healthy_lines = []
+            for h in healthy[:20]:  # Discord field value limit
+                tag = "🏮" if h.get("is_alt") else "👑"
+                lv = f" Lv {h['stove_lv']}" if h.get("stove_lv") else ""
+                days = h.get("days_left", 30)
+                healthy_lines.append(f"{tag} **{h['name']}** ({h['fid']}){lv} — 🛡️ {days}d left")
+            suffix = f"\n*...and {len(healthy) - 20} more*" if len(healthy) > 20 else ""
+            embeds.append({
+                "title": f"🟢 Healthy & Active Sync Tokens ({len(healthy)})",
+                "description": "\n".join(healthy_lines) + suffix,
+                "color": color_ok
+            })
+
+        # --- Embed 3: Expired Tokens ---
+        if expired:
+            expired_lines = []
+            for e in expired[:20]:
+                tag = "🏮" if e.get("is_alt") else "👑"
+                reason = e.get("reason", "Expired")
+                # Shorten common reason for compactness
+                if "30-Day limit" in reason or "Session Expired" in reason:
+                    reason = "30-Day session expired"
+                elif "No token" in reason:
+                    reason = "No token registered"
+                expired_lines.append(f"{tag} **{e['name']}** ({e['fid']}) — ⚠️ {reason}")
+            suffix = f"\n*...and {len(expired) - 20} more*" if len(expired) > 20 else ""
+            embeds.append({
+                "title": f"🔴 Expired / Needs Re-Sync ({len(expired)})",
+                "description": "\n".join(expired_lines) + suffix,
+                "color": color_warn,
+                "footer": {"text": "These Chiefs need to re-verify in Account Hub → In-Game Sync"}
+            })
+
+        # --- Embed 4: Upgrades (if any) ---
+        if upgrades:
+            upgrade_lines = [
+                f"🔥 **{u['name']}** ({u['fid']}) — {u['oldLevel']} ➜ **{u['newLevel']}**"
+                for u in upgrades[:15]
+            ]
+            embeds.append({
+                "title": f"🔥 Furnace Upgrades Detected ({len(upgrades)})",
+                "description": "\n".join(upgrade_lines),
+                "color": color_gold
+            })
+
+        # Post — Discord allows max 10 embeds per message
+        payload = {
+            "username": "Alliance Token Scanner 🛡️",
+            "embeds": embeds[:10]
+        }
+        try:
+            r = session.post(target_webhook, json=payload, timeout=10)
+            if r.status_code in (200, 204):
+                self.log(f"📡 Token Health Report posted to Discord ({len(embeds)} embeds).")
+            else:
+                self.log(f"⚠️ Discord token health post returned: {r.status_code} — {r.text[:200]}")
+        except Exception as e:
+            self.log(f"⚠️ Discord token health post failed: {e}")
 
     def _send_token_email_report(self, total, healthy, expired, upgrades, name_changes):
         try:

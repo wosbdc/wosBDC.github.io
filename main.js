@@ -15146,7 +15146,8 @@ window.openEditProfileModal = async () => {
                  centuryGamesVerified: true
               };
               if (data.avatar_image) updates.avatar_image = data.avatar_image;
-              if (data.nickname && !/^\d+$/.test(data.nickname) && !currentUser.name) updates.name = data.nickname;
+              // Smart name sync: update only if game returns a real, changed name (picks up in-game renames, blocks empty/numeric returns)
+              if (data.nickname && !/^\d+$/.test(data.nickname) && data.nickname.trim() !== (currentUser.name || '').trim()) updates.name = data.nickname;
 
               await update(ref(db, `users/${currentUser.uid}`), updates);
               Object.assign(currentUser, updates);
@@ -15317,7 +15318,8 @@ window.handleSyncCenturyGamesProfile = async () => {
         centuryGamesVerified: true
       };
       if (data.avatar_image) updates.avatar_image = data.avatar_image;
-      if (data.nickname && !/^\d+$/.test(data.nickname) && !currentUser.name) updates.name = data.nickname;
+      // Smart name sync: picks up in-game renames, ignores empty/numeric/unchanged
+      if (data.nickname && !/^\d+$/.test(data.nickname) && data.nickname.trim() !== (currentUser.name || '').trim()) updates.name = data.nickname;
 
       await update(ref(db, `users/${currentUser.uid}`), updates);
       currentUser.stove_lv = finalStove;
@@ -15546,8 +15548,8 @@ window.openAccountHubVerifyModal = () => {
                 } catch(e) { console.warn("Failed to auto-sync avatar:", e); }
               }
             }
-            // Only update name if user has no name yet — never overwrite existing name on token renewal
-            if (data.nickname && !/^\d+$/.test(data.nickname) && !currentUser.name) {
+            // Smart name sync: picks up in-game renames, ignores empty/numeric/unchanged values
+            if (data.nickname && !/^\d+$/.test(data.nickname) && data.nickname.trim() !== (currentUser.name || '').trim()) {
               updates.name = data.nickname;
             }
 
@@ -17309,7 +17311,8 @@ window.handleSyncAllCharacters = async (btnEl = null) => {
             } catch(e) {}
           }
         }
-        if (data.nickname && !/^\d+$/.test(data.nickname) && !currentUser.name) updates.name = data.nickname;
+        // Smart name sync: picks up in-game renames, ignores empty/numeric/unchanged
+        if (data.nickname && !/^\d+$/.test(data.nickname) && data.nickname.trim() !== (currentUser.name || '').trim()) updates.name = data.nickname;
         await update(ref(db, `users/${currentUser.uid}`), updates);
         currentUser.stove_lv = finalStove;
         currentUser.furnaceLevel = finalStove;

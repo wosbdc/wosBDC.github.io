@@ -1,11 +1,12 @@
 {
-  "version": "2.9.82",
+  "version": "2.9.83",
   "releaseDate": "2026-08-19",
-  "title": "What's New in v2.9.82",
+  "title": "What's New in v2.9.83",
   "notes": [
-    "🛡️ Name Protection: Token renewal never overwrites your display name.",
-    "📋 Healthy Token List: Email report now lists all active sync tokens.",
-    "⚡ Days Remaining: Healthy token report shows days left per token."
+    "🧠 Smart Name Sync: Picks up in-game renames, ignores bad values.",
+    "📡 Discord Token Report: Scan results post as rich embeds.",
+    "❓ Unclaimed Accounts: Gatekeeper lists who hasn't registered.",
+    "🔢 Discord Embed Guard: Auto-truncates at 4096 char limit."
   ],
   "wosbdc_alliance_dashboard": {
     "version": "2.9.67",
