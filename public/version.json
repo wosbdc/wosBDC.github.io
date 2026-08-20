@@ -1,11 +1,11 @@
 {
-  "version": "2.9.77",
+  "version": "2.9.78",
   "releaseDate": "2026-08-19",
-  "title": "What's New in v2.9.77",
+  "title": "What's New in v2.9.78",
   "notes": [
-    "🌐 3-Tier Multi-Cloud Waterfall: Zero Google Apps Script quota rate-limiting.",
-    "⚡ Vercel Edge Serverless Backup: Lightning fast character validation and sync.",
-    "🛡️ Seamless Game Server Routing: Automatic failover between Central Command and Vercel."
+    "🔑 Direct In-Game Code Entry: Enter mailbox verification codes instantly.",
+    "🛡️ Permanent Zero-Quota Bypass: Direct serverless routing for tokens.",
+    "⚡ Enhanced Alt Linking: Instant verification code entry for alts."
   ],
   "wosbdc_alliance_dashboard": {
     "version": "2.9.67",

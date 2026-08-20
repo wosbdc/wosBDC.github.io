@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.78] - 2026-08-19
+- 🔑 **Instant Code Entry**: Input active in-game mailbox codes directly.
+- 🛡️ **Zero Quota Bypass**: Completely removed Google Apps Script urlfetch fallbacks.
+- ⚡ **Enhanced Alt Linking**: Alt code verification input is always accessible.
+
 ## [2.9.77] - 2026-08-19
 - 🌐 **3-Tier API Waterfall**: Added Vercel Edge Serverless backup proxy tier.
 - ⚡ **Zero Quota Exhaustion**: Direct in-game server communication bypasses Google limits.

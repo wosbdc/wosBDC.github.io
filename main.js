@@ -15410,19 +15410,22 @@ window.openAccountHubVerifyModal = () => {
         </div>
       ` : ''}
 
-      <div style="text-align:center; margin-bottom:16px;">
-        <button id="sendHubCodeBtn" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer; box-shadow:0 2px 10px rgba(14,165,233,0.3);">
+      <div style="text-align:center; margin-bottom:14px;">
+        <button id="sendHubCodeBtn" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer; box-shadow:0 2px 10px rgba(14,165,233,0.3); width:100%;">
           📩 Send Code to In-Game Mail
         </button>
       </div>
 
-      <div id="hubVerifyCodeSection" style="display:none; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px; padding:14px; margin-bottom:14px;">
-        <label style="display:block; font-size:12px; font-weight:bold; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase;">
-          Enter 6-Digit In-Game Code
+      <div id="hubVerifyCodeSection" style="background:rgba(255,255,255,0.03); border:1px solid rgba(56,189,248,0.3); border-radius:12px; padding:14px; margin-bottom:14px;">
+        <label style="display:block; font-size:12px; font-weight:bold; color:#38bdf8; margin-bottom:6px; text-transform:uppercase;">
+          🔑 Enter 6-Digit In-Game Code
         </label>
+        <p style="font-size:11.5px; color:var(--text-muted); margin:0 0 10px 0;">
+          Check your Whiteout Survival system mailbox for the code, or enter any active code received today:
+        </p>
         <div style="display:flex; gap:8px;">
-          <input type="text" id="hubCaptchaInput" maxlength="8" placeholder="e.g. 123456" style="flex:1; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:#fff; font-size:15px; font-family:monospace; letter-spacing:2px; text-align:center;">
-          <button id="submitHubCodeBtn" style="background:var(--accent); color:#fff; border:none; padding:9px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer;">
+          <input type="text" id="hubCaptchaInput" maxlength="8" placeholder="e.g. 123456" style="flex:1; padding:10px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:#fff; font-size:16px; font-family:monospace; letter-spacing:3px; text-align:center; font-weight:bold;">
+          <button id="submitHubCodeBtn" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:10px 18px; border-radius:8px; font-weight:bold; font-size:13.5px; cursor:pointer; flex-shrink:0;">
             Verify & Bind
           </button>
         </div>
@@ -25619,11 +25622,11 @@ window.resetBearTrapEvent = async () => {
                 </div>
 
                 <!-- Step 2 of Auto-Link: In-game code input -->
-                <div id="altAutoCodeBox" style="display:none; background:rgba(56,189,248,0.06); border:1px solid rgba(56,189,248,0.3); border-radius:10px; padding:12px; margin-bottom:12px;">
-                    <div style="font-size:12px; color:#38bdf8; font-weight:bold; margin-bottom:6px;">📩 Code Sent to Alt's In-Game Mailbox!</div>
+                <div id="altAutoCodeBox" style="background:rgba(56,189,248,0.06); border:1px solid rgba(56,189,248,0.3); border-radius:10px; padding:12px; margin-bottom:12px;">
+                    <div style="font-size:12px; color:#38bdf8; font-weight:bold; margin-bottom:6px;">🔑 In-Game Mailbox Code</div>
                     <div style="display:flex; gap:8px; align-items:center;">
-                        <input type="text" id="altAutoCodeInput" maxlength="8" placeholder="6-digit code" style="flex:1; max-width:140px; padding:8px 12px; border-radius:8px; border:1px solid rgba(56,189,248,0.5); background:var(--bg-main); color:#fff; font-size:15px; font-family:monospace; letter-spacing:2px; text-align:center;">
-                        <button type="button" id="altAutoConfirmCodeBtn" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer;">Confirm & Link</button>
+                        <input type="text" id="altAutoCodeInput" maxlength="8" placeholder="6-digit code" style="flex:1; padding:8px 12px; border-radius:8px; border:1px solid rgba(56,189,248,0.5); background:var(--bg-main); color:#fff; font-size:15px; font-family:monospace; letter-spacing:2px; text-align:center; font-weight:bold;">
+                        <button type="button" id="altAutoConfirmCodeBtn" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; flex-shrink:0;">Confirm & Link</button>
                     </div>
                     <div id="altAutoFeedback" style="font-size:11.5px; margin-top:6px; display:none;"></div>
                 </div>
