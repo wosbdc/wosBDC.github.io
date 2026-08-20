@@ -13685,6 +13685,17 @@ window.filterAltAccountsList = function() {
   const cards = Array.from(grid.querySelectorAll('.alt-account-card'));
   let visibleCount = 0;
 
+  let countAll = 0;
+  let countActive = 0;
+  let countNeedsSync = 0;
+  let countEnrolled = 0;
+  let countNotEnrolled = 0;
+
+  let countActiveToken = 0;
+  let countExpiringToken = 0;
+  let countExpiredToken = 0;
+  let countUnverifiedToken = 0;
+
   cards.forEach(card => {
     const name = card.getAttribute('data-name') || '';
     const gid = card.getAttribute('data-gid') || '';
@@ -13719,6 +13730,19 @@ window.filterAltAccountsList = function() {
     if (perksFilter === 'enrolled') matchPerks = isEnrolled;
     else if (perksFilter === 'not_enrolled') matchPerks = !isEnrolled;
 
+    if (matchSearch) {
+      countAll++;
+      if (tokenStatus === 'active' || tokenStatus === 'expiring') countActive++;
+      if (tokenStatus === 'unverified' || tokenStatus === 'expired' || tokenStatus === 'expiring') countNeedsSync++;
+      if (isEnrolled) countEnrolled++;
+      else countNotEnrolled++;
+
+      if (tokenStatus === 'active') countActiveToken++;
+      else if (tokenStatus === 'expiring') countExpiringToken++;
+      else if (tokenStatus === 'expired') countExpiredToken++;
+      else countUnverifiedToken++;
+    }
+
     const isVisible = matchSearch && matchTab && matchToken && matchPerks;
     card.style.display = isVisible ? 'flex' : 'none';
     if (isVisible) visibleCount++;
@@ -13740,6 +13764,36 @@ window.filterAltAccountsList = function() {
     });
     sorted.forEach(card => grid.appendChild(card));
   }
+
+  // Update helper for select dropdown option text
+  const updateSelectOptionText = (selectId, optVal, text) => {
+    const sel = document.getElementById(selectId);
+    if (!sel) return;
+    const opt = sel.querySelector(`option[value="${optVal}"]`);
+    if (opt) opt.textContent = text;
+  };
+
+  // Dynamically update Population Tab Buttons
+  const tabAll = document.querySelector('.alt-filter-tab[data-tab="all"]');
+  if (tabAll) tabAll.textContent = `👥 All (${countAll})`;
+  const tabActive = document.querySelector('.alt-filter-tab[data-tab="active"]');
+  if (tabActive) tabActive.textContent = `🟢 Active Sync (${countActive})`;
+  const tabNeedsSync = document.querySelector('.alt-filter-tab[data-tab="needs_sync"]');
+  if (tabNeedsSync) tabNeedsSync.textContent = `⚠️ Needs Sync (${countNeedsSync})`;
+  const tabEnrolled = document.querySelector('.alt-filter-tab[data-tab="enrolled"]');
+  if (tabEnrolled) tabEnrolled.textContent = `🎁 Enrolled (${countEnrolled})`;
+
+  // Dynamically update 30-Day Token Dropdown Options
+  updateSelectOptionText('altTokenFilter', 'all', `🛡️ Token: All (${countAll})`);
+  updateSelectOptionText('altTokenFilter', 'active', `🟢 Active Sync (${countActiveToken})`);
+  updateSelectOptionText('altTokenFilter', 'expiring', `🟠 Expiring Soon (${countExpiringToken})`);
+  updateSelectOptionText('altTokenFilter', 'expired', `🔴 Expired Sync (${countExpiredToken})`);
+  updateSelectOptionText('altTokenFilter', 'unverified', `⚪ Unverified (${countUnverifiedToken})`);
+
+  // Dynamically update Perks Dropdown Options
+  updateSelectOptionText('altPerksFilter', 'all', `🎁 Perks: All (${countAll})`);
+  updateSelectOptionText('altPerksFilter', 'enrolled', `✅ Enrolled (${countEnrolled})`);
+  updateSelectOptionText('altPerksFilter', 'not_enrolled', `⏳ Needs Enrollment (${countNotEnrolled})`);
 
   const counterEl = document.getElementById('altFilterCounter');
   if (counterEl) {
@@ -19896,6 +19950,19 @@ const views = {
         let countClaimed = 0;
         let countUnclaimed = 0;
 
+        let countPushOn = 0;
+        let countPushOff = 0;
+        let countHasAlts = 0;
+        let countAllAlts = 0;
+        let countNew = 0;
+        let countEnrolled = 0;
+        let countStaff = 0;
+
+        let countActiveToken = 0;
+        let countExpiringToken = 0;
+        let countExpiredToken = 0;
+        let countUnverifiedToken = 0;
+
         rows.forEach(row => {
             const name = row.getAttribute('data-name') || '';
             const gid = row.getAttribute('data-gid') || '';
@@ -19951,6 +20018,19 @@ const views = {
                 if (isAlt) countAlts++;
                 if (isClaimed) countClaimed++;
                 if (!isClaimed && !isAlt) countUnclaimed++;
+
+                if (isPushOn && !isAlt) countPushOn++;
+                if (!isPushOn && !isAlt) countPushOff++;
+                if (hasAlts && !isAlt) countHasAlts++;
+                if (isAlt) countAllAlts++;
+                if (isNew && !isAlt) countNew++;
+                if (isEnrolled && !isAlt) countEnrolled++;
+                if (isAdmin && !isAlt) countStaff++;
+
+                if (tokenStatus === 'active') countActiveToken++;
+                else if (tokenStatus === 'expiring') countExpiringToken++;
+                else if (tokenStatus === 'expired') countExpiredToken++;
+                else countUnverifiedToken++;
             }
 
             if (matchesSearch && matchesTab && matchesToken && matchesAttr) {
@@ -19960,6 +20040,14 @@ const views = {
                 row.style.display = 'none';
             }
         });
+
+        // Helper to update dropdown option label
+        const updateSelectOptionText = (selectId, optVal, text) => {
+            const sel = document.getElementById(selectId);
+            if (!sel) return;
+            const opt = sel.querySelector(`option[value="${optVal}"]`);
+            if (opt) opt.textContent = text;
+        };
 
         // Dynamically update Tab button counters
         const btnAll = document.querySelector('.admin-user-filter-tab[data-tab="all"]');
@@ -19976,6 +20064,30 @@ const views = {
 
         const btnUnclaimed = document.querySelector('.admin-user-filter-tab[data-tab="unclaimed"]');
         if (btnUnclaimed) btnUnclaimed.textContent = `⚠️ Unclaimed (${countUnclaimed})`;
+
+        // Dynamically update Attributes Dropdown Options
+        updateSelectOptionText('adminUserAttrFilter', 'all', `🏷️ Attributes: All (${countAll})`);
+        updateSelectOptionText('adminUserAttrFilter', 'push_on', `🔔 Push: Enabled (${countPushOn})`);
+        updateSelectOptionText('adminUserAttrFilter', 'push_off', `🔕 Push: Disabled (${countPushOff})`);
+        updateSelectOptionText('adminUserAttrFilter', 'alts', `👥 Accounts with Alts (${countHasAlts})`);
+        updateSelectOptionText('adminUserAttrFilter', 'all_alts', `🔗 All Linked Alts (${countAllAlts})`);
+        updateSelectOptionText('adminUserAttrFilter', 'new', `🆕 New Signups (${countNew})`);
+        updateSelectOptionText('adminUserAttrFilter', 'enrolled', `🎁 Gift Codes (${countEnrolled})`);
+        updateSelectOptionText('adminUserAttrFilter', 'staff', `👑 R4/R5 Staff (${countStaff})`);
+
+        // Dynamically update 30-Day Token Dropdown Options
+        updateSelectOptionText('adminUserTokenFilter', 'all', `🛡️ Token: All (${countAll})`);
+        updateSelectOptionText('adminUserTokenFilter', 'active', `🟢 Active Sync (${countActiveToken})`);
+        updateSelectOptionText('adminUserTokenFilter', 'expiring', `🟠 Expiring Soon (${countExpiringToken})`);
+        updateSelectOptionText('adminUserTokenFilter', 'expired', `🔴 Expired Sync (${countExpiredToken})`);
+        updateSelectOptionText('adminUserTokenFilter', 'unverified', `⚪ Unverified (${countUnverifiedToken})`);
+
+        // Dynamically update Action Buttons
+        const copyUnclBtn = document.querySelector('button[onclick*="copyUnclaimedRosterList"]');
+        if (copyUnclBtn) copyUnclBtn.textContent = `📋 Copy Unclaimed (${countUnclaimed})`;
+
+        const copyUnsyncBtn = document.querySelector('button[onclick*="copyUnsyncedTokensList"]');
+        if (copyUnsyncBtn) copyUnsyncBtn.textContent = `📋 Copy Unsynced (${countExpiredToken + countUnverifiedToken})`;
 
         // Dynamically update subtitle summary counter
         const subEl = document.getElementById('adminUserSubtitleCounter');
