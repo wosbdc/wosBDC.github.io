@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [2.9.87] - 2026-08-20
+- 🎫 **Admin Ticket Tabs**: Open, In Progress, Done, Archived, All.
+- 🟡 **Open is Default**: Closed tickets hidden from main view.
+- 📋 **Live Tab Counts**: Each tab shows real-time ticket count.
+- 🚫 **Public Hides Closed**: Completed tickets off by default for members.
+
 ## [2.9.83] - 2026-08-19
 - 🧠 **Smart Name Sync**: Picks up in-game renames, ignores bad API values.
 - 📡 **Discord Token Report**: Scan results post as rich embeds to Discord.

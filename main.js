@@ -11181,23 +11181,59 @@ window.renderAdminFeedbackTab = async () => {
             return;
         }
 
-        let rowsHtml = items.map(item => {
-            const isFeat = item.type === 'feature';
-            const isCompleted = item.status === 'completed';
-            const isInProgress = item.status === 'in_progress';
-            const isPending = !item.status || item.status === 'pending';
-            const typeBadge = isFeat 
-                ? '<span style="background:rgba(6,182,212,0.15); color:#06b6d4; border:1px solid rgba(6,182,212,0.3); padding:2px 8px; border-radius:6px; font-size:11px; font-weight:bold;">💡 FEATURE</span>'
-                : '<span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:2px 8px; border-radius:6px; font-size:11px; font-weight:bold;">🐞 BUG</span>';
+        // --- Count by status ---
+        const counts = {
+            open:        items.filter(i => !i.status || i.status === 'pending').length,
+            in_progress: items.filter(i => i.status === 'in_progress').length,
+            completed:   items.filter(i => i.status === 'completed').length,
+            archived:    items.filter(i => i.status === 'archived').length,
+            all:         items.length
+        };
 
-            return `
-                <tr style="border-bottom:1px solid var(--border); background:${isCompleted ? 'rgba(16,185,129,0.03)' : 'transparent'};">
+        // --- Persist active tab across re-renders ---
+        if (!window._adminTicketTab) window._adminTicketTab = 'open';
+        const activeTab = window._adminTicketTab;
+
+        // --- Filter items for current tab ---
+        const filtered = items.filter(item => {
+            if (activeTab === 'open')        return !item.status || item.status === 'pending';
+            if (activeTab === 'in_progress') return item.status === 'in_progress';
+            if (activeTab === 'completed')   return item.status === 'completed';
+            if (activeTab === 'archived')    return item.status === 'archived';
+            return true; // 'all'
+        });
+
+        // --- Tab bar style helper ---
+        const tabStyle = (key) => {
+            const isActive = activeTab === key;
+            const colors = { open:'#eab308', in_progress:'#3b82f6', completed:'#10b981', archived:'#94a3b8', all:'#06b6d4' };
+            const c = colors[key] || '#06b6d4';
+            return isActive
+                ? `background:${c}22; border:1.5px solid ${c}; color:${c}; padding:7px 16px; border-radius:8px; font-size:12px; font-weight:800; cursor:pointer; transition:0.15s; letter-spacing:0.3px;`
+                : `background:transparent; border:1.5px solid rgba(255,255,255,0.1); color:var(--text-muted); padding:7px 16px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; transition:0.15s;`;
+        };
+
+        // --- Build table rows ---
+        let rowsHtml = '';
+        if (filtered.length === 0) {
+            rowsHtml = `<tr><td colspan="8" style="padding:30px; text-align:center; color:var(--text-muted); font-size:13px;">No tickets in this category. 🎉</td></tr>`;
+        } else {
+            rowsHtml = filtered.map(item => {
+                const isFeat = item.type === 'feature';
+                const isCompleted = item.status === 'completed';
+                const isInProgress = item.status === 'in_progress';
+                const isArchived = item.status === 'archived';
+                const isPending = !item.status || item.status === 'pending';
+                const typeBadge = isFeat
+                    ? '<span style="background:rgba(6,182,212,0.15); color:#06b6d4; border:1px solid rgba(6,182,212,0.3); padding:2px 8px; border-radius:6px; font-size:11px; font-weight:bold;">💡 FEATURE</span>'
+                    : '<span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:2px 8px; border-radius:6px; font-size:11px; font-weight:bold;">🐞 BUG</span>';
+                const rowBg = isCompleted ? 'rgba(16,185,129,0.04)' : isInProgress ? 'rgba(59,130,246,0.04)' : isArchived ? 'rgba(255,255,255,0.02)' : 'transparent';
+                return `
+                <tr style="border-bottom:1px solid var(--border); background:${rowBg}; opacity:${isArchived ? '0.6' : '1'};">
                     <td style="padding:12px; text-align:center;">
                         <input type="checkbox" onchange="window.toggleFeedbackCompleted('${item.id}', this.checked)" ${isCompleted ? 'checked' : ''} style="width:18px; height:18px; accent-color:#10b981; cursor:pointer;" title="Mark Completed / Done">
                     </td>
-                    <td style="padding:12px; white-space:nowrap;">
-                        ${typeBadge}
-                    </td>
+                    <td style="padding:12px; white-space:nowrap;">${typeBadge}</td>
                     <td style="padding:12px;">
                         <div style="font-weight:bold; font-size:13px; color:var(--text-main); ${isCompleted ? 'text-decoration:line-through; opacity:0.75;' : ''}">${escapeHTML(item.title || '')}</div>
                         ${item.description ? `<div style="font-size:11.5px; color:var(--text-muted); margin-top:3px; max-width:380px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHTML(item.description)}</div>` : ''}
@@ -11211,30 +11247,34 @@ window.renderAdminFeedbackTab = async () => {
                         <strong style="color:var(--text-main);">${escapeHTML(item.submittedBy?.name || 'Chief')}</strong><br>
                         <span style="font-size:10.5px;">${window.formatTimeAgo(item.createdAt)}</span>
                     </td>
-                    <td style="padding:12px; text-align:center; font-weight:bold; color:var(--accent); font-family:var(--mono);">
-                        👍 ${item.voteCount || 0}
-                    </td>
+                    <td style="padding:12px; text-align:center; font-weight:bold; color:var(--accent); font-family:var(--mono);">👍 ${item.voteCount || 0}</td>
                     <td style="padding:12px; white-space:nowrap;">
                         <select onchange="window.updateFeedbackStatus('${item.id}', this.value)" style="padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:11px; font-weight:bold;">
                             <option value="pending" ${isPending ? 'selected' : ''}>🟡 Under Review</option>
                             <option value="in_progress" ${isInProgress ? 'selected' : ''}>🔵 In Progress</option>
                             <option value="completed" ${isCompleted ? 'selected' : ''}>✅ Completed</option>
-                            <option value="archived" ${item.status === 'archived' ? 'selected' : ''}>⚪ Archived</option>
+                            <option value="archived" ${isArchived ? 'selected' : ''}>⚪ Archived</option>
                         </select>
                     </td>
                     <td style="padding:12px; white-space:nowrap; text-align:right;">
-                        <button onclick="window.openAdminNoteModal('${item.id}', '${escapeHTML(item.adminNote || '')}')" style="background:rgba(6,182,212,0.12); border:1px solid rgba(6,182,212,0.3); color:var(--accent); padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;" title="Add or edit resolution note">
-                            ✏️ Note
-                        </button>
-                        <button onclick="window.deleteFeedbackItem('${item.id}')" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; margin-left:4px;" title="Delete ticket">
-                            🗑️
-                        </button>
+                        <button onclick="window.openAdminNoteModal('${item.id}', '${escapeHTML(item.adminNote || '')}')" style="background:rgba(6,182,212,0.12); border:1px solid rgba(6,182,212,0.3); color:var(--accent); padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;" title="Add or edit resolution note">✏️ Note</button>
+                        <button onclick="window.deleteFeedbackItem('${item.id}')" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; margin-left:4px;" title="Delete ticket">🗑️</button>
                     </td>
-                </tr>
-            `;
-        }).join('');
+                </tr>`;
+            }).join('');
+        }
 
         container.innerHTML = `
+            <!-- Status Tab Bar -->
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; padding-bottom:14px; border-bottom:1px solid var(--border); align-items:center;">
+                <button onclick="window._adminTicketTab='open'; window.renderAdminFeedbackTab();" style="${tabStyle('open')}">🟡 Open (${counts.open})</button>
+                <button onclick="window._adminTicketTab='in_progress'; window.renderAdminFeedbackTab();" style="${tabStyle('in_progress')}">🔵 In Progress (${counts.in_progress})</button>
+                <button onclick="window._adminTicketTab='completed'; window.renderAdminFeedbackTab();" style="${tabStyle('completed')}">✅ Done (${counts.completed})</button>
+                <button onclick="window._adminTicketTab='archived'; window.renderAdminFeedbackTab();" style="${tabStyle('archived')}">⚪ Archived (${counts.archived})</button>
+                <button onclick="window._adminTicketTab='all'; window.renderAdminFeedbackTab();" style="${tabStyle('all')}">📋 All (${counts.all})</button>
+                <span style="margin-left:auto; font-size:11px; color:var(--text-muted); font-style:italic;">Showing ${filtered.length} ticket${filtered.length !== 1 ? 's' : ''}</span>
+            </div>
+            <!-- Ticket Table -->
             <div style="overflow-x:auto;">
                 <table style="width:100%; border-collapse:collapse; text-align:left; font-size:13px;">
                     <thead>
@@ -11249,9 +11289,7 @@ window.renderAdminFeedbackTab = async () => {
                             <th style="padding:10px 12px; text-align:right; width:100px;">Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        ${rowsHtml}
-                    </tbody>
+                    <tbody>${rowsHtml}</tbody>
                 </table>
             </div>
         `;
@@ -30754,7 +30792,7 @@ window.resetBearTrapEvent = async () => {
     if (!app) return;
 
     try {
-        let activeFilter = initialFilter || 'all';
+        let activeFilter = initialFilter || 'open';
         let searchQuery = '';
         let activeSort = 'top';
 
@@ -30771,20 +30809,24 @@ window.resetBearTrapEvent = async () => {
 
         const renderFeedbackUI = () => {
             const counts = {
-                all: items.length,
-                feature: items.filter(i => i.type === 'feature').length,
-                bug: items.filter(i => i.type === 'bug').length,
-                pending: items.filter(i => i.status === 'pending' || !i.status).length,
+                open:        items.filter(i => !i.status || i.status === 'pending' || i.status === 'in_progress').length,
+                feature:     items.filter(i => i.type === 'feature' && i.status !== 'archived').length,
+                bug:         items.filter(i => i.type === 'bug' && i.status !== 'archived').length,
+                pending:     items.filter(i => i.status === 'pending' || !i.status).length,
                 in_progress: items.filter(i => i.status === 'in_progress').length,
-                completed: items.filter(i => i.status === 'completed').length
+                completed:   items.filter(i => i.status === 'completed').length,
+                all:         items.length
             };
 
             let filtered = items.filter(item => {
-                if (activeFilter === 'feature' && item.type !== 'feature') return false;
-                if (activeFilter === 'bug' && item.type !== 'bug') return false;
+                // 'open' = pending + in_progress (default — hides completed & archived)
+                if (activeFilter === 'open') return !item.status || item.status === 'pending' || item.status === 'in_progress';
+                if (activeFilter === 'feature') return item.type === 'feature' && item.status !== 'archived';
+                if (activeFilter === 'bug') return item.type === 'bug' && item.status !== 'archived';
                 if (activeFilter === 'pending' && item.status !== 'pending' && item.status) return false;
                 if (activeFilter === 'in_progress' && item.status !== 'in_progress') return false;
                 if (activeFilter === 'completed' && item.status !== 'completed') return false;
+                // 'all' shows everything including archived
 
                 if (searchQuery) {
                     const q = searchQuery.toLowerCase();
@@ -30974,12 +31016,12 @@ window.resetBearTrapEvent = async () => {
 
                         <!-- Filter Pills -->
                         <div style="display:flex; gap:8px; flex-wrap:wrap; overflow-x:auto; padding-bottom:4px;">
-                            <button class="fb-pill ${activeFilter === 'all' ? 'active' : ''}" data-filter="all" style="${getPillStyle(activeFilter === 'all', '#06b6d4')}">All (${counts.all})</button>
+                            <button class="fb-pill ${activeFilter === 'open' ? 'active' : ''}" data-filter="open" style="${getPillStyle(activeFilter === 'open', '#eab308')}">🟡 Open (${counts.open})</button>
                             <button class="fb-pill ${activeFilter === 'feature' ? 'active' : ''}" data-filter="feature" style="${getPillStyle(activeFilter === 'feature', '#06b6d4')}">💡 Features (${counts.feature})</button>
                             <button class="fb-pill ${activeFilter === 'bug' ? 'active' : ''}" data-filter="bug" style="${getPillStyle(activeFilter === 'bug', '#ef4444')}">🐞 Bugs (${counts.bug})</button>
-                            <button class="fb-pill ${activeFilter === 'pending' ? 'active' : ''}" data-filter="pending" style="${getPillStyle(activeFilter === 'pending', '#eab308')}">🟡 Under Review (${counts.pending})</button>
                             <button class="fb-pill ${activeFilter === 'in_progress' ? 'active' : ''}" data-filter="in_progress" style="${getPillStyle(activeFilter === 'in_progress', '#3b82f6')}">🔵 In Progress (${counts.in_progress})</button>
                             <button class="fb-pill ${activeFilter === 'completed' ? 'active' : ''}" data-filter="completed" style="${getPillStyle(activeFilter === 'completed', '#10b981')}">✅ Completed (${counts.completed})</button>
+                            <button class="fb-pill ${activeFilter === 'all' ? 'active' : ''}" data-filter="all" style="${getPillStyle(activeFilter === 'all', '#94a3b8')}">📋 All (${counts.all})</button>
                         </div>
                     </div>
 
