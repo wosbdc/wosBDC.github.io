@@ -1,11 +1,11 @@
 {
-  "version": "2.9.81",
+  "version": "2.9.82",
   "releaseDate": "2026-08-19",
-  "title": "What's New in v2.9.81",
+  "title": "What's New in v2.9.82",
   "notes": [
-    "🛡️ Live Gatekeeper Telemetry: Fixed active token counting across mains and alts.",
-    "📊 Accurate Sync Counting: Scans and aggregates full Firebase token records.",
-    "⚡ Real-Time Discord Sync: Roster report displays true live token numbers."
+    "🛡️ Name Protection: Token renewal never overwrites your display name.",
+    "📋 Healthy Token List: Email report now lists all active sync tokens.",
+    "⚡ Days Remaining: Healthy token report shows days left per token."
   ],
   "wosbdc_alliance_dashboard": {
     "version": "2.9.67",

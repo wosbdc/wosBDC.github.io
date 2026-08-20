@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [2.9.82] - 2026-08-19
+- 🛡️ **Name Protection**: Token renewal never overwrites your display name.
+- 📋 **Healthy Token List**: Email report now lists all active sync tokens.
+- ⚡ **Days Remaining**: Token scan report shows remaining days per token.
+
 ## [2.9.81] - 2026-08-19
 - 🛡️ **Live Gatekeeper Telemetry**: Fixed active token counting across mains and alts.
 - 📊 **Accurate Sync Metrics**: Scans full Firebase user and alt token records.

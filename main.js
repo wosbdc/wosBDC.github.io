@@ -15146,7 +15146,7 @@ window.openEditProfileModal = async () => {
                  centuryGamesVerified: true
               };
               if (data.avatar_image) updates.avatar_image = data.avatar_image;
-              if (data.nickname && !/^\d+$/.test(data.nickname)) updates.name = data.nickname;
+              if (data.nickname && !/^\d+$/.test(data.nickname) && !currentUser.name) updates.name = data.nickname;
 
               await update(ref(db, `users/${currentUser.uid}`), updates);
               Object.assign(currentUser, updates);
@@ -15317,7 +15317,7 @@ window.handleSyncCenturyGamesProfile = async () => {
         centuryGamesVerified: true
       };
       if (data.avatar_image) updates.avatar_image = data.avatar_image;
-      if (data.nickname && !/^\d+$/.test(data.nickname)) updates.name = data.nickname;
+      if (data.nickname && !/^\d+$/.test(data.nickname) && !currentUser.name) updates.name = data.nickname;
 
       await update(ref(db, `users/${currentUser.uid}`), updates);
       currentUser.stove_lv = finalStove;
@@ -15546,7 +15546,10 @@ window.openAccountHubVerifyModal = () => {
                 } catch(e) { console.warn("Failed to auto-sync avatar:", e); }
               }
             }
-            if (data.nickname && !/^\d+$/.test(data.nickname)) updates.name = data.nickname;
+            // Only update name if user has no name yet — never overwrite existing name on token renewal
+            if (data.nickname && !/^\d+$/.test(data.nickname) && !currentUser.name) {
+              updates.name = data.nickname;
+            }
 
             await update(ref(db, `users/${currentUser.uid}`), updates);
             currentUser.gameId = activeTargetGid;
@@ -15558,6 +15561,7 @@ window.openAccountHubVerifyModal = () => {
             currentUser.verifiedAt = nowIso;
             currentUser.lastSyncedAt = nowIso;
             currentUser.centuryGamesVerified = true;
+            // Never overwrite existing display name in memory either
             if (updates.name) currentUser.name = updates.name;
             if (updates.avatar_image) currentUser.avatar_image = updates.avatar_image;
             try { localStorage.setItem('cached_current_user', JSON.stringify(currentUser)); } catch(e) {}
@@ -17305,7 +17309,7 @@ window.handleSyncAllCharacters = async (btnEl = null) => {
             } catch(e) {}
           }
         }
-        if (data.nickname && !/^\d+$/.test(data.nickname)) updates.name = data.nickname;
+        if (data.nickname && !/^\d+$/.test(data.nickname) && !currentUser.name) updates.name = data.nickname;
         await update(ref(db, `users/${currentUser.uid}`), updates);
         currentUser.stove_lv = finalStove;
         currentUser.furnaceLevel = finalStove;
