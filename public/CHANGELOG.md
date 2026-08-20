@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [2.9.90] - 2026-08-20
+- 🛡️ **Unified Token Status**: Standardized 30-day token expiry detection across website and profiles.
+- ⚡ **Accurate Calculations**: Real-time token expiry checks for mains and alts.
+- 📊 **Parity Tracking**: Perfect tally alignment across all dropdown filters and tabs.
+- 🔄 **Realtime Cache**: Instant profile updates and navbar indicator synchronization.
+
 ## [2.9.89] - 2026-08-20
 - 🛡️ **Automated Tests**: Auto-verifies version sync across all configuration files.
 - 📋 **QA Protocol**: Added comprehensive TESTING.md safety checklist for releases.

@@ -3233,6 +3233,10 @@ window.setupUserRealtimeSync = (uid) => {
       const updatedUser = snap.val();
       currentUser = { ...currentUser, ...updatedUser };
       window.currentUser = currentUser;
+      try { localStorage.setItem('cached_current_user', JSON.stringify(currentUser)); } catch(e) {}
+      if (typeof window.updateNavbarUserIndicator === 'function') {
+        window.updateNavbarUserIndicator(currentUser);
+      }
       if (typeof window.updateNewMemberBadge === 'function') {
         window.updateNewMemberBadge();
       }
@@ -12331,7 +12335,7 @@ window.getMemberTokenStatus = (user) => {
   // 1. Direct explicit tokenStatus object written by Central Command scanner
   if (user.tokenStatus && typeof user.tokenStatus === 'object') {
     const ts = user.tokenStatus;
-    const days = typeof ts.daysLeft === 'number' ? ts.daysLeft : 0;
+    const days = (typeof ts.daysLeft === 'number') ? ts.daysLeft : (ts.status === 'active' ? 30 : 0);
     if (ts.status === 'expired' || user.tokenExpired === true || days <= 0) {
       return {
         status: 'expired',
@@ -12342,7 +12346,7 @@ window.getMemberTokenStatus = (user) => {
         color: '#ef4444',
         icon: '🚨'
       };
-    } else if (ts.status === 'expiring_soon' || days <= 3) {
+    } else if (ts.status === 'expiring_soon' || ts.status === 'expiring' || (days <= 3 && days > 0)) {
       return {
         status: 'expiring_soon',
         label: `Token Expires in ${days} Day${days === 1 ? '' : 's'}`,
@@ -12352,7 +12356,7 @@ window.getMemberTokenStatus = (user) => {
         color: '#f59e0b',
         icon: '⏳'
       };
-    } else {
+    } else if (ts.status === 'active' || days > 0) {
       return {
         status: 'active',
         label: `30-Day Sync Active (${days} Days Left)`,
@@ -12366,7 +12370,7 @@ window.getMemberTokenStatus = (user) => {
   }
 
   // 2. Direct client-side JWT decoding if token exists
-  const rawTok = user.wos_cg_token || user.token;
+  const rawTok = user.wos_cg_token || user.token || user.stove_token || user.syncToken;
   if (rawTok && typeof rawTok === 'string') {
     try {
       const parts = rawTok.split('.');
@@ -12379,7 +12383,7 @@ window.getMemberTokenStatus = (user) => {
             const nowMs = Date.now();
             const msLeft = expMs - nowMs;
             const daysLeft = Math.max(0, Math.floor(msLeft / (1000 * 60 * 60 * 24)));
-            if (daysLeft <= 0) {
+            if (daysLeft <= 0 || user.tokenExpired === true) {
               return {
                 status: 'expired',
                 label: '30-Day Sync Token Expired',
@@ -12416,58 +12420,61 @@ window.getMemberTokenStatus = (user) => {
     } catch(e) {}
   }
 
-  if (!user.wos_cg_token) {
-    if (user.tokenExpired === true || (user.tokenStatus && user.tokenStatus.status === 'expired')) {
-      return {
-        status: 'expired',
-        label: '30-Day Sync Token Expired',
-        desc: 'Your 30-day token has expired. Enter a new in-game code to keep stats auto-syncing.',
-        daysLeft: 0,
-        alert: true,
-        color: '#ef4444',
-        icon: '🚨'
-      };
+  // 3. Fallback check: verifiedAt or lastSyncedAt timestamps
+  const vDate = user.verifiedAt || user.lastSyncedAt || (user.centuryGamesVerified ? (user.createdAt || user.joinedDate) : null);
+  if (rawTok && vDate) {
+    const verifiedMs = new Date(vDate).getTime();
+    if (!isNaN(verifiedMs)) {
+      const elapsedDays = Math.floor((Date.now() - verifiedMs) / (1000 * 60 * 60 * 24));
+      const daysLeft = Math.max(0, 30 - elapsedDays);
+
+      if (daysLeft <= 0 || user.tokenExpired === true) {
+        return {
+          status: 'expired',
+          label: '30-Day Sync Token Expired',
+          desc: 'Your 30-day token has expired. Enter a new in-game code to keep stats auto-syncing.',
+          daysLeft: 0,
+          alert: true,
+          color: '#ef4444',
+          icon: '🚨'
+        };
+      } else if (daysLeft <= 3) {
+        return {
+          status: 'expiring_soon',
+          label: `Token Expires in ${daysLeft} Day${daysLeft === 1 ? '' : 's'}`,
+          desc: `Your 30-day sync token will expire in ${daysLeft} day${daysLeft === 1 ? '' : 's'}. Renew early to avoid sync interruption.`,
+          daysLeft: daysLeft,
+          alert: true,
+          color: '#f59e0b',
+          icon: '⏳'
+        };
+      } else {
+        return {
+          status: 'active',
+          label: `30-Day Sync Active (${daysLeft} Days Left)`,
+          desc: 'Your 30-day sync token is verified and syncing normally.',
+          daysLeft: daysLeft,
+          alert: false,
+          color: '#10b981',
+          icon: '🛡️'
+        };
+      }
     }
+  }
+
+  if (rawTok && user.tokenExpired !== true) {
     return {
-      status: 'unverified',
-      label: 'Character Unverified',
-      desc: 'Verify your in-game mailbox code to enable 30-day automatic stats, furnace level, and avatar syncing.',
-      daysLeft: 0,
-      alert: true,
-      color: '#f59e0b',
-      icon: '⚠️'
+      status: 'active',
+      label: '30-Day Sync Active (30 Days Left)',
+      desc: 'Your 30-day sync token is verified and syncing normally.',
+      daysLeft: 30,
+      alert: false,
+      color: '#10b981',
+      icon: '🛡️'
     };
   }
 
-  const vDate = user.verifiedAt || user.lastSyncedAt;
-  if (!vDate) {
-    if (user.tokenExpired === true || (user.tokenStatus && user.tokenStatus.status === 'expired')) {
-      return {
-        status: 'expired',
-        label: '30-Day Sync Token Expired',
-        desc: 'Your 30-day token has expired. Enter a new in-game code to keep stats auto-syncing.',
-        daysLeft: 0,
-        alert: true,
-        color: '#ef4444',
-        icon: '🚨'
-      };
-    }
-    return {
-      status: 'unverified',
-      label: 'Character Unverified',
-      desc: 'Verify your in-game mailbox code to enable 30-day automatic stats, furnace level, and avatar syncing.',
-      daysLeft: 0,
-      alert: true,
-      color: '#f59e0b',
-      icon: '⚠️'
-    };
-  }
-
-  const verifiedMs = new Date(vDate).getTime();
-  const elapsedDays = Math.floor((Date.now() - verifiedMs) / (1000 * 60 * 60 * 24));
-  const daysLeft = Math.max(0, 30 - elapsedDays);
-
-  if (daysLeft <= 0 || user.tokenExpired === true) {
+  if (user.tokenExpired === true || (user.tokenStatus && user.tokenStatus.status === 'expired')) {
     return {
       status: 'expired',
       label: '30-Day Sync Token Expired',
@@ -12477,27 +12484,17 @@ window.getMemberTokenStatus = (user) => {
       color: '#ef4444',
       icon: '🚨'
     };
-  } else if (daysLeft <= 3) {
-    return {
-      status: 'expiring_soon',
-      label: `Token Expires in ${daysLeft} Day${daysLeft === 1 ? '' : 's'}`,
-      desc: `Your 30-day sync token will expire in ${daysLeft} day${daysLeft === 1 ? '' : 's'}. Renew early to avoid sync interruption.`,
-      daysLeft: daysLeft,
-      alert: true,
-      color: '#f59e0b',
-      icon: '⏳'
-    };
-  } else {
-    return {
-      status: 'active',
-      label: `30-Day Sync Active (${daysLeft} Days Left)`,
-      desc: 'Your 30-day sync token is verified and syncing normally.',
-      daysLeft: daysLeft,
-      alert: false,
-      color: '#10b981',
-      icon: '🛡️'
-    };
   }
+
+  return {
+    status: 'unverified',
+    label: 'Character Unverified',
+    desc: 'Verify your in-game mailbox code to enable 30-day automatic stats, furnace level, and avatar syncing.',
+    daysLeft: 0,
+    alert: true,
+    color: '#f59e0b',
+    icon: '⚠️'
+  };
 };
 
 window.getAltTokenStatus = (aTok) => {
@@ -13743,7 +13740,8 @@ window.filterAltAccountsList = function() {
   cards.forEach(card => {
     const name = card.getAttribute('data-name') || '';
     const gid = card.getAttribute('data-gid') || '';
-    const tokenStatus = card.getAttribute('data-token-status') || 'unverified';
+    const rawTokenStatus = card.getAttribute('data-token-status') || 'unverified';
+    const tokenStatus = (rawTokenStatus === 'expiring_soon') ? 'expiring' : rawTokenStatus;
     const isEnrolled = card.getAttribute('data-enrolled') === 'true';
 
     // 1. Search Query
@@ -15150,8 +15148,8 @@ window.openEditProfileModal = async () => {
 
   const furnaceSelectHtml = window.renderFurnaceSelectHtml('editProfileFurnaceSelect', currentFurnace, 'margin-top:6px;');
 
-  const tokenStatus = window.getTokenExpiryStatus ? window.getTokenExpiryStatus(currentUser.wos_cg_token) : { expired: true, daysLeft: 0 };
-  const hasValidToken = !!(currentUser.wos_cg_token && !tokenStatus.expired);
+  const tokenStatus = (typeof window.getMemberTokenStatus === 'function') ? window.getMemberTokenStatus(currentUser) : { status: 'unverified', daysLeft: 0 };
+  const hasValidToken = (tokenStatus.status === 'active' || tokenStatus.status === 'expiring_soon');
 
   modalOverlay.innerHTML = `
     <div class="card" style="width:90%; max-width:520px; background:linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.9)); border:1px solid rgba(56,189,248,0.3); padding:30px; border-radius:20px; box-shadow:0 20px 50px rgba(0,0,0,0.6); text-align:left; animation:zoomIn 0.2s forwards;">
@@ -20018,7 +20016,8 @@ const views = {
             const altSyncedCount = parseInt(row.getAttribute('data-alt-synced-count') || '0', 10);
             const isEnrolled = row.getAttribute('data-is-enrolled') === 'true';
             const isClaimed = row.getAttribute('data-is-claimed') === 'true';
-            const tokenStatus = row.getAttribute('data-token-status') || 'unverified';
+            const rawTokenStatus = row.getAttribute('data-token-status') || 'unverified';
+            const normTokenStatus = (rawTokenStatus === 'expiring_soon') ? 'expiring' : rawTokenStatus;
             const isPushOn = row.getAttribute('data-push-enabled') === 'true';
 
             const matchesSearch = !searchVal || name.includes(searchVal) || gid.includes(searchVal) || email.includes(searchVal);
@@ -20033,16 +20032,16 @@ const views = {
             if (tokenFilter !== 'all') {
                 if (attrFilter === 'alts' && !isAlt) {
                     if (tokenFilter === 'active') {
-                        matchesToken = (tokenStatus === 'active' || altSyncedCount > 0);
+                        matchesToken = (normTokenStatus === 'active' || altSyncedCount > 0);
                     } else if (tokenFilter === 'unverified') {
-                        matchesToken = (tokenStatus === 'unverified' || altSyncedCount === 0);
+                        matchesToken = (normTokenStatus === 'unverified' || altSyncedCount === 0);
                     } else if (tokenFilter === 'expired') {
-                        matchesToken = (tokenStatus === 'expired');
+                        matchesToken = (normTokenStatus === 'expired');
                     } else if (tokenFilter === 'expiring') {
-                        matchesToken = (tokenStatus === 'expiring');
+                        matchesToken = (normTokenStatus === 'expiring');
                     }
                 } else {
-                    matchesToken = (tokenStatus === tokenFilter);
+                    matchesToken = (normTokenStatus === tokenFilter);
                 }
             }
 
@@ -20071,9 +20070,9 @@ const views = {
                 if (isEnrolled && !isAlt) countEnrolled++;
                 if (isAdmin && !isAlt) countStaff++;
 
-                if (tokenStatus === 'active') countActiveToken++;
-                else if (tokenStatus === 'expiring') countExpiringToken++;
-                else if (tokenStatus === 'expired') countExpiredToken++;
+                if (normTokenStatus === 'active') countActiveToken++;
+                else if (normTokenStatus === 'expiring') countExpiringToken++;
+                else if (normTokenStatus === 'expired') countExpiredToken++;
                 else countUnverifiedToken++;
             }
 
@@ -21987,15 +21986,39 @@ const views = {
 
               Object.entries(users).forEach(([uid, u]) => {
                 const tStat = window.getMemberTokenStatus(u);
-                if (tStat.status === 'active') tokenActiveCount++;
-                else if (tStat.status === 'expiring') tokenExpiringCount++;
-                else if (tStat.status === 'expired') tokenExpiredCount++;
+                const s = (tStat.status === 'expiring_soon') ? 'expiring' : (tStat.status || 'unverified');
+                if (s === 'active') tokenActiveCount++;
+                else if (s === 'expiring') tokenExpiringCount++;
+                else if (s === 'expired') tokenExpiredCount++;
                 else tokenUnverifiedCount++;
+
+                // Also count all alt tokens corresponding to alt rows in the table
+                const processedAltGids = new Set();
+                const checkAltTok = (aid, aTok) => {
+                  const cleanAid = String(aid).trim();
+                  if (!cleanAid || processedAltGids.has(cleanAid)) return;
+                  processedAltGids.add(cleanAid);
+                  const aStat = window.getAltTokenStatus(aTok);
+                  const as = (aStat.status === 'expiring_soon') ? 'expiring' : (aStat.status || 'unverified');
+                  if (as === 'active') tokenActiveCount++;
+                  else if (as === 'expiring') tokenExpiringCount++;
+                  else if (as === 'expired') tokenExpiredCount++;
+                  else tokenUnverifiedCount++;
+                };
+                if (u.altTokens && typeof u.altTokens === 'object') {
+                  Object.entries(u.altTokens).forEach(([aid, at]) => checkAltTok(aid, at));
+                }
+                if (u.linkedAltsData && typeof u.linkedAltsData === 'object') {
+                  Object.entries(u.linkedAltsData).forEach(([aid, at]) => checkAltTok(aid, at));
+                }
+                if (u.linkedGameIds && Array.isArray(u.linkedGameIds)) {
+                  u.linkedGameIds.forEach(aid => checkAltTok(aid, {}));
+                }
 
                 let ms = u.createdAt ? new Date(u.createdAt).getTime() : (u.timestamp ? Number(u.timestamp) : 0);
                 if (ms > 0 && (Date.now() - ms) <= (7 * 24 * 60 * 60 * 1000)) newSignupsCount++;
 
-                const uAltCount = ((u.altTokens ? Object.keys(u.altTokens).length : 0) + (u.linkedAltsData ? Object.keys(u.linkedAltsData).length : 0) + (u.linkedGameIds ? u.linkedGameIds.length : 0));
+                const uAltCount = processedAltGids.size;
                 if (uAltCount > 0) {
                   hasAltsCount++;
                 }
@@ -22191,12 +22214,13 @@ const views = {
         const isEnrolled = (rEntry && (rEntry.giftCodes === true || rEntry.giftCodes === 'TRUE' || (typeof rEntry.giftCodes === 'string' && rEntry.giftCodes.toLowerCase().trim() === 'true')));
 
         const tokenStatus = window.getMemberTokenStatus(u);
+        const rowTokenStatus = (tokenStatus.status === 'expiring_soon') ? 'expiring' : (tokenStatus.status || 'unverified');
         let tokenPill = `<span style="background:rgba(255,255,255,0.06); color:var(--text-muted); border:1px solid var(--border); padding:3px 8px; border-radius:10px; font-size:11px;">⚪ Unverified</span>`;
-        if (tokenStatus.status === 'active') {
+        if (rowTokenStatus === 'active') {
           tokenPill = `<span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:3px 8px; border-radius:10px; font-size:11px; font-weight:bold;">🟢 ${tokenStatus.daysLeft}d Sync</span>`;
-        } else if (tokenStatus.status === 'expiring') {
+        } else if (rowTokenStatus === 'expiring') {
           tokenPill = `<span style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); padding:3px 8px; border-radius:10px; font-size:11px; font-weight:bold;">🟠 ${tokenStatus.daysLeft}d Expiring</span>`;
-        } else if (tokenStatus.status === 'expired') {
+        } else if (rowTokenStatus === 'expired') {
           tokenPill = `<span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.4); padding:3px 8px; border-radius:10px; font-size:11px; font-weight:bold;">🔴 Expired Sync</span>`;
         }
 
@@ -22207,9 +22231,9 @@ const views = {
         let altSyncedCount = 0;
         if (totalAlts > 0 && u.altTokens) {
           Object.values(u.altTokens).forEach(at => {
-            if (at && at.verifiedAt) {
-              const d = Math.floor((Date.now() - new Date(at.verifiedAt).getTime()) / (1000 * 60 * 60 * 24));
-              if (d < 30) altSyncedCount++;
+            const aStat = window.getAltTokenStatus(at);
+            if (aStat.status === 'active' || aStat.status === 'expiring_soon' || aStat.status === 'expiring') {
+              altSyncedCount++;
             }
           });
         }
@@ -22226,7 +22250,7 @@ const views = {
               data-is-admin="${isAdminUser ? 'true' : 'false'}" 
               data-has-alts="${totalAlts > 0 ? 'true' : 'false'}" 
               data-is-enrolled="${isEnrolled ? 'true' : 'false'}" 
-              data-token-status="${tokenStatus.status}"
+              data-token-status="${rowTokenStatus}"
               data-alt-synced-count="${altSyncedCount}"
               data-is-claimed="true"
               data-is-alt="false"
@@ -22327,24 +22351,15 @@ const views = {
             let altName = aTok.nickname || aTok.name || aTok.chiefName || idToNameMap[altGidStr] || `Alt (${altGidStr})`;
             let altFurnace = aTok.stove_lv || aTok.furnaceLevel || '';
             
-            let altTokenStatus = 'unverified';
+            const altStat = (typeof window.getAltTokenStatus === 'function') ? window.getAltTokenStatus(aTok) : { status: 'unverified', daysLeft: 0 };
+            const altTokenStatus = (altStat.status === 'expiring_soon') ? 'expiring' : (altStat.status || 'unverified');
             let altTokenPill = `<span style="background:rgba(255,255,255,0.06); color:var(--text-muted); border:1px solid var(--border); padding:2px 8px; border-radius:10px; font-size:11px;">⚪ Unverified Alt</span>`;
-            if (aTok && aTok.verifiedAt) {
-              const aVerified = new Date(aTok.verifiedAt);
-              if (!isNaN(aVerified.getTime())) {
-                const daysElapsed = Math.floor((Date.now() - aVerified.getTime()) / (1000 * 60 * 60 * 24));
-                const daysLeft = Math.max(0, 30 - daysElapsed);
-                if (daysLeft > 14) {
-                  altTokenStatus = 'active';
-                  altTokenPill = `<span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold;">🟢 ${daysLeft}d Alt Sync</span>`;
-                } else if (daysLeft > 0) {
-                  altTokenStatus = 'expiring';
-                  altTokenPill = `<span style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold;">🟠 ${daysLeft}d Alt Sync</span>`;
-                } else {
-                  altTokenStatus = 'expired';
-                  altTokenPill = `<span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.4); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold;">🔴 Expired Alt Sync</span>`;
-                }
-              }
+            if (altTokenStatus === 'active') {
+              altTokenPill = `<span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold;">🟢 ${altStat.daysLeft}d Alt Sync</span>`;
+            } else if (altTokenStatus === 'expiring') {
+              altTokenPill = `<span style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold;">🟠 ${altStat.daysLeft}d Alt Sync</span>`;
+            } else if (altTokenStatus === 'expired') {
+              altTokenPill = `<span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.4); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold;">🔴 Expired Alt Sync</span>`;
             }
 
             const altFurnaceScore = window.getFurnaceNumericValue(altFurnace);
@@ -25662,20 +25677,14 @@ window.resetBearTrapEvent = async () => {
         }
         let profileData = (profileSnap && profileSnap.exists()) ? profileSnap.val() : null;
         if (profileData) {
-            if (profileData.gameId && !currentUser.gameId) currentUser.gameId = profileData.gameId;
+            Object.assign(currentUser, profileData);
+            if (profileData.tokenStatus) currentUser.tokenStatus = profileData.tokenStatus;
+            if (profileData.tokenExpired !== undefined) currentUser.tokenExpired = profileData.tokenExpired;
+            if (profileData.gameId) currentUser.gameId = String(profileData.gameId).trim();
             if (profileData.name && !currentUser.name) currentUser.name = profileData.name;
             if (profileData.stove_lv) currentUser.stove_lv = profileData.stove_lv;
             if (profileData.furnaceLevel) currentUser.furnaceLevel = profileData.furnaceLevel;
-            if (profileData.dateStarted) currentUser.dateStarted = profileData.dateStarted;
-            if (profileData.joinedDate) currentUser.joinedDate = profileData.joinedDate;
-            if (profileData.timeActive) currentUser.timeActive = profileData.timeActive;
-            if (profileData.bio) currentUser.bio = profileData.bio;
-            if (profileData.wos_cg_token) currentUser.wos_cg_token = profileData.wos_cg_token;
-            if (profileData.section) currentUser.section = profileData.section;
-            if (profileData.centuryGamesVerified) currentUser.centuryGamesVerified = profileData.centuryGamesVerified;
-            if (profileData.altTokens) currentUser.altTokens = profileData.altTokens;
-            if (profileData.linkedGameIds) currentUser.linkedGameIds = profileData.linkedGameIds;
-            if (profileData.linkedAltsData) currentUser.linkedAltsData = profileData.linkedAltsData;
+            window.currentUser = currentUser;
             try { localStorage.setItem('cached_current_user', JSON.stringify(currentUser)); } catch(e) {}
         }
     } catch(e) {}

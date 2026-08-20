@@ -1,19 +1,19 @@
 {
-  "version": "2.9.89",
+  "version": "2.9.90",
   "releaseDate": "2026-08-20",
-  "title": "What's New in v2.9.89",
+  "title": "What's New in v2.9.90",
   "notes": [
-    "🛡️ Automated test suite now verifies triple-version synchronization.",
-    "📋 Added TESTING.md QA protocol for view isolation and safety.",
-    "⚡ Fixed core AST syntax handling in ID name mapping."
+    "🛡️ Unified 30-day token status detection across database and profiles.",
+    "⚡ Accurate real-time expiry calculations for mains and alts.",
+    "📊 Perfect tally alignment across all dropdown filters and tabs."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "2.9.89",
+    "version": "2.9.90",
     "latestChanges": [
+      "v2.9.90: Unified token status calculations & real-time filter sync",
       "v2.9.89: Automated version sync validation & TESTING.md QA protocol",
       "v2.9.88: Fixed admin ticket actions navigating away from admin panel",
-      "v2.9.87: Admin ticket status tab bar - Open, In Progress, Done, Archived, All with live counts",
-      "v2.9.86: Dynamic real-time synchronization for all dropdown filter options and action button counters"
+      "v2.9.87: Admin ticket status tab bar - Open, In Progress, Done, Archived, All with live counts"
     ]
   }
 }
