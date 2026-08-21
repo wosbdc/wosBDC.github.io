@@ -13896,25 +13896,29 @@ window.openAllianceAlertsModal = async () => {
 
     const overlay = document.createElement('div');
     overlay.id = 'notificationsModalOverlay';
-    overlay.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.85); backdrop-filter:blur(10px); z-index:99999; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease;';
+    overlay.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.85); backdrop-filter:blur(10px); z-index:99999; display:flex; align-items:center; justify-content:center; padding:10px; animation:fadeIn 0.2s ease; box-sizing:border-box;';
 
     overlay.innerHTML = `
-      <div class="card" style="width:95%; max-width:580px; max-height:88vh; background:linear-gradient(145deg, rgba(15,23,42,0.97), rgba(30,41,59,0.95)); border:1px solid rgba(56,189,248,0.35); padding:18px; border-radius:18px; box-shadow:0 25px 60px rgba(0,0,0,0.75); text-align:left; animation:zoomIn 0.2s forwards; display:flex; flex-direction:column; color:var(--text-main); overflow:hidden;">
+      <div class="card" style="width:100%; max-width:580px; max-height:calc(100dvh - 24px); background:linear-gradient(145deg, rgba(15,23,42,0.97), rgba(30,41,59,0.95)); border:1px solid rgba(56,189,248,0.35); padding:14px 16px; border-radius:16px; box-shadow:0 25px 60px rgba(0,0,0,0.75); text-align:left; animation:zoomIn 0.2s forwards; display:flex; flex-direction:column; color:var(--text-main); overflow:hidden; box-sizing:border-box;">
         
         <!-- Header -->
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:12px; gap:8px;">
-          <div style="display:flex; align-items:center; gap:10px; min-width:0;">
-            <span style="font-size:22px; flex-shrink:0;">🔔</span>
-            <div style="min-width:0;">
-              <h3 style="margin:0; color:#fff; font-size:16.5px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Alliance Notifications & Alerts</h3>
-              <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">Chief <strong>${window.escapeHTML(chiefName)}</strong> (ID: ${currentUser ? (currentUser.gameId || 'N/A') : 'N/A'})</div>
+        <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+            <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+              <span style="font-size:22px; flex-shrink:0;">🔔</span>
+              <div style="min-width:0;">
+                <h3 style="margin:0; color:#fff; font-size:16px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Alliance Alerts & Notifications</h3>
+                <div style="font-size:11.5px; color:var(--text-muted); margin-top:1px;">Chief <strong style="color:#e2e8f0;">${window.escapeHTML(chiefName)}</strong></div>
+              </div>
             </div>
+            <button onclick="document.getElementById('notificationsModalOverlay').remove()" class="close-btn" title="Close Window" style="flex-shrink:0;">✕</button>
           </div>
-          <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+
+          <!-- Action Pills Bar -->
+          <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
             ${headerShieldBtnHtml}
             ${headerStaffToolsPillHtml}
             ${headerPushPillHtml}
-            <button onclick="document.getElementById('notificationsModalOverlay').remove()" class="close-btn" title="Close Window">✕</button>
           </div>
         </div>
 
@@ -13953,7 +13957,7 @@ window.openAllianceAlertsModal = async () => {
         ` : ''}
 
         <!-- Scrollable Unified Stream Feed -->
-        <div id="bellStreamFeedContainer" style="display:flex; flex-direction:column; gap:10px; overflow-y:auto; flex:1; max-height:58vh; padding-right:4px;">
+        <div id="bellStreamFeedContainer" style="display:flex; flex-direction:column; gap:10px; overflow-y:auto; flex:1; max-height:60dvh; min-height:120px; padding-right:4px;">
           ${streamFeedHtml}
         </div>
 

@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [3.0.3] - 2026-08-20
+- 📱 **Mobile Header Optimization**: Streamlined alerts header for iOS and Android smartphones.
+
 ## [3.0.2] - 2026-08-20
 - 🎨 **Cleaner Date Inputs**: Removed duplicate faded icons for a clean single button.
 
