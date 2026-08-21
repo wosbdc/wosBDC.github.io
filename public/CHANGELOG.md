@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.1.3] - 2026-08-21
+- ⚔️ **Auto-Join Timer**: Added rally auto-join renewal countdown with custom alerts.
+- 🔔 **Renewal Push Notifications**: Get alerted before in-game auto-join expires.
+- 🎵 **Rally March Chime**: Added harmonic audio alert when auto-join ends.
+- 📱 **Sidebar & Stream Cards**: Quick 1-tap 8h restart buttons across dashboard.
+
 ## [3.1.2] - 2026-08-21
 - 🌐 **Expanded Feeds**: Added PocketTactics, Beebom, and TouchTapPlay scraper sources.
 - 🧹 **Noise Filtering**: Upgraded token blacklist to eliminate blog site artifacts.

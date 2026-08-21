@@ -13180,6 +13180,349 @@ window.openPersonalShieldModal = function() {
   document.body.appendChild(overlay);
 };
 
+// ==========================================
+// ⚔️ AUTO-JOIN RENEWAL & RALLY REMINDER SUITE
+// ==========================================
+
+window.playAutoJoinAlertSound = () => {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const now = ctx.currentTime;
+    
+    // Rally march trumpet sequence (G4 -> C5 -> E5 -> G5)
+    const notes = [392.00, 523.25, 659.25, 783.99];
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(freq, now + i * 0.12);
+      gain.gain.setValueAtTime(0.2, now + i * 0.12);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.3);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + i * 0.12);
+      osc.stop(now + i * 0.12 + 0.3);
+    });
+  } catch (e) {
+    console.warn("Web Audio Auto-Join alert chime not available:", e);
+  }
+};
+
+window.getAutoJoinTimer = () => {
+  try {
+    const raw = localStorage.getItem('wos_auto_join_timer');
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (!data || !data.expiresAt) return null;
+    return data;
+  } catch (e) {
+    return null;
+  }
+};
+
+window.setAutoJoinTimer = (durationHours, durationMins = 0, warningMins = 15) => {
+  const durationMs = (Number(durationHours) * 3600000) + (Number(durationMins) * 60000);
+  if (durationMs <= 0) return;
+  const now = Date.now();
+  const expiresAt = now + durationMs;
+  const timerData = {
+    startedAt: now,
+    durationMs,
+    expiresAt,
+    warningMins: Number(warningMins) || 15,
+    alertTriggered: false,
+    expiredAlertTriggered: false,
+    label: durationHours >= 24 ? `${Math.round(durationHours/24)}d Auto-Join` : `${durationHours}h Auto-Join`
+  };
+  localStorage.setItem('wos_auto_join_timer', JSON.stringify(timerData));
+  if (window.showToast) window.showToast(`⚔️ Auto-Join Timer Active: Expires in ${durationHours}h ${durationMins ? `${durationMins}m` : ''}`, "success");
+  if (typeof window.startAutoJoinTicker === 'function') window.startAutoJoinTicker();
+};
+
+window.cancelAutoJoinTimer = () => {
+  localStorage.removeItem('wos_auto_join_timer');
+  if (window.showToast) window.showToast("⚔️ Auto-Join Timer cancelled.", "info");
+};
+
+window.startAutoJoinTicker = () => {
+  if (window._autoJoinTickerInterval) clearInterval(window._autoJoinTickerInterval);
+
+  const checkAutoJoin = () => {
+    const aj = window.getAutoJoinTimer();
+    if (!aj) return;
+    const now = Date.now();
+    const diff = aj.expiresAt - now;
+    const warningMs = (aj.warningMins || 15) * 60000;
+
+    // Trigger Warning Notification & Audio Chime
+    if (diff > 0 && diff <= warningMs && !aj.alertTriggered) {
+      aj.alertTriggered = true;
+      localStorage.setItem('wos_auto_join_timer', JSON.stringify(aj));
+      window.playAutoJoinAlertSound();
+      
+      const minsLeft = Math.max(1, Math.ceil(diff / 60000));
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+          new Notification('⚔️ AUTO-JOIN EXPIRING SOON!', {
+            body: `Chief, your rally Auto-Join expires in ${minsLeft} minutes! Log into Whiteout Survival to restart Auto-Join!`,
+            icon: 'https://wosbdc.github.io/central_command_icon.ico'
+          });
+        } catch(e) {}
+      }
+      if (window.showToast) window.showToast(`⚔️ AUTO-JOIN WARNING: Expires in ${minsLeft} minutes! Restart Auto-Join in-game!`, "warning");
+    }
+
+    // Trigger Expired Alert
+    if (diff <= 0 && !aj.expiredAlertTriggered) {
+      aj.expiredAlertTriggered = true;
+      localStorage.setItem('wos_auto_join_timer', JSON.stringify(aj));
+      window.playAutoJoinAlertSound();
+      
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+          new Notification('🚨 AUTO-JOIN HAS EXPIRED!', {
+            body: `Your rally Auto-Join stopped! Open Whiteout Survival and restart Auto-Join so you don't miss beast rallies!`,
+            icon: 'https://wosbdc.github.io/central_command_icon.ico'
+          });
+        } catch(e) {}
+      }
+      if (window.showToast) window.showToast(`🚨 AUTO-JOIN EXPIRED: Re-enable Auto-Join in-game now!`, "error");
+    }
+
+    // Update any open Auto-Join Countdown Elements
+    const countdownEls = document.querySelectorAll('#autoJoinCountdownText, .auto-join-countdown-text');
+    countdownEls.forEach(countdownEl => {
+      if (diff > 0) {
+        countdownEl.textContent = window.formatCountdownTimeRemaining(diff);
+        countdownEl.style.color = '#38bdf8';
+        countdownEl.style.textShadow = '0 0 10px rgba(56,189,248,0.4)';
+      } else {
+        countdownEl.textContent = 'EXPIRED!';
+        countdownEl.style.color = '#ef4444';
+        countdownEl.style.textShadow = '0 0 10px rgba(239,68,68,0.6)';
+      }
+    });
+  };
+
+  checkAutoJoin();
+  window._autoJoinTickerInterval = setInterval(checkAutoJoin, 1000);
+};
+
+window.startAutoJoinTicker();
+
+window.selectedAutoJoinHours = 8;
+window.selectedAutoJoinMins = 0;
+
+window.selectAutoJoinPreset = function(hours, mins = 0) {
+  window.selectedAutoJoinHours = Number(hours);
+  window.selectedAutoJoinMins = Number(mins);
+  
+  const customCont = document.getElementById('autoJoinCustomInputsContainer');
+  if (customCont) customCont.style.display = 'none';
+
+  document.querySelectorAll('.auto-join-preset-btn').forEach(btn => {
+    const bH = Number(btn.getAttribute('data-hours'));
+    if (bH === hours) {
+      btn.style.background = 'linear-gradient(135deg, #0ea5e9, #0284c7)';
+      btn.style.border = 'none';
+      btn.style.boxShadow = '0 2px 8px rgba(14,165,233,0.3)';
+    } else {
+      btn.style.background = 'rgba(255,255,255,0.06)';
+      btn.style.border = '1px solid rgba(255,255,255,0.12)';
+      btn.style.boxShadow = 'none';
+    }
+  });
+};
+
+window.toggleAutoJoinCustomInputs = function() {
+  const customCont = document.getElementById('autoJoinCustomInputsContainer');
+  if (!customCont) return;
+  const isHidden = (customCont.style.display === 'none');
+  customCont.style.display = isHidden ? 'block' : 'none';
+  if (isHidden) {
+    document.querySelectorAll('.auto-join-preset-btn').forEach(btn => {
+      btn.style.background = 'rgba(255,255,255,0.06)';
+      btn.style.border = '1px solid rgba(255,255,255,0.12)';
+      btn.style.boxShadow = 'none';
+    });
+  }
+};
+
+window.handleActivateAutoJoinFromModal = function() {
+  const customCont = document.getElementById('autoJoinCustomInputsContainer');
+  let h = window.selectedAutoJoinHours || 8;
+  let m = window.selectedAutoJoinMins || 0;
+  if (customCont && customCont.style.display === 'block') {
+    h = Number(document.getElementById('autoJoinCustomHours')?.value || 0);
+    m = Number(document.getElementById('autoJoinCustomMins')?.value || 0);
+  }
+  const warningMins = Number(document.getElementById('autoJoinWarningTiming')?.value || 15);
+  window.setAutoJoinTimer(h, m, warningMins);
+  const overlay = document.getElementById('autoJoinModalOverlay');
+  if (overlay) overlay.remove();
+};
+
+window.openAutoJoinModal = function() {
+  let existing = document.getElementById('autoJoinModalOverlay');
+  if (existing) existing.remove();
+
+  const currentAutoJoin = window.getAutoJoinTimer();
+  const now = Date.now();
+  const isActive = currentAutoJoin && (currentAutoJoin.expiresAt > now);
+  const diffMs = isActive ? (currentAutoJoin.expiresAt - now) : 0;
+  const expiryDate = isActive ? new Date(currentAutoJoin.expiresAt) : null;
+  const expiryTimeStr = expiryDate ? `${expiryDate.toLocaleDateString([], { month:'short', day:'numeric' })} at ${expiryDate.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}` : '';
+
+  const overlay = document.createElement('div');
+  overlay.id = 'autoJoinModalOverlay';
+  overlay.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.85); backdrop-filter:blur(10px); z-index:100005; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease;';
+
+  overlay.innerHTML = `
+    <div class="card" style="width:94%; max-width:480px; background:linear-gradient(145deg, rgba(15,23,42,0.98), rgba(30,41,59,0.96)); border:1.5px solid rgba(56,189,248,0.45); padding:22px; border-radius:18px; box-shadow:0 25px 60px rgba(0,0,0,0.85); text-align:left; color:var(--text-main); max-height:90vh; overflow-y:auto; animation:zoomIn 0.2s ease;">
+      
+      <!-- Header -->
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:12px; gap:8px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:24px;">⚔️</span>
+          <div>
+            <h3 style="margin:0; color:#fff; font-size:16.5px; font-weight:800;">Auto-Join Renewal Timer</h3>
+            <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">Rally auto-join countdown & reminder alerts</div>
+          </div>
+        </div>
+        <button onclick="document.getElementById('autoJoinModalOverlay').remove()" class="close-btn" title="Close Window">✕</button>
+      </div>
+
+      ${isActive ? `
+        <!-- Active Auto-Join Status Box -->
+        <div style="background:linear-gradient(145deg, rgba(56,189,248,0.15), rgba(15,23,42,0.9)); border:1.5px solid #38bdf8; border-radius:14px; padding:14px; margin-bottom:14px; box-shadow:0 0 15px rgba(56,189,248,0.2);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <span style="font-size:11px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.5px; display:flex; align-items:center; gap:5px;">
+              🟢 Active Rally Auto-Join
+            </span>
+            <span style="font-size:11px; background:rgba(56,189,248,0.2); color:#38bdf8; border:1px solid rgba(56,189,248,0.4); padding:1px 6px; border-radius:6px; font-weight:bold;">${currentAutoJoin.label || 'Auto-Join'}</span>
+          </div>
+          <div style="font-family:monospace; font-weight:800; font-size:22px; color:#38bdf8; letter-spacing:1px; margin:4px 0; text-shadow:0 0 10px rgba(56,189,248,0.4);" id="autoJoinCountdownText">
+            ${window.formatCountdownTimeRemaining(diffMs)}
+          </div>
+          <div style="font-size:11.5px; color:var(--text-muted); font-family:monospace;">
+            🕒 Stops on: <strong>${expiryTimeStr}</strong>
+          </div>
+          <div style="display:flex; gap:8px; margin-top:12px;">
+            <button onclick="window.setAutoJoinTimer(8, 0, document.getElementById('autoJoinWarningTiming')?.value || 15); window.openAutoJoinModal();" style="flex:1; background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:7px 10px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer;">
+              ➕ Restart 8h ⭐
+            </button>
+            <button onclick="window.cancelAutoJoinTimer(); window.openAutoJoinModal();" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer;">
+              ❌ Cancel
+            </button>
+          </div>
+        </div>
+      ` : (currentAutoJoin && currentAutoJoin.expiresAt ? `
+        <!-- Expired Auto-Join Status Box (RED) -->
+        <div style="background:linear-gradient(145deg, rgba(239,68,68,0.15), rgba(15,23,42,0.9)); border:1.5px solid #ef4444; border-radius:14px; padding:14px; margin-bottom:14px; box-shadow:0 0 15px rgba(239,68,68,0.25);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <span style="font-size:11px; font-weight:800; color:#ef4444; text-transform:uppercase; letter-spacing:0.5px; display:flex; align-items:center; gap:5px;">
+              🚨 Rally Auto-Join Expired
+            </span>
+            <span style="font-size:11px; background:rgba(239,68,68,0.2); color:#ef4444; border:1px solid rgba(239,68,68,0.4); padding:1px 6px; border-radius:6px; font-weight:bold;">STOPPED</span>
+          </div>
+          <div style="font-family:monospace; font-weight:800; font-size:22px; color:#ef4444; letter-spacing:1px; margin:4px 0; text-shadow:0 0 10px rgba(239,68,68,0.6);" id="autoJoinCountdownText">
+            EXPIRED!
+          </div>
+          <div style="font-size:11.5px; color:#f87171; font-family:monospace;">
+            ⚠️ Auto-Join stopped at: <strong>${expiryTimeStr}</strong> — Re-enable in-game now!
+          </div>
+          <div style="display:flex; gap:8px; margin-top:12px;">
+            <button onclick="window.setAutoJoinTimer(8, 0, 15); window.openAutoJoinModal();" style="flex:1; background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:7px 10px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; box-shadow:0 2px 8px rgba(14,165,233,0.3);">
+              ⚔️ Restart 8h Auto-Join ⭐
+            </button>
+            <button onclick="window.cancelAutoJoinTimer(); window.openAutoJoinModal();" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.2); color:#cbd5e1; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer;">
+              Dismiss
+            </button>
+          </div>
+        </div>
+      ` : '')}
+
+      <!-- Preset Selection Grid -->
+      <div style="margin-bottom:14px;">
+        <label style="font-size:11.5px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:8px;">
+          ${isActive ? 'Or Set New Auto-Join Duration:' : 'Select In-Game Auto-Join Duration:'}
+        </label>
+        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px;">
+          <button type="button" onclick="window.selectAutoJoinPreset(4, 0)" class="auto-join-preset-btn" data-hours="4" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; padding:10px 6px; border-radius:10px; font-size:12.5px; font-weight:bold; cursor:pointer; text-align:center; transition:0.15s;">
+            ⚔️ 4 Hours
+          </button>
+          <button type="button" onclick="window.selectAutoJoinPreset(8, 0)" class="auto-join-preset-btn active" data-hours="8" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); border:none; color:#fff; padding:10px 6px; border-radius:10px; font-size:12.5px; font-weight:bold; cursor:pointer; text-align:center; box-shadow:0 2px 8px rgba(14,165,233,0.3); transition:0.15s;">
+            ⚔️ 8 Hours ⭐
+          </button>
+          <button type="button" onclick="window.selectAutoJoinPreset(12, 0)" class="auto-join-preset-btn" data-hours="12" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; padding:10px 6px; border-radius:10px; font-size:12.5px; font-weight:bold; cursor:pointer; text-align:center; transition:0.15s;">
+            ⚔️ 12 Hours
+          </button>
+          <button type="button" onclick="window.selectAutoJoinPreset(24, 0)" class="auto-join-preset-btn" data-hours="24" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; padding:10px 6px; border-radius:10px; font-size:12.5px; font-weight:bold; cursor:pointer; text-align:center; transition:0.15s;">
+            ⚔️ 24 Hours
+          </button>
+          <button type="button" onclick="window.selectAutoJoinPreset(48, 0)" class="auto-join-preset-btn" data-hours="48" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; padding:10px 6px; border-radius:10px; font-size:12.5px; font-weight:bold; cursor:pointer; text-align:center; transition:0.15s;">
+            ⚔️ 48 Hours (2d)
+          </button>
+          <button type="button" onclick="window.toggleAutoJoinCustomInputs()" id="autoJoinCustomToggleBtn" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:var(--text-muted); padding:10px 6px; border-radius:10px; font-size:12.5px; font-weight:bold; cursor:pointer; text-align:center; transition:0.15s;">
+            ⚙️ Custom
+          </button>
+        </div>
+      </div>
+
+      <!-- Custom Time Inputs (Hidden by default) -->
+      <div id="autoJoinCustomInputsContainer" style="display:none; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:10px; margin-bottom:14px;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+          <div>
+            <label style="font-size:11px; font-weight:bold; color:var(--text-muted); display:block; margin-bottom:4px;">Hours</label>
+            <input type="number" id="autoJoinCustomHours" min="0" max="720" value="8" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; font-weight:bold; outline:none; box-sizing:border-box;">
+          </div>
+          <div>
+            <label style="font-size:11px; font-weight:bold; color:var(--text-muted); display:block; margin-bottom:4px;">Minutes</label>
+            <input type="number" id="autoJoinCustomMins" min="0" max="59" value="0" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; font-weight:bold; outline:none; box-sizing:border-box;">
+          </div>
+        </div>
+      </div>
+
+      <!-- Pre-Expiry Warning Selector -->
+      <div style="margin-bottom:14px;">
+        <label style="font-size:11.5px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:6px;">
+          ⚠️ Alert Me Before Auto-Join Stops:
+        </label>
+        <select id="autoJoinWarningTiming" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12.5px; font-weight:bold; outline:none; cursor:pointer; box-sizing:border-box;">
+          <option value="5">5 Minutes Before</option>
+          <option value="15" selected>15 Minutes Before (Recommended)</option>
+          <option value="30">30 Minutes Before</option>
+          <option value="60">1 Hour Before</option>
+        </select>
+      </div>
+
+      <!-- Sound & Test Row -->
+      <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:10px 12px; margin-bottom:16px; flex-wrap:wrap; gap:8px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:16px;">🔊</span>
+          <span style="font-size:12px; font-weight:bold; color:#fff;">Rally Alert Chime</span>
+        </div>
+        <button type="button" onclick="window.playAutoJoinAlertSound();" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#38bdf8; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+          🧪 Test Chime
+        </button>
+      </div>
+
+      <!-- Actions -->
+      <div style="display:flex; justify-content:flex-end; gap:8px;">
+        <button type="button" onclick="document.getElementById('autoJoinModalOverlay').remove()" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#cbd5e1; padding:8px 16px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12.5px;">Close</button>
+        <button type="button" onclick="window.handleActivateAutoJoinFromModal()" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:8px 20px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12.5px; box-shadow:0 2px 10px rgba(14,165,233,0.4); display:inline-flex; align-items:center; gap:6px;">
+          ⚔️ Start Auto-Join Timer
+        </button>
+      </div>
+
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+};
+
 window.startBellCountdownTicker = () => {
   if (window._bellCountdownInterval) clearInterval(window._bellCountdownInterval);
   
@@ -13725,7 +14068,151 @@ window.openAllianceAlertsModal = async () => {
       html: shieldCardHtml
     });
 
-    // A2. Alliance Scheduled Events (Bear Trap, Castle, Crazy Joe, Foundry)
+    // A2. Auto-Join Rally Reminder Stream Item (Inside Timers Tab)
+    const currentAutoJoin = (typeof window.getAutoJoinTimer === 'function') ? window.getAutoJoinTimer() : null;
+    const isAutoJoinActive = currentAutoJoin && (currentAutoJoin.expiresAt > Date.now());
+    const autoJoinRemainingMs = isAutoJoinActive ? (currentAutoJoin.expiresAt - Date.now()) : 0;
+    const ajExpiryDate = isAutoJoinActive ? new Date(currentAutoJoin.expiresAt) : null;
+    const ajExpiryTimeStr = ajExpiryDate ? `${ajExpiryDate.toLocaleDateString([], { month:'short', day:'numeric' })} at ${ajExpiryDate.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}` : '';
+
+    let autoJoinCardHtml = '';
+    if (isAutoJoinActive) {
+      autoJoinCardHtml = `
+        <div class="bell-stream-card" data-category="timers" style="background:linear-gradient(145deg, rgba(56,189,248,0.15), rgba(15,23,42,0.92)); border:1.5px solid #38bdf8; border-left:5px solid #38bdf8; border-radius:12px; padding:12px 14px; box-shadow:0 6px 20px rgba(56,189,248,0.2); display:flex; flex-direction:column; gap:8px; position:relative;">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+              <span style="background:rgba(56,189,248,0.2); color:#38bdf8; border:1px solid rgba(56,189,248,0.4); padding:2px 8px; border-radius:10px; font-size:10.5px; font-weight:800; display:inline-flex; align-items:center; gap:4px; text-transform:uppercase; letter-spacing:0.5px;">
+                ⚔️ Auto-Join Rally
+              </span>
+              <span style="background:rgba(56,189,248,0.25); color:#38bdf8; border:1px solid #38bdf8; padding:1px 7px; border-radius:10px; font-size:10px; font-weight:800; animation:pulse 1.5s infinite;">🟢 AUTO-JOIN RUNNING</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:5px;">
+              <button onclick="event.stopPropagation(); window.openAutoJoinModal();" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:6px; padding:3px 8px; font-size:11px; cursor:pointer; font-weight:bold; transition:0.15s;" title="Manage auto-join settings">
+                ⚙️ Custom
+              </button>
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+            <div>
+              <div style="font-weight:800; font-size:14.5px; color:#fff;">
+                ⚔️ ${window.escapeHTML(currentAutoJoin.label || 'Rally Auto-Join Active')}
+              </div>
+              <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
+                Stops on: <strong style="color:#e2e8f0;">${ajExpiryTimeStr}</strong> (Alert: ${currentAutoJoin.warningMins || 15}m before expiry)
+              </div>
+            </div>
+            <div style="font-family:monospace; font-weight:800; font-size:20px; color:#38bdf8; letter-spacing:0.5px; text-shadow:0 0 10px rgba(56,189,248,0.4);" id="autoJoinCountdownText">
+              ${window.formatCountdownTimeRemaining(autoJoinRemainingMs)}
+            </div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div style="display:flex; align-items:center; gap:6px; border-top:1px solid rgba(255,255,255,0.08); padding-top:8px; margin-top:2px; flex-wrap:wrap;">
+            <button type="button" onclick="window.setAutoJoinTimer(8, 0, ${currentAutoJoin.warningMins || 15}); window.openAllianceAlertsModal();" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
+              ➕ Restart 8h ⭐
+            </button>
+            <button type="button" onclick="window.setAutoJoinTimer(12, 0, ${currentAutoJoin.warningMins || 15}); window.openAllianceAlertsModal();" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
+              ➕ Extend +12h
+            </button>
+            <button type="button" onclick="window.cancelAutoJoinTimer(); window.openAllianceAlertsModal();" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
+              ❌ Cancel
+            </button>
+          </div>
+        </div>
+      `;
+    } else if (currentAutoJoin && currentAutoJoin.expiresAt && (Date.now() - currentAutoJoin.expiresAt < 24 * 3600000)) {
+      autoJoinCardHtml = `
+        <div class="bell-stream-card" data-category="timers" style="background:linear-gradient(145deg, rgba(239,68,68,0.15), rgba(15,23,42,0.92)); border:1.5px solid #ef4444; border-left:5px solid #ef4444; border-radius:12px; padding:12px 14px; box-shadow:0 6px 20px rgba(239,68,68,0.25); display:flex; flex-direction:column; gap:8px; position:relative;">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+              <span style="background:rgba(239,68,68,0.2); color:#ef4444; border:1px solid rgba(239,68,68,0.4); padding:2px 8px; border-radius:10px; font-size:10.5px; font-weight:800; display:inline-flex; align-items:center; gap:4px; text-transform:uppercase; letter-spacing:0.5px;">
+                ⚔️ Auto-Join Rally
+              </span>
+              <span style="background:rgba(239,68,68,0.25); color:#ef4444; border:1px solid #ef4444; padding:1px 7px; border-radius:10px; font-size:10px; font-weight:800; animation:pulse 1.5s infinite;">🚨 EXPIRED</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:5px;">
+              <button onclick="event.stopPropagation(); window.openAutoJoinModal();" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:6px; padding:3px 8px; font-size:11px; cursor:pointer; font-weight:bold; transition:0.15s;" title="Manage auto-join settings">
+                ⚙️ Custom
+              </button>
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+            <div>
+              <div style="font-weight:800; font-size:14.5px; color:#fff;">
+                ⚔️ Rally Auto-Join Stopped
+              </div>
+              <div style="font-size:11.5px; color:#f87171; margin-top:2px;">
+                ⚠️ Expired at: <strong>${ajExpiryTimeStr}</strong>. Restart in-game to keep rallying!
+              </div>
+            </div>
+            <div style="font-family:monospace; font-weight:800; font-size:20px; color:#ef4444; letter-spacing:0.5px; text-shadow:0 0 10px rgba(239,68,68,0.6);" id="autoJoinCountdownText">
+              EXPIRED!
+            </div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div style="display:flex; align-items:center; gap:6px; border-top:1px solid rgba(255,255,255,0.08); padding-top:8px; margin-top:2px; flex-wrap:wrap;">
+            <button type="button" onclick="window.setAutoJoinTimer(8, 0, 15); window.openAllianceAlertsModal();" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:4px 12px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; box-shadow:0 2px 8px rgba(14,165,233,0.3);">
+              ⚔️ Restart 8h ⭐
+            </button>
+            <button type="button" onclick="window.setAutoJoinTimer(12, 0, 15); window.openAllianceAlertsModal();" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#fff; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
+              ⚔️ 12h
+            </button>
+            <button type="button" onclick="window.setAutoJoinTimer(24, 0, 15); window.openAllianceAlertsModal();" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#fff; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
+              ⚔️ 24h
+            </button>
+            <button type="button" onclick="window.cancelAutoJoinTimer(); window.openAllianceAlertsModal();" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
+              ❌ Dismiss
+            </button>
+          </div>
+        </div>
+      `;
+    } else {
+      autoJoinCardHtml = `
+        <div class="bell-stream-card" data-category="timers" style="background:linear-gradient(145deg, rgba(15,23,42,0.92), rgba(30,41,59,0.85)); border:1px dashed rgba(56,189,248,0.35); border-left:4.5px solid #38bdf8; border-radius:12px; padding:12px 14px; box-shadow:0 4px 14px rgba(0,0,0,0.3); display:flex; flex-direction:column; gap:8px; position:relative;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="background:rgba(56,189,248,0.14); color:#38bdf8; border:1px solid rgba(56,189,248,0.35); padding:2px 8px; border-radius:10px; font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">
+                ⚔️ Auto-Join Rally
+              </span>
+              <span style="font-size:11px; color:var(--text-muted);">No timer set</span>
+            </div>
+            <button onclick="window.openAutoJoinModal()" style="background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
+              ⚙️ Custom
+            </button>
+          </div>
+
+          <div style="font-size:12px; color:#cbd5e1;">
+            Started Auto-Join in-game? Set a reminder to restart it before it expires:
+          </div>
+
+          <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:2px;">
+            <button type="button" onclick="window.setAutoJoinTimer(4, 0, 15); window.openAllianceAlertsModal();" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; padding:5px 10px; border-radius:8px; font-size:11px; font-weight:bold; cursor:pointer; transition:0.15s;">
+              ⚔️ 4 Hours
+            </button>
+            <button type="button" onclick="window.setAutoJoinTimer(8, 0, 15); window.openAllianceAlertsModal();" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:5px 12px; border-radius:8px; font-size:11px; font-weight:bold; cursor:pointer; box-shadow:0 2px 6px rgba(14,165,233,0.3);">
+              ⚔️ 8 Hours ⭐
+            </button>
+            <button type="button" onclick="window.setAutoJoinTimer(12, 0, 15); window.openAllianceAlertsModal();" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; padding:5px 10px; border-radius:8px; font-size:11px; font-weight:bold; cursor:pointer; transition:0.15s;">
+              ⚔️ 12 Hours
+            </button>
+            <button type="button" onclick="window.setAutoJoinTimer(24, 0, 15); window.openAllianceAlertsModal();" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; padding:5px 10px; border-radius:8px; font-size:11px; font-weight:bold; cursor:pointer; transition:0.15s;">
+              ⚔️ 24 Hours
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    streamItems.push({
+      category: 'timers',
+      timestamp: isAutoJoinActive ? (currentAutoJoin.expiresAt || Date.now()) : 0,
+      html: autoJoinCardHtml
+    });
+
+    // A3. Alliance Scheduled Events (Bear Trap, Castle, Crazy Joe, Foundry)
     countdownAlerts.forEach(b => {
       const catMeta = window.getCountdownAlertCategoryMeta(b.category || 'general');
       const targetMs = Number(b.targetTimestamp);
@@ -14077,6 +14564,12 @@ window.openAllianceAlertsModal = async () => {
       </button>
     `;
 
+    const headerAutoJoinBtnHtml = `
+      <button onclick="window.openAutoJoinModal()" style="background:${isAutoJoinActive ? 'rgba(56,189,248,0.18)' : 'rgba(255,255,255,0.06)'}; border:1px solid ${isAutoJoinActive ? 'rgba(56,189,248,0.5)' : 'rgba(255,255,255,0.15)'}; color:${isAutoJoinActive ? '#38bdf8' : 'var(--text-muted)'}; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px; box-shadow:0 0 10px ${isAutoJoinActive ? 'rgba(56,189,248,0.25)' : 'transparent'}; transition:all 0.2s ease;" title="Set Rally Auto-Join Renewal Reminder Timer">
+        <span>⚔️ ${isAutoJoinActive ? 'Auto-Join Active' : 'Auto-Join Timer'}</span>
+      </button>
+    `;
+
     const overlay = document.createElement('div');
     overlay.id = 'notificationsModalOverlay';
     overlay.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.85); backdrop-filter:blur(10px); z-index:99999; display:flex; align-items:center; justify-content:center; padding:10px; animation:fadeIn 0.2s ease; box-sizing:border-box;';
@@ -14100,6 +14593,7 @@ window.openAllianceAlertsModal = async () => {
           <!-- Action Pills Bar -->
           <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
             ${headerShieldBtnHtml}
+            ${headerAutoJoinBtnHtml}
             ${headerStaffToolsPillHtml}
             ${headerPushPillHtml}
           </div>
