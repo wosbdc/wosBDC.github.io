@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [3.0.0] - 2026-08-20
+- 🛡️ **Shield Terminology**: Replaced all bubble wording with shield across the UI.
+
 ## [2.9.99] - 2026-08-20
 - 🔴 **Expired Timer Styling**: Render expired timer status in bold alert red.
 

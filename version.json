@@ -1,17 +1,17 @@
 {
-  "version": "2.9.99",
+  "version": "3.0.0",
   "releaseDate": "2026-08-20",
-  "title": "What's New in v2.9.99",
+  "title": "What's New in v3.0.0",
   "notes": [
-    "🔴 Render expired timer status in bold alert red."
+    "🛡️ Replaced bubble wording with shield across the UI."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "2.9.99",
+    "version": "3.0.0",
     "latestChanges": [
+      "v3.0.0: Standardized Shield terminology and consistent UI theme",
       "v2.9.99: Styled expired defense shield and timers in red",
       "v2.9.98: Fixed live local time conversion preview in Alert Creator modal",
-      "v2.9.97: Integrated Personal Shield timer directly into Timers tab stream",
-      "v2.9.96: Alliance Timers Suite & Personal Shield Reminders with Presets and Recurrence"
+      "v2.9.97: Integrated Personal Shield timer directly into Timers tab stream"
     ]
   }
 }

@@ -12757,12 +12757,12 @@ window.startPersonalShieldTicker = () => {
       if ('Notification' in window && Notification.permission === 'granted') {
         try {
           new Notification('🚨 SHIELD DROPPING SOON!', {
-            body: `Chief, your furnace shield drops in ${minsLeft} minutes! Log in and re-bubble now to avoid being zeroed!`,
+            body: `Chief, your furnace shield drops in ${minsLeft} minutes! Log in and re-shield now to avoid being zeroed!`,
             icon: 'https://wosbdc.github.io/central_command_icon.ico'
           });
         } catch(e) {}
       }
-      if (window.showToast) window.showToast(`🚨 SHIELD WARNING: Drops in ${minsLeft} minutes! Re-bubble now!`, "error");
+      if (window.showToast) window.showToast(`🚨 SHIELD WARNING: Drops in ${minsLeft} minutes! Re-shield now!`, "error");
     }
 
     // Update any open Shield Countdown Elements
@@ -12873,7 +12873,7 @@ window.openPersonalShieldModal = function() {
         <div style="background:linear-gradient(145deg, rgba(16,185,129,0.15), rgba(15,23,42,0.9)); border:1.5px solid #10b981; border-radius:14px; padding:14px; margin-bottom:14px; box-shadow:0 0 15px rgba(16,185,129,0.2);">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
             <span style="font-size:11px; font-weight:800; color:#10b981; text-transform:uppercase; letter-spacing:0.5px; display:flex; align-items:center; gap:5px;">
-              🟢 Active Defense Bubble
+              🟢 Active Defense Shield
             </span>
             <span style="font-size:11px; background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:1px 6px; border-radius:6px; font-weight:bold;">${currentShield.label || 'Shield'}</span>
           </div>
@@ -12897,7 +12897,7 @@ window.openPersonalShieldModal = function() {
         <div style="background:linear-gradient(145deg, rgba(239,68,68,0.15), rgba(15,23,42,0.9)); border:1.5px solid #ef4444; border-radius:14px; padding:14px; margin-bottom:14px; box-shadow:0 0 15px rgba(239,68,68,0.25);">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
             <span style="font-size:11px; font-weight:800; color:#ef4444; text-transform:uppercase; letter-spacing:0.5px; display:flex; align-items:center; gap:5px;">
-              🚨 Furnace Defense Bubble Expired
+              🚨 Furnace Defense Shield Expired
             </span>
             <span style="font-size:11px; background:rgba(239,68,68,0.2); color:#ef4444; border:1px solid rgba(239,68,68,0.4); padding:1px 6px; border-radius:6px; font-weight:bold;">UNPROTECTED</span>
           </div>
@@ -12905,11 +12905,11 @@ window.openPersonalShieldModal = function() {
             EXPIRED!
           </div>
           <div style="font-size:11.5px; color:#f87171; font-family:monospace;">
-            ⚠️ Shield dropped at: <strong>${expiryTimeStr}</strong> - Re-bubble now!
+            ⚠️ Shield dropped at: <strong>${expiryTimeStr}</strong> - Re-shield now!
           </div>
           <div style="display:flex; gap:8px; margin-top:12px;">
-            <button onclick="window.setPersonalShieldTimer(8, 0, 15); window.openPersonalShieldModal();" style="flex:1; background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:7px 10px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; box-shadow:0 2px 8px rgba(16,185,129,0.4);">
-              🛡️ Re-Bubble 8h ⭐
+            <button onclick="window.setPersonalShieldTimer(8, 0, 15); window.openPersonalShieldModal();" style="flex:1; background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:7px 10px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; box-shadow:0 2px 8px rgba(14,165,233,0.3);">
+              🛡️ Re-Shield 8h ⭐
             </button>
             <button onclick="window.cancelPersonalShieldTimer(); window.openPersonalShieldModal();" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.2); color:#cbd5e1; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer;">
               Dismiss
@@ -13414,7 +13414,7 @@ window.openAllianceAlertsModal = async () => {
               <span style="background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:2px 8px; border-radius:10px; font-size:10.5px; font-weight:800; display:inline-flex; align-items:center; gap:4px; text-transform:uppercase; letter-spacing:0.5px;">
                 🛡️ Personal Shield
               </span>
-              <span style="background:rgba(16,185,129,0.25); color:#10b981; border:1px solid #10b981; padding:1px 7px; border-radius:10px; font-size:10px; font-weight:800; animation:pulse 1.5s infinite;">🟢 BUBBLE ACTIVE</span>
+              <span style="background:rgba(16,185,129,0.25); color:#10b981; border:1px solid #10b981; padding:1px 7px; border-radius:10px; font-size:10px; font-weight:800; animation:pulse 1.5s infinite;">🟢 SHIELD ACTIVE</span>
             </div>
             <div style="display:flex; align-items:center; gap:5px;">
               <button onclick="event.stopPropagation(); window.openPersonalShieldModal();" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:6px; padding:3px 8px; font-size:11px; cursor:pointer; font-weight:bold; transition:0.15s;" title="Manage shield settings">
@@ -13474,7 +13474,7 @@ window.openAllianceAlertsModal = async () => {
                 🛡️ Furnace Defense Shield
               </div>
               <div style="font-size:11.5px; color:#f87171; margin-top:2px;">
-                ⚠️ Dropped on: <strong>${expiryTimeStr}</strong>. Re-bubble now to stay safe!
+                ⚠️ Dropped on: <strong>${expiryTimeStr}</strong>. Re-shield now to stay safe!
               </div>
             </div>
             <div style="font-family:monospace; font-weight:800; font-size:20px; color:#ef4444; letter-spacing:0.5px; text-shadow:0 0 10px rgba(239,68,68,0.6);" id="personalShieldCountdownText">
@@ -13485,13 +13485,13 @@ window.openAllianceAlertsModal = async () => {
           <!-- Quick Actions -->
           <div style="display:flex; align-items:center; gap:6px; border-top:1px solid rgba(255,255,255,0.08); padding-top:8px; margin-top:2px; flex-wrap:wrap;">
             <button type="button" onclick="window.setPersonalShieldTimer(2, 0, 15); window.openAllianceAlertsModal();" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#fff; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
-              🛡️ Re-Bubble 2h
+              🛡️ Re-Shield 2h
             </button>
-            <button type="button" onclick="window.setPersonalShieldTimer(8, 0, 15); window.openAllianceAlertsModal();" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:4px 12px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; box-shadow:0 2px 6px rgba(16,185,129,0.4);">
-              🛡️ Re-Bubble 8h ⭐
+            <button type="button" onclick="window.setPersonalShieldTimer(8, 0, 15); window.openAllianceAlertsModal();" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:4px 12px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; box-shadow:0 2px 8px rgba(14,165,233,0.3);">
+              🛡️ Re-Shield 8h ⭐
             </button>
             <button type="button" onclick="window.setPersonalShieldTimer(24, 0, 15); window.openAllianceAlertsModal();" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#fff; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
-              🛡️ Re-Bubble 24h
+              🛡️ Re-Shield 24h
             </button>
             <button type="button" onclick="window.cancelPersonalShieldTimer(); window.openAllianceAlertsModal();" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
               ❌ Dismiss
@@ -13515,7 +13515,7 @@ window.openAllianceAlertsModal = async () => {
           </div>
 
           <div style="font-size:12px; color:#cbd5e1;">
-            Bubbled in-game? Start a reminder to get alerted before your furnace shield drops:
+            Shielded in-game? Start a reminder to get alerted before your furnace shield drops:
           </div>
 
           <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:2px;">
