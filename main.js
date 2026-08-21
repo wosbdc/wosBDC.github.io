@@ -14489,75 +14489,69 @@ window.openAllianceAlertsModal = async () => {
       `;
     }
 
-    let headerPushPillHtml = '';
-    if (isPushSupported) {
-      if (isPushActive) {
-        headerPushPillHtml = `
-          <div style="position:relative; display:inline-block;">
-            <button id="modalHeaderPushBtn" onclick="window.toggleHeaderPushDropdown(event)" style="background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.4); color:#10b981; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:5px; box-shadow:0 0 10px rgba(16,185,129,0.15); transition:all 0.2s ease;" title="Device Push Notifications Active (Click for settings)">
-              <span style="width:6px; height:6px; border-radius:50%; background:#10b981; box-shadow:0 0 6px #10b981; display:inline-block;"></span>
-              <span>Push: ON</span>
-              <span id="headerPushChevron" style="font-size:9px; opacity:0.8; transition:transform 0.2s ease;">▾</span>
-            </button>
-            <div id="headerPushDropdown" style="display:none; position:absolute; right:0; top:calc(100% + 6px); width:200px; background:rgba(15,23,42,0.98); border:1px solid rgba(56,189,248,0.3); border-radius:12px; box-shadow:0 14px 35px rgba(0,0,0,0.85); z-index:10000; padding:6px; backdrop-filter:blur(14px); animation:fadeIn 0.15s ease;">
-              <div style="padding:6px 8px; font-size:10px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid rgba(255,255,255,0.06); margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
-                <span>📱 Device Notifications</span>
-                <span style="color:#10b981; font-size:9.5px; font-weight:bold;">Active 🟢</span>
-              </div>
-              <button onclick="window.openTimerPreferencesModal(); window.closeHeaderPushDropdown();" style="width:100%; text-align:left; background:transparent; border:none; color:#38bdf8; padding:7px 9px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.15s;" onmouseover="this.style.background='rgba(56,189,248,0.15)'" onmouseout="this.style.background='transparent'">
-                ⚙️ Alert Preferences
-              </button>
-              <button onclick="window.testLocalPushNotification(); window.closeHeaderPushDropdown();" style="width:100%; text-align:left; background:transparent; border:none; color:#60a5fa; padding:7px 9px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.15s;" onmouseover="this.style.background='rgba(59,130,246,0.15)'" onmouseout="this.style.background='transparent'">
-                🧪 Test Alert on this Device
-              </button>
-              <button onclick="window.markAllBellAlertsRead();" style="width:100%; text-align:left; background:transparent; border:none; color:var(--text-muted); padding:7px 9px; border-radius:6px; font-size:12px; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
-                🧹 Mark All as Read
-              </button>
-              <button onclick="window.handleModalPushToggle(this); window.closeHeaderPushDropdown();" style="width:100%; text-align:left; background:transparent; border:none; color:#f87171; padding:7px 9px; border-radius:6px; font-size:12px; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.15s;" onmouseover="this.style.background='rgba(239,68,68,0.12)'" onmouseout="this.style.background='transparent'">
-                🔕 Turn OFF Push
-              </button>
-            </div>
-          </div>
-        `;
-      } else {
-        headerPushPillHtml = `
-          <button id="modalPushToggleBtn" onclick="window.handleModalPushToggle(this)" style="background:linear-gradient(135deg, #ec4899, #8b5cf6); color:#fff; border:none; border-radius:20px; padding:4px 11px; font-size:11px; font-weight:bold; cursor:pointer; box-shadow:0 2px 8px rgba(236,72,153,0.35); display:inline-flex; align-items:center; gap:5px; transition:0.2s;" title="Enable instant alerts for Bear Trap, Shields & SvS">
-            🔔 Turn ON Push
-          </button>
-        `;
-      }
-    }
-
-    // Combined Timers Pill Dropdown (Personal Shield & Auto-Join Renewal)
+    // ==========================================
+    // ⚙️ UNIFIED "OPTIONS" DROPDOWN PILL (TIMERS + PUSH + PREFERENCES)
+    // ==========================================
     const activeTimersCount = (isShieldActive ? 1 : 0) + (isAutoJoinActive ? 1 : 0);
-    const timersPillLabel = activeTimersCount > 0 
-      ? `⏱️ Timers (${activeTimersCount} Active 🟢)` 
-      : `⏱️ Timers`;
-    
-    const headerTimersDropdownHtml = `
+    const hasActiveFeatures = isPushActive || (activeTimersCount > 0);
+
+    const headerOptionsDropdownHtml = `
       <div style="position:relative; display:inline-block;">
-        <button id="modalHeaderTimersBtn" onclick="window.toggleHeaderTimersDropdown(event)" style="background:${activeTimersCount > 0 ? 'rgba(16,185,129,0.14)' : 'rgba(255,255,255,0.06)'}; border:1px solid ${activeTimersCount > 0 ? 'rgba(16,185,129,0.45)' : 'rgba(255,255,255,0.15)'}; color:${activeTimersCount > 0 ? '#10b981' : 'var(--text-main)'}; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:5px; box-shadow:0 0 10px ${activeTimersCount > 0 ? 'rgba(16,185,129,0.2)' : 'transparent'}; transition:all 0.2s ease;" title="Manage Shield & Auto-Join Timers">
-          <span>${timersPillLabel}</span>
-          <span id="headerTimersChevron" style="font-size:9px; opacity:0.8; transition:transform 0.2s ease;">▾</span>
+        <button id="modalHeaderOptionsBtn" onclick="window.toggleHeaderOptionsDropdown(event)" style="background:${hasActiveFeatures ? 'rgba(16,185,129,0.14)' : 'rgba(255,255,255,0.06)'}; border:1px solid ${hasActiveFeatures ? 'rgba(16,185,129,0.45)' : 'rgba(255,255,255,0.15)'}; color:${hasActiveFeatures ? '#10b981' : 'var(--text-main)'}; padding:4px 11px; border-radius:20px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:5px; box-shadow:0 0 10px ${hasActiveFeatures ? 'rgba(16,185,129,0.2)' : 'transparent'}; transition:all 0.2s ease;" title="Timer & Notification Options">
+          ${hasActiveFeatures ? `<span style="width:6px; height:6px; border-radius:50%; background:#10b981; box-shadow:0 0 6px #10b981; display:inline-block;"></span>` : ''}
+          <span>⚙️ Options</span>
+          <span id="headerOptionsChevron" style="font-size:9px; opacity:0.8; transition:transform 0.2s ease;">▾</span>
         </button>
-        <div id="headerTimersDropdown" style="display:none; position:absolute; left:0; top:calc(100% + 6px); width:235px; background:rgba(15,23,42,0.98); border:1px solid rgba(56,189,248,0.3); border-radius:12px; box-shadow:0 14px 35px rgba(0,0,0,0.85); z-index:10000; padding:6px; backdrop-filter:blur(14px); animation:fadeIn 0.15s ease;">
-          <div style="padding:6px 8px; font-size:10px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid rgba(255,255,255,0.06); margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
-            <span>⏱️ Custom Timers</span>
+
+        <div id="headerOptionsDropdown" style="display:none; position:absolute; left:0; top:calc(100% + 6px); width:245px; background:rgba(15,23,42,0.98); border:1px solid rgba(56,189,248,0.3); border-radius:12px; box-shadow:0 14px 35px rgba(0,0,0,0.85); z-index:10000; padding:6px; backdrop-filter:blur(14px); animation:fadeIn 0.15s ease;">
+          
+          <!-- Section 1: Timers -->
+          <div style="padding:5px 8px; font-size:10px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid rgba(255,255,255,0.06); margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
+            <span>⏱️ Alliance Timers</span>
             <span style="font-size:9.5px; color:${activeTimersCount > 0 ? '#10b981' : 'var(--text-muted)'}; font-weight:bold;">${activeTimersCount > 0 ? `${activeTimersCount} Running 🟢` : 'Idle'}</span>
           </div>
-          <button onclick="window.openPersonalShieldModal(); window.closeHeaderTimersDropdown();" style="width:100%; text-align:left; background:transparent; border:none; color:#fff; padding:7px 9px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:space-between; transition:0.15s;" onmouseover="this.style.background='rgba(56,189,248,0.12)'" onmouseout="this.style.background='transparent'">
+
+          <button onclick="window.openPersonalShieldModal(); window.closeHeaderOptionsDropdown();" style="width:100%; text-align:left; background:transparent; border:none; color:#fff; padding:7px 9px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:space-between; transition:0.15s;" onmouseover="this.style.background='rgba(56,189,248,0.12)'" onmouseout="this.style.background='transparent'">
             <span style="display:flex; align-items:center; gap:6px;">🛡️ Shield Timer</span>
             ${isShieldActive ? `<span style="font-size:10px; color:#10b981; font-family:monospace;">${window.formatCountdownTimeRemaining(shieldRemainingMs)}</span>` : `<span style="font-size:10px; color:var(--text-muted);">Set ➔</span>`}
           </button>
-          <button onclick="window.openAutoJoinModal(); window.closeHeaderTimersDropdown();" style="width:100%; text-align:left; background:transparent; border:none; color:#fff; padding:7px 9px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:space-between; transition:0.15s;" onmouseover="this.style.background='rgba(56,189,248,0.12)'" onmouseout="this.style.background='transparent'">
+
+          <button onclick="window.openAutoJoinModal(); window.closeHeaderOptionsDropdown();" style="width:100%; text-align:left; background:transparent; border:none; color:#fff; padding:7px 9px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:space-between; transition:0.15s;" onmouseover="this.style.background='rgba(56,189,248,0.12)'" onmouseout="this.style.background='transparent'">
             <span style="display:flex; align-items:center; gap:6px;">⚔️ Auto-Join Timer</span>
             ${isAutoJoinActive ? `<span style="font-size:10px; color:#38bdf8; font-family:monospace;">${window.formatCountdownTimeRemaining(autoJoinRemainingMs)}</span>` : `<span style="font-size:10px; color:var(--text-muted);">Set 8h ➔</span>`}
           </button>
+
+          <!-- Section 2: Notifications & Push -->
+          <div style="padding:6px 8px 4px 8px; font-size:10px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; border-top:1px solid rgba(255,255,255,0.06); border-bottom:1px solid rgba(255,255,255,0.06); margin:5px 0 4px 0; display:flex; justify-content:space-between; align-items:center;">
+            <span>📱 Notifications</span>
+            <span style="font-size:9.5px; color:${isPushActive ? '#10b981' : 'var(--text-muted)'}; font-weight:bold;">${isPushActive ? 'Push ON 🟢' : 'Push OFF'}</span>
+          </div>
+
+          ${isPushSupported ? (isPushActive ? `
+            <button onclick="window.handleModalPushToggle(this); window.closeHeaderOptionsDropdown();" style="width:100%; text-align:left; background:transparent; border:none; color:#f87171; padding:6px 9px; border-radius:6px; font-size:11.5px; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.15s;" onmouseover="this.style.background='rgba(239,68,68,0.12)'" onmouseout="this.style.background='transparent'">
+              🔕 Turn OFF Push
+            </button>
+          ` : `
+            <button onclick="window.handleModalPushToggle(this); window.closeHeaderOptionsDropdown();" style="width:100%; text-align:left; background:linear-gradient(135deg, rgba(236,72,153,0.15), rgba(139,92,246,0.15)); border:1px solid rgba(236,72,153,0.3); color:#ec4899; padding:6px 9px; border-radius:6px; font-size:11.5px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; margin-bottom:2px; transition:0.15s;" onmouseover="this.style.background='rgba(236,72,153,0.25)'" onmouseout="this.style.background='rgba(236,72,153,0.15)'">
+              🔔 Turn ON Device Push
+            </button>
+          `) : ''}
+
+          <button onclick="window.openTimerPreferencesModal(); window.closeHeaderOptionsDropdown();" style="width:100%; text-align:left; background:transparent; border:none; color:#38bdf8; padding:6px 9px; border-radius:6px; font-size:11.5px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.15s;" onmouseover="this.style.background='rgba(56,189,248,0.15)'" onmouseout="this.style.background='transparent'">
+            ⚙️ Alert Timing & Sounds
+          </button>
+
+          <button onclick="window.testLocalPushNotification(); window.closeHeaderOptionsDropdown();" style="width:100%; text-align:left; background:transparent; border:none; color:#60a5fa; padding:6px 9px; border-radius:6px; font-size:11.5px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.15s;" onmouseover="this.style.background='rgba(59,130,246,0.15)'" onmouseout="this.style.background='transparent'">
+            🧪 Test Alert on this Device
+          </button>
+
+          <!-- Section 3: Clean Actions -->
           <div style="border-top:1px solid rgba(255,255,255,0.06); margin-top:4px; padding-top:4px;">
-            <button onclick="window.openTimerPreferencesModal(); window.closeHeaderTimersDropdown();" style="width:100%; text-align:left; background:transparent; border:none; color:var(--text-muted); padding:6px 9px; border-radius:6px; font-size:11.5px; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
-              ⚙️ Alert Timing & Sounds
+            <button onclick="window.markAllBellAlertsRead(); window.closeHeaderOptionsDropdown();" style="width:100%; text-align:left; background:transparent; border:none; color:var(--text-muted); padding:6px 9px; border-radius:6px; font-size:11.5px; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
+              🧹 Mark All as Read
             </button>
           </div>
+
         </div>
       </div>
     `;
@@ -14584,9 +14578,8 @@ window.openAllianceAlertsModal = async () => {
 
           <!-- Action Pills Bar -->
           <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-            ${headerTimersDropdownHtml}
+            ${headerOptionsDropdownHtml}
             ${headerStaffToolsPillHtml}
-            ${headerPushPillHtml}
           </div>
         </div>
 
@@ -14653,22 +14646,16 @@ window.openAllianceAlertsModal = async () => {
 
     // Close header dropdowns if clicked outside
     overlay.addEventListener('click', (e) => {
-      const dd = document.getElementById('headerPushDropdown');
-      const btn = document.getElementById('modalHeaderPushBtn');
-      if (dd && dd.style.display === 'block' && !dd.contains(e.target) && (!btn || !btn.contains(e.target))) {
-        window.closeHeaderPushDropdown();
+      const odd = document.getElementById('headerOptionsDropdown');
+      const obtn = document.getElementById('modalHeaderOptionsBtn');
+      if (odd && odd.style.display === 'block' && !odd.contains(e.target) && (!obtn || !obtn.contains(e.target))) {
+        window.closeHeaderOptionsDropdown();
       }
 
       const sdd = document.getElementById('headerStaffDropdown');
       const sbtn = document.getElementById('modalHeaderStaffBtn');
       if (sdd && sdd.style.display === 'block' && !sdd.contains(e.target) && (!sbtn || !sbtn.contains(e.target))) {
         window.closeHeaderStaffDropdown();
-      }
-
-      const tdd = document.getElementById('headerTimersDropdown');
-      const tbtn = document.getElementById('modalHeaderTimersBtn');
-      if (tdd && tdd.style.display === 'block' && !tdd.contains(e.target) && (!tbtn || !tbtn.contains(e.target))) {
-        window.closeHeaderTimersDropdown();
       }
     });
   } catch(err) {
@@ -14739,8 +14726,7 @@ window.toggleHeaderStaffDropdown = (e) => {
   dd.style.display = isHidden ? 'block' : 'none';
   if (chevron) chevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
   if (isHidden) {
-    window.closeHeaderPushDropdown();
-    window.closeHeaderTimersDropdown();
+    window.closeHeaderOptionsDropdown();
   }
 };
 
@@ -14751,47 +14737,30 @@ window.closeHeaderStaffDropdown = () => {
   if (chevron) chevron.style.transform = 'rotate(0deg)';
 };
 
-window.toggleHeaderPushDropdown = (e) => {
+window.toggleHeaderOptionsDropdown = (e) => {
   if (e) e.stopPropagation();
-  const dd = document.getElementById('headerPushDropdown');
-  const chevron = document.getElementById('headerPushChevron');
+  const dd = document.getElementById('headerOptionsDropdown');
+  const chevron = document.getElementById('headerOptionsChevron');
   if (!dd) return;
   const isHidden = (dd.style.display === 'none' || !dd.style.display);
   dd.style.display = isHidden ? 'block' : 'none';
   if (chevron) chevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
   if (isHidden) {
     window.closeHeaderStaffDropdown();
-    window.closeHeaderTimersDropdown();
   }
 };
 
-window.closeHeaderPushDropdown = () => {
-  const dd = document.getElementById('headerPushDropdown');
-  const chevron = document.getElementById('headerPushChevron');
+window.closeHeaderOptionsDropdown = () => {
+  const dd = document.getElementById('headerOptionsDropdown');
+  const chevron = document.getElementById('headerOptionsChevron');
   if (dd) dd.style.display = 'none';
   if (chevron) chevron.style.transform = 'rotate(0deg)';
 };
 
-window.toggleHeaderTimersDropdown = (e) => {
-  if (e) e.stopPropagation();
-  const dd = document.getElementById('headerTimersDropdown');
-  const chevron = document.getElementById('headerTimersChevron');
-  if (!dd) return;
-  const isHidden = (dd.style.display === 'none' || !dd.style.display);
-  dd.style.display = isHidden ? 'block' : 'none';
-  if (chevron) chevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
-  if (isHidden) {
-    window.closeHeaderPushDropdown();
-    window.closeHeaderStaffDropdown();
-  }
-};
-
-window.closeHeaderTimersDropdown = () => {
-  const dd = document.getElementById('headerTimersDropdown');
-  const chevron = document.getElementById('headerTimersChevron');
-  if (dd) dd.style.display = 'none';
-  if (chevron) chevron.style.transform = 'rotate(0deg)';
-};
+window.toggleHeaderPushDropdown = window.toggleHeaderOptionsDropdown;
+window.closeHeaderPushDropdown = window.closeHeaderOptionsDropdown;
+window.toggleHeaderTimersDropdown = window.toggleHeaderOptionsDropdown;
+window.closeHeaderTimersDropdown = window.closeHeaderOptionsDropdown;
 
 window.openNewMembersModal = window.openAllianceAlertsModal;
 window.openNotificationsModal = window.openAllianceAlertsModal;
