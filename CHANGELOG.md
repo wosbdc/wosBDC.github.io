@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [3.0.4] - 2026-08-20
+- 🛡️ **Alt Token Isolation**: Protected main profile data during alt account token renewals.
+
 ## [3.0.3] - 2026-08-20
 - 📱 **Mobile Header Optimization**: Streamlined alerts header for iOS and Android smartphones.
 

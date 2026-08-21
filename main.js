@@ -16239,12 +16239,24 @@ window.handleSyncCenturyGamesProfile = async () => {
   }
 };
 
-window.openAccountHubVerifyModal = () => {
+window.openAccountHubVerifyModal = (targetGid = null, targetName = '') => {
   if (!currentUser) return;
+  
+  const cleanTargetGid = targetGid ? String(targetGid).trim() : '';
+  const cleanMainGid = String(currentUser.gameId || '').trim();
+
+  // If called for an alt character, seamlessly route to the dedicated Alt Verification modal
+  if (cleanTargetGid && cleanMainGid && cleanTargetGid !== cleanMainGid) {
+    if (typeof window.openAltVerifyModal === 'function') {
+      return window.openAltVerifyModal(cleanTargetGid, targetName);
+    }
+  }
+
   const oldModal = document.getElementById('accountHubVerifyModalOverlay');
   if (oldModal && oldModal.parentNode) oldModal.parentNode.removeChild(oldModal);
 
-  const hasGid = !!(currentUser.gameId && currentUser.gameId.toString().trim());
+  const activeDisplayGid = cleanTargetGid || cleanMainGid;
+  const hasGid = !!activeDisplayGid;
 
   const modalOverlay = document.createElement('div');
   modalOverlay.id = 'accountHubVerifyModalOverlay';
@@ -16260,7 +16272,7 @@ window.openAccountHubVerifyModal = () => {
       </div>
 
       <p style="font-size:13px; color:var(--text-muted); margin:0 0 16px 0; line-height:1.5;">
-        ${hasGid ? `Verify Game ID <strong>${currentUser.gameId}</strong> to link your character directly to our database for <strong>30-day automatic stats syncing</strong> and in-game avatar loading.` : `Link your Whiteout Survival character by entering your Game ID to enable <strong>30-day automatic stats syncing</strong>.`}
+        ${hasGid ? `Verify Game ID <strong>${activeDisplayGid}</strong> to link your character directly to our database for <strong>30-day automatic stats syncing</strong> and in-game avatar loading.` : `Link your Whiteout Survival character by entering your Game ID to enable <strong>30-day automatic stats syncing</strong>.`}
       </p>
 
       ${!hasGid ? `
@@ -16311,11 +16323,11 @@ window.openAccountHubVerifyModal = () => {
   const feedback = document.getElementById('hubVerifyFeedback');
   const gidInput = document.getElementById('hubTargetGidInput');
 
-  let activeTargetGid = currentUser.gameId;
+  let activeTargetGid = activeDisplayGid;
 
   if (sendBtn) {
     sendBtn.addEventListener('click', async () => {
-      if (gidInput) {
+      if (gidInput && gidInput.value.trim()) {
         activeTargetGid = gidInput.value.trim();
       }
       if (!activeTargetGid || !/^\d{6,14}$/.test(activeTargetGid)) {
@@ -16360,6 +16372,9 @@ window.openAccountHubVerifyModal = () => {
 
   if (submitCodeBtn && codeInput) {
     const handleVerify = async () => {
+      if (gidInput && gidInput.value.trim()) {
+        activeTargetGid = gidInput.value.trim();
+      }
       const code = codeInput.value.trim();
       if (!code || code.length < 4) {
         if (feedback) {
@@ -16380,10 +16395,12 @@ window.openAccountHubVerifyModal = () => {
         if (data && (data.success || data.token) && (data.token || data.data?.token)) {
           const tokenStr = data.token || data.data?.token;
           const nowIso = new Date().toISOString();
-          const isMainAccount = (!currentUser.gameId || activeTargetGid === currentUser.gameId);
+          const cleanFinalTarget = String(activeTargetGid || '').trim();
+          const cleanPrimaryGid = String(currentUser.gameId || '').trim();
+          const isMainAccount = (!cleanPrimaryGid || cleanFinalTarget === cleanPrimaryGid);
 
           if (isMainAccount) {
-            // Update Primary Main Account
+            // Update Primary Main Account ONLY
             const updates = {
               gameId: activeTargetGid,
               wos_cg_token: tokenStr,
@@ -16423,7 +16440,6 @@ window.openAccountHubVerifyModal = () => {
             currentUser.verifiedAt = nowIso;
             currentUser.lastSyncedAt = nowIso;
             currentUser.centuryGamesVerified = true;
-            // Never overwrite existing display name in memory either
             if (updates.name) currentUser.name = updates.name;
             if (updates.avatar_image) currentUser.avatar_image = updates.avatar_image;
             try { localStorage.setItem('cached_current_user', JSON.stringify(currentUser)); } catch(e) {}
@@ -16433,7 +16449,7 @@ window.openAccountHubVerifyModal = () => {
             if (window.renderNavbarUserIndicator) window.renderNavbarUserIndicator();
             if (views.account) views.account();
           } else {
-            // Safe Alt Account Token Update (Protects Main Account Data from being overwritten!)
+            // Safe Alt Account Token Update (Strictly Protects Main Account Data from being overwritten!)
             const altChiefName = data.nickname || (window.idToNameMap && window.idToNameMap[activeTargetGid]) || `Alt (${activeTargetGid})`;
             const altTokenObj = {
               token: tokenStr,
@@ -16479,16 +16495,16 @@ window.openAccountHubVerifyModal = () => {
             await update(ref(db, `users_alts/${activeTargetGid}`), altUpdates);
 
             modalOverlay.remove();
-            window.showToast(`🎉 30-Day token bound for Alt (${altChiefName})! Main account unchanged.`, "success");
+            window.showToast(`🎉 30-Day sync token bound for alt ${altChiefName}!`, "success");
             if (views.account) views.account('Alts');
           }
         } else {
-          throw new Error(window.translateWosApiError(data.message || 'Invalid or expired code.', data.code));
+          throw new Error(window.translateWosApiError(data ? data.message : 'Invalid or expired in-game code.', data ? data.code : null));
         }
       } catch (err) {
         submitCodeBtn.disabled = false;
         submitCodeBtn.textContent = 'Verify & Bind';
-        const msg = window.translateWosApiError(err.message || 'Verification failed.');
+        const msg = window.translateWosApiError(err.message || 'Verification failed. Please retry.');
         if (feedback) {
           feedback.style.display = 'block';
           feedback.style.color = 'var(--danger)';
@@ -16500,10 +16516,7 @@ window.openAccountHubVerifyModal = () => {
 
     submitCodeBtn.addEventListener('click', handleVerify);
     codeInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        handleVerify();
-      }
+      if (e.key === 'Enter') handleVerify();
     });
   }
 };

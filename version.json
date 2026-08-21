@@ -1,17 +1,17 @@
 {
-  "version": "3.0.3",
+  "version": "3.0.4",
   "releaseDate": "2026-08-20",
-  "title": "What's New in v3.0.3",
+  "title": "What's New in v3.0.4",
   "notes": [
-    "📱 Streamlined alerts header for iOS and Android smartphones."
+    "🛡️ Protected main profile data during alt account token renewals."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.0.3",
+    "version": "3.0.4",
     "latestChanges": [
+      "v3.0.4: Guaranteed database isolation between main profile and alt renewals",
       "v3.0.3: Mobile-optimized Alerts header and removed redundant ID number",
       "v3.0.2: Removed duplicate faded icons in date/time picker inputs",
-      "v3.0.1: Click-to-open calendar and clock picker on alert date/time inputs",
-      "v3.0.0: Standardized Shield terminology and consistent UI theme"
+      "v3.0.1: Click-to-open calendar and clock picker on alert date/time inputs"
     ]
   }
 }
