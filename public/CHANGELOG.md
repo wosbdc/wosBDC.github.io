@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [2.9.98] - 2026-08-20
+- 🕒 **Live Time Preview**: Real-time UTC to local time conversion in alert modal.
+
 ## [2.9.97] - 2026-08-20
 - 🛡️ **Shield in Timers Tab**: Integrated Personal Shield directly into Timers tab stream.
 

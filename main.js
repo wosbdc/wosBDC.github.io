@@ -14374,6 +14374,81 @@ window.openEditCountdownAlertModal = async (key) => {
 
 window.ccaCurrentMode = 'utc';
 
+window.updateCountdownModalPreview = function() {
+  const convText = document.getElementById('ccaLocalTimeConverted');
+  const tzBadge = document.getElementById('ccaLocalTzBadge');
+  const utcConfirm = document.getElementById('ccaUtcConfirmLabel');
+  const relDiff = document.getElementById('ccaRelativeDiffLabel');
+
+  if (!convText) return;
+
+  let targetTimestamp = null;
+  const mode = window.ccaCurrentMode || 'utc';
+
+  if (mode === 'utc') {
+    const uDate = document.getElementById('ccaUtcDate')?.value;
+    const uTime = document.getElementById('ccaUtcTime')?.value || '00:00';
+    if (uDate) {
+      const parts = uDate.split('-').map(Number);
+      const timeParts = uTime.split(':').map(Number);
+      if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
+        const yr = parts[0];
+        const mo = parts[1];
+        const da = parts[2];
+        const ho = (!isNaN(timeParts[0])) ? timeParts[0] : 0;
+        const mi = (!isNaN(timeParts[1])) ? timeParts[1] : 0;
+        targetTimestamp = Date.UTC(yr, mo - 1, da, ho, mi, 0);
+      }
+    }
+  } else {
+    const dtVal = document.getElementById('ccaLocalDt')?.value;
+    if (dtVal) {
+      const d = new Date(dtVal);
+      if (!isNaN(d.getTime())) {
+        targetTimestamp = d.getTime();
+      }
+    }
+  }
+
+  if (!targetTimestamp) {
+    if (convText) convText.textContent = '⚠️ Please select a valid date & time';
+    if (relDiff) relDiff.textContent = '⏳ Pending selection';
+    return;
+  }
+
+  const dateObj = new Date(targetTimestamp);
+  const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Local Time';
+  if (tzBadge) tzBadge.textContent = userTz;
+
+  const dateFormatted = dateObj.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+  const timeFormatted = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (convText) convText.textContent = `${dateFormatted} at ${timeFormatted}`;
+
+  const pad = (n) => String(n).padStart(2, '0');
+  const utcFormatted = `${dateObj.getUTCFullYear()}-${pad(dateObj.getUTCMonth() + 1)}-${pad(dateObj.getUTCDate())} ${pad(dateObj.getUTCHours())}:${pad(dateObj.getUTCMinutes())} UTC`;
+  if (utcConfirm) utcConfirm.textContent = `🌐 ${utcFormatted}`;
+
+  const diffMs = targetTimestamp - Date.now();
+  if (relDiff) {
+    if (diffMs > 0) {
+      relDiff.style.color = '#f59e0b';
+      const timeRemaining = (typeof window.formatCountdownTimeRemaining === 'function') 
+        ? window.formatCountdownTimeRemaining(diffMs) 
+        : `${Math.round(diffMs / 60000)}m`;
+      relDiff.textContent = `⏳ Starts in ${timeRemaining}`;
+    } else {
+      const durMs = Number(document.getElementById('ccaDuration')?.value || '7200000');
+      if (diffMs + durMs > 0) {
+        relDiff.style.color = '#10b981';
+        relDiff.textContent = `🟢 Event is LIVE NOW!`;
+      } else {
+        relDiff.style.color = '#ef4444';
+        relDiff.textContent = `⚠️ Event time is in the past`;
+      }
+    }
+  }
+};
+
 window.setCcaTimeInputMode = function(mode) {
   window.ccaCurrentMode = mode;
   const utcFields = document.getElementById('ccaUtcFields');
