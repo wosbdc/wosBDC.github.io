@@ -185,18 +185,14 @@
           </div>
 
           <!-- Optional Custom Timers Widget (Toggled via Options / Preferences) -->
-          <div id="sidebarCustomTimersCard" style="display:none; background:rgba(15,23,42,0.7); border:1px solid var(--border); border-radius:10px; padding:10px 12px; margin-top:8px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-              <span style="color:var(--text-muted); font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">⏱️ Custom Timers</span>
-              <span id="sidebarCustomTimersStatus" style="font-size:9.5px; color:var(--text-muted); font-weight:bold; background:rgba(255,255,255,0.06); padding:1px 6px; border-radius:8px;">ALERTS</span>
-            </div>
+          <div id="sidebarCustomTimersCard" style="display:none; background:rgba(15,23,42,0.7); border:1px solid var(--border); border-radius:10px; padding:6px; margin-top:8px;">
             <div style="display:flex; gap:8px;">
               <button onclick="if(window.openPersonalShieldModal) window.openPersonalShieldModal();" id="sidebarShieldBtn" style="flex:1; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.35); color:#10b981; padding:9px 8px; border-radius:8px; font-size:12.5px; font-weight:800; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; transition:all 0.2s ease;" title="Set Personal Shield Timer">
-                <span style="font-size:12px; font-weight:bold; display:flex; align-items:center; gap:4px;">🛡️ Shield</span>
+                <span style="font-size:12.5px; font-weight:800; display:flex; align-items:center; gap:4px;">🛡️ Shield</span>
                 <span id="sidebarShieldTimerText" style="font-size:11.5px; font-weight:800; font-family:monospace; letter-spacing:0.5px; opacity:0.95;">Set ➔</span>
               </button>
               <button onclick="if(window.openAutoJoinModal) window.openAutoJoinModal();" id="sidebarAutoJoinBtn" style="flex:1; background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.35); color:#38bdf8; padding:9px 8px; border-radius:8px; font-size:12.5px; font-weight:800; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; transition:all 0.2s ease;" title="Set Auto-Join Renewal Timer">
-                <span style="font-size:12px; font-weight:bold; display:flex; align-items:center; gap:4px;">⚔️ Auto-Join</span>
+                <span style="font-size:12.5px; font-weight:800; display:flex; align-items:center; gap:4px;">⚔️ Auto-Join</span>
                 <span id="sidebarAutoJoinTimerText" style="font-size:11.5px; font-weight:800; font-family:monospace; letter-spacing:0.5px; opacity:0.95;">8h ➔</span>
               </button>
             </div>
