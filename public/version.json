@@ -1,13 +1,15 @@
 {
-  "version": "3.0.5",
-  "releaseDate": "2026-08-20",
-  "title": "What's New in v3.0.5",
+  "version": "3.0.6",
+  "releaseDate": "2026-08-21",
+  "title": "What's New in v3.0.6",
   "notes": [
-    "🛡️ Hardened main profile state and in-game avatar isolation."
+    "⚔️ Real-time Firebase auto-save on Showdown score input.",
+    "⚡ Instant visual sync status indicators and live table updates."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.0.5",
+    "version": "3.0.6",
     "latestChanges": [
+      "v3.0.6: Real-time Firebase auto-save on Showdown score input",
       "v3.0.5: Full alt isolation for tokens, avatars, and in-memory states",
       "v3.0.4: Guaranteed database isolation between main profile and alt renewals",
       "v3.0.3: Mobile-optimized Alerts header and removed redundant ID number",

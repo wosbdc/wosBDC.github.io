@@ -24105,7 +24105,7 @@ const views = {
 
             let matchesCat = true;
             if (catFilter !== 'all') {
-               if (catFilter === 'signups') {
+                if (catFilter === 'signups') {
                   matchesCat = rowText.includes('signup') || rowText.includes('championship') || rowText.includes('mercenary') || rowText.includes('polar') || rowText.includes('bear trap toggle');
                } else if (catFilter === 'furnace') {
                   matchesCat = rowText.includes('furnace') || rowText.includes('profile') || rowText.includes('stove') || rowText.includes('alt profile');
@@ -24201,89 +24201,172 @@ const views = {
          </div>
 
          <div class="card">
-           <div class="card-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-              <span>Daily Player Scores</span>
-              <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                 <button onclick="window.restoreDefaultShowdownHistory()" style="background:rgba(255,215,0,0.15); color:#FFD700; border:1px solid rgba(255,215,0,0.4); padding:4px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:4px;" title="Write original 5 historical cycles into Firebase RTDB">👑 Restore All 5 Cycles</button>
-                 <button onclick="window.openShowdownArchiveVaultModal('all', true)" style="background:linear-gradient(135deg, rgba(139,92,246,0.3) 0%, rgba(124,58,237,0.15) 100%); color:#a78bfa; border:1px solid rgba(139,92,246,0.5); padding:4px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:4px;">📂 Vault Manager</button>
-                 <button onclick="window.showMissedDaysReportModal(this)" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--accent); padding:4px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:4px;">📋 Missed Days Report</button>
-                 <button onclick="window.restoreLatestShowdownArchive()" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--accent); padding:4px 8px; border-radius:6px; cursor:pointer; font-size:12px;">↩️ Restore Choice</button>
-                 <button onclick="window.showResetEventModal()" style="background:linear-gradient(135deg, rgba(239,68,68,0.2) 0%, rgba(239,68,68,0.08) 100%); color:#ef4444; border:1px solid rgba(239,68,68,0.4); padding:4px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:4px;">🔄 Reset Event</button>
+            <div class="card-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+               <div style="display:flex; align-items:center; gap:8px;">
+                 <span>Daily Player Scores</span>
+                 <span id="sdPlayerAutoSaveStatus" style="font-size:11.5px; font-weight:700; color:var(--text-muted); background:rgba(255,255,255,0.05); padding:2px 8px; border-radius:6px; border:1px solid rgba(255,255,255,0.1); display:inline-flex; align-items:center; gap:4px;">⚡ Auto-Save Enabled</span>
                </div>
-           </div>
-           <div style="background:rgba(255,255,255,0.02); padding:15px; border-radius:8px; border:1px solid var(--border); margin-bottom:10px;">
-             <label style="display:block; margin-bottom:5px; font-weight:bold; color:var(--text-main);">Select Player</label>
-             <select id="sdPlayerSelect" style="width:100%; padding:12px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:16px; margin-bottom:15px;" onchange="window.onSdPlayerSelect()">
-               <option value="">-- Choose a Player --</option>`;
-               
-       allPlayers.sort((a,b) => a.localeCompare(b)).forEach(p => {
-          html += `<option value="${escapeHTML(p)}">${escapeHTML(p)}</option>`;
-       });
-               
+               <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                  <button onclick="window.restoreDefaultShowdownHistory()" style="background:rgba(255,215,0,0.15); color:#FFD700; border:1px solid rgba(255,215,0,0.4); padding:4px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:4px;" title="Write original 5 historical cycles into Firebase RTDB">👑 Restore All 5 Cycles</button>
+                  <button onclick="window.openShowdownArchiveVaultModal('all', true)" style="background:linear-gradient(135deg, rgba(139,92,246,0.3) 0%, rgba(124,58,237,0.15) 100%); color:#a78bfa; border:1px solid rgba(139,92,246,0.5); padding:4px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:4px;">📂 Vault Manager</button>
+                  <button onclick="window.showMissedDaysReportModal(this)" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--accent); padding:4px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:4px;">📋 Missed Days Report</button>
+                  <button onclick="window.restoreLatestShowdownArchive()" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--accent); padding:4px 8px; border-radius:6px; cursor:pointer; font-size:12px;">↩️ Restore Choice</button>
+                  <button onclick="window.showResetEventModal()" style="background:linear-gradient(135deg, rgba(239,68,68,0.2) 0%, rgba(239,68,68,0.08) 100%); color:#ef4444; border:1px solid rgba(239,68,68,0.4); padding:4px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:4px;">🔄 Reset Event</button>
+                </div>
+            </div>
+            <div style="background:rgba(255,255,255,0.02); padding:15px; border-radius:8px; border:1px solid var(--border); margin-bottom:10px;">
+              <label style="display:block; margin-bottom:5px; font-weight:bold; color:var(--text-main);">Select Player</label>
+              <select id="sdPlayerSelect" style="width:100%; padding:12px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:16px; margin-bottom:15px;" onchange="window.onSdPlayerSelect()">
+                <option value="">-- Choose a Player --</option>`;
+                
+        allPlayers.sort((a,b) => a.localeCompare(b)).forEach(p => {
+           html += `<option value="${escapeHTML(p)}">${escapeHTML(p)}</option>`;
+        });
+                
 html += `</select>
-             
-             <div id="sdEntryFields" style="display:none; flex-direction:column; gap:10px;">
-               ${[1,2,3,4,5,6].map(d => `
-                  <div style="display:flex; align-items:center; gap:10px;">
-                    <span style="width:50px; font-weight:bold; color:var(--text-muted);">Day ${d}</span>
-                    <input type="number" id="sd_d${d}" placeholder="Score" style="flex:1; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main);">
-                    <button id="sd_d${d}_lock" onclick="window.toggleSdLock(${d})" style="display:none; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); color:#ef4444; padding:6px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; min-width:80px;" title="Click to unlock & edit">🔒 Locked</button>
-                  </div>
-               `).join('')}
-               
-               <button onclick="window.saveShowdownEntry()" style="background:var(--success); color:white; border:none; padding:12px; border-radius:6px; font-weight:bold; font-size:16px; margin-top:10px; cursor:pointer;">💾 Save Scores</button>
-             </div>
-           </div>
-         </div>
-         
-         <div class="card">
-           <h2 style="color:var(--accent); margin-top:0;">⚙️ Enemy Alliance Settings</h2>
-           <p style="color:var(--text-muted); font-size:14px;">Event goals are set to <b>3,333,333</b> daily (20M total). Horns, Winners, and Alliance Totals are automatically calculated.</p>
-           
-           <div style="margin-bottom:20px;">
-             <label style="font-weight:bold; color:var(--text-main); display:block; margin-bottom:5px;">Enemy Alliance Name</label>
-             <input type="text" id="metaEnemyName" value="${meta.enemyAlliance.name || ''}" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
-           </div>
-           
-           <div style="background:var(--bg-main); padding:15px; border-radius:8px; border:1px solid var(--border); margin-bottom:20px; overflow-x:auto;">
-             <table style="width:100%; border-collapse:collapse; text-align:left; min-width:600px;">
-               <thead>
-                 <tr style="border-bottom:1px solid var(--border);">
-                   <th style="padding:8px 5px; color:var(--text-muted);">Day</th>
-                   <th style="padding:8px 5px; color:var(--text-muted);">Alliance Total</th>
-                   <th style="padding:8px 5px; color:var(--text-muted);">Enemy Score</th>
-                   <th style="padding:8px 5px; color:var(--text-muted);">Winner (Top Player)</th>
-                   <th style="padding:8px 5px; color:var(--text-muted);">Horns</th>
-                 </tr>
-               </thead>
-               <tbody>`;
-               
-       for (let i = 1; i <= 6; i++) {
-         let es = (meta.enemyAlliance && meta.enemyAlliance.scores) ? (meta.enemyAlliance.scores['d'+i] || 0) : 0;
-         let h = staticHorns['d'+i];
-         let wName = winners['d'+i].name || '-';
-         let at = allianceTotals['d'+i];
-         
-         html += `<tr>
-           <td style="padding:8px 5px; font-weight:bold; color:var(--text-main);">Day ${i}</td>
-           <td style="padding:8px 5px; color:var(--accent); font-weight:bold;">${at > 0 ? at.toLocaleString() : '-'}</td>
-           <td style="padding:8px 5px;"><input type="number" id="meta_es_${i}" value="${es}" style="width:100px; padding:5px; border-radius:4px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);"></td>
-           <td style="padding:8px 5px; color:var(--success);">${escapeHTML(wName)}</td>
-           <td style="padding:8px 5px; color:var(--text-muted);">${h}</td>
-         </tr>`;
-       }
-       
-       html += `</tbody>
-             </table>
-           </div>
-           
-           <button onclick="window.saveShowdownMeta()" style="background:var(--success); color:#fff; border:none; padding:12px; border-radius:8px; cursor:pointer; font-weight:bold; width:100%;">💾 Save Enemy Scores</button>
-         </div>
-       </div>`;
+              
+              <div id="sdEntryFields" style="display:none; flex-direction:column; gap:10px;">
+                ${[1,2,3,4,5,6].map(d => `
+                   <div style="display:flex; align-items:center; gap:10px;">
+                     <span style="width:50px; font-weight:bold; color:var(--text-muted);">Day ${d}</span>
+                     <input type="number" id="sd_d${d}" placeholder="Score" oninput="window.debouncedAutoSaveSdEntry()" onblur="window.flushAutoSaveSdEntry()" style="flex:1; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main);">
+                     <button id="sd_d${d}_lock" onclick="window.toggleSdLock(${d})" style="display:none; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); color:#ef4444; padding:6px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; min-width:80px;" title="Click to unlock & edit">🔒 Locked</button>
+                   </div>
+                `).join('')}
+                
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; flex-wrap:wrap; gap:10px;">
+                  <button id="btnManualSaveSd" onclick="window.saveShowdownEntry(false)" style="background:var(--success); color:white; border:none; padding:12px 20px; border-radius:6px; font-weight:bold; font-size:15px; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">💾 Save Scores Now</button>
+                  <span id="sdSaveLiveIndicator" style="font-size:12px; color:var(--text-muted); font-weight:600;">⚡ Real-time Firebase Sync</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+              <h2 style="color:var(--accent); margin:0;">⚙️ Enemy Alliance Settings</h2>
+              <span id="sdEnemyAutoSaveStatus" style="font-size:11.5px; font-weight:700; color:var(--text-muted); background:rgba(255,255,255,0.05); padding:2px 8px; border-radius:6px; border:1px solid rgba(255,255,255,0.1); display:inline-flex; align-items:center; gap:4px;">⚡ Auto-Save Enabled</span>
+            </div>
+            <p style="color:var(--text-muted); font-size:14px;">Event goals are set to <b>3,333,333</b> daily (20M total). Horns, Winners, and Alliance Totals are automatically calculated in real time.</p>
+            
+            <div style="margin-bottom:20px;">
+              <label style="font-weight:bold; color:var(--text-main); display:block; margin-bottom:5px;">Enemy Alliance Name</label>
+              <input type="text" id="metaEnemyName" value="${meta.enemyAlliance.name || ''}" oninput="window.debouncedAutoSaveSdMeta()" onblur="window.flushAutoSaveSdMeta()" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
+            </div>
+            
+            <div style="background:var(--bg-main); padding:15px; border-radius:8px; border:1px solid var(--border); margin-bottom:20px; overflow-x:auto;">
+              <table style="width:100%; border-collapse:collapse; text-align:left; min-width:600px;">
+                <thead>
+                  <tr style="border-bottom:1px solid var(--border);">
+                    <th style="padding:8px 5px; color:var(--text-muted);">Day</th>
+                    <th style="padding:8px 5px; color:var(--text-muted);">Alliance Total</th>
+                    <th style="padding:8px 5px; color:var(--text-muted);">Enemy Score</th>
+                    <th style="padding:8px 5px; color:var(--text-muted);">Winner (Top Player)</th>
+                    <th style="padding:8px 5px; color:var(--text-muted);">Horns</th>
+                  </tr>
+                </thead>
+                <tbody>`;
+                
+        for (let i = 1; i <= 6; i++) {
+          let es = (meta.enemyAlliance && meta.enemyAlliance.scores) ? (meta.enemyAlliance.scores['d'+i] || 0) : 0;
+          let h = staticHorns['d'+i];
+          let wName = winners['d'+i].name || '-';
+          let at = allianceTotals['d'+i];
+          
+          html += `<tr>
+            <td style="padding:8px 5px; font-weight:bold; color:var(--text-main);">Day ${i}</td>
+            <td id="sdSummaryAt_${i}" style="padding:8px 5px; color:var(--accent); font-weight:bold;">${at > 0 ? at.toLocaleString() : '-'}</td>
+            <td style="padding:8px 5px;"><input type="number" id="meta_es_${i}" value="${es}" oninput="window.debouncedAutoSaveSdMeta()" onblur="window.flushAutoSaveSdMeta()" style="width:100px; padding:5px; border-radius:4px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main);"></td>
+            <td id="sdSummaryWin_${i}" style="padding:8px 5px; color:var(--success);">${escapeHTML(wName)}</td>
+            <td style="padding:8px 5px; color:var(--text-muted);">${h}</td>
+          </tr>`;
+        }
+        
+        html += `</tbody>
+              </table>
+            </div>
+            
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+              <button id="btnManualSaveMeta" onclick="window.saveShowdownMeta(false)" style="background:var(--success); color:#fff; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:15px;">💾 Save Enemy Scores Now</button>
+              <span id="sdMetaLiveIndicator" style="font-size:12px; color:var(--text-muted); font-weight:600;">⚡ Real-time Firebase Sync</span>
+            </div>
+          </div>
+        </div>`;
        
        app.innerHTML = html;
        
        window._currentSdLiveData = sdLiveData;
+       let _activeSdPlayer = null;
+       let _sdEntryTimer = null;
+       let _sdMetaTimer = null;
+
+       window.setSdStatus = (id, text, color = '') => {
+           const el = document.getElementById(id);
+           if (el) {
+               el.innerHTML = text;
+               if (color) el.style.color = color;
+           }
+       };
+
+       window.recalcShowdownSummaryTable = () => {
+           const sdLiveData = window._currentSdLiveData || {};
+           let allianceTotals = {d1:0, d2:0, d3:0, d4:0, d5:0, d6:0};
+           let winners = {d1:{name:'', score:0}, d2:{name:'', score:0}, d3:{name:'', score:0}, d4:{name:'', score:0}, d5:{name:'', score:0}, d6:{name:'', score:0}};
+           
+           Object.entries(sdLiveData).forEach(([playerName, scores]) => {
+               if (!scores || typeof scores !== 'object') return;
+               for (let i = 1; i <= 6; i++) {
+                   let score = scores['d'+i] || 0;
+                   allianceTotals['d'+i] += score;
+                   if (score > winners['d'+i].score) {
+                       winners['d'+i] = { name: playerName, score: score };
+                   }
+               }
+           });
+
+           for (let i = 1; i <= 6; i++) {
+               const atEl = document.getElementById(`sdSummaryAt_${i}`);
+               const winEl = document.getElementById(`sdSummaryWin_${i}`);
+               const at = allianceTotals['d'+i];
+               const wName = winners['d'+i].name || '-';
+               if (atEl) atEl.textContent = at > 0 ? at.toLocaleString() : '-';
+               if (winEl) winEl.textContent = escapeHTML(wName);
+           }
+       };
+
+       window.debouncedAutoSaveSdEntry = () => {
+           window.setSdStatus('sdPlayerAutoSaveStatus', '🔄 Auto-saving to Firebase...', '#38bdf8');
+           window.setSdStatus('sdSaveLiveIndicator', '🔄 Syncing...', '#38bdf8');
+           clearTimeout(_sdEntryTimer);
+           _sdEntryTimer = setTimeout(() => {
+               window.saveShowdownEntry(true);
+           }, 450);
+       };
+
+       window.flushAutoSaveSdEntry = () => {
+           if (_sdEntryTimer) {
+               clearTimeout(_sdEntryTimer);
+               _sdEntryTimer = null;
+               window.saveShowdownEntry(true);
+           }
+       };
+
+       window.debouncedAutoSaveSdMeta = () => {
+           window.setSdStatus('sdEnemyAutoSaveStatus', '🔄 Auto-saving enemy settings...', '#38bdf8');
+           window.setSdStatus('sdMetaLiveIndicator', '🔄 Syncing...', '#38bdf8');
+           clearTimeout(_sdMetaTimer);
+           _sdMetaTimer = setTimeout(() => {
+               window.saveShowdownMeta(true);
+           }, 450);
+       };
+
+       window.flushAutoSaveSdMeta = () => {
+           if (_sdMetaTimer) {
+               clearTimeout(_sdMetaTimer);
+               _sdMetaTimer = null;
+               window.saveShowdownMeta(true);
+           }
+       };
        
        window.toggleSdLock = (d) => {
            let input = document.getElementById('sd_d'+d);
@@ -24306,7 +24389,12 @@ html += `</select>
        };
        
        window.onSdPlayerSelect = () => {
+          if (_activeSdPlayer) {
+             window.flushAutoSaveSdEntry();
+          }
+
           const sel = document.getElementById('sdPlayerSelect').value;
+          _activeSdPlayer = sel;
           const fields = document.getElementById('sdEntryFields');
           if (!sel) {
              fields.style.display = 'none';
@@ -24335,65 +24423,99 @@ html += `</select>
                  lockBtn.style.display = 'none';
              }
           }
+
+          window.setSdStatus('sdPlayerAutoSaveStatus', `⚡ Ready for ${escapeHTML(sel)}`, 'var(--text-muted)');
+          window.setSdStatus('sdSaveLiveIndicator', '⚡ Real-time Firebase Sync', 'var(--text-muted)');
        };
        
-       window.saveShowdownEntry = async () => {
-          const sel = document.getElementById('sdPlayerSelect').value;
+       window.saveShowdownEntry = async (isAutoSave = false) => {
+          const sel = document.getElementById('sdPlayerSelect')?.value;
           if (!sel) return;
           
-          let btn = event.target;
-          let origText = btn.innerHTML;
-          btn.innerHTML = 'Saving...';
-          btn.disabled = true;
+          let btn = document.getElementById('btnManualSaveSd');
+          let origText = btn ? btn.innerHTML : '💾 Save Scores Now';
+          if (!isAutoSave && btn) {
+             btn.innerHTML = 'Saving to Firebase...';
+             btn.disabled = true;
+          }
           
           let updates = {};
           for (let i = 1; i <= 6; i++) {
-             let val = parseInt(document.getElementById('sd_d'+i).value);
+             const inputEl = document.getElementById('sd_d'+i);
+             let val = inputEl ? parseInt(inputEl.value) : 0;
              updates['d'+i] = isNaN(val) ? 0 : val;
           }
           
           try {
              await set(ref(db, `showdown_live/${sel}`), updates);
              window._currentSdLiveData[sel] = updates;
-             window.logAdminAction("Showdown Score Update", `Saved daily Showdown scores for player ${sel}`, sel);
-             if (window.showToast) window.showToast(`Saved scores for ${sel}`, "success");
              
              // Sync the cached data to reflect this so navigation uses updated scores
              if (window.liveData['Showdown']) {
                 window.liveData['Showdown'] = window.mergeShowdownData(window.liveData['Showdown'], window._currentSdLiveData);
              }
+
+             const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+             window.setSdStatus('sdPlayerAutoSaveStatus', `✅ Auto-saved to Firebase (${nowTime})`, '#10b981');
+             window.setSdStatus('sdSaveLiveIndicator', `✅ Saved to Firebase (${nowTime})`, '#10b981');
+
+             if (!isAutoSave) {
+                window.logAdminAction("Showdown Score Update", `Saved daily Showdown scores for player ${sel}`, sel);
+                if (window.showToast) window.showToast(`✅ Saved scores for ${sel}`, "success");
+             }
+
+             window.recalcShowdownSummaryTable();
           } catch(e) {
-             console.error(e);
-             if (window.showToast) window.showToast("Failed to save", "error");
+             console.error("Showdown score save error:", e);
+             window.setSdStatus('sdPlayerAutoSaveStatus', '❌ Auto-save failed', '#ef4444');
+             window.setSdStatus('sdSaveLiveIndicator', '❌ Save error', '#ef4444');
+             if (!isAutoSave && window.showToast) window.showToast("Failed to save to Firebase", "error");
           }
           
-          btn.innerHTML = origText;
-          btn.disabled = false;
+          if (!isAutoSave && btn) {
+             btn.innerHTML = origText;
+             btn.disabled = false;
+          }
        };
        
-       window.saveShowdownMeta = async () => {
-          const btn = event.target;
-          const oldText = btn.innerHTML;
-          btn.innerHTML = "Saving...";
-          btn.disabled = true;
+       window.saveShowdownMeta = async (isAutoSave = false) => {
+          const btn = document.getElementById('btnManualSaveMeta');
+          const oldText = btn ? btn.innerHTML : '💾 Save Enemy Scores Now';
+          if (!isAutoSave && btn) {
+             btn.innerHTML = "Saving to Firebase...";
+             btn.disabled = true;
+          }
           
-          let newMeta = { enemyAlliance: { name: document.getElementById('metaEnemyName').value, scores: {} } };
+          const enemyNameInput = document.getElementById('metaEnemyName');
+          let newMeta = { enemyAlliance: { name: enemyNameInput ? enemyNameInput.value : '', scores: {} } };
           
           for (let i = 1; i <= 6; i++) {
-             newMeta.enemyAlliance.scores['d'+i] = Number(document.getElementById('meta_es_'+i).value) || 0;
+             const esInput = document.getElementById('meta_es_'+i);
+             newMeta.enemyAlliance.scores['d'+i] = esInput ? (Number(esInput.value) || 0) : 0;
           }
           
           try {
              await set(ref(db, 'showdown_meta'), newMeta);
-             window.logAdminAction("Enemy Alliance Update", `Updated Enemy Alliance name to '${newMeta.enemyAlliance.name || '[WWA] Whiteoutwarriors'}' and daily enemy scores`, newMeta.enemyAlliance.name);
-             if(window.showToast) window.showToast("Event Settings saved successfully!", "success");
+
+             const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+             window.setSdStatus('sdEnemyAutoSaveStatus', `✅ Enemy settings saved (${nowTime})`, '#10b981');
+             window.setSdStatus('sdMetaLiveIndicator', `✅ Saved to Firebase (${nowTime})`, '#10b981');
+
+             if (!isAutoSave) {
+                window.logAdminAction("Enemy Alliance Update", `Updated Enemy Alliance name to '${newMeta.enemyAlliance.name || '[WWA] Whiteoutwarriors'}' and daily enemy scores`, newMeta.enemyAlliance.name);
+                if(window.showToast) window.showToast("✅ Event Settings saved successfully!", "success");
+             }
           } catch(e) {
-             console.error(e);
-             if(window.showToast) window.showToast("Error saving data", "error");
+             console.error("Showdown meta save error:", e);
+             window.setSdStatus('sdEnemyAutoSaveStatus', '❌ Auto-save failed', '#ef4444');
+             window.setSdStatus('sdMetaLiveIndicator', '❌ Save error', '#ef4444');
+             if (!isAutoSave && window.showToast) window.showToast("Error saving data to Firebase", "error");
           }
           
-          btn.innerHTML = oldText;
-          btn.disabled = false;
+          if (!isAutoSave && btn) {
+             btn.innerHTML = oldText;
+             btn.disabled = false;
+          }
        };
        
     } catch(e) {

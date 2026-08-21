@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.0.6] - 2026-08-21
+- ⚔️ **Showdown Auto-Save**: Real-time Firebase auto-save on score input.
+- ⚡ **Live Sync Status**: Instant visual feedback indicators on every edit.
+- 📊 **Instant Recalculation**: Showdown summary table live updates during entry.
+
 ## [3.0.5] - 2026-08-20
 - 🛡️ **Full Alt Isolation**: Hardened main profile state and in-game avatar isolation.
 
