@@ -12576,12 +12576,22 @@ window.formatRelativeTime = (ts) => {
 
 window.getCountdownAlertCategoryMeta = (cat) => {
   switch (cat) {
+    case 'bear_trap':
+      return { icon: '🐻', name: 'Bear Trap Rally', color: '#f59e0b', bg: 'rgba(245,158,11,0.14)', border: 'rgba(245,158,11,0.4)', glow: 'rgba(245,158,11,0.25)' };
+    case 'castle_battle':
+      return { icon: '⚔️', name: 'Sunfire Castle / SvS', color: '#ef4444', bg: 'rgba(239,68,68,0.14)', border: 'rgba(239,68,68,0.4)', glow: 'rgba(239,68,68,0.25)' };
+    case 'crazy_joe':
+      return { icon: '🧟', name: 'Crazy Joe Defense', color: '#a855f7', bg: 'rgba(168,85,247,0.14)', border: 'rgba(168,85,247,0.4)', glow: 'rgba(168,85,247,0.25)' };
+    case 'foundry_battle':
+      return { icon: '🏰', name: 'Foundry / Canyon Clash', color: '#06b6d4', bg: 'rgba(6,182,212,0.14)', border: 'rgba(6,182,212,0.4)', glow: 'rgba(6,182,212,0.25)' };
     case 'game_update':
       return { icon: '🎮', name: 'Game Update & Maintenance', color: '#38bdf8', bg: 'rgba(56,189,248,0.12)', border: 'rgba(56,189,248,0.4)', glow: 'rgba(56,189,248,0.25)' };
     case 'site_maintenance':
       return { icon: '🛠️', name: 'Site Maintenance', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.4)', glow: 'rgba(245,158,11,0.25)' };
     case 'alliance_event':
       return { icon: '⚔️', name: 'Alliance Event / War', color: '#c084fc', bg: 'rgba(168,85,247,0.12)', border: 'rgba(168,85,247,0.4)', glow: 'rgba(168,85,247,0.25)' };
+    case 'staff_notice':
+      return { icon: '🛡️', name: 'Staff Directive', color: '#a855f7', bg: 'rgba(168,85,247,0.12)', border: 'rgba(168,85,247,0.4)', glow: 'rgba(168,85,247,0.25)' };
     default:
       return { icon: '📢', name: 'Leadership Announcement', color: '#f472b6', bg: 'rgba(236,72,153,0.12)', border: 'rgba(236,72,153,0.4)', glow: 'rgba(236,72,153,0.25)' };
   }
@@ -12596,12 +12606,31 @@ window.formatCountdownTimeRemaining = (diffMs) => {
   return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 };
 
-window.getScheduledAlertStatus = (targetMs, endMs, mode = '1hour') => {
+window.getScheduledAlertStatus = (targetMs, endMs, mode = '1hour', recurrence = 'none') => {
   const now = Date.now();
   if (!targetMs) return { stage: 'none' };
   
-  const diffToStart = Number(targetMs) - now;
-  const effectiveEnd = Number(endMs) || (Number(targetMs) + 2 * 60 * 60 * 1000);
+  let target = Number(targetMs);
+  let effectiveEnd = Number(endMs) || (target + 2 * 60 * 60 * 1000);
+  const duration = Math.max(1800000, effectiveEnd - target);
+
+  // Handle auto-recurring intervals if event already ended
+  if (recurrence && recurrence !== 'none' && now > effectiveEnd) {
+    let recMs = 0;
+    if (recurrence === '48h') recMs = 48 * 3600000;
+    else if (recurrence === 'daily') recMs = 24 * 3600000;
+    else if (recurrence === 'weekly') recMs = 7 * 24 * 3600000;
+    else if (recurrence === 'biweekly') recMs = 14 * 24 * 3600000;
+
+    if (recMs > 0) {
+      while (now > effectiveEnd) {
+        target += recMs;
+        effectiveEnd = target + duration;
+      }
+    }
+  }
+
+  const diffToStart = target - now;
   const diffToEnd = effectiveEnd - now;
 
   if (diffToStart > 0) {
@@ -12612,8 +12641,9 @@ window.getScheduledAlertStatus = (targetMs, endMs, mode = '1hour') => {
       isFinalHour,
       diffToStart,
       diffToEnd,
-      targetMs: Number(targetMs),
-      endMs: effectiveEnd
+      targetMs: target,
+      endMs: effectiveEnd,
+      recurrence
     };
   } else if (diffToEnd > 0) {
     return {
@@ -12621,8 +12651,9 @@ window.getScheduledAlertStatus = (targetMs, endMs, mode = '1hour') => {
       isFinalHour: false,
       diffToStart,
       diffToEnd,
-      targetMs: Number(targetMs),
-      endMs: effectiveEnd
+      targetMs: target,
+      endMs: effectiveEnd,
+      recurrence
     };
   } else {
     return {
@@ -12630,10 +12661,312 @@ window.getScheduledAlertStatus = (targetMs, endMs, mode = '1hour') => {
       isFinalHour: false,
       diffToStart,
       diffToEnd,
-      targetMs: Number(targetMs),
-      endMs: effectiveEnd
+      targetMs: target,
+      endMs: effectiveEnd,
+      recurrence
     };
   }
+};
+
+// ==========================================
+// 🛡️ PERSONAL SHIELD & CUSTOM TIMERS SUITE
+// ==========================================
+
+window.playShieldAlertSound = () => {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const now = ctx.currentTime;
+    
+    // 4-tone harmonic alert chime (D5 -> A5 -> D6 -> F#6)
+    const notes = [587.33, 880.00, 1174.66, 1479.98];
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, now + i * 0.14);
+      gain.gain.setValueAtTime(0.25, now + i * 0.14);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.14 + 0.35);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + i * 0.14);
+      osc.stop(now + i * 0.14 + 0.35);
+    });
+  } catch (e) {
+    console.warn("Web Audio chime playback not available:", e);
+  }
+};
+
+window.getPersonalShieldTimer = () => {
+  try {
+    const raw = localStorage.getItem('wos_personal_shield_timer');
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (!data || !data.expiresAt) return null;
+    return data;
+  } catch (e) {
+    return null;
+  }
+};
+
+window.setPersonalShieldTimer = (durationHours, durationMins = 0, warningMins = 15) => {
+  const durationMs = (Number(durationHours) * 3600000) + (Number(durationMins) * 60000);
+  if (durationMs <= 0) return;
+  const now = Date.now();
+  const expiresAt = now + durationMs;
+  const timerData = {
+    startedAt: now,
+    durationMs,
+    expiresAt,
+    warningMins: Number(warningMins) || 15,
+    alertTriggered: false,
+    label: durationHours >= 24 ? `${Math.round(durationHours/24)}d Shield` : `${durationHours}h Shield`
+  };
+  localStorage.setItem('wos_personal_shield_timer', JSON.stringify(timerData));
+  if (window.showToast) window.showToast(`🛡️ Shield Timer Active: Expires in ${durationHours}h ${durationMins ? `${durationMins}m` : ''}`, "success");
+  if (typeof window.startPersonalShieldTicker === 'function') window.startPersonalShieldTicker();
+  if (typeof window.updateNewMemberBadge === 'function') window.updateNewMemberBadge();
+};
+
+window.cancelPersonalShieldTimer = () => {
+  localStorage.removeItem('wos_personal_shield_timer');
+  if (window.showToast) window.showToast("🛡️ Shield Timer cancelled.", "info");
+  const banner = document.getElementById('personalShieldActiveBanner');
+  if (banner) banner.remove();
+  if (typeof window.updateNewMemberBadge === 'function') window.updateNewMemberBadge();
+};
+
+window.startPersonalShieldTicker = () => {
+  if (window._shieldTickerInterval) clearInterval(window._shieldTickerInterval);
+
+  const checkShield = () => {
+    const shield = window.getPersonalShieldTimer();
+    if (!shield) return;
+    const now = Date.now();
+    const diff = shield.expiresAt - now;
+    const warningMs = (shield.warningMins || 15) * 60000;
+
+    // Trigger Warning Notification & Audio Chime
+    if (diff > 0 && diff <= warningMs && !shield.alertTriggered) {
+      shield.alertTriggered = true;
+      localStorage.setItem('wos_personal_shield_timer', JSON.stringify(shield));
+      window.playShieldAlertSound();
+      
+      const minsLeft = Math.max(1, Math.ceil(diff / 60000));
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+          new Notification('🚨 SHIELD DROPPING SOON!', {
+            body: `Chief, your furnace shield drops in ${minsLeft} minutes! Log in and re-bubble now to avoid being zeroed!`,
+            icon: 'https://wosbdc.github.io/central_command_icon.ico'
+          });
+        } catch(e) {}
+      }
+      if (window.showToast) window.showToast(`🚨 SHIELD WARNING: Drops in ${minsLeft} minutes! Re-bubble now!`, "error");
+    }
+
+    // Update any open Shield Countdown Elements
+    const countdownEl = document.getElementById('personalShieldCountdownText');
+    if (countdownEl) {
+      if (diff > 0) {
+        countdownEl.textContent = window.formatCountdownTimeRemaining(diff);
+      } else {
+        countdownEl.textContent = 'EXPIRED!';
+      }
+    }
+  };
+
+  checkShield();
+  window._shieldTickerInterval = setInterval(checkShield, 1000);
+};
+
+window.startPersonalShieldTicker();
+
+window.selectedShieldHours = 8;
+window.selectedShieldMins = 0;
+
+window.selectShieldPreset = function(hours, mins = 0) {
+  window.selectedShieldHours = Number(hours);
+  window.selectedShieldMins = Number(mins);
+  
+  const customCont = document.getElementById('shieldCustomInputsContainer');
+  if (customCont) customCont.style.display = 'none';
+
+  document.querySelectorAll('.shield-preset-btn').forEach(btn => {
+    const bH = Number(btn.getAttribute('data-hours'));
+    if (bH === hours) {
+      btn.style.background = 'linear-gradient(135deg, #0ea5e9, #0284c7)';
+      btn.style.border = 'none';
+      btn.style.boxShadow = '0 2px 8px rgba(14,165,233,0.3)';
+    } else {
+      btn.style.background = 'rgba(255,255,255,0.06)';
+      btn.style.border = '1px solid rgba(255,255,255,0.12)';
+      btn.style.boxShadow = 'none';
+    }
+  });
+};
+
+window.toggleShieldCustomInputs = function() {
+  const customCont = document.getElementById('shieldCustomInputsContainer');
+  if (!customCont) return;
+  const isHidden = (customCont.style.display === 'none');
+  customCont.style.display = isHidden ? 'block' : 'none';
+  if (isHidden) {
+    document.querySelectorAll('.shield-preset-btn').forEach(btn => {
+      btn.style.background = 'rgba(255,255,255,0.06)';
+      btn.style.border = '1px solid rgba(255,255,255,0.12)';
+      btn.style.boxShadow = 'none';
+    });
+  }
+};
+
+window.handleActivateShieldFromModal = function() {
+  const customCont = document.getElementById('shieldCustomInputsContainer');
+  let h = window.selectedShieldHours || 8;
+  let m = window.selectedShieldMins || 0;
+  if (customCont && customCont.style.display === 'block') {
+    h = Number(document.getElementById('shieldCustomHours')?.value || 0);
+    m = Number(document.getElementById('shieldCustomMins')?.value || 0);
+  }
+  const warningMins = Number(document.getElementById('shieldWarningTiming')?.value || 15);
+  window.setPersonalShieldTimer(h, m, warningMins);
+  const overlay = document.getElementById('personalShieldModalOverlay');
+  if (overlay) overlay.remove();
+};
+
+window.openPersonalShieldModal = function() {
+  let existing = document.getElementById('personalShieldModalOverlay');
+  if (existing) existing.remove();
+
+  const currentShield = window.getPersonalShieldTimer();
+  const now = Date.now();
+  const isActive = currentShield && (currentShield.expiresAt > now);
+  const diffMs = isActive ? (currentShield.expiresAt - now) : 0;
+  const expiryDate = isActive ? new Date(currentShield.expiresAt) : null;
+  const expiryTimeStr = expiryDate ? `${expiryDate.toLocaleDateString([], { month:'short', day:'numeric' })} at ${expiryDate.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}` : '';
+
+  const overlay = document.createElement('div');
+  overlay.id = 'personalShieldModalOverlay';
+  overlay.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.85); backdrop-filter:blur(10px); z-index:100005; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease;';
+
+  overlay.innerHTML = `
+    <div class="card" style="width:94%; max-width:480px; background:linear-gradient(145deg, rgba(15,23,42,0.98), rgba(30,41,59,0.96)); border:1.5px solid rgba(56,189,248,0.45); padding:22px; border-radius:18px; box-shadow:0 25px 60px rgba(0,0,0,0.85); text-align:left; color:var(--text-main); max-height:90vh; overflow-y:auto; animation:zoomIn 0.2s ease;">
+      
+      <!-- Header -->
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:12px; gap:8px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:24px;">🛡️</span>
+          <div>
+            <h3 style="margin:0; color:#fff; font-size:16.5px; font-weight:800;">Personal Shield Timer</h3>
+            <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">Custom furnace defense countdown & pre-drop alerts</div>
+          </div>
+        </div>
+        <button onclick="document.getElementById('personalShieldModalOverlay').remove()" class="close-btn" title="Close Window">✕</button>
+      </div>
+
+      ${isActive ? `
+        <!-- Active Shield Status Box -->
+        <div style="background:linear-gradient(145deg, rgba(16,185,129,0.15), rgba(15,23,42,0.9)); border:1.5px solid #10b981; border-radius:14px; padding:14px; margin-bottom:14px; box-shadow:0 0 15px rgba(16,185,129,0.2);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <span style="font-size:11px; font-weight:800; color:#10b981; text-transform:uppercase; letter-spacing:0.5px; display:flex; align-items:center; gap:5px;">
+              🟢 Active Defense Bubble
+            </span>
+            <span style="font-size:11px; background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:1px 6px; border-radius:6px; font-weight:bold;">${currentShield.label || 'Shield'}</span>
+          </div>
+          <div style="font-family:monospace; font-weight:800; font-size:22px; color:#fff; letter-spacing:1px; margin:4px 0;" id="personalShieldCountdownText">
+            ${window.formatCountdownTimeRemaining(diffMs)}
+          </div>
+          <div style="font-size:11.5px; color:var(--text-muted); font-family:monospace;">
+            🕒 Drops on: <strong>${expiryTimeStr}</strong>
+          </div>
+          <div style="display:flex; gap:8px; margin-top:12px;">
+            <button onclick="window.setPersonalShieldTimer(8, 0, document.getElementById('shieldWarningTiming')?.value || 15); window.openPersonalShieldModal();" style="flex:1; background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:7px 10px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer;">
+              ➕ Extend +8h
+            </button>
+            <button onclick="window.cancelPersonalShieldTimer(); window.openPersonalShieldModal();" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer;">
+              ❌ Cancel
+            </button>
+          </div>
+        </div>
+      ` : ''}
+
+      <!-- Preset Selection Grid -->
+      <div style="margin-bottom:14px;">
+        <label style="font-size:11.5px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:8px;">
+          ${isActive ? 'Or Set New Shield Duration:' : 'Select Shield Duration:'}
+        </label>
+        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px;">
+          <button type="button" onclick="window.selectShieldPreset(2, 0)" class="shield-preset-btn" data-hours="2" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; padding:10px 6px; border-radius:10px; font-size:12.5px; font-weight:bold; cursor:pointer; text-align:center; transition:0.15s;">
+            🛡️ 2 Hours
+          </button>
+          <button type="button" onclick="window.selectShieldPreset(8, 0)" class="shield-preset-btn active" data-hours="8" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); border:none; color:#fff; padding:10px 6px; border-radius:10px; font-size:12.5px; font-weight:bold; cursor:pointer; text-align:center; box-shadow:0 2px 8px rgba(14,165,233,0.3); transition:0.15s;">
+            🛡️ 8 Hours ⭐
+          </button>
+          <button type="button" onclick="window.selectShieldPreset(12, 0)" class="shield-preset-btn" data-hours="12" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; padding:10px 6px; border-radius:10px; font-size:12.5px; font-weight:bold; cursor:pointer; text-align:center; transition:0.15s;">
+            🛡️ 12 Hours
+          </button>
+          <button type="button" onclick="window.selectShieldPreset(24, 0)" class="shield-preset-btn" data-hours="24" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; padding:10px 6px; border-radius:10px; font-size:12.5px; font-weight:bold; cursor:pointer; text-align:center; transition:0.15s;">
+            🛡️ 24 Hours
+          </button>
+          <button type="button" onclick="window.selectShieldPreset(72, 0)" class="shield-preset-btn" data-hours="72" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; padding:10px 6px; border-radius:10px; font-size:12.5px; font-weight:bold; cursor:pointer; text-align:center; transition:0.15s;">
+            🛡️ 72 Hours (3d)
+          </button>
+          <button type="button" onclick="window.toggleShieldCustomInputs()" id="shieldCustomToggleBtn" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:var(--text-muted); padding:10px 6px; border-radius:10px; font-size:12.5px; font-weight:bold; cursor:pointer; text-align:center; transition:0.15s;">
+            ⚙️ Custom
+          </button>
+        </div>
+      </div>
+
+      <!-- Custom Time Inputs (Hidden by default) -->
+      <div id="shieldCustomInputsContainer" style="display:none; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:10px; margin-bottom:14px;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+          <div>
+            <label style="font-size:11px; font-weight:bold; color:var(--text-muted); display:block; margin-bottom:4px;">Hours</label>
+            <input type="number" id="shieldCustomHours" min="0" max="720" value="8" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; font-weight:bold; outline:none; box-sizing:border-box;">
+          </div>
+          <div>
+            <label style="font-size:11px; font-weight:bold; color:var(--text-muted); display:block; margin-bottom:4px;">Minutes</label>
+            <input type="number" id="shieldCustomMins" min="0" max="59" value="0" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; font-weight:bold; outline:none; box-sizing:border-box;">
+          </div>
+        </div>
+      </div>
+
+      <!-- Pre-Drop Warning Selector -->
+      <div style="margin-bottom:14px;">
+        <label style="font-size:11.5px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:6px;">
+          ⚠️ Alert Me Before Shield Drops:
+        </label>
+        <select id="shieldWarningTiming" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12.5px; font-weight:bold; outline:none; cursor:pointer; box-sizing:border-box;">
+          <option value="5">5 Minutes Before</option>
+          <option value="15" selected>15 Minutes Before (Recommended)</option>
+          <option value="30">30 Minutes Before</option>
+          <option value="60">1 Hour Before</option>
+        </select>
+      </div>
+
+      <!-- Sound & Test Row -->
+      <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:10px 12px; margin-bottom:16px; flex-wrap:wrap; gap:8px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:16px;">🔊</span>
+          <span style="font-size:12px; font-weight:bold; color:#fff;">Audio Chime Warning</span>
+        </div>
+        <button type="button" onclick="window.playShieldAlertSound();" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#38bdf8; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+          🧪 Test Chime
+        </button>
+      </div>
+
+      <!-- Actions -->
+      <div style="display:flex; justify-content:flex-end; gap:8px;">
+        <button type="button" onclick="document.getElementById('personalShieldModalOverlay').remove()" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#cbd5e1; padding:8px 16px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12.5px;">Close</button>
+        <button type="button" onclick="window.handleActivateShieldFromModal()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:8px 20px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12.5px; box-shadow:0 2px 10px rgba(16,185,129,0.4); display:inline-flex; align-items:center; gap:6px;">
+          🛡️ Start Shield Timer
+        </button>
+      </div>
+
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
 };
 
 window.startBellCountdownTicker = () => {
@@ -12645,21 +12978,24 @@ window.startBellCountdownTicker = () => {
       const targetMs = Number(el.getAttribute('data-target-ts') || '0');
       const endMs = Number(el.getAttribute('data-end-ts') || '0');
       const mode = el.getAttribute('data-mode') || '1hour';
+      const recurrence = el.getAttribute('data-recurrence') || 'none';
       if (!targetMs) return;
 
-      const status = window.getScheduledAlertStatus(targetMs, endMs, mode);
-      const dateObj = new Date(targetMs);
+      const status = window.getScheduledAlertStatus(targetMs, endMs, mode, recurrence);
+      const dateObj = new Date(status.targetMs);
       const localTimeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       const localDateStr = dateObj.toLocaleDateString([], { month: 'short', day: 'numeric' });
       const utcHours = String(dateObj.getUTCHours()).padStart(2, '0');
       const utcMins = String(dateObj.getUTCMinutes()).padStart(2, '0');
       const utcDisplay = `${utcHours}:${utcMins} UTC`;
+      const recBadge = status.recurrence && status.recurrence !== 'none' ? `<span style="background:rgba(168,85,247,0.15); color:#c084fc; border:1px solid rgba(168,85,247,0.4); padding:1px 6px; border-radius:6px; font-size:10px; font-weight:bold;">🔁 ${status.recurrence.toUpperCase()}</span>` : '';
 
       if (status.stage === 'countdown') {
         const timeStr = window.formatCountdownTimeRemaining(status.diffToStart);
         el.innerHTML = `
-          <div style="display:flex; align-items:center; gap:8px;">
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
             <span style="font-family:monospace; font-weight:800; font-size:15px; color:#f59e0b; text-shadow:0 0 10px rgba(245,158,11,0.5); letter-spacing:0.5px;">⏳ STARTS IN: ${timeStr}</span>
+            ${recBadge}
           </div>
           <div style="font-size:11.5px; color:var(--text-muted); font-family:monospace;">
             🕒 ${localDateStr}, ${localTimeStr} (${utcDisplay})
@@ -12668,8 +13004,9 @@ window.startBellCountdownTicker = () => {
       } else if (status.stage === 'live') {
         const timeStr = window.formatCountdownTimeRemaining(status.diffToEnd);
         el.innerHTML = `
-          <div style="display:flex; align-items:center; gap:8px;">
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
             <span style="font-family:monospace; font-weight:800; font-size:15px; color:#10b981; text-shadow:0 0 10px rgba(16,185,129,0.5); letter-spacing:0.5px;">🚨 LIVE NOW (Ends in ${timeStr})</span>
+            ${recBadge}
           </div>
           <div style="font-size:11.5px; color:#10b981; font-weight:bold; font-family:monospace;">
             🟢 In Progress
@@ -12680,9 +13017,10 @@ window.startBellCountdownTicker = () => {
         const diffMins = Math.floor((status.diffToStart % 3600000) / 60000);
         const inLabel = diffHrs > 24 ? `in ${Math.floor(diffHrs/24)}d ${diffHrs%24}h` : (diffHrs > 0 ? `in ${diffHrs}h ${diffMins}m` : `in ${diffMins}m`);
         el.innerHTML = `
-          <div style="font-size:13.5px; font-weight:700; color:#38bdf8; display:flex; align-items:center; gap:6px;">
+          <div style="font-size:13.5px; font-weight:700; color:#38bdf8; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
             <span>📅 Scheduled: ${localDateStr} at ${localTimeStr}</span>
             <span style="background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:1px 6px; border-radius:6px; font-size:11px;">${inLabel}</span>
+            ${recBadge}
           </div>
           <div style="font-size:11.5px; color:var(--text-muted); font-family:monospace;">
             ${utcDisplay}
@@ -12690,8 +13028,9 @@ window.startBellCountdownTicker = () => {
         `;
       } else if (status.stage === 'ended') {
         el.innerHTML = `
-          <div style="font-size:12px; font-weight:bold; color:var(--text-muted);">
-            ✅ Event Concluded
+          <div style="font-size:12px; font-weight:bold; color:var(--text-muted); display:flex; align-items:center; gap:6px;">
+            <span>✅ Event Concluded</span>
+            ${recBadge}
           </div>
           <div style="font-size:11.5px; color:var(--text-muted); font-family:monospace;">
             ${localDateStr}, ${localTimeStr}
@@ -12766,7 +13105,7 @@ window.updateNewMemberBadge = async () => {
           const effectiveEnd = Number(item.endTimestamp) || (Number(item.targetTimestamp) + 2 * 3600000);
           if (effectiveEnd > (now - 12 * 3600000)) {
             countdownCount++;
-            const cStatus = window.getScheduledAlertStatus(item.targetTimestamp, item.endTimestamp, item.countdownMode);
+            const cStatus = window.getScheduledAlertStatus(item.targetTimestamp, item.endTimestamp, item.countdownMode, item.recurrence || 'none');
             if (cStatus.stage === 'countdown' && cStatus.isFinalHour) {
               if (!nearestActiveCountdown || cStatus.diffToStart < nearestActiveCountdown.diffToStart) {
                 nearestActiveCountdown = cStatus;
@@ -13036,7 +13375,7 @@ window.openAllianceAlertsModal = async () => {
       const catMeta = window.getCountdownAlertCategoryMeta(b.category || 'general');
       const targetMs = Number(b.targetTimestamp);
       const endMs = Number(b.endTimestamp || (targetMs + 2 * 3600000));
-      const status = window.getScheduledAlertStatus(targetMs, endMs, b.countdownMode || '1hour');
+      const status = window.getScheduledAlertStatus(targetMs, endMs, b.countdownMode || '1hour', b.recurrence || 'none');
       const isLive = status.stage === 'live';
       const isCountdown = status.stage === 'countdown';
       const isUrgent = b.priority === 'urgent' || isLive || isCountdown;
@@ -13078,6 +13417,7 @@ window.openAllianceAlertsModal = async () => {
                data-target-ts="${targetMs}" 
                data-end-ts="${endMs}" 
                data-mode="${b.countdownMode || '1hour'}"
+               data-recurrence="${b.recurrence || 'none'}"
                style="background:rgba(15,23,42,0.85); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:8px 12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-top:2px;">
             <div style="font-size:12.5px; font-weight:bold; color:#fff;">⏳ Calculating countdown...</div>
           </div>
@@ -13352,6 +13692,9 @@ window.openAllianceAlertsModal = async () => {
                 <span>📱 Device Notifications</span>
                 <span style="color:#10b981; font-size:9.5px; font-weight:bold;">Active 🟢</span>
               </div>
+              <button onclick="window.openTimerPreferencesModal(); window.closeHeaderPushDropdown();" style="width:100%; text-align:left; background:transparent; border:none; color:#38bdf8; padding:7px 9px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.15s;" onmouseover="this.style.background='rgba(56,189,248,0.15)'" onmouseout="this.style.background='transparent'">
+                ⚙️ Alert Preferences
+              </button>
               <button onclick="window.testLocalPushNotification(); window.closeHeaderPushDropdown();" style="width:100%; text-align:left; background:transparent; border:none; color:#60a5fa; padding:7px 9px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.15s;" onmouseover="this.style.background='rgba(59,130,246,0.15)'" onmouseout="this.style.background='transparent'">
                 🧪 Test Alert on this Device
               </button>
@@ -13373,6 +13716,16 @@ window.openAllianceAlertsModal = async () => {
       }
     }
 
+    const currentShield = (typeof window.getPersonalShieldTimer === 'function') ? window.getPersonalShieldTimer() : null;
+    const isShieldActive = currentShield && (currentShield.expiresAt > Date.now());
+    const shieldRemainingMs = isShieldActive ? (currentShield.expiresAt - Date.now()) : 0;
+
+    const headerShieldBtnHtml = `
+      <button onclick="window.openPersonalShieldModal()" style="background:${isShieldActive ? 'rgba(16,185,129,0.14)' : 'rgba(56,189,248,0.12)'}; border:1px solid ${isShieldActive ? 'rgba(16,185,129,0.45)' : 'rgba(56,189,248,0.4)'}; color:${isShieldActive ? '#10b981' : '#38bdf8'}; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px; box-shadow:0 0 10px ${isShieldActive ? 'rgba(16,185,129,0.2)' : 'transparent'}; transition:all 0.2s ease;" title="Set Personal Shield & Defense Warning Timer">
+        <span>🛡️ ${isShieldActive ? 'Shield Active' : 'Shield Timer'}</span>
+      </button>
+    `;
+
     const overlay = document.createElement('div');
     overlay.id = 'notificationsModalOverlay';
     overlay.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.85); backdrop-filter:blur(10px); z-index:99999; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease;';
@@ -13389,12 +13742,33 @@ window.openAllianceAlertsModal = async () => {
               <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">Chief <strong>${window.escapeHTML(chiefName)}</strong> (ID: ${currentUser ? (currentUser.gameId || 'N/A') : 'N/A'})</div>
             </div>
           </div>
-          <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+          <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+            ${headerShieldBtnHtml}
             ${headerStaffToolsPillHtml}
             ${headerPushPillHtml}
             <button onclick="document.getElementById('notificationsModalOverlay').remove()" class="close-btn" title="Close Window">✕</button>
           </div>
         </div>
+
+        ${isShieldActive ? `
+          <!-- Active Personal Shield Banner -->
+          <div id="personalShieldActiveBanner" style="background:linear-gradient(135deg, rgba(16,185,129,0.14), rgba(15,23,42,0.95)); border:1.5px solid rgba(16,185,129,0.45); border-radius:12px; padding:10px 14px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; box-shadow:0 0 12px rgba(16,185,129,0.15);">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:20px;">🛡️</span>
+              <div>
+                <div style="font-size:11px; font-weight:800; color:#10b981; text-transform:uppercase; letter-spacing:0.5px;">
+                  Active Shield: <span id="personalShieldCountdownText" style="font-family:monospace; color:#fff; font-size:13px; font-weight:bold;">${window.formatCountdownTimeRemaining(shieldRemainingMs)}</span>
+                </div>
+                <div style="font-size:10.5px; color:var(--text-muted); margin-top:1px;">
+                  Alert set for ${currentShield.warningMins || 15}m before expiration
+                </div>
+              </div>
+            </div>
+            <button onclick="window.openPersonalShieldModal()" style="background:rgba(16,185,129,0.2); border:1px solid rgba(16,185,129,0.4); color:#10b981; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
+              ⚙️ Manage
+            </button>
+          </div>
+        ` : ''}
 
         <!-- Top Filter Tabs Bar (Only renders categories with active items) -->
         ${countAll > 0 ? `
@@ -13961,6 +14335,71 @@ window.applyCcaUtcPreset = function(timeStr) {
   }
 };
 
+window.applyCcaGamePreset = function(presetKey) {
+  window.setAlertTypeInModal('timer');
+  const catEl = document.getElementById('ccaCategory');
+  const titleEl = document.getElementById('ccaTitle');
+  const bodyEl = document.getElementById('ccaBody');
+  const durEl = document.getElementById('ccaDuration');
+  const recEl = document.getElementById('ccaRecurrence');
+  const prioEl = document.getElementById('ccaPriority');
+  const timeEl = document.getElementById('ccaUtcTime');
+
+  if (presetKey === 'bear_trap_1') {
+    if (catEl) catEl.value = 'bear_trap';
+    if (titleEl) titleEl.value = '🐻 Bear Trap #1 Rally';
+    if (bodyEl) bodyEl.value = '🐻 Top rally leads use Jessie / Jeronimo / Mia lead! Do not join rallies with infantry!';
+    if (durEl) durEl.value = '1800000'; // 30 mins
+    if (recEl) recEl.value = '48h';
+    if (prioEl) prioEl.value = 'high';
+    if (timeEl) timeEl.value = '19:00';
+  } else if (presetKey === 'bear_trap_2') {
+    if (catEl) catEl.value = 'bear_trap';
+    if (titleEl) titleEl.value = '🐻 Bear Trap #2 Rally';
+    if (bodyEl) bodyEl.value = '🐻 Top rally leads use Jessie / Jeronimo / Mia lead! Do not join rallies with infantry!';
+    if (durEl) durEl.value = '1800000'; // 30 mins
+    if (recEl) recEl.value = '48h';
+    if (prioEl) prioEl.value = 'high';
+    if (timeEl) timeEl.value = '02:00';
+  } else if (presetKey === 'castle_battle') {
+    if (catEl) catEl.value = 'castle_battle';
+    if (titleEl) titleEl.value = '⚔️ Sunfire Castle Battle Phase';
+    if (bodyEl) bodyEl.value = '⚔️ Sunfire Castle battle is live! Move to assigned turrets. Ensure 24h shield is active before fighting!';
+    if (durEl) durEl.value = '21600000'; // 6 hours
+    if (recEl) recEl.value = 'weekly';
+    if (prioEl) prioEl.value = 'urgent';
+    if (timeEl) timeEl.value = '12:00';
+  } else if (presetKey === 'crazy_joe') {
+    if (catEl) catEl.value = 'crazy_joe';
+    if (titleEl) titleEl.value = '🧟 Crazy Joe Alliance Defense Waves';
+    if (bodyEl) bodyEl.value = '🧟 Send reinforcements to HQ and offline members! Prepare for 20 defense waves!';
+    if (durEl) durEl.value = '3600000'; // 1 hour
+    if (recEl) recEl.value = 'weekly';
+    if (prioEl) prioEl.value = 'high';
+    if (timeEl) timeEl.value = '19:00';
+  } else if (presetKey === 'foundry_battle') {
+    if (catEl) catEl.value = 'foundry_battle';
+    if (titleEl) titleEl.value = '🏰 Foundry Alliance Tournament';
+    if (bodyEl) bodyEl.value = '🏰 Legion 1 & 2 enter battlefield! Capture Munitions & Arsenal early!';
+    if (durEl) durEl.value = '3600000'; // 1 hour
+    if (recEl) recEl.value = 'biweekly';
+    if (prioEl) prioEl.value = 'high';
+    if (timeEl) timeEl.value = '19:00';
+  } else if (presetKey === 'svs_shield') {
+    if (catEl) catEl.value = 'castle_battle';
+    if (titleEl) titleEl.value = '🛡️ SvS Kill Event Shield Warning';
+    if (bodyEl) bodyEl.value = '🚨 Kill Event is starting! Put up your 24h/72h shields immediately to protect furnace and troops!';
+    if (durEl) durEl.value = '86400000'; // 24 hours
+    if (recEl) recEl.value = 'weekly';
+    if (prioEl) prioEl.value = 'urgent';
+    if (timeEl) timeEl.value = '00:00';
+  }
+
+  if (typeof window.updateCountdownModalPreview === 'function') {
+    window.updateCountdownModalPreview();
+  }
+};
+
 window.setAlertTypeInModal = function(type) {
   window.ccaCurrentType = type;
   
@@ -14038,6 +14477,7 @@ window.openCreateCountdownAlertModal = function(editData = null, defaultType = '
   const initialTitle = (editData && editData.title) || '';
   const initialBody = (editData && editData.body) || '';
   const initialCountdownMode = (editData && editData.countdownMode) || '1hour';
+  const initialRecurrence = (editData && editData.recurrence) || 'none';
   const initialPriority = (editData && editData.priority) || 'high';
 
   window.ccaCurrentMode = 'utc';
@@ -14093,8 +14533,8 @@ window.openCreateCountdownAlertModal = function(editData = null, defaultType = '
   modal.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.85); backdrop-filter:blur(10px); z-index:100002; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease;';
 
   modal.innerHTML = `
-    <div class="card" style="width:94%; max-width:520px; background:linear-gradient(145deg, rgba(15,23,42,0.98), rgba(30,41,59,0.96)); border:1px solid rgba(56,189,248,0.4); padding:22px; border-radius:18px; box-shadow:0 25px 60px rgba(0,0,0,0.85); text-align:left; color:var(--text-main); max-height:90vh; overflow-y:auto; animation:zoomIn 0.2s ease;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:10px;">
+    <div class="card" style="width:94%; max-width:540px; background:linear-gradient(145deg, rgba(15,23,42,0.98), rgba(30,41,59,0.96)); border:1px solid rgba(56,189,248,0.4); padding:22px; border-radius:18px; box-shadow:0 25px 60px rgba(0,0,0,0.85); text-align:left; color:var(--text-main); max-height:90vh; overflow-y:auto; animation:zoomIn 0.2s ease;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:10px;">
         <div style="display:flex; align-items:center; gap:8px;">
           <span style="font-size:22px;">${isEdit ? '✏️' : '🚀'}</span>
           <div>
@@ -14103,6 +14543,33 @@ window.openCreateCountdownAlertModal = function(editData = null, defaultType = '
           </div>
         </div>
         <button onclick="document.getElementById('createCountdownAlertModalOverlay').remove()" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#cbd5e1; font-size:18px; width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; line-height:1; transition:0.15s;" onmouseover="this.style.background='rgba(239,68,68,0.2)'; this.style.borderColor='rgba(239,68,68,0.4)'; this.style.color='#ef4444'" onmouseout="this.style.background='rgba(255,255,255,0.06)'; this.style.borderColor='rgba(255,255,255,0.12)'; this.style.color='#cbd5e1'" title="Close Window">✕</button>
+      </div>
+
+      <!-- 1-Click Quick Game Event Presets Bar -->
+      <div style="margin-bottom:14px; background:rgba(0,0,0,0.3); border:1px solid rgba(56,189,248,0.25); border-radius:12px; padding:10px;">
+        <div style="font-size:10.5px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; display:flex; align-items:center; gap:4px;">
+          <span>⚡ 1-Click Game Event Presets:</span>
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap:5px;">
+          <button type="button" onclick="window.applyCcaGamePreset('bear_trap_1')" style="background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.35); color:#f59e0b; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; transition:0.15s;">
+            🐻 Bear Trap 1 (19:00)
+          </button>
+          <button type="button" onclick="window.applyCcaGamePreset('bear_trap_2')" style="background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.35); color:#f59e0b; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; transition:0.15s;">
+            🐻 Bear Trap 2 (02:00)
+          </button>
+          <button type="button" onclick="window.applyCcaGamePreset('castle_battle')" style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.35); color:#ef4444; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; transition:0.15s;">
+            ⚔️ Castle / SvS (6h)
+          </button>
+          <button type="button" onclick="window.applyCcaGamePreset('crazy_joe')" style="background:rgba(168,85,247,0.12); border:1px solid rgba(168,85,247,0.35); color:#c084fc; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; transition:0.15s;">
+            🧟 Crazy Joe
+          </button>
+          <button type="button" onclick="window.applyCcaGamePreset('foundry_battle')" style="background:rgba(6,182,212,0.12); border:1px solid rgba(6,182,212,0.35); color:#06b6d4; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; transition:0.15s;">
+            🏰 Foundry
+          </button>
+          <button type="button" onclick="window.applyCcaGamePreset('svs_shield')" style="background:rgba(244,114,182,0.12); border:1px solid rgba(244,114,182,0.35); color:#f472b6; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; transition:0.15s;">
+            🛡️ Shield Warning
+          </button>
+        </div>
       </div>
 
       <!-- 3-in-1 Alert Type Segmented Control -->
@@ -14132,6 +14599,10 @@ window.openCreateCountdownAlertModal = function(editData = null, defaultType = '
         <div id="ccaCategoryContainer">
           <label style="font-size:11.5px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:5px;">Category</label>
           <select id="ccaCategory" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; font-weight:bold; cursor:pointer; outline:none; box-sizing:border-box;">
+            <option value="bear_trap" ${initialCategory === 'bear_trap' ? 'selected' : ''}>🐻 Bear Trap Rally</option>
+            <option value="castle_battle" ${initialCategory === 'castle_battle' ? 'selected' : ''}>⚔️ Sunfire Castle / SvS Battle</option>
+            <option value="crazy_joe" ${initialCategory === 'crazy_joe' ? 'selected' : ''}>🧟 Crazy Joe Alliance Defense</option>
+            <option value="foundry_battle" ${initialCategory === 'foundry_battle' ? 'selected' : ''}>🏰 Foundry / Canyon Clash</option>
             <option value="general" ${initialCategory === 'general' ? 'selected' : ''}>📢 General Alliance Announcement</option>
             <option value="game_update" ${initialCategory === 'game_update' ? 'selected' : ''}>🎮 Game Update & Server Maintenance</option>
             <option value="site_maintenance" ${initialCategory === 'site_maintenance' ? 'selected' : ''}>🛠️ Website Maintenance & Downtime</option>
@@ -14242,13 +14713,24 @@ window.openCreateCountdownAlertModal = function(editData = null, defaultType = '
               </div>
 
               <div>
-                <label style="font-size:11px; font-weight:bold; color:var(--text-muted); display:block; margin-bottom:4px;">Countdown Ticker Mode</label>
-                <select id="ccaMode" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer; outline:none; box-sizing:border-box;">
-                  <option value="1hour" ${initialCountdownMode === '1hour' ? 'selected' : ''}>⏳ Final 1 Hour (Standard)</option>
-                  <option value="always" ${initialCountdownMode === 'always' ? 'selected' : ''}>⏳ Always Live Ticking</option>
-                  <option value="none" ${initialCountdownMode === 'none' ? 'selected' : ''}>📅 Date Only (No Ticker)</option>
+                <label style="font-size:11px; font-weight:bold; color:var(--text-muted); display:block; margin-bottom:4px;">Auto-Recurrence Cycle</label>
+                <select id="ccaRecurrence" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer; outline:none; box-sizing:border-box;">
+                  <option value="none" ${initialRecurrence === 'none' ? 'selected' : ''}>❌ No Recurrence (One-Time)</option>
+                  <option value="48h" ${initialRecurrence === '48h' ? 'selected' : ''}>🔁 Every 48 Hours (Bear Trap)</option>
+                  <option value="daily" ${initialRecurrence === 'daily' ? 'selected' : ''}>🔁 Daily (Every 24h)</option>
+                  <option value="weekly" ${initialRecurrence === 'weekly' ? 'selected' : ''}>🔁 Weekly (Castle / Crazy Joe)</option>
+                  <option value="biweekly" ${initialRecurrence === 'biweekly' ? 'selected' : ''}>🔁 Bi-Weekly (Foundry / Canyon)</option>
                 </select>
               </div>
+            </div>
+
+            <div>
+              <label style="font-size:11px; font-weight:bold; color:var(--text-muted); display:block; margin-bottom:4px;">Countdown Ticker Mode</label>
+              <select id="ccaMode" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer; outline:none; box-sizing:border-box;">
+                <option value="1hour" ${initialCountdownMode === '1hour' ? 'selected' : ''}>⏳ Final 1 Hour (Standard)</option>
+                <option value="always" ${initialCountdownMode === 'always' ? 'selected' : ''}>⏳ Always Live Ticking</option>
+                <option value="none" ${initialCountdownMode === 'none' ? 'selected' : ''}>📅 Date Only (No Ticker)</option>
+              </select>
             </div>
           </div>
         </div>
@@ -14307,6 +14789,7 @@ window.handleSaveCountdownAlert = async function(e, editKey = '') {
     const title = document.getElementById('ccaTitle')?.value.trim() || '';
     const body = document.getElementById('ccaBody')?.value.trim() || '';
     const durMs = Number(document.getElementById('ccaDuration')?.value || '7200000');
+    const recurrence = document.getElementById('ccaRecurrence')?.value || 'none';
     const countdownMode = document.getElementById('ccaMode')?.value || '1hour';
     const priority = document.getElementById('ccaPriority')?.value || 'high';
     const sendPush = document.getElementById('ccaSendPush')?.checked ?? false;
@@ -14347,6 +14830,7 @@ window.handleSaveCountdownAlert = async function(e, editKey = '') {
       body,
       category,
       alertType,
+      recurrence: (alertType === 'timer') ? recurrence : 'none',
       isStaffOnly: (alertType === 'staff'),
       targetAudience: (alertType === 'staff' ? 'staff' : 'all'),
       countdownMode: (alertType === 'timer' && targetTimestamp) ? countdownMode : 'none',
@@ -14548,6 +15032,114 @@ window.executeBroadcastCleanup = async (daysThreshold) => {
     console.error("Cleanup error:", err);
     if (window.showToast) window.showToast("Cleanup failed: " + (err.message || err), "error");
   }
+};
+
+window.getTimerSubscriptions = function() {
+  try {
+    const raw = localStorage.getItem('wos_timer_subscriptions');
+    if (!raw) return { bear_trap: true, castle_battle: true, crazy_joe: true, foundry_battle: true, game_update: true, personal_shield: true };
+    return JSON.parse(raw);
+  } catch (e) {
+    return { bear_trap: true, castle_battle: true, crazy_joe: true, foundry_battle: true, game_update: true, personal_shield: true };
+  }
+};
+
+window.saveTimerSubscription = function(key, isEnabled) {
+  const subs = window.getTimerSubscriptions();
+  subs[key] = Boolean(isEnabled);
+  localStorage.setItem('wos_timer_subscriptions', JSON.stringify(subs));
+  if (window.showToast) window.showToast("Preferences updated.", "info");
+};
+
+window.openTimerPreferencesModal = function() {
+  let existing = document.getElementById('timerPreferencesModalOverlay');
+  if (existing) existing.remove();
+
+  const subs = window.getTimerSubscriptions();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'timerPreferencesModalOverlay';
+  overlay.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.85); backdrop-filter:blur(10px); z-index:100006; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease;';
+
+  overlay.innerHTML = `
+    <div class="card" style="width:94%; max-width:440px; background:linear-gradient(145deg, rgba(15,23,42,0.98), rgba(30,41,59,0.96)); border:1.5px solid rgba(56,189,248,0.45); padding:22px; border-radius:18px; box-shadow:0 25px 60px rgba(0,0,0,0.85); text-align:left; color:var(--text-main); max-height:90vh; overflow-y:auto; animation:zoomIn 0.2s ease;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:12px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:22px;">⚙️</span>
+          <div>
+            <h3 style="margin:0; color:#fff; font-size:16.5px; font-weight:800;">Timer & Alert Watchlist</h3>
+            <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">Select which events you want reminders for</div>
+          </div>
+        </div>
+        <button onclick="document.getElementById('timerPreferencesModalOverlay').remove()" class="close-btn" title="Close Window">✕</button>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:16px;">
+        <label style="display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); padding:10px 12px; border-radius:10px; cursor:pointer;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:18px;">🐻</span>
+            <div>
+              <div style="font-size:13px; font-weight:bold; color:#fff;">Bear Trap Rallies</div>
+              <div style="font-size:11px; color:var(--text-muted);">Countdown & rally reminder alerts</div>
+            </div>
+          </div>
+          <input type="checkbox" onchange="window.saveTimerSubscription('bear_trap', this.checked)" ${subs.bear_trap !== false ? 'checked' : ''} style="cursor:pointer; width:18px; height:18px; accent-color:#0ea5e9;">
+        </label>
+
+        <label style="display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); padding:10px 12px; border-radius:10px; cursor:pointer;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:18px;">⚔️</span>
+            <div>
+              <div style="font-size:13px; font-weight:bold; color:#fff;">Sunfire Castle & SvS Battles</div>
+              <div style="font-size:11px; color:var(--text-muted);">Battle phase & turret defense alerts</div>
+            </div>
+          </div>
+          <input type="checkbox" onchange="window.saveTimerSubscription('castle_battle', this.checked)" ${subs.castle_battle !== false ? 'checked' : ''} style="cursor:pointer; width:18px; height:18px; accent-color:#0ea5e9;">
+        </label>
+
+        <label style="display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); padding:10px 12px; border-radius:10px; cursor:pointer;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:18px;">🧟</span>
+            <div>
+              <div style="font-size:13px; font-weight:bold; color:#fff;">Crazy Joe Defense Waves</div>
+              <div style="font-size:11px; color:var(--text-muted);">Alliance HQ & member reinforcement</div>
+            </div>
+          </div>
+          <input type="checkbox" onchange="window.saveTimerSubscription('crazy_joe', this.checked)" ${subs.crazy_joe !== false ? 'checked' : ''} style="cursor:pointer; width:18px; height:18px; accent-color:#0ea5e9;">
+        </label>
+
+        <label style="display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); padding:10px 12px; border-radius:10px; cursor:pointer;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:18px;">🏰</span>
+            <div>
+              <div style="font-size:13px; font-weight:bold; color:#fff;">Foundry / Canyon Clash</div>
+              <div style="font-size:11px; color:var(--text-muted);">Match battle time alerts</div>
+            </div>
+          </div>
+          <input type="checkbox" onchange="window.saveTimerSubscription('foundry_battle', this.checked)" ${subs.foundry_battle !== false ? 'checked' : ''} style="cursor:pointer; width:18px; height:18px; accent-color:#0ea5e9;">
+        </label>
+
+        <label style="display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); padding:10px 12px; border-radius:10px; cursor:pointer;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:18px;">🛡️</span>
+            <div>
+              <div style="font-size:13px; font-weight:bold; color:#fff;">Personal Furnace Shield Alerts</div>
+              <div style="font-size:11px; color:var(--text-muted);">Pre-drop warning chime & push</div>
+            </div>
+          </div>
+          <input type="checkbox" onchange="window.saveTimerSubscription('personal_shield', this.checked)" ${subs.personal_shield !== false ? 'checked' : ''} style="cursor:pointer; width:18px; height:18px; accent-color:#0ea5e9;">
+        </label>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end;">
+        <button type="button" onclick="document.getElementById('timerPreferencesModalOverlay').remove()" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:8px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12.5px;">
+          Save & Close
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
 };
 
 window.handleModalPushToggle = async (btnEl) => {

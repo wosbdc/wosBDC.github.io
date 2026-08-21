@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [2.9.96] - 2026-08-20
+- 🐻 **1-Click Game Presets**: Instant setup for Bear Trap, Castle, and Crazy Joe.
+- 🛡️ **Personal Shield Timer**: Live countdown with custom pre-drop audio & push alerts.
+- 🔁 **Auto-Recurring Timers**: Automatic 48-hour Bear Trap and weekly event resets.
+- ⚙️ **Event Watchlist**: Customize which alliance event reminders you receive.
+
 ## [2.9.95] - 2026-08-20
 - 🔔 **Accurate Bell Counter**: Badge count perfectly matches items needing attention.
 
