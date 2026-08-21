@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.0.9] - 2026-08-21
+- ⚡ **Showdown Auto-Save**: Real-time Firebase sync on score edits.
+- 📊 **Live Score Recalculation**: Showdown summary table live updates instantly.
+- 👾 **Enemy Scores Auto-Save**: Enemy scores save automatically without losing focus.
+
 ## [3.0.8] - 2026-08-21
 - 🛡️ **Cascade Delete**: Deleting players automatically cleans all 10 event tables.
 - 🧹 **Event Orphan Purge**: 1-click tool to purge inactive/test records.

@@ -8433,16 +8433,12 @@ window.mergeShowdownData = (data, sdLiveData) => {
 };
 
 window.fetchMergedShowdown = async () => {
-   let baseData = await fetchSheet("Showdown");
    let sdLiveData = {};
    try {
        let snap = await get(ref(db, 'showdown_live'));
-       if (snap.exists()) sdLiveData = snap.val();
-   } catch(e) { console.error(e); }
-   
-   let baseDataCopy = JSON.parse(JSON.stringify(baseData)); 
-   let mergedData = window.mergeShowdownData(baseDataCopy, sdLiveData);
-   return { mergedData, sdLiveData };
+       if (snap.exists()) sdLiveData = snap.val() || {};
+   } catch(e) { console.error("fetchMergedShowdown error:", e); }
+   return { mergedData: null, sdLiveData };
 };
 
 const fetchSheet = async (sheetName) => {
@@ -10054,30 +10050,30 @@ window.buildVaultModalContent = (activeKey = 'all', isAdminMode = false) => {
             if (hasWinners) {
                 mainContent += `<tr style="background:rgba(255,215,0,0.12); border-bottom:1px solid rgba(255,215,0,0.3);">
                     <th colspan="3" style="font-weight:bold; color:#FFD700; text-align:right; padding-right:15px; border-bottom: none;">🏆 Daily Winners</th>
-                    <th class="hide-mobile" style="color:#FFD700; font-weight:bold; border-bottom: none;">${escapeHTML(w.d1 || '-')}</th>
-                    <th class="hide-mobile" style="color:#FFD700; font-weight:bold; border-bottom: none;">${escapeHTML(w.d2 || '-')}</th>
-                    <th class="hide-mobile" style="color:#FFD700; font-weight:bold; border-bottom: none;">${escapeHTML(w.d3 || '-')}</th>
-                    <th class="hide-mobile" style="color:#FFD700; font-weight:bold; border-bottom: none;">${escapeHTML(w.d4 || '-')}</th>
-                    <th class="hide-mobile" style="color:#FFD700; font-weight:bold; border-bottom: none;">${escapeHTML(w.d5 || '-')}</th>
-                    <th class="hide-mobile" style="color:#FFD700; font-weight:bold; border-bottom: none;">${escapeHTML(w.d6 || '-')}</th>
+                    <th style="color:#FFD700; font-weight:bold; border-bottom: none; text-align:center;">${escapeHTML(w.d1 || '-')}</th>
+                    <th style="color:#FFD700; font-weight:bold; border-bottom: none; text-align:center;">${escapeHTML(w.d2 || '-')}</th>
+                    <th style="color:#FFD700; font-weight:bold; border-bottom: none; text-align:center;">${escapeHTML(w.d3 || '-')}</th>
+                    <th style="color:#FFD700; font-weight:bold; border-bottom: none; text-align:center;">${escapeHTML(w.d4 || '-')}</th>
+                    <th style="color:#FFD700; font-weight:bold; border-bottom: none; text-align:center;">${escapeHTML(w.d5 || '-')}</th>
+                    <th style="color:#FFD700; font-weight:bold; border-bottom: none; text-align:center;">${escapeHTML(w.d6 || '-')}</th>
                 </tr>`;
             }
             
             mainContent += `<tr>
-                      <th style="text-align:center;">RANK</th><th>NAME</th><th>TOTAL SCORE</th><th class="hide-mobile">DAY 1</th><th class="hide-mobile">DAY 2</th><th class="hide-mobile">DAY 3</th><th class="hide-mobile">DAY 4</th><th class="hide-mobile">DAY 5</th><th class="hide-mobile">DAY 6</th>
+                      <th style="text-align:center;">RANK</th><th>NAME</th><th>TOTAL SCORE</th><th style="text-align:center;">DAY 1</th><th style="text-align:center;">DAY 2</th><th style="text-align:center;">DAY 3</th><th style="text-align:center;">DAY 4</th><th style="text-align:center;">DAY 5</th><th style="text-align:center;">DAY 6</th>
                    </tr></thead><tbody>`;
             
             archivedPlayers.forEach((p, idx) => {
                 mainContent += `<tr>
                     <td style="font-weight:bold; color:var(--text-muted); text-align:center;">${idx + 1}</td>
                     <td style="font-weight:bold;">${formatCell(p.name)}</td>
-                    <td style="font-weight:bold; color:var(--accent);">${(p.total||0).toLocaleString()}</td>
-                    <td class="hide-mobile">${(p.d1||0) > 0 ? (p.d1||0).toLocaleString() : '-'}</td>
-                    <td class="hide-mobile">${(p.d2||0) > 0 ? (p.d2||0).toLocaleString() : '-'}</td>
-                    <td class="hide-mobile">${(p.d3||0) > 0 ? (p.d3||0).toLocaleString() : '-'}</td>
-                    <td class="hide-mobile">${(p.d4||0) > 0 ? (p.d4||0).toLocaleString() : '-'}</td>
-                    <td class="hide-mobile">${(p.d5||0) > 0 ? (p.d5||0).toLocaleString() : '-'}</td>
-                    <td class="hide-mobile">${(p.d6||0) > 0 ? (p.d6||0).toLocaleString() : '-'}</td>
+                    <td style="font-weight:bold; color:var(--accent); text-align:center;">${(p.total||0).toLocaleString()}</td>
+                    <td style="text-align:center;">${(p.d1||0) > 0 ? (p.d1||0).toLocaleString() : '-'}</td>
+                    <td style="text-align:center;">${(p.d2||0) > 0 ? (p.d2||0).toLocaleString() : '-'}</td>
+                    <td style="text-align:center;">${(p.d3||0) > 0 ? (p.d3||0).toLocaleString() : '-'}</td>
+                    <td style="text-align:center;">${(p.d4||0) > 0 ? (p.d4||0).toLocaleString() : '-'}</td>
+                    <td style="text-align:center;">${(p.d5||0) > 0 ? (p.d5||0).toLocaleString() : '-'}</td>
+                    <td style="text-align:center;">${(p.d6||0) > 0 ? (p.d6||0).toLocaleString() : '-'}</td>
                 </tr>`;
             });
             mainContent += `</tbody></table></div>`;
@@ -24341,14 +24337,13 @@ const views = {
            html += `<option value="${escapeHTML(p)}">${escapeHTML(p)}</option>`;
         });
                 
-html += `</select>
+        html += `</select>
               
               <div id="sdEntryFields" style="display:none; flex-direction:column; gap:10px;">
                 ${[1,2,3,4,5,6].map(d => `
                    <div style="display:flex; align-items:center; gap:10px;">
-                     <span style="width:50px; font-weight:bold; color:var(--text-muted);">Day ${d}</span>
-                     <input type="number" id="sd_d${d}" placeholder="Score" oninput="window.debouncedAutoSaveSdEntry()" onblur="window.flushAutoSaveSdEntry()" style="flex:1; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main);">
-                     <button id="sd_d${d}_lock" onclick="window.toggleSdLock(${d})" style="display:none; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); color:#ef4444; padding:6px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; min-width:80px;" title="Click to unlock & edit">🔒 Locked</button>
+                     <span style="width:60px; font-weight:bold; color:var(--text-muted);">Day ${d}</span>
+                     <input type="number" id="sd_d${d}" placeholder="0" oninput="window.debouncedAutoSaveSdEntry()" onblur="window.flushAutoSaveSdEntry()" style="flex:1; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:15px; font-weight:600;">
                    </div>
                 `).join('')}
                 
@@ -24451,7 +24446,6 @@ html += `</select>
                if (winEl) winEl.textContent = escapeHTML(wName);
            }
        };
-
        window.debouncedAutoSaveSdEntry = () => {
            window.setSdStatus('sdPlayerAutoSaveStatus', '🔄 Auto-saving to Firebase...', '#38bdf8');
            window.setSdStatus('sdSaveLiveIndicator', '🔄 Syncing...', '#38bdf8');
@@ -24469,85 +24463,36 @@ html += `</select>
            }
        };
 
-       window.debouncedAutoSaveSdMeta = () => {
-           window.setSdStatus('sdEnemyAutoSaveStatus', '🔄 Auto-saving enemy settings...', '#38bdf8');
-           window.setSdStatus('sdMetaLiveIndicator', '🔄 Syncing...', '#38bdf8');
-           clearTimeout(_sdMetaTimer);
-           _sdMetaTimer = setTimeout(() => {
-               window.saveShowdownMeta(true);
-           }, 450);
-       };
-
-       window.flushAutoSaveSdMeta = () => {
-           if (_sdMetaTimer) {
-               clearTimeout(_sdMetaTimer);
-               _sdMetaTimer = null;
-               window.saveShowdownMeta(true);
-           }
-       };
-       
-       window.toggleSdLock = (d) => {
-           let input = document.getElementById('sd_d'+d);
-           let lockBtn = document.getElementById('sd_d'+d+'_lock');
-           if (input.disabled) {
-               input.disabled = false;
-               input.style.opacity = '1';
-               lockBtn.innerHTML = '✏️ Edit';
-               lockBtn.style.background = 'rgba(16,185,129,0.15)';
-               lockBtn.style.borderColor = 'rgba(16,185,129,0.3)';
-               lockBtn.style.color = '#10b981';
-           } else {
-               input.disabled = true;
-               input.style.opacity = '0.5';
-               lockBtn.innerHTML = '🔒 Locked';
-               lockBtn.style.background = 'rgba(239,68,68,0.15)';
-               lockBtn.style.borderColor = 'rgba(239,68,68,0.3)';
-               lockBtn.style.color = '#ef4444';
-           }
-       };
-       
        window.onSdPlayerSelect = () => {
           if (_activeSdPlayer) {
              window.flushAutoSaveSdEntry();
           }
 
-          const sel = document.getElementById('sdPlayerSelect').value;
+          const sel = document.getElementById('sdPlayerSelect')?.value;
           _activeSdPlayer = sel;
           const fields = document.getElementById('sdEntryFields');
           if (!sel) {
-             fields.style.display = 'none';
+             if (fields) fields.style.display = 'none';
              return;
           }
-          fields.style.display = 'flex';
-          const pData = window._currentSdLiveData[sel] || {};
+          if (fields) fields.style.display = 'flex';
+          const pData = (window._currentSdLiveData && window._currentSdLiveData[sel]) ? window._currentSdLiveData[sel] : {};
           for (let i = 1; i <= 6; i++) {
              let val = pData['d'+i];
              let input = document.getElementById('sd_d'+i);
-             let lockBtn = document.getElementById('sd_d'+i+'_lock');
-             
-             input.value = val !== undefined ? val : '';
-             
-             if (val !== undefined && val !== null && val !== '') {
-                 input.disabled = true;
-                 input.style.opacity = '0.5';
-                 lockBtn.style.display = 'inline-block';
-                 lockBtn.innerHTML = '🔒 Locked';
-                 lockBtn.style.background = 'rgba(239,68,68,0.15)';
-                 lockBtn.style.borderColor = 'rgba(239,68,68,0.3)';
-                 lockBtn.style.color = '#ef4444';
-             } else {
+             if (input) {
+                 input.value = (val !== undefined && val !== null && val !== '') ? val : '';
                  input.disabled = false;
                  input.style.opacity = '1';
-                 lockBtn.style.display = 'none';
              }
           }
 
           window.setSdStatus('sdPlayerAutoSaveStatus', `⚡ Ready for ${escapeHTML(sel)}`, 'var(--text-muted)');
           window.setSdStatus('sdSaveLiveIndicator', '⚡ Real-time Firebase Sync', 'var(--text-muted)');
        };
-       
+
        window.saveShowdownEntry = async (isAutoSave = false) => {
-          const sel = document.getElementById('sdPlayerSelect')?.value;
+          const sel = document.getElementById('sdPlayerSelect')?.value || _activeSdPlayer;
           if (!sel) return;
           
           let btn = document.getElementById('btnManualSaveSd');
@@ -24595,7 +24540,24 @@ html += `</select>
              btn.disabled = false;
           }
        };
-       
+
+       window.debouncedAutoSaveSdMeta = () => {
+           window.setSdStatus('sdEnemyAutoSaveStatus', '🔄 Auto-saving enemy settings...', '#38bdf8');
+           window.setSdStatus('sdMetaLiveIndicator', '🔄 Syncing...', '#38bdf8');
+           clearTimeout(_sdMetaTimer);
+           _sdMetaTimer = setTimeout(() => {
+               window.saveShowdownMeta(true);
+           }, 450);
+       };
+
+       window.flushAutoSaveSdMeta = () => {
+           if (_sdMetaTimer) {
+               clearTimeout(_sdMetaTimer);
+               _sdMetaTimer = null;
+               window.saveShowdownMeta(true);
+           }
+       };
+
        window.saveShowdownMeta = async (isAutoSave = false) => {
           const btn = document.getElementById('btnManualSaveMeta');
           const oldText = btn ? btn.innerHTML : '💾 Save Enemy Scores Now';
@@ -30254,7 +30216,7 @@ window.resetBearTrapEvent = async () => {
        
        let pDayHeaders = '';
        for(let i=1; i<=6; i++) {
-           pDayHeaders += `<th class="hide-mobile" style="border-right: 1px solid rgba(255,255,255,0.08); text-align:center;"><span style="background:rgba(255,255,255,0.05); padding:3px 10px; border-radius:6px; font-size:11px; text-transform:uppercase; letter-spacing:0.5px;">Day ${i}</span></th>`;
+           pDayHeaders += `<th style="border-right: 1px solid rgba(255,255,255,0.08); text-align:center;"><span style="background:rgba(255,255,255,0.05); padding:3px 10px; border-radius:6px; font-size:11px; text-transform:uppercase; letter-spacing:0.5px;">Day ${i}</span></th>`;
        }
        
        let playersCard = `<div class="card"><div class="card-title">🏆 Player Rankings</div><div class="card-table-scroll" style="overflow-x:auto; width:100%; border-radius:8px; border:1px solid var(--border);"><table style="min-width:700px; border-collapse:collapse;"><thead><tr>
@@ -30279,7 +30241,7 @@ window.resetBearTrapEvent = async () => {
             let dayCells = '';
             for (let di = 1; di <= 6; di++) {
                 let val = p['d' + di] || 0;
-                dayCells += `<td class="hide-mobile" style="border-right: 1px solid rgba(255,255,255,0.06); text-align:center;">${val > 0 ? val.toLocaleString() : '-'}</td>`;
+                dayCells += `<td style="border-right: 1px solid rgba(255,255,255,0.06); text-align:center;">${val > 0 ? val.toLocaleString() : '-'}</td>`;
             }
             
             playersCard += `<tr>
