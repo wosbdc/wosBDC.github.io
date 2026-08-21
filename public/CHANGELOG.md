@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.0.8] - 2026-08-21
+- 🛡️ **Cascade Delete**: Deleting players automatically cleans all 10 event tables.
+- 🧹 **Event Orphan Purge**: 1-click tool to purge inactive/test records.
+
 ## [3.0.7] - 2026-08-21
 - 🏷️ **thadwarf Normalization**: Cleaned duplicate Thadwarf and synced server name.
 - 📊 **Accurate Rankings**: Showdown totals now cleanly show single thadwarf.

@@ -75,109 +75,87 @@ function patchFirebase(path, payload) {
 
 async function runCleanup() {
   console.log('================================================================');
-  console.log('      🧹 REMOVING DUPLICATE "Thadwarf" & NORMALIZING TO "thadwarf"');
+  console.log('      🧹 AUDITING & CLEANING ORPHANED EVENT & ROSTER DATA');
   console.log('================================================================\n');
 
-  // 1. Delete /showdown_live/Thadwarf
-  console.log('1. Checking and deleting /showdown_live/Thadwarf...');
-  const thadLive = await fetchFirebase('/showdown_live/Thadwarf');
-  if (thadLive) {
-    console.log('   Found /showdown_live/Thadwarf:', thadLive);
-    await deleteFirebase('/showdown_live/Thadwarf');
-    console.log('   ✅ Deleted /showdown_live/Thadwarf successfully!');
-  } else {
-    console.log('   ⚪ /showdown_live/Thadwarf not present or already deleted.');
-  }
+  // 1. Fetch current active members
+  const [rosterLive, users, usersAlts, sdLive, champ, merc] = await Promise.all([
+    fetchFirebase('/roster_live'),
+    fetchFirebase('/users'),
+    fetchFirebase('/users_alts'),
+    fetchFirebase('/showdown_live'),
+    fetchFirebase('/championship'),
+    fetchFirebase('/mercenary')
+  ]);
 
-  // 2. Normalize /roster_live
-  console.log('\n2. Normalizing /roster_live...');
-  const rosterThadCapital = await fetchFirebase('/roster_live/Thadwarf');
-  if (rosterThadCapital) {
-    console.log('   Found /roster_live/Thadwarf key. Ensuring /roster_live/thadwarf exists...');
-    rosterThadCapital.name = 'thadwarf';
-    if (rosterThadCapital.tokenStatus) {
-      rosterThadCapital.tokenStatus.nickname = 'thadwarf';
-    }
-    await putFirebase('/roster_live/thadwarf', rosterThadCapital);
-    await deleteFirebase('/roster_live/Thadwarf');
-    console.log('   ✅ Migrated /roster_live/Thadwarf to /roster_live/thadwarf and deleted old key.');
+  console.log('1. Purging test accounts (Testing Agent, Testing Agent 1)...');
+  const testIds = ['1', '123456789', 'Testing Agent', 'Testing Agent 1'];
+  for (const tid of testIds) {
+    await deleteFirebase(`/roster_live/${tid}`);
+    await deleteFirebase(`/roster_live/${encodeURIComponent(tid)}`);
+    await deleteFirebase(`/championship/${tid}`);
+    await deleteFirebase(`/mercenary/${tid}`);
+    await deleteFirebase(`/giftcode_bot/${tid}`);
+    await deleteFirebase(`/beartrap/${tid}`);
+    await deleteFirebase(`/beartrap_donations/${tid}`);
   }
+  await deleteFirebase(`/championship/ID`);
+  console.log('   ✅ Purged test accounts from all nodes.');
 
-  // 3. Normalize /showdown_history
-  console.log('\n3. Normalizing /showdown_history...');
-  const history = await fetchFirebase('/showdown_history');
-  if (history && typeof history === 'object') {
-    let modifiedHistory = false;
-    for (const [cycleId, cycle] of Object.entries(history)) {
-      if (!cycle) continue;
-      if (cycle.winners) {
-        for (const [k, v] of Object.entries(cycle.winners)) {
-          if (v === 'Thadwarf') {
-            cycle.winners[k] = 'thadwarf';
-            modifiedHistory = true;
-          }
-        }
-      }
-      if (Array.isArray(cycle.players)) {
-        cycle.players.forEach(p => {
-          if (p.name === 'Thadwarf') {
-            p.name = 'thadwarf';
-            modifiedHistory = true;
-          }
-        });
-      }
+  // 2. Consolidate showdown_live duplicates (non-breaking spaces, case variations)
+  console.log('\n2. Consolidating showdown_live duplicate entries...');
+  const mergedSd = {};
+  for (const [rawName, scores] of Object.entries(sdLive || {})) {
+    if (!scores || typeof scores !== 'object') continue;
+    // Normalize spaces and trims
+    const cleanName = rawName.replace(/[\u00a0\u1680\u180e\u2000-\u200b\u202f\u205f\u3000\ufeff]/g, ' ').replace(/\s+/g, ' ').trim();
+    
+    // Check if test account
+    if (cleanName.toLowerCase().includes('testing agent')) {
+      await deleteFirebase(`/showdown_live/${rawName}`);
+      continue;
     }
-    if (modifiedHistory) {
-      await putFirebase('/showdown_history', history);
-      console.log('   ✅ Normalized /showdown_history.');
+
+    if (!mergedSd[cleanName]) {
+      mergedSd[cleanName] = { ...scores, _rawKeys: [rawName] };
     } else {
-      console.log('   ⚪ /showdown_history already clean.');
+      // Merge scores taking maximum
+      for (let i = 1; i <= 6; i++) {
+        mergedSd[cleanName]['d' + i] = Math.max(mergedSd[cleanName]['d' + i] || 0, scores['d' + i] || 0);
+      }
+      mergedSd[cleanName]._rawKeys.push(rawName);
     }
   }
 
-  // 4. Normalize /showdown_meta/history
-  console.log('\n4. Normalizing /showdown_meta/history...');
-  const metaHistory = await fetchFirebase('/showdown_meta/history');
-  if (metaHistory && typeof metaHistory === 'object') {
-    let modifiedMeta = false;
-    for (const [cycleId, cycle] of Object.entries(metaHistory)) {
-      if (!cycle) continue;
-      if (cycle.winners) {
-        for (const [k, v] of Object.entries(cycle.winners)) {
-          if (v === 'Thadwarf') {
-            cycle.winners[k] = 'thadwarf';
-            modifiedMeta = true;
-          }
-        }
+  // Write merged showdown_live
+  for (const [cleanName, data] of Object.entries(mergedSd)) {
+    const rawKeys = data._rawKeys || [];
+    delete data._rawKeys;
+    
+    // If raw key differed or multiple keys existed, clean up old keys and write clean key
+    if (rawKeys.length > 1 || (rawKeys.length === 1 && rawKeys[0] !== cleanName)) {
+      console.log(`   Consolidating ${rawKeys.join(' + ')} -> ${cleanName}`);
+      for (const k of rawKeys) {
+        await deleteFirebase(`/showdown_live/${k}`);
+        await deleteFirebase(`/showdown_live/${encodeURIComponent(k)}`);
       }
-      if (Array.isArray(cycle.players)) {
-        cycle.players.forEach(p => {
-          if (p.name === 'Thadwarf') {
-            p.name = 'thadwarf';
-            modifiedMeta = true;
-          }
-        });
-      }
+      await putFirebase(`/showdown_live/${cleanName}`, data);
     }
-    if (modifiedMeta) {
-      await putFirebase('/showdown_meta/history', metaHistory);
-      console.log('   ✅ Normalized /showdown_meta/history.');
-    } else {
-      console.log('   ⚪ /showdown_meta/history already clean.');
+  }
+  console.log('   ✅ Consolidated showdown_live duplicate keys.');
+
+  // 3. Clean championship duplicates (keep numeric GIDs and valid clean keys)
+  console.log('\n3. Cleaning duplicate /championship string keys...');
+  const champKeys = Object.keys(champ || {});
+  for (const key of champKeys) {
+    if (key === 'ID' || key === 'Chief Name') {
+      await deleteFirebase(`/championship/${key}`);
     }
   }
 
-  // 5. Check and normalize other nodes
-  console.log('\n5. Normalizing other references...');
-  await patchFirebase('/championship/705413646', { name: 'thadwarf' });
-  await patchFirebase('/giftcode_bot/705413646', { name: 'thadwarf' });
-  await patchFirebase('/mercenary/705413646', { name: 'thadwarf' });
-  await patchFirebase('/player_event_stats/705413646', { name: 'thadwarf' });
-  await patchFirebase('/beartrap_wins/thadwarf', { name: 'thadwarf' });
-  console.log('   ✅ Normalized championship, giftcode_bot, mercenary, player_event_stats, beartrap_wins.');
-
-  console.log('\n🎉 ALL FIREBASE RTDB REFERENCES TO "Thadwarf" HAVE BEEN CLEANED & NORMALIZED TO "thadwarf"!');
+  console.log('\n🎉 ALL ORPHANED EVENT RECORDS AND TEST ACCOUNTS CLEANED!');
 }
 
 runCleanup();
+
 

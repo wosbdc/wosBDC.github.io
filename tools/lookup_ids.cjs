@@ -20,24 +20,37 @@ function fetchFirebase(path) {
 }
 
 async function inspectShowdown() {
-  console.log('Fetching entire root database...');
-  const root = await fetchFirebase('/');
-  
-  function scan(obj, path) {
-    if (!obj) return;
-    if (typeof obj === 'string') {
-      if (obj === 'Thadwarf') console.log('Exact string "Thadwarf" at:', path);
-      if (obj === 'thadwarf') console.log('Exact string "thadwarf" at:', path);
-    } else if (typeof obj === 'object') {
-      for (const [k, v] of Object.entries(obj)) {
-        if (k === 'Thadwarf') console.log('Key "Thadwarf" at:', path + '/' + k);
-        if (k === 'thadwarf') console.log('Key "thadwarf" at:', path + '/' + k);
-        scan(v, path + '/' + k);
-      }
-    }
-  }
-  
-  scan(root, '');
+  const rosterLive = await fetchFirebase('/roster_live');
+  const users = await fetchFirebase('/users');
+  const usersAlts = await fetchFirebase('/users_alts');
+  const sdLive = await fetchFirebase('/showdown_live');
+  const champ = await fetchFirebase('/championship');
+  const merc = await fetchFirebase('/mercenary');
+
+  console.log(`Total in roster_live: ${Object.keys(rosterLive || {}).length}`);
+  console.log(`Total in users (Primary registered): ${Object.keys(users || {}).length}`);
+  console.log(`Total in users_alts: ${Object.keys(usersAlts || {}).length}`);
+  console.log(`Total in showdown_live: ${Object.keys(sdLive || {}).length}`);
+  console.log(`Total in championship: ${Object.keys(champ || {}).length}`);
+  console.log(`Total in mercenary: ${Object.keys(merc || {}).length}`);
+
+  console.log('\n--- 1. ROSTER_LIVE NAMES ---');
+  Object.values(rosterLive || {}).forEach(r => console.log(`  • ${r.name || 'No Name'} (ID: ${r.gameId})`));
+
+  console.log('\n--- 2. REGISTERED USERS (/users) ---');
+  Object.values(users || {}).forEach(u => console.log(`  • ${u.name || 'No Name'} (ID: ${u.gameId}) (Email: ${u.email})`));
+
+  console.log('\n--- 3. GLOBAL ALTS (/users_alts) ---');
+  Object.values(usersAlts || {}).forEach(a => console.log(`  • ${a.name || a.nickname || 'No Name'} (ID: ${a.gameId})`));
+
+  console.log('\n--- 4. SHOWDOWN LIVE NAMES (/showdown_live) ---');
+  Object.keys(sdLive || {}).forEach(k => console.log(`  • ${k}`));
+
+  console.log('\n--- 5. CHAMPIONSHIP PLAYERS (/championship) ---');
+  Object.entries(champ || {}).forEach(([k, v]) => console.log(`  • Key: ${k} | Name: ${v.name || 'N/A'}`));
+
+  console.log('\n--- 6. MERCENARY PLAYERS (/mercenary) ---');
+  Object.entries(merc || {}).forEach(([k, v]) => console.log(`  • Key: ${k} | Name: ${v.name || 'N/A'}`));
 }
 
 inspectShowdown();

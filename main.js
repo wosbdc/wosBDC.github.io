@@ -5867,17 +5867,62 @@ window._executeLogBearTrapWinner = async (name, trap) => {
             }
         }
 
-        // 4. Clean up all related Firebase nodes for this player ID & name
+        // 4. Comprehensive Cascade Purge across ALL Event & Data Nodes
         const donKey = normTargetName.replace(/[^a-z0-9]/g, '_');
-        if (targetGid) {
-            await Promise.all([
-                remove(ref(db, `avatars/${targetGid}`)).catch(() => null),
-                remove(ref(db, `beartrap/${targetGid}`)).catch(() => null),
-                remove(ref(db, `beartrap_donations/${targetGid}`)).catch(() => null),
-                remove(ref(db, `beartrap_donations/${donKey}`)).catch(() => null),
-                remove(ref(db, `staffProfiles/${targetGid}`)).catch(() => null)
-            ]);
+        const eventRemovals = [];
+        
+        // Showdown Live
+        if (name) {
+            eventRemovals.push(remove(ref(db, `showdown_live/${name}`)).catch(() => null));
+            eventRemovals.push(remove(ref(db, `showdown_live/${encodeURIComponent(name)}`)).catch(() => null));
+            eventRemovals.push(remove(ref(db, `showdown_live/${normTargetName}`)).catch(() => null));
+            if (donKey) eventRemovals.push(remove(ref(db, `showdown_live/${donKey}`)).catch(() => null));
         }
+        if (targetGid) {
+            eventRemovals.push(remove(ref(db, `showdown_live/${targetGid}`)).catch(() => null));
+        }
+
+        // Championship (both numeric ID and string name keys)
+        if (targetGid) {
+            eventRemovals.push(remove(ref(db, `championship/${targetGid}`)).catch(() => null));
+        }
+        if (donKey) {
+            eventRemovals.push(remove(ref(db, `championship/${donKey}`)).catch(() => null));
+        }
+        if (name) {
+            eventRemovals.push(remove(ref(db, `championship/${name}`)).catch(() => null));
+            eventRemovals.push(remove(ref(db, `championship/${normTargetName}`)).catch(() => null));
+        }
+
+        // Mercenary Prestige
+        if (targetGid) {
+            eventRemovals.push(remove(ref(db, `mercenary/${targetGid}`)).catch(() => null));
+        }
+        if (donKey) {
+            eventRemovals.push(remove(ref(db, `mercenary/${donKey}`)).catch(() => null));
+        }
+        if (name) {
+            eventRemovals.push(remove(ref(db, `mercenary/${name}`)).catch(() => null));
+        }
+
+        // Bear Trap Donations, Wins, and Player Stats
+        if (targetGid) {
+            eventRemovals.push(remove(ref(db, `beartrap/${targetGid}`)).catch(() => null));
+            eventRemovals.push(remove(ref(db, `beartrap_donations/${targetGid}`)).catch(() => null));
+            eventRemovals.push(remove(ref(db, `player_event_stats/${targetGid}`)).catch(() => null));
+            eventRemovals.push(remove(ref(db, `avatars/${targetGid}`)).catch(() => null));
+            eventRemovals.push(remove(ref(db, `staffProfiles/${targetGid}`)).catch(() => null));
+        }
+        if (donKey) {
+            eventRemovals.push(remove(ref(db, `beartrap_donations/${donKey}`)).catch(() => null));
+            eventRemovals.push(remove(ref(db, `beartrap_wins/${donKey}`)).catch(() => null));
+        }
+        if (name) {
+            eventRemovals.push(remove(ref(db, `beartrap_wins/${name}`)).catch(() => null));
+            eventRemovals.push(remove(ref(db, `beartrap_wins/${normTargetName}`)).catch(() => null));
+        }
+
+        await Promise.all(eventRemovals);
 
         // 5. Instantly clear from local in-memory maps & caches
         if (targetGid) {
@@ -5936,6 +5981,78 @@ window._executeLogBearTrapWinner = async (name, trap) => {
     } catch (e) {
         window.showToast(`Error deleting player: ${e.message}`, "error");
     }
+  };
+
+  window.auditAndCleanInactiveEventRecords = async () => {
+      const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+      if (!isManager) {
+          if (window.showToast) window.showToast("Only R4/R5 managers can audit and clean event records", "error");
+          return;
+      }
+
+      if (window.showToast) window.showToast("Auditing event database for inactive/orphaned players...", "info");
+
+      try {
+          const [rosterData, sdSnap, champSnap, mercSnap] = await Promise.all([
+              window.fetchRoster().catch(() => ({})),
+              get(ref(db, 'showdown_live')).catch(() => null),
+              get(ref(db, 'championship')).catch(() => null),
+              get(ref(db, 'mercenary')).catch(() => null)
+          ]);
+
+          const activeNames = new Set();
+          const activeGids = new Set();
+          if (rosterData) {
+              Object.values(rosterData).forEach(p => {
+                  if (p.name) activeNames.add(p.name.toString().trim().toLowerCase());
+                  if (p.gameId) activeGids.add(p.gameId.toString().trim());
+              });
+          }
+
+          const sdLive = (sdSnap && sdSnap.exists()) ? (sdSnap.val() || {}) : {};
+          const champ = (champSnap && champSnap.exists()) ? (champSnap.val() || {}) : {};
+          const merc = (mercSnap && mercSnap.exists()) ? (mercSnap.val() || {}) : {};
+
+          const orphanedSd = [];
+          for (const k of Object.keys(sdLive)) {
+              if (k.toLowerCase().includes('testing agent') || k === '1' || k === '123456789') {
+                  orphanedSd.push(k);
+              }
+          }
+
+          const orphanedChamp = [];
+          for (const [k, v] of Object.entries(champ)) {
+              if (k === 'ID' || k === 'Chief Name' || k === '1' || k === '123456789' || (v && v.name && v.name.toLowerCase().includes('testing agent'))) {
+                  orphanedChamp.push(k);
+              }
+          }
+
+          const orphanedMerc = [];
+          for (const [k, v] of Object.entries(merc)) {
+              if (k === '1' || k === '123456789' || (v && v.name && v.name.toLowerCase().includes('testing agent'))) {
+                  orphanedMerc.push(k);
+              }
+          }
+
+          const totalOrphaned = orphanedSd.length + orphanedChamp.length + orphanedMerc.length;
+          if (totalOrphaned === 0) {
+              if (window.showToast) window.showToast("✅ All event player records are 100% clean and synced with active roster!", "success");
+              return;
+          }
+
+          const confirmClean = await window.customConfirm(`🧹 Found ${totalOrphaned} orphaned/test event records:\n\n• Showdown: ${orphanedSd.length}\n• Championship: ${orphanedChamp.length}\n• Mercenary: ${orphanedMerc.length}\n\nPurge these records now?`);
+          if (!confirmClean) return;
+
+          for (const k of orphanedSd) await remove(ref(db, `showdown_live/${k}`)).catch(() => null);
+          for (const k of orphanedChamp) await remove(ref(db, `championship/${k}`)).catch(() => null);
+          for (const k of orphanedMerc) await remove(ref(db, `mercenary/${k}`)).catch(() => null);
+
+          if (window.showToast) window.showToast(`✅ Successfully purged ${totalOrphaned} orphaned event records!`, "success");
+          if (window.activeViewFunc) window.activeViewFunc();
+      } catch(err) {
+          console.error("Event audit error:", err);
+          if (window.showToast) window.showToast("Error during event audit: " + err.message, "error");
+      }
   };
 
 window.promptLogBearTrapWinner = async (name) => {
@@ -22299,6 +22416,7 @@ const views = {
                 <button onclick="window.openNewMembersModal()" style="background:linear-gradient(135deg, #06b6d4, #3b82f6); color:#fff; border:none; padding:12px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; box-shadow:0 4px 12px rgba(6,182,212,0.3); display:flex; align-items:center; justify-content:center; gap:8px;">🔔 Recent Member Signups</button>
                 <button id="syncAllSheetsBtn" onclick="window.syncAllSheetsToFirebase()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:12px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; box-shadow:0 4px 12px rgba(16,185,129,0.3); display:flex; align-items:center; justify-content:center; gap:8px;">⚡ Master Sync Sheets ➔ Firebase</button>
                 <button onclick="window.syncScheduleDirectly()" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#fff; border:none; padding:12px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; box-shadow:0 4px 12px rgba(59,130,246,0.3); display:flex; align-items:center; justify-content:center; gap:8px;">📅 Sync Schedule ➔ Site</button>
+                <button onclick="window.auditAndCleanInactiveEventRecords()" style="background:linear-gradient(135deg, #ef4444, #b91c1c); color:#fff; border:none; padding:12px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; box-shadow:0 4px 12px rgba(239,68,68,0.3); display:flex; align-items:center; justify-content:center; gap:8px;">🧹 Purge Orphaned Event Records</button>
               </div>
             </div>
           </div>
