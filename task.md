@@ -1,14 +1,14 @@
-# Task: v3.1.1 Automatic Gift Code Bot Enrollment & Dispatcher Upgrade
+# Task: v3.1.2 Gift Code Sources Expansion & Multi-Feed Bot Upgrade
 
-- [x] Create project backup archive (`backup_v3.1.1_auto_enroll_giftcodes.zip`) <!-- id: 0 -->
-- [x] Auto-enroll all registered members and linked alts in `src/firebase.js` <!-- id: 1 -->
-- [x] Add auto-sync background job on user authentication (`listenToAuth`) <!-- id: 2 -->
-- [x] Add manual "Resync Claimed Members" button in Bot Management tab <!-- id: 3 -->
-- [x] Upgrade Mass Gift Code Dispatcher with streamlined target audience selection <!-- id: 4 -->
-- [x] Update Perks tab with "Auto-Redeem" badges and clear enrollment messaging <!-- id: 5 -->
-- [x] Update `CHANGELOG.md`, `public/CHANGELOG.md`, `version.json`, and `public/version.json` <!-- id: 6 -->
-- [x] Run full automated testing suite (`npm.cmd run build`) <!-- id: 7 -->
-- [x] Test autonomous scraper engine (`auto_giftcode_bot.mjs`) <!-- id: 8 -->
+- [x] Create project backup archive (`backup_v3.1.2_new_code_sources.zip`) <!-- id: 0 -->
+- [x] Research & audit top Whiteout Survival gift code publisher feeds <!-- id: 1 -->
+- [x] Integrate `PocketTactics`, `Beebom`, `TouchTapPlay` into `tools/auto_giftcode_bot.mjs` <!-- id: 2 -->
+- [x] Sync Python GUI feeds in `tools/bdc_central_command_gui.pyw` <!-- id: 3 -->
+- [x] Update bot description in `main.js` (`views.bots`) <!-- id: 4 -->
+- [x] Update versioning and changelogs (`package.json`, `version.json`, `public/version.json`, `CHANGELOG.md`, `public/CHANGELOG.md`) <!-- id: 5 -->
+- [x] Run automated build and testing suite (`npm.cmd run build`) <!-- id: 6 -->
+- [x] Test live multi-source scraper run (`node tools/auto_giftcode_bot.mjs --once`) <!-- id: 7 -->
+
 
 
 

@@ -992,10 +992,10 @@ class GiftCodeBotEngine:
         self.load_blacklist()
         self.sources = [
             ("WosRewards", "https://www.wosrewards.com/giftcodes"),
-            ("GamsGo", "https://www.gamsgo.com/blog/whiteout-survival-gift-codes"),
-            ("PocketGamer", "https://www.pocketgamer.com/whiteout-survival/codes/"),
-            ("DotGG", "https://dotgg.gg/whiteout-survival/gift-codes/"),
-            ("ProGameGuides", "https://progameguides.com/whiteout-survival/whiteout-survival-codes/")
+            ("PocketTactics", "https://www.pockettactics.com/whiteout-survival/codes"),
+            ("Beebom", "https://beebom.com/whiteout-survival-codes/"),
+            ("TouchTapPlay", "https://www.touchtapplay.com/whiteout-survival-codes/"),
+            ("PocketGamer", "https://www.pocketgamer.com/whiteout-survival/codes/")
         ]
         self.ignored_words = {
             'WHITEOUT', 'SURVIVAL', 'CENTURY', 'GAMES', 'DISCORD', 'FACEBOOK', 'REDDIT',

@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.1.2] - 2026-08-21
+- 🌐 **Expanded Feeds**: Added PocketTactics, Beebom, and TouchTapPlay scraper sources.
+- 🧹 **Noise Filtering**: Upgraded token blacklist to eliminate blog site artifacts.
+- ⚡ **Multi-Source Sweeps**: 24/7 bot scans 5 high-speed code feeds concurrently.
+
 ## [3.1.1] - 2026-08-21
 - 🎯 **Auto-Enrollment**: All members & alts auto-enrolled for gift codes.
 - 🔄 **Login Sync**: Background giftcode_bot sync fires every sign-in.

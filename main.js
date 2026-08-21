@@ -22582,7 +22582,7 @@ const views = {
                         </span>
                       </div>
                       <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
-                        Autonomous 24/7 Engine: monitors 5 web feeds (WosRewards, GamsGo, DotGG, ProGameGuides, PocketGamer) and auto-redeems active codes for 100% of registered alliance members & linked alts.
+                        Autonomous 24/7 Engine: monitors 5 active web feeds (WosRewards, PocketTactics, Beebom, TouchTapPlay, PocketGamer) and auto-redeems active codes for 100% of registered alliance members &amp; linked alts.
                       </div>
                     </div>
                   </div>

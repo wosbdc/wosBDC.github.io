@@ -22,9 +22,9 @@ const DEFAULT_KID = '2089';
 
 const SCRAPE_SOURCES = [
   { name: 'WosRewards', url: 'https://www.wosrewards.com/giftcodes' },
-  { name: 'GamsGo', url: 'https://www.gamsgo.com/blog/whiteout-survival-gift-codes' },
-  { name: 'DotGG', url: 'https://dotgg.gg/whiteout-survival/gift-codes/' },
-  { name: 'ProGameGuides', url: 'https://progameguides.com/whiteout-survival/whiteout-survival-codes/' },
+  { name: 'PocketTactics', url: 'https://www.pockettactics.com/whiteout-survival/codes' },
+  { name: 'Beebom', url: 'https://beebom.com/whiteout-survival-codes/' },
+  { name: 'TouchTapPlay', url: 'https://www.touchtapplay.com/whiteout-survival-codes/' },
   { name: 'PocketGamer', url: 'https://www.pocketgamer.com/whiteout-survival/codes/' }
 ];
 
@@ -34,7 +34,13 @@ const IGNORED_WORDS = new Set([
   'ACTIVE', 'REWARD', 'REWARDS', 'GIFTCODE', 'PLAYERS', 'AVATAR', 'STOVE',
   'FURNACE', 'STATUS', 'SERVER', 'ONLINE', 'OFFLINE', 'METHOD', 'REPORT',
   'CODES', 'CODE', 'ADDED', 'LIST', 'CLAIM', 'EXCHANGE', 'PAGE', 'NOTES',
-  'LINKS', 'CHECK', 'TOTAL', 'SOURCE', 'TABLE', 'TITLE', 'HEADER', 'FOOTER'
+  'LINKS', 'CHECK', 'TOTAL', 'SOURCE', 'TABLE', 'TITLE', 'HEADER', 'FOOTER',
+  'TIKTOK', 'INSTAGRAM', 'BLUESKY', 'NEWSLETTER', 'ACCOUNT', 'POLICIES',
+  'SEARCH', 'LOGOUT', 'PASSWORD', 'USERNAME', 'CLOSE', 'WPDISCUZ', 'SETTING',
+  'SETTINGS', 'TERMS', 'POLICY', 'PRIVACY', 'CONTACT', 'COOKIE', 'COOKIES',
+  'IN-GAME', 'CASE-SENSITIVE', 'TIME-LIMITED', 'OFFICIALSTORE', 'DISCOUNTED',
+  'POPULAR', 'GEMS', 'TYPE', 'REDEEM', 'EVENT', 'MAILBOX', 'ACCOUNTS',
+  'CONFIRM', 'SUBMIT', 'CANCEL', 'DELETE', 'CARDS', 'BEFORE', 'ANYWHERE', 'HOVER'
 ]);
 
 // Helper for HTTP/HTTPS requests
@@ -146,8 +152,11 @@ async function testOrRedeemCenturyCode(roleId, cdk, kid = DEFAULT_KID) {
     if (msg.includes('already') || msg.includes('received') || msg.includes('has been claimed') || json.code === 20002) {
       return { success: true, status: 'already_claimed', msg: json.msg || 'Already claimed' };
     }
-    if (msg.includes('expired') || msg.includes('not exist') || msg.includes('does not exist') || json.code === 20001 || json.code === 20005) {
+    if (msg.includes('expired') || msg.includes('not exist') || msg.includes('does not exist') || msg.includes('not found') || msg.includes('cdk not found') || json.code === 20001 || json.code === 20005 || json.code === 40008) {
       return { success: false, status: 'expired', msg: json.msg || 'Expired or invalid code' };
+    }
+    if (msg.includes('too frequent') || json.code === 40007) {
+      return { success: false, status: 'rate_limited', msg: json.msg || 'Rate limited, retrying...' };
     }
     return { success: false, status: 'error', msg: json.msg || 'Unknown API response', rawCode: json.code };
   } catch (err) {
@@ -252,7 +261,13 @@ export async function runAutoGiftCodeSweep() {
 
     newlyFoundCodes.push(code);
     console.log(`\n🧪 [Testing Candidate] [${code}] against Century Games API...`);
-    const testRes = await testOrRedeemCenturyCode(TEST_PLAYER_ID, code);
+    let testRes = await testOrRedeemCenturyCode(TEST_PLAYER_ID, code);
+
+    if (testRes.status === 'rate_limited') {
+      console.log(`⏳ Rate limit reached, waiting 2.5s before retrying [${code}]...`);
+      await new Promise(r => setTimeout(r, 2500));
+      testRes = await testOrRedeemCenturyCode(TEST_PLAYER_ID, code);
+    }
 
     if (testRes.status === 'success' || testRes.status === 'already_claimed') {
       console.log(`🎉 [VERIFIED ACTIVE] Code [${code}] is valid! (${testRes.msg})`);
@@ -281,7 +296,7 @@ export async function runAutoGiftCodeSweep() {
       console.log(`⚠️ [UNVERIFIED / ERROR] Code [${code}]: ${testRes.msg}`);
     }
 
-    await new Promise(r => setTimeout(r, 600));
+    await new Promise(r => setTimeout(r, 1200));
   }
 
   // If new valid codes were found, auto-redeem for all enrolled alliance members!
