@@ -13450,20 +13450,17 @@ window.openAutoJoinModal = function() {
           ${isActive ? 'Or Set New Auto-Join Duration:' : 'Select In-Game Auto-Join Duration:'}
         </label>
         <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px;">
+          <button type="button" onclick="window.selectAutoJoinPreset(1, 0)" class="auto-join-preset-btn" data-hours="1" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; padding:10px 6px; border-radius:10px; font-size:12.5px; font-weight:bold; cursor:pointer; text-align:center; transition:0.15s;">
+            ⚔️ 1 Hour
+          </button>
+          <button type="button" onclick="window.selectAutoJoinPreset(2, 0)" class="auto-join-preset-btn" data-hours="2" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; padding:10px 6px; border-radius:10px; font-size:12.5px; font-weight:bold; cursor:pointer; text-align:center; transition:0.15s;">
+            ⚔️ 2 Hours
+          </button>
           <button type="button" onclick="window.selectAutoJoinPreset(4, 0)" class="auto-join-preset-btn" data-hours="4" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; padding:10px 6px; border-radius:10px; font-size:12.5px; font-weight:bold; cursor:pointer; text-align:center; transition:0.15s;">
             ⚔️ 4 Hours
           </button>
-          <button type="button" onclick="window.selectAutoJoinPreset(8, 0)" class="auto-join-preset-btn active" data-hours="8" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); border:none; color:#fff; padding:10px 6px; border-radius:10px; font-size:12.5px; font-weight:bold; cursor:pointer; text-align:center; box-shadow:0 2px 8px rgba(14,165,233,0.3); transition:0.15s;">
-            ⚔️ 8 Hours ⭐
-          </button>
-          <button type="button" onclick="window.selectAutoJoinPreset(12, 0)" class="auto-join-preset-btn" data-hours="12" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; padding:10px 6px; border-radius:10px; font-size:12.5px; font-weight:bold; cursor:pointer; text-align:center; transition:0.15s;">
-            ⚔️ 12 Hours
-          </button>
-          <button type="button" onclick="window.selectAutoJoinPreset(24, 0)" class="auto-join-preset-btn" data-hours="24" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; padding:10px 6px; border-radius:10px; font-size:12.5px; font-weight:bold; cursor:pointer; text-align:center; transition:0.15s;">
-            ⚔️ 24 Hours
-          </button>
-          <button type="button" onclick="window.selectAutoJoinPreset(48, 0)" class="auto-join-preset-btn" data-hours="48" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; padding:10px 6px; border-radius:10px; font-size:12.5px; font-weight:bold; cursor:pointer; text-align:center; transition:0.15s;">
-            ⚔️ 48 Hours (2d)
+          <button type="button" onclick="window.selectAutoJoinPreset(8, 0)" class="auto-join-preset-btn active" data-hours="8" style="grid-column: span 2; background:linear-gradient(135deg, #0ea5e9, #0284c7); border:none; color:#fff; padding:10px 6px; border-radius:10px; font-size:12.5px; font-weight:bold; cursor:pointer; text-align:center; box-shadow:0 2px 8px rgba(14,165,233,0.3); transition:0.15s;">
+            ⚔️ 8 Hours (In-Game Max) ⭐
           </button>
           <button type="button" onclick="window.toggleAutoJoinCustomInputs()" id="autoJoinCustomToggleBtn" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:var(--text-muted); padding:10px 6px; border-radius:10px; font-size:12.5px; font-weight:bold; cursor:pointer; text-align:center; transition:0.15s;">
             ⚙️ Custom
@@ -14110,10 +14107,10 @@ window.openAllianceAlertsModal = async () => {
           <!-- Quick Actions -->
           <div style="display:flex; align-items:center; gap:6px; border-top:1px solid rgba(255,255,255,0.08); padding-top:8px; margin-top:2px; flex-wrap:wrap;">
             <button type="button" onclick="window.setAutoJoinTimer(8, 0, ${currentAutoJoin.warningMins || 15}); window.openAllianceAlertsModal();" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
-              ➕ Restart 8h ⭐
+              ➕ Restart 8h (Max) ⭐
             </button>
-            <button type="button" onclick="window.setAutoJoinTimer(12, 0, ${currentAutoJoin.warningMins || 15}); window.openAllianceAlertsModal();" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
-              ➕ Extend +12h
+            <button type="button" onclick="window.setAutoJoinTimer(4, 0, ${currentAutoJoin.warningMins || 15}); window.openAllianceAlertsModal();" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#fff; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
+              ⚔️ 4h
             </button>
             <button type="button" onclick="window.cancelAutoJoinTimer(); window.openAllianceAlertsModal();" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
               ❌ Cancel
@@ -14155,13 +14152,13 @@ window.openAllianceAlertsModal = async () => {
           <!-- Quick Actions -->
           <div style="display:flex; align-items:center; gap:6px; border-top:1px solid rgba(255,255,255,0.08); padding-top:8px; margin-top:2px; flex-wrap:wrap;">
             <button type="button" onclick="window.setAutoJoinTimer(8, 0, 15); window.openAllianceAlertsModal();" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:4px 12px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; box-shadow:0 2px 8px rgba(14,165,233,0.3);">
-              ⚔️ Restart 8h ⭐
+              ⚔️ Restart 8h (Max) ⭐
             </button>
-            <button type="button" onclick="window.setAutoJoinTimer(12, 0, 15); window.openAllianceAlertsModal();" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#fff; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
-              ⚔️ 12h
+            <button type="button" onclick="window.setAutoJoinTimer(4, 0, 15); window.openAllianceAlertsModal();" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#fff; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
+              ⚔️ 4h
             </button>
-            <button type="button" onclick="window.setAutoJoinTimer(24, 0, 15); window.openAllianceAlertsModal();" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#fff; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
-              ⚔️ 24h
+            <button type="button" onclick="window.setAutoJoinTimer(2, 0, 15); window.openAllianceAlertsModal();" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#fff; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
+              ⚔️ 2h
             </button>
             <button type="button" onclick="window.cancelAutoJoinTimer(); window.openAllianceAlertsModal();" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
               ❌ Dismiss
@@ -14185,21 +14182,21 @@ window.openAllianceAlertsModal = async () => {
           </div>
 
           <div style="font-size:12px; color:#cbd5e1;">
-            Started Auto-Join in-game? Set a reminder to restart it before it expires:
+            Started Auto-Join in-game? Set a reminder to restart it before it expires (8h in-game max):
           </div>
 
           <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:2px;">
+            <button type="button" onclick="window.setAutoJoinTimer(1, 0, 15); window.openAllianceAlertsModal();" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; padding:5px 10px; border-radius:8px; font-size:11px; font-weight:bold; cursor:pointer; transition:0.15s;">
+              ⚔️ 1 Hour
+            </button>
+            <button type="button" onclick="window.setAutoJoinTimer(2, 0, 15); window.openAllianceAlertsModal();" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; padding:5px 10px; border-radius:8px; font-size:11px; font-weight:bold; cursor:pointer; transition:0.15s;">
+              ⚔️ 2 Hours
+            </button>
             <button type="button" onclick="window.setAutoJoinTimer(4, 0, 15); window.openAllianceAlertsModal();" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; padding:5px 10px; border-radius:8px; font-size:11px; font-weight:bold; cursor:pointer; transition:0.15s;">
               ⚔️ 4 Hours
             </button>
             <button type="button" onclick="window.setAutoJoinTimer(8, 0, 15); window.openAllianceAlertsModal();" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:5px 12px; border-radius:8px; font-size:11px; font-weight:bold; cursor:pointer; box-shadow:0 2px 6px rgba(14,165,233,0.3);">
-              ⚔️ 8 Hours ⭐
-            </button>
-            <button type="button" onclick="window.setAutoJoinTimer(12, 0, 15); window.openAllianceAlertsModal();" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; padding:5px 10px; border-radius:8px; font-size:11px; font-weight:bold; cursor:pointer; transition:0.15s;">
-              ⚔️ 12 Hours
-            </button>
-            <button type="button" onclick="window.setAutoJoinTimer(24, 0, 15); window.openAllianceAlertsModal();" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; padding:5px 10px; border-radius:8px; font-size:11px; font-weight:bold; cursor:pointer; transition:0.15s;">
-              ⚔️ 24 Hours
+              ⚔️ 8 Hours (Max) ⭐
             </button>
           </div>
         </div>
