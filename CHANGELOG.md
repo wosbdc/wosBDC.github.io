@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [2.9.93] - 2026-08-20
+- 🛡️ **Renamed Tab**: Changed 'Tokens' filter tab to compact 'Sync'.
+
 ## [2.9.92] - 2026-08-20
 - 🏷️ **Clean Alt Cards**: Chief name first with compact Alt tag.
 - 🧹 **No Duplicates**: Removed redundant expired status text from cards.

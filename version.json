@@ -1,18 +1,17 @@
 {
-  "version": "2.9.92",
+  "version": "2.9.93",
   "releaseDate": "2026-08-20",
-  "title": "What's New in v2.9.92",
+  "title": "What's New in v2.9.93",
   "notes": [
-    "🏷️ Clean Alt cards with name first and compact tag.",
-    "🧹 Removed redundant duplicate expired status labels."
+    "🛡️ Renamed Tokens filter tab to compact Sync."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "2.9.92",
+    "version": "2.9.93",
     "latestChanges": [
+      "v2.9.93: Renamed 'Tokens' filter tab to compact 'Sync'",
       "v2.9.92: Streamlined Alt token cards with name first & no duplicate expired labels",
       "v2.9.91: Unified Bell Notification Stream with category tabs & clean feed",
-      "v2.9.90: Unified token status calculations & real-time filter sync",
-      "v2.9.89: Automated version sync validation & TESTING.md QA protocol"
+      "v2.9.90: Unified token status calculations & real-time filter sync"
     ]
   }
 }

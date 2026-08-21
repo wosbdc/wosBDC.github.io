@@ -13279,7 +13279,7 @@ window.openAllianceAlertsModal = async () => {
           <div style="font-size:36px; margin-bottom:8px;">🎉</div>
           <div style="font-size:16px; font-weight:bold; color:#10b981; margin-bottom:4px;">All Caught Up!</div>
           <div style="font-size:12.5px; color:var(--text-muted); line-height:1.4;">
-            You have no pending alerts, announcements, or un-synced tokens right now.
+            You have no pending alerts, announcements, or un-synced accounts right now.
           </div>
         </div>
       `;
@@ -13391,7 +13391,7 @@ window.openAllianceAlertsModal = async () => {
             📢 News (${countBroadcasts})
           </button>
           <button onclick="window.filterBellStream('tokens')" class="bell-filter-tab" data-filter="tokens" style="background:rgba(255,255,255,0.06); color:var(--text-main); border:1px solid rgba(255,255,255,0.12); padding:5px 11px; border-radius:18px; font-size:11px; font-weight:bold; cursor:pointer; white-space:nowrap; transition:all 0.15s ease;">
-            🛡️ Tokens (${countTokens})
+            🛡️ Sync (${countTokens})
           </button>
           <button onclick="window.filterBellStream('tickets')" class="bell-filter-tab" data-filter="tickets" style="background:rgba(255,255,255,0.06); color:var(--text-main); border:1px solid rgba(255,255,255,0.12); padding:5px 11px; border-radius:18px; font-size:11px; font-weight:bold; cursor:pointer; white-space:nowrap; transition:all 0.15s ease;">
             💡 Tickets (${countTickets})
