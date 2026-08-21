@@ -1,20 +1,20 @@
 {
-  "version": "3.0.9",
+  "version": "3.1.0",
   "releaseDate": "2026-08-21",
-  "title": "What's New in v3.0.9",
+  "title": "What's New in v3.1.0",
   "notes": [
-    "⚡ Showdown Auto-Save: Real-time Firebase sync on score edits.",
-    "📊 Live Score Recalculation: Showdown summary table live updates instantly.",
-    "👾 Enemy Scores Auto-Save: Enemy scores save automatically without losing focus."
+    "📱 Fluid Vertical Scrolling: Smooth full-page vertical scrolling across all rankings tables.",
+    "👆 Zero Touch Trapping: Removed nested scroll constraints on mobile and tablet devices.",
+    "↔️ Dual-Axis Responsiveness: Preserved smooth horizontal swiping with sticky rank/name headers."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.0.9",
+    "version": "3.1.0",
     "latestChanges": [
+      "v3.1.0: Fluid full-page vertical scrolling and zero touch trapping on Showdown & Leaderboards",
       "v3.0.9: Real-time auto-save & instant table recalculation for Showdown",
       "v3.0.8: Full cascade player deletion across all event databases",
       "v3.0.7: Synced lowercase thadwarf name and removed duplicate entry",
-      "v3.0.6: Real-time Firebase auto-save on Showdown score input",
-      "v3.0.5: Full alt isolation for tokens, avatars, and in-memory states"
+      "v3.0.6: Real-time Firebase auto-save on Showdown score input"
     ]
   }
 }

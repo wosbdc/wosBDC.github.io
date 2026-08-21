@@ -304,12 +304,11 @@ code {
 /* Custom Smooth Scrollbar for Leaderboard & Showdown Cards */
 .card-table-scroll {
     overflow-x: auto;
-    overflow-y: auto;
-    max-height: 480px;
+    overflow-y: visible;
+    max-height: none;
     width: 100%;
     border-radius: 8px;
     border: 1px solid var(--border);
-    overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
     touch-action: pan-x pan-y;
 }

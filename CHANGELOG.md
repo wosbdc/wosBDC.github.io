@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.1.0] - 2026-08-21
+- 📱 **Fluid Vertical Scrolling**: Smooth full-page vertical scrolling across all rankings tables.
+- 👆 **Zero Touch Trapping**: Removed nested scroll constraints on mobile and tablet devices.
+- ↔️ **Dual-Axis Responsiveness**: Preserved smooth horizontal swiping with sticky rank/name headers.
+
 ## [3.0.9] - 2026-08-21
 - ⚡ **Showdown Auto-Save**: Real-time Firebase sync on score edits.
 - 📊 **Live Score Recalculation**: Showdown summary table live updates instantly.
