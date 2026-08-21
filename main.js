@@ -14873,12 +14873,28 @@ window.openCreateCountdownAlertModal = function(editData = null, defaultType = '
             <div id="ccaUtcFields" style="display:flex; flex-direction:column; gap:8px;">
               <div style="display:grid; grid-template-columns:1.2fr 1fr; gap:10px;">
                 <div>
-                  <label style="font-size:11px; font-weight:bold; color:#38bdf8; display:block; margin-bottom:4px;">🌐 UTC Event Date</label>
-                  <input type="date" id="ccaUtcDate" value="${initialUtcDate}" oninput="window.updateCountdownModalPreview()" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12.5px; font-weight:bold; outline:none; box-sizing:border-box; cursor:pointer;">
+                  <label style="font-size:11px; font-weight:bold; color:#38bdf8; display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <span>🌐 UTC Event Date</span>
+                    <span style="font-size:10px; color:var(--text-muted); font-weight:normal;">(Click to pick)</span>
+                  </label>
+                  <div style="position:relative; display:flex; align-items:center;">
+                    <input type="date" id="ccaUtcDate" value="${initialUtcDate}" oninput="window.updateCountdownModalPreview()" onclick="if(this.showPicker){try{this.showPicker();}catch(e){}}" style="width:100%; padding:9px 38px 9px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12.5px; font-weight:bold; outline:none; box-sizing:border-box; cursor:pointer; color-scheme:dark;">
+                    <button type="button" onclick="const el=document.getElementById('ccaUtcDate'); if(el && el.showPicker){try{el.showPicker();}catch(e){}}else if(el){el.focus();}" style="position:absolute; right:6px; background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.35); color:#38bdf8; border-radius:6px; padding:3px 7px; font-size:12px; cursor:pointer; font-weight:bold; transition:0.15s;" title="Open Date Picker">
+                      📅
+                    </button>
+                  </div>
                 </div>
                 <div>
-                  <label style="font-size:11px; font-weight:bold; color:#38bdf8; display:block; margin-bottom:4px;">🌐 UTC Time (HH:MM)</label>
-                  <input type="time" id="ccaUtcTime" value="${initialUtcTime}" oninput="window.updateCountdownModalPreview()" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12.5px; font-weight:bold; outline:none; box-sizing:border-box; cursor:pointer;">
+                  <label style="font-size:11px; font-weight:bold; color:#38bdf8; display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <span>🌐 UTC Time (HH:MM)</span>
+                    <span style="font-size:10px; color:var(--text-muted); font-weight:normal;">(Click to pick)</span>
+                  </label>
+                  <div style="position:relative; display:flex; align-items:center;">
+                    <input type="time" id="ccaUtcTime" value="${initialUtcTime}" oninput="window.updateCountdownModalPreview()" onclick="if(this.showPicker){try{this.showPicker();}catch(e){}}" style="width:100%; padding:9px 38px 9px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12.5px; font-weight:bold; outline:none; box-sizing:border-box; cursor:pointer; color-scheme:dark;">
+                    <button type="button" onclick="const el=document.getElementById('ccaUtcTime'); if(el && el.showPicker){try{el.showPicker();}catch(e){}}else if(el){el.focus();}" style="position:absolute; right:6px; background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.35); color:#38bdf8; border-radius:6px; padding:3px 7px; font-size:12px; cursor:pointer; font-weight:bold; transition:0.15s;" title="Open Time Picker">
+                      🕒
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -14896,8 +14912,16 @@ window.openCreateCountdownAlertModal = function(editData = null, defaultType = '
             <!-- Local Input Controls -->
             <div id="ccaLocalFields" style="display:none; flex-direction:column; gap:8px;">
               <div>
-                <label style="font-size:11px; font-weight:bold; color:#10b981; display:block; margin-bottom:4px;">🕒 Event Start Date & Time (Your Local Time)</label>
-                <input type="datetime-local" id="ccaLocalDt" value="${initialLocalDt}" oninput="window.updateCountdownModalPreview()" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12.5px; font-weight:bold; outline:none; box-sizing:border-box; cursor:pointer;">
+                <label style="font-size:11px; font-weight:bold; color:#10b981; display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                  <span>🕒 Event Start Date & Time (Your Local Time)</span>
+                  <span style="font-size:10.5px; color:#10b981; font-weight:bold;">📅 Click box or icon to pick</span>
+                </label>
+                <div style="position:relative; display:flex; align-items:center;">
+                  <input type="datetime-local" id="ccaLocalDt" value="${initialLocalDt}" oninput="window.updateCountdownModalPreview()" onclick="if(this.showPicker){try{this.showPicker();}catch(e){}}" style="width:100%; padding:10px 48px 10px 12px; border-radius:8px; border:1.5px solid rgba(16,185,129,0.4); background:rgba(15,23,42,0.95); color:#fff; font-size:13.5px; font-weight:bold; outline:none; box-sizing:border-box; cursor:pointer; color-scheme:dark; box-shadow:0 0 10px rgba(16,185,129,0.15);">
+                  <button type="button" onclick="const el=document.getElementById('ccaLocalDt'); if(el && el.showPicker){try{el.showPicker();}catch(e){}}else if(el){el.focus();}" style="position:absolute; right:6px; background:rgba(16,185,129,0.2); border:1px solid rgba(16,185,129,0.45); color:#10b981; border-radius:6px; padding:4px 8px; font-size:13px; cursor:pointer; font-weight:bold; display:flex; align-items:center; gap:4px; transition:0.15s;" title="Open Calendar & Clock Picker">
+                    📅 🕒
+                  </button>
+                </div>
               </div>
             </div>
 

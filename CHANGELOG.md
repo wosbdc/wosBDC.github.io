@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [3.0.1] - 2026-08-20
+- 📅 **Click-to-Pick Date & Time**: Click anywhere on input to open calendar picker.
+
 ## [3.0.0] - 2026-08-20
 - 🛡️ **Shield Terminology**: Replaced all bubble wording with shield across the UI.
 
