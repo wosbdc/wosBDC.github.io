@@ -12721,77 +12721,94 @@ window.updateNewMemberBadge = async () => {
 
   if (currentUser) {
     tokenStatus = window.getMemberTokenStatus(currentUser);
-    mainAlert = (tokenStatus.status === 'expired' || tokenStatus.status === 'expiring_soon' || tokenStatus.status === 'unverified') ? 1 : 0;
+    if (tokenStatus.alert) {
+      mainAlert = 1;
+    }
 
     // 2. Check linked alts token status
-    if (currentUser.linkedGameIds && Array.isArray(currentUser.linkedGameIds) && currentUser.linkedGameIds.length > 0) {
-      currentUser.linkedGameIds.forEach(agid => {
-        const aTok = currentUser.altTokens ? currentUser.altTokens[agid] : null;
-        if (aTok) {
-          const aStat = window.getAltTokenStatus(aTok);
-          if (aStat.status === 'expired' || aStat.status === 'unverified') {
-            altAlertsCount++;
-            hasExpiredAlt = true;
-          } else if (aStat.status === 'expiring_soon') {
-            altAlertsCount++;
-            hasExpiringAlt = true;
-          }
+    const rawAlts = currentUser.linkedGameIds ? (Array.isArray(currentUser.linkedGameIds) ? currentUser.linkedGameIds : Object.values(currentUser.linkedGameIds)) : [];
+    rawAlts.forEach(agid => {
+      const aTok = currentUser.altTokens ? currentUser.altTokens[agid] : null;
+      const aStat = window.getAltTokenStatus(aTok);
+      if (aStat.status !== 'active') {
+        altAlertsCount++;
+        if (aStat.status === 'expired' || aStat.status === 'unverified') {
+          hasExpiredAlt = true;
+        } else if (aStat.status === 'expiring_soon') {
+          hasExpiringAlt = true;
         }
-      });
-    }
+      }
+    });
   }
 
-  // 3. Check unread leadership broadcast announcements & active countdowns
-  let broadcastUnreadCount = 0;
+  // 3. Check broadcasts, scheduled alerts & staff directives
+  let countdownCount = 0;
+  let standardBroadcastCount = 0;
+  let staffAlertCount = 0;
   let nearestActiveCountdown = null;
   let liveCountdownCount = 0;
   const isStaffUser = Boolean(currentUser && typeof window.isAdminUser === 'function' && window.isAdminUser(currentUser));
+
   try {
-    const lastSeenBroadcast = Number(localStorage.getItem('last_seen_broadcast_timestamp') || '0');
     const bSnap = await get(ref(db, 'broadcastAlerts'));
     if (bSnap.exists()) {
       const bVal = bSnap.val() || {};
+      const now = Date.now();
       for (const item of Object.values(bVal)) {
         if (!item) continue;
-        if (item.isStaffOnly && !isStaffUser) continue;
-        if (item.timestamp && item.timestamp > lastSeenBroadcast) {
-          broadcastUnreadCount++;
+        const isStaffAlert = Boolean(item.isStaffOnly === true || item.targetAudience === 'staff' || item.alertType === 'staff');
+        if (isStaffAlert) {
+          if (isStaffUser) staffAlertCount++;
+          continue;
         }
+
         if (item.targetTimestamp) {
-          const cStatus = window.getScheduledAlertStatus(item.targetTimestamp, item.endTimestamp, item.countdownMode);
-          if (cStatus.stage === 'countdown' && cStatus.isFinalHour) {
-            if (!nearestActiveCountdown || cStatus.diffToStart < nearestActiveCountdown.diffToStart) {
-              nearestActiveCountdown = cStatus;
+          const effectiveEnd = Number(item.endTimestamp) || (Number(item.targetTimestamp) + 2 * 3600000);
+          if (effectiveEnd > (now - 12 * 3600000)) {
+            countdownCount++;
+            const cStatus = window.getScheduledAlertStatus(item.targetTimestamp, item.endTimestamp, item.countdownMode);
+            if (cStatus.stage === 'countdown' && cStatus.isFinalHour) {
+              if (!nearestActiveCountdown || cStatus.diffToStart < nearestActiveCountdown.diffToStart) {
+                nearestActiveCountdown = cStatus;
+              }
+            } else if (cStatus.stage === 'live') {
+              liveCountdownCount++;
             }
-          } else if (cStatus.stage === 'live') {
-            liveCountdownCount++;
+            continue;
           }
         }
+        standardBroadcastCount++;
       }
     }
   } catch(e) {
-    console.warn("Failed to count unread broadcasts:", e);
+    console.warn("Failed to count broadcasts:", e);
   }
 
-  // 4. Check unread community feedback & bug reports
-  let feedbackUnreadCount = 0;
+  // 4. Check active community feedback & bug reports needing attention
+  let feedbackAttentionCount = 0;
   try {
-    const lastSeenFeedback = Number(localStorage.getItem('last_seen_feedback_timestamp') || '0');
     const fSnap = await get(ref(db, 'community_feedback'));
     if (fSnap.exists()) {
       const fVal = fSnap.val() || {};
-      for (const item of Object.values(fVal)) {
-        if (!item) continue;
-        if (item.createdAt && item.createdAt > lastSeenFeedback) {
-          feedbackUnreadCount++;
+      for (const f of Object.values(fVal)) {
+        if (!f) continue;
+        const normStatus = (f.status || 'open').toLowerCase();
+        const isMyTicket = currentUser && (
+          (currentUser.gameId && f.submittedBy?.gameId && String(currentUser.gameId).trim() === String(f.submittedBy.gameId).trim()) ||
+          (currentUser.name && f.submittedBy?.name && String(currentUser.name).trim().toLowerCase() === String(f.submittedBy.name).trim().toLowerCase())
+        );
+        if (normStatus === 'open' || normStatus === 'pending' || normStatus === 'in_progress') {
+          feedbackAttentionCount++;
+        } else if (isMyTicket && f.adminNote) {
+          feedbackAttentionCount++;
         }
       }
     }
   } catch(e) {
-    console.warn("Failed to count unread feedback:", e);
+    console.warn("Failed to count feedback:", e);
   }
 
-  const totalAlerts = mainAlert + (altAlertsCount > 0 ? 1 : 0) + broadcastUnreadCount + feedbackUnreadCount;
+  const totalAlerts = mainAlert + altAlertsCount + countdownCount + standardBroadcastCount + staffAlertCount + feedbackAttentionCount;
 
   if (mobileAlertsBtn) {
     if (liveCountdownCount > 0) {

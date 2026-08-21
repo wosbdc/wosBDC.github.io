@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [2.9.95] - 2026-08-20
+- 🔔 **Accurate Bell Counter**: Badge count perfectly matches items needing attention.
+
 ## [2.9.94] - 2026-08-20
 - 💡 **Dynamic Tabs**: Filter tabs only show when active alerts exist.
 
