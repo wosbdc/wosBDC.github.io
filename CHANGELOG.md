@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.1.4] - 2026-08-21
+- ⚙️ **Unified Options Menu**: Push settings and timers combined into one menu.
+- 📌 **Sidebar Timers Toggle**: Show or hide shield and auto-join widgets.
+- ⏱️ **Live Countdown Badges**: Ticking remaining time indicators across all menus.
+
 ## [3.1.3] - 2026-08-21
 - ⚔️ **Auto-Join Timer**: Added rally auto-join renewal countdown with custom alerts.
 - 🔔 **Renewal Push Notifications**: Get alerted before in-game auto-join expires.

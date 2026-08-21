@@ -184,6 +184,24 @@
             </div>
           </div>
 
+          <!-- Optional Custom Timers Widget (Toggled via Options / Preferences) -->
+          <div id="sidebarCustomTimersCard" style="display:none; background:rgba(15,23,42,0.6); border:1px solid var(--border); border-radius:8px; padding:8px 10px; margin-top:6px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <span style="color:var(--text-muted); font-size:10.5px; font-weight:bold; text-transform:uppercase; letter-spacing:0.5px;">⏱️ Custom Timers</span>
+              <span id="sidebarCustomTimersStatus" style="font-size:9.5px; color:var(--text-muted); font-weight:bold;">ALERTS</span>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <button onclick="if(window.openPersonalShieldModal) window.openPersonalShieldModal();" id="sidebarShieldBtn" style="flex:1; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); color:#10b981; padding:6px 4px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; transition:0.15s;" title="Set Personal Shield Timer">
+                <span>🛡️ Shield</span>
+                <span id="sidebarShieldTimerText" style="font-size:9.5px; font-family:monospace; opacity:0.85;">Set ➔</span>
+              </button>
+              <button onclick="if(window.openAutoJoinModal) window.openAutoJoinModal();" id="sidebarAutoJoinBtn" style="flex:1; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; padding:6px 4px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; transition:0.15s;" title="Set Auto-Join Renewal Timer">
+                <span>⚔️ Auto-Join</span>
+                <span id="sidebarAutoJoinTimerText" style="font-size:9.5px; font-family:monospace; opacity:0.85;">8h ➔</span>
+              </button>
+            </div>
+          </div>
+
         </div>
       </div>
 

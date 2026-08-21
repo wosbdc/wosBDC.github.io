@@ -12910,6 +12910,7 @@ window.setPersonalShieldTimer = (durationHours, durationMins = 0, warningMins = 
   if (window.showToast) window.showToast(`🛡️ Shield Timer Active: Expires in ${durationHours}h ${durationMins ? `${durationMins}m` : ''}`, "success");
   if (typeof window.startPersonalShieldTicker === 'function') window.startPersonalShieldTicker();
   if (typeof window.updateNewMemberBadge === 'function') window.updateNewMemberBadge();
+  if (typeof window.updateSidebarTimersDisplay === 'function') window.updateSidebarTimersDisplay();
 };
 
 window.cancelPersonalShieldTimer = () => {
@@ -12918,12 +12919,14 @@ window.cancelPersonalShieldTimer = () => {
   const banner = document.getElementById('personalShieldActiveBanner');
   if (banner) banner.remove();
   if (typeof window.updateNewMemberBadge === 'function') window.updateNewMemberBadge();
+  if (typeof window.updateSidebarTimersDisplay === 'function') window.updateSidebarTimersDisplay();
 };
 
 window.startPersonalShieldTicker = () => {
   if (window._shieldTickerInterval) clearInterval(window._shieldTickerInterval);
 
   const checkShield = () => {
+    if (typeof window.updateSidebarTimersDisplay === 'function') window.updateSidebarTimersDisplay();
     const shield = window.getPersonalShieldTimer();
     if (!shield) return;
     const now = Date.now();
@@ -13239,17 +13242,20 @@ window.setAutoJoinTimer = (durationHours, durationMins = 0, warningMins = 15) =>
   localStorage.setItem('wos_auto_join_timer', JSON.stringify(timerData));
   if (window.showToast) window.showToast(`⚔️ Auto-Join Timer Active: Expires in ${durationHours}h ${durationMins ? `${durationMins}m` : ''}`, "success");
   if (typeof window.startAutoJoinTicker === 'function') window.startAutoJoinTicker();
+  if (typeof window.updateSidebarTimersDisplay === 'function') window.updateSidebarTimersDisplay();
 };
 
 window.cancelAutoJoinTimer = () => {
   localStorage.removeItem('wos_auto_join_timer');
   if (window.showToast) window.showToast("⚔️ Auto-Join Timer cancelled.", "info");
+  if (typeof window.updateSidebarTimersDisplay === 'function') window.updateSidebarTimersDisplay();
 };
 
 window.startAutoJoinTicker = () => {
   if (window._autoJoinTickerInterval) clearInterval(window._autoJoinTickerInterval);
 
   const checkAutoJoin = () => {
+    if (typeof window.updateSidebarTimersDisplay === 'function') window.updateSidebarTimersDisplay();
     const aj = window.getAutoJoinTimer();
     if (!aj) return;
     const now = Date.now();
@@ -13311,6 +13317,88 @@ window.startAutoJoinTicker = () => {
 };
 
 window.startAutoJoinTicker();
+
+// ==========================================
+// 📌 SIDEBAR CUSTOM TIMERS CONTROLLER & TOGGLE
+// ==========================================
+window.isSidebarTimersEnabled = function() {
+  return localStorage.getItem('wos_show_sidebar_timers') === 'true';
+};
+
+window.toggleSidebarTimers = function(enabled) {
+  const val = (typeof enabled === 'boolean') ? enabled : !window.isSidebarTimersEnabled();
+  localStorage.setItem('wos_show_sidebar_timers', val ? 'true' : 'false');
+  window.updateSidebarTimersDisplay();
+  if (window.showToast) {
+    window.showToast(val ? "📌 Sidebar Timers enabled!" : "📌 Sidebar Timers hidden.", "info");
+  }
+};
+
+window.updateSidebarTimersDisplay = function() {
+  const card = document.getElementById('sidebarCustomTimersCard');
+  if (!card) return;
+  const isEnabled = window.isSidebarTimersEnabled();
+  card.style.display = isEnabled ? 'block' : 'none';
+  if (!isEnabled) return;
+
+  // Update shield indicator
+  const shield = (typeof window.getPersonalShieldTimer === 'function') ? window.getPersonalShieldTimer() : null;
+  const shieldTextEl = document.getElementById('sidebarShieldTimerText');
+  const shieldBtn = document.getElementById('sidebarShieldBtn');
+  if (shield && shield.expiresAt > Date.now()) {
+    const rem = shield.expiresAt - Date.now();
+    if (shieldTextEl) shieldTextEl.textContent = (typeof window.formatCountdownTimeRemaining === 'function') ? window.formatCountdownTimeRemaining(rem) : 'Active';
+    if (shieldBtn) {
+      shieldBtn.style.background = 'rgba(16,185,129,0.2)';
+      shieldBtn.style.borderColor = '#10b981';
+      shieldBtn.style.boxShadow = '0 0 8px rgba(16,185,129,0.3)';
+    }
+  } else if (shield && shield.expiresAt) {
+    if (shieldTextEl) shieldTextEl.textContent = 'EXPIRED';
+    if (shieldBtn) {
+      shieldBtn.style.background = 'rgba(239,68,68,0.15)';
+      shieldBtn.style.borderColor = '#ef4444';
+      shieldBtn.style.boxShadow = 'none';
+    }
+  } else {
+    if (shieldTextEl) shieldTextEl.textContent = 'Set ➔';
+    if (shieldBtn) {
+      shieldBtn.style.background = 'rgba(16,185,129,0.08)';
+      shieldBtn.style.borderColor = 'rgba(16,185,129,0.3)';
+      shieldBtn.style.boxShadow = 'none';
+    }
+  }
+
+  // Update auto-join indicator
+  const autoJoin = (typeof window.getAutoJoinTimer === 'function') ? window.getAutoJoinTimer() : null;
+  const ajTextEl = document.getElementById('sidebarAutoJoinTimerText');
+  const ajBtn = document.getElementById('sidebarAutoJoinBtn');
+  if (autoJoin && autoJoin.expiresAt > Date.now()) {
+    const rem = autoJoin.expiresAt - Date.now();
+    if (ajTextEl) ajTextEl.textContent = (typeof window.formatCountdownTimeRemaining === 'function') ? window.formatCountdownTimeRemaining(rem) : 'Active';
+    if (ajBtn) {
+      ajBtn.style.background = 'rgba(56,189,248,0.2)';
+      ajBtn.style.borderColor = '#38bdf8';
+      ajBtn.style.boxShadow = '0 0 8px rgba(56,189,248,0.3)';
+    }
+  } else if (autoJoin && autoJoin.expiresAt) {
+    if (ajTextEl) ajTextEl.textContent = 'EXPIRED';
+    if (ajBtn) {
+      ajBtn.style.background = 'rgba(239,68,68,0.15)';
+      ajBtn.style.borderColor = '#ef4444';
+      ajBtn.style.boxShadow = 'none';
+    }
+  } else {
+    if (ajTextEl) ajTextEl.textContent = '8h ➔';
+    if (ajBtn) {
+      ajBtn.style.background = 'rgba(56,189,248,0.08)';
+      ajBtn.style.borderColor = 'rgba(56,189,248,0.3)';
+      ajBtn.style.boxShadow = 'none';
+    }
+  }
+};
+
+window.updateSidebarTimersDisplay();
 
 window.selectedAutoJoinHours = 8;
 window.selectedAutoJoinMins = 0;
@@ -14545,7 +14633,17 @@ window.openAllianceAlertsModal = async () => {
             🧪 Test Alert on this Device
           </button>
 
-          <!-- Section 3: Clean Actions -->
+          <!-- Section 3: Display & Layout -->
+          <div style="padding:6px 8px 4px 8px; font-size:10px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; border-top:1px solid rgba(255,255,255,0.06); border-bottom:1px solid rgba(255,255,255,0.06); margin:5px 0 4px 0; display:flex; justify-content:space-between; align-items:center;">
+            <span>🎨 Display & Layout</span>
+          </div>
+
+          <label style="display:flex; align-items:center; justify-content:space-between; padding:6px 9px; border-radius:6px; cursor:pointer; font-size:11.5px; color:var(--text-main); font-weight:bold; transition:0.15s;" onmouseover="this.style.background='rgba(56,189,248,0.1)'" onmouseout="this.style.background='transparent'">
+            <span style="display:flex; align-items:center; gap:6px;">📌 Show in Left Sidebar</span>
+            <input type="checkbox" onchange="window.toggleSidebarTimers(this.checked)" ${window.isSidebarTimersEnabled() ? 'checked' : ''} style="cursor:pointer; width:15px; height:15px; accent-color:#0ea5e9;">
+          </label>
+
+          <!-- Section 4: Clean Actions -->
           <div style="border-top:1px solid rgba(255,255,255,0.06); margin-top:4px; padding-top:4px;">
             <button onclick="window.markAllBellAlertsRead(); window.closeHeaderOptionsDropdown();" style="width:100%; text-align:left; background:transparent; border:none; color:var(--text-muted); padding:6px 9px; border-radius:6px; font-size:11.5px; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
               🧹 Mark All as Read
@@ -16049,6 +16147,18 @@ window.openTimerPreferencesModal = function() {
             </div>
           </div>
           <input type="checkbox" onchange="window.saveTimerSubscription('personal_shield', this.checked)" ${subs.personal_shield !== false ? 'checked' : ''} style="cursor:pointer; width:18px; height:18px; accent-color:#0ea5e9;">
+        </label>
+
+        <!-- Sidebar Widget Display Preference -->
+        <label style="display:flex; align-items:center; justify-content:space-between; background:rgba(56,189,248,0.06); border:1px solid rgba(56,189,248,0.25); padding:10px 12px; border-radius:10px; cursor:pointer;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:18px;">📌</span>
+            <div>
+              <div style="font-size:13px; font-weight:bold; color:#38bdf8;">Show Timers in Left Sidebar</div>
+              <div style="font-size:11px; color:var(--text-muted);">Quick-access Shield & Auto-Join card on home screen</div>
+            </div>
+          </div>
+          <input type="checkbox" onchange="window.toggleSidebarTimers(this.checked)" ${window.isSidebarTimersEnabled() ? 'checked' : ''} style="cursor:pointer; width:18px; height:18px; accent-color:#0ea5e9;">
         </label>
       </div>
 
