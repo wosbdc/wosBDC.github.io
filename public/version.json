@@ -1,15 +1,16 @@
 {
-  "version": "2.9.90",
+  "version": "2.9.91",
   "releaseDate": "2026-08-20",
-  "title": "What's New in v2.9.90",
+  "title": "What's New in v2.9.91",
   "notes": [
-    "🛡️ Unified 30-day token status detection across database and profiles.",
-    "⚡ Accurate real-time expiry calculations for mains and alts.",
-    "📊 Perfect tally alignment across all dropdown filters and tabs."
+    "🔔 Unified notification stream with category tabs.",
+    "🎯 Closed tickets automatically hidden from alert feed.",
+    "🧹 Mark all notifications as read in one click."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "2.9.90",
+    "version": "2.9.91",
     "latestChanges": [
+      "v2.9.91: Unified Bell Notification Stream with category tabs & clean feed",
       "v2.9.90: Unified token status calculations & real-time filter sync",
       "v2.9.89: Automated version sync validation & TESTING.md QA protocol",
       "v2.9.88: Fixed admin ticket actions navigating away from admin panel",

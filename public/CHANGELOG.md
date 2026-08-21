@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [2.9.91] - 2026-08-20
+- 🔔 **Unified Stream**: Combined all alerts into one continuous feed.
+- 🏷️ **Category Tabs**: Quick filter by timers, broadcasts, tokens, or tickets.
+- 🎯 **Clean Inbox**: Closed and archived tickets are automatically hidden.
+- 🧹 **1-Click Clear**: Mark all notifications as read in one tap.
+
 ## [2.9.90] - 2026-08-20
 - 🛡️ **Unified Token Status**: Standardized 30-day token expiry detection across website and profiles.
 - ⚡ **Accurate Calculations**: Real-time token expiry checks for mains and alts.

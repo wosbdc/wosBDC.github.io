@@ -12896,7 +12896,7 @@ window.openAllianceAlertsModal = async () => {
     let oldModal = document.getElementById('newMembersModalOverlay');
     if (oldModal) oldModal.remove();
 
-    // Fetch broadcast alerts from Firebase RTDB with keys
+    // 1. Fetch broadcast alerts from Firebase RTDB
     let broadcastsList = [];
     const lastSeenBroadcast = Number(localStorage.getItem('last_seen_broadcast_timestamp') || '0');
     let unreadBroadcastCount = 0;
@@ -12943,7 +12943,7 @@ window.openAllianceAlertsModal = async () => {
       console.warn("Failed to load broadcasts:", err);
     }
 
-    // Fetch Feedback & Bug Tracker submissions from Firebase
+    // 2. Fetch Feedback & Bug Tracker submissions (Only active items needing attention)
     let feedbackList = [];
     const lastSeenFeedback = Number(localStorage.getItem('last_seen_feedback_timestamp') || '0');
     let unreadFeedbackCount = 0;
@@ -12951,26 +12951,340 @@ window.openAllianceAlertsModal = async () => {
       const fSnap = await get(ref(db, 'community_feedback'));
       if (fSnap.exists()) {
         const fVal = fSnap.val() || {};
-        feedbackList = Object.entries(fVal).map(([k, v]) => ({
+        const allFeedback = Object.entries(fVal).map(([k, v]) => ({
           ...v,
           id: k
         })).filter(Boolean);
-        feedbackList.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        allFeedback.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+        // Attention Rule: Only show open/pending, in_progress, or user's ticket with developer note
+        feedbackList = allFeedback.filter(f => {
+          const normStatus = (f.status || 'open').toLowerCase();
+          const isMyTicket = currentUser && (
+            (currentUser.gameId && f.submittedBy?.gameId && String(currentUser.gameId).trim() === String(f.submittedBy.gameId).trim()) ||
+            (currentUser.name && f.submittedBy?.name && String(currentUser.name).trim().toLowerCase() === String(f.submittedBy.name).trim().toLowerCase())
+          );
+          if (normStatus === 'open' || normStatus === 'pending' || normStatus === 'in_progress') return true;
+          if (isMyTicket && f.adminNote) return true;
+          return false;
+        });
+
         unreadFeedbackCount = feedbackList.filter(f => f.createdAt && f.createdAt > lastSeenFeedback).length;
       }
     } catch(err) {
       console.warn("Failed to load feedback for alerts modal:", err);
     }
 
-    // Immediately mark broadcasts as seen to clear badge counter
-    localStorage.setItem('last_seen_broadcast_timestamp', String(Date.now()));
-    if (typeof window.updateNewMemberBadge === 'function') window.updateNewMemberBadge();
+    // 3. Process Main & Alt Token Health Alerts
+    const tokenAlerts = [];
+    if (tokenStatus.alert) {
+      tokenAlerts.push({
+        type: 'main_token',
+        isMain: true,
+        status: tokenStatus.status,
+        daysLeft: tokenStatus.daysLeft,
+        label: tokenStatus.label || '30-Day Sync Token',
+        color: tokenStatus.color || '#f59e0b',
+        icon: tokenStatus.icon || '🛡️'
+      });
+    }
 
-    const overlay = document.createElement('div');
-    overlay.id = 'notificationsModalOverlay';
-    overlay.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.85); backdrop-filter:blur(10px); z-index:99999; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease;';
+    const rawAlts = currentUser?.linkedGameIds ? (Array.isArray(currentUser.linkedGameIds) ? currentUser.linkedGameIds : Object.values(currentUser.linkedGameIds)) : [];
+    rawAlts.forEach(agid => {
+      const aTok = currentUser.altTokens ? currentUser.altTokens[agid] : null;
+      let aName = (typeof aTok === 'object' && aTok && aTok.nickname) ? aTok.nickname : ((window.idToNameMap && window.idToNameMap[agid]) || `Alt Chief ${agid}`);
+      let aLevel = (typeof aTok === 'object' && aTok && aTok.stove_lv) ? aTok.stove_lv : '';
+      let formattedLevel = aLevel ? (String(aLevel).toUpperCase().startsWith('FC') ? aLevel : `FC ${aLevel}`) : '';
 
-    // 0. Push Notifications Header Pill & Leadership Tools Dropdown
+      const aStat = window.getAltTokenStatus(aTok);
+      if (aStat.status !== 'active') {
+        tokenAlerts.push({
+          type: 'alt_token',
+          isMain: false,
+          agid: agid,
+          name: aName,
+          level: formattedLevel,
+          status: aStat.status,
+          daysLeft: aStat.daysLeft,
+          badge: aStat.badge
+        });
+      }
+    });
+
+    // 4. Build Unified Cards Stack
+    const streamItems = [];
+
+    // A. Timers / Scheduled Events
+    countdownAlerts.forEach(b => {
+      const catMeta = window.getCountdownAlertCategoryMeta(b.category || 'general');
+      const targetMs = Number(b.targetTimestamp);
+      const endMs = Number(b.endTimestamp || (targetMs + 2 * 3600000));
+      const status = window.getScheduledAlertStatus(targetMs, endMs, b.countdownMode || '1hour');
+      const isLive = status.stage === 'live';
+      const isCountdown = status.stage === 'countdown';
+      const isUrgent = b.priority === 'urgent' || isLive || isCountdown;
+      const borderColor = isLive ? '#10b981' : (isCountdown ? '#f59e0b' : '#38bdf8');
+      const leftStripeColor = isLive ? '#10b981' : (isCountdown ? '#f59e0b' : '#38bdf8');
+
+      const staffActions = isStaff ? `
+        <div style="display:flex; align-items:center; gap:5px;">
+          <button onclick="event.stopPropagation(); window.openEditCountdownAlertModal('${b.key}');" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:6px; padding:3px 8px; font-size:11px; cursor:pointer; font-weight:bold; transition:0.15s;" title="Edit scheduled alert">
+            ✏️ Edit
+          </button>
+          <button onclick="event.stopPropagation(); window.deleteBroadcastAlert('${b.key}');" style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); color:#ef4444; border-radius:6px; padding:3px 8px; font-size:11px; cursor:pointer; font-weight:bold; transition:0.15s;" title="Delete announcement">
+            🗑️
+          </button>
+        </div>
+      ` : '';
+
+      const cardHtml = `
+        <div class="bell-stream-card" data-category="timers" style="background:linear-gradient(145deg, rgba(15,23,42,0.92), rgba(30,41,59,0.85)); border:1px solid ${borderColor}; border-left:4.5px solid ${leftStripeColor}; border-radius:12px; padding:12px 14px; box-shadow:0 6px 18px rgba(0,0,0,0.4); display:flex; flex-direction:column; gap:6px; position:relative;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+              <span style="background:${catMeta.bg}; color:${catMeta.color}; border:1px solid ${catMeta.border}; padding:2px 8px; border-radius:10px; font-size:10.5px; font-weight:800; display:inline-flex; align-items:center; gap:4px; text-transform:uppercase; letter-spacing:0.5px;">
+                ${catMeta.icon} ${catMeta.name}
+              </span>
+              ${isLive ? `<span style="background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:1px 7px; border-radius:10px; font-size:10px; font-weight:800; animation:pulse 1.5s infinite;">🟢 LIVE NOW</span>` : ''}
+              ${isUrgent && !isLive ? `<span style="background:rgba(245,158,11,0.2); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); padding:1px 7px; border-radius:10px; font-size:10px; font-weight:bold; animation:pulse 2s infinite;">⏳ COUNTDOWN</span>` : ''}
+            </div>
+            ${staffActions}
+          </div>
+
+          <div style="font-weight:800; font-size:14.5px; color:#fff; line-height:1.3;">
+            ${window.escapeHTML(b.title || 'Scheduled Event')}
+          </div>
+
+          ${b.body ? `<div style="font-size:12px; color:var(--text-main); line-height:1.4; white-space:pre-wrap; opacity:0.9;">${window.escapeHTML(b.body)}</div>` : ''}
+
+          <!-- Live Ticking Countdown Box -->
+          <div class="bell-countdown-ticker-el" 
+               data-target-ts="${targetMs}" 
+               data-end-ts="${endMs}" 
+               data-mode="${b.countdownMode || '1hour'}"
+               style="background:rgba(15,23,42,0.85); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:8px 12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-top:2px;">
+            <div style="font-size:12.5px; font-weight:bold; color:#fff;">⏳ Calculating countdown...</div>
+          </div>
+
+          <div style="font-size:11px; color:var(--text-muted); margin-top:2px; display:flex; justify-content:space-between; align-items:center;">
+            <span>📢 Posted by ${window.escapeHTML(b.senderName || 'Leadership')}</span>
+            <span>${window.formatRelativeTime ? window.formatRelativeTime(b.timestamp) : ''}</span>
+          </div>
+        </div>
+      `;
+
+      streamItems.push({
+        category: 'timers',
+        timestamp: targetMs,
+        html: cardHtml
+      });
+    });
+
+    // B. Token Sync Health Alerts
+    tokenAlerts.forEach(t => {
+      if (t.isMain) {
+        const isExpired = t.status === 'expired';
+        const cardHtml = `
+          <div class="bell-stream-card" data-category="tokens" style="background:rgba(15,23,42,0.7); border:1px solid ${isExpired ? 'rgba(239,68,68,0.4)' : 'rgba(245,158,11,0.4)'}; border-left:4.5px solid ${isExpired ? '#ef4444' : '#f59e0b'}; border-radius:12px; padding:12px 14px; box-shadow:0 6px 18px rgba(0,0,0,0.4); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+              <span style="font-size:24px; flex-shrink:0;">${t.icon}</span>
+              <div>
+                <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                  <span style="background:rgba(245,158,11,0.15); color:${t.color}; border:1px solid rgba(245,158,11,0.4); padding:2px 7px; border-radius:8px; font-size:10px; font-weight:800;">🛡️ SYNC HEALTH</span>
+                  <span style="font-weight:bold; font-size:13.5px; color:#fff;">${t.label}</span>
+                </div>
+                <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
+                  ${isExpired ? 'Token expired • Restores 30-day automated alliance stats' : `Expires in ${t.daysLeft}d • 10-second in-game renewal`}
+                </div>
+              </div>
+            </div>
+            <div>
+              <button onclick="document.getElementById('notificationsModalOverlay').remove(); window.openAccountHubVerifyModal();" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:6px 12px; border-radius:8px; font-weight:bold; font-size:11.5px; cursor:pointer; box-shadow:0 2px 8px rgba(14,165,233,0.3); display:inline-flex; align-items:center; gap:4px;">
+                ⚡ Verify in Game (10s)
+              </button>
+            </div>
+          </div>
+        `;
+        streamItems.push({ category: 'tokens', timestamp: Date.now() + 1000, html: cardHtml });
+      } else {
+        const isExpired = t.status === 'expired';
+        const cardHtml = `
+          <div class="bell-stream-card" data-category="tokens" style="background:rgba(15,23,42,0.7); border:1px solid ${isExpired ? 'rgba(239,68,68,0.35)' : 'rgba(245,158,11,0.35)'}; border-left:4.5px solid ${isExpired ? '#ef4444' : '#f59e0b'}; border-radius:12px; padding:12px 14px; box-shadow:0 6px 18px rgba(0,0,0,0.4); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+              <span style="font-size:22px; flex-shrink:0;">🔗</span>
+              <div>
+                <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                  <span style="background:rgba(59,130,246,0.15); color:#60a5fa; border:1px solid rgba(59,130,246,0.4); padding:2px 7px; border-radius:8px; font-size:10px; font-weight:800;">🔗 ALT ACCOUNT</span>
+                  <span style="font-weight:bold; font-size:13.5px; color:#fff;">${window.escapeHTML(t.name)}</span>
+                  ${t.level ? `<span style="font-size:10px; background:rgba(249,115,22,0.15); color:#f97316; border:1px solid rgba(249,115,22,0.4); padding:1px 6px; border-radius:8px; font-weight:bold;">🔥 ${window.escapeHTML(t.level)}</span>` : ''}
+                </div>
+                <div style="font-size:11px; color:var(--text-muted); font-family:monospace; margin-top:2px;">
+                  ID: ${t.agid} • ${isExpired ? 'Token Expired' : `Expires in ${t.daysLeft}d`}
+                </div>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              ${t.badge}
+              <button onclick="document.getElementById('notificationsModalOverlay').remove(); window.openAltVerifyModal('${t.agid}');" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; border-radius:6px; padding:5px 10px; font-size:11.5px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px; box-shadow:0 2px 6px rgba(14,165,233,0.3);" title="Send in-game mailbox verification code">
+                ⚡ Setup / Renew
+              </button>
+            </div>
+          </div>
+        `;
+        streamItems.push({ category: 'tokens', timestamp: Date.now(), html: cardHtml });
+      }
+    });
+
+    // C. Leadership Broadcast Announcements
+    standardBroadcasts.forEach(b => {
+      const isUnread = Boolean(b.timestamp && b.timestamp > lastSeenBroadcast);
+      const relTime = window.formatRelativeTime ? window.formatRelativeTime(b.timestamp) : '';
+      const deleteBtn = isStaff ? `
+        <button onclick="event.stopPropagation(); window.deleteBroadcastAlert('${b.key}')" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; border-radius:6px; padding:2px 7px; font-size:11px; cursor:pointer;" title="Delete announcement">
+          🗑️
+        </button>
+      ` : '';
+
+      const cardHtml = `
+        <div class="bell-stream-card" data-category="broadcasts" style="background:rgba(15,23,42,0.7); border:1px solid ${isUnread ? 'rgba(236,72,153,0.45)' : 'rgba(255,255,255,0.08)'}; border-left:4.5px solid #ec4899; border-radius:12px; padding:12px 14px; box-shadow:0 6px 18px rgba(0,0,0,0.4); display:flex; flex-direction:column; gap:4px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+            <div style="font-weight:bold; font-size:14px; color:#fff; display:flex; align-items:center; gap:6px; flex-wrap:wrap; min-width:0;">
+              <span style="background:rgba(236,72,153,0.18); color:#f472b6; border:1px solid rgba(236,72,153,0.4); padding:2px 7px; border-radius:8px; font-size:10px; font-weight:800;">📢 LEADERSHIP</span>
+              <span>${window.escapeHTML(b.title || 'Announcement')}</span>
+              ${isUnread ? `<span style="font-size:9.5px; background:rgba(236,72,153,0.25); color:#ec4899; border:1px solid rgba(236,72,153,0.5); padding:1px 6px; border-radius:8px; font-weight:bold;">NEW</span>` : ''}
+            </div>
+            <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+              <span style="font-size:11px; color:var(--text-muted);">${relTime}</span>
+              ${deleteBtn}
+            </div>
+          </div>
+          <div style="font-size:12.5px; color:var(--text-main); line-height:1.4; white-space:pre-wrap; margin-top:2px;">${window.escapeHTML(b.body || '')}</div>
+          <div style="font-size:11px; color:var(--text-muted); margin-top:4px; display:flex; align-items:center; justify-content:space-between;">
+            <span>📢 Posted by ${window.escapeHTML(b.senderName || 'Leadership')}</span>
+          </div>
+        </div>
+      `;
+
+      streamItems.push({ category: 'broadcasts', timestamp: b.timestamp || 0, html: cardHtml });
+    });
+
+    // D. Feature & Bug Tracker Feed (Filtered to items needing attention)
+    feedbackList.forEach(f => {
+      const isUnread = Boolean(f.createdAt && f.createdAt > lastSeenFeedback);
+      const relTime = window.formatRelativeTime ? window.formatRelativeTime(f.createdAt) : '';
+      const isFeat = f.type === 'feature';
+      const typeBadge = isFeat 
+        ? `<span style="background:rgba(6,182,212,0.18); border:1px solid rgba(6,182,212,0.4); color:#06b6d4; padding:2px 7px; border-radius:8px; font-size:10px; font-weight:800;">💡 FEATURE</span>`
+        : `<span style="background:rgba(239,68,68,0.18); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:2px 7px; border-radius:8px; font-size:10px; font-weight:800;">🐞 BUG</span>`;
+      
+      const normStatus = (f.status || 'open').toLowerCase();
+      const statusBadge = (normStatus === 'completed' || normStatus === 'done')
+        ? `<span style="background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:1px 6px; border-radius:6px; font-size:9.5px; font-weight:bold;">✓ Done</span>`
+        : (normStatus === 'in_progress'
+            ? `<span style="background:rgba(59,130,246,0.2); color:#3b82f6; border:1px solid rgba(59,130,246,0.4); padding:1px 6px; border-radius:6px; font-size:9.5px; font-weight:bold;">🔵 In Progress</span>`
+            : `<span style="background:rgba(234,179,8,0.15); color:#eab308; border:1px solid rgba(234,179,8,0.35); padding:1px 6px; border-radius:6px; font-size:9.5px; font-weight:bold;">🟡 Open</span>`);
+
+      const isMyTicket = currentUser && (
+        (currentUser.gameId && f.submittedBy?.gameId && String(currentUser.gameId).trim() === String(f.submittedBy.gameId).trim()) ||
+        (currentUser.name && f.submittedBy?.name && String(currentUser.name).trim().toLowerCase() === String(f.submittedBy.name).trim().toLowerCase())
+      );
+      const myTicketBadge = isMyTicket ? `<span style="font-size:9.5px; background:rgba(168,85,247,0.2); color:#c084fc; border:1px solid rgba(168,85,247,0.4); padding:1px 6px; border-radius:8px; font-weight:bold;">⭐ YOUR TICKET</span>` : '';
+
+      const adminNoteHtml = f.adminNote ? `
+        <div style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.3); border-radius:8px; padding:7px 10px; margin-top:4px;">
+          <div style="font-size:10.5px; font-weight:800; color:#10b981; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2px; display:flex; align-items:center; gap:4px;">
+            <span>💬 Developer Note</span>
+          </div>
+          <div style="font-size:12px; color:var(--text-main); line-height:1.4; white-space:pre-wrap;">${window.escapeHTML(f.adminNote)}</div>
+        </div>
+      ` : '';
+
+      const cardHtml = `
+        <div class="bell-stream-card" data-category="tickets" style="background:rgba(15,23,42,0.7); border:1px solid ${isUnread ? 'rgba(6,182,212,0.5)' : (isMyTicket ? 'rgba(168,85,247,0.35)' : 'rgba(255,255,255,0.08)')}; border-left:4.5px solid ${isFeat ? '#06b6d4' : '#f43f5e'}; border-radius:12px; padding:12px 14px; box-shadow:0 6px 18px rgba(0,0,0,0.4); display:flex; flex-direction:column; gap:6px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap;">
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; min-width:0;">
+              ${typeBadge}
+              <span style="font-size:10px; color:var(--text-muted); font-weight:bold; background:rgba(255,255,255,0.05); padding:1px 5px; border-radius:4px;">[${window.escapeHTML(f.category || 'General')}]</span>
+              ${statusBadge}
+              ${myTicketBadge}
+              ${isUnread ? `<span style="font-size:9.5px; background:rgba(6,182,212,0.2); color:#38bdf8; border:1px solid rgba(6,182,212,0.4); padding:1px 6px; border-radius:8px; font-weight:bold;">NEW</span>` : ''}
+            </div>
+            <span style="font-size:11px; color:var(--text-muted);">${relTime}</span>
+          </div>
+          <div style="font-weight:bold; font-size:13.5px; color:#fff; line-height:1.3;">
+            ${window.escapeHTML(f.title || 'Untitled Post')}
+          </div>
+          ${f.description ? `<div style="font-size:12px; color:var(--text-main); line-height:1.4; opacity:0.85; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${window.escapeHTML(f.description)}</div>` : ''}
+          ${adminNoteHtml}
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2px; padding-top:4px; border-top:1px solid rgba(255,255,255,0.04);">
+            <span style="font-size:11px; color:var(--text-muted);">👤 ${window.escapeHTML(f.submittedBy?.name || 'Chief')} • 👍 ${f.voteCount || 1}</span>
+            <div style="display:flex; align-items:center; gap:8px;">
+              ${f.imageUrl ? '<span style="font-size:11px; color:#38bdf8;">📷 Image</span>' : ''}
+              <button onclick="document.getElementById('notificationsModalOverlay').remove(); if(views.feedback) views.feedback();" style="background:linear-gradient(135deg, rgba(6,182,212,0.2), rgba(6,182,212,0.05)); border:1px solid rgba(6,182,212,0.4); color:#38bdf8; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
+                🔍 View in Tracker ➔
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      streamItems.push({ category: 'tickets', timestamp: f.createdAt || 0, html: cardHtml });
+    });
+
+    // E. Staff Confidential Directives
+    if (isStaff) {
+      staffBroadcasts.forEach(b => {
+        const relTime = window.formatRelativeTime ? window.formatRelativeTime(b.timestamp) : '';
+        const cardHtml = `
+          <div class="bell-stream-card" data-category="staff" style="background:rgba(15,23,42,0.7); border:1px solid rgba(168,85,247,0.35); border-left:4.5px solid #a855f7; border-radius:12px; padding:12px 14px; box-shadow:0 6px 18px rgba(0,0,0,0.4); display:flex; flex-direction:column; gap:4px;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+              <div style="font-weight:bold; font-size:13.5px; color:#c084fc; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                <span style="background:rgba(168,85,247,0.2); color:#c084fc; border:1px solid rgba(168,85,247,0.4); padding:2px 7px; border-radius:8px; font-size:10px; font-weight:800;">👑 STAFF DIRECTIVE</span>
+                <span>${window.escapeHTML(b.title || 'Staff Notice')}</span>
+                ${b.priority === 'urgent' ? `<span style="font-size:10px; background:rgba(239,68,68,0.2); color:#ef4444; border:1px solid rgba(239,68,68,0.4); padding:1px 6px; border-radius:8px; font-weight:bold;">🚨 URGENT</span>` : ''}
+              </div>
+              <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+                <span style="font-size:11px; color:var(--text-muted);">${relTime}</span>
+                <button onclick="event.stopPropagation(); window.deleteBroadcastAlert('${b.key}')" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; border-radius:6px; padding:2px 7px; font-size:11px; cursor:pointer;" title="Delete staff alert">
+                  🗑️
+                </button>
+              </div>
+            </div>
+            ${b.body ? `<div style="font-size:12.5px; color:var(--text-main); line-height:1.4; white-space:pre-wrap; margin-top:2px;">${window.escapeHTML(b.body)}</div>` : ''}
+            <div style="font-size:11px; color:var(--text-muted); margin-top:3px; display:flex; align-items:center; justify-content:space-between;">
+              <span>📢 Posted by ${window.escapeHTML(b.senderName || 'Leadership')}</span>
+            </div>
+          </div>
+        `;
+        streamItems.push({ category: 'staff', timestamp: b.timestamp || 0, html: cardHtml });
+      });
+    }
+
+    // Sort stream by timestamp (newest first)
+    streamItems.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+    // Category Counts for Filter Tabs
+    const countAll = streamItems.length;
+    const countTimers = streamItems.filter(i => i.category === 'timers').length;
+    const countBroadcasts = streamItems.filter(i => i.category === 'broadcasts').length;
+    const countTokens = streamItems.filter(i => i.category === 'tokens').length;
+    const countTickets = streamItems.filter(i => i.category === 'tickets').length;
+    const countStaff = streamItems.filter(i => i.category === 'staff').length;
+
+    // Build Stream Feed HTML
+    let streamFeedHtml = streamItems.map(i => i.html).join('');
+    if (countAll === 0) {
+      streamFeedHtml = `
+        <div id="bellStreamEmptyNotice" style="text-align:center; padding:36px 16px; background:rgba(16,185,129,0.05); border:1px dashed rgba(16,185,129,0.3); border-radius:14px; margin-bottom:12px;">
+          <div style="font-size:36px; margin-bottom:8px;">🎉</div>
+          <div style="font-size:16px; font-weight:bold; color:#10b981; margin-bottom:4px;">All Caught Up!</div>
+          <div style="font-size:12.5px; color:var(--text-muted); line-height:1.4;">
+            You have no pending alerts, announcements, or un-synced tokens right now.
+          </div>
+        </div>
+      `;
+    }
+
+    // Header Controls
     const isPushSupported = ('Notification' in window) && ('serviceWorker' in navigator);
     const pushPermission = isPushSupported ? Notification.permission : 'unsupported';
     const isPushActive = isPushSupported && (pushPermission === 'granted');
@@ -13023,7 +13337,7 @@ window.openAllianceAlertsModal = async () => {
               <button onclick="window.testLocalPushNotification(); window.closeHeaderPushDropdown();" style="width:100%; text-align:left; background:transparent; border:none; color:#60a5fa; padding:7px 9px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.15s;" onmouseover="this.style.background='rgba(59,130,246,0.15)'" onmouseout="this.style.background='transparent'">
                 🧪 Test Alert on this Device
               </button>
-              <button onclick="window.markAllBroadcastsRead(); document.getElementById('notificationsModalOverlay').remove(); window.openAllianceAlertsModal();" style="width:100%; text-align:left; background:transparent; border:none; color:var(--text-muted); padding:7px 9px; border-radius:6px; font-size:12px; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
+              <button onclick="window.markAllBellAlertsRead();" style="width:100%; text-align:left; background:transparent; border:none; color:var(--text-muted); padding:7px 9px; border-radius:6px; font-size:12px; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
                 🧹 Mark All as Read
               </button>
               <button onclick="window.handleModalPushToggle(this); window.closeHeaderPushDropdown();" style="width:100%; text-align:left; background:transparent; border:none; color:#f87171; padding:7px 9px; border-radius:6px; font-size:12px; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.15s;" onmouseover="this.style.background='rgba(239,68,68,0.12)'" onmouseout="this.style.background='transparent'">
@@ -13041,476 +13355,20 @@ window.openAllianceAlertsModal = async () => {
       }
     }
 
-    // 1. Spotlight Scheduled Countdown Alerts Section
-    let spotlightSectionHtml = '';
-    if (countdownAlerts.length > 0) {
-      let liveCount = 0;
-      let urgentCount = 0;
-
-      const cardsHtml = countdownAlerts.map(b => {
-        const catMeta = window.getCountdownAlertCategoryMeta(b.category || 'general');
-        const targetMs = Number(b.targetTimestamp);
-        const endMs = Number(b.endTimestamp || (targetMs + 2 * 3600000));
-        const status = window.getScheduledAlertStatus(targetMs, endMs, b.countdownMode || '1hour');
-        
-        const isLive = status.stage === 'live';
-        const isCountdown = status.stage === 'countdown';
-        const isUrgent = b.priority === 'urgent' || isLive || isCountdown;
-        if (isLive) liveCount++;
-        if (isUrgent) urgentCount++;
-        
-        const borderColor = isLive ? '#10b981' : (isCountdown ? '#f59e0b' : catMeta.color);
-        const bgGradient = isLive 
-          ? 'linear-gradient(145deg, rgba(16,185,129,0.14), rgba(15,23,42,0.95))'
-          : (isCountdown 
-              ? 'linear-gradient(145deg, rgba(245,158,11,0.16), rgba(15,23,42,0.95))' 
-              : `linear-gradient(145deg, ${catMeta.bg}, rgba(15,23,42,0.95))`);
-
-        const staffActions = isStaff ? `
-          <div style="display:flex; align-items:center; gap:5px;">
-            <button onclick="event.stopPropagation(); window.openEditCountdownAlertModal('${b.key}');" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:6px; padding:3px 8px; font-size:11px; cursor:pointer; font-weight:bold; transition:0.15s;" onmouseover="this.style.background='rgba(56,189,248,0.2)'" title="Edit scheduled alert">
-              ✏️ Edit
-            </button>
-            <button onclick="event.stopPropagation(); window.deleteBroadcastAlert('${b.key}');" style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); color:#ef4444; border-radius:6px; padding:3px 8px; font-size:11px; cursor:pointer; font-weight:bold; transition:0.15s;" onmouseover="this.style.background='rgba(239,68,68,0.25)'" title="Delete announcement">
-              🗑️
-            </button>
-          </div>
-        ` : '';
-
-        return `
-          <div style="background:${bgGradient}; border:1.5px solid ${borderColor}; border-radius:14px; padding:14px; box-shadow:0 8px 24px rgba(0,0,0,0.5), 0 0 15px ${isUrgent ? 'rgba(245,158,11,0.15)' : 'transparent'}; position:relative; overflow:hidden;">
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:8px;">
-              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                <span style="background:${catMeta.bg}; color:${catMeta.color}; border:1px solid ${catMeta.border}; padding:3px 9px; border-radius:12px; font-size:11px; font-weight:800; display:inline-flex; align-items:center; gap:4px; text-transform:uppercase; letter-spacing:0.5px;">
-                  ${catMeta.icon} ${catMeta.name}
-                </span>
-                ${b.priority === 'urgent' ? `<span style="background:rgba(239,68,68,0.2); color:#ef4444; border:1px solid rgba(239,68,68,0.4); padding:2px 8px; border-radius:10px; font-size:10px; font-weight:bold; animation:pulse 2s infinite;">🚨 URGENT</span>` : ''}
-              </div>
-              ${staffActions}
-            </div>
-
-            <div style="font-weight:800; font-size:15.5px; color:#fff; line-height:1.3; margin-bottom:6px;">
-              ${window.escapeHTML(b.title || 'Scheduled Event')}
-            </div>
-
-            ${b.body ? `<div style="font-size:12.5px; color:var(--text-main); line-height:1.4; white-space:pre-wrap; margin-bottom:12px; opacity:0.9;">${window.escapeHTML(b.body)}</div>` : ''}
-
-            <!-- Live Ticking Countdown Box -->
-            <div class="bell-countdown-ticker-el" 
-                 data-target-ts="${targetMs}" 
-                 data-end-ts="${endMs}" 
-                 data-mode="${b.countdownMode || '1hour'}"
-                 style="background:rgba(15,23,42,0.85); border:1px solid rgba(255,255,255,0.12); border-radius:10px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-              <div style="font-size:13px; font-weight:bold; color:#fff;">⏳ Calculating countdown...</div>
-            </div>
-
-            <div style="font-size:11px; color:var(--text-muted); margin-top:8px; display:flex; justify-content:space-between; align-items:center;">
-              <span>📢 Posted by ${window.escapeHTML(b.senderName || 'Leadership')}</span>
-              <span>${window.formatRelativeTime ? window.formatRelativeTime(b.timestamp) : ''}</span>
-            </div>
-          </div>
-        `;
-      }).join('');
-
-      const hasLive = liveCount > 0;
-      const containerBorder = hasLive ? 'rgba(16,185,129,0.55)' : 'rgba(245,158,11,0.45)';
-      const containerShadow = hasLive ? '0 12px 35px rgba(0,0,0,0.65), 0 0 25px rgba(16,185,129,0.22)' : '0 12px 35px rgba(0,0,0,0.65), 0 0 25px rgba(245,158,11,0.15)';
-      const ribbonGradient = hasLive ? 'linear-gradient(90deg, #10b981, #38bdf8, #10b981)' : 'linear-gradient(90deg, #f59e0b, #ec4899, #f59e0b)';
-
-      spotlightSectionHtml = `
-        <div style="background:linear-gradient(145deg, rgba(15,23,42,0.92), rgba(30,41,59,0.85)); border:2px solid ${containerBorder}; border-radius:16px; padding:14px; margin-bottom:16px; box-shadow:${containerShadow}; position:relative; overflow:hidden;">
-          
-          <!-- Top Accent Ribbon -->
-          <div style="position:absolute; top:0; left:0; right:0; height:3.5px; background:${ribbonGradient};"></div>
-
-          <!-- Header Banner -->
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.08);">
-            <div>
-              <div style="font-size:13.5px; font-weight:800; color:${hasLive ? '#34d399' : '#fbbf24'}; display:flex; align-items:center; gap:8px; letter-spacing:0.5px; text-transform:uppercase;">
-                <span style="font-size:16px;">⚡</span>
-                <span>Live Timers & Scheduled Events</span>
-                ${hasLive ? `<span style="background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:2px 8px; border-radius:12px; font-size:10px; font-weight:800; animation:pulse 2s infinite;">🔴 ${liveCount} LIVE</span>` : ''}
-                <span style="background:rgba(245,158,11,0.18); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); padding:2px 8px; border-radius:12px; font-size:10px; font-weight:bold;">⏳ ${countdownAlerts.length} Active</span>
-              </div>
-              <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
-                Real-time event countdowns & active alliance schedules
-              </div>
-            </div>
-
-            ${isStaff ? `
-              <div style="display:flex; align-items:center; gap:6px;">
-                <button onclick="event.stopPropagation(); window.openCreateCountdownAlertModal(null, 'timer');" style="background:linear-gradient(135deg, #f59e0b, #d97706); color:#fff; border:none; padding:4px 10px; border-radius:8px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px; box-shadow:0 2px 8px rgba(245,158,11,0.3); transition:0.2s;" title="Schedule a new countdown alert">
-                  ➕ Schedule Event
-                </button>
-              </div>
-            ` : ''}
-          </div>
-
-          <!-- Cards Stack -->
-          <div style="display:flex; flex-direction:column; gap:10px;">
-            ${cardsHtml}
-          </div>
-        </div>
-      `;
-    }
-
-    // 2. Standard Broadcasts Section HTML (Only show if announcements exist)
-    let broadcastsSectionHtml = '';
-    if (standardBroadcasts.length > 0) {
-      const bCards = standardBroadcasts.slice(0, 15).map(b => {
-        const isUnread = Boolean(b.timestamp && b.timestamp > lastSeenBroadcast);
-        const relTime = window.formatRelativeTime ? window.formatRelativeTime(b.timestamp) : '';
-        const deleteBtn = isStaff ? `
-          <button onclick="event.stopPropagation(); window.deleteBroadcastAlert('${b.key}')" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; border-radius:6px; padding:2px 7px; font-size:11px; cursor:pointer; display:inline-flex; align-items:center; gap:2px; transition:0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.25)'" onmouseout="this.style.background='rgba(239,68,68,0.1)'" title="Delete this announcement">
-            🗑️
-          </button>
-        ` : '';
-
-        return `
-          <div style="background:rgba(15,23,42,0.6); border:1px solid ${isUnread ? 'rgba(236,72,153,0.45)' : 'rgba(255,255,255,0.08)'}; border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; gap:4px; position:relative;">
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
-              <div style="font-weight:bold; font-size:13.5px; color:#fff; display:flex; align-items:center; gap:6px; flex-wrap:wrap; min-width:0;">
-                <span>${window.escapeHTML(b.title || 'Announcement')}</span>
-                ${isUnread ? `<span style="font-size:10px; background:rgba(236,72,153,0.2); color:#ec4899; border:1px solid rgba(236,72,153,0.4); padding:1px 6px; border-radius:8px; font-weight:bold;">NEW</span>` : ''}
-              </div>
-              <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
-                <span style="font-size:11px; color:var(--text-muted);">${relTime}</span>
-                ${deleteBtn}
-              </div>
-            </div>
-            <div style="font-size:12.5px; color:var(--text-main); line-height:1.4; white-space:pre-wrap; margin-top:2px;">${window.escapeHTML(b.body || '')}</div>
-            <div style="font-size:11px; color:var(--text-muted); margin-top:3px; display:flex; align-items:center; justify-content:space-between; gap:6px;">
-              <span>📢 ${window.escapeHTML(b.senderName || 'Leadership')}</span>
-            </div>
-          </div>
-        `;
-      }).join('');
-
-      broadcastsSectionHtml = `
-        <div id="broadcastsAlertsContainer" style="background:rgba(236,72,153,0.06); border:1px solid rgba(236,72,153,0.25); border-radius:14px; margin-bottom:12px; overflow:hidden; transition:all 0.2s ease;">
-          <div id="broadcastsAccordionHeader" onclick="window.toggleBroadcastsAccordionBanner()" style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; cursor:pointer; user-select:none;">
-            <div>
-              <div style="font-size:13.5px; font-weight:bold; color:#f472b6; display:flex; align-items:center; gap:8px;">
-                <span>📢 Leadership Announcements (${standardBroadcasts.length})</span>
-              </div>
-              <div style="font-size:11.5px; color:var(--text-muted); margin-top:3px;">
-                Alliance broadcasts & general leadership notices
-              </div>
-            </div>
-            <div style="display:flex; align-items:center; gap:8px;">
-              ${isStaff ? `
-                <button onclick="event.stopPropagation(); window.openCreateCountdownAlertModal();" style="background:linear-gradient(135deg, #ec4899, #8b5cf6); color:#fff; border:none; padding:3px 9px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:3px; box-shadow:0 2px 6px rgba(236,72,153,0.3);" title="Post a new announcement or scheduled countdown alert">
-                  ➕ New Alert
-                </button>
-                <button onclick="event.stopPropagation(); window.openBroadcastCleanerModal();" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.35); color:#ef4444; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:3px; transition:0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.25)'" onmouseout="this.style.background='rgba(239,68,68,0.15)'" title="Open Announcement Cleaner">
-                  🧹 Cleaner
-                </button>
-              ` : ''}
-              <span style="background:rgba(236,72,153,0.2); color:#f472b6; border:1px solid rgba(236,72,153,0.4); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold;">${unreadBroadcastCount > 0 ? `${unreadBroadcastCount} New` : `${standardBroadcasts.length}`}</span>
-              <span id="broadcastsAccordionChevron" style="font-size:15px; color:var(--text-muted); transition:transform 0.2s ease;">▾</span>
-            </div>
-          </div>
-          <div id="broadcastsAccordionBody" style="display:${unreadBroadcastCount > 0 || (standardBroadcasts.length > 0 && countdownAlerts.length === 0) ? 'block' : 'none'}; padding:0 14px 14px 14px; max-height:260px; overflow-y:auto;">
-            <div style="display:flex; flex-direction:column; gap:8px; border-top:1px solid rgba(255,255,255,0.06); padding-top:10px;">
-              ${bCards}
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
-    // Linked Alts Token Breakdown Section
-    let altsSectionHtml = '';
-    const rawAlts = currentUser.linkedGameIds ? (Array.isArray(currentUser.linkedGameIds) ? currentUser.linkedGameIds : Object.values(currentUser.linkedGameIds)) : [];
-    
-    let unSyncedAltsCount = 0;
-    let syncedAltsCount = 0;
-
-    const processedAlts = rawAlts.map(agid => {
-      const aTok = currentUser.altTokens ? currentUser.altTokens[agid] : null;
-      let aName = (typeof aTok === 'object' && aTok && aTok.nickname) ? aTok.nickname : ((window.idToNameMap && window.idToNameMap[agid]) || `Alt Chief ${agid}`);
-      let aLevel = (typeof aTok === 'object' && aTok && aTok.stove_lv) ? aTok.stove_lv : '';
-      let formattedLevel = aLevel ? (String(aLevel).toUpperCase().startsWith('FC') ? aLevel : `FC ${aLevel}`) : '';
-
-      const aStat = window.getAltTokenStatus(aTok);
-      let aStatus = aStat.status;
-      let aDays = aStat.daysLeft;
-      let aBadge = aStat.badge;
-
-      if (aStatus === 'active') {
-        syncedAltsCount++;
-      } else {
-        unSyncedAltsCount++;
-      }
-
-      return { agid, aName, formattedLevel, aStatus, aDays, aBadge };
-    });
-
-    if (rawAlts.length > 0 && unSyncedAltsCount > 0) {
-      const bannerBorder = 'rgba(245,158,11,0.35)';
-      const bannerBg = 'rgba(245,158,11,0.06)';
-      const bannerColor = '#f59e0b';
-      const bannerTitle = `🔗 Alt Accounts Un-Sync Status (${unSyncedAltsCount})`;
-      const bannerSubtitle = `${unSyncedAltsCount} of ${rawAlts.length} alts need setup/renewal • Tap to view & setup`;
-
-      const altRowsHtml = processedAlts.filter(alt => alt.aStatus !== 'active').map(alt => {
-        const actionBtn = `<button onclick="document.getElementById('notificationsModalOverlay').remove(); window.openAltVerifyModal('${alt.agid}');" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; border-radius:6px; padding:4px 10px; font-size:11.5px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px; box-shadow:0 2px 6px rgba(14,165,233,0.3);" title="Send in-game mailbox verification code">⚡ Setup / Renew</button>`;
-
-        return `
-          <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:9px 12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-            <div style="display:flex; align-items:center; gap:10px;">
-              <div style="width:30px; height:30px; border-radius:50%; background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.3); display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0;">🔗</div>
-              <div>
-                <div style="font-weight:bold; font-size:13px; color:var(--text-main); display:flex; align-items:center; gap:6px;">
-                  <span>${window.escapeHTML(alt.aName)}</span>
-                  ${alt.formattedLevel ? `<span style="font-size:10px; background:rgba(249,115,22,0.15); color:#f97316; border:1px solid rgba(249,115,22,0.4); padding:1px 6px; border-radius:8px; font-weight:bold;">🔥 ${window.escapeHTML(alt.formattedLevel)}</span>` : ''}
-                </div>
-                <div style="font-size:11px; color:var(--text-muted); font-family:monospace; margin-top:2px;">
-                  ID: ${alt.agid}
-                </div>
-              </div>
-            </div>
-            <div style="display:flex; align-items:center; gap:8px;">
-              ${alt.aBadge}
-              ${actionBtn}
-            </div>
-          </div>
-        `;
-      }).join('');
-
-      altsSectionHtml = `
-        <div style="background:${bannerBg}; border:1px solid ${bannerBorder}; border-radius:14px; margin-bottom:12px; overflow:hidden; transition:all 0.2s ease;">
-          <div id="altAccordionHeader" onclick="window.toggleAltAccordionBanner()" style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; cursor:pointer; user-select:none;">
-            <div>
-              <div style="font-size:13.5px; font-weight:bold; color:${bannerColor}; display:flex; align-items:center; gap:8px;">
-                <span>${bannerTitle}</span>
-              </div>
-              <div style="font-size:11.5px; color:var(--text-muted); margin-top:3px;">
-                ${bannerSubtitle}
-              </div>
-            </div>
-            <div style="display:flex; align-items:center; gap:8px;">
-              <button onclick="event.stopPropagation(); document.getElementById('notificationsModalOverlay').remove(); window.openAltManagerModal();" style="background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.4); color:#60a5fa; padding:4px 9px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;" title="Open Alt Manager">
-                ⚙️ Manage
-              </button>
-              <span id="altAccordionChevron" style="font-size:15px; color:var(--text-muted); transition:transform 0.2s ease;">▾</span>
-            </div>
-          </div>
-          <div id="altAccordionBody" style="display:none; padding:0 14px 14px 14px; max-height:220px; overflow-y:auto;">
-            <div style="display:flex; flex-direction:column; gap:8px; border-top:1px solid rgba(255,255,255,0.06); padding-top:10px;">
-              ${altRowsHtml}
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
-    let staffPlaceholderHtml = '';
-    if (isStaff && staffBroadcasts.length > 0) {
-      const staffBroadcastsCardsHtml = staffBroadcasts.map(b => {
-        const relTime = window.formatRelativeTime ? window.formatRelativeTime(b.timestamp) : '';
-        return `
-          <div style="background:rgba(15,23,42,0.7); border:1px solid rgba(168,85,247,0.35); border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; gap:4px;">
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
-              <div style="font-weight:bold; font-size:13.5px; color:#c084fc; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                <span>🛡️ ${window.escapeHTML(b.title || 'Staff Notice')}</span>
-                <span style="font-size:10px; background:rgba(168,85,247,0.2); color:#c084fc; border:1px solid rgba(168,85,247,0.4); padding:1px 6px; border-radius:8px; font-weight:bold;">STAFF ONLY</span>
-                ${b.priority === 'urgent' ? `<span style="font-size:10px; background:rgba(239,68,68,0.2); color:#ef4444; border:1px solid rgba(239,68,68,0.4); padding:1px 6px; border-radius:8px; font-weight:bold;">🚨 URGENT</span>` : ''}
-              </div>
-              <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
-                <span style="font-size:11px; color:var(--text-muted);">${relTime}</span>
-                <button onclick="event.stopPropagation(); window.deleteBroadcastAlert('${b.key}')" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; border-radius:6px; padding:2px 7px; font-size:11px; cursor:pointer;" title="Delete staff alert">
-                  🗑️
-                </button>
-              </div>
-            </div>
-            ${b.body ? `<div style="font-size:12.5px; color:var(--text-main); line-height:1.4; white-space:pre-wrap; margin-top:2px;">${window.escapeHTML(b.body)}</div>` : ''}
-            <div style="font-size:11px; color:var(--text-muted); margin-top:3px; display:flex; align-items:center; justify-content:space-between; gap:6px;">
-              <span>📢 Posted by ${window.escapeHTML(b.senderName || 'Leadership')}</span>
-            </div>
-          </div>
-        `;
-      }).join('');
-
-      staffPlaceholderHtml = `
-        <div id="staffAlertsContainer" style="background:rgba(168,85,247,0.06); border:1px solid rgba(168,85,247,0.25); border-radius:14px; margin-bottom:12px; overflow:hidden; transition:all 0.2s ease;">
-          <div id="staffAccordionHeader" onclick="window.toggleStaffAccordionBanner()" style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; cursor:pointer; user-select:none;">
-            <div>
-              <div style="font-size:13.5px; font-weight:bold; color:#c084fc; display:flex; align-items:center; gap:8px;">
-                <span id="staffAlertsTitle">🛡️ Staff Only (${staffBroadcasts.length})</span>
-              </div>
-              <div id="staffAlertsSubtitle" style="font-size:11.5px; color:var(--text-muted); margin-top:3px;">
-                Confidential leadership directives & alerts (R4/R5 only)
-              </div>
-            </div>
-            <div style="display:flex; align-items:center; gap:8px;">
-              <button onclick="event.stopPropagation(); window.openCreateCountdownAlertModal(null, 'staff');" style="background:linear-gradient(135deg, #a855f7, #6366f1); color:#fff; border:none; padding:3px 9px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:3px; box-shadow:0 2px 6px rgba(168,85,247,0.3);" title="Post a staff-only confidential alert">
-                ➕ Staff Alert
-              </button>
-              <span id="staffAlertsBadgeCount" style="background:rgba(168,85,247,0.2); color:#c084fc; border:1px solid rgba(168,85,247,0.4); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold;">${staffBroadcasts.length}</span>
-              <span id="staffAccordionChevron" style="font-size:15px; color:var(--text-muted); transition:transform 0.2s ease;">▾</span>
-            </div>
-          </div>
-          <div id="staffAccordionBody" style="display:none; padding:0 14px 14px 14px; max-height:260px; overflow-y:auto;">
-            <div style="display:flex; flex-direction:column; gap:8px; border-top:1px solid rgba(255,255,255,0.06); padding-top:10px;">
-              ${staffBroadcastsCardsHtml}
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
-    // 4. Feature Request & Bug Reports Section HTML (Only show if feedback posts exist)
-    let feedbackSectionHtml = '';
-    if (feedbackList.length > 0) {
-      const fCards = feedbackList.slice(0, 10).map(f => {
-        const isUnread = Boolean(f.createdAt && f.createdAt > lastSeenFeedback);
-        const relTime = window.formatRelativeTime ? window.formatRelativeTime(f.createdAt) : (window.formatTimeAgo ? window.formatTimeAgo(f.createdAt) : '');
-        const isFeat = f.type === 'feature';
-        const typeBadge = isFeat 
-          ? `<span style="background:rgba(6,182,212,0.18); border:1px solid rgba(6,182,212,0.4); color:#06b6d4; padding:2px 7px; border-radius:6px; font-size:10px; font-weight:800;">💡 FEATURE</span>`
-          : `<span style="background:rgba(239,68,68,0.18); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:2px 7px; border-radius:6px; font-size:10px; font-weight:800;">🐞 BUG</span>`;
-        
-        const isCompleted = f.status === 'completed';
-        const isInProgress = f.status === 'in_progress';
-        const statusBadge = isCompleted
-          ? `<span style="background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:1px 6px; border-radius:6px; font-size:9.5px; font-weight:bold;">✓ Done (Resolved)</span>`
-          : (isInProgress
-              ? `<span style="background:rgba(59,130,246,0.2); color:#3b82f6; border:1px solid rgba(59,130,246,0.4); padding:1px 6px; border-radius:6px; font-size:9.5px; font-weight:bold;">🔵 In Progress</span>`
-              : `<span style="background:rgba(234,179,8,0.15); color:#eab308; border:1px solid rgba(234,179,8,0.35); padding:1px 6px; border-radius:6px; font-size:9.5px; font-weight:bold;">🟡 Review</span>`);
-
-        const isMyTicket = currentUser && (
-          (currentUser.gameId && f.submittedBy?.gameId && String(currentUser.gameId).trim() === String(f.submittedBy.gameId).trim()) ||
-          (currentUser.name && f.submittedBy?.name && String(currentUser.name).trim().toLowerCase() === String(f.submittedBy.name).trim().toLowerCase())
-        );
-        const myTicketBadge = isMyTicket ? `<span style="font-size:9.5px; background:rgba(168,85,247,0.2); color:#c084fc; border:1px solid rgba(168,85,247,0.4); padding:1px 6px; border-radius:8px; font-weight:bold;">⭐ YOUR TICKET</span>` : '';
-
-        const adminNoteHtml = f.adminNote ? `
-          <div style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.3); border-radius:8px; padding:7px 10px; margin-top:4px;">
-            <div style="font-size:10.5px; font-weight:800; color:#10b981; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2px; display:flex; align-items:center; gap:4px;">
-              <span>💬 Developer Note</span>
-            </div>
-            <div style="font-size:12px; color:var(--text-main); line-height:1.4; white-space:pre-wrap;">${window.escapeHTML(f.adminNote)}</div>
-          </div>
-        ` : '';
-
-        return `
-          <div style="background:rgba(15,23,42,0.6); border:1px solid ${isUnread ? 'rgba(6,182,212,0.5)' : (isMyTicket ? 'rgba(168,85,247,0.35)' : 'rgba(255,255,255,0.08)')}; border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; gap:6px; position:relative;">
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap;">
-              <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; min-width:0;">
-                ${typeBadge}
-                <span style="font-size:10px; color:var(--text-muted); font-weight:bold; background:rgba(255,255,255,0.05); padding:1px 5px; border-radius:4px;">[${window.escapeHTML(f.category || 'General')}]</span>
-                ${statusBadge}
-                ${myTicketBadge}
-                ${isUnread ? `<span style="font-size:9.5px; background:rgba(6,182,212,0.2); color:#38bdf8; border:1px solid rgba(6,182,212,0.4); padding:1px 6px; border-radius:8px; font-weight:bold;">NEW</span>` : ''}
-              </div>
-              <span style="font-size:11px; color:var(--text-muted);">${relTime}</span>
-            </div>
-            <div style="font-weight:bold; font-size:13.5px; color:#fff; line-height:1.3;">
-              ${window.escapeHTML(f.title || 'Untitled Post')}
-            </div>
-            ${f.description ? `<div style="font-size:12px; color:var(--text-main); line-height:1.4; opacity:0.85; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${window.escapeHTML(f.description)}</div>` : ''}
-            ${adminNoteHtml}
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2px; padding-top:4px; border-top:1px solid rgba(255,255,255,0.04);">
-              <span style="font-size:11px; color:var(--text-muted);">👤 ${window.escapeHTML(f.submittedBy?.name || 'Chief')} • 👍 ${f.voteCount || 1}</span>
-              <div style="display:flex; align-items:center; gap:8px;">
-                ${f.imageUrl ? '<span style="font-size:11px; color:#38bdf8;">📷 Image</span>' : ''}
-                <button onclick="document.getElementById('notificationsModalOverlay').remove(); if(views.feedback) views.feedback();" style="background:linear-gradient(135deg, rgba(6,182,212,0.2), rgba(6,182,212,0.05)); border:1px solid rgba(6,182,212,0.4); color:#38bdf8; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
-                  🔍 View ➔
-                </button>
-              </div>
-            </div>
-          </div>
-        `;
-      }).join('');
-
-      feedbackSectionHtml = `
-        <div id="feedbackAlertsContainer" style="background:rgba(6,182,212,0.06); border:1px solid rgba(6,182,212,0.25); border-radius:14px; margin-bottom:12px; overflow:hidden; transition:all 0.2s ease;">
-          <div id="feedbackAccordionHeader" onclick="window.toggleFeedbackAccordionBanner()" style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; cursor:pointer; user-select:none;">
-            <div>
-              <div style="font-size:13.5px; font-weight:bold; color:#38bdf8; display:flex; align-items:center; gap:8px;">
-                <span>💡 Feature & Bug Tracker (${feedbackList.length})</span>
-              </div>
-              <div style="font-size:11.5px; color:var(--text-muted); margin-top:3px;">
-                Member suggestions, feature requests & bug reports
-              </div>
-            </div>
-            <div style="display:flex; align-items:center; gap:8px;">
-              <button onclick="event.stopPropagation(); document.getElementById('notificationsModalOverlay').remove(); if(views.feedback) views.feedback();" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:3px 9px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:3px; box-shadow:0 2px 6px rgba(14,165,233,0.3);" title="Open Feature & Bug Tracker">
-                ➕ Submit / View
-              </button>
-              <span style="background:rgba(6,182,212,0.2); color:#38bdf8; border:1px solid rgba(6,182,212,0.4); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold;">${unreadFeedbackCount > 0 ? `${unreadFeedbackCount} New` : `${feedbackList.length}`}</span>
-              <span id="feedbackAccordionChevron" style="font-size:15px; color:var(--text-muted); transition:transform 0.2s ease;">▾</span>
-            </div>
-          </div>
-          <div id="feedbackAccordionBody" style="display:${unreadFeedbackCount > 0 ? 'block' : 'none'}; padding:0 14px 14px 14px; max-height:260px; overflow-y:auto;">
-            <div style="display:flex; flex-direction:column; gap:8px; border-top:1px solid rgba(255,255,255,0.06); padding-top:10px;">
-              ${fCards}
-              <button onclick="document.getElementById('notificationsModalOverlay').remove(); if(views.feedback) views.feedback();" style="width:100%; text-align:center; background:rgba(6,182,212,0.1); border:1px solid rgba(6,182,212,0.3); color:#38bdf8; font-weight:bold; font-size:12px; padding:8px; border-radius:8px; cursor:pointer; margin-top:4px;">
-                🚀 Open Complete Tracker (${feedbackList.length} Submissions) ➔
-              </button>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
-    // Main Character Card HTML: ONLY show when action is required (expiring soon <=5d or expired)
-    let mainTokenHtml = '';
-    if (tokenStatus.alert) {
-      mainTokenHtml = `
-        <div style="background:${tokenStatus.status === 'expired' ? 'rgba(239,68,68,0.08)' : 'rgba(245,158,11,0.08)'}; border:1px solid ${tokenStatus.status === 'expired' ? 'rgba(239,68,68,0.35)' : 'rgba(245,158,11,0.35)'}; border-radius:14px; padding:12px 15px; margin-bottom:12px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-            <div style="display:flex; align-items:center; gap:10px;">
-              <span style="font-size:22px;">${tokenStatus.icon || '⚠️'}</span>
-              <div>
-                <div style="font-weight:bold; font-size:14px; color:${tokenStatus.color || '#f59e0b'}; display:flex; align-items:center; gap:6px;">
-                  <span>${tokenStatus.label || '30-Day Sync Expiring'}</span>
-                  ${currentUser.section ? `<span style="font-size:11px; opacity:0.8;">(#${currentUser.section})</span>` : ''}
-                </div>
-                <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
-                  ${tokenStatus.status === 'expired' ? 'Token expired • Verify in game to restore 30-day sync' : `Expires in ${tokenStatus.daysLeft}d • Renew in game (10s)`}
-                </div>
-              </div>
-            </div>
-            <div>
-              <button onclick="document.getElementById('notificationsModalOverlay').remove(); window.openAccountHubVerifyModal();" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:7px 13px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; box-shadow:0 2px 8px rgba(14,165,233,0.3); display:flex; align-items:center; gap:5px;">
-                🛡️ Verify in Game (10s)
-              </button>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
-    const hasImmediateAlerts = Boolean(
-      tokenStatus.alert || 
-      (rawAlts.length > 0 && unSyncedAltsCount > 0) || 
-      countdownAlerts.length > 0 || 
-      standardBroadcasts.length > 0 || 
-      (isStaff && staffBroadcasts.length > 0) || 
-      feedbackList.length > 0
-    );
-
-    let allCaughtUpHtml = !hasImmediateAlerts ? `
-      <div id="allCaughtUpNotice" style="text-align:center; padding:32px 16px; background:rgba(16,185,129,0.05); border:1px dashed rgba(16,185,129,0.3); border-radius:14px; margin-bottom:12px;">
-        <div style="font-size:36px; margin-bottom:8px;">🎉</div>
-        <div style="font-size:16px; font-weight:bold; color:#10b981; margin-bottom:4px;">All Caught Up!</div>
-        <div style="font-size:12.5px; color:var(--text-muted); line-height:1.4;">
-          You have no pending alerts, announcements, or un-synced tokens right now.
-        </div>
-      </div>
-    ` : '';
+    const overlay = document.createElement('div');
+    overlay.id = 'notificationsModalOverlay';
+    overlay.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.85); backdrop-filter:blur(10px); z-index:99999; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease;';
 
     overlay.innerHTML = `
-      <div class="card" style="width:94%; max-width:540px; max-height:88vh; background:linear-gradient(145deg, rgba(15,23,42,0.96), rgba(30,41,59,0.94)); border:1px solid rgba(56,189,248,0.35); padding:20px; border-radius:18px; box-shadow:0 25px 60px rgba(0,0,0,0.7); text-align:left; animation:zoomIn 0.2s forwards; overflow-y:auto; color:var(--text-main);">
+      <div class="card" style="width:95%; max-width:580px; max-height:88vh; background:linear-gradient(145deg, rgba(15,23,42,0.97), rgba(30,41,59,0.95)); border:1px solid rgba(56,189,248,0.35); padding:18px; border-radius:18px; box-shadow:0 25px 60px rgba(0,0,0,0.75); text-align:left; animation:zoomIn 0.2s forwards; display:flex; flex-direction:column; color:var(--text-main); overflow:hidden;">
         
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:12px; gap:8px;">
+        <!-- Header -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:12px; gap:8px;">
           <div style="display:flex; align-items:center; gap:10px; min-width:0;">
-            <span style="font-size:20px; flex-shrink:0;">🔔</span>
+            <span style="font-size:22px; flex-shrink:0;">🔔</span>
             <div style="min-width:0;">
               <h3 style="margin:0; color:#fff; font-size:16.5px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Alliance Notifications & Alerts</h3>
-              <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">Status for Chief <strong>${window.escapeHTML(chiefName)}</strong> (ID: ${currentUser ? (currentUser.gameId || 'N/A') : 'N/A'})</div>
+              <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">Chief <strong>${window.escapeHTML(chiefName)}</strong> (ID: ${currentUser ? (currentUser.gameId || 'N/A') : 'N/A'})</div>
             </div>
           </div>
           <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
@@ -13520,43 +13378,45 @@ window.openAllianceAlertsModal = async () => {
           </div>
         </div>
 
-        <!-- Spotlight Scheduled Countdown Alerts Section -->
-        ${spotlightSectionHtml}
+        <!-- Top Filter Tabs Bar -->
+        <div id="bellFilterTabsBar" style="display:flex; align-items:center; gap:6px; overflow-x:auto; padding-bottom:10px; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.06); scrollbar-width:none;">
+          <button onclick="window.filterBellStream('all')" class="bell-filter-tab active" data-filter="all" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:5px 11px; border-radius:18px; font-size:11px; font-weight:bold; cursor:pointer; white-space:nowrap; transition:all 0.15s ease; box-shadow:0 2px 6px rgba(14,165,233,0.3);">
+            📋 All (${countAll})
+          </button>
+          <button onclick="window.filterBellStream('timers')" class="bell-filter-tab" data-filter="timers" style="background:rgba(255,255,255,0.06); color:var(--text-main); border:1px solid rgba(255,255,255,0.12); padding:5px 11px; border-radius:18px; font-size:11px; font-weight:bold; cursor:pointer; white-space:nowrap; transition:all 0.15s ease;">
+            ⚡ Timers (${countTimers})
+          </button>
+          <button onclick="window.filterBellStream('broadcasts')" class="bell-filter-tab" data-filter="broadcasts" style="background:rgba(255,255,255,0.06); color:var(--text-main); border:1px solid rgba(255,255,255,0.12); padding:5px 11px; border-radius:18px; font-size:11px; font-weight:bold; cursor:pointer; white-space:nowrap; transition:all 0.15s ease;">
+            📢 News (${countBroadcasts})
+          </button>
+          <button onclick="window.filterBellStream('tokens')" class="bell-filter-tab" data-filter="tokens" style="background:rgba(255,255,255,0.06); color:var(--text-main); border:1px solid rgba(255,255,255,0.12); padding:5px 11px; border-radius:18px; font-size:11px; font-weight:bold; cursor:pointer; white-space:nowrap; transition:all 0.15s ease;">
+            🛡️ Tokens (${countTokens})
+          </button>
+          <button onclick="window.filterBellStream('tickets')" class="bell-filter-tab" data-filter="tickets" style="background:rgba(255,255,255,0.06); color:var(--text-main); border:1px solid rgba(255,255,255,0.12); padding:5px 11px; border-radius:18px; font-size:11px; font-weight:bold; cursor:pointer; white-space:nowrap; transition:all 0.15s ease;">
+            💡 Tickets (${countTickets})
+          </button>
+          ${isStaff ? `
+            <button onclick="window.filterBellStream('staff')" class="bell-filter-tab" data-filter="staff" style="background:rgba(168,85,247,0.12); color:#c084fc; border:1px solid rgba(168,85,247,0.3); padding:5px 11px; border-radius:18px; font-size:11px; font-weight:bold; cursor:pointer; white-space:nowrap; transition:all 0.15s ease;">
+              👑 Staff (${countStaff})
+            </button>
+          ` : ''}
+        </div>
 
-        ${countdownAlerts.length > 0 && (standardBroadcasts.length > 0 || tokenStatus.alert || (rawAlts.length > 0 && unSyncedAltsCount > 0) || (isStaff && staffBroadcasts.length > 0) || feedbackList.length > 0) ? `
-          <!-- Visual Section Divider -->
-          <div style="display:flex; align-items:center; gap:12px; margin:16px 0 14px 0;">
-            <div style="flex:1; height:1px; background:rgba(255,255,255,0.08);"></div>
-            <span style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; display:flex; align-items:center; gap:5px;">
-              📢 Alliance Announcements & Updates
-            </span>
-            <div style="flex:1; height:1px; background:rgba(255,255,255,0.08);"></div>
-          </div>
-        ` : ''}
+        <!-- Scrollable Unified Stream Feed -->
+        <div id="bellStreamFeedContainer" style="display:flex; flex-direction:column; gap:10px; overflow-y:auto; flex:1; max-height:58vh; padding-right:4px;">
+          ${streamFeedHtml}
+        </div>
 
-        <!-- Main Character Status Card (Only if Action Required) -->
-        ${mainTokenHtml}
-
-        <!-- Collapsible Linked Alts Section (Only if un-synced) -->
-        ${altsSectionHtml}
-
-        <!-- Broadcast Announcements Section -->
-        ${broadcastsSectionHtml}
-
-        <!-- Feature Requests & Bug Reports Section -->
-        ${feedbackSectionHtml}
-
-        <!-- Collapsible Staff Section (For Staff) -->
-        ${staffPlaceholderHtml}
-
-        <!-- All Caught Up (if no alerts) -->
-        ${allCaughtUpHtml}
-
-        <div style="display:flex; justify-content:flex-end; align-items:center; margin-top:16px;">
-          <button onclick="document.getElementById('notificationsModalOverlay').remove()" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#cbd5e1; padding:8px 22px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12.5px; transition:0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">
+        <!-- Bottom Action Bar -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.08); flex-wrap:wrap; gap:8px;">
+          <button onclick="window.markAllBellAlertsRead()" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:var(--text-muted); padding:6px 14px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:11.5px; transition:0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.12)'; this.style.color='#fff';" onmouseout="this.style.background='rgba(255,255,255,0.06)'; this.style.color='var(--text-muted)';">
+            🧹 Mark All as Read
+          </button>
+          <button onclick="document.getElementById('notificationsModalOverlay').remove()" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); border:none; color:#fff; padding:7px 20px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12px; box-shadow:0 2px 8px rgba(14,165,233,0.3); transition:0.2s;">
             Close
           </button>
         </div>
+
       </div>
     `;
 
@@ -13586,6 +13446,60 @@ window.openAllianceAlertsModal = async () => {
   } catch(err) {
     console.error("Error in openAllianceAlertsModal:", err);
   }
+};
+
+window.filterBellStream = (category) => {
+  const tabs = document.querySelectorAll('.bell-filter-tab');
+  tabs.forEach(tab => {
+    const isTarget = tab.getAttribute('data-filter') === category;
+    if (isTarget) {
+      tab.style.background = 'linear-gradient(135deg, #0ea5e9, #0284c7)';
+      tab.style.color = '#fff';
+      tab.style.border = 'none';
+      tab.style.boxShadow = '0 2px 6px rgba(14,165,233,0.3)';
+    } else {
+      tab.style.background = 'rgba(255,255,255,0.06)';
+      tab.style.color = 'var(--text-main)';
+      tab.style.border = '1px solid rgba(255,255,255,0.12)';
+      tab.style.boxShadow = 'none';
+    }
+  });
+
+  const cards = document.querySelectorAll('.bell-stream-card');
+  let visibleCount = 0;
+  cards.forEach(card => {
+    const cardCat = card.getAttribute('data-category');
+    if (category === 'all' || cardCat === category) {
+      card.style.display = 'flex';
+      visibleCount++;
+    } else {
+      card.style.display = 'none';
+    }
+  });
+
+  let emptyMsg = document.getElementById('bellStreamTabEmpty');
+  if (visibleCount === 0 && cards.length > 0) {
+    if (!emptyMsg) {
+      emptyMsg = document.createElement('div');
+      emptyMsg.id = 'bellStreamTabEmpty';
+      emptyMsg.style.cssText = 'text-align:center; padding:28px 16px; color:var(--text-muted); font-size:12.5px; font-style:italic;';
+      emptyMsg.textContent = 'No notifications found under this filter.';
+      const container = document.getElementById('bellStreamFeedContainer');
+      if (container) container.appendChild(emptyMsg);
+    }
+  } else if (emptyMsg) {
+    emptyMsg.remove();
+  }
+};
+
+window.markAllBellAlertsRead = () => {
+  localStorage.setItem('last_seen_broadcast_timestamp', String(Date.now()));
+  localStorage.setItem('last_seen_feedback_timestamp', String(Date.now()));
+  if (typeof window.updateNewMemberBadge === 'function') window.updateNewMemberBadge();
+  document.querySelectorAll('.bell-stream-card span').forEach(el => {
+    if (el.textContent.trim() === 'NEW') el.remove();
+  });
+  if (window.showToast) window.showToast("✓ All notifications marked as read!", "success");
 };
 
 window.toggleHeaderStaffDropdown = (e) => {
@@ -13622,42 +13536,6 @@ window.closeHeaderPushDropdown = () => {
   const chevron = document.getElementById('headerPushChevron');
   if (dd) dd.style.display = 'none';
   if (chevron) chevron.style.transform = 'rotate(0deg)';
-};
-
-window.toggleBroadcastsAccordionBanner = () => {
-  const body = document.getElementById('broadcastsAccordionBody');
-  const chevron = document.getElementById('broadcastsAccordionChevron');
-  if (!body) return;
-  const isHidden = (body.style.display === 'none' || !body.style.display);
-  body.style.display = isHidden ? 'block' : 'none';
-  if (chevron) chevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
-};
-
-window.toggleAltAccordionBanner = () => {
-  const body = document.getElementById('altAccordionBody');
-  const chevron = document.getElementById('altAccordionChevron');
-  if (!body) return;
-  const isHidden = (body.style.display === 'none' || !body.style.display);
-  body.style.display = isHidden ? 'block' : 'none';
-  if (chevron) chevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
-};
-
-window.toggleStaffAccordionBanner = () => {
-  const body = document.getElementById('staffAccordionBody');
-  const chevron = document.getElementById('staffAccordionChevron');
-  if (!body) return;
-  const isHidden = (body.style.display === 'none' || !body.style.display);
-  body.style.display = isHidden ? 'block' : 'none';
-  if (chevron) chevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
-};
-
-window.toggleFeedbackAccordionBanner = () => {
-  const body = document.getElementById('feedbackAccordionBody');
-  const chevron = document.getElementById('feedbackAccordionChevron');
-  if (!body) return;
-  const isHidden = (body.style.display === 'none' || !body.style.display);
-  body.style.display = isHidden ? 'block' : 'none';
-  if (chevron) chevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
 };
 
 window.openNewMembersModal = window.openAllianceAlertsModal;
