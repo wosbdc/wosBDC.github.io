@@ -143,7 +143,19 @@ async function testOrRedeemCenturyCode(roleId, cdk, kid = DEFAULT_KID) {
       body: formBody
     });
 
-    const json = JSON.parse(res.body || '{}');
+    let json = {};
+    const rawBody = (res.body || '').trim();
+
+    if (rawBody.startsWith('<') || res.status === 429 || res.status === 403) {
+      return { success: false, status: 'rate_limited', msg: 'Game server returned rate-limit or HTML block' };
+    }
+
+    try {
+      json = JSON.parse(rawBody || '{}');
+    } catch(parseErr) {
+      return { success: false, status: 'rate_limited', msg: 'Non-JSON API response' };
+    }
+
     const msg = (json.msg || '').toLowerCase();
 
     if (json.code === 0 || json.status === 'success') {
@@ -152,7 +164,7 @@ async function testOrRedeemCenturyCode(roleId, cdk, kid = DEFAULT_KID) {
     if (msg.includes('already') || msg.includes('received') || msg.includes('has been claimed') || json.code === 20002) {
       return { success: true, status: 'already_claimed', msg: json.msg || 'Already claimed' };
     }
-    if (msg.includes('expired') || msg.includes('not exist') || msg.includes('does not exist') || msg.includes('not found') || msg.includes('cdk not found') || json.code === 20001 || json.code === 20005 || json.code === 40008) {
+    if (msg.includes('expired') || msg.includes('not exist') || msg.includes('does not exist') || msg.includes('not found') || msg.includes('cdk not found') || msg.includes('time error') || json.code === 20001 || json.code === 20005 || json.code === 40005 || json.code === 40008) {
       return { success: false, status: 'expired', msg: json.msg || 'Expired or invalid code' };
     }
     if (msg.includes('too frequent') || json.code === 40007) {
@@ -200,10 +212,12 @@ async function scrapeCandidateCodes() {
       const res = await fetchUrl(src.url);
       if (res.status !== 200 || !res.body) continue;
 
-      // Specialized parser for WosRewards.com
+      let targetHtml = res.body;
+
+      // 1. Specialized parser for WosRewards.com
       if (src.name === 'WosRewards' || src.url.includes('wosrewards.com')) {
         const activeMatch = res.body.match(/Active Codes<\/div>([\s\S]*?)<details/i);
-        const targetHtml = activeMatch ? activeMatch[1] : res.body;
+        if (activeMatch) targetHtml = activeMatch[1];
         const codeRegex = /data-code="([^"]+)"/g;
         let m;
         while ((m = codeRegex.exec(targetHtml)) !== null) {
@@ -214,18 +228,37 @@ async function scrapeCandidateCodes() {
         }
       }
 
-      // Extract uppercase words or alphanumeric tokens inside strong, code, b, td tags
+      // 2. Specialized parser for PocketTactics
+      else if (src.name === 'PocketTactics' || src.url.includes('pockettactics.com')) {
+        const activeMatch = res.body.split(/active\s+whiteout\s+survival\s+codes/i)[1]?.split(/expired\s+whiteout\s+survival\s+codes/i)[0];
+        if (activeMatch) targetHtml = activeMatch;
+      }
+
+      // 3. Specialized parser for TouchTapPlay
+      else if (src.name === 'TouchTapPlay' || src.url.includes('touchtapplay.com')) {
+        const activeMatch = res.body.split(/Codes\s*\(\s*Active\s*\)/i)[1]?.split(/Codes\s*\(\s*Expired\s*\)/i)[0];
+        if (activeMatch) targetHtml = activeMatch;
+      }
+
+      // 4. Specialized parser for Beebom
+      else if (src.name === 'Beebom' || src.url.includes('beebom.com')) {
+        const activeMatch = res.body.split(/working\s+(?:whiteout\s+survival\s+)?codes/i)[1]?.split(/expired\s+(?:whiteout\s+survival\s+)?codes/i)[0];
+        if (activeMatch) targetHtml = activeMatch;
+      }
+
+      // Extract alphanumeric tokens inside strong, code, b, td, li tags
       const patterns = [
-        /<(?:strong|b|code)[^>]*>\s*([A-Za-z0-9_]{4,20})\s*<\/(?:strong|b|code)>/gi,
+        /<(?:strong|b|code|li)[^>]*>\s*([A-Za-z0-9_]{4,20})\s*<\/(?:strong|b|code|li)>/gi,
         /<td[^>]*>\s*([A-Za-z0-9_]{4,20})\s*<\/td>/gi,
         /(?:code|cdk|coupon|gift)[:\s]+([A-Za-z0-9_]{4,20})/gi
       ];
 
       for (const pattern of patterns) {
         let match;
-        while ((match = pattern.exec(res.body)) !== null) {
-          const raw = match[1].trim().toUpperCase();
-          if (raw.length >= 4 && raw.length <= 20 && !IGNORED_WORDS.has(raw) && !/^\d+$/.test(raw)) {
+        while ((match = pattern.exec(targetHtml)) !== null) {
+          const raw = match[1].trim();
+          const upper = raw.toUpperCase();
+          if (raw.length >= 4 && raw.length <= 20 && !IGNORED_WORDS.has(upper) && !/^\d+$/.test(raw)) {
             candidateCodes.add(raw);
           }
         }
