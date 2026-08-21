@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.0.7] - 2026-08-21
+- 🏷️ **thadwarf Normalization**: Cleaned duplicate Thadwarf and synced server name.
+- 📊 **Accurate Rankings**: Showdown totals now cleanly show single thadwarf.
+
 ## [3.0.6] - 2026-08-21
 - ⚔️ **Showdown Auto-Save**: Real-time Firebase auto-save on score input.
 - ⚡ **Live Sync Status**: Instant visual feedback indicators on every edit.
