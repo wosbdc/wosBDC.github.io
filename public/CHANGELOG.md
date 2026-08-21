@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [2.9.94] - 2026-08-20
+- 💡 **Dynamic Tabs**: Filter tabs only show when active alerts exist.
+
 ## [2.9.93] - 2026-08-20
 - 🛡️ **Renamed Tab**: Changed 'Tokens' filter tab to compact 'Sync'.
 

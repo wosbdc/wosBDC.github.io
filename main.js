@@ -13379,29 +13379,39 @@ window.openAllianceAlertsModal = async () => {
           </div>
         </div>
 
-        <!-- Top Filter Tabs Bar -->
-        <div id="bellFilterTabsBar" style="display:flex; align-items:center; gap:6px; overflow-x:auto; padding-bottom:10px; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.06); scrollbar-width:none;">
-          <button onclick="window.filterBellStream('all')" class="bell-filter-tab active" data-filter="all" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:5px 11px; border-radius:18px; font-size:11px; font-weight:bold; cursor:pointer; white-space:nowrap; transition:all 0.15s ease; box-shadow:0 2px 6px rgba(14,165,233,0.3);">
-            📋 All (${countAll})
-          </button>
-          <button onclick="window.filterBellStream('timers')" class="bell-filter-tab" data-filter="timers" style="background:rgba(255,255,255,0.06); color:var(--text-main); border:1px solid rgba(255,255,255,0.12); padding:5px 11px; border-radius:18px; font-size:11px; font-weight:bold; cursor:pointer; white-space:nowrap; transition:all 0.15s ease;">
-            ⚡ Timers (${countTimers})
-          </button>
-          <button onclick="window.filterBellStream('broadcasts')" class="bell-filter-tab" data-filter="broadcasts" style="background:rgba(255,255,255,0.06); color:var(--text-main); border:1px solid rgba(255,255,255,0.12); padding:5px 11px; border-radius:18px; font-size:11px; font-weight:bold; cursor:pointer; white-space:nowrap; transition:all 0.15s ease;">
-            📢 News (${countBroadcasts})
-          </button>
-          <button onclick="window.filterBellStream('tokens')" class="bell-filter-tab" data-filter="tokens" style="background:rgba(255,255,255,0.06); color:var(--text-main); border:1px solid rgba(255,255,255,0.12); padding:5px 11px; border-radius:18px; font-size:11px; font-weight:bold; cursor:pointer; white-space:nowrap; transition:all 0.15s ease;">
-            🛡️ Sync (${countTokens})
-          </button>
-          <button onclick="window.filterBellStream('tickets')" class="bell-filter-tab" data-filter="tickets" style="background:rgba(255,255,255,0.06); color:var(--text-main); border:1px solid rgba(255,255,255,0.12); padding:5px 11px; border-radius:18px; font-size:11px; font-weight:bold; cursor:pointer; white-space:nowrap; transition:all 0.15s ease;">
-            💡 Tickets (${countTickets})
-          </button>
-          ${isStaff ? `
-            <button onclick="window.filterBellStream('staff')" class="bell-filter-tab" data-filter="staff" style="background:rgba(168,85,247,0.12); color:#c084fc; border:1px solid rgba(168,85,247,0.3); padding:5px 11px; border-radius:18px; font-size:11px; font-weight:bold; cursor:pointer; white-space:nowrap; transition:all 0.15s ease;">
-              👑 Staff (${countStaff})
+        <!-- Top Filter Tabs Bar (Only renders categories with active items) -->
+        ${countAll > 0 ? `
+          <div id="bellFilterTabsBar" style="display:flex; align-items:center; gap:6px; overflow-x:auto; padding-bottom:10px; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.06); scrollbar-width:none;">
+            <button onclick="window.filterBellStream('all')" class="bell-filter-tab active" data-filter="all" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:5px 11px; border-radius:18px; font-size:11px; font-weight:bold; cursor:pointer; white-space:nowrap; transition:all 0.15s ease; box-shadow:0 2px 6px rgba(14,165,233,0.3);">
+              📋 All (${countAll})
             </button>
-          ` : ''}
-        </div>
+            ${countTimers > 0 ? `
+              <button onclick="window.filterBellStream('timers')" class="bell-filter-tab" data-filter="timers" style="background:rgba(255,255,255,0.06); color:var(--text-main); border:1px solid rgba(255,255,255,0.12); padding:5px 11px; border-radius:18px; font-size:11px; font-weight:bold; cursor:pointer; white-space:nowrap; transition:all 0.15s ease;">
+                ⚡ Timers (${countTimers})
+              </button>
+            ` : ''}
+            ${countBroadcasts > 0 ? `
+              <button onclick="window.filterBellStream('broadcasts')" class="bell-filter-tab" data-filter="broadcasts" style="background:rgba(255,255,255,0.06); color:var(--text-main); border:1px solid rgba(255,255,255,0.12); padding:5px 11px; border-radius:18px; font-size:11px; font-weight:bold; cursor:pointer; white-space:nowrap; transition:all 0.15s ease;">
+                📢 News (${countBroadcasts})
+              </button>
+            ` : ''}
+            ${countTokens > 0 ? `
+              <button onclick="window.filterBellStream('tokens')" class="bell-filter-tab" data-filter="tokens" style="background:rgba(255,255,255,0.06); color:var(--text-main); border:1px solid rgba(255,255,255,0.12); padding:5px 11px; border-radius:18px; font-size:11px; font-weight:bold; cursor:pointer; white-space:nowrap; transition:all 0.15s ease;">
+                🛡️ Sync (${countTokens})
+              </button>
+            ` : ''}
+            ${countTickets > 0 ? `
+              <button onclick="window.filterBellStream('tickets')" class="bell-filter-tab" data-filter="tickets" style="background:rgba(255,255,255,0.06); color:var(--text-main); border:1px solid rgba(255,255,255,0.12); padding:5px 11px; border-radius:18px; font-size:11px; font-weight:bold; cursor:pointer; white-space:nowrap; transition:all 0.15s ease;">
+                💡 Tickets (${countTickets})
+              </button>
+            ` : ''}
+            ${(isStaff && countStaff > 0) ? `
+              <button onclick="window.filterBellStream('staff')" class="bell-filter-tab" data-filter="staff" style="background:rgba(168,85,247,0.12); color:#c084fc; border:1px solid rgba(168,85,247,0.3); padding:5px 11px; border-radius:18px; font-size:11px; font-weight:bold; cursor:pointer; white-space:nowrap; transition:all 0.15s ease;">
+                👑 Staff (${countStaff})
+              </button>
+            ` : ''}
+          </div>
+        ` : ''}
 
         <!-- Scrollable Unified Stream Feed -->
         <div id="bellStreamFeedContainer" style="display:flex; flex-direction:column; gap:10px; overflow-y:auto; flex:1; max-height:58vh; padding-right:4px;">
