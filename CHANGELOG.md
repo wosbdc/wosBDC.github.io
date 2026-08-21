@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [2.9.99] - 2026-08-20
+- 🔴 **Expired Timer Styling**: Render expired timer status in bold alert red.
+
 ## [2.9.98] - 2026-08-20
 - 🕒 **Live Time Preview**: Real-time UTC to local time conversion in alert modal.
 
