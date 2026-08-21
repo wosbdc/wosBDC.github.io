@@ -14528,16 +14528,38 @@ window.openAllianceAlertsModal = async () => {
       }
     }
 
-    const headerShieldBtnHtml = `
-      <button onclick="window.openPersonalShieldModal()" style="background:${isShieldActive ? 'rgba(16,185,129,0.14)' : 'rgba(56,189,248,0.12)'}; border:1px solid ${isShieldActive ? 'rgba(16,185,129,0.45)' : 'rgba(56,189,248,0.4)'}; color:${isShieldActive ? '#10b981' : '#38bdf8'}; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px; box-shadow:0 0 10px ${isShieldActive ? 'rgba(16,185,129,0.2)' : 'transparent'}; transition:all 0.2s ease;" title="Set Personal Shield & Defense Warning Timer">
-        <span>🛡️ ${isShieldActive ? 'Shield Active' : 'Shield Timer'}</span>
-      </button>
-    `;
-
-    const headerAutoJoinBtnHtml = `
-      <button onclick="window.openAutoJoinModal()" style="background:${isAutoJoinActive ? 'rgba(56,189,248,0.18)' : 'rgba(255,255,255,0.06)'}; border:1px solid ${isAutoJoinActive ? 'rgba(56,189,248,0.5)' : 'rgba(255,255,255,0.15)'}; color:${isAutoJoinActive ? '#38bdf8' : 'var(--text-muted)'}; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px; box-shadow:0 0 10px ${isAutoJoinActive ? 'rgba(56,189,248,0.25)' : 'transparent'}; transition:all 0.2s ease;" title="Set Rally Auto-Join Renewal Reminder Timer">
-        <span>⚔️ ${isAutoJoinActive ? 'Auto-Join Active' : 'Auto-Join Timer'}</span>
-      </button>
+    // Combined Timers Pill Dropdown (Personal Shield & Auto-Join Renewal)
+    const activeTimersCount = (isShieldActive ? 1 : 0) + (isAutoJoinActive ? 1 : 0);
+    const timersPillLabel = activeTimersCount > 0 
+      ? `⏱️ Timers (${activeTimersCount} Active 🟢)` 
+      : `⏱️ Timers`;
+    
+    const headerTimersDropdownHtml = `
+      <div style="position:relative; display:inline-block;">
+        <button id="modalHeaderTimersBtn" onclick="window.toggleHeaderTimersDropdown(event)" style="background:${activeTimersCount > 0 ? 'rgba(16,185,129,0.14)' : 'rgba(255,255,255,0.06)'}; border:1px solid ${activeTimersCount > 0 ? 'rgba(16,185,129,0.45)' : 'rgba(255,255,255,0.15)'}; color:${activeTimersCount > 0 ? '#10b981' : 'var(--text-main)'}; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:5px; box-shadow:0 0 10px ${activeTimersCount > 0 ? 'rgba(16,185,129,0.2)' : 'transparent'}; transition:all 0.2s ease;" title="Manage Shield & Auto-Join Timers">
+          <span>${timersPillLabel}</span>
+          <span id="headerTimersChevron" style="font-size:9px; opacity:0.8; transition:transform 0.2s ease;">▾</span>
+        </button>
+        <div id="headerTimersDropdown" style="display:none; position:absolute; left:0; top:calc(100% + 6px); width:235px; background:rgba(15,23,42,0.98); border:1px solid rgba(56,189,248,0.3); border-radius:12px; box-shadow:0 14px 35px rgba(0,0,0,0.85); z-index:10000; padding:6px; backdrop-filter:blur(14px); animation:fadeIn 0.15s ease;">
+          <div style="padding:6px 8px; font-size:10px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid rgba(255,255,255,0.06); margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
+            <span>⏱️ Custom Timers</span>
+            <span style="font-size:9.5px; color:${activeTimersCount > 0 ? '#10b981' : 'var(--text-muted)'}; font-weight:bold;">${activeTimersCount > 0 ? `${activeTimersCount} Running 🟢` : 'Idle'}</span>
+          </div>
+          <button onclick="window.openPersonalShieldModal(); window.closeHeaderTimersDropdown();" style="width:100%; text-align:left; background:transparent; border:none; color:#fff; padding:7px 9px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:space-between; transition:0.15s;" onmouseover="this.style.background='rgba(56,189,248,0.12)'" onmouseout="this.style.background='transparent'">
+            <span style="display:flex; align-items:center; gap:6px;">🛡️ Shield Timer</span>
+            ${isShieldActive ? `<span style="font-size:10px; color:#10b981; font-family:monospace;">${window.formatCountdownTimeRemaining(shieldRemainingMs)}</span>` : `<span style="font-size:10px; color:var(--text-muted);">Set ➔</span>`}
+          </button>
+          <button onclick="window.openAutoJoinModal(); window.closeHeaderTimersDropdown();" style="width:100%; text-align:left; background:transparent; border:none; color:#fff; padding:7px 9px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:space-between; transition:0.15s;" onmouseover="this.style.background='rgba(56,189,248,0.12)'" onmouseout="this.style.background='transparent'">
+            <span style="display:flex; align-items:center; gap:6px;">⚔️ Auto-Join Timer</span>
+            ${isAutoJoinActive ? `<span style="font-size:10px; color:#38bdf8; font-family:monospace;">${window.formatCountdownTimeRemaining(autoJoinRemainingMs)}</span>` : `<span style="font-size:10px; color:var(--text-muted);">Set 8h ➔</span>`}
+          </button>
+          <div style="border-top:1px solid rgba(255,255,255,0.06); margin-top:4px; padding-top:4px;">
+            <button onclick="window.openTimerPreferencesModal(); window.closeHeaderTimersDropdown();" style="width:100%; text-align:left; background:transparent; border:none; color:var(--text-muted); padding:6px 9px; border-radius:6px; font-size:11.5px; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
+              ⚙️ Alert Timing & Sounds
+            </button>
+          </div>
+        </div>
+      </div>
     `;
 
     const overlay = document.createElement('div');
@@ -14562,8 +14584,7 @@ window.openAllianceAlertsModal = async () => {
 
           <!-- Action Pills Bar -->
           <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-            ${headerShieldBtnHtml}
-            ${headerAutoJoinBtnHtml}
+            ${headerTimersDropdownHtml}
             ${headerStaffToolsPillHtml}
             ${headerPushPillHtml}
           </div>
@@ -14643,6 +14664,12 @@ window.openAllianceAlertsModal = async () => {
       if (sdd && sdd.style.display === 'block' && !sdd.contains(e.target) && (!sbtn || !sbtn.contains(e.target))) {
         window.closeHeaderStaffDropdown();
       }
+
+      const tdd = document.getElementById('headerTimersDropdown');
+      const tbtn = document.getElementById('modalHeaderTimersBtn');
+      if (tdd && tdd.style.display === 'block' && !tdd.contains(e.target) && (!tbtn || !tbtn.contains(e.target))) {
+        window.closeHeaderTimersDropdown();
+      }
     });
   } catch(err) {
     console.error("Error in openAllianceAlertsModal:", err);
@@ -14711,7 +14738,10 @@ window.toggleHeaderStaffDropdown = (e) => {
   const isHidden = (dd.style.display === 'none' || !dd.style.display);
   dd.style.display = isHidden ? 'block' : 'none';
   if (chevron) chevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
-  if (isHidden) window.closeHeaderPushDropdown();
+  if (isHidden) {
+    window.closeHeaderPushDropdown();
+    window.closeHeaderTimersDropdown();
+  }
 };
 
 window.closeHeaderStaffDropdown = () => {
@@ -14729,12 +14759,36 @@ window.toggleHeaderPushDropdown = (e) => {
   const isHidden = (dd.style.display === 'none' || !dd.style.display);
   dd.style.display = isHidden ? 'block' : 'none';
   if (chevron) chevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
-  if (isHidden) window.closeHeaderStaffDropdown();
+  if (isHidden) {
+    window.closeHeaderStaffDropdown();
+    window.closeHeaderTimersDropdown();
+  }
 };
 
 window.closeHeaderPushDropdown = () => {
   const dd = document.getElementById('headerPushDropdown');
   const chevron = document.getElementById('headerPushChevron');
+  if (dd) dd.style.display = 'none';
+  if (chevron) chevron.style.transform = 'rotate(0deg)';
+};
+
+window.toggleHeaderTimersDropdown = (e) => {
+  if (e) e.stopPropagation();
+  const dd = document.getElementById('headerTimersDropdown');
+  const chevron = document.getElementById('headerTimersChevron');
+  if (!dd) return;
+  const isHidden = (dd.style.display === 'none' || !dd.style.display);
+  dd.style.display = isHidden ? 'block' : 'none';
+  if (chevron) chevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+  if (isHidden) {
+    window.closeHeaderPushDropdown();
+    window.closeHeaderStaffDropdown();
+  }
+};
+
+window.closeHeaderTimersDropdown = () => {
+  const dd = document.getElementById('headerTimersDropdown');
+  const chevron = document.getElementById('headerTimersChevron');
   if (dd) dd.style.display = 'none';
   if (chevron) chevron.style.transform = 'rotate(0deg)';
 };
