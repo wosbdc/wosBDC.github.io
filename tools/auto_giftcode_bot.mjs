@@ -296,9 +296,13 @@ export async function runAutoGiftCodeSweep() {
     console.log(`\n🧪 [Testing Candidate] [${code}] against Century Games API...`);
     let testRes = await testOrRedeemCenturyCode(TEST_PLAYER_ID, code);
 
-    if (testRes.status === 'rate_limited') {
-      console.log(`⏳ Rate limit reached, waiting 2.5s before retrying [${code}]...`);
-      await new Promise(r => setTimeout(r, 2500));
+    // If rate limited, wait with progressive backoff and retry up to 2 times
+    let retryCount = 0;
+    while (testRes.status === 'rate_limited' && retryCount < 2) {
+      retryCount++;
+      const waitTime = retryCount * 3000;
+      console.log(`⏳ Rate limit reached, waiting ${waitTime/1000}s before retrying [${code}] (Attempt ${retryCount}/2)...`);
+      await new Promise(r => setTimeout(r, waitTime));
       testRes = await testOrRedeemCenturyCode(TEST_PLAYER_ID, code);
     }
 
