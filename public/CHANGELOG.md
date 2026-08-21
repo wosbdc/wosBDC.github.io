@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [2.9.92] - 2026-08-20
+- 🏷️ **Clean Alt Cards**: Chief name first with compact Alt tag.
+- 🧹 **No Duplicates**: Removed redundant expired status text from cards.
+
 ## [2.9.91] - 2026-08-20
 - 🔔 **Unified Stream**: Combined all alerts into one continuous feed.
 - 🏷️ **Category Tabs**: Quick filter by timers, broadcasts, tokens, or tickets.

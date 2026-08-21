@@ -13084,22 +13084,23 @@ window.openAllianceAlertsModal = async () => {
       if (t.isMain) {
         const isExpired = t.status === 'expired';
         const cardHtml = `
-          <div class="bell-stream-card" data-category="tokens" style="background:rgba(15,23,42,0.7); border:1px solid ${isExpired ? 'rgba(239,68,68,0.4)' : 'rgba(245,158,11,0.4)'}; border-left:4.5px solid ${isExpired ? '#ef4444' : '#f59e0b'}; border-radius:12px; padding:12px 14px; box-shadow:0 6px 18px rgba(0,0,0,0.4); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-            <div style="display:flex; align-items:center; gap:10px; min-width:0;">
-              <span style="font-size:24px; flex-shrink:0;">${t.icon}</span>
-              <div>
+          <div class="bell-stream-card" data-category="tokens" style="background:rgba(15,23,42,0.7); border:1px solid ${isExpired ? 'rgba(239,68,68,0.4)' : 'rgba(245,158,11,0.4)'}; border-left:4.5px solid ${isExpired ? '#ef4444' : '#f59e0b'}; border-radius:12px; padding:12px 14px; box-shadow:0 6px 18px rgba(0,0,0,0.4); display:flex; justify-content:space-between; align-items:center; gap:10px;">
+            <div style="display:flex; align-items:center; gap:10px; min-width:0; flex:1;">
+              <span style="font-size:22px; flex-shrink:0;">🛡️</span>
+              <div style="min-width:0;">
                 <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                  <span style="background:rgba(245,158,11,0.15); color:${t.color}; border:1px solid rgba(245,158,11,0.4); padding:2px 7px; border-radius:8px; font-size:10px; font-weight:800;">🛡️ SYNC HEALTH</span>
-                  <span style="font-weight:bold; font-size:13.5px; color:#fff;">${t.label}</span>
+                  <span style="font-weight:bold; font-size:14px; color:#fff;">${window.escapeHTML(chiefName)}</span>
+                  <span style="background:rgba(6,182,212,0.15); color:#38bdf8; border:1px solid rgba(6,182,212,0.4); padding:1px 6px; border-radius:6px; font-size:10px; font-weight:800;">Main</span>
                 </div>
-                <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
-                  ${isExpired ? 'Token expired • Restores 30-day automated alliance stats' : `Expires in ${t.daysLeft}d • 10-second in-game renewal`}
+                <div style="font-size:11px; color:var(--text-muted); font-family:monospace; margin-top:2px;">
+                  ID: ${currentUser ? (currentUser.gameId || 'N/A') : 'N/A'}
                 </div>
               </div>
             </div>
-            <div>
-              <button onclick="document.getElementById('notificationsModalOverlay').remove(); window.openAccountHubVerifyModal();" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:6px 12px; border-radius:8px; font-weight:bold; font-size:11.5px; cursor:pointer; box-shadow:0 2px 8px rgba(14,165,233,0.3); display:inline-flex; align-items:center; gap:4px;">
-                ⚡ Verify in Game (10s)
+            <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+              <span style="background:${isExpired ? 'rgba(239,68,68,0.15)' : 'rgba(245,158,11,0.15)'}; color:${isExpired ? '#ef4444' : '#f59e0b'}; border:1px solid ${isExpired ? 'rgba(239,68,68,0.4)' : 'rgba(245,158,11,0.4)'}; padding:2px 8px; border-radius:8px; font-size:11px; font-weight:bold;">${isExpired ? '🔴 Expired' : `🟠 ${t.daysLeft}d Left`}</span>
+              <button onclick="document.getElementById('notificationsModalOverlay').remove(); window.openAccountHubVerifyModal();" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:5px 11px; border-radius:6px; font-weight:bold; font-size:11.5px; cursor:pointer; box-shadow:0 2px 8px rgba(14,165,233,0.3); display:inline-flex; align-items:center; gap:4px;">
+                ⚡ Verify (10s)
               </button>
             </div>
           </div>
@@ -13108,21 +13109,21 @@ window.openAllianceAlertsModal = async () => {
       } else {
         const isExpired = t.status === 'expired';
         const cardHtml = `
-          <div class="bell-stream-card" data-category="tokens" style="background:rgba(15,23,42,0.7); border:1px solid ${isExpired ? 'rgba(239,68,68,0.35)' : 'rgba(245,158,11,0.35)'}; border-left:4.5px solid ${isExpired ? '#ef4444' : '#f59e0b'}; border-radius:12px; padding:12px 14px; box-shadow:0 6px 18px rgba(0,0,0,0.4); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-            <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+          <div class="bell-stream-card" data-category="tokens" style="background:rgba(15,23,42,0.7); border:1px solid ${isExpired ? 'rgba(239,68,68,0.35)' : 'rgba(245,158,11,0.35)'}; border-left:4.5px solid ${isExpired ? '#ef4444' : '#f59e0b'}; border-radius:12px; padding:12px 14px; box-shadow:0 6px 18px rgba(0,0,0,0.4); display:flex; justify-content:space-between; align-items:center; gap:10px;">
+            <div style="display:flex; align-items:center; gap:10px; min-width:0; flex:1;">
               <span style="font-size:22px; flex-shrink:0;">🔗</span>
-              <div>
+              <div style="min-width:0;">
                 <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                  <span style="background:rgba(59,130,246,0.15); color:#60a5fa; border:1px solid rgba(59,130,246,0.4); padding:2px 7px; border-radius:8px; font-size:10px; font-weight:800;">🔗 ALT ACCOUNT</span>
-                  <span style="font-weight:bold; font-size:13.5px; color:#fff;">${window.escapeHTML(t.name)}</span>
+                  <span style="font-weight:bold; font-size:14px; color:#fff;">${window.escapeHTML(t.name)}</span>
                   ${t.level ? `<span style="font-size:10px; background:rgba(249,115,22,0.15); color:#f97316; border:1px solid rgba(249,115,22,0.4); padding:1px 6px; border-radius:8px; font-weight:bold;">🔥 ${window.escapeHTML(t.level)}</span>` : ''}
+                  <span style="background:rgba(59,130,246,0.15); color:#60a5fa; border:1px solid rgba(59,130,246,0.4); padding:1px 6px; border-radius:6px; font-size:10px; font-weight:800;">Alt</span>
                 </div>
                 <div style="font-size:11px; color:var(--text-muted); font-family:monospace; margin-top:2px;">
-                  ID: ${t.agid} • ${isExpired ? 'Token Expired' : `Expires in ${t.daysLeft}d`}
+                  ID: ${t.agid}
                 </div>
               </div>
             </div>
-            <div style="display:flex; align-items:center; gap:8px;">
+            <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
               ${t.badge}
               <button onclick="document.getElementById('notificationsModalOverlay').remove(); window.openAltVerifyModal('${t.agid}');" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; border-radius:6px; padding:5px 10px; font-size:11.5px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px; box-shadow:0 2px 6px rgba(14,165,233,0.3);" title="Send in-game mailbox verification code">
                 ⚡ Setup / Renew
