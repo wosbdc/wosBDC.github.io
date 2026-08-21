@@ -1,17 +1,17 @@
 {
-  "version": "3.0.4",
+  "version": "3.0.5",
   "releaseDate": "2026-08-20",
-  "title": "What's New in v3.0.4",
+  "title": "What's New in v3.0.5",
   "notes": [
-    "🛡️ Protected main profile data during alt account token renewals."
+    "🛡️ Hardened main profile state and in-game avatar isolation."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.0.4",
+    "version": "3.0.5",
     "latestChanges": [
+      "v3.0.5: Full alt isolation for tokens, avatars, and in-memory states",
       "v3.0.4: Guaranteed database isolation between main profile and alt renewals",
       "v3.0.3: Mobile-optimized Alerts header and removed redundant ID number",
-      "v3.0.2: Removed duplicate faded icons in date/time picker inputs",
-      "v3.0.1: Click-to-open calendar and clock picker on alert date/time inputs"
+      "v3.0.2: Removed duplicate faded icons in date/time picker inputs"
     ]
   }
 }

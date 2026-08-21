@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [3.0.5] - 2026-08-20
+- 🛡️ **Full Alt Isolation**: Hardened main profile state and in-game avatar isolation.
+
 ## [3.0.4] - 2026-08-20
 - 🛡️ **Alt Token Isolation**: Protected main profile data during alt account token renewals.
 

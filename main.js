@@ -249,9 +249,12 @@ window.apiVerifyGameCaptcha = async (gameId, code, uid = '') => {
   const cleanCode = String(code || '').trim();
   if (!cleanId || !cleanCode) return { success: false, error: 'Missing game ID or code' };
 
+  const isMain = Boolean(currentUser && currentUser.gameId && cleanId === String(currentUser.gameId).trim());
+  const payloadUid = (isMain && uid) ? uid : '';
+
   // Tier 1: BDC Central Command
   try {
-    const bdcRes = await window.callBdcBackend('verify_code', { gameId: cleanId, roleId: cleanId, code: cleanCode, uid: uid || (currentUser && currentUser.uid) || '' });
+    const bdcRes = await window.callBdcBackend('verify_code', { gameId: cleanId, roleId: cleanId, code: cleanCode, uid: payloadUid, isAlt: !isMain });
     if (bdcRes && (bdcRes.success || bdcRes.token || bdcRes.data?.token)) return bdcRes;
   } catch (e) {}
 
@@ -289,9 +292,12 @@ window.apiSyncProfileWithToken = async (gameId, token, uid = '') => {
   const cleanId = String(gameId || '').trim();
   if (!cleanId) return { success: false, error: 'Missing game ID' };
 
+  const isMain = Boolean(currentUser && currentUser.gameId && cleanId === String(currentUser.gameId).trim());
+  const payloadUid = (isMain && uid) ? uid : '';
+
   // Tier 1: BDC Central Command
   try {
-    const bdcRes = await window.callBdcBackend('get_role', { gameId: cleanId, roleId: cleanId, token: token || '', uid: uid || (currentUser && currentUser.uid) || '' });
+    const bdcRes = await window.callBdcBackend('get_role', { gameId: cleanId, roleId: cleanId, token: token || '', uid: payloadUid, isAlt: !isMain });
     if (bdcRes && (bdcRes.success || bdcRes.nickname)) return bdcRes;
   } catch (e) {}
 
@@ -15676,20 +15682,35 @@ window.openAvatarManagerModal = async (targetGameId, chiefName) => {
 };
 
 window.applyInGameAvatar = async (gameId) => {
-  const gid = gameId || (currentUser ? currentUser.gameId : '');
+  const cleanGid = String(gameId || (currentUser ? currentUser.gameId : '')).trim();
+  const isAlt = Boolean(currentUser && currentUser.gameId && cleanGid !== String(currentUser.gameId).trim());
   const btn = document.getElementById('btnSetWosAvatar');
   if (btn) { btn.disabled = true; btn.textContent = 'Syncing...'; }
 
   try {
-    let avatarUrl = (currentUser && currentUser.gameId === gid && currentUser.avatar_image) ? currentUser.avatar_image : '';
-    
-    if (!avatarUrl && currentUser && currentUser.wos_cg_token) {
-      const data = await window.apiSyncProfileWithToken(gid, currentUser.wos_cg_token, currentUser.uid);
+    let token = '';
+    let avatarUrl = '';
+
+    if (isAlt) {
+      const altTokObj = currentUser?.altTokens?.[cleanGid];
+      token = (typeof altTokObj === 'string') ? altTokObj : (altTokObj?.token || '');
+      avatarUrl = altTokObj?.avatar_image || '';
+    } else {
+      token = currentUser?.wos_cg_token || '';
+      avatarUrl = currentUser?.avatar_image || '';
+    }
+
+    if (!avatarUrl && token) {
+      const data = await window.apiSyncProfileWithToken(cleanGid, token);
       if (data && data.success && data.avatar_image) {
         avatarUrl = data.avatar_image;
-        if (currentUser.uid) {
+        if (!isAlt && currentUser?.uid) {
           await update(ref(db, `users/${currentUser.uid}`), { avatar_image: avatarUrl });
           currentUser.avatar_image = avatarUrl;
+        } else if (isAlt && currentUser?.uid) {
+          await update(ref(db, `users/${currentUser.uid}/altTokens/${cleanGid}`), { avatar_image: avatarUrl }).catch(() => null);
+          await update(ref(db, `users_alts/${cleanGid}`), { avatar_image: avatarUrl }).catch(() => null);
+          if (currentUser.altTokens?.[cleanGid]) currentUser.altTokens[cleanGid].avatar_image = avatarUrl;
         }
       }
     }
@@ -15698,28 +15719,36 @@ window.applyInGameAvatar = async (gameId) => {
       if (window.showToast) window.showToast("30-Day sync token required to fetch latest avatar. Please verify in game.", "warning");
       const overlay = document.getElementById('avatarManagerModalOverlay');
       if (overlay) overlay.remove();
-      window.openAccountHubVerifyModal();
+      if (isAlt) {
+        window.openAltVerifyModal(cleanGid);
+      } else {
+        window.openAccountHubVerifyModal();
+      }
       return;
     }
 
-    await uploadAvatar(gid, avatarUrl);
-    avatarMap[gid] = avatarUrl;
+    await uploadAvatar(cleanGid, avatarUrl);
+    avatarMap[cleanGid] = avatarUrl;
     
-    if (currentUser && currentUser.gameId === gid && currentUser.uid) {
+    if (!isAlt && currentUser?.uid) {
       await update(ref(db, `users/${currentUser.uid}`), {
         avatar_image: avatarUrl,
         avatarPreference: 'wos'
       });
       currentUser.avatarPreference = 'wos';
+      const hubImg = document.getElementById('accountHubAvatarImg');
+      if (hubImg) {
+        hubImg.src = avatarUrl;
+        hubImg.style.display = 'block';
+        if (hubImg.nextElementSibling) hubImg.nextElementSibling.style.display = 'none';
+      }
+    } else if (isAlt && currentUser?.uid) {
+      await update(ref(db, `users/${currentUser.uid}/altTokens/${cleanGid}`), { avatar_image: avatarUrl }).catch(() => null);
+      await update(ref(db, `users_alts/${cleanGid}`), { avatar_image: avatarUrl }).catch(() => null);
+      if (currentUser.altTokens?.[cleanGid]) currentUser.altTokens[cleanGid].avatar_image = avatarUrl;
     }
 
-    const hubImg = document.getElementById('accountHubAvatarImg');
-    if (hubImg) {
-      hubImg.src = avatarUrl;
-      hubImg.style.display = 'block';
-      if (hubImg.nextElementSibling) hubImg.nextElementSibling.style.display = 'none';
-    }
-    const altImg = document.getElementById(`altAvatarImg-${gid}`);
+    const altImg = document.getElementById(`altAvatarImg-${cleanGid}`);
     if (altImg) {
       altImg.src = avatarUrl;
       altImg.style.display = 'block';
@@ -15737,21 +15766,27 @@ window.applyInGameAvatar = async (gameId) => {
 };
 
 window.resetAvatarToInitials = async (gameId, chiefName) => {
-  const gid = gameId || (currentUser ? currentUser.gameId : '');
+  const cleanGid = String(gameId || (currentUser ? currentUser.gameId : '')).trim();
+  const isAlt = Boolean(currentUser && currentUser.gameId && cleanGid !== String(currentUser.gameId).trim());
   try {
-    await deleteAvatar(gid);
-    delete avatarMap[gid];
+    await deleteAvatar(cleanGid);
+    delete avatarMap[cleanGid];
 
-    if (currentUser && currentUser.gameId === gid && currentUser.uid) {
+    if (!isAlt && currentUser?.uid) {
       await update(ref(db, `users/${currentUser.uid}`), {
-        avatarPreference: 'initials'
+        avatarPreference: 'initials',
+        avatar_image: null
       });
       currentUser.avatarPreference = 'initials';
-    }
-
-    const hubImg = document.getElementById('accountHubAvatarImg');
-    if (hubImg) {
-      hubImg.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(chiefName || 'Player')}&background=06b6d4&color=fff&bold=true&size=128`;
+      currentUser.avatar_image = null;
+      const hubImg = document.getElementById('accountHubAvatarImg');
+      if (hubImg) {
+        hubImg.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(chiefName || 'Player')}&background=06b6d4&color=fff&bold=true&size=128`;
+      }
+    } else if (isAlt && currentUser?.uid) {
+      await update(ref(db, `users/${currentUser.uid}/altTokens/${cleanGid}`), { avatar_image: null }).catch(() => null);
+      await update(ref(db, `users_alts/${cleanGid}`), { avatar_image: null }).catch(() => null);
+      if (currentUser.altTokens?.[cleanGid]) currentUser.altTokens[cleanGid].avatar_image = null;
     }
 
     if (window.showToast) window.showToast("Profile picture reset to default initials.", "info");
@@ -19120,7 +19155,13 @@ window.openAltVerifyModal = (gid, altName = '') => {
       if (feedback) feedback.style.display = 'none';
 
       try {
-        const data = await window.apiVerifyGameCaptcha(cleanGid, code, currentUser.uid);
+        const savedPrimaryGid = (currentUser.gameId || '').toString().trim();
+        const savedPrimaryName = (currentUser.name || '').toString().trim();
+        const savedPrimaryStove = (currentUser.stove_lv || currentUser.furnaceLevel || '').toString().trim();
+        const savedPrimaryAvatar = (currentUser.avatar_image || '').toString().trim();
+        const savedPrimaryToken = (currentUser.wos_cg_token || '').toString().trim();
+
+        const data = await window.apiVerifyGameCaptcha(cleanGid, code);
 
         if (data && (data.success || data.token) && (data.token || data.data?.token)) {
           const nowIso = new Date().toISOString();
@@ -19161,6 +19202,17 @@ window.openAltVerifyModal = (gid, altName = '') => {
           }
           if (data.nickname && !/^\d+$/.test(data.nickname)) altUpdates.name = data.nickname;
           await update(ref(db, `users_alts/${cleanGid}`), altUpdates);
+
+          // Guarantee main profile memory isolation
+          if (savedPrimaryGid) currentUser.gameId = savedPrimaryGid;
+          if (savedPrimaryName) currentUser.name = savedPrimaryName;
+          if (savedPrimaryStove) {
+            currentUser.stove_lv = savedPrimaryStove;
+            currentUser.furnaceLevel = savedPrimaryStove;
+          }
+          if (savedPrimaryAvatar) currentUser.avatar_image = savedPrimaryAvatar;
+          if (savedPrimaryToken) currentUser.wos_cg_token = savedPrimaryToken;
+          try { localStorage.setItem('cached_current_user', JSON.stringify(currentUser)); } catch(e) {}
 
           modalOverlay.remove();
           window.showToast(`🎉 30-Day sync token bound for ${data.nickname || cleanName}!`, 'success');
