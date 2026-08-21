@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [3.0.2] - 2026-08-20
+- 🎨 **Cleaner Date Inputs**: Removed duplicate faded icons for a clean single button.
+
 ## [3.0.1] - 2026-08-20
 - 📅 **Click-to-Pick Date & Time**: Click anywhere on input to open calendar picker.
 

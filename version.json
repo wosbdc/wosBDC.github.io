@@ -1,17 +1,17 @@
 {
-  "version": "3.0.1",
+  "version": "3.0.2",
   "releaseDate": "2026-08-20",
-  "title": "What's New in v3.0.1",
+  "title": "What's New in v3.0.2",
   "notes": [
-    "📅 Click anywhere on date/time inputs to open picker."
+    "🎨 Removed duplicate faded icons for a clean single button."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.0.1",
+    "version": "3.0.2",
     "latestChanges": [
+      "v3.0.2: Removed duplicate faded icons in date/time picker inputs",
       "v3.0.1: Click-to-open calendar and clock picker on alert date/time inputs",
       "v3.0.0: Standardized Shield terminology and consistent UI theme",
-      "v2.9.99: Styled expired defense shield and timers in red",
-      "v2.9.98: Fixed live local time conversion preview in Alert Creator modal"
+      "v2.9.99: Styled expired defense shield and timers in red"
     ]
   }
 }
