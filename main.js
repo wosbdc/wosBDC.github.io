@@ -956,7 +956,7 @@ window.isGiftcodeEnrolled = async (gameId) => {
 };
 
 // Enroll a player natively into Firebase Realtime Database
-window.enrollGiftcodeBot = async (gameId, chiefName) => {
+window.enrollGiftcodeBot = async (gameId, chiefName, isAlt = false, ownerUid = null) => {
     if (!gameId) return false;
     const gIdStr = gameId.toString().trim();
     const record = {
@@ -964,6 +964,8 @@ window.enrollGiftcodeBot = async (gameId, chiefName) => {
         name: chiefName || '',
         enrolled: true,
         status: 'Active',
+        isAlt: !!isAlt,
+        ownerUid: ownerUid || null,
         timestamp: Date.now()
     };
     
@@ -978,6 +980,65 @@ window.enrollGiftcodeBot = async (gameId, chiefName) => {
     } catch(e) {
         console.warn("Failed to write giftcode_bot in Firebase", e);
         return false;
+    }
+};
+
+// Seamless Auto-Sync: Guarantees 100% of claimed profiles & linked alts are enrolled in giftcode_bot
+window.syncAllClaimedUsersToGiftbot = async () => {
+    try {
+        const usersSnap = await get(ref(db, 'users'));
+        if (!usersSnap.exists()) return 0;
+        const usersData = usersSnap.val() || {};
+        let syncCount = 0;
+        const updates = {};
+
+        for (const [uid, u] of Object.entries(usersData)) {
+            if (!u) continue;
+            // Primary Main Character
+            if (u.gameId) {
+                const mainGid = String(u.gameId).trim();
+                if (mainGid && /^\d+$/.test(mainGid)) {
+                    updates[`giftcode_bot/${mainGid}`] = {
+                        gameId: mainGid,
+                        name: u.name || u.chiefName || (window.idToNameMap && window.idToNameMap[mainGid]) || '',
+                        enrolled: true,
+                        status: 'Active',
+                        ownerUid: uid,
+                        isAlt: false,
+                        timestamp: Date.now()
+                    };
+                    syncCount++;
+                }
+            }
+            // Linked Alt Characters
+            if (u.linkedGameIds && Array.isArray(u.linkedGameIds)) {
+                for (const agid of u.linkedGameIds) {
+                    const altGid = String(agid).trim();
+                    if (altGid && /^\d+$/.test(altGid)) {
+                        const altTok = (u.altTokens && u.altTokens[altGid]) || {};
+                        const altName = altTok.nickname || (window.idToNameMap && window.idToNameMap[altGid]) || `Alt ${altGid}`;
+                        updates[`giftcode_bot/${altGid}`] = {
+                            gameId: altGid,
+                            name: altName,
+                            enrolled: true,
+                            status: 'Active',
+                            ownerUid: uid,
+                            isAlt: true,
+                            timestamp: Date.now()
+                        };
+                        syncCount++;
+                    }
+                }
+            }
+        }
+
+        if (Object.keys(updates).length > 0) {
+            await update(ref(db), updates);
+        }
+        return syncCount;
+    } catch(e) {
+        console.warn("Auto-sync claimed users to giftcode_bot failed:", e);
+        return 0;
     }
 };
 
@@ -6963,6 +7024,9 @@ listenToAuth((user) => {
     if(signOutSidebarBtn) signOutSidebarBtn.style.display = 'inline-flex';
     
     window.updateNavbarUserIndicator(currentUser);
+    if (window.syncAllClaimedUsersToGiftbot) {
+      window.syncAllClaimedUsersToGiftbot().catch(() => null);
+    }
     
     // Automatically remove onboarding banner and refresh views on sign-in
     const onboardingEl = document.getElementById('essentialOnboardingBanner');
@@ -16719,28 +16783,31 @@ window.openGiftCodeDispatcherModal = async (initialCode = '') => {
 
         <!-- Step 2: Target Audience Preview -->
         <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:18px; margin-bottom:16px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
             <div style="font-size:12px; font-weight:bold; color:#38bdf8; text-transform:uppercase; letter-spacing:0.5px;">
-              Step 2: Target Resolution
+              Step 2: Target Audience (Auto-Enrolled)
             </div>
-            <span id="gcTargetCountBadge" style="background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:3px 10px; border-radius:12px; font-size:12px; font-weight:bold;">
+            <span id="gcTargetCountBadge" style="background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:4px 12px; border-radius:12px; font-size:12px; font-weight:bold;">
               Calculating targets...
             </span>
           </div>
 
-          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px; margin-bottom:10px;">
-            <label style="display:flex; align-items:center; gap:8px; background:rgba(15,23,42,0.6); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.06); cursor:pointer; font-size:13px;">
-              <input type="checkbox" id="gcIncludeEnrolled" checked style="width:16px; height:16px; accent-color:#ec4899;">
-              <span>🎁 Enrolled Roster Chiefs (<strong id="gcEnrolledCount">...</strong>)</span>
-            </label>
-            <label style="display:flex; align-items:center; gap:8px; background:rgba(15,23,42,0.6); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.06); cursor:pointer; font-size:13px;">
-              <input type="checkbox" id="gcIncludeAlts" checked style="width:16px; height:16px; accent-color:#ec4899;">
-              <span>❄️ Verified Linked Alts (<strong id="gcAltsCount">...</strong>)</span>
-            </label>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:10px; margin-bottom:10px;">
             <label style="display:flex; align-items:center; gap:8px; background:rgba(16,185,129,0.08); padding:10px 12px; border-radius:8px; border:1px solid rgba(16,185,129,0.3); cursor:pointer; font-size:13px; color:#10b981; font-weight:bold;">
-              <input type="checkbox" id="gcOnlyClaimed" checked style="width:16px; height:16px; accent-color:#10b981;">
-              <span>🔒 Only Claimed Accounts (<strong id="gcClaimedCount">...</strong>)</span>
+              <input type="radio" name="gcTargetFilterRadio" value="all" checked style="width:16px; height:16px; accent-color:#10b981;">
+              <span>🎯 All Characters (<strong id="gcTotalTargetsCount">...</strong>)</span>
             </label>
+            <label style="display:flex; align-items:center; gap:8px; background:rgba(15,23,42,0.6); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.06); cursor:pointer; font-size:13px;">
+              <input type="radio" name="gcTargetFilterRadio" value="mains" style="width:16px; height:16px; accent-color:#ec4899;">
+              <span>⭐ Mains Only (<strong id="gcClaimedCount">...</strong>)</span>
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; background:rgba(15,23,42,0.6); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.06); cursor:pointer; font-size:13px;">
+              <input type="radio" name="gcTargetFilterRadio" value="alts" style="width:16px; height:16px; accent-color:#ec4899;">
+              <span>🔗 Alts Only (<strong id="gcAltsCount">...</strong>)</span>
+            </label>
+          </div>
+          <div style="font-size:11.5px; color:var(--text-muted); margin-top:4px;">
+            💡 <em>All registered alliance members and linked alts are automatically enrolled and eligible for instant dispatch.</em>
           </div>
         </div>
 
@@ -16827,100 +16894,82 @@ window.openGiftCodeDispatcherModal = async (initialCode = '') => {
   window._gcTotalCount = 0;
 
   // Target Resolvers
-  let enrolledList = [];
+  let mainsList = [];
   let altsList = [];
-  const claimedGameIds = new Set();
 
   const updateTargetCounts = () => {
-    const incEnrolled = document.getElementById('gcIncludeEnrolled')?.checked ?? true;
-    const incAlts = document.getElementById('gcIncludeAlts')?.checked ?? true;
-    const onlyClaimed = document.getElementById('gcOnlyClaimed')?.checked ?? true;
+    const filterRadio = document.querySelector('input[name="gcTargetFilterRadio"]:checked')?.value || 'all';
 
-    const targetSet = new Map();
-
-    if (incEnrolled) {
-      enrolledList.forEach(p => {
-        if (!onlyClaimed || claimedGameIds.has(String(p.gameId))) {
-          targetSet.set(String(p.gameId), p);
-        }
-      });
-    }
-    if (incAlts) {
-      altsList.forEach(a => {
-        if (!targetSet.has(String(a.gameId))) {
-          if (!onlyClaimed || claimedGameIds.has(String(a.gameId))) {
-            targetSet.set(String(a.gameId), a);
-          }
-        }
-      });
+    let targets = [];
+    if (filterRadio === 'all') {
+      targets = [...mainsList, ...altsList];
+    } else if (filterRadio === 'mains') {
+      targets = [...mainsList];
+    } else if (filterRadio === 'alts') {
+      targets = [...altsList];
     }
 
-    const total = targetSet.size;
+    // Deduplicate by gameId
+    const targetMap = new Map();
+    targets.forEach(t => {
+      const gid = String(t.gameId).trim();
+      if (gid && /^\d+$/.test(gid) && !targetMap.has(gid)) {
+        targetMap.set(gid, t);
+      }
+    });
+
+    const finalTargets = Array.from(targetMap.values());
     const badge = document.getElementById('gcTargetCountBadge');
     if (badge) {
-      badge.textContent = onlyClaimed 
-        ? `${total} Claimed Characters` 
-        : `${total} Total Characters`;
+      badge.textContent = `🎯 ${finalTargets.length} Characters (${mainsList.length} Mains + ${altsList.length} Alts)`;
     }
-    return Array.from(targetSet.values());
+    return finalTargets;
   };
 
   // Fetch data to populate targets
   try {
-    const [cListSnap, usersSnap] = await Promise.all([
-      get(ref(db, "sheets/Chief's List")),
-      get(ref(db, "users"))
-    ]);
+    const usersSnap = await get(ref(db, "users"));
 
-    // Parse enrolled chiefs from Chief's List
-    if (cListSnap.exists()) {
-      const cRows = cListSnap.val() || [];
-      for (let i = 3; i < cRows.length; i++) {
-        const row = cRows[i];
-        if (!row || !row[0]) continue;
-        const name = String(row[0]).trim();
-        const gid = String(row[1] || '').trim();
-        const enrolled = String(row[3] || '').toLowerCase() === 'true';
-        if (gid && enrolled) {
-          enrolledList.push({ gameId: gid, name: name, type: 'roster' });
-        }
-      }
-    }
-
-    // Parse verified alts and claimed IDs from Firebase Users
+    // Parse verified mains and alts from Firebase Users
     if (usersSnap.exists()) {
       const uData = usersSnap.val() || {};
-      for (const u of Object.values(uData)) {
+      for (const [uid, u] of Object.entries(uData)) {
+        if (!u) continue;
         if (u.gameId) {
-          claimedGameIds.add(String(u.gameId).trim());
+          const mainGid = String(u.gameId).trim();
+          if (mainGid && /^\d+$/.test(mainGid)) {
+            const mName = u.name || u.chiefName || (window.idToNameMap && window.idToNameMap[mainGid]) || `Chief ${mainGid}`;
+            mainsList.push({ gameId: mainGid, name: mName, type: 'main', uid: uid });
+          }
         }
         if (u.linkedGameIds && Array.isArray(u.linkedGameIds)) {
           u.linkedGameIds.forEach(agid => {
             const altGid = String(agid).trim();
-            if (altGid) claimedGameIds.add(altGid);
-            const altTok = (u.altTokens && u.altTokens[altGid]) || {};
-            const aName = altTok.nickname || (window.idToNameMap && window.idToNameMap[altGid]) || `Alt ${altGid}`;
-            altsList.push({ gameId: altGid, name: aName, type: 'alt' });
+            if (altGid && /^\d+$/.test(altGid)) {
+              const altTok = (u.altTokens && u.altTokens[altGid]) || {};
+              const aName = altTok.nickname || (window.idToNameMap && window.idToNameMap[altGid]) || `Alt ${altGid}`;
+              altsList.push({ gameId: altGid, name: aName, type: 'alt', uid: uid });
+            }
           });
         }
       }
     }
 
-    const enrEl = document.getElementById('gcEnrolledCount');
-    if (enrEl) enrEl.textContent = enrolledList.length;
+    const totalEl = document.getElementById('gcTotalTargetsCount');
+    if (totalEl) totalEl.textContent = mainsList.length + altsList.length;
+    const clmEl = document.getElementById('gcClaimedCount');
+    if (clmEl) clmEl.textContent = mainsList.length;
     const altsEl = document.getElementById('gcAltsCount');
     if (altsEl) altsEl.textContent = altsList.length;
-    const clmEl = document.getElementById('gcClaimedCount');
-    if (clmEl) clmEl.textContent = claimedGameIds.size;
 
     updateTargetCounts();
   } catch(e) {
     console.warn("Failed to load targets for Gift Code Dispatcher:", e);
   }
 
-  document.getElementById('gcIncludeEnrolled')?.addEventListener('change', updateTargetCounts);
-  document.getElementById('gcIncludeAlts')?.addEventListener('change', updateTargetCounts);
-  document.getElementById('gcOnlyClaimed')?.addEventListener('change', updateTargetCounts);
+  document.querySelectorAll('input[name="gcTargetFilterRadio"]').forEach(r => {
+    r.addEventListener('change', updateTargetCounts);
+  });
 
   // Test Code Button handler
   const testBtn = document.getElementById('gcTestCodeBtn');
@@ -17560,6 +17609,29 @@ window.renderMaintenanceTelemetryData = (data) => {
   if (upgradesEl) upgradesEl.textContent = data.upgradesCount ?? 0;
   if (nameChangesEl) nameChangesEl.textContent = data.nameChangesCount ?? 0;
   if (summaryEl && data.summary) summaryEl.textContent = data.summary;
+};
+
+window.runManualGiftbotSync = async (btnEl = null) => {
+  let origHtml = '';
+  if (btnEl) {
+    origHtml = btnEl.innerHTML;
+    btnEl.disabled = true;
+    btnEl.innerHTML = '⏳ Syncing...';
+  }
+
+  if (window.showToast) window.showToast('🔄 Synchronizing all registered chiefs & alts into Gift Bot...', 'info');
+
+  try {
+    const count = await window.syncAllClaimedUsersToGiftbot();
+    if (window.showToast) window.showToast(`✅ Successfully synchronized ${count} claimed characters into Gift Bot!`, 'success');
+  } catch(err) {
+    if (window.showToast) window.showToast(`Sync failed: ${err.message}`, 'error');
+  } finally {
+    if (btnEl) {
+      btnEl.disabled = false;
+      btnEl.innerHTML = origHtml || '🔄 Resync Claimed Members';
+    }
+  }
 };
 
 window.runLiveGiftCodeSweep = async (btnEl = null) => {
@@ -22510,12 +22582,15 @@ const views = {
                         </span>
                       </div>
                       <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
-                        Autonomous 24/7 Engine: monitors 5 web feeds (WosRewards, GamsGo, DotGG, ProGameGuides, PocketGamer) and auto-redeems active codes for all enrolled members.
+                        Autonomous 24/7 Engine: monitors 5 web feeds (WosRewards, GamsGo, DotGG, ProGameGuides, PocketGamer) and auto-redeems active codes for 100% of registered alliance members & linked alts.
                       </div>
                     </div>
                   </div>
 
                   <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <button onclick="window.runManualGiftbotSync(this)" style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.35); padding:8px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.2s;">
+                      🔄 Resync Claimed Members
+                    </button>
                     <button id="btnTriggerManualSweepBotsTab" onclick="window.runLiveGiftCodeSweep(this)" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:8px 16px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 2px 10px rgba(14,165,233,0.35); transition:0.2s;">
                       ▶️ Run Live Sweep Now
                     </button>
@@ -27531,7 +27606,7 @@ window.resetBearTrapEvent = async () => {
                   </div>
                   <div>
                     <h3 style="margin:0; font-size:18px; color:#fff;">Automatic Gift Code Redemption</h3>
-                    <p style="margin:2px 0 0 0; font-size:12.5px; color:var(--text-muted);">Exclusive alliance member perk for verified and claimed accounts</p>
+                    <p style="margin:2px 0 0 0; font-size:12.5px; color:var(--text-muted);">Seamlessly included for all verified alliance members &amp; linked alts</p>
                   </div>
                 </div>
                 <div>
@@ -27543,13 +27618,13 @@ window.resetBearTrapEvent = async () => {
               </div>
 
               <p style="font-size:14px; color:#cbd5e1; line-height:1.6; margin:0 0 16px 0;">
-                As a registered alliance member, Chief <strong>${window.escapeHTML(currentChiefName)}</strong> and all <strong>${links.length} linked alt(s)</strong> automatically receive every newly discovered gift code directly in your in-game mailbox without any manual code entering!
+                As a verified BDC Alliance member, your main character <strong>${window.escapeHTML(currentChiefName)}</strong> and all <strong>${links.length} linked alt(s)</strong> are automatically enrolled to receive every new gift code directly in your in-game mailbox — zero manual steps required!
               </p>
 
               <!-- Enrolled Lineup Overview -->
               <div style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:14px 16px; margin-bottom:16px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                  <span style="font-size:12px; font-weight:bold; color:var(--accent); text-transform:uppercase; letter-spacing:0.5px;">👥 Enrolled Character Lineup (1 Main + ${links.length} Alts)</span>
+                  <span style="font-size:12px; font-weight:bold; color:var(--accent); text-transform:uppercase; letter-spacing:0.5px;">🎯 Auto-Enrolled Character Lineup (1 Main + ${links.length} Alts)</span>
                   <button onclick="let b=document.getElementById('accTabBtnCharacters'); if(b) b.click();" style="background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; padding:4px 10px; border-radius:6px; font-size:11.5px; font-weight:bold; cursor:pointer;">
                     👥 Manage Characters
                   </button>
@@ -27570,7 +27645,7 @@ window.resetBearTrapEvent = async () => {
                         ? `<span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:2px 8px; border-radius:6px; font-size:11px; font-weight:bold;">🟢 30d Sync (${tokenStatus.daysLeft}d)</span>`
                         : `<button onclick="window.openAccountHubVerifyModal()" style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); padding:2px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">⚠️ Setup Sync</button>`
                       }
-                      <span style="border:1px solid rgba(16,185,129,0.35); color:#10b981; background:rgba(16,185,129,0.1); border-radius:6px; padding:2px 6px; font-size:11px; font-weight:600;">🎁 Enrolled</span>
+                      <span style="border:1px solid rgba(16,185,129,0.35); color:#10b981; background:rgba(16,185,129,0.1); border-radius:6px; padding:2px 6px; font-size:11px; font-weight:600;">🟢 Auto-Redeem</span>
                     </div>
                   </div>
 
@@ -27589,7 +27664,7 @@ window.resetBearTrapEvent = async () => {
                           ? `<span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:2px 8px; border-radius:6px; font-size:11px; font-weight:bold;">🟢 30d Sync (${alt.altTokenDaysRemaining}d)</span>`
                           : `<button onclick="window.openAltVerifyModal('${alt.cleanGid}')" style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); padding:2px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">⚠️ Setup Sync</button>`
                         }
-                        <span style="border:1px solid rgba(16,185,129,0.35); color:#10b981; background:rgba(16,185,129,0.1); border-radius:6px; padding:2px 6px; font-size:11px; font-weight:600;">🎁 Enrolled</span>
+                        <span style="border:1px solid rgba(16,185,129,0.35); color:#10b981; background:rgba(16,185,129,0.1); border-radius:6px; padding:2px 6px; font-size:11px; font-weight:600;">🟢 Auto-Redeem</span>
                       </div>
                     </div>
                   `).join('')}
@@ -27597,7 +27672,7 @@ window.resetBearTrapEvent = async () => {
               </div>
 
               <div style="font-size:12.5px; color:var(--text-muted); line-height:1.5;">
-                <em>✨ When leadership or the automated bot dispatches a gift code, all registered characters are redeemed simultaneously. Check your in-game mailbox to collect rewards!</em>
+                <em>✨ Your characters are automatically enrolled the moment you register or link an alt. When the 24/7 bot discovers a new code, all characters are redeemed simultaneously — just check your in-game mailbox!</em>
               </div>
             </div>
 

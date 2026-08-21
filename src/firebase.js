@@ -118,12 +118,34 @@ export async function linkAltAccount(uid, newGameId, currentLinks = []) {
   
   const updatedLinks = [...currentLinks, newGameId];
   await set(ref(db, `users/${uid}/linkedGameIds`), updatedLinks);
+
+  // Automatically enroll linked alt into giftcode_bot so it receives auto-redemptions
+  try {
+    const cleanGid = String(newGameId).trim();
+    if (cleanGid) {
+      await set(ref(db, `giftcode_bot/${cleanGid}`), {
+        gameId: cleanGid,
+        name: '',
+        enrolled: true,
+        status: 'Active',
+        isAlt: true,
+        ownerUid: uid,
+        timestamp: Date.now()
+      });
+    }
+  } catch(e) {}
 }
 
 export async function unlinkAltAccount(uid, gameIdToRemove, currentLinks = []) {
   const updatedLinks = currentLinks.filter(id => id !== gameIdToRemove);
   await set(ref(db, `users/${uid}/linkedGameIds`), updatedLinks);
   await set(ref(db, `users/${uid}/altTokens/${gameIdToRemove}`), null);
+  try {
+    const cleanGid = String(gameIdToRemove).trim();
+    if (cleanGid) {
+      await set(ref(db, `giftcode_bot/${cleanGid}`), null);
+    }
+  } catch(e) {}
 }
 
 export async function registerUser(email, password, gameId, chiefName, furnaceLevel = '') {
@@ -142,6 +164,21 @@ export async function registerUser(email, password, gameId, chiefName, furnaceLe
   
   // Save user profile in Realtime Database mapped by UID
   await set(ref(db, `users/${user.uid}`), userData);
+
+  // Automatically enroll registered member into giftcode_bot
+  if (gameId) {
+    try {
+      const cleanGid = String(gameId).trim();
+      await set(ref(db, `giftcode_bot/${cleanGid}`), {
+        gameId: cleanGid,
+        name: chiefName || '',
+        enrolled: true,
+        status: 'Active',
+        ownerUid: user.uid,
+        timestamp: Date.now()
+      });
+    } catch(e) {}
+  }
   
   return user;
 }

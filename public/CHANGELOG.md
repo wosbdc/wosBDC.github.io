@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [3.1.1] - 2026-08-21
+- 🎯 **Auto-Enrollment**: All members & alts auto-enrolled for gift codes.
+- 🔄 **Login Sync**: Background giftcode_bot sync fires every sign-in.
+- 🎁 **Dispatcher Upgrade**: Simplified radio filter for target audience.
+- 🟢 **Auto-Redeem Badges**: Perks tab shows "Auto-Redeem" status.
+- 🔧 **Resync Button**: Admin can 1-click resync claimed members.
+
 ## [3.1.0] - 2026-08-21
 - 📱 **Fluid Vertical Scrolling**: Smooth full-page vertical scrolling across all rankings tables.
 - 👆 **Zero Touch Trapping**: Removed nested scroll constraints on mobile and tablet devices.

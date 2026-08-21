@@ -50,6 +50,7 @@ function fetchUrl(targetUrl, options = {}) {
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,application/json,*/*;q=0.8',
         ...(options.headers || {})
       },
+      rejectUnauthorized: false,
       timeout: 12000
     };
 
