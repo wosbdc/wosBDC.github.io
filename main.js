@@ -13349,22 +13349,22 @@ window.updateSidebarTimersDisplay = function() {
     const rem = shield.expiresAt - Date.now();
     if (shieldTextEl) shieldTextEl.textContent = (typeof window.formatCountdownTimeRemaining === 'function') ? window.formatCountdownTimeRemaining(rem) : 'Active';
     if (shieldBtn) {
-      shieldBtn.style.background = 'rgba(16,185,129,0.2)';
+      shieldBtn.style.background = 'rgba(16,185,129,0.22)';
       shieldBtn.style.borderColor = '#10b981';
-      shieldBtn.style.boxShadow = '0 0 8px rgba(16,185,129,0.3)';
+      shieldBtn.style.boxShadow = '0 0 10px rgba(16,185,129,0.35)';
     }
   } else if (shield && shield.expiresAt) {
     if (shieldTextEl) shieldTextEl.textContent = 'EXPIRED';
     if (shieldBtn) {
-      shieldBtn.style.background = 'rgba(239,68,68,0.15)';
+      shieldBtn.style.background = 'rgba(239,68,68,0.18)';
       shieldBtn.style.borderColor = '#ef4444';
-      shieldBtn.style.boxShadow = 'none';
+      shieldBtn.style.boxShadow = '0 0 8px rgba(239,68,68,0.3)';
     }
   } else {
     if (shieldTextEl) shieldTextEl.textContent = 'Set ➔';
     if (shieldBtn) {
-      shieldBtn.style.background = 'rgba(16,185,129,0.08)';
-      shieldBtn.style.borderColor = 'rgba(16,185,129,0.3)';
+      shieldBtn.style.background = 'rgba(16,185,129,0.12)';
+      shieldBtn.style.borderColor = 'rgba(16,185,129,0.35)';
       shieldBtn.style.boxShadow = 'none';
     }
   }
@@ -13377,22 +13377,22 @@ window.updateSidebarTimersDisplay = function() {
     const rem = autoJoin.expiresAt - Date.now();
     if (ajTextEl) ajTextEl.textContent = (typeof window.formatCountdownTimeRemaining === 'function') ? window.formatCountdownTimeRemaining(rem) : 'Active';
     if (ajBtn) {
-      ajBtn.style.background = 'rgba(56,189,248,0.2)';
+      ajBtn.style.background = 'rgba(56,189,248,0.22)';
       ajBtn.style.borderColor = '#38bdf8';
-      ajBtn.style.boxShadow = '0 0 8px rgba(56,189,248,0.3)';
+      ajBtn.style.boxShadow = '0 0 10px rgba(56,189,248,0.35)';
     }
   } else if (autoJoin && autoJoin.expiresAt) {
     if (ajTextEl) ajTextEl.textContent = 'EXPIRED';
     if (ajBtn) {
-      ajBtn.style.background = 'rgba(239,68,68,0.15)';
+      ajBtn.style.background = 'rgba(239,68,68,0.18)';
       ajBtn.style.borderColor = '#ef4444';
-      ajBtn.style.boxShadow = 'none';
+      ajBtn.style.boxShadow = '0 0 8px rgba(239,68,68,0.3)';
     }
   } else {
     if (ajTextEl) ajTextEl.textContent = '8h ➔';
     if (ajBtn) {
-      ajBtn.style.background = 'rgba(56,189,248,0.08)';
-      ajBtn.style.borderColor = 'rgba(56,189,248,0.3)';
+      ajBtn.style.background = 'rgba(56,189,248,0.12)';
+      ajBtn.style.borderColor = 'rgba(56,189,248,0.35)';
       ajBtn.style.boxShadow = 'none';
     }
   }
