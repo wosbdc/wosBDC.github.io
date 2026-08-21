@@ -13370,7 +13370,103 @@ window.openAllianceAlertsModal = async () => {
     // 4. Build Unified Cards Stack
     const streamItems = [];
 
-    // A. Timers / Scheduled Events
+    // A1. Personal Furnace Shield Stream Item (Inside Timers Tab)
+    const currentShield = (typeof window.getPersonalShieldTimer === 'function') ? window.getPersonalShieldTimer() : null;
+    const isShieldActive = currentShield && (currentShield.expiresAt > Date.now());
+    const shieldRemainingMs = isShieldActive ? (currentShield.expiresAt - Date.now()) : 0;
+    const expiryDate = isShieldActive ? new Date(currentShield.expiresAt) : null;
+    const expiryTimeStr = expiryDate ? `${expiryDate.toLocaleDateString([], { month:'short', day:'numeric' })} at ${expiryDate.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}` : '';
+
+    let shieldCardHtml = '';
+    if (isShieldActive) {
+      shieldCardHtml = `
+        <div class="bell-stream-card" data-category="timers" style="background:linear-gradient(145deg, rgba(16,185,129,0.15), rgba(15,23,42,0.92)); border:1.5px solid #10b981; border-left:5px solid #10b981; border-radius:12px; padding:12px 14px; box-shadow:0 6px 20px rgba(16,185,129,0.2); display:flex; flex-direction:column; gap:8px; position:relative;">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+              <span style="background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:2px 8px; border-radius:10px; font-size:10.5px; font-weight:800; display:inline-flex; align-items:center; gap:4px; text-transform:uppercase; letter-spacing:0.5px;">
+                🛡️ Personal Shield
+              </span>
+              <span style="background:rgba(16,185,129,0.25); color:#10b981; border:1px solid #10b981; padding:1px 7px; border-radius:10px; font-size:10px; font-weight:800; animation:pulse 1.5s infinite;">🟢 BUBBLE ACTIVE</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:5px;">
+              <button onclick="event.stopPropagation(); window.openPersonalShieldModal();" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:6px; padding:3px 8px; font-size:11px; cursor:pointer; font-weight:bold; transition:0.15s;" title="Manage shield settings">
+                ⚙️ Custom
+              </button>
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+            <div>
+              <div style="font-weight:800; font-size:14.5px; color:#fff;">
+                🛡️ ${window.escapeHTML(currentShield.label || 'Furnace Defense Shield')}
+              </div>
+              <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
+                Drops on: <strong style="color:#e2e8f0;">${expiryTimeStr}</strong> (Alert: ${currentShield.warningMins || 15}m before drop)
+              </div>
+            </div>
+            <div style="font-family:monospace; font-weight:800; font-size:20px; color:#10b981; letter-spacing:0.5px; text-shadow:0 0 10px rgba(16,185,129,0.4);" id="personalShieldCountdownText">
+              ${window.formatCountdownTimeRemaining(shieldRemainingMs)}
+            </div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div style="display:flex; align-items:center; gap:6px; border-top:1px solid rgba(255,255,255,0.08); padding-top:8px; margin-top:2px; flex-wrap:wrap;">
+            <button type="button" onclick="window.setPersonalShieldTimer(8, 0, ${currentShield.warningMins || 15}); window.openAllianceAlertsModal();" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
+              ➕ Extend +8h
+            </button>
+            <button type="button" onclick="window.setPersonalShieldTimer(24, 0, ${currentShield.warningMins || 15}); window.openAllianceAlertsModal();" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
+              ➕ Extend +24h
+            </button>
+            <button type="button" onclick="window.cancelPersonalShieldTimer(); window.openAllianceAlertsModal();" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
+              ❌ Cancel
+            </button>
+          </div>
+        </div>
+      `;
+    } else {
+      shieldCardHtml = `
+        <div class="bell-stream-card" data-category="timers" style="background:linear-gradient(145deg, rgba(15,23,42,0.92), rgba(30,41,59,0.85)); border:1px dashed rgba(56,189,248,0.35); border-left:4.5px solid #38bdf8; border-radius:12px; padding:12px 14px; box-shadow:0 4px 14px rgba(0,0,0,0.3); display:flex; flex-direction:column; gap:8px; position:relative;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="background:rgba(56,189,248,0.14); color:#38bdf8; border:1px solid rgba(56,189,248,0.35); padding:2px 8px; border-radius:10px; font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">
+                🛡️ Personal Shield
+              </span>
+              <span style="font-size:11px; color:var(--text-muted);">No shield active</span>
+            </div>
+            <button onclick="window.openPersonalShieldModal()" style="background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
+              ⚙️ Custom
+            </button>
+          </div>
+
+          <div style="font-size:12px; color:#cbd5e1;">
+            Bubbled in-game? Start a reminder to get alerted before your furnace shield drops:
+          </div>
+
+          <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:2px;">
+            <button type="button" onclick="window.setPersonalShieldTimer(2, 0, 15); window.openAllianceAlertsModal();" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; padding:5px 10px; border-radius:8px; font-size:11px; font-weight:bold; cursor:pointer; transition:0.15s;">
+              🛡️ 2 Hours
+            </button>
+            <button type="button" onclick="window.setPersonalShieldTimer(8, 0, 15); window.openAllianceAlertsModal();" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:5px 12px; border-radius:8px; font-size:11px; font-weight:bold; cursor:pointer; box-shadow:0 2px 6px rgba(14,165,233,0.3);">
+              🛡️ 8 Hours ⭐
+            </button>
+            <button type="button" onclick="window.setPersonalShieldTimer(24, 0, 15); window.openAllianceAlertsModal();" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; padding:5px 10px; border-radius:8px; font-size:11px; font-weight:bold; cursor:pointer; transition:0.15s;">
+              🛡️ 24 Hours
+            </button>
+            <button type="button" onclick="window.setPersonalShieldTimer(72, 0, 15); window.openAllianceAlertsModal();" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; padding:5px 10px; border-radius:8px; font-size:11px; font-weight:bold; cursor:pointer; transition:0.15s;">
+              🛡️ 72 Hours
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    streamItems.push({
+      category: 'timers',
+      timestamp: isShieldActive ? (currentShield.expiresAt || Date.now()) : 0,
+      html: shieldCardHtml
+    });
+
+    // A2. Alliance Scheduled Events (Bear Trap, Castle, Crazy Joe, Foundry)
     countdownAlerts.forEach(b => {
       const catMeta = window.getCountdownAlertCategoryMeta(b.category || 'general');
       const targetMs = Number(b.targetTimestamp);
@@ -13716,10 +13812,6 @@ window.openAllianceAlertsModal = async () => {
       }
     }
 
-    const currentShield = (typeof window.getPersonalShieldTimer === 'function') ? window.getPersonalShieldTimer() : null;
-    const isShieldActive = currentShield && (currentShield.expiresAt > Date.now());
-    const shieldRemainingMs = isShieldActive ? (currentShield.expiresAt - Date.now()) : 0;
-
     const headerShieldBtnHtml = `
       <button onclick="window.openPersonalShieldModal()" style="background:${isShieldActive ? 'rgba(16,185,129,0.14)' : 'rgba(56,189,248,0.12)'}; border:1px solid ${isShieldActive ? 'rgba(16,185,129,0.45)' : 'rgba(56,189,248,0.4)'}; color:${isShieldActive ? '#10b981' : '#38bdf8'}; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px; box-shadow:0 0 10px ${isShieldActive ? 'rgba(16,185,129,0.2)' : 'transparent'}; transition:all 0.2s ease;" title="Set Personal Shield & Defense Warning Timer">
         <span>🛡️ ${isShieldActive ? 'Shield Active' : 'Shield Timer'}</span>
@@ -13749,26 +13841,6 @@ window.openAllianceAlertsModal = async () => {
             <button onclick="document.getElementById('notificationsModalOverlay').remove()" class="close-btn" title="Close Window">✕</button>
           </div>
         </div>
-
-        ${isShieldActive ? `
-          <!-- Active Personal Shield Banner -->
-          <div id="personalShieldActiveBanner" style="background:linear-gradient(135deg, rgba(16,185,129,0.14), rgba(15,23,42,0.95)); border:1.5px solid rgba(16,185,129,0.45); border-radius:12px; padding:10px 14px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; box-shadow:0 0 12px rgba(16,185,129,0.15);">
-            <div style="display:flex; align-items:center; gap:8px;">
-              <span style="font-size:20px;">🛡️</span>
-              <div>
-                <div style="font-size:11px; font-weight:800; color:#10b981; text-transform:uppercase; letter-spacing:0.5px;">
-                  Active Shield: <span id="personalShieldCountdownText" style="font-family:monospace; color:#fff; font-size:13px; font-weight:bold;">${window.formatCountdownTimeRemaining(shieldRemainingMs)}</span>
-                </div>
-                <div style="font-size:10.5px; color:var(--text-muted); margin-top:1px;">
-                  Alert set for ${currentShield.warningMins || 15}m before expiration
-                </div>
-              </div>
-            </div>
-            <button onclick="window.openPersonalShieldModal()" style="background:rgba(16,185,129,0.2); border:1px solid rgba(16,185,129,0.4); color:#10b981; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
-              ⚙️ Manage
-            </button>
-          </div>
-        ` : ''}
 
         <!-- Top Filter Tabs Bar (Only renders categories with active items) -->
         ${countAll > 0 ? `

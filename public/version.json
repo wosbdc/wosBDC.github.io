@@ -1,20 +1,17 @@
 {
-  "version": "2.9.96",
+  "version": "2.9.97",
   "releaseDate": "2026-08-20",
-  "title": "What's New in v2.9.96",
+  "title": "What's New in v2.9.97",
   "notes": [
-    "🐻 Instant presets for Bear Trap, Castle, and Crazy Joe.",
-    "🛡️ Personal Shield timer with pre-drop audio chime warnings.",
-    "🔁 Auto-recurring timers for 48h Bear Trap and weekly events.",
-    "⚙️ Customizable alert subscriptions for your preferred events."
+    "🛡️ Personal Shield timer integrated directly into Timers tab stream."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "2.9.96",
+    "version": "2.9.97",
     "latestChanges": [
+      "v2.9.97: Integrated Personal Shield timer directly into Timers tab stream",
       "v2.9.96: Alliance Timers Suite & Personal Shield Reminders with Presets and Recurrence",
       "v2.9.95: Synchronized navbar Bell badge counter with active stream items",
-      "v2.9.94: Dynamic filter tabs that only show categories with active alerts",
-      "v2.9.93: Renamed 'Tokens' filter tab to compact 'Sync'"
+      "v2.9.94: Dynamic filter tabs that only show categories with active alerts"
     ]
   }
 }

@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [2.9.97] - 2026-08-20
+- 🛡️ **Shield in Timers Tab**: Integrated Personal Shield directly into Timers tab stream.
+
 ## [2.9.96] - 2026-08-20
 - 🐻 **1-Click Game Presets**: Instant setup for Bear Trap, Castle, and Crazy Joe.
 - 🛡️ **Personal Shield Timer**: Live countdown with custom pre-drop audio & push alerts.
