@@ -7,6 +7,359 @@ import changelogRaw from './CHANGELOG.md?raw'
 
 // adminDeletePlayer is defined below at line ~1703 (single canonical definition)
 
+/**
+ * 🛡️ Bulletproof Chief Name Sanitizer & Normalizer
+ * Cleans mojibake (Â ), non-breaking spaces (\u00C2\u00A0, \u00A0), zero-width characters,
+ * collapses redundant whitespace, and corrects known typos (e.g., "Miaow queen" -> "Miaow Queen").
+ */
+window.cleanChiefName = (name) => {
+    if (!name && name !== 0) return '';
+    let str = String(name);
+    
+    // Strip UTF-8 mojibake, non-breaking spaces, and hidden Unicode directional/zero-width marks
+    str = str.replace(/Â[\u00A0\s]/g, ' ')
+             .replace(/\u00C2\u00A0/g, ' ')
+             .replace(/\u00C2/g, '')
+             .replace(/Â/g, '')
+             .replace(/[\u00A0\u2000-\u200B\u202F\u205F\u3000\uFEFF\u200E\u200F]/g, ' ');
+    
+    // Trim and remove leading alliance tags like [BDC] or [B1]
+    str = str.trim().replace(/^\[[^\]]*\]\s*/g, '');
+    
+    // Collapse consecutive whitespace to a single space
+    str = str.replace(/\s+/g, ' ').trim();
+    
+    // Canonical name overrides & casing normalization
+    const lower = str.toLowerCase();
+    if (lower === 'miaow queen' || lower === 'miaowÂ queen' || lower === 'miaowqueen') return 'Miaow Queen';
+    if (lower === 'perma frost' || lower === 'permaÂ frost') return 'Perma Frost';
+    if (lower === 'sentinel frost' || lower === 'sentinelÂ frost') return 'Sentinel Frost';
+    if (lower === 'cyrus frost' || lower === 'cyrusÂ frost') return 'Cyrus Frost';
+    if (lower === 'dragon frost' || lower === 'dragonÂ frost') return 'Dragon Frost';
+    if (lower === 'titan frost' || lower === 'titanÂ frost') return 'Titan Frost';
+    if (lower === 'dwarf 2' || lower === 'dwarf2') return 'Dwarf 2';
+    
+    return str;
+};
+
+/**
+ * 👥 Single Unified Chief List Resolver
+ * Aggregates and deduplicates all chiefs across Registered Users, Linked Alts,
+ * Roster Live, and Showdown Live into a single source of truth with sanitized names.
+ */
+window.getUnifiedMasterChiefList = async () => {
+    try {
+        const [usersSnap, rosterData, sdSnap] = await Promise.all([
+            get(ref(db, 'users')).catch(() => null),
+            window.fetchRoster().catch(() => ({})),
+            get(ref(db, 'showdown_live')).catch(() => null)
+        ]);
+        
+        const users = (usersSnap && usersSnap.exists()) ? (usersSnap.val() || {}) : {};
+        const sdLive = (sdSnap && sdSnap.exists()) ? (sdSnap.val() || {}) : {};
+        
+        const chiefMap = new Map();
+        
+        const addChief = (rawName, rawGid, extra = {}) => {
+            const cleanName = window.cleanChiefName(rawName);
+            if (!cleanName || /^\d{6,}$/.test(cleanName) || cleanName.toLowerCase() === 'chief name' || cleanName.toLowerCase() === 'game id') return;
+            const gid = rawGid ? String(rawGid).trim() : '';
+            const normKey = cleanName.toLowerCase();
+            
+            if (chiefMap.has(normKey)) {
+                const existing = chiefMap.get(normKey);
+                if (!existing.gameId && gid) existing.gameId = gid;
+                if (!existing.furnaceLevel && (extra.furnaceLevel || extra.stove_lv)) existing.furnaceLevel = extra.furnaceLevel || extra.stove_lv;
+                if (!existing.stove_lv && (extra.stove_lv || extra.furnaceLevel)) existing.stove_lv = extra.stove_lv || extra.furnaceLevel;
+                if (extra.isAlt) existing.isAlt = true;
+                if (extra.isMain) existing.isMain = true;
+                if (extra.parentChiefName && !existing.parentChiefName) existing.parentChiefName = extra.parentChiefName;
+                if (extra.uid && !existing.uid) existing.uid = extra.uid;
+                return;
+            }
+            
+            chiefMap.set(normKey, {
+                name: cleanName,
+                gameId: gid,
+                stove_lv: extra.stove_lv || extra.furnaceLevel || '',
+                furnaceLevel: extra.furnaceLevel || extra.stove_lv || '',
+                isAlt: Boolean(extra.isAlt),
+                isMain: Boolean(extra.isMain),
+                parentChiefName: extra.parentChiefName || '',
+                uid: extra.uid || ''
+            });
+        };
+        
+        // 1. Add all Roster members
+        if (rosterData && typeof rosterData === 'object') {
+            Object.values(rosterData).forEach(rp => {
+                if (rp && (rp.name || rp.chiefName)) {
+                    addChief(rp.name || rp.chiefName, rp.gameId || rp.id, { furnaceLevel: rp.furnaceLevel || rp.stove_lv, isMain: true });
+                }
+            });
+        }
+        
+        // 2. Add all Users and Linked Alts
+        if (users && typeof users === 'object') {
+            Object.entries(users).forEach(([uid, u]) => {
+                if (!u) return;
+                const mainName = u.chiefName || u.name;
+                if (mainName) {
+                    addChief(mainName, u.gameId, { uid, furnaceLevel: u.furnaceLevel || u.stove_lv, isMain: true });
+                }
+                
+                const checkAlt = (aid, aData) => {
+                    if (!aData || typeof aData !== 'object') return;
+                    const altName = aData.nickname || aData.name || aData.chiefName;
+                    if (altName) {
+                        addChief(altName, aid, { uid, furnaceLevel: aData.stove_lv || aData.furnaceLevel, isAlt: true, parentChiefName: mainName });
+                    }
+                };
+                
+                if (u.altTokens && typeof u.altTokens === 'object') {
+                    Object.entries(u.altTokens).forEach(([aid, at]) => checkAlt(aid, at));
+                }
+                if (u.linkedAltsData && typeof u.linkedAltsData === 'object') {
+                    Object.entries(u.linkedAltsData).forEach(([aid, at]) => checkAlt(aid, at));
+                }
+            });
+        }
+        
+        // 3. Add any active Showdown players
+        if (sdLive && typeof sdLive === 'object') {
+            Object.entries(sdLive).forEach(([pName, pScores]) => {
+                if (pName && pScores && typeof pScores === 'object') {
+                    addChief(pScores.name || pName, pScores.id || pScores.gameId);
+                }
+            });
+        }
+        
+        const list = Array.from(chiefMap.values());
+        list.sort((a, b) => a.name.localeCompare(b.name));
+        return list;
+    } catch(e) {
+        console.warn("getUnifiedMasterChiefList error:", e);
+        return [];
+    }
+};
+
+/**
+ * 🧹 Automated Database & Chief Names Cleanup Suite
+ * Cleans corrupt keys, Â artifacts, and synchronizes names across users, alts, roster, and showdown.
+ */
+window.runDatabaseNameCleanup = async (notify = false) => {
+    if (notify && window.showToast) window.showToast("🧹 Running Full Database & Chief Names Cleanup...", "info");
+    
+    let cleanedUsersCount = 0;
+    let cleanedAltsCount = 0;
+    let cleanedRosterCount = 0;
+    let cleanedShowdownCount = 0;
+    let cleanedHistCount = 0;
+    
+    try {
+        const [usersSnap, rosterSnap, sdSnap, metaSnap] = await Promise.all([
+            get(ref(db, 'users')).catch(() => null),
+            get(ref(db, 'roster_live')).catch(() => null),
+            get(ref(db, 'showdown_live')).catch(() => null),
+            get(ref(db, 'showdown_meta')).catch(() => null)
+        ]);
+
+        // 1. Clean users and altTokens / linkedAltsData
+        if (usersSnap && usersSnap.exists()) {
+            const usersObj = usersSnap.val() || {};
+            for (const [uid, u] of Object.entries(usersObj)) {
+                if (!u || typeof u !== 'object') continue;
+                let changed = false;
+                const updates = {};
+                
+                if (u.name) {
+                    const cName = window.cleanChiefName(u.name);
+                    if (cName !== u.name) {
+                        updates.name = cName;
+                        changed = true;
+                    }
+                }
+                if (u.chiefName) {
+                    const cChief = window.cleanChiefName(u.chiefName);
+                    if (cChief !== u.chiefName) {
+                        updates.chiefName = cChief;
+                        changed = true;
+                    }
+                }
+                
+                if (u.altTokens && typeof u.altTokens === 'object') {
+                    const newAltTokens = { ...u.altTokens };
+                    let altChanged = false;
+                    for (const [aid, at] of Object.entries(newAltTokens)) {
+                        if (!at || typeof at !== 'object') continue;
+                        if (at.nickname) {
+                            const cNick = window.cleanChiefName(at.nickname);
+                            if (cNick !== at.nickname) {
+                                newAltTokens[aid] = { ...at, nickname: cNick, name: cNick };
+                                altChanged = true;
+                                cleanedAltsCount++;
+                            }
+                        }
+                    }
+                    if (altChanged) {
+                        updates.altTokens = newAltTokens;
+                        changed = true;
+                    }
+                }
+                
+                if (u.linkedAltsData && typeof u.linkedAltsData === 'object') {
+                    const newLinkedAlts = { ...u.linkedAltsData };
+                    let altChanged = false;
+                    for (const [aid, at] of Object.entries(newLinkedAlts)) {
+                        if (!at || typeof at !== 'object') continue;
+                        const dirtyName = at.nickname || at.name || at.chiefName;
+                        if (dirtyName) {
+                            const cNick = window.cleanChiefName(dirtyName);
+                            if (cNick !== dirtyName || at.name !== cNick || at.nickname !== cNick) {
+                                newLinkedAlts[aid] = { ...at, nickname: cNick, name: cNick, chiefName: cNick };
+                                altChanged = true;
+                                cleanedAltsCount++;
+                            }
+                        }
+                    }
+                    if (altChanged) {
+                        updates.linkedAltsData = newLinkedAlts;
+                        changed = true;
+                    }
+                }
+                
+                if (changed) {
+                    await update(ref(db, `users/${uid}`), updates).catch(e => console.warn(`Error updating user ${uid}:`, e));
+                    cleanedUsersCount++;
+                    if (currentUser && currentUser.uid === uid) {
+                        Object.assign(currentUser, updates);
+                    }
+                }
+            }
+        }
+
+        // 2. Clean roster_live
+        if (rosterSnap && rosterSnap.exists()) {
+            const rosterObj = rosterSnap.val() || {};
+            const newRoster = {};
+            let rosterChanged = false;
+            for (const [k, p] of Object.entries(rosterObj)) {
+                if (!p || typeof p !== 'object' || k === 'Chief Name' || k === 'chief name') continue;
+                const dirtyName = p.name || p.chiefName || k;
+                const cName = window.cleanChiefName(dirtyName);
+                const canonKey = cName || k;
+                
+                if (cName !== dirtyName || canonKey !== k) {
+                    rosterChanged = true;
+                    cleanedRosterCount++;
+                }
+                newRoster[canonKey] = {
+                    ...p,
+                    name: cName,
+                    chiefName: cName
+                };
+            }
+            if (rosterChanged) {
+                await set(ref(db, 'roster_live'), newRoster).catch(e => console.warn("Error updating roster_live:", e));
+                window.rosterCache = newRoster;
+            }
+        }
+
+        // 3. Clean showdown_live (Migrate MiaowÂ queen, PermaÂ Frost, etc.)
+        if (sdSnap && sdSnap.exists()) {
+            const sdObj = sdSnap.val() || {};
+            const newSd = {};
+            let sdChanged = false;
+            const keysToRemove = [];
+            for (const [k, scores] of Object.entries(sdObj)) {
+                if (!scores || typeof scores !== 'object' || k === 'error') continue;
+                const dirtyName = scores.name || k;
+                const cName = window.cleanChiefName(dirtyName);
+                if (cName !== k || (scores.name && scores.name !== cName)) {
+                    sdChanged = true;
+                    keysToRemove.push(k);
+                    cleanedShowdownCount++;
+                }
+                if (!newSd[cName]) {
+                    newSd[cName] = {
+                        ...scores,
+                        name: cName
+                    };
+                } else {
+                    for (let di = 1; di <= 6; di++) {
+                        newSd[cName]['d' + di] = Math.max(newSd[cName]['d' + di] || 0, scores['d' + di] || 0);
+                    }
+                    newSd[cName].total = [1,2,3,4,5,6].reduce((sum, di) => sum + (newSd[cName]['d'+di]||0), 0);
+                }
+            }
+            if (sdChanged) {
+                for (const [cName, scores] of Object.entries(newSd)) {
+                    await set(ref(db, `showdown_live/${cName}`), scores).catch(e => console.warn(`Error writing showdown_live/${cName}:`, e));
+                }
+                for (const oldKey of keysToRemove) {
+                    if (oldKey && !newSd[oldKey]) {
+                        await remove(ref(db, `showdown_live/${oldKey}`)).catch(() => null);
+                    }
+                }
+            }
+        }
+
+        // 4. Clean showdown_meta/history
+        if (metaSnap && metaSnap.exists()) {
+            const meta = metaSnap.val() || {};
+            if (meta.history && typeof meta.history === 'object') {
+                let histChanged = false;
+                const newHist = { ...meta.history };
+                for (const [hKey, block] of Object.entries(newHist)) {
+                    if (!block || typeof block !== 'object') continue;
+                    if (Array.isArray(block.players)) {
+                        block.players.forEach(p => {
+                            if (p && p.name) {
+                                const cName = window.cleanChiefName(p.name);
+                                if (cName !== p.name) {
+                                    p.name = cName;
+                                    histChanged = true;
+                                    cleanedHistCount++;
+                                }
+                            }
+                        });
+                    }
+                    if (block.winners && typeof block.winners === 'object') {
+                        for (const [wKey, wVal] of Object.entries(block.winners)) {
+                            if (typeof wVal === 'string') {
+                                const cWinner = window.cleanChiefName(wVal);
+                                if (cWinner !== wVal) {
+                                    block.winners[wKey] = cWinner;
+                                    histChanged = true;
+                                }
+                            }
+                        }
+                    }
+                }
+                if (histChanged) {
+                    await set(ref(db, 'showdown_meta/history'), newHist).catch(e => console.warn("Error updating showdown_meta/history:", e));
+                }
+            }
+        }
+
+        const totalCleaned = cleanedUsersCount + cleanedAltsCount + cleanedRosterCount + cleanedShowdownCount + cleanedHistCount;
+        console.log(`[Database Cleanup] Complete: Fixed ${cleanedUsersCount} user(s), ${cleanedAltsCount} alt(s), ${cleanedRosterCount} roster row(s), ${cleanedShowdownCount} showdown row(s), ${cleanedHistCount} history record(s).`);
+        
+        if (notify && window.showToast) {
+            window.showToast(`✨ Cleanup Complete: Sanitized ${totalCleaned} record(s) with clean names!`, "success");
+        }
+
+        if (notify && window.activeViewFunc) {
+            window.activeViewFunc();
+        }
+    } catch(err) {
+        console.error("[Database Cleanup] Error:", err);
+        if (notify && window.showToast) {
+            window.showToast("Database cleanup error: " + (err.message || err), "error");
+        }
+    }
+};
+
 window.deduplicateRosterLive = async () => {
     try {
         const snap = await get(ref(db, 'roster_live')).catch(() => null);
@@ -22,7 +375,7 @@ window.deduplicateRosterLive = async () => {
             if (!p || typeof p !== 'object' || key === 'Chief Name' || key === 'chief name') continue;
 
             const gid = p.gameId ? p.gameId.toString().trim() : '';
-            const name = (p.name || p.chiefName || key).toString().trim();
+            const name = window.cleanChiefName(p.name || p.chiefName || key);
             const normName = name.toLowerCase();
 
             if (!name && !gid) continue;
@@ -89,7 +442,7 @@ window.fetchRoster = async () => {
            for (const [k, p] of Object.entries(cached)) {
                if (!p || typeof p !== 'object') continue;
                const gid = p.gameId ? p.gameId.toString().trim() : '';
-               const name = (p.name || p.chiefName || k).toString().trim();
+               const name = window.cleanChiefName(p.name || p.chiefName || k);
                const normName = name.toLowerCase();
 
                if (gid && seenGids.has(gid)) continue;
@@ -98,7 +451,7 @@ window.fetchRoster = async () => {
                if (gid) seenGids.add(gid);
                if (normName) seenNames.add(normName);
 
-               deduplicated[k] = { ...p, name, gameId: gid };
+               deduplicated[name || k] = { ...p, name, gameId: gid };
            }
 
            window.rosterCache = deduplicated;
@@ -110,7 +463,7 @@ window.fetchRoster = async () => {
    let newRoster = {};
    if (rosterRaw && rosterRaw.length > 1) {
        for (let i = 3; i < rosterRaw.length; i++) {
-           const name = rosterRaw[i][0] ? rosterRaw[i][0].toString().trim() : '';
+           const name = window.cleanChiefName(rosterRaw[i][0] ? rosterRaw[i][0].toString().trim() : '');
            const gameId = rosterRaw[i][1] ? rosterRaw[i][1].toString().trim() : '';
            if (!name || name.toLowerCase() === 'chief name' || gameId.toLowerCase() === 'game id') continue;
            newRoster[name] = {
@@ -24939,33 +25292,64 @@ const views = {
     }
     
     try {
-       const [sdRes, metaSnap, rosterRawData] = await Promise.all([
+       const [sdRes, metaSnap, unifiedChiefList] = await Promise.all([
           window.fetchMergedShowdown(),
           get(ref(db, 'showdown_meta')),
-          window.fetchRoster().catch(() => ({}))
+          window.getUnifiedMasterChiefList()
        ]);
        
        let meta = (metaSnap && metaSnap.exists() && metaSnap.val()) ? metaSnap.val() : {};
        if (!meta.enemyAlliance || typeof meta.enemyAlliance !== 'object') meta.enemyAlliance = { name: "[WWA] Whiteoutwarriors", scores: { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 } };
        if (!meta.enemyAlliance.scores || typeof meta.enemyAlliance.scores !== 'object') meta.enemyAlliance.scores = { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 };
        
-       const sdLiveData = sdRes.sdLiveData || {};
+       const rawSdLiveData = sdRes.sdLiveData || {};
+       const sdLiveData = {};
+       
+       // Sanitize keys and names in sdLiveData
+       Object.entries(rawSdLiveData).forEach(([k, v]) => {
+          if (!v || typeof v !== 'object' || k === 'error') return;
+          const cleanK = window.cleanChiefName(v.name || k);
+          if (!sdLiveData[cleanK]) {
+              sdLiveData[cleanK] = { ...v, name: cleanK };
+          } else {
+              for (let i = 1; i <= 6; i++) {
+                  sdLiveData[cleanK]['d'+i] = Math.max(sdLiveData[cleanK]['d'+i] || 0, v['d'+i] || 0);
+              }
+          }
+       });
        
        let allPlayers = [];
-       if (rosterRawData) { Object.values(rosterRawData).forEach(p => { if (p.name) allPlayers.push(p.name); }); }
-       if (allPlayers.length === 0) allPlayers = Object.keys(sdLiveData);
-       allPlayers = [...new Set(allPlayers)];
+       if (Array.isArray(unifiedChiefList) && unifiedChiefList.length > 0) {
+          unifiedChiefList.forEach(c => {
+             if (c && c.name) {
+                allPlayers.push({
+                   name: c.name,
+                   gameId: c.gameId,
+                   isAlt: c.isAlt,
+                   parentChiefName: c.parentChiefName,
+                   label: c.isAlt ? `${c.name} (Alt of ${c.parentChiefName || 'Member'})` : c.name
+                });
+             }
+          });
+       } else {
+          Object.keys(sdLiveData).forEach(k => {
+             allPlayers.push({ name: k, gameId: '', isAlt: false, parentChiefName: '', label: k });
+          });
+       }
+       
+       allPlayers.sort((a, b) => a.name.localeCompare(b.name));
        
        let allianceTotals = {d1:0, d2:0, d3:0, d4:0, d5:0, d6:0};
        let winners = {d1:{name:'', score:0}, d2:{name:'', score:0}, d3:{name:'', score:0}, d4:{name:'', score:0}, d5:{name:'', score:0}, d6:{name:'', score:0}};
        
        Object.entries(sdLiveData).forEach(([playerName, scores]) => {
           if (!scores || typeof scores !== 'object') return;
+          const cleanName = window.cleanChiefName(scores.name || playerName);
           for (let i = 1; i <= 6; i++) {
               let score = scores['d'+i] || 0;
               allianceTotals['d'+i] += score;
               if (score > winners['d'+i].score) {
-                  winners['d'+i] = { name: playerName, score: score };
+                  winners['d'+i] = { name: cleanName, score: score };
               }
           }
        });
@@ -24993,6 +25377,7 @@ const views = {
                  <span id="sdPlayerAutoSaveStatus" style="font-size:11.5px; font-weight:700; color:var(--text-muted); background:rgba(255,255,255,0.05); padding:2px 8px; border-radius:6px; border:1px solid rgba(255,255,255,0.1); display:inline-flex; align-items:center; gap:4px;">⚡ Auto-Save Enabled</span>
                </div>
                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                  <button onclick="window.runDatabaseNameCleanup(true)" style="background:linear-gradient(135deg, rgba(16,185,129,0.2) 0%, rgba(16,185,129,0.08) 100%); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:4px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:4px;" title="Sanitize dirty names, remove Â artifacts, and sync all accounts across Firebase">🧹 Clean Names</button>
                   <button onclick="window.restoreDefaultShowdownHistory()" style="background:rgba(255,215,0,0.15); color:#FFD700; border:1px solid rgba(255,215,0,0.4); padding:4px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:4px;" title="Write original 5 historical cycles into Firebase RTDB">👑 Restore All 5 Cycles</button>
                   <button onclick="window.openShowdownArchiveVaultModal('all', true)" style="background:linear-gradient(135deg, rgba(139,92,246,0.3) 0%, rgba(124,58,237,0.15) 100%); color:#a78bfa; border:1px solid rgba(139,92,246,0.5); padding:4px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:4px;">📂 Vault Manager</button>
                   <button onclick="window.showMissedDaysReportModal(this)" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--accent); padding:4px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:4px;">📋 Missed Days Report</button>
@@ -25003,10 +25388,10 @@ const views = {
             <div style="background:rgba(255,255,255,0.02); padding:15px; border-radius:8px; border:1px solid var(--border); margin-bottom:10px;">
               <label style="display:block; margin-bottom:5px; font-weight:bold; color:var(--text-main);">Select Player</label>
               <select id="sdPlayerSelect" style="width:100%; padding:12px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:16px; margin-bottom:15px;" onchange="window.onSdPlayerSelect()">
-                <option value="">-- Choose a Player --</option>`;
+                <option value="">-- Choose a Player (${allPlayers.length} Chiefs) --</option>`;
                 
-        allPlayers.sort((a,b) => a.localeCompare(b)).forEach(p => {
-           html += `<option value="${escapeHTML(p)}">${escapeHTML(p)}</option>`;
+        allPlayers.forEach(p => {
+           html += `<option value="${escapeHTML(p.name)}">${escapeHTML(p.label)}</option>`;
         });
                 
         html += `</select>
@@ -25100,11 +25485,12 @@ const views = {
            
            Object.entries(sdLiveData).forEach(([playerName, scores]) => {
                if (!scores || typeof scores !== 'object') return;
+               const cleanName = window.cleanChiefName(scores.name || playerName);
                for (let i = 1; i <= 6; i++) {
                    let score = scores['d'+i] || 0;
                    allianceTotals['d'+i] += score;
                    if (score > winners['d'+i].score) {
-                       winners['d'+i] = { name: playerName, score: score };
+                       winners['d'+i] = { name: cleanName, score: score };
                    }
                }
            });
@@ -25140,7 +25526,8 @@ const views = {
              window.flushAutoSaveSdEntry();
           }
 
-          const sel = document.getElementById('sdPlayerSelect')?.value;
+          const rawSel = document.getElementById('sdPlayerSelect')?.value;
+          const sel = window.cleanChiefName(rawSel);
           _activeSdPlayer = sel;
           const fields = document.getElementById('sdEntryFields');
           if (!sel) {
@@ -25148,7 +25535,15 @@ const views = {
              return;
           }
           if (fields) fields.style.display = 'flex';
-          const pData = (window._currentSdLiveData && window._currentSdLiveData[sel]) ? window._currentSdLiveData[sel] : {};
+          
+          let pData = (window._currentSdLiveData && window._currentSdLiveData[sel]) ? window._currentSdLiveData[sel] : null;
+          if (!pData && window._currentSdLiveData) {
+             const lower = sel.toLowerCase();
+             const matchKey = Object.keys(window._currentSdLiveData).find(k => window.cleanChiefName(k).toLowerCase() === lower);
+             if (matchKey) pData = window._currentSdLiveData[matchKey];
+          }
+          pData = pData || {};
+          
           for (let i = 1; i <= 6; i++) {
              let val = pData['d'+i];
              let input = document.getElementById('sd_d'+i);
@@ -25164,7 +25559,8 @@ const views = {
        };
 
        window.saveShowdownEntry = async (isAutoSave = false) => {
-          const sel = document.getElementById('sdPlayerSelect')?.value || _activeSdPlayer;
+          const rawSel = document.getElementById('sdPlayerSelect')?.value || _activeSdPlayer;
+          const sel = window.cleanChiefName(rawSel);
           if (!sel) return;
           
           let btn = document.getElementById('btnManualSaveSd');
@@ -25174,17 +25570,25 @@ const views = {
              btn.disabled = true;
           }
           
-          let updates = {};
+          const cleanSel = window.cleanChiefName(sel);
+          let updates = { name: cleanSel };
           for (let i = 1; i <= 6; i++) {
              const inputEl = document.getElementById('sd_d'+i);
              let val = inputEl ? parseInt(inputEl.value) : 0;
              updates['d'+i] = isNaN(val) ? 0 : val;
           }
+          updates.total = [1,2,3,4,5,6].reduce((sum, d) => sum + (updates['d'+d] || 0), 0);
           
           try {
-             await set(ref(db, `showdown_live/${sel}`), updates);
-             window._currentSdLiveData[sel] = updates;
+             await set(ref(db, `showdown_live/${cleanSel}`), updates);
+             window._currentSdLiveData = window._currentSdLiveData || {};
+             window._currentSdLiveData[cleanSel] = updates;
              
+             // Recalculate summary table live
+             if (typeof window.recalcShowdownSummaryTable === 'function') {
+                 window.recalcShowdownSummaryTable();
+             }
+
              // Sync the cached data to reflect this so navigation uses updated scores
              if (window.liveData['Showdown']) {
                 window.liveData['Showdown'] = window.mergeShowdownData(window.liveData['Showdown'], window._currentSdLiveData);
@@ -29986,7 +30390,20 @@ window.resetBearTrapEvent = async () => {
             get(ref(db, 'showdown_meta/history')).catch(() => null)
          ]);
          
-         const liveData = liveSnap.val() || {};
+         const rawLiveData = liveSnap.val() || {};
+         let liveData = {};
+         Object.entries(rawLiveData).forEach(([k, v]) => {
+             if (!v || typeof v !== 'object' || k === 'error') return;
+             const cleanK = window.cleanChiefName(v.name || k);
+             if (!cleanK) return;
+             if (!liveData[cleanK]) {
+                 liveData[cleanK] = { ...v, name: cleanK };
+             } else {
+                 for (let i = 1; i <= 6; i++) {
+                     liveData[cleanK]['d'+i] = Math.max(liveData[cleanK]['d'+i] || 0, v['d'+i] || 0);
+                 }
+             }
+         });
          let fetchedHist = (historySnap && historySnap.exists() && historySnap.val()) ? historySnap.val() : {};
          let rawHist = sdHistoryData;
          if (rawHist && typeof rawHist === 'object' && rawHist.data) rawHist = rawHist.data;
@@ -30003,6 +30420,7 @@ window.resetBearTrapEvent = async () => {
          
          for (const [pName, scores] of Object.entries(liveData)) {
              if (!scores || typeof scores !== 'object') continue;
+             const cleanName = window.cleanChiefName(scores.name || pName);
              let pd1 = scores.d1 || 0;
              let pd2 = scores.d2 || 0;
              let pd3 = scores.d3 || 0;
@@ -30017,13 +30435,13 @@ window.resetBearTrapEvent = async () => {
              ourScores.d5 += pd5;
              ourScores.d6 += pd6;
              
-             if (pd1 > topPlayers.d1.score) topPlayers.d1 = { name: pName, score: pd1 };
-             if (pd2 > topPlayers.d2.score) topPlayers.d2 = { name: pName, score: pd2 };
-             if (pd3 > topPlayers.d3.score) topPlayers.d3 = { name: pName, score: pd3 };
-             if (pd4 > topPlayers.d4.score) topPlayers.d4 = { name: pName, score: pd4 };
-             if (pd5 > topPlayers.d5.score) topPlayers.d5 = { name: pName, score: pd5 };
-             if (pd6 > topPlayers.d6.score) topPlayers.d6 = { name: pName, score: pd6 };
-             players.push({ name: pName, d1: pd1, d2: pd2, d3: pd3, d4: pd4, d5: pd5, d6: pd6, total: pTotal });
+             if (pd1 > topPlayers.d1.score) topPlayers.d1 = { name: cleanName, score: pd1 };
+             if (pd2 > topPlayers.d2.score) topPlayers.d2 = { name: cleanName, score: pd2 };
+             if (pd3 > topPlayers.d3.score) topPlayers.d3 = { name: cleanName, score: pd3 };
+             if (pd4 > topPlayers.d4.score) topPlayers.d4 = { name: cleanName, score: pd4 };
+             if (pd5 > topPlayers.d5.score) topPlayers.d5 = { name: cleanName, score: pd5 };
+             if (pd6 > topPlayers.d6.score) topPlayers.d6 = { name: cleanName, score: pd6 };
+             players.push({ name: cleanName, d1: pd1, d2: pd2, d3: pd3, d4: pd4, d5: pd5, d6: pd6, total: pTotal });
           }
 
           const staticHorns = { d1: 1, d2: 2, d3: 2, d4: 2, d5: 2, d6: 4 };
@@ -30131,14 +30549,21 @@ window.resetBearTrapEvent = async () => {
               let allTimePlayers = calculateAllTimeShowdown(historyObj);
               let combinedMap = {};
               allTimePlayers.forEach(p => {
-                  combinedMap[p.name.toLowerCase()] = { name: p.name, horns: p.horns, wins: p.wins, total: p.total };
+                  if (p && p.name) {
+                      const cName = window.cleanChiefName(p.name);
+                      const key = cName.toLowerCase();
+                      combinedMap[key] = { name: cName, horns: p.horns, wins: p.wins, total: p.total };
+                  }
               });
               players.forEach(p => {
-                  let key = p.name.toLowerCase();
-                  if (!combinedMap[key]) combinedMap[key] = { name: p.name, horns: 0, wins: 0, total: 0 };
-                  combinedMap[key].horns += (p.horns || 0);
-                  combinedMap[key].wins += (p.wins || 0);
-                  combinedMap[key].total += (p.total || 0);
+                  if (p && p.name) {
+                      const cName = window.cleanChiefName(p.name);
+                      let key = cName.toLowerCase();
+                      if (!combinedMap[key]) combinedMap[key] = { name: cName, horns: 0, wins: 0, total: 0 };
+                      combinedMap[key].horns += (p.horns || 0);
+                      combinedMap[key].wins += (p.wins || 0);
+                      combinedMap[key].total += (p.total || 0);
+                  }
               });
               allTimePlayers = Object.values(combinedMap).sort((a, b) => b.horns !== a.horns ? b.horns - a.horns : b.total - a.total);
               
@@ -30716,6 +31141,22 @@ window.resetBearTrapEvent = async () => {
        
        let html = `<div style="display:flex; flex-direction:column; gap:20px;">`;
        
+       // Sanitize and deduplicate live Showdown scores
+       let sanitizedLiveMap = {};
+       for (const [pKey, scores] of Object.entries(liveData)) {
+          if (!scores || typeof scores !== 'object' || pKey === 'error') continue;
+          const cleanName = window.cleanChiefName(scores.name || pKey);
+          if (!cleanName) continue;
+          if (!sanitizedLiveMap[cleanName]) {
+             sanitizedLiveMap[cleanName] = { ...scores, name: cleanName };
+          } else {
+             for (let di = 1; di <= 6; di++) {
+                sanitizedLiveMap[cleanName]['d' + di] = Math.max(sanitizedLiveMap[cleanName]['d' + di] || 0, scores['d' + di] || 0);
+             }
+          }
+       }
+       liveData = sanitizedLiveMap;
+
        // Calculate Our Scores
        let ourScores = { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 };
        let players = [];
@@ -30723,6 +31164,7 @@ window.resetBearTrapEvent = async () => {
        
        for (const [pName, scores] of Object.entries(liveData)) {
           if (!scores || typeof scores !== 'object') continue;
+          const cleanName = window.cleanChiefName(scores.name || pName);
           let pd1 = scores.d1 || 0;
           let pd2 = scores.d2 || 0;
           let pd3 = scores.d3 || 0;
@@ -30742,14 +31184,14 @@ window.resetBearTrapEvent = async () => {
              let dScore = scores['d' + di] || 0;
              if (dScore > 0) {
                 if (dScore > topPlayers['d' + di].score) {
-                   topPlayers['d' + di] = { names: [pName], score: dScore };
+                   topPlayers['d' + di] = { names: [cleanName], score: dScore };
                 } else if (dScore === topPlayers['d' + di].score) {
-                   topPlayers['d' + di].names.push(pName);
+                   topPlayers['d' + di].names.push(cleanName);
                 }
              }
           }
           
-          players.push({ name: pName, d1: pd1, d2: pd2, d3: pd3, d4: pd4, d5: pd5, d6: pd6, total: pTotal });
+          players.push({ name: cleanName, d1: pd1, d2: pd2, d3: pd3, d4: pd4, d5: pd5, d6: pd6, total: pTotal });
        }
        
        ourScores.total = ourScores.d1 + ourScores.d2 + ourScores.d3 + ourScores.d4 + ourScores.d5 + ourScores.d6;
@@ -30994,10 +31436,10 @@ window.resetBearTrapEvent = async () => {
           for (let r = 1; r < data.length; r++) {
              let pName = data[r][0];
              if (!pName) continue;
-             let safeName = pName.toString().trim();
+             let safeName = window.cleanChiefName(pName);
              let missedCount = 0;
              if (currentDay > 0) {
-                let p = sdLiveData[safeName] || {};
+                let p = sdLiveData[safeName] || sdLiveData[pName] || {};
                 for (let i = 1; i <= currentDay; i++) {
                    if (!(p['d'+i] > 0)) missedCount++;
                 }
@@ -31040,7 +31482,7 @@ window.resetBearTrapEvent = async () => {
                 let pScore = tableData[dr][totalCol];
                 
                 if (pName && (typeof pScore === 'number' || (typeof pScore === 'string' && !isNaN(pScore)))) {
-                  let safeName = pName.toString().trim();
+                  let safeName = window.cleanChiefName(pName);
                   if (!allTimeShowdownMap[safeName]) allTimeShowdownMap[safeName] = 0;
                   allTimeShowdownMap[safeName] += Number(pScore);
                 }
@@ -31055,7 +31497,7 @@ window.resetBearTrapEvent = async () => {
       
       for (const [pName, scores] of Object.entries(sdLiveData)) {
           if (!scores || typeof scores !== 'object') continue;
-          let safeName = pName.toString().trim();
+          let safeName = window.cleanChiefName(scores.name || pName);
           let pScore = (scores.d1||0) + (scores.d2||0) + (scores.d3||0) + (scores.d4||0) + (scores.d5||0) + (scores.d6||0);
           if (!allTimeShowdownMap[safeName]) allTimeShowdownMap[safeName] = 0;
           allTimeShowdownMap[safeName] += pScore;

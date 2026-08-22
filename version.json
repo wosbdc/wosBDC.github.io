@@ -1,20 +1,20 @@
 {
-  "version": "3.1.4",
-  "releaseDate": "2026-08-21",
-  "title": "What's New in v3.1.4",
+  "version": "3.1.5",
+  "releaseDate": "2026-08-22",
+  "title": "What's New in v3.1.5",
   "notes": [
-    "⚙️ Unified Options Menu: Push settings and timers combined into one menu.",
-    "📌 Sidebar Timers Toggle: Show or hide shield and auto-join widgets.",
-    "⏱️ Live Countdown Badges: Ticking remaining time indicators across all menus."
+    "🧹 Name Sanitizer: Cleans corrupt characters and tags from Showdown names.",
+    "🔄 Auto Deduplication: Merges duplicate records and keeps highest day scores.",
+    "⚡ Database Repair: Auto-migrates legacy and corrupted Firebase player keys."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.1.4",
+    "version": "3.1.5",
     "latestChanges": [
+      "v3.1.5: Showdown player name sanitization, auto-deduplication, and database cleanup",
       "v3.1.4: Unified Options menu and customizable sidebar timers toggle",
       "v3.1.3: Added Auto-Join Renewal Reminder Timer with push and audio alerts",
       "v3.1.2: Added PocketTactics, Beebom, and TouchTapPlay gift code feeds",
-      "v3.1.1: Automatic gift code bot enrollment for all members and alts",
-      "v3.1.0: Fluid full-page vertical scrolling and zero touch trapping on Showdown & Leaderboards"
+      "v3.1.1: Automatic gift code bot enrollment for all members and alts"
     ]
   }
 }

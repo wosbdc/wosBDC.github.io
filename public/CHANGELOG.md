@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.1.5] - 2026-08-22
+- 🧹 **Name Sanitizer**: Cleans corrupt characters and tags from Showdown names.
+- 🔄 **Auto Deduplication**: Merges duplicate records and keeps highest day scores.
+- ⚡ **Database Repair**: Auto-migrates legacy and corrupted Firebase player keys.
+
 ## [3.1.4] - 2026-08-21
 - ⚙️ **Unified Options Menu**: Push settings and timers combined into one menu.
 - 📌 **Sidebar Timers Toggle**: Show or hide shield and auto-join widgets.
