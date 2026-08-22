@@ -1,21 +1,21 @@
 {
-  "version": "3.1.6",
+  "version": "3.1.7",
   "releaseDate": "2026-08-22",
-  "title": "What's New in v3.1.6",
+  "title": "What's New in v3.1.7",
   "notes": [
-    "🎥 Video Ticket Attachments: Attach MP4/WebM bug and feature video clips.",
-    "🎬 Video Player Lightbox: Fullscreen video player with playback controls and download.",
-    "🖼️ Auto Thumbnail Poster: Automatically extracts crisp poster frame from uploaded videos.",
-    "🔗 External Video Links: Paste YouTube or Streamable links with zero upload limits."
+    "📁 Google Drive Drop & Go: Drag & drop auto-uploads video attachments to Google Drive.",
+    "🛡️ 3-Tier Quota Fallback: Silent in-database storage fallback if Google Drive quotas hit.",
+    "🎬 Drive Streaming Lightbox: Embedded Drive video streaming with instant poster and downloads.",
+    "🔗 Direct Drive Links: Paste public Google Drive links with zero file limits."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.1.6",
+    "version": "3.1.7",
     "latestChanges": [
+      "v3.1.7: Google Drive Drop & Go auto-upload with 3-tier resilient quota fallback",
       "v3.1.6: Video attachments, video lightbox player, and thumbnail extractor for feedback tickets",
       "v3.1.5: Showdown player name sanitization, auto-deduplication, and database cleanup",
       "v3.1.4: Unified Options menu and customizable sidebar timers toggle",
-      "v3.1.3: Added Auto-Join Renewal Reminder Timer with push and audio alerts",
-      "v3.1.2: Added PocketTactics, Beebom, and TouchTapPlay gift code feeds"
+      "v3.1.3: Added Auto-Join Renewal Reminder Timer with push and audio alerts"
     ]
   }
 }

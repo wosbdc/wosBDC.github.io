@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.1.7] - 2026-08-22
+- 📁 **Google Drive Drop & Go**: Drag & drop auto-uploads video attachments to Google Drive.
+- 🛡️ **3-Tier Quota Fallback**: Silent in-database storage fallback if Google Drive quotas hit.
+- 🎬 **Drive Streaming Lightbox**: Embedded Drive video streaming with instant poster and downloads.
+- 🔗 **Direct Drive Links**: Paste public Google Drive links with zero file limits.
+
 ## [3.1.6] - 2026-08-22
 - 🎥 **Video Ticket Attachments**: Attach MP4/WebM bug and feature video clips.
 - 🎬 **Video Player Lightbox**: Fullscreen video player with playback controls and download.

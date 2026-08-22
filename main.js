@@ -11322,14 +11322,92 @@ window.processFeedbackVideo = (file, maxSizeBytes = 10 * 1024 * 1024) => {
     });
 };
 
+window.openExternalDriveFolder = (folderUrl) => {
+    window.open(folderUrl || 'https://drive.google.com', '_blank');
+};
+
+window.parseGoogleDriveUrl = (url) => {
+    if (!url || typeof url !== 'string') return null;
+    const str = url.trim();
+    if (!str.includes('drive.google.com') && !str.includes('docs.google.com')) return null;
+
+    let fileId = null;
+    const matchFileD = str.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+    if (matchFileD && matchFileD[1]) {
+        fileId = matchFileD[1];
+    } else {
+        const matchParamId = str.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+        if (matchParamId && matchParamId[1]) {
+            fileId = matchParamId[1];
+        }
+    }
+
+    if (!fileId) return null;
+
+    return {
+        fileId: fileId,
+        previewUrl: `https://drive.google.com/file/d/${fileId}/preview`,
+        thumbnailUrl: `https://drive.google.com/thumbnail?id=${fileId}&sz=w800`,
+        downloadUrl: `https://drive.google.com/uc?export=download&id=${fileId}`,
+        viewUrl: `https://drive.google.com/file/d/${fileId}/view`
+    };
+};
+
+window.uploadMediaToDriveBackend = async (base64Data, fileName, mimeType, authorName) => {
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 25000);
+
+        const payload = {
+            api: 'uploadFeedbackMedia',
+            fileData: base64Data,
+            fileName: fileName || 'feedback_media.mp4',
+            mimeType: mimeType || 'video/mp4',
+            author: authorName || 'Alliance Member'
+        };
+
+        const res = await fetch(API_BASE_URL, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!res.ok) {
+            throw new Error(`Google Drive API HTTP error ${res.status}`);
+        }
+
+        const data = await res.json();
+        if (!data || !data.success) {
+            throw new Error(data?.message || 'Google Drive upload returned unsuccessful');
+        }
+
+        return data;
+    } catch(err) {
+        console.warn("Google Drive backend upload skipped/failed, using fallback:", err);
+        throw err;
+    }
+};
+
 window.openFeedbackMediaLightbox = (options = {}) => {
     let type = 'image';
     let url = '';
+    let downloadUrl = '';
     let downloadName = 'feedback_attachment';
+    let viewUrl = '';
 
     if (typeof options === 'string') {
         url = options;
-        if (url.includes('.mp4') || url.includes('.webm') || url.includes('data:video/')) {
+        if (url.includes('drive.google.com')) {
+            type = 'gdrive_video';
+            const parsed = window.parseGoogleDriveUrl(url);
+            if (parsed) {
+                url = parsed.previewUrl;
+                downloadUrl = parsed.downloadUrl;
+                viewUrl = parsed.viewUrl;
+            }
+        } else if (url.includes('.mp4') || url.includes('.webm') || url.startsWith('data:video/')) {
             type = 'video';
             downloadName = 'feedback_clip.mp4';
         } else {
@@ -11339,6 +11417,16 @@ window.openFeedbackMediaLightbox = (options = {}) => {
         type = options.type || (options.videoUrl ? 'video' : 'image');
         url = options.url || options.videoUrl || options.imageUrl || '';
         downloadName = options.name || (type === 'video' ? 'feedback_clip.mp4' : 'feedback_screenshot.jpg');
+        
+        if (url.includes('drive.google.com') || type === 'gdrive_video' || type === 'gdrive_media') {
+            type = 'gdrive_video';
+            const parsed = window.parseGoogleDriveUrl(url);
+            if (parsed) {
+                url = parsed.previewUrl;
+                downloadUrl = parsed.downloadUrl;
+                viewUrl = parsed.viewUrl;
+            }
+        }
     }
 
     if (!url) return;
@@ -11350,10 +11438,17 @@ window.openFeedbackMediaLightbox = (options = {}) => {
     overlay.id = 'feedbackLightboxModal';
     overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.92); backdrop-filter:blur(8px); z-index:100000; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; box-sizing:border-box; animation: fadeIn 0.2s ease;';
 
+    const isDrive = (type === 'gdrive_video' || url.includes('drive.google.com'));
     const isVideo = (type === 'video' || type === 'external_video' || url.startsWith('data:video/') || url.includes('.mp4') || url.includes('.webm') || url.includes('.mov'));
 
     let mediaContentHtml = '';
-    if (isVideo) {
+    if (isDrive) {
+        mediaContentHtml = `
+            <div style="width:85vw; max-width:960px; height:72vh; border-radius:10px; overflow:hidden; box-shadow:0 10px 40px rgba(0,0,0,0.8); border:1px solid rgba(255,255,255,0.2); background:#000;">
+                <iframe src="${escapeHTML(url)}" allow="autoplay; fullscreen" style="width:100%; height:100%; border:none;" allowfullscreen></iframe>
+            </div>
+        `;
+    } else if (isVideo) {
         mediaContentHtml = `
             <video src="${escapeHTML(url)}" controls autoplay playsinline style="max-width:100%; max-height:75vh; border-radius:10px; box-shadow:0 10px 40px rgba(0,0,0,0.8); border:1px solid rgba(255,255,255,0.2); background:#000;">
                 Your browser does not support HTML5 video playback.
@@ -11365,15 +11460,25 @@ window.openFeedbackMediaLightbox = (options = {}) => {
         `;
     }
 
+    const driveButtonsHtml = isDrive && viewUrl ? `
+        <a href="${escapeHTML(viewUrl)}" target="_blank" style="background:rgba(6,182,212,0.2); border:1px solid rgba(6,182,212,0.4); color:#38bdf8; padding:6px 14px; border-radius:8px; font-weight:bold; font-size:12px; text-decoration:none; display:inline-flex; align-items:center; gap:6px; transition:0.2s;">
+            📁 Open in Drive
+        </a>
+    ` : '';
+
+    const downloadHref = downloadUrl || url;
+    const isExternalStream = isDrive || url.startsWith('http');
+
     overlay.innerHTML = `
-        <div style="position:relative; max-width:92vw; max-height:90vh; display:flex; flex-direction:column; align-items:center;">
+        <div style="position:relative; max-width:94vw; max-height:92vh; display:flex; flex-direction:column; align-items:center;">
             <div style="display:flex; justify-content:space-between; align-items:center; width:100%; margin-bottom:12px; gap:10px; flex-wrap:wrap;">
                 <span style="color:#fff; font-size:13px; font-weight:bold; display:flex; align-items:center; gap:6px;">
-                    ${isVideo ? '🎥 Feedback Video Clip Viewer' : '📷 Feedback Screenshot Viewer'}
+                    ${isDrive ? '📁 Google Drive Video Player' : (isVideo ? '🎥 Feedback Video Clip Viewer' : '📷 Feedback Screenshot Viewer')}
                 </span>
-                <div style="display:flex; gap:8px; align-items:center;">
-                    <a href="${escapeHTML(url)}" download="${escapeHTML(downloadName)}" target="_blank" style="background:rgba(255,255,255,0.15); color:#fff; border:none; padding:6px 14px; border-radius:8px; font-weight:bold; font-size:12px; text-decoration:none; display:inline-flex; align-items:center; gap:6px; transition:0.2s;">
-                        ⬇️ Download ${isVideo ? 'Video' : 'Image'}
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                    ${driveButtonsHtml}
+                    <a href="${escapeHTML(downloadHref)}" ${!isExternalStream ? `download="${escapeHTML(downloadName)}"` : ''} target="_blank" style="background:rgba(255,255,255,0.15); color:#fff; border:none; padding:6px 14px; border-radius:8px; font-weight:bold; font-size:12px; text-decoration:none; display:inline-flex; align-items:center; gap:6px; transition:0.2s;">
+                        ⬇️ Download ${isDrive ? 'from Drive' : (isVideo ? 'Video' : 'Image')}
                     </a>
                     <button id="closeFeedbackLightboxBtn" style="background:rgba(255,255,255,0.2); border:none; color:#fff; width:34px; height:34px; border-radius:50%; font-size:18px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center;">✕</button>
                 </div>
@@ -11732,15 +11837,15 @@ window.openSubmitFeedbackModal = (defaultType = 'feature') => {
             <div style="margin-bottom:16px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                     <label style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Media Attachment (Optional)</label>
-                    <span style="font-size:11px; color:#a855f7; font-weight:bold;">📸 Images & 🎥 Videos supported</span>
+                    <span style="font-size:11px; color:#38bdf8; font-weight:bold;">📁 Google Drive & 🎥 Video Auto-Upload</span>
                 </div>
                 
                 <div id="fbUploadDropZone" style="border:2px dashed rgba(255,255,255,0.15); border-radius:10px; padding:16px; text-align:center; background:rgba(255,255,255,0.02); transition:0.2s; cursor:pointer;" onclick="document.getElementById('fbMediaFileInput')?.click()">
                     <input type="file" id="fbMediaFileInput" accept="image/*,video/mp4,video/webm,video/quicktime,video/ogg,.mov" style="display:none;">
                     <div style="display:flex; align-items:center; justify-content:center; gap:8px; font-size:13px; font-weight:bold; color:var(--accent);">
-                        <span>📷 / 🎥</span> <span>Click to attach image or video, drag & drop, or paste (Ctrl+V)</span>
+                        <span>📁 / 🎥 / 📷</span> <span>Drop & Go: Attach video or image (Auto-saved to Drive)</span>
                     </div>
-                    <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Supported: PNG, JPG, WebP, MP4, WebM, MOV (Max 10 MB)</div>
+                    <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Supported: PNG, JPG, WebP, MP4, WebM, MOV (Auto-fallback protected)</div>
                 </div>
 
                 <!-- Preview Thumbnail Box -->
@@ -11756,12 +11861,15 @@ window.openSubmitFeedbackModal = (defaultType = 'feature') => {
                     <button type="button" id="fbRemoveMediaBtn" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); color:#ef4444; border-radius:6px; padding:4px 8px; font-size:11px; font-weight:bold; cursor:pointer;">✕ Remove</button>
                 </div>
 
-                <!-- External Video Link Accordion/Option -->
-                <div style="margin-top:10px;">
-                    <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
-                        <span style="font-size:11px; color:var(--text-muted); font-weight:600;">🔗 Or paste external video URL:</span>
+                <!-- External Video / Drive Link Accordion/Option -->
+                <div style="margin-top:10px; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:8px; padding:10px 12px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:6px;">
+                        <span style="font-size:11px; color:var(--text-muted); font-weight:700;">🔗 Or paste Google Drive / YouTube link:</span>
+                        <a href="https://drive.google.com" target="_blank" rel="noopener noreferrer" style="font-size:10.5px; color:#38bdf8; text-decoration:none; font-weight:bold; display:inline-flex; align-items:center; gap:4px; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25); padding:2px 8px; border-radius:4px;" title="Open Google Drive to upload massive recordings">
+                            📁 Open Drive Folder
+                        </a>
                     </div>
-                    <input type="url" id="fbExternalVideoInput" placeholder="https://streamable.com/... or https://youtube.com/..." style="width:100%; padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; box-sizing:border-box;">
+                    <input type="url" id="fbExternalVideoInput" placeholder="Paste Google Drive link, YouTube, Streamable, etc..." style="width:100%; padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; box-sizing:border-box;">
                 </div>
             </div>
 
@@ -11799,7 +11907,20 @@ window.openSubmitFeedbackModal = (defaultType = 'feature') => {
         if (prevContainer) prevContainer.style.display = 'flex';
         if (prevName) prevName.textContent = media.name || 'Attachment';
 
-        if (media.type === 'video') {
+        if (media.type === 'gdrive_video') {
+            if (prevImg) {
+                if (media.thumbnail) {
+                    prevImg.src = media.thumbnail;
+                    prevImg.style.display = 'block';
+                } else {
+                    prevImg.style.display = 'none';
+                }
+            }
+            if (prevVideoIcon) prevVideoIcon.style.display = 'flex';
+            if (prevDetails) {
+                prevDetails.innerHTML = `<span style="color:#38bdf8;">📁 Google Drive Video</span> • Saved & Viewable`;
+            }
+        } else if (media.type === 'video') {
             if (prevImg) {
                 if (media.thumbnail) {
                     prevImg.src = media.thumbnail;
@@ -11834,12 +11955,13 @@ window.openSubmitFeedbackModal = (defaultType = 'feature') => {
             return;
         }
 
-        if (window.showToast) window.showToast(isVideo ? "Processing video attachment..." : "Compressing image...", "info");
+        if (window.showToast) window.showToast(isVideo ? "Processing video..." : "Compressing image...", "info");
 
         try {
+            let processed = null;
             if (isVideo) {
                 const videoData = await window.processFeedbackVideo(file);
-                attachedMedia = {
+                processed = {
                     type: 'video',
                     dataUrl: videoData.dataUrl,
                     thumbnail: videoData.thumbnail,
@@ -11847,12 +11969,9 @@ window.openSubmitFeedbackModal = (defaultType = 'feature') => {
                     sizeBytes: videoData.sizeBytes,
                     name: videoData.name
                 };
-                if (extVideoInput) extVideoInput.value = '';
-                updatePreview(attachedMedia);
-                if (window.showToast) window.showToast("🎥 Video attached successfully!", "success");
             } else {
                 const compressed = await window.compressFeedbackImage(file);
-                attachedMedia = {
+                processed = {
                     type: 'image',
                     dataUrl: compressed,
                     thumbnail: compressed,
@@ -11860,10 +11979,47 @@ window.openSubmitFeedbackModal = (defaultType = 'feature') => {
                     sizeBytes: file.size,
                     name: file.name || 'screenshot.jpg'
                 };
-                if (extVideoInput) extVideoInput.value = '';
-                updatePreview(attachedMedia);
-                if (window.showToast) window.showToast("📸 Image attached successfully!", "success");
             }
+
+            attachedMedia = processed;
+            if (extVideoInput) extVideoInput.value = '';
+            updatePreview(attachedMedia);
+
+            // Attempt Drop & Go background upload to Alliance Google Drive with automatic fallback
+            const mimeType = isVideo ? (file.type || 'video/mp4') : (file.type || 'image/jpeg');
+            const author = authorName;
+
+            if (prevDetails) {
+                prevDetails.innerHTML = `<span style="color:#06b6d4;">☁️ Saving to Alliance Google Drive...</span>`;
+            }
+
+            window.uploadMediaToDriveBackend(processed.dataUrl, processed.name, mimeType, author)
+                .then((driveRes) => {
+                    if (driveRes && driveRes.success) {
+                        attachedMedia = {
+                            type: 'gdrive_video',
+                            dataUrl: driveRes.previewUrl,
+                            thumbnail: driveRes.thumbnailUrl || processed.thumbnail,
+                            duration: processed.duration,
+                            sizeBytes: driveRes.sizeBytes || processed.sizeBytes,
+                            name: driveRes.name || processed.name,
+                            viewUrl: driveRes.viewUrl,
+                            downloadUrl: driveRes.downloadUrl,
+                            fileId: driveRes.fileId
+                        };
+                        updatePreview(attachedMedia);
+                        if (window.showToast) window.showToast("📁 Saved to Alliance Google Drive!", "success");
+                    }
+                })
+                .catch((driveErr) => {
+                    console.log("Drive auto-upload fallback active (in-database storage):", driveErr);
+                    if (prevDetails) {
+                        const durText = processed.duration ? window.formatVideoDuration(processed.duration) : '';
+                        const sizeMb = processed.sizeBytes ? `${(processed.sizeBytes / (1024 * 1024)).toFixed(1)} MB` : '';
+                        prevDetails.innerHTML = `<span style="color:#10b981;">✓ Ready (In-Database Storage)</span> ${durText ? `• ${durText}` : ''} ${sizeMb ? `• ${sizeMb}` : ''}`;
+                    }
+                });
+
         } catch(err) {
             console.error(err);
             if (window.showToast) window.showToast("Media error: " + err.message, "error");
@@ -11877,21 +12033,45 @@ window.openSubmitFeedbackModal = (defaultType = 'feature') => {
     extVideoInput?.addEventListener('input', (e) => {
         const val = e.target.value.trim();
         if (val) {
-            attachedMedia = {
-                type: 'external_video',
-                dataUrl: val,
-                thumbnail: null,
-                duration: 0,
-                sizeBytes: 0,
-                name: 'External Video Link'
-            };
-            if (fileInput) fileInput.value = '';
-            if (prevContainer) prevContainer.style.display = 'flex';
-            if (prevImg) prevImg.style.display = 'none';
-            if (prevVideoIcon) prevVideoIcon.style.display = 'flex';
-            if (prevName) prevName.textContent = val;
-            if (prevDetails) prevDetails.innerHTML = `<span style="color:#a855f7;">🔗 External Video Link</span> • Ready`;
-        } else if (attachedMedia && attachedMedia.type === 'external_video') {
+            const parsedGdrive = window.parseGoogleDriveUrl(val);
+            if (parsedGdrive) {
+                attachedMedia = {
+                    type: 'gdrive_video',
+                    dataUrl: parsedGdrive.previewUrl,
+                    thumbnail: parsedGdrive.thumbnailUrl,
+                    duration: 0,
+                    sizeBytes: 0,
+                    name: 'Google Drive Video',
+                    viewUrl: parsedGdrive.viewUrl,
+                    downloadUrl: parsedGdrive.downloadUrl,
+                    fileId: parsedGdrive.fileId
+                };
+                if (fileInput) fileInput.value = '';
+                if (prevContainer) prevContainer.style.display = 'flex';
+                if (prevImg) {
+                    prevImg.src = parsedGdrive.thumbnailUrl;
+                    prevImg.style.display = 'block';
+                }
+                if (prevVideoIcon) prevVideoIcon.style.display = 'flex';
+                if (prevName) prevName.textContent = 'Google Drive Attachment';
+                if (prevDetails) prevDetails.innerHTML = `<span style="color:#38bdf8;">📁 Google Drive Link</span> • Auto-Embedded Player`;
+            } else {
+                attachedMedia = {
+                    type: 'external_video',
+                    dataUrl: val,
+                    thumbnail: null,
+                    duration: 0,
+                    sizeBytes: 0,
+                    name: 'External Video Link'
+                };
+                if (fileInput) fileInput.value = '';
+                if (prevContainer) prevContainer.style.display = 'flex';
+                if (prevImg) prevImg.style.display = 'none';
+                if (prevVideoIcon) prevVideoIcon.style.display = 'flex';
+                if (prevName) prevName.textContent = val;
+                if (prevDetails) prevDetails.innerHTML = `<span style="color:#a855f7;">🔗 External Video Link</span> • Ready`;
+            }
+        } else if (attachedMedia && (attachedMedia.type === 'external_video' || attachedMedia.type === 'gdrive_video')) {
             attachedMedia = null;
             updatePreview(null);
         }
@@ -11963,7 +12143,7 @@ window.openSubmitFeedbackModal = (defaultType = 'feature') => {
         }
 
         try {
-            const isVideo = attachedMedia && (attachedMedia.type === 'video' || attachedMedia.type === 'external_video');
+            const isVideo = attachedMedia && (attachedMedia.type === 'video' || attachedMedia.type === 'external_video' || attachedMedia.type === 'gdrive_video');
             const isImage = attachedMedia && attachedMedia.type === 'image';
 
             await window.submitFeedbackItem({
@@ -12077,7 +12257,7 @@ window.renderAdminFeedbackTab = async () => {
                     <td style="padding:12px;">
                         <div style="font-weight:bold; font-size:13px; color:var(--text-main); ${isCompleted ? 'text-decoration:line-through; opacity:0.75;' : ''}">${escapeHTML(item.title || '')}</div>
                         ${item.description ? `<div style="font-size:11.5px; color:var(--text-muted); margin-top:3px; max-width:380px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHTML(item.description)}</div>` : ''}
-                        ${item.videoUrl ? `<div style="margin-top:4px;"><a href="javascript:void(0)" onclick="window.openFeedbackMediaLightbox({ type:'video', url:'${escapeHTML(item.videoUrl)}', title:'${escapeHTML(item.title || '')}', name:'${escapeHTML(item.mediaName || 'feedback_clip.mp4')}' })" style="font-size:11px; color:#a855f7; font-weight:bold; text-decoration:none; display:inline-flex; align-items:center; gap:4px; background:rgba(168,85,247,0.12); border:1px solid rgba(168,85,247,0.3); padding:2px 8px; border-radius:4px;">🎥 View Video Clip ${item.mediaDuration ? `(${window.formatVideoDuration(item.mediaDuration)})` : ''}</a></div>` : (item.imageUrl ? `<div style="margin-top:4px;"><a href="javascript:void(0)" onclick="window.openFeedbackMediaLightbox('${escapeHTML(item.imageUrl)}')" style="font-size:11px; color:#38bdf8; font-weight:bold; text-decoration:none; display:inline-flex; align-items:center; gap:4px; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25); padding:2px 8px; border-radius:4px;">🖼️ View Screenshot</a></div>` : '')}
+                        ${item.videoUrl ? `<div style="margin-top:4px;"><a href="javascript:void(0)" onclick="window.openFeedbackMediaLightbox({ type:'${(item.mediaType === 'gdrive_video' || item.videoUrl.includes('drive.google.com')) ? 'gdrive_video' : 'video'}', url:'${escapeHTML(item.videoUrl)}', title:'${escapeHTML(item.title || '')}', name:'${escapeHTML(item.mediaName || 'feedback_clip.mp4')}' })" style="font-size:11px; color:#38bdf8; font-weight:bold; text-decoration:none; display:inline-flex; align-items:center; gap:4px; background:rgba(6,182,212,0.12); border:1px solid rgba(6,182,212,0.3); padding:2px 8px; border-radius:4px;">${(item.mediaType === 'gdrive_video' || item.videoUrl.includes('drive.google.com')) ? '📁 View Drive Video' : `🎥 View Video Clip ${item.mediaDuration ? '(' + window.formatVideoDuration(item.mediaDuration) + ')' : ''}`}</a></div>` : (item.imageUrl ? `<div style="margin-top:4px;"><a href="javascript:void(0)" onclick="window.openFeedbackMediaLightbox('${escapeHTML(item.imageUrl)}')" style="font-size:11px; color:#38bdf8; font-weight:bold; text-decoration:none; display:inline-flex; align-items:center; gap:4px; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25); padding:2px 8px; border-radius:4px;">🖼️ View Screenshot</a></div>` : '')}
                         ${item.adminNote ? `<div style="font-size:11.5px; color:#38bdf8; font-weight:bold; margin-top:5px; white-space:pre-wrap; word-break:break-word; background:rgba(56,189,248,0.06); border:1px solid rgba(56,189,248,0.2); padding:5px 10px; border-radius:6px; line-height:1.45;">✨ ${escapeHTML(item.adminNote)}</div>` : ''}
                     </td>
                     <td style="padding:12px; white-space:nowrap;">
@@ -33377,13 +33557,13 @@ window.resetBearTrapEvent = async () => {
                                 ${item.description ? `<p style="margin:0; font-size:13px; color:var(--text-muted); line-height:1.45; white-space:pre-line;">${escapeHTML(item.description)}</p>` : ''}
                                 ${item.videoUrl ? `
                                     <div style="margin-top:10px; position:relative; max-width:480px;">
-                                        <div onclick="window.openFeedbackMediaLightbox({ type:'video', url:'${escapeHTML(item.videoUrl)}', title:'${escapeHTML(item.title || '')}', name:'${escapeHTML(item.mediaName || 'feedback_clip.mp4')}' })" style="position:relative; cursor:pointer; border-radius:10px; overflow:hidden; border:1px solid rgba(255,255,255,0.15); box-shadow:0 4px 14px rgba(0,0,0,0.35); background:#000; display:inline-block; max-width:100%; transition:transform 0.2s ease;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                                        <div onclick="window.openFeedbackMediaLightbox({ type:'${(item.mediaType === 'gdrive_video' || item.videoUrl.includes('drive.google.com')) ? 'gdrive_video' : 'video'}', url:'${escapeHTML(item.videoUrl)}', title:'${escapeHTML(item.title || '')}', name:'${escapeHTML(item.mediaName || 'feedback_clip.mp4')}' })" style="position:relative; cursor:pointer; border-radius:10px; overflow:hidden; border:1px solid rgba(255,255,255,0.15); box-shadow:0 4px 14px rgba(0,0,0,0.35); background:#000; display:inline-block; max-width:100%; transition:transform 0.2s ease;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
                                             ${item.videoThumbnail ? `<img src="${escapeHTML(item.videoThumbnail)}" style="max-height:200px; width:auto; max-width:100%; object-fit:cover; display:block; filter:brightness(0.85);">` : `<div style="height:140px; width:260px; background:linear-gradient(135deg, rgba(6,182,212,0.2), rgba(139,92,246,0.2)); display:flex; align-items:center; justify-content:center; font-size:32px;">🎬</div>`}
                                             <div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); width:44px; height:44px; border-radius:50%; background:rgba(6,182,212,0.85); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; color:#fff; font-size:18px; box-shadow:0 0 16px rgba(6,182,212,0.6); pointer-events:none;">
                                                 ▶
                                             </div>
                                             <div style="position:absolute; bottom:8px; right:8px; background:rgba(0,0,0,0.75); color:#fff; padding:2px 8px; border-radius:4px; font-size:10.5px; font-weight:bold; letter-spacing:0.5px; display:flex; align-items:center; gap:4px;">
-                                                <span>🎥</span> <span>${item.mediaDuration ? window.formatVideoDuration(item.mediaDuration) : 'Video Clip'}</span>
+                                                <span>${(item.mediaType === 'gdrive_video' || item.videoUrl.includes('drive.google.com')) ? '📁 Google Drive' : (item.mediaDuration ? `🎥 ${window.formatVideoDuration(item.mediaDuration)}` : '🎥 Video Clip')}</span>
                                             </div>
                                         </div>
                                     </div>
