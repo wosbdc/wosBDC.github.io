@@ -1,20 +1,21 @@
 {
-  "version": "3.1.5",
+  "version": "3.1.6",
   "releaseDate": "2026-08-22",
-  "title": "What's New in v3.1.5",
+  "title": "What's New in v3.1.6",
   "notes": [
-    "🧹 Name Sanitizer: Cleans corrupt characters and tags from Showdown names.",
-    "🔄 Auto Deduplication: Merges duplicate records and keeps highest day scores.",
-    "⚡ Database Repair: Auto-migrates legacy and corrupted Firebase player keys."
+    "🎥 Video Ticket Attachments: Attach MP4/WebM bug and feature video clips.",
+    "🎬 Video Player Lightbox: Fullscreen video player with playback controls and download.",
+    "🖼️ Auto Thumbnail Poster: Automatically extracts crisp poster frame from uploaded videos.",
+    "🔗 External Video Links: Paste YouTube or Streamable links with zero upload limits."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.1.5",
+    "version": "3.1.6",
     "latestChanges": [
+      "v3.1.6: Video attachments, video lightbox player, and thumbnail extractor for feedback tickets",
       "v3.1.5: Showdown player name sanitization, auto-deduplication, and database cleanup",
       "v3.1.4: Unified Options menu and customizable sidebar timers toggle",
       "v3.1.3: Added Auto-Join Renewal Reminder Timer with push and audio alerts",
-      "v3.1.2: Added PocketTactics, Beebom, and TouchTapPlay gift code feeds",
-      "v3.1.1: Automatic gift code bot enrollment for all members and alts"
+      "v3.1.2: Added PocketTactics, Beebom, and TouchTapPlay gift code feeds"
     ]
   }
 }

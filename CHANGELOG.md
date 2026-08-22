@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.1.6] - 2026-08-22
+- 🎥 **Video Ticket Attachments**: Attach MP4/WebM bug and feature video clips.
+- 🎬 **Video Player Lightbox**: Fullscreen video player with playback controls and download.
+- 🖼️ **Auto Thumbnail Poster**: Automatically extracts crisp poster frame from uploaded videos.
+- 🔗 **External Video Links**: Paste YouTube or Streamable links with zero upload limits.
+
 ## [3.1.5] - 2026-08-22
 - 🧹 **Name Sanitizer**: Cleans corrupt characters and tags from Showdown names.
 - 🔄 **Auto Deduplication**: Merges duplicate records and keeps highest day scores.

@@ -11168,6 +11168,14 @@ window.fetchFeedbackItems = async () => {
     }
 };
 
+window.formatVideoDuration = (seconds) => {
+    if (!seconds || isNaN(seconds) || seconds <= 0) return '0:00';
+    const s = Math.round(seconds);
+    const m = Math.floor(s / 60);
+    const rem = s % 60;
+    return `${m}:${rem < 10 ? '0' : ''}${rem}`;
+};
+
 window.compressFeedbackImage = (fileOrBlob, maxDim = 1200, quality = 0.8) => {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -11201,8 +11209,140 @@ window.compressFeedbackImage = (fileOrBlob, maxDim = 1200, quality = 0.8) => {
     });
 };
 
-window.openFeedbackImageLightbox = (imageUrl) => {
-    if (!imageUrl) return;
+window.processFeedbackVideo = (file, maxSizeBytes = 10 * 1024 * 1024) => {
+    return new Promise((resolve, reject) => {
+        if (!file) return reject(new Error("No video file provided"));
+        
+        if (file.size > maxSizeBytes) {
+            const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+            return reject(new Error(`Video file is too large (${sizeMb} MB). Maximum direct upload size is 10 MB. For longer videos, please paste an external link.`));
+        }
+
+        const videoUrl = URL.createObjectURL(file);
+        const video = document.createElement('video');
+        video.preload = 'metadata';
+        video.src = videoUrl;
+        video.muted = true;
+        video.playsInline = true;
+
+        let resolved = false;
+        const cleanup = () => {
+            try { URL.revokeObjectURL(videoUrl); } catch(e) {}
+        };
+
+        const timeout = setTimeout(() => {
+            if (!resolved) {
+                resolved = true;
+                cleanup();
+                const reader = new FileReader();
+                reader.onload = (e) => resolve({
+                    dataUrl: e.target.result,
+                    thumbnail: null,
+                    duration: 0,
+                    sizeBytes: file.size,
+                    name: file.name || 'video_attachment.mp4',
+                    mimeType: file.type || 'video/mp4'
+                });
+                reader.onerror = (err) => reject(err);
+                reader.readAsDataURL(file);
+            }
+        }, 8000);
+
+        video.onloadedmetadata = () => {
+            const duration = video.duration || 0;
+            const seekTime = Math.min(0.5, Math.max(0.1, duration / 2));
+            video.currentTime = seekTime;
+        };
+
+        video.onseeked = () => {
+            if (resolved) return;
+            resolved = true;
+            clearTimeout(timeout);
+
+            try {
+                let w = video.videoWidth || 640;
+                let h = video.videoHeight || 360;
+                const maxDim = 600;
+                if (w > maxDim || h > maxDim) {
+                    if (w > h) {
+                        h = Math.round((h * maxDim) / w);
+                        w = maxDim;
+                    } else {
+                        w = Math.round((w * maxDim) / h);
+                        h = maxDim;
+                    }
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0, w, h);
+                const thumbnail = canvas.toDataURL('image/jpeg', 0.75);
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    cleanup();
+                    resolve({
+                        dataUrl: e.target.result,
+                        thumbnail: thumbnail,
+                        duration: video.duration || 0,
+                        sizeBytes: file.size,
+                        name: file.name || 'video_attachment.mp4',
+                        mimeType: file.type || 'video/mp4'
+                    });
+                };
+                reader.onerror = (err) => {
+                    cleanup();
+                    reject(err);
+                };
+                reader.readAsDataURL(file);
+            } catch (err) {
+                cleanup();
+                reject(err);
+            }
+        };
+
+        video.onerror = () => {
+            if (resolved) return;
+            resolved = true;
+            clearTimeout(timeout);
+            cleanup();
+            const reader = new FileReader();
+            reader.onload = (e) => resolve({
+                dataUrl: e.target.result,
+                thumbnail: null,
+                duration: 0,
+                sizeBytes: file.size,
+                name: file.name || 'video_attachment.mp4',
+                mimeType: file.type || 'video/mp4'
+            });
+            reader.onerror = (e) => reject(new Error("Unable to read video file format"));
+            reader.readAsDataURL(file);
+        };
+    });
+};
+
+window.openFeedbackMediaLightbox = (options = {}) => {
+    let type = 'image';
+    let url = '';
+    let downloadName = 'feedback_attachment';
+
+    if (typeof options === 'string') {
+        url = options;
+        if (url.includes('.mp4') || url.includes('.webm') || url.includes('data:video/')) {
+            type = 'video';
+            downloadName = 'feedback_clip.mp4';
+        } else {
+            downloadName = 'feedback_screenshot.jpg';
+        }
+    } else if (options && typeof options === 'object') {
+        type = options.type || (options.videoUrl ? 'video' : 'image');
+        url = options.url || options.videoUrl || options.imageUrl || '';
+        downloadName = options.name || (type === 'video' ? 'feedback_clip.mp4' : 'feedback_screenshot.jpg');
+    }
+
+    if (!url) return;
+
     const existing = document.getElementById('feedbackLightboxModal');
     if (existing) existing.remove();
 
@@ -11210,27 +11350,62 @@ window.openFeedbackImageLightbox = (imageUrl) => {
     overlay.id = 'feedbackLightboxModal';
     overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.92); backdrop-filter:blur(8px); z-index:100000; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; box-sizing:border-box; animation: fadeIn 0.2s ease;';
 
+    const isVideo = (type === 'video' || type === 'external_video' || url.startsWith('data:video/') || url.includes('.mp4') || url.includes('.webm') || url.includes('.mov'));
+
+    let mediaContentHtml = '';
+    if (isVideo) {
+        mediaContentHtml = `
+            <video src="${escapeHTML(url)}" controls autoplay playsinline style="max-width:100%; max-height:75vh; border-radius:10px; box-shadow:0 10px 40px rgba(0,0,0,0.8); border:1px solid rgba(255,255,255,0.2); background:#000;">
+                Your browser does not support HTML5 video playback.
+            </video>
+        `;
+    } else {
+        mediaContentHtml = `
+            <img src="${escapeHTML(url)}" style="max-width:100%; max-height:78vh; border-radius:10px; object-fit:contain; box-shadow:0 10px 40px rgba(0,0,0,0.8); border:1px solid rgba(255,255,255,0.2);">
+        `;
+    }
+
     overlay.innerHTML = `
-        <div style="position:relative; max-width:92vw; max-height:88vh; display:flex; flex-direction:column; align-items:center;">
-            <div style="display:flex; justify-content:space-between; align-items:center; width:100%; margin-bottom:12px;">
-                <span style="color:#fff; font-size:13px; font-weight:bold; display:flex; align-items:center; gap:6px;">📷 Feedback Screenshot Viewer</span>
-                <div style="display:flex; gap:8px;">
-                    <a href="${escapeHTML(imageUrl)}" download="feedback_screenshot.jpg" target="_blank" style="background:rgba(255,255,255,0.15); color:#fff; border:none; padding:6px 14px; border-radius:8px; font-weight:bold; font-size:12px; text-decoration:none; display:inline-flex; align-items:center; gap:6px; transition:0.2s;">
-                        ⬇️ Download Image
+        <div style="position:relative; max-width:92vw; max-height:90vh; display:flex; flex-direction:column; align-items:center;">
+            <div style="display:flex; justify-content:space-between; align-items:center; width:100%; margin-bottom:12px; gap:10px; flex-wrap:wrap;">
+                <span style="color:#fff; font-size:13px; font-weight:bold; display:flex; align-items:center; gap:6px;">
+                    ${isVideo ? '🎥 Feedback Video Clip Viewer' : '📷 Feedback Screenshot Viewer'}
+                </span>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <a href="${escapeHTML(url)}" download="${escapeHTML(downloadName)}" target="_blank" style="background:rgba(255,255,255,0.15); color:#fff; border:none; padding:6px 14px; border-radius:8px; font-weight:bold; font-size:12px; text-decoration:none; display:inline-flex; align-items:center; gap:6px; transition:0.2s;">
+                        ⬇️ Download ${isVideo ? 'Video' : 'Image'}
                     </a>
-                    <button onclick="document.getElementById('feedbackLightboxModal')?.remove()" style="background:rgba(255,255,255,0.2); border:none; color:#fff; width:34px; height:34px; border-radius:50%; font-size:18px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center;">✕</button>
+                    <button id="closeFeedbackLightboxBtn" style="background:rgba(255,255,255,0.2); border:none; color:#fff; width:34px; height:34px; border-radius:50%; font-size:18px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center;">✕</button>
                 </div>
             </div>
-            <img src="${escapeHTML(imageUrl)}" style="max-width:100%; max-height:80vh; border-radius:10px; object-fit:contain; box-shadow:0 10px 40px rgba(0,0,0,0.8); border:1px solid rgba(255,255,255,0.2);">
+            ${mediaContentHtml}
         </div>
     `;
 
+    const closeModal = () => {
+        const vid = overlay.querySelector('video');
+        if (vid) { vid.pause(); vid.src = ''; }
+        overlay.remove();
+    };
+
+    overlay.querySelector('#closeFeedbackLightboxBtn')?.addEventListener('click', closeModal);
+
     overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) overlay.remove();
+        if (e.target === overlay) closeModal();
     });
+
+    const keyHandler = (e) => {
+        if (e.key === 'Escape') {
+            closeModal();
+            document.removeEventListener('keydown', keyHandler);
+        }
+    };
+    document.addEventListener('keydown', keyHandler);
 
     document.body.appendChild(overlay);
 };
+
+window.openFeedbackImageLightbox = (url) => window.openFeedbackMediaLightbox(url);
 
 window.submitFeedbackItem = async (payload) => {
     try {
@@ -11245,6 +11420,12 @@ window.submitFeedbackItem = async (payload) => {
             title: payload.title || '',
             description: payload.description || '',
             imageUrl: payload.imageUrl || null,
+            videoUrl: payload.videoUrl || null,
+            videoThumbnail: payload.videoThumbnail || null,
+            mediaType: payload.mediaType || (payload.videoUrl ? 'video' : (payload.imageUrl ? 'image' : null)),
+            mediaDuration: payload.mediaDuration || null,
+            mediaSize: payload.mediaSize || null,
+            mediaName: payload.mediaName || null,
             status: 'pending',
             submittedBy: {
                 uid: userUid,
@@ -11480,7 +11661,7 @@ window.openSubmitFeedbackModal = (defaultType = 'feature') => {
     if (existing) existing.remove();
 
     let selectedType = defaultType; // 'feature' or 'bug'
-    let attachedImageDataUrl = null;
+    let attachedMedia = null; // { type: 'image'|'video'|'external_video', dataUrl, thumbnail, duration, sizeBytes, name }
 
     const overlay = document.createElement('div');
     overlay.id = 'submitFeedbackModal';
@@ -11490,7 +11671,7 @@ window.openSubmitFeedbackModal = (defaultType = 'feature') => {
     const authorGid = currentUser?.gameId || '';
 
     overlay.innerHTML = `
-        <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:16px; padding:24px; max-width:540px; width:100%; box-shadow:0 12px 40px rgba(0,0,0,0.6); max-height:90vh; overflow-y:auto;">
+        <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:16px; padding:24px; max-width:560px; width:100%; box-shadow:0 12px 40px rgba(0,0,0,0.6); max-height:90vh; overflow-y:auto;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:12px;">
                 <div style="display:flex; align-items:center; gap:10px;">
                     <div style="width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg, rgba(6,182,212,0.2), rgba(168,85,247,0.2)); border:1px solid rgba(6,182,212,0.4); display:flex; align-items:center; justify-content:center; font-size:18px;">
@@ -11498,7 +11679,7 @@ window.openSubmitFeedbackModal = (defaultType = 'feature') => {
                     </div>
                     <div>
                         <h3 style="margin:0; font-size:17px; color:var(--text-main); font-weight:800;">Submit Idea or Report Bug</h3>
-                        <p style="margin:2px 0 0 0; font-size:11px; color:var(--text-muted);">Share your feedback directly with alliance developers & managers</p>
+                        <p style="margin:2px 0 0 0; font-size:11px; color:var(--text-muted);">Share your feedback with alliance developers & managers</p>
                     </div>
                 </div>
                 <button onclick="document.getElementById('submitFeedbackModal')?.remove()" style="background:none; border:none; color:var(--text-muted); font-size:20px; cursor:pointer;">✕</button>
@@ -11547,26 +11728,40 @@ window.openSubmitFeedbackModal = (defaultType = 'feature') => {
                 <textarea id="fbDescInput" rows="4" placeholder="Explain what feature you'd like to see, or if reporting a bug, what happened and how to reproduce it..." style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; box-sizing:border-box; resize:vertical; line-height:1.4;"></textarea>
             </div>
 
-            <!-- Image / Screenshot Attachment -->
+            <!-- Media Attachment: Image or Video -->
             <div style="margin-bottom:16px;">
-                <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Screenshot / Image Attachment (Optional)</label>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <label style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Media Attachment (Optional)</label>
+                    <span style="font-size:11px; color:#a855f7; font-weight:bold;">📸 Images & 🎥 Videos supported</span>
+                </div>
                 
-                <div id="fbUploadDropZone" style="border:2px dashed rgba(255,255,255,0.15); border-radius:10px; padding:14px; text-align:center; background:rgba(255,255,255,0.02); transition:0.2s; cursor:pointer;" onclick="document.getElementById('fbImageFileInput')?.click()">
-                    <input type="file" id="fbImageFileInput" accept="image/*" style="display:none;">
+                <div id="fbUploadDropZone" style="border:2px dashed rgba(255,255,255,0.15); border-radius:10px; padding:16px; text-align:center; background:rgba(255,255,255,0.02); transition:0.2s; cursor:pointer;" onclick="document.getElementById('fbMediaFileInput')?.click()">
+                    <input type="file" id="fbMediaFileInput" accept="image/*,video/mp4,video/webm,video/quicktime,video/ogg,.mov" style="display:none;">
                     <div style="display:flex; align-items:center; justify-content:center; gap:8px; font-size:13px; font-weight:bold; color:var(--accent);">
-                        <span>📷</span> <span>Click to attach, drag & drop, or paste (Ctrl+V) image</span>
+                        <span>📷 / 🎥</span> <span>Click to attach image or video, drag & drop, or paste (Ctrl+V)</span>
                     </div>
-                    <div style="font-size:11px; color:var(--text-muted); margin-top:3px;">Supported: PNG, JPG, WebP (Auto-compressed)</div>
+                    <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Supported: PNG, JPG, WebP, MP4, WebM, MOV (Max 10 MB)</div>
                 </div>
 
                 <!-- Preview Thumbnail Box -->
-                <div id="fbImagePreviewContainer" style="display:none; margin-top:10px; background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:8px 12px; align-items:center; gap:12px;">
-                    <img id="fbImagePreviewImg" src="" style="width:50px; height:50px; border-radius:6px; object-fit:cover; border:1px solid rgba(255,255,255,0.15);">
-                    <div style="flex:1; overflow:hidden;">
-                        <div id="fbImagePreviewName" style="font-size:12px; font-weight:bold; color:var(--text-main); white-space:nowrap; text-overflow:ellipsis; overflow:hidden;">screenshot.png</div>
-                        <div style="font-size:11px; color:#10b981; font-weight:bold;">✓ Ready to attach</div>
+                <div id="fbMediaPreviewContainer" style="display:none; margin-top:10px; background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:10px 14px; align-items:center; gap:12px;">
+                    <div id="fbMediaPreviewThumbWrapper" style="position:relative; width:52px; height:52px; border-radius:8px; overflow:hidden; border:1px solid rgba(255,255,255,0.15); flex-shrink:0; background:#000; display:flex; align-items:center; justify-content:center;">
+                        <img id="fbMediaPreviewImg" src="" style="width:100%; height:100%; object-fit:cover; display:none;">
+                        <div id="fbMediaPreviewVideoIcon" style="position:absolute; width:22px; height:22px; border-radius:50%; background:rgba(6,182,212,0.85); color:#fff; display:none; align-items:center; justify-content:center; font-size:10px;">▶</div>
                     </div>
-                    <button type="button" id="fbRemoveImageBtn" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); color:#ef4444; border-radius:6px; padding:4px 8px; font-size:11px; font-weight:bold; cursor:pointer;">✕ Remove</button>
+                    <div style="flex:1; overflow:hidden;">
+                        <div id="fbMediaPreviewName" style="font-size:12px; font-weight:bold; color:var(--text-main); white-space:nowrap; text-overflow:ellipsis; overflow:hidden;">file_attachment</div>
+                        <div id="fbMediaPreviewDetails" style="font-size:11px; color:#10b981; font-weight:bold;">✓ Ready to attach</div>
+                    </div>
+                    <button type="button" id="fbRemoveMediaBtn" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); color:#ef4444; border-radius:6px; padding:4px 8px; font-size:11px; font-weight:bold; cursor:pointer;">✕ Remove</button>
+                </div>
+
+                <!-- External Video Link Accordion/Option -->
+                <div style="margin-top:10px;">
+                    <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+                        <span style="font-size:11px; color:var(--text-muted); font-weight:600;">🔗 Or paste external video URL:</span>
+                    </div>
+                    <input type="url" id="fbExternalVideoInput" placeholder="https://streamable.com/... or https://youtube.com/..." style="width:100%; padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; box-sizing:border-box;">
                 </div>
             </div>
 
@@ -11588,23 +11783,90 @@ window.openSubmitFeedbackModal = (defaultType = 'feature') => {
 
     document.body.appendChild(overlay);
 
-    const fileInput = overlay.querySelector('#fbImageFileInput');
+    const fileInput = overlay.querySelector('#fbMediaFileInput');
+    const prevContainer = overlay.querySelector('#fbMediaPreviewContainer');
+    const prevImg = overlay.querySelector('#fbMediaPreviewImg');
+    const prevVideoIcon = overlay.querySelector('#fbMediaPreviewVideoIcon');
+    const prevName = overlay.querySelector('#fbMediaPreviewName');
+    const prevDetails = overlay.querySelector('#fbMediaPreviewDetails');
+    const extVideoInput = overlay.querySelector('#fbExternalVideoInput');
+
+    const updatePreview = (media) => {
+        if (!media) {
+            if (prevContainer) prevContainer.style.display = 'none';
+            return;
+        }
+        if (prevContainer) prevContainer.style.display = 'flex';
+        if (prevName) prevName.textContent = media.name || 'Attachment';
+
+        if (media.type === 'video') {
+            if (prevImg) {
+                if (media.thumbnail) {
+                    prevImg.src = media.thumbnail;
+                    prevImg.style.display = 'block';
+                } else {
+                    prevImg.style.display = 'none';
+                }
+            }
+            if (prevVideoIcon) prevVideoIcon.style.display = 'flex';
+            const durText = media.duration ? window.formatVideoDuration(media.duration) : '';
+            const sizeMb = media.sizeBytes ? `${(media.sizeBytes / (1024 * 1024)).toFixed(1)} MB` : '';
+            if (prevDetails) {
+                prevDetails.innerHTML = `<span style="color:#a855f7;">🎥 Video Clip</span> ${durText ? `• ${durText}` : ''} ${sizeMb ? `• ${sizeMb}` : ''}`;
+            }
+        } else if (media.type === 'image') {
+            if (prevImg) {
+                prevImg.src = media.dataUrl;
+                prevImg.style.display = 'block';
+            }
+            if (prevVideoIcon) prevVideoIcon.style.display = 'none';
+            if (prevDetails) prevDetails.innerHTML = `<span style="color:#10b981;">📸 Image Screenshot</span> • Ready to attach`;
+        }
+    };
+
     const handleFile = async (file) => {
-        if (!file || !file.type.startsWith('image/')) return;
+        if (!file) return;
+        const isVideo = file.type.startsWith('video/') || file.name.toLowerCase().endsWith('.mov') || file.name.toLowerCase().endsWith('.mp4') || file.name.toLowerCase().endsWith('.webm');
+        const isImage = file.type.startsWith('image/');
+
+        if (!isVideo && !isImage) {
+            if (window.showToast) window.showToast("Unsupported file type. Please select an image or video.", "warning");
+            return;
+        }
+
+        if (window.showToast) window.showToast(isVideo ? "Processing video attachment..." : "Compressing image...", "info");
+
         try {
-            const compressed = await window.compressFeedbackImage(file);
-            attachedImageDataUrl = compressed;
-            const prevContainer = document.getElementById('fbImagePreviewContainer');
-            const prevImg = document.getElementById('fbImagePreviewImg');
-            const prevName = document.getElementById('fbImagePreviewName');
-            if (prevContainer && prevImg) {
-                prevImg.src = compressed;
-                if (prevName) prevName.textContent = file.name || 'Screenshot';
-                prevContainer.style.display = 'flex';
+            if (isVideo) {
+                const videoData = await window.processFeedbackVideo(file);
+                attachedMedia = {
+                    type: 'video',
+                    dataUrl: videoData.dataUrl,
+                    thumbnail: videoData.thumbnail,
+                    duration: videoData.duration,
+                    sizeBytes: videoData.sizeBytes,
+                    name: videoData.name
+                };
+                if (extVideoInput) extVideoInput.value = '';
+                updatePreview(attachedMedia);
+                if (window.showToast) window.showToast("🎥 Video attached successfully!", "success");
+            } else {
+                const compressed = await window.compressFeedbackImage(file);
+                attachedMedia = {
+                    type: 'image',
+                    dataUrl: compressed,
+                    thumbnail: compressed,
+                    duration: 0,
+                    sizeBytes: file.size,
+                    name: file.name || 'screenshot.jpg'
+                };
+                if (extVideoInput) extVideoInput.value = '';
+                updatePreview(attachedMedia);
+                if (window.showToast) window.showToast("📸 Image attached successfully!", "success");
             }
         } catch(err) {
             console.error(err);
-            if (window.showToast) window.showToast("Failed to process image: " + err.message, "error");
+            if (window.showToast) window.showToast("Media error: " + err.message, "error");
         }
     };
 
@@ -11612,14 +11874,37 @@ window.openSubmitFeedbackModal = (defaultType = 'feature') => {
         if (e.target.files && e.target.files[0]) handleFile(e.target.files[0]);
     });
 
+    extVideoInput?.addEventListener('input', (e) => {
+        const val = e.target.value.trim();
+        if (val) {
+            attachedMedia = {
+                type: 'external_video',
+                dataUrl: val,
+                thumbnail: null,
+                duration: 0,
+                sizeBytes: 0,
+                name: 'External Video Link'
+            };
+            if (fileInput) fileInput.value = '';
+            if (prevContainer) prevContainer.style.display = 'flex';
+            if (prevImg) prevImg.style.display = 'none';
+            if (prevVideoIcon) prevVideoIcon.style.display = 'flex';
+            if (prevName) prevName.textContent = val;
+            if (prevDetails) prevDetails.innerHTML = `<span style="color:#a855f7;">🔗 External Video Link</span> • Ready`;
+        } else if (attachedMedia && attachedMedia.type === 'external_video') {
+            attachedMedia = null;
+            updatePreview(null);
+        }
+    });
+
     overlay.addEventListener('paste', (e) => {
         const items = (e.clipboardData || e.originalEvent?.clipboardData)?.items;
         if (items) {
             for (let i = 0; i < items.length; i++) {
-                if (items[i].type.indexOf('image') !== -1) {
+                if (items[i].type.indexOf('image') !== -1 || items[i].type.indexOf('video') !== -1) {
                     const blob = items[i].getAsFile();
                     handleFile(blob);
-                    if (window.showToast) window.showToast("📋 Image pasted from clipboard!", "success");
+                    if (window.showToast) window.showToast("📋 Media pasted from clipboard!", "success");
                     break;
                 }
             }
@@ -11641,11 +11926,11 @@ window.openSubmitFeedbackModal = (defaultType = 'feature') => {
         });
     }
 
-    overlay.querySelector('#fbRemoveImageBtn')?.addEventListener('click', () => {
-        attachedImageDataUrl = null;
-        const prevContainer = document.getElementById('fbImagePreviewContainer');
-        if (prevContainer) prevContainer.style.display = 'none';
+    overlay.querySelector('#fbRemoveMediaBtn')?.addEventListener('click', () => {
+        attachedMedia = null;
+        updatePreview(null);
         if (fileInput) fileInput.value = '';
+        if (extVideoInput) extVideoInput.value = '';
     });
 
     window.selectFeedbackType = (t) => {
@@ -11678,12 +11963,21 @@ window.openSubmitFeedbackModal = (defaultType = 'feature') => {
         }
 
         try {
+            const isVideo = attachedMedia && (attachedMedia.type === 'video' || attachedMedia.type === 'external_video');
+            const isImage = attachedMedia && attachedMedia.type === 'image';
+
             await window.submitFeedbackItem({
                 type: selectedType,
                 category: category,
                 title: title,
                 description: desc,
-                imageUrl: attachedImageDataUrl,
+                imageUrl: isImage ? attachedMedia.dataUrl : null,
+                videoUrl: isVideo ? attachedMedia.dataUrl : null,
+                videoThumbnail: isVideo ? attachedMedia.thumbnail : null,
+                mediaType: attachedMedia ? attachedMedia.type : null,
+                mediaDuration: attachedMedia ? attachedMedia.duration : null,
+                mediaSize: attachedMedia ? attachedMedia.sizeBytes : null,
+                mediaName: attachedMedia ? attachedMedia.name : null,
                 authorName: authorName,
                 authorGameId: authorGid
             });
@@ -11783,7 +12077,7 @@ window.renderAdminFeedbackTab = async () => {
                     <td style="padding:12px;">
                         <div style="font-weight:bold; font-size:13px; color:var(--text-main); ${isCompleted ? 'text-decoration:line-through; opacity:0.75;' : ''}">${escapeHTML(item.title || '')}</div>
                         ${item.description ? `<div style="font-size:11.5px; color:var(--text-muted); margin-top:3px; max-width:380px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHTML(item.description)}</div>` : ''}
-                        ${item.imageUrl ? `<div style="margin-top:4px;"><a href="javascript:void(0)" onclick="window.openFeedbackImageLightbox('${escapeHTML(item.imageUrl)}')" style="font-size:11px; color:#38bdf8; font-weight:bold; text-decoration:none; display:inline-flex; align-items:center; gap:4px; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25); padding:2px 8px; border-radius:4px;">🖼️ View Screenshot</a></div>` : ''}
+                        ${item.videoUrl ? `<div style="margin-top:4px;"><a href="javascript:void(0)" onclick="window.openFeedbackMediaLightbox({ type:'video', url:'${escapeHTML(item.videoUrl)}', title:'${escapeHTML(item.title || '')}', name:'${escapeHTML(item.mediaName || 'feedback_clip.mp4')}' })" style="font-size:11px; color:#a855f7; font-weight:bold; text-decoration:none; display:inline-flex; align-items:center; gap:4px; background:rgba(168,85,247,0.12); border:1px solid rgba(168,85,247,0.3); padding:2px 8px; border-radius:4px;">🎥 View Video Clip ${item.mediaDuration ? `(${window.formatVideoDuration(item.mediaDuration)})` : ''}</a></div>` : (item.imageUrl ? `<div style="margin-top:4px;"><a href="javascript:void(0)" onclick="window.openFeedbackMediaLightbox('${escapeHTML(item.imageUrl)}')" style="font-size:11px; color:#38bdf8; font-weight:bold; text-decoration:none; display:inline-flex; align-items:center; gap:4px; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25); padding:2px 8px; border-radius:4px;">🖼️ View Screenshot</a></div>` : '')}
                         ${item.adminNote ? `<div style="font-size:11.5px; color:#38bdf8; font-weight:bold; margin-top:5px; white-space:pre-wrap; word-break:break-word; background:rgba(56,189,248,0.06); border:1px solid rgba(56,189,248,0.2); padding:5px 10px; border-radius:6px; line-height:1.45;">✨ ${escapeHTML(item.adminNote)}</div>` : ''}
                     </td>
                     <td style="padding:12px; white-space:nowrap;">
@@ -33081,11 +33375,23 @@ window.resetBearTrapEvent = async () => {
                                     ${escapeHTML(item.title || 'Untitled Request')}
                                 </h3>
                                 ${item.description ? `<p style="margin:0; font-size:13px; color:var(--text-muted); line-height:1.45; white-space:pre-line;">${escapeHTML(item.description)}</p>` : ''}
-                                ${item.imageUrl ? `
-                                    <div style="margin-top:10px;">
-                                        <img src="${escapeHTML(item.imageUrl)}" onclick="window.openFeedbackImageLightbox('${escapeHTML(item.imageUrl)}')" style="max-height:180px; max-width:100%; border-radius:8px; border:1px solid rgba(255,255,255,0.15); cursor:pointer; object-fit:cover; transition:transform 0.2s ease, box-shadow 0.2s ease; box-shadow:0 4px 14px rgba(0,0,0,0.35);" title="Click to view full screenshot" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                                ${item.videoUrl ? `
+                                    <div style="margin-top:10px; position:relative; max-width:480px;">
+                                        <div onclick="window.openFeedbackMediaLightbox({ type:'video', url:'${escapeHTML(item.videoUrl)}', title:'${escapeHTML(item.title || '')}', name:'${escapeHTML(item.mediaName || 'feedback_clip.mp4')}' })" style="position:relative; cursor:pointer; border-radius:10px; overflow:hidden; border:1px solid rgba(255,255,255,0.15); box-shadow:0 4px 14px rgba(0,0,0,0.35); background:#000; display:inline-block; max-width:100%; transition:transform 0.2s ease;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                                            ${item.videoThumbnail ? `<img src="${escapeHTML(item.videoThumbnail)}" style="max-height:200px; width:auto; max-width:100%; object-fit:cover; display:block; filter:brightness(0.85);">` : `<div style="height:140px; width:260px; background:linear-gradient(135deg, rgba(6,182,212,0.2), rgba(139,92,246,0.2)); display:flex; align-items:center; justify-content:center; font-size:32px;">🎬</div>`}
+                                            <div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); width:44px; height:44px; border-radius:50%; background:rgba(6,182,212,0.85); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; color:#fff; font-size:18px; box-shadow:0 0 16px rgba(6,182,212,0.6); pointer-events:none;">
+                                                ▶
+                                            </div>
+                                            <div style="position:absolute; bottom:8px; right:8px; background:rgba(0,0,0,0.75); color:#fff; padding:2px 8px; border-radius:4px; font-size:10.5px; font-weight:bold; letter-spacing:0.5px; display:flex; align-items:center; gap:4px;">
+                                                <span>🎥</span> <span>${item.mediaDuration ? window.formatVideoDuration(item.mediaDuration) : 'Video Clip'}</span>
+                                            </div>
+                                        </div>
                                     </div>
-                                ` : ''}
+                                ` : (item.imageUrl ? `
+                                    <div style="margin-top:10px;">
+                                        <img src="${escapeHTML(item.imageUrl)}" onclick="window.openFeedbackMediaLightbox('${escapeHTML(item.imageUrl)}')" style="max-height:180px; max-width:100%; border-radius:8px; border:1px solid rgba(255,255,255,0.15); cursor:pointer; object-fit:cover; transition:transform 0.2s ease, box-shadow 0.2s ease; box-shadow:0 4px 14px rgba(0,0,0,0.35);" title="Click to view full screenshot" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                                    </div>
+                                ` : '')}
                             </div>
 
                             <!-- Admin Resolution Note Block -->
