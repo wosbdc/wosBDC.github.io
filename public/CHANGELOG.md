@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [3.1.9] - 2026-08-22
+- 🔔 **Event Reminders**: Custom alerts for any scheduled alliance event.
+- ⏰ **Pre-Event Timing**: Get warned 0m to 1h beforehand.
+- 🎺 **Fanfare Chimes**: Audio fanfare alert when events begin.
+- 🔥 **Live Event Ticker**: Real-time countdown for active running events.
+- 📅 **1-Tap Subscriptions**: Instant quick reminders for all Bear Traps.
+
 ## [3.1.8] - 2026-08-22
 - 🔄 **Real-Time Sync**: Live ticket synchronization across all ticket desks.
 - 🟡 **Default Open View**: Completed tickets auto-hide from default queue.

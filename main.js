@@ -15406,6 +15406,11 @@ window.openAllianceAlertsModal = async () => {
             ${isAutoJoinActive ? `<span style="font-size:10px; color:#38bdf8; font-family:monospace;">${window.formatCountdownTimeRemaining(autoJoinRemainingMs)}</span>` : `<span style="font-size:10px; color:var(--text-muted);">Set 8h ➔</span>`}
           </button>
 
+          <button onclick="window.openEventRemindersManagerModal(); window.closeHeaderOptionsDropdown();" style="width:100%; text-align:left; background:transparent; border:none; color:#fff; padding:7px 9px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:space-between; transition:0.15s;" onmouseover="this.style.background='rgba(56,189,248,0.12)'" onmouseout="this.style.background='transparent'">
+            <span style="display:flex; align-items:center; gap:6px;">🔔 Event Reminders</span>
+            <span style="font-size:10px; color:#38bdf8; font-weight:bold;">${(typeof window.getEventReminders === 'function' && window.getEventReminders().length > 0) ? `${window.getEventReminders().length} Active` : 'Manage ➔'}</span>
+          </button>
+
           <!-- Section 2: Notifications & Push -->
           <div style="padding:6px 8px 4px 8px; font-size:10px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; border-top:1px solid rgba(255,255,255,0.06); border-bottom:1px solid rgba(255,255,255,0.06); margin:5px 0 4px 0; display:flex; justify-content:space-between; align-items:center;">
             <span>📱 Notifications</span>
@@ -21129,23 +21134,35 @@ window.openEditAltProfileModal = async (gameId, chiefName) => {
 window.parseScheduleEventDate = (dateStr) => {
   if (!dateStr) return null;
   const s = String(dateStr).trim();
+  const now = new Date();
   
+  // 1. Check for explicit M/D e.g. 8/22 or 08/22
   const mdMatch = s.match(/(\d{1,2})\/(\d{1,2})/);
   if (mdMatch) {
-    const now = new Date();
     return new Date(now.getFullYear(), parseInt(mdMatch[1]) - 1, parseInt(mdMatch[2]));
   }
   
+  // 2. Check for YYYY-MM-DD
   const isoMatch = s.match(/(\d{4})-(\d{2})-(\d{2})/);
   if (isoMatch) {
     return new Date(parseInt(isoMatch[1]), parseInt(isoMatch[2]) - 1, parseInt(isoMatch[3]));
   }
 
+  // 3. Check for Month name + Day e.g. "Aug 22" or "August 22"
+  const monthMatch = s.match(/(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s*(\d{1,2})/i);
+  if (monthMatch) {
+    const months = { jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11 };
+    const mIdx = months[monthMatch[1].toLowerCase().slice(0, 3)];
+    if (mIdx !== undefined) {
+      return new Date(now.getFullYear(), mIdx, parseInt(monthMatch[2]));
+    }
+  }
+
+  // 4. Check for Day of Week e.g. "Saturday", "Sat"
   const daysMap = { sunday:0, sun:0, monday:1, mon:1, tuesday:2, tue:2, wednesday:3, wed:3, thursday:4, thu:4, friday:5, fri:5, saturday:6, sat:6 };
   const lower = s.toLowerCase();
   for (const [dayName, dayNum] of Object.entries(daysMap)) {
     if (lower.includes(dayName)) {
-      const now = new Date();
       const currentDay = now.getDay();
       let diff = dayNum - currentDay;
       if (diff < 0) diff += 7;
@@ -21163,8 +21180,8 @@ window.parseScheduleEventTime = (timeStr, pdtVal) => {
   if (!timeStr && !pdtVal) return null;
   const s = String(timeStr || '').trim();
   
-  // 1. Direct HH:mm
-  const hmMatch = s.match(/^(\d{1,2}):(\d{2})$/);
+  // 1. Direct HH:mm (e.g. "19:00", "07:30", "19:00 UTC")
+  const hmMatch = s.match(/^(\d{1,2}):(\d{2})(?:\s*UTC)?$/i);
   if (hmMatch) {
     return { h: parseInt(hmMatch[1]), m: parseInt(hmMatch[2]) };
   }
@@ -21177,20 +21194,508 @@ window.parseScheduleEventTime = (timeStr, pdtVal) => {
     }
   }
 
-  // 3. 12-hour format e.g. '5:00 AM', '9:30 PM'
-  const pdtMatch = String(pdtVal || s).match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  // 3. 12-hour format e.g. '5:00 AM', '9:30 PM', '12:00 PM PDT'
+  const targetStr = String(pdtVal || s);
+  const pdtMatch = targetStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)/i);
   if (pdtMatch) {
     let h = parseInt(pdtMatch[1]);
     const m = parseInt(pdtMatch[2]);
     const isPM = pdtMatch[3].toUpperCase() === 'PM';
     if (isPM && h < 12) h += 12;
     if (!isPM && h === 12) h = 0;
-    // Convert PDT (UTC-7) to UTC (+7 hours)
-    return { h: (h + 7) % 24, m };
+    // If from pdtVal, convert PDT (UTC-7) to UTC (+7 hours)
+    if (pdtVal && targetStr === pdtVal) {
+      return { h: (h + 7) % 24, m };
+    }
+    return { h, m };
   }
 
   return null;
 };
+
+// ==========================================
+// 📅 UNIFIED REAL-TIME SCHEDULE RESOLVER
+// ==========================================
+
+window._cachedScheduleLive = null;
+window._scheduleRealtimeInitialized = false;
+
+window.initScheduleRealtimeSync = () => {
+  if (window._scheduleRealtimeInitialized) return;
+  window._scheduleRealtimeInitialized = true;
+  try {
+    const schedRef = ref(db, 'schedule_live');
+    onValue(schedRef, (snap) => {
+      if (snap.exists()) {
+        window._cachedScheduleLive = snap.val();
+        if (typeof window.updateNewMemberBadge === 'function') window.updateNewMemberBadge();
+      }
+    }, (err) => {
+      console.warn("Schedule realtime sync error:", err);
+    });
+  } catch(e) {
+    console.warn("Failed to attach schedule realtime listener:", e);
+  }
+};
+
+window.initScheduleRealtimeSync();
+
+window.getUnifiedScheduleEvents = () => {
+  const events = [];
+  const now = new Date();
+  
+  // 1. Check liveData cached from Firebase 'schedule_live' or Google Sheets 'WhiteOut Survival'
+  let liveSched = window._cachedScheduleLive || (window.liveData ? window.liveData['schedule_live_parsed'] : null);
+  
+  if (!liveSched) {
+    const sheetData = window.liveData ? window.liveData['WhiteOut Survival'] : null;
+    if (sheetData && Array.isArray(sheetData) && typeof window.parseSheetToScheduleLiveData === 'function') {
+      liveSched = window.parseSheetToScheduleLiveData(sheetData);
+    }
+  }
+
+  if (liveSched && Array.isArray(liveSched.events)) {
+    liveSched.events.forEach(ev => {
+      if (!ev || !ev.eventName) return;
+      const eventName = String(ev.eventName).trim();
+      if (!eventName || eventName.toLowerCase().includes("event's") || eventName.toLowerCase() === 'rewards') return;
+
+      const eventDate = window.parseScheduleEventDate(ev.dateStr);
+      if (!eventDate) return;
+      const startT = window.parseScheduleEventTime(ev.utcStr, ev.pdtVal);
+      if (!startT) return;
+
+      const exactStart = new Date(eventDate);
+      exactStart.setUTCHours(startT.h, startT.m, 0, 0);
+
+      let durationMs = 3600000; // 1h default
+      const nameLower = eventName.toLowerCase();
+      if (nameLower.includes('bear trap') || nameLower.includes('🪤') || nameLower.includes('🐻')) durationMs = 30 * 60 * 1000; // 30m
+      else if (nameLower.includes('brothers in arms') || nameLower.includes('k. e.') || nameLower.includes('ke') || nameLower.includes('svs')) durationMs = 24 * 3600 * 1000; // 24h
+      else if (nameLower.includes('castle') || nameLower.includes('sunfire')) durationMs = 4 * 3600 * 1000; // 4h
+      else if (nameLower.includes('foundry') || nameLower.includes('canyon')) durationMs = 2 * 3600 * 1000; // 2h
+      else if (nameLower.includes('shield')) durationMs = 8 * 3600 * 1000;
+
+      const exactEnd = new Date(exactStart.getTime() + durationMs);
+
+      const isBearTrap = eventName.includes('Bear Trap') || eventName.includes('🪤') || eventName.includes('🐻');
+      const isJoe = eventName.includes('Crazy Joe') || eventName.includes('🔥');
+      const isCastle = eventName.includes('Castle') || eventName.includes('🏰');
+      const isBia = eventName.includes('Brothers') || eventName.includes('⚔️');
+      const emoji = ev.emoji || (isBearTrap ? '🪤' : (isJoe ? '🔥' : (isCastle ? '🏰' : (isBia ? '⚔️' : '✨'))));
+
+      events.push({
+        id: ev.id || `ev_${exactStart.getTime()}_${eventName.replace(/\s+/g, '_')}`,
+        name: eventName,
+        dateStr: ev.dateStr,
+        utcStr: ev.utcStr,
+        pdtVal: ev.pdtVal,
+        emoji: emoji,
+        start: exactStart,
+        end: exactEnd,
+        durationMs: durationMs,
+        utcDisplay: `${String(startT.h).padStart(2, '0')}:${String(startT.m).padStart(2, '0')} UTC`
+      });
+    });
+  }
+
+  return events;
+};
+
+// ==========================================
+// 🔔 SCHEDULE EVENT REMINDERS SUITE
+// ==========================================
+
+window.playEventAlertSound = () => {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const now = ctx.currentTime;
+    
+    // Alliance Fanfare Horn Chime (C5 -> E5 -> G5 -> C6)
+    const notes = [523.25, 659.25, 783.99, 1046.50];
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, now + i * 0.14);
+      gain.gain.setValueAtTime(0.25, now + i * 0.14);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.14 + 0.35);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + i * 0.14);
+      osc.stop(now + i * 0.14 + 0.35);
+    });
+  } catch (e) {
+    console.warn("Web Audio Event alert chime not available:", e);
+  }
+};
+
+window.getEventReminders = () => {
+  try {
+    const raw = localStorage.getItem('wos_event_reminders');
+    if (!raw) return [];
+    const list = JSON.parse(raw);
+    return Array.isArray(list) ? list : [];
+  } catch (e) {
+    return [];
+  }
+};
+
+window.saveEventReminders = (list) => {
+  try {
+    localStorage.setItem('wos_event_reminders', JSON.stringify(list || []));
+  } catch (e) {
+    console.error("Failed to save event reminders:", e);
+  }
+};
+
+window.setEventReminder = async (eventName, exactStartTimeMs, warningMins = 15, emoji = '✨') => {
+  const startTime = Number(exactStartTimeMs);
+  if (!startTime || isNaN(startTime)) return false;
+  
+  const id = `rem_${startTime}_${String(eventName).replace(/[^a-zA-Z0-9]/g, '_')}`;
+  const reminders = window.getEventReminders().filter(r => r.id !== id);
+
+  const reminderObj = {
+    id,
+    eventName: String(eventName).trim(),
+    exactStartTime: startTime,
+    warningMins: Number(warningMins) || 15,
+    emoji: emoji || '✨',
+    triggered: false,
+    liveTriggered: false,
+    createdAt: Date.now()
+  };
+
+  reminders.push(reminderObj);
+  window.saveEventReminders(reminders);
+
+  if ('Notification' in window && Notification.permission === 'default') {
+    try { await Notification.requestPermission(); } catch(e) {}
+  }
+
+  const minsText = Number(warningMins) === 0 ? "at event start" : `${warningMins}m before start`;
+  if (window.showToast) {
+    window.showToast(`🔔 Reminder Set: ${emoji} ${eventName} (${minsText})`, "success");
+  }
+
+  if (typeof window.startEventReminderTicker === 'function') {
+    window.startEventReminderTicker();
+  }
+
+  return true;
+};
+
+window.cancelEventReminder = (reminderId) => {
+  const reminders = window.getEventReminders().filter(r => r.id !== reminderId);
+  window.saveEventReminders(reminders);
+  if (window.showToast) {
+    window.showToast("🔔 Event Reminder removed.", "info");
+  }
+};
+
+window.isEventReminderSet = (eventName, exactStartTimeMs) => {
+  const startTime = Number(exactStartTimeMs);
+  const id = `rem_${startTime}_${String(eventName).replace(/[^a-zA-Z0-9]/g, '_')}`;
+  return window.getEventReminders().some(r => r.id === id);
+};
+
+window.openEventReminderModal = function(eventName, exactStartTimeMs, emoji = '✨', dateStr = '', utcStr = '') {
+  let existing = document.getElementById('eventReminderModalOverlay');
+  if (existing) existing.remove();
+
+  const startTime = Number(exactStartTimeMs);
+  const startDate = new Date(startTime);
+  const isSet = window.isEventReminderSet(eventName, startTime);
+  const existingRem = window.getEventReminders().find(r => r.id === `rem_${startTime}_${String(eventName).replace(/[^a-zA-Z0-9]/g, '_')}`);
+  const currentWarning = existingRem ? existingRem.warningMins : 15;
+
+  const localTimeStr = `${startDate.toLocaleDateString([], { weekday:'short', month:'short', day:'numeric' })} at ${startDate.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}`;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'eventReminderModalOverlay';
+  overlay.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.85); backdrop-filter:blur(10px); z-index:100006; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease;';
+
+  overlay.innerHTML = `
+    <div class="card" style="width:94%; max-width:480px; background:linear-gradient(145deg, rgba(15,23,42,0.98), rgba(30,41,59,0.96)); border:1.5px solid rgba(56,189,248,0.45); padding:22px; border-radius:18px; box-shadow:0 25px 60px rgba(0,0,0,0.85); text-align:left; color:var(--text-main); max-height:90vh; overflow-y:auto; animation:zoomIn 0.2s ease;">
+      
+      <!-- Header -->
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:12px; gap:8px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:24px;">🔔</span>
+          <div>
+            <h3 style="margin:0; color:#fff; font-size:16.5px; font-weight:800;">Alliance Event Reminder</h3>
+            <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">Custom alert before event starts</div>
+          </div>
+        </div>
+        <button onclick="document.getElementById('eventReminderModalOverlay').remove()" class="close-btn" title="Close Window">✕</button>
+      </div>
+
+      <!-- Event Info Card -->
+      <div style="background:linear-gradient(145deg, rgba(56,189,248,0.12), rgba(15,23,42,0.9)); border:1.5px solid rgba(56,189,248,0.35); border-radius:14px; padding:14px; margin-bottom:16px;">
+        <div style="font-size:11px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">
+          SCHEDULED EVENT
+        </div>
+        <div style="font-size:17px; font-weight:800; color:#fff; margin-bottom:4px;">
+          ${emoji} ${escapeHTML(eventName)}
+        </div>
+        <div style="font-size:12px; color:var(--text-muted); font-family:monospace;">
+          🕒 ${localTimeStr} ${utcStr ? `(${utcStr})` : ''}
+        </div>
+      </div>
+
+      <!-- Warning Timing Selector -->
+      <div style="margin-bottom:16px;">
+        <label style="font-size:11.5px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:6px;">
+          ⚠️ Alert Me Before Event Starts:
+        </label>
+        <select id="eventReminderTiming" style="width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; font-weight:bold; outline:none; cursor:pointer; box-sizing:border-box;">
+          <option value="0" ${currentWarning === 0 ? 'selected' : ''}>At Event Start (0m)</option>
+          <option value="5" ${currentWarning === 5 ? 'selected' : ''}>5 Minutes Before</option>
+          <option value="10" ${currentWarning === 10 ? 'selected' : ''}>10 Minutes Before</option>
+          <option value="15" ${currentWarning === 15 ? 'selected' : ''}>15 Minutes Before (Recommended ⭐)</option>
+          <option value="30" ${currentWarning === 30 ? 'selected' : ''}>30 Minutes Before</option>
+          <option value="60" ${currentWarning === 60 ? 'selected' : ''}>1 Hour Before</option>
+        </select>
+      </div>
+
+      <!-- Sound & Test Row -->
+      <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:10px 12px; margin-bottom:18px; flex-wrap:wrap; gap:8px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:16px;">🎺</span>
+          <span style="font-size:12px; font-weight:bold; color:#fff;">Fanfare Audio Chime</span>
+        </div>
+        <button type="button" onclick="window.playEventAlertSound();" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#38bdf8; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+          🧪 Test Fanfare
+        </button>
+      </div>
+
+      <!-- Actions -->
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+        ${isSet ? `
+          <button type="button" onclick="window.cancelEventReminder('${existingRem?.id}'); document.getElementById('eventReminderModalOverlay').remove(); if(typeof window.renderTabs === 'function') window.renderTabs();" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:9px 14px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12px;">
+            ❌ Remove Reminder
+          </button>
+        ` : '<div></div>'}
+        <div style="display:flex; gap:8px;">
+          <button type="button" onclick="document.getElementById('eventReminderModalOverlay').remove()" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#cbd5e1; padding:9px 16px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12.5px;">Close</button>
+          <button type="button" onclick="const w = document.getElementById('eventReminderTiming')?.value || 15; window.setEventReminder('${escapeHTML(eventName)}', ${startTime}, w, '${emoji}'); document.getElementById('eventReminderModalOverlay').remove(); if(typeof window.renderTabs === 'function') window.renderTabs();" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:9px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12.5px; box-shadow:0 2px 10px rgba(14,165,233,0.4); display:inline-flex; align-items:center; gap:6px;">
+            🔔 Save Reminder
+          </button>
+        </div>
+      </div>
+
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+};
+
+window.openEventRemindersManagerModal = function() {
+  let existing = document.getElementById('eventRemindersManagerModalOverlay');
+  if (existing) existing.remove();
+
+  const reminders = window.getEventReminders();
+  const now = Date.now();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'eventRemindersManagerModalOverlay';
+  overlay.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.85); backdrop-filter:blur(10px); z-index:100006; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease;';
+
+  let listHtml = '';
+  if (reminders.length === 0) {
+    listHtml = `
+      <div style="background:rgba(255,255,255,0.03); border:1px dashed var(--border); border-radius:12px; padding:24px; text-align:center; color:var(--text-muted);">
+        <div style="font-size:28px; margin-bottom:8px;">🔔</div>
+        <div style="font-size:13px; font-weight:bold; color:var(--text-main);">No active event reminders</div>
+        <p style="font-size:11.5px; margin:4px 0 0 0;">Click the 🔔 button next to any event in the Schedule to set a reminder, or use the quick subscriptions below!</p>
+      </div>
+    `;
+  } else {
+    listHtml = reminders.map(r => {
+      const isPast = (r.exactStartTime <= now);
+      const diff = r.exactStartTime - now;
+      const timeStr = new Date(r.exactStartTime).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+      const dateStr = new Date(r.exactStartTime).toLocaleDateString([], { weekday:'short', month:'short', day:'numeric' });
+
+      return `
+        <div style="background:rgba(255,255,255,0.04); border:1px solid ${isPast ? 'rgba(239,68,68,0.3)' : 'rgba(56,189,248,0.3)'}; border-radius:12px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
+          <div>
+            <div style="font-size:14px; font-weight:bold; color:#fff; display:flex; align-items:center; gap:6px;">
+              <span>${r.emoji || '✨'}</span>
+              <span>${escapeHTML(r.eventName)}</span>
+            </div>
+            <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">
+              🕒 ${dateStr} at ${timeStr} • Alert: ${r.warningMins === 0 ? 'At start' : `${r.warningMins}m before`}
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:11px; font-family:monospace; color:${isPast ? '#ef4444' : '#10b981'}; font-weight:bold;">
+              ${isPast ? 'LIVE / PAST' : `in ${Math.floor(diff/3600000)}h ${Math.floor((diff%3600000)/60000)}m`}
+            </span>
+            <button onclick="window.cancelEventReminder('${r.id}'); window.openEventRemindersManagerModal();" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;" title="Delete Reminder">
+              ✕
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  overlay.innerHTML = `
+    <div class="card" style="width:94%; max-width:540px; background:linear-gradient(145deg, rgba(15,23,42,0.98), rgba(30,41,59,0.96)); border:1.5px solid rgba(56,189,248,0.45); padding:22px; border-radius:18px; box-shadow:0 25px 60px rgba(0,0,0,0.85); text-align:left; color:var(--text-main); max-height:90vh; overflow-y:auto; animation:zoomIn 0.2s ease;">
+      
+      <!-- Header -->
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:12px; gap:8px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:24px;">🔔</span>
+          <div>
+            <h3 style="margin:0; color:#fff; font-size:16.5px; font-weight:800;">Alliance Event Reminders</h3>
+            <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">Active reminders and 1-tap bulk subscriptions</div>
+          </div>
+        </div>
+        <button onclick="document.getElementById('eventRemindersManagerModalOverlay').remove()" class="close-btn" title="Close Window">✕</button>
+      </div>
+
+      <!-- Quick Subscriptions Grid -->
+      <div style="margin-bottom:16px;">
+        <div style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">
+          ⚡ 1-Tap Quick Subscriptions:
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <button onclick="window.bulkSubscribeEventReminders('bear trap'); window.openEventRemindersManagerModal();" style="background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.35); color:#10b981; padding:8px 10px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px;">
+            <span>🪤</span> <span>All Bear Traps</span>
+          </button>
+          <button onclick="window.bulkSubscribeEventReminders('crazy joe'); window.openEventRemindersManagerModal();" style="background:rgba(249,115,22,0.12); border:1px solid rgba(249,115,22,0.35); color:#f97316; padding:8px 10px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px;">
+            <span>🔥</span> <span>All Crazy Joe</span>
+          </button>
+          <button onclick="window.bulkSubscribeEventReminders('castle'); window.openEventRemindersManagerModal();" style="background:rgba(168,85,247,0.12); border:1px solid rgba(168,85,247,0.35); color:#a855f7; padding:8px 10px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px;">
+            <span>🏰</span> <span>Castle Battle</span>
+          </button>
+          <button onclick="window.bulkSubscribeEventReminders('brothers'); window.openEventRemindersManagerModal();" style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.35); color:#ef4444; padding:8px 10px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:6px;">
+            <span>⚔️</span> <span>Brothers in Arms</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Active Reminders List -->
+      <div style="margin-bottom:16px;">
+        <div style="font-size:11px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+          <span>Active Reminders (${reminders.length})</span>
+          ${reminders.length > 0 ? `
+            <button onclick="window.saveEventReminders([]); window.openEventRemindersManagerModal();" style="background:transparent; border:none; color:#ef4444; font-size:11px; font-weight:bold; cursor:pointer;">Clear All</button>
+          ` : ''}
+        </div>
+        <div style="display:flex; flex-direction:column; gap:8px; max-height:240px; overflow-y:auto;">
+          ${listHtml}
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div style="display:flex; justify-content:flex-end; gap:8px; border-top:1px solid rgba(255,255,255,0.06); padding-top:12px;">
+        <button type="button" onclick="document.getElementById('eventRemindersManagerModalOverlay').remove()" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#cbd5e1; padding:8px 16px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12.5px;">Close</button>
+      </div>
+
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+};
+
+window.bulkSubscribeEventReminders = (keyword) => {
+  const events = window.getUnifiedScheduleEvents();
+  const kw = String(keyword).toLowerCase();
+  const matched = events.filter(e => e.name.toLowerCase().includes(kw) && e.start.getTime() > Date.now());
+  
+  if (matched.length === 0) {
+    if (window.showToast) window.showToast(`No upcoming "${keyword}" events found in the schedule.`, "warning");
+    return;
+  }
+
+  let count = 0;
+  matched.forEach(e => {
+    window.setEventReminder(e.name, e.start.getTime(), 15, e.emoji);
+    count++;
+  });
+
+  if (window.showToast) {
+    window.showToast(`🔔 Subscribed to ${count} upcoming "${keyword}" events!`, "success");
+  }
+};
+
+window.startEventReminderTicker = () => {
+  if (window._eventReminderTickerInterval) clearInterval(window._eventReminderTickerInterval);
+
+  const checkReminders = () => {
+    const reminders = window.getEventReminders();
+    if (!reminders || reminders.length === 0) return;
+
+    const now = Date.now();
+    let updated = false;
+
+    reminders.forEach(r => {
+      // Prune reminders older than 24 hours
+      if (r.exactStartTime + 24 * 3600 * 1000 < now) {
+        return;
+      }
+
+      const diff = r.exactStartTime - now;
+      const warningMs = (r.warningMins || 15) * 60000;
+
+      // 1. Trigger Warning Notification & Audio Chime
+      if (diff > 0 && diff <= warningMs && !r.triggered) {
+        r.triggered = true;
+        updated = true;
+        window.playEventAlertSound();
+
+        const minsLeft = Math.max(1, Math.ceil(diff / 60000));
+        if ('Notification' in window && Notification.permission === 'granted') {
+          try {
+            new Notification(`🔥 ${r.emoji || '✨'} ${r.eventName} STARTS SOON!`, {
+              body: `Chief, ${r.eventName} starts in ${minsLeft} minutes! Log into Whiteout Survival to get ready!`,
+              icon: 'https://wosbdc.github.io/central_command_icon.ico'
+            });
+          } catch(e) {}
+        }
+
+        if (window.showToast) {
+          window.showToast(`🔥 ${r.emoji || '✨'} ${r.eventName} starts in ${minsLeft} minutes! Rally up!`, "warning");
+        }
+      }
+
+      // 2. Trigger Event Live Alert (at 00:00 start)
+      if (diff <= 0 && diff > -300000 && !r.liveTriggered) {
+        r.liveTriggered = true;
+        updated = true;
+        window.playEventAlertSound();
+
+        if ('Notification' in window && Notification.permission === 'granted') {
+          try {
+            new Notification(`⚔️ ${r.emoji || '✨'} ${r.eventName} IS LIVE NOW!`, {
+              body: `The event has begun! Rally up with the alliance now!`,
+              icon: 'https://wosbdc.github.io/central_command_icon.ico'
+            });
+          } catch(e) {}
+        }
+
+        if (window.showToast) {
+          window.showToast(`⚔️ ${r.emoji || '✨'} ${r.eventName} IS LIVE NOW! Rally up!`, "success");
+        }
+      }
+    });
+
+    if (updated) {
+      window.saveEventReminders(reminders);
+    }
+  };
+
+  checkReminders();
+  window._eventReminderTickerInterval = setInterval(checkReminders, 1000);
+};
+
+window.startEventReminderTicker();
 
 const views = {
   login: async () => views.auth('login', 1),
@@ -30173,38 +30678,10 @@ window.resetBearTrapEvent = async () => {
         fetchSheet('WhiteOut Survival').catch(() => null)
       ]);
       
-      const liveSched = (sheetWos && Array.isArray(sheetWos) && sheetWos.length > 0)
-        ? window.parseSheetToScheduleLiveData(sheetWos)
-        : await window.fetchScheduleLiveData().catch(() => null);
-      
-      let nextEvents = [];
-      let nextEventTime = null;
-      let upcomingEvents = [];
+      const allEvents = (typeof window.getUnifiedScheduleEvents === 'function') ? window.getUnifiedScheduleEvents() : [];
       let now = new Date();
-
-      if (liveSched && Array.isArray(liveSched.events) && liveSched.events.length > 0) {
-        liveSched.events.forEach(ev => {
-          const eventDate = window.parseScheduleEventDate(ev.dateStr);
-          if (!eventDate) return;
-          const startT = window.parseScheduleEventTime(ev.utcStr, ev.pdtVal);
-          if (!startT) return;
-          const exactEventDate = new Date(eventDate);
-          exactEventDate.setUTCHours(startT.h, startT.m, 0, 0);
-          if (exactEventDate > now) {
-            upcomingEvents.push({
-              name: String(ev.eventName).trim(),
-              exactDate: exactEventDate,
-              emoji: ev.emoji || '✨'
-            });
-          }
-        });
-      }
-
-      if (upcomingEvents.length > 0) {
-        upcomingEvents.sort((a, b) => a.exactDate - b.exactDate);
-        nextEventTime = upcomingEvents[0].exactDate;
-        nextEvents = upcomingEvents.filter(e => e.exactDate.getTime() === nextEventTime.getTime());
-      }
+      let activeEv = allEvents.find(e => now >= e.start && now < e.end);
+      let nextEv = allEvents.filter(e => e.start > now).sort((a,b) => a.start - b.start)[0];
       
       const renderNewsContent = () => {
         let contentHtml = "";
@@ -30245,25 +30722,80 @@ window.resetBearTrapEvent = async () => {
       };
 
       let countdownHtml = '';
-      if (nextEvents.length > 0) {
+      if (activeEv) {
+        const isReminderSet = (typeof window.isEventReminderSet === 'function') && window.isEventReminderSet(activeEv.name, activeEv.start.getTime());
         countdownHtml = `
-          <div class="card" style="margin-bottom: 25px; position: relative; overflow: hidden; animation: fadeIn 0.5s ease;">
+          <div class="card" style="margin-bottom: 25px; position: relative; overflow: hidden; animation: fadeIn 0.4s ease; border: 1.5px solid rgba(16,185,129,0.55); background: linear-gradient(135deg, rgba(16,185,129,0.12), rgba(15,23,42,0.95)); box-shadow: 0 0 25px rgba(16,185,129,0.2);">
             <div class="countdown-widget-container" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px;">
               <div class="countdown-event-details" style="display:flex; align-items:center; gap:15px;">
-                <div style="background:rgba(168,85,247,0.1); color:var(--accent); width:50px; height:50px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:24px; flex-shrink:0;">
-                  ⏱️
+                <div style="background:rgba(16,185,129,0.2); color:#10b981; width:52px; height:52px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:26px; flex-shrink:0; box-shadow:0 0 15px rgba(16,185,129,0.4);">
+                  🔥
                 </div>
                 <div>
-                  <div style="font-weight:bold; color:var(--text-muted); font-size:12px; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Next Upcoming Event</div>
-                  <div id="liveCountdownEventName" style="font-weight:bold; color:var(--text-main); font-size:18px; transition: opacity 0.3s ease;">
-                    ${nextEvents[0].name.includes('Bear Trap') ? '🪤' : '✨'} ${nextEvents[0].name}
+                  <div style="font-weight:bold; color:#10b981; font-size:11.5px; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+                    <span style="width:7px; height:7px; border-radius:50%; background:#10b981; box-shadow:0 0 6px #10b981;"></span>
+                    ACTIVE ALLIANCE EVENT • LIVE NOW
+                  </div>
+                  <div id="liveCountdownEventName" style="font-weight:bold; color:var(--text-main); font-size:19px;">
+                    ${activeEv.emoji} ${escapeHTML(activeEv.name)}
+                  </div>
+                  <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">
+                    🕒 Ends at ${activeEv.end.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })} local (${activeEv.utcDisplay})
                   </div>
                 </div>
               </div>
-              <div class="countdown-timer-details" style="text-align:right;">
-                <div style="font-weight:bold; color:var(--text-muted); font-size:12px; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Starts In</div>
-                <div id="liveCountdownTimer" style="font-weight:bold; color:var(--accent); font-size:24px; font-family:monospace; background:var(--bg-main); padding:6px 12px; border-radius:8px; border:1px solid var(--border);">
-                  --h --m --s
+              <div class="countdown-timer-details" style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+                <div>
+                  <div style="font-weight:bold; color:var(--text-muted); font-size:11px; text-transform:uppercase; letter-spacing:1px; margin-bottom:3px;">Time Remaining</div>
+                  <div id="liveCountdownTimer" style="font-weight:bold; color:#10b981; font-size:24px; font-family:monospace; background:rgba(0,0,0,0.4); padding:6px 14px; border-radius:10px; border:1px solid rgba(16,185,129,0.4); text-shadow:0 0 10px rgba(16,185,129,0.4);">
+                    --m --s
+                  </div>
+                </div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                  <button onclick="window.openEventReminderModal('${escapeHTML(activeEv.name)}', ${activeEv.start.getTime()}, '${activeEv.emoji}', '${activeEv.dateStr}', '${activeEv.utcStr}')" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#fff; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:5px;">
+                    <span>🔔</span> <span>Reminder</span>
+                  </button>
+                  <button onclick="if(window.views && window.views.schedule) window.views.schedule();" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:5px;">
+                    <span>📅</span> <span>Schedule</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      } else if (nextEv) {
+        const isReminderSet = (typeof window.isEventReminderSet === 'function') && window.isEventReminderSet(nextEv.name, nextEv.start.getTime());
+        countdownHtml = `
+          <div class="card" style="margin-bottom: 25px; position: relative; overflow: hidden; animation: fadeIn 0.4s ease; border: 1.5px solid rgba(56,189,248,0.35); background: linear-gradient(135deg, rgba(56,189,248,0.1), rgba(15,23,42,0.95)); box-shadow: 0 0 20px rgba(56,189,248,0.15);">
+            <div class="countdown-widget-container" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px;">
+              <div class="countdown-event-details" style="display:flex; align-items:center; gap:15px;">
+                <div style="background:rgba(56,189,248,0.15); color:var(--accent); width:52px; height:52px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:26px; flex-shrink:0; box-shadow:0 0 12px rgba(56,189,248,0.3);">
+                  ⏱️
+                </div>
+                <div>
+                  <div style="font-weight:bold; color:var(--text-muted); font-size:12px; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Next Upcoming Alliance Event</div>
+                  <div id="liveCountdownEventName" style="font-weight:bold; color:var(--text-main); font-size:19px;">
+                    ${nextEv.emoji} ${escapeHTML(nextEv.name)}
+                  </div>
+                  <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">
+                    🕒 Starts at ${nextEv.start.toLocaleDateString([], { weekday:'short', month:'short', day:'numeric' })} ${nextEv.start.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })} local (${nextEv.utcDisplay})
+                  </div>
+                </div>
+              </div>
+              <div class="countdown-timer-details" style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+                <div>
+                  <div style="font-weight:bold; color:var(--text-muted); font-size:11px; text-transform:uppercase; letter-spacing:1px; margin-bottom:3px;">Starts In</div>
+                  <div id="liveCountdownTimer" style="font-weight:bold; color:var(--accent); font-size:24px; font-family:monospace; background:rgba(0,0,0,0.4); padding:6px 14px; border-radius:10px; border:1px solid rgba(56,189,248,0.35); text-shadow:0 0 10px rgba(56,189,248,0.3);">
+                    --h --m --s
+                  </div>
+                </div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                  <button onclick="window.openEventReminderModal('${escapeHTML(nextEv.name)}', ${nextEv.start.getTime()}, '${nextEv.emoji}', '${nextEv.dateStr}', '${nextEv.utcStr}')" style="background:${isReminderSet ? 'rgba(16,185,129,0.2)' : 'linear-gradient(135deg, #0ea5e9, #0284c7)'}; border:${isReminderSet ? '1px solid #10b981' : 'none'}; color:${isReminderSet ? '#10b981' : '#fff'}; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:5px; box-shadow:0 2px 8px rgba(14,165,233,0.3);">
+                    <span>${isReminderSet ? '✓' : '🔔'}</span> <span>${isReminderSet ? 'Reminder Active' : 'Remind Me'}</span>
+                  </button>
+                  <button onclick="if(window.views && window.views.schedule) window.views.schedule();" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#cbd5e1; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:5px;">
+                    <span>📅 Schedule</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -30313,57 +30845,45 @@ window.resetBearTrapEvent = async () => {
         </div>
       `;
 
-      if (nextEvents.length > 0 && nextEventTime) {
-        // Rotation Interval
-        let eventIdx = 0;
-        let eventNameEl = document.getElementById('liveCountdownEventName');
-        if (nextEvents.length > 1) {
-          const rotationInterval = setInterval(() => {
-            if (!document.getElementById('liveCountdownEventName')) return clearInterval(rotationInterval);
-            eventIdx = (eventIdx + 1) % nextEvents.length;
-            let evName = nextEvents[eventIdx].name;
-            eventNameEl.style.opacity = 0;
-            setTimeout(() => {
-              if (!document.getElementById('liveCountdownEventName')) return;
-              eventNameEl.innerHTML = `${evName.includes('Bear Trap') ? '🪤' : '✨'} ${evName}`;
-              eventNameEl.style.opacity = 1;
-            }, 300);
-          }, 4000); // Rotate every 4 seconds
-        }
-
-        // Countdown Interval
+      // Live Ticking Countdown on Home Page
+      if (activeEv || nextEv) {
         const timerEl = document.getElementById('liveCountdownTimer');
         const updateTimer = () => {
-          if (!document.getElementById('liveCountdownTimer')) return clearInterval(countdownInterval);
-          let now = new Date();
-          let diff = nextEventTime - now;
+          if (!document.getElementById('liveCountdownTimer')) return clearInterval(window._homeCountdownInterval);
+          const currentNow = new Date();
           
-          if (diff <= 0) {
-            timerEl.innerHTML = "Started!";
-            timerEl.style.color = "var(--success)";
-            clearInterval(countdownInterval);
-            // Refresh view to get the next event
-            setTimeout(() => {
-              if (document.getElementById('liveCountdownTimer')) views.home();
-            }, 5000);
-            return;
+          if (activeEv) {
+            let diff = Math.max(0, Math.floor((activeEv.end - currentNow) / 1000));
+            if (diff <= 0) {
+              timerEl.textContent = "Ended";
+              clearInterval(window._homeCountdownInterval);
+              setTimeout(() => { if (document.getElementById('liveCountdownTimer')) views.home(); }, 3000);
+              return;
+            }
+            let m = Math.floor(diff / 60);
+            let s = diff % 60;
+            let h = Math.floor(m / 60);
+            m = m % 60;
+            timerEl.textContent = h > 0 ? `${h}h ${m}m ${s}s left` : `${m}m ${s}s left`;
+          } else if (nextEv) {
+            let diff = Math.max(0, Math.floor((nextEv.start - currentNow) / 1000));
+            if (diff <= 0) {
+              timerEl.textContent = "Started!";
+              timerEl.style.color = "#10b981";
+              clearInterval(window._homeCountdownInterval);
+              setTimeout(() => { if (document.getElementById('liveCountdownTimer')) views.home(); }, 3000);
+              return;
+            }
+            let h = Math.floor(diff / 3600);
+            let m = Math.floor((diff % 3600) / 60);
+            let s = diff % 60;
+            timerEl.textContent = `${String(h).padStart(2,'0')}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s`;
           }
-          
-          let h = Math.floor(diff / (1000 * 60 * 60));
-          let m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-          let s = Math.floor((diff % (1000 * 60)) / 1000);
-          
-          let timeStr = '';
-          if (h > 0) {
-            timeStr = `${h}<span style="color:var(--text-main); font-size:0.7em; margin:0 4px 0 1px;">h</span>${m.toString().padStart(2, '0')}<span style="color:var(--text-main); font-size:0.7em; margin:0 4px 0 1px;">m</span>${s.toString().padStart(2, '0')}<span style="color:var(--text-main); font-size:0.7em; margin-left:1px;">s</span>`;
-          } else {
-            timeStr = `${m}<span style="color:var(--text-main); font-size:0.7em; margin:0 4px 0 1px;">m</span>${s.toString().padStart(2, '0')}<span style="color:var(--text-main); font-size:0.7em; margin-left:1px;">s</span>`;
-          }
-          timerEl.innerHTML = timeStr;
         };
-        
-        let countdownInterval = setInterval(updateTimer, 1000);
+
         updateTimer();
+        if (window._homeCountdownInterval) clearInterval(window._homeCountdownInterval);
+        window._homeCountdownInterval = setInterval(updateTimer, 1000);
       }
       
     } catch(e) { renderError(e.message); }
@@ -32804,6 +33324,9 @@ window.resetBearTrapEvent = async () => {
               </div>
             </div>
             <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+              <button onclick="window.openEventRemindersManagerModal()" style="background:rgba(56,189,248,0.14); border:1px solid rgba(56,189,248,0.35); color:#38bdf8; padding:7px 14px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12px; display:flex; align-items:center; gap:5px; box-shadow:0 2px 8px rgba(56,189,248,0.2);" title="Manage scheduled event reminders & alarms">
+                <span>🔔</span> <span>Event Reminders</span>
+              </button>
               ${isManager ? `
                 <button onclick="window.openScheduleEditorModal()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:7px 14px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12px; display:flex; align-items:center; gap:5px; box-shadow:0 2px 8px rgba(16,185,129,0.3);">
                   ⚙️ Manage Schedule
@@ -33028,6 +33551,13 @@ window.resetBearTrapEvent = async () => {
             countdownHtml = `<span style="background:rgba(100,100,100,0.15);color:var(--text-muted);font-size:11px;padding:3px 8px;border-radius:10px;">Done</span>`;
           }
 
+          const isRemSet = (typeof window.isEventReminderSet === 'function') && ev.eventDateTime && window.isEventReminderSet(ev.eventName, ev.eventDateTime.getTime());
+          const remBtnHtml = (ev.eventDateTime && !ev.isPast) ? `
+            <button onclick="window.openEventReminderModal('${escapeHTML(ev.eventName)}', ${ev.eventDateTime.getTime()}, '${ev.emoji}', '', '${escapeHTML(ev.utcDisplay || '')}')" style="background:${isRemSet ? 'rgba(16,185,129,0.2)' : 'rgba(56,189,248,0.12)'}; border:1px solid ${isRemSet ? '#10b981' : 'rgba(56,189,248,0.35)'}; color:${isRemSet ? '#10b981' : '#38bdf8'}; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:0.15s;" title="Set Event Reminder">
+              <span>${isRemSet ? '✓' : '🔔'}</span> <span>${isRemSet ? 'Reminding' : 'Remind'}</span>
+            </button>
+          ` : '';
+
           todayRows += `
             <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg-main);border-radius:10px;margin-bottom:8px;gap:10px;${strikeStyle}flex-wrap:wrap;">
               <span style="font-size:14px;font-weight:600;color:var(--text-main);">${ev.emoji} ${ev.eventName}</span>
@@ -33035,6 +33565,7 @@ window.resetBearTrapEvent = async () => {
                 ${ev.utcDisplay ? `<span style="font-size:13px;color:var(--text-muted);">${ev.utcDisplay}</span>` : ''}
                 ${ev.localTimeStr ? `<span style="font-size:13px;font-weight:600;color:var(--text-main);">${ev.localTimeStr} local</span>` : ev.pdtVal ? `<span style="font-size:13px;color:var(--text-muted);">${ev.pdtVal} PDT</span>` : ''}
                 ${countdownHtml}
+                ${remBtnHtml}
               </div>
             </div>`;
         });
@@ -33105,12 +33636,20 @@ window.resetBearTrapEvent = async () => {
 
         if (upcomingEvents.length > 0) {
           upcomingEvents.forEach(ev => {
+            const isRemSet = (typeof window.isEventReminderSet === 'function') && ev.eventDateTime && window.isEventReminderSet(ev.eventName, ev.eventDateTime.getTime());
+            const remBtnHtml = ev.eventDateTime ? `
+              <button onclick="window.openEventReminderModal('${escapeHTML(ev.eventName)}', ${ev.eventDateTime.getTime()}, '${ev.emoji}', '${escapeHTML(ev.dateLabel || '')}', '${escapeHTML(ev.utcDisplay || '')}')" style="background:${isRemSet ? 'rgba(16,185,129,0.2)' : 'rgba(56,189,248,0.12)'}; border:1px solid ${isRemSet ? '#10b981' : 'rgba(56,189,248,0.35)'}; color:${isRemSet ? '#10b981' : '#38bdf8'}; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:0.15s;" title="Set Event Reminder">
+                <span>${isRemSet ? '✓' : '🔔'}</span> <span>${isRemSet ? 'Reminding' : 'Remind'}</span>
+              </button>
+            ` : '';
+
             upcomingHtml += `<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:6px;">
               <span style="font-size:14px;color:var(--text-main);font-weight:500;">${ev.emoji} ${ev.eventName}</span>
-              <div style="display:flex;gap:10px;align-items:center;">
+              <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
                 <span style="font-size:12px;color:var(--text-muted);">${ev.dateLabel}</span>
                 ${ev.utcDisplay ? `<span style="font-size:12px;color:var(--text-muted);">${ev.utcDisplay}</span>` : ''}
                 ${ev.localTimeStr ? `<span style="font-size:12px;font-weight:600;color:var(--accent);">${ev.localTimeStr}</span>` : ''}
+                ${remBtnHtml}
               </div>
             </div>`;
           });
@@ -33347,9 +33886,29 @@ window.resetBearTrapEvent = async () => {
               let isSignupCat = catLower.includes('signup') || catLower.includes('sign-up') || catLower.includes('sign up');
               let bullet = isSignupCat ? '<span style="color:#10b981; font-weight:bold; font-size:11px;">🟢</span>' : (isBt ? '🪤' : '✨');
               
-              html += `<li style="padding:6px 0; font-size:13px; color:var(--text-main); display:flex; align-items:center; gap:8px; border-bottom:1px solid rgba(255,255,255,0.05);">
-                         <span>${bullet}</span>
-                         <span>${ev}</span>
+              let timeMatch = ev.match(/\((\d{1,2}:\d{2})/);
+              let calRemBtn = '';
+              if (timeMatch && day.dateObj) {
+                const parts = timeMatch[1].split(':');
+                const evStart = new Date(day.dateObj);
+                evStart.setUTCHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0);
+                if (evStart.getTime() > Date.now()) {
+                  const evCleanName = ev.replace(/\([^\)]*\)/g, '').replace(/^[^\w\s]+/g, '').trim();
+                  const isRemSet = (typeof window.isEventReminderSet === 'function') && window.isEventReminderSet(evCleanName, evStart.getTime());
+                  calRemBtn = `
+                    <button onclick="window.openEventReminderModal('${escapeHTML(evCleanName)}', ${evStart.getTime()}, '${isBt ? '🪤' : '✨'}', '${escapeHTML(day.dateStr)}', '${timeMatch[1]} UTC')" style="background:${isRemSet ? 'rgba(16,185,129,0.2)' : 'rgba(56,189,248,0.12)'}; border:1px solid ${isRemSet ? '#10b981' : 'rgba(56,189,248,0.35)'}; color:${isRemSet ? '#10b981' : '#38bdf8'}; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:2px; margin-left:auto;" title="Set Event Reminder">
+                      <span>${isRemSet ? '✓' : '🔔'}</span>
+                    </button>
+                  `;
+                }
+              }
+
+              html += `<li style="padding:6px 0; font-size:13px; color:var(--text-main); display:flex; align-items:center; justify-content:space-between; gap:8px; border-bottom:1px solid rgba(255,255,255,0.05);">
+                         <div style="display:flex; align-items:center; gap:8px;">
+                           <span>${bullet}</span>
+                           <span>${ev}</span>
+                         </div>
+                         ${calRemBtn}
                        </li>`;
             });
             html += `</ul>`;
@@ -34651,96 +35210,68 @@ function updateGlobalTimers() {
   // --- CURRENT / NEXT EVENT TIMER ---
   const activeNameEl = document.getElementById('active-event-name');
   if (activeNameEl) {
-    let scheduleData = window.liveData['WhiteOut Survival'];
-    if (scheduleData && Array.isArray(scheduleData)) {
-      let events = [];
-      for (let i = 1; i < Math.min(34, scheduleData.length); i++) {
-        const row = scheduleData[i];
-        const eventName = row[5], dateRaw = row[6], utcRaw = row[7];
-        if (!eventName || String(eventName).trim() === '') continue;
-        if (String(eventName).includes("Event's")) continue;
-        if (String(eventName).trim() === 'Rewards') break;
+    const events = (typeof window.getUnifiedScheduleEvents === 'function') ? window.getUnifiedScheduleEvents() : [];
+    
+    let activeEv = events.find(e => now >= e.start && now < e.end);
+    let nextEv = events.filter(e => e.start > now).sort((a,b) => a.start - b.start)[0];
 
-        const dateStr = String(dateRaw || '').trim();
-        let eventDate = null;
-        const mdMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})$/);
-        const isoMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})T/);
-        if (mdMatch) {
-          eventDate = new Date(now.getFullYear(), parseInt(mdMatch[1]) - 1, parseInt(mdMatch[2]));
-        } else if (isoMatch) {
-          let parts = dateStr.split('T')[0].split('-');
-          eventDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-        } else continue;
+    const labelEl = document.getElementById('active-event-label');
+    const statusEl = document.getElementById('active-event-status');
+    const timeEl = document.getElementById('active-event-time');
+    const timerEl = document.getElementById('active-event-timer');
+    const cardEl = document.getElementById('active-event-card');
 
-        let utcDisplay = '';
-        let eventDateTime = null;
-        const utcStr = String(utcRaw || '').trim();
-        const hmMatch = utcStr.match(/^(\d{1,2}):(\d{2})$/);
-        const isoUtcMatch = utcStr.match(/^\d{4}-\d{2}-\d{2}T/);
-
-        if (hmMatch) {
-          const h = parseInt(hmMatch[1]), m = parseInt(hmMatch[2]);
-          utcDisplay = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')} UTC`;
-          eventDateTime = new Date(Date.UTC(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate(), h, m));
-        } else if (isoUtcMatch) {
-          const gasDate = new Date(utcStr);
-          gasDate.setUTCHours(gasDate.getUTCHours() - 8);
-          const h = gasDate.getUTCHours(), m = gasDate.getUTCMinutes();
-          utcDisplay = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')} UTC`;
-          eventDateTime = new Date(Date.UTC(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate(), h, m));
-        }
-
-        if (!eventDateTime) continue;
-
-        let durationMs = 3600000;
-        const nameLower = String(eventName).toLowerCase();
-        if (nameLower.includes('bear trap') || nameLower.includes('🪤')) durationMs = 30 * 60 * 1000;
-        else if (nameLower.includes('brothers in arms') || nameLower.includes('k. e.') || nameLower.includes('ke')) durationMs = 24 * 3600 * 1000;
-        else if (nameLower.includes('shield')) durationMs = 8 * 3600 * 1000;
-        else if (nameLower.includes('castle')) durationMs = 4 * 3600 * 1000;
-
-        events.push({
-          name: String(eventName).trim(),
-          start: eventDateTime,
-          end: new Date(eventDateTime.getTime() + durationMs),
-          utcDisplay
-        });
+    if (activeEv) {
+      if (cardEl) {
+        cardEl.style.background = 'rgba(16,185,129,0.1)';
+        cardEl.style.borderColor = 'rgba(16,185,129,0.4)';
+        cardEl.style.boxShadow = '0 0 14px rgba(16,185,129,0.25)';
       }
+      if (labelEl) labelEl.textContent = '🔥 Active Event';
+      if (statusEl) {
+        statusEl.textContent = 'LIVE NOW';
+        statusEl.style.background = 'rgba(16,185,129,0.25)';
+        statusEl.style.color = '#10b981';
+      }
+      if (activeNameEl) activeNameEl.textContent = `${activeEv.emoji} ${activeEv.name}`;
+      if (timeEl) timeEl.textContent = `Ends ${activeEv.end.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
+      
+      let diff = Math.max(0, Math.floor((activeEv.end - now) / 1000));
+      let h = Math.floor(diff / 3600), m = Math.floor((diff % 3600) / 60), s = diff % 60;
+      if (timerEl) {
+        timerEl.textContent = h > 0 ? `${h}h ${m}m ${s}s left` : `${m}m ${s}s left`;
+        timerEl.style.color = '#10b981';
+      }
+    } else if (nextEv) {
+      if (cardEl) {
+        cardEl.style.background = 'rgba(56,189,248,0.06)';
+        cardEl.style.borderColor = 'rgba(56,189,248,0.22)';
+        cardEl.style.boxShadow = 'none';
+      }
+      if (labelEl) labelEl.textContent = '⏳ Next Event';
+      if (statusEl) {
+        statusEl.textContent = 'UPCOMING';
+        statusEl.style.background = 'rgba(56,189,248,0.15)';
+        statusEl.style.color = '#38bdf8';
+      }
+      if (activeNameEl) activeNameEl.textContent = `${nextEv.emoji} ${nextEv.name}`;
+      if (timeEl) timeEl.textContent = `${nextEv.utcDisplay} (${nextEv.start.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})})`;
 
-      let activeEv = events.find(e => now >= e.start && now < e.end);
-      let nextEv = events.filter(e => e.start > now).sort((a,b) => a.start - b.start)[0];
-
-      const labelEl = document.getElementById('active-event-label');
-      const statusEl = document.getElementById('active-event-status');
-      const timeEl = document.getElementById('active-event-time');
-      const timerEl = document.getElementById('active-event-timer');
-      const cardEl = document.getElementById('active-event-card');
-
-      if (activeEv) {
-        if (cardEl) { cardEl.style.background = 'rgba(16,185,129,0.06)'; cardEl.style.borderColor = 'rgba(16,185,129,0.22)'; }
-        if (labelEl) labelEl.textContent = '🔥 Active Event';
-        if (statusEl) { statusEl.textContent = 'LIVE NOW'; statusEl.style.background = 'rgba(16,185,129,0.15)'; statusEl.style.color = '#10b981'; }
-        if (activeNameEl) activeNameEl.textContent = activeEv.name;
-        if (timeEl) timeEl.textContent = `Ends ${activeEv.end.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
-        
-        let diff = Math.max(0, Math.floor((activeEv.end - now) / 1000));
-        let h = Math.floor(diff / 3600), m = Math.floor((diff % 3600) / 60), s = diff % 60;
-        if (timerEl) { timerEl.textContent = h > 0 ? `${h}h ${m}m ${s}s left` : `${m}m ${s}s left`; timerEl.style.color = '#10b981'; }
-      } else if (nextEv) {
-        if (cardEl) { cardEl.style.background = 'rgba(56,189,248,0.06)'; cardEl.style.borderColor = 'rgba(56,189,248,0.18)'; }
-        if (labelEl) labelEl.textContent = '⏳ Next Event';
-        if (statusEl) { statusEl.textContent = 'UPCOMING'; statusEl.style.background = 'rgba(56,189,248,0.15)'; statusEl.style.color = '#38bdf8'; }
-        if (activeNameEl) activeNameEl.textContent = nextEv.name;
-        if (timeEl) timeEl.textContent = nextEv.utcDisplay;
-
-        let diff = Math.max(0, Math.floor((nextEv.start - now) / 1000));
-        let h = Math.floor(diff / 3600), m = Math.floor((diff % 3600) / 60), s = diff % 60;
-        if (timerEl) { timerEl.textContent = h > 0 ? `in ${h}h ${m}m` : `in ${m}m ${s}s`; timerEl.style.color = '#38bdf8'; }
-      } else {
-        if (activeNameEl) activeNameEl.textContent = 'No events scheduled';
+      let diff = Math.max(0, Math.floor((nextEv.start - now) / 1000));
+      let h = Math.floor(diff / 3600), m = Math.floor((diff % 3600) / 60), s = diff % 60;
+      if (timerEl) {
+        timerEl.textContent = h > 0 ? `in ${h}h ${m}m ${s}s` : `in ${m}m ${s}s`;
+        timerEl.style.color = '#38bdf8';
       }
     } else {
-      fetchSheet('WhiteOut Survival').catch(() => null);
+      if (activeNameEl) activeNameEl.textContent = 'No events scheduled';
+      if (timerEl) timerEl.textContent = '';
+      if (timeEl) timeEl.textContent = '';
+      if (statusEl) {
+        statusEl.textContent = 'IDLE';
+        statusEl.style.background = 'rgba(255,255,255,0.08)';
+        statusEl.style.color = 'var(--text-muted)';
+      }
     }
   }
 
