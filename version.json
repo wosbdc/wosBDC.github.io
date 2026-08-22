@@ -1,21 +1,22 @@
 {
-  "version": "3.1.7",
+  "version": "3.1.8",
   "releaseDate": "2026-08-22",
-  "title": "What's New in v3.1.7",
+  "title": "What's New in v3.1.8",
   "notes": [
-    "📁 Google Drive Drop & Go: Drag & drop auto-uploads video attachments to Google Drive.",
-    "🛡️ 3-Tier Quota Fallback: Silent in-database storage fallback if Google Drive quotas hit.",
-    "🎬 Drive Streaming Lightbox: Embedded Drive video streaming with instant poster and downloads.",
-    "🔗 Direct Drive Links: Paste public Google Drive links with zero file limits."
+    "🔄 Real-Time Sync: Live ticket synchronization across all ticket desks.",
+    "🟡 Default Open View: Completed tickets auto-hide from default queue.",
+    "🔔 Smart Bell System: Only unread actionable alerts show up.",
+    "🧹 Universal Dismiss: 1-click Mark All Read and card dismiss.",
+    "⏱️ Timer Stream Cleanup: Inactive timer cards hidden when idle."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.1.7",
+    "version": "3.1.8",
     "latestChanges": [
-      "v3.1.7: Google Drive Drop & Go auto-upload with 3-tier resilient quota fallback",
-      "v3.1.6: Video attachments, video lightbox player, and thumbnail extractor for feedback tickets",
+      "v3.1.8: Real-time ticket sync, default open view, and smart bell dismissal",
+      "v3.1.7: Google Drive Drop & Go auto-upload with 3-tier quota fallback",
+      "v3.1.6: Video attachments, video lightbox player, and thumbnail extractor",
       "v3.1.5: Showdown player name sanitization, auto-deduplication, and database cleanup",
-      "v3.1.4: Unified Options menu and customizable sidebar timers toggle",
-      "v3.1.3: Added Auto-Join Renewal Reminder Timer with push and audio alerts"
+      "v3.1.4: Unified Options menu and customizable sidebar timers toggle"
     ]
   }
 }

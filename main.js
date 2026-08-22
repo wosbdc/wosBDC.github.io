@@ -14545,35 +14545,53 @@ window.updateNewMemberBadge = async () => {
   let liveCountdownCount = 0;
   const isStaffUser = Boolean(currentUser && typeof window.isAdminUser === 'function' && window.isAdminUser(currentUser));
 
+  const lastSeenBroadcast = Number(localStorage.getItem('last_seen_broadcast_timestamp') || '0');
+  const lastSeenFeedback = Number(localStorage.getItem('last_seen_feedback_timestamp') || '0');
+  let dismissedBellItems = [];
+  try {
+    dismissedBellItems = JSON.parse(localStorage.getItem('dismissed_bell_items') || '[]');
+  } catch(e) { dismissedBellItems = []; }
+
   try {
     const bSnap = await get(ref(db, 'broadcastAlerts'));
     if (bSnap.exists()) {
       const bVal = bSnap.val() || {};
       const now = Date.now();
-      for (const item of Object.values(bVal)) {
+      for (const [k, item] of Object.entries(bVal)) {
         if (!item) continue;
+        const itemKey = item.id || item.key || k;
+        if (dismissedBellItems.includes(itemKey)) continue;
+
         const isStaffAlert = Boolean(item.isStaffOnly === true || item.targetAudience === 'staff' || item.alertType === 'staff');
         if (isStaffAlert) {
-          if (isStaffUser) staffAlertCount++;
+          if (isStaffUser && item.timestamp && item.timestamp > lastSeenBroadcast) {
+            staffAlertCount++;
+          }
           continue;
         }
 
         if (item.targetTimestamp) {
           const effectiveEnd = Number(item.endTimestamp) || (Number(item.targetTimestamp) + 2 * 3600000);
           if (effectiveEnd > (now - 12 * 3600000)) {
-            countdownCount++;
             const cStatus = window.getScheduledAlertStatus(item.targetTimestamp, item.endTimestamp, item.countdownMode, item.recurrence || 'none');
             if (cStatus.stage === 'countdown' && cStatus.isFinalHour) {
+              countdownCount++;
               if (!nearestActiveCountdown || cStatus.diffToStart < nearestActiveCountdown.diffToStart) {
                 nearestActiveCountdown = cStatus;
               }
             } else if (cStatus.stage === 'live') {
+              countdownCount++;
               liveCountdownCount++;
+            } else if (item.timestamp && item.timestamp > lastSeenBroadcast) {
+              countdownCount++;
             }
             continue;
           }
         }
-        standardBroadcastCount++;
+
+        if (item.timestamp && item.timestamp > lastSeenBroadcast) {
+          standardBroadcastCount++;
+        }
       }
     }
   } catch(e) {
@@ -14586,16 +14604,23 @@ window.updateNewMemberBadge = async () => {
     const fSnap = await get(ref(db, 'community_feedback'));
     if (fSnap.exists()) {
       const fVal = fSnap.val() || {};
-      for (const f of Object.values(fVal)) {
+      for (const [k, f] of Object.entries(fVal)) {
         if (!f) continue;
+        const ticketKey = f.id || k;
+        if (dismissedBellItems.includes(ticketKey)) continue;
+
         const normStatus = (f.status || 'open').toLowerCase();
+        const ticketTime = Number(f.updatedAt || f.createdAt || 0);
+        if (ticketTime <= lastSeenFeedback) continue;
+
         const isMyTicket = currentUser && (
           (currentUser.gameId && f.submittedBy?.gameId && String(currentUser.gameId).trim() === String(f.submittedBy.gameId).trim()) ||
           (currentUser.name && f.submittedBy?.name && String(currentUser.name).trim().toLowerCase() === String(f.submittedBy.name).trim().toLowerCase())
         );
-        if (normStatus === 'open' || normStatus === 'pending' || normStatus === 'in_progress') {
+
+        if (isMyTicket && f.adminNote) {
           feedbackAttentionCount++;
-        } else if (isMyTicket && f.adminNote) {
+        } else if (isStaffUser && (normStatus === 'open' || normStatus === 'pending' || normStatus === 'in_progress')) {
           feedbackAttentionCount++;
         }
       }
@@ -14716,6 +14741,10 @@ window.openAllianceAlertsModal = async () => {
     let countdownAlerts = [];
     let standardBroadcasts = [];
     let staffBroadcasts = [];
+    let dismissedBellItems = [];
+    try {
+      dismissedBellItems = JSON.parse(localStorage.getItem('dismissed_bell_items') || '[]');
+    } catch(e) { dismissedBellItems = []; }
 
     try {
       const bSnap = await get(ref(db, 'broadcastAlerts'));
@@ -14725,7 +14754,7 @@ window.openAllianceAlertsModal = async () => {
           ...v,
           id: v.id || k,
           key: k
-        })).filter(Boolean);
+        })).filter(b => b && !dismissedBellItems.includes(b.key));
         
         broadcastsList.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
         unreadBroadcastCount = broadcastsList.filter(b => b.timestamp && b.timestamp > lastSeenBroadcast).length;
@@ -14767,7 +14796,7 @@ window.openAllianceAlertsModal = async () => {
         const allFeedback = Object.entries(fVal).map(([k, v]) => ({
           ...v,
           id: k
-        })).filter(Boolean);
+        })).filter(f => f && !dismissedBellItems.includes(f.id));
         allFeedback.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
         // Attention Rule: Only show open/pending, in_progress, or user's ticket with developer note
@@ -14777,12 +14806,15 @@ window.openAllianceAlertsModal = async () => {
             (currentUser.gameId && f.submittedBy?.gameId && String(currentUser.gameId).trim() === String(f.submittedBy.gameId).trim()) ||
             (currentUser.name && f.submittedBy?.name && String(currentUser.name).trim().toLowerCase() === String(f.submittedBy.name).trim().toLowerCase())
           );
-          if (normStatus === 'open' || normStatus === 'pending' || normStatus === 'in_progress') return true;
           if (isMyTicket && f.adminNote) return true;
+          if (isStaff && (normStatus === 'open' || normStatus === 'pending' || normStatus === 'in_progress')) return true;
           return false;
         });
 
-        unreadFeedbackCount = feedbackList.filter(f => f.createdAt && f.createdAt > lastSeenFeedback).length;
+        unreadFeedbackCount = feedbackList.filter(f => {
+          const tTime = Number(f.updatedAt || f.createdAt || 0);
+          return tTime > lastSeenFeedback;
+        }).length;
       }
     } catch(err) {
       console.warn("Failed to load feedback for alerts modal:", err);
@@ -14827,16 +14859,15 @@ window.openAllianceAlertsModal = async () => {
     // 4. Build Unified Cards Stack
     const streamItems = [];
 
-    // A1. Personal Furnace Shield Stream Item (Inside Timers Tab)
+    // A1. Personal Furnace Shield Stream Item (ONLY if running or recently expired)
     const currentShield = (typeof window.getPersonalShieldTimer === 'function') ? window.getPersonalShieldTimer() : null;
     const isShieldActive = currentShield && (currentShield.expiresAt > Date.now());
     const shieldRemainingMs = isShieldActive ? (currentShield.expiresAt - Date.now()) : 0;
-    const expiryDate = isShieldActive ? new Date(currentShield.expiresAt) : null;
+    const expiryDate = isShieldActive ? new Date(currentShield.expiresAt) : (currentShield?.expiresAt ? new Date(currentShield.expiresAt) : null);
     const expiryTimeStr = expiryDate ? `${expiryDate.toLocaleDateString([], { month:'short', day:'numeric' })} at ${expiryDate.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}` : '';
 
-    let shieldCardHtml = '';
     if (isShieldActive) {
-      shieldCardHtml = `
+      const shieldCardHtml = `
         <div class="bell-stream-card" data-category="timers" style="background:linear-gradient(145deg, rgba(16,185,129,0.15), rgba(15,23,42,0.92)); border:1.5px solid #10b981; border-left:5px solid #10b981; border-radius:12px; padding:12px 14px; box-shadow:0 6px 20px rgba(16,185,129,0.2); display:flex; flex-direction:column; gap:8px; position:relative;">
           <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
             <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
@@ -14880,8 +14911,9 @@ window.openAllianceAlertsModal = async () => {
           </div>
         </div>
       `;
-    } else if (currentShield && currentShield.expiresAt && (Date.now() - currentShield.expiresAt < 24 * 3600000)) {
-      shieldCardHtml = `
+      streamItems.push({ category: 'timers', timestamp: currentShield.expiresAt || Date.now(), html: shieldCardHtml });
+    } else if (currentShield && currentShield.expiresAt && (Date.now() - currentShield.expiresAt < 24 * 3600000) && !dismissedBellItems.includes('personal_shield_expired')) {
+      const shieldCardHtml = `
         <div class="bell-stream-card" data-category="timers" style="background:linear-gradient(145deg, rgba(239,68,68,0.15), rgba(15,23,42,0.92)); border:1.5px solid #ef4444; border-left:5px solid #ef4444; border-radius:12px; padding:12px 14px; box-shadow:0 6px 20px rgba(239,68,68,0.25); display:flex; flex-direction:column; gap:8px; position:relative;">
           <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
             <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
@@ -14897,7 +14929,7 @@ window.openAllianceAlertsModal = async () => {
             </div>
           </div>
 
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:gap:6px;">
             <div>
               <div style="font-weight:800; font-size:14.5px; color:#fff;">
                 🛡️ Furnace Defense Shield
@@ -14922,65 +14954,24 @@ window.openAllianceAlertsModal = async () => {
             <button type="button" onclick="window.setPersonalShieldTimer(24, 0, 15); window.openAllianceAlertsModal();" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:#fff; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
               🛡️ Re-Shield 24h
             </button>
-            <button type="button" onclick="window.cancelPersonalShieldTimer(); window.openAllianceAlertsModal();" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
+            <button type="button" onclick="window.dismissBellItem('personal_shield_expired'); window.cancelPersonalShieldTimer(); window.openAllianceAlertsModal();" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
               ❌ Dismiss
             </button>
           </div>
         </div>
       `;
-    } else {
-      shieldCardHtml = `
-        <div class="bell-stream-card" data-category="timers" style="background:linear-gradient(145deg, rgba(15,23,42,0.92), rgba(30,41,59,0.85)); border:1px dashed rgba(56,189,248,0.35); border-left:4.5px solid #38bdf8; border-radius:12px; padding:12px 14px; box-shadow:0 4px 14px rgba(0,0,0,0.3); display:flex; flex-direction:column; gap:8px; position:relative;">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div style="display:flex; align-items:center; gap:6px;">
-              <span style="background:rgba(56,189,248,0.14); color:#38bdf8; border:1px solid rgba(56,189,248,0.35); padding:2px 8px; border-radius:10px; font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">
-                🛡️ Personal Shield
-              </span>
-              <span style="font-size:11px; color:var(--text-muted);">No shield active</span>
-            </div>
-            <button onclick="window.openPersonalShieldModal()" style="background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
-              ⚙️ Custom
-            </button>
-          </div>
-
-          <div style="font-size:12px; color:#cbd5e1;">
-            Shielded in-game? Start a reminder to get alerted before your furnace shield drops:
-          </div>
-
-          <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:2px;">
-            <button type="button" onclick="window.setPersonalShieldTimer(2, 0, 15); window.openAllianceAlertsModal();" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; padding:5px 10px; border-radius:8px; font-size:11px; font-weight:bold; cursor:pointer; transition:0.15s;">
-              🛡️ 2 Hours
-            </button>
-            <button type="button" onclick="window.setPersonalShieldTimer(8, 0, 15); window.openAllianceAlertsModal();" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:5px 12px; border-radius:8px; font-size:11px; font-weight:bold; cursor:pointer; box-shadow:0 2px 6px rgba(14,165,233,0.3);">
-              🛡️ 8 Hours ⭐
-            </button>
-            <button type="button" onclick="window.setPersonalShieldTimer(24, 0, 15); window.openAllianceAlertsModal();" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; padding:5px 10px; border-radius:8px; font-size:11px; font-weight:bold; cursor:pointer; transition:0.15s;">
-              🛡️ 24 Hours
-            </button>
-            <button type="button" onclick="window.setPersonalShieldTimer(72, 0, 15); window.openAllianceAlertsModal();" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; padding:5px 10px; border-radius:8px; font-size:11px; font-weight:bold; cursor:pointer; transition:0.15s;">
-              🛡️ 72 Hours
-            </button>
-          </div>
-        </div>
-      `;
+      streamItems.push({ category: 'timers', timestamp: currentShield.expiresAt, html: shieldCardHtml });
     }
 
-    streamItems.push({
-      category: 'timers',
-      timestamp: isShieldActive ? (currentShield.expiresAt || Date.now()) : 0,
-      html: shieldCardHtml
-    });
-
-    // A2. Auto-Join Rally Reminder Stream Item (Inside Timers Tab)
+    // A2. Auto-Join Rally Reminder Stream Item (ONLY if running or recently expired)
     const currentAutoJoin = (typeof window.getAutoJoinTimer === 'function') ? window.getAutoJoinTimer() : null;
     const isAutoJoinActive = currentAutoJoin && (currentAutoJoin.expiresAt > Date.now());
     const autoJoinRemainingMs = isAutoJoinActive ? (currentAutoJoin.expiresAt - Date.now()) : 0;
-    const ajExpiryDate = isAutoJoinActive ? new Date(currentAutoJoin.expiresAt) : null;
+    const ajExpiryDate = isAutoJoinActive ? new Date(currentAutoJoin.expiresAt) : (currentAutoJoin?.expiresAt ? new Date(currentAutoJoin.expiresAt) : null);
     const ajExpiryTimeStr = ajExpiryDate ? `${ajExpiryDate.toLocaleDateString([], { month:'short', day:'numeric' })} at ${ajExpiryDate.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}` : '';
 
-    let autoJoinCardHtml = '';
     if (isAutoJoinActive) {
-      autoJoinCardHtml = `
+      const autoJoinCardHtml = `
         <div class="bell-stream-card" data-category="timers" style="background:linear-gradient(145deg, rgba(56,189,248,0.15), rgba(15,23,42,0.92)); border:1.5px solid #38bdf8; border-left:5px solid #38bdf8; border-radius:12px; padding:12px 14px; box-shadow:0 6px 20px rgba(56,189,248,0.2); display:flex; flex-direction:column; gap:8px; position:relative;">
           <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
             <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
@@ -15021,8 +15012,9 @@ window.openAllianceAlertsModal = async () => {
           </div>
         </div>
       `;
-    } else if (currentAutoJoin && currentAutoJoin.expiresAt && (Date.now() - currentAutoJoin.expiresAt < 24 * 3600000)) {
-      autoJoinCardHtml = `
+      streamItems.push({ category: 'timers', timestamp: currentAutoJoin.expiresAt || Date.now(), html: autoJoinCardHtml });
+    } else if (currentAutoJoin && currentAutoJoin.expiresAt && (Date.now() - currentAutoJoin.expiresAt < 24 * 3600000) && !dismissedBellItems.includes('auto_join_expired')) {
+      const autoJoinCardHtml = `
         <div class="bell-stream-card" data-category="timers" style="background:linear-gradient(145deg, rgba(239,68,68,0.15), rgba(15,23,42,0.92)); border:1.5px solid #ef4444; border-left:5px solid #ef4444; border-radius:12px; padding:12px 14px; box-shadow:0 6px 20px rgba(239,68,68,0.25); display:flex; flex-direction:column; gap:8px; position:relative;">
           <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
             <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
@@ -15057,45 +15049,14 @@ window.openAllianceAlertsModal = async () => {
             <button type="button" onclick="window.setAutoJoinTimer(8, 0, 15); window.openAllianceAlertsModal();" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:5px 14px; border-radius:6px; font-size:11.5px; font-weight:bold; cursor:pointer; box-shadow:0 2px 8px rgba(14,165,233,0.3);">
               ⚔️ Restart 8h Auto-Join ⭐
             </button>
-            <button type="button" onclick="window.cancelAutoJoinTimer(); window.openAllianceAlertsModal();" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:5px 10px; border-radius:6px; font-size:11.5px; font-weight:bold; cursor:pointer;">
+            <button type="button" onclick="window.dismissBellItem('auto_join_expired'); window.cancelAutoJoinTimer(); window.openAllianceAlertsModal();" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:5px 10px; border-radius:6px; font-size:11.5px; font-weight:bold; cursor:pointer;">
               ❌ Dismiss
             </button>
           </div>
         </div>
       `;
-    } else {
-      autoJoinCardHtml = `
-        <div class="bell-stream-card" data-category="timers" style="background:linear-gradient(145deg, rgba(15,23,42,0.92), rgba(30,41,59,0.85)); border:1px dashed rgba(56,189,248,0.35); border-left:4.5px solid #38bdf8; border-radius:12px; padding:12px 14px; box-shadow:0 4px 14px rgba(0,0,0,0.3); display:flex; flex-direction:column; gap:8px; position:relative;">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div style="display:flex; align-items:center; gap:6px;">
-              <span style="background:rgba(56,189,248,0.14); color:#38bdf8; border:1px solid rgba(56,189,248,0.35); padding:2px 8px; border-radius:10px; font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">
-                ⚔️ Auto-Join Rally
-              </span>
-              <span style="font-size:11px; color:var(--text-muted);">No timer set</span>
-            </div>
-            <button onclick="window.openAutoJoinModal()" style="background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
-              ⚙️ Custom
-            </button>
-          </div>
-
-          <div style="font-size:12px; color:#cbd5e1;">
-            Started Auto-Join in-game? Set a reminder to restart it before it expires (8h standard):
-          </div>
-
-          <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:2px;">
-            <button type="button" onclick="window.setAutoJoinTimer(8, 0, 15); window.openAllianceAlertsModal();" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:6px 16px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; box-shadow:0 2px 6px rgba(14,165,233,0.3);">
-              ⚔️ Start 8h Auto-Join Timer ⭐
-            </button>
-          </div>
-        </div>
-      `;
+      streamItems.push({ category: 'timers', timestamp: currentAutoJoin.expiresAt, html: autoJoinCardHtml });
     }
-
-    streamItems.push({
-      category: 'timers',
-      timestamp: isAutoJoinActive ? (currentAutoJoin.expiresAt || Date.now()) : 0,
-      html: autoJoinCardHtml
-    });
 
     // A3. Alliance Scheduled Events (Bear Trap, Castle, Crazy Joe, Foundry)
     countdownAlerts.forEach(b => {
@@ -15239,6 +15200,9 @@ window.openAllianceAlertsModal = async () => {
             </div>
             <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
               <span style="font-size:11px; color:var(--text-muted);">${relTime}</span>
+              <button onclick="event.stopPropagation(); window.dismissBellItem('${b.key}');" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:6px; padding:2px 8px; font-size:11px; font-weight:bold; cursor:pointer; transition:0.15s;" title="Dismiss announcement">
+                ✓ Dismiss
+              </button>
               ${deleteBtn}
             </div>
           </div>
@@ -15302,8 +15266,11 @@ window.openAllianceAlertsModal = async () => {
           ${adminNoteHtml}
           <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2px; padding-top:4px; border-top:1px solid rgba(255,255,255,0.04);">
             <span style="font-size:11px; color:var(--text-muted);">👤 ${window.escapeHTML(f.submittedBy?.name || 'Chief')} • 👍 ${f.voteCount || 1}</span>
-            <div style="display:flex; align-items:center; gap:8px;">
+            <div style="display:flex; align-items:center; gap:6px;">
               ${f.imageUrl ? '<span style="font-size:11px; color:#38bdf8;">📷 Image</span>' : ''}
+              <button onclick="event.stopPropagation(); window.dismissBellItem('${f.id}');" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#fff; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;" title="Dismiss ticket notification">
+                ✓ Dismiss
+              </button>
               <button onclick="document.getElementById('notificationsModalOverlay').remove(); if(views.feedback) views.feedback();" style="background:linear-gradient(135deg, rgba(6,182,212,0.2), rgba(6,182,212,0.05)); border:1px solid rgba(6,182,212,0.4); color:#38bdf8; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
                 🔍 View in Tracker ➔
               </button>
@@ -15329,6 +15296,9 @@ window.openAllianceAlertsModal = async () => {
               </div>
               <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
                 <span style="font-size:11px; color:var(--text-muted);">${relTime}</span>
+                <button onclick="event.stopPropagation(); window.dismissBellItem('${b.key}');" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#fff; border-radius:6px; padding:2px 8px; font-size:11px; font-weight:bold; cursor:pointer;" title="Dismiss staff directive">
+                  ✓ Dismiss
+                </button>
                 <button onclick="event.stopPropagation(); window.deleteBroadcastAlert('${b.key}')" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; border-radius:6px; padding:2px 7px; font-size:11px; cursor:pointer;" title="Delete staff alert">
                   🗑️
                 </button>
@@ -15466,7 +15436,7 @@ window.openAllianceAlertsModal = async () => {
           </div>
 
           <label style="display:flex; align-items:center; justify-content:space-between; padding:6px 9px; border-radius:6px; cursor:pointer; font-size:11.5px; color:var(--text-main); font-weight:bold; transition:0.15s;" onmouseover="this.style.background='rgba(56,189,248,0.1)'" onmouseout="this.style.background='transparent'">
-            <span style="display:flex; align-items:center; gap:6px;">📌 Show in Left Sidebar</span>
+            <span>📌 Show in Left Sidebar</span>
             <input type="checkbox" onchange="window.toggleSidebarTimers(this.checked)" ${window.isSidebarTimersEnabled() ? 'checked' : ''} style="cursor:pointer; width:15px; height:15px; accent-color:#0ea5e9;">
           </label>
 
@@ -15503,6 +15473,9 @@ window.openAllianceAlertsModal = async () => {
 
           <!-- Action Pills Bar -->
           <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+            <button onclick="window.markAllBellAlertsRead()" style="background:rgba(16,185,129,0.14); border:1px solid rgba(16,185,129,0.45); color:#10b981; padding:4px 11px; border-radius:20px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:5px; transition:0.2s;" onmouseover="this.style.background='rgba(16,185,129,0.25)'" onmouseout="this.style.background='rgba(16,185,129,0.14)'" title="Mark all alerts, broadcasts and tickets as read">
+              <span>✓ Mark All Read</span>
+            </button>
             ${headerOptionsDropdownHtml}
             ${headerStaffToolsPillHtml}
           </div>
@@ -15586,6 +15559,33 @@ window.openAllianceAlertsModal = async () => {
   } catch(err) {
     console.error("Error in openAllianceAlertsModal:", err);
   }
+};
+
+window.dismissBellItem = (itemKey) => {
+  if (!itemKey) return;
+  try {
+    let list = JSON.parse(localStorage.getItem('dismissed_bell_items') || '[]');
+    if (!list.includes(itemKey)) {
+      list.push(itemKey);
+      localStorage.setItem('dismissed_bell_items', JSON.stringify(list));
+    }
+  } catch(e) {}
+  if (typeof window.updateNewMemberBadge === 'function') window.updateNewMemberBadge();
+  if (document.getElementById('notificationsModalOverlay') && typeof window.openAllianceAlertsModal === 'function') {
+    window.openAllianceAlertsModal();
+  }
+  if (window.showToast) window.showToast("✓ Notification dismissed", "info");
+};
+
+window.markAllBellAlertsRead = () => {
+  const now = Date.now();
+  localStorage.setItem('last_seen_broadcast_timestamp', String(now));
+  localStorage.setItem('last_seen_feedback_timestamp', String(now));
+  if (typeof window.updateNewMemberBadge === 'function') window.updateNewMemberBadge();
+  if (document.getElementById('notificationsModalOverlay') && typeof window.openAllianceAlertsModal === 'function') {
+    window.openAllianceAlertsModal();
+  }
+  if (window.showToast) window.showToast("✓ All notifications marked as read!", "success");
 };
 
 window.filterBellStream = (category) => {
@@ -33397,7 +33397,7 @@ window.resetBearTrapEvent = async () => {
   },
 
   
-  feedback: async (initialFilter = 'all') => {
+  feedback: async (initialFilter = 'open') => {
     if (!currentUser) return window.renderMembersOnlyGuard("Feature Request & Bug Tracker");
     const navbar = document.querySelector('.navbar');
     if (navbar) navbar.style.display = 'flex';
@@ -33410,12 +33410,17 @@ window.resetBearTrapEvent = async () => {
     const app = document.getElementById('app');
     if (!app) return;
 
+    if (typeof window._feedbackUnsubscribe === 'function') {
+      window._feedbackUnsubscribe();
+      window._feedbackUnsubscribe = null;
+    }
+
     try {
         let activeFilter = initialFilter || 'open';
         let searchQuery = '';
         let activeSort = 'top';
 
-        let items = await window.fetchFeedbackItems();
+        let items = [];
         const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
 
         const getPillStyle = (isActive, color) => {
@@ -33438,14 +33443,12 @@ window.resetBearTrapEvent = async () => {
             };
 
             let filtered = items.filter(item => {
-                // 'open' = pending + in_progress (default — hides completed & archived)
                 if (activeFilter === 'open') return !item.status || item.status === 'pending' || item.status === 'in_progress';
                 if (activeFilter === 'feature') return item.type === 'feature' && item.status !== 'archived';
                 if (activeFilter === 'bug') return item.type === 'bug' && item.status !== 'archived';
                 if (activeFilter === 'pending' && item.status !== 'pending' && item.status) return false;
                 if (activeFilter === 'in_progress' && item.status !== 'in_progress') return false;
                 if (activeFilter === 'completed' && item.status !== 'completed') return false;
-                // 'all' shows everything including archived
 
                 if (searchQuery) {
                     const q = searchQuery.toLowerCase();
@@ -33502,13 +33505,6 @@ window.resetBearTrapEvent = async () => {
                             ? 'border:1px solid rgba(59,130,246,0.35); background:linear-gradient(135deg, rgba(59,130,246,0.04) 0%, rgba(255,255,255,0.01) 100%);'
                             : 'border:1px solid var(--border); background:var(--card-bg);');
 
-                    let authorText = escapeHTML(item.submittedBy?.name || 'Chief');
-                    let timeAgoText = window.formatTimeAgo(item.createdAt);
-
-                    let upvoteBtnStyle = hasVoted
-                        ? 'background:linear-gradient(135deg, rgba(6,182,212,0.3), rgba(168,85,247,0.3)); border:1.5px solid #06b6d4; color:#38bdf8; box-shadow:0 0 12px rgba(6,182,212,0.4);'
-                        : 'background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--text-main);';
-
                     let adminControlsHtml = isManager ? `
                         <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; border-top:1px solid rgba(255,255,255,0.06); padding-top:10px; margin-top:10px;">
                             <label style="display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:bold; color:${isCompleted ? '#10b981' : 'var(--text-muted)'}; cursor:pointer;">
@@ -33535,21 +33531,17 @@ window.resetBearTrapEvent = async () => {
 
                     return `
                         <div class="feedback-card" style="${cardBorder} border-radius:14px; padding:18px 22px; display:flex; flex-direction:column; gap:10px; box-shadow:0 4px 20px rgba(0,0,0,0.25); transition:transform 0.2s ease, box-shadow 0.2s ease;">
-                            <!-- Card Header: Badges & Upvote -->
                             <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;">
                                 <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                                     ${typeBadge}
                                     <span style="font-size:11px; color:var(--text-muted); font-weight:bold; background:var(--bg-main); border:1px solid var(--border); padding:2px 8px; border-radius:6px;">[${escapeHTML(item.category || 'General')}]</span>
                                 </div>
-
                                 <div style="display:flex; align-items:center; gap:10px;">
-                                    <button onclick="window.toggleFeedbackVote('${item.id}')" style="${upvoteBtnStyle} padding:6px 14px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13px; display:inline-flex; align-items:center; gap:6px; transition:0.2s;" title="Upvote this idea">
+                                    <button onclick="window.toggleFeedbackVote('${item.id}')" style="${hasVoted ? 'background:linear-gradient(135deg, rgba(6,182,212,0.3), rgba(168,85,247,0.3)); border:1.5px solid #06b6d4; color:#38bdf8;' : 'background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--text-main);'} padding:6px 14px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13px; display:inline-flex; align-items:center; gap:6px; transition:0.2s;" title="Upvote this idea">
                                         <span>👍</span> <span>${voteCount}</span>
                                     </button>
                                 </div>
                             </div>
-
-                            <!-- Title & Description -->
                             <div>
                                 <h3 style="margin:0 0 6px 0; font-size:16px; font-weight:bold; color:var(--text-main); line-height:1.3;">
                                     ${escapeHTML(item.title || 'Untitled Request')}
@@ -33559,9 +33551,7 @@ window.resetBearTrapEvent = async () => {
                                     <div style="margin-top:10px; position:relative; max-width:480px;">
                                         <div onclick="window.openFeedbackMediaLightbox({ type:'${(item.mediaType === 'gdrive_video' || item.videoUrl.includes('drive.google.com')) ? 'gdrive_video' : 'video'}', url:'${escapeHTML(item.videoUrl)}', title:'${escapeHTML(item.title || '')}', name:'${escapeHTML(item.mediaName || 'feedback_clip.mp4')}' })" style="position:relative; cursor:pointer; border-radius:10px; overflow:hidden; border:1px solid rgba(255,255,255,0.15); box-shadow:0 4px 14px rgba(0,0,0,0.35); background:#000; display:inline-block; max-width:100%; transition:transform 0.2s ease;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
                                             ${item.videoThumbnail ? `<img src="${escapeHTML(item.videoThumbnail)}" style="max-height:200px; width:auto; max-width:100%; object-fit:cover; display:block; filter:brightness(0.85);">` : `<div style="height:140px; width:260px; background:linear-gradient(135deg, rgba(6,182,212,0.2), rgba(139,92,246,0.2)); display:flex; align-items:center; justify-content:center; font-size:32px;">🎬</div>`}
-                                            <div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); width:44px; height:44px; border-radius:50%; background:rgba(6,182,212,0.85); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; color:#fff; font-size:18px; box-shadow:0 0 16px rgba(6,182,212,0.6); pointer-events:none;">
-                                                ▶
-                                            </div>
+                                            <div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); width:44px; height:44px; border-radius:50%; background:rgba(6,182,212,0.85); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; color:#fff; font-size:18px; box-shadow:0 0 16px rgba(6,182,212,0.6); pointer-events:none;">▶</div>
                                             <div style="position:absolute; bottom:8px; right:8px; background:rgba(0,0,0,0.75); color:#fff; padding:2px 8px; border-radius:4px; font-size:10.5px; font-weight:bold; letter-spacing:0.5px; display:flex; align-items:center; gap:4px;">
                                                 <span>${(item.mediaType === 'gdrive_video' || item.videoUrl.includes('drive.google.com')) ? '📁 Google Drive' : (item.mediaDuration ? `🎥 ${window.formatVideoDuration(item.mediaDuration)}` : '🎥 Video Clip')}</span>
                                             </div>
@@ -33573,30 +33563,20 @@ window.resetBearTrapEvent = async () => {
                                     </div>
                                 ` : '')}
                             </div>
-
-                            <!-- Admin Resolution Note Block -->
                             ${item.adminNote ? `
                                 <div style="background:rgba(56,189,248,0.07); border:1px solid rgba(56,189,248,0.25); border-radius:10px; padding:10px 14px; margin-top:2px;">
-                                    <div style="font-size:11px; font-weight:bold; color:#38bdf8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; display:flex; align-items:center; gap:5px;">
-                                        <span>✨</span> Admin / Developer Note
-                                    </div>
+                                    <div style="font-size:11px; font-weight:bold; color:#38bdf8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; display:flex; align-items:center; gap:5px;"><span>✨</span> Admin / Developer Note</div>
                                     <div style="font-size:12.5px; color:var(--text-main); line-height:1.5; white-space:pre-wrap; word-break:break-word;">${escapeHTML(item.adminNote)}</div>
                                 </div>
                             ` : ''}
-
-                            <!-- Footer: Author & Status -->
                             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.04);">
                                 <div style="font-size:11.5px; color:var(--text-muted); display:flex; align-items:center; gap:6px;">
-                                    <span>👤 <strong style="color:var(--text-main);">${authorText}</strong></span>
+                                    <span>👤 <strong style="color:var(--text-main);">${escapeHTML(item.submittedBy?.name || 'Chief')}</strong></span>
                                     <span>•</span>
-                                    <span>${timeAgoText}</span>
+                                    <span>${window.formatTimeAgo(item.createdAt)}</span>
                                 </div>
-
-                                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                                    ${statusBadge}
-                                </div>
+                                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">${statusBadge}</div>
                             </div>
-
                             ${adminControlsHtml}
                         </div>
                     `;
@@ -33605,36 +33585,21 @@ window.resetBearTrapEvent = async () => {
 
             let html = `
                 <div style="max-width:960px; margin:0 auto; padding-bottom:50px; display:flex; flex-direction:column; gap:18px; animation: fadeIn 0.3s ease;">
-                    
-                    <!-- Title & Action Banner -->
                     <div style="background:linear-gradient(135deg, rgba(6,182,212,0.12) 0%, rgba(168,85,247,0.06) 100%); border:1px solid rgba(6,182,212,0.35); border-radius:16px; padding:22px 24px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; box-shadow:0 6px 25px rgba(0,0,0,0.3);">
                         <div style="display:flex; align-items:center; gap:14px;">
-                            <div style="width:44px; height:44px; border-radius:12px; background:linear-gradient(135deg, #06b6d4, #8b5cf6); display:flex; align-items:center; justify-content:center; font-size:22px; box-shadow:0 4px 15px rgba(6,182,212,0.4); flex-shrink:0;">
-                                💡
-                            </div>
+                            <div style="width:44px; height:44px; border-radius:12px; background:linear-gradient(135deg, #06b6d4, #8b5cf6); display:flex; align-items:center; justify-content:center; font-size:22px; box-shadow:0 4px 15px rgba(6,182,212,0.4); flex-shrink:0;">💡</div>
                             <div>
                                 <h1 style="margin:0; font-size:22px; font-weight:900; color:var(--text-main); letter-spacing:0.5px;">Alliance Feature & Bug Tracker</h1>
                                 <p style="margin:2px 0 0 0; font-size:12px; color:var(--text-muted);">Suggest new features, report game/website bugs, and vote on community priorities.</p>
                             </div>
                         </div>
-
-                        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                            <button onclick="window.openSubmitFeedbackModal()" style="background:linear-gradient(135deg, #06b6d4, #8b5cf6); color:#fff; border:none; padding:10px 18px; border-radius:10px; font-weight:bold; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 4px 14px rgba(6,182,212,0.35); transition:0.2s;">
-                                ➕ Submit Request / Bug
-                            </button>
-                        </div>
+                        <button onclick="window.openSubmitFeedbackModal()" style="background:linear-gradient(135deg, #06b6d4, #8b5cf6); color:#fff; border:none; padding:10px 18px; border-radius:10px; font-weight:bold; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 4px 14px rgba(6,182,212,0.35); transition:0.2s;">➕ Submit Request / Bug</button>
                     </div>
-
-                    <!-- Search Bar & Filters -->
                     <div style="display:flex; flex-direction:column; gap:12px;">
-                        
                         <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
-                            <!-- Search Bar -->
                             <div style="flex:1; min-width:240px; position:relative;">
                                 <input type="text" id="feedbackSearchInput" value="${escapeHTML(searchQuery)}" placeholder="🔍 Search suggestions, bugs, or categories..." style="width:100%; padding:10px 14px; border-radius:10px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:13px; box-sizing:border-box;">
                             </div>
-
-                            <!-- Sort Dropdown -->
                             <div style="display:flex; align-items:center; gap:8px;">
                                 <span style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Sort:</span>
                                 <select id="feedbackSortSelect" style="padding:8px 12px; border-radius:8px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">
@@ -33644,8 +33609,6 @@ window.resetBearTrapEvent = async () => {
                                 </select>
                             </div>
                         </div>
-
-                        <!-- Filter Pills -->
                         <div style="display:flex; gap:8px; flex-wrap:wrap; overflow-x:auto; padding-bottom:4px;">
                             <button class="fb-pill ${activeFilter === 'open' ? 'active' : ''}" data-filter="open" style="${getPillStyle(activeFilter === 'open', '#eab308')}">🟡 Open (${counts.open})</button>
                             <button class="fb-pill ${activeFilter === 'feature' ? 'active' : ''}" data-filter="feature" style="${getPillStyle(activeFilter === 'feature', '#06b6d4')}">💡 Features (${counts.feature})</button>
@@ -33655,38 +33618,17 @@ window.resetBearTrapEvent = async () => {
                             <button class="fb-pill ${activeFilter === 'all' ? 'active' : ''}" data-filter="all" style="${getPillStyle(activeFilter === 'all', '#94a3b8')}">📋 All (${counts.all})</button>
                         </div>
                     </div>
-
-                    <!-- Cards Container -->
-                    <div style="display:flex; flex-direction:column; gap:12px;" id="feedbackCardsContainer">
-                        ${cardsHtml}
-                    </div>
-
+                    <div style="display:flex; flex-direction:column; gap:12px;" id="feedbackCardsContainer">${cardsHtml}</div>
                 </div>
             `;
 
             app.innerHTML = html;
-
             const searchEl = document.getElementById('feedbackSearchInput');
-            if (searchEl) {
-                searchEl.addEventListener('input', (e) => {
-                    searchQuery = e.target.value;
-                    renderFeedbackUI();
-                });
-            }
-
+            if (searchEl) searchEl.addEventListener('input', (e) => { searchQuery = e.target.value; renderFeedbackUI(); });
             const sortEl = document.getElementById('feedbackSortSelect');
-            if (sortEl) {
-                sortEl.addEventListener('change', (e) => {
-                    activeSort = e.target.value;
-                    renderFeedbackUI();
-                });
-            }
-
+            if (sortEl) sortEl.addEventListener('change', (e) => { activeSort = e.target.value; renderFeedbackUI(); });
             document.querySelectorAll('.fb-pill').forEach(pill => {
-                pill.addEventListener('click', () => {
-                    activeFilter = pill.getAttribute('data-filter') || 'all';
-                    renderFeedbackUI();
-                });
+                pill.addEventListener('click', () => { activeFilter = pill.getAttribute('data-filter') || 'all'; renderFeedbackUI(); });
             });
         };
 
@@ -33695,6 +33637,21 @@ window.resetBearTrapEvent = async () => {
             renderFeedbackUI();
         };
 
+        const feedbackRef = ref(db, 'community_feedback');
+        const unsub = onValue(feedbackRef, (snap) => {
+            if (!snap.exists()) {
+                items = [];
+            } else {
+                const data = snap.val() || {};
+                items = Object.keys(data).map(k => ({ id: k, ...data[k] }));
+                items.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+            }
+            renderFeedbackUI();
+        }, (err) => {
+            console.error("Realtime feedback subscription error:", err);
+        });
+
+        window._feedbackUnsubscribe = unsub;
         renderFeedbackUI();
 
     } catch(err) {

@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [3.1.8] - 2026-08-22
+- 🔄 **Real-Time Sync**: Live ticket synchronization across all ticket desks.
+- 🟡 **Default Open View**: Completed tickets auto-hide from default queue.
+- 🔔 **Smart Bell System**: Only unread actionable alerts show up.
+- 🧹 **Universal Dismiss**: 1-click Mark All Read and card dismiss.
+- ⏱️ **Timer Stream Cleanup**: Inactive timer cards hidden when idle.
+
 ## [3.1.7] - 2026-08-22
 - 📁 **Google Drive Drop & Go**: Drag & drop auto-uploads video attachments to Google Drive.
 - 🛡️ **3-Tier Quota Fallback**: Silent in-database storage fallback if Google Drive quotas hit.
