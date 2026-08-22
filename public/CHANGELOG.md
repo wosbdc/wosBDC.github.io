@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.2.0] - 2026-08-22
+- 📅 **No Date Guard**: Events without times show friendly message.
+- 🔕 **Silent Alerts Fixed**: Closing modal no longer triggers alerts.
+
 ## [3.1.9] - 2026-08-22
 - 🔔 **Event Reminders**: Custom alerts for any scheduled alliance event.
 - ⏰ **Pre-Event Timing**: Get warned 0m to 1h beforehand.

@@ -1,22 +1,19 @@
 {
-  "version": "3.1.9",
+  "version": "3.2.0",
   "releaseDate": "2026-08-22",
-  "title": "What's New in v3.1.9",
+  "title": "What's New in v3.2.0",
   "notes": [
-    "🔔 Event Reminders: Custom alerts for any scheduled alliance event.",
-    "⏰ Pre-Event Timing: Get warned 0m to 1h beforehand.",
-    "🎺 Fanfare Chimes: Audio fanfare alert when events begin.",
-    "🔥 Live Event Ticker: Real-time countdown for active running events.",
-    "📅 1-Tap Subscriptions: Instant quick reminders for all Bear Traps."
+    "📅 No Date Guard: Events without times show a friendly message.",
+    "🔕 Silent Alerts Fixed: Closing reminder modal no longer fires alerts."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.1.9",
+    "version": "3.2.0",
     "latestChanges": [
+      "v3.2.0: Reminder modal no-data guard and spurious alert ticker fix",
       "v3.1.9: Schedule event reminders, fanfare alerts, and active event ticker",
       "v3.1.8: Real-time ticket sync, default open view, and smart bell dismissal",
       "v3.1.7: Google Drive Drop & Go auto-upload with 3-tier quota fallback",
-      "v3.1.6: Video attachments, video lightbox player, and thumbnail extractor",
-      "v3.1.5: Showdown player name sanitization, auto-deduplication, and database cleanup"
+      "v3.1.6: Video attachments, video lightbox player, and thumbnail extractor"
     ]
   }
 }

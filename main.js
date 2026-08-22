@@ -21407,6 +21407,26 @@ window.openEventReminderModal = function(eventName, exactStartTimeMs, emoji = 'â
   if (existing) existing.remove();
 
   const startTime = Number(exactStartTimeMs);
+
+  // Guard: if no valid timestamp, show a friendly "no data" message instead of a broken modal
+  if (!startTime || isNaN(startTime) || startTime <= 0) {
+    const noDataOverlay = document.createElement('div');
+    noDataOverlay.id = 'eventReminderModalOverlay';
+    noDataOverlay.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.85); backdrop-filter:blur(10px); z-index:100006; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease;';
+    noDataOverlay.innerHTML = `
+      <div class="card" style="width:94%; max-width:440px; background:linear-gradient(145deg, rgba(15,23,42,0.98), rgba(30,41,59,0.96)); border:1.5px solid rgba(245,158,11,0.4); padding:24px; border-radius:18px; box-shadow:0 25px 60px rgba(0,0,0,0.85); text-align:center; color:var(--text-main); animation:zoomIn 0.2s ease;">
+        <div style="font-size:40px; margin-bottom:12px;">ðŸ“…</div>
+        <h3 style="margin:0 0 8px 0; color:#fff; font-size:16px; font-weight:800;">No Event Time Available</h3>
+        <p style="font-size:12.5px; color:var(--text-muted); line-height:1.5; margin:0 0 18px 0;">
+          This event doesn't have a scheduled time yet.<br>Reminders can only be set for events with a confirmed date &amp; time.
+        </p>
+        <button onclick="document.getElementById('eventReminderModalOverlay').remove()" style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:#cbd5e1; padding:9px 20px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13px;">Got It</button>
+      </div>
+    `;
+    document.body.appendChild(noDataOverlay);
+    return;
+  }
+
   const startDate = new Date(startTime);
   const isSet = window.isEventReminderSet(eventName, startTime);
   const existingRem = window.getEventReminders().find(r => r.id === `rem_${startTime}_${String(eventName).replace(/[^a-zA-Z0-9]/g, '_')}`);
@@ -21636,6 +21656,9 @@ window.startEventReminderTicker = () => {
     let updated = false;
 
     reminders.forEach(r => {
+      // Guard: skip reminders with invalid timestamps (prevents spurious alerts from bad data)
+      if (!r.exactStartTime || isNaN(r.exactStartTime) || r.exactStartTime <= 0) return;
+
       // Prune reminders older than 24 hours
       if (r.exactStartTime + 24 * 3600 * 1000 < now) {
         return;
