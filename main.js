@@ -10741,6 +10741,20 @@ window.archiveAndResetChampionshipSeason = async () => {
             window.fetchPlayerEventStats().catch(() => ({}))
         ]);
 
+        // Guard against archiving an unplayed / empty season
+        let hasAnyBattleData = false;
+        if (currentMatchups && currentMatchups.rounds) {
+            Object.values(currentMatchups.rounds).forEach(r => {
+                if (Number(r.ourScore) > 0 || Number(r.enemyAlliance?.score) > 0 || Number(r.ourFlags) > 0 || Number(r.enemyAlliance?.flags) > 0 || (r.enemyAlliance?.name && r.enemyAlliance.name !== `Opponent ${r.roundNum}` && r.enemyAlliance.name.trim() !== '')) {
+                    hasAnyBattleData = true;
+                }
+            });
+        }
+        if (!hasAnyBattleData && (!currentMatchups.seasonName || currentMatchups.seasonName === "Upcoming Season")) {
+            const proceedBlank = await window.customConfirm("⚠️ BLANK SEASON WARNING:\n\nThe current live season has no recorded battle scores, flags, or opponent names.\n\nArchiving now will save an empty season to the Vault. Are you sure you want to proceed?");
+            if (!proceedBlank) return;
+        }
+
         // 2. Archive Battle Matchups to championship_meta/history
         await set(ref(db, `championship_meta/history/${timestamp}`), {
             ...currentMatchups,
@@ -10913,26 +10927,260 @@ window.openChampionshipArchiveVaultModal = async (initialKey = 'live') => {
 
 window.deleteChampionshipArchive = async (tsKey) => {
     if (!tsKey || tsKey === 'live') return;
-    const isAllowed = currentUser && (currentUser.isAdmin || currentUser.isR4R5);
+    const isAllowed = Boolean(currentUser && (window.isAdminUser(currentUser) || window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4'));
     if (!isAllowed) {
-        alert("Permission denied. Only Admins and R4/R5 leadership can delete archived seasons.");
+        if (window.showToast) window.showToast("Permission denied. Only Admins and R4/R5 leadership can delete archived seasons.", "error");
+        else alert("Permission denied. Only Admins and R4/R5 leadership can delete archived seasons.");
         return;
     }
-    if (!confirm("Are you sure you want to permanently delete this archived Championship season from the Vault and Leaderboards?")) return;
+    const seasonData = window._champVaultState?.historyObj?.[tsKey] || {};
+    const sTitle = seasonData.seasonName || `Season (${new Date(Number(tsKey) || tsKey).toLocaleDateString()})`;
+    
+    let confirmed = false;
+    if (typeof window.customConfirm === 'function') {
+        confirmed = await window.customConfirm(`🗑️ Permanent Deletion Warning:\n\nAre you sure you want to permanently delete "${sTitle}" from the Championship Vault and Leaderboards?\n\nThis action cannot be undone.`);
+    } else {
+        confirmed = confirm(`Are you sure you want to permanently delete "${sTitle}" from the Championship Vault?`);
+    }
+    if (!confirmed) return;
+
     try {
         await Promise.all([
             set(ref(db, `championship_meta/history/${tsKey}`), null),
             set(ref(db, `events_archive/championship/${tsKey}`), null)
         ]);
-        if (typeof showToast === 'function') showToast('Championship archive deleted successfully!', 'success');
+        if (window.logAdminAction) {
+            window.logAdminAction("Championship Archive Deleted", `Deleted archived season (${sTitle}, key: ${tsKey}) from history`);
+        }
+        if (typeof showToast === 'function') showToast(`Championship archive "${sTitle}" deleted! 🗑️`, 'success');
         if (window._champVaultState && window._champVaultState.historyObj) {
             delete window._champVaultState.historyObj[tsKey];
         }
         window.renderChampionshipVaultBody('live');
-        if (views && views.leaderboards) views.leaderboards('Alliance Championship');
+        if (typeof views !== 'undefined' && views && views.leaderboards) {
+            views.leaderboards('Alliance Championship');
+        }
     } catch(err) {
         console.error("Error deleting championship archive:", err);
-        alert("Failed to delete archive: " + err.message);
+        if (window.showToast) window.showToast("Failed to delete archive: " + err.message, "error");
+        else alert("Failed to delete archive: " + err.message);
+    }
+};
+
+window.openEditChampionshipArchiveModal = async (tsKey) => {
+    if (!tsKey || tsKey === 'live') return;
+    const isAllowed = Boolean(currentUser && (window.isAdminUser(currentUser) || window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4'));
+    if (!isAllowed) {
+        if (window.showToast) window.showToast("Permission denied.", "error");
+        return;
+    }
+    const seasonData = window._champVaultState?.historyObj?.[tsKey];
+    if (!seasonData) return;
+
+    let existing = document.getElementById('editChampArchiveModal');
+    if (existing) existing.remove();
+
+    const curName = seasonData.seasonName || `Season ${new Date(Number(tsKey)).toLocaleDateString()}`;
+    const curStatus = seasonData.statusText || '';
+    const curOurFlags = seasonData.ourSeasonFlags !== undefined ? seasonData.ourSeasonFlags : '';
+    const curEnemyFlags = seasonData.enemySeasonFlags !== undefined ? seasonData.enemySeasonFlags : '';
+
+    let modal = document.createElement('div');
+    modal.id = 'editChampArchiveModal';
+    modal.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); z-index:10015; display:flex; justify-content:center; align-items:center; padding:15px; box-sizing:border-box; animation:fadeIn 0.2s ease;';
+
+    modal.innerHTML = `
+        <div style="background:var(--card-bg); border:1px solid var(--accent); border-radius:16px; width:100%; max-width:520px; padding:24px; box-shadow:0 10px 40px rgba(0,0,0,0.7); color:var(--text-main);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:12px;">
+                <div style="font-size:17px; font-weight:bold; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+                    <span>✏️ Edit Archived Season Info</span>
+                </div>
+                <button onclick="document.getElementById('editChampArchiveModal').remove()" style="background:none; border:none; color:var(--text-muted); font-size:18px; cursor:pointer;">✕</button>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:14px;">
+                <div>
+                    <label style="display:block; font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:bold; margin-bottom:5px;">Season Name / Title</label>
+                    <input type="text" id="editChampArchive_name" value="${escapeHTML(curName)}" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-weight:bold; box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="display:block; font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:bold; margin-bottom:5px;">Status / Record Text</label>
+                    <input type="text" id="editChampArchive_status" value="${escapeHTML(curStatus)}" placeholder="e.g. 4 Wins – 1 Loss (Tournament Champions)" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-weight:bold; box-sizing:border-box;">
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                    <div>
+                        <label style="display:block; font-size:11px; text-transform:uppercase; color:#10b981; font-weight:bold; margin-bottom:5px;">🚩 Our Total Flags</label>
+                        <input type="number" id="editChampArchive_ourFlags" value="${curOurFlags}" placeholder="0" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid rgba(16,185,129,0.4); background:var(--bg-main); color:#10b981; font-weight:bold; box-sizing:border-box;">
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:11px; text-transform:uppercase; color:#ef4444; font-weight:bold; margin-bottom:5px;">🚩 Enemy Total Flags</label>
+                        <input type="number" id="editChampArchive_enemyFlags" value="${curEnemyFlags}" placeholder="0" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid rgba(239,68,68,0.4); background:var(--bg-main); color:#ef4444; font-weight:bold; box-sizing:border-box;">
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:10px;">
+                    <button onclick="document.getElementById('editChampArchiveModal').remove()" style="padding:9px 16px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--text-muted); cursor:pointer; font-weight:bold;">Cancel</button>
+                    <button id="saveEditChampArchiveBtn" onclick="window.saveEditedChampionshipArchive('${tsKey}')" style="padding:9px 20px; border-radius:8px; border:none; background:var(--accent); color:#fff; cursor:pointer; font-weight:bold; box-shadow:0 2px 10px rgba(6,182,212,0.3);">💾 Save Changes</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+};
+
+window.saveEditedChampionshipArchive = async (tsKey) => {
+    const btn = document.getElementById('saveEditChampArchiveBtn');
+    const newName = document.getElementById('editChampArchive_name')?.value?.trim();
+    const newStatus = document.getElementById('editChampArchive_status')?.value?.trim();
+    const ourFlags = document.getElementById('editChampArchive_ourFlags')?.value;
+    const enemyFlags = document.getElementById('editChampArchive_enemyFlags')?.value;
+
+    if (!newName) {
+        if (window.showToast) window.showToast("Season title cannot be empty", "error");
+        return;
+    }
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+
+    try {
+        const updates = {
+            seasonName: newName,
+            statusText: newStatus,
+            ourSeasonFlags: ourFlags !== '' ? Number(ourFlags) : 0,
+            enemySeasonFlags: enemyFlags !== '' ? Number(enemyFlags) : 0,
+            lastEditedAt: Date.now(),
+            lastEditedBy: (currentUser && (currentUser.displayName || currentUser.name)) || 'Admin'
+        };
+        await update(ref(db, `championship_meta/history/${tsKey}`), updates);
+
+        if (window._champVaultState && window._champVaultState.historyObj && window._champVaultState.historyObj[tsKey]) {
+            Object.assign(window._champVaultState.historyObj[tsKey], updates);
+        }
+
+        const modal = document.getElementById('editChampArchiveModal');
+        if (modal) modal.remove();
+
+        if (window.showToast) window.showToast("Archived season details updated! 🎉", "success");
+        window.renderChampionshipVaultBody(tsKey);
+        if (typeof views !== 'undefined' && views && views.leaderboards) {
+            views.leaderboards('Alliance Championship');
+        }
+    } catch(err) {
+        console.error("Error updating championship archive:", err);
+        if (window.showToast) window.showToast("Error updating archive: " + err.message, "error");
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '💾 Save Changes'; }
+    }
+};
+
+window.restoreChampionshipArchive = async (tsKey) => {
+    if (!tsKey || tsKey === 'live') return;
+    const isAllowed = Boolean(currentUser && (window.isAdminUser(currentUser) || window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4'));
+    if (!isAllowed) {
+        if (window.showToast) window.showToast("Permission denied. Only Admins and R4/R5 leadership can restore archives.", "error");
+        return;
+    }
+    const seasonData = window._champVaultState?.historyObj?.[tsKey];
+    if (!seasonData) return;
+
+    const sTitle = seasonData.seasonName || `Season (${new Date(Number(tsKey) || tsKey).toLocaleDateString()})`;
+    
+    let confirmed = false;
+    if (typeof window.customConfirm === 'function') {
+        confirmed = await window.customConfirm(`↩️ Restore to Live Matchups?\n\nThis will load "${sTitle}" into the active Live Championship 5-Round Matchups view.\n\nProceed?`);
+    } else {
+        confirmed = confirm(`Restore "${sTitle}" into active Live Matchups?`);
+    }
+    if (!confirmed) return;
+
+    try {
+        const payload = {
+            seasonName: seasonData.seasonName || "Restored Season",
+            statusText: seasonData.statusText || "Championship Series",
+            ourSeasonFlags: seasonData.ourSeasonFlags !== undefined ? seasonData.ourSeasonFlags : 0,
+            enemySeasonFlags: seasonData.enemySeasonFlags !== undefined ? seasonData.enemySeasonFlags : 0,
+            ourState: seasonData.ourState || "2089",
+            rounds: seasonData.rounds || {},
+            updatedAt: Date.now(),
+            updatedBy: (currentUser && (currentUser.displayName || currentUser.name)) || 'Admin'
+        };
+        await set(ref(db, 'championship_matchups'), payload);
+
+        if (window.logAdminAction) {
+            window.logAdminAction("Championship Restored", `Restored archived season (${sTitle}) to live matchups.`);
+        }
+        if (window.showToast) window.showToast(`"${sTitle}" restored to Live Matchups! 🎉`, "success");
+
+        const modal = document.getElementById('championshipArchiveVaultModal');
+        if (modal) modal.remove();
+
+        if (typeof views !== 'undefined' && views && views.championshipAdmin) {
+            views.championshipAdmin('matchups');
+        } else if (typeof views !== 'undefined' && views && views.championship) {
+            views.championship();
+        }
+    } catch(err) {
+        console.error("Error restoring championship archive:", err);
+        if (window.showToast) window.showToast("Error restoring archive: " + err.message, "error");
+    }
+};
+
+window.purgeBlankChampionshipArchives = async () => {
+    const isAllowed = Boolean(currentUser && (window.isAdminUser(currentUser) || window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4'));
+    if (!isAllowed) {
+        if (window.showToast) window.showToast("Permission denied.", "error");
+        return;
+    }
+    if (!window._champVaultState || !window._champVaultState.historyObj) return;
+
+    const historyObj = window._champVaultState.historyObj;
+    const blankKeys = [];
+
+    Object.entries(historyObj).forEach(([k, s]) => {
+        if (!s) { blankKeys.push(k); return; }
+        let hasData = false;
+        if (s.rounds) {
+            Object.values(s.rounds).forEach(r => {
+                if (Number(r.ourScore) > 0 || Number(r.enemyAlliance?.score) > 0 || Number(r.ourFlags) > 0 || Number(r.enemyAlliance?.flags) > 0 || (r.enemyAlliance?.name && r.enemyAlliance.name.trim() !== '' && r.enemyAlliance.name !== `Opponent ${r.roundNum}`)) {
+                    hasData = true;
+                }
+            });
+        }
+        if (!hasData && (Number(s.ourSeasonFlags || 0) === 0) && (Number(s.enemySeasonFlags || 0) === 0)) {
+            blankKeys.push(k);
+        }
+    });
+
+    if (blankKeys.length === 0) {
+        if (window.showToast) window.showToast("No blank archives found!", "info");
+        return;
+    }
+
+    let confirmed = false;
+    if (typeof window.customConfirm === 'function') {
+        confirmed = await window.customConfirm(`🧹 Found ${blankKeys.length} blank/empty Championship archive(s).\n\nDelete all ${blankKeys.length} empty season(s) permanently?`);
+    } else {
+        confirmed = confirm(`Delete all ${blankKeys.length} empty season(s) permanently?`);
+    }
+    if (!confirmed) return;
+
+    try {
+        const deletePromises = [];
+        blankKeys.forEach(k => {
+            deletePromises.push(set(ref(db, `championship_meta/history/${k}`), null));
+            deletePromises.push(set(ref(db, `events_archive/championship/${k}`), null));
+            delete historyObj[k];
+        });
+        await Promise.all(deletePromises);
+
+        if (window.logAdminAction) {
+            window.logAdminAction("Purge Blank Championship Archives", `Deleted ${blankKeys.length} empty archives from history`);
+        }
+        if (window.showToast) window.showToast(`Cleaned ${blankKeys.length} blank archive(s)! 🧹`, "success");
+        window.renderChampionshipVaultBody('live');
+        if (typeof views !== 'undefined' && views && views.leaderboards) {
+            views.leaderboards('Alliance Championship');
+        }
+    } catch(err) {
+        console.error("Error purging blank championship archives:", err);
+        if (window.showToast) window.showToast("Error purging archives: " + err.message, "error");
     }
 };
 
@@ -10943,12 +11191,47 @@ window.renderChampionshipVaultBody = (activeKey = 'live') => {
     const { historyObj, liveData } = window._champVaultState;
     const historyKeys = Object.keys(historyObj).sort((a,b) => Number(b) - Number(a));
 
-    let optionsHtml = `<option value="live" ${activeKey === 'live' ? 'selected' : ''}>🌟 Current Season: ${escapeHTML(liveData.seasonName || 'Upcoming Season')}</option>`;
+    const isStaff = Boolean(currentUser && (window.isAdminUser(currentUser) || window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4'));
+
+    // Detect blank archives
+    let blankArchiveCount = 0;
     historyKeys.forEach(k => {
         let entry = historyObj[k];
+        if (!entry) { blankArchiveCount++; return; }
+        let hasData = false;
+        if (entry.rounds) {
+            Object.values(entry.rounds).forEach(r => {
+                if (Number(r.ourScore) > 0 || Number(r.enemyAlliance?.score) > 0 || Number(r.ourFlags) > 0 || Number(r.enemyAlliance?.flags) > 0 || (r.enemyAlliance?.name && r.enemyAlliance.name.trim() !== '' && r.enemyAlliance.name !== `Opponent ${r.roundNum}`)) {
+                    hasData = true;
+                }
+            });
+        }
+        if (!hasData && (Number(entry.ourSeasonFlags || 0) === 0) && (Number(entry.enemySeasonFlags || 0) === 0)) {
+            blankArchiveCount++;
+        }
+    });
+
+    let optionsHtml = `<option value="live" ${activeKey === 'live' ? 'selected' : ''}>🌟 Current Season: ${escapeHTML(liveData.seasonName || 'Upcoming Season')}</option>`;
+    historyKeys.forEach(k => {
+        let entry = historyObj[k] || {};
         let sName = entry.seasonName || ('Season ' + new Date(Number(k)).toLocaleDateString());
         let sRecord = entry.statusText ? ` (${entry.statusText})` : '';
-        optionsHtml += `<option value="${k}" ${activeKey === k ? 'selected' : ''}>📅 Archived: ${escapeHTML(sName)}${escapeHTML(sRecord)}</option>`;
+
+        // Check if this particular entry is blank
+        let isEntryBlank = false;
+        let hasData = false;
+        if (entry.rounds) {
+            Object.values(entry.rounds).forEach(r => {
+                if (Number(r.ourScore) > 0 || Number(r.enemyAlliance?.score) > 0 || Number(r.ourFlags) > 0 || Number(r.enemyAlliance?.flags) > 0 || (r.enemyAlliance?.name && r.enemyAlliance.name.trim() !== '' && r.enemyAlliance.name !== `Opponent ${r.roundNum}`)) {
+                    hasData = true;
+                }
+            });
+        }
+        if (!hasData && (Number(entry.ourSeasonFlags || 0) === 0) && (Number(entry.enemySeasonFlags || 0) === 0)) {
+            isEntryBlank = true;
+        }
+
+        optionsHtml += `<option value="${k}" ${activeKey === k ? 'selected' : ''}>📅 Archived: ${escapeHTML(sName)}${escapeHTML(sRecord)}${isEntryBlank ? ' [⚠️ Blank Season]' : ''}</option>`;
     });
 
     let displayData = activeKey === 'live' ? liveData : historyObj[activeKey];
@@ -11061,20 +11344,34 @@ window.renderChampionshipVaultBody = (activeKey = 'live') => {
         `;
     }).join('');
 
-    let deleteArchiveBtn = (activeKey !== 'live' && currentUser && (currentUser.isAdmin || currentUser.isR4R5))
-        ? `<button onclick="window.deleteChampionshipArchive('${escapeHTML(activeKey)}')" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:6px 14px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.3)'" onmouseout="this.style.background='rgba(239,68,68,0.15)'">🗑️ Delete Archive Season</button>`
-        : '';
+    let adminActionControlsHtml = '';
+    if (isStaff && activeKey !== 'live') {
+        adminActionControlsHtml = `
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <button onclick="window.openEditChampionshipArchiveModal('${escapeHTML(activeKey)}')" style="background:rgba(255,215,0,0.15); border:1px solid rgba(255,215,0,0.4); color:#FFD700; padding:6px 12px; border-radius:8px; font-weight:bold; font-size:11.5px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; transition:0.2s;" onmouseover="this.style.background='rgba(255,215,0,0.25)'" onmouseout="this.style.background='rgba(255,215,0,0.15)'">✏️ Edit Season</button>
+                <button onclick="window.restoreChampionshipArchive('${escapeHTML(activeKey)}')" style="background:rgba(6,182,212,0.15); border:1px solid rgba(6,182,212,0.4); color:var(--accent); padding:6px 12px; border-radius:8px; font-weight:bold; font-size:11.5px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; transition:0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.25)'" onmouseout="this.style.background='rgba(6,182,212,0.15)'">↩️ Restore Live</button>
+                <button onclick="window.deleteChampionshipArchive('${escapeHTML(activeKey)}')" style="background:linear-gradient(135deg, rgba(239,68,68,0.2), rgba(220,38,38,0.2)); border:1px solid rgba(239,68,68,0.5); color:#ef4444; padding:6px 12px; border-radius:8px; font-weight:bold; font-size:11.5px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; transition:0.2s; box-shadow:0 2px 8px rgba(239,68,68,0.2);" onmouseover="this.style.background='rgba(239,68,68,0.35)'" onmouseout="this.style.background='rgba(239,68,68,0.2)'">🗑️ Delete Archive</button>
+            </div>
+        `;
+    }
+
+    let purgeBlankBtnHtml = (isStaff && blankArchiveCount > 0) ? `
+        <button onclick="window.purgeBlankChampionshipArchives()" style="background:rgba(239,68,68,0.12); border:1px dashed rgba(239,68,68,0.4); color:#ef4444; padding:5px 12px; border-radius:8px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px; margin-left:auto;">
+            🧹 Purge Blank Archives (${blankArchiveCount})
+        </button>
+    ` : '';
 
     body.innerHTML = `
         <div style="margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; background:rgba(255,255,200,0.02); padding:12px 18px; border-radius:10px; border:1px solid var(--border);">
-            <div style="font-weight:bold; font-size:13px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+            <div style="font-weight:bold; font-size:13px; color:var(--text-main); display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                 <span>📅 Select Championship Season:</span>
+                ${purgeBlankBtnHtml}
             </div>
             <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
                 <select style="padding:8px 14px; border-radius:8px; border:1px solid var(--accent); background:var(--card-bg); color:var(--text-main); font-size:13px; font-weight:bold; cursor:pointer; min-width:280px;" onchange="window.renderChampionshipVaultBody(this.value)">
                     ${optionsHtml}
                 </select>
-                ${deleteArchiveBtn}
+                ${adminActionControlsHtml}
             </div>
         </div>
 

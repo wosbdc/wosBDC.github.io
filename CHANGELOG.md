@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [3.2.1] - 2026-08-26
+- 🗑️ **Archive Deletion**: Leaders can permanently delete archived Championship seasons.
+- ✏️ **Edit Season Info**: Custom titles, records, and flag adjustments.
+- ↩️ **Restore to Live**: 1-click restore archived seasons to live tracker.
+- 🛡️ **Blank Season Guard**: Prevents accidental empty resets in archive vault.
+- 🧹 **Purge Tool**: 1-click purge for all blank test archives.
+
 ## [3.2.0] - 2026-08-22
 - 📅 **No Date Guard**: Events without times show friendly message.
 - 🔕 **Silent Alerts Fixed**: Closing modal no longer triggers alerts.

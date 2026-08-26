@@ -1,19 +1,22 @@
 {
-  "version": "3.2.0",
-  "releaseDate": "2026-08-22",
-  "title": "What's New in v3.2.0",
+  "version": "3.2.1",
+  "releaseDate": "2026-08-26",
+  "title": "What's New in v3.2.1",
   "notes": [
-    "📅 No Date Guard: Events without times show a friendly message.",
-    "🔕 Silent Alerts Fixed: Closing reminder modal no longer fires alerts."
+    "🗑️ Archive Deletion: Leaders can permanently delete archived Championship seasons.",
+    "✏️ Edit Season Info: Custom titles, records, and flag adjustments.",
+    "↩️ Restore to Live: 1-click restore archived seasons to live tracker.",
+    "🛡️ Blank Season Guard: Prevents accidental empty resets in archive vault.",
+    "🧹 Purge Tool: 1-click purge for all blank test archives."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.2.0",
+    "version": "3.2.1",
     "latestChanges": [
+      "v3.2.1: Championship Archive deletion, editing, restore, and blank season purge",
       "v3.2.0: Reminder modal no-data guard and spurious alert ticker fix",
       "v3.1.9: Schedule event reminders, fanfare alerts, and active event ticker",
       "v3.1.8: Real-time ticket sync, default open view, and smart bell dismissal",
-      "v3.1.7: Google Drive Drop & Go auto-upload with 3-tier quota fallback",
-      "v3.1.6: Video attachments, video lightbox player, and thumbnail extractor"
+      "v3.1.7: Google Drive Drop & Go auto-upload with 3-tier quota fallback"
     ]
   }
 }
