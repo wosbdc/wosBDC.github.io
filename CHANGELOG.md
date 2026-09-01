@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.2.5] - 2026-09-01
+- 🚪 **Alt Departure Unlink**: Departed or banned alts auto-removed from holder page.
+- 🚫 **Account Hub Cleaner**: Only active member alts appear on character cards.
+- 💾 **Departed Alts Archive**: Retains former alt record history safely in Firebase.
+- ⚡ **Cascade Departure**: Main account departure automatically cascades to all alts.
+
 ## [3.2.4] - 2026-09-01
 - 🎭 **Expand/Collapse Alts**: Toggle arrow on each player to show/hide alts.
 - 👥 **Global Alt Toggle**: 1-click button to expand or collapse all alts.

@@ -558,17 +558,56 @@ window.updateMemberStatus = async (name, gid, uid, newStatus, reason = '', isAlt
             }).catch(() => null));
         }
 
-        // 2. Update user account in users node
+        // 2. Update user account in users node & handle alt unlinking
         if (uid) {
             if (isAlt && targetGid) {
-                updatePromises.push(update(ref(db, `users/${uid}/altTokens/${targetGid}`), {
-                    membershipStatus: normStatus,
-                    statusReason: reason || null
-                }).catch(() => null));
-                updatePromises.push(update(ref(db, `users/${uid}/linkedAltsData/${targetGid}`), {
-                    membershipStatus: normStatus,
-                    statusReason: reason || null
-                }).catch(() => null));
+                if (normStatus !== 'active') {
+                    // Archive to departedAlts and remove from active altTokens & linkedAltsData
+                    updatePromises.push(update(ref(db, `users/${uid}/departedAlts/${targetGid}`), {
+                        name: targetName || '',
+                        gameId: targetGid,
+                        membershipStatus: normStatus,
+                        statusReason: reason || null,
+                        departedAt: timestamp,
+                        departedBy: adminName
+                    }).catch(() => null));
+
+                    updatePromises.push(remove(ref(db, `users/${uid}/altTokens/${targetGid}`)).catch(() => null));
+                    updatePromises.push(remove(ref(db, `users/${uid}/linkedAltsData/${targetGid}`)).catch(() => null));
+
+                    // Remove from linkedGameIds array
+                    get(ref(db, `users/${uid}/linkedGameIds`)).then(snap => {
+                        if (snap.exists() && Array.isArray(snap.val())) {
+                            const updatedLinks = snap.val().filter(id => String(id).trim() !== targetGid);
+                            update(ref(db, `users/${uid}`), { linkedGameIds: updatedLinks }).catch(() => null);
+                        }
+                    }).catch(() => null);
+
+                    if (currentUser && currentUser.uid === uid) {
+                        if (currentUser.altTokens) delete currentUser.altTokens[targetGid];
+                        if (currentUser.linkedAltsData) delete currentUser.linkedAltsData[targetGid];
+                        if (Array.isArray(currentUser.linkedGameIds)) {
+                            currentUser.linkedGameIds = currentUser.linkedGameIds.filter(id => String(id).trim() !== targetGid);
+                        }
+                    }
+                } else {
+                    // Restore to active altTokens
+                    updatePromises.push(update(ref(db, `users/${uid}/altTokens/${targetGid}`), {
+                        nickname: targetName || `Chief ${targetGid}`,
+                        membershipStatus: 'active',
+                        statusReason: reason || null,
+                        restoredAt: timestamp
+                    }).catch(() => null));
+                    updatePromises.push(remove(ref(db, `users/${uid}/departedAlts/${targetGid}`)).catch(() => null));
+
+                    get(ref(db, `users/${uid}/linkedGameIds`)).then(snap => {
+                        const cur = (snap.exists() && Array.isArray(snap.val())) ? snap.val() : [];
+                        if (!cur.some(id => String(id).trim() === targetGid)) {
+                            cur.push(targetGid);
+                            update(ref(db, `users/${uid}`), { linkedGameIds: cur }).catch(() => null);
+                        }
+                    }).catch(() => null);
+                }
             } else {
                 updatePromises.push(update(ref(db, `users/${uid}`), {
                     membershipStatus: normStatus,
@@ -577,6 +616,27 @@ window.updateMemberStatus = async (name, gid, uid, newStatus, reason = '', isAlt
                     statusUpdatedAt: timestamp,
                     statusUpdatedBy: adminName
                 }).catch(() => null));
+
+                // If main account departs or is banned, cascade status to all linked alts
+                if (normStatus !== 'active') {
+                    get(ref(db, `users/${uid}`)).then(uSnap => {
+                        if (uSnap.exists()) {
+                            const uObj = uSnap.val() || {};
+                            const altIds = [];
+                            if (uObj.altTokens) Object.keys(uObj.altTokens).forEach(aid => altIds.push(String(aid).trim()));
+                            if (uObj.linkedGameIds && Array.isArray(uObj.linkedGameIds)) {
+                                uObj.linkedGameIds.forEach(aid => { if (!altIds.includes(String(aid).trim())) altIds.push(String(aid).trim()); });
+                            }
+
+                            altIds.forEach(agid => {
+                                update(ref(db, `roster_live/${agid}`), { membershipStatus: normStatus, statusReason: `Owner ${targetName || uid} marked ${normStatus}`, statusUpdatedAt: timestamp }).catch(() => null);
+                                update(ref(db, `giftcode_bot/${agid}`), { enrolled: false, status: normStatus === 'banned' ? 'Banned' : 'Inactive' }).catch(() => null);
+                                const aTok = uObj.altTokens && uObj.altTokens[agid];
+                                if (aTok && aTok.nickname) remove(ref(db, `showdown_live/${aTok.nickname}`)).catch(() => null);
+                            });
+                        }
+                    }).catch(() => null);
+                }
             }
         } else if (targetGid) {
             const usersSnap = await get(ref(db, 'users')).catch(() => null);
@@ -594,10 +654,22 @@ window.updateMemberStatus = async (name, gid, uid, newStatus, reason = '', isAlt
                         break;
                     }
                     if (uObj && uObj.altTokens && uObj.altTokens[targetGid]) {
-                        updatePromises.push(update(ref(db, `users/${uId}/altTokens/${targetGid}`), {
-                            membershipStatus: normStatus,
-                            statusReason: reason || null
-                        }).catch(() => null));
+                        if (normStatus !== 'active') {
+                            updatePromises.push(update(ref(db, `users/${uId}/departedAlts/${targetGid}`), {
+                                name: targetName || (uObj.altTokens[targetGid]?.nickname || ''),
+                                gameId: targetGid,
+                                membershipStatus: normStatus,
+                                statusReason: reason || null,
+                                departedAt: timestamp
+                            }).catch(() => null));
+                            updatePromises.push(remove(ref(db, `users/${uId}/altTokens/${targetGid}`)).catch(() => null));
+                            updatePromises.push(remove(ref(db, `users/${uId}/linkedAltsData/${targetGid}`)).catch(() => null));
+                        } else {
+                            updatePromises.push(update(ref(db, `users/${uId}/altTokens/${targetGid}`), {
+                                membershipStatus: normStatus,
+                                statusReason: reason || null
+                            }).catch(() => null));
+                        }
                     }
                 }
             }
@@ -1112,14 +1184,33 @@ window.bulkUpdateMemberStatus = async (membersList, newStatus, reason = '', show
             // 2. users node
             if (uid) {
                 if (isAlt && gid) {
-                    promises.push(update(ref(db, `users/${uid}/altTokens/${gid}`), {
-                        membershipStatus: normStatus,
-                        statusReason: reason || null
-                    }).catch(() => null));
-                    promises.push(update(ref(db, `users/${uid}/linkedAltsData/${gid}`), {
-                        membershipStatus: normStatus,
-                        statusReason: reason || null
-                    }).catch(() => null));
+                    if (normStatus !== 'active') {
+                        promises.push(update(ref(db, `users/${uid}/departedAlts/${gid}`), {
+                            name: name || '',
+                            gameId: gid,
+                            membershipStatus: normStatus,
+                            statusReason: reason || null,
+                            departedAt: timestamp,
+                            departedBy: adminName
+                        }).catch(() => null));
+                        promises.push(remove(ref(db, `users/${uid}/altTokens/${gid}`)).catch(() => null));
+                        promises.push(remove(ref(db, `users/${uid}/linkedAltsData/${gid}`)).catch(() => null));
+                        
+                        // Clean from linkedGameIds
+                        const uObj = uData[uid];
+                        if (uObj && Array.isArray(uObj.linkedGameIds)) {
+                            const newLinks = uObj.linkedGameIds.filter(id => String(id).trim() !== gid);
+                            promises.push(update(ref(db, `users/${uid}`), { linkedGameIds: newLinks }).catch(() => null));
+                        }
+                    } else {
+                        promises.push(update(ref(db, `users/${uid}/altTokens/${gid}`), {
+                            nickname: name || `Chief ${gid}`,
+                            membershipStatus: 'active',
+                            statusReason: reason || null,
+                            restoredAt: timestamp
+                        }).catch(() => null));
+                        promises.push(remove(ref(db, `users/${uid}/departedAlts/${gid}`)).catch(() => null));
+                    }
                 } else {
                     promises.push(update(ref(db, `users/${uid}`), {
                         membershipStatus: normStatus,
@@ -1128,6 +1219,24 @@ window.bulkUpdateMemberStatus = async (membersList, newStatus, reason = '', show
                         statusUpdatedAt: timestamp,
                         statusUpdatedBy: adminName
                     }).catch(() => null));
+
+                    // Cascade to alts if main account departs
+                    if (normStatus !== 'active') {
+                        const uObj = uData[uid];
+                        if (uObj) {
+                            const altIds = [];
+                            if (uObj.altTokens) Object.keys(uObj.altTokens).forEach(aid => altIds.push(String(aid).trim()));
+                            if (uObj.linkedGameIds && Array.isArray(uObj.linkedGameIds)) {
+                                uObj.linkedGameIds.forEach(aid => { if (!altIds.includes(String(aid).trim())) altIds.push(String(aid).trim()); });
+                            }
+                            altIds.forEach(agid => {
+                                promises.push(update(ref(db, `roster_live/${agid}`), { membershipStatus: normStatus, statusReason: `Owner ${name || uid} marked ${normStatus}`, statusUpdatedAt: timestamp }).catch(() => null));
+                                promises.push(update(ref(db, `giftcode_bot/${agid}`), { enrolled: false, status: normStatus === 'banned' ? 'Banned' : 'Inactive' }).catch(() => null));
+                                const aTok = uObj.altTokens && uObj.altTokens[agid];
+                                if (aTok && aTok.nickname) promises.push(remove(ref(db, `showdown_live/${aTok.nickname}`)).catch(() => null));
+                            });
+                        }
+                    }
                 }
             }
 
@@ -26728,20 +26837,6 @@ const views = {
         const hasAvatar = (typeof avatarMap !== 'undefined' && avatarMap && avatarMap[uGidStr]) || (u.avatar && u.avatar.length > 5);
         const avatarSrc = window.getAvatarUrl(uGidStr, cName);
 
-        // Collect all alts for this user
-        const altGidsSet = new Set();
-        if (u.altTokens && typeof u.altTokens === 'object') {
-          Object.keys(u.altTokens).forEach(aid => altGidsSet.add(String(aid).trim()));
-        }
-        if (u.linkedAltsData && typeof u.linkedAltsData === 'object') {
-          Object.keys(u.linkedAltsData).forEach(aid => altGidsSet.add(String(aid).trim()));
-        }
-        if (u.linkedGameIds && Array.isArray(u.linkedGameIds)) {
-          u.linkedGameIds.forEach(aid => altGidsSet.add(String(aid).trim()));
-        }
-        const userAltGids = Array.from(altGidsSet);
-        const totalAlts = userAltGids.length;
-
         // Check if roster entry exists in rosterRawData
         let rEntry = null;
         if (rosterRawData) {
@@ -26764,6 +26859,25 @@ const views = {
         } else if (memStatus === 'banned') {
           memStatusPill = `<span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.4); padding:3px 8px; border-radius:10px; font-size:11px; font-weight:bold;">🚫 Banned</span>`;
         }
+
+        // Collect all ACTIVE alts for this user (departed/banned alts are unlinked and shown individually)
+        const altGidsSet = new Set();
+        if (u.altTokens && typeof u.altTokens === 'object') {
+          Object.keys(u.altTokens).forEach(aid => altGidsSet.add(String(aid).trim()));
+        }
+        if (u.linkedAltsData && typeof u.linkedAltsData === 'object') {
+          Object.keys(u.linkedAltsData).forEach(aid => altGidsSet.add(String(aid).trim()));
+        }
+        if (u.linkedGameIds && Array.isArray(u.linkedGameIds)) {
+          u.linkedGameIds.forEach(aid => altGidsSet.add(String(aid).trim()));
+        }
+        const userAltGids = Array.from(altGidsSet).filter(agid => {
+          const altGidStr = String(agid).trim();
+          const aTok = (u.altTokens && u.altTokens[altGidStr]) || (u.linkedAltsData && u.linkedAltsData[altGidStr]) || {};
+          const altMemStatus = window.normalizeMembershipStatus(aTok.membershipStatus || aTok.status || memStatus);
+          return altMemStatus === 'active';
+        });
+        const totalAlts = (memStatus === 'active') ? userAltGids.length : 0;
 
         const tokenStatus = window.getMemberTokenStatus(u);
         const rowTokenStatus = (tokenStatus.status === 'expiring_soon') ? 'expiring' : (tokenStatus.status || 'unverified');
@@ -30475,7 +30589,25 @@ window.resetBearTrapEvent = async () => {
         }
     } catch(e) {}
 
-    let links = currentUser.linkedGameIds || [];
+    // Exclude departed (left) or banned alts from the account holder's active characters lineup
+    const rawLinks = Array.isArray(currentUser.linkedGameIds) ? [...currentUser.linkedGameIds] : [];
+    if (currentUser.altTokens && typeof currentUser.altTokens === 'object') {
+        Object.keys(currentUser.altTokens).forEach(aid => {
+            const cleanAid = String(aid).trim();
+            if (cleanAid && !rawLinks.includes(cleanAid)) rawLinks.push(cleanAid);
+        });
+    }
+
+    let links = rawLinks.filter(gid => {
+        const cleanGid = String(gid).trim();
+        const aTok = (currentUser.altTokens && currentUser.altTokens[cleanGid]) || {};
+        const aData = (currentUser.linkedAltsData && currentUser.linkedAltsData[cleanGid]) || {};
+        const aSaved = (altProfilesMap && altProfilesMap[cleanGid]) || {};
+        const rItem = window.rosterCache && (window.rosterCache[cleanGid] || window.rosterCache[aTok.nickname || aData.name]);
+        const altStatus = window.normalizeMembershipStatus(aTok.membershipStatus || aData.membershipStatus || aSaved.membershipStatus || (rItem && (rItem.membershipStatus || rItem.status)) || 'active');
+        return altStatus === 'active';
+    });
+
     let currentChiefName = (currentUser.gameId && idToNameMap[currentUser.gameId] && !/^\d+$/.test(idToNameMap[currentUser.gameId])) 
         ? idToNameMap[currentUser.gameId] 
         : (currentUser.name || currentUser.chiefName || currentUser.displayName || (currentUser.gameId ? `Chief ${currentUser.gameId}` : 'Chief'));
