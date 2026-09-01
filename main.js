@@ -485,6 +485,270 @@ window.fetchRoster = async () => {
    return newRoster;
 };
 
+window.normalizeMembershipStatus = (status) => {
+    if (!status) return 'active';
+    const s = String(status).toLowerCase().trim();
+    if (s === 'banned' || s === 'ban') return 'banned';
+    if (s === 'left' || s === 'former' || s === 'inactive' || s === 'left_alliance' || s === 'left alliance') return 'left';
+    return 'active';
+};
+
+window.isPlayerActiveMember = (p) => {
+    if (!p) return false;
+    if (typeof p === 'string') {
+        const cleanN = window.cleanChiefName(p).toLowerCase();
+        if (window.rosterCache) {
+            for (const r of Object.values(window.rosterCache)) {
+                if (r && (r.name?.toLowerCase() === cleanN || String(r.gameId).trim() === p)) {
+                    return window.normalizeMembershipStatus(r.membershipStatus || r.status) === 'active';
+                }
+            }
+        }
+        return true;
+    }
+    const status = window.normalizeMembershipStatus(p.membershipStatus || p.status);
+    return status === 'active';
+};
+
+window.fetchActiveRoster = async () => {
+    const allRoster = await window.fetchRoster();
+    if (!allRoster || typeof allRoster !== 'object') return {};
+    const active = {};
+    for (const [k, p] of Object.entries(allRoster)) {
+        if (p && window.isPlayerActiveMember(p)) {
+            active[k] = p;
+        }
+    }
+    return active;
+};
+
+window.updateMemberStatus = async (name, gid, uid, newStatus, reason = '', isAlt = false) => {
+    const isManager = Boolean(currentUser && (window.isAdminUser(currentUser) || window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4'));
+    if (!isManager) {
+        if (window.showToast) window.showToast("Only R4/R5 managers can change membership status", "error");
+        return false;
+    }
+
+    const normStatus = window.normalizeMembershipStatus(newStatus);
+    const timestamp = Date.now();
+    const adminName = (currentUser && (currentUser.displayName || currentUser.name)) || 'Admin';
+    const targetGid = gid ? String(gid).trim() : '';
+    const targetName = name ? String(name).trim() : '';
+
+    try {
+        const updatePromises = [];
+
+        // 1. Update roster_live
+        if (targetGid) {
+            updatePromises.push(update(ref(db, `roster_live/${targetGid}`), {
+                membershipStatus: normStatus,
+                status: normStatus,
+                statusReason: reason || null,
+                statusUpdatedAt: timestamp,
+                statusUpdatedBy: adminName
+            }).catch(() => null));
+        }
+        if (targetName) {
+            updatePromises.push(update(ref(db, `roster_live/${targetName}`), {
+                membershipStatus: normStatus,
+                status: normStatus,
+                statusReason: reason || null,
+                statusUpdatedAt: timestamp,
+                statusUpdatedBy: adminName
+            }).catch(() => null));
+        }
+
+        // 2. Update user account in users node
+        if (uid) {
+            if (isAlt && targetGid) {
+                updatePromises.push(update(ref(db, `users/${uid}/altTokens/${targetGid}`), {
+                    membershipStatus: normStatus,
+                    statusReason: reason || null
+                }).catch(() => null));
+                updatePromises.push(update(ref(db, `users/${uid}/linkedAltsData/${targetGid}`), {
+                    membershipStatus: normStatus,
+                    statusReason: reason || null
+                }).catch(() => null));
+            } else {
+                updatePromises.push(update(ref(db, `users/${uid}`), {
+                    membershipStatus: normStatus,
+                    status: normStatus,
+                    statusReason: reason || null,
+                    statusUpdatedAt: timestamp,
+                    statusUpdatedBy: adminName
+                }).catch(() => null));
+            }
+        } else if (targetGid) {
+            const usersSnap = await get(ref(db, 'users')).catch(() => null);
+            if (usersSnap && usersSnap.exists()) {
+                const uData = usersSnap.val() || {};
+                for (const [uId, uObj] of Object.entries(uData)) {
+                    if (uObj && String(uObj.gameId).trim() === targetGid) {
+                        updatePromises.push(update(ref(db, `users/${uId}`), {
+                            membershipStatus: normStatus,
+                            status: normStatus,
+                            statusReason: reason || null,
+                            statusUpdatedAt: timestamp,
+                            statusUpdatedBy: adminName
+                        }).catch(() => null));
+                        break;
+                    }
+                    if (uObj && uObj.altTokens && uObj.altTokens[targetGid]) {
+                        updatePromises.push(update(ref(db, `users/${uId}/altTokens/${targetGid}`), {
+                            membershipStatus: normStatus,
+                            statusReason: reason || null
+                        }).catch(() => null));
+                    }
+                }
+            }
+        }
+
+        // 3. If left or banned, remove from live showdown and disable giftbot auto-enroll
+        if (normStatus !== 'active') {
+            if (targetName) {
+                updatePromises.push(remove(ref(db, `showdown_live/${targetName}`)).catch(() => null));
+            }
+            if (targetGid) {
+                updatePromises.push(update(ref(db, `giftcode_bot/${targetGid}`), {
+                    enrolled: false,
+                    status: normStatus === 'banned' ? 'Banned' : 'Inactive'
+                }).catch(() => null));
+            }
+        } else {
+            if (targetGid) {
+                updatePromises.push(update(ref(db, `giftcode_bot/${targetGid}`), {
+                    enrolled: true,
+                    status: 'Active'
+                }).catch(() => null));
+            }
+        }
+
+        await Promise.all(updatePromises);
+
+        window.rosterCache = null;
+        if (typeof window.clearAllEventCaches === 'function') {
+            window.clearAllEventCaches();
+        }
+
+        if (window.logAdminAction) {
+            window.logAdminAction("Membership Status Updated", `Changed ${targetName || targetGid} status to ${normStatus.toUpperCase()}${reason ? ` (${reason})` : ''}`);
+        }
+
+        const label = normStatus === 'active' ? '🟢 Active Member' : (normStatus === 'left' ? '🚪 Left Alliance' : '🚫 Banned');
+        if (window.showToast) window.showToast(`Updated ${targetName || 'Player'} status to ${label}! 🎉`, "success");
+
+        return true;
+    } catch(err) {
+        console.error("updateMemberStatus error:", err);
+        if (window.showToast) window.showToast("Error updating status: " + err.message, "error");
+        return false;
+    }
+};
+
+window.openChangeMembershipStatusModal = (name, gid, uid = null, currentStatus = 'active', isAlt = false) => {
+    let existingModal = document.getElementById('changeMembershipStatusModal');
+    if (existingModal) existingModal.remove();
+
+    const cleanName = window.cleanChiefName(name || 'Player');
+    const normCurStatus = window.normalizeMembershipStatus(currentStatus);
+
+    let modal = document.createElement('div');
+    modal.id = 'changeMembershipStatusModal';
+    modal.style.cssText = 'position:fixed; inset:0; width:100%; height:100%; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); z-index:10015; display:flex; justify-content:center; align-items:center; padding:16px; box-sizing:border-box; animation:fadeIn 0.2s ease;';
+
+    modal.innerHTML = `
+        <div style="background:var(--card-bg); border:1px solid var(--accent); border-radius:16px; width:100%; max-width:500px; padding:24px; box-shadow:0 10px 40px rgba(0,0,0,0.7); color:var(--text-main); position:relative;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:12px;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="font-size:24px;">🛡️</div>
+                    <div>
+                        <div style="font-size:17px; font-weight:bold; color:var(--text-main);">Update Membership Status</div>
+                        <div style="font-size:12px; color:var(--text-muted);">${escapeHTML(cleanName)} ${gid ? `(ID: ${gid})` : ''} ${isAlt ? '• 🎭 Linked Alt' : ''}</div>
+                    </div>
+                </div>
+                <button onclick="document.getElementById('changeMembershipStatusModal').remove()" style="background:none; border:none; color:var(--text-muted); font-size:18px; cursor:pointer; padding:4px 8px;">✕</button>
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:14px;">
+                <div style="font-size:13px; color:var(--text-muted);">
+                    Select the alliance membership status for this character. Setting to <em>Left Alliance</em> or <em>Banned</em> excludes them from active event trackers without deleting any account records or history.
+                </div>
+
+                <div style="display:flex; flex-direction:column; gap:10px; background:rgba(0,0,0,0.25); padding:12px; border-radius:10px; border:1px solid var(--border);">
+                    <label style="display:flex; align-items:flex-start; gap:12px; cursor:pointer; padding:8px; border-radius:8px; transition:0.2s; ${normCurStatus === 'active' ? 'background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3);' : ''}">
+                        <input type="radio" name="membershipStatusChoice" value="active" ${normCurStatus === 'active' ? 'checked' : ''} style="margin-top:3px;">
+                        <div>
+                            <div style="font-weight:bold; color:#10b981; font-size:13.5px; display:flex; align-items:center; gap:6px;">
+                                🟢 Active Alliance Member
+                            </div>
+                            <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
+                                Included in all active event tables, signups, Bear Trap donations, Showdown, and leaderboards.
+                            </div>
+                        </div>
+                    </label>
+
+                    <label style="display:flex; align-items:flex-start; gap:12px; cursor:pointer; padding:8px; border-radius:8px; transition:0.2s; ${normCurStatus === 'left' ? 'background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.3);' : ''}">
+                        <input type="radio" name="membershipStatusChoice" value="left" ${normCurStatus === 'left' ? 'checked' : ''} style="margin-top:3px;">
+                        <div>
+                            <div style="font-weight:bold; color:#f59e0b; font-size:13.5px; display:flex; align-items:center; gap:6px;">
+                                🚪 Left Alliance / Former Member
+                            </div>
+                            <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
+                                Excluded from live event rosters and pending lists. All account data, furnace level, and history are safely preserved.
+                            </div>
+                        </div>
+                    </label>
+
+                    <label style="display:flex; align-items:flex-start; gap:12px; cursor:pointer; padding:8px; border-radius:8px; transition:0.2s; ${normCurStatus === 'banned' ? 'background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3);' : ''}">
+                        <input type="radio" name="membershipStatusChoice" value="banned" ${normCurStatus === 'banned' ? 'checked' : ''} style="margin-top:3px;">
+                        <div>
+                            <div style="font-weight:bold; color:#ef4444; font-size:13.5px; display:flex; align-items:center; gap:6px;">
+                                🚫 Banned from Alliance
+                            </div>
+                            <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
+                                Excluded from all live events and blocked from alliance features. Historical data is retained.
+                            </div>
+                        </div>
+                    </label>
+                </div>
+
+                <div>
+                    <label style="display:block; font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:bold; margin-bottom:5px;">Reason / Notes (Optional)</label>
+                    <input type="text" id="membershipStatusReasonInput" placeholder="e.g. Transferred states / Inactive / Rejoined" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12.5px; box-sizing:border-box;">
+                </div>
+
+                <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:8px;">
+                    <button onclick="document.getElementById('changeMembershipStatusModal').remove()" style="padding:9px 16px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--text-muted); cursor:pointer; font-weight:bold;">Cancel</button>
+                    <button id="saveMembershipStatusBtn" onclick="window.submitMembershipStatusChange('${escapeHTML(cleanName.replace(/'/g, "\\'"))}', '${escapeHTML(gid || '')}', '${escapeHTML(uid || '')}', ${isAlt ? 'true' : 'false'})" style="padding:9px 20px; border-radius:8px; border:none; background:var(--accent); color:#fff; cursor:pointer; font-weight:bold; box-shadow:0 2px 10px rgba(6,182,212,0.3);">💾 Save Status</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+};
+
+window.submitMembershipStatusChange = async (name, gid, uid, isAlt) => {
+    const btn = document.getElementById('saveMembershipStatusBtn');
+    const selectedRadio = document.querySelector('input[name="membershipStatusChoice"]:checked');
+    const newStatus = selectedRadio ? selectedRadio.value : 'active';
+    const reason = document.getElementById('membershipStatusReasonInput')?.value?.trim() || '';
+
+    if (btn) { btn.disabled = true; btn.textContent = 'Updating...'; }
+
+    try {
+        const ok = await window.updateMemberStatus(name, gid, uid, newStatus, reason, isAlt);
+        if (ok) {
+            const modal = document.getElementById('changeMembershipStatusModal');
+            if (modal) modal.remove();
+
+            if (typeof views !== 'undefined' && views && views.admin) {
+                views.admin('tab-users');
+            }
+        }
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '💾 Save Status'; }
+    }
+};
 
 const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbzEDRKqYLW05dris_vyxF-SZEH5917Saa5eRieag0n_gbJeWj3Qo_Zvgch94hBg1tE/exec';
 const VERCEL_API_BASE = 'https://wos-vercel-proxy.vercel.app/api';
@@ -2516,12 +2780,14 @@ window.archiveAndResetMercenaryCycle = async () => {
         let rosterList = [];
         if (rosterData) {
             Object.values(rosterData).forEach(p => {
-                if (p.name && p.gameId) rosterList.push(p);
+                if (p.name && p.gameId && window.isPlayerActiveMember(p)) rosterList.push(p);
             });
         }
         if (rosterList.length === 0 && window.idToNameMap) {
             Object.entries(window.idToNameMap).forEach(([gid, name]) => {
-                rosterList.push({ gameId: gid, name: name });
+                if (window.isPlayerActiveMember({ gameId: gid, name: name })) {
+                    rosterList.push({ gameId: gid, name: name });
+                }
             });
         }
 
@@ -2637,12 +2903,14 @@ window.archiveAndResetPolarTerrorsCycle = async () => {
         let rosterList = [];
         if (rosterData) {
             Object.values(rosterData).forEach(p => {
-                if (p.name && p.gameId) rosterList.push(p);
+                if (p.name && p.gameId && window.isPlayerActiveMember(p)) rosterList.push(p);
             });
         }
         if (rosterList.length === 0 && window.idToNameMap) {
             Object.entries(window.idToNameMap).forEach(([gid, name]) => {
-                rosterList.push({ gameId: gid, name: name });
+                if (window.isPlayerActiveMember({ gameId: gid, name: name })) {
+                    rosterList.push({ gameId: gid, name: name });
+                }
             });
         }
 
@@ -2759,12 +3027,14 @@ window.archiveAndResetBearTrapCycle = async () => {
         let rosterList = [];
         if (rosterData) {
             Object.values(rosterData).forEach(p => {
-                if (p.name && p.gameId) rosterList.push(p);
+                if (p.name && p.gameId && window.isPlayerActiveMember(p)) rosterList.push(p);
             });
         }
         if (rosterList.length === 0 && window.idToNameMap) {
             Object.entries(window.idToNameMap).forEach(([gid, name]) => {
-                rosterList.push({ gameId: gid, name: name });
+                if (window.isPlayerActiveMember({ gameId: gid, name: name })) {
+                    rosterList.push({ gameId: gid, name: name });
+                }
             });
         }
 
@@ -10785,12 +11055,14 @@ window.archiveAndResetChampionshipSeason = async () => {
         let rosterList = [];
         if (rosterData) {
             Object.values(rosterData).forEach(p => {
-                if (p.name && p.gameId) rosterList.push(p);
+                if (p.name && p.gameId && window.isPlayerActiveMember(p)) rosterList.push(p);
             });
         }
         if (rosterList.length === 0 && window.idToNameMap) {
             Object.entries(window.idToNameMap).forEach(([gid, name]) => {
-                rosterList.push({ gameId: gid, name: name });
+                if (window.isPlayerActiveMember({ gameId: gid, name: name })) {
+                    rosterList.push({ gameId: gid, name: name });
+                }
             });
         }
 
@@ -23175,7 +23447,16 @@ const views = {
         });
         if (btnEl) {
             btnEl.classList.add('active');
-            if (tabName === 'unclaimed') {
+            if (tabName === 'active') {
+                btnEl.style.background = '#10b981';
+                btnEl.style.color = '#fff';
+            } else if (tabName === 'left') {
+                btnEl.style.background = '#f59e0b';
+                btnEl.style.color = '#fff';
+            } else if (tabName === 'banned') {
+                btnEl.style.background = '#ef4444';
+                btnEl.style.color = '#fff';
+            } else if (tabName === 'unclaimed') {
                 btnEl.style.background = '#ef4444';
                 btnEl.style.color = '#fff';
             } else if (tabName === 'claimed') {
@@ -23235,6 +23516,9 @@ const views = {
         let visibleCount = 0;
 
         let countAll = 0;
+        let countActive = 0;
+        let countLeft = 0;
+        let countBanned = 0;
         let countMains = 0;
         let countAlts = 0;
         let countClaimed = 0;
@@ -23261,6 +23545,7 @@ const views = {
             const isAdmin = row.getAttribute('data-is-admin') === 'true';
             const hasAlts = row.getAttribute('data-has-alts') === 'true';
             const isAlt = row.getAttribute('data-is-alt') === 'true';
+            const memStatus = row.getAttribute('data-membership-status') || 'active';
             const altSyncedCount = parseInt(row.getAttribute('data-alt-synced-count') || '0', 10);
             const isEnrolled = row.getAttribute('data-is-enrolled') === 'true';
             const isClaimed = row.getAttribute('data-is-claimed') === 'true';
@@ -23271,7 +23556,10 @@ const views = {
             const matchesSearch = !searchVal || name.includes(searchVal) || gid.includes(searchVal) || email.includes(searchVal);
 
             let matchesTab = true;
-            if (activeTab === 'mains') matchesTab = !isAlt;
+            if (activeTab === 'active') matchesTab = (memStatus === 'active');
+            else if (activeTab === 'left') matchesTab = (memStatus === 'left');
+            else if (activeTab === 'banned') matchesTab = (memStatus === 'banned');
+            else if (activeTab === 'mains') matchesTab = !isAlt;
             else if (activeTab === 'alts') matchesTab = isAlt;
             else if (activeTab === 'unclaimed') matchesTab = !isClaimed && !isAlt;
             else if (activeTab === 'claimed') matchesTab = isClaimed;
@@ -23294,7 +23582,10 @@ const views = {
             }
 
             let matchesAttr = true;
-            if (attrFilter === 'new') matchesAttr = isNew && !isAlt;
+            if (attrFilter === 'active_members') matchesAttr = (memStatus === 'active');
+            else if (attrFilter === 'left_members') matchesAttr = (memStatus === 'left');
+            else if (attrFilter === 'banned_members') matchesAttr = (memStatus === 'banned');
+            else if (attrFilter === 'new') matchesAttr = isNew && !isAlt;
             else if (attrFilter === 'alts') matchesAttr = hasAlts && !isAlt;
             else if (attrFilter === 'all_alts') matchesAttr = isAlt;
             else if (attrFilter === 'enrolled') matchesAttr = isEnrolled && !isAlt;
@@ -23305,6 +23596,10 @@ const views = {
             // Compute dynamic category counts matching search query
             if (matchesSearch) {
                 countAll++;
+                if (memStatus === 'active') countActive++;
+                else if (memStatus === 'left') countLeft++;
+                else if (memStatus === 'banned') countBanned++;
+
                 if (!isAlt) countMains++;
                 if (isAlt) countAlts++;
                 if (isClaimed) countClaimed++;
@@ -23344,6 +23639,15 @@ const views = {
         const btnAll = document.querySelector('.admin-user-filter-tab[data-tab="all"]');
         if (btnAll) btnAll.textContent = `👥 All (${countAll})`;
 
+        const btnActive = document.querySelector('.admin-user-filter-tab[data-tab="active"]');
+        if (btnActive) btnActive.textContent = `🟢 Active (${countActive})`;
+
+        const btnLeft = document.querySelector('.admin-user-filter-tab[data-tab="left"]');
+        if (btnLeft) btnLeft.textContent = `🚪 Left (${countLeft})`;
+
+        const btnBanned = document.querySelector('.admin-user-filter-tab[data-tab="banned"]');
+        if (btnBanned) btnBanned.textContent = `🚫 Banned (${countBanned})`;
+
         const btnMains = document.querySelector('.admin-user-filter-tab[data-tab="mains"]');
         if (btnMains) btnMains.textContent = `⭐ Mains (${countMains})`;
 
@@ -23358,6 +23662,9 @@ const views = {
 
         // Dynamically update Attributes Dropdown Options
         updateSelectOptionText('adminUserAttrFilter', 'all', `🏷️ Attributes: All (${countAll})`);
+        updateSelectOptionText('adminUserAttrFilter', 'active_members', `🟢 Active Members (${countActive})`);
+        updateSelectOptionText('adminUserAttrFilter', 'left_members', `🚪 Left Alliance (${countLeft})`);
+        updateSelectOptionText('adminUserAttrFilter', 'banned_members', `🚫 Banned (${countBanned})`);
         updateSelectOptionText('adminUserAttrFilter', 'push_on', `🔔 Push: Enabled (${countPushOn})`);
         updateSelectOptionText('adminUserAttrFilter', 'push_off', `🔕 Push: Disabled (${countPushOff})`);
         updateSelectOptionText('adminUserAttrFilter', 'alts', `👥 Accounts with Alts (${countHasAlts})`);
@@ -25225,6 +25532,9 @@ const views = {
               const totalClaimedCount = totalUsersCount + totalAltsCount;
 
               let hasAltsCount = 0;
+              let activeMembersCount = 0;
+              let leftMembersCount = 0;
+              let bannedMembersCount = 0;
               let tokenActiveCount = 0;
               let tokenExpiringCount = 0;
               let tokenExpiredCount = 0;
@@ -25237,6 +25547,11 @@ const views = {
               let pushDisabledCount = 0;
 
               Object.entries(users).forEach(([uid, u]) => {
+                const memStat = window.normalizeMembershipStatus(u.membershipStatus || u.status);
+                if (memStat === 'active') activeMembersCount++;
+                else if (memStat === 'left') leftMembersCount++;
+                else if (memStat === 'banned') bannedMembersCount++;
+
                 const tStat = window.getMemberTokenStatus(u);
                 const s = (tStat.status === 'expiring_soon') ? 'expiring' : (tStat.status || 'unverified');
                 if (s === 'active') tokenActiveCount++;
@@ -25250,6 +25565,11 @@ const views = {
                   const cleanAid = String(aid).trim();
                   if (!cleanAid || processedAltGids.has(cleanAid)) return;
                   processedAltGids.add(cleanAid);
+                  const aMem = window.normalizeMembershipStatus(aTok.membershipStatus || aTok.status || memStat);
+                  if (aMem === 'active') activeMembersCount++;
+                  else if (aMem === 'left') leftMembersCount++;
+                  else if (aMem === 'banned') bannedMembersCount++;
+
                   const aStat = window.getAltTokenStatus(aTok);
                   const as = (aStat.status === 'expiring_soon') ? 'expiring' : (aStat.status || 'unverified');
                   if (as === 'active') tokenActiveCount++;
@@ -25283,6 +25603,15 @@ const views = {
                 else pushDisabledCount++;
               });
 
+              if (window._currentUnclaimedRosterList && window._currentUnclaimedRosterList.length > 0) {
+                window._currentUnclaimedRosterList.forEach(up => {
+                  const unMem = window.normalizeMembershipStatus(up.membershipStatus || up.status);
+                  if (unMem === 'active') activeMembersCount++;
+                  else if (unMem === 'left') leftMembersCount++;
+                  else if (unMem === 'banned') bannedMembersCount++;
+                });
+              }
+
               if (rosterRawData) {
                 Object.values(rosterRawData).forEach(rp => {
                   if (!rp) return;
@@ -25304,7 +25633,7 @@ const views = {
                         👥 Alliance Members & Player Database
                       </div>
                       <div id="adminUserSubtitleCounter" style="font-size:12px; color:var(--text-muted); margin-top:2px;">
-                        ${totalMembersCount} total chief(s) • ${totalMainsCount} mains • ${totalAltsCount} linked alt(s) • ${totalUsersCount} registered user(s) • ${unclaimedCount} unclaimed roster
+                        ${totalMembersCount} total • 🟢 ${activeMembersCount} active • 🚪 ${leftMembersCount} left • 🚫 ${bannedMembersCount} banned • ${totalMainsCount} mains • ${totalAltsCount} alts • ${unclaimedCount} unclaimed
                       </div>
                     </div>
 
@@ -25318,6 +25647,15 @@ const views = {
                       <div style="display:inline-flex; background:var(--bg-main); padding:3px; border-radius:10px; border:1px solid var(--border); gap:4px; flex-wrap:wrap;">
                         <button class="admin-user-filter-tab active" data-tab="all" onclick="window.setAdminUserPopulationTab('all', this)" style="background:var(--accent); color:#fff; border:none; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
                           👥 All (${totalMembersCount})
+                        </button>
+                        <button class="admin-user-filter-tab" data-tab="active" onclick="window.setAdminUserPopulationTab('active', this)" style="background:transparent; color:var(--text-muted); border:none; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+                          🟢 Active (${activeMembersCount})
+                        </button>
+                        <button class="admin-user-filter-tab" data-tab="left" onclick="window.setAdminUserPopulationTab('left', this)" style="background:transparent; color:var(--text-muted); border:none; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+                          🚪 Left (${leftMembersCount})
+                        </button>
+                        <button class="admin-user-filter-tab" data-tab="banned" onclick="window.setAdminUserPopulationTab('banned', this)" style="background:transparent; color:var(--text-muted); border:none; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+                          🚫 Banned (${bannedMembersCount})
                         </button>
                         <button class="admin-user-filter-tab" data-tab="mains" onclick="window.setAdminUserPopulationTab('mains', this)" style="background:transparent; color:var(--text-muted); border:none; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
                           ⭐ Mains (${totalMainsCount})
@@ -25465,6 +25803,14 @@ const views = {
         const furnaceScore = window.getFurnaceNumericValue(furnaceLv);
         const isEnrolled = (rEntry && (rEntry.giftCodes === true || rEntry.giftCodes === 'TRUE' || (typeof rEntry.giftCodes === 'string' && rEntry.giftCodes.toLowerCase().trim() === 'true')));
 
+        const memStatus = window.normalizeMembershipStatus(u.membershipStatus || u.status || (rEntry && (rEntry.membershipStatus || rEntry.status)));
+        let memStatusPill = `<span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:3px 8px; border-radius:10px; font-size:11px; font-weight:bold;">🟢 Active</span>`;
+        if (memStatus === 'left') {
+          memStatusPill = `<span style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); padding:3px 8px; border-radius:10px; font-size:11px; font-weight:bold;">🚪 Left Alliance</span>`;
+        } else if (memStatus === 'banned') {
+          memStatusPill = `<span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.4); padding:3px 8px; border-radius:10px; font-size:11px; font-weight:bold;">🚫 Banned</span>`;
+        }
+
         const tokenStatus = window.getMemberTokenStatus(u);
         const rowTokenStatus = (tokenStatus.status === 'expiring_soon') ? 'expiring' : (tokenStatus.status || 'unverified');
         let tokenPill = `<span style="background:rgba(255,255,255,0.06); color:var(--text-muted); border:1px solid var(--border); padding:3px 8px; border-radius:10px; font-size:11px;">⚪ Unverified</span>`;
@@ -25504,21 +25850,23 @@ const views = {
               data-is-enrolled="${isEnrolled ? 'true' : 'false'}" 
               data-token-status="${rowTokenStatus}"
               data-alt-synced-count="${altSyncedCount}"
+              data-membership-status="${memStatus}"
               data-is-claimed="true"
               data-is-alt="false"
               data-push-enabled="${isPush ? 'true' : 'false'}"
               data-furnace-score="${furnaceScore}"
               data-created-ms="${createdMs}"
-              style="border-bottom:1px solid var(--border); transition:0.2s;">
+              style="border-bottom:1px solid var(--border); transition:0.2s; ${memStatus === 'left' ? 'opacity:0.75; background:rgba(245,158,11,0.03);' : (memStatus === 'banned' ? 'opacity:0.65; background:rgba(239,68,68,0.04);' : '')}">
             
             <td style="padding:12px 10px;">
               <div style="display:flex; align-items:center; gap:12px;">
-                <div style="width:40px; height:40px; border-radius:50%; overflow:hidden; background:var(--card-bg); flex-shrink:0; border:2px solid var(--accent); display:flex; align-items:center; justify-content:center;">
+                <div style="width:40px; height:40px; border-radius:50%; overflow:hidden; background:var(--card-bg); flex-shrink:0; border:2px solid ${memStatus === 'left' ? '#f59e0b' : (memStatus === 'banned' ? '#ef4444' : 'var(--accent)')}; display:flex; align-items:center; justify-content:center;">
                   <img src="${avatarSrc}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(cName)}&background=3b82f6&color=fff&bold=true&size=128';">
                 </div>
                 <div style="display:flex; flex-direction:column; gap:2px;">
                   <div style="font-weight:bold; font-size:14px; color:var(--text-main); display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
                     <span>${escapeHTML(cName)}</span>
+                    ${memStatus !== 'active' ? memStatusPill : ''}
                     ${isAdminUser ? `<span style="background:rgba(234,179,8,0.15); color:#eab308; border:1px solid rgba(234,179,8,0.4); padding:2px 8px; border-radius:12px; font-size:10px; font-weight:bold;">👑 ${u.role === 'R5' ? 'R5 LEADER' : 'R4 STAFF'}</span>` : ''}
                     ${isNew ? `<span style="background:rgba(59,130,246,0.15); color:#3b82f6; border:1px solid rgba(59,130,246,0.4); padding:2px 8px; border-radius:12px; font-size:10px; font-weight:bold;">✨ NEW</span>` : ''}
                     ${totalAlts > 0 ? `<span style="background:rgba(168,85,247,0.12); color:#c084fc; border:1px solid rgba(168,85,247,0.3); padding:2px 8px; border-radius:12px; font-size:10px; font-weight:bold;">👥 ${totalAlts} Alt(s)</span>` : ''}
@@ -25561,6 +25909,18 @@ const views = {
                   <div onclick="window.closeAllUserActionMenus(); window.openAdminEditFurnaceModal('${escapeHTML(cName)}', '${uGidStr}', '${furnaceLv || ''}');" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:var(--text-main); cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(249,115,22,0.15)'; this.style.color='#f97316';" onmouseout="this.style.background='transparent'; this.style.color='var(--text-main)';">
                     <span style="font-size:14px;">🔥</span> Edit Furnace Level
                   </div>
+                  <div onclick="window.closeAllUserActionMenus(); window.openChangeMembershipStatusModal('${escapeHTML(cName.replace(/'/g, "\\'"))}', '${uGidStr}', '${uid}', '${memStatus}', false);" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:#38bdf8; cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(56,189,248,0.15)';" onmouseout="this.style.background='transparent';">
+                    <span style="font-size:14px;">🛡️</span> Membership Status
+                  </div>
+                  ${memStatus === 'active' ? `
+                  <div onclick="window.closeAllUserActionMenus(); window.updateMemberStatus('${escapeHTML(cName.replace(/'/g, "\\'"))}', '${uGidStr}', '${uid}', 'left').then(ok => { if(ok && views.admin) views.admin('tab-users'); });" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:#f59e0b; cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(245,158,11,0.15)';" onmouseout="this.style.background='transparent';">
+                    <span style="font-size:14px;">🚪</span> Mark as Left Alliance
+                  </div>
+                  ` : `
+                  <div onclick="window.closeAllUserActionMenus(); window.updateMemberStatus('${escapeHTML(cName.replace(/'/g, "\\'"))}', '${uGidStr}', '${uid}', 'active').then(ok => { if(ok && views.admin) views.admin('tab-users'); });" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:#10b981; cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(160,250,180,0.15)';" onmouseout="this.style.background='transparent';">
+                    <span style="font-size:14px;">🟢</span> Restore to Active Member
+                  </div>
+                  `}
                   <div onclick="window.closeAllUserActionMenus(); window.openAdminRepairUserModal('${uid}');" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:var(--text-main); cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(168,85,247,0.15)'; this.style.color='#c084fc';" onmouseout="this.style.background='transparent'; this.style.color='var(--text-main)';">
                     <span style="font-size:14px;">🛠️</span> Repair Game ID
                   </div>
@@ -25586,7 +25946,7 @@ const views = {
                   </div>` : ''}
                   <div style="height:1px; background:rgba(255,255,255,0.08); margin:4px 0;"></div>
                   <div onclick="window.closeAllUserActionMenus(); window.adminDeletePlayer('${escapeHTML(cName.replace(/'/g, "\\'"))}', '${uGidStr}', '${uid}');" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:#ef4444; cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(239,68,68,0.18)';" onmouseout="this.style.background='transparent';">
-                    <span style="font-size:14px;">🗑️</span> Delete Player
+                    <span style="font-size:14px;">🗑️</span> Delete Player Permanently
                   </div>
                 </div>
               </div>
@@ -25603,6 +25963,14 @@ const views = {
             let altName = aTok.nickname || aTok.name || aTok.chiefName || idToNameMap[altGidStr] || `Alt (${altGidStr})`;
             let altFurnace = aTok.stove_lv || aTok.furnaceLevel || '';
             
+            const altMemStatus = window.normalizeMembershipStatus(aTok.membershipStatus || aTok.status || memStatus);
+            let altMemPill = `<span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:2px 6px; border-radius:10px; font-size:10px; font-weight:bold;">🟢 Active</span>`;
+            if (altMemStatus === 'left') {
+              altMemPill = `<span style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); padding:2px 6px; border-radius:10px; font-size:10px; font-weight:bold;">🚪 Left</span>`;
+            } else if (altMemStatus === 'banned') {
+              altMemPill = `<span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.4); padding:2px 6px; border-radius:10px; font-size:10px; font-weight:bold;">🚫 Banned</span>`;
+            }
+
             const altStat = (typeof window.getAltTokenStatus === 'function') ? window.getAltTokenStatus(aTok) : { status: 'unverified', daysLeft: 0 };
             const altTokenStatus = (altStat.status === 'expiring_soon') ? 'expiring' : (altStat.status || 'unverified');
             let altTokenPill = `<span style="background:rgba(255,255,255,0.06); color:var(--text-muted); border:1px solid var(--border); padding:2px 8px; border-radius:10px; font-size:11px;">⚪ Unverified Alt</span>`;
@@ -25628,11 +25996,12 @@ const views = {
                   data-has-alts="false" 
                   data-is-enrolled="false" 
                   data-token-status="${altTokenStatus}"
+                  data-membership-status="${altMemStatus}"
                   data-is-claimed="true"
                   data-is-alt="true"
                   data-furnace-score="${altFurnaceScore}"
                   data-created-ms="${createdMs}"
-                  style="border-bottom:1px solid rgba(255,255,255,0.05); background:rgba(30,41,59,0.35);">
+                  style="border-bottom:1px solid rgba(255,255,255,0.05); background:rgba(30,41,59,0.35); ${altMemStatus === 'left' ? 'opacity:0.75;' : (altMemStatus === 'banned' ? 'opacity:0.65;' : '')}">
                 
                 <td style="padding:10px 10px 10px 30px;">
                   <div style="display:flex; align-items:center; gap:10px;">
@@ -25643,6 +26012,7 @@ const views = {
                     <div style="display:flex; flex-direction:column; gap:2px;">
                       <div style="font-weight:bold; font-size:13px; color:var(--text-main); display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
                         <span>${escapeHTML(altName)}</span>
+                        ${altMemStatus !== 'active' ? altMemPill : ''}
                         <span style="background:rgba(168,85,247,0.12); color:#c084fc; border:1px solid rgba(168,85,247,0.3); padding:1px 6px; border-radius:10px; font-size:10px; font-weight:bold;">🎭 Alt of ${escapeHTML(cName)}</span>
                       </div>
                       <div style="font-family:monospace; font-size:11.5px; color:var(--text-muted); font-weight:bold;">
@@ -25682,12 +26052,15 @@ const views = {
                       <div onclick="window.closeAllUserActionMenus(); window.openAdminEditFurnaceModal('${escapeHTML(altName)}', '${altGidStr}', '${altFurnace}');" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:var(--text-main); cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(249,115,22,0.15)'; this.style.color='#f97316';" onmouseout="this.style.background='transparent'; this.style.color='var(--text-main)';">
                         <span style="font-size:14px;">🔥</span> Edit Furnace Level
                       </div>
+                      <div onclick="window.closeAllUserActionMenus(); window.openChangeMembershipStatusModal('${escapeHTML(altName.replace(/'/g, "\\'"))}', '${altGidStr}', '${uid}', '${altMemStatus}', true);" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:#c084fc; cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(168,85,247,0.15)';" onmouseout="this.style.background='transparent';">
+                        <span style="font-size:14px;">🛡️</span> Membership Status
+                      </div>
                       <div onclick="window.closeAllUserActionMenus(); window.adminManageAltsPrompt('${uid}');" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:var(--text-main); cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(59,130,246,0.15)'; this.style.color='#3b82f6';" onmouseout="this.style.background='transparent'; this.style.color='var(--text-main)';">
                         <span style="font-size:14px;">🔗</span> Manage Linked Alts
                       </div>
                       <div style="height:1px; background:rgba(255,255,255,0.08); margin:4px 0;"></div>
                       <div onclick="window.closeAllUserActionMenus(); window.adminDeletePlayer('${escapeHTML(altName.replace(/'/g, "\\'"))}', '${altGidStr}', null);" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:#ef4444; cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(239,68,68,0.18)';" onmouseout="this.style.background='transparent';">
-                        <span style="font-size:14px;">🗑️</span> Delete Alt
+                        <span style="font-size:14px;">🗑️</span> Delete Alt Permanently
                       </div>
                     </div>
                   </div>
@@ -25721,6 +26094,14 @@ const views = {
           const avatarSrc = window.getAvatarUrl(uGid, uName);
           const furnaceScore = window.getFurnaceNumericValue(flVal);
           
+          const unclaimMemStatus = window.normalizeMembershipStatus(p.membershipStatus || p.status);
+          let unclaimMemPill = `<span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:3px 8px; border-radius:10px; font-size:10px; font-weight:bold;">🟢 Active</span>`;
+          if (unclaimMemStatus === 'left') {
+            unclaimMemPill = `<span style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); padding:3px 8px; border-radius:10px; font-size:10px; font-weight:bold;">🚪 Left</span>`;
+          } else if (unclaimMemStatus === 'banned') {
+            unclaimMemPill = `<span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.4); padding:3px 8px; border-radius:10px; font-size:10px; font-weight:bold;">🚫 Banned</span>`;
+          }
+
           let rosterInfoHtml = '';
           if (flVal) rosterInfoHtml += `<span onclick="window.openAdminEditFurnaceModal('${escapeHTML(uName)}', '${uGid}', '${flVal}')" style="cursor:pointer; display:inline-flex; align-items:center;" title="Click to Edit Furnace Level">${window.getFurnaceIconHtml(flVal, 32)}</span>`;
           if (isEnrolled) rosterInfoHtml += `<span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:3px 8px; border-radius:10px; font-size:11px; font-weight:bold;">✅ Enrolled</span>`;
@@ -25736,11 +26117,12 @@ const views = {
                 data-has-alts="false" 
                 data-is-enrolled="${isEnrolled ? 'true' : 'false'}" 
                 data-token-status="unverified"
+                data-membership-status="${unclaimMemStatus}"
                 data-is-claimed="false"
                 data-is-alt="false"
                 data-furnace-score="${furnaceScore}"
                 data-created-ms="0"
-                style="border-bottom:1px solid var(--border); background:rgba(239,68,68,0.02);">
+                style="border-bottom:1px solid var(--border); background:rgba(239,68,68,0.02); ${unclaimMemStatus === 'left' ? 'opacity:0.75;' : (unclaimMemStatus === 'banned' ? 'opacity:0.65;' : '')}">
               
               <td style="padding:12px 10px;">
                 <div style="display:flex; align-items:center; gap:12px;">
@@ -25750,6 +26132,7 @@ const views = {
                   <div style="display:flex; flex-direction:column; gap:2px;">
                     <div style="font-weight:bold; font-size:14px; color:var(--text-main); display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
                       <span>${escapeHTML(uName)}</span>
+                      ${unclaimMemStatus !== 'active' ? unclaimMemPill : ''}
                       <span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.4); padding:2px 8px; border-radius:12px; font-size:10px; font-weight:bold; letter-spacing:0.5px;">⚠️ UNCLAIMED ROSTER</span>
                     </div>
                     <div style="font-family:monospace; font-size:12px; color:var(--text-muted); font-weight:bold;">
@@ -25791,12 +26174,15 @@ const views = {
                     <div onclick="window.closeAllUserActionMenus(); window.openAdminEditFurnaceModal('${escapeHTML(uName)}', '${uGid}', '${flVal || ''}');" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:var(--text-main); cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(249,115,22,0.15)'; this.style.color='#f97316';" onmouseout="this.style.background='transparent'; this.style.color='var(--text-main)';">
                       <span style="font-size:14px;">🔥</span> Edit Furnace Level
                     </div>
+                    <div onclick="window.closeAllUserActionMenus(); window.openChangeMembershipStatusModal('${escapeHTML(uName.replace(/'/g, "\\'"))}', '${uGid}', null, '${unclaimMemStatus}', false);" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:#38bdf8; cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(56,189,248,0.15)';" onmouseout="this.style.background='transparent';">
+                      <span style="font-size:14px;">🛡️</span> Membership Status
+                    </div>
                     <div onclick="window.closeAllUserActionMenus(); window.openEditRosterMemberModal('${escapeHTML(uName.replace(/'/g, "\\'"))}');" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:#3b82f6; cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(59,130,246,0.15)';" onmouseout="this.style.background='transparent';">
                       <span style="font-size:14px;">✏️</span> Edit Roster Member
                     </div>
                     <div style="height:1px; background:rgba(255,255,255,0.08); margin:4px 0;"></div>
                     <div onclick="window.closeAllUserActionMenus(); window.adminDeletePlayer('${escapeHTML(uName.replace(/'/g, "\\'"))}', '${uGid}', null);" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:#ef4444; cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(239,68,68,0.18)';" onmouseout="this.style.background='transparent';">
-                      <span style="font-size:14px;">🗑️</span> Delete Player
+                      <span style="font-size:14px;">🗑️</span> Delete Player Permanently
                     </div>
                   </div>
                 </div>
@@ -26620,7 +27006,7 @@ const views = {
        let allPlayers = [];
        if (Array.isArray(unifiedChiefList) && unifiedChiefList.length > 0) {
           unifiedChiefList.forEach(c => {
-             if (c && c.name) {
+             if (c && c.name && window.isPlayerActiveMember(c)) {
                 allPlayers.push({
                    name: c.name,
                    gameId: c.gameId,
@@ -26632,7 +27018,9 @@ const views = {
           });
        } else {
           Object.keys(sdLiveData).forEach(k => {
-             allPlayers.push({ name: k, gameId: '', isAlt: false, parentChiefName: '', label: k });
+             if (window.isPlayerActiveMember(k)) {
+                allPlayers.push({ name: k, gameId: '', isAlt: false, parentChiefName: '', label: k });
+             }
           });
        }
        
@@ -27011,7 +27399,7 @@ const views = {
         let rosterList = [];
         if (rosterData) {
             Object.values(rosterData).forEach(p => {
-                if (p.name && p.gameId) rosterList.push(p);
+                if (p.name && p.gameId && window.isPlayerActiveMember(p)) rosterList.push(p);
             });
         }
         rosterList.sort((a,b) => (a.name || '').localeCompare(b.name || ''));
@@ -27681,7 +28069,7 @@ const views = {
         let rosterList = [];
         if (rosterData) {
             Object.values(rosterData).forEach(p => {
-                if (p.name && p.gameId) rosterList.push(p);
+                if (p.name && p.gameId && window.isPlayerActiveMember(p)) rosterList.push(p);
             });
         }
 
@@ -27919,7 +28307,7 @@ const views = {
         let rosterList = [];
         if (rosterData) {
             Object.values(rosterData).forEach(p => {
-                if (p.name && p.gameId) rosterList.push(p);
+                if (p.name && p.gameId && window.isPlayerActiveMember(p)) rosterList.push(p);
             });
         }
 
@@ -28264,7 +28652,7 @@ const views = {
         let rosterList = [];
         if (rosterData) {
             Object.values(rosterData).forEach(p => {
-                if (p.name && p.gameId) rosterList.push(p);
+                if (p.name && p.gameId && window.isPlayerActiveMember(p)) rosterList.push(p);
             });
         }
 
@@ -32939,6 +33327,7 @@ window.resetBearTrapEvent = async () => {
             }
             
             Array.from(allNamesSet).sort((a,b) => a.localeCompare(b)).forEach(name => {
+                if (!window.isPlayerActiveMember(name)) return;
                 let isReg = false;
                 let gid = nameToIdMap[name];
                 if (gid && registeredGameIds.has(gid.toString().trim())) isReg = true;

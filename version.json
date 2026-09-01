@@ -1,22 +1,22 @@
 {
-  "version": "3.2.1",
-  "releaseDate": "2026-08-26",
-  "title": "What's New in v3.2.1",
+  "version": "3.2.2",
+  "releaseDate": "2026-09-01",
+  "title": "What's New in v3.2.2",
   "notes": [
-    "🗑️ Archive Deletion: Leaders can permanently delete archived Championship seasons.",
-    "✏️ Edit Season Info: Custom titles, records, and flag adjustments.",
-    "↩️ Restore to Live: 1-click restore archived seasons to live tracker.",
-    "🛡️ Blank Season Guard: Prevents accidental empty resets in archive vault.",
-    "🧹 Purge Tool: 1-click purge for all blank test archives."
+    "🛡️ Membership Lifecycle: Mark players as Active, Left Alliance, or Banned.",
+    "🚫 Event Exclusion: Former and banned members auto-hidden from all events.",
+    "🔍 Status Filters: Filter member lists by Active, Left, Banned, or Alts.",
+    "⚡ 1-Click Actions: Quick dropdown to change status, ban, or restore.",
+    "💾 Data Preserved: Retain former player history without deleting account data."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.2.1",
+    "version": "3.2.2",
     "latestChanges": [
+      "v3.2.2: Alliance Membership status and event exclusion system",
       "v3.2.1: Championship Archive deletion, editing, restore, and blank season purge",
       "v3.2.0: Reminder modal no-data guard and spurious alert ticker fix",
       "v3.1.9: Schedule event reminders, fanfare alerts, and active event ticker",
-      "v3.1.8: Real-time ticket sync, default open view, and smart bell dismissal",
-      "v3.1.7: Google Drive Drop & Go auto-upload with 3-tier quota fallback"
+      "v3.1.8: Real-time ticket sync, default open view, and smart bell dismissal"
     ]
   }
 }

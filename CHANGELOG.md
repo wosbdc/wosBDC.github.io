@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [3.2.2] - 2026-09-01
+- 🛡️ **Membership Lifecycle**: Mark players as Active, Left Alliance, or Banned.
+- 🚫 **Event Exclusion**: Former and banned members auto-hidden from all events.
+- 🔍 **Status Filters**: Filter member lists by Active, Left, Banned, or Alts.
+- ⚡ **1-Click Actions**: Quick dropdown to change status, ban, or restore.
+- 💾 **Data Preserved**: Retain former player history without deleting account data.
+
 ## [3.2.1] - 2026-08-26
 - 🗑️ **Archive Deletion**: Leaders can permanently delete archived Championship seasons.
 - ✏️ **Edit Season Info**: Custom titles, records, and flag adjustments.
