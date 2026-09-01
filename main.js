@@ -766,6 +766,96 @@ window.clearAdminUserSelection = () => {
     window.updateAdminBulkActionToolbar();
 };
 
+// ==========================================
+// 🎭 COLLAPSIBLE ALT CHARACTERS CONTROLLER
+// ==========================================
+window._collapsedAltOwnerUids = window._collapsedAltOwnerUids || new Set();
+
+window.togglePlayerAltsCollapse = (ownerUid, event) => {
+    if (event) {
+        event.stopPropagation();
+        if (event.preventDefault) event.preventDefault();
+    }
+    if (!ownerUid) return;
+
+    const isCollapsed = window._collapsedAltOwnerUids.has(ownerUid);
+    const arrow = document.getElementById(`alt-arrow-${ownerUid}`);
+    const altRows = document.querySelectorAll(`.alt-of-${ownerUid}`);
+
+    if (isCollapsed) {
+        window._collapsedAltOwnerUids.delete(ownerUid);
+        if (arrow) {
+            arrow.textContent = '▼';
+            arrow.style.transform = 'rotate(0deg)';
+        }
+        altRows.forEach(r => {
+            r.setAttribute('data-alt-collapsed', 'false');
+        });
+    } else {
+        window._collapsedAltOwnerUids.add(ownerUid);
+        if (arrow) {
+            arrow.textContent = '▶';
+            arrow.style.transform = 'rotate(0deg)';
+        }
+        altRows.forEach(r => {
+            r.setAttribute('data-alt-collapsed', 'true');
+        });
+    }
+
+    if (typeof window.filterAdminUsersList === 'function') {
+        window.filterAdminUsersList();
+    }
+    if (typeof window.updateAdminBulkActionToolbar === 'function') {
+        window.updateAdminBulkActionToolbar();
+    }
+};
+
+window.toggleAllAltsCollapse = () => {
+    const allAltButtons = document.querySelectorAll('.alt-toggle-pill-btn');
+    if (allAltButtons.length === 0) return;
+
+    const allOwnerUids = [];
+    allAltButtons.forEach(btn => {
+        const uid = btn.getAttribute('data-owner-uid') || (btn.id ? btn.id.replace('alt-toggle-btn-', '') : '');
+        if (uid) allOwnerUids.push(uid);
+    });
+
+    const anyExpanded = allOwnerUids.some(uid => !window._collapsedAltOwnerUids.has(uid));
+    const shouldCollapse = anyExpanded;
+
+    allOwnerUids.forEach(uid => {
+        const arrow = document.getElementById(`alt-arrow-${uid}`);
+        const altRows = document.querySelectorAll(`.alt-of-${uid}`);
+        if (shouldCollapse) {
+            window._collapsedAltOwnerUids.add(uid);
+            if (arrow) {
+                arrow.textContent = '▶';
+                arrow.style.transform = 'rotate(0deg)';
+            }
+            altRows.forEach(r => r.setAttribute('data-alt-collapsed', 'true'));
+        } else {
+            window._collapsedAltOwnerUids.delete(uid);
+            if (arrow) {
+                arrow.textContent = '▼';
+                arrow.style.transform = 'rotate(0deg)';
+            }
+            altRows.forEach(r => r.setAttribute('data-alt-collapsed', 'false'));
+        }
+    });
+
+    const toggleBtnText = document.getElementById('toggleAllAltsText');
+    if (toggleBtnText) {
+        toggleBtnText.textContent = shouldCollapse ? 'Expand Alts' : 'Collapse Alts';
+    }
+
+    if (typeof window.filterAdminUsersList === 'function') {
+        window.filterAdminUsersList();
+    }
+    if (typeof window.updateAdminBulkActionToolbar === 'function') {
+        window.updateAdminBulkActionToolbar();
+    }
+};
+
 window.toggleSelectAdminUser = (checkbox) => {
     if (!checkbox) return;
     const gid = (checkbox.getAttribute('data-gid') || '').trim();
@@ -24456,9 +24546,19 @@ const views = {
                 else countUnverifiedToken++;
             }
 
+            const isAltRow = row.classList.contains('alt-character-row');
+            const ownerUid = row.getAttribute('data-owner-uid');
+            const isAltCollapsed = isAltRow && ownerUid && window._collapsedAltOwnerUids && window._collapsedAltOwnerUids.has(ownerUid);
+            const isExplicitAltTab = (activeTab === 'alts');
+            const isSpecificSearchMatch = Boolean(searchVal && (row.getAttribute('data-name')?.includes(searchVal) || row.getAttribute('data-gid')?.includes(searchVal)));
+
             if (matchesSearch && matchesTab && matchesToken && matchesAttr) {
-                row.style.display = '';
-                visibleCount++;
+                if (isAltCollapsed && !isExplicitAltTab && !isSpecificSearchMatch) {
+                    row.style.display = 'none';
+                } else {
+                    row.style.display = '';
+                    visibleCount++;
+                }
             } else {
                 row.style.display = 'none';
             }
@@ -26558,6 +26658,11 @@ const views = {
                       ⚡ Bulk Manage Status
                     </button>
 
+                    <!-- Toggle All Alts Collapse Button -->
+                    <button id="toggleAllAltsCollapseBtn" onclick="window.toggleAllAltsCollapse()" style="background:rgba(168,85,247,0.12); color:#c084fc; border:1px solid rgba(168,85,247,0.35); padding:9px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s; white-space:nowrap; flex-shrink:0; display:inline-flex; align-items:center; gap:5px;" onmouseover="this.style.background='rgba(168,85,247,0.22)'" onmouseout="this.style.background='rgba(168,85,247,0.12)'" title="Expand or collapse all linked alt character rows across the whole table">
+                      <span id="toggleAllAltsIcon">👥</span> <span id="toggleAllAltsText">Collapse Alts</span>
+                    </button>
+
                     <!-- Copy Unclaimed Button -->
                     <button onclick="window.copyUnclaimedRosterList()" style="background:rgba(239,68,68,0.12); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:9px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s; white-space:nowrap; flex-shrink:0;" onmouseover="this.style.background='rgba(239,68,68,0.2)'" onmouseout="this.style.background='rgba(239,68,68,0.12)'" title="Copy all unclaimed alliance roster members">
                       📋 Copy Unclaimed (${unclaimedCount})
@@ -26722,7 +26827,18 @@ const views = {
                     ${memStatus !== 'active' ? memStatusPill : ''}
                     ${isAdminUser ? `<span style="background:rgba(234,179,8,0.15); color:#eab308; border:1px solid rgba(234,179,8,0.4); padding:2px 8px; border-radius:12px; font-size:10px; font-weight:bold;">👑 ${u.role === 'R5' ? 'R5 LEADER' : 'R4 STAFF'}</span>` : ''}
                     ${isNew ? `<span style="background:rgba(59,130,246,0.15); color:#3b82f6; border:1px solid rgba(59,130,246,0.4); padding:2px 8px; border-radius:12px; font-size:10px; font-weight:bold;">✨ NEW</span>` : ''}
-                    ${totalAlts > 0 ? `<span style="background:rgba(168,85,247,0.12); color:#c084fc; border:1px solid rgba(168,85,247,0.3); padding:2px 8px; border-radius:12px; font-size:10px; font-weight:bold;">👥 ${totalAlts} Alt(s)</span>` : ''}
+                    ${totalAlts > 0 ? `
+                    <button onclick="window.togglePlayerAltsCollapse('${escapeHTML(uid)}', event)" 
+                            id="alt-toggle-btn-${escapeHTML(uid)}" 
+                            data-owner-uid="${escapeHTML(uid)}"
+                            class="alt-toggle-pill-btn" 
+                            style="background:rgba(168,85,247,0.15); color:#c084fc; border:1px solid rgba(168,85,247,0.35); padding:2px 8px; border-radius:12px; font-size:10.5px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:5px; transition:0.2s;" 
+                            onmouseover="this.style.background='rgba(168,85,247,0.25)';" 
+                            onmouseout="this.style.background='rgba(168,85,247,0.15)';" 
+                            title="Click to show/hide ${totalAlts} linked alt character(s)">
+                      <span>👥 ${totalAlts} Alt${totalAlts === 1 ? '' : 's'}</span>
+                      <span class="alt-toggle-arrow" id="alt-arrow-${escapeHTML(uid)}" style="font-size:9px; transition:transform 0.2s ease; display:inline-block;">${(window._collapsedAltOwnerUids && window._collapsedAltOwnerUids.has(uid)) ? '▶' : '▼'}</span>
+                    </button>` : ''}
                   </div>
                   <div style="font-family:monospace; font-size:12px; color:var(--text-muted); font-weight:bold;">
                     ID: ${escapeHTML(uGidStr || 'N/A')}
@@ -26838,8 +26954,10 @@ const views = {
             const altFurnaceScore = window.getFurnaceNumericValue(altFurnace);
             const altAvatarSrc = window.getAvatarUrl(altGidStr, altName);
 
+            const isOwnerCollapsed = Boolean(window._collapsedAltOwnerUids && window._collapsedAltOwnerUids.has(uid));
+
             html += `
-              <tr class="admin-user-row alt-character-row" 
+              <tr class="admin-user-row alt-character-row alt-of-${escapeHTML(uid)}" 
                   data-name="${escapeHTML(altName.toLowerCase())}" 
                   data-name-raw="${escapeHTML(altName)}"
                   data-gid="${escapeHTML(altGidStr.toLowerCase())}" 
@@ -26852,9 +26970,11 @@ const views = {
                   data-membership-status="${altMemStatus}"
                   data-is-claimed="true"
                   data-is-alt="true"
+                  data-owner-uid="${escapeHTML(uid)}"
+                  data-alt-collapsed="${isOwnerCollapsed ? 'true' : 'false'}"
                   data-furnace-score="${altFurnaceScore}"
                   data-created-ms="${createdMs}"
-                  style="border-bottom:1px solid rgba(255,255,255,0.05); background:rgba(30,41,59,0.35); ${altMemStatus === 'left' ? 'opacity:0.75;' : (altMemStatus === 'banned' ? 'opacity:0.65;' : '')}">
+                  style="border-bottom:1px solid rgba(255,255,255,0.05); background:rgba(30,41,59,0.35); ${isOwnerCollapsed ? 'display:none;' : ''} ${altMemStatus === 'left' ? 'opacity:0.75;' : (altMemStatus === 'banned' ? 'opacity:0.65;' : '')}">
                 
                 <td style="padding:10px 6px; text-align:center;">
                   <input type="checkbox" class="admin-user-select-checkbox" data-name="${escapeHTML(altName)}" data-gid="${escapeHTML(altGidStr)}" data-uid="${escapeHTML(uid)}" data-is-alt="true" onchange="window.toggleSelectAdminUser(this)">

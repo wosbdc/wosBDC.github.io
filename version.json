@@ -1,22 +1,21 @@
 {
-  "version": "3.2.3",
+  "version": "3.2.4",
   "releaseDate": "2026-09-01",
-  "title": "What's New in v3.2.3",
+  "title": "What's New in v3.2.4",
   "notes": [
-    "⚡ Bulk Multi-Select: Check multiple members to batch update status.",
-    "🚀 Floating Action Bar: 1-click bulk Active, Left, or Ban toolbar.",
-    "📋 Bulk Manager Modal: Dedicated interactive checklist with quick filter presets.",
-    "📝 Paste List Mode: Batch match and update pasted name lists.",
-    "🛡️ Batch Safety: Confirmation prompts with optional bulk reason notes."
+    "🎭 Expand/Collapse Alts: Toggle arrow on each player to show/hide alts.",
+    "👥 Global Alt Toggle: 1-click button to expand or collapse all alts.",
+    "🔍 Smart Alt Search: Searching for alts auto-reveals matching character rows.",
+    "🧹 Clean Member View: Compact roster view without alt row clutter."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.2.3",
+    "version": "3.2.4",
     "latestChanges": [
+      "v3.2.4: Collapsible alt characters with arrow toggle in member database",
       "v3.2.3: Bulk Alliance Membership status management system",
       "v3.2.2: Alliance Membership status and event exclusion system",
       "v3.2.1: Championship Archive deletion, editing, restore, and blank season purge",
-      "v3.2.0: Reminder modal no-data guard and spurious alert ticker fix",
-      "v3.1.9: Schedule event reminders, fanfare alerts, and active event ticker"
+      "v3.2.0: Reminder modal no-data guard and spurious alert ticker fix"
     ]
   }
 }

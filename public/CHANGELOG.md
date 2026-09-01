@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.2.4] - 2026-09-01
+- 🎭 **Expand/Collapse Alts**: Toggle arrow on each player to show/hide alts.
+- 👥 **Global Alt Toggle**: 1-click button to expand or collapse all alts.
+- 🔍 **Smart Alt Search**: Searching for alts auto-reveals matching character rows.
+- 🧹 **Clean Member View**: Compact roster view without alt row clutter.
+
 ## [3.2.3] - 2026-09-01
 - ⚡ **Bulk Multi-Select**: Check multiple members to batch update status.
 - 🚀 **Floating Action Bar**: 1-click bulk Active, Left, or Ban toolbar.
