@@ -1,22 +1,22 @@
 {
-  "version": "3.2.2",
+  "version": "3.2.3",
   "releaseDate": "2026-09-01",
-  "title": "What's New in v3.2.2",
+  "title": "What's New in v3.2.3",
   "notes": [
-    "🛡️ Membership Lifecycle: Mark players as Active, Left Alliance, or Banned.",
-    "🚫 Event Exclusion: Former and banned members auto-hidden from all events.",
-    "🔍 Status Filters: Filter member lists by Active, Left, Banned, or Alts.",
-    "⚡ 1-Click Actions: Quick dropdown to change status, ban, or restore.",
-    "💾 Data Preserved: Retain former player history without deleting account data."
+    "⚡ Bulk Multi-Select: Check multiple members to batch update status.",
+    "🚀 Floating Action Bar: 1-click bulk Active, Left, or Ban toolbar.",
+    "📋 Bulk Manager Modal: Dedicated interactive checklist with quick filter presets.",
+    "📝 Paste List Mode: Batch match and update pasted name lists.",
+    "🛡️ Batch Safety: Confirmation prompts with optional bulk reason notes."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.2.2",
+    "version": "3.2.3",
     "latestChanges": [
+      "v3.2.3: Bulk Alliance Membership status management system",
       "v3.2.2: Alliance Membership status and event exclusion system",
       "v3.2.1: Championship Archive deletion, editing, restore, and blank season purge",
       "v3.2.0: Reminder modal no-data guard and spurious alert ticker fix",
-      "v3.1.9: Schedule event reminders, fanfare alerts, and active event ticker",
-      "v3.1.8: Real-time ticket sync, default open view, and smart bell dismissal"
+      "v3.1.9: Schedule event reminders, fanfare alerts, and active event ticker"
     ]
   }
 }

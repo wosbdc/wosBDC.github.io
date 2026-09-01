@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [3.2.3] - 2026-09-01
+- ⚡ **Bulk Multi-Select**: Check multiple members to batch update status.
+- 🚀 **Floating Action Bar**: 1-click bulk Active, Left, or Ban toolbar.
+- 📋 **Bulk Manager Modal**: Dedicated interactive checklist with quick filter presets.
+- 📝 **Paste List Mode**: Batch match and update pasted name lists.
+- 🛡️ **Batch Safety**: Confirmation prompts with optional bulk reason notes.
+
 ## [3.2.2] - 2026-09-01
 - 🛡️ **Membership Lifecycle**: Mark players as Active, Left Alliance, or Banned.
 - 🚫 **Event Exclusion**: Former and banned members auto-hidden from all events.

@@ -750,6 +750,843 @@ window.submitMembershipStatusChange = async (name, gid, uid, isAlt) => {
     }
 };
 
+// ==========================================
+// 🛡️ BULK ALLIANCE MEMBERSHIP STATUS ENGINE
+// ==========================================
+window._selectedAdminMembers = window._selectedAdminMembers || new Set();
+window._selectedAdminMembersMap = window._selectedAdminMembersMap || new Map();
+
+window.clearAdminUserSelection = () => {
+    window._selectedAdminMembers.clear();
+    window._selectedAdminMembersMap.clear();
+    const checkboxes = document.querySelectorAll('.admin-user-select-checkbox');
+    checkboxes.forEach(cb => { cb.checked = false; });
+    const selectAllCb = document.getElementById('adminUserSelectAllCheckbox');
+    if (selectAllCb) selectAllCb.checked = false;
+    window.updateAdminBulkActionToolbar();
+};
+
+window.toggleSelectAdminUser = (checkbox) => {
+    if (!checkbox) return;
+    const gid = (checkbox.getAttribute('data-gid') || '').trim();
+    const name = (checkbox.getAttribute('data-name') || '').trim();
+    const uid = (checkbox.getAttribute('data-uid') || '').trim();
+    const isAlt = checkbox.getAttribute('data-is-alt') === 'true';
+    const key = gid || (name ? name.toLowerCase() : uid);
+
+    if (checkbox.checked) {
+        window._selectedAdminMembers.add(key);
+        window._selectedAdminMembersMap.set(key, { name, gameId: gid, uid, isAlt });
+    } else {
+        window._selectedAdminMembers.delete(key);
+        window._selectedAdminMembersMap.delete(key);
+    }
+    window.updateAdminBulkActionToolbar();
+};
+
+window.toggleSelectAllAdminUsers = (checked) => {
+    const checkboxes = document.querySelectorAll('#adminUsersTbody .admin-user-select-checkbox');
+    checkboxes.forEach(cb => {
+        const row = cb.closest('tr');
+        if (row && row.style.display === 'none') return; // skip hidden rows
+        cb.checked = checked;
+        const gid = (cb.getAttribute('data-gid') || '').trim();
+        const name = (cb.getAttribute('data-name') || '').trim();
+        const uid = (cb.getAttribute('data-uid') || '').trim();
+        const isAlt = cb.getAttribute('data-is-alt') === 'true';
+        const key = gid || (name ? name.toLowerCase() : uid);
+
+        if (checked) {
+            window._selectedAdminMembers.add(key);
+            window._selectedAdminMembersMap.set(key, { name, gameId: gid, uid, isAlt });
+        } else {
+            window._selectedAdminMembers.delete(key);
+            window._selectedAdminMembersMap.delete(key);
+        }
+    });
+    window.updateAdminBulkActionToolbar();
+};
+
+window.updateAdminBulkActionToolbar = () => {
+    let toolbar = document.getElementById('adminBulkFloatingToolbar');
+    const selectedCount = window._selectedAdminMembers.size;
+
+    const selectAllCb = document.getElementById('adminUserSelectAllCheckbox');
+    if (selectAllCb) {
+        const visibleCheckboxes = Array.from(document.querySelectorAll('#adminUsersTbody .admin-user-select-checkbox'))
+            .filter(cb => { const r = cb.closest('tr'); return !r || r.style.display !== 'none'; });
+        const allChecked = visibleCheckboxes.length > 0 && visibleCheckboxes.every(cb => cb.checked);
+        selectAllCb.checked = allChecked;
+    }
+
+    if (!toolbar) return;
+
+    if (selectedCount > 0) {
+        toolbar.style.display = 'flex';
+        const countEl = document.getElementById('adminBulkSelectedCount');
+        if (countEl) countEl.textContent = `${selectedCount} Member${selectedCount === 1 ? '' : 's'} Selected`;
+    } else {
+        toolbar.style.display = 'none';
+    }
+};
+
+window.executeTableBulkStatusChange = async (targetStatus, customReason = '') => {
+    const membersList = Array.from(window._selectedAdminMembersMap.values());
+    if (membersList.length === 0) {
+        if (window.showToast) window.showToast("No members selected", "warning");
+        return;
+    }
+
+    const normStatus = window.normalizeMembershipStatus(targetStatus);
+    const statusLabels = {
+        active: '🟢 ACTIVE (Include in all live events)',
+        left: '🚪 LEFT ALLIANCE (Exclude from events, preserve data)',
+        banned: '🚫 BANNED (Block & exclude from events)'
+    };
+
+    const confirmMsg = `⚡ BULK MEMBERSHIP STATUS UPDATE\n\nAre you sure you want to update ${membersList.length} selected member${membersList.length === 1 ? '' : 's'} to:\n👉 ${statusLabels[normStatus] || normStatus}?\n\nProceed?`;
+    const ok = await window.customConfirm(confirmMsg);
+    if (!ok) return;
+
+    await window.bulkUpdateMemberStatus(membersList, normStatus, customReason);
+};
+
+window.openBulkStatusWithReasonModal = (preselectedStatus = 'left') => {
+    const membersList = Array.from(window._selectedAdminMembersMap.values());
+    if (membersList.length === 0) {
+        if (window.showToast) window.showToast("No members selected", "warning");
+        return;
+    }
+
+    let existingModal = document.getElementById('bulkStatusWithReasonModal');
+    if (existingModal) existingModal.remove();
+
+    let modal = document.createElement('div');
+    modal.id = 'bulkStatusWithReasonModal';
+    modal.style.cssText = 'position:fixed; inset:0; width:100%; height:100%; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); z-index:10020; display:flex; justify-content:center; align-items:center; padding:16px; box-sizing:border-box; animation:fadeIn 0.2s ease;';
+
+    modal.innerHTML = `
+        <div style="background:var(--card-bg); border:1px solid var(--accent); border-radius:16px; width:100%; max-width:520px; padding:24px; box-shadow:0 10px 40px rgba(0,0,0,0.7); color:var(--text-main); position:relative;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:12px;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="font-size:24px;">🛡️</div>
+                    <div>
+                        <div style="font-size:17px; font-weight:bold; color:var(--text-main);">Bulk Update Status</div>
+                        <div style="font-size:12px; color:var(--text-muted);">${membersList.length} Selected Members & Alts</div>
+                    </div>
+                </div>
+                <button onclick="document.getElementById('bulkStatusWithReasonModal').remove()" style="background:none; border:none; color:var(--text-muted); font-size:18px; cursor:pointer; padding:4px 8px;">✕</button>
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:14px;">
+                <div style="font-size:12.5px; color:var(--text-muted);">
+                    Apply a new alliance membership status and an optional reason note to all <strong>${membersList.length}</strong> selected members simultaneously.
+                </div>
+
+                <div style="display:flex; flex-direction:column; gap:10px; background:rgba(0,0,0,0.25); padding:12px; border-radius:10px; border:1px solid var(--border);">
+                    <label style="display:flex; align-items:flex-start; gap:12px; cursor:pointer; padding:8px; border-radius:8px;">
+                        <input type="radio" name="bulkStatusModalChoice" value="active" ${preselectedStatus === 'active' ? 'checked' : ''} style="margin-top:3px;">
+                        <div>
+                            <div style="font-weight:bold; color:#10b981; font-size:13px;">🟢 Active Alliance Members</div>
+                            <div style="font-size:11px; color:var(--text-muted);">Include in all active event signups, donations, Showdown, and leaderboards.</div>
+                        </div>
+                    </label>
+
+                    <label style="display:flex; align-items:flex-start; gap:12px; cursor:pointer; padding:8px; border-radius:8px;">
+                        <input type="radio" name="bulkStatusModalChoice" value="left" ${preselectedStatus === 'left' ? 'checked' : ''} style="margin-top:3px;">
+                        <div>
+                            <div style="font-weight:bold; color:#f59e0b; font-size:13px;">🚪 Left Alliance / Former Members</div>
+                            <div style="font-size:11px; color:var(--text-muted);">Exclude from live event rosters. All historical data and account stats are preserved.</div>
+                        </div>
+                    </label>
+
+                    <label style="display:flex; align-items:flex-start; gap:12px; cursor:pointer; padding:8px; border-radius:8px;">
+                        <input type="radio" name="bulkStatusModalChoice" value="banned" ${preselectedStatus === 'banned' ? 'checked' : ''} style="margin-top:3px;">
+                        <div>
+                            <div style="font-weight:bold; color:#ef4444; font-size:13px;">🚫 Banned from Alliance</div>
+                            <div style="font-size:11px; color:var(--text-muted);">Exclude from all events and block alliance features while keeping audit history.</div>
+                        </div>
+                    </label>
+                </div>
+
+                <div>
+                    <label style="display:block; font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:bold; margin-bottom:5px;">Reason / Notes (Optional)</label>
+                    <input type="text" id="bulkStatusModalReasonInput" placeholder="e.g. Post-SvS Roster Cleanup / Transferred Alliance" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12.5px; box-sizing:border-box;">
+                </div>
+
+                <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:8px;">
+                    <button onclick="document.getElementById('bulkStatusWithReasonModal').remove()" style="padding:9px 16px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--text-muted); cursor:pointer; font-weight:bold;">Cancel</button>
+                    <button id="saveBulkStatusModalBtn" onclick="window.submitBulkStatusWithReason()" style="padding:9px 20px; border-radius:8px; border:none; background:var(--accent); color:#fff; cursor:pointer; font-weight:bold; box-shadow:0 2px 10px rgba(6,182,212,0.3);">⚡ Apply to ${membersList.length} Members</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+};
+
+window.submitBulkStatusWithReason = async () => {
+    const btn = document.getElementById('saveBulkStatusModalBtn');
+    const selectedRadio = document.querySelector('input[name="bulkStatusModalChoice"]:checked');
+    const newStatus = selectedRadio ? selectedRadio.value : 'left';
+    const reason = document.getElementById('bulkStatusModalReasonInput')?.value?.trim() || '';
+    const membersList = Array.from(window._selectedAdminMembersMap.values());
+
+    if (btn) { btn.disabled = true; btn.textContent = 'Updating...'; }
+
+    try {
+        const ok = await window.bulkUpdateMemberStatus(membersList, newStatus, reason);
+        if (ok) {
+            const modal = document.getElementById('bulkStatusWithReasonModal');
+            if (modal) modal.remove();
+        }
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '⚡ Apply'; }
+    }
+};
+
+window.bulkUpdateMemberStatus = async (membersList, newStatus, reason = '', showProgress = true) => {
+    const isManager = Boolean(currentUser && (window.isAdminUser(currentUser) || window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4'));
+    if (!isManager) {
+        if (window.showToast) window.showToast("Only R4/R5 managers can perform bulk status updates", "error");
+        return false;
+    }
+
+    if (!Array.isArray(membersList) || membersList.length === 0) {
+        if (window.showToast) window.showToast("No members specified for bulk update", "warning");
+        return false;
+    }
+
+    const normStatus = window.normalizeMembershipStatus(newStatus);
+    const timestamp = Date.now();
+    const adminName = (currentUser && (currentUser.displayName || currentUser.name)) || 'Admin';
+
+    if (showProgress && window.showToast) {
+        window.showToast(`Updating ${membersList.length} members to ${normStatus.toUpperCase()}...`, "info");
+    }
+
+    try {
+        // Pre-fetch users for fast resolution of uids / alt tokens
+        const usersSnap = await get(ref(db, 'users')).catch(() => null);
+        const uData = (usersSnap && usersSnap.exists()) ? (usersSnap.val() || {}) : {};
+
+        const userByGidMap = {};
+        const altTokensByGidMap = {};
+        for (const [uId, uObj] of Object.entries(uData)) {
+            if (!uObj) continue;
+            const uGid = String(uObj.gameId || '').trim();
+            if (uGid) userByGidMap[uGid] = uId;
+
+            if (uObj.altTokens && typeof uObj.altTokens === 'object') {
+                Object.keys(uObj.altTokens).forEach(aid => {
+                    altTokensByGidMap[String(aid).trim()] = { uid: uId, isAltToken: true };
+                });
+            }
+            if (uObj.linkedAltsData && typeof uObj.linkedAltsData === 'object') {
+                Object.keys(uObj.linkedAltsData).forEach(aid => {
+                    altTokensByGidMap[String(aid).trim()] = { uid: uId, isLinkedAlt: true };
+                });
+            }
+        }
+
+        const promises = [];
+
+        for (const item of membersList) {
+            const gid = item.gameId ? String(item.gameId).trim() : '';
+            const name = item.name ? String(item.name).trim() : '';
+            let uid = item.uid || (gid ? userByGidMap[gid] : null);
+            const isAlt = item.isAlt || Boolean(gid && altTokensByGidMap[gid]);
+            if (!uid && gid && altTokensByGidMap[gid]) {
+                uid = altTokensByGidMap[gid].uid;
+            }
+
+            // 1. roster_live
+            if (gid) {
+                promises.push(update(ref(db, `roster_live/${gid}`), {
+                    membershipStatus: normStatus,
+                    status: normStatus,
+                    statusReason: reason || null,
+                    statusUpdatedAt: timestamp,
+                    statusUpdatedBy: adminName
+                }).catch(() => null));
+            }
+            if (name) {
+                promises.push(update(ref(db, `roster_live/${name}`), {
+                    membershipStatus: normStatus,
+                    status: normStatus,
+                    statusReason: reason || null,
+                    statusUpdatedAt: timestamp,
+                    statusUpdatedBy: adminName
+                }).catch(() => null));
+            }
+
+            // 2. users node
+            if (uid) {
+                if (isAlt && gid) {
+                    promises.push(update(ref(db, `users/${uid}/altTokens/${gid}`), {
+                        membershipStatus: normStatus,
+                        statusReason: reason || null
+                    }).catch(() => null));
+                    promises.push(update(ref(db, `users/${uid}/linkedAltsData/${gid}`), {
+                        membershipStatus: normStatus,
+                        statusReason: reason || null
+                    }).catch(() => null));
+                } else {
+                    promises.push(update(ref(db, `users/${uid}`), {
+                        membershipStatus: normStatus,
+                        status: normStatus,
+                        statusReason: reason || null,
+                        statusUpdatedAt: timestamp,
+                        statusUpdatedBy: adminName
+                    }).catch(() => null));
+                }
+            }
+
+            // 3. showdown_live & giftcode_bot
+            if (normStatus !== 'active') {
+                if (name) {
+                    promises.push(remove(ref(db, `showdown_live/${name}`)).catch(() => null));
+                }
+                if (gid) {
+                    promises.push(update(ref(db, `giftcode_bot/${gid}`), {
+                        enrolled: false,
+                        status: normStatus === 'banned' ? 'Banned' : 'Inactive'
+                    }).catch(() => null));
+                }
+            } else {
+                if (gid) {
+                    promises.push(update(ref(db, `giftcode_bot/${gid}`), {
+                        enrolled: true,
+                        status: 'Active'
+                    }).catch(() => null));
+                }
+            }
+        }
+
+        await Promise.all(promises);
+
+        window.rosterCache = null;
+        if (typeof window.clearAllEventCaches === 'function') {
+            window.clearAllEventCaches();
+        }
+
+        if (window.logAdminAction) {
+            window.logAdminAction("Bulk Membership Status Updated", `Updated ${membersList.length} members to ${normStatus.toUpperCase()}${reason ? ` (${reason})` : ''}`);
+        }
+
+        const label = normStatus === 'active' ? '🟢 Active' : (normStatus === 'left' ? '🚪 Left Alliance' : '🚫 Banned');
+        if (window.showToast) {
+            window.showToast(`Successfully updated ${membersList.length} members to ${label}! 🎉`, "success");
+        }
+
+        window.clearAdminUserSelection();
+
+        if (typeof views !== 'undefined' && views && views.admin) {
+            views.admin('tab-users');
+        }
+
+        return true;
+    } catch(err) {
+        console.error("bulkUpdateMemberStatus error:", err);
+        if (window.showToast) window.showToast("Bulk update error: " + err.message, "error");
+        return false;
+    }
+};
+
+// ==========================================
+// ⚡ DEDICATED BULK MEMBERSHIP MANAGER MODAL
+// ==========================================
+window.parsePastedMembersList = (rawText, allAvailableMembers = []) => {
+    if (!rawText || typeof rawText !== 'string') return { matched: [], unmatchedLines: [] };
+
+    const lines = rawText.split(/[\r\n,;]+/).map(l => l.trim()).filter(Boolean);
+    const matched = [];
+    const matchedKeys = new Set();
+    const unmatchedLines = [];
+
+    // Create lookup indexes
+    const gidIndex = {};
+    const nameIndex = {};
+
+    allAvailableMembers.forEach(m => {
+        if (m.gameId) gidIndex[String(m.gameId).trim().toLowerCase()] = m;
+        if (m.name) nameIndex[String(m.name).trim().toLowerCase()] = m;
+    });
+
+    lines.forEach(line => {
+        const cleanLine = line.replace(/^(?:\(?\d+[\.\)\-]\s*|[•\-\*–—\>\#]\s*)/, '').replace(/[,;]+$/, '').trim(); // strip list bullets/numbering
+        if (!cleanLine) return;
+
+        const lineLower = cleanLine.toLowerCase();
+        let target = gidIndex[lineLower] || nameIndex[lineLower];
+
+        if (!target) {
+            // Fuzzy search by substring
+            target = allAvailableMembers.find(m => {
+                const mName = (m.name || '').toLowerCase();
+                const mGid = (m.gameId || '').toLowerCase();
+                return mName === lineLower || mGid === lineLower || (mName.length > 3 && (mName.includes(lineLower) || lineLower.includes(mName)));
+            });
+        }
+
+        if (target) {
+            const key = target.gameId || target.name;
+            if (!matchedKeys.has(key)) {
+                matchedKeys.add(key);
+                matched.push(target);
+            }
+        } else {
+            unmatchedLines.push(cleanLine);
+        }
+    });
+
+    return { matched, unmatchedLines };
+};
+
+window.openBulkMembershipManagerModal = async () => {
+    let existingModal = document.getElementById('bulkMembershipManagerModal');
+    if (existingModal) existingModal.remove();
+
+    if (window.showToast) window.showToast("Loading member directory for Bulk Manager...", "info");
+
+    const [usersSnap, rosterRawData] = await Promise.all([
+        get(ref(db, 'users')).catch(() => null),
+        window.fetchRoster().catch(() => ({}))
+    ]);
+
+    const users = (usersSnap && usersSnap.exists()) ? (usersSnap.val() || {}) : {};
+    const allMembersList = [];
+    const seenMemberKeys = new Set();
+
+    // 1. Process users & linked alts
+    Object.entries(users).forEach(([uid, u]) => {
+        if (!u) return;
+        const mainGid = String(u.gameId || '').trim();
+        const mainName = window.cleanChiefName(idToNameMap[mainGid] || u.chiefName || u.name || (mainGid ? `Chief ${mainGid}` : 'Member'));
+        const mainStatus = window.normalizeMembershipStatus(u.membershipStatus || u.status);
+
+        if (mainGid || mainName) {
+            const key = mainGid || mainName.toLowerCase();
+            if (!seenMemberKeys.has(key)) {
+                seenMemberKeys.add(key);
+                allMembersList.push({
+                    name: mainName,
+                    gameId: mainGid,
+                    uid: uid,
+                    isAlt: false,
+                    type: 'Main Account',
+                    furnaceLevel: u.furnaceLevel || u.furnace || '',
+                    membershipStatus: mainStatus
+                });
+            }
+        }
+
+        // Process alts
+        const processAlt = (aid, altObj) => {
+            const aGid = String(aid || '').trim();
+            if (!aGid) return;
+            const aName = window.cleanChiefName(idToNameMap[aGid] || altObj.name || altObj.chiefName || `Alt ${aGid}`);
+            const aStatus = window.normalizeMembershipStatus(altObj.membershipStatus || altObj.status || mainStatus);
+            const aKey = aGid;
+            if (!seenMemberKeys.has(aKey)) {
+                seenMemberKeys.add(aKey);
+                allMembersList.push({
+                    name: aName,
+                    gameId: aGid,
+                    uid: uid,
+                    isAlt: true,
+                    type: `Alt of ${mainName}`,
+                    furnaceLevel: altObj.furnaceLevel || altObj.furnace || '',
+                    membershipStatus: aStatus
+                });
+            }
+        };
+
+        if (u.altTokens && typeof u.altTokens === 'object') {
+            Object.entries(u.altTokens).forEach(([aid, at]) => processAlt(aid, at));
+        }
+        if (u.linkedAltsData && typeof u.linkedAltsData === 'object') {
+            Object.entries(u.linkedAltsData).forEach(([aid, at]) => processAlt(aid, at));
+        }
+        if (u.linkedGameIds && Array.isArray(u.linkedGameIds)) {
+            u.linkedGameIds.forEach(aid => processAlt(aid, {}));
+        }
+    });
+
+    // 2. Process unclaimed roster members
+    if (rosterRawData && typeof rosterRawData === 'object') {
+        Object.values(rosterRawData).forEach(p => {
+            if (!p) return;
+            const rGid = String(p.id || p.gameId || p.gid || '').trim();
+            const rName = window.cleanChiefName(p.chiefName || p.name || (rGid ? `Chief ${rGid}` : ''));
+            if (!rGid && !rName) return;
+
+            const rKey = rGid || rName.toLowerCase();
+            if (!seenMemberKeys.has(rKey)) {
+                seenMemberKeys.add(rKey);
+                const rStatus = window.normalizeMembershipStatus(p.membershipStatus || p.status);
+                allMembersList.push({
+                    name: rName || `Chief ${rGid}`,
+                    gameId: rGid,
+                    uid: null,
+                    isAlt: false,
+                    type: 'Unclaimed Roster',
+                    furnaceLevel: p.furnaceLevel || '',
+                    membershipStatus: rStatus
+                });
+            }
+        });
+    }
+
+    allMembersList.sort((a, b) => a.name.localeCompare(b.name));
+    window._bulkManagerAllMembers = allMembersList;
+    window._bulkManagerSelectedKeys = new Set();
+
+    let modal = document.createElement('div');
+    modal.id = 'bulkMembershipManagerModal';
+    modal.style.cssText = 'position:fixed; inset:0; width:100%; height:100%; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); z-index:10015; display:flex; justify-content:center; align-items:center; padding:16px; box-sizing:border-box; animation:fadeIn 0.2s ease;';
+
+    const statusBadge = (st) => {
+        if (st === 'active') return '<span style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:2px 7px; border-radius:10px; font-size:10.5px; font-weight:bold;">🟢 Active</span>';
+        if (st === 'left') return '<span style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.3); padding:2px 7px; border-radius:10px; font-size:10.5px; font-weight:bold;">🚪 Left</span>';
+        return '<span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:2px 7px; border-radius:10px; font-size:10.5px; font-weight:bold;">🚫 Banned</span>';
+    };
+
+    modal.innerHTML = `
+        <div style="background:var(--card-bg); border:1px solid var(--accent); border-radius:16px; width:100%; max-width:760px; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 10px 40px rgba(0,0,0,0.8); color:var(--text-main); position:relative; overflow:hidden;">
+            
+            <!-- Modal Header -->
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:18px 24px; border-bottom:1px solid var(--border); background:rgba(0,0,0,0.2);">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div style="font-size:26px;">⚡</div>
+                    <div>
+                        <div style="font-size:18px; font-weight:800; color:var(--text-main);">Bulk Alliance Membership Manager</div>
+                        <div style="font-size:12px; color:var(--text-muted);">Batch update active, departed, or banned status across multiple members at once</div>
+                    </div>
+                </div>
+                <button onclick="document.getElementById('bulkMembershipManagerModal').remove()" style="background:none; border:none; color:var(--text-muted); font-size:20px; cursor:pointer; padding:4px 8px;">✕</button>
+            </div>
+
+            <!-- Segmented Mode Tabs -->
+            <div style="display:flex; gap:10px; padding:12px 24px; border-bottom:1px solid var(--border); background:rgba(0,0,0,0.1);">
+                <button id="bulkTabBtnChecklist" onclick="window.switchBulkManagerTab('checklist')" style="background:var(--accent); color:#fff; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; font-size:12.5px; cursor:pointer; transition:0.2s;">
+                    📋 Member Checklist (${allMembersList.length})
+                </button>
+                <button id="bulkTabBtnPaste" onclick="window.switchBulkManagerTab('paste')" style="background:var(--bg-main); color:var(--text-muted); border:1px solid var(--border); padding:8px 16px; border-radius:8px; font-weight:bold; font-size:12.5px; cursor:pointer; transition:0.2s;">
+                    📝 Paste Names or IDs List
+                </button>
+            </div>
+
+            <!-- Modal Body (Scrollable) -->
+            <div style="flex:1; overflow-y:auto; padding:20px 24px; display:flex; flex-direction:column; gap:16px;">
+                
+                <!-- Tab 1: Checklist Directory -->
+                <div id="bulkManagerChecklistContainer" style="display:flex; flex-direction:column; gap:12px;">
+                    <!-- Filter Controls & Presets -->
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                        <input type="text" id="bulkManagerSearchInput" oninput="window.filterBulkManagerList()" placeholder="🔍 Filter list by name or ID..." style="flex:1 1 200px; padding:8px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12.5px;">
+                        
+                        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                            <button onclick="window.setBulkManagerFilter('all_visible')" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); font-size:11px; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:bold;">All Visible</button>
+                            <button onclick="window.setBulkManagerFilter('active')" style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); color:#10b981; font-size:11px; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:bold;">All Active</button>
+                            <button onclick="window.setBulkManagerFilter('left')" style="background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); color:#f59e0b; font-size:11px; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:bold;">All Left</button>
+                            <button onclick="window.setBulkManagerFilter('invert')" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); font-size:11px; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:bold;">Invert</button>
+                            <button onclick="window.setBulkManagerFilter('clear')" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; font-size:11px; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:bold;">Clear</button>
+                        </div>
+                    </div>
+
+                    <!-- Checklist Scrollable Container -->
+                    <div style="border:1px solid var(--border); border-radius:10px; background:var(--bg-main); max-height:280px; overflow-y:auto;">
+                        <table style="width:100%; border-collapse:collapse; text-align:left; font-size:12px;">
+                            <thead>
+                                <tr style="border-bottom:1px solid var(--border); color:var(--text-muted); font-size:11px; text-transform:uppercase; position:sticky; top:0; background:var(--card-bg); z-index:2;">
+                                    <th style="width:36px; padding:10px 8px; text-align:center;">
+                                        <input type="checkbox" id="bulkManagerSelectAllCb" onchange="window.toggleBulkManagerSelectAll(this.checked)">
+                                    </th>
+                                    <th style="padding:10px 8px;">Chief Name & ID</th>
+                                    <th style="padding:10px 8px;">Account Type</th>
+                                    <th style="padding:10px 8px; text-align:right;">Current Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bulkManagerTbody">
+                                ${allMembersList.map((m, idx) => {
+                                    const key = m.gameId || m.name;
+                                    return `
+                                        <tr class="bulk-manager-row" data-key="${escapeHTML(key)}" data-name="${escapeHTML(m.name.toLowerCase())}" data-gid="${escapeHTML(m.gameId.toLowerCase())}" data-status="${escapeHTML(m.membershipStatus)}" data-is-alt="${m.isAlt}" style="border-bottom:1px solid rgba(255,255,255,0.05); transition:0.15s;">
+                                            <td style="text-align:center; padding:8px;">
+                                                <input type="checkbox" class="bulk-mgr-cb" data-key="${escapeHTML(key)}" onchange="window.toggleBulkManagerItem('${escapeHTML(key)}', this.checked)">
+                                            </td>
+                                            <td style="padding:8px;">
+                                                <div style="font-weight:bold; color:var(--text-main);">${escapeHTML(m.name)}</div>
+                                                <div style="font-size:11px; color:var(--text-muted);">${m.gameId ? `ID: ${m.gameId}` : 'No ID'} ${m.furnaceLevel ? `• 🔥 F${m.furnaceLevel}` : ''}</div>
+                                            </td>
+                                            <td style="padding:8px; color:var(--text-muted); font-size:11.5px;">
+                                                ${escapeHTML(m.type)}
+                                            </td>
+                                            <td style="padding:8px; text-align:right;">
+                                                ${statusBadge(m.membershipStatus)}
+                                            </td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tab 2: Paste List Mode -->
+                <div id="bulkManagerPasteContainer" style="display:none; flex-direction:column; gap:12px;">
+                    <div style="font-size:12.5px; color:var(--text-muted);">
+                        Paste a raw list of <strong>Chief Names</strong> or <strong>Game IDs</strong> below (one per line, or comma-separated). The system will automatically match them to characters on file.
+                    </div>
+                    <textarea id="bulkManagerPasteTextarea" oninput="window.updateBulkManagerMatchCount()" placeholder="Example:&#10;Chief Sarah&#10;104928103&#10;BadGuy99&#10;109283719" style="width:100%; height:160px; padding:12px; border-radius:10px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-family:monospace; font-size:12.5px; box-sizing:border-box; resize:vertical;"></textarea>
+                    
+                    <div id="bulkManagerPastePreview" style="font-size:12px; font-weight:bold; color:var(--accent);">
+                        Paste names or IDs above to see match preview.
+                    </div>
+                </div>
+
+                <!-- Bottom Status Choice Controls -->
+                <div style="background:rgba(0,0,0,0.25); border:1px solid var(--border); border-radius:12px; padding:14px; display:flex; flex-direction:column; gap:10px;">
+                    <div style="font-size:12px; font-weight:bold; text-transform:uppercase; color:var(--text-muted);">Set Target Status For Selected Members:</div>
+                    
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px;">
+                        <label style="display:flex; align-items:center; gap:8px; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); padding:10px 12px; border-radius:8px; cursor:pointer;">
+                            <input type="radio" name="bulkManagerTargetStatus" value="active">
+                            <span style="font-weight:bold; color:#10b981; font-size:12.5px;">🟢 Active Member</span>
+                        </label>
+                        <label style="display:flex; align-items:center; gap:8px; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); padding:10px 12px; border-radius:8px; cursor:pointer;">
+                            <input type="radio" name="bulkManagerTargetStatus" value="left" checked>
+                            <span style="font-weight:bold; color:#f59e0b; font-size:12.5px;">🚪 Left Alliance</span>
+                        </label>
+                        <label style="display:flex; align-items:center; gap:8px; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); padding:10px 12px; border-radius:8px; cursor:pointer;">
+                            <input type="radio" name="bulkManagerTargetStatus" value="banned">
+                            <span style="font-weight:bold; color:#ef4444; font-size:12.5px;">🚫 Ban Player</span>
+                        </label>
+                    </div>
+
+                    <div style="margin-top:4px;">
+                        <input type="text" id="bulkManagerReasonInput" placeholder="Optional reason note (e.g. Inactive departure / Merged alliance)" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; box-sizing:border-box;">
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Modal Footer Action Bar -->
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 24px; border-top:1px solid var(--border); background:rgba(0,0,0,0.25); flex-wrap:wrap; gap:10px;">
+                <div id="bulkManagerFooterCount" style="font-size:13px; font-weight:bold; color:var(--accent);">
+                    0 Members Selected
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <button onclick="document.getElementById('bulkMembershipManagerModal').remove()" style="padding:9px 16px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--text-muted); cursor:pointer; font-weight:bold; font-size:13px;">Cancel</button>
+                    <button id="bulkManagerApplyBtn" onclick="window.submitBulkMembershipManager()" style="padding:9px 22px; border-radius:8px; border:none; background:linear-gradient(135deg, var(--accent), #0284c7); color:#fff; cursor:pointer; font-weight:8px; font-weight:bold; font-size:13px; box-shadow:0 3px 12px rgba(6,182,212,0.3); transition:0.2s;">⚡ Apply Bulk Update</button>
+                </div>
+            </div>
+
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+    window._bulkManagerCurrentTab = 'checklist';
+};
+
+window.switchBulkManagerTab = (tab) => {
+    window._bulkManagerCurrentTab = tab;
+    const btnChecklist = document.getElementById('bulkTabBtnChecklist');
+    const btnPaste = document.getElementById('bulkTabBtnPaste');
+    const containerChecklist = document.getElementById('bulkManagerChecklistContainer');
+    const containerPaste = document.getElementById('bulkManagerPasteContainer');
+
+    if (tab === 'checklist') {
+        if (btnChecklist) { btnChecklist.style.background = 'var(--accent)'; btnChecklist.style.color = '#fff'; btnChecklist.style.border = 'none'; }
+        if (btnPaste) { btnPaste.style.background = 'var(--bg-main)'; btnPaste.style.color = 'var(--text-muted)'; btnPaste.style.border = '1px solid var(--border)'; }
+        if (containerChecklist) containerChecklist.style.display = 'flex';
+        if (containerPaste) containerPaste.style.display = 'none';
+        window.updateBulkManagerFooterCount();
+    } else {
+        if (btnPaste) { btnPaste.style.background = 'var(--accent)'; btnPaste.style.color = '#fff'; btnPaste.style.border = 'none'; }
+        if (btnChecklist) { btnChecklist.style.background = 'var(--bg-main)'; btnChecklist.style.color = 'var(--text-muted)'; btnChecklist.style.border = '1px solid var(--border)'; }
+        if (containerPaste) containerPaste.style.display = 'flex';
+        if (containerChecklist) containerChecklist.style.display = 'none';
+        window.updateBulkManagerMatchCount();
+    }
+};
+
+window.toggleBulkManagerItem = (key, checked) => {
+    if (checked) {
+        window._bulkManagerSelectedKeys.add(key);
+    } else {
+        window._bulkManagerSelectedKeys.delete(key);
+    }
+    window.updateBulkManagerFooterCount();
+};
+
+window.toggleBulkManagerSelectAll = (checked) => {
+    const visibleRows = Array.from(document.querySelectorAll('#bulkManagerTbody .bulk-manager-row'))
+        .filter(r => r.style.display !== 'none');
+
+    visibleRows.forEach(r => {
+        const key = r.getAttribute('data-key');
+        const cb = r.querySelector('.bulk-mgr-cb');
+        if (cb) cb.checked = checked;
+        if (checked) {
+            window._bulkManagerSelectedKeys.add(key);
+        } else {
+            window._bulkManagerSelectedKeys.delete(key);
+        }
+    });
+    window.updateBulkManagerFooterCount();
+};
+
+window.filterBulkManagerList = () => {
+    const q = (document.getElementById('bulkManagerSearchInput')?.value || '').toLowerCase().trim();
+    const rows = document.querySelectorAll('#bulkManagerTbody .bulk-manager-row');
+
+    rows.forEach(r => {
+        const name = r.getAttribute('data-name') || '';
+        const gid = r.getAttribute('data-gid') || '';
+        const match = !q || name.includes(q) || gid.includes(q);
+        r.style.display = match ? '' : 'none';
+    });
+};
+
+window.setBulkManagerFilter = (preset) => {
+    const rows = Array.from(document.querySelectorAll('#bulkManagerTbody .bulk-manager-row'))
+        .filter(r => r.style.display !== 'none');
+
+    if (preset === 'clear') {
+        window._bulkManagerSelectedKeys.clear();
+        document.querySelectorAll('#bulkManagerTbody .bulk-mgr-cb').forEach(cb => { cb.checked = false; });
+    } else if (preset === 'all_visible') {
+        rows.forEach(r => {
+            const key = r.getAttribute('data-key');
+            const cb = r.querySelector('.bulk-mgr-cb');
+            if (cb) cb.checked = true;
+            window._bulkManagerSelectedKeys.add(key);
+        });
+    } else if (preset === 'invert') {
+        rows.forEach(r => {
+            const key = r.getAttribute('data-key');
+            const cb = r.querySelector('.bulk-mgr-cb');
+            if (window._bulkManagerSelectedKeys.has(key)) {
+                window._bulkManagerSelectedKeys.delete(key);
+                if (cb) cb.checked = false;
+            } else {
+                window._bulkManagerSelectedKeys.add(key);
+                if (cb) cb.checked = true;
+            }
+        });
+    } else if (preset === 'active' || preset === 'left' || preset === 'banned') {
+        rows.forEach(r => {
+            const st = r.getAttribute('data-status');
+            const key = r.getAttribute('data-key');
+            const cb = r.querySelector('.bulk-mgr-cb');
+            if (st === preset) {
+                window._bulkManagerSelectedKeys.add(key);
+                if (cb) cb.checked = true;
+            } else {
+                window._bulkManagerSelectedKeys.delete(key);
+                if (cb) cb.checked = false;
+            }
+        });
+    }
+
+    const selectAllCb = document.getElementById('bulkManagerSelectAllCb');
+    if (selectAllCb) {
+        selectAllCb.checked = rows.length > 0 && rows.every(r => window._bulkManagerSelectedKeys.has(r.getAttribute('data-key')));
+    }
+
+    window.updateBulkManagerFooterCount();
+};
+
+window.updateBulkManagerFooterCount = () => {
+    const footerCount = document.getElementById('bulkManagerFooterCount');
+    const applyBtn = document.getElementById('bulkManagerApplyBtn');
+    const count = window._bulkManagerSelectedKeys ? window._bulkManagerSelectedKeys.size : 0;
+
+    if (footerCount) {
+        footerCount.textContent = `${count} Member${count === 1 ? '' : 's'} Selected`;
+    }
+    if (applyBtn) {
+        applyBtn.textContent = `⚡ Apply to ${count} Member${count === 1 ? '' : 's'}`;
+    }
+};
+
+window.updateBulkManagerMatchCount = () => {
+    const rawText = document.getElementById('bulkManagerPasteTextarea')?.value || '';
+    const previewEl = document.getElementById('bulkManagerPastePreview');
+    const footerCount = document.getElementById('bulkManagerFooterCount');
+    const applyBtn = document.getElementById('bulkManagerApplyBtn');
+
+    const { matched, unmatchedLines } = window.parsePastedMembersList(rawText, window._bulkManagerAllMembers || []);
+    window._bulkManagerMatchedFromPaste = matched;
+
+    if (previewEl) {
+        if (!rawText.trim()) {
+            previewEl.innerHTML = `Paste names or IDs above to see match preview.`;
+            previewEl.style.color = 'var(--text-muted)';
+        } else {
+            let msg = `✅ Matched <strong>${matched.length}</strong> member${matched.length === 1 ? '' : 's'} from pasted list.`;
+            if (unmatchedLines.length > 0) {
+                msg += ` <span style="color:#ef4444;">(⚠️ ${unmatchedLines.length} unrecognized: ${escapeHTML(unmatchedLines.slice(0, 3).join(', '))}${unmatchedLines.length > 3 ? '...' : ''})</span>`;
+            }
+            previewEl.innerHTML = msg;
+            previewEl.style.color = matched.length > 0 ? '#10b981' : '#ef4444';
+        }
+    }
+
+    if (footerCount) {
+        footerCount.textContent = `${matched.length} Member${matched.length === 1 ? '' : 's'} Matched`;
+    }
+    if (applyBtn) {
+        applyBtn.textContent = `⚡ Apply to ${matched.length} Member${matched.length === 1 ? '' : 's'}`;
+    }
+};
+
+window.submitBulkMembershipManager = async () => {
+    const isPasteTab = window._bulkManagerCurrentTab === 'paste';
+    let targetsToUpdate = [];
+
+    if (isPasteTab) {
+        targetsToUpdate = window._bulkManagerMatchedFromPaste || [];
+    } else {
+        const selectedKeys = window._bulkManagerSelectedKeys || new Set();
+        const allMembers = window._bulkManagerAllMembers || [];
+        targetsToUpdate = allMembers.filter(m => selectedKeys.has(m.gameId || m.name));
+    }
+
+    if (targetsToUpdate.length === 0) {
+        if (window.showToast) window.showToast("No members selected for bulk update", "warning");
+        return;
+    }
+
+    const selectedRadio = document.querySelector('input[name="bulkManagerTargetStatus"]:checked');
+    const targetStatus = selectedRadio ? selectedRadio.value : 'left';
+    const reason = document.getElementById('bulkManagerReasonInput')?.value?.trim() || '';
+
+    const statusLabels = {
+        active: '🟢 ACTIVE (Include in active events)',
+        left: '🚪 LEFT ALLIANCE (Exclude from events, preserve data)',
+        banned: '🚫 BANNED (Block & exclude from events)'
+    };
+
+    const confirmMsg = `⚡ BULK MEMBERSHIP STATUS UPDATE\n\nAre you sure you want to update ${targetsToUpdate.length} member${targetsToUpdate.length === 1 ? '' : 's'} to:\n👉 ${statusLabels[targetStatus] || targetStatus}?\n\nProceed?`;
+    const ok = await window.customConfirm(confirmMsg);
+    if (!ok) return;
+
+    const btn = document.getElementById('bulkManagerApplyBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Updating...'; }
+
+    try {
+        const success = await window.bulkUpdateMemberStatus(targetsToUpdate, targetStatus, reason);
+        if (success) {
+            const modal = document.getElementById('bulkMembershipManagerModal');
+            if (modal) modal.remove();
+        }
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '⚡ Apply Bulk Update'; }
+    }
+};
+
 const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbzEDRKqYLW05dris_vyxF-SZEH5917Saa5eRieag0n_gbJeWj3Qo_Zvgch94hBg1tE/exec';
 const VERCEL_API_BASE = 'https://wos-vercel-proxy.vercel.app/api';
 const VERIFY_PROXY_URL = `${VERCEL_API_BASE}/verify`; // Fallback / secondary proxy
@@ -23696,6 +24533,10 @@ const views = {
                 subEl.textContent = `${rows.length} total chief(s) • ${countMains} mains • ${countAlts} linked alt(s) • ${countClaimed} registered user(s) • ${countUnclaimed} unclaimed roster`;
             }
         }
+
+        if (typeof window.updateAdminBulkActionToolbar === 'function') {
+            window.updateAdminBulkActionToolbar();
+        }
     };
 
     window.sortAdminUsersList = () => {
@@ -25712,6 +26553,11 @@ const views = {
                       <option value="gid_asc">🔢 Game ID (Asc)</option>
                     </select>
 
+                    <!-- Bulk Manage Status Button -->
+                    <button onclick="window.openBulkMembershipManagerModal()" style="background:rgba(6,182,212,0.14); color:#06b6d4; border:1px solid rgba(6,182,212,0.35); padding:9px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s; white-space:nowrap; flex-shrink:0; display:inline-flex; align-items:center; gap:5px;" onmouseover="this.style.background='rgba(6,182,212,0.25)'" onmouseout="this.style.background='rgba(6,182,212,0.14)'" title="Open interactive Bulk Membership Status Manager & Paste Importer">
+                      ⚡ Bulk Manage Status
+                    </button>
+
                     <!-- Copy Unclaimed Button -->
                     <button onclick="window.copyUnclaimedRosterList()" style="background:rgba(239,68,68,0.12); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:9px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s; white-space:nowrap; flex-shrink:0;" onmouseover="this.style.background='rgba(239,68,68,0.2)'" onmouseout="this.style.background='rgba(239,68,68,0.12)'" title="Copy all unclaimed alliance roster members">
                       📋 Copy Unclaimed (${unclaimedCount})
@@ -25730,6 +26576,9 @@ const views = {
               <table style="width:100%; border-collapse:collapse; text-align:left;">
                 <thead>
                   <tr style="border-bottom:2px solid var(--border); color:var(--text-muted); font-size:12px; text-transform:uppercase;">
+                    <th style="width:36px; padding:12px 6px; text-align:center;">
+                      <input type="checkbox" id="adminUserSelectAllCheckbox" onchange="window.toggleSelectAllAdminUsers(this.checked)" title="Select all visible members">
+                    </th>
                     <th style="padding:12px 10px;">Chief & ID</th>
                     <th style="padding:12px 10px;">Roster & 30d Sync</th>
                     <th style="padding:12px 10px;">Email & Signup Date</th>
@@ -25858,6 +26707,10 @@ const views = {
               data-created-ms="${createdMs}"
               style="border-bottom:1px solid var(--border); transition:0.2s; ${memStatus === 'left' ? 'opacity:0.75; background:rgba(245,158,11,0.03);' : (memStatus === 'banned' ? 'opacity:0.65; background:rgba(239,68,68,0.04);' : '')}">
             
+            <td style="padding:12px 6px; text-align:center;">
+              <input type="checkbox" class="admin-user-select-checkbox" data-name="${escapeHTML(cName)}" data-gid="${escapeHTML(uGidStr)}" data-uid="${escapeHTML(uid)}" data-is-alt="false" onchange="window.toggleSelectAdminUser(this)">
+            </td>
+
             <td style="padding:12px 10px;">
               <div style="display:flex; align-items:center; gap:12px;">
                 <div style="width:40px; height:40px; border-radius:50%; overflow:hidden; background:var(--card-bg); flex-shrink:0; border:2px solid ${memStatus === 'left' ? '#f59e0b' : (memStatus === 'banned' ? '#ef4444' : 'var(--accent)')}; display:flex; align-items:center; justify-content:center;">
@@ -26003,6 +26856,10 @@ const views = {
                   data-created-ms="${createdMs}"
                   style="border-bottom:1px solid rgba(255,255,255,0.05); background:rgba(30,41,59,0.35); ${altMemStatus === 'left' ? 'opacity:0.75;' : (altMemStatus === 'banned' ? 'opacity:0.65;' : '')}">
                 
+                <td style="padding:10px 6px; text-align:center;">
+                  <input type="checkbox" class="admin-user-select-checkbox" data-name="${escapeHTML(altName)}" data-gid="${escapeHTML(altGidStr)}" data-uid="${escapeHTML(uid)}" data-is-alt="true" onchange="window.toggleSelectAdminUser(this)">
+                </td>
+
                 <td style="padding:10px 10px 10px 30px;">
                   <div style="display:flex; align-items:center; gap:10px;">
                     <span style="color:var(--text-muted); font-size:16px;">↳</span>
@@ -26124,6 +26981,10 @@ const views = {
                 data-created-ms="0"
                 style="border-bottom:1px solid var(--border); background:rgba(239,68,68,0.02); ${unclaimMemStatus === 'left' ? 'opacity:0.75;' : (unclaimMemStatus === 'banned' ? 'opacity:0.65;' : '')}">
               
+              <td style="padding:12px 6px; text-align:center;">
+                <input type="checkbox" class="admin-user-select-checkbox" data-name="${escapeHTML(uName)}" data-gid="${escapeHTML(uGid.toString())}" data-uid="" data-is-alt="false" onchange="window.toggleSelectAdminUser(this)">
+              </td>
+
               <td style="padding:12px 10px;">
                 <div style="display:flex; align-items:center; gap:12px;">
                   <div style="width:40px; height:40px; border-radius:50%; overflow:hidden; background:rgba(239,68,68,0.15); flex-shrink:0; border:2px solid rgba(239,68,68,0.3); display:flex; align-items:center; justify-content:center;">
@@ -26193,7 +27054,33 @@ const views = {
         }
       }
       
-      html += `</tbody></table></div></div>
+      html += `</tbody></table></div>
+            
+            <!-- Floating Bulk Action Toolbar -->
+            <div id="adminBulkFloatingToolbar" style="display:none; position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:rgba(15,23,42,0.95); backdrop-filter:blur(14px); border:1.5px solid var(--accent); border-radius:14px; padding:12px 20px; box-shadow:0 10px 35px rgba(0,0,0,0.8), 0 0 20px rgba(6,182,212,0.25); z-index:9990; align-items:center; gap:12px; flex-wrap:wrap; animation:slideUp 0.25s ease;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:18px;">🛡️</span>
+                <span id="adminBulkSelectedCount" style="font-weight:800; font-size:13px; color:#fff;">0 Members Selected</span>
+              </div>
+              <div style="height:20px; width:1px; background:rgba(255,255,255,0.2);"></div>
+              <button onclick="window.executeTableBulkStatusChange('active')" style="background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:7px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;" onmouseover="this.style.background='rgba(16,185,129,0.35)'" onmouseout="this.style.background='rgba(16,185,129,0.2)'">
+                🟢 Set Active
+              </button>
+              <button onclick="window.executeTableBulkStatusChange('left')" style="background:rgba(245,158,11,0.2); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); padding:7px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;" onmouseover="this.style.background='rgba(245,158,11,0.35)'" onmouseout="this.style.background='rgba(245,158,11,0.2)'">
+                🚪 Set Left Alliance
+              </button>
+              <button onclick="window.executeTableBulkStatusChange('banned')" style="background:rgba(239,68,68,0.2); color:#ef4444; border:1px solid rgba(239,68,68,0.4); padding:7px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.35)'" onmouseout="this.style.background='rgba(239,68,68,0.2)'">
+                🚫 Ban
+              </button>
+              <button onclick="window.openBulkStatusWithReasonModal()" style="background:rgba(6,182,212,0.2); color:#06b6d4; border:1px solid rgba(6,182,212,0.4); padding:7px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.35)'" onmouseout="this.style.background='rgba(6,182,212,0.2)'">
+                🛡️ Status & Reason...
+              </button>
+              <button onclick="window.clearAdminUserSelection()" style="background:transparent; color:var(--text-muted); border:1px solid var(--border); padding:7px 12px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer;" title="Clear all selections">
+                ✕ Clear
+              </button>
+            </div>
+            
+            </div></div>
           </div>
           `;
       
