@@ -1,12 +1,12 @@
 {
   "name": "wos-public-website",
   "private": true,
-  "version": "3.2.5",
+  "version": "3.2.6",
   "type": "module",
   "scripts": {
     "dev": "vite --host",
     "start": "vite",
-    "build": "node tools/check_window_bindings.cjs && node tools/test_all_features.cjs && node tools/test_alt_isolation.cjs && node tools/test_bell_and_ticket_sync.cjs && node tools/test_event_reminders_and_timer.cjs && node tools/test_championship_archive.cjs && node tools/test_membership_status.cjs && node tools/test_bulk_membership.cjs && node tools/test_alt_collapsible.cjs && node tools/test_alt_removal_on_departure.cjs && vite build",
+    "build": "node tools/check_window_bindings.cjs && node tools/test_all_features.cjs && node tools/test_alt_isolation.cjs && node tools/test_bell_and_ticket_sync.cjs && node tools/test_event_reminders_and_timer.cjs && node tools/test_championship_archive.cjs && node tools/test_membership_status.cjs && node tools/test_bulk_membership.cjs && node tools/test_alt_collapsible.cjs && node tools/test_alt_removal_on_departure.cjs && node tools/test_schedule_and_bell_reminders.cjs && vite build",
     "preview": "vite preview",
     "emergency-sync": "node manual_sync.cjs"
   },

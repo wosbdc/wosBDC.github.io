@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.2.6] - 2026-09-03
+- 🐻 **Bear Trap Sync**: Active Bear Trap resolved and listed today.
+- 🔔 **Bell Event Alerts**: 1-click reminders directly in notification bell.
+- 📅 **Live Schedule Grid**: Unified weekly schedule syncs directly from sheets.
+- ⏰ **Dynamic Event Countdown**: Real-time ticker tracks today's alliance events.
+
 ## [3.2.5] - 2026-09-01
 - 🚪 **Alt Departure Unlink**: Departed or banned alts auto-removed from holder page.
 - 🚫 **Account Hub Cleaner**: Only active member alts appear on character cards.

@@ -16729,6 +16729,107 @@ window.openAllianceAlertsModal = async () => {
       });
     });
 
+    // A3.5. Google Sheets / Real-time Alliance Scheduled Events (Bear Trap, Castle Battle, Crazy Joe)
+    const unifiedEvents = (typeof window.getUnifiedScheduleEvents === 'function') ? window.getUnifiedScheduleEvents() : [];
+    const nowMs = Date.now();
+    const todayStr = new Date().toDateString();
+
+    unifiedEvents.forEach(ev => {
+      if (!ev || !ev.start) return;
+      const startMs = ev.start.getTime();
+      const endMs = ev.end.getTime();
+
+      // Only show events that are today, currently live, or starting within the next 24 hours
+      const isToday = ev.start.toDateString() === todayStr;
+      const isLive = nowMs >= startMs && nowMs <= endMs;
+      const isUpcoming24h = startMs > nowMs && (startMs - nowMs) <= 24 * 3600 * 1000;
+      if (!isToday && !isLive && !isUpcoming24h) return;
+
+      // Avoid duplicating if staff already posted a manual broadcastAlert for this exact event
+      const alreadyInBroadcast = countdownAlerts.some(ca => {
+        const caTitle = (ca.title || '').toLowerCase();
+        const evLower = ev.name.toLowerCase();
+        return (caTitle.includes(evLower) || evLower.includes(caTitle)) && Math.abs(Number(ca.targetTimestamp) - startMs) < 3600000;
+      });
+      if (alreadyInBroadcast) return;
+
+      const borderColor = isLive ? '#10b981' : '#f59e0b';
+      const leftStripeColor = isLive ? '#10b981' : '#f59e0b';
+      const isBearTrap = ev.name.includes('Bear Trap') || ev.name.includes('🪤') || ev.name.includes('🐻');
+      const catName = isBearTrap ? 'BEAR TRAP' : (ev.name.toUpperCase());
+
+      const reminderSet = (typeof window.isEventReminderSet === 'function') && window.isEventReminderSet(ev.name, startMs);
+
+      let activeWarningMins = 15;
+      if (reminderSet && typeof window.getEventReminders === 'function') {
+        const foundRem = window.getEventReminders().find(r => r.eventName === ev.name && r.exactStartTime === startMs);
+        if (foundRem) activeWarningMins = foundRem.warningMins;
+      }
+
+      const cardHtml = `
+        <div class="bell-stream-card" data-category="timers" style="background:linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.9)); border:1px solid ${borderColor}; border-left:4.5px solid ${leftStripeColor}; border-radius:12px; padding:12px 14px; box-shadow:0 6px 18px rgba(0,0,0,0.4); display:flex; flex-direction:column; gap:8px; position:relative;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+              <span style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.35); padding:2px 8px; border-radius:10px; font-size:10.5px; font-weight:800; display:inline-flex; align-items:center; gap:4px; text-transform:uppercase; letter-spacing:0.5px;">
+                ${ev.emoji} ${catName}
+              </span>
+              ${isLive ? `<span style="background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:1px 7px; border-radius:10px; font-size:10px; font-weight:800; animation:pulse 1.5s infinite;">🟢 LIVE NOW</span>` : ''}
+              ${!isLive ? `<span style="background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.35); padding:1px 7px; border-radius:10px; font-size:10px; font-weight:bold;">📅 SCHEDULED</span>` : ''}
+            </div>
+            <div style="font-size:11px; color:var(--text-muted);">
+              ${ev.dateLabel || (ev.start.toLocaleDateString([], { weekday:'short', month:'short', day:'numeric' }))}
+            </div>
+          </div>
+
+          <div style="font-weight:800; font-size:15px; color:#fff; line-height:1.3; display:flex; align-items:center; gap:8px;">
+            <span>${ev.emoji} ${window.escapeHTML(ev.name)}</span>
+          </div>
+
+          <!-- Live Ticking Countdown Box -->
+          <div class="bell-countdown-ticker-el" 
+               data-target-ts="${startMs}" 
+               data-end-ts="${endMs}" 
+               data-mode="1hour"
+               data-recurrence="none"
+               style="background:rgba(15,23,42,0.85); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:8px 12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-top:2px;">
+            <div style="font-size:12.5px; font-weight:bold; color:#fff;">⏳ Calculating countdown...</div>
+          </div>
+
+          <!-- Time info & quick reminder buttons -->
+          <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.08); padding-top:8px; margin-top:2px; flex-wrap:wrap; gap:8px;">
+            <div style="font-size:12px; color:var(--text-muted); display:flex; align-items:center; gap:6px;">
+              <span>🕒</span>
+              <span><strong>${ev.pdtVal ? ev.pdtVal + ' PDT / ' : ''}${ev.utcDisplay}</strong> (${ev.start.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })} local)</span>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+              ${reminderSet ? `
+                <span style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:4px 10px; border-radius:6px; font-size:11.5px; font-weight:bold; display:inline-flex; align-items:center; gap:4px;">
+                  ✓ Reminder Set (${activeWarningMins}m)
+                </span>
+                <button type="button" onclick="event.stopPropagation(); window.cancelEventReminder('rem_${startMs}_${ev.name.replace(/[^a-zA-Z0-9]/g, '_')}'); window.openAllianceAlertsModal();" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.35); color:#ef4444; padding:4px 9px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
+                  Cancel
+                </button>
+              ` : `
+                <button type="button" onclick="event.stopPropagation(); window.setEventReminder('${window.escapeHTML(ev.name)}', ${startMs}, 15, '${ev.emoji}'); window.openAllianceAlertsModal();" style="background:linear-gradient(135deg, #f59e0b, #d97706); color:#fff; border:none; padding:5px 12px; border-radius:6px; font-size:11.5px; font-weight:bold; cursor:pointer; box-shadow:0 2px 8px rgba(245,158,11,0.3); display:inline-flex; align-items:center; gap:4px;">
+                  🔔 Remind 15m Before ⭐
+                </button>
+                <button type="button" onclick="event.stopPropagation(); window.openEventReminderModal('${window.escapeHTML(ev.name)}', ${startMs}, '${ev.emoji}', '${window.escapeHTML(ev.dateStr || '')}', '${window.escapeHTML(ev.utcDisplay || '')}');" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#cbd5e1; padding:5px 9px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;" title="Choose custom reminder time">
+                  ⚙️ Options
+                </button>
+              `}
+            </div>
+          </div>
+        </div>
+      `;
+
+      streamItems.push({
+        category: 'timers',
+        timestamp: startMs,
+        html: cardHtml
+      });
+    });
+
     // B. Token Sync Health Alerts
     tokenAlerts.forEach(t => {
       if (t.isMain) {
@@ -21701,14 +21802,21 @@ window.buildLiveGatekeeperTelemetry = async function() {
     .filter(c => c.name && c.name !== 'Chief' && !c.name.toLowerCase().includes('agent'))
     .sort((a, b) => b.timestamp - a.timestamp);
 
-  const topSignups = (sortedSignups.length > 0 ? sortedSignups : allChiefs).slice(0, 3);
-  const signupsLines = topSignups.map(c => {
-    const cname = c.name;
-    const icon = cname.toLowerCase().includes('brian') ? '👑' : (cname.toLowerCase().includes('thadwarf') ? '⚔️' : '🛡️');
-    const fLv = c.furnaceLevel ? ` (Lv ${c.furnaceLevel})` : '';
-    return `• ${icon} **${cname}**${fLv}`;
-  });
-  const signupsText = signupsLines.length > 0 ? signupsLines.join('\n') : "• 👑 **BrianDCox**\n• ⚔️ **thadwarf**\n• 🛡️ **Ice Mouse**";
+  const thirtyDaysAgo = Date.now() - (30 * 86400000);
+  const recentSignupsList = sortedSignups.filter(c => c.timestamp >= thirtyDaysAgo);
+  let signupsText = '';
+  if (recentSignupsList.length > 0) {
+    const lines = recentSignupsList.slice(0, 3).map(c => {
+      const cname = c.name;
+      const icon = cname.toLowerCase().includes('brian') ? '👑' : (cname.toLowerCase().includes('thadwarf') ? '⚔️' : '🛡️');
+      const dStr = c.timestamp ? new Date(c.timestamp).toUTCString().slice(8, 16) : '';
+      const datePart = dStr ? ` *(${dStr})*` : '';
+      return `• ${icon} **${cname}**${datePart}`;
+    });
+    signupsText = `👥 **RECENT MEMBER SIGNUPS (+${recentSignupsList.length})**\n` + lines.join('\n');
+  } else {
+    signupsText = `👥 **ALLIANCE MEMBER STABILITY**\n• 🛡️ **Status:** Roster stable (0 new signups in past 30 days)\n• 👑 **Alliance Core:** ${totalMembers} verified Chiefs on roster`;
+  }
 
   const activeCodes = Object.values(history).filter(c => c && c.status === 'active');
   const latestCodeObj = activeCodes.length > 0 ? activeCodes[0] : null;
@@ -21718,17 +21826,33 @@ window.buildLiveGatekeeperTelemetry = async function() {
 
   const maintAudited = maintData.accountsAudited ?? totalMembers;
   const maintRefreshed = maintData.tokensRefreshed ?? activeTokens;
-  let maintLastRunStr = '2:00 AM UTC (Last Night)';
+  const maintUpgrades = maintData.upgrades || [];
+  const maintUpgradesCount = maintData.upgradesCount !== undefined ? maintData.upgradesCount : maintUpgrades.length;
+  let maintLastRunStr = 'Live Sync Active';
   if (maintData.lastRun) {
     const ld = new Date(maintData.lastRun);
     maintLastRunStr = `${ld.toLocaleDateString([], { month: 'short', day: 'numeric' })} • ${ld.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
   }
 
+  let defaultUpgrades = '';
+  if (maintUpgrades.length > 0) {
+    const upgLines = maintUpgrades.map(u => {
+      const cname = u.name || 'Chief';
+      const icon = cname.toLowerCase().includes('brian') ? '👑' : (cname.toLowerCase().includes('thadwarf') ? '⚔️' : '🛡️');
+      return `• ${icon} **${cname}:** ${u.oldLevel || 'Unknown'} ➔ **${u.newLevel || 'Unknown'}**`;
+    });
+    upgLines.push('• ⚡ *Auto-synced to Gatekeeper Roster & Google Sheets*');
+    defaultUpgrades = `🔥 **FURNACE UPGRADES DETECTED (+${maintUpgradesCount})**\n` + upgLines.join('\n');
+  } else {
+    defaultUpgrades = `🔥 **FURNACE UPGRADES & PROGRESSION**\n• 🛡️ **Status:** All ${maintAudited} Chief furnaces verified and up-to-date.\n• ⚡ **Last Sweep:** 0 new upgrades detected in latest audit.`;
+  }
+
   const defaultSectionTexts = {
     roster: `🛡️ **ALLIANCE ROSTER & VERIFICATION**\n• 👥 **Total Members:** ${totalMembers} Chiefs\n• 📈 **New Joins Today:** +${newToday}  |  **Past 7 Days:** +${new7d}\n• 🔒 **Unclaimed Ratio:** ${unclaimed}/${totalMembers} (${activeTokens} Active 30-Day Tokens)`,
-    signups: `👥 **RECENT MEMBER SIGNUPS**\n${signupsText}`,
+    upgrades: defaultUpgrades,
+    signups: signupsText.startsWith('👥') ? signupsText : `👥 **RECENT MEMBER SIGNUPS**\n${signupsText}`,
     perks: `🎁 **ACTIVE ALLIANCE PROMO PERKS**\n• 💎 **Active Code:** ${codeStr}\n• ✅ **Claim Delivery:** ${claimsStr}\n• 📬 **Notice:** Check your in-game mailbox to collect rewards!`,
-    maintenance: `🌙 **NIGHTLY ACCOUNT MAINTENANCE**\n• 🟢 **Status:** 2:00 AM UTC Audit Active & Scheduled\n• 🔄 **Last Audit:** ${maintLastRunStr} (${maintAudited} Audited, ${maintRefreshed} Refreshed)\n• ⚡ **Sync State:** Google Sheets & Firebase Two-Way Verified`,
+    maintenance: `🌙 **NIGHTLY ACCOUNT MAINTENANCE**\n• 🟢 **Status:** 6-Hr Auto-Audit Active & Scheduled\n• 🔄 **Last Audit:** ${maintLastRunStr} (${maintAudited} Audited, ${maintUpgradesCount} Upgrades)\n• ⚡ **Sync State:** Google Sheets & Firebase Two-Way Verified`,
     bot: `🤖 **AUTO-BOT TELEMETRY**\n• 🟢 **Status:** Active & Monitoring\n• ⏳ **Next Sweep:** In ~35 mins (Every 45m)`
   };
 
@@ -21784,6 +21908,7 @@ window.pushGatekeeperReportToDiscord = async function(btnEl = null, customPayloa
       const useManual = savedConfig.useManualTextOverrides === true;
 
       const sRoster = (useManual && savedConfig.customRosterText) ? savedConfig.customRosterText : def.roster;
+      const sUpgrades = (useManual && savedConfig.customUpgradesText) ? savedConfig.customUpgradesText : def.upgrades;
       const sSignups = (useManual && savedConfig.customSignupsText) ? savedConfig.customSignupsText : def.signups;
       const sPerks = (useManual && savedConfig.customPerksText) ? savedConfig.customPerksText : def.perks;
       const sMaint = (useManual && savedConfig.customMaintenanceText) ? savedConfig.customMaintenanceText : def.maintenance;
@@ -21795,6 +21920,9 @@ window.pushGatekeeperReportToDiscord = async function(btnEl = null, customPayloa
       }
       if (savedConfig.incRoster !== false) {
         sections.push(sRoster);
+      }
+      if (savedConfig.incUpgrades !== false) {
+        sections.push(sUpgrades);
       }
       if (savedConfig.incSignups !== false) {
         sections.push(sSignups);
@@ -21921,6 +22049,7 @@ window.openGatekeeperReportEditorModal = async function() {
     title: savedConfig.title || "🏰 ALLIANCE GATEKEEPER REPORT",
     announcement: savedConfig.announcement || "",
     incRoster: savedConfig.incRoster !== false,
+    incUpgrades: savedConfig.incUpgrades !== false,
     incSignups: savedConfig.incSignups !== false,
     incPerks: savedConfig.incPerks !== false,
     incMaintenance: savedConfig.incMaintenance !== false,
@@ -21934,6 +22063,7 @@ window.openGatekeeperReportEditorModal = async function() {
   };
 
   const sRoster = (useManual && savedConfig.customRosterText) ? savedConfig.customRosterText : def.roster;
+  const sUpgrades = (useManual && savedConfig.customUpgradesText) ? savedConfig.customUpgradesText : def.upgrades;
   const sSignups = (useManual && savedConfig.customSignupsText) ? savedConfig.customSignupsText : def.signups;
   const sPerks = (useManual && savedConfig.customPerksText) ? savedConfig.customPerksText : def.perks;
   const sMaint = (useManual && savedConfig.customMaintenanceText) ? savedConfig.customMaintenanceText : def.maintenance;
@@ -22834,9 +22964,36 @@ window.initScheduleRealtimeSync = () => {
       if (snap.exists()) {
         window._cachedScheduleLive = snap.val();
         if (typeof window.updateNewMemberBadge === 'function') window.updateNewMemberBadge();
+        if (typeof window.updateGlobalTimers === 'function') window.updateGlobalTimers();
       }
     }, (err) => {
       console.warn("Schedule realtime sync error:", err);
+    });
+
+    // Realtime sync for weekly schedule grid (sheets/schedule)
+    const sheetSchedRef = ref(db, 'sheets/schedule');
+    onValue(sheetSchedRef, (snap) => {
+      if (snap.exists()) {
+        if (!window.liveData) window.liveData = {};
+        window.liveData['schedule'] = snap.val();
+        if (typeof window.updateNewMemberBadge === 'function') window.updateNewMemberBadge();
+        if (typeof window.updateGlobalTimers === 'function') window.updateGlobalTimers();
+      }
+    }, (err) => {
+      console.warn("sheets/schedule realtime sync error:", err);
+    });
+
+    // Realtime sync for Schedule data (sheets/Schedule data)
+    const sheetSchedDataRef = ref(db, 'sheets/Schedule data');
+    onValue(sheetSchedDataRef, (snap) => {
+      if (snap.exists()) {
+        if (!window.liveData) window.liveData = {};
+        window.liveData['Schedule data'] = snap.val();
+        if (typeof window.updateNewMemberBadge === 'function') window.updateNewMemberBadge();
+        if (typeof window.updateGlobalTimers === 'function') window.updateGlobalTimers();
+      }
+    }, (err) => {
+      console.warn("sheets/Schedule data realtime sync error:", err);
     });
   } catch(e) {
     console.warn("Failed to attach schedule realtime listener:", e);
@@ -22845,26 +23002,139 @@ window.initScheduleRealtimeSync = () => {
 
 window.initScheduleRealtimeSync();
 
+// Standard alliance event times & durations lookup map
+window.STANDARD_EVENT_TIMES_MAP = {
+  'bear trap': { startUtc: '16:00', startPdt: '9:00 AM', durationMs: 30 * 60000, emoji: '🪤' },
+  'crazy joe': { startUtc: '16:00', startPdt: '9:00 AM', durationMs: 30 * 60000, emoji: '🔥' },
+  'castle': { startUtc: '12:00', startPdt: '5:00 AM', durationMs: 4 * 3600000, emoji: '🏰' },
+  "shield's up 8h": { startUtc: '17:00', startPdt: '10:00 AM', durationMs: 8 * 3600000, emoji: '🛡️' },
+  'shield': { startUtc: '09:30', startPdt: '2:30 AM', durationMs: 7.5 * 3600000, emoji: '🛡️' },
+  'brothers in arms': { startUtc: '00:00', startPdt: '5:00 PM', durationMs: 24 * 3600000, emoji: '⚔️' },
+  'foundry': { startUtc: '14:00', startPdt: '7:00 AM', durationMs: 2 * 3600000, emoji: '🏭' },
+  'canyon': { startUtc: '19:00', startPdt: '12:00 PM', durationMs: 2 * 3600000, emoji: '🏜️' },
+  'polar terrors': { startUtc: '16:30', startPdt: '9:30 AM', durationMs: 30 * 60000, emoji: '❄️' },
+  'mercenary prestige': { startUtc: '16:30', startPdt: '9:30 AM', durationMs: 30 * 60000, emoji: '🎖️' }
+};
+
 window.getUnifiedScheduleEvents = () => {
   const events = [];
+  const seenKeys = new Set();
   const now = new Date();
-  
-  // 1. Check liveData cached from Firebase 'schedule_live' or Google Sheets 'WhiteOut Survival'
-  let liveSched = window._cachedScheduleLive || (window.liveData ? window.liveData['schedule_live_parsed'] : null);
-  
-  if (!liveSched) {
-    const sheetData = window.liveData ? window.liveData['WhiteOut Survival'] : null;
-    if (sheetData && Array.isArray(sheetData) && typeof window.parseSheetToScheduleLiveData === 'function') {
-      liveSched = window.parseSheetToScheduleLiveData(sheetData);
+
+  function addEvent(name, start, end, durationMs, utcDisplay, pdtVal, emoji, dateStr, dateLabel) {
+    if (!name || !start || isNaN(start.getTime())) return;
+    const cleanName = String(name).trim();
+    if (!cleanName || cleanName.toLowerCase().includes("event's") || cleanName.toLowerCase() === 'rewards') return;
+
+    // Deduplicate by normalized name and start hour
+    const hourBucket = Math.floor(start.getTime() / 3600000);
+    const key = cleanName.toLowerCase().replace(/[^a-z0-9]/g, '') + '_' + hourBucket;
+    if (seenKeys.has(key)) return;
+    seenKeys.add(key);
+
+    const isBearTrap = cleanName.includes('Bear Trap') || cleanName.includes('🪤') || cleanName.includes('🐻');
+    const isJoe = cleanName.includes('Crazy Joe') || cleanName.includes('🔥');
+    const isCastle = cleanName.includes('Castle') || cleanName.includes('🏰');
+    const isBia = cleanName.includes('Brothers') || cleanName.includes('⚔️');
+    const finalEmoji = emoji || (isBearTrap ? '🪤' : (isJoe ? '🔥' : (isCastle ? '🏰' : (isBia ? '⚔️' : '✨'))));
+
+    events.push({
+      id: 'ev_' + start.getTime() + '_' + cleanName.replace(/[^a-zA-Z0-9]/g, '_'),
+      name: cleanName,
+      start: start,
+      end: end || new Date(start.getTime() + (durationMs || 3600000)),
+      durationMs: durationMs || 3600000,
+      utcDisplay: utcDisplay || `${String(start.getUTCHours()).padStart(2, '0')}:${String(start.getUTCMinutes()).padStart(2, '0')} UTC`,
+      pdtVal: pdtVal || '',
+      emoji: finalEmoji,
+      dateStr: dateStr || `${start.getUTCMonth() + 1}/${start.getUTCDate()}`,
+      dateLabel: dateLabel || ''
+    });
+  }
+
+  // 1. Parse Weekly Schedule Grid (sheets/schedule)
+  const schedGrid = (window.liveData && window.liveData['schedule']) ? window.liveData['schedule'] : null;
+  if (schedGrid && Array.isArray(schedGrid) && schedGrid.length >= 3) {
+    const headers = schedGrid[2];
+    if (Array.isArray(headers)) {
+      for (let c = 1; c < headers.length; c++) {
+        const header = String(headers[c] || '').trim();
+        if (!header) continue;
+
+        let colDate = null;
+        const md = header.match(/(\d{1,2})\/(\d{1,2})/);
+        if (md) {
+          colDate = new Date(Date.UTC(now.getUTCFullYear(), parseInt(md[1]) - 1, parseInt(md[2])));
+        } else if (header.toLowerCase().includes('today')) {
+          colDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+        } else if (header.toLowerCase().includes('tomorrow')) {
+          colDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
+        }
+
+        if (!colDate) continue;
+
+        for (let r = 4; r <= 13; r++) {
+          if (!schedGrid[r]) continue;
+          const evName = String(schedGrid[r][c] || '').trim();
+          if (!evName || evName.toLowerCase() === 'events' || evName.toLowerCase() === 'rewards') continue;
+
+          let meta = { startUtc: '16:00', startPdt: '9:00 AM', durationMs: 3600000, emoji: '✨' };
+          const lower = evName.toLowerCase();
+          for (const [k, t] of Object.entries(window.STANDARD_EVENT_TIMES_MAP)) {
+            if (lower.includes(k)) { meta = t; break; }
+          }
+
+          const [h, m] = meta.startUtc.split(':').map(Number);
+          const start = new Date(colDate);
+          start.setUTCHours(h, m, 0, 0);
+          const end = new Date(start.getTime() + meta.durationMs);
+
+          addEvent(evName, start, end, meta.durationMs, meta.startUtc + ' UTC', meta.startPdt, meta.emoji, `${colDate.getUTCMonth() + 1}/${colDate.getUTCDate()}`, header);
+        }
+      }
     }
+  }
+
+  // 2. Parse Timed Events Table (sheets/Schedule data)
+  const schedData = (window.liveData && window.liveData['Schedule data']) ? window.liveData['Schedule data'] : null;
+  if (schedData && Array.isArray(schedData)) {
+    schedData.forEach((row, idx) => {
+      if (idx === 0 || !Array.isArray(row)) return;
+      const title = String(row[2] || '').trim();
+      const startDateVal = String(row[3] || '').trim();
+      const startTimeVal = String(row[5] || '').trim();
+      const endTimeVal = String(row[6] || '').trim();
+      if (!title || !startDateVal) return;
+
+      const eventDate = window.parseScheduleEventDate(startDateVal);
+      if (!eventDate) return;
+
+      const startT = window.parseScheduleEventTime(startTimeVal, startTimeVal) || { h: 16, m: 0 };
+      const endT = window.parseScheduleEventTime(endTimeVal, endTimeVal);
+
+      const exactStart = new Date(eventDate);
+      exactStart.setUTCHours(startT.h, startT.m, 0, 0);
+
+      let durationMs = 3600000;
+      if (endT) {
+        const exactEnd = new Date(eventDate);
+        exactEnd.setUTCHours(endT.h, endT.m, 0, 0);
+        if (exactEnd > exactStart) durationMs = exactEnd.getTime() - exactStart.getTime();
+      }
+
+      addEvent(title, exactStart, new Date(exactStart.getTime() + durationMs), durationMs, `${String(startT.h).padStart(2,'0')}:${String(startT.m).padStart(2,'0')} UTC`, startTimeVal, '✨', startDateVal);
+    });
+  }
+
+  // 3. Parse Custom Manager Events from Firebase 'schedule_live' or Sheets 'WhiteOut Survival'
+  let liveSched = window._cachedScheduleLive || (window.liveData ? window.liveData['schedule_live_parsed'] : null);
+  if (!liveSched && window.liveData && window.liveData['WhiteOut Survival'] && typeof window.parseSheetToScheduleLiveData === 'function') {
+    liveSched = window.parseSheetToScheduleLiveData(window.liveData['WhiteOut Survival']);
   }
 
   if (liveSched && Array.isArray(liveSched.events)) {
     liveSched.events.forEach(ev => {
       if (!ev || !ev.eventName) return;
-      const eventName = String(ev.eventName).trim();
-      if (!eventName || eventName.toLowerCase().includes("event's") || eventName.toLowerCase() === 'rewards') return;
-
       const eventDate = window.parseScheduleEventDate(ev.dateStr);
       if (!eventDate) return;
       const startT = window.parseScheduleEventTime(ev.utcStr, ev.pdtVal);
@@ -22873,38 +23143,76 @@ window.getUnifiedScheduleEvents = () => {
       const exactStart = new Date(eventDate);
       exactStart.setUTCHours(startT.h, startT.m, 0, 0);
 
-      let durationMs = 3600000; // 1h default
-      const nameLower = eventName.toLowerCase();
-      if (nameLower.includes('bear trap') || nameLower.includes('🪤') || nameLower.includes('🐻')) durationMs = 30 * 60 * 1000; // 30m
-      else if (nameLower.includes('brothers in arms') || nameLower.includes('k. e.') || nameLower.includes('ke') || nameLower.includes('svs')) durationMs = 24 * 3600 * 1000; // 24h
-      else if (nameLower.includes('castle') || nameLower.includes('sunfire')) durationMs = 4 * 3600 * 1000; // 4h
-      else if (nameLower.includes('foundry') || nameLower.includes('canyon')) durationMs = 2 * 3600 * 1000; // 2h
+      let durationMs = 3600000;
+      const nameLower = ev.eventName.toLowerCase();
+      if (nameLower.includes('bear trap') || nameLower.includes('🪤') || nameLower.includes('🐻')) durationMs = 30 * 60 * 1000;
+      else if (nameLower.includes('brothers in arms') || nameLower.includes('k. e.') || nameLower.includes('ke') || nameLower.includes('svs')) durationMs = 24 * 3600 * 1000;
+      else if (nameLower.includes('castle') || nameLower.includes('sunfire')) durationMs = 4 * 3600 * 1000;
+      else if (nameLower.includes('foundry') || nameLower.includes('canyon')) durationMs = 2 * 3600 * 1000;
       else if (nameLower.includes('shield')) durationMs = 8 * 3600 * 1000;
 
-      const exactEnd = new Date(exactStart.getTime() + durationMs);
-
-      const isBearTrap = eventName.includes('Bear Trap') || eventName.includes('🪤') || eventName.includes('🐻');
-      const isJoe = eventName.includes('Crazy Joe') || eventName.includes('🔥');
-      const isCastle = eventName.includes('Castle') || eventName.includes('🏰');
-      const isBia = eventName.includes('Brothers') || eventName.includes('⚔️');
-      const emoji = ev.emoji || (isBearTrap ? '🪤' : (isJoe ? '🔥' : (isCastle ? '🏰' : (isBia ? '⚔️' : '✨'))));
-
-      events.push({
-        id: ev.id || `ev_${exactStart.getTime()}_${eventName.replace(/\s+/g, '_')}`,
-        name: eventName,
-        dateStr: ev.dateStr,
-        utcStr: ev.utcStr,
-        pdtVal: ev.pdtVal,
-        emoji: emoji,
-        start: exactStart,
-        end: exactEnd,
-        durationMs: durationMs,
-        utcDisplay: `${String(startT.h).padStart(2, '0')}:${String(startT.m).padStart(2, '0')} UTC`
-      });
+      addEvent(ev.eventName, exactStart, new Date(exactStart.getTime() + durationMs), durationMs, `${String(startT.h).padStart(2,'0')}:${String(startT.m).padStart(2,'0')} UTC`, ev.pdtVal, ev.emoji, ev.dateStr);
     });
   }
 
+  // 4. Smart Bear Trap 48h Cycle Guarantee
+  // Anchor date: 8/20/2026 16:00 UTC. Bear Trap runs every 2 days.
+  const anchorTime = Date.UTC(2026, 7, 20, 16, 0, 0);
+  const todayUtcEventTime = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 16, 0, 0);
+  const diffDays = Math.round((todayUtcEventTime - anchorTime) / 86400000);
+  if (diffDays >= 0 && diffDays % 2 === 0) {
+    const todayBtStart = new Date(todayUtcEventTime);
+    const todayBtEnd = new Date(todayBtStart.getTime() + 30 * 60000);
+    addEvent('🐻‍❄️ Bear Trap  🪤', todayBtStart, todayBtEnd, 30 * 60000, '16:00 UTC', '9:00 AM', '🪤', `${now.getUTCMonth() + 1}/${now.getUTCDate()}`, 'Today');
+  }
+
+  // Sort chronologically
+  events.sort((a, b) => a.start.getTime() - b.start.getTime());
   return events;
+};
+
+// Extract Rewards Events for today or specified date
+window.getUnifiedScheduleRewards = (targetDate = new Date()) => {
+  const rewards = [];
+  const schedGrid = (window.liveData && window.liveData['schedule']) ? window.liveData['schedule'] : null;
+  if (!schedGrid || !Array.isArray(schedGrid) || schedGrid.length < 15) return rewards;
+
+  const headers = schedGrid[2];
+  if (!Array.isArray(headers)) return rewards;
+
+  const targetM = targetDate.getUTCMonth() + 1;
+  const targetD = targetDate.getUTCDate();
+  let colIdx = -1;
+
+  for (let c = 1; c < headers.length; c++) {
+    const h = String(headers[c] || '').trim();
+    const md = h.match(/(\d{1,2})\/(\d{1,2})/);
+    if (md && parseInt(md[1]) === targetM && parseInt(md[2]) === targetD) {
+      colIdx = c;
+      break;
+    }
+  }
+
+  if (colIdx === -1) {
+    // Fallback: search for "Today"
+    for (let c = 1; c < headers.length; c++) {
+      if (String(headers[c] || '').toLowerCase().includes('today')) {
+        colIdx = c;
+        break;
+      }
+    }
+  }
+
+  if (colIdx !== -1) {
+    for (let r = 15; r < schedGrid.length; r++) {
+      const val = String(schedGrid[r][colIdx] || '').trim();
+      if (val && val.toLowerCase() !== 'rewards events' && val.toLowerCase() !== 'rewards' && !rewards.includes(val)) {
+        rewards.push(val);
+      }
+    }
+  }
+
+  return rewards;
 };
 
 // ==========================================
@@ -35150,9 +35458,10 @@ window.resetBearTrapEvent = async () => {
 
     renderLoading('Loading Schedule');
     try {
-      const [weeklyData, todayData] = await Promise.all([
+      const [weeklyData, todayData, scheduleDataSheet] = await Promise.all([
         fetchSheet('schedule').catch(() => null),
-        fetchSheet('WhiteOut Survival').catch(() => null)
+        fetchSheet('WhiteOut Survival').catch(() => null),
+        fetchSheet('Schedule data').catch(() => null)
       ]);
       const liveSched = (todayData && Array.isArray(todayData) && todayData.length > 0)
         ? window.parseSheetToScheduleLiveData(todayData)
@@ -35196,171 +35505,52 @@ window.resetBearTrapEvent = async () => {
         const contentDiv = document.getElementById('schedule-content');
 
         if (currentTab === 'today') {
-           const data = todayData;
            const now = new Date();
            const todayStr = now.toDateString();
            let todayEvents = [];
            let upcomingEvents = [];
            let rewards = [], signups = [], allWeek = [], holidays = [];
 
-           if (liveSched && Array.isArray(liveSched.events)) {
-             // ── Fast Real-Time Firebase Schedule ──
-             liveSched.events.forEach(ev => {
-               const dateStr = String(ev.dateStr || '').trim();
-               let eventDate = window.parseScheduleEventDate(dateStr);
-               if (!eventDate) return;
+           // ── Query Master Unified Events Resolver ──
+           const allUnifiedEvents = (typeof window.getUnifiedScheduleEvents === 'function') ? window.getUnifiedScheduleEvents() : [];
 
-               const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-               const isToday = eventDate.toDateString() === todayStr;
-               const isFuture = eventDate >= todayDate && !isToday;
+           allUnifiedEvents.forEach(ev => {
+             const isToday = ev.start.toDateString() === todayStr || (now >= ev.start && now <= ev.end);
+             const isFuture = ev.start > now && !isToday;
+             const isLiveNow = (now >= ev.start && now <= ev.end);
+             const isPast = now > ev.end;
 
-               const startT = window.parseScheduleEventTime(ev.utcStr, ev.pdtVal);
-               const endT = window.parseScheduleEventTime(ev.endUtcStr, ev.endPdtVal);
+             const entry = {
+               eventName: ev.name,
+               utcDisplay: ev.utcDisplay,
+               localTimeStr: ev.start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+               pdtVal: ev.pdtVal,
+               isLiveNow,
+               isPast,
+               emoji: ev.emoji || '✨',
+               eventDateTime: ev.start,
+               eventEndDateTime: ev.end,
+               eventDate: ev.start,
+               dateLabel: ev.dateLabel || ev.start.toLocaleDateString('en-US', { weekday:'short', month:'numeric', day:'numeric' })
+             };
 
-               let utcDisplay = '';
-               let localTimeStr = '';
-               let eventDateTime = null;
-               let eventEndDateTime = null;
-
-               if (startT) {
-                 utcDisplay = `${String(startT.h).padStart(2, '0')}:${String(startT.m).padStart(2, '0')}`;
-                 if (endT) utcDisplay += ` - ${String(endT.h).padStart(2, '0')}:${String(endT.m).padStart(2, '0')}`;
-                 utcDisplay += ' UTC';
-
-                 eventDateTime = new Date(eventDate);
-                 eventDateTime.setUTCHours(startT.h, startT.m, 0, 0);
-
-                 const localRef = new Date();
-                 localRef.setUTCHours(startT.h, startT.m, 0, 0);
-                 const startLocal = localRef.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-                 if (endT) {
-                   eventEndDateTime = new Date(eventDate);
-                   eventEndDateTime.setUTCHours(endT.h, endT.m, 0, 0);
-                   if (eventEndDateTime <= eventDateTime) {
-                     eventEndDateTime.setDate(eventEndDateTime.getDate() + 1);
-                   }
-                   const endLocalRef = new Date();
-                   endLocalRef.setUTCHours(endT.h, endT.m, 0, 0);
-                   localTimeStr = `${startLocal} - ${endLocalRef.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-                 } else {
-                   localTimeStr = startLocal;
-                   eventEndDateTime = new Date(eventDateTime.getTime() + 30 * 60000);
-                 }
-               }
-
-               const isLiveNow = eventDateTime && eventEndDateTime && (eventDateTime <= now && now <= eventEndDateTime);
-               const isPast = eventEndDateTime ? eventEndDateTime < now : (eventDateTime ? eventDateTime < now : (!isToday && eventDate < now));
-               const entry = { eventName: String(ev.eventName).trim(), utcDisplay, localTimeStr, pdtVal: String(ev.pdtVal || ''), isLiveNow, isPast, emoji: ev.emoji || '✨', eventDateTime, eventEndDateTime, eventDate };
-
-               if (isToday) {
-                 todayEvents.push(entry);
-               } else if (isFuture && !isPast) {
-                 entry.dateLabel = eventDate.toLocaleDateString('en-US', { weekday:'short', month:'numeric', day:'numeric' });
-                 upcomingEvents.push(entry);
-               }
-             });
-
-
-
-             rewards = liveSched.rewards || [];
-             signups = liveSched.signups || [];
-             allWeek = liveSched.allWeek || [];
-             holidays = liveSched.holidays || [];
-           } else {
-             // ── Google Sheets Fallback ──
-             if (!data || !Array.isArray(data) || data.length === 0) {
-               contentDiv.innerHTML = `<div class="card"><div class="loading">⚠️ Schedule data is currently unavailable. Please try again later.</div></div>`;
-               return;
+             if (isToday) {
+               todayEvents.push(entry);
+             } else if (isFuture && !isPast) {
+               upcomingEvents.push(entry);
              }
+           });
 
-             for (let i = 1; i < Math.min(34, data.length); i++) {
-               const row = data[i];
-               const eventName = row[5];
-               const dateRaw   = row[6];
-               const utcRaw    = row[7];
-               const pdtVal    = row[8];
-
-               if (!eventName || String(eventName).trim() === '') continue;
-               if (String(eventName).includes("Event's")) continue;
-               if (String(eventName).trim() === 'Rewards') break;
-
-               const dateStr = String(dateRaw || '').trim();
-               let eventDate = null;
-               const mdMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})$/);
-               const isoMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})T/);
-               if (mdMatch) {
-                 eventDate = new Date(now.getFullYear(), parseInt(mdMatch[1]) - 1, parseInt(mdMatch[2]));
-               } else if (isoMatch) {
-                 eventDate = new Date(dateStr);
-               } else {
-                 continue;
-               }
-
-               const isToday = eventDate.toDateString() === todayStr;
-               const isFuture = eventDate > now && !isToday;
-
-               let utcDisplay = '';
-               let localTimeStr = '';
-               let eventDateTime = null;
-
-               const utcStr = String(utcRaw || '').trim();
-               const hmMatch = utcStr.match(/^(\d{1,2}):(\d{2})$/);
-               const isoUtcMatch = utcStr.match(/^\d{4}-\d{2}-\d{2}T/);
-
-               if (hmMatch) {
-                 const h = parseInt(hmMatch[1]), m = parseInt(hmMatch[2]);
-                 utcDisplay = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')} UTC`;
-                 const localRef = new Date();
-                 localRef.setUTCHours(h, m, 0, 0);
-                 localTimeStr = localRef.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-                 eventDateTime = new Date(eventDate);
-                 eventDateTime.setUTCHours(h, m, 0, 0);
-               } else if (isoUtcMatch) {
-                 const gasDate = new Date(utcStr);
-                 gasDate.setUTCHours(gasDate.getUTCHours() - 8);
-                 const h = gasDate.getUTCHours(), m = gasDate.getUTCMinutes();
-                 utcDisplay = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')} UTC`;
-                 const localRef = new Date();
-                 localRef.setUTCHours(h, m, 0, 0);
-                 localTimeStr = localRef.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-                 eventDateTime = new Date(eventDate);
-                 eventDateTime.setUTCHours(h, m, 0, 0);
-               }
-
-               const isPast = eventDateTime ? eventDateTime < now : (!isToday && eventDate < now);
-               const isBearTrap = String(eventName).includes('Bear Trap') || String(eventName).includes('🪤') || String(eventName).includes('🐻');
-               const emoji = isBearTrap ? '🪤' : '✨';
-
-               const entry = { eventName: String(eventName).trim(), utcDisplay, localTimeStr, pdtVal: String(pdtVal || ''), isPast, emoji, eventDateTime, eventDate };
-
-               if (isToday) {
-                 todayEvents.push(entry);
-               } else if (isFuture && !isPast) {
-                 entry.dateLabel = eventDate.toLocaleDateString('en-US', { weekday:'short', month:'numeric', day:'numeric' });
-                 upcomingEvents.push(entry);
-               }
-             }
-
-             let headerRowIdx = -1;
-             for (let i = 0; i < data.length; i++) {
-               const cell = String(data[i][5] || '').trim().toLowerCase();
-               if (cell === 'rewards') { headerRowIdx = i; break; }
-             }
-
-             if (headerRowIdx !== -1) {
-               for (let i = headerRowIdx + 1; i < data.length; i++) {
-                 const r = data[i][5], g = data[i][6], h = data[i][7], k = data[i][8];
-                 const anyVal = [r,g,h,k].some(v => v && String(v).trim() !== '');
-                 if (!anyVal) break;
-                 const skip = (v) => !v || String(v).trim() === '' || String(v).trim().toLowerCase() === 'no events';
-                 if (!skip(r)) rewards.push(String(r).trim());
-                 if (!skip(g)) signups.push(String(g).trim());
-                 if (!skip(h)) allWeek.push(String(h).trim());
-                 if (!skip(k)) holidays.push(String(k).trim());
-               }
-             }
+           // Rewards from weekly schedule grid
+           if (typeof window.getUnifiedScheduleRewards === 'function') {
+             rewards = window.getUnifiedScheduleRewards(now);
            }
+           if (liveSched && Array.isArray(liveSched.rewards)) {
+             liveSched.rewards.forEach(r => { if (!rewards.includes(r)) rewards.push(r); });
+           }
+           signups = (liveSched && liveSched.signups) || [];
+           allWeek = (liveSched && liveSched.allWeek) || [];
+           holidays = (liveSched && liveSched.holidays) || [];
 
       // ── 3. Build the unified card ──
       const dayName = now.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });

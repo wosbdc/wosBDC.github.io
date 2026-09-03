@@ -1,21 +1,21 @@
 {
-  "version": "3.2.5",
-  "releaseDate": "2026-09-01",
-  "title": "What's New in v3.2.5",
+  "version": "3.2.6",
+  "releaseDate": "2026-09-03",
+  "title": "What's New in v3.2.6",
   "notes": [
-    "🚪 Alt Departure Unlink: Departed or banned alts auto-removed from holder page.",
-    "🚫 Account Hub Cleaner: Only active member alts appear on character cards.",
-    "💾 Departed Alts Archive: Retains former alt record history safely in Firebase.",
-    "⚡ Cascade Departure: Main account departure automatically cascades to all alts."
+    "🐻 Bear Trap Sync: Active Bear Trap resolved and listed today.",
+    "🔔 Bell Event Alerts: 1-click reminders directly in notification bell.",
+    "📅 Live Schedule Grid: Unified weekly schedule syncs directly from sheets.",
+    "⏰ Dynamic Event Countdown: Real-time ticker tracks today's alliance events."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.2.5",
+    "version": "3.2.6",
     "latestChanges": [
+      "v3.2.6: Fix schedule grid and bell system event reminders for today's events",
       "v3.2.5: Remove departed and banned alts from main account holder page",
       "v3.2.4: Collapsible alt characters with arrow toggle in member database",
       "v3.2.3: Bulk Alliance Membership status management system",
-      "v3.2.2: Alliance Membership status and event exclusion system",
-      "v3.2.1: Championship Archive deletion, editing, restore, and blank season purge"
+      "v3.2.2: Alliance Membership status and event exclusion system"
     ]
   }
 }
