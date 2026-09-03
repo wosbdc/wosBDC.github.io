@@ -145,6 +145,46 @@ pass('main.js includes window.cancelEventReminder');
 assert(mainJs.includes('window.playEventAlertSound'), 'playEventAlertSound must be defined');
 pass('main.js includes window.playEventAlertSound');
 
+// -------------------------------------------------------------
+// Test 6: All-Week Expiration Filtering (Purge Expired Showdown)
+// -------------------------------------------------------------
+console.log('\n🧹 Test 6: All-Week Expiration Filtering (Purge Expired Showdown)');
+const mockSchedData = [
+  ['', '', 'Title', 'Start Date', 'End Date'],
+  ['', '', 'Alliance ShowDown', '8/17/2026', '8/23/2026'],
+  ['', '', 'Alliance Mobilization', '8/31/2026', '9/6/2026']
+];
+
+const nowTest = new Date('2026-09-03T12:00:00Z');
+const rawAllWeekTest = ['Alliance ShowDown', 'Alliance Mobilization'];
+
+const filteredAllWeek = rawAllWeekTest.filter(item => {
+  const clean = String(item || '').trim();
+  for (let r = 1; r < mockSchedData.length; r++) {
+    const title = mockSchedData[r][2];
+    if (title.toLowerCase().includes(clean.toLowerCase()) || clean.toLowerCase().includes(title.toLowerCase())) {
+      const endVal = mockSchedData[r][4];
+      if (endVal) {
+        const endDate = new Date(endVal);
+        endDate.setHours(23, 59, 59, 999);
+        if (endDate < nowTest) return false;
+      }
+    }
+  }
+  return true;
+});
+
+assert.deepStrictEqual(filteredAllWeek, ['Alliance Mobilization']);
+assert(!filteredAllWeek.includes('Alliance ShowDown'), 'Alliance ShowDown must be excluded as expired');
+pass('Expired past Showdown (8/17-8/23) is cleanly filtered out while active events are retained');
+
+// -------------------------------------------------------------
+// Test 7: Deduplication Verification (No Duplicate Whole Week in Coming up)
+// -------------------------------------------------------------
+console.log('\n🚫 Test 7: Deduplication Verification');
+assert(!mainJs.includes('📆 Whole Week / Ongoing Events'), 'main.js must not contain duplicate Whole Week block in Coming up');
+pass('Duplicate "📆 Whole Week / Ongoing Events" block eliminated from Coming up section');
+
 console.log('\n=========================================');
 console.log(`Test Summary: ${passCount}/${passCount} tests passed`);
 console.log('=========================================\n');

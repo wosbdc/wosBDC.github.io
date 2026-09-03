@@ -35549,8 +35549,29 @@ window.resetBearTrapEvent = async () => {
              liveSched.rewards.forEach(r => { if (!rewards.includes(r)) rewards.push(r); });
            }
            signups = (liveSched && liveSched.signups) || [];
-           allWeek = (liveSched && liveSched.allWeek) || [];
+           const rawAllWeek = (liveSched && liveSched.allWeek) || [];
            holidays = (liveSched && liveSched.holidays) || [];
+
+           // Filter allWeek: only show events actively ongoing, never expired past events (e.g. past Showdown)
+           const schedDataRows = (window.liveData && window.liveData['Schedule data']) || [];
+           allWeek = rawAllWeek.filter(item => {
+             const cleanItem = String(item || '').trim();
+             if (!cleanItem) return false;
+             for (let r = 1; r < schedDataRows.length; r++) {
+               const rowTitle = String(schedDataRows[r][2] || '').trim();
+               if (rowTitle.toLowerCase().includes(cleanItem.toLowerCase()) || cleanItem.toLowerCase().includes(rowTitle.toLowerCase())) {
+                 const endVal = String(schedDataRows[r][4] || schedDataRows[r][3] || '').trim();
+                 if (endVal) {
+                   const endDate = window.parseScheduleEventDate ? window.parseScheduleEventDate(endVal) : new Date(endVal);
+                   if (endDate) {
+                     endDate.setHours(23, 59, 59, 999);
+                     if (endDate < now) return false;
+                   }
+                 }
+               }
+             }
+             return true;
+           });
 
       // ── 3. Build the unified card ──
       const dayName = now.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
@@ -35656,42 +35677,28 @@ window.resetBearTrapEvent = async () => {
 
       // Coming up:
       let upcomingHtml = '';
-      if (upcomingEvents.length > 0 || allWeek.length > 0) {
+      if (upcomingEvents.length > 0) {
         upcomingHtml = `<div style="background:var(--bg-main);border-radius:12px;padding:16px;margin-top:16px;">
           ${sectionPill('📅','Coming up:','var(--accent)','rgba(59,130,246,0.12)')}`;
-          
-        if (allWeek.length > 0) {
-          upcomingHtml += `
-            <div style="background:rgba(129,140,248,0.08); border:1px solid rgba(129,140,248,0.25); border-radius:10px; padding:12px 14px; margin-bottom:14px;">
-              <div style="font-size:12px; font-weight:bold; color:#818cf8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
-                📆 Whole Week / Ongoing Events
-              </div>
-              <div style="display:flex; flex-wrap:wrap; gap:8px;">
-                ${allWeek.map(x => `<span style="background:rgba(129,140,248,0.2); color:#818cf8; padding:5px 12px; border-radius:20px; font-size:13px; font-weight:600;">✨ ${x}</span>`).join('')}
-              </div>
-            </div>`;
-        }
 
-        if (upcomingEvents.length > 0) {
-          upcomingEvents.forEach(ev => {
-            const isRemSet = (typeof window.isEventReminderSet === 'function') && ev.eventDateTime && window.isEventReminderSet(ev.eventName, ev.eventDateTime.getTime());
-            const remBtnHtml = ev.eventDateTime ? `
-              <button onclick="window.openEventReminderModal('${escapeHTML(ev.eventName)}', ${ev.eventDateTime.getTime()}, '${ev.emoji}', '${escapeHTML(ev.dateLabel || '')}', '${escapeHTML(ev.utcDisplay || '')}')" style="background:${isRemSet ? 'rgba(16,185,129,0.2)' : 'rgba(56,189,248,0.12)'}; border:1px solid ${isRemSet ? '#10b981' : 'rgba(56,189,248,0.35)'}; color:${isRemSet ? '#10b981' : '#38bdf8'}; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:0.15s;" title="Set Event Reminder">
-                <span>${isRemSet ? '✓' : '🔔'}</span> <span>${isRemSet ? 'Reminding' : 'Remind'}</span>
-              </button>
-            ` : '';
+        upcomingEvents.forEach(ev => {
+          const isRemSet = (typeof window.isEventReminderSet === 'function') && ev.eventDateTime && window.isEventReminderSet(ev.eventName, ev.eventDateTime.getTime());
+          const remBtnHtml = ev.eventDateTime ? `
+            <button onclick="window.openEventReminderModal('${escapeHTML(ev.eventName)}', ${ev.eventDateTime.getTime()}, '${ev.emoji}', '${escapeHTML(ev.dateLabel || '')}', '${escapeHTML(ev.utcDisplay || '')}')" style="background:${isRemSet ? 'rgba(16,185,129,0.2)' : 'rgba(56,189,248,0.12)'}; border:1px solid ${isRemSet ? '#10b981' : 'rgba(56,189,248,0.35)'}; color:${isRemSet ? '#10b981' : '#38bdf8'}; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:0.15s;" title="Set Event Reminder">
+              <span>${isRemSet ? '✓' : '🔔'}</span> <span>${isRemSet ? 'Reminding' : 'Remind'}</span>
+            </button>
+          ` : '';
 
-            upcomingHtml += `<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:6px;">
-              <span style="font-size:14px;color:var(--text-main);font-weight:500;">${ev.emoji} ${ev.eventName}</span>
-              <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-                <span style="font-size:12px;color:var(--text-muted);">${ev.dateLabel}</span>
-                ${ev.utcDisplay ? `<span style="font-size:12px;color:var(--text-muted);">${ev.utcDisplay}</span>` : ''}
-                ${ev.localTimeStr ? `<span style="font-size:12px;font-weight:600;color:var(--accent);">${ev.localTimeStr}</span>` : ''}
-                ${remBtnHtml}
-              </div>
-            </div>`;
-          });
-        }
+          upcomingHtml += `<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:6px;">
+            <span style="font-size:14px;color:var(--text-main);font-weight:500;">${ev.emoji} ${ev.eventName}</span>
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+              <span style="font-size:12px;color:var(--text-muted);">${ev.dateLabel}</span>
+              ${ev.utcDisplay ? `<span style="font-size:12px;color:var(--text-muted);">${ev.utcDisplay}</span>` : ''}
+              ${ev.localTimeStr ? `<span style="font-size:12px;font-weight:600;color:var(--accent);">${ev.localTimeStr}</span>` : ''}
+              ${remBtnHtml}
+            </div>
+          </div>`;
+        });
         upcomingHtml += `</div>`;
       }
 
@@ -35838,7 +35845,7 @@ window.resetBearTrapEvent = async () => {
               if (isToday) {
                 if (liveSched.rewards && liveSched.rewards.length > 0) categories['Rewards'] = liveSched.rewards;
                 if (liveSched.signups && liveSched.signups.length > 0) categories['Sign-Ups'] = liveSched.signups;
-                if (liveSched.allWeek && liveSched.allWeek.length > 0) categories['All Week'] = liveSched.allWeek;
+                if (allWeek && allWeek.length > 0) categories['All Week'] = allWeek;
                 if (liveSched.holidays && liveSched.holidays.length > 0) categories['Holidays'] = liveSched.holidays;
               }
 

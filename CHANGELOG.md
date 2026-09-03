@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.2.7] - 2026-09-03
+- 🧹 **Showdown Purge**: Cleared expired past Alliance Showdown from schedule.
+- 📆 **Smart Expiration**: Filters out ended events using sheet date ranges.
+- 🚫 **Deduplicate Cards**: Removed redundant duplicate all-week block from upcoming.
+
 ## [3.2.6] - 2026-09-03
 - 🐻 **Bear Trap Sync**: Active Bear Trap resolved and listed today.
 - 🔔 **Bell Event Alerts**: 1-click reminders directly in notification bell.
