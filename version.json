@@ -1,20 +1,21 @@
 {
-  "version": "3.2.7",
+  "version": "3.2.8",
   "releaseDate": "2026-09-03",
-  "title": "What's New in v3.2.7",
+  "title": "What's New in v3.2.8",
   "notes": [
-    "🧹 Showdown Purge: Cleared expired past Alliance Showdown from schedule.",
-    "📆 Smart Expiration: Filters out ended events using sheet date ranges.",
-    "🚫 Deduplicate Cards: Removed redundant duplicate all-week block from upcoming."
+    "⏰ Exact Alarm Time: Reminder modal shows calculated alarm trigger time.",
+    "✅ Active Reminder Banner: Highlights active reminder and countdown to alarm.",
+    "🔔 Live Trigger Calculator: Updates alarm time instantly when changing warning minutes.",
+    "🕒 Explicit Bell Badges: Displays exact alarm trigger time on alert cards."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.2.7",
+    "version": "3.2.8",
     "latestChanges": [
+      "v3.2.8: Add exact alarm trigger time indicators to event reminders",
       "v3.2.7: Purge stale Alliance Showdown and deduplicate schedule cards",
       "v3.2.6: Fix schedule grid and bell system event reminders for today's events",
       "v3.2.5: Remove departed and banned alts from main account holder page",
-      "v3.2.4: Collapsible alt characters with arrow toggle in member database",
-      "v3.2.3: Bulk Alliance Membership status management system"
+      "v3.2.4: Collapsible alt characters with arrow toggle in member database"
     ]
   }
 }

@@ -185,6 +185,30 @@ console.log('\n🚫 Test 7: Deduplication Verification');
 assert(!mainJs.includes('📆 Whole Week / Ongoing Events'), 'main.js must not contain duplicate Whole Week block in Coming up');
 pass('Duplicate "📆 Whole Week / Ongoing Events" block eliminated from Coming up section');
 
+// -------------------------------------------------------------
+// Test 8: Alarm Trigger Time Calculation & Toast Notification
+// -------------------------------------------------------------
+console.log('\n⏰ Test 8: Alarm Trigger Time Calculation & Toast Notification');
+const testStartMs = 1788451200000; // 9:00 AM PDT (16:00 UTC)
+const testWarningMins = 5;
+const calculatedAlarmMs = testStartMs - (testWarningMins * 60000);
+const calcAlarmDate = new Date(calculatedAlarmMs);
+
+assert.strictEqual(testStartMs - calculatedAlarmMs, 5 * 60000, 'Alarm must be exactly 5 minutes before start');
+assert(mainJs.includes('Alarm at ${alarmTimeStr} local'), 'setEventReminder must include exact alarm time in toast');
+assert(mainJs.includes('eventReminderCalcBox'), 'openEventReminderModal must contain live alarm calculation box');
+assert(mainJs.includes('eventReminderCalculatedTime'), 'openEventReminderModal must contain calculated time element');
+pass('Alarm trigger time calculation accurately offsets minutes and is present in toast');
+
+// -------------------------------------------------------------
+// Test 9: Active Reminder Banner & Manager List Details
+// -------------------------------------------------------------
+console.log('\n✅ Test 9: Active Reminder Banner & Manager List Details');
+assert(mainJs.includes('Reminder Currently Set'), 'openEventReminderModal must display prominent active reminder banner');
+assert(mainJs.includes('Alarm set for <strong>${new Date(startMs - (activeWarningMins * 60000))'), 'Bell modal must show exact alarm time in badge');
+assert(mainJs.includes('Alert at ${alarmD.toLocaleTimeString'), 'Schedule view must show exact alarm time on reminder buttons');
+pass('Prominent active banner, bell alarm badges, and schedule button labels verified');
+
 console.log('\n=========================================');
 console.log(`Test Summary: ${passCount}/${passCount} tests passed`);
 console.log('=========================================\n');

@@ -16802,14 +16802,22 @@ window.openAllianceAlertsModal = async () => {
               <span><strong>${ev.pdtVal ? ev.pdtVal + ' PDT / ' : ''}${ev.utcDisplay}</strong> (${ev.start.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })} local)</span>
             </div>
 
-            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; width:100%;">
               ${reminderSet ? `
-                <span style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:4px 10px; border-radius:6px; font-size:11.5px; font-weight:bold; display:inline-flex; align-items:center; gap:4px;">
-                  ✓ Reminder Set (${activeWarningMins}m)
-                </span>
-                <button type="button" onclick="event.stopPropagation(); window.cancelEventReminder('rem_${startMs}_${ev.name.replace(/[^a-zA-Z0-9]/g, '_')}'); window.openAllianceAlertsModal();" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.35); color:#ef4444; padding:4px 9px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
-                  Cancel
-                </button>
+                <div style="background:rgba(16,185,129,0.14); border:1px solid rgba(16,185,129,0.4); border-radius:8px; padding:6px 12px; display:flex; align-items:center; justify-content:space-between; width:100%; gap:8px; flex-wrap:wrap;">
+                  <div style="font-size:12px; font-weight:bold; color:#10b981; display:flex; align-items:center; gap:6px;">
+                    <span>✅</span>
+                    <span>Alarm set for <strong>${new Date(startMs - (activeWarningMins * 60000)).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })} local</strong> (${activeWarningMins === 0 ? 'at start' : `${activeWarningMins}m before`})</span>
+                  </div>
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    <button type="button" onclick="event.stopPropagation(); window.openEventReminderModal('${window.escapeHTML(ev.name)}', ${startMs}, '${ev.emoji}', '${window.escapeHTML(ev.dateStr || '')}', '${window.escapeHTML(ev.utcDisplay || '')}');" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#cbd5e1; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;" title="Change reminder time">
+                      ⚙️ Change
+                    </button>
+                    <button type="button" onclick="event.stopPropagation(); window.cancelEventReminder('rem_${startMs}_${ev.name.replace(/[^a-zA-Z0-9]/g, '_')}'); window.openAllianceAlertsModal();" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.35); color:#ef4444; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
               ` : `
                 <button type="button" onclick="event.stopPropagation(); window.setEventReminder('${window.escapeHTML(ev.name)}', ${startMs}, 15, '${ev.emoji}'); window.openAllianceAlertsModal();" style="background:linear-gradient(135deg, #f59e0b, #d97706); color:#fff; border:none; padding:5px 12px; border-radius:6px; font-size:11.5px; font-weight:bold; cursor:pointer; box-shadow:0 2px 8px rgba(245,158,11,0.3); display:inline-flex; align-items:center; gap:4px;">
                   🔔 Remind 15m Before ⭐
@@ -23289,9 +23297,12 @@ window.setEventReminder = async (eventName, exactStartTimeMs, warningMins = 15, 
     try { await Notification.requestPermission(); } catch(e) {}
   }
 
+  const alarmTimeMs = startTime - (Number(warningMins) * 60000);
+  const alarmDate = new Date(alarmTimeMs);
+  const alarmTimeStr = alarmDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const minsText = Number(warningMins) === 0 ? "at event start" : `${warningMins}m before start`;
   if (window.showToast) {
-    window.showToast(`🔔 Reminder Set: ${emoji} ${eventName} (${minsText})`, "success");
+    window.showToast(`🔔 Reminder Set: ${emoji} ${eventName} — Alarm at ${alarmTimeStr} local (${minsText})`, "success");
   }
 
   if (typeof window.startEventReminderTicker === 'function') {
@@ -23347,12 +23358,25 @@ window.openEventReminderModal = function(eventName, exactStartTimeMs, emoji = '�
 
   const localTimeStr = `${startDate.toLocaleDateString([], { weekday:'short', month:'short', day:'numeric' })} at ${startDate.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}`;
 
+  const activeAlarmMs = startTime - (currentWarning * 60000);
+  const activeAlarmDate = new Date(activeAlarmMs);
+  const activeAlarmTimeStr = activeAlarmDate.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+  const diffToActiveAlarm = activeAlarmMs - Date.now();
+  let activeCountdownText = '';
+  if (diffToActiveAlarm > 0) {
+    const ah = Math.floor(diffToActiveAlarm / 3600000);
+    const am = Math.floor((diffToActiveAlarm % 3600000) / 60000);
+    activeCountdownText = `⏳ Alarm rings in ${ah > 0 ? `${ah}h ${am}m` : `${am}m`}`;
+  } else {
+    activeCountdownText = `🚨 Ringing / In Progress`;
+  }
+
   const overlay = document.createElement('div');
   overlay.id = 'eventReminderModalOverlay';
   overlay.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.85); backdrop-filter:blur(10px); z-index:100006; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease;';
 
   overlay.innerHTML = `
-    <div class="card" style="width:94%; max-width:480px; background:linear-gradient(145deg, rgba(15,23,42,0.98), rgba(30,41,59,0.96)); border:1.5px solid rgba(56,189,248,0.45); padding:22px; border-radius:18px; box-shadow:0 25px 60px rgba(0,0,0,0.85); text-align:left; color:var(--text-main); max-height:90vh; overflow-y:auto; animation:zoomIn 0.2s ease;">
+    <div class="card" style="width:94%; max-width:490px; background:linear-gradient(145deg, rgba(15,23,42,0.98), rgba(30,41,59,0.96)); border:1.5px solid rgba(56,189,248,0.45); padding:22px; border-radius:18px; box-shadow:0 25px 60px rgba(0,0,0,0.85); text-align:left; color:var(--text-main); max-height:90vh; overflow-y:auto; animation:zoomIn 0.2s ease;">
       
       <!-- Header -->
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:12px; gap:8px;">
@@ -23365,6 +23389,24 @@ window.openEventReminderModal = function(eventName, exactStartTimeMs, emoji = '�
         </div>
         <button onclick="document.getElementById('eventReminderModalOverlay').remove()" class="close-btn" title="Close Window">✕</button>
       </div>
+
+      <!-- Active Reminder Status Banner -->
+      ${isSet ? `
+        <div style="background:linear-gradient(135deg, rgba(16,185,129,0.18), rgba(5,150,105,0.12)); border:1.5px solid #10b981; border-radius:12px; padding:12px 14px; margin-bottom:14px; display:flex; align-items:center; gap:12px; box-shadow:0 4px 14px rgba(16,185,129,0.2);">
+          <span style="font-size:26px; filter:drop-shadow(0 0 8px rgba(16,185,129,0.6));">✅</span>
+          <div style="flex:1;">
+            <div style="font-size:11px; font-weight:800; color:#10b981; text-transform:uppercase; letter-spacing:0.5px;">Reminder Currently Set</div>
+            <div style="font-size:14.5px; font-weight:800; color:#fff; margin-top:2px;">
+              Alarm set for <span style="color:#38bdf8; font-family:monospace; font-size:15px; background:rgba(15,23,42,0.7); padding:2px 8px; border-radius:6px; border:1px solid rgba(56,189,248,0.3);">${activeAlarmTimeStr} local</span>
+            </div>
+            <div style="font-size:11.5px; color:rgba(255,255,255,0.85); margin-top:4px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <span>🕒 ${currentWarning === 0 ? 'At event start' : `${currentWarning}m before event start`}</span>
+              <span>•</span>
+              <span style="color:#f59e0b; font-weight:bold;">${activeCountdownText}</span>
+            </div>
+          </div>
+        </div>
+      ` : ''}
 
       <!-- Event Info Card -->
       <div style="background:linear-gradient(145deg, rgba(56,189,248,0.12), rgba(15,23,42,0.9)); border:1.5px solid rgba(56,189,248,0.35); border-radius:14px; padding:14px; margin-bottom:16px;">
@@ -23380,7 +23422,7 @@ window.openEventReminderModal = function(eventName, exactStartTimeMs, emoji = '�
       </div>
 
       <!-- Warning Timing Selector -->
-      <div style="margin-bottom:16px;">
+      <div style="margin-bottom:12px;">
         <label style="font-size:11.5px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:6px;">
           ⚠️ Alert Me Before Event Starts:
         </label>
@@ -23392,6 +23434,19 @@ window.openEventReminderModal = function(eventName, exactStartTimeMs, emoji = '�
           <option value="30" ${currentWarning === 30 ? 'selected' : ''}>30 Minutes Before</option>
           <option value="60" ${currentWarning === 60 ? 'selected' : ''}>1 Hour Before</option>
         </select>
+      </div>
+
+      <!-- Live Calculated Alarm Trigger Box -->
+      <div id="eventReminderCalcBox" style="background:linear-gradient(145deg, rgba(14,165,233,0.12), rgba(15,23,42,0.85)); border:1.5px solid rgba(56,189,248,0.4); border-radius:12px; padding:12px 14px; margin-bottom:16px;">
+        <div style="font-size:10.5px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+          <span>⏰</span> <span>ALARM TRIGGER TIME:</span>
+        </div>
+        <div id="eventReminderCalculatedTime" style="font-size:18px; font-weight:900; color:#fff; font-family:monospace;">
+          --:--
+        </div>
+        <div id="eventReminderCalculatedSub" style="font-size:11.5px; color:rgba(255,255,255,0.75); margin-top:3px;">
+          Calculating alarm time...
+        </div>
       </div>
 
       <!-- Sound & Test Row -->
@@ -23414,7 +23469,7 @@ window.openEventReminderModal = function(eventName, exactStartTimeMs, emoji = '�
         ` : '<div></div>'}
         <div style="display:flex; gap:8px;">
           <button type="button" onclick="document.getElementById('eventReminderModalOverlay').remove()" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#cbd5e1; padding:9px 16px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12.5px;">Close</button>
-          <button type="button" onclick="const w = document.getElementById('eventReminderTiming')?.value || 15; window.setEventReminder('${escapeHTML(eventName)}', ${startTime}, w, '${emoji}'); document.getElementById('eventReminderModalOverlay').remove(); if(typeof window.renderTabs === 'function') window.renderTabs();" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:9px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12.5px; box-shadow:0 2px 10px rgba(14,165,233,0.4); display:inline-flex; align-items:center; gap:6px;">
+          <button id="eventReminderSaveBtn" type="button" onclick="const w = document.getElementById('eventReminderTiming')?.value || 15; window.setEventReminder('${escapeHTML(eventName)}', ${startTime}, w, '${emoji}'); document.getElementById('eventReminderModalOverlay').remove(); if(typeof window.renderTabs === 'function') window.renderTabs();" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:9px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12.5px; box-shadow:0 2px 10px rgba(14,165,233,0.4); display:inline-flex; align-items:center; gap:6px;">
             🔔 Save Reminder
           </button>
         </div>
@@ -23424,6 +23479,39 @@ window.openEventReminderModal = function(eventName, exactStartTimeMs, emoji = '�
   `;
 
   document.body.appendChild(overlay);
+
+  const updateCalc = () => {
+    const selEl = overlay.querySelector('#eventReminderTiming');
+    const timeEl = overlay.querySelector('#eventReminderCalculatedTime');
+    const subEl = overlay.querySelector('#eventReminderCalculatedSub');
+    const saveBtn = overlay.querySelector('#eventReminderSaveBtn');
+    if (!selEl || !timeEl) return;
+
+    const wMins = Number(selEl.value || 15);
+    const alarmMs = startTime - (wMins * 60000);
+    const alarmDate = new Date(alarmMs);
+    const alarmTimeStr = alarmDate.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+    const diffMs = alarmMs - Date.now();
+
+    timeEl.textContent = `${alarmTimeStr} local`;
+
+    if (diffMs <= 0) {
+      if (subEl) subEl.innerHTML = `<span style="color:#ef4444; font-weight:bold;">⚠️ Selected alarm time has already passed!</span>`;
+    } else {
+      const h = Math.floor(diffMs / 3600000);
+      const m = Math.floor((diffMs % 3600000) / 60000);
+      const countdownStr = h > 0 ? `${h}h ${m}m` : `${m}m`;
+      if (subEl) subEl.innerHTML = `⏳ Alarm will ring in <strong>${countdownStr}</strong> (${wMins === 0 ? 'at event start' : `${wMins}m before start`})`;
+    }
+
+    if (saveBtn) {
+      saveBtn.innerHTML = `🔔 Save Reminder (Alarm at ${alarmTimeStr})`;
+    }
+  };
+
+  const selEl = overlay.querySelector('#eventReminderTiming');
+  if (selEl) selEl.addEventListener('change', updateCalc);
+  updateCalc();
 };
 
 window.openEventRemindersManagerModal = function() {
@@ -23453,6 +23541,20 @@ window.openEventRemindersManagerModal = function() {
       const timeStr = new Date(r.exactStartTime).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
       const dateStr = new Date(r.exactStartTime).toLocaleDateString([], { weekday:'short', month:'short', day:'numeric' });
 
+      const alarmMs = r.exactStartTime - ((Number(r.warningMins) || 15) * 60000);
+      const alarmTimeStr = new Date(alarmMs).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+      const diffAlarm = alarmMs - now;
+      const isAlarmPast = diffAlarm <= 0;
+
+      let alarmCountdown = '';
+      if (!isAlarmPast) {
+        const ah = Math.floor(diffAlarm / 3600000);
+        const am = Math.floor((diffAlarm % 3600000) / 60000);
+        alarmCountdown = `Alarm in ${ah > 0 ? `${ah}h ${am}m` : `${am}m`}`;
+      } else {
+        alarmCountdown = isPast ? 'Event Past' : 'Alarm Rang';
+      }
+
       return `
         <div style="background:rgba(255,255,255,0.04); border:1px solid ${isPast ? 'rgba(239,68,68,0.3)' : 'rgba(56,189,248,0.3)'}; border-radius:12px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
           <div>
@@ -23460,13 +23562,16 @@ window.openEventRemindersManagerModal = function() {
               <span>${r.emoji || '✨'}</span>
               <span>${escapeHTML(r.eventName)}</span>
             </div>
+            <div style="font-size:12px; color:#38bdf8; font-weight:bold; margin-top:2px; display:flex; align-items:center; gap:5px;">
+              <span>⏰</span> <span>Alarm: <strong>${alarmTimeStr} local</strong> (${r.warningMins === 0 ? 'at start' : `${r.warningMins}m before`})</span>
+            </div>
             <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">
-              🕒 ${dateStr} at ${timeStr} • Alert: ${r.warningMins === 0 ? 'At start' : `${r.warningMins}m before`}
+              📅 Event: ${dateStr} at ${timeStr}
             </div>
           </div>
           <div style="display:flex; align-items:center; gap:8px;">
-            <span style="font-size:11px; font-family:monospace; color:${isPast ? '#ef4444' : '#10b981'}; font-weight:bold;">
-              ${isPast ? 'LIVE / PAST' : `in ${Math.floor(diff/3600000)}h ${Math.floor((diff%3600000)/60000)}m`}
+            <span style="font-size:11px; font-family:monospace; color:${isAlarmPast ? (isPast ? '#ef4444' : '#f59e0b') : '#10b981'}; font-weight:bold; background:rgba(0,0,0,0.3); padding:3px 8px; border-radius:6px;">
+              ${alarmCountdown}
             </span>
             <button onclick="window.cancelEventReminder('${r.id}'); window.openEventRemindersManagerModal();" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;" title="Delete Reminder">
               ✕
@@ -35611,9 +35716,19 @@ window.resetBearTrapEvent = async () => {
           }
 
           const isRemSet = (typeof window.isEventReminderSet === 'function') && ev.eventDateTime && window.isEventReminderSet(ev.eventName, ev.eventDateTime.getTime());
+          let remAlarmLabel = 'Remind';
+          if (isRemSet && typeof window.getEventReminders === 'function') {
+            const foundRem = window.getEventReminders().find(r => r.id === `rem_${ev.eventDateTime.getTime()}_${String(ev.eventName).replace(/[^a-zA-Z0-9]/g, '_')}`);
+            if (foundRem) {
+              const alarmD = new Date(foundRem.exactStartTime - ((Number(foundRem.warningMins) || 15) * 60000));
+              remAlarmLabel = `Alert at ${alarmD.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}`;
+            } else {
+              remAlarmLabel = 'Reminding';
+            }
+          }
           const remBtnHtml = (ev.eventDateTime && !ev.isPast) ? `
-            <button onclick="window.openEventReminderModal('${escapeHTML(ev.eventName)}', ${ev.eventDateTime.getTime()}, '${ev.emoji}', '', '${escapeHTML(ev.utcDisplay || '')}')" style="background:${isRemSet ? 'rgba(16,185,129,0.2)' : 'rgba(56,189,248,0.12)'}; border:1px solid ${isRemSet ? '#10b981' : 'rgba(56,189,248,0.35)'}; color:${isRemSet ? '#10b981' : '#38bdf8'}; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:0.15s;" title="Set Event Reminder">
-              <span>${isRemSet ? '✓' : '🔔'}</span> <span>${isRemSet ? 'Reminding' : 'Remind'}</span>
+            <button onclick="window.openEventReminderModal('${escapeHTML(ev.eventName)}', ${ev.eventDateTime.getTime()}, '${ev.emoji}', '', '${escapeHTML(ev.utcDisplay || '')}')" style="background:${isRemSet ? 'rgba(16,185,129,0.2)' : 'rgba(56,189,248,0.12)'}; border:1px solid ${isRemSet ? '#10b981' : 'rgba(56,189,248,0.35)'}; color:${isRemSet ? '#10b981' : '#38bdf8'}; padding:4px 9px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:0.15s;" title="Manage Event Reminder">
+              <span>${isRemSet ? '✓' : '🔔'}</span> <span>${remAlarmLabel}</span>
             </button>
           ` : '';
 
@@ -35683,9 +35798,19 @@ window.resetBearTrapEvent = async () => {
 
         upcomingEvents.forEach(ev => {
           const isRemSet = (typeof window.isEventReminderSet === 'function') && ev.eventDateTime && window.isEventReminderSet(ev.eventName, ev.eventDateTime.getTime());
+          let remAlarmLabel = 'Remind';
+          if (isRemSet && typeof window.getEventReminders === 'function') {
+            const foundRem = window.getEventReminders().find(r => r.id === `rem_${ev.eventDateTime.getTime()}_${String(ev.eventName).replace(/[^a-zA-Z0-9]/g, '_')}`);
+            if (foundRem) {
+              const alarmD = new Date(foundRem.exactStartTime - ((Number(foundRem.warningMins) || 15) * 60000));
+              remAlarmLabel = `Alert at ${alarmD.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}`;
+            } else {
+              remAlarmLabel = 'Reminding';
+            }
+          }
           const remBtnHtml = ev.eventDateTime ? `
-            <button onclick="window.openEventReminderModal('${escapeHTML(ev.eventName)}', ${ev.eventDateTime.getTime()}, '${ev.emoji}', '${escapeHTML(ev.dateLabel || '')}', '${escapeHTML(ev.utcDisplay || '')}')" style="background:${isRemSet ? 'rgba(16,185,129,0.2)' : 'rgba(56,189,248,0.12)'}; border:1px solid ${isRemSet ? '#10b981' : 'rgba(56,189,248,0.35)'}; color:${isRemSet ? '#10b981' : '#38bdf8'}; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:0.15s;" title="Set Event Reminder">
-              <span>${isRemSet ? '✓' : '🔔'}</span> <span>${isRemSet ? 'Reminding' : 'Remind'}</span>
+            <button onclick="window.openEventReminderModal('${escapeHTML(ev.eventName)}', ${ev.eventDateTime.getTime()}, '${ev.emoji}', '${escapeHTML(ev.dateLabel || '')}', '${escapeHTML(ev.utcDisplay || '')}')" style="background:${isRemSet ? 'rgba(16,185,129,0.2)' : 'rgba(56,189,248,0.12)'}; border:1px solid ${isRemSet ? '#10b981' : 'rgba(56,189,248,0.35)'}; color:${isRemSet ? '#10b981' : '#38bdf8'}; padding:4px 9px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:0.15s;" title="Manage Event Reminder">
+              <span>${isRemSet ? '✓' : '🔔'}</span> <span>${remAlarmLabel}</span>
             </button>
           ` : '';
 

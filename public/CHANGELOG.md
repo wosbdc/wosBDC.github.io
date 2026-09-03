@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.2.8] - 2026-09-03
+- ⏰ **Exact Alarm Time**: Reminder modal shows calculated alarm trigger time.
+- ✅ **Active Reminder Banner**: Highlights active reminder and countdown to alarm.
+- 🔔 **Live Trigger Calculator**: Updates alarm time instantly when changing warning minutes.
+- 🕒 **Explicit Bell Badges**: Displays exact alarm trigger time on alert cards.
+
 ## [3.2.7] - 2026-09-03
 - 🧹 **Showdown Purge**: Cleared expired past Alliance Showdown from schedule.
 - 📆 **Smart Expiration**: Filters out ended events using sheet date ranges.
