@@ -1,21 +1,20 @@
 {
-  "version": "3.2.8",
+  "version": "3.2.9",
   "releaseDate": "2026-09-03",
-  "title": "What's New in v3.2.8",
+  "title": "What's New in v3.2.9",
   "notes": [
-    "⏰ Exact Alarm Time: Reminder modal shows calculated alarm trigger time.",
-    "✅ Active Reminder Banner: Highlights active reminder and countdown to alarm.",
-    "🔔 Live Trigger Calculator: Updates alarm time instantly when changing warning minutes.",
-    "🕒 Explicit Bell Badges: Displays exact alarm trigger time on alert cards."
+    "🌐 Split Time Box: Local and UTC times share one compact split row.",
+    "🔔 Elevated Alert Toaster: Notification toasts always float above all popups and modals.",
+    "📅 Untimed Event Toasts: Clicking events with no schedule shows clear info toasts."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.2.8",
+    "version": "3.2.9",
     "latestChanges": [
+      "v3.2.9: Split UTC/Local time row and elevated toast notification layer",
       "v3.2.8: Add exact alarm trigger time indicators to event reminders",
       "v3.2.7: Purge stale Alliance Showdown and deduplicate schedule cards",
       "v3.2.6: Fix schedule grid and bell system event reminders for today's events",
-      "v3.2.5: Remove departed and banned alts from main account holder page",
-      "v3.2.4: Collapsible alt characters with arrow toggle in member database"
+      "v3.2.5: Remove departed and banned alts from main account holder page"
     ]
   }
 }

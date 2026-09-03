@@ -209,6 +209,26 @@ assert(mainJs.includes('Alarm set for <strong>${new Date(startMs - (activeWarnin
 assert(mainJs.includes('Alert at ${alarmD.toLocaleTimeString'), 'Schedule view must show exact alarm time on reminder buttons');
 pass('Prominent active banner, bell alarm badges, and schedule button labels verified');
 
+// -------------------------------------------------------------
+// Test 10: Split UTC & Local Time Row in Same Box
+// -------------------------------------------------------------
+console.log('\n🌐 Test 10: Split UTC & Local Time Row in Same Box');
+assert(mainJs.includes('grid-template-columns:1fr 1fr'), 'Event Info card must have 2-column split grid');
+assert(mainJs.includes('LOCAL TIME'), 'Split box must include LOCAL TIME label');
+assert(mainJs.includes('UTC TIME'), 'Split box must include UTC TIME label');
+pass('Local Time and UTC Time rendered in single-row split box inside Scheduled Event card');
+
+// -------------------------------------------------------------
+// Test 11: Elevated Toast Container z-index (9999999) & Untimed Alerts
+// -------------------------------------------------------------
+console.log('\n🔔 Test 11: Elevated Toast Container z-index & Untimed Alerts');
+const styleCss = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
+assert(styleCss.includes('z-index: 9999999;'), 'style.css toast-container must have z-index 9999999');
+assert(mainJs.includes("container.style.zIndex = '9999999';"), 'showToast must enforce z-index 9999999 on container');
+assert(mainJs.includes('No scheduled time found for'), 'openEventReminderModal must fire toast if event has no scheduled time');
+assert(mainJs.includes('Rest day! No timed events are scheduled for today'), 'Rest day banner must fire toast on click');
+pass('Toast container is elevated above all popups with 9999999 z-index and untimed alerts verified');
+
 console.log('\n=========================================');
 console.log(`Test Summary: ${passCount}/${passCount} tests passed`);
 console.log('=========================================\n');

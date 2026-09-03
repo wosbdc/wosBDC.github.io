@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.2.9] - 2026-09-03
+- 🌐 **Split Time Box**: Local and UTC times share one compact split row.
+- 🔔 **Elevated Alert Toaster**: Notification toasts always float above all popups and modals.
+- 📅 **Untimed Event Toasts**: Clicking events with no schedule shows clear info toasts.
+
 ## [3.2.8] - 2026-09-03
 - ⏰ **Exact Alarm Time**: Reminder modal shows calculated alarm trigger time.
 - ✅ **Active Reminder Banner**: Highlights active reminder and countdown to alarm.

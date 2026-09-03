@@ -9924,8 +9924,13 @@ window.customPrompt = (message, defaultValue = '') => {
 };
 
 window.showToast = (message, type = 'success', sticky = null) => {
-  const container = document.getElementById('toast-container');
-  if (!container) return;
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    document.body.appendChild(container);
+  }
+  container.style.zIndex = '9999999';
   const toast = document.createElement('div');
   toast.className = `toast-msg ${type}`;
   
@@ -23334,6 +23339,9 @@ window.openEventReminderModal = function(eventName, exactStartTimeMs, emoji = '�
 
   // Guard: if no valid timestamp, show a friendly "no data" message instead of a broken modal
   if (!startTime || isNaN(startTime) || startTime <= 0) {
+    if (window.showToast) {
+      window.showToast(`📅 No scheduled time found for "${eventName || 'this event'}" yet.`, "info");
+    }
     const noDataOverlay = document.createElement('div');
     noDataOverlay.id = 'eventReminderModalOverlay';
     noDataOverlay.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.85); backdrop-filter:blur(10px); z-index:100006; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease;';
@@ -23342,7 +23350,7 @@ window.openEventReminderModal = function(eventName, exactStartTimeMs, emoji = '�
         <div style="font-size:40px; margin-bottom:12px;">📅</div>
         <h3 style="margin:0 0 8px 0; color:#fff; font-size:16px; font-weight:800;">No Event Time Available</h3>
         <p style="font-size:12.5px; color:var(--text-muted); line-height:1.5; margin:0 0 18px 0;">
-          This event doesn't have a scheduled time yet.<br>Reminders can only be set for events with a confirmed date &amp; time.
+          "${escapeHTML(eventName || 'This event')}" doesn't have a scheduled time yet.<br>Reminders can only be set for events with a confirmed date &amp; time.
         </p>
         <button onclick="document.getElementById('eventReminderModalOverlay').remove()" style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:#cbd5e1; padding:9px 20px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13px;">Got It</button>
       </div>
@@ -23356,7 +23364,13 @@ window.openEventReminderModal = function(eventName, exactStartTimeMs, emoji = '�
   const existingRem = window.getEventReminders().find(r => r.id === `rem_${startTime}_${String(eventName).replace(/[^a-zA-Z0-9]/g, '_')}`);
   const currentWarning = existingRem ? existingRem.warningMins : 15;
 
-  const localTimeStr = `${startDate.toLocaleDateString([], { weekday:'short', month:'short', day:'numeric' })} at ${startDate.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}`;
+  const localClockStr = startDate.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+  const localDayStr = startDate.toLocaleDateString([], { weekday:'short', month:'short', day:'numeric' });
+
+  const utcHours = String(startDate.getUTCHours()).padStart(2, '0');
+  const utcMins = String(startDate.getUTCMinutes()).padStart(2, '0');
+  const utcClockStr = `${utcHours}:${utcMins} UTC`;
+  const utcDayStr = startDate.toLocaleDateString([], { timeZone:'UTC', weekday:'short', month:'short', day:'numeric' });
 
   const activeAlarmMs = startTime - (currentWarning * 60000);
   const activeAlarmDate = new Date(activeAlarmMs);
@@ -23408,16 +23422,41 @@ window.openEventReminderModal = function(eventName, exactStartTimeMs, emoji = '�
         </div>
       ` : ''}
 
-      <!-- Event Info Card -->
+      <!-- Event Info Card with Split UTC & Local Time Row -->
       <div style="background:linear-gradient(145deg, rgba(56,189,248,0.12), rgba(15,23,42,0.9)); border:1.5px solid rgba(56,189,248,0.35); border-radius:14px; padding:14px; margin-bottom:16px;">
-        <div style="font-size:11px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">
+        <div style="font-size:10.5px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">
           SCHEDULED EVENT
         </div>
-        <div style="font-size:17px; font-weight:800; color:#fff; margin-bottom:4px;">
+        <div style="font-size:18px; font-weight:800; color:#fff; margin-bottom:10px;">
           ${emoji} ${escapeHTML(eventName)}
         </div>
-        <div style="font-size:12px; color:var(--text-muted); font-family:monospace;">
-          🕒 ${localTimeStr} ${utcStr ? `(${utcStr})` : ''}
+
+        <!-- Split Local & UTC Time Row in the Same Box -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; background:rgba(15,23,42,0.7); border:1px solid rgba(56,189,248,0.25); border-radius:10px; overflow:hidden;">
+          <!-- Local Time Half -->
+          <div style="padding:10px 12px; border-right:1px solid rgba(255,255,255,0.08); display:flex; flex-direction:column; justify-content:center;">
+            <div style="font-size:10px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.5px; display:flex; align-items:center; gap:4px; margin-bottom:2px;">
+              <span>📍</span> <span>LOCAL TIME</span>
+            </div>
+            <div style="font-size:15px; font-weight:900; color:#fff; font-family:monospace; line-height:1.2;">
+              ${localClockStr}
+            </div>
+            <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">
+              ${localDayStr}
+            </div>
+          </div>
+          <!-- UTC Time Half -->
+          <div style="padding:10px 12px; display:flex; flex-direction:column; justify-content:center; background:rgba(245,158,11,0.04);">
+            <div style="font-size:10px; font-weight:800; color:#f59e0b; text-transform:uppercase; letter-spacing:0.5px; display:flex; align-items:center; gap:4px; margin-bottom:2px;">
+              <span>🌐</span> <span>UTC TIME</span>
+            </div>
+            <div style="font-size:15px; font-weight:900; color:#fff; font-family:monospace; line-height:1.2;">
+              ${utcClockStr}
+            </div>
+            <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">
+              ${utcDayStr}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -35687,7 +35726,7 @@ window.resetBearTrapEvent = async () => {
       // Today's Events rows
       let todayRows = '';
       if (todayEvents.length === 0) {
-        todayRows = `<div style="padding:14px 0;text-align:center;color:var(--text-muted);font-style:italic;">🎉 Rest day — no timed events today!</div>`;
+        todayRows = `<div onclick="if(window.showToast) window.showToast('🎉 Rest day! No timed events are scheduled for today.', 'info');" style="padding:14px 0;text-align:center;color:var(--text-muted);font-style:italic;cursor:pointer;" title="Click for info">🎉 Rest day — no timed events today!</div>`;
       } else {
         todayEvents.forEach(ev => {
           const strikeStyle = ev.isPast ? 'opacity:0.45;text-decoration:line-through;' : '';
@@ -35746,7 +35785,7 @@ window.resetBearTrapEvent = async () => {
       }
 
       // Category columns (2-col grid for Rewards + Signups)
-      const listItems = (arr, color) => arr.map(x => `<div style="padding:6px 0;font-size:14px;color:var(--text-main);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;"><span style="width:7px;height:7px;background:${color};border-radius:50%;flex-shrink:0;"></span>${x}</div>`).join('');
+      const listItems = (arr, color) => arr.map(x => `<div onclick="if(window.showToast) window.showToast('ℹ️ &quot;${escapeHTML(x)}&quot; is active for today with no specific timed alert.', 'info');" style="padding:6px 0;font-size:14px;color:var(--text-main);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;cursor:pointer;" title="Click for info"><span style="width:7px;height:7px;background:${color};border-radius:50%;flex-shrink:0;"></span>${x}</div>`).join('');
 
       let categoriesHtml = '';
 
@@ -36058,12 +36097,13 @@ window.resetBearTrapEvent = async () => {
               
               let timeMatch = ev.match(/\((\d{1,2}:\d{2})/);
               let calRemBtn = '';
+              const evCleanName = ev.replace(/\([^\)]*\)/g, '').replace(/^[^\w\s]+/g, '').trim();
+
               if (timeMatch && day.dateObj) {
                 const parts = timeMatch[1].split(':');
                 const evStart = new Date(day.dateObj);
                 evStart.setUTCHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0);
                 if (evStart.getTime() > Date.now()) {
-                  const evCleanName = ev.replace(/\([^\)]*\)/g, '').replace(/^[^\w\s]+/g, '').trim();
                   const isRemSet = (typeof window.isEventReminderSet === 'function') && window.isEventReminderSet(evCleanName, evStart.getTime());
                   calRemBtn = `
                     <button onclick="window.openEventReminderModal('${escapeHTML(evCleanName)}', ${evStart.getTime()}, '${isBt ? '🪤' : '✨'}', '${escapeHTML(day.dateStr)}', '${timeMatch[1]} UTC')" style="background:${isRemSet ? 'rgba(16,185,129,0.2)' : 'rgba(56,189,248,0.12)'}; border:1px solid ${isRemSet ? '#10b981' : 'rgba(56,189,248,0.35)'}; color:${isRemSet ? '#10b981' : '#38bdf8'}; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:2px; margin-left:auto;" title="Set Event Reminder">
@@ -36071,9 +36111,15 @@ window.resetBearTrapEvent = async () => {
                     </button>
                   `;
                 }
+              } else {
+                calRemBtn = `
+                  <button type="button" onclick="event.stopPropagation(); if(window.showToast) window.showToast('📅 &quot;${escapeHTML(evCleanName)}&quot; is an ongoing event with no specific timed schedule.', 'info');" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); color:var(--text-muted); padding:2px 6px; border-radius:4px; font-size:10px; cursor:pointer; display:inline-flex; align-items:center; gap:2px; margin-left:auto;" title="No timed schedule">
+                    <span>ℹ️</span>
+                  </button>
+                `;
               }
 
-              html += `<li style="padding:6px 0; font-size:13px; color:var(--text-main); display:flex; align-items:center; justify-content:space-between; gap:8px; border-bottom:1px solid rgba(255,255,255,0.05);">
+              html += `<li onclick="if(window.showToast) window.showToast('📅 &quot;${escapeHTML(evCleanName)}&quot; is listed for ${escapeHTML(day.dateStr)}.', 'info');" style="padding:6px 0; font-size:13px; color:var(--text-main); display:flex; align-items:center; justify-content:space-between; gap:8px; border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer;" title="Click for details">
                          <div style="display:flex; align-items:center; gap:8px;">
                            <span>${bullet}</span>
                            <span>${ev}</span>
