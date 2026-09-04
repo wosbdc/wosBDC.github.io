@@ -1,20 +1,20 @@
 {
-  "version": "3.2.9",
+  "version": "3.3.0",
   "releaseDate": "2026-09-03",
-  "title": "What's New in v3.2.9",
+  "title": "What's New in v3.3.0",
   "notes": [
-    "🌐 Split Time Box: Local and UTC times share one compact split row.",
-    "🔔 Elevated Alert Toaster: Notification toasts always float above all popups and modals.",
-    "📅 Untimed Event Toasts: Clicking events with no schedule shows clear info toasts."
+    "🔄 Live Sync Telemetry: Displays real-time sync timestamps for all master sheets.",
+    "⚡ Instant Sync Trigger: Added manual button to synchronize Google Sheets immediately.",
+    "🔍 Sync Filters & Search: Easily filter sheets by today, recent, or search."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.2.9",
+    "version": "3.3.0",
     "latestChanges": [
+      "v3.3.0: Real-time database sync telemetry, search filters, and instant sync trigger",
       "v3.2.9: Split UTC/Local time row and elevated toast notification layer",
       "v3.2.8: Add exact alarm trigger time indicators to event reminders",
       "v3.2.7: Purge stale Alliance Showdown and deduplicate schedule cards",
-      "v3.2.6: Fix schedule grid and bell system event reminders for today's events",
-      "v3.2.5: Remove departed and banned alts from main account holder page"
+      "v3.2.6: Fix schedule grid and bell system event reminders for today's events"
     ]
   }
 }

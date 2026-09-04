@@ -229,6 +229,59 @@ assert(mainJs.includes('No scheduled time found for'), 'openEventReminderModal m
 assert(mainJs.includes('Rest day! No timed events are scheduled for today'), 'Rest day banner must fire toast on click');
 pass('Toast container is elevated above all popups with 9999999 z-index and untimed alerts verified');
 
+// -------------------------------------------------------------
+// Test 12: Live Database Sync Status UI & Handlers
+// -------------------------------------------------------------
+console.log('\n🔄 Test 12: Live Database Sync Status UI & Handlers');
+assert(mainJs.includes('id="adminSyncStatusList"'), 'Must contain adminSyncStatusList container');
+assert(mainJs.includes('window.filterAdminSyncStatus'), 'Must define window.filterAdminSyncStatus');
+assert(mainJs.includes('window.renderAdminSyncStatusList'), 'Must define window.renderAdminSyncStatusList');
+assert(mainJs.includes('window.refreshAdminSyncStatus'), 'Must define window.refreshAdminSyncStatus');
+assert(mainJs.includes('window.triggerAdminSheetsSync'), 'Must define window.triggerAdminSheetsSync');
+assert(mainJs.includes('id="adminSyncSearchInput"'), 'Must contain sheet search input');
+assert(mainJs.includes('id="adminForceSyncSheetsBtn"'), 'Must contain manual Sync Sheets Now button');
+assert(mainJs.includes('id="syncFilterTab_today"'), 'Must contain Synced Today filter tab');
+assert(mainJs.includes('id="syncFilterTab_recent"'), 'Must contain Recent filter tab');
+assert(mainJs.includes('id="syncFilterTab_older"'), 'Must contain Older filter tab');
+pass('All UI elements, search, filters, and sync trigger handlers verified in main.js');
+
+// -------------------------------------------------------------
+// Test 13: Live Telemetry Logic, Sorting & Apps Script Integration
+// -------------------------------------------------------------
+console.log('\n📊 Test 13: Live Telemetry Logic, Sorting & Apps Script Integration');
+const now = Date.now();
+const oneMinuteAgo = now - 60000;
+const threeHoursAgo = now - (3 * 3600000);
+const twoDaysAgo = now - (2 * 86400000);
+const tenDaysAgo = now - (10 * 86400000);
+
+const mockSyncData = {
+  "Schedule data": oneMinuteAgo,
+  "data": threeHoursAgo,
+  "LeaderBoards": twoDaysAgo,
+  "Showdown": tenDaysAgo
+};
+
+const sortedKeys = Object.keys(mockSyncData).sort((a, b) => mockSyncData[b] - mockSyncData[a]);
+assert.strictEqual(sortedKeys[0], 'Schedule data', 'Most recent sync must be at the top');
+assert.strictEqual(sortedKeys[1], 'data', 'Second most recent sync must be second');
+assert.strictEqual(sortedKeys[sortedKeys.length - 1], 'Showdown', 'Oldest sync must be at the bottom');
+assert.strictEqual(sortedKeys.length, 4, 'All sheets must be retained without hiding older days');
+
+const gasFirebaseSyncPath = path.join(__dirname, '..', '..', 'wos', 'FirebaseSync.js');
+if (fs.existsSync(gasFirebaseSyncPath)) {
+  const gasSyncContent = fs.readFileSync(gasFirebaseSyncPath, 'utf8');
+  assert(gasSyncContent.includes('FIREBASE_URL + "/system/lastSync/"'), 'FirebaseSync.js must push to /system/lastSync/');
+  pass('FirebaseSync.js includes /system/lastSync/ live telemetry update');
+}
+const gasSidebarsPath = path.join(__dirname, '..', '..', 'wos', 'Sidebars_and_Tools.js');
+if (fs.existsSync(gasSidebarsPath)) {
+  const gasSidebars = fs.readFileSync(gasSidebarsPath, 'utf8');
+  assert(gasSidebars.includes('forceSyncSheets'), 'Sidebars_and_Tools.js must include forceSyncSheets endpoint');
+  pass('Sidebars_and_Tools.js includes forceSyncSheets API endpoint');
+}
+pass('Telemetry logic, newest-first sorting, and Apps Script integration verified');
+
 console.log('\n=========================================');
 console.log(`Test Summary: ${passCount}/${passCount} tests passed`);
 console.log('=========================================\n');

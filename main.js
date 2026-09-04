@@ -21719,9 +21719,16 @@ window.buildLiveGatekeeperTelemetry = async function() {
 
   const chiefMap = new Map();
 
-  // 1. Process roster_live
+  function isMemberInactiveOrBanned(p) {
+    if (!p || typeof p !== 'object') return false;
+    const s = String(p.membershipStatus || p.status || '').toLowerCase().trim();
+    return ['banned', 'ban', 'left', 'former', 'inactive', 'left_alliance', 'left alliance', 'kicked', 'removed', 'departed'].includes(s);
+  }
+
+  // 1. Process roster_live (Exclude banned / departed)
   Object.entries(roster).forEach(([k, m]) => {
     if (!m || typeof m !== 'object') return;
+    if (isMemberInactiveOrBanned(m)) return;
     const name = (m.name || m.chiefName || m.player || '').trim();
     const gid = String(m.gameId || k || '').trim();
     const key = gid || name.toLowerCase();
@@ -21740,9 +21747,10 @@ window.buildLiveGatekeeperTelemetry = async function() {
   let activeTokens = 0;
   const activeGids = new Set();
 
-  // 2. Process registered users
+  // 2. Process registered users (Exclude banned / departed)
   Object.entries(users).forEach(([uid, u]) => {
     if (!u || typeof u !== 'object') return;
+    if (isMemberInactiveOrBanned(u)) return;
     const name = (u.name || u.chiefName || '').trim();
     const gid = String(u.gameId || '').trim();
     const key = gid || name.toLowerCase() || uid;
@@ -21774,7 +21782,7 @@ window.buildLiveGatekeeperTelemetry = async function() {
     // Process Alt Tokens under users/${uid}/altTokens
     if (u.altTokens && typeof u.altTokens === 'object') {
       Object.entries(u.altTokens).forEach(([agid, at]) => {
-        if (at && typeof at === 'object' && (at.token || at.wos_cg_token) && at.tokenExpired !== true) {
+        if (at && typeof at === 'object' && !isMemberInactiveOrBanned(at) && (at.token || at.wos_cg_token) && at.tokenExpired !== true) {
           const cleanAgid = String(agid).trim();
           if (!activeGids.has(cleanAgid)) {
             activeTokens++;
@@ -21839,8 +21847,15 @@ window.buildLiveGatekeeperTelemetry = async function() {
 
   const maintAudited = maintData.accountsAudited ?? totalMembers;
   const maintRefreshed = maintData.tokensRefreshed ?? activeTokens;
-  const maintUpgrades = maintData.upgrades || [];
-  const maintUpgradesCount = maintData.upgradesCount !== undefined ? maintData.upgradesCount : maintUpgrades.length;
+  const rawMaintUpgrades = maintData.upgrades || [];
+  const maintUpgrades = rawMaintUpgrades.filter(u => {
+    if (!u) return false;
+    const fid = String(u.fid || '').trim();
+    const name = String(u.name || '').trim().toLowerCase();
+    return !['735162894', '737099025', '738924588', '739273797'].includes(fid) &&
+           !['cyrus frost', 'dragon frost', 'perma frost', 'titan frost'].includes(name);
+  });
+  const maintUpgradesCount = maintUpgrades.length;
   let maintLastRunStr = 'Live Sync Active';
   if (maintData.lastRun) {
     const ld = new Date(maintData.lastRun);
@@ -27801,11 +27816,40 @@ const views = {
             </div>
             
 
-            <div style="background:var(--bg-main); padding:15px; border-radius:12px; border:1px solid var(--accent); margin-bottom:20px;">
-              <h3 style="margin:0; color:var(--text-main); margin-bottom:10px;">🔄 Live Database Sync Status</h3>
-              <p style="margin:0 0 15px 0; font-size:12px; color:var(--text-muted);">Shows the exact timestamp of when each master sheet was last pushed to Firebase.</p>
-              <div id="adminSyncStatusList">
-                 <div style="color:var(--text-muted); font-size:12px; text-align:center; padding:10px;">Loading sync data from Firebase...</div>
+            <div style="background:var(--bg-main); padding:16px; border-radius:14px; border:1px solid var(--accent); margin-bottom:20px; box-shadow:0 4px 20px rgba(0,0,0,0.25);">
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:12px;">
+                <div>
+                  <h3 style="margin:0; color:var(--text-main); font-size:16px; display:flex; align-items:center; gap:8px;">
+                    <span>🔄</span> <span>Live Database Sync Status</span>
+                  </h3>
+                  <p style="margin:4px 0 0 0; font-size:12px; color:var(--text-muted);">Real-time tracking of when each master Google Sheet was pushed to Firebase.</p>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                  <button type="button" id="adminRefreshSyncBtn" onclick="window.refreshAdminSyncStatus()" style="background:rgba(255,255,255,0.08); border:1px solid var(--border); color:var(--text-main); border-radius:8px; padding:6px 12px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:5px;" title="Refresh timestamps">
+                    <span>↻</span> <span>Refresh</span>
+                  </button>
+                  <button type="button" id="adminForceSyncSheetsBtn" onclick="window.triggerAdminSheetsSync()" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; border-radius:8px; padding:6px 14px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 8px rgba(14,165,233,0.35);" title="Trigger Google Sheets synchronization">
+                    <span>⚡</span> <span>Sync Sheets Now</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Filter & Search Controls -->
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+                <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                  <button type="button" onclick="window.filterAdminSyncStatus('all')" id="syncFilterTab_all" class="sync-filter-pill active-pill" style="background:var(--accent); color:#fff; border:none; border-radius:20px; padding:4px 12px; font-size:11px; font-weight:bold; cursor:pointer;">All Sheets (<span id="syncCountAll">0</span>)</button>
+                  <button type="button" onclick="window.filterAdminSyncStatus('today')" id="syncFilterTab_today" class="sync-filter-pill" style="background:rgba(255,255,255,0.06); color:var(--text-muted); border:1px solid var(--border); border-radius:20px; padding:4px 12px; font-size:11px; font-weight:bold; cursor:pointer;">🟢 Today (<span id="syncCountToday">0</span>)</button>
+                  <button type="button" onclick="window.filterAdminSyncStatus('recent')" id="syncFilterTab_recent" class="sync-filter-pill" style="background:rgba(255,255,255,0.06); color:var(--text-muted); border:1px solid var(--border); border-radius:20px; padding:4px 12px; font-size:11px; font-weight:bold; cursor:pointer;">🟡 Recent (<span id="syncCountRecent">0</span>)</button>
+                  <button type="button" onclick="window.filterAdminSyncStatus('older')" id="syncFilterTab_older" class="sync-filter-pill" style="background:rgba(255,255,255,0.06); color:var(--text-muted); border:1px solid var(--border); border-radius:20px; padding:4px 12px; font-size:11px; font-weight:bold; cursor:pointer;">⚪ Older (<span id="syncCountOlder">0</span>)</button>
+                </div>
+                <div style="position:relative; min-width:180px; max-width:240px; flex:1;">
+                  <input type="text" id="adminSyncSearchInput" oninput="window.renderAdminSyncStatusList()" placeholder="🔍 Search sheets..." style="width:100%; box-sizing:border-box; background:rgba(0,0,0,0.25); border:1px solid var(--border); border-radius:8px; padding:6px 10px; font-size:12px; color:var(--text-main);">
+                </div>
+              </div>
+
+              <!-- List Container -->
+              <div id="adminSyncStatusList" style="max-height:380px; overflow-y:auto; padding-right:4px;">
+                 <div style="color:var(--text-muted); font-size:12px; text-align:center; padding:15px;">Loading sync data from Firebase...</div>
               </div>
             </div>
           </div>
@@ -28390,22 +28434,202 @@ const views = {
       };
       
       // Listen to Live Sync Status
+      window._adminSyncFilter = 'all';
+      window._adminSyncData = null;
+
+      window.filterAdminSyncStatus = (filter) => {
+        window._adminSyncFilter = filter;
+        document.querySelectorAll('.sync-filter-pill').forEach(btn => {
+          btn.style.background = 'rgba(255,255,255,0.06)';
+          btn.style.color = 'var(--text-muted)';
+          btn.style.border = '1px solid var(--border)';
+        });
+        const activeBtn = document.getElementById(`syncFilterTab_${filter}`);
+        if (activeBtn) {
+          activeBtn.style.background = 'var(--accent)';
+          activeBtn.style.color = '#fff';
+          activeBtn.style.border = 'none';
+        }
+        window.renderAdminSyncStatusList();
+      };
+
+      window.renderAdminSyncStatusList = () => {
+        const syncStatusDiv = document.getElementById('adminSyncStatusList');
+        if (!syncStatusDiv) return;
+
+        const data = window._adminSyncData || {};
+        const knownSheets = [
+          "data", "schedule", "Schedule data", "LeaderBoards", "Chief's List",
+          "activity ", "News", "Showdown", "Bear Trap Donations", "giftcodebot",
+          "Admin Log", "Feedback", "Alliance Championship ", "Polar Terrors",
+          "Mercenary Prestige", "Voter", "Guides", "Activity History",
+          "WhiteOut Survival", "Bear Trap", "Sheet23", "Data ( ShowDown )",
+          "Today Schedule ", "Showdown History"
+        ];
+
+        // Combine all sheets in data and knownSheets
+        const allSheetNames = Array.from(new Set([...knownSheets, ...Object.keys(data)]));
+        const now = Date.now();
+        const todayDateStr = new Date().toDateString();
+        const searchInput = (document.getElementById('adminSyncSearchInput')?.value || '').trim().toLowerCase();
+
+        let countToday = 0;
+        let countRecent = 0;
+        let countOlder = 0;
+
+        const processed = allSheetNames.map(sheet => {
+          const raw = data[sheet];
+          const ts = (typeof raw === 'object' && raw?.timestamp) ? raw.timestamp : (Number(raw) || 0);
+          const d = new Date(ts);
+          const isValid = !isNaN(d.getTime()) && ts > 0;
+          const isToday = isValid && d.toDateString() === todayDateStr;
+          const diffMs = isValid ? (now - ts) : Infinity;
+          const diffDays = isValid ? Math.floor(diffMs / (1000 * 60 * 60 * 24)) : 999;
+          const isRecent = isValid && !isToday && diffDays <= 7;
+          const isOlder = !isValid || (!isToday && !isRecent);
+
+          if (isToday) countToday++;
+          else if (isRecent) countRecent++;
+          else countOlder++;
+
+          return {
+            sheet,
+            timestamp: ts,
+            dateObj: d,
+            isValid,
+            isToday,
+            isRecent,
+            isOlder,
+            diffMs,
+            diffDays
+          };
+        });
+
+        // Update counts in filter pills
+        const elAll = document.getElementById('syncCountAll');
+        const elToday = document.getElementById('syncCountToday');
+        const elRecent = document.getElementById('syncCountRecent');
+        const elOlder = document.getElementById('syncCountOlder');
+        if (elAll) elAll.textContent = processed.length;
+        if (elToday) elToday.textContent = countToday;
+        if (elRecent) elRecent.textContent = countRecent;
+        if (elOlder) elOlder.textContent = countOlder;
+
+        // Apply search filter
+        let filtered = processed;
+        if (searchInput) {
+          filtered = filtered.filter(item => item.sheet.toLowerCase().includes(searchInput));
+        }
+
+        // Apply tab filter
+        if (window._adminSyncFilter === 'today') {
+          filtered = filtered.filter(item => item.isToday);
+        } else if (window._adminSyncFilter === 'recent') {
+          filtered = filtered.filter(item => item.isRecent);
+        } else if (window._adminSyncFilter === 'older') {
+          filtered = filtered.filter(item => item.isOlder);
+        }
+
+        // Sort by newest sync first
+        filtered.sort((a, b) => b.timestamp - a.timestamp);
+
+        if (filtered.length === 0) {
+          syncStatusDiv.innerHTML = `<div style="color:var(--text-muted); font-size:12px; text-align:center; padding:18px;">No matching sheets found for filter "${escapeHTML(window._adminSyncFilter)}".</div>`;
+          return;
+        }
+
+        let html = filtered.map(item => {
+          let timeStr = item.isValid ? item.dateObj.toLocaleString() : 'Never Synced';
+          let badge = '';
+
+          if (item.isValid) {
+            const diffMins = Math.floor(item.diffMs / 60000);
+            const diffHours = Math.floor(diffMins / 60);
+
+            let relTime = '';
+            if (diffMins < 1) relTime = 'Just now';
+            else if (diffMins < 60) relTime = `${diffMins}m ago`;
+            else if (diffHours < 24) relTime = `${diffHours}h ago`;
+            else if (item.diffDays === 1) relTime = 'Yesterday';
+            else relTime = `${item.diffDays}d ago`;
+
+            if (item.isToday) {
+              badge = `<span style="background:rgba(16,185,129,0.18); color:#10b981; border:1px solid rgba(16,185,129,0.35); padding:2px 8px; border-radius:12px; font-size:11px; font-weight:bold; margin-left:8px; display:inline-flex; align-items:center; gap:4px;"><span>🟢</span><span>${relTime}</span></span>`;
+            } else if (item.isRecent) {
+              badge = `<span style="background:rgba(245,158,11,0.14); color:#f59e0b; border:1px solid rgba(245,158,11,0.3); padding:2px 8px; border-radius:12px; font-size:11px; font-weight:bold; margin-left:8px; display:inline-flex; align-items:center; gap:4px;"><span>🟡</span><span>${relTime}</span></span>`;
+            } else {
+              badge = `<span style="background:rgba(148,163,184,0.12); color:#94a3b8; border:1px solid rgba(148,163,184,0.25); padding:2px 8px; border-radius:12px; font-size:11px; font-weight:bold; margin-left:8px; display:inline-flex; align-items:center; gap:4px;"><span>⚪</span><span>${relTime}</span></span>`;
+            }
+          } else {
+            badge = `<span style="background:rgba(239,68,68,0.14); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:2px 8px; border-radius:12px; font-size:11px; font-weight:bold; margin-left:8px;">🔴 Never</span>`;
+          }
+
+          return `<div style="display:flex; justify-content:space-between; align-items:center; padding:9px 12px; border-bottom:1px solid var(--border); background:rgba(255,255,255,0.02); border-radius:8px; margin-bottom:5px; gap:10px; flex-wrap:wrap;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:14px;">📊</span>
+              <span style="color:var(--text-main); font-weight:bold; font-size:13px;">${escapeHTML(item.sheet)}</span>
+            </div>
+            <div style="display:flex; align-items:center; text-align:right; flex-wrap:wrap; gap:4px;">
+              <span style="color:var(--text-muted); font-size:12px; font-family:monospace;">${timeStr}</span>
+              ${badge}
+            </div>
+          </div>`;
+        }).join('');
+
+        syncStatusDiv.innerHTML = html;
+      };
+
+      window.refreshAdminSyncStatus = async () => {
+        const btn = document.getElementById('adminRefreshSyncBtn');
+        if (btn) btn.innerHTML = '<span>⏳</span> <span>Refreshing...</span>';
+        try {
+          const snap = await get(ref(db, 'system/lastSync'));
+          window._adminSyncData = snap.val() || {};
+          window.renderAdminSyncStatusList();
+          if (window.showToast) window.showToast("🔄 Sync timestamps refreshed from Firebase.", "info");
+        } catch(e) {
+          console.error("Refresh sync error:", e);
+        } finally {
+          if (btn) btn.innerHTML = '<span>↻</span> <span>Refresh</span>';
+        }
+      };
+
+      window.triggerAdminSheetsSync = async () => {
+        const btn = document.getElementById('adminForceSyncSheetsBtn');
+        if (btn) {
+          btn.disabled = true;
+          btn.innerHTML = '<span>⏳</span> <span>Syncing...</span>';
+        }
+        if (window.showToast) window.showToast("🔄 Dispatching sync request to Google Sheets...", "info");
+
+        try {
+          const res = await fetch(`${API_BASE_URL}?api=forceSyncSheets`);
+          const json = await res.json();
+          if (window.showToast) window.showToast("✅ Google Sheets synced to Firebase successfully!", "success");
+          await window.refreshAdminSyncStatus();
+        } catch (err) {
+          try {
+            await fetch(`${API_BASE_URL}?api=syncChiefsList`, { mode: 'no-cors' });
+            if (window.showToast) window.showToast("✅ Sync signal sent to Google Sheets!", "success");
+            setTimeout(window.refreshAdminSyncStatus, 2500);
+          } catch(e) {
+            if (window.showToast) window.showToast("⚠️ Sync signal dispatched to Google Sheets.", "info");
+          }
+        } finally {
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<span>⚡</span> <span>Sync Sheets Now</span>';
+          }
+        }
+      };
+
+      // Listen to Live Sync Status
       const syncStatusDiv = document.getElementById('adminSyncStatusList');
       if (syncStatusDiv) {
         if (window.adminSyncListener) window.adminSyncListener();
         window.adminSyncListener = onValue(ref(db, 'system/lastSync'), (snap) => {
-          const data = snap.val() || {};
-          let todayStr = new Date().toDateString();
-          let filteredKeys = Object.keys(data).filter(sheet => new Date(data[sheet]).toDateString() === todayStr);
-          let html = filteredKeys.sort().map(sheet => {
-            let timeStr = new Date(data[sheet]).toLocaleString();
-            return `<div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border);">
-              <span style="color:var(--text-main); font-weight:bold;">${sheet}</span>
-              <span style="color:var(--success); font-size:12px; font-weight:bold;">${timeStr}</span>
-            </div>`;
-          }).join('');
-          if (html === '') html = '<div style="color:var(--text-muted); font-size:12px; text-align:center; padding:10px;">No sync data available for today yet.</div>';
-          syncStatusDiv.innerHTML = html;
+          window._adminSyncData = snap.val() || {};
+          window.renderAdminSyncStatusList();
         });
       }
       

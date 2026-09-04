@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.0] - 2026-09-03
+- 🔄 **Live Sync Telemetry**: Displays real-time sync timestamps for all master sheets.
+- ⚡ **Instant Sync Trigger**: Added manual button to synchronize Google Sheets immediately.
+- 🔍 **Sync Filters & Search**: Easily filter sheets by today, recent, or search.
+
 ## [3.2.9] - 2026-09-03
 - 🌐 **Split Time Box**: Local and UTC times share one compact split row.
 - 🔔 **Elevated Alert Toaster**: Notification toasts always float above all popups and modals.
