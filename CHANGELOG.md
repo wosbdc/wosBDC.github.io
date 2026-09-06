@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.3] - 2026-09-05
+- ⚡ **Highlight Changed Battles**: Glowing borders highlight rounds modified by admins.
+- 🎯 **Visual Field Badges**: Shows NEW OPPONENT and NEW SCORE tags.
+- 🔍 **Filter Modified Only**: One-click toggle hides unchanged battle rounds.
+- 📜 **Dynamic Archive Diffs**: Computes exact change deltas from prior archive.
+
 ## [3.3.2] - 2026-09-05
 - 📜 **Historical Archive Audit**: Recovers archived battle scores and opponent alliances.
 - 🛡️ **Clean System Logs**: Non-member updates never batch into zero-chief groups.

@@ -296,6 +296,11 @@ assert(mainJs.includes('⚔️ 5-Round Matchups & Scores'), 'showLogDetailModal 
 assert(mainJs.includes('🏆 Victory'), 'showLogDetailModal must support victory badge');
 assert(mainJs.includes('❌ Defeat'), 'showLogDetailModal must support defeat badge');
 assert(mainJs.includes('⏳ Pending'), 'showLogDetailModal must support pending badge');
+assert(mainJs.includes('champ-audit-round-card'), 'showLogDetailModal must tag round cards with champ-audit-round-card class');
+assert(mainJs.includes('window.toggleChampCardsFilter ='), 'main.js must define window.toggleChampCardsFilter');
+assert(mainJs.includes('⚡ MODIFIED IN THIS LOG'), 'showLogDetailModal must support modified card badge');
+assert(mainJs.includes('NEW OPPONENT'), 'showLogDetailModal must support new opponent badge');
+assert(mainJs.includes('NEW SCORE'), 'showLogDetailModal must support new score badge');
 
 // Functional testing of computeChampionshipDiffs logic
 const prevChamp = {

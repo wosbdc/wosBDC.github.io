@@ -1,21 +1,21 @@
 {
-  "version": "3.3.2",
+  "version": "3.3.3",
   "releaseDate": "2026-09-05",
-  "title": "What's New in v3.3.2",
+  "title": "What's New in v3.3.3",
   "notes": [
-    "📜 Historical Archive Audit: Recovers archived battle scores and opponent alliances.",
-    "🛡️ Clean System Logs: Non-member updates never batch into zero-chief groups.",
-    "⚡ Typing Auto-Save Clean: Prevents duplicate audit logs while typing scores.",
-    "🔍 Accurate Opponent Names: Modal displays opponent alliances from past updates."
+    "⚡ Highlight Changed Battles: Glowing borders highlight rounds modified by admins.",
+    "🎯 Visual Field Badges: Shows NEW OPPONENT and NEW SCORE tags.",
+    "🔍 Filter Modified Only: One-click toggle hides unchanged battle rounds.",
+    "📜 Dynamic Archive Diffs: Computes exact change deltas from prior archive."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.2",
+    "version": "3.3.3",
     "latestChanges": [
+      "v3.3.3: Visual highlights for modified championship rounds and one-click filter",
       "v3.3.2: Recover archived championship audit details and prevent zero-chief batches",
       "v3.3.1: Championship matchups audit details with scores, flags, and 5-round battle cards",
       "v3.3.0: Real-time database sync telemetry, search filters, and instant sync trigger",
-      "v3.2.9: Split UTC/Local time row and elevated toast notification layer",
-      "v3.2.8: Add exact alarm trigger time indicators to event reminders"
+      "v3.2.9: Split UTC/Local time row and elevated toast notification layer"
     ]
   }
 }

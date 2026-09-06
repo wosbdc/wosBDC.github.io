@@ -25806,6 +25806,7 @@ const views = {
           // Fetch or resolve Championship snapshot
           let champ = (logData.metadata && logData.metadata.championship) ? logData.metadata.championship : null;
           let isFromArchive = false;
+          let prevArch = null;
           if (!champ) {
             try {
               const histSnap = await get(ref(db, 'championship_meta/history'));
@@ -25813,25 +25814,33 @@ const views = {
                 const archives = histSnap.val() || {};
                 const logTs = logData.timestamp || logData.rawLog?.timestamp || 0;
                 const archKeys = Object.keys(archives).sort((a,b) => Number(a) - Number(b));
+                let matchedIndex = -1;
                 
                 // 1. Try finding archive with updatedAt very close to log timestamp
-                for (const k of archKeys) {
+                for (let i = 0; i < archKeys.length; i++) {
+                  const k = archKeys[i];
                   const arch = archives[k];
                   if (arch.updatedAt && Math.abs(arch.updatedAt - logTs) < 300000) {
                     champ = arch;
                     isFromArchive = true;
+                    matchedIndex = i;
                     break;
                   }
                 }
                 // 2. If not matched, find earliest archive whose archive timestamp is >= log timestamp
                 if (!champ) {
-                  for (const k of archKeys) {
+                  for (let i = 0; i < archKeys.length; i++) {
+                    const k = archKeys[i];
                     if (Number(k) >= logTs) {
                       champ = archives[k];
                       isFromArchive = true;
+                      matchedIndex = i;
                       break;
                     }
                   }
+                }
+                if (matchedIndex > 0) {
+                  prevArch = archives[archKeys[matchedIndex - 1]];
                 }
               }
             } catch(e) {
@@ -25882,26 +25891,78 @@ const views = {
             }
           }
 
+          // If still empty and we have prevArch (or if from archive), dynamically compute diffs!
+          if (parsedDiffs.length === 0 && champ && prevArch && typeof window.computeChampionshipDiffs === 'function') {
+            parsedDiffs = window.computeChampionshipDiffs(prevArch, champ);
+          }
+
+          // Cache on logData for clipboard copy
+          logData._recoveredChamp = champ;
+          logData._recoveredDiffs = parsedDiffs;
+
+          // Track which rounds and which specific fields were modified
+          const modifiedRoundNums = new Set();
+          const roundFieldChanges = {};
+
+          parsedDiffs.forEach(d => {
+            const m = d.match(/Round\s*([1-5])/i);
+            if (m) {
+              const rNum = parseInt(m[1]);
+              modifiedRoundNums.add(rNum);
+              roundFieldChanges[rNum] = roundFieldChanges[rNum] || {};
+              if (/opponent:/i.test(d)) roundFieldChanges[rNum].opponent = true;
+              if (/score:/i.test(d)) roundFieldChanges[rNum].score = true;
+              if (/flags:/i.test(d)) roundFieldChanges[rNum].flags = true;
+              if (/date:/i.test(d)) roundFieldChanges[rNum].date = true;
+            }
+          });
+
+          // Fallback if no specific round parsed: mark active rounds as modified
+          if (modifiedRoundNums.size === 0 && champ && champ.rounds) {
+            for (let i = 1; i <= 5; i++) {
+              const r = champ.rounds['r' + i];
+              if (r && ((r.enemyAlliance && r.enemyAlliance.name) || r.ourScore > 0 || (r.enemyAlliance && r.enemyAlliance.score > 0))) {
+                modifiedRoundNums.add(i);
+                roundFieldChanges[i] = { opponent: true, score: true, flags: true };
+              }
+            }
+          }
+
           let diffsHtml = '';
           if (parsedDiffs.length > 0) {
             diffsHtml = `
-              <div style="background:rgba(245,158,11,0.06); border:1px solid rgba(245,158,11,0.3); border-radius:12px; padding:12px 14px; display:flex; flex-direction:column; gap:8px;">
-                <div style="font-size:11px; text-transform:uppercase; color:#f59e0b; font-weight:800; letter-spacing:0.5px; display:flex; align-items:center; gap:6px;">
-                  <span>⚡</span><span>Changes Recorded in this Update (${parsedDiffs.length})</span>
+              <div style="background:linear-gradient(135deg, rgba(245,158,11,0.12) 0%, rgba(217,119,6,0.06) 100%); border:1.5px solid #f59e0b; border-radius:12px; padding:14px 16px; display:flex; flex-direction:column; gap:10px; box-shadow:0 4px 15px rgba(245,158,11,0.15);">
+                <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px;">
+                  <div style="font-size:12px; text-transform:uppercase; color:#f59e0b; font-weight:900; letter-spacing:0.5px; display:flex; align-items:center; gap:6px;">
+                    <span style="font-size:14px;">⚡</span>
+                    <span>Changes Made by ${escapeHTML(logData.admin || 'Admin')} (${parsedDiffs.length})</span>
+                  </div>
+                  <span style="background:rgba(245,158,11,0.25); border:1px solid rgba(245,158,11,0.5); color:#f59e0b; font-size:11px; font-weight:800; padding:2px 8px; border-radius:6px;">
+                    ${modifiedRoundNums.size} of 5 Rounds Updated
+                  </span>
                 </div>
                 <div style="display:flex; flex-direction:column; gap:6px;">
                   ${parsedDiffs.map(d => {
                     let icon = '⚡';
-                    let borderCol = 'rgba(255,255,255,0.08)';
-                    let bgCol = 'rgba(255,255,255,0.02)';
-                    if (d.includes('Score:')) { icon = '🎯'; borderCol = 'rgba(56,189,248,0.25)'; bgCol = 'rgba(56,189,248,0.05)'; }
-                    else if (d.includes('Flags:')) { icon = '🚩'; borderCol = 'rgba(16,185,129,0.25)'; bgCol = 'rgba(16,185,129,0.05)'; }
-                    else if (d.includes('Opponent:')) { icon = '⚔️'; borderCol = 'rgba(239,68,68,0.25)'; bgCol = 'rgba(239,68,68,0.05)'; }
-                    else if (d.includes('Season Name:') || d.includes('Record')) { icon = '🏆'; borderCol = 'rgba(245,158,11,0.25)'; bgCol = 'rgba(245,158,11,0.05)'; }
+                    let borderCol = 'rgba(245,158,11,0.3)';
+                    let bgCol = 'rgba(0,0,0,0.3)';
+                    if (d.includes('Score:')) { icon = '🎯'; borderCol = 'rgba(56,189,248,0.35)'; }
+                    else if (d.includes('Flags:')) { icon = '🚩'; borderCol = 'rgba(16,185,129,0.35)'; }
+                    else if (d.includes('Opponent:')) { icon = '⚔️'; borderCol = 'rgba(245,158,11,0.5)'; }
+                    else if (d.includes('Season Name:') || d.includes('Record')) { icon = '🏆'; borderCol = 'rgba(245,158,11,0.35)'; }
+
+                    let formattedText = escapeHTML(d);
+                    if (formattedText.includes('➔')) {
+                      formattedText = formattedText.split('➔').map((part, pIdx) => {
+                        if (pIdx === 0) return `<span style="opacity:0.75;">${part.trim()}</span>`;
+                        return `<span style="color:#f59e0b; font-weight:900; margin:0 4px;">➔</span><strong style="color:#fff; background:rgba(245,158,11,0.15); padding:1px 6px; border-radius:4px;">${part.trim()}</strong>`;
+                      }).join('');
+                    }
+
                     return `
                       <div style="display:flex; align-items:flex-start; gap:8px; padding:8px 10px; background:${bgCol}; border:1px solid ${borderCol}; border-radius:8px; font-size:12px; line-height:1.4;">
-                        <span style="font-size:13px; flex-shrink:0;">${icon}</span>
-                        <span style="color:var(--text-main); word-break:break-word;">${escapeHTML(d)}</span>
+                        <span style="font-size:14px; flex-shrink:0;">${icon}</span>
+                        <div style="color:var(--text-main); word-break:break-word; flex:1;">${formattedText}</div>
                       </div>
                     `;
                   }).join('')}
@@ -25926,19 +25987,15 @@ const views = {
               const oppName = (enemy.name || '').trim() || `Opponent ${i}`;
               const roundDate = r.date || `Round ${i}`;
 
-              let outcomeBadge = '';
-              let borderHighlight = 'var(--border)';
-              let bgGradient = 'rgba(255,255,255,0.02)';
+              const isModified = modifiedRoundNums.has(i);
+              const changes = roundFieldChanges[i] || {};
 
+              let outcomeBadge = '';
               if (ourScore > 0 || enemyScore > 0) {
                 if (ourScore > enemyScore) {
                   outcomeBadge = `<span style="background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.4); color:#34d399; padding:2px 8px; border-radius:6px; font-size:10.5px; font-weight:700;">🏆 Victory (+${(ourScore - enemyScore).toLocaleString()})</span>`;
-                  borderHighlight = 'rgba(16,185,129,0.3)';
-                  bgGradient = 'linear-gradient(135deg, rgba(16,185,129,0.06) 0%, rgba(255,255,255,0.02) 100%)';
                 } else if (enemyScore > ourScore) {
                   outcomeBadge = `<span style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#f87171; padding:2px 8px; border-radius:6px; font-size:10.5px; font-weight:700;">❌ Defeat (-${(enemyScore - ourScore).toLocaleString()})</span>`;
-                  borderHighlight = 'rgba(239,68,68,0.3)';
-                  bgGradient = 'linear-gradient(135deg, rgba(239,68,68,0.06) 0%, rgba(255,255,255,0.02) 100%)';
                 } else {
                   outcomeBadge = `<span style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.4); color:#fbbf24; padding:2px 8px; border-radius:6px; font-size:10.5px; font-weight:700;">🤝 Tied</span>`;
                 }
@@ -25946,11 +26003,51 @@ const views = {
                 outcomeBadge = `<span style="background:rgba(148,163,184,0.1); border:1px solid rgba(148,163,184,0.25); color:#94a3b8; padding:2px 8px; border-radius:6px; font-size:10.5px; font-weight:600;">⏳ Pending</span>`;
               }
 
+              const cardBorder = isModified
+                ? '2px solid #f59e0b'
+                : '1px solid rgba(255,255,255,0.08)';
+              const cardBg = isModified
+                ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(30, 41, 59, 0.95) 100%)'
+                : 'rgba(255, 255, 255, 0.02)';
+              const cardShadow = isModified
+                ? '0 0 16px rgba(245, 158, 11, 0.25), 0 4px 12px rgba(0,0,0,0.3)'
+                : 'none';
+              const cardOpacity = isModified ? '1' : '0.65';
+
+              const modifiedPill = isModified
+                ? `<span style="background:linear-gradient(135deg, #f59e0b, #d97706); color:#000; font-weight:900; font-size:10px; padding:2.5px 8px; border-radius:6px; text-transform:uppercase; letter-spacing:0.5px; display:inline-flex; align-items:center; gap:4px; box-shadow:0 2px 6px rgba(245,158,11,0.35);">⚡ MODIFIED IN THIS LOG</span>`
+                : `<span style="background:rgba(255,255,255,0.05); color:var(--text-muted); font-size:10px; padding:2px 6px; border-radius:5px; font-weight:600;">(Unchanged)</span>`;
+
+              const oppBoxStyle = changes.opponent
+                ? `background:rgba(245,158,11,0.12); border:1.5px solid #f59e0b; box-shadow:0 0 10px rgba(245,158,11,0.25);`
+                : `background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.22);`;
+
+              const bdcScoreBadge = changes.score
+                ? `<span style="background:rgba(56,189,248,0.25); color:#38bdf8; border:1px solid rgba(56,189,248,0.5); font-size:9px; font-weight:800; padding:1px 5px; border-radius:4px; margin-left:4px;">NEW SCORE</span>`
+                : '';
+
+              const bdcFlagsBadge = changes.flags
+                ? `<span style="background:rgba(245,158,11,0.25); color:#f59e0b; border:1px solid rgba(245,158,11,0.5); font-size:9px; font-weight:800; padding:1px 5px; border-radius:4px; margin-left:4px;">NEW</span>`
+                : '';
+
+              const enemyNameBadge = changes.opponent
+                ? `<span style="background:#f59e0b; color:#000; font-size:9.5px; font-weight:900; padding:1px 6px; border-radius:4px; margin-right:4px; box-shadow:0 1px 4px rgba(245,158,11,0.4); white-space:nowrap;">NEW OPPONENT</span>`
+                : '';
+
+              const enemyScoreBadge = changes.score
+                ? `<span style="background:rgba(239,68,68,0.25); color:#fca5a5; border:1px solid rgba(239,68,68,0.5); font-size:9px; font-weight:800; padding:1px 5px; border-radius:4px; margin-left:4px;">NEW SCORE</span>`
+                : '';
+
+              const enemyFlagsBadge = changes.flags
+                ? `<span style="background:rgba(245,158,11,0.25); color:#f59e0b; border:1px solid rgba(245,158,11,0.5); font-size:9px; font-weight:800; padding:1px 5px; border-radius:4px; margin-left:4px;">NEW</span>`
+                : '';
+
               return `
-                <div style="background:${bgGradient}; border:1px solid ${borderHighlight}; border-radius:12px; padding:11px 13px; display:flex; flex-direction:column; gap:9px;">
+                <div class="champ-audit-round-card" data-modified="${isModified ? 'true' : 'false'}" style="background:${cardBg}; border:${cardBorder}; box-shadow:${cardShadow}; opacity:${cardOpacity}; border-radius:12px; padding:12px 14px; display:flex; flex-direction:column; gap:9px; transition:all 0.2s ease;">
                   <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:7px;">
                     <div style="display:flex; align-items:center; gap:8px;">
-                      <span style="font-size:12.5px; font-weight:800; color:var(--text-main);">Round ${i}</span>
+                      <span style="font-size:13px; font-weight:800; color:var(--text-main);">Round ${i}</span>
+                      ${modifiedPill}
                       <span style="background:rgba(255,255,255,0.06); color:var(--text-muted); padding:2px 8px; border-radius:6px; font-size:11px; font-weight:600;">📅 ${escapeHTML(roundDate)}</span>
                     </div>
                     <div>${outcomeBadge}</div>
@@ -25959,22 +26056,33 @@ const views = {
                     <div style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.22); border-radius:8px; padding:7px 9px; display:flex; flex-direction:column; gap:2px;">
                       <div style="display:flex; align-items:center; justify-content:space-between; gap:4px;">
                         <span style="font-weight:700; color:#34d399; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">[${escapeHTML(ourState)}] BDC</span>
-                        <span style="background:rgba(16,185,129,0.2); color:#6ee7b7; font-size:10px; font-weight:800; padding:1px 5px; border-radius:4px; white-space:nowrap;">${ourFlags} 🚩</span>
+                        <div style="display:flex; align-items:center; gap:2px;">
+                          <span style="background:rgba(16,185,129,0.2); color:#6ee7b7; font-size:10px; font-weight:800; padding:1px 5px; border-radius:4px; white-space:nowrap;">${ourFlags} 🚩</span>
+                          ${bdcFlagsBadge}
+                        </div>
                       </div>
-                      <div style="font-size:13.5px; font-weight:800; color:var(--text-main); font-family:monospace; margin-top:2px;">
-                        ${ourScore.toLocaleString()} <span style="font-size:10px; color:var(--text-muted); font-family:inherit; font-weight:normal;">pts</span>
+                      <div style="font-size:13.5px; font-weight:800; color:var(--text-main); font-family:monospace; margin-top:2px; display:flex; align-items:center; gap:4px;">
+                        <span>${ourScore.toLocaleString()}</span> <span style="font-size:10px; color:var(--text-muted); font-family:inherit; font-weight:normal;">pts</span>
+                        ${bdcScoreBadge}
                       </div>
                     </div>
                     <div style="display:flex; flex-direction:column; align-items:center; justify-content:center;">
                       <span style="font-size:9.5px; font-weight:900; color:var(--text-muted); background:rgba(255,255,255,0.06); padding:2px 5px; border-radius:4px; letter-spacing:1px;">VS</span>
                     </div>
-                    <div style="background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.22); border-radius:8px; padding:7px 9px; display:flex; flex-direction:column; gap:2px; text-align:right;">
+                    <div style="${oppBoxStyle} border-radius:8px; padding:7px 9px; display:flex; flex-direction:column; gap:2px; text-align:right;">
                       <div style="display:flex; align-items:center; justify-content:space-between; gap:4px; flex-direction:row-reverse;">
-                        <span style="font-weight:700; color:#f87171; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHTML(oppName)}">[${escapeHTML(oppState)}] ${escapeHTML(oppName)}</span>
-                        <span style="background:rgba(239,68,68,0.2); color:#fca5a5; font-size:10px; font-weight:800; padding:1px 5px; border-radius:4px; white-space:nowrap;">${enemyFlags} 🏳️</span>
+                        <div style="display:flex; align-items:center; gap:3px; overflow:hidden; justify-content:flex-end;">
+                          ${enemyNameBadge}
+                          <span style="font-weight:700; color:#f87171; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHTML(oppName)}">[${escapeHTML(oppState)}] ${escapeHTML(oppName)}</span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:2px;">
+                          ${enemyFlagsBadge}
+                          <span style="background:rgba(239,68,68,0.2); color:#fca5a5; font-size:10px; font-weight:800; padding:1px 5px; border-radius:4px; white-space:nowrap;">${enemyFlags} 🏳️</span>
+                        </div>
                       </div>
-                      <div style="font-size:13.5px; font-weight:800; color:var(--text-main); font-family:monospace; margin-top:2px;">
-                        ${enemyScore.toLocaleString()} <span style="font-size:10px; color:var(--text-muted); font-family:inherit; font-weight:normal;">pts</span>
+                      <div style="font-size:13.5px; font-weight:800; color:var(--text-main); font-family:monospace; margin-top:2px; display:flex; align-items:center; justify-content:flex-end; gap:4px;">
+                        ${enemyScoreBadge}
+                        <span>${enemyScore.toLocaleString()}</span> <span style="font-size:10px; color:var(--text-muted); font-family:inherit; font-weight:normal;">pts</span>
                       </div>
                     </div>
                   </div>
@@ -25994,6 +26102,28 @@ const views = {
                    <span>Legacy Audit Log: Detailed score/flag diff tracking was introduced in v3.3.1. Displaying active Championship 5-Round snapshot.</span>
                  </div>`
               : '');
+
+          const filterToolbarHtml = (modifiedRoundNums.size > 0 && modifiedRoundNums.size < 5) ? `
+            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+              <div style="font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:800; letter-spacing:0.5px; display:flex; align-items:center; gap:6px;">
+                <span>⚔️ 5-Round Matchups</span>
+                <span style="background:rgba(245,158,11,0.15); color:#f59e0b; font-size:10.5px; padding:1px 6px; border-radius:5px; font-weight:700;">${modifiedRoundNums.size} modified</span>
+              </div>
+              <div style="display:inline-flex; background:rgba(0,0,0,0.35); border:1px solid var(--border); border-radius:8px; padding:2px; gap:3px;">
+                <button id="champFilterModOnlyBtn" onclick="window.toggleChampCardsFilter('modified')" style="background:#f59e0b; color:#000; border:none; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:800; cursor:pointer; transition:0.2s;">
+                  ⚡ Modified (${modifiedRoundNums.size})
+                </button>
+                <button id="champFilterAllBtn" onclick="window.toggleChampCardsFilter('all')" style="background:transparent; color:var(--text-muted); border:none; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; transition:0.2s;">
+                  📋 All (5)
+                </button>
+              </div>
+            </div>
+          ` : `
+            <div style="font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:800; letter-spacing:0.5px; display:flex; justify-content:space-between; align-items:center;">
+              <span>⚔️ 5-Round Matchups & Scores</span>
+              <span style="background:rgba(245,158,11,0.15); color:#f59e0b; font-size:10.5px; padding:1px 7px; border-radius:5px; font-weight:700;">⚡ All 5 Rounds Modified</span>
+            </div>
+          `;
 
           modal.innerHTML = `
             <div style="background:var(--bg-card, #1e293b); border:1px solid var(--border, #334155); border-radius:16px; width:100%; max-width:620px; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 25px 50px -12px rgba(0,0,0,0.6); overflow:hidden;" onclick="event.stopPropagation()">
@@ -26059,10 +26189,7 @@ const views = {
                 <!-- 5-Round Battle Cards -->
                 ${roundsHtml ? `
                   <div style="display:flex; flex-direction:column; gap:8px;">
-                    <div style="font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:800; letter-spacing:0.5px; display:flex; justify-content:space-between; align-items:center;">
-                      <span>⚔️ 5-Round Matchups & Scores</span>
-                      <span style="font-size:10.5px; color:var(--text-muted); font-weight:normal;">State 2089</span>
-                    </div>
+                    ${filterToolbarHtml}
                     <div style="display:flex; flex-direction:column; gap:8px;">
                       ${roundsHtml}
                     </div>
@@ -26209,10 +26336,33 @@ const views = {
       // Compatibility alias
       window.showBatchedMembersModal = (id) => window.showLogDetailModal(id);
 
+      window.toggleChampCardsFilter = (mode) => {
+        const cards = document.querySelectorAll('.champ-audit-round-card');
+        const modBtn = document.getElementById('champFilterModOnlyBtn');
+        const allBtn = document.getElementById('champFilterAllBtn');
+        if (mode === 'modified') {
+          cards.forEach(c => {
+            if (c.getAttribute('data-modified') === 'true') {
+              c.style.display = 'flex';
+            } else {
+              c.style.display = 'none';
+            }
+          });
+          if (modBtn) { modBtn.style.background = '#f59e0b'; modBtn.style.color = '#000'; }
+          if (allBtn) { allBtn.style.background = 'transparent'; allBtn.style.color = 'var(--text-muted)'; }
+        } else {
+          cards.forEach(c => {
+            c.style.display = 'flex';
+          });
+          if (allBtn) { allBtn.style.background = 'rgba(255,255,255,0.15)'; allBtn.style.color = '#fff'; }
+          if (modBtn) { modBtn.style.background = 'transparent'; modBtn.style.color = 'var(--text-muted)'; }
+        }
+      };
+
       window.copyChampionshipLogDetails = (logId) => {
         const logData = window._batchedMembersMap && window._batchedMembersMap[logId];
         if (!logData) return;
-        const champ = (logData.metadata && logData.metadata.championship) || window._lastChampionshipMatchups;
+        const champ = logData._recoveredChamp || (logData.metadata && logData.metadata.championship) || window._lastChampionshipMatchups;
         let text = '';
         if (champ) {
           const lines = [
@@ -26221,9 +26371,10 @@ const views = {
             `🕒 Logged: ${logData.dateStr || ''} ${logData.timeStr || ''} by ${logData.admin || 'Admin'}`,
             ''
           ];
-          if (champ.diffs && champ.diffs.length > 0) {
+          const diffsList = (champ.diffs && champ.diffs.length > 0) ? champ.diffs : (logData._recoveredDiffs || []);
+          if (diffsList.length > 0) {
             lines.push('⚡ Changes Recorded in this Update:');
-            champ.diffs.forEach(d => lines.push(`• ${d}`));
+            diffsList.forEach(d => lines.push(`• ${d}`));
             lines.push('');
           }
           if (champ.rounds) {
