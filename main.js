@@ -7420,7 +7420,7 @@ window.syncScheduleDirectly = async () => {
     }
 };
 
-window.logAdminAction = async (actionType, details, targetPlayer = '') => {
+window.logAdminAction = async (actionType, details, targetPlayer = '', metadata = null) => {
     try {
         const adminName = (currentUser && currentUser.gameId && idToNameMap[currentUser.gameId]) 
             ? idToNameMap[currentUser.gameId] 
@@ -7440,6 +7440,9 @@ window.logAdminAction = async (actionType, details, targetPlayer = '') => {
             dateStr: now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
             timeStr: now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
         };
+        if (metadata && typeof metadata === 'object') {
+            logItem.metadata = metadata;
+        }
         
         await set(ref(db, `admin_logs/${logId}`), logItem);
     } catch (e) {
@@ -12015,11 +12018,164 @@ window.fetchChampionshipMatchups = async () => {
     return JSON.parse(JSON.stringify(window.DEFAULT_CHAMPIONSHIP_MATCHUPS));
 };
 
-window.saveChampionshipMatchups = async (data) => {
+window.computeChampionshipDiffs = (prev, current) => {
+    if (!current || typeof current !== 'object') return [];
+    if (!prev || typeof prev !== 'object') {
+        return ['Championship season details and 5-round battle info updated'];
+    }
+
+    const diffs = [];
+
+    // 1. Season Name
+    if (prev.seasonName && current.seasonName && prev.seasonName !== current.seasonName) {
+        diffs.push(`Season Name: "${prev.seasonName}" ➔ "${current.seasonName}"`);
+    }
+
+    // 2. Status Text / Record
+    if (prev.statusText && current.statusText && prev.statusText !== current.statusText) {
+        diffs.push(`Record / Series Status: "${prev.statusText}" ➔ "${current.statusText}"`);
+    }
+
+    // 3. Season Flags
+    const prevOurFlags = Number(prev.ourSeasonFlags) || 0;
+    const currOurFlags = Number(current.ourSeasonFlags) || 0;
+    const prevEnemyFlags = Number(prev.enemySeasonFlags) || 0;
+    const currEnemyFlags = Number(current.enemySeasonFlags) || 0;
+
+    if (prevOurFlags !== currOurFlags || prevEnemyFlags !== currEnemyFlags) {
+        const ourDelta = currOurFlags - prevOurFlags;
+        const enemyDelta = currEnemyFlags - prevEnemyFlags;
+        const ourDeltaStr = ourDelta > 0 ? ` (+${ourDelta})` : (ourDelta < 0 ? ` (${ourDelta})` : '');
+        const enemyDeltaStr = enemyDelta > 0 ? ` (+${enemyDelta})` : (enemyDelta < 0 ? ` (${enemyDelta})` : '');
+        diffs.push(`Season Flags: BDC ${prevOurFlags} ➔ ${currOurFlags}${ourDeltaStr} 🚩 | Enemies ${prevEnemyFlags} ➔ ${currEnemyFlags}${enemyDeltaStr} 🏳️`);
+    }
+
+    // 4. Per-round diffs
+    const prevRounds = prev.rounds || {};
+    const currRounds = current.rounds || {};
+
+    for (let i = 1; i <= 5; i++) {
+        const rKey = 'r' + i;
+        const pR = prevRounds[rKey] || {};
+        const cR = currRounds[rKey] || {};
+
+        const pEnemy = pR.enemyAlliance || {};
+        const cEnemy = cR.enemyAlliance || {};
+
+        const roundChanges = [];
+
+        // Date
+        if (pR.date && cR.date && pR.date !== cR.date && cR.date !== `Round ${i}`) {
+            roundChanges.push(`Date: "${pR.date}" ➔ "${cR.date}"`);
+        }
+
+        // Opponent Name / State
+        const pEnemyName = (pEnemy.name || '').trim();
+        const cEnemyName = (cEnemy.name || '').trim();
+        const pEnemyState = (pEnemy.state || '').trim();
+        const cEnemyState = (cEnemy.state || '').trim();
+
+        if (pEnemyName !== cEnemyName || pEnemyState !== cEnemyState) {
+            const pOpp = pEnemyName ? `[${pEnemyState || '?'}] ${pEnemyName}` : (pR.date || `Opponent ${i}`);
+            const cOpp = cEnemyName ? `[${cEnemyState || '?'}] ${cEnemyName}` : (cR.date || `Opponent ${i}`);
+            roundChanges.push(`Opponent: ${pOpp} ➔ ${cOpp}`);
+        }
+
+        // Scores
+        const pOurScore = Number(pR.ourScore) || 0;
+        const cOurScore = Number(cR.ourScore) || 0;
+        const pEnemyScore = Number(pEnemy.score) || 0;
+        const cEnemyScore = Number(cEnemy.score) || 0;
+
+        if (pOurScore !== cOurScore || pEnemyScore !== cEnemyScore) {
+            const ourDiff = cOurScore - pOurScore;
+            const ourDiffStr = ourDiff > 0 ? ` (+${ourDiff.toLocaleString()})` : (ourDiff < 0 ? ` (${ourDiff.toLocaleString()})` : '');
+            const enemyDiff = cEnemyScore - pEnemyScore;
+            const enemyDiffStr = enemyDiff > 0 ? ` (+${enemyDiff.toLocaleString()})` : (enemyDiff < 0 ? ` (${enemyDiff.toLocaleString()})` : '');
+            roundChanges.push(`Score: BDC ${pOurScore.toLocaleString()} ➔ ${cOurScore.toLocaleString()}${ourDiffStr} vs Enemy ${pEnemyScore.toLocaleString()} ➔ ${cEnemyScore.toLocaleString()}${enemyDiffStr}`);
+        }
+
+        // Flags
+        const pOurRFlags = Number(pR.ourFlags) || 0;
+        const cOurRFlags = Number(cR.ourFlags) || 0;
+        const pEnemyRFlags = Number(pEnemy.flags) || 0;
+        const cEnemyRFlags = Number(cEnemy.flags) || 0;
+
+        if (pOurRFlags !== cOurRFlags || pEnemyRFlags !== cEnemyRFlags) {
+            roundChanges.push(`Flags: BDC ${pOurRFlags} ➔ ${cOurRFlags} 🚩 | Enemy ${pEnemyRFlags} ➔ ${cEnemyRFlags} 🏳️`);
+        }
+
+        if (roundChanges.length > 0) {
+            const enemyLabel = cEnemyName ? `vs [${cEnemyState || '?'}] ${cEnemyName}` : '';
+            diffs.push(`Round ${i} ${enemyLabel}: ${roundChanges.join('; ')}`);
+        }
+    }
+
+    return diffs;
+};
+
+window.saveChampionshipMatchups = async (data, skipLog = false) => {
     if (!data || typeof data !== 'object') return false;
+
+    // 1. Fetch prior matchup state to compute granular changes
+    let prevData = window._lastChampionshipMatchups;
+    if (!prevData) {
+        try {
+            const snap = await get(ref(db, 'championship_matchups'));
+            if (snap && snap.exists()) {
+                prevData = snap.val();
+                window._lastChampionshipMatchups = JSON.parse(JSON.stringify(prevData));
+            }
+        } catch(e) {}
+    }
+
+    // 2. Save new state to Firebase
     await set(ref(db, 'championship_matchups'), data);
-    if (window.logAdminAction) {
-        window.logAdminAction("Championship Matchups Update", `Updated Championship 5-Round matchups and scores (${data.seasonName || 'Current Season'})`);
+
+    // 3. Compute diffs
+    const diffs = window.computeChampionshipDiffs ? window.computeChampionshipDiffs(prevData, data) : [];
+    window._lastChampionshipMatchups = JSON.parse(JSON.stringify(data));
+
+    // 4. Log detailed Admin Action (unless explicitly silenced)
+    if (!skipLog && window.logAdminAction) {
+        const seasonName = data.seasonName || 'Current Season';
+        const record = data.statusText || '0 Wins – 0 Losses';
+        const ourTotalFlags = Number(data.ourSeasonFlags) || 0;
+        const enemyTotalFlags = Number(data.enemySeasonFlags) || 0;
+
+        let detailsText = '';
+        if (diffs.length > 0) {
+            detailsText = `🏆 Season: ${seasonName} (${record})\n🚩 Overall Flags: BDC ${ourTotalFlags} 🚩 | Enemies ${enemyTotalFlags} 🏳️\n\n⚡ Changes Recorded in this Update:\n` +
+                          diffs.map(d => `• ${d}`).join('\n');
+        } else {
+            let roundsLines = [];
+            if (data.rounds) {
+                for (let i = 1; i <= 5; i++) {
+                    const r = data.rounds['r' + i] || {};
+                    const enemy = r.enemyAlliance || {};
+                    const oppStr = enemy.name ? `[${enemy.state || '?'}] ${enemy.name}` : `Opponent ${i}`;
+                    const resBadge = r.ourScore > enemy.score ? '🏆 Victory' : (enemy.score > r.ourScore ? '❌ Defeat' : (r.ourScore > 0 ? '🤝 Tie' : '⏳ Pending'));
+                    roundsLines.push(`• Round ${i} (${r.date || `Round ${i}`}): BDC ${Number(r.ourScore || 0).toLocaleString()} (${r.ourFlags || 0} 🚩) vs ${oppStr} ${Number(enemy.score || 0).toLocaleString()} (${enemy.flags || 0} 🏳️) [${resBadge}]`);
+                }
+            }
+            detailsText = `🏆 Season: ${seasonName} (${record})\n🚩 Overall Flags: BDC ${ourTotalFlags} 🚩 | Enemies ${enemyTotalFlags} 🏳️\n\n⚔️ 5-Round Matchups Snapshot:\n` +
+                          roundsLines.join('\n');
+        }
+
+        const metadata = {
+            championship: {
+                seasonName: seasonName,
+                statusText: record,
+                ourSeasonFlags: ourTotalFlags,
+                enemySeasonFlags: enemyTotalFlags,
+                rounds: data.rounds || {},
+                diffs: diffs,
+                prevSeasonFlags: prevData ? { our: prevData.ourSeasonFlags || 0, enemy: prevData.enemySeasonFlags || 0 } : null,
+                timestamp: Date.now()
+            }
+        };
+
+        await window.logAdminAction("Championship Matchups Update", detailsText, "Alliance Championship", metadata);
     }
     return true;
 };
@@ -25626,12 +25782,17 @@ const views = {
       };
 
       // Rich Unified Interactive Modal to View Action & Batched Member Details
-      window.showLogDetailModal = (logId) => {
+      // Rich Unified Interactive Modal to View Action & Batched Member Details
+      window.showLogDetailModal = async (logId) => {
         const logData = window._batchedMembersMap && window._batchedMembersMap[logId];
         if (!logData) return;
 
         const existing = document.getElementById('logDetailModal');
         if (existing) existing.remove();
+
+        const isChampionship = (logData.action || '').toLowerCase().includes('championship') || 
+                               (logData.target || '').toLowerCase().includes('championship') ||
+                               (logData.metadata && logData.metadata.championship);
 
         const modal = document.createElement('div');
         modal.id = 'logDetailModal';
@@ -25640,6 +25801,262 @@ const views = {
         modal.onclick = (e) => {
           if (e.target === modal) modal.remove();
         };
+
+        if (isChampionship) {
+          // Fetch or resolve Championship snapshot
+          let champ = (logData.metadata && logData.metadata.championship) ? logData.metadata.championship : null;
+          if (!champ) {
+            if (window._lastChampionshipMatchups) {
+              champ = window._lastChampionshipMatchups;
+            } else if (typeof window.fetchChampionshipMatchups === 'function') {
+              try {
+                champ = await window.fetchChampionshipMatchups();
+              } catch(e) {}
+            }
+          }
+
+          const seasonName = (champ && champ.seasonName) ? champ.seasonName : 'Current Season';
+          const statusText = (champ && champ.statusText) ? champ.statusText : '0 Wins – 0 Losses';
+          
+          let ourFlagsCount = champ ? Number(champ.ourSeasonFlags) : 0;
+          let enemyFlagsCount = champ ? Number(champ.enemySeasonFlags) : 0;
+          if (isNaN(ourFlagsCount) || ourFlagsCount === 0) {
+            let sum = 0;
+            if (champ && champ.rounds) {
+              for (let i = 1; i <= 5; i++) sum += Number(champ.rounds['r' + i]?.ourFlags) || 0;
+            }
+            if (sum > 0 || isNaN(ourFlagsCount)) ourFlagsCount = sum;
+          }
+          if (isNaN(enemyFlagsCount) || enemyFlagsCount === 0) {
+            let sum = 0;
+            if (champ && champ.rounds) {
+              for (let i = 1; i <= 5; i++) sum += Number(champ.rounds['r' + i]?.enemyAlliance?.flags) || 0;
+            }
+            if (sum > 0 || isNaN(enemyFlagsCount)) enemyFlagsCount = sum;
+          }
+
+          // Diffs resolution
+          const explicitDiffs = (logData.metadata && logData.metadata.championship && Array.isArray(logData.metadata.championship.diffs))
+            ? logData.metadata.championship.diffs
+            : [];
+          let parsedDiffs = [...explicitDiffs];
+          if (parsedDiffs.length === 0 && logData.details) {
+            const lines = logData.details.split('\n').map(l => l.trim()).filter(Boolean);
+            const bulletLines = lines.filter(l => l.startsWith('•')).map(l => l.replace(/^•\s*/, ''));
+            if (bulletLines.length > 0) {
+              parsedDiffs = bulletLines;
+            }
+          }
+
+          let diffsHtml = '';
+          if (parsedDiffs.length > 0) {
+            diffsHtml = `
+              <div style="background:rgba(245,158,11,0.06); border:1px solid rgba(245,158,11,0.3); border-radius:12px; padding:12px 14px; display:flex; flex-direction:column; gap:8px;">
+                <div style="font-size:11px; text-transform:uppercase; color:#f59e0b; font-weight:800; letter-spacing:0.5px; display:flex; align-items:center; gap:6px;">
+                  <span>⚡</span><span>Changes Recorded in this Update (${parsedDiffs.length})</span>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:6px;">
+                  ${parsedDiffs.map(d => {
+                    let icon = '⚡';
+                    let borderCol = 'rgba(255,255,255,0.08)';
+                    let bgCol = 'rgba(255,255,255,0.02)';
+                    if (d.includes('Score:')) { icon = '🎯'; borderCol = 'rgba(56,189,248,0.25)'; bgCol = 'rgba(56,189,248,0.05)'; }
+                    else if (d.includes('Flags:')) { icon = '🚩'; borderCol = 'rgba(16,185,129,0.25)'; bgCol = 'rgba(16,185,129,0.05)'; }
+                    else if (d.includes('Opponent:')) { icon = '⚔️'; borderCol = 'rgba(239,68,68,0.25)'; bgCol = 'rgba(239,68,68,0.05)'; }
+                    else if (d.includes('Season Name:') || d.includes('Record')) { icon = '🏆'; borderCol = 'rgba(245,158,11,0.25)'; bgCol = 'rgba(245,158,11,0.05)'; }
+                    return `
+                      <div style="display:flex; align-items:flex-start; gap:8px; padding:8px 10px; background:${bgCol}; border:1px solid ${borderCol}; border-radius:8px; font-size:12px; line-height:1.4;">
+                        <span style="font-size:13px; flex-shrink:0;">${icon}</span>
+                        <span style="color:var(--text-main); word-break:break-word;">${escapeHTML(d)}</span>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+            `;
+          }
+
+          // 5 Rounds Cards
+          let roundsHtml = '';
+          if (champ && champ.rounds) {
+            roundsHtml = [1, 2, 3, 4, 5].map(i => {
+              const rKey = 'r' + i;
+              const r = champ.rounds[rKey] || {};
+              const enemy = r.enemyAlliance || {};
+              const ourScore = Number(r.ourScore) || 0;
+              const enemyScore = Number(enemy.score) || 0;
+              const ourFlags = Number(r.ourFlags) || 0;
+              const enemyFlags = Number(enemy.flags) || 0;
+              const ourState = r.ourState || '2089';
+              const oppState = enemy.state || '?';
+              const oppName = (enemy.name || '').trim() || `Opponent ${i}`;
+              const roundDate = r.date || `Round ${i}`;
+
+              let outcomeBadge = '';
+              let borderHighlight = 'var(--border)';
+              let bgGradient = 'rgba(255,255,255,0.02)';
+
+              if (ourScore > 0 || enemyScore > 0) {
+                if (ourScore > enemyScore) {
+                  outcomeBadge = `<span style="background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.4); color:#34d399; padding:2px 8px; border-radius:6px; font-size:10.5px; font-weight:700;">🏆 Victory (+${(ourScore - enemyScore).toLocaleString()})</span>`;
+                  borderHighlight = 'rgba(16,185,129,0.3)';
+                  bgGradient = 'linear-gradient(135deg, rgba(16,185,129,0.06) 0%, rgba(255,255,255,0.02) 100%)';
+                } else if (enemyScore > ourScore) {
+                  outcomeBadge = `<span style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#f87171; padding:2px 8px; border-radius:6px; font-size:10.5px; font-weight:700;">❌ Defeat (-${(enemyScore - ourScore).toLocaleString()})</span>`;
+                  borderHighlight = 'rgba(239,68,68,0.3)';
+                  bgGradient = 'linear-gradient(135deg, rgba(239,68,68,0.06) 0%, rgba(255,255,255,0.02) 100%)';
+                } else {
+                  outcomeBadge = `<span style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.4); color:#fbbf24; padding:2px 8px; border-radius:6px; font-size:10.5px; font-weight:700;">🤝 Tied</span>`;
+                }
+              } else {
+                outcomeBadge = `<span style="background:rgba(148,163,184,0.1); border:1px solid rgba(148,163,184,0.25); color:#94a3b8; padding:2px 8px; border-radius:6px; font-size:10.5px; font-weight:600;">⏳ Pending</span>`;
+              }
+
+              return `
+                <div style="background:${bgGradient}; border:1px solid ${borderHighlight}; border-radius:12px; padding:11px 13px; display:flex; flex-direction:column; gap:9px;">
+                  <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:7px;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                      <span style="font-size:12.5px; font-weight:800; color:var(--text-main);">Round ${i}</span>
+                      <span style="background:rgba(255,255,255,0.06); color:var(--text-muted); padding:2px 8px; border-radius:6px; font-size:11px; font-weight:600;">📅 ${escapeHTML(roundDate)}</span>
+                    </div>
+                    <div>${outcomeBadge}</div>
+                  </div>
+                  <div style="display:grid; grid-template-columns: 1fr auto 1fr; align-items:center; gap:8px;">
+                    <div style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.22); border-radius:8px; padding:7px 9px; display:flex; flex-direction:column; gap:2px;">
+                      <div style="display:flex; align-items:center; justify-content:space-between; gap:4px;">
+                        <span style="font-weight:700; color:#34d399; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">[${escapeHTML(ourState)}] BDC</span>
+                        <span style="background:rgba(16,185,129,0.2); color:#6ee7b7; font-size:10px; font-weight:800; padding:1px 5px; border-radius:4px; white-space:nowrap;">${ourFlags} 🚩</span>
+                      </div>
+                      <div style="font-size:13.5px; font-weight:800; color:var(--text-main); font-family:monospace; margin-top:2px;">
+                        ${ourScore.toLocaleString()} <span style="font-size:10px; color:var(--text-muted); font-family:inherit; font-weight:normal;">pts</span>
+                      </div>
+                    </div>
+                    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center;">
+                      <span style="font-size:9.5px; font-weight:900; color:var(--text-muted); background:rgba(255,255,255,0.06); padding:2px 5px; border-radius:4px; letter-spacing:1px;">VS</span>
+                    </div>
+                    <div style="background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.22); border-radius:8px; padding:7px 9px; display:flex; flex-direction:column; gap:2px; text-align:right;">
+                      <div style="display:flex; align-items:center; justify-content:space-between; gap:4px; flex-direction:row-reverse;">
+                        <span style="font-weight:700; color:#f87171; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHTML(oppName)}">[${escapeHTML(oppState)}] ${escapeHTML(oppName)}</span>
+                        <span style="background:rgba(239,68,68,0.2); color:#fca5a5; font-size:10px; font-weight:800; padding:1px 5px; border-radius:4px; white-space:nowrap;">${enemyFlags} 🏳️</span>
+                      </div>
+                      <div style="font-size:13.5px; font-weight:800; color:var(--text-main); font-family:monospace; margin-top:2px;">
+                        ${enemyScore.toLocaleString()} <span style="font-size:10px; color:var(--text-muted); font-family:inherit; font-weight:normal;">pts</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              `;
+            }).join('');
+          }
+
+          const legacyNoticeHtml = (!logData.metadata?.championship)
+            ? `<div style="background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.25); border-radius:8px; padding:8px 12px; font-size:11.5px; color:#38bdf8; display:flex; align-items:center; gap:8px;">
+                 <span>ℹ️</span>
+                 <span>Legacy Audit Log: Detailed score/flag diff tracking was introduced in v3.3.1. Displaying current active Championship 5-Round snapshot.</span>
+               </div>`
+            : '';
+
+          modal.innerHTML = `
+            <div style="background:var(--bg-card, #1e293b); border:1px solid var(--border, #334155); border-radius:16px; width:100%; max-width:620px; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 25px 50px -12px rgba(0,0,0,0.6); overflow:hidden;" onclick="event.stopPropagation()">
+              <!-- Header -->
+              <div style="padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; background:linear-gradient(90deg, rgba(56,189,248,0.08) 0%, rgba(255,255,255,0.02) 100%);">
+                <div style="display:flex; align-items:center; gap:12px;">
+                  <div style="background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.35); color:#38bdf8; width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:22px;">
+                    🏆
+                  </div>
+                  <div>
+                    <h3 style="margin:0; color:var(--text-main); font-size:16px; font-weight:800; display:flex; align-items:center; gap:6px;">
+                      <span>Championship Matchups Audit</span>
+                      <span style="background:rgba(56,189,248,0.12); color:#38bdf8; font-size:11px; padding:1px 7px; border-radius:6px; font-weight:700;">5-Rounds</span>
+                    </h3>
+                    <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
+                      Admin: <span style="color:#a78bfa; font-weight:700;">${escapeHTML(logData.admin || 'Admin')}</span> &bull; Target: <span style="color:#38bdf8; font-weight:600;">Alliance Championship</span>
+                    </div>
+                  </div>
+                </div>
+                <button onclick="document.getElementById('logDetailModal')?.remove()" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:15px; transition:0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.2)'; this.style.color='#ef4444';" onmouseout="this.style.background='rgba(255,255,255,0.06)'; this.style.color='var(--text-main)';">✕</button>
+              </div>
+
+              <!-- Meta Sub-Header -->
+              <div style="padding:10px 20px; background:rgba(0,0,0,0.25); border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; font-size:12px; gap:8px; flex-wrap:wrap;">
+                <span style="color:var(--text-muted);">📅 Date: <strong style="color:var(--text-main);">${escapeHTML(logData.dateStr || '')}</strong></span>
+                <span style="color:var(--text-muted); font-size:11.5px;">🕒 Time: ${escapeHTML(logData.timeStr || '')}</span>
+              </div>
+
+              <!-- Scrollable Content -->
+              <div style="padding:16px 20px; overflow-y:auto; -webkit-overflow-scrolling:touch; max-height:64vh; display:flex; flex-direction:column; gap:14px; scrollbar-width:thin; scrollbar-color:var(--accent) rgba(0,0,0,0.3);">
+                
+                ${legacyNoticeHtml}
+
+                <!-- Season Overview Banner & Flag Scorecard -->
+                <div style="background:linear-gradient(135deg, rgba(56,189,248,0.08) 0%, rgba(168,85,247,0.06) 100%); border:1px solid rgba(56,189,248,0.25); border-radius:12px; padding:14px 16px; display:flex; flex-direction:column; gap:10px;">
+                  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                    <div>
+                      <div style="font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:700; letter-spacing:0.5px;">🏆 Championship Season</div>
+                      <div style="font-size:16px; font-weight:800; color:var(--text-main);">${escapeHTML(seasonName)}</div>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.06); border:1px solid var(--border); padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700; color:#38bdf8;">
+                      ⚔️ ${escapeHTML(statusText)}
+                    </div>
+                  </div>
+                  <div style="display:flex; align-items:center; justify-content:space-around; background:rgba(0,0,0,0.3); border-radius:10px; padding:10px; border:1px solid rgba(255,255,255,0.04);">
+                    <div style="text-align:center;">
+                      <div style="font-size:22px; font-weight:900; color:#10b981; font-family:monospace;">${ourFlagsCount}</div>
+                      <div style="font-size:11px; font-weight:700; color:#6ee7b7;">🚩 BDC Flags Won</div>
+                    </div>
+                    <div style="font-size:11px; font-weight:800; color:var(--text-muted); background:rgba(255,255,255,0.08); padding:3px 8px; border-radius:6px; letter-spacing:0.5px;">
+                      SERIES TOTAL
+                    </div>
+                    <div style="text-align:center;">
+                      <div style="font-size:22px; font-weight:900; color:#ef4444; font-family:monospace;">${enemyFlagsCount}</div>
+                      <div style="font-size:11px; font-weight:700; color:#fca5a5;">🏳️ Enemies Flags Won</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Changes / Diffs Box -->
+                ${diffsHtml}
+
+                <!-- 5-Round Battle Cards -->
+                ${roundsHtml ? `
+                  <div style="display:flex; flex-direction:column; gap:8px;">
+                    <div style="font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:800; letter-spacing:0.5px; display:flex; justify-content:space-between; align-items:center;">
+                      <span>⚔️ 5-Round Matchups & Scores</span>
+                      <span style="font-size:10.5px; color:var(--text-muted); font-weight:normal;">State 2089</span>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:8px;">
+                      ${roundsHtml}
+                    </div>
+                  </div>
+                ` : ''}
+
+                <!-- Raw Log Details String Box -->
+                ${logData.details && !diffsHtml ? `
+                  <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:10px; padding:12px 14px;">
+                    <div style="font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:700; letter-spacing:0.5px; margin-bottom:4px;">📝 Recorded Notes</div>
+                    <div style="font-size:12.5px; color:var(--text-main); line-height:1.5; white-space:pre-wrap; word-break:break-word;">
+                      ${escapeHTML(logData.details)}
+                    </div>
+                  </div>
+                ` : ''}
+
+              </div>
+
+              <!-- Footer -->
+              <div style="padding:14px 20px; border-top:1px solid var(--border); display:flex; gap:10px; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02);">
+                <button onclick="window.copyChampionshipLogDetails('${logId}')" style="background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; padding:8px 14px; border-radius:8px; font-size:12.5px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:0.2s;" onmouseover="this.style.background='rgba(56,189,248,0.2)';" onmouseout="this.style.background='rgba(56,189,248,0.1)';">
+                  📋 Copy Matchup Summary
+                </button>
+                <button onclick="document.getElementById('logDetailModal')?.remove()" style="background:var(--accent); color:white; border:none; padding:8px 22px; border-radius:8px; font-size:12.5px; font-weight:bold; cursor:pointer;">
+                  Done
+                </button>
+              </div>
+            </div>
+          `;
+
+          document.body.appendChild(modal);
+          return;
+        }
 
         const listSource = (logData.memberDetails && logData.memberDetails.length > 0)
           ? logData.memberDetails
@@ -25753,9 +26170,54 @@ const views = {
       // Compatibility alias
       window.showBatchedMembersModal = (id) => window.showLogDetailModal(id);
 
+      window.copyChampionshipLogDetails = (logId) => {
+        const logData = window._batchedMembersMap && window._batchedMembersMap[logId];
+        if (!logData) return;
+        const champ = (logData.metadata && logData.metadata.championship) || window._lastChampionshipMatchups;
+        let text = '';
+        if (champ) {
+          const lines = [
+            `🏆 Alliance Championship: ${champ.seasonName || 'Current Season'} (${champ.statusText || '0 Wins – 0 Losses'})`,
+            `🚩 Overall Flags: BDC ${champ.ourSeasonFlags || 0} 🚩 vs Enemies ${champ.enemySeasonFlags || 0} 🏳️`,
+            `🕒 Logged: ${logData.dateStr || ''} ${logData.timeStr || ''} by ${logData.admin || 'Admin'}`,
+            ''
+          ];
+          if (champ.diffs && champ.diffs.length > 0) {
+            lines.push('⚡ Changes Recorded in this Update:');
+            champ.diffs.forEach(d => lines.push(`• ${d}`));
+            lines.push('');
+          }
+          if (champ.rounds) {
+            lines.push('⚔️ 5-Round Matchup Details:');
+            for (let i = 1; i <= 5; i++) {
+              const r = champ.rounds['r' + i] || {};
+              const enemy = r.enemyAlliance || {};
+              const opp = enemy.name ? `[${enemy.state || '?'}] ${enemy.name}` : `Opponent ${i}`;
+              const outcome = (r.ourScore > enemy.score) ? 'Victory' : (enemy.score > r.ourScore ? 'Defeat' : (r.ourScore > 0 ? 'Tie' : 'Pending'));
+              lines.push(`• Round ${i} (${r.date || `Round ${i}`}): [${r.ourState || '2089'}] BDC ${Number(r.ourScore || 0).toLocaleString()} (${r.ourFlags || 0} Flags) vs ${opp} ${Number(enemy.score || 0).toLocaleString()} (${enemy.flags || 0} Flags) [${outcome}]`);
+            }
+          }
+          text = lines.join('\n');
+        } else if (logData.details) {
+          text = logData.details;
+        }
+        if (!text) return;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text);
+        }
+        if (typeof window.showToast === 'function') {
+          window.showToast("📋 Copied Championship matchup details to clipboard!");
+        } else {
+          alert("📋 Copied Championship matchup details to clipboard!");
+        }
+      };
+
       window.copyBatchedMembersList = (batchId) => {
         const batchData = window._batchedMembersMap && window._batchedMembersMap[batchId];
         if (!batchData) return;
+        if ((batchData.action || '').toLowerCase().includes('championship') || (batchData.metadata && batchData.metadata.championship)) {
+          return window.copyChampionshipLogDetails(batchId);
+        }
         let text = '';
         if (batchData.memberDetails && batchData.memberDetails.length > 0) {
           text = batchData.memberDetails.map((m, idx) => {
@@ -25888,7 +26350,9 @@ const views = {
                    details: firstLog.details || '',
                    members: singleExtracted.map(m => m.name),
                    memberDetails: singleExtracted,
-                   group: group
+                   group: group,
+                   metadata: firstLog.metadata || null,
+                   rawLog: firstLog
                  };
 
                  const actionBadge = window.getAdminActionBadgeHtml(firstLog.action || 'Batch Action', true, singleExtracted.length);
@@ -25934,7 +26398,9 @@ const views = {
                    timeStr: timeStr,
                    details: firstLog.details || '',
                    members: targetName ? [targetName] : [],
-                   memberDetails: singleExtracted.length > 0 ? singleExtracted : (targetName ? [{ name: targetName, meta: '', raw: targetName }] : [])
+                   memberDetails: singleExtracted.length > 0 ? singleExtracted : (targetName ? [{ name: targetName, meta: '', raw: targetName }] : []),
+                   metadata: firstLog.metadata || null,
+                   rawLog: firstLog
                  };
                  
                  tbodyHtml += `
@@ -26025,7 +26491,9 @@ const views = {
                 details: `${group.length} consecutive actions batched (${uniqueMembers.length} chiefs affected)`,
                 members: memberNames,
                 memberDetails: uniqueMembers,
-                group: group
+                group: group,
+                metadata: firstLog.metadata || null,
+                rawLog: firstLog
               };
 
               const actionBadge = window.getAdminActionBadgeHtml(firstLog.action || 'Batch Action', true, group.length);

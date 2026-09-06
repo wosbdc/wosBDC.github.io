@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.1] - 2026-09-05
+- 🏆 **Championship Audit Details**: View complete scores and flags in audit logs.
+- 🚩 **Flag Delta Tracking**: Audit logs track flag changes for every update.
+- ⚔️ **5-Round Battle Cards**: Interactive popup reveals round-by-round matchup scores and outcomes.
+- 📋 **Matchup Summary Copy**: One-click button copies full 5-round results and flags.
+
 ## [3.3.0] - 2026-09-03
 - 🔄 **Live Sync Telemetry**: Displays real-time sync timestamps for all master sheets.
 - ⚡ **Instant Sync Trigger**: Added manual button to synchronize Google Sheets immediately.

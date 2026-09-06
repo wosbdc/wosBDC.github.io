@@ -1,20 +1,21 @@
 {
-  "version": "3.3.0",
-  "releaseDate": "2026-09-03",
-  "title": "What's New in v3.3.0",
+  "version": "3.3.1",
+  "releaseDate": "2026-09-05",
+  "title": "What's New in v3.3.1",
   "notes": [
-    "🔄 Live Sync Telemetry: Displays real-time sync timestamps for all master sheets.",
-    "⚡ Instant Sync Trigger: Added manual button to synchronize Google Sheets immediately.",
-    "🔍 Sync Filters & Search: Easily filter sheets by today, recent, or search."
+    "🏆 Championship Audit Details: View complete scores and flags in audit logs.",
+    "🚩 Flag Delta Tracking: Audit logs track flag changes for every update.",
+    "⚔️ 5-Round Battle Cards: Interactive popup reveals round-by-round matchup scores.",
+    "📋 Matchup Summary Copy: One-click button copies full 5-round results."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.0",
+    "version": "3.3.1",
     "latestChanges": [
+      "v3.3.1: Championship matchups audit details with scores, flags, and 5-round battle cards",
       "v3.3.0: Real-time database sync telemetry, search filters, and instant sync trigger",
       "v3.2.9: Split UTC/Local time row and elevated toast notification layer",
       "v3.2.8: Add exact alarm trigger time indicators to event reminders",
-      "v3.2.7: Purge stale Alliance Showdown and deduplicate schedule cards",
-      "v3.2.6: Fix schedule grid and bell system event reminders for today's events"
+      "v3.2.7: Purge stale Alliance Showdown and deduplicate schedule cards"
     ]
   }
 }

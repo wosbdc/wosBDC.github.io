@@ -280,7 +280,60 @@ if (fs.existsSync(gasSidebarsPath)) {
   assert(gasSidebars.includes('forceSyncSheets'), 'Sidebars_and_Tools.js must include forceSyncSheets endpoint');
   pass('Sidebars_and_Tools.js includes forceSyncSheets API endpoint');
 }
-pass('Telemetry logic, newest-first sorting, and Apps Script integration verified');
+// -------------------------------------------------------------
+// Test 14: Championship Matchups Audit Log Details, Scores & Flags (v3.3.1)
+// -------------------------------------------------------------
+console.log('\n🏆 Test 14: Championship Matchups Audit Log Details, Scores & Flags');
+assert(mainJs.includes('window.computeChampionshipDiffs ='), 'main.js must define computeChampionshipDiffs');
+assert(mainJs.includes('metadata = {'), 'saveChampionshipMatchups must construct metadata');
+assert(mainJs.includes('championship: {'), 'metadata must contain championship object');
+assert(mainJs.includes('metadata: firstLog.metadata || null'), 'fetchAdminLog must preserve metadata in _batchedMembersMap');
+assert(mainJs.includes('window.copyChampionshipLogDetails ='), 'main.js must define window.copyChampionshipLogDetails');
+assert(mainJs.includes('Championship Matchups Audit'), 'showLogDetailModal must have Championship Matchups Audit header');
+assert(mainJs.includes('🚩 BDC Flags Won'), 'showLogDetailModal must render BDC Flags scoreboard');
+assert(mainJs.includes('🏳️ Enemies Flags Won'), 'showLogDetailModal must render Enemies Flags scoreboard');
+assert(mainJs.includes('⚔️ 5-Round Matchups & Scores'), 'showLogDetailModal must render 5-round battle cards section');
+assert(mainJs.includes('🏆 Victory'), 'showLogDetailModal must support victory badge');
+assert(mainJs.includes('❌ Defeat'), 'showLogDetailModal must support defeat badge');
+assert(mainJs.includes('⏳ Pending'), 'showLogDetailModal must support pending badge');
+
+// Functional testing of computeChampionshipDiffs logic
+const prevChamp = {
+  seasonName: "Upcoming Season",
+  statusText: "0 Wins – 0 Losses",
+  ourSeasonFlags: 10,
+  enemySeasonFlags: 6,
+  rounds: {
+    r1: { date: "May 10", ourScore: 0, ourFlags: 0, enemyAlliance: { name: "Opponent 1", state: "2045", score: 0, flags: 0 } },
+    r2: { date: "May 12", ourScore: 50000, ourFlags: 1, enemyAlliance: { name: "Opponent 2", state: "1988", score: 40000, flags: 1 } },
+    r3: { date: "May 14", ourScore: 0, ourFlags: 0, enemyAlliance: { name: "Opponent 3", state: "2102", score: 0, flags: 0 } }
+  }
+};
+
+const currChamp = {
+  seasonName: "Upcoming Season",
+  statusText: "1 Wins – 0 Losses",
+  ourSeasonFlags: 13,
+  enemySeasonFlags: 7,
+  rounds: {
+    r1: { date: "May 10", ourScore: 120000, ourFlags: 3, enemyAlliance: { name: "Opponent 1", state: "2045", score: 95000, flags: 1 } },
+    r2: { date: "May 12", ourScore: 50000, ourFlags: 1, enemyAlliance: { name: "Opponent 2", state: "1988", score: 40000, flags: 1 } },
+    r3: { date: "May 14", ourScore: 0, ourFlags: 0, enemyAlliance: { name: "Alpha Titans", state: "2050", score: 0, flags: 0 } }
+  }
+};
+
+// Extract and execute computeChampionshipDiffs from mainJs
+const fnMatch = mainJs.match(/window\.computeChampionshipDiffs\s*=\s*\(([\s\S]*?)\r?\n\};/);
+assert(fnMatch, 'computeChampionshipDiffs function definition must be extractable');
+const computeDiffs = new Function('return ' + fnMatch[0].replace('window.computeChampionshipDiffs =', ''))();
+
+const generatedDiffs = computeDiffs(prevChamp, currChamp);
+assert(Array.isArray(generatedDiffs) && generatedDiffs.length >= 3, 'Must produce diffs for status, flags, round 1 score/flags, round 3 opponent');
+assert(generatedDiffs.some(d => d.includes('Record / Series Status')), 'Must record status text update');
+assert(generatedDiffs.some(d => d.includes('Season Flags: BDC 10 ➔ 13 (+3) 🚩 | Enemies 6 ➔ 7 (+1) 🏳️')), 'Must record exact season flag deltas');
+assert(generatedDiffs.some(d => d.includes('Round 1') && d.includes('120,000') && d.includes('3 🚩')), 'Must record round 1 score & flag changes');
+assert(generatedDiffs.some(d => d.includes('Round 3') && d.includes('Alpha Titans')), 'Must record round 3 opponent alliance change');
+pass('computeChampionshipDiffs logic, metadata tracking, and rich 5-round battle card modal verified');
 
 console.log('\n=========================================');
 console.log(`Test Summary: ${passCount}/${passCount} tests passed`);
