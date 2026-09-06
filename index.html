@@ -123,29 +123,25 @@
 
         <!-- Clocks -->
         <div id="global-timers" style="display:flex; flex-direction:column; gap:8px;">
-          <div>
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <span style="color:var(--text-muted); font-size:11px; font-weight:bold; text-transform:uppercase; letter-spacing:0.5px;">UTC</span>
-              <span id="utc-clock" style="color:var(--text-main); font-size:13px; font-weight:bold; font-family:monospace; letter-spacing:0.5px;">00:00:00</span>
+          <!-- Split Local & UTC Time Row in the Same Box -->
+          <div style="display:grid; grid-template-columns:1fr 1fr; background:rgba(15,23,42,0.6); border:1px solid var(--border); border-radius:8px; overflow:hidden;">
+            <!-- Local Half -->
+            <div style="padding:8px 10px; border-right:1px solid var(--border); display:flex; flex-direction:column; justify-content:center;">
+              <div style="font-size:10px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.5px; display:flex; align-items:center; gap:4px; margin-bottom:2px;">
+                <span>📍</span> <span>Local</span>
+              </div>
+              <span id="local-clock" style="color:var(--text-main); font-size:13px; font-weight:bold; font-family:monospace; letter-spacing:0.5px; display:block;">00:00:00</span>
+              <span id="local-date" style="color:var(--text-muted); font-size:9.5px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block;"></span>
             </div>
-            <div style="text-align:right; margin-top:1px;">
-              <span id="utc-date" style="color:var(--text-muted); font-size:10px;"></span>
-            </div>
-          </div>
-
-          <div style="border-top:1px solid var(--border); margin:1px 0;"></div>
-
-          <div>
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <span style="color:var(--text-muted); font-size:11px; font-weight:bold; text-transform:uppercase; letter-spacing:0.5px;">Local</span>
-              <span id="local-clock" style="color:var(--text-main); font-size:13px; font-weight:bold; font-family:monospace; letter-spacing:0.5px;">00:00:00</span>
-            </div>
-            <div style="text-align:right; margin-top:1px;">
-              <span id="local-date" style="color:var(--text-muted); font-size:10px;"></span>
+            <!-- UTC Half -->
+            <div style="padding:8px 10px; background:rgba(245,158,11,0.04); display:flex; flex-direction:column; justify-content:center;">
+              <div style="font-size:10px; font-weight:800; color:#f59e0b; text-transform:uppercase; letter-spacing:0.5px; display:flex; align-items:center; gap:4px; margin-bottom:2px;">
+                <span>🌐</span> <span>UTC</span>
+              </div>
+              <span id="utc-clock" style="color:var(--text-main); font-size:13px; font-weight:bold; font-family:monospace; letter-spacing:0.5px; display:block;">00:00:00</span>
+              <span id="utc-date" style="color:var(--text-muted); font-size:9.5px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block;"></span>
             </div>
           </div>
-
-          <div style="border-top:1px solid var(--border); margin:1px 0;"></div>
 
           <!-- Daily Reset -->
           <div style="background:rgba(56,189,248,0.06); border:1px solid rgba(56,189,248,0.18); border-radius:8px; padding:8px 10px;">

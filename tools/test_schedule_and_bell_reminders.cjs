@@ -340,6 +340,19 @@ assert(generatedDiffs.some(d => d.includes('Round 1') && d.includes('120,000') &
 assert(generatedDiffs.some(d => d.includes('Round 3') && d.includes('Alpha Titans')), 'Must record round 3 opponent alliance change');
 pass('computeChampionshipDiffs logic, metadata tracking, and rich 5-round battle card modal verified');
 
+// -------------------------------------------------------------
+// Test 13: Sidebar Split Local & UTC Clock Box Verification
+// -------------------------------------------------------------
+console.log('\n🕐 Test 13: Sidebar Split Local & UTC Clock Box Verification');
+const indexPath = path.join(__dirname, '..', 'index.html');
+const indexHtml = fs.readFileSync(indexPath, 'utf8');
+assert(indexHtml.includes('id="settingsSidebar"'), 'index.html must include settingsSidebar');
+assert(indexHtml.includes('Split Local & UTC Time Row in the Same Box'), 'Settings sidebar must contain split time row');
+assert(indexHtml.includes('id="local-clock"') && indexHtml.includes('id="local-date"'), 'Sidebar must contain local-clock and local-date');
+assert(indexHtml.includes('id="utc-clock"') && indexHtml.includes('id="utc-date"'), 'Sidebar must contain utc-clock and utc-date');
+pass('Settings sidebar includes compact split Local and UTC clock row in one box');
+
 console.log('\n=========================================');
 console.log(`Test Summary: ${passCount}/${passCount} tests passed`);
 console.log('=========================================\n');
+

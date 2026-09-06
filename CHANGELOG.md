@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.3.5] - 2026-09-06
+- 🕐 **Split Sidebar Clocks**: Local and UTC clocks share one compact split row.
+- 📱 **Clean Sidebar Layout**: Compact clock box saves vertical space in the sidebar.
+
 ## [3.3.4] - 2026-09-05
 - 🎯 **Precise Round Targeting**: Highlights only the exact round modified by admin.
 - 🛡️ **Eliminate Archive Bleed**: Prevents prior season rounds appearing as new changes.
