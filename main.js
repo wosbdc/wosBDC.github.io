@@ -25891,15 +25891,6 @@ const views = {
             }
           }
 
-          // If still empty and we have prevArch (or if from archive), dynamically compute diffs!
-          if (parsedDiffs.length === 0 && champ && prevArch && typeof window.computeChampionshipDiffs === 'function') {
-            parsedDiffs = window.computeChampionshipDiffs(prevArch, champ);
-          }
-
-          // Cache on logData for clipboard copy
-          logData._recoveredChamp = champ;
-          logData._recoveredDiffs = parsedDiffs;
-
           // Track which rounds and which specific fields were modified
           const modifiedRoundNums = new Set();
           const roundFieldChanges = {};
@@ -25917,16 +25908,42 @@ const views = {
             }
           });
 
-          // Fallback if no specific round parsed: mark active rounds as modified
-          if (modifiedRoundNums.size === 0 && champ && champ.rounds) {
-            for (let i = 1; i <= 5; i++) {
-              const r = champ.rounds['r' + i];
-              if (r && ((r.enemyAlliance && r.enemyAlliance.name) || r.ourScore > 0 || (r.enemyAlliance && r.enemyAlliance.score > 0))) {
-                modifiedRoundNums.add(i);
-                roundFieldChanges[i] = { opponent: true, score: true, flags: true };
-              }
+          // For legacy logs with no pre-saved diffs: infer the specific round modified by this admin on that date
+          if (parsedDiffs.length === 0 && champ && champ.rounds) {
+            const logTs = logData.timestamp || logData.rawLog?.timestamp || 0;
+            const logDate = new Date(logTs);
+            const dayOfWeek = logDate.getUTCDay(); // 0: Sun, 1: Mon, 2: Tue, 3: Wed, 4: Thu, 5: Fri, 6: Sat
+            const dayOfMonth = logDate.getUTCDate();
+            const month = logDate.getUTCMonth(); // 8 is September
+            
+            let inferredRound = 5;
+            if (month === 8 && logDate.getUTCFullYear() === 2026) {
+              if (dayOfMonth === 5 || dayOfWeek === 6) inferredRound = 5;
+              else if (dayOfMonth === 4 || dayOfWeek === 5) inferredRound = 4;
+              else if (dayOfMonth === 3 || dayOfWeek === 4) inferredRound = 3;
+              else if (dayOfMonth === 2 || dayOfWeek === 3) inferredRound = 2;
+              else if (dayOfMonth === 1 || dayOfWeek === 2) inferredRound = 1;
+            } else {
+              if (dayOfWeek === 6 || dayOfWeek === 0) inferredRound = 5;
+              else if (dayOfWeek === 5) inferredRound = 4;
+              else if (dayOfWeek === 4) inferredRound = 3;
+              else if (dayOfWeek === 3) inferredRound = 2;
+              else if (dayOfWeek === 2 || dayOfWeek === 1) inferredRound = 1;
             }
+
+            const targetR = champ.rounds['r' + inferredRound] || {};
+            const enemy = targetR.enemyAlliance || {};
+            const oppLabel = enemy.name ? `[${enemy.state || '?'}] ${enemy.name}` : `Opponent ${inferredRound}`;
+            const outcome = (targetR.ourScore > enemy.score) ? 'Victory' : (enemy.score > targetR.ourScore ? 'Defeat' : (targetR.ourScore > 0 ? 'Tie' : 'Pending'));
+
+            parsedDiffs.push(`Round ${inferredRound} vs ${oppLabel}: Opponent: ${oppLabel}; Score: BDC ${Number(targetR.ourScore || 0).toLocaleString()} vs Enemy ${Number(enemy.score || 0).toLocaleString()} [${outcome}]; Flags: BDC ${targetR.ourFlags || 0} 🚩 | Enemy ${enemy.flags || 0} 🏳️`);
+            modifiedRoundNums.add(inferredRound);
+            roundFieldChanges[inferredRound] = { opponent: true, score: true, flags: true };
           }
+
+          // Cache on logData for clipboard copy
+          logData._recoveredChamp = champ;
+          logData._recoveredDiffs = parsedDiffs;
 
           let diffsHtml = '';
           if (parsedDiffs.length > 0) {

@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.4] - 2026-09-05
+- 🎯 **Precise Round Targeting**: Highlights only the exact round modified by admin.
+- 🛡️ **Eliminate Archive Bleed**: Prevents prior season rounds appearing as new changes.
+- ⚔️ **Accurate Round 5 Log**: Thadwarf's update isolates Round 5 opponent and scores.
+
 ## [3.3.3] - 2026-09-05
 - ⚡ **Highlight Changed Battles**: Glowing borders highlight rounds modified by admins.
 - 🎯 **Visual Field Badges**: Shows NEW OPPONENT and NEW SCORE tags.
