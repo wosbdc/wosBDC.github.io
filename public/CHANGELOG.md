@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.2] - 2026-09-05
+- 📜 **Historical Archive Audit**: Recovers archived battle scores and opponent alliances.
+- 🛡️ **Clean System Logs**: Non-member updates never batch into zero-chief groups.
+- ⚡ **Typing Auto-Save Clean**: Prevents duplicate audit logs while typing scores.
+- 🔍 **Accurate Opponent Names**: Modal displays opponent alliances from past updates.
+
 ## [3.3.1] - 2026-09-05
 - 🏆 **Championship Audit Details**: View complete scores and flags in audit logs.
 - 🚩 **Flag Delta Tracking**: Audit logs track flag changes for every update.

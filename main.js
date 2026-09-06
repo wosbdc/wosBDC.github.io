@@ -25805,13 +25805,47 @@ const views = {
         if (isChampionship) {
           // Fetch or resolve Championship snapshot
           let champ = (logData.metadata && logData.metadata.championship) ? logData.metadata.championship : null;
+          let isFromArchive = false;
           if (!champ) {
-            if (window._lastChampionshipMatchups) {
-              champ = window._lastChampionshipMatchups;
-            } else if (typeof window.fetchChampionshipMatchups === 'function') {
-              try {
-                champ = await window.fetchChampionshipMatchups();
-              } catch(e) {}
+            try {
+              const histSnap = await get(ref(db, 'championship_meta/history'));
+              if (histSnap && histSnap.exists()) {
+                const archives = histSnap.val() || {};
+                const logTs = logData.timestamp || logData.rawLog?.timestamp || 0;
+                const archKeys = Object.keys(archives).sort((a,b) => Number(a) - Number(b));
+                
+                // 1. Try finding archive with updatedAt very close to log timestamp
+                for (const k of archKeys) {
+                  const arch = archives[k];
+                  if (arch.updatedAt && Math.abs(arch.updatedAt - logTs) < 300000) {
+                    champ = arch;
+                    isFromArchive = true;
+                    break;
+                  }
+                }
+                // 2. If not matched, find earliest archive whose archive timestamp is >= log timestamp
+                if (!champ) {
+                  for (const k of archKeys) {
+                    if (Number(k) >= logTs) {
+                      champ = archives[k];
+                      isFromArchive = true;
+                      break;
+                    }
+                  }
+                }
+              }
+            } catch(e) {
+              console.warn("Error looking up championship history archive:", e);
+            }
+
+            if (!champ) {
+              if (window._lastChampionshipMatchups) {
+                champ = window._lastChampionshipMatchups;
+              } else if (typeof window.fetchChampionshipMatchups === 'function') {
+                try {
+                  champ = await window.fetchChampionshipMatchups();
+                } catch(e) {}
+              }
             }
           }
 
@@ -25949,12 +25983,17 @@ const views = {
             }).join('');
           }
 
-          const legacyNoticeHtml = (!logData.metadata?.championship)
+          const legacyNoticeHtml = isFromArchive
             ? `<div style="background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.25); border-radius:8px; padding:8px 12px; font-size:11.5px; color:#38bdf8; display:flex; align-items:center; gap:8px;">
-                 <span>ℹ️</span>
-                 <span>Legacy Audit Log: Detailed score/flag diff tracking was introduced in v3.3.1. Displaying current active Championship 5-Round snapshot.</span>
+                 <span>📜</span>
+                 <span>Archived Season Matchups: Displaying battle scores & opponent alliances saved by <strong>${escapeHTML(champ.updatedBy || logData.admin || 'Admin')}</strong> for this season.</span>
                </div>`
-            : '';
+            : (!logData.metadata?.championship
+              ? `<div style="background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.25); border-radius:8px; padding:8px 12px; font-size:11.5px; color:#38bdf8; display:flex; align-items:center; gap:8px;">
+                   <span>ℹ️</span>
+                   <span>Legacy Audit Log: Detailed score/flag diff tracking was introduced in v3.3.1. Displaying active Championship 5-Round snapshot.</span>
+                 </div>`
+              : '');
 
           modal.innerHTML = `
             <div style="background:var(--bg-card, #1e293b); border:1px solid var(--border, #334155); border-radius:16px; width:100%; max-width:620px; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 25px 50px -12px rgba(0,0,0,0.6); overflow:hidden;" onclick="event.stopPropagation()">
@@ -26298,6 +26337,33 @@ const views = {
         let currentBatch = [];
 
         logItems.forEach(log => {
+           const actionLower = (log.action || '').toLowerCase();
+           const isNonBatchable = actionLower.includes('championship') || 
+                                  actionLower.includes('showdown') || 
+                                  actionLower.includes('archive') || 
+                                  actionLower.includes('reset') ||
+                                  actionLower.includes('sync');
+
+           if (isNonBatchable) {
+              if (currentBatch.length > 0) {
+                 groupedLogs.push(currentBatch);
+                 currentBatch = [];
+              }
+              // De-duplicate rapid intermediate auto-saves from same admin within 60 seconds
+              const lastGroup = groupedLogs.length > 0 ? groupedLogs[groupedLogs.length - 1] : null;
+              if (lastGroup && lastGroup.length === 1) {
+                 const lastLog = lastGroup[0];
+                 const isSameBurst = (lastLog.admin || '').toLowerCase() === (log.admin || '').toLowerCase() &&
+                                     (lastLog.action || '').toLowerCase() === actionLower &&
+                                     Math.abs((lastLog.timestamp || 0) - (log.timestamp || 0)) <= 60000;
+                 if (isSameBurst) {
+                    return;
+                 }
+              }
+              groupedLogs.push([log]);
+              return;
+           }
+
            if (currentBatch.length === 0) {
               currentBatch.push(log);
            } else {
@@ -26347,6 +26413,7 @@ const views = {
                    action: firstLog.action || 'Admin Action',
                    dateStr: dateStr,
                    timeStr: timeStr,
+                   timestamp: firstLog.timestamp || 0,
                    details: firstLog.details || '',
                    members: singleExtracted.map(m => m.name),
                    memberDetails: singleExtracted,
@@ -26396,6 +26463,7 @@ const views = {
                    target: targetName,
                    dateStr: dateStr,
                    timeStr: timeStr,
+                   timestamp: firstLog.timestamp || 0,
                    details: firstLog.details || '',
                    members: targetName ? [targetName] : [],
                    memberDetails: singleExtracted.length > 0 ? singleExtracted : (targetName ? [{ name: targetName, meta: '', raw: targetName }] : []),
@@ -26479,6 +26547,11 @@ const views = {
                 hoverTitle = `${group.length} consecutive actions batched`;
               }
 
+              const isChampBatch = (firstLog.action || '').toLowerCase().includes('championship');
+              const batchDetailsText = isChampBatch
+                ? `${group.length} Championship matchup updates`
+                : `${group.length} consecutive actions batched (${uniqueMembers.length} chiefs affected)`;
+
               window._batchedMembersMap = window._batchedMembersMap || {};
               window._batchedMembersMap[batchId] = {
                 id: batchId,
@@ -26487,8 +26560,9 @@ const views = {
                 action: firstLog.action || 'Batch Action',
                 dateStr: dateStr,
                 timeStr: `${startTimeStr} – ${endTimeStr}`,
+                timestamp: firstLog.timestamp || 0,
                 summaryHtml: summaryHtml,
-                details: `${group.length} consecutive actions batched (${uniqueMembers.length} chiefs affected)`,
+                details: batchDetailsText,
                 members: memberNames,
                 memberDetails: uniqueMembers,
                 group: group,
@@ -30259,7 +30333,7 @@ const views = {
                     updatedBy: (currentUser && currentUser.displayName) ? currentUser.displayName : (currentUser?.email || 'Admin')
                 };
 
-                const ok = await window.saveChampionshipMatchups(payload);
+                const ok = await window.saveChampionshipMatchups(payload, isAuto);
                 if (ok) {
                     if (headerStatus) {
                         headerStatus.innerHTML = '☁️ Auto-Save Active';
