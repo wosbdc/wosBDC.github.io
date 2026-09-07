@@ -489,9 +489,18 @@ window.fetchRoster = async (forceFresh = false) => {
 
            for (const [k, p] of Object.entries(cached)) {
                if (!p || typeof p !== 'object') continue;
-               const gid = p.gameId ? String(p.gameId).trim() : (/^\d{6,}$/.test(k) ? k : '');
                const name = window.cleanChiefName(p.name || p.chiefName || (/^\d{6,}$/.test(k) ? '' : k));
                const normName = name.toLowerCase();
+               let gid = p.gameId ? String(p.gameId).trim() : '';
+               if (!gid && p.tokenStatus && p.tokenStatus.gameId) {
+                   gid = String(p.tokenStatus.gameId).trim();
+               }
+               if (!gid && /^\d{6,}$/.test(k)) {
+                   gid = k;
+               }
+               if (!gid && window.nameToIdMap) {
+                   gid = window.nameToIdMap[normName] || window.nameToIdMap[name] || '';
+               }
                const furnaceLevel = p.furnaceLevel || p.stove_lv || 'F30';
                const memStatus = window.normalizeMembershipStatus(p.membershipStatus || p.status || 'active');
 
@@ -583,21 +592,27 @@ window.isPlayerActiveMember = (p) => {
     if (!p) return false;
     if (typeof p === 'string') {
         const cleanN = window.cleanChiefName(p).toLowerCase();
+        const rawLower = p.toLowerCase().trim();
         if (window.rosterCache) {
-            const direct = window.rosterCache[cleanN] || window.rosterCache[p];
+            const direct = window.rosterCache[cleanN] || window.rosterCache[rawLower] || window.rosterCache[p] || window.rosterCache[window.cleanChiefName(p)];
             if (direct) {
                 return window.normalizeMembershipStatus(direct.membershipStatus || direct.status) === 'active';
             }
             for (const r of Object.values(window.rosterCache)) {
-                if (r && (r.name?.toLowerCase() === cleanN || String(r.gameId).trim() === p)) {
+                if (r && (r.name?.toLowerCase() === cleanN || r.name?.toLowerCase() === rawLower || String(r.gameId).trim() === p)) {
                     return window.normalizeMembershipStatus(r.membershipStatus || r.status) === 'active';
                 }
             }
         }
         return true;
     }
-    const status = window.normalizeMembershipStatus(p.membershipStatus || p.status);
-    return status === 'active';
+    if (p.membershipStatus || p.status) {
+        return window.normalizeMembershipStatus(p.membershipStatus || p.status) === 'active';
+    }
+    if (p.name || p.gameId) {
+        return window.isPlayerActiveMember(p.name || String(p.gameId));
+    }
+    return true;
 };
 
 window.fetchActiveRoster = async () => {
@@ -2686,11 +2701,12 @@ export let enrolledGameIds = new Set();
 
 export const refreshIdToNameMap = async () => {
     try {
-        const [rosterRawData, giftcodebotData, usersSnap, gcBotSnap] = await Promise.all([
+        const [rosterRawData, giftcodebotData, usersSnap, gcBotSnap, altsSnap] = await Promise.all([
             window.fetchRoster().catch(() => null),
             fetchSheet("giftcodebot").catch(() => null),
             get(ref(db, 'users')).catch(() => null),
-            get(ref(db, 'giftcode_bot')).catch(() => null)
+            get(ref(db, 'giftcode_bot')).catch(() => null),
+            get(ref(db, 'users_alts')).catch(() => null)
         ]);
         
         // 1. Map Firebase Registered Users (Highest Priority for newly registered members)
@@ -2703,7 +2719,35 @@ export const refreshIdToNameMap = async () => {
                     if (nStr && !/^\d+$/.test(nStr) && nStr !== gStr) {
                         idToNameMap[gStr] = nStr;
                         nameToIdMap[nStr] = gStr;
+                        nameToIdMap[nStr.toLowerCase()] = gStr;
                     }
+                }
+                if (u && u.altTokens && typeof u.altTokens === 'object') {
+                    Object.entries(u.altTokens).forEach(([altGid, altObj]) => {
+                        if (!altGid || !altObj) return;
+                        const aGStr = altGid.toString().trim();
+                        const aNStr = (altObj.nickname || altObj.name || altObj.chiefName || "").toString().replace(/[\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]/g, ' ').trim();
+                        if (aNStr && !/^\d+$/.test(aNStr) && aNStr !== aGStr) {
+                            if (!idToNameMap[aGStr]) idToNameMap[aGStr] = aNStr;
+                            if (!nameToIdMap[aNStr]) nameToIdMap[aNStr] = aGStr;
+                            if (!nameToIdMap[aNStr.toLowerCase()]) nameToIdMap[aNStr.toLowerCase()] = aGStr;
+                        }
+                    });
+                }
+            });
+        }
+
+        // 1b. Map Firebase Registered Alts (users_alts)
+        if (altsSnap && altsSnap.exists()) {
+            const alts = altsSnap.val() || {};
+            Object.entries(alts).forEach(([altGid, altObj]) => {
+                if (!altGid || !altObj) return;
+                const aGStr = altGid.toString().trim();
+                const aNStr = (altObj.name || altObj.chiefName || altObj.nickname || "").toString().replace(/[\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]/g, ' ').trim();
+                if (aNStr && !/^\d+$/.test(aNStr) && aNStr !== aGStr) {
+                    if (!idToNameMap[aGStr]) idToNameMap[aGStr] = aNStr;
+                    if (!nameToIdMap[aNStr]) nameToIdMap[aNStr] = aGStr;
+                    if (!nameToIdMap[aNStr.toLowerCase()]) nameToIdMap[aNStr.toLowerCase()] = aGStr;
                 }
             });
         }
@@ -2719,6 +2763,7 @@ export const refreshIdToNameMap = async () => {
                     if (nStr && !/^\d+$/.test(nStr) && nStr !== gStr) {
                         idToNameMap[gStr] = nStr;
                         nameToIdMap[nStr] = gStr;
+                        nameToIdMap[nStr.toLowerCase()] = gStr;
                     }
                 }
             });
@@ -2727,12 +2772,13 @@ export const refreshIdToNameMap = async () => {
         // 3. Map Roster Sheet
         if (rosterRawData) {
             Object.values(rosterRawData).forEach(p => {
-                if (p.name && p.gameId) {
+                const gid = p.gameId ? String(p.gameId).trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : '');
+                if (p.name && gid) {
                     const nStr = p.name.toString().replace(/[\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]/g, ' ').trim();
-                    const gStr = p.gameId.toString().trim();
-                    if (nStr && !/^\d+$/.test(nStr) && nStr !== gStr) {
-                        idToNameMap[gStr] = nStr;
-                        nameToIdMap[nStr] = gStr;
+                    if (nStr && !/^\d+$/.test(nStr) && nStr !== gid) {
+                        idToNameMap[gid] = nStr;
+                        nameToIdMap[nStr] = gid;
+                        nameToIdMap[nStr.toLowerCase()] = gid;
                     }
                 }
             });
@@ -2749,8 +2795,9 @@ export const refreshIdToNameMap = async () => {
                     if (name) {
                         const nStr = name.toString().replace(/[\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]/g, ' ').trim();
                         if (nStr && !/^\d+$/.test(nStr) && nStr !== gStr) {
-                            idToNameMap[gStr] = nStr;
-                            nameToIdMap[nStr] = gStr;
+                            if (!idToNameMap[gStr]) idToNameMap[gStr] = nStr;
+                            if (!nameToIdMap[nStr]) nameToIdMap[nStr] = gStr;
+                            if (!nameToIdMap[nStr.toLowerCase()]) nameToIdMap[nStr.toLowerCase()] = gStr;
                         }
                     }
                 }
@@ -2759,12 +2806,14 @@ export const refreshIdToNameMap = async () => {
 
         window.nameToIdMap = nameToIdMap;
         window.idToNameMap = idToNameMap;
+        window.refreshIdToNameMap = refreshIdToNameMap;
         window.enrolledGameIds = enrolledGameIds;
         if (typeof window.updateNavbarUserIndicator === 'function' && currentUser) {
             window.updateNavbarUserIndicator(currentUser);
         }
     } catch(e) { console.error("Error refreshing ID map:", e); }
 };
+window.refreshIdToNameMap = refreshIdToNameMap;
 
 // Real-Time Firebase Listeners for Master Store & Filter Reactivity
 onValue(ref(db, 'users'), () => {
@@ -3499,6 +3548,38 @@ window.resetFrostClan = async function() {
   }
 };
 
+/**
+ * 🎯 Bulletproof Event Record Resolver
+ * Case-insensitively resolves a player's event record across gameId, raw name,
+ * cleaned name, lowercase name, and underscore slug keys.
+ */
+window.getEventRecord = (data, p) => {
+    if (!data || !p) return null;
+    if (typeof p === 'string') {
+        p = { name: p };
+    }
+    const gid = p.gameId ? String(p.gameId).trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : (window.nameToIdMap?.[(p.name || '').toLowerCase()] || ''));
+    const rawName = (p.name || p.chiefName || '').replace(/[\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]/g, ' ').trim();
+    const cleanN = rawName ? window.cleanChiefName(rawName) : '';
+    const normName = (rawName || '').toLowerCase().trim();
+    const cleanLower = (cleanN || '').toLowerCase().trim();
+    const slugName = normName.replace(/[^a-z0-9]/g, '_');
+    const cleanSlug = cleanLower.replace(/[^a-z0-9]/g, '_');
+    const mappedName = (gid && window.idToNameMap?.[gid]) || '';
+    const mappedLower = mappedName ? mappedName.toLowerCase().trim() : '';
+
+    return (gid && data[gid]) ||
+           (cleanN && data[cleanN]) ||
+           (rawName && data[rawName]) ||
+           (cleanLower && data[cleanLower]) ||
+           (normName && data[normName]) ||
+           (mappedName && data[mappedName]) ||
+           (mappedLower && data[mappedLower]) ||
+           (cleanSlug && data[cleanSlug]) ||
+           (slugName && data[slugName]) ||
+           null;
+};
+
 // Fetch Championship Data natively from single master node activity_live
 // Fetch Championship Data natively from master node activity_live with fallback to championship node
 window.fetchChampionshipData = async () => {
@@ -3507,9 +3588,10 @@ window.fetchChampionshipData = async () => {
     const isT = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
 
     const addEntry = (gid, chiefName, isSigned, lastUpdated) => {
+        const cleanN = window.cleanChiefName(chiefName);
         const entry = {
             gameId: gid,
-            name: chiefName,
+            name: cleanN || chiefName,
             signedUp: isSigned,
             lastUpdated: lastUpdated || Date.now()
         };
@@ -3517,6 +3599,12 @@ window.fetchChampionshipData = async () => {
         if (chiefName) {
             result[chiefName] = entry;
             result[chiefName.toLowerCase()] = entry;
+            result[chiefName.toLowerCase().replace(/[^a-z0-9]/g, '_')] = entry;
+        }
+        if (cleanN && cleanN !== chiefName) {
+            result[cleanN] = entry;
+            result[cleanN.toLowerCase()] = entry;
+            result[cleanN.toLowerCase().replace(/[^a-z0-9]/g, '_')] = entry;
         }
     };
 
@@ -3578,7 +3666,7 @@ window.toggleChampionshipStatus = async (gameId, forceStatus = null) => {
     try { data = await window.fetchChampionshipData(); } catch(e) { console.error(e); }
 
     const isT = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
-    const existing = data[gIdStr] || { gameId: gIdStr, name: (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief', signedUp: false };
+    const existing = window.getEventRecord(data, { gameId: gIdStr, name: window.idToNameMap?.[gIdStr] }) || data[gIdStr] || { gameId: gIdStr, name: (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief', signedUp: false };
     const currentStatus = isT(existing.signedUp);
     const newSignedUpStatus = (forceStatus !== null) ? Boolean(forceStatus) : !currentStatus;
     const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name || "Admin") : "Admin";
@@ -3687,9 +3775,10 @@ window.fetchMercenaryData = async () => {
     const isT = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
 
     const addEntry = (gid, chiefName, isSigned, phase, difficulty, lastUpdated) => {
+        const cleanN = window.cleanChiefName(chiefName);
         const entry = {
             gameId: gid,
-            name: chiefName,
+            name: cleanN || chiefName,
             signedUp: isSigned,
             phase: phase || "Champion's Initiation",
             difficulty: difficulty || "Hard",
@@ -3699,6 +3788,12 @@ window.fetchMercenaryData = async () => {
         if (chiefName) {
             result[chiefName] = entry;
             result[chiefName.toLowerCase()] = entry;
+            result[chiefName.toLowerCase().replace(/[^a-z0-9]/g, '_')] = entry;
+        }
+        if (cleanN && cleanN !== chiefName) {
+            result[cleanN] = entry;
+            result[cleanN.toLowerCase()] = entry;
+            result[cleanN.toLowerCase().replace(/[^a-z0-9]/g, '_')] = entry;
         }
     };
 
@@ -3779,7 +3874,7 @@ window.toggleMercenaryStatus = async (gameId, forceStatus = null) => {
     let data = {};
     try { data = await window.fetchMercenaryData(); } catch(e) { console.error(e); }
 
-    const existing = data[gIdStr] || { gameId: gIdStr, name: (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief', signedUp: false };
+    const existing = window.getEventRecord(data, { gameId: gIdStr, name: window.idToNameMap?.[gIdStr] }) || data[gIdStr] || { gameId: gIdStr, name: (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief', signedUp: false };
     const newSignedUpStatus = (forceStatus !== null) ? forceStatus : !existing.signedUp;
     const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name || "Admin") : "Admin";
     const playerName = existing.name || (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief';
@@ -3931,9 +4026,10 @@ window.fetchPolarTerrorsData = async () => {
     const isT = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
 
     const addEntry = (gid, chiefName, isSigned, lastUpdated) => {
+        const cleanN = window.cleanChiefName(chiefName);
         const entry = {
             gameId: gid,
-            name: chiefName,
+            name: cleanN || chiefName,
             signedUp: isSigned,
             lastUpdated: lastUpdated || Date.now()
         };
@@ -3941,6 +4037,12 @@ window.fetchPolarTerrorsData = async () => {
         if (chiefName) {
             result[chiefName] = entry;
             result[chiefName.toLowerCase()] = entry;
+            result[chiefName.toLowerCase().replace(/[^a-z0-9]/g, '_')] = entry;
+        }
+        if (cleanN && cleanN !== chiefName) {
+            result[cleanN] = entry;
+            result[cleanN.toLowerCase()] = entry;
+            result[cleanN.toLowerCase().replace(/[^a-z0-9]/g, '_')] = entry;
         }
     };
 
@@ -3980,7 +4082,7 @@ window.togglePolarTerrorsStatus = async (gameId, forceStatus = null) => {
     let data = {};
     try { data = await window.fetchPolarTerrorsData(); } catch(e) { console.error(e); }
 
-    const existing = data[gIdStr] || { gameId: gIdStr, name: (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief', signedUp: false };
+    const existing = window.getEventRecord(data, { gameId: gIdStr, name: window.idToNameMap?.[gIdStr] }) || data[gIdStr] || { gameId: gIdStr, name: (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief', signedUp: false };
     const newSignedUpStatus = (forceStatus !== null) ? forceStatus : !existing.signedUp;
     const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name || "Admin") : "Admin";
     const playerName = existing.name || (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief';
@@ -4081,12 +4183,18 @@ window.archiveAndResetMercenaryCycle = async () => {
 
         let rosterList = [];
         const seenGids = new Set();
+        const seenNames = new Set();
         if (rosterData) {
             Object.values(rosterData).forEach(p => {
-                const gid = p.gameId ? String(p.gameId).trim() : (p.name || '').toLowerCase().trim();
-                if (gid && seenGids.has(gid)) return;
-                if (p.name && p.gameId && window.isPlayerActiveMember(p)) {
-                    seenGids.add(gid);
+                if (!p || typeof p !== 'object') return;
+                const cleanName = window.cleanChiefName(p.name || p.chiefName || '');
+                const normName = (cleanName || p.name || '').toLowerCase().trim();
+                const gid = p.gameId ? String(p.gameId).trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : (window.nameToIdMap?.[normName] || ''));
+                if ((gid && seenGids.has(gid)) || (normName && seenNames.has(normName))) return;
+                if (cleanName && window.isPlayerActiveMember(p)) {
+                    if (!p.gameId && gid && /^\d+$/.test(gid)) p.gameId = gid;
+                    if (gid) seenGids.add(gid);
+                    if (normName) seenNames.add(normName);
                     rosterList.push(p);
                 }
             });
@@ -4103,8 +4211,8 @@ window.archiveAndResetMercenaryCycle = async () => {
         let playerSnapshots = [];
 
         rosterList.forEach(p => {
-            const gidStr = p.gameId.toString().trim();
-            const rec = mercData[gidStr];
+            const gidStr = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (window.nameToIdMap?.[(p.name || '').toLowerCase()] || '');
+            const rec = window.getEventRecord(mercData, p);
             const isDone = rec && Boolean(rec.signedUp);
             if (isDone) {
                 yesCount++;
@@ -4210,11 +4318,18 @@ window.archiveAndResetPolarTerrorsCycle = async () => {
 
         let rosterList = [];
         const seenGids = new Set();
+        const seenNames = new Set();
         if (rosterData) {
             Object.values(rosterData).forEach(p => {
-                const gidStr = p.gameId ? p.gameId.toString().trim() : '';
-                if (p.name && gidStr && !seenGids.has(gidStr) && window.isPlayerActiveMember(p)) {
-                    seenGids.add(gidStr);
+                if (!p || typeof p !== 'object') return;
+                const cleanName = window.cleanChiefName(p.name || p.chiefName || '');
+                const normName = (cleanName || p.name || '').toLowerCase().trim();
+                const gid = p.gameId ? String(p.gameId).trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : (window.nameToIdMap?.[normName] || ''));
+                if ((gid && seenGids.has(gid)) || (normName && seenNames.has(normName))) return;
+                if (cleanName && window.isPlayerActiveMember(p)) {
+                    if (!p.gameId && gid && /^\d+$/.test(gid)) p.gameId = gid;
+                    if (gid) seenGids.add(gid);
+                    if (normName) seenNames.add(normName);
                     rosterList.push(p);
                 }
             });
@@ -4233,8 +4348,8 @@ window.archiveAndResetPolarTerrorsCycle = async () => {
         let playerSnapshots = [];
 
         rosterList.forEach(p => {
-            const gidStr = p.gameId.toString().trim();
-            const rec = polarData[gidStr];
+            const gidStr = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (window.nameToIdMap?.[(p.name || '').toLowerCase()] || '');
+            const rec = window.getEventRecord(polarData, p);
             const isDone = rec && Boolean(rec.signedUp);
             if (isDone) {
                 yesCount++;
@@ -4341,11 +4456,18 @@ window.archiveAndResetBearTrapCycle = async () => {
 
         let rosterList = [];
         const seenGids = new Set();
+        const seenNames = new Set();
         if (rosterData) {
             Object.values(rosterData).forEach(p => {
-                const gidStr = p.gameId ? p.gameId.toString().trim() : '';
-                if (p.name && gidStr && !seenGids.has(gidStr) && window.isPlayerActiveMember(p)) {
-                    seenGids.add(gidStr);
+                if (!p || typeof p !== 'object') return;
+                const cleanName = window.cleanChiefName(p.name || p.chiefName || '');
+                const normName = (cleanName || p.name || '').toLowerCase().trim();
+                const gid = p.gameId ? String(p.gameId).trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : (window.nameToIdMap?.[normName] || ''));
+                if ((gid && seenGids.has(gid)) || (normName && seenNames.has(normName))) return;
+                if (cleanName && window.isPlayerActiveMember(p)) {
+                    if (!p.gameId && gid && /^\d+$/.test(gid)) p.gameId = gid;
+                    if (gid) seenGids.add(gid);
+                    if (normName) seenNames.add(normName);
                     rosterList.push(p);
                 }
             });
@@ -4364,8 +4486,8 @@ window.archiveAndResetBearTrapCycle = async () => {
         let playerSnapshots = [];
 
         rosterList.forEach(p => {
-            const gidStr = p.gameId.toString().trim();
-            const rec = btData[gidStr] || (p.name ? btData[p.name] : null);
+            const gidStr = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (window.nameToIdMap?.[(p.name || '').toLowerCase()] || '');
+            const rec = window.getEventRecord(btData, p);
             const isDone = rec && (isT(rec.donated) || isT(rec.signedUp));
             if (isDone) {
                 yesCount++;
@@ -4642,6 +4764,13 @@ window.fetchBearTrapData = async () => {
                     if (name) {
                         result[name] = item;
                         result[name.toLowerCase()] = item;
+                        result[name.toLowerCase().replace(/[^a-z0-9]/g, '_')] = item;
+                    }
+                    const cleanN = window.cleanChiefName(name);
+                    if (cleanN && cleanN !== name) {
+                        result[cleanN] = item;
+                        result[cleanN.toLowerCase()] = item;
+                        result[cleanN.toLowerCase().replace(/[^a-z0-9]/g, '_')] = item;
                     }
                 } else {
                     result[k] = v;
@@ -4708,7 +4837,7 @@ window.toggleBearTrapStatus = async (gameId, forceStatus = null) => {
     let data = {};
     try { data = await window.fetchBearTrapData(); } catch(e) { console.error(e); }
 
-    const existing = data[gIdStr] || { gameId: gIdStr, name: (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief', signedUp: false };
+    const existing = window.getEventRecord(data, { gameId: gIdStr, name: window.idToNameMap?.[gIdStr] }) || data[gIdStr] || { gameId: gIdStr, name: (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief', signedUp: false };
     
     const playerName = existing.name || (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief';
     existing.name = playerName;
@@ -12985,11 +13114,18 @@ window.archiveAndResetChampionshipSeason = async () => {
         // 4. Process Roster and Archive Signups
         let rosterList = [];
         const seenGids = new Set();
+        const seenNames = new Set();
         if (rosterData) {
             Object.values(rosterData).forEach(p => {
-                const gidStr = p.gameId ? p.gameId.toString().trim() : '';
-                if (p.name && gidStr && !seenGids.has(gidStr) && window.isPlayerActiveMember(p)) {
-                    seenGids.add(gidStr);
+                if (!p || typeof p !== 'object') return;
+                const cleanName = window.cleanChiefName(p.name || p.chiefName || '');
+                const normName = (cleanName || p.name || '').toLowerCase().trim();
+                const gid = p.gameId ? String(p.gameId).trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : (window.nameToIdMap?.[normName] || ''));
+                if ((gid && seenGids.has(gid)) || (normName && seenNames.has(normName))) return;
+                if (cleanName && window.isPlayerActiveMember(p)) {
+                    if (!p.gameId && gid && /^\d+$/.test(gid)) p.gameId = gid;
+                    if (gid) seenGids.add(gid);
+                    if (normName) seenNames.add(normName);
                     rosterList.push(p);
                 }
             });
@@ -13008,8 +13144,8 @@ window.archiveAndResetChampionshipSeason = async () => {
         let playerSnapshots = [];
 
         rosterList.forEach(p => {
-            const gidStr = p.gameId.toString().trim();
-            const rec = champData[gidStr] || (p.name ? champData[p.name] : null);
+            const gidStr = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (window.nameToIdMap?.[(p.name || '').toLowerCase()] || '');
+            const rec = window.getEventRecord(champData, p);
             const isSigned = rec && isT(rec.signedUp);
             if (isSigned) {
                 yesCount++;
@@ -30837,12 +30973,18 @@ const views = {
 
         let rosterList = [];
         const seenGids = new Set();
+        const seenNames = new Set();
         if (rosterData) {
             Object.values(rosterData).forEach(p => {
-                const gid = p.gameId ? String(p.gameId).trim() : (p.name || '').toLowerCase().trim();
-                if (gid && seenGids.has(gid)) return;
-                if (p.name && p.gameId && window.isPlayerActiveMember(p)) {
-                    seenGids.add(gid);
+                if (!p || typeof p !== 'object') return;
+                const cleanName = window.cleanChiefName(p.name || p.chiefName || '');
+                const normName = (cleanName || p.name || '').toLowerCase().trim();
+                const gid = p.gameId ? String(p.gameId).trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : (window.nameToIdMap?.[normName] || ''));
+                if ((gid && seenGids.has(gid)) || (normName && seenNames.has(normName))) return;
+                if (cleanName && window.isPlayerActiveMember(p)) {
+                    if (!p.gameId && gid && /^\d+$/.test(gid)) p.gameId = gid;
+                    if (gid) seenGids.add(gid);
+                    if (normName) seenNames.add(normName);
                     rosterList.push(p);
                 }
             });
@@ -30857,9 +30999,7 @@ const views = {
         let missingNames = [];
 
         rosterList.forEach(p => {
-            let gIdStr = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (p.name ? p.name.toLowerCase().replace(/[^a-z0-9]/g, '_') : '');
-            let nameKey = p.name ? p.name.toLowerCase().replace(/[^a-z0-9]/g, '_') : '';
-            let record = championshipData[gIdStr] || (nameKey ? championshipData[nameKey] : null) || (p.name ? championshipData[p.name] : null);
+            let record = window.getEventRecord(championshipData, p);
             let isSignedUp = record && isT(record.signedUp);
             if (isSignedUp) {
                 yesCount++;
@@ -30940,9 +31080,8 @@ const views = {
                     </thead>
                     <tbody id="champTableBody">
                       ${rosterList.map(p => {
-                          let gIdStr = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (p.name ? p.name.toLowerCase().replace(/[^a-z0-9]/g, '_') : '');
-                          let nameKey = p.name ? p.name.toLowerCase().replace(/[^a-z0-9]/g, '_') : '';
-                          let record = championshipData[gIdStr] || (nameKey ? championshipData[nameKey] : null) || (p.name ? championshipData[p.name] : null);
+                          let gIdStr = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : (window.nameToIdMap?.[(p.name || '').toLowerCase()] || p.name || ''));
+                          let record = window.getEventRecord(championshipData, p);
                           let isSignedUp = record && isT(record.signedUp);
                           return `
                             <tr class="champ-row" data-name="${escapeHTML((p.name || '').toLowerCase())}" data-gid="${gIdStr}" data-signed="${isSignedUp ? 'yes' : 'no'}" style="border-bottom:1px solid var(--border);">
@@ -31513,12 +31652,18 @@ const views = {
 
         let rosterList = [];
         const seenGids = new Set();
+        const seenNames = new Set();
         if (rosterData) {
             Object.values(rosterData).forEach(p => {
-                const gid = p.gameId ? String(p.gameId).trim() : (p.name || '').toLowerCase().trim();
-                if (gid && seenGids.has(gid)) return;
-                if (p.name && p.gameId && window.isPlayerActiveMember(p)) {
-                    seenGids.add(gid);
+                if (!p || typeof p !== 'object') return;
+                const cleanName = window.cleanChiefName(p.name || p.chiefName || '');
+                const normName = (cleanName || p.name || '').toLowerCase().trim();
+                const gid = p.gameId ? String(p.gameId).trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : (window.nameToIdMap?.[normName] || ''));
+                if ((gid && seenGids.has(gid)) || (normName && seenNames.has(normName))) return;
+                if (cleanName && window.isPlayerActiveMember(p)) {
+                    if (!p.gameId && gid && /^\d+$/.test(gid)) p.gameId = gid;
+                    if (gid) seenGids.add(gid);
+                    if (normName) seenNames.add(normName);
                     rosterList.push(p);
                 }
             });
@@ -31531,8 +31676,7 @@ const views = {
         let noCount = 0;
 
         rosterList.forEach(p => {
-            let gIdStr = p.gameId.toString().trim();
-            let record = polarData[gIdStr];
+            let record = window.getEventRecord(polarData, p);
             let isDone = record && record.signedUp;
             if (isDone) {
                 yesCount++;
@@ -31600,8 +31744,9 @@ const views = {
                   </thead>
                   <tbody id="ptTableBody">
                     ${rosterList.map(p => {
-                       let gIdStr = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (p.name ? p.name.toLowerCase().replace(/[^a-z0-9]/g, '_') : '');
-                       let isDone = polarData[gIdStr] ? polarData[gIdStr].signedUp : false;
+                       let gIdStr = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : (window.nameToIdMap?.[(p.name || '').toLowerCase()] || p.name || ''));
+                       let record = window.getEventRecord(polarData, p);
+                       let isDone = record ? Boolean(record.signedUp) : false;
                        let badgeBg = isDone ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)';
                        let badgeColor = isDone ? '#10b981' : '#ef4444';
                        let badgeBorder = isDone ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)';
@@ -31757,12 +31902,18 @@ const views = {
 
         let rosterList = [];
         const seenGids = new Set();
+        const seenNames = new Set();
         if (rosterData) {
             Object.values(rosterData).forEach(p => {
-                const gid = p.gameId ? String(p.gameId).trim() : (p.name || '').toLowerCase().trim();
-                if (gid && seenGids.has(gid)) return;
-                if (p.name && p.gameId && window.isPlayerActiveMember(p)) {
-                    seenGids.add(gid);
+                if (!p || typeof p !== 'object') return;
+                const cleanName = window.cleanChiefName(p.name || p.chiefName || '');
+                const normName = (cleanName || p.name || '').toLowerCase().trim();
+                const gid = p.gameId ? String(p.gameId).trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : (window.nameToIdMap?.[normName] || ''));
+                if ((gid && seenGids.has(gid)) || (normName && seenNames.has(normName))) return;
+                if (cleanName && window.isPlayerActiveMember(p)) {
+                    if (!p.gameId && gid && /^\d+$/.test(gid)) p.gameId = gid;
+                    if (gid) seenGids.add(gid);
+                    if (normName) seenNames.add(normName);
                     rosterList.push(p);
                 }
             });
@@ -31776,8 +31927,7 @@ const views = {
         let missingNames = [];
 
         rosterList.forEach(p => {
-            let gIdStr = p.gameId.toString().trim();
-            let record = btData[gIdStr];
+            let record = window.getEventRecord(btData, p);
             let isSignedUp = record && record.signedUp;
             if (isSignedUp) {
                 yesCount++;
@@ -31855,8 +32005,9 @@ const views = {
                   </thead>
                   <tbody id="btTableBody">
                     ${rosterList.map(p => {
-                       let gIdStr = p.gameId.toString().trim();
-                       let isSignedUp = btData[gIdStr] ? btData[gIdStr].signedUp : false;
+                       let gIdStr = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : (window.nameToIdMap?.[(p.name || '').toLowerCase()] || p.name || ''));
+                       let record = window.getEventRecord(btData, p);
+                       let isSignedUp = record ? Boolean(record.signedUp) : false;
                        return `
                        <tr class="bt-row" data-name="${escapeHTML(p.name.toLowerCase())}" style="border-bottom:1px solid var(--border);">
                          <td style="padding:12px; font-weight:bold; color:var(--text-main);">${escapeHTML(p.name)}</td>
@@ -31935,7 +32086,7 @@ const views = {
                 let newNo = 0;
                 let newMissing = [];
                 window.btRosterList.forEach(rp => {
-                    let st = pData[rp.gameId.toString().trim()];
+                    let st = window.getEventRecord(pData, rp);
                     if (st && st.signedUp) newYes++;
                     else {
                         newNo++;
@@ -31976,7 +32127,7 @@ const views = {
                 let newNo = 0;
                 let newMissing = [];
                 window.btRosterList.forEach(rp => {
-                    let st = pData[rp.gameId.toString().trim()];
+                    let st = window.getEventRecord(pData, rp);
                     if (st && st.signedUp) newYes++;
                     else {
                         newNo++;
@@ -37189,12 +37340,18 @@ window.resetBearTrapEvent = async () => {
 
         let rosterList = [];
         const seenGids = new Set();
+        const seenNames = new Set();
         if (rosterData) {
             Object.values(rosterData).forEach(p => {
-                const gid = p.gameId ? String(p.gameId).trim() : (p.name || '').toLowerCase().trim();
-                if (gid && seenGids.has(gid)) return;
-                if (p.name && p.gameId && window.isPlayerActiveMember(p)) {
-                    seenGids.add(gid);
+                if (!p || typeof p !== 'object') return;
+                const cleanName = window.cleanChiefName(p.name || p.chiefName || '');
+                const normName = (cleanName || p.name || '').toLowerCase().trim();
+                const gid = p.gameId ? String(p.gameId).trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : (window.nameToIdMap?.[normName] || ''));
+                if ((gid && seenGids.has(gid)) || (normName && seenNames.has(normName))) return;
+                if (cleanName && window.isPlayerActiveMember(p)) {
+                    if (!p.gameId && gid && /^\d+$/.test(gid)) p.gameId = gid;
+                    if (gid) seenGids.add(gid);
+                    if (normName) seenNames.add(normName);
                     rosterList.push(p);
                 }
             });
@@ -37206,8 +37363,7 @@ window.resetBearTrapEvent = async () => {
         let noCount = 0;
 
         rosterList.forEach(p => {
-            let gIdStr = String(p.gameId || '').trim();
-            let record = mercenaryData[gIdStr];
+            let record = window.getEventRecord(mercenaryData, p);
             let isDone = record && record.signedUp;
             if (isDone) yesCount++;
             else noCount++;
@@ -37263,8 +37419,7 @@ window.resetBearTrapEvent = async () => {
         };
 
         const championList = rosterList.filter(p => {
-          let gIdStr = String(p.gameId || '').trim();
-          let record = mercenaryData[gIdStr];
+          let record = window.getEventRecord(mercenaryData, p);
           return record && record.signedUp;
         });
 
@@ -37322,8 +37477,8 @@ window.resetBearTrapEvent = async () => {
                   🛡️ No <b>Phaethon Masters</b> registered yet for this event cycle.<br>Complete all 25 scout battles to be immortalized on the Wall of Champions!
                 </div>
               ` : championList.map(p => {
-                let gIdStr = String(p.gameId || '').trim();
-                let record = mercenaryData[gIdStr] || {};
+                let gIdStr = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : (window.nameToIdMap?.[(p.name || '').toLowerCase()] || p.name || ''));
+                let record = window.getEventRecord(mercenaryData, p) || {};
                 let phase = record.phase || "Champion's Initiation";
                 let phaseStyle = (window.MERCENARY_PHASE_STYLES && window.MERCENARY_PHASE_STYLES[phase]) || window.MERCENARY_PHASE_STYLES["Champion's Initiation"];
                 let diffKey = record.difficulty || "Hard";
@@ -37392,8 +37547,8 @@ window.resetBearTrapEvent = async () => {
                   </thead>
                   <tbody>
                     ${rosterList.map(p => {
-                      let gIdStr = String(p.gameId || '').trim();
-                      let record = mercenaryData[gIdStr] || {};
+                      let gIdStr = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : (window.nameToIdMap?.[(p.name || '').toLowerCase()] || p.name || ''));
+                      let record = window.getEventRecord(mercenaryData, p) || {};
                       let isDone = record && record.signedUp;
                       let phase = record.phase || "Champion's Initiation";
                       let phaseStyle = (window.MERCENARY_PHASE_STYLES && window.MERCENARY_PHASE_STYLES[phase]) || window.MERCENARY_PHASE_STYLES["Champion's Initiation"];

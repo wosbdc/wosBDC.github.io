@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [3.3.17] - 2026-09-07
+- 🎯 **Unified Roster**: Fallback resolution prevents dropped members in event trackers.
+- 👥 **Dwarf 2 Healed**: Restored character profile, game ID, and active event records.
+- ⚔️ **Mercenary Prestige**: Standardized roster deduplication and champion lookups across views.
+- 🐻 **Bear Trap Sync**: Updated table rendering and donation toggles for alts.
+- 🔍 **Alt Indexing**: Automatically maps registered user alts into global lookup maps.
+
 ## [3.3.16] - 2026-09-07
 - 📋 **Required Type**: Forces members to pick bug or feature.
 - 🚫 **Blank Placeholder**: Stops members from submitting without choosing a type.
