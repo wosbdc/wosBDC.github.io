@@ -1,14 +1,17 @@
 {
-  "version": "3.3.18",
+  "version": "3.3.19",
   "releaseDate": "2026-09-07",
-  "title": "What's New in v3.3.18",
+  "title": "What's New in v3.3.19",
   "notes": [
-    "🛡️ Admin Menu: Renamed leadership navigation button to Admin Menu.",
-    "🔗 Navigation: Aligned button label with the Admin Menu title."
+    "🔗 Alt Manager: Easily assign alts to any main account.",
+    "❄️ Titan Frost: Restored runaway Frost alt to main account.",
+    "⚡ Instant Sync: Updates database and active roster in real-time.",
+    "🛠️ Admin Tools: Quick alt assignment button in Admin Menu."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.18",
+    "version": "3.3.19",
     "latestChanges": [
+      "v3.3.19: Admin Alt Assignment modal, direct Firebase sync, and Titan Frost heal",
       "v3.3.18: Renamed Leadership Hub header button to Admin Menu",
       "v3.3.17: Unified event tracker roster deduplication, Dwarf 2 healing, and alt lookup indexing",
       "v3.3.16: Required feedback type dropdown, blank required placeholder, and admin type switcher",

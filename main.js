@@ -7560,43 +7560,678 @@ window.adminUnlinkAltAccountPrompt = async (chiefName, altId) => {
     }
 };
 
-window.adminLinkAltAccountPromptByChief = async (chiefName) => {
-    const gameId = window.nameToIdMap[chiefName];
-    if (!gameId) {
-        if(window.showToast) window.showToast("Could not find Game ID for " + chiefName, "error");
-        else window.showToast("Could not find Game ID", "error");
-        return;
+window.executeAdminAssignAlt = async (mainGid, altGid, options = {}) => {
+  const restoreActive = options.restoreActive !== false;
+  const syncCenturyToken = options.syncCenturyToken !== false;
+
+  mainGid = (mainGid || '').toString().trim();
+  altGid = (altGid || '').toString().trim();
+
+  if (!mainGid || !altGid) {
+    throw new Error("Both Main Chief and Alt Account must be specified.");
+  }
+  if (mainGid === altGid) {
+    throw new Error("Main Account and Alt Account cannot have the same Game ID.");
+  }
+
+  // 1. Fetch live users and users_alts
+  const [usersSnap, altsSnap] = await Promise.all([
+    get(ref(db, 'users')),
+    get(ref(db, 'users_alts'))
+  ]);
+
+  const users = usersSnap.val() || {};
+  const usersAlts = altsSnap.val() || {};
+
+  // 2. Resolve Main UID
+  let targetMainUid = null;
+  let mainUser = null;
+  for (const [uid, u] of Object.entries(users)) {
+    if (String(u.gameId).trim() === mainGid || String(u.game_id).trim() === mainGid) {
+      targetMainUid = uid;
+      mainUser = u;
+      break;
     }
-    
-    const altId = await window.customPrompt(`Enter the Game ID of the Alt Account you want to link to ${chiefName}:`);
-    if (!altId || altId.trim() === '') return;
-    
+  }
+
+  if (!targetMainUid) {
+    throw new Error(`Main Chief (Game ID: ${mainGid}) is not registered in the site database.`);
+  }
+
+  const mainChiefName = (window.idToNameMap && window.idToNameMap[mainGid]) || mainUser.name || mainUser.chiefName || `Chief ${mainGid}`;
+
+  // 3. Resolve Alt Metadata
+  let altName = (window.idToNameMap && window.idToNameMap[altGid]) || usersAlts[altGid]?.name || `Alt ${altGid}`;
+  let altFurnace = usersAlts[altGid]?.furnace || '30';
+
+  if (window.roster && Array.isArray(window.roster)) {
+    const found = window.roster.find(r => String(r.gameId).trim() === altGid || String(r.name).toLowerCase() === altName.toLowerCase());
+    if (found) {
+      if (found.name) altName = found.name;
+      if (found.furnace) altFurnace = String(found.furnace).replace(/[^0-9]/g, '');
+    }
+  }
+
+  try {
+    const cgSnap = await get(ref(db, `century_tokens/${altGid}`));
+    if (cgSnap.exists()) {
+      const cgd = cgSnap.val();
+      if (cgd.nickname) altName = cgd.nickname;
+      if (cgd.stove_lv) altFurnace = String(cgd.stove_lv).replace(/[^0-9]/g, '');
+    }
+  } catch(e) {}
+
+  // 4. Detach alt from any other user accounts
+  for (const [uid, u] of Object.entries(users)) {
+    if (uid === targetMainUid) continue;
+    let oldLinks = Array.isArray(u.linkedGameIds) ? u.linkedGameIds.map(String) : [];
+    const hasToken = u.altTokens && u.altTokens[altGid];
+    const hasData = u.linkedAltsData && u.linkedAltsData[altGid];
+    if (oldLinks.includes(altGid) || hasToken || hasData) {
+      const newLinks = oldLinks.filter(id => id !== altGid);
+      await set(ref(db, `users/${uid}/linkedGameIds`), newLinks);
+      if (hasToken) await remove(ref(db, `users/${uid}/altTokens/${altGid}`)).catch(() => null);
+      if (hasData) await remove(ref(db, `users/${uid}/linkedAltsData/${altGid}`)).catch(() => null);
+    }
+  }
+
+  // 5. Update main user
+  let currentMainLinks = Array.isArray(mainUser.linkedGameIds) ? mainUser.linkedGameIds.map(String) : [];
+  if (!currentMainLinks.includes(altGid)) {
+    currentMainLinks.push(altGid);
+  }
+  await set(ref(db, `users/${targetMainUid}/linkedGameIds`), currentMainLinks);
+
+  const altDataPayload = {
+    name: altName,
+    gameId: Number(altGid) || altGid,
+    furnace: altFurnace || '30',
+    membershipStatus: 'active',
+    status: 'active',
+    linkedAt: new Date().toISOString()
+  };
+  await set(ref(db, `users/${targetMainUid}/linkedAltsData/${altGid}`), altDataPayload);
+
+  if (syncCenturyToken) {
+    const altTokenPayload = {
+      centuryGamesVerified: true,
+      furnaceLevel: `Lv ${altFurnace || '30'}`,
+      stove_lv: `Lv ${altFurnace || '30'}`,
+      nickname: altName,
+      section: '2089',
+      game_id: String(altGid)
+    };
+    await set(ref(db, `users/${targetMainUid}/altTokens/${altGid}`), altTokenPayload);
+  }
+
+  // 6. Update users_alts
+  const userAltPayload = {
+    gameId: Number(altGid) || altGid,
+    name: altName,
+    ownerUid: targetMainUid,
+    mainGid: Number(mainGid) || mainGid,
+    mainChiefName: mainChiefName,
+    membershipStatus: restoreActive ? 'active' : (usersAlts[altGid]?.membershipStatus || 'active'),
+    status: restoreActive ? 'active' : (usersAlts[altGid]?.status || 'active'),
+    furnace: altFurnace || '30',
+    updatedAt: new Date().toISOString()
+  };
+  await update(ref(db, `users_alts/${altGid}`), userAltPayload);
+
+  // 7. Update roster_live
+  if (restoreActive) {
     try {
-        const res = await fetch(`${API_BASE_URL}?api=adminLinkAlt&gameId=${encodeURIComponent(gameId)}&chiefName=${encodeURIComponent(chiefName)}&altGameId=${encodeURIComponent(altId.trim())}`);
-        const json = await res.json();
-        
-        if (json.success) {
-            if (window.showToast) window.showToast(`Alt Account linked for ${chiefName}!`, "success");
-            if (document.getElementById('adminHubView')) window.views.admin();
-            window.searchPlayerFull(chiefName);
-        } else {
-            window.customAlert(json.message || "Failed to link alt account.");
-        }
-    } catch(e) {
-        window.showToast(e.message, "error");
+      await update(ref(db, `roster_live/${altName}`), {
+        gameId: Number(altGid) || altGid,
+        name: altName,
+        furnace: altFurnace || '30',
+        membershipStatus: 'active',
+        status: 'active',
+        statusUpdatedBy: currentUser?.displayName || currentUser?.email || 'Admin',
+        statusUpdatedAt: new Date().toISOString()
+      });
+    } catch(e) {}
+  }
+
+  // 8. Update giftcode_bot
+  try {
+    await update(ref(db, `giftcode_bot/${altGid}`), {
+      ownerUid: targetMainUid,
+      name: altName,
+      gameId: Number(altGid) || altGid
+    });
+  } catch(e) {}
+
+  // 9. Invalidate caches
+  if (typeof window.invalidateMemberCaches === 'function') {
+    window.invalidateMemberCaches({ refreshView: true });
+  }
+
+  return { success: true, mainChiefName, altName, altGid, mainGid };
+};
+
+window.openAdminAssignAltModal = async (prefillChiefOrGid = null, prefillAltGid = null) => {
+  const activeUser = currentUser || window.currentUser;
+  if (!activeUser || !(typeof window.isAdminUser === 'function' && window.isAdminUser(activeUser))) {
+    if (window.showToast) window.showToast("Access Denied: Staff permissions required.", "error");
+    return;
+  }
+
+  const oldModal = document.getElementById('adminAssignAltModalOverlay');
+  if (oldModal && oldModal.parentNode) oldModal.parentNode.removeChild(oldModal);
+
+  const modalOverlay = document.createElement('div');
+  modalOverlay.id = 'adminAssignAltModalOverlay';
+  modalOverlay.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.88); backdrop-filter:blur(12px); z-index:99999; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease;';
+
+  modalOverlay.innerHTML = `
+    <div class="card" style="width:92%; max-width:560px; background:linear-gradient(145deg, rgba(15,23,42,0.98), rgba(30,41,59,0.96)); border:1px solid rgba(56,189,248,0.4); padding:24px; border-radius:22px; box-shadow:0 25px 60px rgba(0,0,0,0.85); text-align:left; animation:zoomIn 0.2s forwards; color:var(--text-main); max-height:92vh; overflow-y:auto;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:12px;">
+        <h3 style="margin:0; color:#fff; font-size:18px; font-weight:bold; display:flex; align-items:center; gap:8px;">
+          🔗 Assign Alt Account to Main
+        </h3>
+        <button id="closeAdminAssignAltModalBtn" style="background:none; border:none; color:var(--text-muted); font-size:26px; cursor:pointer; line-height:1;">&times;</button>
+      </div>
+
+      <p style="margin:0 0 16px 0; font-size:12px; color:#94a3b8;">
+        Directly link, reassign, or restore an alt account to a primary registered chief in the Firebase database.
+      </p>
+
+      <div style="display:flex; flex-direction:column; gap:16px;">
+        <!-- Step 1: Main Chief -->
+        <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:14px;">
+          <label style="display:block; font-size:11px; font-weight:bold; color:#38bdf8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">
+            1. Select Main Chief Account
+          </label>
+          <div style="position:relative;">
+            <input id="adminAssignMainSearch" type="text" placeholder="Search Chief Name or Game ID..." autocomplete="off" style="width:100%; box-sizing:border-box; background:rgba(15,23,42,0.8); border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:9px 12px; color:#fff; font-size:14px;">
+            <div id="adminAssignMainSuggestions" style="position:absolute; top:100%; left:0; right:0; background:rgba(15,23,42,0.98); border:1px solid rgba(56,189,248,0.3); border-radius:8px; max-height:180px; overflow-y:auto; z-index:1000; display:none; margin-top:4px; box-shadow:0 10px 25px rgba(0,0,0,0.5);"></div>
+          </div>
+          <div id="adminAssignMainPreview" style="margin-top:10px; display:none;"></div>
+        </div>
+
+        <!-- Step 2: Alt Account -->
+        <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:14px;">
+          <label style="display:block; font-size:11px; font-weight:bold; color:#a855f7; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">
+            2. Alt Account to Assign
+          </label>
+          <div style="position:relative;">
+            <input id="adminAssignAltSearch" type="text" placeholder="Enter Alt Game ID or Name..." autocomplete="off" style="width:100%; box-sizing:border-box; background:rgba(15,23,42,0.8); border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:9px 12px; color:#fff; font-size:14px;">
+            <div id="adminAssignAltSuggestions" style="position:absolute; top:100%; left:0; right:0; background:rgba(15,23,42,0.98); border:1px solid rgba(168,85,247,0.4); border-radius:8px; max-height:180px; overflow-y:auto; z-index:1000; display:none; margin-top:4px; box-shadow:0 10px 25px rgba(0,0,0,0.5);"></div>
+          </div>
+          <div id="adminAssignAltPreview" style="margin-top:10px; display:none;"></div>
+        </div>
+
+        <!-- Options -->
+        <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-radius:10px; padding:10px 14px; display:flex; flex-direction:column; gap:8px;">
+          <label style="display:flex; align-items:center; gap:8px; font-size:12px; color:#cbd5e1; cursor:pointer;">
+            <input type="checkbox" id="adminAssignRestoreActive" checked style="accent-color:#10b981; width:16px; height:16px;">
+            <span>Ensure Alt Status is set to <strong>Active</strong> in Alliance Roster</span>
+          </label>
+          <label style="display:flex; align-items:center; gap:8px; font-size:12px; color:#cbd5e1; cursor:pointer;">
+            <input type="checkbox" id="adminAssignSyncCentury" checked style="accent-color:#38bdf8; width:16px; height:16px;">
+            <span>Sync Century Games token verification for this alt</span>
+          </label>
+        </div>
+
+        <div id="adminAssignStatusBanner" style="display:none; padding:10px 14px; border-radius:10px; font-size:13px; font-weight:600;"></div>
+
+        <!-- Action Buttons -->
+        <div style="display:flex; gap:12px; margin-top:6px;">
+          <button id="cancelAdminAssignAltBtn" style="flex:1; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.2); color:#cbd5e1; padding:11px; border-radius:10px; cursor:pointer; font-weight:bold; font-size:14px;">Cancel</button>
+          <button id="submitAdminAssignAltBtn" disabled style="flex:1.4; background:linear-gradient(135deg, #0284c7, #2563eb); color:#fff; border:none; padding:11px; border-radius:10px; cursor:not-allowed; opacity:0.5; font-weight:bold; font-size:14px; box-shadow:0 4px 15px rgba(2,132,199,0.4); display:flex; align-items:center; justify-content:center; gap:6px;">
+            <span>🔗 Assign Alt Account</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modalOverlay);
+
+  const closeModal = () => {
+    if (modalOverlay && modalOverlay.parentNode) modalOverlay.parentNode.removeChild(modalOverlay);
+  };
+
+  document.getElementById('closeAdminAssignAltModalBtn')?.addEventListener('click', closeModal);
+  document.getElementById('cancelAdminAssignAltBtn')?.addEventListener('click', closeModal);
+  modalOverlay.addEventListener('click', (e) => {
+    if (e.target === modalOverlay) closeModal();
+  });
+
+  const onKeydown = (e) => {
+    if (e.key === 'Escape') {
+      closeModal();
+      document.removeEventListener('keydown', onKeydown);
     }
+  };
+  document.addEventListener('keydown', onKeydown);
+
+  // Fetch users & users_alts snapshot for live validation
+  let users = {};
+  let usersAlts = {};
+  try {
+    const [uSnap, aSnap] = await Promise.all([
+      get(ref(db, 'users')),
+      get(ref(db, 'users_alts'))
+    ]);
+    users = uSnap.val() || {};
+    usersAlts = aSnap.val() || {};
+  } catch(e) {
+    console.error("Error loading user databases for alt assignment modal:", e);
+  }
+
+  let selectedMainGid = null;
+  let selectedMainChief = null;
+  let selectedAltGid = null;
+  let selectedAltName = null;
+
+  const mainSearchInput = document.getElementById('adminAssignMainSearch');
+  const mainSuggestions = document.getElementById('adminAssignMainSuggestions');
+  const mainPreview = document.getElementById('adminAssignMainPreview');
+
+  const altSearchInput = document.getElementById('adminAssignAltSearch');
+  const altSuggestions = document.getElementById('adminAssignAltSuggestions');
+  const altPreview = document.getElementById('adminAssignAltPreview');
+
+  const statusBanner = document.getElementById('adminAssignStatusBanner');
+  const submitBtn = document.getElementById('submitAdminAssignAltBtn');
+
+  const selectMainAccount = (gid, name) => {
+    selectedMainGid = String(gid).trim();
+    selectedMainChief = name || (window.idToNameMap && window.idToNameMap[selectedMainGid]) || `Chief ${selectedMainGid}`;
+    mainSearchInput.value = `${selectedMainChief} (${selectedMainGid})`;
+    mainSuggestions.style.display = 'none';
+
+    // Find main user record
+    let targetUid = null;
+    let targetUser = null;
+    for (const [uid, u] of Object.entries(users)) {
+      if (String(u.gameId).trim() === selectedMainGid || String(u.game_id).trim() === selectedMainGid) {
+        targetUid = uid;
+        targetUser = u;
+        break;
+      }
+    }
+
+    const furnace = targetUser?.stove_lv || targetUser?.furnaceLevel || '30';
+    const linkedAlts = Array.isArray(targetUser?.linkedGameIds) ? targetUser.linkedGameIds : [];
+
+    let altsTagsHtml = '<span style="color:#64748b; font-style:italic;">None</span>';
+    if (linkedAlts.length > 0) {
+      altsTagsHtml = linkedAlts.map(agid => {
+        const aname = (window.idToNameMap && window.idToNameMap[agid]) || usersAlts[agid]?.name || targetUser?.altTokens?.[agid]?.nickname || agid;
+        return `<span style="background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:600;">${window.escapeHTML(aname)} (${agid})</span>`;
+      }).join(' ');
+    }
+
+    mainPreview.style.display = 'block';
+    mainPreview.innerHTML = `
+      <div style="display:flex; align-items:center; justify-content:space-between; background:rgba(15,23,42,0.9); padding:10px 14px; border-radius:10px; border:1px solid rgba(56,189,248,0.3);">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div style="width:36px; height:36px; border-radius:50%; overflow:hidden; background:var(--bg-secondary); border:1px solid var(--border); flex-shrink:0;">
+            <img src="${window.getAvatarUrl ? window.getAvatarUrl(selectedMainGid, selectedMainChief) : ''}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(selectedMainChief)}&background=0284c7&color=fff&bold=true&size=128';">
+          </div>
+          <div>
+            <div style="font-weight:bold; font-size:14px; color:#fff;">${window.escapeHTML(selectedMainChief)}</div>
+            <div style="font-size:11px; color:#94a3b8; font-family:monospace;">ID: ${selectedMainGid} &bull; ${furnace.toString().startsWith('FC') ? furnace : 'Lv ' + furnace}</div>
+          </div>
+        </div>
+        <button id="changeSelectedMainBtn" style="background:none; border:1px solid rgba(255,255,255,0.2); color:#94a3b8; border-radius:6px; padding:4px 8px; font-size:11px; cursor:pointer;">Change</button>
+      </div>
+      <div style="margin-top:8px; font-size:11px; color:#94a3b8; display:flex; flex-wrap:wrap; gap:4px; align-items:center;">
+        <span style="font-weight:bold; color:#cbd5e1;">Current Alts (${linkedAlts.length}):</span> ${altsTagsHtml}
+      </div>
+    `;
+
+    document.getElementById('changeSelectedMainBtn')?.addEventListener('click', () => {
+      selectedMainGid = null;
+      selectedMainChief = null;
+      mainSearchInput.value = '';
+      mainPreview.style.display = 'none';
+      mainSearchInput.focus();
+      updateValidation();
+    });
+
+    updateValidation();
+  };
+
+  const selectAltAccount = (agid, aname, furnace = '30') => {
+    selectedAltGid = String(agid).trim();
+    selectedAltName = aname || (window.idToNameMap && window.idToNameMap[selectedAltGid]) || usersAlts[selectedAltGid]?.name || `Alt ${selectedAltGid}`;
+    altSearchInput.value = `${selectedAltName} (${selectedAltGid})`;
+    altSuggestions.style.display = 'none';
+
+    // Check existing link status in users
+    let currentOwnerChief = null;
+    let currentOwnerGid = null;
+    let currentOwnerUid = null;
+
+    for (const [uid, u] of Object.entries(users)) {
+      const links = Array.isArray(u.linkedGameIds) ? u.linkedGameIds.map(String) : [];
+      if (links.includes(selectedAltGid) || (u.altTokens && u.altTokens[selectedAltGid])) {
+        currentOwnerUid = uid;
+        currentOwnerGid = String(u.gameId || u.game_id || '');
+        currentOwnerChief = (window.idToNameMap && window.idToNameMap[currentOwnerGid]) || u.name || u.chiefName || `Chief ${currentOwnerGid}`;
+        break;
+      }
+    }
+
+    if (!currentOwnerUid && usersAlts[selectedAltGid]?.ownerUid) {
+      const oUid = usersAlts[selectedAltGid].ownerUid;
+      if (users[oUid]) {
+        currentOwnerUid = oUid;
+        currentOwnerGid = String(users[oUid].gameId || users[oUid].game_id || '');
+        currentOwnerChief = (window.idToNameMap && window.idToNameMap[currentOwnerGid]) || users[oUid].name || users[oUid].chiefName || `Chief ${currentOwnerGid}`;
+      }
+    }
+
+    let ownershipNoticeHtml = '';
+    if (currentOwnerUid && currentOwnerGid === selectedMainGid) {
+      ownershipNoticeHtml = `<div style="margin-top:6px; font-size:11px; color:#38bdf8; font-weight:600;">ℹ️ Already linked to this Main Chief (${window.escapeHTML(selectedMainChief || currentOwnerChief)}).</div>`;
+    } else if (currentOwnerUid) {
+      ownershipNoticeHtml = `<div style="margin-top:6px; font-size:11px; color:#f59e0b; font-weight:600;">⚠️ Currently linked to <strong>${window.escapeHTML(currentOwnerChief)}</strong> (${currentOwnerGid}). Reassigning will cleanly transfer it.</div>`;
+    } else {
+      ownershipNoticeHtml = `<div style="margin-top:6px; font-size:11px; color:#10b981; font-weight:600;">🟢 Unlinked Alt Account (Available to link).</div>`;
+    }
+
+    altPreview.style.display = 'block';
+    altPreview.innerHTML = `
+      <div style="display:flex; align-items:center; justify-content:space-between; background:rgba(15,23,42,0.9); padding:10px 14px; border-radius:10px; border:1px solid rgba(168,85,247,0.4);">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div style="width:36px; height:36px; border-radius:50%; overflow:hidden; background:var(--bg-secondary); border:1px solid var(--border); flex-shrink:0;">
+            <img src="${window.getAvatarUrl ? window.getAvatarUrl(selectedAltGid, selectedAltName) : ''}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(selectedAltName)}&background=a855f7&color=fff&bold=true&size=128';">
+          </div>
+          <div>
+            <div style="font-weight:bold; font-size:14px; color:#fff;">${window.escapeHTML(selectedAltName)}</div>
+            <div style="font-size:11px; color:#94a3b8; font-family:monospace;">ID: ${selectedAltGid} &bull; ${furnace.toString().startsWith('FC') ? furnace : 'Lv ' + furnace}</div>
+          </div>
+        </div>
+        <button id="changeSelectedAltBtn" style="background:none; border:1px solid rgba(255,255,255,0.2); color:#94a3b8; border-radius:6px; padding:4px 8px; font-size:11px; cursor:pointer;">Change</button>
+      </div>
+      ${ownershipNoticeHtml}
+    `;
+
+    document.getElementById('changeSelectedAltBtn')?.addEventListener('click', () => {
+      selectedAltGid = null;
+      selectedAltName = null;
+      altSearchInput.value = '';
+      altPreview.style.display = 'none';
+      altSearchInput.focus();
+      updateValidation();
+    });
+
+    updateValidation();
+  };
+
+  const updateValidation = () => {
+    if (!selectedMainGid || !selectedAltGid) {
+      statusBanner.style.display = 'none';
+      submitBtn.disabled = true;
+      submitBtn.style.opacity = '0.5';
+      submitBtn.style.cursor = 'not-allowed';
+      return;
+    }
+
+    if (selectedMainGid === selectedAltGid) {
+      statusBanner.style.display = 'block';
+      statusBanner.style.background = 'rgba(239,68,68,0.15)';
+      statusBanner.style.border = '1px solid #ef4444';
+      statusBanner.style.color = '#ef4444';
+      statusBanner.innerHTML = '⚠️ Main Chief and Alt Account cannot have the same Game ID.';
+      submitBtn.disabled = true;
+      submitBtn.style.opacity = '0.5';
+      submitBtn.style.cursor = 'not-allowed';
+      return;
+    }
+
+    // Check if already linked to selectedMain
+    let isAlreadyLinked = false;
+    for (const [uid, u] of Object.entries(users)) {
+      if (String(u.gameId).trim() === selectedMainGid || String(u.game_id).trim() === selectedMainGid) {
+        const links = Array.isArray(u.linkedGameIds) ? u.linkedGameIds.map(String) : [];
+        if (links.includes(selectedAltGid)) isAlreadyLinked = true;
+        break;
+      }
+    }
+
+    if (isAlreadyLinked) {
+      statusBanner.style.display = 'block';
+      statusBanner.style.background = 'rgba(56,189,248,0.15)';
+      statusBanner.style.border = '1px solid #38bdf8';
+      statusBanner.style.color = '#38bdf8';
+      statusBanner.innerHTML = `ℹ️ ${window.escapeHTML(selectedAltName)} (${selectedAltGid}) is already assigned to ${window.escapeHTML(selectedMainChief)}.`;
+      submitBtn.disabled = true;
+      submitBtn.style.opacity = '0.5';
+      submitBtn.style.cursor = 'not-allowed';
+      return;
+    }
+
+    statusBanner.style.display = 'block';
+    statusBanner.style.background = 'rgba(16,185,129,0.15)';
+    statusBanner.style.border = '1px solid #10b981';
+    statusBanner.style.color = '#10b981';
+    statusBanner.innerHTML = `Ready: Assign <strong>${window.escapeHTML(selectedAltName)}</strong> to <strong>${window.escapeHTML(selectedMainChief)}</strong>.`;
+
+    submitBtn.disabled = false;
+    submitBtn.style.opacity = '1';
+    submitBtn.style.cursor = 'pointer';
+  };
+
+  // Main input autocomplete search
+  mainSearchInput.addEventListener('input', () => {
+    const q = mainSearchInput.value.trim().toLowerCase();
+    if (!q) {
+      mainSuggestions.style.display = 'none';
+      return;
+    }
+
+    // Build candidates from registered users
+    const candidates = [];
+    const seenGids = new Set();
+
+    Object.entries(users).forEach(([uid, u]) => {
+      const gid = String(u.gameId || u.game_id || '').trim();
+      if (!gid || seenGids.has(gid)) return;
+      seenGids.add(gid);
+      const name = (window.idToNameMap && window.idToNameMap[gid]) || u.name || u.chiefName || `Chief ${gid}`;
+      if (name.toLowerCase().includes(q) || gid.includes(q)) {
+        candidates.push({ gid, name, furnace: u.stove_lv || u.furnaceLevel || '30' });
+      }
+    });
+
+    if (candidates.length === 0) {
+      mainSuggestions.innerHTML = `<div style="padding:10px 12px; font-size:12px; color:#94a3b8; text-align:center;">No registered chiefs found matching "${window.escapeHTML(q)}"</div>`;
+      mainSuggestions.style.display = 'block';
+      return;
+    }
+
+    mainSuggestions.innerHTML = candidates.slice(0, 8).map(c => `
+      <div class="admin-assign-main-item" data-gid="${c.gid}" data-name="${window.escapeHTML(c.name)}" style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.05); font-size:13px;" onmouseover="this.style.background='rgba(56,189,248,0.15)'" onmouseout="this.style.background='transparent'">
+        <span style="font-weight:bold; color:#fff;">${window.escapeHTML(c.name)}</span>
+        <span style="font-family:monospace; font-size:11px; color:#38bdf8;">ID: ${c.gid}</span>
+      </div>
+    `).join('');
+    mainSuggestions.style.display = 'block';
+
+    mainSuggestions.querySelectorAll('.admin-assign-main-item').forEach(el => {
+      el.addEventListener('click', () => {
+        selectMainAccount(el.dataset.gid, el.dataset.name);
+      });
+    });
+  });
+
+  // Alt input autocomplete search & direct numeric ID lookup
+  altSearchInput.addEventListener('input', () => {
+    const q = altSearchInput.value.trim().toLowerCase();
+    if (!q) {
+      altSuggestions.style.display = 'none';
+      return;
+    }
+
+    const candidates = [];
+    const seenGids = new Set();
+
+    // Check window.roster
+    if (window.roster && Array.isArray(window.roster)) {
+      window.roster.forEach(r => {
+        const gid = String(r.gameId || '').trim();
+        if (!gid || seenGids.has(gid)) return;
+        const name = r.name || `Chief ${gid}`;
+        if (name.toLowerCase().includes(q) || gid.includes(q)) {
+          seenGids.add(gid);
+          candidates.push({ gid, name, furnace: r.furnace || '30' });
+        }
+      });
+    }
+
+    // Check users_alts
+    Object.entries(usersAlts).forEach(([agid, a]) => {
+      const gid = String(agid).trim();
+      if (!gid || seenGids.has(gid)) return;
+      const name = a.name || `Alt ${gid}`;
+      if (name.toLowerCase().includes(q) || gid.includes(q)) {
+        seenGids.add(gid);
+        candidates.push({ gid, name, furnace: a.furnace || '30' });
+      }
+    });
+
+    // Check idToNameMap
+    if (window.idToNameMap) {
+      Object.entries(window.idToNameMap).forEach(([gid, name]) => {
+        if (!gid || seenGids.has(gid)) return;
+        if (name.toLowerCase().includes(q) || gid.includes(q)) {
+          seenGids.add(gid);
+          candidates.push({ gid, name, furnace: '30' });
+        }
+      });
+    }
+
+    // If query is pure numbers and not matched, offer as direct Game ID
+    if (/^\d{6,12}$/.test(q) && !seenGids.has(q)) {
+      candidates.unshift({ gid: q, name: `Game ID ${q}`, furnace: '30' });
+    }
+
+    if (candidates.length === 0) {
+      if (/^\d+$/.test(q)) {
+        selectAltAccount(q, `Alt ${q}`);
+        return;
+      }
+      altSuggestions.innerHTML = `<div style="padding:10px 12px; font-size:12px; color:#94a3b8; text-align:center;">No accounts found matching "${window.escapeHTML(q)}"</div>`;
+      altSuggestions.style.display = 'block';
+      return;
+    }
+
+    altSuggestions.innerHTML = candidates.slice(0, 8).map(c => `
+      <div class="admin-assign-alt-item" data-gid="${c.gid}" data-name="${window.escapeHTML(c.name)}" data-furnace="${c.furnace}" style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.05); font-size:13px;" onmouseover="this.style.background='rgba(168,85,247,0.18)'" onmouseout="this.style.background='transparent'">
+        <span style="font-weight:bold; color:#fff;">${window.escapeHTML(c.name)}</span>
+        <span style="font-family:monospace; font-size:11px; color:#c084fc;">ID: ${c.gid}</span>
+      </div>
+    `).join('');
+    altSuggestions.style.display = 'block';
+
+    altSuggestions.querySelectorAll('.admin-assign-alt-item').forEach(el => {
+      el.addEventListener('click', () => {
+        selectAltAccount(el.dataset.gid, el.dataset.name, el.dataset.furnace);
+      });
+    });
+  });
+
+  // Handle Enter key in alt search
+  altSearchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const q = altSearchInput.value.trim();
+      if (/^\d{6,12}$/.test(q)) {
+        selectAltAccount(q, (window.idToNameMap && window.idToNameMap[q]) || usersAlts[q]?.name || `Alt ${q}`);
+      }
+    }
+  });
+
+  // Handle Prefills if provided
+  if (prefillChiefOrGid) {
+    let matchedGid = null;
+    let matchedName = null;
+
+    if (typeof prefillChiefOrGid === 'string' && window.nameToIdMap && window.nameToIdMap[prefillChiefOrGid]) {
+      matchedGid = window.nameToIdMap[prefillChiefOrGid];
+      matchedName = prefillChiefOrGid;
+    } else if (typeof prefillChiefOrGid === 'number' || /^\d+$/.test(prefillChiefOrGid)) {
+      matchedGid = String(prefillChiefOrGid);
+      matchedName = (window.idToNameMap && window.idToNameMap[matchedGid]) || `Chief ${matchedGid}`;
+    } else {
+      matchedName = String(prefillChiefOrGid);
+      matchedGid = (window.nameToIdMap && window.nameToIdMap[matchedName]) || null;
+    }
+
+    if (matchedGid) {
+      selectMainAccount(matchedGid, matchedName);
+    }
+  }
+
+  if (prefillAltGid) {
+    const agid = String(prefillAltGid).trim();
+    const aname = (window.idToNameMap && window.idToNameMap[agid]) || usersAlts[agid]?.name || `Alt ${agid}`;
+    selectAltAccount(agid, aname);
+  }
+
+  // Submit Handler
+  submitBtn.addEventListener('click', async () => {
+    if (!selectedMainGid || !selectedAltGid || selectedMainGid === selectedAltGid) return;
+
+    submitBtn.disabled = true;
+    submitBtn.style.opacity = '0.7';
+    submitBtn.innerHTML = `
+      <div style="border:2px solid rgba(255,255,255,0.2); border-top-color:#fff; border-radius:50%; width:16px; height:16px; animation:spin 1s linear infinite;"></div>
+      <span>Assigning Alt...</span>
+    `;
+
+    try {
+      const restoreActive = document.getElementById('adminAssignRestoreActive')?.checked !== false;
+      const syncCentury = document.getElementById('adminAssignSyncCentury')?.checked !== false;
+
+      const res = await window.executeAdminAssignAlt(selectedMainGid, selectedAltGid, {
+        restoreActive,
+        syncCenturyToken: syncCentury
+      });
+
+      closeModal();
+      if (window.showToast) {
+        window.showToast(`Successfully assigned ${res.altName} to ${res.mainChiefName}!`, "success");
+      }
+
+      if (document.getElementById('adminHubView') && window.views?.admin) {
+        window.views.admin('tab-users');
+      } else if (window.searchPlayerFull && selectedMainChief) {
+        window.searchPlayerFull(selectedMainChief);
+      }
+    } catch(err) {
+      console.error("Alt assignment error:", err);
+      submitBtn.disabled = false;
+      submitBtn.style.opacity = '1';
+      submitBtn.innerHTML = `<span>🔗 Assign Alt Account</span>`;
+      statusBanner.style.display = 'block';
+      statusBanner.style.background = 'rgba(239,68,68,0.15)';
+      statusBanner.style.border = '1px solid #ef4444';
+      statusBanner.style.color = '#ef4444';
+      statusBanner.innerHTML = `❌ Error: ${window.escapeHTML(err.message || "Failed to assign alt account.")}`;
+    }
+  });
+};
+
+window.adminLinkAltAccountPromptByChief = async (chiefName) => {
+  await window.openAdminAssignAltModal(chiefName);
 };
 
 window.adminManageAltsPrompt = async (uid) => {
-    try {
-        const uSnap = await get(ref(db, `users/${uid}`));
-        const u = uSnap.val();
-        if (!u) return;
-        const cName = idToNameMap[u.gameId] || u.name || "Chief";
-        await window.adminLinkAltAccountPromptByChief(cName);
-    } catch(e) {
-        if (window.showToast) window.showToast(e.message, "error");
-    }
+  try {
+    const uSnap = await get(ref(db, `users/${uid}`));
+    const u = uSnap.val();
+    if (!u) return;
+    const cName = (window.idToNameMap && window.idToNameMap[u.gameId]) || u.name || u.chiefName || u.gameId;
+    await window.openAdminAssignAltModal(cName);
+  } catch(e) {
+    if (window.showToast) window.showToast(e.message, "error");
+  }
 };
 
 window.openAdminEditFurnaceModal = async (chiefName, gameId = '', currentFurnace = '30') => {
@@ -28315,6 +28950,7 @@ const views = {
                 <button onclick="views.feedback()" style="background:linear-gradient(135deg, #06b6d4, #8b5cf6); color:#fff; border:none; padding:12px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; box-shadow:0 4px 12px rgba(6,182,212,0.3); display:flex; align-items:center; justify-content:center; gap:8px;">💡 Feature & Bug Tracker</button>
                 <button onclick="views.admin('tab-users')" style="background:linear-gradient(135deg, #6366f1, #4f46e5); color:#fff; border:none; padding:12px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; box-shadow:0 4px 12px rgba(99,102,241,0.3); display:flex; align-items:center; justify-content:center; gap:8px;">👥 Member Database & User Hub</button>
                 <button onclick="document.querySelector('.admin-tab-btn[data-tab=\'tab-users\']')?.click(); if(window.showToast) window.showToast('Click 🛠️ Repair ID next to any member in the table to swap or fix IDs!', 'info');" style="background:linear-gradient(135deg, #a855f7, #9333ea); color:#fff; border:none; padding:12px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; box-shadow:0 4px 12px rgba(168,85,247,0.3); display:flex; align-items:center; justify-content:center; gap:8px;">🛠️ Chief Character & ID Repair</button>
+                <button onclick="window.openAdminAssignAltModal()" style="background:linear-gradient(135deg, #0284c7, #0369a1); color:#fff; border:none; padding:12px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; box-shadow:0 4px 12px rgba(2,132,199,0.3); display:flex; align-items:center; justify-content:center; gap:8px;">🔗 Assign Alt to Main</button>
                 <button onclick="window.openNewMembersModal()" style="background:linear-gradient(135deg, #06b6d4, #3b82f6); color:#fff; border:none; padding:12px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; box-shadow:0 4px 12px rgba(6,182,212,0.3); display:flex; align-items:center; justify-content:center; gap:8px;">🔔 Recent Member Signups</button>
                 <button id="syncAllSheetsBtn" onclick="window.syncAllSheetsToFirebase()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:12px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; box-shadow:0 4px 12px rgba(16,185,129,0.3); display:flex; align-items:center; justify-content:center; gap:8px;">⚡ Master Sync Sheets ➔ Firebase</button>
                 <button onclick="window.syncScheduleDirectly()" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#fff; border:none; padding:12px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; box-shadow:0 4px 12px rgba(59,130,246,0.3); display:flex; align-items:center; justify-content:center; gap:8px;">📅 Sync Schedule ➔ Site</button>
@@ -28662,7 +29298,10 @@ const views = {
 
           <!-- Tab 2: Users -->
           <div id="tab-users" class="admin-tab-content" style="display:none;">
-            <div style="display:flex; justify-content:flex-end; align-items:center; margin-bottom:15px;">
+            <div style="display:flex; justify-content:flex-end; align-items:center; margin-bottom:15px; gap:10px;">
+                <button onclick="window.openAdminAssignAltModal()" style="background:linear-gradient(135deg, #0284c7, #0369a1); border:none; color:#fff; padding:8px 14px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13px; display:flex; align-items:center; gap:6px; box-shadow:0 2px 8px rgba(2,132,199,0.25); transition:0.2s;">
+                    <span>🔗</span> Assign Alt Account
+                </button>
                 <button onclick="window.refreshAdminUsers()" style="background:var(--card-bg); border:1px solid var(--border); color:var(--text-main); padding:8px 14px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13px; display:flex; align-items:center; gap:6px; transition:0.2s;">
                     <span id="adminRefreshIcon">🔄</span> Refresh User List
                 </button>

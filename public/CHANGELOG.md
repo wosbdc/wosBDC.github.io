@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.19] - 2026-09-07
+- 🔗 **Alt Manager**: Easily assign alts to any main account.
+- ❄️ **Titan Frost**: Restored runaway Frost alt to main account.
+- ⚡ **Instant Sync**: Updates database and active roster in real-time.
+- 🛠️ **Admin Tools**: Quick alt assignment button in Admin Menu.
+
 ## [3.3.18] - 2026-09-07
 - 🛡️ **Admin Menu**: Renamed leadership navigation button to Admin Menu.
 - 🔗 **Navigation**: Aligned button label with the Admin Menu title.
