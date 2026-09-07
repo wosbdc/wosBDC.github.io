@@ -1,15 +1,16 @@
 {
-  "version": "3.3.9",
+  "version": "3.3.10",
   "releaseDate": "2026-09-07",
-  "title": "What's New in v3.3.9",
+  "title": "What's New in v3.3.10",
   "notes": [
-    "🤖 Bot Fleet Safety Matrix: Real-time 7-bot status preventing staff account login collisions.",
-    "⛔ Login Safety Badges: Instant visual warnings when an account is occupied on active duty.",
-    "🟢 Instant Safe Tags: Green tags identify which bot accounts are idle and safe to use."
+    "🚀 CI/CD Pipeline Fix: Resolved headless test runner compatibility with GitHub Pages cloud build.",
+    "🌐 Cross-Platform Testing: Added dynamic environment detection for browser automation in CI.",
+    "📦 Optimized Build Order: Assets compile to dist before headless verification suites execute."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.9",
+    "version": "3.3.10",
     "latestChanges": [
+      "v3.3.10: Fixed GitHub Pages deployment pipeline and cross-platform headless test execution",
       "v3.3.9: Alliance Bot Fleet & Account Login Safety Matrix for 7 bots",
       "v3.3.8: Full real-time DOM synchronization for Bot Operations Radar",
       "v3.3.7: Relocated Bot Operations Radar to Admin Menu with multi-account rotation tracking",

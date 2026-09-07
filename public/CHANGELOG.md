@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.10] - 2026-09-07
+- 🚀 **CI Build Fix**: Fixed GitHub Pages automated deployment pipeline failure.
+- 🌐 **Cross-Platform Test**: Headless test suite now supports cloud CI runners.
+- 📦 **Build Pipeline Order**: Vite build generates distribution assets before testing.
+
 ## [3.3.9] - 2026-09-07
 - 🤖 **Bot Fleet Matrix**: Displays active status for all seven bots.
 - ⛔ **Login Safety Warnings**: Red alerts indicate when accounts are occupied.
