@@ -1,16 +1,17 @@
 {
-  "version": "3.3.6",
+  "version": "3.3.7",
   "releaseDate": "2026-09-06",
-  "title": "What's New in v3.3.6",
+  "title": "What's New in v3.3.7",
   "notes": [
-    "🤖 Bot Operations Radar: Live bot status and telemetry displayed on Staff page.",
-    "⚡ Real-Time Telemetry: Real-time Firebase sync shows active bots and cooldown countdowns.",
-    "⏱️ Smooth Countdown Ticker: Live second-by-second cooldown timer keeps staff informed."
+    "🛡️ Admin Menu Relocation: Bot Operations Radar moved into Admin Menu Bots tab.",
+    "🔒 Restricted Access: Radar visibility secured exclusively for authorized alliance officers.",
+    "🔄 Multi-Account Tracking: Real-time Firebase sync reflects active rotation bot names."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.6",
+    "version": "3.3.7",
     "latestChanges": [
-      "v3.3.6: Live Bot Operations Radar with Firebase telemetry on Staff page",
+      "v3.3.7: Relocated Bot Operations Radar to Admin Menu with multi-account rotation tracking",
+      "v3.3.6: Live Bot Operations Radar with Firebase telemetry",
       "v3.3.5: Split UTC and Local clocks into one compact row in Settings sidebar",
       "v3.3.4: Precise round-level targeting and elimination of cross-season archive bleed",
       "v3.3.3: Visual highlights for modified championship rounds and one-click filter",

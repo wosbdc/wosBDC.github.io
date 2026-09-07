@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.7] - 2026-09-06
+- 🛡️ **Admin Menu Relocation**: Bot Operations Radar moved into Admin Menu Bots tab.
+- 🔒 **Restricted Access**: Radar visibility secured exclusively for authorized alliance officers.
+- 🔄 **Multi-Account Tracking**: Real-time Firebase sync reflects active rotation bot names.
+
 ## [3.3.6] - 2026-09-06
 - 🤖 **Bot Operations Radar**: Live bot status and telemetry displayed on Staff page.
 - ⚡ **Real-Time Telemetry**: Real-time Firebase sync shows active bots and cooldown countdowns.

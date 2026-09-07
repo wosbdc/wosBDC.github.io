@@ -10201,9 +10201,7 @@ window.renderMembersOnlyGuard = (viewName = "Alliance Portal") => {
   }
   const appEl = document.getElementById('app');
   if (!appEl) return;
-  const staffRadarHtml = (viewName && viewName.includes("Staff") && window.getBotOperationsRadarHtml) ? window.getBotOperationsRadarHtml() : '';
   appEl.innerHTML = `
-    ${staffRadarHtml}
     <div class="card" style="max-width:650px; margin:40px auto; text-align:center; padding:45px 30px; animation:fadeIn 0.3s ease; border:1px solid rgba(255,255,255,0.12); background:linear-gradient(145deg, rgba(15,23,42,0.85), rgba(30,41,59,0.75)); backdrop-filter:blur(20px); border-radius:24px; box-shadow:0 25px 60px rgba(0,0,0,0.6);">
        <div style="display:inline-block; background:rgba(6,182,212,0.15); color:var(--accent); border:1px solid rgba(6,182,212,0.3); padding:6px 16px; border-radius:20px; font-size:13px; font-weight:bold; margin-bottom:18px; text-transform:uppercase; letter-spacing:1px;">
           ✨ Essential Alliance Member Portal
@@ -25093,7 +25091,6 @@ const views = {
 
     app.innerHTML = `
       <div class="card fade-in" style="background: transparent; border: none; box-shadow: none;">
-        ${window.getBotOperationsRadarHtml ? window.getBotOperationsRadarHtml() : ''}
         <div style="text-align:center; margin-bottom:40px;">
           <h2 class="staff-title">👑 Alliance Leadership</h2>
           <p class="staff-subtitle">Meet the dedicated team keeping the alliance strong.</p>
@@ -27453,6 +27450,7 @@ const views = {
 
           <!-- Tab: Bots Hub -->
           <div id="tab-bots" class="admin-tab-content" style="display:none;">
+            ${window.getBotOperationsRadarHtml ? window.getBotOperationsRadarHtml() : ''}
             
             <!-- Main Bots Hub View -->
             <div id="botsHubMainContainer" style="display:flex; flex-direction:column; gap:20px; margin-bottom:20px;">

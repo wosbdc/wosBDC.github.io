@@ -73,13 +73,13 @@ server.listen(PORT, async () => {
       }
     });
 
-    console.log('\n--- PHASE 1: DESKTOP RENDERING & NAVIGATION ---');
+    console.log('\n--- PHASE 1: SECURITY & SECLUSION TEST (ABSENT FROM STAFF) ---');
     await page.setViewport({ width: 1280, height: 800 });
     await page.goto(`http://localhost:${PORT}`, { waitUntil: 'networkidle0', timeout: 15000 });
     await new Promise(r => setTimeout(r, 1000));
 
     // Navigate to Staff view
-    const navigated = await page.evaluate(() => {
+    const navigatedStaff = await page.evaluate(() => {
       const staffBtn = document.querySelector('[data-target="staff"]');
       if (staffBtn) {
         staffBtn.click();
@@ -88,54 +88,112 @@ server.listen(PORT, async () => {
       return false;
     });
 
-    if (!navigated) {
+    if (!navigatedStaff) {
       throw new Error('Could not trigger navigation to Staff view via [data-target="staff"]');
     }
-    console.log('  ✅ Navigated to Staff view successfully');
-    await new Promise(r => setTimeout(r, 1200));
+    await new Promise(r => setTimeout(r, 1000));
 
-    // Verify Bot Operations Radar element physically exists in the DOM
-    const radarDetails = await page.evaluate(() => {
-      const radar = document.getElementById('bot-operations-radar');
-      if (!radar) return null;
+    // Assert that #bot-operations-radar is STRICTLY ABSENT from Staff view!
+    const radarInStaff = await page.evaluate(() => {
+      return document.getElementById('bot-operations-radar') !== null;
+    });
+    if (radarInStaff) {
+      throw new Error('Security Breach: #bot-operations-radar was found on Staff page! It must be restricted to Admin menu only.');
+    }
+    console.log('  ✅ Verified: #bot-operations-radar is completely absent from Staff page.');
+
+    console.log('\n--- PHASE 2: ADMIN MENU RELOCATION & MULTI-ACCOUNT ROTATION ---');
+    // Mock admin authentication and navigate directly to views.admin('tab-bots')
+    const navigatedAdmin = await page.evaluate(async () => {
+      window.currentUser = { uid: '318843189', email: 'admin@bdc.com', displayName: 'R5 Leader' };
+      window.systemAdmins = window.systemAdmins || {};
+      window.systemAdmins['318843189'] = 'R5';
+      window.isAdminUser = () => true;
+      window.isGoogleAuthVerified = async () => true;
+      window.getAdminLevel = () => 'R5';
+      window.fetchRoster = async () => [];
+      if (typeof window.views?.admin === 'function') {
+        await window.views.admin('tab-bots');
+        return true;
+      }
+      return false;
+    });
+
+    if (!navigatedAdmin) {
+      throw new Error('Could not execute window.views.admin("tab-bots")');
+    }
+    await page.waitForSelector('#bot-operations-radar', { timeout: 10000 });
+
+    // Verify Bot Operations Radar element physically exists inside #tab-bots
+    const radarInAdmin = await page.evaluate(() => {
+      const tabBots = document.getElementById('tab-bots');
+      if (!tabBots) return { error: '#tab-bots not found' };
+      const radar = tabBots.querySelector('#bot-operations-radar');
+      if (!radar) return { error: '#bot-operations-radar not found inside #tab-bots' };
       const title = radar.querySelector('.bot-radar-title')?.textContent?.trim();
       const account = document.getElementById('bot-radar-account-val')?.textContent?.trim();
       const badge = document.getElementById('bot-radar-badge-el')?.textContent?.trim();
-      const clock = document.getElementById('bot-radar-clock')?.textContent?.trim();
-      const stage = document.getElementById('bot-radar-stage-val')?.textContent?.trim();
-      return { found: true, title, account, badge, clock, stage };
+      return { found: true, title, account, badge };
     });
 
-    if (!radarDetails || !radarDetails.found) {
-      throw new Error('Assertion Failed: #bot-operations-radar not rendered in DOM on Staff page!');
+    if (!radarInAdmin || !radarInAdmin.found) {
+      throw new Error('Assertion Failed: ' + (radarInAdmin?.error || 'Radar not found in Admin Bots tab'));
     }
-    console.log(`  ✅ #bot-operations-radar rendered in DOM: Title="${radarDetails.title}", Account="${radarDetails.account}", Badge="${radarDetails.badge}", Stage="${radarDetails.stage}"`);
+    console.log(`  ✅ #bot-operations-radar verified in Admin Bots tab: Account="${radarInAdmin.account}", Badge="${radarInAdmin.badge}"`);
 
-    // Verify Real Visual DOM Mutation: Simulate Live Telemetry Update
-    console.log('\n--- PHASE 2: VISUAL DOM MUTATION TEST ---');
+    // Verify Real Visual DOM Mutation: Simulate Multi-Account Rotation (Guardian -> Bisquick -> Shrimp Cooldown)
+    console.log('\n--- PHASE 3: DYNAMIC ACCOUNT ROTATION & COOLDOWN TEST ---');
     const mutationResult = await page.evaluate(() => {
       if (typeof window.updateBotOperationsRadarDom === 'function') {
+        // Step A: Guardian Active
         window.latestBotStatus = {
-          status: 'COOLDOWN',
-          account: 'ShrimpLeprechaun',
-          stage: 'City Rest Interval (10m)',
-          secondsLeft: 350,
+          status: 'ACTIVE',
+          account: 'Guardian (Inst 1)',
+          stage: 'Wilderness / Routine Tasks',
+          secondsLeft: 0,
           totalBots: 1,
-          shortTime: '10:05 PM',
+          shortTime: '10:45 PM',
           receivedAt: Date.now()
         };
         window.updateBotOperationsRadarDom();
+        const accountA = document.getElementById('bot-radar-account-val')?.textContent?.trim();
+        const badgeA = document.getElementById('bot-radar-badge-el')?.textContent?.trim();
 
-        const badge = document.getElementById('bot-radar-badge-el');
-        const clock = document.getElementById('bot-radar-clock');
-        const stage = document.getElementById('bot-radar-stage-val');
-        const card = document.getElementById('bot-operations-radar');
+        // Step B: Bisquick Active
+        window.latestBotStatus = {
+          status: 'ACTIVE',
+          account: 'Bisquick (Inst 11)',
+          stage: 'Wilderness / Routine Tasks',
+          secondsLeft: 0,
+          totalBots: 1,
+          shortTime: '10:46 PM',
+          receivedAt: Date.now()
+        };
+        window.updateBotOperationsRadarDom();
+        const accountB = document.getElementById('bot-radar-account-val')?.textContent?.trim();
+
+        // Step C: Shrimp Cooldown
+        window.latestBotStatus = {
+          status: 'COOLDOWN',
+          account: 'ShrimpLeprechaun (Inst 14)',
+          stage: 'Resting on City Tab',
+          secondsLeft: 590,
+          totalBots: 1,
+          shortTime: '10:47 PM',
+          receivedAt: Date.now()
+        };
+        window.updateBotOperationsRadarDom();
+        const accountC = document.getElementById('bot-radar-account-val')?.textContent?.trim();
+        const badgeC = document.getElementById('bot-radar-badge-el')?.textContent?.trim();
+        const cardC = document.getElementById('bot-operations-radar');
 
         return {
-          badgeText: badge?.textContent?.trim(),
-          isCooldownBadge: badge?.classList?.contains('cooldown'),
-          stageText: stage?.textContent?.trim(),
-          hasCooldownBorder: card?.classList?.contains('border-cooldown')
+          accountA,
+          badgeA,
+          accountB,
+          accountC,
+          badgeC,
+          hasCooldownBorder: cardC?.classList?.contains('border-cooldown')
         };
       }
       return null;
@@ -144,10 +202,13 @@ server.listen(PORT, async () => {
     if (!mutationResult) {
       throw new Error('Assertion Failed: window.updateBotOperationsRadarDom function not found!');
     }
-    if (!mutationResult.badgeText.includes('COOLDOWN') || !mutationResult.isCooldownBadge || !mutationResult.hasCooldownBorder) {
-      throw new Error(`Assertion Failed: DOM mutation did not update visual classes! Result: ${JSON.stringify(mutationResult)}`);
+    if (mutationResult.accountA !== 'Guardian (Inst 1)' || mutationResult.accountB !== 'Bisquick (Inst 11)' || mutationResult.accountC !== 'ShrimpLeprechaun (Inst 14)' || !mutationResult.hasCooldownBorder) {
+      throw new Error(`Assertion Failed: Multi-account rotation did not mutate DOM accurately! Result: ${JSON.stringify(mutationResult)}`);
     }
-    console.log(`  ✅ DOM dynamically mutated: Badge="${mutationResult.badgeText}" (cooldown class=${mutationResult.isCooldownBadge}), BorderCooldown=${mutationResult.hasCooldownBorder}, Stage="${mutationResult.stageText}"`);
+    console.log(`  ✅ Multi-account rotation verified in DOM:`);
+    console.log(`     1. ${mutationResult.accountA} -> Badge="${mutationResult.badgeA}"`);
+    console.log(`     2. ${mutationResult.accountB} -> Active Switch`);
+    console.log(`     3. ${mutationResult.accountC} -> Badge="${mutationResult.badgeC}" (BorderCooldown=${mutationResult.hasCooldownBorder})`);
 
     // Responsive Audit across Mobile, Tablet, Desktop
     console.log('\n--- PHASE 3: RESPONSIVE OVERFLOW AUDIT ---');
