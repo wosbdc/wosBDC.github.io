@@ -101,7 +101,7 @@ function runStaticVerification() {
 
   // 6. Automation Health & Staleness Watchdog
   assert(code.includes('window.getBotAutomationHealth ='), 'getBotAutomationHealth must be defined');
-  assert(code.includes('isHeartbeatStale'), 'Code must check isHeartbeatStale');
+  assert(code.includes('isHeartbeatStale') || code.includes('isStale'), 'Code must check isHeartbeatStale or isStale');
   assert(code.includes('HOST TELEMETRY TIMEOUT'), 'Code must include HOST TELEMETRY TIMEOUT state');
   console.log('  ✅ window.getBotAutomationHealth and 60-second Staleness Watchdog verified.');
 

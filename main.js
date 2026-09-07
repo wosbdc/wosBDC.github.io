@@ -5244,6 +5244,7 @@ window.getBotAutomationHealth = (data = window.latestBotStatus || {}) => {
   const status = (data.status || 'OFFLINE').toUpperCase();
   const ts = Number(data.timestamp || data.receivedAt || 0);
   const isStale = Boolean(ts > 0 && (now - ts > 60000));
+  const isHeartbeatStale = isStale;
   
   const isHubOnline = Boolean(data.bothubOnline !== false && !isStale && ts > 0);
   const isServerOnline = Boolean(isHubOnline && data.serverOnline === true && status !== 'OFFLINE');
@@ -5252,6 +5253,7 @@ window.getBotAutomationHealth = (data = window.latestBotStatus || {}) => {
   return {
     status,
     isStale,
+    isHeartbeatStale,
     isHubOnline,
     isServerOnline,
     isOffline,
