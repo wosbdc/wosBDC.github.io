@@ -1,16 +1,17 @@
 {
-  "version": "3.3.12",
+  "version": "3.3.13",
   "releaseDate": "2026-09-07",
-  "title": "What's New in v3.3.12",
+  "title": "What's New in v3.3.13",
   "notes": [
-    "🤖 Heartbeat Watchdog: 60-second telemetry watchdog marks bots offline if host disconnects.",
-    "📡 Dynamic Health Tags: Separately displays live Hub and Bot Server connection statuses.",
-    "🔔 Leadership Alerts: Stale telemetry automatically triggers confidential Bell alerts for R4/R5.",
-    "🧹 Clean House Protocol: Enforced strict two-backup retention and pre-backup house cleaning."
+    "⚡ Unified Sync Engine: Updates all database nodes synchronously on every change.",
+    "🔄 Cache Invalidation: Instantly purges cached rosters and refreshes active views.",
+    "🔍 Dual-Key Lookup: Resolves member data by Game ID or Chief Name.",
+    "🛡️ Furnace Fallback: Guarantees player profile furnace levels never render blank."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.12",
+    "version": "3.3.13",
     "latestChanges": [
+      "v3.3.13: Unified member update sync engine, dual-key resolution, and instant cache invalidation",
       "v3.3.12: Added 60s heartbeat watchdog, dynamic hub/server health tags, and clean exit handlers",
       "v3.3.11: Added Bot Server dual-detection and confidential R4/R5 leadership Bell alerts",
       "v3.3.10: Fixed GitHub Pages deployment pipeline and cross-platform headless test execution",

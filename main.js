@@ -425,8 +425,56 @@ window.deduplicateRosterLive = async () => {
     }
 };
 
-window.fetchRoster = async () => {
-   if (window.rosterCache) return window.rosterCache;
+window.normalizeMembershipStatus = (status) => {
+    if (!status) return 'active';
+    const s = String(status).toLowerCase().trim();
+    if (s === 'banned' || s === 'ban') return 'banned';
+    if (s === 'left' || s === 'former' || s === 'inactive' || s === 'left_alliance' || s === 'left alliance') return 'left';
+    return 'active';
+};
+
+// =========================================================================
+// 🔄 UNIVERSAL CACHE INVALIDATION & REACTIVE RE-RENDER ENGINE
+// =========================================================================
+window.invalidateMemberCaches = (options = {}) => {
+    window.rosterCache = null;
+    window.bearTrapCache = null;
+    window.polarTerrorsCache = null;
+    window.mercenaryCache = null;
+    window.championshipCache = null;
+    window._playerEventStatsCache = null;
+    window.activityCache = null;
+    window._cachedAllUsers = null;
+    window.giftcodeCache = null;
+
+    if (window.liveData) {
+        delete window.liveData["Chief's List"];
+        if (window.livePromises) delete window.livePromises["Chief's List"];
+    }
+
+    if (typeof refreshIdToNameMap === 'function') {
+        refreshIdToNameMap().catch(() => null);
+    }
+
+    if (currentUser && typeof localStorage !== 'undefined') {
+        try { localStorage.setItem('cached_current_user', JSON.stringify(currentUser)); } catch(e) {}
+    }
+
+    if (options.refreshView !== false) {
+        if (document.getElementById('rosterLookupResult') && typeof window.searchPlayerFull === 'function') {
+            const currentLookupName = document.getElementById('uniSearchInput')?.value || document.getElementById('playerLookupSelect')?.value;
+            if (currentLookupName) window.searchPlayerFull(currentLookupName).catch(() => null);
+        } else if (typeof window.activeViewFunc === 'function') {
+            try { window.activeViewFunc(); } catch(e) { console.warn("activeViewFunc refresh error:", e); }
+        }
+    }
+};
+
+// =========================================================================
+// 📋 DUAL-KEY ROSTER FETCHER (Indexed by Name AND Game ID)
+// =========================================================================
+window.fetchRoster = async (forceFresh = false) => {
+   if (!forceFresh && window.rosterCache) return window.rosterCache;
    try {
        const snap = await get(ref(db, 'roster_live'));
        if (snap.exists()) {
@@ -434,30 +482,40 @@ window.fetchRoster = async () => {
            delete cached['Chief Name'];
            delete cached['chief name'];
 
-           // Filter out duplicate entries by name/gameId in memory
-           const deduplicated = {};
-           const seenGids = new Set();
-           const seenNames = new Set();
+           const dualIndexed = {};
 
            for (const [k, p] of Object.entries(cached)) {
                if (!p || typeof p !== 'object') continue;
-               const gid = p.gameId ? p.gameId.toString().trim() : '';
-               const name = window.cleanChiefName(p.name || p.chiefName || k);
-               const normName = name.toLowerCase();
+               const gid = p.gameId ? String(p.gameId).trim() : (/^\d{6,}$/.test(k) ? k : '');
+               const name = window.cleanChiefName(p.name || p.chiefName || (/^\d{6,}$/.test(k) ? '' : k));
+               const furnaceLevel = p.furnaceLevel || p.stove_lv || 'F30';
+               const memStatus = window.normalizeMembershipStatus(p.membershipStatus || p.status || 'active');
 
-               if (gid && seenGids.has(gid)) continue;
-               if (normName && seenNames.has(normName)) continue;
+               const entry = {
+                   ...p,
+                   name: name || p.name || k,
+                   chiefName: name || p.chiefName || k,
+                   gameId: gid,
+                   furnaceLevel: furnaceLevel,
+                   stove_lv: furnaceLevel,
+                   membershipStatus: memStatus,
+                   status: memStatus
+               };
 
-               if (gid) seenGids.add(gid);
-               if (normName) seenNames.add(normName);
-
-               deduplicated[name || k] = { ...p, name, gameId: gid };
+               if (name) {
+                   dualIndexed[name] = entry;
+                   dualIndexed[name.toLowerCase()] = entry;
+               }
+               if (gid) {
+                   dualIndexed[gid] = entry;
+               }
+               dualIndexed[k] = entry;
            }
 
-           window.rosterCache = deduplicated;
+           window.rosterCache = dualIndexed;
            return window.rosterCache;
        }
-   } catch(e) { console.warn('Firebase read error:', e); }
+   } catch(e) { console.warn('Firebase roster read error:', e); }
 
    const rosterRaw = await fetchSheet("Chief's List");
    let newRoster = {};
@@ -466,14 +524,22 @@ window.fetchRoster = async () => {
            const name = window.cleanChiefName(rosterRaw[i][0] ? rosterRaw[i][0].toString().trim() : '');
            const gameId = rosterRaw[i][1] ? rosterRaw[i][1].toString().trim() : '';
            if (!name || name.toLowerCase() === 'chief name' || gameId.toLowerCase() === 'game id') continue;
-           newRoster[name] = {
+           const furnaceLevel = rosterRaw[i][2] || 'F30';
+           const item = {
                name: name,
+               chiefName: name,
                gameId: gameId,
-               furnaceLevel: rosterRaw[i][2] || '',
+               furnaceLevel: furnaceLevel,
+               stove_lv: furnaceLevel,
                giftCodes: rosterRaw[i][3] || '',
                joinedDate: rosterRaw[i][4] || '',
-               timeActive: rosterRaw[i][5] || ''
+               timeActive: rosterRaw[i][5] || '',
+               membershipStatus: 'active',
+               status: 'active'
            };
+           newRoster[name] = item;
+           newRoster[name.toLowerCase()] = item;
+           if (gameId) newRoster[gameId] = item;
        }
        try {
            await set(ref(db, 'roster_live'), newRoster);
@@ -485,19 +551,15 @@ window.fetchRoster = async () => {
    return newRoster;
 };
 
-window.normalizeMembershipStatus = (status) => {
-    if (!status) return 'active';
-    const s = String(status).toLowerCase().trim();
-    if (s === 'banned' || s === 'ban') return 'banned';
-    if (s === 'left' || s === 'former' || s === 'inactive' || s === 'left_alliance' || s === 'left alliance') return 'left';
-    return 'active';
-};
-
 window.isPlayerActiveMember = (p) => {
     if (!p) return false;
     if (typeof p === 'string') {
         const cleanN = window.cleanChiefName(p).toLowerCase();
         if (window.rosterCache) {
+            const direct = window.rosterCache[cleanN] || window.rosterCache[p];
+            if (direct) {
+                return window.normalizeMembershipStatus(direct.membershipStatus || direct.status) === 'active';
+            }
             for (const r of Object.values(window.rosterCache)) {
                 if (r && (r.name?.toLowerCase() === cleanN || String(r.gameId).trim() === p)) {
                     return window.normalizeMembershipStatus(r.membershipStatus || r.status) === 'active';
@@ -522,6 +584,400 @@ window.fetchActiveRoster = async () => {
     return active;
 };
 
+// =========================================================================
+// 🔍 CENTRALIZED MEMBER DATA RESOLVER (Universal Dual-Key Lookup)
+// =========================================================================
+window.resolveMemberData = async (targetNameOrGid, preloaded = {}) => {
+    if (!targetNameOrGid) return null;
+    const query = String(targetNameOrGid).trim();
+    const queryLower = query.toLowerCase();
+    const cleanQuery = window.cleanChiefName(query);
+
+    let cleanGid = /^\d{6,}$/.test(query) ? query : (window.nameToIdMap?.[queryLower] || window.nameToIdMap?.[cleanQuery.toLowerCase()] || window.nameToIdMap?.[query] || '');
+    let cleanName = !/^\d{6,}$/.test(query) ? cleanQuery : (window.idToNameMap?.[query] || '');
+
+    // 1. Check live or preloaded roster
+    const rosterObj = preloaded.roster || window.rosterCache || await window.fetchRoster().catch(() => ({}));
+    let rEntry = null;
+    if (rosterObj) {
+        rEntry = rosterObj[cleanGid] || rosterObj[cleanName] || rosterObj[query] || rosterObj[queryLower] || null;
+        if (!rEntry) {
+            for (const item of Object.values(rosterObj)) {
+                if (!item || typeof item !== 'object') continue;
+                const iGid = item.gameId ? String(item.gameId).trim() : '';
+                const iName = window.cleanChiefName(item.name || item.chiefName || '');
+                if ((cleanGid && iGid === cleanGid) || (cleanName && iName.toLowerCase() === cleanName.toLowerCase())) {
+                    rEntry = item;
+                    break;
+                }
+            }
+        }
+    }
+
+    if (rEntry) {
+        if (!cleanGid && rEntry.gameId) cleanGid = String(rEntry.gameId).trim();
+        if (!cleanName && (rEntry.name || rEntry.chiefName)) cleanName = window.cleanChiefName(rEntry.name || rEntry.chiefName);
+    }
+
+    // 2. Check users node
+    let userObj = null;
+    let userUid = null;
+    let altTokObj = null;
+    let isAlt = false;
+
+    const usersData = preloaded.users || (await get(ref(db, 'users')).then(s => s.exists() ? s.val() : {}).catch(() => ({})));
+    for (const [uid, u] of Object.entries(usersData || {})) {
+        if (!u || typeof u !== 'object') continue;
+        const uGid = u.gameId ? String(u.gameId).trim() : '';
+        const uName = window.cleanChiefName(u.name || u.chiefName || '');
+        if ((cleanGid && uGid === cleanGid) || (cleanName && uName.toLowerCase() === cleanName.toLowerCase())) {
+            userObj = u;
+            userUid = uid;
+            isAlt = false;
+            break;
+        }
+
+        const checkAlts = { ...(u.altTokens || {}), ...(u.linkedAltsData || {}), ...(u.departedAlts || {}) };
+        for (const [aGid, aData] of Object.entries(checkAlts)) {
+            const cleanAGid = String(aGid).trim();
+            const aName = window.cleanChiefName(aData?.nickname || aData?.name || aData?.chiefName || '');
+            if ((cleanGid && cleanAGid === cleanGid) || (cleanName && aName.toLowerCase() === cleanName.toLowerCase())) {
+                userObj = u;
+                userUid = uid;
+                altTokObj = aData;
+                isAlt = true;
+                if (!cleanGid) cleanGid = cleanAGid;
+                if (!cleanName && aName) cleanName = aName;
+                break;
+            }
+        }
+        if (userObj) break;
+    }
+
+    const furnaceLevel = (altTokObj?.stove_lv || altTokObj?.furnaceLevel) || (rEntry?.furnaceLevel || rEntry?.stove_lv) || (userObj?.stove_lv || userObj?.furnaceLevel) || 'F30';
+    const membershipStatus = window.normalizeMembershipStatus(altTokObj?.membershipStatus || altTokObj?.status || rEntry?.membershipStatus || rEntry?.status || userObj?.membershipStatus || userObj?.status || 'active');
+
+    return {
+        gameId: cleanGid || query,
+        name: cleanName || query,
+        cleanName: cleanName || query,
+        furnaceLevel,
+        stove_lv: furnaceLevel,
+        membershipStatus,
+        status: membershipStatus,
+        statusReason: altTokObj?.statusReason || rEntry?.statusReason || userObj?.statusReason || '',
+        isAlt,
+        ownerUid: isAlt ? userUid : null,
+        ownerName: isAlt && userObj ? window.cleanChiefName(userObj.name || userObj.chiefName || '') : null,
+        userUid,
+        userObj,
+        rEntry,
+        altTokObj
+    };
+};
+
+// =========================================================================
+// ⚡ UNIFIED MULTI-NODE MUTATION ENGINE (Single Source of Truth)
+// =========================================================================
+window.executeUnifiedMemberUpdate = async (options = {}) => {
+    const {
+        gameId,
+        name,
+        furnaceLevel,
+        membershipStatus,
+        statusReason,
+        giftCodesEnrolled,
+        avatarUrl,
+        joinedDate,
+        timeActive,
+        bio,
+        isAlt: explicitIsAlt,
+        ownerUid: explicitOwnerUid,
+        actionLog
+    } = options;
+
+    const rawGid = gameId ? String(gameId).trim() : '';
+    const rawName = name ? String(name).trim() : '';
+    const cleanName = window.cleanChiefName(rawName);
+    const cleanGid = rawGid || window.nameToIdMap?.[cleanName.toLowerCase()] || window.nameToIdMap?.[cleanName] || '';
+    const normStatus = membershipStatus ? window.normalizeMembershipStatus(membershipStatus) : null;
+    const cleanFurnace = furnaceLevel ? String(furnaceLevel).trim() : null;
+    const timestamp = Date.now();
+    const adminName = (currentUser && (currentUser.displayName || currentUser.name)) || 'Admin';
+
+    const promises = [];
+
+    // 1. Update roster_live with dual keys (both cleanName and cleanGid)
+    const rosterSnap = await get(ref(db, 'roster_live')).catch(() => null);
+    let rosterObj = (rosterSnap && rosterSnap.exists()) ? rosterSnap.val() : {};
+
+    let existingRoster = null;
+    let foundRosterKey = null;
+    for (const [rk, rv] of Object.entries(rosterObj)) {
+        if (!rv || typeof rv !== 'object') continue;
+        if (rk.toLowerCase() === cleanName.toLowerCase() ||
+            (rv.name && rv.name.toLowerCase() === cleanName.toLowerCase()) ||
+            (cleanGid && ((rv.gameId && String(rv.gameId).trim() === cleanGid) || rk === cleanGid))) {
+            existingRoster = rv;
+            foundRosterKey = rk;
+            break;
+        }
+    }
+
+    const updatedRosterEntry = {
+        ...(existingRoster || {}),
+        name: cleanName || existingRoster?.name || cleanGid,
+        chiefName: cleanName || existingRoster?.chiefName || cleanGid,
+        gameId: cleanGid || existingRoster?.gameId || '',
+        updatedAt: timestamp
+    };
+    if (cleanFurnace) {
+        updatedRosterEntry.furnaceLevel = cleanFurnace;
+        updatedRosterEntry.stove_lv = cleanFurnace;
+    }
+    if (normStatus) {
+        updatedRosterEntry.membershipStatus = normStatus;
+        updatedRosterEntry.status = normStatus;
+        updatedRosterEntry.statusReason = statusReason || null;
+        updatedRosterEntry.statusUpdatedAt = timestamp;
+        updatedRosterEntry.statusUpdatedBy = adminName;
+    }
+    if (joinedDate) {
+        updatedRosterEntry.dateStarted = joinedDate;
+        updatedRosterEntry.joinedDate = joinedDate;
+    }
+    if (timeActive) updatedRosterEntry.timeActive = timeActive;
+    if (giftCodesEnrolled !== undefined) updatedRosterEntry.giftCodes = giftCodesEnrolled ? 'TRUE' : 'FALSE';
+
+    const saveKeys = new Set();
+    if (cleanName) saveKeys.add(cleanName);
+    if (cleanGid) saveKeys.add(cleanGid);
+    if (foundRosterKey) saveKeys.add(foundRosterKey);
+
+    saveKeys.forEach(k => {
+        promises.push(set(ref(db, `roster_live/${k}`), updatedRosterEntry).catch(() => null));
+    });
+
+    // 2. Update users/ node in Firebase
+    const usersSnap = await get(ref(db, 'users')).catch(() => null);
+    if (usersSnap && usersSnap.exists()) {
+        const allUsers = usersSnap.val() || {};
+        for (const [uid, uData] of Object.entries(allUsers)) {
+            if (!uData || typeof uData !== 'object') continue;
+            const uGid = uData.gameId ? String(uData.gameId).trim() : '';
+            const uName = window.cleanChiefName(uData.name || uData.chiefName || '');
+
+            // Primary Character Match
+            if ((cleanGid && uGid === cleanGid) || (cleanName && uName.toLowerCase() === cleanName.toLowerCase())) {
+                const userUpdates = { updatedAt: new Date().toISOString() };
+                if (cleanFurnace) {
+                    userUpdates.stove_lv = cleanFurnace;
+                    userUpdates.furnaceLevel = cleanFurnace;
+                }
+                if (normStatus) {
+                    userUpdates.membershipStatus = normStatus;
+                    userUpdates.status = normStatus;
+                    userUpdates.statusReason = statusReason || null;
+                    userUpdates.statusUpdatedAt = timestamp;
+                    userUpdates.statusUpdatedBy = adminName;
+                }
+                if (joinedDate) {
+                    userUpdates.dateStarted = joinedDate;
+                    userUpdates.joinedDate = joinedDate;
+                }
+                if (timeActive) userUpdates.timeActive = timeActive;
+                if (bio !== undefined) userUpdates.bio = bio;
+                if (avatarUrl) {
+                    userUpdates.avatar = avatarUrl;
+                    if (cleanGid) {
+                        promises.push(set(ref(db, `avatars/${cleanGid}`), avatarUrl).catch(() => null));
+                        if (typeof avatarMap !== 'undefined' && avatarMap) avatarMap[cleanGid] = avatarUrl;
+                    }
+                }
+
+                promises.push(update(ref(db, `users/${uid}`), userUpdates).catch(() => null));
+
+                if (currentUser && currentUser.uid === uid) {
+                    Object.assign(currentUser, userUpdates);
+                    try { localStorage.setItem('cached_current_user', JSON.stringify(currentUser)); } catch(e) {}
+                }
+
+                if (normStatus && normStatus !== 'active') {
+                    const altIds = [];
+                    if (uData.altTokens) Object.keys(uData.altTokens).forEach(aid => altIds.push(String(aid).trim()));
+                    if (uData.linkedGameIds && Array.isArray(uData.linkedGameIds)) {
+                        uData.linkedGameIds.forEach(aid => { if (!altIds.includes(String(aid).trim())) altIds.push(String(aid).trim()); });
+                    }
+                    altIds.forEach(agid => {
+                        promises.push(update(ref(db, `roster_live/${agid}`), { membershipStatus: normStatus, status: normStatus, statusReason: `Owner ${cleanName || uid} marked ${normStatus}`, statusUpdatedAt: timestamp }).catch(() => null));
+                        promises.push(update(ref(db, `giftcode_bot/${agid}`), { enrolled: false, status: normStatus === 'banned' ? 'Banned' : 'Inactive' }).catch(() => null));
+                    });
+                }
+                break;
+            }
+
+            // Alt Character Match
+            const isTargetAlt = (explicitOwnerUid && explicitOwnerUid === uid) ||
+                (cleanGid && ((uData.linkedGameIds && uData.linkedGameIds.includes(cleanGid)) ||
+                (uData.linkedAltsData && uData.linkedAltsData[cleanGid]) ||
+                (uData.altTokens && uData.altTokens[cleanGid]) ||
+                (uData.departedAlts && uData.departedAlts[cleanGid])));
+
+            if (isTargetAlt && cleanGid) {
+                const altFieldUpdates = {};
+                if (cleanFurnace) {
+                    altFieldUpdates[`linkedAltsData/${cleanGid}/stove_lv`] = cleanFurnace;
+                    altFieldUpdates[`linkedAltsData/${cleanGid}/furnaceLevel`] = cleanFurnace;
+                    if (uData.altTokens && uData.altTokens[cleanGid]) {
+                        altFieldUpdates[`altTokens/${cleanGid}/stove_lv`] = cleanFurnace;
+                        altFieldUpdates[`altTokens/${cleanGid}/furnaceLevel`] = cleanFurnace;
+                    }
+                }
+                if (cleanName) {
+                    altFieldUpdates[`linkedAltsData/${cleanGid}/name`] = cleanName;
+                    if (uData.altTokens && uData.altTokens[cleanGid]) {
+                        altFieldUpdates[`altTokens/${cleanGid}/nickname`] = cleanName;
+                    }
+                }
+                if (normStatus) {
+                    altFieldUpdates[`linkedAltsData/${cleanGid}/membershipStatus`] = normStatus;
+                    altFieldUpdates[`linkedAltsData/${cleanGid}/status`] = normStatus;
+                    altFieldUpdates[`linkedAltsData/${cleanGid}/statusReason`] = statusReason || null;
+                    altFieldUpdates[`linkedAltsData/${cleanGid}/statusUpdatedAt`] = timestamp;
+                    if (uData.altTokens && uData.altTokens[cleanGid]) {
+                        altFieldUpdates[`altTokens/${cleanGid}/membershipStatus`] = normStatus;
+                        altFieldUpdates[`altTokens/${cleanGid}/status`] = normStatus;
+                    }
+                    if (normStatus !== 'active') {
+                        altFieldUpdates[`departedAlts/${cleanGid}`] = {
+                            name: cleanName || (uData.altTokens?.[cleanGid]?.nickname || ''),
+                            gameId: cleanGid,
+                            membershipStatus: normStatus,
+                            statusReason: statusReason || null,
+                            departedAt: timestamp,
+                            departedBy: adminName
+                        };
+                    } else {
+                        promises.push(remove(ref(db, `users/${uid}/departedAlts/${cleanGid}`)).catch(() => null));
+                    }
+                }
+                if (joinedDate) {
+                    altFieldUpdates[`linkedAltsData/${cleanGid}/joinedDate`] = joinedDate;
+                    altFieldUpdates[`linkedAltsData/${cleanGid}/dateStarted`] = joinedDate;
+                }
+                if (timeActive) altFieldUpdates[`linkedAltsData/${cleanGid}/timeActive`] = timeActive;
+                altFieldUpdates[`linkedAltsData/${cleanGid}/updatedAt`] = new Date().toISOString();
+
+                promises.push(update(ref(db, `users/${uid}`), altFieldUpdates).catch(() => null));
+
+                if (currentUser && currentUser.uid === uid) {
+                    currentUser.linkedAltsData = currentUser.linkedAltsData || {};
+                    currentUser.linkedAltsData[cleanGid] = {
+                        ...(currentUser.linkedAltsData[cleanGid] || {}),
+                        gameId: cleanGid,
+                        name: cleanName || currentUser.linkedAltsData[cleanGid]?.name,
+                        stove_lv: cleanFurnace || currentUser.linkedAltsData[cleanGid]?.stove_lv,
+                        furnaceLevel: cleanFurnace || currentUser.linkedAltsData[cleanGid]?.furnaceLevel,
+                        membershipStatus: normStatus || currentUser.linkedAltsData[cleanGid]?.membershipStatus
+                    };
+                    if (currentUser.altTokens && currentUser.altTokens[cleanGid]) {
+                        if (cleanFurnace) {
+                            currentUser.altTokens[cleanGid].stove_lv = cleanFurnace;
+                            currentUser.altTokens[cleanGid].furnaceLevel = cleanFurnace;
+                        }
+                        if (normStatus) {
+                            currentUser.altTokens[cleanGid].membershipStatus = normStatus;
+                        }
+                    }
+                    try { localStorage.setItem('cached_current_user', JSON.stringify(currentUser)); } catch(e) {}
+                }
+                break;
+            }
+        }
+    }
+
+    // 3. Update users_alts/${cleanGid} legacy node directly
+    if (cleanGid) {
+        const altData = { gameId: cleanGid, name: cleanName, updatedAt: new Date().toISOString() };
+        if (cleanFurnace) { altData.stove_lv = cleanFurnace; altData.furnaceLevel = cleanFurnace; }
+        if (normStatus) { altData.membershipStatus = normStatus; altData.status = normStatus; }
+        if (joinedDate) { altData.joinedDate = joinedDate; altData.dateStarted = joinedDate; }
+        if (timeActive) altData.timeActive = timeActive;
+        promises.push(update(ref(db, `users_alts/${cleanGid}`), altData).catch(() => null));
+    }
+
+    // 4. Update giftcode_bot/${cleanGid}
+    if (cleanGid) {
+        const gcUpdates = { updatedAt: timestamp };
+        if (cleanName) gcUpdates.name = cleanName;
+        if (cleanFurnace) gcUpdates.furnaceLevel = cleanFurnace;
+        if (normStatus) {
+            gcUpdates.enrolled = (normStatus === 'active' && giftCodesEnrolled !== false);
+            gcUpdates.status = (normStatus === 'active' ? 'Active' : (normStatus === 'banned' ? 'Banned' : 'Inactive'));
+        } else if (giftCodesEnrolled !== undefined) {
+            gcUpdates.enrolled = Boolean(giftCodesEnrolled);
+        }
+        promises.push(update(ref(db, `giftcode_bot/${cleanGid}`), gcUpdates).catch(() => null));
+    }
+
+    // 5. Update activity_live/${cleanGid}
+    if (cleanGid && (cleanName || normStatus)) {
+        const actUpdates = { updatedAt: timestamp };
+        if (cleanName) actUpdates.name = cleanName;
+        if (normStatus) {
+            actUpdates.membershipStatus = normStatus;
+            actUpdates.status = normStatus;
+        }
+        promises.push(update(ref(db, `activity_live/${cleanGid}`), actUpdates).catch(() => null));
+    }
+
+    // 6. If member is not active, purge from live showdown
+    if (normStatus && normStatus !== 'active') {
+        if (cleanName) promises.push(remove(ref(db, `showdown_live/${cleanName}`)).catch(() => null));
+        if (rawName && rawName !== cleanName) promises.push(remove(ref(db, `showdown_live/${rawName}`)).catch(() => null));
+    }
+
+    // 6. Sync to BDC Central Command backend
+    if (cleanFurnace) {
+        window.callBdcBackend('update_furnace', {
+            gameId: cleanGid,
+            name: cleanName,
+            level: cleanFurnace,
+            joinedDate: joinedDate || ''
+        }).catch(() => null);
+    }
+
+    // 7. Update in-memory liveData Chief's List row if loaded
+    if (window.liveData && window.liveData["Chief's List"]) {
+        const cList = window.liveData["Chief's List"];
+        for (let i = 1; i < cList.length; i++) {
+            if ((cleanGid && cList[i][1] && cList[i][1].toString().trim() === cleanGid) ||
+                (cleanName && cList[i][0] && cList[i][0].toString().toLowerCase().trim() === cleanName.toLowerCase())) {
+                if (cleanFurnace) cList[i][2] = cleanFurnace;
+                if (giftCodesEnrolled !== undefined) cList[i][3] = giftCodesEnrolled ? 'TRUE' : 'FALSE';
+                if (joinedDate) cList[i][4] = window.formatDateForDisplay(joinedDate);
+                break;
+            }
+        }
+    }
+
+    // 8. Log Admin Action
+    if (actionLog && window.logAdminAction) {
+        window.logAdminAction(actionLog.title || "Member Updated", actionLog.details || `Updated member ${cleanName} (${cleanGid})`, cleanName);
+    }
+
+    // Wait for all writes
+    await Promise.all(promises);
+
+    // 9. Invalidate caches and refresh active view
+    window.invalidateMemberCaches({ refreshView: true });
+
+    return true;
+};
+
+// =========================================================================
+// 🛡️ UNIFIED MEMBERSHIP STATUS CONTROLLER
+// =========================================================================
 window.updateMemberStatus = async (name, gid, uid, newStatus, reason = '', isAlt = false) => {
     const isManager = Boolean(currentUser && (window.isAdminUser(currentUser) || window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4'));
     if (!isManager) {
@@ -530,209 +986,25 @@ window.updateMemberStatus = async (name, gid, uid, newStatus, reason = '', isAlt
     }
 
     const normStatus = window.normalizeMembershipStatus(newStatus);
-    const timestamp = Date.now();
-    const adminName = (currentUser && (currentUser.displayName || currentUser.name)) || 'Admin';
     const targetGid = gid ? String(gid).trim() : '';
     const targetName = name ? String(name).trim() : '';
 
     try {
-        const updatePromises = [];
-
-        // 1. Update roster_live
-        if (targetGid) {
-            updatePromises.push(update(ref(db, `roster_live/${targetGid}`), {
-                membershipStatus: normStatus,
-                status: normStatus,
-                statusReason: reason || null,
-                statusUpdatedAt: timestamp,
-                statusUpdatedBy: adminName
-            }).catch(() => null));
-        }
-        if (targetName) {
-            updatePromises.push(update(ref(db, `roster_live/${targetName}`), {
-                membershipStatus: normStatus,
-                status: normStatus,
-                statusReason: reason || null,
-                statusUpdatedAt: timestamp,
-                statusUpdatedBy: adminName
-            }).catch(() => null));
-        }
-
-        // 2. Update user account in users node & handle alt unlinking
-        if (uid) {
-            if (isAlt && targetGid) {
-                if (normStatus !== 'active') {
-                    // Mark membership status on altTokens, linkedAltsData, and archive to departedAlts
-                    updatePromises.push(update(ref(db, `users/${uid}/altTokens/${targetGid}`), {
-                        membershipStatus: normStatus,
-                        status: normStatus,
-                        statusReason: reason || null,
-                        statusUpdatedAt: timestamp,
-                        statusUpdatedBy: adminName
-                    }).catch(() => null));
-
-                    updatePromises.push(update(ref(db, `users/${uid}/linkedAltsData/${targetGid}`), {
-                        membershipStatus: normStatus,
-                        status: normStatus,
-                        statusReason: reason || null,
-                        statusUpdatedAt: timestamp,
-                        statusUpdatedBy: adminName
-                    }).catch(() => null));
-
-                    updatePromises.push(update(ref(db, `users/${uid}/departedAlts/${targetGid}`), {
-                        name: targetName || '',
-                        gameId: targetGid,
-                        membershipStatus: normStatus,
-                        statusReason: reason || null,
-                        departedAt: timestamp,
-                        departedBy: adminName
-                    }).catch(() => null));
-
-                    if (currentUser && currentUser.uid === uid) {
-                        if (currentUser.altTokens && currentUser.altTokens[targetGid]) {
-                            currentUser.altTokens[targetGid].membershipStatus = normStatus;
-                        }
-                        if (currentUser.linkedAltsData && currentUser.linkedAltsData[targetGid]) {
-                            currentUser.linkedAltsData[targetGid].membershipStatus = normStatus;
-                        }
-                    }
-                } else {
-                    // Restore to active altTokens & linkedAltsData
-                    updatePromises.push(update(ref(db, `users/${uid}/altTokens/${targetGid}`), {
-                        nickname: targetName || `Chief ${targetGid}`,
-                        membershipStatus: 'active',
-                        status: 'active',
-                        statusReason: reason || null,
-                        restoredAt: timestamp
-                    }).catch(() => null));
-
-                    updatePromises.push(update(ref(db, `users/${uid}/linkedAltsData/${targetGid}`), {
-                        membershipStatus: 'active',
-                        status: 'active',
-                        statusReason: reason || null,
-                        restoredAt: timestamp
-                    }).catch(() => null));
-
-                    updatePromises.push(remove(ref(db, `users/${uid}/departedAlts/${targetGid}`)).catch(() => null));
-
-                    get(ref(db, `users/${uid}/linkedGameIds`)).then(snap => {
-                        const cur = (snap.exists() && Array.isArray(snap.val())) ? snap.val() : [];
-                        if (!cur.some(id => String(id).trim() === targetGid)) {
-                            cur.push(targetGid);
-                            update(ref(db, `users/${uid}`), { linkedGameIds: cur }).catch(() => null);
-                        }
-                    }).catch(() => null);
-
-                    if (currentUser && currentUser.uid === uid) {
-                        if (currentUser.altTokens && currentUser.altTokens[targetGid]) {
-                            currentUser.altTokens[targetGid].membershipStatus = 'active';
-                        }
-                        if (currentUser.linkedAltsData && currentUser.linkedAltsData[targetGid]) {
-                            currentUser.linkedAltsData[targetGid].membershipStatus = 'active';
-                        }
-                    }
-                }
-            } else {
-                updatePromises.push(update(ref(db, `users/${uid}`), {
-                    membershipStatus: normStatus,
-                    status: normStatus,
-                    statusReason: reason || null,
-                    statusUpdatedAt: timestamp,
-                    statusUpdatedBy: adminName
-                }).catch(() => null));
-
-                // If main account departs or is banned, cascade status to all linked alts
-                if (normStatus !== 'active') {
-                    get(ref(db, `users/${uid}`)).then(uSnap => {
-                        if (uSnap.exists()) {
-                            const uObj = uSnap.val() || {};
-                            const altIds = [];
-                            if (uObj.altTokens) Object.keys(uObj.altTokens).forEach(aid => altIds.push(String(aid).trim()));
-                            if (uObj.linkedGameIds && Array.isArray(uObj.linkedGameIds)) {
-                                uObj.linkedGameIds.forEach(aid => { if (!altIds.includes(String(aid).trim())) altIds.push(String(aid).trim()); });
-                            }
-
-                            altIds.forEach(agid => {
-                                update(ref(db, `roster_live/${agid}`), { membershipStatus: normStatus, statusReason: `Owner ${targetName || uid} marked ${normStatus}`, statusUpdatedAt: timestamp }).catch(() => null);
-                                update(ref(db, `giftcode_bot/${agid}`), { enrolled: false, status: normStatus === 'banned' ? 'Banned' : 'Inactive' }).catch(() => null);
-                                const aTok = uObj.altTokens && uObj.altTokens[agid];
-                                if (aTok && aTok.nickname) remove(ref(db, `showdown_live/${aTok.nickname}`)).catch(() => null);
-                            });
-                        }
-                    }).catch(() => null);
-                }
+        await window.executeUnifiedMemberUpdate({
+            gameId: targetGid,
+            name: targetName,
+            membershipStatus: normStatus,
+            statusReason: reason,
+            isAlt,
+            ownerUid: uid,
+            actionLog: {
+                title: "Membership Status Updated",
+                details: `Changed ${targetName || targetGid} status to ${normStatus.toUpperCase()}${reason ? ` (${reason})` : ''}`
             }
-        } else if (targetGid) {
-            const usersSnap = await get(ref(db, 'users')).catch(() => null);
-            if (usersSnap && usersSnap.exists()) {
-                const uData = usersSnap.val() || {};
-                for (const [uId, uObj] of Object.entries(uData)) {
-                    if (uObj && String(uObj.gameId).trim() === targetGid) {
-                        updatePromises.push(update(ref(db, `users/${uId}`), {
-                            membershipStatus: normStatus,
-                            status: normStatus,
-                            statusReason: reason || null,
-                            statusUpdatedAt: timestamp,
-                            statusUpdatedBy: adminName
-                        }).catch(() => null));
-                        break;
-                    }
-                    if (uObj && uObj.altTokens && uObj.altTokens[targetGid]) {
-                        if (normStatus !== 'active') {
-                            updatePromises.push(update(ref(db, `users/${uId}/departedAlts/${targetGid}`), {
-                                name: targetName || (uObj.altTokens[targetGid]?.nickname || ''),
-                                gameId: targetGid,
-                                membershipStatus: normStatus,
-                                statusReason: reason || null,
-                                departedAt: timestamp
-                            }).catch(() => null));
-                            updatePromises.push(remove(ref(db, `users/${uId}/altTokens/${targetGid}`)).catch(() => null));
-                            updatePromises.push(remove(ref(db, `users/${uId}/linkedAltsData/${targetGid}`)).catch(() => null));
-                        } else {
-                            updatePromises.push(update(ref(db, `users/${uId}/altTokens/${targetGid}`), {
-                                membershipStatus: normStatus,
-                                statusReason: reason || null
-                            }).catch(() => null));
-                        }
-                    }
-                }
-            }
-        }
-
-        // 3. If left or banned, remove from live showdown and disable giftbot auto-enroll
-        if (normStatus !== 'active') {
-            if (targetName) {
-                updatePromises.push(remove(ref(db, `showdown_live/${targetName}`)).catch(() => null));
-            }
-            if (targetGid) {
-                updatePromises.push(update(ref(db, `giftcode_bot/${targetGid}`), {
-                    enrolled: false,
-                    status: normStatus === 'banned' ? 'Banned' : 'Inactive'
-                }).catch(() => null));
-            }
-        } else {
-            if (targetGid) {
-                updatePromises.push(update(ref(db, `giftcode_bot/${targetGid}`), {
-                    enrolled: true,
-                    status: 'Active'
-                }).catch(() => null));
-            }
-        }
-
-        await Promise.all(updatePromises);
-
-        window.rosterCache = null;
-        if (typeof window.clearAllEventCaches === 'function') {
-            window.clearAllEventCaches();
-        }
-
-        if (window.logAdminAction) {
-            window.logAdminAction("Membership Status Updated", `Changed ${targetName || targetGid} status to ${normStatus.toUpperCase()}${reason ? ` (${reason})` : ''}`);
-        }
+        });
 
         const label = normStatus === 'active' ? '🟢 Active Member' : (normStatus === 'left' ? '🚪 Left Alliance' : '🚫 Banned');
         if (window.showToast) window.showToast(`Updated ${targetName || 'Player'} status to ${label}! 🎉`, "success");
-
         return true;
     } catch(err) {
         console.error("updateMemberStatus error:", err);
@@ -1185,104 +1457,14 @@ window.bulkUpdateMemberStatus = async (membersList, newStatus, reason = '', show
                 uid = altTokensByGidMap[gid].uid;
             }
 
-            // 1. roster_live
-            if (gid) {
-                promises.push(update(ref(db, `roster_live/${gid}`), {
-                    membershipStatus: normStatus,
-                    status: normStatus,
-                    statusReason: reason || null,
-                    statusUpdatedAt: timestamp,
-                    statusUpdatedBy: adminName
-                }).catch(() => null));
-            }
-            if (name) {
-                promises.push(update(ref(db, `roster_live/${name}`), {
-                    membershipStatus: normStatus,
-                    status: normStatus,
-                    statusReason: reason || null,
-                    statusUpdatedAt: timestamp,
-                    statusUpdatedBy: adminName
-                }).catch(() => null));
-            }
-
-            // 2. users node
-            if (uid) {
-                if (isAlt && gid) {
-                    if (normStatus !== 'active') {
-                        promises.push(update(ref(db, `users/${uid}/departedAlts/${gid}`), {
-                            name: name || '',
-                            gameId: gid,
-                            membershipStatus: normStatus,
-                            statusReason: reason || null,
-                            departedAt: timestamp,
-                            departedBy: adminName
-                        }).catch(() => null));
-                        promises.push(remove(ref(db, `users/${uid}/altTokens/${gid}`)).catch(() => null));
-                        promises.push(remove(ref(db, `users/${uid}/linkedAltsData/${gid}`)).catch(() => null));
-                        
-                        // Clean from linkedGameIds
-                        const uObj = uData[uid];
-                        if (uObj && Array.isArray(uObj.linkedGameIds)) {
-                            const newLinks = uObj.linkedGameIds.filter(id => String(id).trim() !== gid);
-                            promises.push(update(ref(db, `users/${uid}`), { linkedGameIds: newLinks }).catch(() => null));
-                        }
-                    } else {
-                        promises.push(update(ref(db, `users/${uid}/altTokens/${gid}`), {
-                            nickname: name || `Chief ${gid}`,
-                            membershipStatus: 'active',
-                            statusReason: reason || null,
-                            restoredAt: timestamp
-                        }).catch(() => null));
-                        promises.push(remove(ref(db, `users/${uid}/departedAlts/${gid}`)).catch(() => null));
-                    }
-                } else {
-                    promises.push(update(ref(db, `users/${uid}`), {
-                        membershipStatus: normStatus,
-                        status: normStatus,
-                        statusReason: reason || null,
-                        statusUpdatedAt: timestamp,
-                        statusUpdatedBy: adminName
-                    }).catch(() => null));
-
-                    // Cascade to alts if main account departs
-                    if (normStatus !== 'active') {
-                        const uObj = uData[uid];
-                        if (uObj) {
-                            const altIds = [];
-                            if (uObj.altTokens) Object.keys(uObj.altTokens).forEach(aid => altIds.push(String(aid).trim()));
-                            if (uObj.linkedGameIds && Array.isArray(uObj.linkedGameIds)) {
-                                uObj.linkedGameIds.forEach(aid => { if (!altIds.includes(String(aid).trim())) altIds.push(String(aid).trim()); });
-                            }
-                            altIds.forEach(agid => {
-                                promises.push(update(ref(db, `roster_live/${agid}`), { membershipStatus: normStatus, statusReason: `Owner ${name || uid} marked ${normStatus}`, statusUpdatedAt: timestamp }).catch(() => null));
-                                promises.push(update(ref(db, `giftcode_bot/${agid}`), { enrolled: false, status: normStatus === 'banned' ? 'Banned' : 'Inactive' }).catch(() => null));
-                                const aTok = uObj.altTokens && uObj.altTokens[agid];
-                                if (aTok && aTok.nickname) promises.push(remove(ref(db, `showdown_live/${aTok.nickname}`)).catch(() => null));
-                            });
-                        }
-                    }
-                }
-            }
-
-            // 3. showdown_live & giftcode_bot
-            if (normStatus !== 'active') {
-                if (name) {
-                    promises.push(remove(ref(db, `showdown_live/${name}`)).catch(() => null));
-                }
-                if (gid) {
-                    promises.push(update(ref(db, `giftcode_bot/${gid}`), {
-                        enrolled: false,
-                        status: normStatus === 'banned' ? 'Banned' : 'Inactive'
-                    }).catch(() => null));
-                }
-            } else {
-                if (gid) {
-                    promises.push(update(ref(db, `giftcode_bot/${gid}`), {
-                        enrolled: true,
-                        status: 'Active'
-                    }).catch(() => null));
-                }
-            }
+            promises.push(window.executeUnifiedMemberUpdate({
+                gameId: gid,
+                name: name,
+                membershipStatus: normStatus,
+                statusReason: reason,
+                isAlt,
+                ownerUid: uid
+            }).catch(e => console.warn("Bulk update item error:", e)));
         }
 
         await Promise.all(promises);
@@ -2558,6 +2740,7 @@ export const refreshIdToNameMap = async () => {
 
 // Real-Time Firebase Listeners for Master Store & Filter Reactivity
 onValue(ref(db, 'users'), () => {
+    window._cachedAllUsers = null;
     refreshIdToNameMap().then(() => {
         if (typeof window.filterAdminUsersList === 'function' && document.querySelector('.admin-user-row')) {
             window.filterAdminUsersList();
@@ -2566,6 +2749,7 @@ onValue(ref(db, 'users'), () => {
 });
 
 onValue(ref(db, 'giftcode_bot'), () => {
+    window.giftcodeCache = null;
     refreshIdToNameMap().then(() => {
         if (typeof window.filterAdminUsersList === 'function' && document.querySelector('.admin-user-row')) {
             window.filterAdminUsersList();
@@ -3294,21 +3478,31 @@ window.fetchChampionshipData = async () => {
     const result = {};
     const isT = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
 
+    const addEntry = (gid, chiefName, isSigned, lastUpdated) => {
+        const entry = {
+            gameId: gid,
+            name: chiefName,
+            signedUp: isSigned,
+            lastUpdated: lastUpdated || Date.now()
+        };
+        if (gid) result[gid] = entry;
+        if (chiefName) {
+            result[chiefName] = entry;
+            result[chiefName.toLowerCase()] = entry;
+        }
+    };
+
     try {
         const snap = await get(ref(db, 'activity_live'));
         if (snap && snap.exists()) {
             const actObj = snap.val() || {};
             if (typeof actObj === 'object') {
-                Object.entries(actObj).forEach(([gid, rec]) => {
+                Object.entries(actObj).forEach(([k, rec]) => {
                     if (rec && typeof rec === 'object') {
-                        const chiefName = rec.name || (window.idToNameMap && window.idToNameMap[gid]) || 'Chief';
+                        const gid = rec.gameId ? String(rec.gameId).trim() : (/^\d{6,}$/.test(k) ? k : (window.nameToIdMap?.[k.toLowerCase()] || ''));
+                        const chiefName = rec.name || (gid && window.idToNameMap ? window.idToNameMap[gid] : '') || (!/^\d+$/.test(k) ? k : 'Chief');
                         const isSigned = rec.championship !== undefined ? isT(rec.championship) : false;
-                        result[gid] = {
-                            gameId: gid,
-                            name: chiefName,
-                            signedUp: isSigned,
-                            lastUpdated: rec.updatedAt || Date.now()
-                        };
+                        addEntry(gid, chiefName, isSigned, rec.updatedAt || Date.now());
                     }
                 });
             }
@@ -3321,16 +3515,14 @@ window.fetchChampionshipData = async () => {
         if (champSnap && champSnap.exists()) {
             const champObj = champSnap.val() || {};
             if (typeof champObj === 'object') {
-                Object.entries(champObj).forEach(([gid, rec]) => {
-                    if (rec && typeof rec === 'object' && result[gid] === undefined) {
-                        const chiefName = rec.name || (window.idToNameMap && window.idToNameMap[gid]) || 'Chief';
-                        const isSigned = rec.signedUp !== undefined ? isT(rec.signedUp) : false;
-                        result[gid] = {
-                            gameId: gid,
-                            name: chiefName,
-                            signedUp: isSigned,
-                            lastUpdated: rec.lastUpdated || rec.updatedAt || Date.now()
-                        };
+                Object.entries(champObj).forEach(([k, rec]) => {
+                    if (rec && typeof rec === 'object') {
+                        const gid = rec.gameId ? String(rec.gameId).trim() : (/^\d{6,}$/.test(k) ? k : (window.nameToIdMap?.[k.toLowerCase()] || ''));
+                        const chiefName = rec.name || (gid && window.idToNameMap ? window.idToNameMap[gid] : '') || (!/^\d+$/.test(k) ? k : 'Chief');
+                        if (!result[gid] && !result[chiefName]) {
+                            const isSigned = rec.signedUp !== undefined ? isT(rec.signedUp) : false;
+                            addEntry(gid, chiefName, isSigned, rec.lastUpdated || rec.updatedAt || Date.now());
+                        }
                     }
                 });
             }
@@ -3340,8 +3532,8 @@ window.fetchChampionshipData = async () => {
     // Ensure all roster players are represented
     if (window.idToNameMap) {
         Object.entries(window.idToNameMap).forEach(([gid, name]) => {
-            if (!result[gid]) {
-                result[gid] = { gameId: gid, name: name, signedUp: false, lastUpdated: Date.now() };
+            if (!result[gid] && !result[name]) {
+                addEntry(gid, name, false, Date.now());
             }
         });
     }
@@ -3466,21 +3658,32 @@ window.fetchMercenaryData = async () => {
     const result = {};
     const isT = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
 
+    const addEntry = (gid, chiefName, isSigned, phase, difficulty, lastUpdated) => {
+        const entry = {
+            gameId: gid,
+            name: chiefName,
+            signedUp: isSigned,
+            phase: phase || "Champion's Initiation",
+            difficulty: difficulty || "Hard",
+            lastUpdated: lastUpdated || Date.now()
+        };
+        if (gid) result[gid] = entry;
+        if (chiefName) {
+            result[chiefName] = entry;
+            result[chiefName.toLowerCase()] = entry;
+        }
+    };
+
     try {
         const snap = await get(ref(db, 'activity_live'));
         if (snap.exists()) {
             const actObj = snap.val() || {};
             if (typeof actObj === 'object') {
-                Object.entries(actObj).forEach(([gid, rec]) => {
+                Object.entries(actObj).forEach(([k, rec]) => {
                     if (rec && typeof rec === 'object') {
-                        result[gid] = {
-                            gameId: gid,
-                            name: rec.name || (window.idToNameMap && window.idToNameMap[gid]) || 'Chief',
-                            signedUp: isT(rec.mercenary),
-                            phase: rec.mercenaryPhase || "Champion's Initiation",
-                            difficulty: rec.mercenaryDifficulty || "Hard",
-                            lastUpdated: rec.updatedAt || Date.now()
-                        };
+                        const gid = rec.gameId ? String(rec.gameId).trim() : (/^\d{6,}$/.test(k) ? k : (window.nameToIdMap?.[k.toLowerCase()] || ''));
+                        const chiefName = rec.name || (gid && window.idToNameMap ? window.idToNameMap[gid] : '') || (!/^\d+$/.test(k) ? k : 'Chief');
+                        addEntry(gid, chiefName, isT(rec.mercenary), rec.mercenaryPhase, rec.mercenaryDifficulty, rec.updatedAt);
                     }
                 });
             }
@@ -3490,8 +3693,8 @@ window.fetchMercenaryData = async () => {
     // Ensure all roster players are represented
     if (window.idToNameMap) {
         Object.entries(window.idToNameMap).forEach(([gid, name]) => {
-            if (!result[gid]) {
-                result[gid] = { gameId: gid, name: name, signedUp: false, phase: "Champion's Initiation", difficulty: "Hard", lastUpdated: Date.now() };
+            if (!result[gid] && !result[name]) {
+                addEntry(gid, name, false, "Champion's Initiation", "Hard", Date.now());
             }
         });
     }
@@ -3699,19 +3902,30 @@ window.fetchPolarTerrorsData = async () => {
     const result = {};
     const isT = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
 
+    const addEntry = (gid, chiefName, isSigned, lastUpdated) => {
+        const entry = {
+            gameId: gid,
+            name: chiefName,
+            signedUp: isSigned,
+            lastUpdated: lastUpdated || Date.now()
+        };
+        if (gid) result[gid] = entry;
+        if (chiefName) {
+            result[chiefName] = entry;
+            result[chiefName.toLowerCase()] = entry;
+        }
+    };
+
     try {
         const snap = await get(ref(db, 'activity_live'));
         if (snap.exists()) {
             const actObj = snap.val() || {};
             if (typeof actObj === 'object') {
-                Object.entries(actObj).forEach(([gid, rec]) => {
+                Object.entries(actObj).forEach(([k, rec]) => {
                     if (rec && typeof rec === 'object') {
-                        result[gid] = {
-                            gameId: gid,
-                            name: rec.name || (window.idToNameMap && window.idToNameMap[gid]) || 'Chief',
-                            signedUp: isT(rec.polarTerrors),
-                            lastUpdated: rec.updatedAt || Date.now()
-                        };
+                        const gid = rec.gameId ? String(rec.gameId).trim() : (/^\d{6,}$/.test(k) ? k : (window.nameToIdMap?.[k.toLowerCase()] || ''));
+                        const chiefName = rec.name || (gid && window.idToNameMap ? window.idToNameMap[gid] : '') || (!/^\d+$/.test(k) ? k : 'Chief');
+                        addEntry(gid, chiefName, isT(rec.polarTerrors), rec.updatedAt);
                     }
                 });
             }
@@ -3721,8 +3935,8 @@ window.fetchPolarTerrorsData = async () => {
     // Ensure all roster players are represented
     if (window.idToNameMap) {
         Object.entries(window.idToNameMap).forEach(([gid, name]) => {
-            if (!result[gid]) {
-                result[gid] = { gameId: gid, name: name, signedUp: false, lastUpdated: Date.now() };
+            if (!result[gid] && !result[name]) {
+                addEntry(gid, name, false, Date.now());
             }
         });
     }
@@ -4368,7 +4582,24 @@ window.fetchBearTrapData = async () => {
     try {
         const snap = await get(ref(db, 'beartrap'));
         if (snap.exists()) {
-            window.bearTrapCache = snap.val();
+            const raw = snap.val() || {};
+            const result = {};
+            Object.entries(raw).forEach(([k, v]) => {
+                if (v && typeof v === 'object') {
+                    const gid = v.gameId ? String(v.gameId).trim() : (/^\d{6,}$/.test(k) ? k : (window.nameToIdMap?.[k.toLowerCase()] || ''));
+                    const name = v.name || (gid && window.idToNameMap ? window.idToNameMap[gid] : '') || (!/^\d+$/.test(k) ? k : '');
+                    const item = { ...v, gameId: gid, name: name };
+                    result[k] = item;
+                    if (gid) result[gid] = item;
+                    if (name) {
+                        result[name] = item;
+                        result[name.toLowerCase()] = item;
+                    }
+                } else {
+                    result[k] = v;
+                }
+            });
+            window.bearTrapCache = result;
             return window.bearTrapCache;
         }
     } catch(e) { console.warn("Firebase beartrap read error:", e); }
@@ -4382,13 +4613,20 @@ window.fetchBearTrapData = async () => {
 
         if (rosterData) {
             Object.values(rosterData).forEach(p => {
-                if (p.gameId) {
-                    seeded[p.gameId.toString().trim()] = {
-                        gameId: p.gameId.toString().trim(),
-                        name: p.name || '',
+                if (p && (p.gameId || p.name)) {
+                    const gid = p.gameId ? String(p.gameId).trim() : '';
+                    const name = p.name || '';
+                    const item = {
+                        gameId: gid,
+                        name: name,
                         signedUp: false,
                         lastUpdated: Date.now()
                     };
+                    if (gid) seeded[gid] = item;
+                    if (name) {
+                        seeded[name] = item;
+                        seeded[name.toLowerCase()] = item;
+                    }
                 }
             });
         }
@@ -4400,12 +4638,11 @@ window.fetchBearTrapData = async () => {
                 let isSignedUp = (statusVal === 'yes' || statusVal === 'true' || statusVal === '✅' || statusVal === '1');
                 
                 let foundGid = window.nameToIdMap ? window.nameToIdMap[pName] : null;
-                if (foundGid) {
-                    if (!seeded[foundGid]) {
-                        seeded[foundGid] = { gameId: foundGid, name: pName, signedUp: isSignedUp, lastUpdated: Date.now() };
-                    } else {
-                        seeded[foundGid].signedUp = isSignedUp;
-                    }
+                const item = { gameId: foundGid || '', name: pName, signedUp: isSignedUp, lastUpdated: Date.now() };
+                if (foundGid) seeded[foundGid] = item;
+                if (pName) {
+                    seeded[pName] = item;
+                    seeded[pName.toLowerCase()] = item;
                 }
             }
         }
@@ -4434,7 +4671,13 @@ window.toggleBearTrapStatus = async (gameId, forceStatus = null) => {
 
     try {
         await set(ref(db, `beartrap/${gIdStr}`), existing);
-        if (window.bearTrapCache) window.bearTrapCache[gIdStr] = existing;
+        if (window.bearTrapCache) {
+            window.bearTrapCache[gIdStr] = existing;
+            if (playerName) {
+                window.bearTrapCache[playerName] = existing;
+                window.bearTrapCache[playerName.toLowerCase()] = existing;
+            }
+        }
         try {
             await update(ref(db, `activity_live/${gIdStr}`), {
                 name: playerName,
@@ -4968,6 +5211,11 @@ onValue(ref(db, 'broadcastAlerts'), () => {
 
 // Realtime listener for live roster and token health updates from Central Command
 onValue(ref(db, 'roster_live'), () => {
+  if (typeof window.invalidateMemberCaches === 'function') {
+    window.invalidateMemberCaches({ refreshView: false });
+  } else {
+    window.rosterCache = null;
+  }
   if (typeof window.updateNewMemberBadge === 'function') {
     window.updateNewMemberBadge();
   }
@@ -5500,6 +5748,9 @@ window.unlinkAltAccountPrompt = async (gid) => {
     if (!confirmed) return;
     try {
         await unlinkAltAccount(currentUser.uid, gid.toString().trim(), currentUser.linkedGameIds || []);
+        if (currentUser.altTokens) delete currentUser.altTokens[gid.toString().trim()];
+        if (currentUser.linkedAltsData) delete currentUser.linkedAltsData[gid.toString().trim()];
+        window.invalidateMemberCaches({ refreshView: false });
         if(window.showToast) window.showToast("Account unlinked.", "success");
         if (views.account) views.account('Alts');
         else if (typeof window.activeViewFunc === 'function') window.activeViewFunc();
@@ -6042,28 +6293,25 @@ window.adminApplyRepairedId = async (uid, fetchedData, oldUserData) => {
 window.addNewChiefToRoster = async (gameId, name, furnaceLevel = 'F30', dateStarted = '') => {
   if (!gameId || !name) throw new Error("Game ID and Chief Name are required.");
   const gIdStr = gameId.toString().trim();
-  const cleanName = name.toString().trim();
+  const cleanName = window.cleanChiefName(name);
   const cleanLevel = furnaceLevel ? furnaceLevel.toString().trim() : 'F30';
   const cleanDate = dateStarted || new Date().toISOString().split('T')[0];
 
-  const record = {
+  await window.executeUnifiedMemberUpdate({
     gameId: gIdStr,
     name: cleanName,
     furnaceLevel: cleanLevel,
-    dateStarted: cleanDate,
-    addedAt: Date.now()
-  };
+    joinedDate: cleanDate,
+    membershipStatus: 'active',
+    giftCodesEnrolled: true,
+    actionLog: {
+      title: "Add Roster Member",
+      details: `Added new player ${cleanName} (${gIdStr}) to roster`
+    }
+  });
 
-  // Write natively to Firebase roster_live
-  await set(ref(db, `roster_live/${gIdStr}`), record);
-  if (window.rosterCache) window.rosterCache[gIdStr] = record;
   if (window.idToNameMap) window.idToNameMap[gIdStr] = cleanName;
   if (window.nameToIdMap) window.nameToIdMap[cleanName] = gIdStr;
-
-  // Log Admin Action
-  if (window.logAdminAction) {
-    window.logAdminAction("Add Roster Member", `Added new player ${cleanName} (${gIdStr}) to roster`, cleanName);
-  }
 
   // Ping GAS backend as fallback
   try {
@@ -6072,7 +6320,13 @@ window.addNewChiefToRoster = async (gameId, name, furnaceLevel = 'F30', dateStar
     fetch(url, { mode: 'no-cors' }).catch(e => null);
   } catch(e) { console.error(e); }
 
-  return record;
+  return {
+    gameId: gIdStr,
+    name: cleanName,
+    furnaceLevel: cleanLevel,
+    dateStarted: cleanDate,
+    addedAt: Date.now()
+  };
 };
 
 // Open Add Player Modal with Single & Bulk Add tabs
@@ -7116,6 +7370,9 @@ window.adminUnlinkAltAccountPrompt = async (chiefName, altId) => {
         
         currentLinks = currentLinks.filter(id => id.toString().trim() !== altId.toString().trim());
         await set(ref(db, `users/${targetUid}/linkedGameIds`), currentLinks);
+        await remove(ref(db, `users/${targetUid}/altTokens/${altId.toString().trim()}`)).catch(() => null);
+        await remove(ref(db, `users/${targetUid}/linkedAltsData/${altId.toString().trim()}`)).catch(() => null);
+        window.invalidateMemberCaches({ refreshView: true });
         
         if (window.showToast) window.showToast(`Unlinked ${altId} from ${chiefName}!`, "success");
         if (window.searchPlayerFull) window.searchPlayerFull(chiefName);
@@ -7233,121 +7490,19 @@ window.openAdminEditFurnaceModal = async (chiefName, gameId = '', currentFurnace
         saveBtn.textContent = 'Saving...';
 
         try {
-           const cleanGid = (gameId || window.nameToIdMap[chiefName.toLowerCase()] || window.nameToIdMap[chiefName] || '').toString().trim();
+            const cleanGid = (gameId || window.nameToIdMap?.[chiefName.toLowerCase()] || window.nameToIdMap?.[chiefName] || '').toString().trim();
+            await window.executeUnifiedMemberUpdate({
+               gameId: cleanGid,
+               name: chiefName,
+               furnaceLevel: newFurnace,
+               actionLog: {
+                  title: "Set Furnace Level",
+                  details: `Updated '${chiefName}' (ID: ${cleanGid}) furnace level to ${newFurnace}`
+               }
+            });
 
-           // 1. Invalidate rosterCache so any future query pulls fresh data
-           window.rosterCache = null;
-
-           // 2. Read & update roster_live in Firebase directly
-           try {
-              const rosterSnap = await get(ref(db, 'roster_live')).catch(() => null);
-              let rosterObj = (rosterSnap && rosterSnap.exists()) ? rosterSnap.val() : {};
-
-              let foundKey = null;
-              for (const [rk, rv] of Object.entries(rosterObj)) {
-                 if (rk.toLowerCase().trim() === chiefName.toLowerCase().trim() ||
-                    (rv && rv.name && rv.name.toLowerCase().trim() === chiefName.toLowerCase().trim()) ||
-                    (rv && rv.chiefName && rv.chiefName.toLowerCase().trim() === chiefName.toLowerCase().trim()) ||
-                    (cleanGid && rv && rv.gameId && rv.gameId.toString().trim() === cleanGid)) {
-                    foundKey = rk;
-                    break;
-                 }
-              }
-              const saveKey = foundKey || (cleanGid ? cleanGid : chiefName);
-              const updatedEntry = {
-                 ...(rosterObj[saveKey] || {}),
-                 name: chiefName,
-                 gameId: cleanGid,
-                 furnaceLevel: newFurnace,
-                 stove_lv: newFurnace,
-                 updatedAt: Date.now()
-              };
-
-              rosterObj[saveKey] = updatedEntry;
-
-              await set(ref(db, `roster_live/${saveKey}`), updatedEntry);
-              if (cleanGid && cleanGid !== saveKey) {
-                 await set(ref(db, `roster_live/${cleanGid}`), updatedEntry);
-              }
-              window.rosterCache = rosterObj;
-           } catch(e) { console.warn("roster_live save error:", e); }
-
-           // 3. Update users/ node in Firebase if user account exists (main or alt)
-           try {
-              const usersSnap = await get(ref(db, 'users'));
-              if (usersSnap.exists()) {
-                 const allUsers = usersSnap.val();
-                 for (const [uid, uData] of Object.entries(allUsers)) {
-                    const uGid = (uData.gameId || '').toString().trim();
-                    const uName = (uData.name || uData.chiefName || '').toString().trim();
-                    
-                    // Check if this is the user's primary character
-                    if ((cleanGid && uGid === cleanGid) || (chiefName && uName.toLowerCase() === chiefName.toLowerCase())) {
-                       await update(ref(db, `users/${uid}`), {
-                          stove_lv: newFurnace,
-                          furnaceLevel: newFurnace,
-                          updatedAt: new Date().toISOString()
-                       });
-                       if (currentUser && currentUser.uid === uid) {
-                          currentUser.stove_lv = newFurnace;
-                          currentUser.furnaceLevel = newFurnace;
-                          try { localStorage.setItem('cached_current_user', JSON.stringify(currentUser)); } catch(e) {}
-                       }
-                       break;
-                    }
-
-                    // Check if this is an Alt account of this user
-                    if (cleanGid && ((uData.linkedGameIds && uData.linkedGameIds.includes(cleanGid)) || (uData.linkedAltsData && uData.linkedAltsData[cleanGid]) || (uData.altTokens && uData.altTokens[cleanGid]))) {
-                       const altUpdates = {};
-                       altUpdates[`linkedAltsData/${cleanGid}/stove_lv`] = newFurnace;
-                       altUpdates[`linkedAltsData/${cleanGid}/furnaceLevel`] = newFurnace;
-                       altUpdates[`linkedAltsData/${cleanGid}/updatedAt`] = new Date().toISOString();
-                       if (uData.altTokens && uData.altTokens[cleanGid]) {
-                          altUpdates[`altTokens/${cleanGid}/stove_lv`] = newFurnace;
-                          altUpdates[`altTokens/${cleanGid}/furnaceLevel`] = newFurnace;
-                       }
-                       await update(ref(db, `users/${uid}`), altUpdates).catch(() => null);
-                       
-                       if (currentUser && currentUser.uid === uid) {
-                          currentUser.linkedAltsData = currentUser.linkedAltsData || {};
-                          if (currentUser.linkedAltsData[cleanGid]) {
-                             currentUser.linkedAltsData[cleanGid].stove_lv = newFurnace;
-                             currentUser.linkedAltsData[cleanGid].furnaceLevel = newFurnace;
-                          }
-                          if (currentUser.altTokens && currentUser.altTokens[cleanGid]) {
-                             currentUser.altTokens[cleanGid].stove_lv = newFurnace;
-                             currentUser.altTokens[cleanGid].furnaceLevel = newFurnace;
-                          }
-                          try { localStorage.setItem('cached_current_user', JSON.stringify(currentUser)); } catch(e) {}
-                       }
-                       break;
-                    }
-                 }
-              }
-           } catch(e) { console.warn("Failed to update user node:", e); }
-
-           // 4. Update users_alts/${cleanGid} node directly in Firebase
-           if (cleanGid) {
-              try {
-                 await update(ref(db, `users_alts/${cleanGid}`), {
-                    gameId: cleanGid,
-                    name: chiefName,
-                    stove_lv: newFurnace,
-                    furnaceLevel: newFurnace,
-                    updatedAt: new Date().toISOString()
-                 }).catch(() => null);
-              } catch(e) {}
-           }
-
-           // Sync with BDC Central Command Backend
-           window.callBdcBackend('update_furnace', {
-              gameId: cleanGid,
-              name: chiefName,
-              level: newFurnace
-           }).catch(() => null);
-
-           // 5. Update in-memory liveData Chief's List row if loaded
-           if (window.liveData && window.liveData["Chief's List"]) {
+            // 5. Update in-memory liveData Chief's List row if loaded
+            if (window.liveData && window.liveData["Chief's List"]) {
               const cList = window.liveData["Chief's List"];
               for (let i = 1; i < cList.length; i++) {
                  if ((cleanGid && cList[i][1] && cList[i][1].toString().trim() === cleanGid) ||
@@ -8170,6 +8325,7 @@ window._executeLogBearTrapWinner = async (name, trap) => {
             fetch(url, { signal: controller.signal }).catch(() => null).finally(() => clearTimeout(timeoutId));
         } catch(e) {}
         
+        window.invalidateMemberCaches({ refreshView: false });
         window.showToast(`🗑️ Successfully deleted ${name || 'player'}.`, "success");
 
         // 8. Refresh UI
@@ -9035,9 +9191,47 @@ window.searchPlayerFull = async (name) => {
         }
     }
     
+    let resolvedRosterInfo = {};
+    if (rosterMap && typeof rosterMap === 'object') {
+       const directKey = Object.keys(rosterMap).find(k => k.toLowerCase().trim() === targetName.toLowerCase().trim());
+       if (directKey) {
+          resolvedRosterInfo = { ...rosterMap[directKey] };
+       } else {
+          const valMatch = Object.values(rosterMap).find(v => 
+             v && typeof v === 'object' && (
+                (v.name && v.name.toString().toLowerCase().trim() === targetName.toLowerCase().trim()) ||
+                (v.chiefName && v.chiefName.toString().toLowerCase().trim() === targetName.toLowerCase().trim()) ||
+                (viewedGameId && v.gameId && v.gameId.toString().trim() === viewedGameId.toString().trim())
+             )
+          );
+          if (valMatch) resolvedRosterInfo = { ...valMatch };
+       }
+    }
+    if (!resolvedRosterInfo.furnaceLevel && viewedGameId && rosterMap && rosterMap[viewedGameId]) {
+       resolvedRosterInfo = { ...resolvedRosterInfo, ...rosterMap[viewedGameId] };
+    }
+    if (usersSnap && usersSnap.exists()) {
+       const users = usersSnap.val();
+       for (const u of Object.values(users)) {
+          const uGid = u.gameId ? u.gameId.toString().trim() : '';
+          const uName = (u.name || u.chiefName || '').toString().trim();
+          if ((viewedGameId && uGid === viewedGameId.toString().trim()) || (targetName && uName.toLowerCase() === targetName.toLowerCase())) {
+             if (u.stove_lv || u.furnaceLevel) {
+                resolvedRosterInfo = {
+                   ...resolvedRosterInfo,
+                   furnaceLevel: u.stove_lv || u.furnaceLevel,
+                   stove_lv: u.stove_lv || u.furnaceLevel
+                };
+             }
+             break;
+          }
+       }
+    }
+    if (!resolvedRosterInfo.gameId && viewedGameId) resolvedRosterInfo.gameId = viewedGameId;
+
     const isUserAdmin = window.isAdminUser(currentUser);
-    let html = window.generatePlayerProfileHtml(targetName, pRow, headers, colIsUpcoming, rosterMap[targetName], null, dynamicSD, showdownActive, bearBoth, bear1, bear2, bearAllTime, btDonationsAllTime, btDonationsCurrent, otherLbs, isUserAdmin, altAccounts, isUserAdmin);
-    
+    let html = window.generatePlayerProfileHtml(targetName, pRow, headers, colIsUpcoming, resolvedRosterInfo, null, dynamicSD, showdownActive, bearBoth, bear1, bear2, bearAllTime, btDonationsAllTime, btDonationsCurrent, otherLbs, isUserAdmin, altAccounts, isUserAdmin);
+
     resDiv.innerHTML = html;
     
   } catch (err) {
@@ -10120,9 +10314,19 @@ if(authSubmitBtn) authSubmitBtn.addEventListener('click', async () => {
       window.idToNameMap[gameId] = chiefName;
       window.nameToIdMap[chiefName] = gameId;
       
-      // Auto-enroll in Firebase giftcode_bot & ping backend API
+      // Auto-enroll in Firebase giftcode_bot, roster_live & ping backend API via unified engine
       try {
-          await window.enrollGiftcodeBot(gameId, chiefName);
+          await window.executeUnifiedMemberUpdate({
+            gameId,
+            name: chiefName,
+            furnaceLevel,
+            membershipStatus: 'active',
+            giftCodesEnrolled: true,
+            avatarUrl: avatarUrlToUse,
+            joinedDate: dateStarted,
+            source: 'registration',
+            refreshViews: false
+          });
           await refreshIdToNameMap();
           const regToken = await getAuthToken();
           const url = `${API_BASE_URL}?api=registerNewPlayer&gameId=${encodeURIComponent(gameId)}&name=${encodeURIComponent(chiefName)}&dateStarted=${encodeURIComponent(dateStarted)}&level=${encodeURIComponent(furnaceLevel)}${regToken ? '&token=' + encodeURIComponent(regToken) : ''}`;
@@ -20096,7 +20300,8 @@ window.openEditProfileModal = async () => {
                  }
               }
 
-              // Update user object & Firebase
+              // Update via unified engine across all authoritative database nodes
+              const newName = (data.nickname && !/^\d+$/.test(data.nickname) && data.nickname.trim() !== (currentUser.name || '').trim()) ? data.nickname.trim() : (currentUser.name || '');
               const updates = {
                  stove_lv: finalStove || currentUser.stove_lv,
                  furnaceLevel: finalStove || currentUser.furnaceLevel,
@@ -20104,11 +20309,20 @@ window.openEditProfileModal = async () => {
                  centuryGamesVerified: true
               };
               if (data.avatar_image) updates.avatar_image = data.avatar_image;
-              // Smart name sync: update only if game returns a real, changed name (picks up in-game renames, blocks empty/numeric returns)
-              if (data.nickname && !/^\d+$/.test(data.nickname) && data.nickname.trim() !== (currentUser.name || '').trim()) updates.name = data.nickname;
+              if (newName) updates.name = newName;
 
-              await update(ref(db, `users/${currentUser.uid}`), updates);
+              await window.executeUnifiedMemberUpdate({
+                 gameId: currentUser.gameId,
+                 name: newName,
+                 furnaceLevel: finalStove || currentUser.furnaceLevel || currentUser.stove_lv,
+                 avatar_image: data.avatar_image || currentUser.avatar_image,
+                 source: 'account_hub_game_sync',
+                 refreshViews: false
+              });
+
               Object.assign(currentUser, updates);
+              try { localStorage.setItem('cached_current_user', JSON.stringify(currentUser)); } catch(e) {}
+              window.invalidateMemberCaches({ refreshView: false });
 
               const statusTextEl = document.getElementById('editProfileSyncStatusText');
               if (statusTextEl) {
@@ -20154,51 +20368,16 @@ window.openEditProfileModal = async () => {
            const chiefName = (idToNameMap[currentUser.gameId] || currentUser.name || currentUser.chiefName || '').toString().trim();
            const cleanGid = (currentUser.gameId || '').toString().trim();
 
-           window.rosterCache = null;
-
-           const userRef = ref(db, `users/${currentUser.uid}`);
-           await update(userRef, {
-              stove_lv: newFurnace,
+           await window.executeUnifiedMemberUpdate({
+              gameId: cleanGid,
+              name: chiefName,
               furnaceLevel: newFurnace,
               dateStarted: newJoinedDate,
               joinedDate: newJoinedDate,
-              timeActive: window.calculateTimeActive(newJoinedDate),
               bio: newBio,
-              updatedAt: new Date().toISOString()
+              source: 'account_hub_profile_modal',
+              refreshViews: false
            });
-
-           try {
-              const rosterSnap = await get(ref(db, 'roster_live')).catch(() => null);
-              let rosterObj = (rosterSnap && rosterSnap.exists()) ? rosterSnap.val() : {};
-
-              let foundKey = null;
-              for (const [rk, rv] of Object.entries(rosterObj)) {
-                 if (rk.toLowerCase() === chiefName.toLowerCase() ||
-                    (rv && rv.name && rv.name.toLowerCase() === chiefName.toLowerCase()) ||
-                    (cleanGid && rv && rv.gameId && rv.gameId.toString().trim() === cleanGid)) {
-                    foundKey = rk;
-                    break;
-                 }
-              }
-              const saveKey = foundKey || (cleanGid ? cleanGid : chiefName);
-              rosterObj[saveKey] = {
-                 ...(rosterObj[saveKey] || {}),
-                 name: chiefName,
-                 gameId: cleanGid,
-                 furnaceLevel: newFurnace,
-                 stove_lv: newFurnace,
-                 dateStarted: newJoinedDate,
-                 joinedDate: newJoinedDate,
-                 timeActive: window.calculateTimeActive(newJoinedDate),
-                 updatedAt: Date.now()
-              };
-
-              await set(ref(db, `roster_live/${saveKey}`), rosterObj[saveKey]);
-              if (cleanGid && cleanGid !== saveKey) {
-                 await set(ref(db, `roster_live/${cleanGid}`), rosterObj[saveKey]);
-              }
-              window.rosterCache = rosterObj;
-           } catch(e) { console.warn("roster_live profile save error:", e); }
 
            currentUser.stove_lv = newFurnace;
            currentUser.furnaceLevel = newFurnace;
@@ -20208,24 +20387,7 @@ window.openEditProfileModal = async () => {
            currentUser.bio = newBio;
            try { localStorage.setItem('cached_current_user', JSON.stringify(currentUser)); } catch(e) {}
 
-           // Update in-memory liveData Chief's List row if present
-           if (window.liveData && window.liveData["Chief's List"]) {
-              const cList = window.liveData["Chief's List"];
-              for (let i = 1; i < cList.length; i++) {
-                 if ((cleanGid && cList[i][1] && cList[i][1].toString().trim() === cleanGid) ||
-                     (chiefName && cList[i][0] && cList[i][0].toString().toLowerCase().trim() === chiefName.toLowerCase())) {
-                    cList[i][2] = newFurnace;
-                    if (newJoinedDate) cList[i][4] = window.formatDateForDisplay(newJoinedDate);
-                    break;
-                 }
-              }
-           }
-
-           try {
-              const token = await getAuthToken();
-              const url = `${API_BASE_URL}?api=registerNewPlayer&gameId=${encodeURIComponent(cleanGid)}&name=${encodeURIComponent(chiefName)}&stove_lv=${encodeURIComponent(newFurnace)}&dateStarted=${encodeURIComponent(newJoinedDate)}&token=${encodeURIComponent(token)}`;
-              fetch(url, { mode: 'no-cors' }).catch(e => null);
-           } catch(e) {}
+           window.invalidateMemberCaches({ refreshView: false });
 
            window.showToast("Profile updated successfully!", "success");
            closeModal();
@@ -20233,7 +20395,9 @@ window.openEditProfileModal = async () => {
         } catch(e) {
            console.error("Save profile error:", e);
            window.showToast("Error saving profile. Try again.", "error");
+        } finally {
            saveBtn.textContent = 'Save Changes';
+           saveBtn.disabled = false;
         }
      };
   }
@@ -20286,32 +20450,29 @@ window.handleSyncCenturyGamesProfile = async () => {
       currentUser.centuryGamesVerified = true;
       if (updates.name) currentUser.name = updates.name;
 
-      // Update roster_live in Firebase and in-memory cache
-      try {
-        const chiefName = (idToNameMap[currentUser.gameId] || currentUser.name || '').toString().trim();
-        const cleanGid = (currentUser.gameId || '').toString().trim();
-        const rosterSnap = await get(ref(db, 'roster_live')).catch(() => null);
-        let rosterObj = (rosterSnap && rosterSnap.exists()) ? rosterSnap.val() : {};
-        let foundKey = null;
-        for (const [rk, rv] of Object.entries(rosterObj)) {
-          if ((cleanGid && rv && rv.gameId && rv.gameId.toString().trim() === cleanGid) ||
-              (chiefName && rk.toLowerCase() === chiefName.toLowerCase())) {
-            foundKey = rk;
-            break;
-          }
-        }
-        const saveKey = foundKey || chiefName || cleanGid;
-        rosterObj[saveKey] = {
-          ...(rosterObj[saveKey] || {}),
-          name: chiefName || updates.name || '',
-          gameId: cleanGid,
-          furnaceLevel: finalStove,
-          stove_lv: finalStove,
-          updatedAt: Date.now()
-        };
-        await set(ref(db, 'roster_live'), rosterObj);
-        window.rosterCache = rosterObj;
-      } catch(e) {}
+      // Update via unified engine across all authoritative database nodes
+      const chiefName = (idToNameMap[currentUser.gameId] || currentUser.name || '').toString().trim();
+      const cleanGid = (currentUser.gameId || '').toString().trim();
+      const finalName = updates.name || chiefName;
+
+      await window.executeUnifiedMemberUpdate({
+        gameId: cleanGid,
+        name: finalName,
+        furnaceLevel: finalStove,
+        avatar_image: updates.avatar_image || currentUser.avatar_image,
+        source: 'account_hub_century_sync',
+        refreshViews: false
+      });
+
+      currentUser.stove_lv = finalStove;
+      currentUser.furnaceLevel = finalStove;
+      currentUser.section = updates.section;
+      currentUser.centuryGamesVerified = true;
+      if (finalName) currentUser.name = finalName;
+      if (updates.avatar_image) currentUser.avatar_image = updates.avatar_image;
+      try { localStorage.setItem('cached_current_user', JSON.stringify(currentUser)); } catch(e) {}
+
+      window.invalidateMemberCaches({ refreshView: false });
 
       window.showToast("Profile synced successfully!", "success");
       if (views.account) views.account();
@@ -22208,31 +22369,19 @@ window.handleSyncAltProfile = async (gid, btnEl = null) => {
         lastSyncedAt: updates.lastSyncedAt
       };
 
-      // Update roster_live for alt
-      try {
-        const altRosterName = updates.name || idToNameMap[cleanGid] || cleanName;
-        const rosterSnap = await get(ref(db, 'roster_live')).catch(() => null);
-        let rosterObj = (rosterSnap && rosterSnap.exists()) ? rosterSnap.val() : {};
-        let foundKey = null;
-        for (const [rk, rv] of Object.entries(rosterObj)) {
-          if ((cleanGid && rv && rv.gameId && rv.gameId.toString().trim() === cleanGid) ||
-              (altRosterName && rk.toLowerCase() === altRosterName.toLowerCase())) {
-            foundKey = rk;
-            break;
-          }
-        }
-        const saveKey = foundKey || altRosterName || cleanGid;
-        rosterObj[saveKey] = {
-          ...(rosterObj[saveKey] || {}),
-          name: altRosterName,
-          gameId: cleanGid,
-          furnaceLevel: finalStove,
-          stove_lv: finalStove,
-          updatedAt: Date.now()
-        };
-        await set(ref(db, 'roster_live'), rosterObj);
-        window.rosterCache = rosterObj;
-      } catch(e) {}
+      // Update via unified engine across all authoritative database nodes
+      const altRosterName = updates.name || idToNameMap[cleanGid] || cleanName;
+      await window.executeUnifiedMemberUpdate({
+        gameId: cleanGid,
+        name: altRosterName,
+        furnaceLevel: finalStove,
+        avatarUrl: data.avatar_image || "",
+        ownerUid: currentUser.uid,
+        isAlt: true,
+        source: 'sync_alt_century_games',
+        refreshViews: false
+      });
+      window.invalidateMemberCaches({ refreshView: false });
 
       window.showToast(`✨ Alt ${data.nickname || cleanName} stats & avatar synced!`, 'success');
       if (views.account) views.account('Alts');
@@ -22299,31 +22448,17 @@ window.handleSyncAllCharacters = async (btnEl = null) => {
         currentUser.centuryGamesVerified = true;
         if (updates.name) currentUser.name = updates.name;
 
-        try {
-          const chiefName = (idToNameMap[currentUser.gameId] || currentUser.name || '').toString().trim();
-          const cleanGid = (currentUser.gameId || '').toString().trim();
-          const rosterSnap = await get(ref(db, 'roster_live')).catch(() => null);
-          let rosterObj = (rosterSnap && rosterSnap.exists()) ? rosterSnap.val() : {};
-          let foundKey = null;
-          for (const [rk, rv] of Object.entries(rosterObj)) {
-            if ((cleanGid && rv && rv.gameId && rv.gameId.toString().trim() === cleanGid) ||
-                (chiefName && rk.toLowerCase() === chiefName.toLowerCase())) {
-              foundKey = rk;
-              break;
-            }
-          }
-          const saveKey = foundKey || chiefName || cleanGid;
-          rosterObj[saveKey] = {
-            ...(rosterObj[saveKey] || {}),
-            name: chiefName || updates.name || '',
-            gameId: cleanGid,
-            furnaceLevel: finalStove,
-            stove_lv: finalStove,
-            updatedAt: Date.now()
-          };
-          await set(ref(db, 'roster_live'), rosterObj);
-          window.rosterCache = rosterObj;
-        } catch(e) {}
+        // Update via unified engine across all authoritative database nodes
+        const chiefName = (idToNameMap[currentUser.gameId] || currentUser.name || '').toString().trim();
+        const cleanGid = (currentUser.gameId || '').toString().trim();
+        await window.executeUnifiedMemberUpdate({
+          gameId: cleanGid,
+          name: chiefName || updates.name || '',
+          furnaceLevel: finalStove,
+          avatarUrl: data.avatar_image || "",
+          source: 'sync_all_century_games_main',
+          refreshViews: false
+        });
 
         successCount++;
       }
@@ -22379,30 +22514,18 @@ window.handleSyncAllCharacters = async (btnEl = null) => {
             lastSyncedAt: updates.lastSyncedAt
           };
 
-          try {
-            const altRosterName = updates.name || idToNameMap[gid] || `Alt ${gid}`;
-            const rosterSnap = await get(ref(db, 'roster_live')).catch(() => null);
-            let rosterObj = (rosterSnap && rosterSnap.exists()) ? rosterSnap.val() : {};
-            let foundKey = null;
-            for (const [rk, rv] of Object.entries(rosterObj)) {
-              if ((gid && rv && rv.gameId && rv.gameId.toString().trim() === gid.toString().trim()) ||
-                  (altRosterName && rk.toLowerCase() === altRosterName.toLowerCase())) {
-                foundKey = rk;
-                break;
-              }
-            }
-            const saveKey = foundKey || altRosterName || gid;
-            rosterObj[saveKey] = {
-              ...(rosterObj[saveKey] || {}),
-              name: altRosterName,
-              gameId: gid,
-              furnaceLevel: finalStove,
-              stove_lv: finalStove,
-              updatedAt: Date.now()
-            };
-            await set(ref(db, 'roster_live'), rosterObj);
-            window.rosterCache = rosterObj;
-          } catch(e) {}
+          // Update via unified engine across all authoritative database nodes
+          const altRosterName = updates.name || idToNameMap[gid] || `Alt ${gid}`;
+          await window.executeUnifiedMemberUpdate({
+            gameId: gid,
+            name: altRosterName,
+            furnaceLevel: finalStove,
+            avatarUrl: data.avatar_image || "",
+            ownerUid: currentUser.uid,
+            isAlt: true,
+            source: 'sync_all_century_games_alt',
+            refreshViews: false
+          });
 
           successCount++;
         }
@@ -22410,6 +22533,10 @@ window.handleSyncAllCharacters = async (btnEl = null) => {
         console.warn("Alt sync error:", e);
       }
     }
+  }
+
+  if (successCount > 0) {
+    window.invalidateMemberCaches({ refreshView: false });
   }
 
   if (btnEl) {
@@ -23550,38 +23677,26 @@ window.openEditAltProfileModal = async (gameId, chiefName) => {
                updatedAt: new Date().toISOString()
             }).catch(e => console.warn("users_alts save error:", e));
 
-            // 3. Save to roster_live in Firebase safely
-            try {
-               const rosterSnap = await get(ref(db, 'roster_live')).catch(() => null);
-               let rosterObj = (rosterSnap && rosterSnap.exists()) ? rosterSnap.val() : {};
-
-               let foundKey = null;
-               for (const [rk, rv] of Object.entries(rosterObj)) {
-                  if (rk.toLowerCase() === chiefName.toLowerCase() ||
-                     (rv && rv.name && rv.name.toLowerCase() === chiefName.toLowerCase()) ||
-                     (cleanGid && rv && rv.gameId && rv.gameId.toString().trim() === cleanGid)) {
-                     foundKey = rk;
-                     break;
-                  }
+            // 3. Save to roster_live in Firebase
+            await window.executeUnifiedMemberUpdate({
+               gameId: cleanGid,
+               name: chiefName,
+               furnaceLevel: newFurnace,
+               actionLog: {
+                  title: "Set Furnace Level",
+                  details: `Updated '${chiefName}' (ID: ${cleanGid}) furnace level to ${newFurnace}`
                }
-               const saveKey = foundKey || cleanGid;
-               rosterObj[saveKey] = {
-                  ...(rosterObj[saveKey] || {}),
-                  name: chiefName,
-                  gameId: cleanGid,
-                  furnaceLevel: newFurnace,
-                  stove_lv: newFurnace,
-                  joinedDate: newJoinedDate,
-                  timeActive: calculatedTimeActive,
-                  updatedAt: Date.now()
-               };
+            });
 
-               await set(ref(db, `roster_live/${saveKey}`), rosterObj[saveKey]);
-               if (cleanGid && cleanGid !== saveKey) {
-                  await set(ref(db, `roster_live/${cleanGid}`), rosterObj[saveKey]);
-               }
-               window.rosterCache = rosterObj;
-            } catch(e) { console.warn("roster_live alt save error:", e); }
+            if (window.showToast) window.showToast(`Updated ${chiefName}'s Furnace Level to ${newFurnace}!`, "success");
+            closeModal();
+
+            // Refresh player card modal if open on screen, or active view
+            if (document.getElementById('rosterLookupResult') && typeof window.searchPlayerFull === 'function') {
+               window.searchPlayerFull(chiefName).catch(() => null);
+            } else if (typeof window.activeViewFunc === 'function') {
+               window.activeViewFunc();
+            }
 
             // 4. Update in-memory liveData Chief's List row if present
             if (window.liveData && window.liveData["Chief's List"]) {
@@ -25381,7 +25496,17 @@ const views = {
                 window.nameToIdMap[finalChiefName] = gid;
 
                 try {
-                  await window.enrollGiftcodeBot(gid, finalChiefName);
+                  await window.executeUnifiedMemberUpdate({
+                    gameId: gid,
+                    name: finalChiefName,
+                    furnaceLevel: finalFurnace,
+                    membershipStatus: 'active',
+                    giftCodesEnrolled: true,
+                    avatarUrl: avatarUrlToUse,
+                    joinedDate: tempDateStarted,
+                    source: 'registration',
+                    refreshViews: false
+                  });
                   await refreshIdToNameMap();
                   const regToken = await getAuthToken();
                   const url = `${API_BASE_URL}?api=registerNewPlayer&gameId=${encodeURIComponent(gid)}&name=${encodeURIComponent(finalChiefName)}&dateStarted=${encodeURIComponent(tempDateStarted)}&level=${encodeURIComponent(finalFurnace)}${regToken ? '&token=' + encodeURIComponent(regToken) : ''}`;

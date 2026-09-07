@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [3.3.13] - 2026-09-07
+- ⚡ **Unified Sync Engine**: Updates all authoritative database nodes synchronously on every change.
+- 🔄 **Cache Invalidation**: Instantly purges cached rosters and refreshes active views.
+- 🔍 **Dual-Key Lookup**: Resolves member data by Game ID or Chief Name.
+- 🛡️ **Furnace Fallback**: Guarantees player profile furnace levels never render blank.
+- 🔗 **Alt Account Sync**: Synchronizes alt character unlinks, swaps, and registrations immediately.
+
 ## [3.3.12] - 2026-09-07
 - 🤖 **Heartbeat Watchdog**: 60-second telemetry watchdog marks bots offline if host disconnects.
 - 📡 **Dynamic Health Tags**: Separately displays live Hub and Bot Server connection statuses.
