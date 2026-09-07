@@ -562,7 +562,23 @@ window.updateMemberStatus = async (name, gid, uid, newStatus, reason = '', isAlt
         if (uid) {
             if (isAlt && targetGid) {
                 if (normStatus !== 'active') {
-                    // Archive to departedAlts and remove from active altTokens & linkedAltsData
+                    // Mark membership status on altTokens, linkedAltsData, and archive to departedAlts
+                    updatePromises.push(update(ref(db, `users/${uid}/altTokens/${targetGid}`), {
+                        membershipStatus: normStatus,
+                        status: normStatus,
+                        statusReason: reason || null,
+                        statusUpdatedAt: timestamp,
+                        statusUpdatedBy: adminName
+                    }).catch(() => null));
+
+                    updatePromises.push(update(ref(db, `users/${uid}/linkedAltsData/${targetGid}`), {
+                        membershipStatus: normStatus,
+                        status: normStatus,
+                        statusReason: reason || null,
+                        statusUpdatedAt: timestamp,
+                        statusUpdatedBy: adminName
+                    }).catch(() => null));
+
                     updatePromises.push(update(ref(db, `users/${uid}/departedAlts/${targetGid}`), {
                         name: targetName || '',
                         gameId: targetGid,
@@ -572,32 +588,31 @@ window.updateMemberStatus = async (name, gid, uid, newStatus, reason = '', isAlt
                         departedBy: adminName
                     }).catch(() => null));
 
-                    updatePromises.push(remove(ref(db, `users/${uid}/altTokens/${targetGid}`)).catch(() => null));
-                    updatePromises.push(remove(ref(db, `users/${uid}/linkedAltsData/${targetGid}`)).catch(() => null));
-
-                    // Remove from linkedGameIds array
-                    get(ref(db, `users/${uid}/linkedGameIds`)).then(snap => {
-                        if (snap.exists() && Array.isArray(snap.val())) {
-                            const updatedLinks = snap.val().filter(id => String(id).trim() !== targetGid);
-                            update(ref(db, `users/${uid}`), { linkedGameIds: updatedLinks }).catch(() => null);
-                        }
-                    }).catch(() => null);
-
                     if (currentUser && currentUser.uid === uid) {
-                        if (currentUser.altTokens) delete currentUser.altTokens[targetGid];
-                        if (currentUser.linkedAltsData) delete currentUser.linkedAltsData[targetGid];
-                        if (Array.isArray(currentUser.linkedGameIds)) {
-                            currentUser.linkedGameIds = currentUser.linkedGameIds.filter(id => String(id).trim() !== targetGid);
+                        if (currentUser.altTokens && currentUser.altTokens[targetGid]) {
+                            currentUser.altTokens[targetGid].membershipStatus = normStatus;
+                        }
+                        if (currentUser.linkedAltsData && currentUser.linkedAltsData[targetGid]) {
+                            currentUser.linkedAltsData[targetGid].membershipStatus = normStatus;
                         }
                     }
                 } else {
-                    // Restore to active altTokens
+                    // Restore to active altTokens & linkedAltsData
                     updatePromises.push(update(ref(db, `users/${uid}/altTokens/${targetGid}`), {
                         nickname: targetName || `Chief ${targetGid}`,
                         membershipStatus: 'active',
+                        status: 'active',
                         statusReason: reason || null,
                         restoredAt: timestamp
                     }).catch(() => null));
+
+                    updatePromises.push(update(ref(db, `users/${uid}/linkedAltsData/${targetGid}`), {
+                        membershipStatus: 'active',
+                        status: 'active',
+                        statusReason: reason || null,
+                        restoredAt: timestamp
+                    }).catch(() => null));
+
                     updatePromises.push(remove(ref(db, `users/${uid}/departedAlts/${targetGid}`)).catch(() => null));
 
                     get(ref(db, `users/${uid}/linkedGameIds`)).then(snap => {
@@ -607,6 +622,15 @@ window.updateMemberStatus = async (name, gid, uid, newStatus, reason = '', isAlt
                             update(ref(db, `users/${uid}`), { linkedGameIds: cur }).catch(() => null);
                         }
                     }).catch(() => null);
+
+                    if (currentUser && currentUser.uid === uid) {
+                        if (currentUser.altTokens && currentUser.altTokens[targetGid]) {
+                            currentUser.altTokens[targetGid].membershipStatus = 'active';
+                        }
+                        if (currentUser.linkedAltsData && currentUser.linkedAltsData[targetGid]) {
+                            currentUser.linkedAltsData[targetGid].membershipStatus = 'active';
+                        }
+                    }
                 }
             } else {
                 updatePromises.push(update(ref(db, `users/${uid}`), {
@@ -4954,16 +4978,37 @@ onValue(ref(db, 'roster_live'), () => {
 
 // Realtime listener for live Bot Operations Telemetry
 window.latestBotStatus = {
-  status: "STANDBY",
-  account: "ShrimpLeprechaun (Inst 14)",
-  stage: "Waiting for Cycle Start",
-  serverOnline: true,
-  bothubOnline: true,
+  status: "OFFLINE",
+  account: "Standby / Idle",
+  stage: "Host Automation Closed",
+  serverOnline: false,
+  bothubOnline: false,
   secondsLeft: 0,
   timeFormatted: "",
-  shortTime: "Just now",
+  shortTime: "Offline",
   totalBots: 0,
-  receivedAt: Date.now()
+  timestamp: 0,
+  receivedAt: 0
+};
+
+window.getBotAutomationHealth = (data = window.latestBotStatus || {}) => {
+  const now = Date.now();
+  const status = (data.status || 'OFFLINE').toUpperCase();
+  const ts = Number(data.timestamp || data.receivedAt || 0);
+  const isStale = Boolean(ts > 0 && (now - ts > 60000));
+  
+  const isHubOnline = Boolean(data.bothubOnline !== false && !isStale && status !== 'OFFLINE');
+  const isServerOnline = Boolean(isHubOnline && data.serverOnline === true);
+  const isOffline = !isHubOnline || !isServerOnline;
+  
+  return {
+    status,
+    isStale,
+    isHubOnline,
+    isServerOnline,
+    isOffline,
+    lastSeenSecs: ts > 0 ? Math.floor((now - ts) / 1000) : null
+  };
 };
 
 onValue(ref(db, 'bot_status'), (snap) => {
@@ -25758,10 +25803,12 @@ const views = {
             const ownerUid = row.getAttribute('data-owner-uid');
             const isAltCollapsed = isAltRow && ownerUid && window._collapsedAltOwnerUids && window._collapsedAltOwnerUids.has(ownerUid);
             const isExplicitAltTab = (activeTab === 'alts');
+            const isStatusTab = (activeTab === 'banned' || activeTab === 'left');
+            const isStatusAttr = (attrFilter === 'banned_members' || attrFilter === 'left_members');
             const isSpecificSearchMatch = Boolean(searchVal && (row.getAttribute('data-name')?.includes(searchVal) || row.getAttribute('data-gid')?.includes(searchVal)));
 
             if (matchesSearch && matchesTab && matchesToken && matchesAttr) {
-                if (isAltCollapsed && !isExplicitAltTab && !isSpecificSearchMatch) {
+                if (isAltCollapsed && !isExplicitAltTab && !isStatusTab && !isStatusAttr && !isSpecificSearchMatch) {
                     row.style.display = 'none';
                 } else {
                     row.style.display = '';
@@ -28136,13 +28183,16 @@ const views = {
                 if (u.linkedGameIds && Array.isArray(u.linkedGameIds)) {
                   u.linkedGameIds.forEach(aid => userAltGids.add(String(aid).trim()));
                 }
+                if (u.departedAlts && typeof u.departedAlts === 'object') {
+                  Object.keys(u.departedAlts).forEach(aid => userAltGids.add(String(aid).trim()));
+                }
 
                 userAltGids.forEach(altGid => {
                   if (!altGid) return;
                   registeredGids.add(altGid.toLowerCase());
                   altOwnerMap[altGid] = { ownerUid: uid, ownerName, ownerUser: u };
 
-                  const aTok = (u.altTokens && u.altTokens[altGid]) || (u.linkedAltsData && u.linkedAltsData[altGid]) || {};
+                  const aTok = (u.altTokens && u.altTokens[altGid]) || (u.linkedAltsData && u.linkedAltsData[altGid]) || (u.departedAlts && u.departedAlts[altGid]) || {};
                   const altName = aTok.nickname || aTok.name || aTok.chiefName || idToNameMap[altGid] || `Alt (${altGid})`;
                   const altFurnace = aTok.stove_lv || aTok.furnaceLevel || '';
 
@@ -28227,6 +28277,9 @@ const views = {
                 if (u.linkedGameIds && Array.isArray(u.linkedGameIds)) {
                   u.linkedGameIds.forEach(aid => userAltGidsSet.add(String(aid).trim()));
                 }
+                if (u.departedAlts && typeof u.departedAlts === 'object') {
+                  Object.keys(u.departedAlts).forEach(aid => userAltGidsSet.add(String(aid).trim()));
+                }
               });
 
               const totalAltsCount = userAltGidsSet.size;
@@ -28269,12 +28322,14 @@ const views = {
                   const cleanAid = String(aid).trim();
                   if (!cleanAid || processedAltGids.has(cleanAid)) return;
                   processedAltGids.add(cleanAid);
-                  const aMem = window.normalizeMembershipStatus(aTok.membershipStatus || aTok.status || memStat);
+                  const aTokData = (u.altTokens && u.altTokens[cleanAid]) || (u.linkedAltsData && u.linkedAltsData[cleanAid]) || (u.departedAlts && u.departedAlts[cleanAid]) || aTok || {};
+                  const rEntry = rosterRawData && (rosterRawData[cleanAid] || (aTokData.nickname && rosterRawData[aTokData.nickname]) || (aTokData.name && rosterRawData[aTokData.name]));
+                  const aMem = window.normalizeMembershipStatus(aTokData.membershipStatus || aTokData.status || (rEntry && (rEntry.membershipStatus || rEntry.status)) || memStat);
                   if (aMem === 'active') activeMembersCount++;
                   else if (aMem === 'left') leftMembersCount++;
                   else if (aMem === 'banned') bannedMembersCount++;
 
-                  const aStat = window.getAltTokenStatus(aTok);
+                  const aStat = window.getAltTokenStatus(aTokData);
                   const as = (aStat.status === 'expiring_soon') ? 'expiring' : (aStat.status || 'unverified');
                   if (as === 'active') tokenActiveCount++;
                   else if (as === 'expiring') tokenExpiringCount++;
@@ -28289,6 +28344,9 @@ const views = {
                 }
                 if (u.linkedGameIds && Array.isArray(u.linkedGameIds)) {
                   u.linkedGameIds.forEach(aid => checkAltTok(aid, {}));
+                }
+                if (u.departedAlts && typeof u.departedAlts === 'object') {
+                  Object.entries(u.departedAlts).forEach(([aid, at]) => checkAltTok(aid, at));
                 }
 
                 let ms = u.createdAt ? new Date(u.createdAt).getTime() : (u.timestamp ? Number(u.timestamp) : 0);
@@ -28514,7 +28572,7 @@ const views = {
           memStatusPill = `<span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.4); padding:3px 8px; border-radius:10px; font-size:11px; font-weight:bold;">🚫 Banned</span>`;
         }
 
-        // Collect all ACTIVE alts for this user (departed/banned alts are unlinked and shown individually)
+        // Collect all alts for this user (including active, left, and banned alts)
         const altGidsSet = new Set();
         if (u.altTokens && typeof u.altTokens === 'object') {
           Object.keys(u.altTokens).forEach(aid => altGidsSet.add(String(aid).trim()));
@@ -28525,13 +28583,11 @@ const views = {
         if (u.linkedGameIds && Array.isArray(u.linkedGameIds)) {
           u.linkedGameIds.forEach(aid => altGidsSet.add(String(aid).trim()));
         }
-        const userAltGids = Array.from(altGidsSet).filter(agid => {
-          const altGidStr = String(agid).trim();
-          const aTok = (u.altTokens && u.altTokens[altGidStr]) || (u.linkedAltsData && u.linkedAltsData[altGidStr]) || {};
-          const altMemStatus = window.normalizeMembershipStatus(aTok.membershipStatus || aTok.status || memStatus);
-          return altMemStatus === 'active';
-        });
-        const totalAlts = (memStatus === 'active') ? userAltGids.length : 0;
+        if (u.departedAlts && typeof u.departedAlts === 'object') {
+          Object.keys(u.departedAlts).forEach(aid => altGidsSet.add(String(aid).trim()));
+        }
+        const userAltGids = Array.from(altGidsSet);
+        const totalAlts = userAltGids.length;
 
         const tokenStatus = window.getMemberTokenStatus(u);
         const rowTokenStatus = (tokenStatus.status === 'expiring_soon') ? 'expiring' : (tokenStatus.status || 'unverified');
@@ -28696,11 +28752,17 @@ const views = {
         if (totalAlts > 0) {
           userAltGids.forEach(agid => {
             const altGidStr = String(agid).trim();
-            const aTok = (u.altTokens && u.altTokens[altGidStr]) || (u.linkedAltsData && u.linkedAltsData[altGidStr]) || {};
-            let altName = aTok.nickname || aTok.name || aTok.chiefName || idToNameMap[altGidStr] || `Alt (${altGidStr})`;
-            let altFurnace = aTok.stove_lv || aTok.furnaceLevel || '';
-            
-            const altMemStatus = window.normalizeMembershipStatus(aTok.membershipStatus || aTok.status || memStatus);
+            const aTok = (u.altTokens && u.altTokens[altGidStr]) || {};
+            const aData = (u.linkedAltsData && u.linkedAltsData[altGidStr]) || {};
+            const aDep = (u.departedAlts && u.departedAlts[altGidStr]) || {};
+            let altName = aTok.nickname || aTok.name || aTok.chiefName || aData.name || aData.chiefName || aDep.name || idToNameMap[altGidStr] || `Alt (${altGidStr})`;
+            let altFurnace = aTok.stove_lv || aTok.furnaceLevel || aData.stove_lv || aData.furnaceLevel || '';
+            const rEntry = rosterRawData && (rosterRawData[altGidStr] || rosterRawData[altName] || Object.values(rosterRawData).find(r => r && (String(r.gameId || r.id || r.gid) === altGidStr || (r.chiefName && r.chiefName.toLowerCase() === altName.toLowerCase()))));
+            if (rEntry) {
+              if (!altFurnace) altFurnace = rEntry.furnaceLevel || rEntry.stove_lv || '';
+              if (!altName || altName.startsWith('Alt (')) altName = rEntry.chiefName || rEntry.name || altName;
+            }
+            const altMemStatus = window.normalizeMembershipStatus(aTok.membershipStatus || aTok.status || aData.membershipStatus || aData.status || aDep.membershipStatus || (rEntry && (rEntry.membershipStatus || rEntry.status)) || memStatus);
             let altMemPill = `<span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:2px 6px; border-radius:10px; font-size:10px; font-weight:bold;">🟢 Active</span>`;
             if (altMemStatus === 'left') {
               altMemPill = `<span style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); padding:2px 6px; border-radius:10px; font-size:10px; font-weight:bold;">🚪 Left</span>`;

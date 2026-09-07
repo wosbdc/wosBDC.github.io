@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.12] - 2026-09-07
+- 🚫 **Banned Accounts**: Banned alts and members now display properly.
+- 👁️ **Unfiltered Banned View**: Status tabs show all matching accounts immediately.
+- 🎭 **Alt Status Badges**: Banned alts clearly display red status badges.
+- ⚙️ **Accurate Alt Counters**: Roster database reflects complete alt counts accurately.
+
 ## [3.3.11] - 2026-09-07
 - 🤖 **Bot Server Detection**: Live dual-app process monitoring alerts when server closes.
 - 🔔 **R4/R5 Bell Alerts**: Confidential offline notifications sent exclusively to leadership.

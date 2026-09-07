@@ -1,15 +1,17 @@
 {
-  "version": "3.3.11",
+  "version": "3.3.12",
   "releaseDate": "2026-09-07",
-  "title": "What's New in v3.3.11",
+  "title": "What's New in v3.3.12",
   "notes": [
-    "🤖 Bot Server Detection: Dual-app process monitoring alerts when server closes.",
-    "🔔 Confidential Bell Alerts: Offline alerts sent exclusively to R4/R5 leadership.",
-    "📡 Dual-App Radar Health: Displays compact live status tags for both programs."
+    "🚫 Banned Accounts Fixed: Banned alts and roster members now display properly.",
+    "👁️ Unfiltered Banned View: Status tabs now show all matching accounts immediately.",
+    "🎭 Alt Status Badging: Banned alts clearly display their red status badges.",
+    "⚙️ Accurate Alt Counters: Roster database reflects complete alt counts accurately."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.11",
+    "version": "3.3.12",
     "latestChanges": [
+      "v3.3.12: Fixed banned accounts visibility and alt display filtering in Alliance Members & Player Database",
       "v3.3.11: Added Bot Server dual-detection and confidential R4/R5 leadership Bell alerts",
       "v3.3.10: Fixed GitHub Pages deployment pipeline and cross-platform headless test execution",
       "v3.3.9: Alliance Bot Fleet & Account Login Safety Matrix for 7 bots",

@@ -64,7 +64,7 @@ const mainContent = fs.readFileSync('main.js', 'utf8');
 
 assert(mainContent.includes('departedAlts'), 'main.js includes departedAlts archive node');
 assert(mainContent.includes('const rawLinks = Array.isArray(currentUser.linkedGameIds)'), 'main.js filters rawLinks in views.account');
-assert(mainContent.includes("totalAlts = (memStatus === 'active') ? userAltGids.length : 0"), 'main.js only counts active alts for active mains');
+assert(mainContent.includes('const totalAlts = userAltGids.length'), 'main.js counts all alts in database table');
 assert(mainContent.includes('window.updateMemberStatus'), 'main.js includes updateMemberStatus');
 
 console.log('\n=========================================');
