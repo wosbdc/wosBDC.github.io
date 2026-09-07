@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.14] - 2026-09-07
+- 👥 **Roster Deduplication**: Fixed double-counted chiefs on event Yes and No pages.
+- 🛡️ **Accurate Member Totals**: Event trackers display exact active member counts without duplicates.
+- ⚡ **Non-Enumerable Aliases**: Preserves instant Game ID lookups without inflating roster collections.
+- 🗄️ **Archive Deduplication**: Cleaned cycle snapshot routines to prevent duplicate participant records.
+
 ## [3.3.13] - 2026-09-07
 - ⚡ **Unified Sync Engine**: Updates all authoritative database nodes synchronously on every change.
 - 🔄 **Cache Invalidation**: Instantly purges cached rosters and refreshes active views.

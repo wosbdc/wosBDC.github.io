@@ -1,16 +1,17 @@
 {
-  "version": "3.3.13",
+  "version": "3.3.14",
   "releaseDate": "2026-09-07",
-  "title": "What's New in v3.3.13",
+  "title": "What's New in v3.3.14",
   "notes": [
-    "⚡ Unified Sync Engine: Updates all database nodes synchronously on every change.",
-    "🔄 Cache Invalidation: Instantly purges cached rosters and refreshes active views.",
-    "🔍 Dual-Key Lookup: Resolves member data by Game ID or Chief Name.",
-    "🛡️ Furnace Fallback: Guarantees player profile furnace levels never render blank."
+    "👥 Roster Deduplication: Fixed double-counted chiefs on event Yes and No pages.",
+    "🛡️ Accurate Member Totals: Event trackers display exact active member counts without duplicates.",
+    "⚡ Non-Enumerable Aliases: Preserves instant Game ID lookups without inflating roster collections.",
+    "🗄️ Archive Deduplication: Cleaned cycle snapshot routines to prevent duplicate participant records."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.13",
+    "version": "3.3.14",
     "latestChanges": [
+      "v3.3.14: Roster deduplication across event Yes/No pages and non-enumerable alias keys",
       "v3.3.13: Unified member update sync engine, dual-key resolution, and instant cache invalidation",
       "v3.3.12: Added 60s heartbeat watchdog, dynamic hub/server health tags, and clean exit handlers",
       "v3.3.11: Added Bot Server dual-detection and confidential R4/R5 leadership Bell alerts",

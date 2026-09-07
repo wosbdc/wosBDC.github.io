@@ -482,14 +482,26 @@ window.fetchRoster = async (forceFresh = false) => {
            delete cached['Chief Name'];
            delete cached['chief name'];
 
-           const dualIndexed = {};
+           const deduplicated = {};
+           const seenGids = new Set();
+           const seenNames = new Set();
+           const entriesToAlias = [];
 
            for (const [k, p] of Object.entries(cached)) {
                if (!p || typeof p !== 'object') continue;
                const gid = p.gameId ? String(p.gameId).trim() : (/^\d{6,}$/.test(k) ? k : '');
                const name = window.cleanChiefName(p.name || p.chiefName || (/^\d{6,}$/.test(k) ? '' : k));
+               const normName = name.toLowerCase();
                const furnaceLevel = p.furnaceLevel || p.stove_lv || 'F30';
                const memStatus = window.normalizeMembershipStatus(p.membershipStatus || p.status || 'active');
+
+               // If already registered in primary map by either GID or Name, do not create duplicate enumerable entry
+               if ((gid && seenGids.has(gid)) || (normName && seenNames.has(normName))) {
+                   continue;
+               }
+
+               if (gid) seenGids.add(gid);
+               if (normName) seenNames.add(normName);
 
                const entry = {
                    ...p,
@@ -502,17 +514,29 @@ window.fetchRoster = async (forceFresh = false) => {
                    status: memStatus
                };
 
-               if (name) {
-                   dualIndexed[name] = entry;
-                   dualIndexed[name.toLowerCase()] = entry;
-               }
-               if (gid) {
-                   dualIndexed[gid] = entry;
-               }
-               dualIndexed[k] = entry;
+               const primaryKey = name || gid || k;
+               deduplicated[primaryKey] = entry;
+               entriesToAlias.push({ primaryKey, entry, gid, name, normName, k });
            }
 
-           window.rosterCache = dualIndexed;
+           // Define non-enumerable aliases so lookup by gid or lowercase name works seamlessly
+           // WITHOUT duplicating items in Object.values(window.rosterCache)!
+           entriesToAlias.forEach(({ primaryKey, entry, gid, name, normName, k }) => {
+               const aliases = new Set([gid, normName, k].filter(Boolean));
+               aliases.delete(primaryKey);
+               aliases.forEach(alias => {
+                   if (!(alias in deduplicated)) {
+                       Object.defineProperty(deduplicated, alias, {
+                           value: entry,
+                           enumerable: false,
+                           writable: true,
+                           configurable: true
+                       });
+                   }
+               });
+           });
+
+           window.rosterCache = deduplicated;
            return window.rosterCache;
        }
    } catch(e) { console.warn('Firebase roster read error:', e); }
@@ -538,8 +562,12 @@ window.fetchRoster = async (forceFresh = false) => {
                status: 'active'
            };
            newRoster[name] = item;
-           newRoster[name.toLowerCase()] = item;
-           if (gameId) newRoster[gameId] = item;
+           if (name.toLowerCase() !== name) {
+               Object.defineProperty(newRoster, name.toLowerCase(), { value: item, enumerable: false, writable: true, configurable: true });
+           }
+           if (gameId && gameId !== name) {
+               Object.defineProperty(newRoster, gameId, { value: item, enumerable: false, writable: true, configurable: true });
+           }
        }
        try {
            await set(ref(db, 'roster_live'), newRoster);
@@ -4052,9 +4080,15 @@ window.archiveAndResetMercenaryCycle = async () => {
         ]);
 
         let rosterList = [];
+        const seenGids = new Set();
         if (rosterData) {
             Object.values(rosterData).forEach(p => {
-                if (p.name && p.gameId && window.isPlayerActiveMember(p)) rosterList.push(p);
+                const gid = p.gameId ? String(p.gameId).trim() : (p.name || '').toLowerCase().trim();
+                if (gid && seenGids.has(gid)) return;
+                if (p.name && p.gameId && window.isPlayerActiveMember(p)) {
+                    seenGids.add(gid);
+                    rosterList.push(p);
+                }
             });
         }
         if (rosterList.length === 0 && window.idToNameMap) {
@@ -4175,14 +4209,21 @@ window.archiveAndResetPolarTerrorsCycle = async () => {
         ]);
 
         let rosterList = [];
+        const seenGids = new Set();
         if (rosterData) {
             Object.values(rosterData).forEach(p => {
-                if (p.name && p.gameId && window.isPlayerActiveMember(p)) rosterList.push(p);
+                const gidStr = p.gameId ? p.gameId.toString().trim() : '';
+                if (p.name && gidStr && !seenGids.has(gidStr) && window.isPlayerActiveMember(p)) {
+                    seenGids.add(gidStr);
+                    rosterList.push(p);
+                }
             });
         }
         if (rosterList.length === 0 && window.idToNameMap) {
             Object.entries(window.idToNameMap).forEach(([gid, name]) => {
-                if (window.isPlayerActiveMember({ gameId: gid, name: name })) {
+                const gidStr = gid ? gid.toString().trim() : '';
+                if (gidStr && !seenGids.has(gidStr) && window.isPlayerActiveMember({ gameId: gid, name: name })) {
+                    seenGids.add(gidStr);
                     rosterList.push({ gameId: gid, name: name });
                 }
             });
@@ -4299,14 +4340,21 @@ window.archiveAndResetBearTrapCycle = async () => {
         ]);
 
         let rosterList = [];
+        const seenGids = new Set();
         if (rosterData) {
             Object.values(rosterData).forEach(p => {
-                if (p.name && p.gameId && window.isPlayerActiveMember(p)) rosterList.push(p);
+                const gidStr = p.gameId ? p.gameId.toString().trim() : '';
+                if (p.name && gidStr && !seenGids.has(gidStr) && window.isPlayerActiveMember(p)) {
+                    seenGids.add(gidStr);
+                    rosterList.push(p);
+                }
             });
         }
         if (rosterList.length === 0 && window.idToNameMap) {
             Object.entries(window.idToNameMap).forEach(([gid, name]) => {
-                if (window.isPlayerActiveMember({ gameId: gid, name: name })) {
+                const gidStr = gid ? gid.toString().trim() : '';
+                if (gidStr && !seenGids.has(gidStr) && window.isPlayerActiveMember({ gameId: gid, name: name })) {
+                    seenGids.add(gidStr);
                     rosterList.push({ gameId: gid, name: name });
                 }
             });
@@ -12936,14 +12984,21 @@ window.archiveAndResetChampionshipSeason = async () => {
 
         // 4. Process Roster and Archive Signups
         let rosterList = [];
+        const seenGids = new Set();
         if (rosterData) {
             Object.values(rosterData).forEach(p => {
-                if (p.name && p.gameId && window.isPlayerActiveMember(p)) rosterList.push(p);
+                const gidStr = p.gameId ? p.gameId.toString().trim() : '';
+                if (p.name && gidStr && !seenGids.has(gidStr) && window.isPlayerActiveMember(p)) {
+                    seenGids.add(gidStr);
+                    rosterList.push(p);
+                }
             });
         }
         if (rosterList.length === 0 && window.idToNameMap) {
             Object.entries(window.idToNameMap).forEach(([gid, name]) => {
-                if (window.isPlayerActiveMember({ gameId: gid, name: name })) {
+                const gidStr = gid ? gid.toString().trim() : '';
+                if (gidStr && !seenGids.has(gidStr) && window.isPlayerActiveMember({ gameId: gid, name: name })) {
+                    seenGids.add(gidStr);
                     rosterList.push({ gameId: gid, name: name });
                 }
             });
@@ -30644,9 +30699,15 @@ const views = {
         ]);
 
         let rosterList = [];
+        const seenGids = new Set();
         if (rosterData) {
             Object.values(rosterData).forEach(p => {
-                if (p.name && p.gameId && window.isPlayerActiveMember(p)) rosterList.push(p);
+                const gid = p.gameId ? String(p.gameId).trim() : (p.name || '').toLowerCase().trim();
+                if (gid && seenGids.has(gid)) return;
+                if (p.name && p.gameId && window.isPlayerActiveMember(p)) {
+                    seenGids.add(gid);
+                    rosterList.push(p);
+                }
             });
         }
         rosterList.sort((a,b) => (a.name || '').localeCompare(b.name || ''));
@@ -31314,9 +31375,15 @@ const views = {
         ]);
 
         let rosterList = [];
+        const seenGids = new Set();
         if (rosterData) {
             Object.values(rosterData).forEach(p => {
-                if (p.name && p.gameId && window.isPlayerActiveMember(p)) rosterList.push(p);
+                const gid = p.gameId ? String(p.gameId).trim() : (p.name || '').toLowerCase().trim();
+                if (gid && seenGids.has(gid)) return;
+                if (p.name && p.gameId && window.isPlayerActiveMember(p)) {
+                    seenGids.add(gid);
+                    rosterList.push(p);
+                }
             });
         }
 
@@ -31552,9 +31619,15 @@ const views = {
         ]);
 
         let rosterList = [];
+        const seenGids = new Set();
         if (rosterData) {
             Object.values(rosterData).forEach(p => {
-                if (p.name && p.gameId && window.isPlayerActiveMember(p)) rosterList.push(p);
+                const gid = p.gameId ? String(p.gameId).trim() : (p.name || '').toLowerCase().trim();
+                if (gid && seenGids.has(gid)) return;
+                if (p.name && p.gameId && window.isPlayerActiveMember(p)) {
+                    seenGids.add(gid);
+                    rosterList.push(p);
+                }
             });
         }
 
@@ -31897,9 +31970,15 @@ const views = {
         ]);
 
         let rosterList = [];
+        const seenGids = new Set();
         if (rosterData) {
             Object.values(rosterData).forEach(p => {
-                if (p.name && p.gameId && window.isPlayerActiveMember(p)) rosterList.push(p);
+                const gid = p.gameId ? String(p.gameId).trim() : (p.name || '').toLowerCase().trim();
+                if (gid && seenGids.has(gid)) return;
+                if (p.name && p.gameId && window.isPlayerActiveMember(p)) {
+                    seenGids.add(gid);
+                    rosterList.push(p);
+                }
             });
         }
 
@@ -36972,9 +37051,15 @@ window.resetBearTrapEvent = async () => {
         ]);
 
         let rosterList = [];
+        const seenGids = new Set();
         if (rosterData) {
             Object.values(rosterData).forEach(p => {
-                if (p.name && p.gameId) rosterList.push(p);
+                const gid = p.gameId ? String(p.gameId).trim() : (p.name || '').toLowerCase().trim();
+                if (gid && seenGids.has(gid)) return;
+                if (p.name && p.gameId && window.isPlayerActiveMember(p)) {
+                    seenGids.add(gid);
+                    rosterList.push(p);
+                }
             });
         }
         rosterList.sort((a,b) => (a.name || '').localeCompare(b.name || ''));
