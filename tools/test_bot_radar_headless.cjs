@@ -93,9 +93,11 @@ function runStaticVerification() {
   console.log('  ✅ getBotFleetSafetyHtml contains all 3 safety states (Occupied, Cooldown, Safe).');
 
   // 5. Views integration
-  assert(code.includes("${typeof window.getBotFleetSafetyHtml === 'function' ? window.getBotFleetSafetyHtml() : ''}"), 'views.staff must embed safety matrix');
+  assert(code.includes('window.getBotFleetSafetyHtml') && code.includes('views.staff'), 'views.staff must embed safety matrix');
   assert(code.includes("document.querySelectorAll('.bot-fleet-container')"), 'DOM updater must refresh all fleet containers');
-  console.log('  ✅ Views and interval mutation hooks verified for staff and admin radar.');
+  assert(code.includes('bot-radar-server-tag'), 'DOM must include bot-radar-server-tag');
+  assert(code.includes('bot_fleet_offline_alert'), 'Code must handle bot_fleet_offline_alert');
+  console.log('  ✅ Views, dual server tags, and alert hooks verified for staff and admin radar.');
 
   console.log('\n🎉 ALL STATIC & STRUCTURAL ASSERTIONS PASSED 100%!\n');
   process.exit(0);
@@ -179,9 +181,11 @@ server.listen(PORT, async () => {
     await page.goto(`http://localhost:${PORT}`, { waitUntil: 'networkidle0', timeout: 15000 });
     await new Promise(r => setTimeout(r, 1000));
 
-    // Authenticate and navigate to Staff view
+    // Authenticate and navigate to Staff view as R5 Leader
     const navigatedStaff = await page.evaluate(async () => {
       window.currentUser = { uid: '318843189', email: 'officer@bdc.com', displayName: 'Staff Officer' };
+      window.isAdminUser = () => true;
+      window.getAdminLevel = () => 'R5';
       if (typeof window.views?.staff === 'function') {
         await window.views.staff();
         return true;
@@ -212,7 +216,7 @@ server.listen(PORT, async () => {
       throw new Error('Security Breach: #bot-operations-radar was found on Staff page! It must be restricted to Admin menu only.');
     }
     if (!staffAudit.fleetInStaff) {
-      throw new Error('Assertion Failed: #bot-fleet-safety-container was NOT found on Staff page!');
+      throw new Error('Assertion Failed: #bot-fleet-safety-container was NOT found on Staff page for R5 Leader!');
     }
     if (staffAudit.fleetItemCount !== 7) {
       throw new Error(`Assertion Failed: Expected 7 bot fleet items on Staff page, found ${staffAudit.fleetItemCount}`);
@@ -221,7 +225,21 @@ server.listen(PORT, async () => {
       throw new Error('Assertion Failed: Guardian was found in bot fleet! Guardian is not a bot and must be excluded.');
     }
     console.log('  ✅ Verified: #bot-operations-radar is secluded from Staff page.');
-    console.log(`  ✅ Verified: Staff page contains 7-bot Fleet Safety Matrix (Guardian cleanly excluded).`);
+    console.log(`  ✅ Verified: Staff page contains 7-bot Fleet Safety Matrix for R5 Leadership (Guardian cleanly excluded).`);
+
+    // Test regular member (R2) visiting staff page: fleet matrix must be NULL!
+    const regularMemberAudit = await page.evaluate(async () => {
+      window.currentUser = { uid: '9999', email: 'member@bdc.com', displayName: 'Regular Member' };
+      window.isAdminUser = () => false;
+      window.getAdminLevel = () => 'R2';
+      await window.views.staff();
+      const fleetInStaff = document.getElementById('bot-fleet-safety-container') !== null;
+      return { fleetInStaff };
+    });
+    if (regularMemberAudit.fleetInStaff) {
+      throw new Error('Security Breach: Regular member (R2) was exposed to Bot Fleet Safety Matrix on Staff page!');
+    }
+    console.log('  ✅ Verified: Regular member (R2) has zero exposure to Bot Fleet Matrix on Staff page.');
 
     console.log('\n--- PHASE 2: ADMIN MENU BOTS TAB & FLEET MATRIX TEST ---');
     // Mock admin authentication and navigate directly to views.admin('tab-bots')
@@ -389,8 +407,117 @@ server.listen(PORT, async () => {
     console.log(`     2. ${mutationResult.accountB} -> Occupied: ${mutationResult.bisquickTagB}, Reverted Angry: ${mutationResult.angryTagB}`);
     console.log(`     3. ${mutationResult.accountC} -> Resting: ${mutationResult.shrimpTagC} (${mutationResult.shrimpDetailC})`);
 
+    console.log('\n--- PHASE 4: BOT SERVER OFFLINE & DUAL-APP RADAR HEALTH TEST ---');
+    const offlineRadarResult = await page.evaluate(async () => {
+      window.latestBotStatus = {
+        status: 'OFFLINE',
+        account: 'Standby / Idle',
+        serverOnline: false,
+        bothubOnline: true,
+        stage: 'Bot Server Closed',
+        secondsLeft: 0,
+        totalBots: 0,
+        shortTime: 'Just now',
+        receivedAt: Date.now()
+      };
+      window.updateBotOperationsRadarDom();
+
+      const radarCard = document.getElementById('bot-operations-radar');
+      const hasOfflineBorder = radarCard?.classList?.contains('border-offline');
+      const badgeText = document.getElementById('bot-radar-badge-el')?.textContent?.trim();
+      const clockText = document.getElementById('bot-radar-clock')?.textContent?.trim();
+      const dualTagText = document.getElementById('bot-radar-dual-tag')?.textContent?.trim();
+      const offlineAlertEl = document.getElementById('bot-radar-offline-alert');
+      const offlineAlertVisible = offlineAlertEl && window.getComputedStyle(offlineAlertEl).display !== 'none';
+      const offlineAlertText = offlineAlertEl?.textContent?.trim();
+
+      return {
+        hasOfflineBorder,
+        badgeText,
+        clockText,
+        dualTagText,
+        offlineAlertVisible,
+        offlineAlertText
+      };
+    });
+
+    if (!offlineRadarResult.hasOfflineBorder) {
+      throw new Error('Assertion Failed: Radar card did not receive .border-offline class when server is offline!');
+    }
+    if (offlineRadarResult.badgeText !== '🔴 BOT SERVER OFFLINE') {
+      throw new Error(`Assertion Failed: Expected badge "🔴 BOT SERVER OFFLINE", got "${offlineRadarResult.badgeText}"`);
+    }
+    if (!offlineRadarResult.dualTagText.includes('Hub: Online') || !offlineRadarResult.dualTagText.includes('Server: Offline')) {
+      throw new Error(`Assertion Failed: Dual tag did not show Hub: Online and Server: Offline! Got: "${offlineRadarResult.dualTagText}"`);
+    }
+    if (!offlineRadarResult.offlineAlertVisible || !offlineRadarResult.offlineAlertText.includes('AUTOMATION HALTED')) {
+      throw new Error(`Assertion Failed: Offline warning bar not visible or missing AUTOMATION HALTED! Got: "${offlineRadarResult.offlineAlertText}"`);
+    }
+    console.log(`  ✅ Verified: Radar displays dual tag (${offlineRadarResult.dualTagText}), red offline badge, and AUTOMATION HALTED warning bar.`);
+
+    console.log('\n--- PHASE 5: R4/R5 BELL ALERT INTEGRATION & PRIVACY AUDIT ---');
+    // Step A: Regular member opens Bell modal -> MUST NOT see bot alert!
+    const regularBellResult = await page.evaluate(async () => {
+      window.currentUser = { uid: '9999', email: 'member@bdc.com', displayName: 'Regular Member' };
+      window.isAdminUser = () => false;
+      window.getAdminLevel = () => 'R2';
+
+      await window.openAllianceAlertsModal();
+      await new Promise(r => setTimeout(r, 200));
+
+      const modal = document.getElementById('notificationsModalOverlay');
+      const hasModal = modal !== null;
+      const modalText = modal ? modal.textContent : '';
+      const hasBotAlert = modalText.includes('BOT ALERT') || modalText.includes('Bot Server Offline');
+      const hasGnBots = modalText.toLowerCase().includes('gnbots');
+
+      return { hasModal, hasBotAlert, hasGnBots };
+    });
+
+    if (!regularBellResult.hasModal) {
+      throw new Error('Assertion Failed: Could not open Bell alerts modal for regular user');
+    }
+    if (regularBellResult.hasBotAlert) {
+      throw new Error('Security Breach: Regular member (R2) was shown Bot Offline alert card in Bell modal!');
+    }
+    if (regularBellResult.hasGnBots) {
+      throw new Error('Security Breach: Banned term "gnbots" found in regular user modal!');
+    }
+    console.log('  ✅ Verified: Regular member (R2) sees zero bot alerts in Bell modal.');
+
+    // Step B: R5 Leader opens Bell modal -> MUST see confidential alert!
+    const leaderBellResult = await page.evaluate(async () => {
+      window.currentUser = { uid: '318843189', email: 'admin@bdc.com', displayName: 'R5 Leader' };
+      window.isAdminUser = () => true;
+      window.getAdminLevel = () => 'R5';
+
+      await window.openAllianceAlertsModal();
+      await new Promise(r => setTimeout(r, 200));
+
+      const modal = document.getElementById('notificationsModalOverlay');
+      const hasModal = modal !== null;
+      const modalText = modal ? modal.textContent : '';
+      const hasBotAlert = modalText.includes('BOT ALERT');
+      const hasR4R5Badge = modalText.includes('R4/R5 ONLY');
+      const hasRadarBtn = modal ? Array.from(modal.querySelectorAll('button')).some(b => b.textContent.includes('View Bot Radar')) : false;
+      const hasGnBots = modalText.toLowerCase().includes('gnbots');
+
+      return { hasModal, hasBotAlert, hasR4R5Badge, hasRadarBtn, hasGnBots };
+    });
+
+    if (!leaderBellResult.hasBotAlert || !leaderBellResult.hasR4R5Badge) {
+      throw new Error('Assertion Failed: R5 Leader was not shown confidential "🚨 BOT ALERT" / "👑 R4/R5 ONLY" card in Bell modal!');
+    }
+    if (!leaderBellResult.hasRadarBtn) {
+      throw new Error('Assertion Failed: "🤖 View Bot Radar ➔" button was not found in leader bot alert card!');
+    }
+    if (leaderBellResult.hasGnBots) {
+      throw new Error('Security Breach: Banned term "gnbots" found in leadership modal!');
+    }
+    console.log('  ✅ Verified: R5 Leadership receives confidential 🚨 BOT ALERT with 👑 R4/R5 ONLY badge and View Bot Radar action.');
+
     // Responsive Audit across Mobile, Tablet, Desktop
-    console.log('\n--- PHASE 3: RESPONSIVE OVERFLOW AUDIT ---');
+    console.log('\n--- PHASE 6: RESPONSIVE OVERFLOW AUDIT ---');
     const viewports = [
       { name: 'Desktop (1280x800)', width: 1280, height: 800 },
       { name: 'Tablet (768x1024)', width: 768, height: 1024 },

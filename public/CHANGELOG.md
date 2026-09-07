@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.11] - 2026-09-07
+- 🤖 **Bot Server Detection**: Live dual-app process monitoring alerts when server closes.
+- 🔔 **R4/R5 Bell Alerts**: Confidential offline notifications sent exclusively to leadership.
+- 📡 **Dual-App Radar Health**: Displays compact live status tags for both programs.
+- 🛡️ **Member Privacy**: Regular alliance members never see bot alerts or cards.
+
 ## [3.3.10] - 2026-09-07
 - 🚀 **CI Build Fix**: Fixed GitHub Pages automated deployment pipeline failure.
 - 🌐 **Cross-Platform Test**: Headless test suite now supports cloud CI runners.
