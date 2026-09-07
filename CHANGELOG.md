@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [3.3.9] - 2026-09-07
+- 🤖 **Bot Fleet Matrix**: Displays active status for all seven bots.
+- ⛔ **Login Safety Warnings**: Red alerts indicate when accounts are occupied.
+- ⏳ **Resting Countdowns**: Live timers show cooldowns between bot routines.
+- 🟢 **Safe Login Tags**: Clear green tags show accounts safe to use.
+- 👥 **Staff View Matrix**: Alliance officers can view fleet safety instantly.
+
 ## [3.3.8] - 2026-09-06
 - ⚡ **Real-Time Sync**: Radar dynamically updates clock, progress, and stage.
 - ⏱️ **Smooth Ticker**: Dynamic countdowns for active routines and cooldowns.

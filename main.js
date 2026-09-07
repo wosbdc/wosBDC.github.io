@@ -4974,6 +4974,101 @@ onValue(ref(db, 'bot_status'), (snap) => {
   }
 });
 
+window.ALLIANCE_BOT_ROSTER = [
+  { id: 'sentinel', name: 'Sentinel Frost', inst: 'Inst 4' },
+  { id: 'bisquick', name: 'Bisquick', inst: 'Inst 11' },
+  { id: 'gingivitis', name: 'Gingivitis', inst: 'Inst 12' },
+  { id: 'bdcfdaddy', name: 'BDCFdaddy', inst: 'Inst 13' },
+  { id: 'shrimp', name: 'ShrimpLeprechaun', inst: 'Inst 14' },
+  { id: 'angry', name: 'AngryGermanpapi', inst: 'Inst 15' },
+  { id: 'babyangry', name: 'BabyAngryGerman', inst: 'Inst 16' }
+];
+
+window.getBotFleetSafetyHtml = () => {
+  const data = window.latestBotStatus || {};
+  const status = (data.status || 'STANDBY').toUpperCase();
+  const activeAccount = data.account || '';
+  const secondsLeft = data.secondsLeft || 0;
+  
+  let cdRemainingText = '';
+  if (status === 'COOLDOWN' && secondsLeft > 0) {
+    const elapsedSecs = Math.floor((Date.now() - (data.receivedAt || Date.now())) / 1000);
+    const rem = Math.max(0, secondsLeft - elapsedSecs);
+    const m = Math.floor(rem / 60).toString().padStart(2, '0');
+    const s = (rem % 60).toString().padStart(2, '0');
+    cdRemainingText = `${m}:${s} left`;
+  }
+
+  let occupiedCount = 0;
+  let safeCount = 0;
+
+  const cardsHtml = window.ALLIANCE_BOT_ROSTER.map(bot => {
+    const isBotActive = status === 'ACTIVE' && activeAccount.includes(bot.name);
+    const isBotCooldown = (status === 'COOLDOWN' && activeAccount.includes(bot.name)) || (status === 'COOLDOWN' && bot.id === 'shrimp' && !activeAccount);
+    
+    let itemClass = 'safe';
+    let badgeClass = 'safe';
+    let badgeTitle = '● STANDBY';
+    let actionTag = '✅ Safe to log in';
+    let detail = 'Routines completed • Idle';
+
+    if (isBotActive) {
+      occupiedCount++;
+      itemClass = 'occupied';
+      badgeClass = 'occupied';
+      badgeTitle = '● ACTIVE DUTY';
+      actionTag = '⛔ DO NOT LOG IN';
+      detail = 'Running Wilderness / Daily Tasks';
+    } else if (isBotCooldown) {
+      itemClass = 'cooldown';
+      badgeClass = 'cooldown';
+      badgeTitle = '⏳ COOLDOWN';
+      actionTag = '⚠️ Resting between runs';
+      detail = cdRemainingText ? `City tab resting • ${cdRemainingText}` : 'Resting on City Tab';
+    } else {
+      safeCount++;
+    }
+
+    return `
+      <div class="bot-fleet-item ${itemClass}" id="bot-fleet-item-${bot.id}">
+        <div class="bot-fleet-item-info">
+          <div class="bot-fleet-name-row">
+            <span class="bot-fleet-name">${bot.name}</span>
+            <span class="bot-fleet-inst">${bot.inst}</span>
+          </div>
+          <span class="bot-fleet-detail" id="bot-fleet-detail-${bot.id}">${detail}</span>
+        </div>
+        <div class="bot-fleet-badge ${badgeClass}" id="bot-fleet-badge-${bot.id}">
+          <span id="bot-fleet-badgetext-${bot.id}">${badgeTitle}</span>
+          <span class="bot-fleet-tag" id="bot-fleet-tag-${bot.id}">${actionTag}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div id="bot-fleet-safety-container" class="bot-fleet-container">
+      <div class="bot-fleet-header">
+        <div class="bot-fleet-title">
+          <span>🤖</span>
+          <span>Alliance Bot Fleet & Account Login Safety</span>
+        </div>
+        <div class="bot-fleet-summary">
+          <div id="bot-fleet-busy-count" class="bot-fleet-summary-pill busy">
+            <span>🔴 ${occupiedCount} OCCUPIED</span>
+          </div>
+          <div id="bot-fleet-safe-count" class="bot-fleet-summary-pill safe">
+            <span>🟢 ${safeCount} SAFE TO LOGIN</span>
+          </div>
+        </div>
+      </div>
+      <div class="bot-fleet-grid">
+        ${cardsHtml}
+      </div>
+    </div>
+  `;
+};
+
 window.getBotOperationsRadarHtml = () => {
   const data = window.latestBotStatus || {};
   const status = (data.status || 'STANDBY').toUpperCase();
@@ -5061,6 +5156,7 @@ window.getBotOperationsRadarHtml = () => {
           </span>
         </div>
       </div>
+      ${window.getBotFleetSafetyHtml ? window.getBotFleetSafetyHtml() : ''}
     </div>
   `;
 };
@@ -5127,6 +5223,13 @@ window.updateBotOperationsRadarDom = () => {
     if (clockEl) clockEl.textContent = 'READY / STANDBY';
     if (fillEl) fillEl.style.width = '0%';
   }
+
+  const fleetContainers = document.querySelectorAll('.bot-fleet-container');
+  if (fleetContainers.length > 0 && typeof window.getBotFleetSafetyHtml === 'function') {
+    fleetContainers.forEach(fc => {
+      fc.outerHTML = window.getBotFleetSafetyHtml();
+    });
+  }
 };
 
 // Smooth local 1-second countdown ticker for the Radar card
@@ -5162,6 +5265,13 @@ if (!window._botRadarInterval) {
       if (clockEl && clockEl.textContent !== 'READY / STANDBY') clockEl.textContent = 'READY / STANDBY';
       if (fillEl && fillEl.style.width !== '0%') fillEl.style.width = '0%';
       if (timerLblEl && timerLblEl.textContent !== 'Cooldown Stage:') timerLblEl.textContent = 'Cooldown Stage:';
+    }
+
+    const fleetContainers = document.querySelectorAll('.bot-fleet-container');
+    if (fleetContainers.length > 0 && typeof window.getBotFleetSafetyHtml === 'function') {
+      fleetContainers.forEach(fc => {
+        fc.outerHTML = window.getBotFleetSafetyHtml();
+      });
     }
   }, 1000);
 }
@@ -25040,7 +25150,7 @@ const views = {
     render();
   },
   staff: async () => {
-    if (!currentUser) return window.renderMembersOnlyGuard("Staff & Officers");
+    if (!currentUser && !window.currentUser) return window.renderMembersOnlyGuard("Staff & Officers");
     let r5Html = '';
     let r4Html = '';
 
@@ -25061,7 +25171,7 @@ const views = {
       if (gid === "318843189") level = "R5"; 
       if (level === true) level = "R5"; // legacy fix
 
-      let name = window.idToNameMap[gid] || 'Unknown Chief';
+      let name = (window.idToNameMap && window.idToNameMap[gid]) || 'Unknown Chief';
       if (gid === "338675830" && name === 'Unknown Chief') {
         name = 'Afu_D';
       }
@@ -25129,9 +25239,13 @@ const views = {
 
     app.innerHTML = `
       <div class="card fade-in" style="background: transparent; border: none; box-shadow: none;">
-        <div style="text-align:center; margin-bottom:40px;">
+        <div style="text-align:center; margin-bottom:30px;">
           <h2 class="staff-title">👑 Alliance Leadership</h2>
           <p class="staff-subtitle">Meet the dedicated team keeping the alliance strong.</p>
+        </div>
+
+        <div style="max-width: 720px; margin: 0 auto 35px auto;">
+          ${typeof window.getBotFleetSafetyHtml === 'function' ? window.getBotFleetSafetyHtml() : ''}
         </div>
         
         <div style="margin-bottom: 40px; display: flex; justify-content: center;">

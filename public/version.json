@@ -1,15 +1,16 @@
 {
-  "version": "3.3.8",
-  "releaseDate": "2026-09-06",
-  "title": "What's New in v3.3.8",
+  "version": "3.3.9",
+  "releaseDate": "2026-09-07",
+  "title": "What's New in v3.3.9",
   "notes": [
-    "⚡ Real-Time DOM Sync: Bot Operations Radar dynamically mutates clock, progress, and stage.",
-    "⏱️ Dynamic Countdown: Seamlessly switches between active routines, cooldowns, and standby.",
-    "🤖 Instant Bots Tab Refresh: Instant DOM synchronization upon opening Bots tab."
+    "🤖 Bot Fleet Safety Matrix: Real-time 7-bot status preventing staff account login collisions.",
+    "⛔ Login Safety Badges: Instant visual warnings when an account is occupied on active duty.",
+    "🟢 Instant Safe Tags: Green tags identify which bot accounts are idle and safe to use."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.8",
+    "version": "3.3.9",
     "latestChanges": [
+      "v3.3.9: Alliance Bot Fleet & Account Login Safety Matrix for 7 bots",
       "v3.3.8: Full real-time DOM synchronization for Bot Operations Radar",
       "v3.3.7: Relocated Bot Operations Radar to Admin Menu with multi-account rotation tracking",
       "v3.3.6: Live Bot Operations Radar with Firebase telemetry",

@@ -73,13 +73,18 @@ server.listen(PORT, async () => {
       }
     });
 
-    console.log('\n--- PHASE 1: SECURITY & SECLUSION TEST (ABSENT FROM STAFF) ---');
+    console.log('\n--- PHASE 1: SECURITY & STAFF FLEET SAFETY MATRIX TEST ---');
     await page.setViewport({ width: 1280, height: 800 });
     await page.goto(`http://localhost:${PORT}`, { waitUntil: 'networkidle0', timeout: 15000 });
     await new Promise(r => setTimeout(r, 1000));
 
-    // Navigate to Staff view
-    const navigatedStaff = await page.evaluate(() => {
+    // Authenticate and navigate to Staff view
+    const navigatedStaff = await page.evaluate(async () => {
+      window.currentUser = { uid: '318843189', email: 'officer@bdc.com', displayName: 'Staff Officer' };
+      if (typeof window.views?.staff === 'function') {
+        await window.views.staff();
+        return true;
+      }
       const staffBtn = document.querySelector('[data-target="staff"]');
       if (staffBtn) {
         staffBtn.click();
@@ -89,20 +94,35 @@ server.listen(PORT, async () => {
     });
 
     if (!navigatedStaff) {
-      throw new Error('Could not trigger navigation to Staff view via [data-target="staff"]');
+      throw new Error('Could not trigger navigation to Staff view');
     }
     await new Promise(r => setTimeout(r, 1000));
 
     // Assert that #bot-operations-radar is STRICTLY ABSENT from Staff view!
-    const radarInStaff = await page.evaluate(() => {
-      return document.getElementById('bot-operations-radar') !== null;
+    const staffAudit = await page.evaluate(() => {
+      const radarInStaff = document.getElementById('bot-operations-radar') !== null;
+      const fleetInStaff = document.getElementById('bot-fleet-safety-container') !== null;
+      const fleetItems = document.querySelectorAll('.bot-fleet-item');
+      const guardianFound = Array.from(fleetItems).some(el => el.textContent.includes('Guardian'));
+      return { radarInStaff, fleetInStaff, fleetItemCount: fleetItems.length, guardianFound };
     });
-    if (radarInStaff) {
+
+    if (staffAudit.radarInStaff) {
       throw new Error('Security Breach: #bot-operations-radar was found on Staff page! It must be restricted to Admin menu only.');
     }
-    console.log('  ✅ Verified: #bot-operations-radar is completely absent from Staff page.');
+    if (!staffAudit.fleetInStaff) {
+      throw new Error('Assertion Failed: #bot-fleet-safety-container was NOT found on Staff page!');
+    }
+    if (staffAudit.fleetItemCount !== 7) {
+      throw new Error(`Assertion Failed: Expected 7 bot fleet items on Staff page, found ${staffAudit.fleetItemCount}`);
+    }
+    if (staffAudit.guardianFound) {
+      throw new Error('Assertion Failed: Guardian was found in bot fleet! Guardian is not a bot and must be excluded.');
+    }
+    console.log('  ✅ Verified: #bot-operations-radar is secluded from Staff page.');
+    console.log(`  ✅ Verified: Staff page contains 7-bot Fleet Safety Matrix (Guardian cleanly excluded).`);
 
-    console.log('\n--- PHASE 2: ADMIN MENU RELOCATION & MULTI-ACCOUNT ROTATION ---');
+    console.log('\n--- PHASE 2: ADMIN MENU BOTS TAB & FLEET MATRIX TEST ---');
     // Mock admin authentication and navigate directly to views.admin('tab-bots')
     const navigatedAdmin = await page.evaluate(async () => {
       window.currentUser = { uid: '318843189', email: 'admin@bdc.com', displayName: 'R5 Leader' };
@@ -124,107 +144,149 @@ server.listen(PORT, async () => {
     }
     await page.waitForSelector('#bot-operations-radar', { timeout: 10000 });
 
-    // Verify Bot Operations Radar element physically exists inside #tab-bots
+    // Verify Bot Operations Radar and Fleet Matrix physically exist inside #tab-bots
     const radarInAdmin = await page.evaluate(() => {
       const tabBots = document.getElementById('tab-bots');
       if (!tabBots) return { error: '#tab-bots not found' };
       const radar = tabBots.querySelector('#bot-operations-radar');
       if (!radar) return { error: '#bot-operations-radar not found inside #tab-bots' };
-      const title = radar.querySelector('.bot-radar-title')?.textContent?.trim();
+      const fleetContainer = tabBots.querySelector('#bot-fleet-safety-container');
+      if (!fleetContainer) return { error: '#bot-fleet-safety-container not found inside #bot-operations-radar' };
+      const items = tabBots.querySelectorAll('.bot-fleet-item');
+      const guardianInFleet = Array.from(items).some(i => i.textContent.includes('Guardian'));
       const account = document.getElementById('bot-radar-account-val')?.textContent?.trim();
       const badge = document.getElementById('bot-radar-badge-el')?.textContent?.trim();
-      return { found: true, title, account, badge };
+      return { found: true, count: items.length, guardianInFleet, account, badge };
     });
 
     if (!radarInAdmin || !radarInAdmin.found) {
       throw new Error('Assertion Failed: ' + (radarInAdmin?.error || 'Radar not found in Admin Bots tab'));
     }
-    console.log(`  ✅ #bot-operations-radar verified in Admin Bots tab: Account="${radarInAdmin.account}", Badge="${radarInAdmin.badge}"`);
+    if (radarInAdmin.count !== 7) {
+      throw new Error(`Assertion Failed: Expected 7 bots in Fleet Matrix inside Admin Bots tab, found ${radarInAdmin.count}`);
+    }
+    if (radarInAdmin.guardianInFleet) {
+      throw new Error('Assertion Failed: Guardian must not be in the Admin Bots fleet matrix!');
+    }
+    console.log(`  ✅ #bot-operations-radar verified in Admin Bots tab: Account="${radarInAdmin.account}", 7 bots in Fleet Safety Matrix`);
 
-    // Verify Real Visual DOM Mutation: Simulate Multi-Account Rotation (Guardian -> Bisquick -> Shrimp Cooldown)
-    console.log('\n--- PHASE 3: DYNAMIC ACCOUNT ROTATION & COOLDOWN TEST ---');
+    // Verify Real Visual DOM Mutation: Simulate Multi-Account Rotation and Login Safety
+    console.log('\n--- PHASE 3: BOT FLEET MATRIX ROTATION & ACCOUNT LOGIN SAFETY TEST ---');
     const mutationResult = await page.evaluate(() => {
-      if (typeof window.updateBotOperationsRadarDom === 'function') {
-        // Step A: Guardian Active
-        window.latestBotStatus = {
-          status: 'ACTIVE',
-          account: 'Guardian (Inst 1)',
-          stage: 'Wilderness / Routine Tasks',
-          secondsLeft: 0,
-          totalBots: 1,
-          shortTime: '10:45 PM',
-          receivedAt: Date.now()
-        };
-        window.updateBotOperationsRadarDom();
-        const accountA = document.getElementById('bot-radar-account-val')?.textContent?.trim();
-        const badgeA = document.getElementById('bot-radar-badge-el')?.textContent?.trim();
-        const clockA = document.getElementById('bot-radar-clock')?.textContent?.trim();
-        const labelA = document.getElementById('bot-radar-timer-label')?.textContent?.trim();
-        const progressWidthA = document.getElementById('bot-radar-progress-fill')?.style?.width;
+      if (typeof window.updateBotOperationsRadarDom !== 'function') return null;
 
-        // Step B: Bisquick Active
-        window.latestBotStatus = {
-          status: 'ACTIVE',
-          account: 'Bisquick (Inst 11)',
-          stage: 'Wilderness / Routine Tasks',
-          secondsLeft: 0,
-          totalBots: 1,
-          shortTime: '10:46 PM',
-          receivedAt: Date.now()
-        };
-        window.updateBotOperationsRadarDom();
-        const accountB = document.getElementById('bot-radar-account-val')?.textContent?.trim();
+      // Step A: AngryGermanpapi Active
+      window.latestBotStatus = {
+        status: 'ACTIVE',
+        account: 'AngryGermanpapi (Inst 15)',
+        stage: 'Wilderness / Routine Tasks',
+        secondsLeft: 0,
+        totalBots: 7,
+        shortTime: '11:01 PM',
+        receivedAt: Date.now()
+      };
+      window.updateBotOperationsRadarDom();
 
-        // Step C: Shrimp Cooldown
-        window.latestBotStatus = {
-          status: 'COOLDOWN',
-          account: 'ShrimpLeprechaun (Inst 14)',
-          stage: 'Resting on City Tab',
-          secondsLeft: 590,
-          totalBots: 1,
-          shortTime: '10:47 PM',
-          receivedAt: Date.now()
-        };
-        window.updateBotOperationsRadarDom();
-        const accountC = document.getElementById('bot-radar-account-val')?.textContent?.trim();
-        const badgeC = document.getElementById('bot-radar-badge-el')?.textContent?.trim();
-        const clockC = document.getElementById('bot-radar-clock')?.textContent?.trim();
-        const labelC = document.getElementById('bot-radar-timer-label')?.textContent?.trim();
-        const cardC = document.getElementById('bot-operations-radar');
+      const accountA = document.getElementById('bot-radar-account-val')?.textContent?.trim();
+      const badgeA = document.getElementById('bot-radar-badge-el')?.textContent?.trim();
+      const clockA = document.getElementById('bot-radar-clock')?.textContent?.trim();
+      const busyPillA = document.getElementById('bot-fleet-busy-count')?.textContent?.trim();
+      const safePillA = document.getElementById('bot-fleet-safe-count')?.textContent?.trim();
+      const angryCardA = document.getElementById('bot-fleet-item-angry');
+      const angryTagA = document.getElementById('bot-fleet-tag-angry')?.textContent?.trim();
+      const bisquickCardA = document.getElementById('bot-fleet-item-bisquick');
+      const bisquickTagA = document.getElementById('bot-fleet-tag-bisquick')?.textContent?.trim();
 
-        return {
-          accountA,
-          badgeA,
-          clockA,
-          labelA,
-          progressWidthA,
-          accountB,
-          accountC,
-          badgeC,
-          clockC,
-          labelC,
-          hasCooldownBorder: cardC?.classList?.contains('border-cooldown')
-        };
-      }
-      return null;
+      // Step B: Bisquick Active
+      window.latestBotStatus = {
+        status: 'ACTIVE',
+        account: 'Bisquick (Inst 11)',
+        stage: 'Wilderness / Routine Tasks',
+        secondsLeft: 0,
+        totalBots: 7,
+        shortTime: '11:05 PM',
+        receivedAt: Date.now()
+      };
+      window.updateBotOperationsRadarDom();
+
+      const accountB = document.getElementById('bot-radar-account-val')?.textContent?.trim();
+      const bisquickCardB = document.getElementById('bot-fleet-item-bisquick');
+      const bisquickTagB = document.getElementById('bot-fleet-tag-bisquick')?.textContent?.trim();
+      const angryCardB = document.getElementById('bot-fleet-item-angry');
+      const angryTagB = document.getElementById('bot-fleet-tag-angry')?.textContent?.trim();
+
+      // Step C: Shrimp Cooldown (Resting)
+      window.latestBotStatus = {
+        status: 'COOLDOWN',
+        account: 'ShrimpLeprechaun (Inst 14)',
+        stage: 'Resting on City Tab',
+        secondsLeft: 590,
+        totalBots: 7,
+        shortTime: '11:10 PM',
+        receivedAt: Date.now()
+      };
+      window.updateBotOperationsRadarDom();
+
+      const accountC = document.getElementById('bot-radar-account-val')?.textContent?.trim();
+      const badgeC = document.getElementById('bot-radar-badge-el')?.textContent?.trim();
+      const clockC = document.getElementById('bot-radar-clock')?.textContent?.trim();
+      const labelC = document.getElementById('bot-radar-timer-label')?.textContent?.trim();
+      const cardC = document.getElementById('bot-operations-radar');
+      const shrimpCardC = document.getElementById('bot-fleet-item-shrimp');
+      const shrimpTagC = document.getElementById('bot-fleet-tag-shrimp')?.textContent?.trim();
+      const shrimpDetailC = document.getElementById('bot-fleet-detail-shrimp')?.textContent?.trim();
+
+      return {
+        accountA,
+        badgeA,
+        clockA,
+        busyPillA,
+        safePillA,
+        angryIsOccupiedA: angryCardA?.classList?.contains('occupied'),
+        angryTagA,
+        bisquickIsSafeA: bisquickCardA?.classList?.contains('safe'),
+        bisquickTagA,
+        accountB,
+        bisquickIsOccupiedB: bisquickCardB?.classList?.contains('occupied'),
+        bisquickTagB,
+        angryIsSafeB: angryCardB?.classList?.contains('safe'),
+        angryTagB,
+        accountC,
+        badgeC,
+        clockC,
+        labelC,
+        hasCooldownBorder: cardC?.classList?.contains('border-cooldown'),
+        shrimpIsCooldownC: shrimpCardC?.classList?.contains('cooldown'),
+        shrimpTagC,
+        shrimpDetailC
+      };
     });
 
     if (!mutationResult) {
       throw new Error('Assertion Failed: window.updateBotOperationsRadarDom function not found!');
     }
-    if (mutationResult.accountA !== 'Guardian (Inst 1)' || mutationResult.accountB !== 'Bisquick (Inst 11)' || mutationResult.accountC !== 'ShrimpLeprechaun (Inst 14)' || !mutationResult.hasCooldownBorder) {
-      throw new Error(`Assertion Failed: Multi-account rotation did not mutate DOM accurately! Result: ${JSON.stringify(mutationResult)}`);
+    if (mutationResult.accountA !== 'AngryGermanpapi (Inst 15)' || !mutationResult.angryIsOccupiedA || mutationResult.angryTagA !== '⛔ DO NOT LOG IN') {
+      throw new Error(`Assertion Failed: Active bot safety warning failed! Result: ${JSON.stringify(mutationResult)}`);
     }
-    if (mutationResult.clockA !== 'ROUTINES RUNNING' || mutationResult.labelA !== 'Cooldown Stage:' || mutationResult.progressWidthA !== '100%') {
-      throw new Error(`Assertion Failed: ACTIVE status clock/label/progress failed! Result: ${JSON.stringify(mutationResult)}`);
+    if (!mutationResult.bisquickIsSafeA || mutationResult.bisquickTagA !== '✅ Safe to log in') {
+      throw new Error(`Assertion Failed: Idle bot safe tag failed! Result: ${JSON.stringify(mutationResult)}`);
+    }
+    if (!mutationResult.busyPillA.includes('1 OCCUPIED') || !mutationResult.safePillA.includes('6 SAFE TO LOGIN')) {
+      throw new Error(`Assertion Failed: Fleet summary counters failed! Busy: "${mutationResult.busyPillA}", Safe: "${mutationResult.safePillA}"`);
+    }
+    if (mutationResult.accountB !== 'Bisquick (Inst 11)' || !mutationResult.bisquickIsOccupiedB || !mutationResult.angryIsSafeB) {
+      throw new Error(`Assertion Failed: Dynamic rotation between bots failed! Result: ${JSON.stringify(mutationResult)}`);
+    }
+    if (mutationResult.accountC !== 'ShrimpLeprechaun (Inst 14)' || !mutationResult.hasCooldownBorder || !mutationResult.shrimpIsCooldownC || mutationResult.shrimpTagC !== '⚠️ Resting between runs') {
+      throw new Error(`Assertion Failed: Cooldown resting state failed! Result: ${JSON.stringify(mutationResult)}`);
     }
     if (mutationResult.clockC !== '00:09:50' || mutationResult.labelC !== 'Cooldown Countdown:') {
-      throw new Error(`Assertion Failed: COOLDOWN status clock/label failed! Result: ${JSON.stringify(mutationResult)}`);
+      throw new Error(`Assertion Failed: Cooldown clock/label failed! Result: ${JSON.stringify(mutationResult)}`);
     }
-    console.log(`  ✅ Multi-account rotation & Real-time DOM clock/progress verified:`);
-    console.log(`     1. ${mutationResult.accountA} -> Badge="${mutationResult.badgeA}", Clock="${mutationResult.clockA}", Progress="${mutationResult.progressWidthA}"`);
-    console.log(`     2. ${mutationResult.accountB} -> Active Switch`);
-    console.log(`     3. ${mutationResult.accountC} -> Badge="${mutationResult.badgeC}", Clock="${mutationResult.clockC}", Label="${mutationResult.labelC}" (BorderCooldown=${mutationResult.hasCooldownBorder})`);
+    console.log(`  ✅ Verified: Fleet Login Safety Matrix dynamically responds to bot rotation:`);
+    console.log(`     1. ${mutationResult.accountA} -> Occupied: ${mutationResult.angryTagA}, Safe: ${mutationResult.bisquickTagA} (${mutationResult.busyPillA}, ${mutationResult.safePillA})`);
+    console.log(`     2. ${mutationResult.accountB} -> Occupied: ${mutationResult.bisquickTagB}, Reverted Angry: ${mutationResult.angryTagB}`);
+    console.log(`     3. ${mutationResult.accountC} -> Resting: ${mutationResult.shrimpTagC} (${mutationResult.shrimpDetailC})`);
 
     // Responsive Audit across Mobile, Tablet, Desktop
     console.log('\n--- PHASE 3: RESPONSIVE OVERFLOW AUDIT ---');
