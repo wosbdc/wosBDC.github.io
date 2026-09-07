@@ -1,17 +1,15 @@
 {
-  "version": "3.3.17",
+  "version": "3.3.18",
   "releaseDate": "2026-09-07",
-  "title": "What's New in v3.3.17",
+  "title": "What's New in v3.3.18",
   "notes": [
-    "🎯 Unified Roster: Fallback resolution prevents dropped members in event trackers.",
-    "👥 Dwarf 2 Healed: Restored character profile, game ID, and active event records.",
-    "⚔️ Mercenary Prestige: Standardized roster deduplication and champion lookups across views.",
-    "🐻 Bear Trap Sync: Updated table rendering and donation toggles for alts.",
-    "🔍 Alt Indexing: Automatically maps registered user alts into global lookup maps."
+    "🛡️ Admin Menu: Renamed leadership navigation button to Admin Menu.",
+    "🔗 Navigation: Aligned button label with the Admin Menu title."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.17",
+    "version": "3.3.18",
     "latestChanges": [
+      "v3.3.18: Renamed Leadership Hub header button to Admin Menu",
       "v3.3.17: Unified event tracker roster deduplication, Dwarf 2 healing, and alt lookup indexing",
       "v3.3.16: Required feedback type dropdown, blank required placeholder, and admin type switcher",
       "v3.3.15: Bug Report 1st toggle priority, required category enforcement, and admin category editor",

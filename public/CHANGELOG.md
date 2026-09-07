@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.3.18] - 2026-09-07
+- 🛡️ **Admin Menu**: Renamed leadership navigation button to Admin Menu.
+- 🔗 **Navigation**: Aligned button label with the Admin Menu title.
+
 ## [3.3.17] - 2026-09-07
 - 🎯 **Unified Roster**: Fallback resolution prevents dropped members in event trackers.
 - 👥 **Dwarf 2 Healed**: Restored character profile, game ID, and active event records.

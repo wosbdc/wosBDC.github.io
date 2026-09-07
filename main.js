@@ -33722,7 +33722,7 @@ window.resetBearTrapEvent = async () => {
           <h2 style="color:var(--text-main); margin:0; font-size:22px;">Account Hub</h2>
           ${ (typeof window.isAdminUser === 'function' && window.isAdminUser(currentUser)) ? `
             <button onclick="if(window.views && window.views.admin) window.views.admin();" style="background:linear-gradient(135deg, rgba(239,68,68,0.22), rgba(220,38,38,0.12)); border:1px solid rgba(239,68,68,0.45); color:#ef4444; padding:6px 14px; border-radius:8px; font-size:12.5px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:all 0.2s; box-shadow:0 2px 10px rgba(239,68,68,0.15);" onmouseover="this.style.background='rgba(239,68,68,0.3)';" onmouseout="this.style.background='linear-gradient(135deg, rgba(239,68,68,0.22), rgba(220,38,38,0.12))';">
-              🛡️ Leadership Hub →
+              Admin Menu
             </button>
           ` : `<div style="width:130px; display:none;" class="acc-header-spacer"></div>`}
         </div>
