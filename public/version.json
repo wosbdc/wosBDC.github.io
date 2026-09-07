@@ -1,14 +1,16 @@
 {
-  "version": "3.3.5",
+  "version": "3.3.6",
   "releaseDate": "2026-09-06",
-  "title": "What's New in v3.3.5",
+  "title": "What's New in v3.3.6",
   "notes": [
-    "🕐 Split Sidebar Clocks: Local and UTC clocks share one compact split row.",
-    "📱 Clean Sidebar Layout: Compact clock box saves vertical space in the sidebar."
+    "🤖 Bot Operations Radar: Live bot status and telemetry displayed on Staff page.",
+    "⚡ Real-Time Telemetry: Real-time Firebase sync shows active bots and cooldown countdowns.",
+    "⏱️ Smooth Countdown Ticker: Live second-by-second cooldown timer keeps staff informed."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.5",
+    "version": "3.3.6",
     "latestChanges": [
+      "v3.3.6: Live Bot Operations Radar with Firebase telemetry on Staff page",
       "v3.3.5: Split UTC and Local clocks into one compact row in Settings sidebar",
       "v3.3.4: Precise round-level targeting and elimination of cross-season archive bleed",
       "v3.3.3: Visual highlights for modified championship rounds and one-click filter",

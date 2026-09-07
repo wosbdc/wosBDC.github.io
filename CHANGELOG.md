@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.6] - 2026-09-06
+- 🤖 **Bot Operations Radar**: Live bot status and telemetry displayed on Staff page.
+- ⚡ **Real-Time Telemetry**: Real-time Firebase sync shows active bots and cooldown countdowns.
+- ⏱️ **Smooth Countdown Ticker**: Live second-by-second cooldown timer keeps staff informed.
+
 ## [3.3.5] - 2026-09-06
 - 🕐 **Split Sidebar Clocks**: Local and UTC clocks share one compact split row.
 - 📱 **Clean Sidebar Layout**: Compact clock box saves vertical space in the sidebar.

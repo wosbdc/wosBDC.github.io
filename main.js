@@ -4952,6 +4952,182 @@ onValue(ref(db, 'roster_live'), () => {
   }
 });
 
+// Realtime listener for live Bot Operations Telemetry
+window.latestBotStatus = {
+  status: "STANDBY",
+  account: "ShrimpLeprechaun (Inst 14)",
+  stage: "Waiting for Cycle Start",
+  secondsLeft: 0,
+  timeFormatted: "",
+  shortTime: "Just now",
+  totalBots: 0,
+  receivedAt: Date.now()
+};
+
+onValue(ref(db, 'bot_status'), (snap) => {
+  if (snap.exists()) {
+    const val = snap.val();
+    window.latestBotStatus = { ...window.latestBotStatus, ...val, receivedAt: Date.now() };
+    if (typeof window.updateBotOperationsRadarDom === 'function') {
+      window.updateBotOperationsRadarDom();
+    }
+  }
+});
+
+window.getBotOperationsRadarHtml = () => {
+  const data = window.latestBotStatus || {};
+  const status = (data.status || 'STANDBY').toUpperCase();
+  const account = data.account || 'ShrimpLeprechaun (Inst 14)';
+  const stage = data.stage || (status === 'ACTIVE' ? 'Wilderness / Routine Tasks' : (status === 'COOLDOWN' ? 'Cooldown in Progress' : 'Standby'));
+  const totalBots = data.totalBots || 0;
+  const shortTime = data.shortTime || 'Just now';
+  
+  const isActive = status === 'ACTIVE';
+  const isCooldown = status === 'COOLDOWN';
+  
+  const badgeClass = isActive ? 'bot-radar-badge active' : (isCooldown ? 'bot-radar-badge cooldown' : 'bot-radar-badge standby');
+  const badgeText = isActive ? '● ACTIVE RUNNING' : (isCooldown ? '⏳ COOLDOWN IN PROGRESS' : '⚪ STANDBY');
+  const cardBorderClass = isActive ? 'bot-radar-card border-active' : (isCooldown ? 'bot-radar-card border-cooldown' : 'bot-radar-card border-standby');
+  const activityColor = isActive ? 'var(--accent)' : (isCooldown ? '#fbbf24' : 'var(--text-muted)');
+  
+  let timerText = '00:00:00';
+  let timerLabel = 'Cooldown Countdown:';
+  let progressWidth = '0%';
+  
+  if (isCooldown && data.secondsLeft > 0) {
+    const elapsedSecs = Math.floor((Date.now() - (data.receivedAt || Date.now())) / 1000);
+    const remaining = Math.max(0, data.secondsLeft - elapsedSecs);
+    const h = Math.floor(remaining / 3600).toString().padStart(2, '0');
+    const m = Math.floor((remaining % 3600) / 60).toString().padStart(2, '0');
+    const s = (remaining % 60).toString().padStart(2, '0');
+    timerText = `${h}:${m}:${s}`;
+    progressWidth = Math.min(100, Math.max(0, (remaining / (data.totalSeconds || 10800)) * 100)) + '%';
+  } else if (isActive) {
+    timerText = 'ROUTINES RUNNING';
+    timerLabel = 'Cooldown Stage:';
+    progressWidth = '100%';
+  } else {
+    timerText = 'READY / STANDBY';
+    timerLabel = 'Cooldown Stage:';
+    progressWidth = '0%';
+  }
+
+  return `
+    <div id="bot-operations-radar" class="${cardBorderClass}" style="max-width: 720px; margin: 0 auto 35px auto;">
+      <div class="bot-radar-header">
+        <div class="bot-radar-title-group">
+          <div class="bot-radar-icon">🤖</div>
+          <div>
+            <div class="bot-radar-title">
+              BOT OPERATIONS RADAR
+              <span id="bot-radar-badge-el" class="${badgeClass}">${badgeText}</span>
+            </div>
+            <div class="bot-radar-subtitle">Live telemetry reported directly from automation host</div>
+          </div>
+        </div>
+        <div class="bot-radar-meta-right">
+          <div class="bot-radar-load-label">Fleet Load</div>
+          <div id="bot-radar-bots-count" class="bot-radar-load-val">${totalBots > 0 ? totalBots + ' Bots Online' : 'Active Duty'}</div>
+        </div>
+      </div>
+
+      <div class="bot-radar-account-banner">
+        <div class="bot-radar-acc-left">
+          <div class="bot-radar-acc-avatar">🦐</div>
+          <div>
+            <div class="bot-radar-acc-label">Monitored Account</div>
+            <div id="bot-radar-account-val" class="bot-radar-acc-name">${window.escapeHTML ? window.escapeHTML(account) : account}</div>
+          </div>
+        </div>
+        <div class="bot-radar-acc-right">
+          <div class="bot-radar-acc-label">Current Phase</div>
+          <div id="bot-radar-stage-val" class="bot-radar-stage-name" style="color: ${activityColor};">${window.escapeHTML ? window.escapeHTML(stage) : stage}</div>
+        </div>
+      </div>
+
+      <div class="bot-radar-timer-box">
+        <div class="bot-radar-timer-row">
+          <span id="bot-radar-timer-label" class="bot-radar-timer-lbl">${timerLabel}</span>
+          <span id="bot-radar-clock" class="bot-radar-clock font-mono">${timerText}</span>
+        </div>
+        <div class="bot-radar-progress-bar">
+          <div id="bot-radar-progress-fill" class="bot-radar-progress-fill" style="width: ${progressWidth};"></div>
+        </div>
+        <div class="bot-radar-footer-row">
+          <span id="bot-radar-last-updated">Last broadcast: ${shortTime}</span>
+          <span class="bot-radar-db-indicator">
+            <span class="bot-radar-pulse-dot"></span>
+            Firebase Realtime Sync
+          </span>
+        </div>
+      </div>
+    </div>
+  `;
+};
+
+window.updateBotOperationsRadarDom = () => {
+  const radarEl = document.getElementById('bot-operations-radar');
+  if (!radarEl) return;
+  
+  const data = window.latestBotStatus || {};
+  const status = (data.status || 'STANDBY').toUpperCase();
+  const account = data.account || 'ShrimpLeprechaun (Inst 14)';
+  const stage = data.stage || (status === 'ACTIVE' ? 'Wilderness / Routine Tasks' : (status === 'COOLDOWN' ? 'Cooldown in Progress' : 'Standby'));
+  const totalBots = data.totalBots || 0;
+  const shortTime = data.shortTime || 'Just now';
+  
+  const isActive = status === 'ACTIVE';
+  const isCooldown = status === 'COOLDOWN';
+  
+  radarEl.className = isActive ? 'bot-radar-card border-active' : (isCooldown ? 'bot-radar-card border-cooldown' : 'bot-radar-card border-standby');
+  
+  const badgeEl = document.getElementById('bot-radar-badge-el');
+  if (badgeEl) {
+    badgeEl.className = isActive ? 'bot-radar-badge active' : (isCooldown ? 'bot-radar-badge cooldown' : 'bot-radar-badge standby');
+    badgeEl.textContent = isActive ? '● ACTIVE RUNNING' : (isCooldown ? '⏳ COOLDOWN IN PROGRESS' : '⚪ STANDBY');
+  }
+  
+  const botsCountEl = document.getElementById('bot-radar-bots-count');
+  if (botsCountEl) botsCountEl.textContent = totalBots > 0 ? `${totalBots} Bots Online` : 'Active Duty';
+  
+  const accValEl = document.getElementById('bot-radar-account-val');
+  if (accValEl) accValEl.textContent = account;
+  
+  const stageValEl = document.getElementById('bot-radar-stage-val');
+  if (stageValEl) {
+    stageValEl.textContent = stage;
+    stageValEl.style.color = isActive ? 'var(--accent)' : (isCooldown ? '#fbbf24' : 'var(--text-muted)');
+  }
+  
+  const lastUpEl = document.getElementById('bot-radar-last-updated');
+  if (lastUpEl) lastUpEl.textContent = `Last broadcast: ${shortTime}`;
+};
+
+// Smooth local 1-second countdown ticker for the Radar card
+if (!window._botRadarInterval) {
+  window._botRadarInterval = setInterval(() => {
+    const radarEl = document.getElementById('bot-operations-radar');
+    if (!radarEl) return;
+    const data = window.latestBotStatus;
+    if (!data || data.status !== 'COOLDOWN' || !data.secondsLeft) return;
+    
+    const elapsedSecs = Math.floor((Date.now() - (data.receivedAt || Date.now())) / 1000);
+    const remaining = Math.max(0, data.secondsLeft - elapsedSecs);
+    const h = Math.floor(remaining / 3600).toString().padStart(2, '0');
+    const m = Math.floor((remaining % 3600) / 60).toString().padStart(2, '0');
+    const s = (remaining % 60).toString().padStart(2, '0');
+    
+    const clockEl = document.getElementById('bot-radar-clock');
+    if (clockEl) clockEl.textContent = `${h}:${m}:${s}`;
+    
+    const fillEl = document.getElementById('bot-radar-progress-fill');
+    if (fillEl) {
+      const pct = Math.min(100, Math.max(0, (remaining / (data.totalSeconds || 10800)) * 100));
+      fillEl.style.width = pct + '%';
+    }
+  }, 1000);
+}
+
 window.setupUserRealtimeSync = (uid) => {
   if (!uid || window._userRealtimeUnsub) return;
   window._userRealtimeUnsub = onValue(ref(db, `users/${uid}`), (snap) => {
@@ -10025,7 +10201,9 @@ window.renderMembersOnlyGuard = (viewName = "Alliance Portal") => {
   }
   const appEl = document.getElementById('app');
   if (!appEl) return;
+  const staffRadarHtml = (viewName && viewName.includes("Staff") && window.getBotOperationsRadarHtml) ? window.getBotOperationsRadarHtml() : '';
   appEl.innerHTML = `
+    ${staffRadarHtml}
     <div class="card" style="max-width:650px; margin:40px auto; text-align:center; padding:45px 30px; animation:fadeIn 0.3s ease; border:1px solid rgba(255,255,255,0.12); background:linear-gradient(145deg, rgba(15,23,42,0.85), rgba(30,41,59,0.75)); backdrop-filter:blur(20px); border-radius:24px; box-shadow:0 25px 60px rgba(0,0,0,0.6);">
        <div style="display:inline-block; background:rgba(6,182,212,0.15); color:var(--accent); border:1px solid rgba(6,182,212,0.3); padding:6px 16px; border-radius:20px; font-size:13px; font-weight:bold; margin-bottom:18px; text-transform:uppercase; letter-spacing:1px;">
           ✨ Essential Alliance Member Portal
@@ -24915,6 +25093,7 @@ const views = {
 
     app.innerHTML = `
       <div class="card fade-in" style="background: transparent; border: none; box-shadow: none;">
+        ${window.getBotOperationsRadarHtml ? window.getBotOperationsRadarHtml() : ''}
         <div style="text-align:center; margin-bottom:40px;">
           <h2 class="staff-title">👑 Alliance Leadership</h2>
           <p class="staff-subtitle">Meet the dedicated team keeping the alliance strong.</p>
