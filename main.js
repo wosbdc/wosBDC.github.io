@@ -4997,8 +4997,8 @@ window.getBotAutomationHealth = (data = window.latestBotStatus || {}) => {
   const ts = Number(data.timestamp || data.receivedAt || 0);
   const isStale = Boolean(ts > 0 && (now - ts > 60000));
   
-  const isHubOnline = Boolean(data.bothubOnline !== false && !isStale && status !== 'OFFLINE');
-  const isServerOnline = Boolean(isHubOnline && data.serverOnline === true);
+  const isHubOnline = Boolean(data.bothubOnline !== false && !isStale && ts > 0);
+  const isServerOnline = Boolean(isHubOnline && data.serverOnline === true && status !== 'OFFLINE');
   const isOffline = !isHubOnline || !isServerOnline;
   
   return {
@@ -5121,31 +5121,59 @@ window.getBotFleetSafetyHtml = () => {
 
 window.getBotOperationsRadarHtml = () => {
   const data = window.latestBotStatus || {};
-  const status = (data.status || 'STANDBY').toUpperCase();
-  const account = data.account || 'ShrimpLeprechaun (Inst 14)';
-  const isOffline = data.serverOnline === false || status === 'OFFLINE';
-  const stage = data.stage || (isOffline ? 'Bot Server Closed' : (status === 'ACTIVE' ? 'Wilderness / Routine Tasks' : (status === 'COOLDOWN' ? 'Cooldown in Progress' : 'Standby')));
+  const health = (typeof window.getBotAutomationHealth === 'function')
+    ? window.getBotAutomationHealth(data)
+    : { isOffline: Boolean(data.serverOnline === false || data.status === 'OFFLINE'), isHubOnline: true, isServerOnline: Boolean(data.serverOnline !== false), isStale: false, status: (data.status || 'STANDBY').toUpperCase() };
+  
+  const status = health.status;
+  const account = data.account || 'Standby / Idle';
+  const isOffline = health.isOffline;
+  const stage = data.stage || (health.isStale ? 'Host Telemetry Stale (>60s)' : (isOffline ? 'Bot Server Closed' : (status === 'ACTIVE' ? 'Wilderness / Routine Tasks' : (status === 'COOLDOWN' ? 'Cooldown in Progress' : 'Standby'))));
   const totalBots = data.totalBots || 0;
-  const shortTime = data.shortTime || 'Just now';
+  const shortTime = data.shortTime || (health.isStale ? 'Stale' : 'Just now');
   
   const isActive = !isOffline && status === 'ACTIVE';
   const isCooldown = !isOffline && status === 'COOLDOWN';
   
   const badgeClass = isOffline ? 'bot-radar-badge offline' : (isActive ? 'bot-radar-badge active' : (isCooldown ? 'bot-radar-badge cooldown' : 'bot-radar-badge standby'));
-  const badgeText = isOffline ? '🔴 BOT SERVER OFFLINE' : (isActive ? '● ACTIVE RUNNING' : (isCooldown ? '⏳ COOLDOWN IN PROGRESS' : '⚪ STANDBY'));
+  let badgeText = '⚪ STANDBY';
+  if (health.isStale) {
+    badgeText = '🔴 HOST TELEMETRY TIMEOUT';
+  } else if (!health.isHubOnline && !health.isServerOnline) {
+    badgeText = '🔴 AUTOMATION OFFLINE';
+  } else if (!health.isServerOnline) {
+    badgeText = '🔴 BOT SERVER OFFLINE';
+  } else if (isActive) {
+    badgeText = '● ACTIVE RUNNING';
+  } else if (isCooldown) {
+    badgeText = '⏳ COOLDOWN IN PROGRESS';
+  }
+
   const cardBorderClass = isOffline ? 'bot-radar-card border-offline' : (isActive ? 'bot-radar-card border-active' : (isCooldown ? 'bot-radar-card border-cooldown' : 'bot-radar-card border-standby'));
   const activityColor = isOffline ? '#ef4444' : (isActive ? 'var(--accent)' : (isCooldown ? '#fbbf24' : 'var(--text-muted)'));
 
-  const hubStatusHtml = `<span style="color:#10b981;">🟢 Hub: Online</span>`;
-  const serverStatusHtml = !isOffline 
+  const hubStatusHtml = health.isHubOnline 
+    ? `<span style="color:#10b981;">🟢 Hub: Online</span>`
+    : `<span style="color:#ef4444; font-weight:bold;">🔴 Hub: Offline</span>`;
+  const serverStatusHtml = health.isServerOnline 
     ? `<span style="color:#10b981;">🟢 Server: Online</span>` 
     : `<span style="color:#ef4444; font-weight:bold;">🔴 Server: Offline</span>`;
   const dualTagHtml = `<div id="bot-radar-dual-tag" class="bot-radar-server-tag">${hubStatusHtml} <span style="opacity:0.4;">•</span> ${serverStatusHtml}</div>`;
 
+  let warningMsg = 'Bot Server is currently offline on host machine';
+  let warningAction = 'AUTOMATION HALTED';
+  if (health.isStale) {
+    warningMsg = 'Host machine is offline or stopped reporting (>60s)';
+    warningAction = 'DISCONNECTED';
+  } else if (!health.isHubOnline && !health.isServerOnline) {
+    warningMsg = 'Both WOS Bot Hub and Bot Server are closed on host';
+    warningAction = 'OFFLINE';
+  }
+
   const offlineWarningHtml = isOffline ? `
     <div id="bot-radar-offline-alert" class="bot-radar-offline-warning-bar">
-      <span>⚠️ Bot Server is currently offline on host machine</span>
-      <span style="font-weight:bold; color:#ef4444;">AUTOMATION HALTED</span>
+      <span>⚠️ ${warningMsg}</span>
+      <span style="font-weight:bold; color:#ef4444;">${warningAction}</span>
     </div>
   ` : `<div id="bot-radar-offline-alert" style="display:none;"></div>`;
 
@@ -5237,12 +5265,16 @@ window.updateBotOperationsRadarDom = () => {
   if (!radarEl) return;
   
   const data = window.latestBotStatus || {};
-  const status = (data.status || 'STANDBY').toUpperCase();
-  const account = data.account || 'ShrimpLeprechaun (Inst 14)';
-  const isOffline = data.serverOnline === false || status === 'OFFLINE';
-  const stage = data.stage || (isOffline ? 'Bot Server Closed' : (status === 'ACTIVE' ? 'Wilderness / Routine Tasks' : (status === 'COOLDOWN' ? 'Cooldown in Progress' : 'Standby')));
+  const health = (typeof window.getBotAutomationHealth === 'function')
+    ? window.getBotAutomationHealth(data)
+    : { isOffline: Boolean(data.serverOnline === false || data.status === 'OFFLINE'), isHubOnline: true, isServerOnline: Boolean(data.serverOnline !== false), isStale: false, status: (data.status || 'STANDBY').toUpperCase() };
+  
+  const status = health.status;
+  const account = data.account || 'Standby / Idle';
+  const isOffline = health.isOffline;
+  const stage = data.stage || (health.isStale ? 'Host Telemetry Stale (>60s)' : (isOffline ? 'Bot Server Closed' : (status === 'ACTIVE' ? 'Wilderness / Routine Tasks' : (status === 'COOLDOWN' ? 'Cooldown in Progress' : 'Standby'))));
   const totalBots = data.totalBots || 0;
-  const shortTime = data.shortTime || 'Just now';
+  const shortTime = data.shortTime || (health.isStale ? 'Stale' : 'Just now');
   
   const isActive = !isOffline && status === 'ACTIVE';
   const isCooldown = !isOffline && status === 'COOLDOWN';
@@ -5252,7 +5284,19 @@ window.updateBotOperationsRadarDom = () => {
   const badgeEl = document.getElementById('bot-radar-badge-el');
   if (badgeEl) {
     badgeEl.className = isOffline ? 'bot-radar-badge offline' : (isActive ? 'bot-radar-badge active' : (isCooldown ? 'bot-radar-badge cooldown' : 'bot-radar-badge standby'));
-    badgeEl.textContent = isOffline ? '🔴 BOT SERVER OFFLINE' : (isActive ? '● ACTIVE RUNNING' : (isCooldown ? '⏳ COOLDOWN IN PROGRESS' : '⚪ STANDBY'));
+    let badgeText = '⚪ STANDBY';
+    if (health.isStale) {
+      badgeText = '🔴 HOST TELEMETRY TIMEOUT';
+    } else if (!health.isHubOnline && !health.isServerOnline) {
+      badgeText = '🔴 AUTOMATION OFFLINE';
+    } else if (!health.isServerOnline) {
+      badgeText = '🔴 BOT SERVER OFFLINE';
+    } else if (isActive) {
+      badgeText = '● ACTIVE RUNNING';
+    } else if (isCooldown) {
+      badgeText = '⏳ COOLDOWN IN PROGRESS';
+    }
+    badgeEl.textContent = badgeText;
   }
   
   const botsCountEl = document.getElementById('bot-radar-bots-count');
@@ -5260,8 +5304,10 @@ window.updateBotOperationsRadarDom = () => {
   
   const dualTagEl = document.getElementById('bot-radar-dual-tag');
   if (dualTagEl) {
-    const hubStatusHtml = `<span style="color:#10b981;">🟢 Hub: Online</span>`;
-    const serverStatusHtml = !isOffline 
+    const hubStatusHtml = health.isHubOnline 
+      ? `<span style="color:#10b981;">🟢 Hub: Online</span>`
+      : `<span style="color:#ef4444; font-weight:bold;">🔴 Hub: Offline</span>`;
+    const serverStatusHtml = health.isServerOnline 
       ? `<span style="color:#10b981;">🟢 Server: Online</span>` 
       : `<span style="color:#ef4444; font-weight:bold;">🔴 Server: Offline</span>`;
     dualTagEl.innerHTML = `${hubStatusHtml} <span style="opacity:0.4;">•</span> ${serverStatusHtml}`;
@@ -5270,9 +5316,18 @@ window.updateBotOperationsRadarDom = () => {
   const alertEl = document.getElementById('bot-radar-offline-alert');
   if (alertEl) {
     if (isOffline) {
+      let warningMsg = 'Bot Server is currently offline on host machine';
+      let warningAction = 'AUTOMATION HALTED';
+      if (health.isStale) {
+        warningMsg = 'Host machine is offline or stopped reporting (>60s)';
+        warningAction = 'DISCONNECTED';
+      } else if (!health.isHubOnline && !health.isServerOnline) {
+        warningMsg = 'Both WOS Bot Hub and Bot Server are closed on host';
+        warningAction = 'OFFLINE';
+      }
       alertEl.className = 'bot-radar-offline-warning-bar';
       alertEl.style.display = 'flex';
-      alertEl.innerHTML = `<span>⚠️ Bot Server is currently offline on host machine</span><span style="font-weight:bold; color:#ef4444;">AUTOMATION HALTED</span>`;
+      alertEl.innerHTML = `<span>⚠️ ${warningMsg}</span><span style="font-weight:bold; color:#ef4444;">${warningAction}</span>`;
     } else {
       alertEl.style.display = 'none';
       alertEl.innerHTML = '';
@@ -16799,9 +16854,11 @@ window.updateNewMemberBadge = async () => {
     console.warn("Failed to count broadcasts:", e);
   }
 
-  // Active Bot Server offline check from live telemetry for R4/R5 leadership
-  const isBotServerHalted = Boolean(window.latestBotStatus && (window.latestBotStatus.serverOnline === false || window.latestBotStatus.status === 'OFFLINE'));
-  if (isStaffUser && isBotServerHalted && !botOfflineCounted && !dismissedBellItems.includes('bot_fleet_offline_alert')) {
+  // Active Bot Server or Host offline check from live telemetry for R4/R5 leadership
+  const botHealth = (typeof window.getBotAutomationHealth === 'function')
+    ? window.getBotAutomationHealth(window.latestBotStatus)
+    : { isOffline: Boolean(window.latestBotStatus && (window.latestBotStatus.serverOnline === false || window.latestBotStatus.status === 'OFFLINE')) };
+  if (isStaffUser && botHealth.isOffline && !botOfflineCounted && !dismissedBellItems.includes('bot_fleet_offline_alert')) {
     staffAlertCount++;
   }
 
@@ -17664,16 +17721,32 @@ window.openAllianceAlertsModal = async () => {
         streamItems.push({ category: 'staff', timestamp: b.timestamp || 0, html: cardHtml });
       });
 
-      // Live Bot Server offline fallback if not in staffBroadcasts but sensor reports offline
+      // Live Bot Server or Host offline fallback if not in staffBroadcasts but sensor reports offline
       const hasBotAlertInStream = staffBroadcasts.some(b => b.id === 'bot_fleet_offline_alert' || b.key === 'bot_fleet_offline_alert');
-      const isLiveBotOffline = window.latestBotStatus && (window.latestBotStatus.serverOnline === false || window.latestBotStatus.status === 'OFFLINE');
+      const botHealth = (typeof window.getBotAutomationHealth === 'function')
+        ? window.getBotAutomationHealth(window.latestBotStatus)
+        : { isOffline: Boolean(window.latestBotStatus && (window.latestBotStatus.serverOnline === false || window.latestBotStatus.status === 'OFFLINE')), isStale: false, isHubOffline: false, isServerOnline: false };
+      const isLiveBotOffline = botHealth.isOffline;
       if (!hasBotAlertInStream && isLiveBotOffline && !dismissedBellItems.includes('bot_fleet_offline_alert')) {
+        let alertTitle = 'Bot Server Offline';
+        let alertDesc = 'Bot Server is closed on host DESKTOP-1CC6J72. Both WOS Bot Hub and Bot Server must be running for automated wilderness farming and account rotations.';
+        let alertAction = 'Action required: Launch Bot Server on host machine';
+        if (botHealth.isStale) {
+          alertTitle = 'Host Automation Offline';
+          alertDesc = 'Host machine DESKTOP-1CC6J72 is offline or stopped reporting telemetry (>60s). Both WOS Bot Hub and Bot Server must be active for automated routines.';
+          alertAction = 'Action required: Ensure host PC is running with WOS Bot Hub active';
+        } else if (!botHealth.isHubOnline && !botHealth.isServerOnline) {
+          alertTitle = 'Automation Closed';
+          alertDesc = 'Both WOS Bot Hub and Bot Server are closed on host DESKTOP-1CC6J72. Automation is currently halted.';
+          alertAction = 'Action required: Launch WOS Bot Hub on host machine';
+        }
+
         const liveBotCardHtml = `
           <div class="bell-stream-card" data-category="staff" style="background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.4); border-left:4.5px solid #ef4444; border-radius:12px; padding:12px 14px; box-shadow:0 6px 18px rgba(0,0,0,0.4); display:flex; flex-direction:column; gap:6px;">
             <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
               <div style="font-weight:bold; font-size:13.5px; color:#f87171; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
                 <span style="background:rgba(239,68,68,0.2); color:#ef4444; border:1px solid rgba(239,68,68,0.4); padding:2px 7px; border-radius:8px; font-size:10px; font-weight:800;">🚨 BOT ALERT</span>
-                <span>Bot Server Offline</span>
+                <span>${window.escapeHTML(alertTitle)}</span>
                 <span style="font-size:10px; background:rgba(168,85,247,0.2); color:#c084fc; border:1px solid rgba(168,85,247,0.4); padding:1px 6px; border-radius:8px; font-weight:bold;">👑 R4/R5 ONLY</span>
               </div>
               <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
@@ -17684,10 +17757,10 @@ window.openAllianceAlertsModal = async () => {
               </div>
             </div>
             <div style="font-size:12.5px; color:var(--text-main); line-height:1.4;">
-              Bot Server is closed on host DESKTOP-1CC6J72. Both WOS Bot Hub and Bot Server must be running for automated wilderness farming and account rotations.
+              ${window.escapeHTML(alertDesc)}
             </div>
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.06); flex-wrap:wrap; gap:6px;">
-              <span style="font-size:11px; color:var(--text-muted);">Action required: Launch Bot Server on host machine</span>
+              <span style="font-size:11px; color:var(--text-muted);">${window.escapeHTML(alertAction)}</span>
               <button onclick="document.getElementById('notificationsModalOverlay').remove(); if(views.botOperations) views.botOperations();" style="background:linear-gradient(135deg, rgba(239,68,68,0.25), rgba(239,68,68,0.1)); border:1px solid rgba(239,68,68,0.4); color:#fca5a5; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
                 🤖 View Bot Radar ➔
               </button>

@@ -99,6 +99,12 @@ function runStaticVerification() {
   assert(code.includes('bot_fleet_offline_alert'), 'Code must handle bot_fleet_offline_alert');
   console.log('  ✅ Views, dual server tags, and alert hooks verified for staff and admin radar.');
 
+  // 6. Automation Health & Staleness Watchdog
+  assert(code.includes('window.getBotAutomationHealth ='), 'getBotAutomationHealth must be defined');
+  assert(code.includes('isHeartbeatStale'), 'Code must check isHeartbeatStale');
+  assert(code.includes('HOST TELEMETRY TIMEOUT'), 'Code must include HOST TELEMETRY TIMEOUT state');
+  console.log('  ✅ window.getBotAutomationHealth and 60-second Staleness Watchdog verified.');
+
   console.log('\n🎉 ALL STATIC & STRUCTURAL ASSERTIONS PASSED 100%!\n');
   process.exit(0);
 }
@@ -298,6 +304,9 @@ server.listen(PORT, async () => {
       window.latestBotStatus = {
         status: 'ACTIVE',
         account: 'AngryGermanpapi (Inst 15)',
+        serverOnline: true,
+        bothubOnline: true,
+        timestamp: Date.now(),
         stage: 'Wilderness / Routine Tasks',
         secondsLeft: 0,
         totalBots: 7,
@@ -320,6 +329,9 @@ server.listen(PORT, async () => {
       window.latestBotStatus = {
         status: 'ACTIVE',
         account: 'Bisquick (Inst 11)',
+        serverOnline: true,
+        bothubOnline: true,
+        timestamp: Date.now(),
         stage: 'Wilderness / Routine Tasks',
         secondsLeft: 0,
         totalBots: 7,
@@ -338,6 +350,9 @@ server.listen(PORT, async () => {
       window.latestBotStatus = {
         status: 'COOLDOWN',
         account: 'ShrimpLeprechaun (Inst 14)',
+        serverOnline: true,
+        bothubOnline: true,
+        timestamp: Date.now(),
         stage: 'Resting on City Tab',
         secondsLeft: 590,
         totalBots: 7,
@@ -407,13 +422,15 @@ server.listen(PORT, async () => {
     console.log(`     2. ${mutationResult.accountB} -> Occupied: ${mutationResult.bisquickTagB}, Reverted Angry: ${mutationResult.angryTagB}`);
     console.log(`     3. ${mutationResult.accountC} -> Resting: ${mutationResult.shrimpTagC} (${mutationResult.shrimpDetailC})`);
 
-    console.log('\n--- PHASE 4: BOT SERVER OFFLINE & DUAL-APP RADAR HEALTH TEST ---');
-    const offlineRadarResult = await page.evaluate(async () => {
+    console.log('\n--- PHASE 4: DUAL-APP RADAR HEALTH, BOTHUB OFFLINE & STALENESS TIMEOUT TEST ---');
+    // Subphase 4A: Bot Server Offline (Hub Online)
+    const serverOfflineResult = await page.evaluate(async () => {
       window.latestBotStatus = {
         status: 'OFFLINE',
         account: 'Standby / Idle',
         serverOnline: false,
         bothubOnline: true,
+        timestamp: Date.now(),
         stage: 'Bot Server Closed',
         secondsLeft: 0,
         totalBots: 0,
@@ -425,7 +442,6 @@ server.listen(PORT, async () => {
       const radarCard = document.getElementById('bot-operations-radar');
       const hasOfflineBorder = radarCard?.classList?.contains('border-offline');
       const badgeText = document.getElementById('bot-radar-badge-el')?.textContent?.trim();
-      const clockText = document.getElementById('bot-radar-clock')?.textContent?.trim();
       const dualTagText = document.getElementById('bot-radar-dual-tag')?.textContent?.trim();
       const offlineAlertEl = document.getElementById('bot-radar-offline-alert');
       const offlineAlertVisible = offlineAlertEl && window.getComputedStyle(offlineAlertEl).display !== 'none';
@@ -434,26 +450,97 @@ server.listen(PORT, async () => {
       return {
         hasOfflineBorder,
         badgeText,
-        clockText,
         dualTagText,
         offlineAlertVisible,
         offlineAlertText
       };
     });
 
-    if (!offlineRadarResult.hasOfflineBorder) {
+    if (!serverOfflineResult.hasOfflineBorder) {
       throw new Error('Assertion Failed: Radar card did not receive .border-offline class when server is offline!');
     }
-    if (offlineRadarResult.badgeText !== '🔴 BOT SERVER OFFLINE') {
-      throw new Error(`Assertion Failed: Expected badge "🔴 BOT SERVER OFFLINE", got "${offlineRadarResult.badgeText}"`);
+    if (serverOfflineResult.badgeText !== '🔴 BOT SERVER OFFLINE') {
+      throw new Error(`Assertion Failed: Expected badge "🔴 BOT SERVER OFFLINE", got "${serverOfflineResult.badgeText}"`);
     }
-    if (!offlineRadarResult.dualTagText.includes('Hub: Online') || !offlineRadarResult.dualTagText.includes('Server: Offline')) {
-      throw new Error(`Assertion Failed: Dual tag did not show Hub: Online and Server: Offline! Got: "${offlineRadarResult.dualTagText}"`);
+    if (!serverOfflineResult.dualTagText.includes('Hub: Online') || !serverOfflineResult.dualTagText.includes('Server: Offline')) {
+      throw new Error(`Assertion Failed: Dual tag did not show Hub: Online and Server: Offline! Got: "${serverOfflineResult.dualTagText}"`);
     }
-    if (!offlineRadarResult.offlineAlertVisible || !offlineRadarResult.offlineAlertText.includes('AUTOMATION HALTED')) {
-      throw new Error(`Assertion Failed: Offline warning bar not visible or missing AUTOMATION HALTED! Got: "${offlineRadarResult.offlineAlertText}"`);
+    if (!serverOfflineResult.offlineAlertVisible || !serverOfflineResult.offlineAlertText.includes('AUTOMATION HALTED')) {
+      throw new Error(`Assertion Failed: Offline warning bar not visible or missing AUTOMATION HALTED! Got: "${serverOfflineResult.offlineAlertText}"`);
     }
-    console.log(`  ✅ Verified: Radar displays dual tag (${offlineRadarResult.dualTagText}), red offline badge, and AUTOMATION HALTED warning bar.`);
+    console.log(`  ✅ 4A Verified: Server offline displays "${serverOfflineResult.dualTagText}", "${serverOfflineResult.badgeText}", and warning bar.`);
+
+    // Subphase 4B: BotHub Offline explicitly (bothubOnline: false)
+    const hubOfflineResult = await page.evaluate(async () => {
+      window.latestBotStatus = {
+        status: 'OFFLINE',
+        account: 'Standby / Idle',
+        serverOnline: false,
+        bothubOnline: false,
+        timestamp: Date.now(),
+        stage: 'BotHub Closed',
+        secondsLeft: 0,
+        totalBots: 0,
+        shortTime: 'Just now',
+        receivedAt: Date.now()
+      };
+      window.updateBotOperationsRadarDom();
+
+      const badgeText = document.getElementById('bot-radar-badge-el')?.textContent?.trim();
+      const dualTagText = document.getElementById('bot-radar-dual-tag')?.textContent?.trim();
+      const offlineAlertEl = document.getElementById('bot-radar-offline-alert');
+      const offlineAlertVisible = offlineAlertEl && window.getComputedStyle(offlineAlertEl).display !== 'none';
+      const offlineAlertText = offlineAlertEl?.textContent?.trim();
+
+      return { badgeText, dualTagText, offlineAlertVisible, offlineAlertText };
+    });
+
+    if (hubOfflineResult.badgeText !== '🔴 AUTOMATION OFFLINE') {
+      throw new Error(`Assertion Failed: Expected badge "🔴 AUTOMATION OFFLINE", got "${hubOfflineResult.badgeText}"`);
+    }
+    if (!hubOfflineResult.dualTagText.includes('Hub: Offline') || !hubOfflineResult.dualTagText.includes('Server: Offline')) {
+      throw new Error(`Assertion Failed: Dual tag did not show Hub: Offline and Server: Offline! Got: "${hubOfflineResult.dualTagText}"`);
+    }
+    if (!hubOfflineResult.offlineAlertVisible || !hubOfflineResult.offlineAlertText.includes('Bot Hub and Bot Server are closed')) {
+      throw new Error(`Assertion Failed: Offline warning bar missing BotHub closed notice! Got: "${hubOfflineResult.offlineAlertText}"`);
+    }
+    console.log(`  ✅ 4B Verified: Hub offline displays "${hubOfflineResult.dualTagText}", "${hubOfflineResult.badgeText}", and closed notice.`);
+
+    // Subphase 4C: 60-Second Heartbeat Staleness Timeout (>60s old timestamp)
+    const staleResult = await page.evaluate(async () => {
+      window.latestBotStatus = {
+        status: 'ACTIVE',
+        account: 'AngryGermanpapi (Inst 15)',
+        serverOnline: true,
+        bothubOnline: true,
+        timestamp: Date.now() - 75000, // 75 seconds ago!
+        stage: 'Wilderness / Routine Tasks',
+        secondsLeft: 0,
+        totalBots: 7,
+        shortTime: '11:01 PM',
+        receivedAt: Date.now() - 75000
+      };
+      window.updateBotOperationsRadarDom();
+
+      const badgeText = document.getElementById('bot-radar-badge-el')?.textContent?.trim();
+      const dualTagText = document.getElementById('bot-radar-dual-tag')?.textContent?.trim();
+      const offlineAlertEl = document.getElementById('bot-radar-offline-alert');
+      const offlineAlertVisible = offlineAlertEl && window.getComputedStyle(offlineAlertEl).display !== 'none';
+      const offlineAlertText = offlineAlertEl?.textContent?.trim();
+
+      return { badgeText, dualTagText, offlineAlertVisible, offlineAlertText };
+    });
+
+    if (staleResult.badgeText !== '🔴 HOST TELEMETRY TIMEOUT') {
+      throw new Error(`Assertion Failed: Expected badge "🔴 HOST TELEMETRY TIMEOUT", got "${staleResult.badgeText}"`);
+    }
+    if (!staleResult.dualTagText.includes('Hub: Offline') || !staleResult.dualTagText.includes('Server: Offline')) {
+      throw new Error(`Assertion Failed: Stale telemetry did not render both Hub & Server Offline! Got: "${staleResult.dualTagText}"`);
+    }
+    if (!staleResult.offlineAlertVisible || !staleResult.offlineAlertText.includes('stopped reporting (>60s)')) {
+      throw new Error(`Assertion Failed: Stale telemetry warning bar missing 60-second notice! Got: "${staleResult.offlineAlertText}"`);
+    }
+    console.log(`  ✅ 4C Verified: 60s staleness timeout triggers "${staleResult.dualTagText}", "${staleResult.badgeText}", and timeout warning.`);
 
     console.log('\n--- PHASE 5: R4/R5 BELL ALERT INTEGRATION & PRIVACY AUDIT ---');
     // Step A: Regular member opens Bell modal -> MUST NOT see bot alert!

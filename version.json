@@ -3,15 +3,15 @@
   "releaseDate": "2026-09-07",
   "title": "What's New in v3.3.12",
   "notes": [
-    "🚫 Banned Accounts Fixed: Banned alts and roster members now display properly.",
-    "👁️ Unfiltered Banned View: Status tabs now show all matching accounts immediately.",
-    "🎭 Alt Status Badging: Banned alts clearly display their red status badges.",
-    "⚙️ Accurate Alt Counters: Roster database reflects complete alt counts accurately."
+    "🤖 Heartbeat Watchdog: 60-second telemetry watchdog marks bots offline if host disconnects.",
+    "📡 Dynamic Health Tags: Separately displays live Hub and Bot Server connection statuses.",
+    "🔔 Leadership Alerts: Stale telemetry automatically triggers confidential Bell alerts for R4/R5.",
+    "🧹 Clean House Protocol: Enforced strict two-backup retention and pre-backup house cleaning."
   ],
   "wosbdc_alliance_dashboard": {
     "version": "3.3.12",
     "latestChanges": [
-      "v3.3.12: Fixed banned accounts visibility and alt display filtering in Alliance Members & Player Database",
+      "v3.3.12: Added 60s heartbeat watchdog, dynamic hub/server health tags, and clean exit handlers",
       "v3.3.11: Added Bot Server dual-detection and confidential R4/R5 leadership Bell alerts",
       "v3.3.10: Fixed GitHub Pages deployment pipeline and cross-platform headless test execution",
       "v3.3.9: Alliance Bot Fleet & Account Login Safety Matrix for 7 bots",

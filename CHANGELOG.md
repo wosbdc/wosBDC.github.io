@@ -1,10 +1,10 @@
 # CHANGELOG
 
 ## [3.3.12] - 2026-09-07
-- 🚫 **Banned Accounts**: Banned alts and members now display properly.
-- 👁️ **Unfiltered Banned View**: Status tabs show all matching accounts immediately.
-- 🎭 **Alt Status Badges**: Banned alts clearly display red status badges.
-- ⚙️ **Accurate Alt Counters**: Roster database reflects complete alt counts accurately.
+- 🤖 **Heartbeat Watchdog**: 60-second telemetry watchdog marks bots offline if host disconnects.
+- 📡 **Dynamic Health Tags**: Separately displays live Hub and Bot Server connection statuses.
+- 🔔 **Leadership Alerts**: Stale telemetry automatically triggers confidential Bell alerts for R4/R5.
+- 🧹 **Clean House Protocol**: Enforced strict two-backup retention and pre-backup house cleaning.
 
 ## [3.3.11] - 2026-09-07
 - 🤖 **Bot Server Detection**: Live dual-app process monitoring alerts when server closes.
