@@ -1,15 +1,16 @@
 {
-  "version": "3.3.7",
+  "version": "3.3.8",
   "releaseDate": "2026-09-06",
-  "title": "What's New in v3.3.7",
+  "title": "What's New in v3.3.8",
   "notes": [
-    "🛡️ Admin Menu Relocation: Bot Operations Radar moved into Admin Menu Bots tab.",
-    "🔒 Restricted Access: Radar visibility secured exclusively for authorized alliance officers.",
-    "🔄 Multi-Account Tracking: Real-time Firebase sync reflects active rotation bot names."
+    "⚡ Real-Time DOM Sync: Bot Operations Radar dynamically mutates clock, progress, and stage.",
+    "⏱️ Dynamic Countdown: Seamlessly switches between active routines, cooldowns, and standby.",
+    "🤖 Instant Bots Tab Refresh: Instant DOM synchronization upon opening Bots tab."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.7",
+    "version": "3.3.8",
     "latestChanges": [
+      "v3.3.8: Full real-time DOM synchronization for Bot Operations Radar",
       "v3.3.7: Relocated Bot Operations Radar to Admin Menu with multi-account rotation tracking",
       "v3.3.6: Live Bot Operations Radar with Firebase telemetry",
       "v3.3.5: Split UTC and Local clocks into one compact row in Settings sidebar",

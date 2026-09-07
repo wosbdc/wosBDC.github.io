@@ -158,6 +158,9 @@ server.listen(PORT, async () => {
         window.updateBotOperationsRadarDom();
         const accountA = document.getElementById('bot-radar-account-val')?.textContent?.trim();
         const badgeA = document.getElementById('bot-radar-badge-el')?.textContent?.trim();
+        const clockA = document.getElementById('bot-radar-clock')?.textContent?.trim();
+        const labelA = document.getElementById('bot-radar-timer-label')?.textContent?.trim();
+        const progressWidthA = document.getElementById('bot-radar-progress-fill')?.style?.width;
 
         // Step B: Bisquick Active
         window.latestBotStatus = {
@@ -185,14 +188,21 @@ server.listen(PORT, async () => {
         window.updateBotOperationsRadarDom();
         const accountC = document.getElementById('bot-radar-account-val')?.textContent?.trim();
         const badgeC = document.getElementById('bot-radar-badge-el')?.textContent?.trim();
+        const clockC = document.getElementById('bot-radar-clock')?.textContent?.trim();
+        const labelC = document.getElementById('bot-radar-timer-label')?.textContent?.trim();
         const cardC = document.getElementById('bot-operations-radar');
 
         return {
           accountA,
           badgeA,
+          clockA,
+          labelA,
+          progressWidthA,
           accountB,
           accountC,
           badgeC,
+          clockC,
+          labelC,
           hasCooldownBorder: cardC?.classList?.contains('border-cooldown')
         };
       }
@@ -205,10 +215,16 @@ server.listen(PORT, async () => {
     if (mutationResult.accountA !== 'Guardian (Inst 1)' || mutationResult.accountB !== 'Bisquick (Inst 11)' || mutationResult.accountC !== 'ShrimpLeprechaun (Inst 14)' || !mutationResult.hasCooldownBorder) {
       throw new Error(`Assertion Failed: Multi-account rotation did not mutate DOM accurately! Result: ${JSON.stringify(mutationResult)}`);
     }
-    console.log(`  ✅ Multi-account rotation verified in DOM:`);
-    console.log(`     1. ${mutationResult.accountA} -> Badge="${mutationResult.badgeA}"`);
+    if (mutationResult.clockA !== 'ROUTINES RUNNING' || mutationResult.labelA !== 'Cooldown Stage:' || mutationResult.progressWidthA !== '100%') {
+      throw new Error(`Assertion Failed: ACTIVE status clock/label/progress failed! Result: ${JSON.stringify(mutationResult)}`);
+    }
+    if (mutationResult.clockC !== '00:09:50' || mutationResult.labelC !== 'Cooldown Countdown:') {
+      throw new Error(`Assertion Failed: COOLDOWN status clock/label failed! Result: ${JSON.stringify(mutationResult)}`);
+    }
+    console.log(`  ✅ Multi-account rotation & Real-time DOM clock/progress verified:`);
+    console.log(`     1. ${mutationResult.accountA} -> Badge="${mutationResult.badgeA}", Clock="${mutationResult.clockA}", Progress="${mutationResult.progressWidthA}"`);
     console.log(`     2. ${mutationResult.accountB} -> Active Switch`);
-    console.log(`     3. ${mutationResult.accountC} -> Badge="${mutationResult.badgeC}" (BorderCooldown=${mutationResult.hasCooldownBorder})`);
+    console.log(`     3. ${mutationResult.accountC} -> Badge="${mutationResult.badgeC}", Clock="${mutationResult.clockC}", Label="${mutationResult.labelC}" (BorderCooldown=${mutationResult.hasCooldownBorder})`);
 
     // Responsive Audit across Mobile, Tablet, Desktop
     console.log('\n--- PHASE 3: RESPONSIVE OVERFLOW AUDIT ---');

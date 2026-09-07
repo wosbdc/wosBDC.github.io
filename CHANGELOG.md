@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.8] - 2026-09-06
+- ⚡ **Real-Time Sync**: Radar dynamically updates clock, progress, and stage.
+- ⏱️ **Smooth Ticker**: Dynamic countdowns for active routines and cooldowns.
+- 🤖 **Instant Refresh**: Telemetry updates instantly when viewing Bots tab.
+
 ## [3.3.7] - 2026-09-06
 - 🛡️ **Admin Menu Relocation**: Bot Operations Radar moved into Admin Menu Bots tab.
 - 🔒 **Restricted Access**: Radar visibility secured exclusively for authorized alliance officers.

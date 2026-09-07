@@ -5101,6 +5101,32 @@ window.updateBotOperationsRadarDom = () => {
   
   const lastUpEl = document.getElementById('bot-radar-last-updated');
   if (lastUpEl) lastUpEl.textContent = `Last broadcast: ${shortTime}`;
+
+  const timerLblEl = document.getElementById('bot-radar-timer-label');
+  const clockEl = document.getElementById('bot-radar-clock');
+  const fillEl = document.getElementById('bot-radar-progress-fill');
+
+  if (isCooldown && data.secondsLeft > 0) {
+    if (timerLblEl) timerLblEl.textContent = 'Cooldown Countdown:';
+    const elapsedSecs = Math.floor((Date.now() - (data.receivedAt || Date.now())) / 1000);
+    const remaining = Math.max(0, data.secondsLeft - elapsedSecs);
+    const h = Math.floor(remaining / 3600).toString().padStart(2, '0');
+    const m = Math.floor((remaining % 3600) / 60).toString().padStart(2, '0');
+    const s = (remaining % 60).toString().padStart(2, '0');
+    if (clockEl) clockEl.textContent = `${h}:${m}:${s}`;
+    if (fillEl) {
+      const pct = Math.min(100, Math.max(0, (remaining / (data.totalSeconds || 10800)) * 100));
+      fillEl.style.width = pct + '%';
+    }
+  } else if (isActive) {
+    if (timerLblEl) timerLblEl.textContent = 'Cooldown Stage:';
+    if (clockEl) clockEl.textContent = 'ROUTINES RUNNING';
+    if (fillEl) fillEl.style.width = '100%';
+  } else {
+    if (timerLblEl) timerLblEl.textContent = 'Cooldown Stage:';
+    if (clockEl) clockEl.textContent = 'READY / STANDBY';
+    if (fillEl) fillEl.style.width = '0%';
+  }
 };
 
 // Smooth local 1-second countdown ticker for the Radar card
@@ -5109,21 +5135,33 @@ if (!window._botRadarInterval) {
     const radarEl = document.getElementById('bot-operations-radar');
     if (!radarEl) return;
     const data = window.latestBotStatus;
-    if (!data || data.status !== 'COOLDOWN' || !data.secondsLeft) return;
-    
-    const elapsedSecs = Math.floor((Date.now() - (data.receivedAt || Date.now())) / 1000);
-    const remaining = Math.max(0, data.secondsLeft - elapsedSecs);
-    const h = Math.floor(remaining / 3600).toString().padStart(2, '0');
-    const m = Math.floor((remaining % 3600) / 60).toString().padStart(2, '0');
-    const s = (remaining % 60).toString().padStart(2, '0');
-    
+    if (!data) return;
+
     const clockEl = document.getElementById('bot-radar-clock');
-    if (clockEl) clockEl.textContent = `${h}:${m}:${s}`;
-    
     const fillEl = document.getElementById('bot-radar-progress-fill');
-    if (fillEl) {
-      const pct = Math.min(100, Math.max(0, (remaining / (data.totalSeconds || 10800)) * 100));
-      fillEl.style.width = pct + '%';
+    const timerLblEl = document.getElementById('bot-radar-timer-label');
+
+    if (data.status === 'COOLDOWN' && data.secondsLeft > 0) {
+      const elapsedSecs = Math.floor((Date.now() - (data.receivedAt || Date.now())) / 1000);
+      const remaining = Math.max(0, data.secondsLeft - elapsedSecs);
+      const h = Math.floor(remaining / 3600).toString().padStart(2, '0');
+      const m = Math.floor((remaining % 3600) / 60).toString().padStart(2, '0');
+      const s = (remaining % 60).toString().padStart(2, '0');
+      
+      if (clockEl) clockEl.textContent = `${h}:${m}:${s}`;
+      if (fillEl) {
+        const pct = Math.min(100, Math.max(0, (remaining / (data.totalSeconds || 10800)) * 100));
+        fillEl.style.width = pct + '%';
+      }
+      if (timerLblEl) timerLblEl.textContent = 'Cooldown Countdown:';
+    } else if (data.status === 'ACTIVE') {
+      if (clockEl && clockEl.textContent !== 'ROUTINES RUNNING') clockEl.textContent = 'ROUTINES RUNNING';
+      if (fillEl && fillEl.style.width !== '100%') fillEl.style.width = '100%';
+      if (timerLblEl && timerLblEl.textContent !== 'Cooldown Stage:') timerLblEl.textContent = 'Cooldown Stage:';
+    } else if (data.status === 'STANDBY') {
+      if (clockEl && clockEl.textContent !== 'READY / STANDBY') clockEl.textContent = 'READY / STANDBY';
+      if (fillEl && fillEl.style.width !== '0%') fillEl.style.width = '0%';
+      if (timerLblEl && timerLblEl.textContent !== 'Cooldown Stage:') timerLblEl.textContent = 'Cooldown Stage:';
     }
   }, 1000);
 }
@@ -28936,6 +28974,7 @@ const views = {
           const targetEl = document.getElementById(tabKey);
           if (targetEl) targetEl.style.display = 'block';
           if (tabKey === 'tab-bots') {
+            if (window.updateBotOperationsRadarDom) window.updateBotOperationsRadarDom();
             if (window.backToBotsHub) window.backToBotsHub();
             if (window.listenToBotTelemetry) window.listenToBotTelemetry();
             if (window.listenToMaintenanceTelemetry) window.listenToMaintenanceTelemetry();
