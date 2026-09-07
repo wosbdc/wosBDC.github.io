@@ -27,19 +27,24 @@ try {
   assert(false, 'main.js compilation failed: ' + err.message);
 }
 
-console.log('\nTest 2: Codebase Verification for Bug 1st & Category Enforcement');
+console.log('\nTest 2: Codebase Verification for Required Type Dropdown, Category & Admin Editing');
 const mainContent = fs.readFileSync('main.js', 'utf8');
 
-// 1. Default to 'bug' in openSubmitFeedbackModal
+// 1. openSubmitFeedbackModal signature defaults to '' so users must actively pick
 assert(
-  mainContent.includes("window.openSubmitFeedbackModal = (defaultType = 'bug') => {"),
-  'openSubmitFeedbackModal defaults parameter to "bug"'
+  mainContent.includes("window.openSubmitFeedbackModal = (defaultType = '') => {"),
+  'openSubmitFeedbackModal defaults parameter to empty string'
 );
 
-// 2. Bug button precedes Feature button in the modal template
-const bugBtnIdx = mainContent.indexOf('id="fbTypeBugBtn"');
-const featBtnIdx = mainContent.indexOf('id="fbTypeFeatureBtn"');
-assert(bugBtnIdx !== -1 && featBtnIdx !== -1 && bugBtnIdx < featBtnIdx, 'fbTypeBugBtn appears BEFORE fbTypeFeatureBtn in DOM template');
+// 2. Type selector dropdown exists with required placeholder
+assert(
+  mainContent.includes('id="fbTypeInput"'),
+  'fbTypeInput dropdown exists in DOM template'
+);
+assert(
+  mainContent.includes('-- Select Type: Bug Report or Feature (Required) --'),
+  'Blank required placeholder option exists in fbTypeInput'
+);
 
 // 3. Required category with blank placeholder option
 assert(
@@ -47,7 +52,12 @@ assert(
   'Blank required placeholder option exists in fbCategoryInput'
 );
 
-// 4. Category validation in handleFeedbackSubmit
+// 4. Type & Category validation in handleFeedbackSubmit
+assert(
+  mainContent.includes('const typeSelectVal = document.getElementById(\'fbTypeInput\')?.value;') &&
+  mainContent.includes('Please select a Feedback Type (Bug Report or Feature Request)!'),
+  'handleFeedbackSubmit requires type and alerts user if empty'
+);
 assert(
   mainContent.includes('const category = document.getElementById(\'fbCategoryInput\')?.value;') &&
   mainContent.includes('Please select a Category / Area before submitting!'),
@@ -60,43 +70,64 @@ assert(mainContent.includes('Alliance Championship'), 'Alliance Championship cat
 assert(mainContent.includes('Bear Trap'), 'Bear Trap category exists');
 assert(mainContent.includes('Mercenary Prestige'), 'Mercenary Prestige category exists');
 
-// 6. window.updateFeedbackCategory defined
+// 6. window.updateFeedbackType and window.updateFeedbackCategory defined
+assert(mainContent.includes('window.updateFeedbackType = async (itemId, newType) => {'), 'window.updateFeedbackType is defined');
 assert(mainContent.includes('window.updateFeedbackCategory = async (itemId, newCategory) => {'), 'window.updateFeedbackCategory is defined');
 
-// 7. Admin Feedback table includes category update select
+// 7. Admin Feedback table includes type and category update selects
+assert(
+  mainContent.includes("onchange=\"window.updateFeedbackType('${item.id}', this.value)\"") &&
+  mainContent.includes('title="Change Ticket Type"'),
+  'Admin table includes editable type dropdown'
+);
 assert(
   mainContent.includes("onchange=\"window.updateFeedbackCategory('${item.id}', this.value)\"") &&
   mainContent.includes('title="Reclassify Category"'),
   'Admin table includes reclassify category dropdown'
 );
 
-// 8. Community feedback cards include category update select for managers
+// 8. Community feedback cards include type and category update selects for managers
 assert(
-  mainContent.includes('title="Reclassify Category"'),
+  mainContent.includes("window.updateFeedbackType('${item.id}', this.value)"),
+  'Community feedback cards include type dropdown in manager controls'
+);
+assert(
+  mainContent.includes("window.updateFeedbackCategory('${item.id}', this.value)"),
   'Community feedback cards include category dropdown in manager controls'
 );
 
-// 9. Admin Resolution note modal includes category selector
+// 9. Admin Resolution note modal includes type and category selectors
+assert(
+  mainContent.includes('id="adminNoteTypeInput"'),
+  'openAdminNoteModal includes adminNoteTypeInput dropdown'
+);
 assert(
   mainContent.includes('id="adminNoteCategoryInput"'),
   'openAdminNoteModal includes adminNoteCategoryInput dropdown'
 );
 
-console.log('\nTest 3: Logic Simulation of Category Validation');
-function simulateSubmit(title, category) {
+console.log('\nTest 3: Logic Simulation of Form Submission Validation');
+function simulateSubmit(type, category, title) {
+  if (!type) {
+    return { success: false, error: 'MISSING_TYPE' };
+  }
   if (!category) {
     return { success: false, error: 'MISSING_CATEGORY' };
   }
   if (!title) {
     return { success: false, error: 'MISSING_TITLE' };
   }
-  return { success: true, payload: { title, category } };
+  return { success: true, payload: { type, category, title } };
 }
 
-assert(simulateSubmit('My Bug', '').success === false, 'Empty category fails validation');
-assert(simulateSubmit('My Bug', '').error === 'MISSING_CATEGORY', 'Empty category returns MISSING_CATEGORY');
-assert(simulateSubmit('', 'Bear Trap').success === false, 'Empty title fails validation');
-assert(simulateSubmit('My Bug', 'Bear Trap').success === true, 'Valid title and category succeed');
+assert(simulateSubmit('', 'Bear Trap', 'My Issue').success === false, 'Empty type fails validation');
+assert(simulateSubmit('', 'Bear Trap', 'My Issue').error === 'MISSING_TYPE', 'Empty type returns MISSING_TYPE');
+assert(simulateSubmit('bug', '', 'My Issue').success === false, 'Empty category fails validation');
+assert(simulateSubmit('bug', '', 'My Issue').error === 'MISSING_CATEGORY', 'Empty category returns MISSING_CATEGORY');
+assert(simulateSubmit('bug', 'Bear Trap', '').success === false, 'Empty title fails validation');
+assert(simulateSubmit('bug', 'Bear Trap', '').error === 'MISSING_TITLE', 'Empty title returns MISSING_TITLE');
+assert(simulateSubmit('bug', 'Bear Trap', 'Bug with trap score').success === true, 'Valid submission succeeds');
+assert(simulateSubmit('feature', 'Alliance Championship', 'Add flags to cards').success === true, 'Valid feature submission succeeds');
 
 console.log('\n========================================');
 console.log('Test Summary: ' + passedTests + '/' + totalTests + ' tests passed');

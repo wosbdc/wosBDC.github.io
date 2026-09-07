@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.16] - 2026-09-07
+- 📋 **Required Type**: Forces members to pick bug or feature.
+- 🚫 **Blank Placeholder**: Stops members from submitting without choosing a type.
+- 🛠️ **Admin Type Editor**: Reclassify bug or feature directly from admin tables.
+- ✏️ **Resolution Note Type**: Change ticket type inside the resolution note editor.
+
 ## [3.3.15] - 2026-09-07
 - 🐞 **Bug Report Priority**: Positioned Bug Report first and preselected by default.
 - 🔒 **Required Category**: Enforced mandatory category selection before feedback ticket submission.

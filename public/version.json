@@ -1,16 +1,17 @@
 {
-  "version": "3.3.15",
+  "version": "3.3.16",
   "releaseDate": "2026-09-07",
-  "title": "What's New in v3.3.15",
+  "title": "What's New in v3.3.16",
   "notes": [
-    "🐞 Bug Report Priority: Positioned Bug Report first and preselected by default.",
-    "🔒 Required Category: Enforced mandatory category selection before feedback ticket submission.",
-    "🏷️ Admin Category Editor: Managers can reclassify miscategorized tickets directly from tables.",
-    "✏️ Resolution Note Category: Update categories directly inside resolution notes modal."
+    "📋 Required Type: Forces members to pick bug or feature.",
+    "🚫 Blank Placeholder: Stops members from submitting without choosing a type.",
+    "🛠️ Admin Type Editor: Reclassify bug or feature directly from admin tables.",
+    "✏️ Resolution Note Type: Change ticket type inside the resolution note editor."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.15",
+    "version": "3.3.16",
     "latestChanges": [
+      "v3.3.16: Required feedback type dropdown, blank required placeholder, and admin type switcher",
       "v3.3.15: Bug Report 1st toggle priority, required category enforcement, and admin category editor",
       "v3.3.14: Roster deduplication across event Yes/No pages and non-enumerable alias keys",
       "v3.3.13: Unified member update sync engine, dual-key resolution, and instant cache invalidation",

@@ -14195,7 +14195,24 @@ window.updateFeedbackCategory = async (itemId, newCategory) => {
     }
 };
 
-window.openAdminNoteModal = (itemId, currentNote = '', currentCategory = '') => {
+window.updateFeedbackType = async (itemId, newType) => {
+    if (!itemId || !newType) return;
+    try {
+        await update(ref(db, `community_feedback/${itemId}`), {
+            type: newType,
+            updatedAt: Date.now()
+        });
+        const typeLabel = newType === 'feature' ? '💡 Feature Request' : '🐞 Bug Report';
+        if (window.showToast) window.showToast(`Ticket type updated to ${typeLabel}!`, "success");
+        if (typeof window.activeFeedbackRender === 'function') window.activeFeedbackRender();
+        if (typeof window.renderAdminFeedbackTab === 'function') window.renderAdminFeedbackTab();
+    } catch (err) {
+        console.error("Failed to update feedback type:", err);
+        if (window.showToast) window.showToast("Failed to update type: " + err.message, "error");
+    }
+};
+
+window.openAdminNoteModal = (itemId, currentNote = '', currentCategory = '', currentType = 'bug') => {
     const existing = document.getElementById('feedbackAdminNoteModal');
     if (existing) existing.remove();
 
@@ -14211,19 +14228,28 @@ window.openAdminNoteModal = (itemId, currentNote = '', currentCategory = '') => 
                         ✨
                     </div>
                     <div>
-                        <h3 style="margin:0; font-size:17px; color:var(--text-main); font-weight:800;">Admin Resolution & Category Editor</h3>
-                        <p style="margin:2px 0 0 0; font-size:11.5px; color:var(--text-muted);">Update developer notes, fix miscategorized tickets, or log changelog tags.</p>
+                        <h3 style="margin:0; font-size:17px; color:var(--text-main); font-weight:800;">Admin Resolution & Ticket Editor</h3>
+                        <p style="margin:2px 0 0 0; font-size:11.5px; color:var(--text-muted);">Update developer notes, reclassify type or category, and log changelog tags.</p>
                     </div>
                 </div>
                 <button onclick="document.getElementById('feedbackAdminNoteModal')?.remove()" style="background:none; border:none; color:var(--text-muted); font-size:20px; cursor:pointer; padding:4px 8px; border-radius:6px;">✕</button>
             </div>
 
-            <!-- Category Selector for Admins -->
-            <div>
-                <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Category / Area (Reclassify if needed):</label>
-                <select id="adminNoteCategoryInput" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; font-weight:bold; box-sizing:border-box;">
-                    ${window.FEEDBACK_CATEGORIES.map(c => `<option value="${c.value}" ${currentCategory === c.value ? 'selected' : ''}>${c.label}</option>`).join('')}
-                </select>
+            <!-- Type & Category Selectors for Admins -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                <div>
+                    <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Ticket Type:</label>
+                    <select id="adminNoteTypeInput" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; font-weight:bold; box-sizing:border-box;">
+                        <option value="bug" ${currentType !== 'feature' ? 'selected' : ''}>🐞 Bug Report</option>
+                        <option value="feature" ${currentType === 'feature' ? 'selected' : ''}>💡 Feature Request</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Category / Area:</label>
+                    <select id="adminNoteCategoryInput" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; font-weight:bold; box-sizing:border-box;">
+                        ${window.FEEDBACK_CATEGORIES.map(c => `<option value="${c.value}" ${currentCategory === c.value ? 'selected' : ''}>${c.label}</option>`).join('')}
+                    </select>
+                </div>
             </div>
 
             <!-- Quick Template Insert Pills -->
@@ -14289,11 +14315,13 @@ window.openAdminNoteModal = (itemId, currentNote = '', currentCategory = '') => 
         saveBtn.onclick = async () => {
             const noteVal = document.getElementById('adminNoteInput')?.value.trim() || '';
             const catVal = document.getElementById('adminNoteCategoryInput')?.value;
+            const typeVal = document.getElementById('adminNoteTypeInput')?.value;
             const updatePayload = {
                 adminNote: noteVal,
                 updatedAt: Date.now()
             };
             if (catVal) updatePayload.category = catVal;
+            if (typeVal) updatePayload.type = typeVal;
             await update(ref(db, `community_feedback/${itemId}`), updatePayload);
             overlay.remove();
             if (window.showToast) window.showToast("Admin changes saved!", "success");
@@ -14303,7 +14331,7 @@ window.openAdminNoteModal = (itemId, currentNote = '', currentCategory = '') => 
     }
 };
 
-window.openSubmitFeedbackModal = (defaultType = 'bug') => {
+window.openSubmitFeedbackModal = (defaultType = '') => {
     if (!currentUser) {
         if (window.showToast) window.showToast("Please sign in to submit suggestions or bugs!", "warning");
         if (views.login) views.login();
@@ -14313,7 +14341,7 @@ window.openSubmitFeedbackModal = (defaultType = 'bug') => {
     const existing = document.getElementById('submitFeedbackModal');
     if (existing) existing.remove();
 
-    let selectedType = defaultType; // 'bug' or 'feature'
+    let selectedType = defaultType; // 'bug' or 'feature' or ''
     let attachedMedia = null; // { type: 'image'|'video'|'external_video', dataUrl, thumbnail, duration, sizeBytes, name }
 
     const overlay = document.createElement('div');
@@ -14324,33 +14352,31 @@ window.openSubmitFeedbackModal = (defaultType = 'bug') => {
     const authorGid = currentUser?.gameId || '';
 
     const isBug = selectedType === 'bug';
+    const isFeat = selectedType === 'feature';
 
     overlay.innerHTML = `
         <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:16px; padding:24px; max-width:560px; width:100%; box-shadow:0 12px 40px rgba(0,0,0,0.6); max-height:90vh; overflow-y:auto;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:12px;">
                 <div style="display:flex; align-items:center; gap:10px;">
-                    <div id="fbModalHeaderIcon" style="width:36px; height:36px; border-radius:10px; background:${isBug ? 'linear-gradient(135deg, rgba(239,68,68,0.2), rgba(168,85,247,0.2))' : 'linear-gradient(135deg, rgba(6,182,212,0.2), rgba(168,85,247,0.2))'}; border:1px solid ${isBug ? 'rgba(239,68,68,0.4)' : 'rgba(6,182,212,0.4)'}; display:flex; align-items:center; justify-content:center; font-size:18px;">
-                        ${isBug ? '🐞' : '💡'}
+                    <div id="fbModalHeaderIcon" style="width:36px; height:36px; border-radius:10px; background:${isBug ? 'linear-gradient(135deg, rgba(239,68,68,0.2), rgba(168,85,247,0.2))' : isFeat ? 'linear-gradient(135deg, rgba(6,182,212,0.2), rgba(168,85,247,0.2))' : 'linear-gradient(135deg, rgba(6,182,212,0.2), rgba(168,85,247,0.2))'}; border:1px solid ${isBug ? 'rgba(239,68,68,0.4)' : 'rgba(6,182,212,0.4)'}; display:flex; align-items:center; justify-content:center; font-size:18px;">
+                        ${isBug ? '🐞' : isFeat ? '💡' : '📝'}
                     </div>
                     <div>
-                        <h3 id="fbModalHeaderTitle" style="margin:0; font-size:17px; color:var(--text-main); font-weight:800;">${isBug ? 'Report Bug or Submit Idea' : 'Submit Idea or Report Bug'}</h3>
+                        <h3 id="fbModalHeaderTitle" style="margin:0; font-size:17px; color:var(--text-main); font-weight:800;">${isBug ? 'Report Bug' : isFeat ? 'Submit Idea / Feature Request' : 'Submit Idea or Report Bug'}</h3>
                         <p style="margin:2px 0 0 0; font-size:11px; color:var(--text-muted);">Share your feedback with alliance developers & managers</p>
                     </div>
                 </div>
                 <button onclick="document.getElementById('submitFeedbackModal')?.remove()" style="background:none; border:none; color:var(--text-muted); font-size:20px; cursor:pointer;">✕</button>
             </div>
 
-            <!-- Type Selector Toggle -->
-            <div style="margin-bottom:16px;">
-                <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Select Type</label>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                    <button type="button" id="fbTypeBugBtn" onclick="window.selectFeedbackType('bug')" style="padding:12px; border-radius:10px; border:${isBug ? '2px solid #ef4444' : '1px solid var(--border)'}; background:${isBug ? 'rgba(239,68,68,0.15)' : 'var(--bg-main)'}; color:${isBug ? '#ef4444' : 'var(--text-muted)'}; font-weight:bold; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:0.2s;">
-                        <span>🐞</span> Bug Report
-                    </button>
-                    <button type="button" id="fbTypeFeatureBtn" onclick="window.selectFeedbackType('feature')" style="padding:12px; border-radius:10px; border:${!isBug ? '2px solid #06b6d4' : '1px solid var(--border)'}; background:${!isBug ? 'rgba(6,182,212,0.15)' : 'var(--bg-main)'}; color:${!isBug ? '#06b6d4' : 'var(--text-muted)'}; font-weight:bold; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:0.2s;">
-                        <span>💡</span> Feature Request
-                    </button>
-                </div>
+            <!-- Type Selector Dropdown -->
+            <div style="margin-bottom:14px;">
+                <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Feedback Type <span style="color:#ef4444; font-size:12px;">*</span></label>
+                <select id="fbTypeInput" onchange="window.selectFeedbackType(this.value); this.style.borderColor='var(--border)';" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; font-weight:bold; box-sizing:border-box;">
+                    <option value="" disabled ${!selectedType ? 'selected' : ''}>-- Select Type: Bug Report or Feature (Required) --</option>
+                    <option value="bug" ${selectedType === 'bug' ? 'selected' : ''}>🐞 Bug Report</option>
+                    <option value="feature" ${selectedType === 'feature' ? 'selected' : ''}>💡 Feature Request / Idea</option>
+                </select>
             </div>
 
             <!-- Category Picker -->
@@ -14365,13 +14391,13 @@ window.openSubmitFeedbackModal = (defaultType = 'bug') => {
             <!-- Title Input -->
             <div style="margin-bottom:14px;">
                 <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Title <span style="color:#ef4444; font-size:12px;">*</span></label>
-                <input type="text" id="fbTitleInput" oninput="this.style.borderColor='var(--border)'" placeholder="${isBug ? 'e.g. Shield alert not triggering, score calculation issue...' : 'e.g. Add flag counts to Championship 5-round cards...'}" style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; font-weight:bold; box-sizing:border-box;">
+                <input type="text" id="fbTitleInput" oninput="this.style.borderColor='var(--border)'" placeholder="${isBug ? 'e.g. Shield alert not triggering, score calculation issue...' : isFeat ? 'e.g. Add flag counts to Championship 5-round cards...' : 'e.g. Brief summary of the bug or idea...'}" style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; font-weight:bold; box-sizing:border-box;">
             </div>
 
             <!-- Description Textarea -->
             <div style="margin-bottom:14px;">
                 <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Description / Details</label>
-                <textarea id="fbDescInput" rows="4" placeholder="${isBug ? 'Explain what bug occurred, where you saw it, and steps to reproduce...' : 'Explain what feature you\'d like to see, or details on how it should work...'}" style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; box-sizing:border-box; resize:vertical; line-height:1.4;"></textarea>
+                <textarea id="fbDescInput" rows="4" placeholder="${isBug ? 'Explain what bug occurred, where you saw it, and steps to reproduce...' : isFeat ? 'Explain what feature you\'d like to see, or details on how it should work...' : 'Provide details, steps to reproduce for bugs, or explain how your feature idea should work...'}" style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; box-sizing:border-box; resize:vertical; line-height:1.4;"></textarea>
             </div>
 
             <!-- Media Attachment: Image or Video -->
@@ -14656,54 +14682,77 @@ window.openSubmitFeedbackModal = (defaultType = 'bug') => {
 
     window.selectFeedbackType = (t) => {
         selectedType = t;
-        const featBtn = document.getElementById('fbTypeFeatureBtn');
-        const bugBtn = document.getElementById('fbTypeBugBtn');
+        const typeSelect = document.getElementById('fbTypeInput');
+        if (typeSelect && typeSelect.value !== t) typeSelect.value = t;
         const headerIcon = document.getElementById('fbModalHeaderIcon');
         const headerTitle = document.getElementById('fbModalHeaderTitle');
         const titleInput = document.getElementById('fbTitleInput');
         const descInput = document.getElementById('fbDescInput');
 
         if (t === 'feature') {
-            if (featBtn) { featBtn.style.border = '2px solid #06b6d4'; featBtn.style.background = 'rgba(6,182,212,0.15)'; featBtn.style.color = '#06b6d4'; }
-            if (bugBtn) { bugBtn.style.border = '1px solid var(--border)'; bugBtn.style.background = 'var(--bg-main)'; bugBtn.style.color = 'var(--text-muted)'; }
             if (headerIcon) {
                 headerIcon.textContent = '💡';
                 headerIcon.style.background = 'linear-gradient(135deg, rgba(6,182,212,0.2), rgba(168,85,247,0.2))';
                 headerIcon.style.border = '1px solid rgba(6,182,212,0.4)';
             }
-            if (headerTitle) headerTitle.textContent = 'Submit Idea or Report Bug';
+            if (headerTitle) headerTitle.textContent = 'Submit Idea / Feature Request';
             if (titleInput && (!titleInput.value || titleInput.value.includes('e.g.'))) {
                 titleInput.placeholder = 'e.g. Add flag counts to Championship 5-round cards...';
             }
             if (descInput && !descInput.value) {
                 descInput.placeholder = "Explain what feature you'd like to see, or details on how it should work...";
             }
-        } else {
-            if (bugBtn) { bugBtn.style.border = '2px solid #ef4444'; bugBtn.style.background = 'rgba(239,68,68,0.15)'; bugBtn.style.color = '#ef4444'; }
-            if (featBtn) { featBtn.style.border = '1px solid var(--border)'; featBtn.style.background = 'var(--bg-main)'; featBtn.style.color = 'var(--text-muted)'; }
+        } else if (t === 'bug') {
             if (headerIcon) {
                 headerIcon.textContent = '🐞';
                 headerIcon.style.background = 'linear-gradient(135deg, rgba(239,68,68,0.2), rgba(168,85,247,0.2))';
                 headerIcon.style.border = '1px solid rgba(239,68,68,0.4)';
             }
-            if (headerTitle) headerTitle.textContent = 'Report Bug or Submit Idea';
+            if (headerTitle) headerTitle.textContent = 'Report Bug';
             if (titleInput && (!titleInput.value || titleInput.value.includes('e.g.'))) {
                 titleInput.placeholder = 'e.g. Shield alert not triggering, score calculation issue...';
             }
             if (descInput && !descInput.value) {
                 descInput.placeholder = 'Explain what bug occurred, where you saw it, and steps to reproduce...';
             }
+        } else {
+            if (headerIcon) {
+                headerIcon.textContent = '📝';
+                headerIcon.style.background = 'linear-gradient(135deg, rgba(6,182,212,0.2), rgba(168,85,247,0.2))';
+                headerIcon.style.border = '1px solid rgba(6,182,212,0.3)';
+            }
+            if (headerTitle) headerTitle.textContent = 'Report Bug or Submit Idea';
+            if (titleInput && (!titleInput.value || titleInput.value.includes('e.g.'))) {
+                titleInput.placeholder = 'e.g. Brief title summarizing the bug or idea...';
+            }
+            if (descInput && !descInput.value) {
+                descInput.placeholder = 'Provide details, steps to reproduce for bugs, or explain how your feature idea should work...';
+            }
         }
     };
 
-    // Ensure initial state styling and placeholders are synced
-    window.selectFeedbackType(selectedType);
+    // If initial type provided, sync UI
+    if (selectedType) {
+        window.selectFeedbackType(selectedType);
+    }
 
     window.handleFeedbackSubmit = async () => {
+        const typeSelectVal = document.getElementById('fbTypeInput')?.value;
+        const finalType = typeSelectVal || selectedType;
+        const category = document.getElementById('fbCategoryInput')?.value;
         const title = document.getElementById('fbTitleInput')?.value.trim();
         const desc = document.getElementById('fbDescInput')?.value.trim();
-        const category = document.getElementById('fbCategoryInput')?.value;
         const submitBtn = document.getElementById('btnSubmitFeedbackSend');
+
+        if (!finalType) {
+            if (window.showToast) window.showToast("⚠️ Please select a Feedback Type (Bug Report or Feature Request)!", "warning");
+            const tSelect = document.getElementById('fbTypeInput');
+            if (tSelect) {
+                tSelect.style.borderColor = '#ef4444';
+                tSelect.focus();
+            }
+            return;
+        }
 
         if (!category) {
             if (window.showToast) window.showToast("⚠️ Please select a Category / Area before submitting!", "warning");
@@ -14735,7 +14784,7 @@ window.openSubmitFeedbackModal = (defaultType = 'bug') => {
             const isImage = attachedMedia && attachedMedia.type === 'image';
 
             await window.submitFeedbackItem({
-                type: selectedType,
+                type: finalType,
                 category: category,
                 title: title,
                 description: desc,
@@ -14841,7 +14890,12 @@ window.renderAdminFeedbackTab = async () => {
                     <td style="padding:12px; text-align:center;">
                         <input type="checkbox" onchange="window.toggleFeedbackCompleted('${item.id}', this.checked)" ${isCompleted ? 'checked' : ''} style="width:18px; height:18px; accent-color:#10b981; cursor:pointer;" title="Mark Completed / Done">
                     </td>
-                    <td style="padding:12px; white-space:nowrap;">${typeBadge}</td>
+                    <td style="padding:12px; white-space:nowrap;">
+                        <select onchange="window.updateFeedbackType('${item.id}', this.value)" style="padding:4px 8px; border-radius:6px; border:1px solid ${isFeat ? 'rgba(6,182,212,0.4)' : 'rgba(239,68,68,0.4)'}; background:${isFeat ? 'rgba(6,182,212,0.12)' : 'rgba(239,68,68,0.12)'}; color:${isFeat ? '#06b6d4' : '#ef4444'}; font-size:11px; font-weight:bold; cursor:pointer;" title="Change Ticket Type">
+                            <option value="bug" ${!isFeat ? 'selected' : ''}>🐞 BUG</option>
+                            <option value="feature" ${isFeat ? 'selected' : ''}>💡 FEATURE</option>
+                        </select>
+                    </td>
                     <td style="padding:12px;">
                         <div style="font-weight:bold; font-size:13px; color:var(--text-main); ${isCompleted ? 'text-decoration:line-through; opacity:0.75;' : ''}">${escapeHTML(item.title || '')}</div>
                         ${item.description ? `<div style="font-size:11.5px; color:var(--text-muted); margin-top:3px; max-width:380px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHTML(item.description)}</div>` : ''}
@@ -14867,7 +14921,7 @@ window.renderAdminFeedbackTab = async () => {
                         </select>
                     </td>
                     <td style="padding:12px; white-space:nowrap; text-align:right;">
-                        <button onclick="window.openAdminNoteModal('${item.id}', '${escapeHTML(item.adminNote || '')}', '${escapeHTML(item.category || '')}')" style="background:rgba(6,182,212,0.12); border:1px solid rgba(6,182,212,0.3); color:var(--accent); padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;" title="Add or edit resolution note">✏️ Note</button>
+                        <button onclick="window.openAdminNoteModal('${item.id}', '${escapeHTML(item.adminNote || '')}', '${escapeHTML(item.category || '')}', '${escapeHTML(item.type || 'bug')}')" style="background:rgba(6,182,212,0.12); border:1px solid rgba(6,182,212,0.3); color:var(--accent); padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;" title="Add or edit resolution note">✏️ Note</button>
                         <button onclick="window.deleteFeedbackItem('${item.id}')" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; margin-left:4px;" title="Delete ticket">🗑️</button>
                     </td>
                 </tr>`;
@@ -38128,6 +38182,11 @@ window.resetBearTrapEvent = async () => {
                                 <input type="checkbox" onchange="window.toggleFeedbackCompleted('${item.id}', this.checked)" ${isCompleted ? 'checked' : ''} style="width:16px; height:16px; accent-color:#10b981; cursor:pointer;">
                                 <span>Done</span>
                             </label>
+
+                            <select onchange="window.updateFeedbackType('${item.id}', this.value)" style="padding:4px 8px; border-radius:6px; border:1px solid ${isFeat ? 'rgba(6,182,212,0.4)' : 'rgba(239,68,68,0.4)'}; background:${isFeat ? 'rgba(6,182,212,0.12)' : 'rgba(239,68,68,0.12)'}; color:${isFeat ? '#06b6d4' : '#ef4444'}; font-size:11px; font-weight:bold; cursor:pointer;" title="Change Type">
+                                <option value="bug" ${!isFeat ? 'selected' : ''}>🐞 Bug</option>
+                                <option value="feature" ${isFeat ? 'selected' : ''}>💡 Feature</option>
+                            </select>
                             
                             <select onchange="window.updateFeedbackStatus('${item.id}', this.value)" style="padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:11px; font-weight:bold;" title="Update Status">
                                 <option value="pending" ${isPending ? 'selected' : ''}>🟡 Under Review</option>
@@ -38140,7 +38199,7 @@ window.resetBearTrapEvent = async () => {
                                 ${window.FEEDBACK_CATEGORIES.map(c => `<option value="${c.value}" ${(item.category || 'General UI') === c.value ? 'selected' : ''}>${c.label}</option>`).join('')}
                             </select>
 
-                            <button onclick="window.openAdminNoteModal('${item.id}', '${escapeHTML(item.adminNote || '')}', '${escapeHTML(item.category || '')}')" style="background:rgba(6,182,212,0.12); border:1px solid rgba(6,182,212,0.3); color:var(--accent); padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+                            <button onclick="window.openAdminNoteModal('${item.id}', '${escapeHTML(item.adminNote || '')}', '${escapeHTML(item.category || '')}', '${escapeHTML(item.type || 'bug')}')" style="background:rgba(6,182,212,0.12); border:1px solid rgba(6,182,212,0.3); color:var(--accent); padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
                                 ✏️ ${item.adminNote ? 'Edit Note' : 'Add Note'}
                             </button>
 
