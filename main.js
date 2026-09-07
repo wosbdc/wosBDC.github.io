@@ -14165,7 +14165,37 @@ window.deleteFeedbackItem = async (itemId) => {
     }
 };
 
-window.openAdminNoteModal = (itemId, currentNote = '') => {
+window.FEEDBACK_CATEGORIES = [
+    { value: "Alliance Championship", label: "🏆 Alliance Championship" },
+    { value: "Bear Trap", label: "🐻 Bear Trap & Attendance" },
+    { value: "Showdown", label: "⚔️ ShowDown" },
+    { value: "Mercenary Prestige", label: "🛡️ Mercenary Prestige" },
+    { value: "Account Hub", label: "👤 Account Hub & Profiles" },
+    { value: "Shield Alerts", label: "🔔 Shield & Discord Alerts" },
+    { value: "Leaderboards", label: "📊 Leaderboards & Medals" },
+    { value: "Schedule", label: "📅 Schedule & Clocks" },
+    { value: "Mobile UI", label: "📱 Mobile Layout & Navigation" },
+    { value: "Gift Codes", label: "🎁 Gift Code Engine" },
+    { value: "General UI", label: "🎨 General UI / Other" }
+];
+
+window.updateFeedbackCategory = async (itemId, newCategory) => {
+    if (!itemId || !newCategory) return;
+    try {
+        await update(ref(db, `community_feedback/${itemId}`), {
+            category: newCategory,
+            updatedAt: Date.now()
+        });
+        if (window.showToast) window.showToast(`Category updated to "${newCategory}"!`, "success");
+        if (typeof window.activeFeedbackRender === 'function') window.activeFeedbackRender();
+        if (typeof window.renderAdminFeedbackTab === 'function') window.renderAdminFeedbackTab();
+    } catch (err) {
+        console.error("Failed to update feedback category:", err);
+        if (window.showToast) window.showToast("Failed to update category: " + err.message, "error");
+    }
+};
+
+window.openAdminNoteModal = (itemId, currentNote = '', currentCategory = '') => {
     const existing = document.getElementById('feedbackAdminNoteModal');
     if (existing) existing.remove();
 
@@ -14181,11 +14211,19 @@ window.openAdminNoteModal = (itemId, currentNote = '') => {
                         ✨
                     </div>
                     <div>
-                        <h3 style="margin:0; font-size:17px; color:var(--text-main); font-weight:800;">Admin Resolution & Developer Notes</h3>
-                        <p style="margin:2px 0 0 0; font-size:11.5px; color:var(--text-muted);">Add multi-line developer updates, changelog tags, or resolution details.</p>
+                        <h3 style="margin:0; font-size:17px; color:var(--text-main); font-weight:800;">Admin Resolution & Category Editor</h3>
+                        <p style="margin:2px 0 0 0; font-size:11.5px; color:var(--text-muted);">Update developer notes, fix miscategorized tickets, or log changelog tags.</p>
                     </div>
                 </div>
                 <button onclick="document.getElementById('feedbackAdminNoteModal')?.remove()" style="background:none; border:none; color:var(--text-muted); font-size:20px; cursor:pointer; padding:4px 8px; border-radius:6px;">✕</button>
+            </div>
+
+            <!-- Category Selector for Admins -->
+            <div>
+                <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Category / Area (Reclassify if needed):</label>
+                <select id="adminNoteCategoryInput" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; font-weight:bold; box-sizing:border-box;">
+                    ${window.FEEDBACK_CATEGORIES.map(c => `<option value="${c.value}" ${currentCategory === c.value ? 'selected' : ''}>${c.label}</option>`).join('')}
+                </select>
             </div>
 
             <!-- Quick Template Insert Pills -->
@@ -14202,7 +14240,7 @@ window.openAdminNoteModal = (itemId, currentNote = '') => {
             <!-- Spacious Textarea Input -->
             <div>
                 <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Resolution Note (Supports multiple lines, bullet points & spacing):</label>
-                <textarea id="adminNoteInput" rows="7" placeholder="Type your notes here...&#10;• Line breaks and spaces are neatly preserved&#10;• Press Enter for new lines&#10;• Press Ctrl+Enter to save" style="width:100%; padding:14px 16px; border-radius:10px; border:1.5px solid var(--accent); background:var(--bg-main); color:var(--text-main); font-size:13.5px; line-height:1.55; box-sizing:border-box; resize:vertical; font-family:inherit; min-height:140px; white-space:pre-wrap;">${escapeHTML(currentNote || '')}</textarea>
+                <textarea id="adminNoteInput" rows="6" placeholder="Type your notes here...&#10;• Line breaks and spaces are neatly preserved&#10;• Press Enter for new lines&#10;• Press Ctrl+Enter to save" style="width:100%; padding:14px 16px; border-radius:10px; border:1.5px solid var(--accent); background:var(--bg-main); color:var(--text-main); font-size:13.5px; line-height:1.55; box-sizing:border-box; resize:vertical; font-family:inherit; min-height:130px; white-space:pre-wrap;">${escapeHTML(currentNote || '')}</textarea>
             </div>
 
             <!-- Footer: Shortcut Tip & Action Buttons -->
@@ -14213,7 +14251,7 @@ window.openAdminNoteModal = (itemId, currentNote = '') => {
                 <div style="display:flex; gap:10px;">
                     <button type="button" onclick="document.getElementById('feedbackAdminNoteModal')?.remove()" style="background:var(--bg-main); border:1px solid var(--border); color:var(--text-muted); padding:9px 18px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px;">Cancel</button>
                     <button type="button" id="saveAdminNoteBtn" style="background:linear-gradient(135deg, #06b6d4, #8b5cf6); border:none; color:#fff; padding:9px 22px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; box-shadow:0 3px 12px rgba(6,182,212,0.35); display:inline-flex; align-items:center; gap:6px;">
-                        💾 Save Note
+                        💾 Save Changes
                     </button>
                 </div>
             </div>
@@ -14250,19 +14288,22 @@ window.openAdminNoteModal = (itemId, currentNote = '') => {
     if (saveBtn) {
         saveBtn.onclick = async () => {
             const noteVal = document.getElementById('adminNoteInput')?.value.trim() || '';
-            await update(ref(db, `community_feedback/${itemId}`), {
+            const catVal = document.getElementById('adminNoteCategoryInput')?.value;
+            const updatePayload = {
                 adminNote: noteVal,
                 updatedAt: Date.now()
-            });
+            };
+            if (catVal) updatePayload.category = catVal;
+            await update(ref(db, `community_feedback/${itemId}`), updatePayload);
             overlay.remove();
-            if (window.showToast) window.showToast("Admin note saved!", "success");
+            if (window.showToast) window.showToast("Admin changes saved!", "success");
             if (typeof window.activeFeedbackRender === 'function') window.activeFeedbackRender();
             if (typeof window.renderAdminFeedbackTab === 'function') window.renderAdminFeedbackTab();
         };
     }
 };
 
-window.openSubmitFeedbackModal = (defaultType = 'feature') => {
+window.openSubmitFeedbackModal = (defaultType = 'bug') => {
     if (!currentUser) {
         if (window.showToast) window.showToast("Please sign in to submit suggestions or bugs!", "warning");
         if (views.login) views.login();
@@ -14272,7 +14313,7 @@ window.openSubmitFeedbackModal = (defaultType = 'feature') => {
     const existing = document.getElementById('submitFeedbackModal');
     if (existing) existing.remove();
 
-    let selectedType = defaultType; // 'feature' or 'bug'
+    let selectedType = defaultType; // 'bug' or 'feature'
     let attachedMedia = null; // { type: 'image'|'video'|'external_video', dataUrl, thumbnail, duration, sizeBytes, name }
 
     const overlay = document.createElement('div');
@@ -14282,15 +14323,17 @@ window.openSubmitFeedbackModal = (defaultType = 'feature') => {
     const authorName = (window.idToNameMap && currentUser?.gameId && window.idToNameMap[currentUser.gameId]) || currentUser?.displayName || 'Chief';
     const authorGid = currentUser?.gameId || '';
 
+    const isBug = selectedType === 'bug';
+
     overlay.innerHTML = `
         <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:16px; padding:24px; max-width:560px; width:100%; box-shadow:0 12px 40px rgba(0,0,0,0.6); max-height:90vh; overflow-y:auto;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:12px;">
                 <div style="display:flex; align-items:center; gap:10px;">
-                    <div style="width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg, rgba(6,182,212,0.2), rgba(168,85,247,0.2)); border:1px solid rgba(6,182,212,0.4); display:flex; align-items:center; justify-content:center; font-size:18px;">
-                        💡
+                    <div id="fbModalHeaderIcon" style="width:36px; height:36px; border-radius:10px; background:${isBug ? 'linear-gradient(135deg, rgba(239,68,68,0.2), rgba(168,85,247,0.2))' : 'linear-gradient(135deg, rgba(6,182,212,0.2), rgba(168,85,247,0.2))'}; border:1px solid ${isBug ? 'rgba(239,68,68,0.4)' : 'rgba(6,182,212,0.4)'}; display:flex; align-items:center; justify-content:center; font-size:18px;">
+                        ${isBug ? '🐞' : '💡'}
                     </div>
                     <div>
-                        <h3 style="margin:0; font-size:17px; color:var(--text-main); font-weight:800;">Submit Idea or Report Bug</h3>
+                        <h3 id="fbModalHeaderTitle" style="margin:0; font-size:17px; color:var(--text-main); font-weight:800;">${isBug ? 'Report Bug or Submit Idea' : 'Submit Idea or Report Bug'}</h3>
                         <p style="margin:2px 0 0 0; font-size:11px; color:var(--text-muted);">Share your feedback with alliance developers & managers</p>
                     </div>
                 </div>
@@ -14301,43 +14344,34 @@ window.openSubmitFeedbackModal = (defaultType = 'feature') => {
             <div style="margin-bottom:16px;">
                 <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Select Type</label>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                    <button type="button" id="fbTypeFeatureBtn" onclick="window.selectFeedbackType('feature')" style="padding:12px; border-radius:10px; border:2px solid #06b6d4; background:rgba(6,182,212,0.15); color:#06b6d4; font-weight:bold; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:0.2s;">
-                        <span>💡</span> Feature Request
-                    </button>
-                    <button type="button" id="fbTypeBugBtn" onclick="window.selectFeedbackType('bug')" style="padding:12px; border-radius:10px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-muted); font-weight:bold; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:0.2s;">
+                    <button type="button" id="fbTypeBugBtn" onclick="window.selectFeedbackType('bug')" style="padding:12px; border-radius:10px; border:${isBug ? '2px solid #ef4444' : '1px solid var(--border)'}; background:${isBug ? 'rgba(239,68,68,0.15)' : 'var(--bg-main)'}; color:${isBug ? '#ef4444' : 'var(--text-muted)'}; font-weight:bold; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:0.2s;">
                         <span>🐞</span> Bug Report
+                    </button>
+                    <button type="button" id="fbTypeFeatureBtn" onclick="window.selectFeedbackType('feature')" style="padding:12px; border-radius:10px; border:${!isBug ? '2px solid #06b6d4' : '1px solid var(--border)'}; background:${!isBug ? 'rgba(6,182,212,0.15)' : 'var(--bg-main)'}; color:${!isBug ? '#06b6d4' : 'var(--text-muted)'}; font-weight:bold; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:0.2s;">
+                        <span>💡</span> Feature Request
                     </button>
                 </div>
             </div>
 
             <!-- Category Picker -->
             <div style="margin-bottom:14px;">
-                <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Category / Area</label>
-                <select id="fbCategoryInput" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; font-weight:bold; box-sizing:border-box;">
-                    <option value="Alliance Championship">🏆 Alliance Championship</option>
-                    <option value="Bear Trap">🐻 Bear Trap & Attendance</option>
-                    <option value="Showdown">⚔️ ShowDown</option>
-                    <option value="Mercenary Prestige">🛡️ Mercenary Prestige</option>
-                    <option value="Account Hub">👤 Account Hub & Profiles</option>
-                    <option value="Shield Alerts">🔔 Shield & Discord Alerts</option>
-                    <option value="Leaderboards">📊 Leaderboards & Medals</option>
-                    <option value="Schedule">📅 Schedule & Clocks</option>
-                    <option value="Mobile UI">📱 Mobile Layout & Navigation</option>
-                    <option value="Gift Codes">🎁 Gift Code Engine</option>
-                    <option value="General UI">🎨 General UI / Other</option>
+                <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Category / Area <span style="color:#ef4444; font-size:12px;">*</span></label>
+                <select id="fbCategoryInput" onchange="this.style.borderColor='var(--border)'" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; font-weight:bold; box-sizing:border-box;">
+                    <option value="" disabled selected>-- Select a Category / Area (Required) --</option>
+                    ${window.FEEDBACK_CATEGORIES.map(c => `<option value="${c.value}">${c.label}</option>`).join('')}
                 </select>
             </div>
 
             <!-- Title Input -->
             <div style="margin-bottom:14px;">
-                <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Title</label>
-                <input type="text" id="fbTitleInput" placeholder="e.g. Add flag counts to Championship 5-round cards..." style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; font-weight:bold; box-sizing:border-box;">
+                <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Title <span style="color:#ef4444; font-size:12px;">*</span></label>
+                <input type="text" id="fbTitleInput" oninput="this.style.borderColor='var(--border)'" placeholder="${isBug ? 'e.g. Shield alert not triggering, score calculation issue...' : 'e.g. Add flag counts to Championship 5-round cards...'}" style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; font-weight:bold; box-sizing:border-box;">
             </div>
 
             <!-- Description Textarea -->
             <div style="margin-bottom:14px;">
                 <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Description / Details</label>
-                <textarea id="fbDescInput" rows="4" placeholder="Explain what feature you'd like to see, or if reporting a bug, what happened and how to reproduce it..." style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; box-sizing:border-box; resize:vertical; line-height:1.4;"></textarea>
+                <textarea id="fbDescInput" rows="4" placeholder="${isBug ? 'Explain what bug occurred, where you saw it, and steps to reproduce...' : 'Explain what feature you\'d like to see, or details on how it should work...'}" style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; box-sizing:border-box; resize:vertical; line-height:1.4;"></textarea>
             </div>
 
             <!-- Media Attachment: Image or Video -->
@@ -14624,23 +14658,70 @@ window.openSubmitFeedbackModal = (defaultType = 'feature') => {
         selectedType = t;
         const featBtn = document.getElementById('fbTypeFeatureBtn');
         const bugBtn = document.getElementById('fbTypeBugBtn');
+        const headerIcon = document.getElementById('fbModalHeaderIcon');
+        const headerTitle = document.getElementById('fbModalHeaderTitle');
+        const titleInput = document.getElementById('fbTitleInput');
+        const descInput = document.getElementById('fbDescInput');
+
         if (t === 'feature') {
             if (featBtn) { featBtn.style.border = '2px solid #06b6d4'; featBtn.style.background = 'rgba(6,182,212,0.15)'; featBtn.style.color = '#06b6d4'; }
             if (bugBtn) { bugBtn.style.border = '1px solid var(--border)'; bugBtn.style.background = 'var(--bg-main)'; bugBtn.style.color = 'var(--text-muted)'; }
+            if (headerIcon) {
+                headerIcon.textContent = '💡';
+                headerIcon.style.background = 'linear-gradient(135deg, rgba(6,182,212,0.2), rgba(168,85,247,0.2))';
+                headerIcon.style.border = '1px solid rgba(6,182,212,0.4)';
+            }
+            if (headerTitle) headerTitle.textContent = 'Submit Idea or Report Bug';
+            if (titleInput && (!titleInput.value || titleInput.value.includes('e.g.'))) {
+                titleInput.placeholder = 'e.g. Add flag counts to Championship 5-round cards...';
+            }
+            if (descInput && !descInput.value) {
+                descInput.placeholder = "Explain what feature you'd like to see, or details on how it should work...";
+            }
         } else {
             if (bugBtn) { bugBtn.style.border = '2px solid #ef4444'; bugBtn.style.background = 'rgba(239,68,68,0.15)'; bugBtn.style.color = '#ef4444'; }
             if (featBtn) { featBtn.style.border = '1px solid var(--border)'; featBtn.style.background = 'var(--bg-main)'; featBtn.style.color = 'var(--text-muted)'; }
+            if (headerIcon) {
+                headerIcon.textContent = '🐞';
+                headerIcon.style.background = 'linear-gradient(135deg, rgba(239,68,68,0.2), rgba(168,85,247,0.2))';
+                headerIcon.style.border = '1px solid rgba(239,68,68,0.4)';
+            }
+            if (headerTitle) headerTitle.textContent = 'Report Bug or Submit Idea';
+            if (titleInput && (!titleInput.value || titleInput.value.includes('e.g.'))) {
+                titleInput.placeholder = 'e.g. Shield alert not triggering, score calculation issue...';
+            }
+            if (descInput && !descInput.value) {
+                descInput.placeholder = 'Explain what bug occurred, where you saw it, and steps to reproduce...';
+            }
         }
     };
+
+    // Ensure initial state styling and placeholders are synced
+    window.selectFeedbackType(selectedType);
 
     window.handleFeedbackSubmit = async () => {
         const title = document.getElementById('fbTitleInput')?.value.trim();
         const desc = document.getElementById('fbDescInput')?.value.trim();
-        const category = document.getElementById('fbCategoryInput')?.value || 'General UI';
+        const category = document.getElementById('fbCategoryInput')?.value;
         const submitBtn = document.getElementById('btnSubmitFeedbackSend');
 
+        if (!category) {
+            if (window.showToast) window.showToast("⚠️ Please select a Category / Area before submitting!", "warning");
+            const catSelect = document.getElementById('fbCategoryInput');
+            if (catSelect) {
+                catSelect.style.borderColor = '#ef4444';
+                catSelect.focus();
+            }
+            return;
+        }
+
         if (!title) {
-            if (window.showToast) window.showToast("Please enter a title for your request.", "warning");
+            if (window.showToast) window.showToast("⚠️ Please enter a title for your report.", "warning");
+            const tInput = document.getElementById('fbTitleInput');
+            if (tInput) {
+                tInput.style.borderColor = '#ef4444';
+                tInput.focus();
+            }
             return;
         }
 
@@ -14768,7 +14849,9 @@ window.renderAdminFeedbackTab = async () => {
                         ${item.adminNote ? `<div style="font-size:11.5px; color:#38bdf8; font-weight:bold; margin-top:5px; white-space:pre-wrap; word-break:break-word; background:rgba(56,189,248,0.06); border:1px solid rgba(56,189,248,0.2); padding:5px 10px; border-radius:6px; line-height:1.45;">✨ ${escapeHTML(item.adminNote)}</div>` : ''}
                     </td>
                     <td style="padding:12px; white-space:nowrap;">
-                        <span style="font-size:11px; color:var(--text-muted); background:var(--bg-main); border:1px solid var(--border); padding:2px 8px; border-radius:6px;">${escapeHTML(item.category || 'General')}</span>
+                        <select onchange="window.updateFeedbackCategory('${item.id}', this.value)" style="padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:11px; font-weight:bold; cursor:pointer;" title="Reclassify Category">
+                            ${window.FEEDBACK_CATEGORIES.map(c => `<option value="${c.value}" ${(item.category || 'General UI') === c.value ? 'selected' : ''}>${c.label}</option>`).join('')}
+                        </select>
                     </td>
                     <td style="padding:12px; white-space:nowrap; font-size:12px; color:var(--text-muted);">
                         <strong style="color:var(--text-main);">${escapeHTML(item.submittedBy?.name || 'Chief')}</strong><br>
@@ -14784,7 +14867,7 @@ window.renderAdminFeedbackTab = async () => {
                         </select>
                     </td>
                     <td style="padding:12px; white-space:nowrap; text-align:right;">
-                        <button onclick="window.openAdminNoteModal('${item.id}', '${escapeHTML(item.adminNote || '')}')" style="background:rgba(6,182,212,0.12); border:1px solid rgba(6,182,212,0.3); color:var(--accent); padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;" title="Add or edit resolution note">✏️ Note</button>
+                        <button onclick="window.openAdminNoteModal('${item.id}', '${escapeHTML(item.adminNote || '')}', '${escapeHTML(item.category || '')}')" style="background:rgba(6,182,212,0.12); border:1px solid rgba(6,182,212,0.3); color:var(--accent); padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;" title="Add or edit resolution note">✏️ Note</button>
                         <button onclick="window.deleteFeedbackItem('${item.id}')" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; margin-left:4px;" title="Delete ticket">🗑️</button>
                     </td>
                 </tr>`;
@@ -38046,14 +38129,18 @@ window.resetBearTrapEvent = async () => {
                                 <span>Done</span>
                             </label>
                             
-                            <select onchange="window.updateFeedbackStatus('${item.id}', this.value)" style="padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:11px; font-weight:bold;">
+                            <select onchange="window.updateFeedbackStatus('${item.id}', this.value)" style="padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:11px; font-weight:bold;" title="Update Status">
                                 <option value="pending" ${isPending ? 'selected' : ''}>🟡 Under Review</option>
                                 <option value="in_progress" ${isInProgress ? 'selected' : ''}>🔵 In Progress</option>
                                 <option value="completed" ${isCompleted ? 'selected' : ''}>✅ Completed</option>
                                 <option value="archived" ${item.status === 'archived' ? 'selected' : ''}>⚪ Archived</option>
                             </select>
 
-                            <button onclick="window.openAdminNoteModal('${item.id}', '${escapeHTML(item.adminNote || '')}')" style="background:rgba(6,182,212,0.12); border:1px solid rgba(6,182,212,0.3); color:var(--accent); padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+                            <select onchange="window.updateFeedbackCategory('${item.id}', this.value)" style="padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:11px; font-weight:bold; cursor:pointer;" title="Reclassify Category">
+                                ${window.FEEDBACK_CATEGORIES.map(c => `<option value="${c.value}" ${(item.category || 'General UI') === c.value ? 'selected' : ''}>${c.label}</option>`).join('')}
+                            </select>
+
+                            <button onclick="window.openAdminNoteModal('${item.id}', '${escapeHTML(item.adminNote || '')}', '${escapeHTML(item.category || '')}')" style="background:rgba(6,182,212,0.12); border:1px solid rgba(6,182,212,0.3); color:var(--accent); padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
                                 ✏️ ${item.adminNote ? 'Edit Note' : 'Add Note'}
                             </button>
 

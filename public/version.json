@@ -1,16 +1,17 @@
 {
-  "version": "3.3.14",
+  "version": "3.3.15",
   "releaseDate": "2026-09-07",
-  "title": "What's New in v3.3.14",
+  "title": "What's New in v3.3.15",
   "notes": [
-    "👥 Roster Deduplication: Fixed double-counted chiefs on event Yes and No pages.",
-    "🛡️ Accurate Member Totals: Event trackers display exact active member counts without duplicates.",
-    "⚡ Non-Enumerable Aliases: Preserves instant Game ID lookups without inflating roster collections.",
-    "🗄️ Archive Deduplication: Cleaned cycle snapshot routines to prevent duplicate participant records."
+    "🐞 Bug Report Priority: Positioned Bug Report first and preselected by default.",
+    "🔒 Required Category: Enforced mandatory category selection before feedback ticket submission.",
+    "🏷️ Admin Category Editor: Managers can reclassify miscategorized tickets directly from tables.",
+    "✏️ Resolution Note Category: Update categories directly inside resolution notes modal."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.14",
+    "version": "3.3.15",
     "latestChanges": [
+      "v3.3.15: Bug Report 1st toggle priority, required category enforcement, and admin category editor",
       "v3.3.14: Roster deduplication across event Yes/No pages and non-enumerable alias keys",
       "v3.3.13: Unified member update sync engine, dual-key resolution, and instant cache invalidation",
       "v3.3.12: Added 60s heartbeat watchdog, dynamic hub/server health tags, and clean exit handlers",

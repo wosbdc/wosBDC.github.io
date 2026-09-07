@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.15] - 2026-09-07
+- 🐞 **Bug Report Priority**: Positioned Bug Report first and preselected by default.
+- 🔒 **Required Category**: Enforced mandatory category selection before feedback ticket submission.
+- 🏷️ **Admin Category Editor**: Managers can reclassify miscategorized tickets directly from tables.
+- ✏️ **Resolution Note Category**: Update categories directly inside resolution notes modal.
+
 ## [3.3.14] - 2026-09-07
 - 👥 **Roster Deduplication**: Fixed double-counted chiefs on event Yes and No pages.
 - 🛡️ **Accurate Member Totals**: Event trackers display exact active member counts without duplicates.
