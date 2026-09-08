@@ -5579,11 +5579,11 @@ window.getBotOperationsRadarHtml = () => {
   
   // Decouple Active Runner vs Cooldown Hold Queue
   const hasCooldown = !isOffline && (((data.cooldownSecondsLeft !== undefined && data.cooldownSecondsLeft > 0) || (data.secondsLeft > 0 && status === 'COOLDOWN')) || Boolean(data.isCooldownRunning));
-  const cdAccount = isOffline ? 'Halted' : (hasCooldown ? (data.cooldownAccount || (status === 'COOLDOWN' ? data.account : '') || 'Resting Account') : 'No Active Rest Queue');
+  const cdAccount = isOffline ? 'No Active Queue' : (hasCooldown ? (data.cooldownAccount || (status === 'COOLDOWN' ? data.account : '') || 'Resting Account') : 'No Active Rest Queue');
 
   const hasActiveRunner = !isOffline && (data.isExecutingTasks === true || (data.activeAccount && data.activeAccount.trim() !== '' && !data.activeAccount.includes('Standby')) || (status === 'ACTIVE' && data.account && !data.account.includes('Standby')));
   const activeRunner = isOffline ? 'Bot Server Closed' : (data.activeAccount && data.activeAccount.trim() !== '' ? data.activeAccount : (data.account && !data.account.includes('Standby') ? data.account : 'Standby / Idle'));
-  const activeStage = isOffline ? 'Automation Halted' : (hasActiveRunner ? (data.activeStage || data.stage || 'Wilderness / Routine Tasks') : (hasCooldown ? 'Waiting in Rotation' : (health.isStale ? 'Host Telemetry Stale (>60s)' : 'Waiting for Cycle')));
+  const activeStage = isOffline ? '' : (hasActiveRunner ? (data.activeStage || data.stage || 'Wilderness / Routine Tasks') : (hasCooldown ? 'Waiting in Rotation' : (health.isStale ? 'Host Telemetry Stale (>60s)' : 'Waiting for Cycle')));
   const runnerPillText = isOffline ? 'OFFLINE' : (hasActiveRunner ? '● IN PROGRESS' : '⚪ IDLE');
   const runnerColor = isOffline ? '#ef4444' : (hasActiveRunner ? '#10b981' : 'var(--text-muted)');
 
@@ -5637,10 +5637,10 @@ window.getBotOperationsRadarHtml = () => {
   let cdSubText = 'Rest cycle ready';
   
   if (isOffline) {
-    timerText = 'SERVER HALTED';
-    timerLabel = 'Automation Status:';
+    timerText = 'STANDBY';
+    timerLabel = 'Cooldown Stage:';
     progressWidth = '0%';
-    cdSubText = 'Automation Offline';
+    cdSubText = 'Standby / Cycle Ready';
   } else if (hasCooldown) {
     timerLabel = 'Cooldown Countdown:';
     const totalSecs = (data.cooldownSecondsLeft !== undefined && data.cooldownSecondsLeft !== null) ? data.cooldownSecondsLeft : (data.secondsLeft || 0);
@@ -5699,7 +5699,7 @@ window.getBotOperationsRadarHtml = () => {
             <div class="bot-radar-comp-text">
               <div class="bot-radar-acc-label">Active Account</div>
               <div id="bot-radar-account-val" class="bot-radar-acc-name">${window.escapeHTML ? window.escapeHTML(activeRunner) : activeRunner}</div>
-              <div id="bot-radar-stage-val" class="bot-radar-stage-name" style="color: ${runnerColor};">${window.escapeHTML ? window.escapeHTML(activeStage) : activeStage}</div>
+              <div id="bot-radar-stage-val" class="bot-radar-stage-name" style="color: ${runnerColor}; display: ${activeStage ? 'block' : 'none'};">${window.escapeHTML ? window.escapeHTML(activeStage) : activeStage}</div>
             </div>
           </div>
         </div>
@@ -5751,11 +5751,11 @@ window.updateBotOperationsRadarDom = () => {
   const shortTime = data.shortTime || (health.isStale ? 'Stale' : 'Just now');
   
   const hasCooldown = !isOffline && (((data.cooldownSecondsLeft !== undefined && data.cooldownSecondsLeft > 0) || (data.secondsLeft > 0 && status === 'COOLDOWN')) || Boolean(data.isCooldownRunning));
-  const cdAccount = isOffline ? 'Halted' : (hasCooldown ? (data.cooldownAccount || (status === 'COOLDOWN' ? data.account : '') || 'Resting Account') : 'No Active Rest Queue');
+  const cdAccount = isOffline ? 'No Active Queue' : (hasCooldown ? (data.cooldownAccount || (status === 'COOLDOWN' ? data.account : '') || 'Resting Account') : 'No Active Rest Queue');
 
   const hasActiveRunner = !isOffline && (data.isExecutingTasks === true || (data.activeAccount && data.activeAccount.trim() !== '' && !data.activeAccount.includes('Standby')) || (status === 'ACTIVE' && data.account && !data.account.includes('Standby')));
   const activeRunner = isOffline ? 'Bot Server Closed' : (data.activeAccount && data.activeAccount.trim() !== '' ? data.activeAccount : (data.account && !data.account.includes('Standby') ? data.account : 'Standby / Idle'));
-  const activeStage = isOffline ? 'Automation Halted' : (hasActiveRunner ? (data.activeStage || data.stage || 'Wilderness / Routine Tasks') : (hasCooldown ? 'Waiting in Rotation' : (health.isStale ? 'Host Telemetry Stale (>60s)' : 'Waiting for Cycle')));
+  const activeStage = isOffline ? '' : (hasActiveRunner ? (data.activeStage || data.stage || 'Wilderness / Routine Tasks') : (hasCooldown ? 'Waiting in Rotation' : (health.isStale ? 'Host Telemetry Stale (>60s)' : 'Waiting for Cycle')));
   const runnerPillText = isOffline ? 'OFFLINE' : (hasActiveRunner ? '● IN PROGRESS' : '⚪ IDLE');
   const runnerColor = isOffline ? '#ef4444' : (hasActiveRunner ? '#10b981' : 'var(--text-muted)');
 
@@ -5824,6 +5824,7 @@ window.updateBotOperationsRadarDom = () => {
   if (stageValEl) {
     stageValEl.textContent = activeStage;
     stageValEl.style.color = runnerColor;
+    stageValEl.style.display = activeStage ? 'block' : 'none';
   }
 
   const runnerBadgeEl = document.getElementById('bot-radar-runner-badge');
@@ -5843,10 +5844,10 @@ window.updateBotOperationsRadarDom = () => {
   let cdSubText = 'Rest cycle ready';
 
   if (isOffline) {
-    if (timerLblEl) timerLblEl.textContent = 'Automation Status:';
-    if (clockEl) clockEl.textContent = 'SERVER HALTED';
+    if (timerLblEl) timerLblEl.textContent = 'Cooldown Stage:';
+    if (clockEl) clockEl.textContent = 'STANDBY';
     if (fillEl) fillEl.style.width = '0%';
-    cdSubText = 'Automation Offline';
+    cdSubText = 'Standby / Cycle Ready';
   } else if (hasCooldown) {
     if (timerLblEl) timerLblEl.textContent = 'Cooldown Countdown:';
     const totalSecs = (data.cooldownSecondsLeft !== undefined && data.cooldownSecondsLeft !== null) ? data.cooldownSecondsLeft : (data.secondsLeft || 0);
@@ -5910,10 +5911,10 @@ if (!window._botRadarInterval) {
     const hasCooldown = !isOffline && (((data.cooldownSecondsLeft !== undefined && data.cooldownSecondsLeft > 0) || (data.secondsLeft > 0 && (data.status || '').toUpperCase() === 'COOLDOWN')) || Boolean(data.isCooldownRunning));
 
     if (isOffline) {
-      if (clockEl && clockEl.textContent !== 'SERVER HALTED') clockEl.textContent = 'SERVER HALTED';
+      if (clockEl && clockEl.textContent !== 'STANDBY') clockEl.textContent = 'STANDBY';
       if (fillEl && fillEl.style.width !== '0%') fillEl.style.width = '0%';
-      if (timerLblEl && timerLblEl.textContent !== 'Automation Status:') timerLblEl.textContent = 'Automation Status:';
-      if (cdSubEl && cdSubEl.textContent !== 'Automation Offline') cdSubEl.textContent = 'Automation Offline';
+      if (timerLblEl && timerLblEl.textContent !== 'Cooldown Stage:') timerLblEl.textContent = 'Cooldown Stage:';
+      if (cdSubEl && cdSubEl.textContent !== 'Standby / Cycle Ready') cdSubEl.textContent = 'Standby / Cycle Ready';
     } else if (hasCooldown) {
       const totalSecs = (data.cooldownSecondsLeft !== undefined && data.cooldownSecondsLeft !== null) ? data.cooldownSecondsLeft : (data.secondsLeft || 0);
       const elapsedSecs = Math.floor((Date.now() - (data.receivedAt || Date.now())) / 1000);
@@ -18349,7 +18350,7 @@ window.openAllianceAlertsModal = async () => {
 
           if (b.targetTimestamp) {
             const effectiveEnd = Number(b.endTimestamp) || (Number(b.targetTimestamp) + 2 * 3600000);
-            if (effectiveEnd > (now - 12 * 3600000)) {
+            if (effectiveEnd > now) {
               countdownAlerts.push(b);
               return;
             }
@@ -18675,7 +18676,11 @@ window.openAllianceAlertsModal = async () => {
             🗑️
           </button>
         </div>
-      ` : '';
+      ` : `
+        <button onclick="event.stopPropagation(); window.dismissBellItem('${b.key}');" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#cbd5e1; border-radius:6px; padding:2px 7px; font-size:10.5px; font-weight:bold; cursor:pointer; transition:0.15s;" title="Dismiss alert">
+          ✕ Dismiss
+        </button>
+      `;
 
       const cardHtml = `
         <div class="bell-stream-card" data-category="timers" style="background:linear-gradient(145deg, rgba(15,23,42,0.92), rgba(30,41,59,0.85)); border:1px solid ${borderColor}; border-left:4.5px solid ${leftStripeColor}; border-radius:12px; padding:12px 14px; box-shadow:0 6px 18px rgba(0,0,0,0.4); display:flex; flex-direction:column; gap:6px; position:relative;">
@@ -18728,13 +18733,19 @@ window.openAllianceAlertsModal = async () => {
     unifiedEvents.forEach(ev => {
       if (!ev || !ev.start) return;
       const startMs = ev.start.getTime();
-      const endMs = ev.end.getTime();
+      const endMs = ev.end ? ev.end.getTime() : (startMs + 3600000);
 
-      // Only show events that are today, currently live, or starting within the next 24 hours
-      const isToday = ev.start.toDateString() === todayStr;
+      // Auto-hide passed events: if the event end time has already passed, do NOT show in bell feed!
+      if (nowMs > endMs) return;
+
+      // Only show events that are currently live or starting within the next 24 hours
       const isLive = nowMs >= startMs && nowMs <= endMs;
       const isUpcoming24h = startMs > nowMs && (startMs - nowMs) <= 24 * 3600 * 1000;
-      if (!isToday && !isLive && !isUpcoming24h) return;
+      if (!isLive && !isUpcoming24h) return;
+
+      // Allow member to manually dismiss event card from Bell feed
+      const evItemKey = `bell_ev_${startMs}_${(ev.name || '').replace(/[^a-zA-Z0-9]/g, '_')}`;
+      if (dismissedBellItems.includes(evItemKey)) return;
 
       // Avoid duplicating if staff already posted a manual broadcastAlert for this exact event
       const alreadyInBroadcast = countdownAlerts.some(ca => {
@@ -18767,8 +18778,11 @@ window.openAllianceAlertsModal = async () => {
               ${isLive ? `<span style="background:rgba(16,185,129,0.2); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:1px 7px; border-radius:10px; font-size:10px; font-weight:800; animation:pulse 1.5s infinite;">🟢 LIVE NOW</span>` : ''}
               ${!isLive ? `<span style="background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.35); padding:1px 7px; border-radius:10px; font-size:10px; font-weight:bold;">📅 SCHEDULED</span>` : ''}
             </div>
-            <div style="font-size:11px; color:var(--text-muted);">
-              ${ev.dateLabel || (ev.start.toLocaleDateString([], { weekday:'short', month:'short', day:'numeric' }))}
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:11px; color:var(--text-muted);">${ev.dateLabel || (ev.start.toLocaleDateString([], { weekday:'short', month:'short', day:'numeric' }))}</span>
+              <button onclick="event.stopPropagation(); window.dismissBellItem('${evItemKey}');" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#cbd5e1; border-radius:6px; padding:2px 7px; font-size:10.5px; font-weight:bold; cursor:pointer; transition:0.15s;" title="Dismiss event from alerts" onmouseover="this.style.color='#ef4444'; this.style.borderColor='rgba(239,68,68,0.4)';" onmouseout="this.style.color='#cbd5e1'; this.style.borderColor='rgba(255,255,255,0.2)';">
+                ✕ Dismiss
+              </button>
             </div>
           </div>
 

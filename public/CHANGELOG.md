@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.22] - 2026-09-07
+- 🤖 **Radar Clean**: Removed repetitive halted and offline text inside compartments.
+- ⏱️ **Calm Standby**: Queue shows peaceful standby when bot server is offline.
+- 🔔 **Auto-Hide Events**: Concluded schedule events automatically disappear from bell feed.
+- ✕ **Dismiss Events**: Easily dismiss any scheduled event from alerts view.
+
 ## [3.3.21] - 2026-09-07
 - 🤖 **Dual Radar**: Decoupled live runner from cooldown queue.
 - 🟢 **Active Runner**: Shows real-time running bot account.
