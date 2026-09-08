@@ -5463,13 +5463,18 @@ window.ALLIANCE_BOT_ROSTER = [
 
 window.getBotFleetSafetyHtml = () => {
   const data = window.latestBotStatus || {};
+  const health = (typeof window.getBotAutomationHealth === 'function')
+    ? window.getBotAutomationHealth(data)
+    : { isOffline: Boolean(data.serverOnline === false || data.status === 'OFFLINE'), isHubOnline: true, isServerOnline: Boolean(data.serverOnline !== false), isStale: false, status: (data.status || 'STANDBY').toUpperCase() };
+  const isOffline = health.isOffline;
+
   const status = (data.status || 'STANDBY').toUpperCase();
   const activeAccount = data.activeAccount || (status === 'ACTIVE' ? (data.account || '') : '');
   const cooldownAccount = data.cooldownAccount || (status === 'COOLDOWN' ? (data.account || '') : '');
   const secondsLeft = (data.cooldownSecondsLeft !== undefined && data.cooldownSecondsLeft !== null) ? data.cooldownSecondsLeft : (data.secondsLeft || 0);
   
   let cdRemainingText = '';
-  if (secondsLeft > 0) {
+  if (!isOffline && secondsLeft > 0) {
     const elapsedSecs = Math.floor((Date.now() - (data.receivedAt || Date.now())) / 1000);
     const rem = Math.max(0, secondsLeft - elapsedSecs);
     const m = Math.floor(rem / 60).toString().padStart(2, '0');
@@ -5486,15 +5491,15 @@ window.getBotFleetSafetyHtml = () => {
       fleetItem = data.fleet.find(f => f.name && f.name.includes(bot.name));
     }
 
-    const isBotActive = fleetItem 
+    const isBotActive = !isOffline && (fleetItem 
       ? (fleetItem.status === 'ACTIVE') 
-      : ((status === 'ACTIVE' && activeAccount.includes(bot.name)) || (data.activeAccount && data.activeAccount.includes(bot.name)));
+      : ((status === 'ACTIVE' && activeAccount.includes(bot.name)) || (data.activeAccount && data.activeAccount.includes(bot.name))));
       
-    const isBotCooldown = fleetItem
+    const isBotCooldown = !isOffline && (fleetItem
       ? (fleetItem.status === 'COOLDOWN')
       : ((status === 'COOLDOWN' && (cooldownAccount.includes(bot.name) || activeAccount.includes(bot.name))) || 
          (cooldownAccount && cooldownAccount.includes(bot.name) && secondsLeft > 0) || 
-         (status === 'COOLDOWN' && bot.id === 'shrimp' && !activeAccount));
+         (status === 'COOLDOWN' && bot.id === 'shrimp' && !activeAccount)));
     
     let itemClass = 'safe';
     let badgeClass = 'safe';
@@ -5502,7 +5507,14 @@ window.getBotFleetSafetyHtml = () => {
     let actionTag = '✅ Safe to log in';
     let detail = 'Routines completed • Idle';
 
-    if (isBotActive) {
+    if (isOffline) {
+      safeCount++;
+      itemClass = 'safe is-offline';
+      badgeClass = 'safe is-offline';
+      badgeTitle = '● OFFLINE';
+      actionTag = '✅ Safe to log in';
+      detail = health.isStale ? 'Host disconnected (>60s) • Safe to log in' : 'Automation offline • Safe to log in';
+    } else if (isBotActive) {
       occupiedCount++;
       itemClass = 'occupied';
       badgeClass = 'occupied';
@@ -5551,11 +5563,11 @@ window.getBotFleetSafetyHtml = () => {
           <span>Alliance Bot Fleet & Account Login Safety</span>
         </div>
         <div class="bot-fleet-summary">
-          <div id="bot-fleet-busy-count" class="bot-fleet-summary-pill busy">
-            <span>🔴 ${occupiedCount} OCCUPIED</span>
+          <div id="bot-fleet-busy-count" class="bot-fleet-summary-pill ${isOffline ? 'offline' : 'busy'}" ${isOffline ? 'style="background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4);"' : ''}>
+            <span>🔴 ${isOffline ? 'AUTOMATION OFFLINE' : `${occupiedCount} OCCUPIED`}</span>
           </div>
           <div id="bot-fleet-safe-count" class="bot-fleet-summary-pill safe">
-            <span>🟢 ${safeCount} SAFE TO LOGIN</span>
+            <span>🟢 ${isOffline ? 'ALL SAFE TO LOGIN' : `${safeCount} SAFE TO LOGIN`}</span>
           </div>
         </div>
       </div>

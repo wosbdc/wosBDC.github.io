@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.3.24] - 2026-09-08
+- 🛡️ **Offline Safety**: Fleet matrix marks accounts safe to login when offline.
+- 🔴 **Consistent State**: Replaced contradictory occupied pills with automation offline indicator.
+
 ## [3.3.23] - 2026-09-07
 - 🟢 **Online Green**: Runner box shines green when bot is actively online.
 - 🔴 **Offline Red**: Compartment boxes switch to bold red when offline.

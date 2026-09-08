@@ -1,15 +1,15 @@
 {
-  "version": "3.3.23",
-  "releaseDate": "2026-09-07",
-  "title": "What's New in v3.3.23",
+  "version": "3.3.24",
+  "releaseDate": "2026-09-08",
+  "title": "What's New in v3.3.24",
   "notes": [
-    "🟢 Online Green: Runner box shines green when bot is online.",
-    "🔴 Offline Red: Compartment boxes switch to bold red when offline.",
-    "🤖 Dynamic Badges: Runner badge dynamically reflects live active, standby, or offline."
+    "🛡️ Offline Safety: Fleet matrix marks accounts safe to login when offline.",
+    "🔴 Consistent State: Replaced contradictory occupied pills with automation offline indicator."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.23",
+    "version": "3.3.24",
     "latestChanges": [
+      "v3.3.24: Fleet safety matrix reflects offline state and marks accounts safe to login when offline",
       "v3.3.23: Dynamic green online / red offline state styling on radar compartments",
       "v3.3.22: Removed redundant Automation Halted/Offline in Bot Radar, auto-hid concluded events in Bell feed, added dismiss button",
       "v3.3.21: Decoupled Bot Operations Radar into dual Active Runner and Cooldown Queue compartments with live GnBots log telemetry",
