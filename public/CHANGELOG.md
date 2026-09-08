@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.28] - 2026-09-08
+- 🖥️ **Hub Status Box**: Added dedicated status box for WOS Bot Hub.
+- ⚙️ **Server Status Box**: Added dedicated status box for Whiteout Bot Server.
+- 📱 **Mobile Optimized**: Responsive 2-column status box grid fits all smartphones.
+
 ## [3.3.27] - 2026-09-08
 - 🤖 **Bots Badge**: Renamed idle runner compartment badge to 🤖Bots.
 - ⏳ **Clean Cooldown**: Renamed rest compartment badge to clean ⏳ COOLDOWN.

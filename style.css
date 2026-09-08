@@ -1686,16 +1686,98 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
   animation: pulse 2s infinite;
 }
 
-.bot-radar-server-tag {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  padding: 3px 8px;
-  font-size: 10.5px;
-  display: inline-flex;
+.bot-radar-server-tag,
+.bot-radar-status-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+  width: 100%;
+}
+
+.bot-radar-mini-box {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: all 0.25s ease;
+}
+
+.bot-radar-mini-box.is-online {
+  border-color: rgba(16, 185, 129, 0.35);
+  background: rgba(16, 185, 129, 0.05);
+}
+
+.bot-radar-mini-box.is-offline {
+  border-color: rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.bot-radar-mini-header {
+  display: flex;
   align-items: center;
   gap: 6px;
-  margin-top: 4px;
+  min-width: 0;
+}
+
+.bot-radar-mini-icon {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.bot-radar-mini-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.bot-radar-mini-val {
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+  padding: 3px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.3px;
+}
+
+.bot-radar-mini-val.is-online {
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.bot-radar-mini-val.is-offline {
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+@media (max-width: 480px) {
+  .bot-radar-server-tag,
+  .bot-radar-status-grid {
+    gap: 8px;
+  }
+  .bot-radar-mini-box {
+    padding: 7px 9px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
+  .bot-radar-mini-label {
+    font-size: 9.5px;
+  }
+  .bot-radar-mini-val {
+    font-size: 10px;
+    padding: 2px 6px;
+  }
 }
 
 .bot-radar-offline-warning-bar {

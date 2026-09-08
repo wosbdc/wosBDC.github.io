@@ -5629,13 +5629,30 @@ window.getBotOperationsRadarHtml = () => {
 
   const cardBorderClass = isOffline ? 'bot-radar-card border-offline' : (isActive ? 'bot-radar-card border-active' : (isCooldown ? 'bot-radar-card border-cooldown' : 'bot-radar-card border-standby'));
 
-  const hubStatusHtml = health.isHubOnline 
-    ? `<span style="color:#10b981;">🟢 Hub: Online</span>`
-    : `<span style="color:#ef4444; font-weight:bold;">🔴 Hub: Offline</span>`;
-  const serverStatusHtml = health.isServerOnline 
-    ? `<span style="color:#10b981;">🟢 Server: Online</span>` 
-    : `<span style="color:#ef4444; font-weight:bold;">🔴 Server: Offline</span>`;
-  const dualTagHtml = `<div id="bot-radar-dual-tag" class="bot-radar-server-tag">${hubStatusHtml} <span style="opacity:0.4;">•</span> ${serverStatusHtml}</div>`;
+  const hubOnline = health.isHubOnline;
+  const serverOnline = health.isServerOnline;
+  const dualTagHtml = `
+    <div id="bot-radar-dual-tag" class="bot-radar-server-tag bot-radar-status-grid">
+      <div id="bot-radar-hub-box" class="bot-radar-mini-box ${hubOnline ? 'is-online' : 'is-offline'}">
+        <div class="bot-radar-mini-header">
+          <span class="bot-radar-mini-icon">🖥️</span>
+          <span class="bot-radar-mini-label">WOS Bot Hub</span>
+        </div>
+        <div id="bot-radar-hub-val" class="bot-radar-mini-val ${hubOnline ? 'is-online' : 'is-offline'}">
+          ${hubOnline ? '🟢 Hub: Online' : '🔴 Hub: Offline'}
+        </div>
+      </div>
+      <div id="bot-radar-server-box" class="bot-radar-mini-box ${serverOnline ? 'is-online' : 'is-offline'}">
+        <div class="bot-radar-mini-header">
+          <span class="bot-radar-mini-icon">⚡</span>
+          <span class="bot-radar-mini-label">Bot Server</span>
+        </div>
+        <div id="bot-radar-server-val" class="bot-radar-mini-val ${serverOnline ? 'is-online' : 'is-offline'}">
+          ${serverOnline ? '🟢 Server: Online' : '🔴 Server: Offline'}
+        </div>
+      </div>
+    </div>
+  `;
 
   let warningMsg = 'Bot Server is currently offline on host machine';
   let warningAction = 'AUTOMATION HALTED';
@@ -5697,9 +5714,10 @@ window.getBotOperationsRadarHtml = () => {
         <div class="bot-radar-meta-right">
           <div class="bot-radar-load-label">Fleet Load</div>
           <div id="bot-radar-bots-count" class="bot-radar-load-val">${totalBots > 0 ? totalBots + ' Bots Online' : 'Active Duty'}</div>
-          ${dualTagHtml}
         </div>
       </div>
+
+      ${dualTagHtml}
 
       ${offlineWarningHtml}
 
@@ -5816,13 +5834,29 @@ window.updateBotOperationsRadarDom = () => {
   
   const dualTagEl = document.getElementById('bot-radar-dual-tag');
   if (dualTagEl) {
-    const hubStatusHtml = health.isHubOnline 
-      ? `<span style="color:#10b981;">🟢 Hub: Online</span>`
-      : `<span style="color:#ef4444; font-weight:bold;">🔴 Hub: Offline</span>`;
-    const serverStatusHtml = health.isServerOnline 
-      ? `<span style="color:#10b981;">🟢 Server: Online</span>` 
-      : `<span style="color:#ef4444; font-weight:bold;">🔴 Server: Offline</span>`;
-    dualTagEl.innerHTML = `${hubStatusHtml} <span style="opacity:0.4;">•</span> ${serverStatusHtml}`;
+    const hubOnline = health.isHubOnline;
+    const serverOnline = health.isServerOnline;
+    dualTagEl.className = 'bot-radar-server-tag bot-radar-status-grid';
+    dualTagEl.innerHTML = `
+      <div id="bot-radar-hub-box" class="bot-radar-mini-box ${hubOnline ? 'is-online' : 'is-offline'}">
+        <div class="bot-radar-mini-header">
+          <span class="bot-radar-mini-icon">🖥️</span>
+          <span class="bot-radar-mini-label">WOS Bot Hub</span>
+        </div>
+        <div id="bot-radar-hub-val" class="bot-radar-mini-val ${hubOnline ? 'is-online' : 'is-offline'}">
+          ${hubOnline ? '🟢 Hub: Online' : '🔴 Hub: Offline'}
+        </div>
+      </div>
+      <div id="bot-radar-server-box" class="bot-radar-mini-box ${serverOnline ? 'is-online' : 'is-offline'}">
+        <div class="bot-radar-mini-header">
+          <span class="bot-radar-mini-icon">⚡</span>
+          <span class="bot-radar-mini-label">Bot Server</span>
+        </div>
+        <div id="bot-radar-server-val" class="bot-radar-mini-val ${serverOnline ? 'is-online' : 'is-offline'}">
+          ${serverOnline ? '🟢 Server: Online' : '🔴 Server: Offline'}
+        </div>
+      </div>
+    `;
   }
 
   const alertEl = document.getElementById('bot-radar-offline-alert');

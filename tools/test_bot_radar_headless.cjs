@@ -569,6 +569,8 @@ server.listen(PORT, async () => {
       const cdCompHasOffline = document.getElementById('bot-radar-cooldown-compartment')?.classList?.contains('is-offline');
       const cdBadgeText = document.getElementById('bot-radar-comp-badge-cooldown')?.textContent?.trim();
       const cdBadgePillText = document.getElementById('bot-radar-cooldown-badge')?.textContent?.trim();
+      const hasHubBox = document.getElementById('bot-radar-hub-box') !== null;
+      const hasServerBox = document.getElementById('bot-radar-server-box') !== null;
 
       return {
         hasOfflineBorder,
@@ -582,7 +584,9 @@ server.listen(PORT, async () => {
         runnerAvatarHasOffline,
         cdCompHasOffline,
         cdBadgeText,
-        cdBadgePillText
+        cdBadgePillText,
+        hasHubBox,
+        hasServerBox
       };
     });
 
@@ -612,6 +616,9 @@ server.listen(PORT, async () => {
     }
     if (!serverOfflineResult.dualTagText.includes('Hub: Online') || !serverOfflineResult.dualTagText.includes('Server: Offline')) {
       throw new Error(`Assertion Failed: Dual tag did not show Hub: Online and Server: Offline! Got: "${serverOfflineResult.dualTagText}"`);
+    }
+    if (!serverOfflineResult.hasHubBox || !serverOfflineResult.hasServerBox) {
+      throw new Error('Assertion Failed: Dedicated status boxes for WOS Bot Hub and Bot Server not found in DOM!');
     }
     if (!serverOfflineResult.offlineAlertVisible || !serverOfflineResult.offlineAlertText.includes('AUTOMATION HALTED')) {
       throw new Error(`Assertion Failed: Offline warning bar not visible or missing AUTOMATION HALTED! Got: "${serverOfflineResult.offlineAlertText}"`);
