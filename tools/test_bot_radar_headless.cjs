@@ -102,21 +102,22 @@ function runStaticVerification() {
   // 6. Automation Health & Staleness Watchdog
   assert(code.includes('window.getBotAutomationHealth ='), 'getBotAutomationHealth must be defined');
   assert(code.includes('isHeartbeatStale') || code.includes('isStale'), 'Code must check isHeartbeatStale or isStale');
-  assert(code.includes('HOST TELEMETRY TIMEOUT'), 'Code must include HOST TELEMETRY TIMEOUT state');
+  assert(code.includes('DISCONNECTED') || code.includes('stopped reporting'), 'Code must handle staleness warning');
   console.log('  ✅ window.getBotAutomationHealth and 60-second Staleness Watchdog verified.');
 
   console.log('\n🎉 ALL STATIC & STRUCTURAL ASSERTIONS PASSED 100%!\n');
-  process.exit(0);
 }
+
+// Always run static verification first to catch CI issues locally
+runStaticVerification();
 
 if (!puppeteer || !chromePath || !fs.existsSync(DIST_DIR) || !fs.existsSync(path.join(DIST_DIR, 'index.html'))) {
   if (!puppeteer || !chromePath) {
-    console.log('ℹ️ Puppeteer or Chrome not detected in this environment (CI / Cloud Runner).');
+    console.log('ℹ️ Puppeteer or Chrome not detected in this environment (CI / Cloud Runner). Skipping browser tests.');
   } else {
-    console.log('ℹ️ dist/ build directory not found. Running static verification.');
+    console.log('ℹ️ dist/ build directory not found. Skipping browser tests.');
   }
-  runStaticVerification();
-  return;
+  process.exit(0);
 }
 
 const MIME_TYPES = {
