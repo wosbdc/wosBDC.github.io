@@ -318,6 +318,8 @@ server.listen(PORT, async () => {
       const accountA = document.getElementById('bot-radar-account-val')?.textContent?.trim();
       const badgeA = document.getElementById('bot-radar-badge-el')?.textContent?.trim();
       const clockA = document.getElementById('bot-radar-clock')?.textContent?.trim();
+      const clockDisplayA = document.getElementById('bot-radar-clock')?.style?.display;
+      const cdBadgeA = document.getElementById('bot-radar-cooldown-badge')?.textContent?.trim();
       const busyPillA = document.getElementById('bot-fleet-busy-count')?.textContent?.trim();
       const safePillA = document.getElementById('bot-fleet-safe-count')?.textContent?.trim();
       const angryCardA = document.getElementById('bot-fleet-item-angry');
@@ -365,6 +367,8 @@ server.listen(PORT, async () => {
       const cdAccountC = document.getElementById('bot-radar-cooldown-val')?.textContent?.trim();
       const badgeC = document.getElementById('bot-radar-badge-el')?.textContent?.trim();
       const clockC = document.getElementById('bot-radar-clock')?.textContent?.trim();
+      const clockDisplayC = document.getElementById('bot-radar-clock')?.style?.display;
+      const cdBadgeC = document.getElementById('bot-radar-cooldown-badge')?.textContent?.trim();
       const cardC = document.getElementById('bot-operations-radar');
       const hasCooldownBorderC = cardC?.classList?.contains('border-cooldown');
       const shrimpCardC = document.getElementById('bot-fleet-item-shrimp');
@@ -394,14 +398,21 @@ server.listen(PORT, async () => {
       const runnerBadgeD = document.getElementById('bot-radar-runner-badge')?.textContent?.trim();
       const cdAccountD = document.getElementById('bot-radar-cooldown-val')?.textContent?.trim();
       const clockD = document.getElementById('bot-radar-clock')?.textContent?.trim();
+      const cdBadgeD = document.getElementById('bot-radar-cooldown-badge')?.textContent?.trim();
       const dualGridD = document.querySelector('.bot-radar-dual-grid') !== null;
       const runnerCardD = document.querySelector('.bot-radar-compartment.runner-card') !== null;
       const cooldownCardD = document.querySelector('.bot-radar-compartment.cooldown-card') !== null;
+
+      const radarAllText = document.getElementById('bot-operations-radar')?.textContent || '';
+      const hasReadyStandby = radarAllText.includes('READY / STANDBY');
+      const hasCycleReady = radarAllText.includes('Cycle Ready');
 
       return {
         accountA,
         badgeA,
         clockA,
+        clockDisplayA,
+        cdBadgeA,
         busyPillA,
         safePillA,
         angryIsOccupiedA: angryCardA?.classList?.contains('occupied'),
@@ -417,6 +428,8 @@ server.listen(PORT, async () => {
         cdAccountC,
         badgeC,
         clockC,
+        clockDisplayC,
+        cdBadgeC,
         hasCooldownBorder: hasCooldownBorderC,
         shrimpIsCooldownC: shrimpCardC?.classList?.contains('cooldown'),
         shrimpTagC,
@@ -426,9 +439,12 @@ server.listen(PORT, async () => {
         runnerBadgeD,
         cdAccountD,
         clockD,
+        cdBadgeD,
         dualGridD,
         runnerCardD,
-        cooldownCardD
+        cooldownCardD,
+        hasReadyStandby,
+        hasCycleReady
       };
     });
 
@@ -447,11 +463,29 @@ server.listen(PORT, async () => {
     if (mutationResult.accountB !== 'Bisquick (Inst 11)' || !mutationResult.bisquickIsOccupiedB || !mutationResult.angryIsSafeB) {
       throw new Error(`Assertion Failed: Dynamic rotation between bots failed! Result: ${JSON.stringify(mutationResult)}`);
     }
-    if (mutationResult.cdAccountC !== 'ShrimpLeprechaun (Inst 14)' || !mutationResult.accountC.includes('Standby') || !mutationResult.hasCooldownBorder || !mutationResult.shrimpIsCooldownC || mutationResult.shrimpTagC !== '⚠️ Resting between runs') {
+    if (mutationResult.cdAccountC !== 'ShrimpLeprechaun (Inst 14)' || (!mutationResult.accountC.includes('Rotation Queue') && !mutationResult.accountC.includes('Standby')) || !mutationResult.hasCooldownBorder || !mutationResult.shrimpIsCooldownC || mutationResult.shrimpTagC !== '⚠️ Resting between runs') {
       throw new Error(`Assertion Failed: Cooldown resting state failed! Result: ${JSON.stringify(mutationResult)}`);
     }
     if (mutationResult.clockC !== '00:09:50') {
       throw new Error(`Assertion Failed: Cooldown clock failed! Result: ${JSON.stringify(mutationResult)}`);
+    }
+    if (mutationResult.cdBadgeA !== '⚪ IDLE') {
+      throw new Error(`Assertion Failed: Expected Cooldown Box badge to be "⚪ IDLE" when idle, got "${mutationResult.cdBadgeA}"`);
+    }
+    if (mutationResult.clockDisplayA !== 'none') {
+      throw new Error(`Assertion Failed: Expected Cooldown Clock to be hidden (display:none) when idle, got "${mutationResult.clockDisplayA}"`);
+    }
+    if (mutationResult.cdBadgeC !== '● ON') {
+      throw new Error(`Assertion Failed: Expected Cooldown Box badge to be "● ON" during cooldown, got "${mutationResult.cdBadgeC}"`);
+    }
+    if (mutationResult.cdBadgeD !== '● ON') {
+      throw new Error(`Assertion Failed: Expected Cooldown Box badge to be "● ON" in dual telemetry, got "${mutationResult.cdBadgeD}"`);
+    }
+    if (mutationResult.hasReadyStandby) {
+      throw new Error('Assertion Failed: Radar still contains forbidden text "READY / STANDBY"!');
+    }
+    if (mutationResult.hasCycleReady) {
+      throw new Error('Assertion Failed: Radar still contains forbidden text "Cycle Ready"!');
     }
     if (mutationResult.accountD !== 'AngryGermanpapi (Inst 15)' || mutationResult.cdAccountD !== 'ShrimpLeprechaun (Inst 14)' || mutationResult.clockD !== '02:00:00') {
       throw new Error(`Assertion Failed: Decoupled dual telemetry failed! Result: ${JSON.stringify(mutationResult)}`);
@@ -496,6 +530,8 @@ server.listen(PORT, async () => {
       const runnerPillHasOffline = runnerPill?.classList?.contains('offline');
       const runnerAvatarHasOffline = document.getElementById('bot-radar-runner-avatar')?.classList?.contains('is-offline');
       const cdCompHasOffline = document.getElementById('bot-radar-cooldown-compartment')?.classList?.contains('is-offline');
+      const cdBadgeText = document.getElementById('bot-radar-comp-badge-cooldown')?.textContent?.trim();
+      const cdBadgePillText = document.getElementById('bot-radar-cooldown-badge')?.textContent?.trim();
 
       return {
         hasOfflineBorder,
@@ -507,7 +543,9 @@ server.listen(PORT, async () => {
         runnerBadgeText,
         runnerPillHasOffline,
         runnerAvatarHasOffline,
-        cdCompHasOffline
+        cdCompHasOffline,
+        cdBadgeText,
+        cdBadgePillText
       };
     });
 
@@ -519,6 +557,12 @@ server.listen(PORT, async () => {
     }
     if (!serverOfflineResult.runnerBadgeText || !serverOfflineResult.runnerBadgeText.includes('AUTOMATION OFFLINE')) {
       throw new Error(`Assertion Failed: Expected runner badge "🔴 AUTOMATION OFFLINE", got "${serverOfflineResult.runnerBadgeText}"`);
+    }
+    if (!serverOfflineResult.cdBadgeText || !serverOfflineResult.cdBadgeText.includes('AUTOMATION OFFLINE')) {
+      throw new Error(`Assertion Failed: Expected cooldown badge "🔴 AUTOMATION OFFLINE", got "${serverOfflineResult.cdBadgeText}"`);
+    }
+    if (serverOfflineResult.cdBadgePillText !== 'OFFLINE') {
+      throw new Error(`Assertion Failed: Expected cooldown pill badge "OFFLINE", got "${serverOfflineResult.cdBadgePillText}"`);
     }
     if (!serverOfflineResult.runnerPillHasOffline) {
       throw new Error('Assertion Failed: Runner status pill did not receive .offline class!');

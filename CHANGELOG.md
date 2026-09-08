@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.26] - 2026-09-08
+- 🏷️ **Cooldown Badge**: Added clean IDLE and ON status badge to cooldown.
+- 🧹 **Removed Clutter**: Removed all Standby and Cycle Ready words from radar.
+- ⏱️ **Clean Clock**: Digital clock shows during countdown and hides when idle.
+- 🛡️ **Rotation Queue**: Fallback runner displays Rotation Queue instead of Standby.
+
 ## [3.3.25] - 2026-09-08
 - ⏱️ **Single Clock**: Removed redundant second countdown timer from cooldown compartment.
 - 🧹 **Clean Compartments**: Removed repetitive routine and wilderness status text from runner.
