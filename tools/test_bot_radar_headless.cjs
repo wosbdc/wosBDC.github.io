@@ -403,6 +403,27 @@ server.listen(PORT, async () => {
       const runnerCardD = document.querySelector('.bot-radar-compartment.runner-card') !== null;
       const cooldownCardD = document.querySelector('.bot-radar-compartment.cooldown-card') !== null;
 
+      // Step E: Full Idle State (Testing 🤖Bots and ⏳ COOLDOWN badges)
+      window.latestBotStatus = {
+        status: 'STANDBY',
+        account: '',
+        activeAccount: '',
+        serverOnline: true,
+        bothubOnline: true,
+        timestamp: Date.now(),
+        stage: '',
+        secondsLeft: 0,
+        totalBots: 7,
+        shortTime: '11:15 PM',
+        receivedAt: Date.now()
+      };
+      window.updateBotOperationsRadarDom();
+
+      const runnerBadgeTitleE = document.getElementById('bot-radar-comp-badge-runner')?.textContent?.trim();
+      const cdBadgeTitleE = document.getElementById('bot-radar-comp-badge-cooldown')?.textContent?.trim();
+      const cdBadgePillE = document.getElementById('bot-radar-cooldown-badge')?.textContent?.trim();
+      const clockDisplayE = document.getElementById('bot-radar-clock')?.style?.display;
+
       const radarAllText = document.getElementById('bot-operations-radar')?.textContent || '';
       const hasReadyStandby = radarAllText.includes('READY / STANDBY');
       const hasCycleReady = radarAllText.includes('Cycle Ready');
@@ -443,6 +464,10 @@ server.listen(PORT, async () => {
         dualGridD,
         runnerCardD,
         cooldownCardD,
+        runnerBadgeTitleE,
+        cdBadgeTitleE,
+        cdBadgePillE,
+        clockDisplayE,
         hasReadyStandby,
         hasCycleReady
       };
@@ -486,6 +511,18 @@ server.listen(PORT, async () => {
     }
     if (mutationResult.hasCycleReady) {
       throw new Error('Assertion Failed: Radar still contains forbidden text "Cycle Ready"!');
+    }
+    if (mutationResult.runnerBadgeTitleE !== '🤖Bots') {
+      throw new Error(`Assertion Failed: Expected Runner compartment badge to be "🤖Bots" when idle, got "${mutationResult.runnerBadgeTitleE}"`);
+    }
+    if (mutationResult.cdBadgeTitleE !== '⏳ COOLDOWN') {
+      throw new Error(`Assertion Failed: Expected Cooldown compartment badge to be "⏳ COOLDOWN" when idle, got "${mutationResult.cdBadgeTitleE}"`);
+    }
+    if (mutationResult.cdBadgePillE !== '⚪ IDLE') {
+      throw new Error(`Assertion Failed: Expected Cooldown pill badge to be "⚪ IDLE" when idle, got "${mutationResult.cdBadgePillE}"`);
+    }
+    if (mutationResult.clockDisplayE !== 'none') {
+      throw new Error(`Assertion Failed: Expected Cooldown Clock to be hidden (display:none) in Step E, got "${mutationResult.clockDisplayE}"`);
     }
     if (mutationResult.accountD !== 'AngryGermanpapi (Inst 15)' || mutationResult.cdAccountD !== 'ShrimpLeprechaun (Inst 14)' || mutationResult.clockD !== '02:00:00') {
       throw new Error(`Assertion Failed: Decoupled dual telemetry failed! Result: ${JSON.stringify(mutationResult)}`);

@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.3.27] - 2026-09-08
+- 🤖 **Bots Badge**: Renamed idle runner compartment badge to 🤖Bots.
+- ⏳ **Clean Cooldown**: Renamed rest compartment badge to clean ⏳ COOLDOWN.
+
 ## [3.3.26] - 2026-09-08
 - 🏷️ **Cooldown Badge**: Added clean IDLE and ON status badge to cooldown.
 - 🧹 **Removed Clutter**: Removed all Standby and Cycle Ready words from radar.
