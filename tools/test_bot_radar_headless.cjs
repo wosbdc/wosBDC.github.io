@@ -362,6 +362,7 @@ server.listen(PORT, async () => {
       window.updateBotOperationsRadarDom();
 
       const accountC = document.getElementById('bot-radar-account-val')?.textContent?.trim();
+      const cdAccountC = document.getElementById('bot-radar-cooldown-val')?.textContent?.trim();
       const badgeC = document.getElementById('bot-radar-badge-el')?.textContent?.trim();
       const clockC = document.getElementById('bot-radar-clock')?.textContent?.trim();
       const labelC = document.getElementById('bot-radar-timer-label')?.textContent?.trim();
@@ -415,6 +416,7 @@ server.listen(PORT, async () => {
         angryIsSafeB: angryCardB?.classList?.contains('safe'),
         angryTagB,
         accountC,
+        cdAccountC,
         badgeC,
         clockC,
         labelC,
@@ -449,7 +451,7 @@ server.listen(PORT, async () => {
     if (mutationResult.accountB !== 'Bisquick (Inst 11)' || !mutationResult.bisquickIsOccupiedB || !mutationResult.angryIsSafeB) {
       throw new Error(`Assertion Failed: Dynamic rotation between bots failed! Result: ${JSON.stringify(mutationResult)}`);
     }
-    if (mutationResult.accountC !== 'ShrimpLeprechaun (Inst 14)' || !mutationResult.hasCooldownBorder || !mutationResult.shrimpIsCooldownC || mutationResult.shrimpTagC !== '⚠️ Resting between runs') {
+    if (mutationResult.cdAccountC !== 'ShrimpLeprechaun (Inst 14)' || !mutationResult.accountC.includes('Standby') || !mutationResult.hasCooldownBorder || !mutationResult.shrimpIsCooldownC || mutationResult.shrimpTagC !== '⚠️ Resting between runs') {
       throw new Error(`Assertion Failed: Cooldown resting state failed! Result: ${JSON.stringify(mutationResult)}`);
     }
     if (mutationResult.clockC !== '00:09:50' || mutationResult.labelC !== 'Cooldown Countdown:') {

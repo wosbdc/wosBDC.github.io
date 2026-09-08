@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.25] - 2026-09-08
+- ⏱️ **Single Clock**: Removed redundant second countdown timer from cooldown compartment.
+- 🧹 **Clean Compartments**: Removed repetitive routine and wilderness status text from runner.
+- 🛡️ **Independent Boxes**: Cooldown account never duplicates into active runner box.
+- 💤 **Rest Status**: Updated cooldown text to resting between rotation runs.
+
 ## [3.3.24] - 2026-09-08
 - 🛡️ **Offline Safety**: Fleet matrix marks accounts safe to login when offline.
 - 🔴 **Consistent State**: Replaced contradictory occupied pills with automation offline indicator.

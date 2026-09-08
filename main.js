@@ -5593,9 +5593,20 @@ window.getBotOperationsRadarHtml = () => {
   const hasCooldown = !isOffline && (((data.cooldownSecondsLeft !== undefined && data.cooldownSecondsLeft > 0) || (data.secondsLeft > 0 && status === 'COOLDOWN')) || Boolean(data.isCooldownRunning));
   const cdAccount = isOffline ? 'No Active Queue' : (hasCooldown ? (data.cooldownAccount || (status === 'COOLDOWN' ? data.account : '') || 'Resting Account') : 'No Active Rest Queue');
 
-  const hasActiveRunner = !isOffline && (data.isExecutingTasks === true || (data.activeAccount && data.activeAccount.trim() !== '' && !data.activeAccount.includes('Standby')) || (status === 'ACTIVE' && data.account && !data.account.includes('Standby')));
-  const activeRunner = isOffline ? 'Bot Server Closed' : (data.activeAccount && data.activeAccount.trim() !== '' ? data.activeAccount : (data.account && !data.account.includes('Standby') ? data.account : 'Standby / Idle'));
-  const activeStage = isOffline ? '' : (hasActiveRunner ? (data.activeStage || data.stage || 'Wilderness / Routine Tasks') : (hasCooldown ? 'Waiting in Rotation' : (health.isStale ? 'Host Telemetry Stale (>60s)' : 'Waiting for Cycle')));
+  // Active Runner MUST be executing tasks or status === ACTIVE, have a non-empty active account, and NOT be the cooldown account
+  const candidateActive = (data.activeAccount && data.activeAccount.trim() !== '' && !data.activeAccount.includes('Standby'))
+    ? data.activeAccount
+    : ((status === 'ACTIVE' && data.account && !data.account.includes('Standby')) ? data.account : '');
+
+  const hasActiveRunner = !isOffline && Boolean(
+    candidateActive &&
+    (status !== 'COOLDOWN') &&
+    (data.isExecutingTasks === true || status === 'ACTIVE') &&
+    (!hasCooldown || candidateActive !== cdAccount)
+  );
+  const activeRunner = isOffline 
+    ? 'Bot Server Closed' 
+    : (hasActiveRunner ? candidateActive : 'Standby / Rotation Queue');
   const runnerPillText = isOffline ? 'OFFLINE' : (hasActiveRunner ? '● IN PROGRESS' : '⚪ IDLE');
   const runnerColor = isOffline ? '#ef4444' : (hasActiveRunner ? '#10b981' : 'var(--text-muted)');
 
@@ -5663,7 +5674,7 @@ window.getBotOperationsRadarHtml = () => {
     const s = (rem % 60).toString().padStart(2, '0');
     timerText = `${h}:${m}:${s}`;
     progressWidth = Math.min(100, Math.max(0, (rem / (data.totalSeconds || 10800)) * 100)) + '%';
-    cdSubText = `Resting on City Tab • ${m}:${s} left`;
+    cdSubText = 'Resting between rotation runs';
   } else if (hasActiveRunner) {
     timerText = 'RUNNER ACTIVE';
     timerLabel = 'Cooldown Stage:';
@@ -5711,7 +5722,6 @@ window.getBotOperationsRadarHtml = () => {
             <div class="bot-radar-comp-text">
               <div class="bot-radar-acc-label">Active Account</div>
               <div id="bot-radar-account-val" class="bot-radar-acc-name">${window.escapeHTML ? window.escapeHTML(activeRunner) : activeRunner}</div>
-              <div id="bot-radar-stage-val" class="bot-radar-stage-name" style="color: ${runnerColor}; display: ${activeStage ? 'block' : 'none'};">${window.escapeHTML ? window.escapeHTML(activeStage) : activeStage}</div>
             </div>
           </div>
         </div>
@@ -5765,9 +5775,20 @@ window.updateBotOperationsRadarDom = () => {
   const hasCooldown = !isOffline && (((data.cooldownSecondsLeft !== undefined && data.cooldownSecondsLeft > 0) || (data.secondsLeft > 0 && status === 'COOLDOWN')) || Boolean(data.isCooldownRunning));
   const cdAccount = isOffline ? 'No Active Queue' : (hasCooldown ? (data.cooldownAccount || (status === 'COOLDOWN' ? data.account : '') || 'Resting Account') : 'No Active Rest Queue');
 
-  const hasActiveRunner = !isOffline && (data.isExecutingTasks === true || (data.activeAccount && data.activeAccount.trim() !== '' && !data.activeAccount.includes('Standby')) || (status === 'ACTIVE' && data.account && !data.account.includes('Standby')));
-  const activeRunner = isOffline ? 'Bot Server Closed' : (data.activeAccount && data.activeAccount.trim() !== '' ? data.activeAccount : (data.account && !data.account.includes('Standby') ? data.account : 'Standby / Idle'));
-  const activeStage = isOffline ? '' : (hasActiveRunner ? (data.activeStage || data.stage || 'Wilderness / Routine Tasks') : (hasCooldown ? 'Waiting in Rotation' : (health.isStale ? 'Host Telemetry Stale (>60s)' : 'Waiting for Cycle')));
+  // Active Runner MUST be executing tasks or status === ACTIVE, have a non-empty active account, and NOT be the cooldown account
+  const candidateActive = (data.activeAccount && data.activeAccount.trim() !== '' && !data.activeAccount.includes('Standby'))
+    ? data.activeAccount
+    : ((status === 'ACTIVE' && data.account && !data.account.includes('Standby')) ? data.account : '');
+
+  const hasActiveRunner = !isOffline && Boolean(
+    candidateActive &&
+    (status !== 'COOLDOWN') &&
+    (data.isExecutingTasks === true || status === 'ACTIVE') &&
+    (!hasCooldown || candidateActive !== cdAccount)
+  );
+  const activeRunner = isOffline 
+    ? 'Bot Server Closed' 
+    : (hasActiveRunner ? candidateActive : 'Standby / Rotation Queue');
   const runnerPillText = isOffline ? 'OFFLINE' : (hasActiveRunner ? '● IN PROGRESS' : '⚪ IDLE');
   const runnerColor = isOffline ? '#ef4444' : (hasActiveRunner ? '#10b981' : 'var(--text-muted)');
 
@@ -5831,13 +5852,6 @@ window.updateBotOperationsRadarDom = () => {
 
   const accValEl = document.getElementById('bot-radar-account-val');
   if (accValEl) accValEl.textContent = activeRunner;
-  
-  const stageValEl = document.getElementById('bot-radar-stage-val');
-  if (stageValEl) {
-    stageValEl.textContent = activeStage;
-    stageValEl.style.color = runnerColor;
-    stageValEl.style.display = activeStage ? 'block' : 'none';
-  }
 
   const runnerCompEl = document.getElementById('bot-radar-runner-compartment');
   if (runnerCompEl) {
@@ -5905,7 +5919,7 @@ window.updateBotOperationsRadarDom = () => {
       const pct = Math.min(100, Math.max(0, (rem / (data.totalSeconds || 10800)) * 100));
       fillEl.style.width = pct + '%';
     }
-    cdSubText = `Resting on City Tab • ${m}:${s} left`;
+    cdSubText = 'Resting between rotation runs';
   } else if (hasActiveRunner) {
     if (timerLblEl) timerLblEl.textContent = 'Cooldown Stage:';
     if (clockEl) clockEl.textContent = 'RUNNER ACTIVE';
@@ -5973,7 +5987,7 @@ if (!window._botRadarInterval) {
         fillEl.style.width = pct + '%';
       }
       if (timerLblEl) timerLblEl.textContent = 'Cooldown Countdown:';
-      if (cdSubEl) cdSubEl.textContent = `Resting on City Tab • ${m}:${s} left`;
+      if (cdSubEl) cdSubEl.textContent = 'Resting between rotation runs';
     }
 
     const fleetContainers = document.querySelectorAll('.bot-fleet-container');

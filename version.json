@@ -1,14 +1,17 @@
 {
-  "version": "3.3.24",
+  "version": "3.3.25",
   "releaseDate": "2026-09-08",
-  "title": "What's New in v3.3.24",
+  "title": "What's New in v3.3.25",
   "notes": [
-    "🛡️ Offline Safety: Fleet matrix marks accounts safe to login when offline.",
-    "🔴 Consistent State: Replaced contradictory occupied pills with automation offline indicator."
+    "⏱️ Single Clock: Removed redundant second countdown timer from cooldown compartment.",
+    "🧹 Clean Compartments: Removed repetitive routine and wilderness status text from runner.",
+    "🛡️ Independent Boxes: Cooldown account never duplicates into active runner box.",
+    "💤 Rest Status: Updated cooldown text to resting between rotation runs."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.24",
+    "version": "3.3.25",
     "latestChanges": [
+      "v3.3.25: Cleaned up radar deck, eliminated redundant timers and wilderness status",
       "v3.3.24: Fleet safety matrix reflects offline state and marks accounts safe to login when offline",
       "v3.3.23: Dynamic green online / red offline state styling on radar compartments",
       "v3.3.22: Removed redundant Automation Halted/Offline in Bot Radar, auto-hid concluded events in Bell feed, added dismiss button",
