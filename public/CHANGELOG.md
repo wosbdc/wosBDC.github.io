@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.23] - 2026-09-07
+- 🟢 **Online Green**: Runner box shines green when bot is actively online.
+- 🔴 **Offline Red**: Compartment boxes switch to bold red when offline.
+- 🤖 **Dynamic Badges**: Compartments dynamically switch between active, standby, and offline.
+
 ## [3.3.22] - 2026-09-07
 - 🤖 **Radar Clean**: Removed repetitive halted and offline text inside compartments.
 - ⏱️ **Calm Standby**: Queue shows peaceful standby when bot server is offline.

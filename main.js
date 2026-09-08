@@ -5689,13 +5689,13 @@ window.getBotOperationsRadarHtml = () => {
       <!-- DUAL COMPARTMENTS: Active Runner vs Cooldown Hold Queue -->
       <div class="bot-radar-dual-grid">
         <!-- Compartment 1: Live Active Runner -->
-        <div class="bot-radar-compartment runner-card">
+        <div id="bot-radar-runner-compartment" class="bot-radar-compartment runner-card ${isOffline ? 'is-offline' : (hasActiveRunner ? 'is-active' : 'is-idle')}">
           <div class="bot-radar-comp-header">
-            <span class="bot-radar-comp-badge runner">🟢 LIVE ACTIVE RUNNER</span>
-            <span id="bot-radar-runner-badge" class="bot-radar-status-pill ${hasActiveRunner ? 'active' : 'idle'}">${runnerPillText}</span>
+            <span id="bot-radar-comp-badge-runner" class="bot-radar-comp-badge runner ${isOffline ? 'is-offline' : (hasActiveRunner ? '' : 'is-idle')}">${isOffline ? '🔴 AUTOMATION OFFLINE' : (hasActiveRunner ? '🟢 LIVE ACTIVE RUNNER' : '⚪ STANDBY RUNNER')}</span>
+            <span id="bot-radar-runner-badge" class="bot-radar-status-pill ${isOffline ? 'offline' : (hasActiveRunner ? 'active' : 'idle')}">${runnerPillText}</span>
           </div>
           <div class="bot-radar-comp-body">
-            <div class="bot-radar-comp-avatar">🤖</div>
+            <div id="bot-radar-runner-avatar" class="bot-radar-comp-avatar ${isOffline ? 'is-offline' : (hasActiveRunner ? '' : 'is-idle')}">🤖</div>
             <div class="bot-radar-comp-text">
               <div class="bot-radar-acc-label">Active Account</div>
               <div id="bot-radar-account-val" class="bot-radar-acc-name">${window.escapeHTML ? window.escapeHTML(activeRunner) : activeRunner}</div>
@@ -5705,13 +5705,13 @@ window.getBotOperationsRadarHtml = () => {
         </div>
 
         <!-- Compartment 2: Cooldown Hold Queue -->
-        <div class="bot-radar-compartment cooldown-card">
+        <div id="bot-radar-cooldown-compartment" class="bot-radar-compartment cooldown-card ${isOffline ? 'is-offline' : ''}">
           <div class="bot-radar-comp-header">
-            <span class="bot-radar-comp-badge cooldown">⏳ COOLDOWN HOLD QUEUE</span>
+            <span id="bot-radar-comp-badge-cooldown" class="bot-radar-comp-badge cooldown ${isOffline ? 'is-offline' : ''}">${isOffline ? '⏳ COOLDOWN STANDBY' : '⏳ COOLDOWN HOLD QUEUE'}</span>
             <span id="bot-radar-clock" class="bot-radar-clock font-mono">${timerText}</span>
           </div>
           <div class="bot-radar-comp-body">
-            <div class="bot-radar-comp-avatar cd">⏳</div>
+            <div id="bot-radar-cooldown-avatar" class="bot-radar-comp-avatar cd ${isOffline ? 'is-offline' : ''}">⏳</div>
             <div class="bot-radar-comp-text">
               <div id="bot-radar-timer-label" class="bot-radar-acc-label">${timerLabel}</div>
               <div id="bot-radar-cooldown-val" class="bot-radar-acc-name">${window.escapeHTML ? window.escapeHTML(cdAccount) : cdAccount}</div>
@@ -5827,10 +5827,42 @@ window.updateBotOperationsRadarDom = () => {
     stageValEl.style.display = activeStage ? 'block' : 'none';
   }
 
+  const runnerCompEl = document.getElementById('bot-radar-runner-compartment');
+  if (runnerCompEl) {
+    runnerCompEl.className = `bot-radar-compartment runner-card ${isOffline ? 'is-offline' : (hasActiveRunner ? 'is-active' : 'is-idle')}`;
+  }
+
+  const runnerBadgeTitleEl = document.getElementById('bot-radar-comp-badge-runner');
+  if (runnerBadgeTitleEl) {
+    runnerBadgeTitleEl.className = `bot-radar-comp-badge runner ${isOffline ? 'is-offline' : (hasActiveRunner ? '' : 'is-idle')}`;
+    runnerBadgeTitleEl.textContent = isOffline ? '🔴 AUTOMATION OFFLINE' : (hasActiveRunner ? '🟢 LIVE ACTIVE RUNNER' : '⚪ STANDBY RUNNER');
+  }
+
+  const runnerAvatarEl = document.getElementById('bot-radar-runner-avatar');
+  if (runnerAvatarEl) {
+    runnerAvatarEl.className = `bot-radar-comp-avatar ${isOffline ? 'is-offline' : (hasActiveRunner ? '' : 'is-idle')}`;
+  }
+
   const runnerBadgeEl = document.getElementById('bot-radar-runner-badge');
   if (runnerBadgeEl) {
-    runnerBadgeEl.className = `bot-radar-status-pill ${hasActiveRunner ? 'active' : 'idle'}`;
+    runnerBadgeEl.className = `bot-radar-status-pill ${isOffline ? 'offline' : (hasActiveRunner ? 'active' : 'idle')}`;
     runnerBadgeEl.textContent = runnerPillText;
+  }
+
+  const cdCompEl = document.getElementById('bot-radar-cooldown-compartment');
+  if (cdCompEl) {
+    cdCompEl.className = `bot-radar-compartment cooldown-card ${isOffline ? 'is-offline' : ''}`;
+  }
+
+  const cdBadgeTitleEl = document.getElementById('bot-radar-comp-badge-cooldown');
+  if (cdBadgeTitleEl) {
+    cdBadgeTitleEl.className = `bot-radar-comp-badge cooldown ${isOffline ? 'is-offline' : ''}`;
+    cdBadgeTitleEl.textContent = isOffline ? '⏳ COOLDOWN STANDBY' : '⏳ COOLDOWN HOLD QUEUE';
+  }
+
+  const cdAvatarEl = document.getElementById('bot-radar-cooldown-avatar');
+  if (cdAvatarEl) {
+    cdAvatarEl.className = `bot-radar-comp-avatar cd ${isOffline ? 'is-offline' : ''}`;
   }
 
   const cdValEl = document.getElementById('bot-radar-cooldown-val');

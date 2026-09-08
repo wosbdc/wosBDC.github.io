@@ -1,16 +1,16 @@
 {
-  "version": "3.3.22",
+  "version": "3.3.23",
   "releaseDate": "2026-09-07",
-  "title": "What's New in v3.3.22",
+  "title": "What's New in v3.3.23",
   "notes": [
-    "🤖 Radar Clean: Removed repetitive halted and offline text inside compartments.",
-    "⏱️ Calm Standby: Queue shows peaceful standby when bot server is offline.",
-    "🔔 Auto-Hide Events: Concluded schedule events automatically disappear from bell feed.",
-    "✕ Dismiss Events: Easily dismiss any scheduled event from alerts view."
+    "🟢 Online Green: Runner box shines green when bot is online.",
+    "🔴 Offline Red: Compartment boxes switch to bold red when offline.",
+    "🤖 Dynamic Badges: Runner badge dynamically reflects live active, standby, or offline."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.22",
+    "version": "3.3.23",
     "latestChanges": [
+      "v3.3.23: Dynamic green online / red offline state styling on radar compartments",
       "v3.3.22: Removed redundant Automation Halted/Offline in Bot Radar, auto-hid concluded events in Bell feed, added dismiss button",
       "v3.3.21: Decoupled Bot Operations Radar into dual Active Runner and Cooldown Queue compartments with live GnBots log telemetry",
       "v3.3.20: Excluded deleted, banned, and departed accounts from Bell token sync alerts and admin unsynced metrics",

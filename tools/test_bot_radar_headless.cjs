@@ -491,18 +491,42 @@ server.listen(PORT, async () => {
       const offlineAlertEl = document.getElementById('bot-radar-offline-alert');
       const offlineAlertVisible = offlineAlertEl && window.getComputedStyle(offlineAlertEl).display !== 'none';
       const offlineAlertText = offlineAlertEl?.textContent?.trim();
+      const runnerComp = document.getElementById('bot-radar-runner-compartment');
+      const runnerHasOfflineClass = runnerComp?.classList?.contains('is-offline');
+      const runnerBadgeText = document.getElementById('bot-radar-comp-badge-runner')?.textContent?.trim();
+      const runnerPill = document.getElementById('bot-radar-runner-badge');
+      const runnerPillHasOffline = runnerPill?.classList?.contains('offline');
+      const runnerAvatarHasOffline = document.getElementById('bot-radar-runner-avatar')?.classList?.contains('is-offline');
+      const cdCompHasOffline = document.getElementById('bot-radar-cooldown-compartment')?.classList?.contains('is-offline');
 
       return {
         hasOfflineBorder,
         badgeText,
         dualTagText,
         offlineAlertVisible,
-        offlineAlertText
+        offlineAlertText,
+        runnerHasOfflineClass,
+        runnerBadgeText,
+        runnerPillHasOffline,
+        runnerAvatarHasOffline,
+        cdCompHasOffline
       };
     });
 
     if (!serverOfflineResult.hasOfflineBorder) {
       throw new Error('Assertion Failed: Radar card did not receive .border-offline class when server is offline!');
+    }
+    if (!serverOfflineResult.runnerHasOfflineClass) {
+      throw new Error('Assertion Failed: Runner compartment box did not receive .is-offline class when server is offline!');
+    }
+    if (!serverOfflineResult.runnerBadgeText || !serverOfflineResult.runnerBadgeText.includes('AUTOMATION OFFLINE')) {
+      throw new Error(`Assertion Failed: Expected runner badge "🔴 AUTOMATION OFFLINE", got "${serverOfflineResult.runnerBadgeText}"`);
+    }
+    if (!serverOfflineResult.runnerPillHasOffline) {
+      throw new Error('Assertion Failed: Runner status pill did not receive .offline class!');
+    }
+    if (!serverOfflineResult.runnerAvatarHasOffline) {
+      throw new Error('Assertion Failed: Runner avatar did not receive .is-offline class!');
     }
     if (serverOfflineResult.badgeText !== '🔴 BOT SERVER OFFLINE') {
       throw new Error(`Assertion Failed: Expected badge "🔴 BOT SERVER OFFLINE", got "${serverOfflineResult.badgeText}"`);
@@ -513,7 +537,7 @@ server.listen(PORT, async () => {
     if (!serverOfflineResult.offlineAlertVisible || !serverOfflineResult.offlineAlertText.includes('AUTOMATION HALTED')) {
       throw new Error(`Assertion Failed: Offline warning bar not visible or missing AUTOMATION HALTED! Got: "${serverOfflineResult.offlineAlertText}"`);
     }
-    console.log(`  ✅ 4A Verified: Server offline displays "${serverOfflineResult.dualTagText}", "${serverOfflineResult.badgeText}", and warning bar.`);
+    console.log(`  ✅ 4A Verified: Server offline displays "${serverOfflineResult.dualTagText}", "${serverOfflineResult.badgeText}", and RED offline runner compartment box.`);
 
     // Subphase 4B: BotHub Offline explicitly (bothubOnline: false)
     const hubOfflineResult = await page.evaluate(async () => {
