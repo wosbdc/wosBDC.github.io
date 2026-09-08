@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.30] - 2026-09-08
+- 🏷️ **Renamed Queue**: Renamed inactive queue text to clean None.
+- 🏷️ **Renamed Server**: Renamed closed bot server text to clean None.
+- 🧹 **Hidden Progress Bar**: Empty progress bar hidden when no queue in progress.
+- 🛡️ **Clean Header**: Removed redundant offline status badge from radar title.
+
 ## [3.3.29] - 2026-09-08
 - 🟢 **Zero Redundancy**: Simplified status pills to clean Online and Offline.
 - 🤖 **Consistent Badges**: Fixed compartment headers permanently to 🤖Bots and ⏳ COOLDOWN.

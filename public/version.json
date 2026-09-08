@@ -1,15 +1,17 @@
 {
-  "version": "3.3.29",
+  "version": "3.3.30",
   "releaseDate": "2026-09-08",
-  "title": "What's New in v3.3.29",
+  "title": "What's New in v3.3.30",
   "notes": [
-    "🟢 Zero Redundancy: Simplified status pills to clean Online and Offline.",
-    "🤖 Consistent Badges: Fixed headers permanently to 🤖Bots and ⏳ COOLDOWN.",
-    "📱 Smart Space: Compact layout saves screen space on mobile phones."
+    "🏷️ Renamed Queue: Renamed inactive queue text to clean None.",
+    "🏷️ Renamed Server: Renamed closed bot server text to clean None.",
+    "🧹 Hidden Progress Bar: Empty progress bar hidden when no queue in progress.",
+    "🛡️ Clean Header: Removed redundant offline status badge from radar title."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.29",
+    "version": "3.3.30",
     "latestChanges": [
+      "v3.3.30: Renamed inactive queue and closed server states to None, hid idle progress bar, removed header offline badge",
       "v3.3.29: Simplified status pills to Online/Offline, fixed 🤖Bots and ⏳ COOLDOWN headers, compact mobile layout",
       "v3.3.28: Added dedicated Hub and Server status boxes with mobile-optimized grid",
       "v3.3.27: Renamed radar compartment badges to 🤖Bots and ⏳ COOLDOWN",
