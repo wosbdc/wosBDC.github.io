@@ -1766,17 +1766,24 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
     gap: 8px;
   }
   .bot-radar-mini-box {
-    padding: 7px 9px;
+    padding: 6px 10px;
     flex-direction: column;
     align-items: flex-start;
+    justify-content: center;
     gap: 5px;
+    min-width: 0;
+  }
+  .bot-radar-mini-header {
+    gap: 5px;
+    width: 100%;
   }
   .bot-radar-mini-label {
-    font-size: 9.5px;
+    font-size: 10px;
   }
   .bot-radar-mini-val {
     font-size: 10px;
-    padding: 2px 6px;
+    padding: 2px 7px;
+    align-self: flex-start;
   }
 }
 

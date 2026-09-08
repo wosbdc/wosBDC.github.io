@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.29] - 2026-09-08
+- 🟢 **Zero Redundancy**: Simplified status pills to clean Online and Offline.
+- 🤖 **Consistent Badges**: Fixed compartment headers permanently to 🤖Bots and ⏳ COOLDOWN.
+- 📱 **Smart Space**: Compact horizontal layout saves screen space on mobile phones.
+
 ## [3.3.28] - 2026-09-08
 - 🖥️ **Hub Status Box**: Added dedicated status box for WOS Bot Hub.
 - ⚙️ **Server Status Box**: Added dedicated status box for Whiteout Bot Server.

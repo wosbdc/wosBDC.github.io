@@ -596,11 +596,11 @@ server.listen(PORT, async () => {
     if (!serverOfflineResult.runnerHasOfflineClass) {
       throw new Error('Assertion Failed: Runner compartment box did not receive .is-offline class when server is offline!');
     }
-    if (!serverOfflineResult.runnerBadgeText || !serverOfflineResult.runnerBadgeText.includes('AUTOMATION OFFLINE')) {
-      throw new Error(`Assertion Failed: Expected runner badge "🔴 AUTOMATION OFFLINE", got "${serverOfflineResult.runnerBadgeText}"`);
+    if (serverOfflineResult.runnerBadgeText !== '🤖Bots') {
+      throw new Error(`Assertion Failed: Expected persistent runner badge "🤖Bots", got "${serverOfflineResult.runnerBadgeText}"`);
     }
-    if (!serverOfflineResult.cdBadgeText || !serverOfflineResult.cdBadgeText.includes('AUTOMATION OFFLINE')) {
-      throw new Error(`Assertion Failed: Expected cooldown badge "🔴 AUTOMATION OFFLINE", got "${serverOfflineResult.cdBadgeText}"`);
+    if (serverOfflineResult.cdBadgeText !== '⏳ COOLDOWN') {
+      throw new Error(`Assertion Failed: Expected persistent cooldown badge "⏳ COOLDOWN", got "${serverOfflineResult.cdBadgeText}"`);
     }
     if (serverOfflineResult.cdBadgePillText !== 'OFFLINE') {
       throw new Error(`Assertion Failed: Expected cooldown pill badge "OFFLINE", got "${serverOfflineResult.cdBadgePillText}"`);
@@ -614,8 +614,11 @@ server.listen(PORT, async () => {
     if (serverOfflineResult.badgeText !== '🔴 BOT SERVER OFFLINE') {
       throw new Error(`Assertion Failed: Expected badge "🔴 BOT SERVER OFFLINE", got "${serverOfflineResult.badgeText}"`);
     }
-    if (!serverOfflineResult.dualTagText.includes('Hub: Online') || !serverOfflineResult.dualTagText.includes('Server: Offline')) {
-      throw new Error(`Assertion Failed: Dual tag did not show Hub: Online and Server: Offline! Got: "${serverOfflineResult.dualTagText}"`);
+    if (!serverOfflineResult.dualTagText.includes('Online') || !serverOfflineResult.dualTagText.includes('Offline')) {
+      throw new Error(`Assertion Failed: Dual tag did not show Online and Offline! Got: "${serverOfflineResult.dualTagText}"`);
+    }
+    if (serverOfflineResult.dualTagText.includes('Hub:') || serverOfflineResult.dualTagText.includes('Server:')) {
+      throw new Error(`Assertion Failed: Dual tag contains redundant "Hub:" or "Server:" prefix! Got: "${serverOfflineResult.dualTagText}"`);
     }
     if (!serverOfflineResult.hasHubBox || !serverOfflineResult.hasServerBox) {
       throw new Error('Assertion Failed: Dedicated status boxes for WOS Bot Hub and Bot Server not found in DOM!');
@@ -623,7 +626,7 @@ server.listen(PORT, async () => {
     if (!serverOfflineResult.offlineAlertVisible || !serverOfflineResult.offlineAlertText.includes('AUTOMATION HALTED')) {
       throw new Error(`Assertion Failed: Offline warning bar not visible or missing AUTOMATION HALTED! Got: "${serverOfflineResult.offlineAlertText}"`);
     }
-    console.log(`  ✅ 4A Verified: Server offline displays "${serverOfflineResult.dualTagText}", "${serverOfflineResult.badgeText}", and RED offline runner compartment box.`);
+    console.log(`  ✅ 4A Verified: Server offline displays "${serverOfflineResult.dualTagText}" (Zero Redundancy), "${serverOfflineResult.badgeText}", and RED offline runner compartment box.`);
 
     // Subphase 4B: BotHub Offline explicitly (bothubOnline: false)
     const hubOfflineResult = await page.evaluate(async () => {
@@ -653,13 +656,16 @@ server.listen(PORT, async () => {
     if (hubOfflineResult.badgeText !== '🔴 AUTOMATION OFFLINE') {
       throw new Error(`Assertion Failed: Expected badge "🔴 AUTOMATION OFFLINE", got "${hubOfflineResult.badgeText}"`);
     }
-    if (!hubOfflineResult.dualTagText.includes('Hub: Offline') || !hubOfflineResult.dualTagText.includes('Server: Offline')) {
-      throw new Error(`Assertion Failed: Dual tag did not show Hub: Offline and Server: Offline! Got: "${hubOfflineResult.dualTagText}"`);
+    if (!hubOfflineResult.dualTagText.includes('Offline')) {
+      throw new Error(`Assertion Failed: Dual tag did not show Offline! Got: "${hubOfflineResult.dualTagText}"`);
+    }
+    if (hubOfflineResult.dualTagText.includes('Hub:') || hubOfflineResult.dualTagText.includes('Server:')) {
+      throw new Error(`Assertion Failed: Dual tag contains redundant "Hub:" or "Server:" prefix! Got: "${hubOfflineResult.dualTagText}"`);
     }
     if (!hubOfflineResult.offlineAlertVisible || !hubOfflineResult.offlineAlertText.includes('Bot Hub and Bot Server are closed')) {
       throw new Error(`Assertion Failed: Offline warning bar missing BotHub closed notice! Got: "${hubOfflineResult.offlineAlertText}"`);
     }
-    console.log(`  ✅ 4B Verified: Hub offline displays "${hubOfflineResult.dualTagText}", "${hubOfflineResult.badgeText}", and closed notice.`);
+    console.log(`  ✅ 4B Verified: Hub offline displays "${hubOfflineResult.dualTagText}" (Zero Redundancy), "${hubOfflineResult.badgeText}", and closed notice.`);
 
     // Subphase 4C: 60-Second Heartbeat Staleness Timeout (>60s old timestamp)
     const staleResult = await page.evaluate(async () => {
@@ -689,13 +695,16 @@ server.listen(PORT, async () => {
     if (staleResult.badgeText !== '🔴 HOST TELEMETRY TIMEOUT') {
       throw new Error(`Assertion Failed: Expected badge "🔴 HOST TELEMETRY TIMEOUT", got "${staleResult.badgeText}"`);
     }
-    if (!staleResult.dualTagText.includes('Hub: Offline') || !staleResult.dualTagText.includes('Server: Offline')) {
-      throw new Error(`Assertion Failed: Stale telemetry did not render both Hub & Server Offline! Got: "${staleResult.dualTagText}"`);
+    if (!staleResult.dualTagText.includes('Offline')) {
+      throw new Error(`Assertion Failed: Stale telemetry did not render Offline! Got: "${staleResult.dualTagText}"`);
+    }
+    if (staleResult.dualTagText.includes('Hub:') || staleResult.dualTagText.includes('Server:')) {
+      throw new Error(`Assertion Failed: Dual tag contains redundant "Hub:" or "Server:" prefix! Got: "${staleResult.dualTagText}"`);
     }
     if (!staleResult.offlineAlertVisible || !staleResult.offlineAlertText.includes('stopped reporting (>60s)')) {
       throw new Error(`Assertion Failed: Stale telemetry warning bar missing 60-second notice! Got: "${staleResult.offlineAlertText}"`);
     }
-    console.log(`  ✅ 4C Verified: 60s staleness timeout triggers "${staleResult.dualTagText}", "${staleResult.badgeText}", and timeout warning.`);
+    console.log(`  ✅ 4C Verified: 60s staleness timeout triggers "${staleResult.dualTagText}" (Zero Redundancy), "${staleResult.badgeText}", and timeout warning.`);
 
     console.log('\n--- PHASE 5: R4/R5 BELL ALERT INTEGRATION & PRIVACY AUDIT ---');
     // Step A: Regular member opens Bell modal -> MUST NOT see bot alert!

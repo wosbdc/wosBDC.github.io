@@ -5639,7 +5639,7 @@ window.getBotOperationsRadarHtml = () => {
           <span class="bot-radar-mini-label">WOS Bot Hub</span>
         </div>
         <div id="bot-radar-hub-val" class="bot-radar-mini-val ${hubOnline ? 'is-online' : 'is-offline'}">
-          ${hubOnline ? '🟢 Hub: Online' : '🔴 Hub: Offline'}
+          ${hubOnline ? '🟢 Online' : '🔴 Offline'}
         </div>
       </div>
       <div id="bot-radar-server-box" class="bot-radar-mini-box ${serverOnline ? 'is-online' : 'is-offline'}">
@@ -5648,7 +5648,7 @@ window.getBotOperationsRadarHtml = () => {
           <span class="bot-radar-mini-label">Bot Server</span>
         </div>
         <div id="bot-radar-server-val" class="bot-radar-mini-val ${serverOnline ? 'is-online' : 'is-offline'}">
-          ${serverOnline ? '🟢 Server: Online' : '🔴 Server: Offline'}
+          ${serverOnline ? '🟢 Online' : '🔴 Offline'}
         </div>
       </div>
     </div>
@@ -5726,7 +5726,7 @@ window.getBotOperationsRadarHtml = () => {
         <!-- Compartment 1: Live Active Runner -->
         <div id="bot-radar-runner-compartment" class="bot-radar-compartment runner-card ${isOffline ? 'is-offline' : (hasActiveRunner ? 'is-active' : 'is-idle')}">
           <div class="bot-radar-comp-header">
-            <span id="bot-radar-comp-badge-runner" class="bot-radar-comp-badge runner ${isOffline ? 'is-offline' : (hasActiveRunner ? '' : 'is-idle')}">${isOffline ? '🔴 AUTOMATION OFFLINE' : (hasActiveRunner ? '🟢 LIVE ACTIVE RUNNER' : '🤖Bots')}</span>
+            <span id="bot-radar-comp-badge-runner" class="bot-radar-comp-badge runner ${isOffline ? 'is-offline' : (hasActiveRunner ? '' : 'is-idle')}">🤖Bots</span>
             <span id="bot-radar-runner-badge" class="bot-radar-status-pill ${isOffline ? 'offline' : (hasActiveRunner ? 'active' : 'idle')}">${runnerPillText}</span>
           </div>
           <div class="bot-radar-comp-body">
@@ -5741,7 +5741,7 @@ window.getBotOperationsRadarHtml = () => {
         <!-- Compartment 2: Cooldown Hold Queue -->
         <div id="bot-radar-cooldown-compartment" class="bot-radar-compartment cooldown-card ${isOffline ? 'is-offline' : ''}">
           <div class="bot-radar-comp-header">
-            <span id="bot-radar-comp-badge-cooldown" class="bot-radar-comp-badge cooldown ${isOffline ? 'is-offline' : ''}">${isOffline ? '🔴 AUTOMATION OFFLINE' : (hasCooldown ? '⏳ COOLDOWN HOLD QUEUE' : '⏳ COOLDOWN')}</span>
+            <span id="bot-radar-comp-badge-cooldown" class="bot-radar-comp-badge cooldown ${isOffline ? 'is-offline' : ''}">⏳ COOLDOWN</span>
             <div style="display:flex; align-items:center; gap:8px;">
               <span id="bot-radar-clock" class="bot-radar-clock font-mono" style="${hasCooldown ? '' : 'display:none;'}">${timerText}</span>
               <span id="bot-radar-cooldown-badge" class="bot-radar-status-pill ${cooldownPillClass}">${cooldownPillText}</span>
@@ -5844,7 +5844,7 @@ window.updateBotOperationsRadarDom = () => {
           <span class="bot-radar-mini-label">WOS Bot Hub</span>
         </div>
         <div id="bot-radar-hub-val" class="bot-radar-mini-val ${hubOnline ? 'is-online' : 'is-offline'}">
-          ${hubOnline ? '🟢 Hub: Online' : '🔴 Hub: Offline'}
+          ${hubOnline ? '🟢 Online' : '🔴 Offline'}
         </div>
       </div>
       <div id="bot-radar-server-box" class="bot-radar-mini-box ${serverOnline ? 'is-online' : 'is-offline'}">
@@ -5853,7 +5853,7 @@ window.updateBotOperationsRadarDom = () => {
           <span class="bot-radar-mini-label">Bot Server</span>
         </div>
         <div id="bot-radar-server-val" class="bot-radar-mini-val ${serverOnline ? 'is-online' : 'is-offline'}">
-          ${serverOnline ? '🟢 Server: Online' : '🔴 Server: Offline'}
+          ${serverOnline ? '🟢 Online' : '🔴 Offline'}
         </div>
       </div>
     `;
@@ -5891,7 +5891,7 @@ window.updateBotOperationsRadarDom = () => {
   const runnerBadgeTitleEl = document.getElementById('bot-radar-comp-badge-runner');
   if (runnerBadgeTitleEl) {
     runnerBadgeTitleEl.className = `bot-radar-comp-badge runner ${isOffline ? 'is-offline' : (hasActiveRunner ? '' : 'is-idle')}`;
-    runnerBadgeTitleEl.textContent = isOffline ? '🔴 AUTOMATION OFFLINE' : (hasActiveRunner ? '🟢 LIVE ACTIVE RUNNER' : '🤖Bots');
+    runnerBadgeTitleEl.textContent = '🤖Bots';
   }
 
   const runnerAvatarEl = document.getElementById('bot-radar-runner-avatar');
@@ -5913,7 +5913,7 @@ window.updateBotOperationsRadarDom = () => {
   const cdBadgeTitleEl = document.getElementById('bot-radar-comp-badge-cooldown');
   if (cdBadgeTitleEl) {
     cdBadgeTitleEl.className = `bot-radar-comp-badge cooldown ${isOffline ? 'is-offline' : ''}`;
-    cdBadgeTitleEl.textContent = isOffline ? '🔴 AUTOMATION OFFLINE' : (hasCooldown ? '⏳ COOLDOWN HOLD QUEUE' : '⏳ COOLDOWN');
+    cdBadgeTitleEl.textContent = '⏳ COOLDOWN';
   }
 
   const cdAvatarEl = document.getElementById('bot-radar-cooldown-avatar');

@@ -1,15 +1,16 @@
 {
-  "version": "3.3.28",
+  "version": "3.3.29",
   "releaseDate": "2026-09-08",
-  "title": "What's New in v3.3.28",
+  "title": "What's New in v3.3.29",
   "notes": [
-    "🖥️ Hub Status Box: Added dedicated status box for WOS Bot Hub.",
-    "⚙️ Server Status Box: Added dedicated status box for Whiteout Bot Server.",
-    "📱 Mobile Optimized: Responsive 2-column status box grid fits all smartphones."
+    "🟢 Zero Redundancy: Simplified status pills to clean Online and Offline.",
+    "🤖 Consistent Badges: Fixed headers permanently to 🤖Bots and ⏳ COOLDOWN.",
+    "📱 Smart Space: Compact layout saves screen space on mobile phones."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.28",
+    "version": "3.3.29",
     "latestChanges": [
+      "v3.3.29: Simplified status pills to Online/Offline, fixed 🤖Bots and ⏳ COOLDOWN headers, compact mobile layout",
       "v3.3.28: Added dedicated Hub and Server status boxes with mobile-optimized grid",
       "v3.3.27: Renamed radar compartment badges to 🤖Bots and ⏳ COOLDOWN",
       "v3.3.26: Removed READY/STANDBY words and added IDLE/ON badge to cooldown compartment",
