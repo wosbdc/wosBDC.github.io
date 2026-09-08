@@ -5424,8 +5424,11 @@ window.getBotAutomationHealth = (data = window.latestBotStatus || {}) => {
   const isHeartbeatStale = isStale;
   
   const isHubOnline = Boolean(data.bothubOnline !== false && !isStale && ts > 0);
+  const isBlackout = Boolean(status === 'EVENT_BLACKOUT' || (data.stage && /event\s*blackout/i.test(data.stage)));
   const isServerOnline = Boolean(isHubOnline && data.serverOnline === true && status !== 'OFFLINE');
-  const isOffline = !isHubOnline || !isServerOnline;
+  // When an alliance event blackout is active, BotHub intentionally parks bots to prevent interference.
+  // The system is fully operational and executing blackout protection.
+  const isOffline = !isHubOnline || (!isServerOnline && !isBlackout);
   
   return {
     status,
@@ -5434,7 +5437,87 @@ window.getBotAutomationHealth = (data = window.latestBotStatus || {}) => {
     isHubOnline,
     isServerOnline,
     isOffline,
+    isBlackout,
     lastSeenSecs: ts > 0 ? Math.floor((now - ts) / 1000) : null
+  };
+};
+
+window.getBotCooldownInfo = (data = window.latestBotStatus || {}) => {
+  const status = (data.status || '').toUpperCase();
+  const rawStage = (data.stage || '').replace(/^[?\s\u{1F6E1}\uFE0F]+/u, '').trim();
+  const rawHold = (data.cooldownHoldText || '').replace(/^[?\s\u{1F6E1}\uFE0F]+/u, '').trim();
+  const rawAcc = (data.account || '').replace(/^[?\s\u{1F6E1}\uFE0F]+/u, '').trim();
+  const rawCdAcc = (data.cooldownAccount || '').replace(/^[?\s\u{1F6E1}\uFE0F]+/u, '').trim();
+
+  const isBlackout = Boolean(status === 'EVENT_BLACKOUT' || /event\s*blackout/i.test(rawStage));
+
+  // 1. Determine Event Name
+  let eventName = '';
+  if (data.cooldownEvent && typeof data.cooldownEvent === 'string' && data.cooldownEvent.trim()) {
+    eventName = data.cooldownEvent.trim();
+  } else if (data.event && typeof data.event === 'string' && data.event.trim()) {
+    eventName = data.event.trim();
+  } else if (data.eventLabel && typeof data.eventLabel === 'string' && data.eventLabel.trim()) {
+    eventName = data.eventLabel.trim();
+  } else if (data.cooldownReason && typeof data.cooldownReason === 'string' && data.cooldownReason.trim()) {
+    eventName = data.cooldownReason.trim();
+  }
+
+  if (!eventName) {
+    const combined = `${rawStage} ${rawHold} ${rawAcc} ${rawCdAcc}`;
+    const boMatch = rawStage.match(/Event\s*Blackout(?:\s*in\s*Progress)?:\s*([^\(]+(?:\([^\)]+\))?)/i);
+    if (boMatch && boMatch[1] && boMatch[1].trim()) {
+      eventName = boMatch[1].trim();
+    } else if (/castle\s*battle/i.test(combined)) {
+      const match = combined.match(/Castle\s*Battle(?:\s*\([^\)]+\))?/i);
+      eventName = match ? match[0].trim() : 'Castle Battle';
+    } else if (/bear\s*trap/i.test(combined)) {
+      const match = combined.match(/Bear\s*Trap(?:\s*\([^\)]+\))?/i);
+      eventName = match ? match[0].trim() : 'Bear Trap';
+    } else if (/foundry/i.test(combined)) {
+      eventName = 'Foundry Battle';
+    } else if (/sunfire/i.test(combined)) {
+      eventName = 'Sunfire Castle';
+    } else if (/quiet\s*hours/i.test(combined)) {
+      eventName = 'Overnight Quiet Hours';
+    } else if (/custom\s*timer/i.test(combined) || /timer\s*adjusted/i.test(combined)) {
+      eventName = 'Custom Cooldown Timer';
+    }
+  }
+
+  // 2. Format Subtext (e.g. "Event: Castle Battle (6h)" or "Routine Rotation Rest")
+  let subText = '';
+  if (eventName) {
+    if (/^event:\s*/i.test(eventName)) {
+      subText = eventName;
+    } else if (/quiet\s*hours/i.test(eventName)) {
+      subText = 'Quiet Hours Blackout';
+    } else if (/timer/i.test(eventName)) {
+      subText = 'Custom Cooldown Timer';
+    } else {
+      subText = `Event: ${eventName}`;
+    }
+  } else {
+    subText = 'Routine Rotation Rest';
+  }
+
+  // 3. Format Target / Account Scope
+  let accountDisplay = '';
+  if (isBlackout || /castle\s*battle|bear\s*trap|quiet\s*hours|foundry/i.test(eventName)) {
+    accountDisplay = 'All Bot Accounts';
+  } else if (rawCdAcc && !rawCdAcc.includes('Inst -1') && !/castle|bear|foundry|blackout/i.test(rawCdAcc)) {
+    accountDisplay = rawCdAcc;
+  } else if (status === 'COOLDOWN' && rawAcc && !rawAcc.includes('Inst -1') && !/castle|bear|foundry|blackout/i.test(rawAcc)) {
+    accountDisplay = rawAcc;
+  } else {
+    accountDisplay = 'All Bot Accounts';
+  }
+
+  return {
+    eventName,
+    subText,
+    accountDisplay,
+    isBlackout
   };
 };
 
@@ -5589,9 +5672,18 @@ window.getBotOperationsRadarHtml = () => {
   const totalBots = data.totalBots || 0;
   const shortTime = data.shortTime || (health.isStale ? 'Stale' : 'Just now');
   
+  const cdInfo = (typeof window.getBotCooldownInfo === 'function')
+    ? window.getBotCooldownInfo(data)
+    : { eventName: '', subText: 'Routine Rotation Rest', accountDisplay: 'All Bot Accounts', isBlackout: false };
+
   // Decouple Active Runner vs Cooldown Hold Queue
-  const hasCooldown = !isOffline && (((data.cooldownSecondsLeft !== undefined && data.cooldownSecondsLeft > 0) || (data.secondsLeft > 0 && status === 'COOLDOWN')) || Boolean(data.isCooldownRunning));
-  const cdAccount = isOffline ? 'None' : (hasCooldown ? (data.cooldownAccount || (status === 'COOLDOWN' ? data.account : '') || 'Resting Account') : 'None');
+  const hasCooldown = !isOffline && (
+    ((data.cooldownSecondsLeft !== undefined && data.cooldownSecondsLeft > 0) ||
+     (data.secondsLeft > 0 && (status === 'COOLDOWN' || status === 'EVENT_BLACKOUT')) ||
+     Boolean(data.isCooldownRunning) ||
+     cdInfo.isBlackout)
+  );
+  const cdAccount = isOffline ? 'None' : (hasCooldown ? cdInfo.accountDisplay : 'None');
 
   // Active Runner MUST be executing tasks or status === ACTIVE, have a non-empty active account, and NOT be the cooldown account
   const candidateActive = (data.activeAccount && data.activeAccount.trim() !== '' && !data.activeAccount.includes('Standby'))
@@ -5621,6 +5713,9 @@ window.getBotOperationsRadarHtml = () => {
   } else if (isActive) {
     badgeText = '● ACTIVE RUNNING';
     badgeClass = 'bot-radar-badge active';
+  } else if (cdInfo.isBlackout) {
+    badgeText = '🛡️ EVENT BLACKOUT';
+    badgeClass = 'bot-radar-badge blackout';
   } else if (isCooldown) {
     badgeText = '⏳ COOLDOWN IN PROGRESS';
     badgeClass = 'bot-radar-badge cooldown';
@@ -5633,6 +5728,10 @@ window.getBotOperationsRadarHtml = () => {
 
   const hubOnline = health.isHubOnline;
   const serverOnline = health.isServerOnline;
+  const serverBoxClass = serverOnline ? 'is-online' : (health.isBlackout ? 'is-blackout' : 'is-offline');
+  const serverValClass = serverOnline ? 'is-online' : (health.isBlackout ? 'is-blackout' : 'is-offline');
+  const serverValText = serverOnline ? '🟢 Online' : (health.isBlackout ? '⏸️ Blackout' : '🔴 Offline');
+
   const dualTagHtml = `
     <div id="bot-radar-dual-tag" class="bot-radar-server-tag bot-radar-status-grid">
       <div id="bot-radar-hub-box" class="bot-radar-mini-box ${hubOnline ? 'is-online' : 'is-offline'}">
@@ -5644,13 +5743,13 @@ window.getBotOperationsRadarHtml = () => {
           ${hubOnline ? '🟢 Online' : '🔴 Offline'}
         </div>
       </div>
-      <div id="bot-radar-server-box" class="bot-radar-mini-box ${serverOnline ? 'is-online' : 'is-offline'}">
+      <div id="bot-radar-server-box" class="bot-radar-mini-box ${serverBoxClass}">
         <div class="bot-radar-mini-header">
           <span class="bot-radar-mini-icon">⚡</span>
           <span class="bot-radar-mini-label">Bot Server</span>
         </div>
-        <div id="bot-radar-server-val" class="bot-radar-mini-val ${serverOnline ? 'is-online' : 'is-offline'}">
-          ${serverOnline ? '🟢 Online' : '🔴 Offline'}
+        <div id="bot-radar-server-val" class="bot-radar-mini-val ${serverValClass}">
+          ${serverValText}
         </div>
       </div>
     </div>
@@ -5674,12 +5773,10 @@ window.getBotOperationsRadarHtml = () => {
   ` : `<div id="bot-radar-offline-alert" style="display:none;"></div>`;
 
   let timerText = '';
-  let progressWidth = '0%';
   let cdSubText = '';
   
   if (isOffline) {
     timerText = '';
-    progressWidth = '0%';
     cdSubText = '';
   } else if (hasCooldown) {
     const totalSecs = (data.cooldownSecondsLeft !== undefined && data.cooldownSecondsLeft !== null) ? data.cooldownSecondsLeft : (data.secondsLeft || 0);
@@ -5689,11 +5786,9 @@ window.getBotOperationsRadarHtml = () => {
     const m = Math.floor((rem % 3600) / 60).toString().padStart(2, '0');
     const s = (rem % 60).toString().padStart(2, '0');
     timerText = `${h}:${m}:${s}`;
-    progressWidth = Math.min(100, Math.max(0, (rem / (data.totalSeconds || 10800)) * 100)) + '%';
-    cdSubText = 'Resting between rotation runs';
+    cdSubText = cdInfo.subText;
   } else {
     timerText = '';
-    progressWidth = '0%';
     cdSubText = '';
   }
 
@@ -5756,9 +5851,6 @@ window.getBotOperationsRadarHtml = () => {
               <div id="bot-radar-cooldown-sub" class="bot-radar-stage-name" style="${cdSubText ? 'color:#fbbf24;' : 'display:none;'}">${window.escapeHTML ? window.escapeHTML(cdSubText) : cdSubText}</div>
             </div>
           </div>
-          <div id="bot-radar-progress-container" class="bot-radar-progress-bar" style="margin-top: 10px; ${hasCooldown ? '' : 'display:none;'}">
-            <div id="bot-radar-progress-fill" class="bot-radar-progress-fill" style="width: ${progressWidth};"></div>
-          </div>
         </div>
       </div>
 
@@ -5788,8 +5880,17 @@ window.updateBotOperationsRadarDom = () => {
   const totalBots = data.totalBots || 0;
   const shortTime = data.shortTime || (health.isStale ? 'Stale' : 'Just now');
   
-  const hasCooldown = !isOffline && (((data.cooldownSecondsLeft !== undefined && data.cooldownSecondsLeft > 0) || (data.secondsLeft > 0 && status === 'COOLDOWN')) || Boolean(data.isCooldownRunning));
-  const cdAccount = isOffline ? 'None' : (hasCooldown ? (data.cooldownAccount || (status === 'COOLDOWN' ? data.account : '') || 'Resting Account') : 'None');
+  const cdInfo = (typeof window.getBotCooldownInfo === 'function')
+    ? window.getBotCooldownInfo(data)
+    : { eventName: '', subText: 'Routine Rotation Rest', accountDisplay: 'All Bot Accounts', isBlackout: false };
+
+  const hasCooldown = !isOffline && (
+    ((data.cooldownSecondsLeft !== undefined && data.cooldownSecondsLeft > 0) ||
+     (data.secondsLeft > 0 && (status === 'COOLDOWN' || status === 'EVENT_BLACKOUT')) ||
+     Boolean(data.isCooldownRunning) ||
+     cdInfo.isBlackout)
+  );
+  const cdAccount = isOffline ? 'None' : (hasCooldown ? cdInfo.accountDisplay : 'None');
 
   // Active Runner MUST be executing tasks or status === ACTIVE, have a non-empty active account, and NOT be the cooldown account
   const candidateActive = (data.activeAccount && data.activeAccount.trim() !== '' && !data.activeAccount.includes('Standby'))
@@ -5823,6 +5924,10 @@ window.updateBotOperationsRadarDom = () => {
       badgeEl.style.display = '';
       badgeEl.className = 'bot-radar-badge active';
       badgeEl.textContent = '● ACTIVE RUNNING';
+    } else if (cdInfo.isBlackout) {
+      badgeEl.style.display = '';
+      badgeEl.className = 'bot-radar-badge blackout';
+      badgeEl.textContent = '🛡️ EVENT BLACKOUT';
     } else if (isCooldown) {
       badgeEl.style.display = '';
       badgeEl.className = 'bot-radar-badge cooldown';
@@ -5841,6 +5946,9 @@ window.updateBotOperationsRadarDom = () => {
   if (dualTagEl) {
     const hubOnline = health.isHubOnline;
     const serverOnline = health.isServerOnline;
+    const serverBoxClass = serverOnline ? 'is-online' : (health.isBlackout ? 'is-blackout' : 'is-offline');
+    const serverValClass = serverOnline ? 'is-online' : (health.isBlackout ? 'is-blackout' : 'is-offline');
+    const serverValText = serverOnline ? '🟢 Online' : (health.isBlackout ? '⏸️ Blackout' : '🔴 Offline');
     dualTagEl.className = 'bot-radar-server-tag bot-radar-status-grid';
     dualTagEl.innerHTML = `
       <div id="bot-radar-hub-box" class="bot-radar-mini-box ${hubOnline ? 'is-online' : 'is-offline'}">
@@ -5852,13 +5960,13 @@ window.updateBotOperationsRadarDom = () => {
           ${hubOnline ? '🟢 Online' : '🔴 Offline'}
         </div>
       </div>
-      <div id="bot-radar-server-box" class="bot-radar-mini-box ${serverOnline ? 'is-online' : 'is-offline'}">
+      <div id="bot-radar-server-box" class="bot-radar-mini-box ${serverBoxClass}">
         <div class="bot-radar-mini-header">
           <span class="bot-radar-mini-icon">⚡</span>
           <span class="bot-radar-mini-label">Bot Server</span>
         </div>
-        <div id="bot-radar-server-val" class="bot-radar-mini-val ${serverOnline ? 'is-online' : 'is-offline'}">
-          ${serverOnline ? '🟢 Online' : '🔴 Offline'}
+        <div id="bot-radar-server-val" class="bot-radar-mini-val ${serverValClass}">
+          ${serverValText}
         </div>
       </div>
     `;
@@ -5930,7 +6038,6 @@ window.updateBotOperationsRadarDom = () => {
   if (cdValEl) cdValEl.textContent = cdAccount;
 
   const clockEl = document.getElementById('bot-radar-clock');
-  const fillEl = document.getElementById('bot-radar-progress-fill');
   const cdSubEl = document.getElementById('bot-radar-cooldown-sub');
   const cooldownBadgeEl = document.getElementById('bot-radar-cooldown-badge');
 
@@ -5948,7 +6055,6 @@ window.updateBotOperationsRadarDom = () => {
       clockEl.style.display = 'none';
       clockEl.textContent = '';
     }
-    if (fillEl) fillEl.style.width = '0%';
     cdSubText = '';
   } else if (hasCooldown) {
     const totalSecs = (data.cooldownSecondsLeft !== undefined && data.cooldownSecondsLeft !== null) ? data.cooldownSecondsLeft : (data.secondsLeft || 0);
@@ -5961,17 +6067,12 @@ window.updateBotOperationsRadarDom = () => {
       clockEl.style.display = 'inline-block';
       clockEl.textContent = `${h}:${m}:${s}`;
     }
-    if (fillEl) {
-      const pct = Math.min(100, Math.max(0, (rem / (data.totalSeconds || 10800)) * 100));
-      fillEl.style.width = pct + '%';
-    }
-    cdSubText = 'Resting between rotation runs';
+    cdSubText = cdInfo.subText;
   } else {
     if (clockEl) {
       clockEl.style.display = 'none';
       clockEl.textContent = '';
     }
-    if (fillEl) fillEl.style.width = '0%';
     cdSubText = '';
   }
 
@@ -5979,11 +6080,6 @@ window.updateBotOperationsRadarDom = () => {
     cdSubEl.textContent = cdSubText;
     cdSubEl.style.display = cdSubText ? 'block' : 'none';
     cdSubEl.style.color = hasCooldown ? '#fbbf24' : 'var(--text-muted)';
-  }
-
-  const progressContainerEl = document.getElementById('bot-radar-progress-container') || (fillEl ? fillEl.closest('.bot-radar-progress-bar') : null);
-  if (progressContainerEl) {
-    progressContainerEl.style.display = hasCooldown ? 'block' : 'none';
   }
   
   const lastUpEl = document.getElementById('bot-radar-last-updated');
@@ -6011,11 +6107,19 @@ if (!window._botRadarInterval) {
     const isOffline = health.isOffline;
 
     const clockEl = document.getElementById('bot-radar-clock');
-    const fillEl = document.getElementById('bot-radar-progress-fill');
     const cdSubEl = document.getElementById('bot-radar-cooldown-sub');
     const cooldownBadgeEl = document.getElementById('bot-radar-cooldown-badge');
 
-    const hasCooldown = !isOffline && (((data.cooldownSecondsLeft !== undefined && data.cooldownSecondsLeft > 0) || (data.secondsLeft > 0 && (data.status || '').toUpperCase() === 'COOLDOWN')) || Boolean(data.isCooldownRunning));
+    const cdInfo = (typeof window.getBotCooldownInfo === 'function')
+      ? window.getBotCooldownInfo(data)
+      : { subText: 'Routine Rotation Rest', isBlackout: false };
+
+    const hasCooldown = !isOffline && (
+      ((data.cooldownSecondsLeft !== undefined && data.cooldownSecondsLeft > 0) ||
+       (data.secondsLeft > 0 && ((data.status || '').toUpperCase() === 'COOLDOWN' || (data.status || '').toUpperCase() === 'EVENT_BLACKOUT')) ||
+       Boolean(data.isCooldownRunning) ||
+       cdInfo.isBlackout)
+    );
 
     const cooldownPillText = isOffline ? 'OFFLINE' : (hasCooldown ? '● ON' : '⚪ IDLE');
     const cooldownPillClass = isOffline ? 'offline' : (hasCooldown ? 'cooldown' : 'idle');
@@ -6030,7 +6134,6 @@ if (!window._botRadarInterval) {
         if (clockEl.style.display !== 'none') clockEl.style.display = 'none';
         if (clockEl.textContent !== '') clockEl.textContent = '';
       }
-      if (fillEl && fillEl.style.width !== '0%') fillEl.style.width = '0%';
       if (cdSubEl) {
         if (cdSubEl.style.display !== 'none') cdSubEl.style.display = 'none';
         if (cdSubEl.textContent !== '') cdSubEl.textContent = '';
@@ -6047,13 +6150,9 @@ if (!window._botRadarInterval) {
         if (clockEl.style.display !== 'inline-block') clockEl.style.display = 'inline-block';
         clockEl.textContent = `${h}:${m}:${s}`;
       }
-      if (fillEl) {
-        const pct = Math.min(100, Math.max(0, (rem / (data.totalSeconds || 10800)) * 100));
-        fillEl.style.width = pct + '%';
-      }
       if (cdSubEl) {
         if (cdSubEl.style.display !== 'block') cdSubEl.style.display = 'block';
-        cdSubEl.textContent = 'Resting between rotation runs';
+        cdSubEl.textContent = cdInfo.subText;
         cdSubEl.style.color = '#fbbf24';
       }
     } else {
@@ -6061,7 +6160,6 @@ if (!window._botRadarInterval) {
         if (clockEl.style.display !== 'none') clockEl.style.display = 'none';
         if (clockEl.textContent !== '') clockEl.textContent = '';
       }
-      if (fillEl && fillEl.style.width !== '0%') fillEl.style.width = '0%';
       if (cdSubEl) {
         if (cdSubEl.style.display !== 'none') cdSubEl.style.display = 'none';
         if (cdSubEl.textContent !== '') cdSubEl.textContent = '';

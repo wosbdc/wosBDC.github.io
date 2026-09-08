@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [3.3.32] - 2026-09-08
+- 🧹 **Removed Progress Bar**: Stripped cooldown progress bar; countdown timer only.
+
+## [3.3.31] - 2026-09-08
+- 🎯 **Trigger Events**: Cooldown box now shows the active event name.
+- 🛡️ **Event Blackout**: Shows event name during Bear Trap or Castle Battle.
+- 🏷️ **Clean Scope**: Event blackouts display All Bot Accounts target cleanly.
+- ⏸️ **Blackout Mode**: Bot Server indicates paused event status without false alarms.
+
 ## [3.3.30] - 2026-09-08
 - 🏷️ **Renamed Queue**: Renamed inactive queue text to clean None.
 - 🏷️ **Renamed Server**: Renamed closed bot server text to clean None.

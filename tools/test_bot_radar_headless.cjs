@@ -105,6 +105,10 @@ function runStaticVerification() {
   assert(code.includes('DISCONNECTED') || code.includes('stopped reporting'), 'Code must handle staleness warning');
   console.log('  ✅ window.getBotAutomationHealth and 60-second Staleness Watchdog verified.');
 
+  // 7. Event-driven Cooldown & Blackout parser
+  assert(code.includes('window.getBotCooldownInfo ='), 'getBotCooldownInfo must be defined');
+  console.log('  ✅ window.getBotCooldownInfo dynamic trigger event parser verified.');
+
   console.log('\n🎉 ALL STATIC & STRUCTURAL ASSERTIONS PASSED 100%!\n');
 }
 
@@ -366,6 +370,7 @@ server.listen(PORT, async () => {
 
       const accountC = document.getElementById('bot-radar-account-val')?.textContent?.trim();
       const cdAccountC = document.getElementById('bot-radar-cooldown-val')?.textContent?.trim();
+      const cdSubC = document.getElementById('bot-radar-cooldown-sub')?.textContent?.trim();
       const badgeC = document.getElementById('bot-radar-badge-el')?.textContent?.trim();
       const clockC = document.getElementById('bot-radar-clock')?.textContent?.trim();
       const clockDisplayC = document.getElementById('bot-radar-clock')?.style?.display;
@@ -429,6 +434,28 @@ server.listen(PORT, async () => {
       const hasReadyStandby = radarAllText.includes('READY / STANDBY');
       const hasCycleReady = radarAllText.includes('Cycle Ready');
 
+      // Step F: Event Blackout (Castle Battle 6h)
+      window.latestBotStatus = {
+        status: 'EVENT_BLACKOUT',
+        account: 'Castle Battle (6h)',
+        cooldownAccount: '??? Castle Battle (6h) (Inst -1)',
+        cooldownHoldText: 'Castle Battle (6h) (05:37:04)',
+        cooldownSecondsLeft: 20224,
+        stage: '??? Event Blackout: Castle Battle (6h)',
+        serverOnline: false,
+        bothubOnline: true,
+        totalBots: 0,
+        timestamp: Date.now(),
+        receivedAt: Date.now()
+      };
+      window.updateBotOperationsRadarDom();
+
+      const cdAccountF = document.getElementById('bot-radar-cooldown-val')?.textContent?.trim();
+      const cdSubF = document.getElementById('bot-radar-cooldown-sub')?.textContent?.trim();
+      const cdBadgeF = document.getElementById('bot-radar-cooldown-badge')?.textContent?.trim();
+      const badgeF = document.getElementById('bot-radar-badge-el')?.textContent?.trim();
+      const serverValF = document.getElementById('bot-radar-server-val')?.textContent?.trim();
+
       return {
         accountA,
         badgeA,
@@ -448,6 +475,7 @@ server.listen(PORT, async () => {
         angryTagB,
         accountC,
         cdAccountC,
+        cdSubC,
         badgeC,
         clockC,
         clockDisplayC,
@@ -470,7 +498,12 @@ server.listen(PORT, async () => {
         cdBadgePillE,
         clockDisplayE,
         hasReadyStandby,
-        hasCycleReady
+        hasCycleReady,
+        cdAccountF,
+        cdSubF,
+        cdBadgeF,
+        badgeF,
+        serverValF
       };
     });
 
@@ -492,8 +525,14 @@ server.listen(PORT, async () => {
     if (mutationResult.cdAccountC !== 'ShrimpLeprechaun (Inst 14)' || (!mutationResult.accountC.includes('Rotation Queue') && !mutationResult.accountC.includes('Standby')) || !mutationResult.hasCooldownBorder || !mutationResult.shrimpIsCooldownC || mutationResult.shrimpTagC !== '⚠️ Resting between runs') {
       throw new Error(`Assertion Failed: Cooldown resting state failed! Result: ${JSON.stringify(mutationResult)}`);
     }
+    if (mutationResult.cdSubC !== 'Routine Rotation Rest') {
+      throw new Error(`Assertion Failed: Expected Cooldown subtext "Routine Rotation Rest", got "${mutationResult.cdSubC}"`);
+    }
     if (mutationResult.clockC !== '00:09:50') {
       throw new Error(`Assertion Failed: Cooldown clock failed! Result: ${JSON.stringify(mutationResult)}`);
+    }
+    if (mutationResult.cdAccountF !== 'All Bot Accounts' || !mutationResult.cdSubF.includes('Castle Battle') || mutationResult.cdBadgeF !== '● ON' || mutationResult.badgeF !== '🛡️ EVENT BLACKOUT' || !mutationResult.serverValF.includes('Blackout')) {
+      throw new Error(`Assertion Failed: Event Blackout Cooldown details failed! Result: ${JSON.stringify({ cdAccountF: mutationResult.cdAccountF, cdSubF: mutationResult.cdSubF, cdBadgeF: mutationResult.cdBadgeF, badgeF: mutationResult.badgeF, serverValF: mutationResult.serverValF })}`);
     }
     if (mutationResult.cdBadgeA !== '⚪ IDLE') {
       throw new Error(`Assertion Failed: Expected Cooldown Box badge to be "⚪ IDLE" when idle, got "${mutationResult.cdBadgeA}"`);
@@ -576,7 +615,7 @@ server.listen(PORT, async () => {
       const runnerAccount = document.getElementById('bot-radar-account-val')?.textContent?.trim();
       const cdAccount = document.getElementById('bot-radar-cooldown-val')?.textContent?.trim();
       const progressContainer = document.getElementById('bot-radar-progress-container') || document.querySelector('.bot-radar-progress-bar');
-      const progressBarVisible = progressContainer && window.getComputedStyle(progressContainer).display !== 'none';
+      const progressBarGone = progressContainer === null;
       const badgeEl = document.getElementById('bot-radar-badge-el');
       const badgeVisible = badgeEl && window.getComputedStyle(badgeEl).display !== 'none' && badgeEl.textContent.trim() !== '';
 
@@ -596,7 +635,7 @@ server.listen(PORT, async () => {
         cdBadgeText,
         cdBadgePillText,
         cdAccount,
-        progressBarVisible,
+        progressBarGone,
         hasHubBox,
         hasServerBox
       };
@@ -623,8 +662,8 @@ server.listen(PORT, async () => {
     if (serverOfflineResult.cdAccount !== 'None') {
       throw new Error(`Assertion Failed: Expected cooldown account "None" when offline, got "${serverOfflineResult.cdAccount}"`);
     }
-    if (serverOfflineResult.progressBarVisible) {
-      throw new Error('Assertion Failed: Expected progress bar track to be hidden when no active cooldown queue!');
+    if (!serverOfflineResult.progressBarGone) {
+      throw new Error('Assertion Failed: Expected progress bar to be completely removed from DOM!');
     }
     if (!serverOfflineResult.runnerPillHasOffline) {
       throw new Error('Assertion Failed: Runner status pill did not receive .offline class!');
@@ -647,7 +686,7 @@ server.listen(PORT, async () => {
     if (!serverOfflineResult.offlineAlertVisible || !serverOfflineResult.offlineAlertText.includes('AUTOMATION HALTED')) {
       throw new Error(`Assertion Failed: Offline warning bar not visible or missing AUTOMATION HALTED! Got: "${serverOfflineResult.offlineAlertText}"`);
     }
-    console.log(`  ✅ 4A Verified: Server offline displays "${serverOfflineResult.dualTagText}" (Zero Redundancy), runner="None", cooldown="None", hidden progress bar, and no header badge.`);
+    console.log(`  ✅ 4A Verified: Server offline displays "${serverOfflineResult.dualTagText}" (Zero Redundancy), runner="None", cooldown="None", no progress bar, and no header badge.`);
 
     // Subphase 4B: BotHub Offline explicitly (bothubOnline: false)
     const hubOfflineResult = await page.evaluate(async () => {
