@@ -5655,17 +5655,14 @@ window.getBotOperationsRadarHtml = () => {
   ` : `<div id="bot-radar-offline-alert" style="display:none;"></div>`;
 
   let timerText = '00:00:00';
-  let timerLabel = 'Cooldown Stage:';
   let progressWidth = '0%';
   let cdSubText = 'Rest cycle ready';
   
   if (isOffline) {
     timerText = 'STANDBY';
-    timerLabel = 'Cooldown Stage:';
     progressWidth = '0%';
     cdSubText = 'Standby / Cycle Ready';
   } else if (hasCooldown) {
-    timerLabel = 'Cooldown Countdown:';
     const totalSecs = (data.cooldownSecondsLeft !== undefined && data.cooldownSecondsLeft !== null) ? data.cooldownSecondsLeft : (data.secondsLeft || 0);
     const elapsedSecs = Math.floor((Date.now() - (data.receivedAt || Date.now())) / 1000);
     const rem = Math.max(0, totalSecs - elapsedSecs);
@@ -5677,12 +5674,10 @@ window.getBotOperationsRadarHtml = () => {
     cdSubText = 'Resting between rotation runs';
   } else if (hasActiveRunner) {
     timerText = 'RUNNER ACTIVE';
-    timerLabel = 'Cooldown Stage:';
     progressWidth = '0%';
     cdSubText = 'Rest cycle ready';
   } else {
     timerText = 'READY / STANDBY';
-    timerLabel = 'Cooldown Stage:';
     progressWidth = '0%';
     cdSubText = 'Standby / Cycle Ready';
   }
@@ -5735,7 +5730,6 @@ window.getBotOperationsRadarHtml = () => {
           <div class="bot-radar-comp-body">
             <div id="bot-radar-cooldown-avatar" class="bot-radar-comp-avatar cd ${isOffline ? 'is-offline' : ''}">⏳</div>
             <div class="bot-radar-comp-text">
-              <div id="bot-radar-timer-label" class="bot-radar-acc-label">${timerLabel}</div>
               <div id="bot-radar-cooldown-val" class="bot-radar-acc-name">${window.escapeHTML ? window.escapeHTML(cdAccount) : cdAccount}</div>
               <div id="bot-radar-cooldown-sub" class="bot-radar-stage-name" style="color: ${hasCooldown ? '#fbbf24' : 'var(--text-muted)'};">${window.escapeHTML ? window.escapeHTML(cdSubText) : cdSubText}</div>
             </div>
@@ -5894,7 +5888,6 @@ window.updateBotOperationsRadarDom = () => {
   const cdValEl = document.getElementById('bot-radar-cooldown-val');
   if (cdValEl) cdValEl.textContent = cdAccount;
 
-  const timerLblEl = document.getElementById('bot-radar-timer-label');
   const clockEl = document.getElementById('bot-radar-clock');
   const fillEl = document.getElementById('bot-radar-progress-fill');
   const cdSubEl = document.getElementById('bot-radar-cooldown-sub');
@@ -5902,12 +5895,10 @@ window.updateBotOperationsRadarDom = () => {
   let cdSubText = 'Rest cycle ready';
 
   if (isOffline) {
-    if (timerLblEl) timerLblEl.textContent = 'Cooldown Stage:';
     if (clockEl) clockEl.textContent = 'STANDBY';
     if (fillEl) fillEl.style.width = '0%';
     cdSubText = 'Standby / Cycle Ready';
   } else if (hasCooldown) {
-    if (timerLblEl) timerLblEl.textContent = 'Cooldown Countdown:';
     const totalSecs = (data.cooldownSecondsLeft !== undefined && data.cooldownSecondsLeft !== null) ? data.cooldownSecondsLeft : (data.secondsLeft || 0);
     const elapsedSecs = Math.floor((Date.now() - (data.receivedAt || Date.now())) / 1000);
     const rem = Math.max(0, totalSecs - elapsedSecs);
@@ -5921,12 +5912,10 @@ window.updateBotOperationsRadarDom = () => {
     }
     cdSubText = 'Resting between rotation runs';
   } else if (hasActiveRunner) {
-    if (timerLblEl) timerLblEl.textContent = 'Cooldown Stage:';
     if (clockEl) clockEl.textContent = 'RUNNER ACTIVE';
     if (fillEl) fillEl.style.width = '0%';
     cdSubText = 'Rest cycle ready';
   } else {
-    if (timerLblEl) timerLblEl.textContent = 'Cooldown Stage:';
     if (clockEl) clockEl.textContent = 'READY / STANDBY';
     if (fillEl) fillEl.style.width = '0%';
     cdSubText = 'Standby / Cycle Ready';
@@ -5963,7 +5952,6 @@ if (!window._botRadarInterval) {
 
     const clockEl = document.getElementById('bot-radar-clock');
     const fillEl = document.getElementById('bot-radar-progress-fill');
-    const timerLblEl = document.getElementById('bot-radar-timer-label');
     const cdSubEl = document.getElementById('bot-radar-cooldown-sub');
 
     const hasCooldown = !isOffline && (((data.cooldownSecondsLeft !== undefined && data.cooldownSecondsLeft > 0) || (data.secondsLeft > 0 && (data.status || '').toUpperCase() === 'COOLDOWN')) || Boolean(data.isCooldownRunning));
@@ -5971,7 +5959,6 @@ if (!window._botRadarInterval) {
     if (isOffline) {
       if (clockEl && clockEl.textContent !== 'STANDBY') clockEl.textContent = 'STANDBY';
       if (fillEl && fillEl.style.width !== '0%') fillEl.style.width = '0%';
-      if (timerLblEl && timerLblEl.textContent !== 'Cooldown Stage:') timerLblEl.textContent = 'Cooldown Stage:';
       if (cdSubEl && cdSubEl.textContent !== 'Standby / Cycle Ready') cdSubEl.textContent = 'Standby / Cycle Ready';
     } else if (hasCooldown) {
       const totalSecs = (data.cooldownSecondsLeft !== undefined && data.cooldownSecondsLeft !== null) ? data.cooldownSecondsLeft : (data.secondsLeft || 0);
@@ -5986,7 +5973,6 @@ if (!window._botRadarInterval) {
         const pct = Math.min(100, Math.max(0, (rem / (data.totalSeconds || 10800)) * 100));
         fillEl.style.width = pct + '%';
       }
-      if (timerLblEl) timerLblEl.textContent = 'Cooldown Countdown:';
       if (cdSubEl) cdSubEl.textContent = 'Resting between rotation runs';
     }
 

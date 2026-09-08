@@ -365,7 +365,6 @@ server.listen(PORT, async () => {
       const cdAccountC = document.getElementById('bot-radar-cooldown-val')?.textContent?.trim();
       const badgeC = document.getElementById('bot-radar-badge-el')?.textContent?.trim();
       const clockC = document.getElementById('bot-radar-clock')?.textContent?.trim();
-      const labelC = document.getElementById('bot-radar-timer-label')?.textContent?.trim();
       const cardC = document.getElementById('bot-operations-radar');
       const hasCooldownBorderC = cardC?.classList?.contains('border-cooldown');
       const shrimpCardC = document.getElementById('bot-fleet-item-shrimp');
@@ -395,7 +394,6 @@ server.listen(PORT, async () => {
       const runnerBadgeD = document.getElementById('bot-radar-runner-badge')?.textContent?.trim();
       const cdAccountD = document.getElementById('bot-radar-cooldown-val')?.textContent?.trim();
       const clockD = document.getElementById('bot-radar-clock')?.textContent?.trim();
-      const labelD = document.getElementById('bot-radar-timer-label')?.textContent?.trim();
       const dualGridD = document.querySelector('.bot-radar-dual-grid') !== null;
       const runnerCardD = document.querySelector('.bot-radar-compartment.runner-card') !== null;
       const cooldownCardD = document.querySelector('.bot-radar-compartment.cooldown-card') !== null;
@@ -419,7 +417,6 @@ server.listen(PORT, async () => {
         cdAccountC,
         badgeC,
         clockC,
-        labelC,
         hasCooldownBorder: hasCooldownBorderC,
         shrimpIsCooldownC: shrimpCardC?.classList?.contains('cooldown'),
         shrimpTagC,
@@ -429,7 +426,6 @@ server.listen(PORT, async () => {
         runnerBadgeD,
         cdAccountD,
         clockD,
-        labelD,
         dualGridD,
         runnerCardD,
         cooldownCardD
@@ -454,8 +450,8 @@ server.listen(PORT, async () => {
     if (mutationResult.cdAccountC !== 'ShrimpLeprechaun (Inst 14)' || !mutationResult.accountC.includes('Standby') || !mutationResult.hasCooldownBorder || !mutationResult.shrimpIsCooldownC || mutationResult.shrimpTagC !== '⚠️ Resting between runs') {
       throw new Error(`Assertion Failed: Cooldown resting state failed! Result: ${JSON.stringify(mutationResult)}`);
     }
-    if (mutationResult.clockC !== '00:09:50' || mutationResult.labelC !== 'Cooldown Countdown:') {
-      throw new Error(`Assertion Failed: Cooldown clock/label failed! Result: ${JSON.stringify(mutationResult)}`);
+    if (mutationResult.clockC !== '00:09:50') {
+      throw new Error(`Assertion Failed: Cooldown clock failed! Result: ${JSON.stringify(mutationResult)}`);
     }
     if (mutationResult.accountD !== 'AngryGermanpapi (Inst 15)' || mutationResult.cdAccountD !== 'ShrimpLeprechaun (Inst 14)' || mutationResult.clockD !== '02:00:00') {
       throw new Error(`Assertion Failed: Decoupled dual telemetry failed! Result: ${JSON.stringify(mutationResult)}`);
