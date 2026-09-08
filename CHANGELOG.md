@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.3.34] - 2026-09-08
+- 🏷️ **Badge Rename**: Compartment header badge now reads Active Account.
+- 🧹 **Label Cleanup**: Removed redundant label above account name.
+
 ## [3.3.33] - 2026-09-08
 - 🏷️ **Renamed Queue**: Idle active account renamed to clean None.
 - 🟢 **Pure Status**: Bot Server pill strictly displays Online or Offline.

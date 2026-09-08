@@ -5806,13 +5806,12 @@ window.getBotOperationsRadarHtml = () => {
         <!-- Compartment 1: Live Active Runner -->
         <div id="bot-radar-runner-compartment" class="bot-radar-compartment runner-card ${isOffline ? 'is-offline' : (hasActiveRunner ? 'is-active' : 'is-idle')}">
           <div class="bot-radar-comp-header">
-            <span id="bot-radar-comp-badge-runner" class="bot-radar-comp-badge runner ${isOffline ? 'is-offline' : (hasActiveRunner ? '' : 'is-idle')}">🤖Bots</span>
+            <span id="bot-radar-comp-badge-runner" class="bot-radar-comp-badge runner ${isOffline ? 'is-offline' : (hasActiveRunner ? '' : 'is-idle')}">Active Account</span>
             <span id="bot-radar-runner-badge" class="bot-radar-status-pill ${isOffline ? 'offline' : (hasActiveRunner ? 'active' : 'idle')}">${runnerPillText}</span>
           </div>
           <div class="bot-radar-comp-body">
             <div id="bot-radar-runner-avatar" class="bot-radar-comp-avatar ${isOffline ? 'is-offline' : (hasActiveRunner ? '' : 'is-idle')}">🤖</div>
             <div class="bot-radar-comp-text">
-              <div class="bot-radar-acc-label">Active Account</div>
               <div id="bot-radar-account-val" class="bot-radar-acc-name">${window.escapeHTML ? window.escapeHTML(activeRunner) : activeRunner}</div>
             </div>
           </div>
@@ -5974,7 +5973,7 @@ window.updateBotOperationsRadarDom = () => {
   const runnerBadgeTitleEl = document.getElementById('bot-radar-comp-badge-runner');
   if (runnerBadgeTitleEl) {
     runnerBadgeTitleEl.className = `bot-radar-comp-badge runner ${isOffline ? 'is-offline' : (hasActiveRunner ? '' : 'is-idle')}`;
-    runnerBadgeTitleEl.textContent = '🤖Bots';
+    runnerBadgeTitleEl.textContent = 'Active Account';
   }
 
   const runnerAvatarEl = document.getElementById('bot-radar-runner-avatar');

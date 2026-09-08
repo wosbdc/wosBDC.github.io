@@ -409,7 +409,7 @@ server.listen(PORT, async () => {
       const runnerCardD = document.querySelector('.bot-radar-compartment.runner-card') !== null;
       const cooldownCardD = document.querySelector('.bot-radar-compartment.cooldown-card') !== null;
 
-      // Step E: Full Idle State (Testing 🤖Bots and ⏳ COOLDOWN badges)
+      // Step E: Full Idle State (Testing Active Account and ⏳ COOLDOWN badges)
       window.latestBotStatus = {
         status: 'STANDBY',
         account: '',
@@ -552,8 +552,8 @@ server.listen(PORT, async () => {
     if (mutationResult.hasCycleReady) {
       throw new Error('Assertion Failed: Radar still contains forbidden text "Cycle Ready"!');
     }
-    if (mutationResult.runnerBadgeTitleE !== '🤖Bots') {
-      throw new Error(`Assertion Failed: Expected Runner compartment badge to be "🤖Bots" when idle, got "${mutationResult.runnerBadgeTitleE}"`);
+    if (mutationResult.runnerBadgeTitleE !== 'Active Account') {
+      throw new Error(`Assertion Failed: Expected Runner compartment badge to be "Active Account" when idle, got "${mutationResult.runnerBadgeTitleE}"`);
     }
     if (mutationResult.cdBadgeTitleE !== '⏳ COOLDOWN') {
       throw new Error(`Assertion Failed: Expected Cooldown compartment badge to be "⏳ COOLDOWN" when idle, got "${mutationResult.cdBadgeTitleE}"`);
@@ -647,8 +647,8 @@ server.listen(PORT, async () => {
     if (!serverOfflineResult.runnerHasOfflineClass) {
       throw new Error('Assertion Failed: Runner compartment box did not receive .is-offline class when server is offline!');
     }
-    if (serverOfflineResult.runnerBadgeText !== '🤖Bots') {
-      throw new Error(`Assertion Failed: Expected persistent runner badge "🤖Bots", got "${serverOfflineResult.runnerBadgeText}"`);
+    if (serverOfflineResult.runnerBadgeText !== 'Active Account') {
+      throw new Error(`Assertion Failed: Expected persistent runner badge "Active Account", got "${serverOfflineResult.runnerBadgeText}"`);
     }
     if (serverOfflineResult.runnerAccount !== 'None') {
       throw new Error(`Assertion Failed: Expected runner account "None" when server closed, got "${serverOfflineResult.runnerAccount}"`);
