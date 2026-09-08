@@ -1730,6 +1730,108 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
   color: #10b981;
 }
 
+.bot-radar-dual-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+@media (max-width: 640px) {
+  .bot-radar-dual-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.bot-radar-compartment {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.bot-radar-compartment.runner-card {
+  border-left: 3px solid #10b981;
+}
+
+.bot-radar-compartment.cooldown-card {
+  border-left: 3px solid #f59e0b;
+}
+
+.bot-radar-comp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.bot-radar-comp-badge {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.bot-radar-comp-badge.runner {
+  color: #34d399;
+}
+
+.bot-radar-comp-badge.cooldown {
+  color: #fbbf24;
+}
+
+.bot-radar-status-pill {
+  font-size: 9.5px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  letter-spacing: 0.5px;
+}
+
+.bot-radar-status-pill.active {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.bot-radar-status-pill.idle {
+  background: rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.bot-radar-comp-body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.bot-radar-comp-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.15);
+  border: 2px solid rgba(16, 185, 129, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.bot-radar-comp-avatar.cd {
+  background: rgba(245, 158, 11, 0.15);
+  border: 2px solid rgba(245, 158, 11, 0.4);
+}
+
+.bot-radar-comp-text {
+  min-width: 0;
+  flex: 1;
+}
+
 .bot-radar-account-banner {
   background: rgba(15, 23, 42, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.08);

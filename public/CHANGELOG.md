@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.21] - 2026-09-07
+- 🤖 **Dual Radar**: Decoupled live runner from cooldown queue.
+- 🟢 **Active Runner**: Shows real-time running bot account.
+- ⏳ **Cooldown Queue**: Accurate countdown timer with progress bar.
+- 🛡️ **Safety Matrix**: Independent rest and active duty indicators.
+
 ## [3.3.20] - 2026-09-07
 - 🔕 **Smart Alerts**: Inactive and departed accounts skip token sync reminders.
 - 🚫 **Banned Accounts**: Banned characters are exempt from token sync alerts.

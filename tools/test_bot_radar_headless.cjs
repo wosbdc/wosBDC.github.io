@@ -366,9 +366,38 @@ server.listen(PORT, async () => {
       const clockC = document.getElementById('bot-radar-clock')?.textContent?.trim();
       const labelC = document.getElementById('bot-radar-timer-label')?.textContent?.trim();
       const cardC = document.getElementById('bot-operations-radar');
+      const hasCooldownBorderC = cardC?.classList?.contains('border-cooldown');
       const shrimpCardC = document.getElementById('bot-fleet-item-shrimp');
       const shrimpTagC = document.getElementById('bot-fleet-tag-shrimp')?.textContent?.trim();
       const shrimpDetailC = document.getElementById('bot-fleet-detail-shrimp')?.textContent?.trim();
+
+      // Step D: Decoupled Dual Telemetry (AngryGermanpapi Active Runner AND Shrimp Cooldown Queue)
+      window.latestBotStatus = {
+        status: 'ACTIVE',
+        activeAccount: 'AngryGermanpapi (Inst 15)',
+        activeStage: 'Attacking Polar Beasts',
+        isExecutingTasks: true,
+        cooldownAccount: 'ShrimpLeprechaun (Inst 14)',
+        cooldownSecondsLeft: 7200,
+        cooldownHoldText: '2 Hours',
+        isCooldownRunning: true,
+        totalBots: 7,
+        serverOnline: true,
+        bothubOnline: true,
+        timestamp: Date.now(),
+        receivedAt: Date.now()
+      };
+      window.updateBotOperationsRadarDom();
+
+      const accountD = document.getElementById('bot-radar-account-val')?.textContent?.trim();
+      const stageD = document.getElementById('bot-radar-stage-val')?.textContent?.trim();
+      const runnerBadgeD = document.getElementById('bot-radar-runner-badge')?.textContent?.trim();
+      const cdAccountD = document.getElementById('bot-radar-cooldown-val')?.textContent?.trim();
+      const clockD = document.getElementById('bot-radar-clock')?.textContent?.trim();
+      const labelD = document.getElementById('bot-radar-timer-label')?.textContent?.trim();
+      const dualGridD = document.querySelector('.bot-radar-dual-grid') !== null;
+      const runnerCardD = document.querySelector('.bot-radar-compartment.runner-card') !== null;
+      const cooldownCardD = document.querySelector('.bot-radar-compartment.cooldown-card') !== null;
 
       return {
         accountA,
@@ -389,10 +418,19 @@ server.listen(PORT, async () => {
         badgeC,
         clockC,
         labelC,
-        hasCooldownBorder: cardC?.classList?.contains('border-cooldown'),
+        hasCooldownBorder: hasCooldownBorderC,
         shrimpIsCooldownC: shrimpCardC?.classList?.contains('cooldown'),
         shrimpTagC,
-        shrimpDetailC
+        shrimpDetailC,
+        accountD,
+        stageD,
+        runnerBadgeD,
+        cdAccountD,
+        clockD,
+        labelD,
+        dualGridD,
+        runnerCardD,
+        cooldownCardD
       };
     });
 
@@ -417,10 +455,17 @@ server.listen(PORT, async () => {
     if (mutationResult.clockC !== '00:09:50' || mutationResult.labelC !== 'Cooldown Countdown:') {
       throw new Error(`Assertion Failed: Cooldown clock/label failed! Result: ${JSON.stringify(mutationResult)}`);
     }
+    if (mutationResult.accountD !== 'AngryGermanpapi (Inst 15)' || mutationResult.cdAccountD !== 'ShrimpLeprechaun (Inst 14)' || mutationResult.clockD !== '02:00:00') {
+      throw new Error(`Assertion Failed: Decoupled dual telemetry failed! Result: ${JSON.stringify(mutationResult)}`);
+    }
+    if (!mutationResult.dualGridD || !mutationResult.runnerCardD || !mutationResult.cooldownCardD) {
+      throw new Error(`Assertion Failed: Dual compartment DOM elements missing! Result: ${JSON.stringify(mutationResult)}`);
+    }
     console.log(`  ✅ Verified: Fleet Login Safety Matrix dynamically responds to bot rotation:`);
     console.log(`     1. ${mutationResult.accountA} -> Occupied: ${mutationResult.angryTagA}, Safe: ${mutationResult.bisquickTagA} (${mutationResult.busyPillA}, ${mutationResult.safePillA})`);
     console.log(`     2. ${mutationResult.accountB} -> Occupied: ${mutationResult.bisquickTagB}, Reverted Angry: ${mutationResult.angryTagB}`);
     console.log(`     3. ${mutationResult.accountC} -> Resting: ${mutationResult.shrimpTagC} (${mutationResult.shrimpDetailC})`);
+    console.log(`     4. Decoupled Dual Telemetry -> Active Runner: "${mutationResult.accountD}" (${mutationResult.stageD}, ${mutationResult.runnerBadgeD}), Cooldown: "${mutationResult.cdAccountD}" (${mutationResult.clockD})`);
 
     console.log('\n--- PHASE 4: DUAL-APP RADAR HEALTH, BOTHUB OFFLINE & STALENESS TIMEOUT TEST ---');
     // Subphase 4A: Bot Server Offline (Hub Online)

@@ -1,16 +1,17 @@
 {
-  "version": "3.3.20",
+  "version": "3.3.21",
   "releaseDate": "2026-09-07",
-  "title": "What's New in v3.3.20",
+  "title": "What's New in v3.3.21",
   "notes": [
-    "🔕 Smart Alerts: Inactive and departed accounts skip token sync reminders.",
-    "🚫 Banned Accounts: Banned characters are exempt from token sync alerts.",
-    "🎭 Alt Filtering: Departed alts never trigger bell sync alerts.",
-    "📋 Clean Copy: Unsynced list excludes departed and banned players."
+    "🤖 Dual Radar: Decoupled live runner from cooldown queue.",
+    "🟢 Active Runner: Shows real-time running bot account.",
+    "⏳ Cooldown Queue: Accurate countdown timer with progress bar.",
+    "🛡️ Safety Matrix: Independent rest and active duty indicators."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.20",
+    "version": "3.3.21",
     "latestChanges": [
+      "v3.3.21: Decoupled Bot Operations Radar into dual Active Runner and Cooldown Queue compartments with live GnBots log telemetry",
       "v3.3.20: Excluded deleted, banned, and departed accounts from Bell token sync alerts and admin unsynced metrics",
       "v3.3.19: Admin Alt Assignment modal, direct Firebase sync, and Titan Frost heal",
       "v3.3.18: Renamed Leadership Hub header button to Admin Menu",
