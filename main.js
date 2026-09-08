@@ -5686,9 +5686,17 @@ window.getBotOperationsRadarHtml = () => {
   const cdAccount = isOffline ? 'None' : (hasCooldown ? cdInfo.accountDisplay : 'None');
 
   // Active Runner MUST be executing tasks or status === ACTIVE, have a non-empty active account, and NOT be the cooldown account
-  const candidateActive = (data.activeAccount && data.activeAccount.trim() !== '' && !data.activeAccount.includes('Standby'))
+  const isCandidateValid = (acc) => Boolean(
+    acc && 
+    acc.trim() !== '' && 
+    !acc.includes('Standby') && 
+    !acc.includes('Rotation Queue') &&
+    acc.toLowerCase() !== 'none'
+  );
+
+  const candidateActive = isCandidateValid(data.activeAccount)
     ? data.activeAccount
-    : ((status === 'ACTIVE' && data.account && !data.account.includes('Standby')) ? data.account : '');
+    : ((status === 'ACTIVE' && isCandidateValid(data.account)) ? data.account : '');
 
   const hasActiveRunner = !isOffline && Boolean(
     candidateActive &&
@@ -5696,41 +5704,20 @@ window.getBotOperationsRadarHtml = () => {
     (data.isExecutingTasks === true || status === 'ACTIVE') &&
     (!hasCooldown || candidateActive !== cdAccount)
   );
-  const activeRunner = isOffline 
-    ? 'None' 
-    : (hasActiveRunner ? candidateActive : 'Rotation Queue');
+  const activeRunner = (isOffline || !hasActiveRunner) ? 'None' : candidateActive;
   const runnerPillText = isOffline ? 'OFFLINE' : (hasActiveRunner ? '● IN PROGRESS' : '⚪ IDLE');
   const runnerColor = isOffline ? '#ef4444' : (hasActiveRunner ? '#10b981' : 'var(--text-muted)');
 
   const isActive = hasActiveRunner;
   const isCooldown = hasCooldown;
   
-  let badgeText = '';
-  let badgeClass = '';
-  if (isOffline) {
-    badgeText = '';
-    badgeClass = 'bot-radar-badge offline';
-  } else if (isActive) {
-    badgeText = '● ACTIVE RUNNING';
-    badgeClass = 'bot-radar-badge active';
-  } else if (cdInfo.isBlackout) {
-    badgeText = '🛡️ EVENT BLACKOUT';
-    badgeClass = 'bot-radar-badge blackout';
-  } else if (isCooldown) {
-    badgeText = '⏳ COOLDOWN IN PROGRESS';
-    badgeClass = 'bot-radar-badge cooldown';
-  } else {
-    badgeText = '⚪ IDLE';
-    badgeClass = 'bot-radar-badge standby';
-  }
-
   const cardBorderClass = isOffline ? 'bot-radar-card border-offline' : (isActive ? 'bot-radar-card border-active' : (isCooldown ? 'bot-radar-card border-cooldown' : 'bot-radar-card border-standby'));
 
   const hubOnline = health.isHubOnline;
   const serverOnline = health.isServerOnline;
-  const serverBoxClass = serverOnline ? 'is-online' : (health.isBlackout ? 'is-blackout' : 'is-offline');
-  const serverValClass = serverOnline ? 'is-online' : (health.isBlackout ? 'is-blackout' : 'is-offline');
-  const serverValText = serverOnline ? '🟢 Online' : (health.isBlackout ? '⏸️ Blackout' : '🔴 Offline');
+  const serverBoxClass = serverOnline ? 'is-online' : 'is-offline';
+  const serverValClass = serverOnline ? 'is-online' : 'is-offline';
+  const serverValText = serverOnline ? '🟢 Online' : '🔴 Offline';
 
   const dualTagHtml = `
     <div id="bot-radar-dual-tag" class="bot-radar-server-tag bot-radar-status-grid">
@@ -5803,14 +5790,10 @@ window.getBotOperationsRadarHtml = () => {
           <div>
             <div class="bot-radar-title">
               BOT OPERATIONS RADAR
-              <span id="bot-radar-badge-el" class="${badgeClass}" style="${badgeText ? '' : 'display:none;'}">${badgeText}</span>
+              <span id="bot-radar-badge-el" style="display:none;"></span>
             </div>
             <div class="bot-radar-subtitle">Live telemetry reported directly from automation host</div>
           </div>
-        </div>
-        <div class="bot-radar-meta-right">
-          <div class="bot-radar-load-label">Fleet Load</div>
-          <div id="bot-radar-bots-count" class="bot-radar-load-val">${totalBots > 0 ? totalBots + ' Bots Online' : 'Active Duty'}</div>
         </div>
       </div>
 
@@ -5893,9 +5876,17 @@ window.updateBotOperationsRadarDom = () => {
   const cdAccount = isOffline ? 'None' : (hasCooldown ? cdInfo.accountDisplay : 'None');
 
   // Active Runner MUST be executing tasks or status === ACTIVE, have a non-empty active account, and NOT be the cooldown account
-  const candidateActive = (data.activeAccount && data.activeAccount.trim() !== '' && !data.activeAccount.includes('Standby'))
+  const isCandidateValid = (acc) => Boolean(
+    acc && 
+    acc.trim() !== '' && 
+    !acc.includes('Standby') && 
+    !acc.includes('Rotation Queue') &&
+    acc.toLowerCase() !== 'none'
+  );
+
+  const candidateActive = isCandidateValid(data.activeAccount)
     ? data.activeAccount
-    : ((status === 'ACTIVE' && data.account && !data.account.includes('Standby')) ? data.account : '');
+    : ((status === 'ACTIVE' && isCandidateValid(data.account)) ? data.account : '');
 
   const hasActiveRunner = !isOffline && Boolean(
     candidateActive &&
@@ -5903,9 +5894,7 @@ window.updateBotOperationsRadarDom = () => {
     (data.isExecutingTasks === true || status === 'ACTIVE') &&
     (!hasCooldown || candidateActive !== cdAccount)
   );
-  const activeRunner = isOffline 
-    ? 'None' 
-    : (hasActiveRunner ? candidateActive : 'Rotation Queue');
+  const activeRunner = (isOffline || !hasActiveRunner) ? 'None' : candidateActive;
   const runnerPillText = isOffline ? 'OFFLINE' : (hasActiveRunner ? '● IN PROGRESS' : '⚪ IDLE');
   const runnerColor = isOffline ? '#ef4444' : (hasActiveRunner ? '#10b981' : 'var(--text-muted)');
 
@@ -5916,27 +5905,8 @@ window.updateBotOperationsRadarDom = () => {
   
   const badgeEl = document.getElementById('bot-radar-badge-el');
   if (badgeEl) {
-    if (isOffline) {
-      badgeEl.style.display = 'none';
-      badgeEl.textContent = '';
-      badgeEl.className = 'bot-radar-badge offline';
-    } else if (isActive) {
-      badgeEl.style.display = '';
-      badgeEl.className = 'bot-radar-badge active';
-      badgeEl.textContent = '● ACTIVE RUNNING';
-    } else if (cdInfo.isBlackout) {
-      badgeEl.style.display = '';
-      badgeEl.className = 'bot-radar-badge blackout';
-      badgeEl.textContent = '🛡️ EVENT BLACKOUT';
-    } else if (isCooldown) {
-      badgeEl.style.display = '';
-      badgeEl.className = 'bot-radar-badge cooldown';
-      badgeEl.textContent = '⏳ COOLDOWN IN PROGRESS';
-    } else {
-      badgeEl.style.display = '';
-      badgeEl.className = 'bot-radar-badge standby';
-      badgeEl.textContent = '⚪ IDLE';
-    }
+    badgeEl.style.display = 'none';
+    badgeEl.textContent = '';
   }
   
   const botsCountEl = document.getElementById('bot-radar-bots-count');
@@ -5946,9 +5916,9 @@ window.updateBotOperationsRadarDom = () => {
   if (dualTagEl) {
     const hubOnline = health.isHubOnline;
     const serverOnline = health.isServerOnline;
-    const serverBoxClass = serverOnline ? 'is-online' : (health.isBlackout ? 'is-blackout' : 'is-offline');
-    const serverValClass = serverOnline ? 'is-online' : (health.isBlackout ? 'is-blackout' : 'is-offline');
-    const serverValText = serverOnline ? '🟢 Online' : (health.isBlackout ? '⏸️ Blackout' : '🔴 Offline');
+    const serverBoxClass = serverOnline ? 'is-online' : 'is-offline';
+    const serverValClass = serverOnline ? 'is-online' : 'is-offline';
+    const serverValText = serverOnline ? '🟢 Online' : '🔴 Offline';
     dualTagEl.className = 'bot-radar-server-tag bot-radar-status-grid';
     dualTagEl.innerHTML = `
       <div id="bot-radar-hub-box" class="bot-radar-mini-box ${hubOnline ? 'is-online' : 'is-offline'}">

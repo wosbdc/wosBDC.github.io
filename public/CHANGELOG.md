@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.33] - 2026-09-08
+- 🏷️ **Renamed Queue**: Idle active account renamed to clean None.
+- 🟢 **Pure Status**: Bot Server pill strictly displays Online or Offline.
+- 🧹 **Header Cleanup**: Removed redundant header status badge and fleet load counter.
+
 ## [3.3.32] - 2026-09-08
 - 🧹 **Removed Progress Bar**: Stripped cooldown progress bar; countdown timer only.
 

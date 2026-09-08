@@ -1818,23 +1818,6 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
   box-shadow: 0 2px 8px rgba(239, 68, 68, 0.15);
 }
 
-.bot-radar-meta-right {
-  text-align: right;
-}
-
-.bot-radar-load-label {
-  font-size: 10px;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-}
-
-.bot-radar-load-val {
-  font-size: 13px;
-  font-weight: 800;
-  color: #10b981;
-}
 
 .bot-radar-dual-grid {
   display: grid;

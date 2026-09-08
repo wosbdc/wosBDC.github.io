@@ -1,13 +1,16 @@
 {
-  "version": "3.3.32",
+  "version": "3.3.33",
   "releaseDate": "2026-09-08",
-  "title": "What's New in v3.3.32",
+  "title": "What's New in v3.3.33",
   "notes": [
-    "🧹 Removed Progress Bar: Stripped cooldown progress bar; countdown timer only."
+    "🏷️ Renamed Queue: Idle active account renamed to clean None.",
+    "🟢 Pure Status: Bot Server pill strictly displays Online or Offline.",
+    "🧹 Header Cleanup: Removed redundant header status badge and fleet load counter."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.32",
+    "version": "3.3.33",
     "latestChanges": [
+      "v3.3.33: Renamed Rotation Queue to None, strictly Online/Offline Bot Server status, removed header badge and fleet load",
       "v3.3.32: Removed cooldown progress bar entirely, countdown timer is sufficient",
       "v3.3.31: Cooldown box displays trigger event name, added blackout status support, cleaned scope label",
       "v3.3.30: Renamed inactive queue and closed server states to None, hid idle progress bar, removed header offline badge",

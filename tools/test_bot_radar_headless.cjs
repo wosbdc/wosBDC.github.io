@@ -522,7 +522,7 @@ server.listen(PORT, async () => {
     if (mutationResult.accountB !== 'Bisquick (Inst 11)' || !mutationResult.bisquickIsOccupiedB || !mutationResult.angryIsSafeB) {
       throw new Error(`Assertion Failed: Dynamic rotation between bots failed! Result: ${JSON.stringify(mutationResult)}`);
     }
-    if (mutationResult.cdAccountC !== 'ShrimpLeprechaun (Inst 14)' || (!mutationResult.accountC.includes('Rotation Queue') && !mutationResult.accountC.includes('Standby')) || !mutationResult.hasCooldownBorder || !mutationResult.shrimpIsCooldownC || mutationResult.shrimpTagC !== '⚠️ Resting between runs') {
+    if (mutationResult.cdAccountC !== 'ShrimpLeprechaun (Inst 14)' || mutationResult.accountC !== 'None' || !mutationResult.hasCooldownBorder || !mutationResult.shrimpIsCooldownC || mutationResult.shrimpTagC !== '⚠️ Resting between runs') {
       throw new Error(`Assertion Failed: Cooldown resting state failed! Result: ${JSON.stringify(mutationResult)}`);
     }
     if (mutationResult.cdSubC !== 'Routine Rotation Rest') {
@@ -531,7 +531,7 @@ server.listen(PORT, async () => {
     if (mutationResult.clockC !== '00:09:50') {
       throw new Error(`Assertion Failed: Cooldown clock failed! Result: ${JSON.stringify(mutationResult)}`);
     }
-    if (mutationResult.cdAccountF !== 'All Bot Accounts' || !mutationResult.cdSubF.includes('Castle Battle') || mutationResult.cdBadgeF !== '● ON' || mutationResult.badgeF !== '🛡️ EVENT BLACKOUT' || !mutationResult.serverValF.includes('Blackout')) {
+    if (mutationResult.cdAccountF !== 'All Bot Accounts' || !mutationResult.cdSubF.includes('Castle Battle') || mutationResult.cdBadgeF !== '● ON' || mutationResult.badgeF !== '' || !mutationResult.serverValF.includes('Offline')) {
       throw new Error(`Assertion Failed: Event Blackout Cooldown details failed! Result: ${JSON.stringify({ cdAccountF: mutationResult.cdAccountF, cdSubF: mutationResult.cdSubF, cdBadgeF: mutationResult.cdBadgeF, badgeF: mutationResult.badgeF, serverValF: mutationResult.serverValF })}`);
     }
     if (mutationResult.cdBadgeA !== '⚪ IDLE') {
