@@ -20,7 +20,7 @@ function assert(condition, testName) {
   }
 }
 
-const ROOT_DIR = 'C:\\Users\\Brian\\Documents\\antigravity\\wos-public-website';
+const ROOT_DIR = path.resolve(__dirname, '..');
 process.chdir(ROOT_DIR);
 
 // -------------------------------------------------------------
@@ -123,6 +123,11 @@ const server = http.createServer((req, res) => {
 async function runBrowserTests() {
   if (!puppeteer) {
     console.log('⚠️ Skipping browser test: puppeteer not available');
+    finish();
+    return;
+  }
+  if (!fs.existsSync(chromePath)) {
+    console.log('⚠️ Skipping browser test: Chrome executable not found at ' + chromePath);
     finish();
     return;
   }
