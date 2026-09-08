@@ -429,7 +429,7 @@ window.normalizeMembershipStatus = (status) => {
     if (!status) return 'active';
     const s = String(status).toLowerCase().trim();
     if (s === 'banned' || s === 'ban') return 'banned';
-    if (s === 'left' || s === 'former' || s === 'inactive' || s === 'left_alliance' || s === 'left alliance') return 'left';
+    if (s === 'left' || s === 'former' || s === 'inactive' || s === 'left_alliance' || s === 'left alliance' || s === 'departed' || s === 'depart' || s === 'deleted' || s === 'delete' || s === 'archived') return 'left';
     return 'active';
 };
 
@@ -16751,9 +16751,30 @@ window.getMemberTokenStatus = (user) => {
       label: 'Character Unverified',
       desc: 'Verify your in-game mailbox code to enable 30-day automatic stats, furnace level, and avatar syncing.',
       daysLeft: 0,
-      alert: true,
+      alert: false,
       color: '#f59e0b',
       icon: '⚠️'
+    };
+  }
+
+  // Check if account is banned, departed/left, or deleted
+  const rawStatus = user.membershipStatus || user.status;
+  const memStatus = typeof window.normalizeMembershipStatus === 'function'
+    ? window.normalizeMembershipStatus(rawStatus)
+    : String(rawStatus || 'active').toLowerCase();
+
+  const isBanned = memStatus === 'banned' || user.banned === true || user.isBanned === true;
+  const isDeparted = memStatus === 'left' || user.deleted === true || user.isDeleted === true;
+
+  if (isBanned || isDeparted) {
+    return {
+      status: 'exempt',
+      label: isBanned ? 'Banned Account' : 'Departed Account',
+      desc: isBanned ? 'Account is banned from alliance. Token sync is disabled.' : 'Account is no longer in the alliance. Token sync is not required.',
+      daysLeft: 0,
+      alert: false,
+      color: 'var(--text-muted)',
+      icon: '⚪'
     };
   }
 
@@ -16924,10 +16945,30 @@ window.getMemberTokenStatus = (user) => {
 
 window.getAltTokenStatus = (aTok) => {
   if (!aTok) {
-    return { status: 'unverified', daysLeft: 0, label: 'Unverified', color: '#f59e0b', badge: '<span style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); padding:2px 8px; border-radius:8px; font-size:11px; font-weight:bold;">⚪ Unverified</span>' };
+    return { status: 'unverified', daysLeft: 0, label: 'Unverified', color: '#f59e0b', alert: false, badge: '<span style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); padding:2px 8px; border-radius:8px; font-size:11px; font-weight:bold;">⚪ Unverified</span>' };
   }
   
   if (typeof aTok === 'object') {
+    const rawStatus = aTok.membershipStatus || aTok.status;
+    const aMem = typeof window.normalizeMembershipStatus === 'function'
+      ? window.normalizeMembershipStatus(rawStatus)
+      : String(rawStatus || 'active').toLowerCase();
+
+    const isBanned = aMem === 'banned' || aTok.banned === true;
+    const isDeparted = aMem === 'left' || aTok.deleted === true || aTok.isDeleted === true || aTok.isDeparted === true;
+
+    if (isBanned || isDeparted) {
+      const label = isBanned ? 'Banned Alt' : 'Departed Alt';
+      return {
+        status: 'exempt',
+        daysLeft: 0,
+        label: label,
+        color: 'var(--text-muted)',
+        alert: false,
+        badge: `<span style="background:rgba(255,255,255,0.06); color:var(--text-muted); border:1px solid var(--border); padding:2px 8px; border-radius:8px; font-size:11px; font-weight:bold;">⚪ ${label}</span>`
+      };
+    }
+
     if (aTok.tokenExpired === true || (aTok.tokenStatus && aTok.tokenStatus.status === 'expired')) {
       return { status: 'expired', daysLeft: 0, label: 'Expired', color: '#ef4444', badge: '<span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.4); padding:2px 8px; border-radius:8px; font-size:11px; font-weight:bold;">🔴 Expired</span>' };
     }
@@ -17931,25 +17972,43 @@ window.updateNewMemberBadge = async () => {
   let tokenStatus = { status: 'active', alert: false };
 
   if (currentUser) {
+    const memStatus = typeof window.normalizeMembershipStatus === 'function'
+      ? window.normalizeMembershipStatus(currentUser.membershipStatus || currentUser.status)
+      : (currentUser.membershipStatus || currentUser.status);
+    const isUserActive = memStatus === 'active' && !currentUser.banned && !currentUser.isBanned && !currentUser.deleted && !currentUser.isDeleted;
+
     tokenStatus = window.getMemberTokenStatus(currentUser);
-    if (tokenStatus.alert) {
+    if (isUserActive && tokenStatus.alert) {
       mainAlert = 1;
     }
 
-    // 2. Check linked alts token status
-    const rawAlts = currentUser.linkedGameIds ? (Array.isArray(currentUser.linkedGameIds) ? currentUser.linkedGameIds : Object.values(currentUser.linkedGameIds)) : [];
-    rawAlts.forEach(agid => {
-      const aTok = currentUser.altTokens ? currentUser.altTokens[agid] : null;
-      const aStat = window.getAltTokenStatus(aTok);
-      if (aStat.status !== 'active') {
-        altAlertsCount++;
-        if (aStat.status === 'expired' || aStat.status === 'unverified') {
-          hasExpiredAlt = true;
-        } else if (aStat.status === 'expiring_soon') {
-          hasExpiringAlt = true;
+    // 2. Check linked alts token status (ONLY active alts that have not left or been banned/deleted)
+    if (isUserActive) {
+      const rawAlts = currentUser.linkedGameIds ? (Array.isArray(currentUser.linkedGameIds) ? currentUser.linkedGameIds : Object.values(currentUser.linkedGameIds)) : [];
+      rawAlts.forEach(agid => {
+        const cleanAid = String(agid).trim();
+        if (!cleanAid) return;
+        if (currentUser.departedAlts && currentUser.departedAlts[cleanAid]) return;
+
+        const aTok = currentUser.altTokens ? currentUser.altTokens[cleanAid] : null;
+        const aData = currentUser.linkedAltsData ? currentUser.linkedAltsData[cleanAid] : null;
+        const aMem = typeof window.normalizeMembershipStatus === 'function'
+          ? window.normalizeMembershipStatus(aData?.membershipStatus || aData?.status || aTok?.membershipStatus || aTok?.status)
+          : 'active';
+
+        if (aMem === 'banned' || aMem === 'left' || aTok?.banned === true || aTok?.deleted === true) return;
+
+        const aStat = window.getAltTokenStatus(aTok || aData);
+        if (aStat.status !== 'active' && aStat.status !== 'exempt') {
+          altAlertsCount++;
+          if (aStat.status === 'expired' || aStat.status === 'unverified') {
+            hasExpiredAlt = true;
+          } else if (aStat.status === 'expiring_soon') {
+            hasExpiringAlt = true;
+          }
         }
-      }
-    });
+      });
+    }
   }
 
   // 3. Check broadcasts, scheduled alerts & staff directives
@@ -18257,9 +18316,14 @@ window.openAllianceAlertsModal = async () => {
       console.warn("Failed to load feedback for alerts modal:", err);
     }
 
-    // 3. Process Main & Alt Token Health Alerts
+    // 3. Process Main & Alt Token Health Alerts (ONLY for active alliance characters)
     const tokenAlerts = [];
-    if (tokenStatus.alert) {
+    const mainMem = u ? (typeof window.normalizeMembershipStatus === 'function'
+      ? window.normalizeMembershipStatus(u.membershipStatus || u.status)
+      : (u.membershipStatus || u.status)) : 'active';
+    const isMainActive = mainMem === 'active' && !u?.banned && !u?.isBanned && !u?.deleted && !u?.isDeleted;
+
+    if (isMainActive && tokenStatus.alert && tokenStatus.status !== 'exempt') {
       tokenAlerts.push({
         type: 'main_token',
         isMain: true,
@@ -18271,27 +18335,40 @@ window.openAllianceAlertsModal = async () => {
       });
     }
 
-    const rawAlts = u?.linkedGameIds ? (Array.isArray(u.linkedGameIds) ? u.linkedGameIds : Object.values(u.linkedGameIds)) : [];
-    rawAlts.forEach(agid => {
-      const aTok = u.altTokens ? u.altTokens[agid] : null;
-      let aName = (typeof aTok === 'object' && aTok && aTok.nickname) ? aTok.nickname : ((window.idToNameMap && window.idToNameMap[agid]) || `Alt Chief ${agid}`);
-      let aLevel = (typeof aTok === 'object' && aTok && aTok.stove_lv) ? aTok.stove_lv : '';
-      let formattedLevel = aLevel ? (String(aLevel).toUpperCase().startsWith('FC') ? aLevel : `FC ${aLevel}`) : '';
+    if (isMainActive) {
+      const rawAlts = u?.linkedGameIds ? (Array.isArray(u.linkedGameIds) ? u.linkedGameIds : Object.values(u.linkedGameIds)) : [];
+      rawAlts.forEach(agid => {
+        const cleanAid = String(agid).trim();
+        if (!cleanAid) return;
+        if (u.departedAlts && u.departedAlts[cleanAid]) return;
 
-      const aStat = window.getAltTokenStatus(aTok);
-      if (aStat.status !== 'active') {
-        tokenAlerts.push({
-          type: 'alt_token',
-          isMain: false,
-          agid: agid,
-          name: aName,
-          level: formattedLevel,
-          status: aStat.status,
-          daysLeft: aStat.daysLeft,
-          badge: aStat.badge
-        });
-      }
-    });
+        const aTok = u.altTokens ? u.altTokens[cleanAid] : null;
+        const aData = u.linkedAltsData ? u.linkedAltsData[cleanAid] : null;
+        const aMem = typeof window.normalizeMembershipStatus === 'function'
+          ? window.normalizeMembershipStatus(aData?.membershipStatus || aData?.status || aTok?.membershipStatus || aTok?.status)
+          : 'active';
+
+        if (aMem === 'banned' || aMem === 'left' || aTok?.banned === true || aTok?.deleted === true) return;
+
+        let aName = (typeof aTok === 'object' && aTok && aTok.nickname) ? aTok.nickname : (aData?.name || (window.idToNameMap && window.idToNameMap[cleanAid]) || `Alt Chief ${cleanAid}`);
+        let aLevel = (typeof aTok === 'object' && aTok && aTok.stove_lv) ? aTok.stove_lv : (aData?.furnace || '');
+        let formattedLevel = aLevel ? (String(aLevel).toUpperCase().startsWith('FC') ? aLevel : `FC ${aLevel}`) : '';
+
+        const aStat = window.getAltTokenStatus(aTok || aData);
+        if (aStat.status !== 'active' && aStat.status !== 'exempt') {
+          tokenAlerts.push({
+            type: 'alt_token',
+            isMain: false,
+            agid: cleanAid,
+            name: aName,
+            level: formattedLevel,
+            status: aStat.status,
+            daysLeft: aStat.daysLeft,
+            badge: aStat.badge
+          });
+        }
+      });
+    }
 
     // 4. Build Unified Cards Stack
     const streamItems = [];
@@ -26685,7 +26762,12 @@ const views = {
         const expiringList = [];
         
         allRows.forEach(row => {
+            const mStatus = row.getAttribute('data-membership-status') || 'active';
+            if (mStatus === 'banned' || mStatus === 'left' || mStatus === 'departed' || mStatus === 'deleted') {
+                return;
+            }
             const tStatus = row.getAttribute('data-token-status') || 'unverified';
+            if (tStatus === 'exempt') return;
             const name = row.getAttribute('data-name-raw') || row.getAttribute('data-name') || '';
             const gid = row.getAttribute('data-gid') || '';
             const isAlt = row.getAttribute('data-is-alt') === 'true';
@@ -26956,10 +27038,12 @@ const views = {
                 if (isEnrolled && !isAlt) countEnrolled++;
                 if (isAdmin && !isAlt) countStaff++;
 
-                if (normTokenStatus === 'active') countActiveToken++;
-                else if (normTokenStatus === 'expiring') countExpiringToken++;
-                else if (normTokenStatus === 'expired') countExpiredToken++;
-                else countUnverifiedToken++;
+                if (memStatus === 'active') {
+                    if (normTokenStatus === 'active') countActiveToken++;
+                    else if (normTokenStatus === 'expiring') countExpiringToken++;
+                    else if (normTokenStatus === 'expired') countExpiredToken++;
+                    else if (normTokenStatus !== 'exempt') countUnverifiedToken++;
+                }
             }
 
             const isAltRow = row.classList.contains('alt-character-row');
@@ -29462,7 +29546,7 @@ const views = {
               let tokenActiveCount = 0;
               let tokenExpiringCount = 0;
               let tokenExpiredCount = 0;
-              let tokenUnverifiedCount = unclaimedCount;
+              let tokenUnverifiedCount = 0;
 
               let newSignupsCount = 0;
               let giftCodesCount = 0;
@@ -29476,12 +29560,14 @@ const views = {
                 else if (memStat === 'left') leftMembersCount++;
                 else if (memStat === 'banned') bannedMembersCount++;
 
-                const tStat = window.getMemberTokenStatus(u);
-                const s = (tStat.status === 'expiring_soon') ? 'expiring' : (tStat.status || 'unverified');
-                if (s === 'active') tokenActiveCount++;
-                else if (s === 'expiring') tokenExpiringCount++;
-                else if (s === 'expired') tokenExpiredCount++;
-                else tokenUnverifiedCount++;
+                if (memStat === 'active' && !u.banned && !u.isBanned && !u.deleted && !u.isDeleted) {
+                  const tStat = window.getMemberTokenStatus(u);
+                  const s = (tStat.status === 'expiring_soon') ? 'expiring' : (tStat.status || 'unverified');
+                  if (s === 'active') tokenActiveCount++;
+                  else if (s === 'expiring') tokenExpiringCount++;
+                  else if (s === 'expired') tokenExpiredCount++;
+                  else if (s !== 'exempt') tokenUnverifiedCount++;
+                }
 
                 // Also count all alt tokens corresponding to alt rows in the table
                 const processedAltGids = new Set();
@@ -29496,12 +29582,14 @@ const views = {
                   else if (aMem === 'left') leftMembersCount++;
                   else if (aMem === 'banned') bannedMembersCount++;
 
-                  const aStat = window.getAltTokenStatus(aTokData);
-                  const as = (aStat.status === 'expiring_soon') ? 'expiring' : (aStat.status || 'unverified');
-                  if (as === 'active') tokenActiveCount++;
-                  else if (as === 'expiring') tokenExpiringCount++;
-                  else if (as === 'expired') tokenExpiredCount++;
-                  else tokenUnverifiedCount++;
+                  if (aMem === 'active' && !aTokData.banned && !aTokData.deleted && !aTokData.isDeparted && !(u.departedAlts && u.departedAlts[cleanAid])) {
+                    const aStat = window.getAltTokenStatus(aTokData);
+                    const as = (aStat.status === 'expiring_soon') ? 'expiring' : (aStat.status || 'unverified');
+                    if (as === 'active') tokenActiveCount++;
+                    else if (as === 'expiring') tokenExpiringCount++;
+                    else if (as === 'expired') tokenExpiredCount++;
+                    else if (as !== 'exempt') tokenUnverifiedCount++;
+                  }
                 };
                 if (u.altTokens && typeof u.altTokens === 'object') {
                   Object.entries(u.altTokens).forEach(([aid, at]) => checkAltTok(aid, at));
@@ -29535,8 +29623,10 @@ const views = {
               if (window._currentUnclaimedRosterList && window._currentUnclaimedRosterList.length > 0) {
                 window._currentUnclaimedRosterList.forEach(up => {
                   const unMem = window.normalizeMembershipStatus(up.membershipStatus || up.status);
-                  if (unMem === 'active') activeMembersCount++;
-                  else if (unMem === 'left') leftMembersCount++;
+                  if (unMem === 'active') {
+                    activeMembersCount++;
+                    tokenUnverifiedCount++;
+                  } else if (unMem === 'left') leftMembersCount++;
                   else if (unMem === 'banned') bannedMembersCount++;
                 });
               }
@@ -29757,9 +29847,14 @@ const views = {
         const totalAlts = userAltGids.length;
 
         const tokenStatus = window.getMemberTokenStatus(u);
-        const rowTokenStatus = (tokenStatus.status === 'expiring_soon') ? 'expiring' : (tokenStatus.status || 'unverified');
+        let rowTokenStatus = (tokenStatus.status === 'expiring_soon') ? 'expiring' : (tokenStatus.status || 'unverified');
+        if (memStatus !== 'active' || u.banned || u.isBanned || u.deleted || u.isDeleted) {
+          rowTokenStatus = 'exempt';
+        }
         let tokenPill = `<span style="background:rgba(255,255,255,0.06); color:var(--text-muted); border:1px solid var(--border); padding:3px 8px; border-radius:10px; font-size:11px;">⚪ Unverified</span>`;
-        if (rowTokenStatus === 'active') {
+        if (rowTokenStatus === 'exempt') {
+          tokenPill = tokenStatus.badge || `<span style="background:rgba(255,255,255,0.06); color:var(--text-muted); border:1px solid var(--border); padding:3px 8px; border-radius:10px; font-size:11px;">⚪ Exempt</span>`;
+        } else if (rowTokenStatus === 'active') {
           tokenPill = `<span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:3px 8px; border-radius:10px; font-size:11px; font-weight:bold;">🟢 ${tokenStatus.daysLeft}d Sync</span>`;
         } else if (rowTokenStatus === 'expiring') {
           tokenPill = `<span style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); padding:3px 8px; border-radius:10px; font-size:11px; font-weight:bold;">🟠 ${tokenStatus.daysLeft}d Expiring</span>`;
@@ -29884,7 +29979,7 @@ const views = {
                   <div onclick="window.closeAllUserActionMenus(); window.openAdminRepairUserModal('${uid}');" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:var(--text-main); cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(168,85,247,0.15)'; this.style.color='#c084fc';" onmouseout="this.style.background='transparent'; this.style.color='var(--text-main)';">
                     <span style="font-size:14px;">🛠️</span> Repair Game ID
                   </div>
-                  ${(tokenStatus.status === 'expired' || tokenStatus.status === 'unverified' || tokenStatus.status === 'expiring') ? `
+                  ${(memStatus === 'active' && !u.banned && !u.isBanned && !u.deleted && !u.isDeleted && (tokenStatus.status === 'expired' || tokenStatus.status === 'unverified' || tokenStatus.status === 'expiring')) ? `
                   <div onclick="window.closeAllUserActionMenus(); window.copyTokenReminderMessage('${escapeHTML(cName.replace(/'/g, "\\'"))}', '${uGidStr}');" style="display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:600; color:#f59e0b; cursor:pointer; text-align:left;" onmouseover="this.style.background='rgba(245,158,11,0.15)';" onmouseout="this.style.background='transparent';">
                     <span style="font-size:14px;">📋</span> Copy Sync Reminder
                   </div>` : ''}
@@ -29937,10 +30032,17 @@ const views = {
               altMemPill = `<span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.4); padding:2px 6px; border-radius:10px; font-size:10px; font-weight:bold;">🚫 Banned</span>`;
             }
 
-            const altStat = (typeof window.getAltTokenStatus === 'function') ? window.getAltTokenStatus(aTok) : { status: 'unverified', daysLeft: 0 };
-            const altTokenStatus = (altStat.status === 'expiring_soon') ? 'expiring' : (altStat.status || 'unverified');
+            const altStat = (typeof window.getAltTokenStatus === 'function')
+              ? window.getAltTokenStatus({ ...aData, ...aTok, ...aDep, membershipStatus: altMemStatus })
+              : { status: 'unverified', daysLeft: 0 };
+            let altTokenStatus = (altStat.status === 'expiring_soon') ? 'expiring' : (altStat.status || 'unverified');
+            if (altMemStatus !== 'active' || (u.departedAlts && u.departedAlts[altGidStr]) || aTok.banned || aTok.deleted) {
+              altTokenStatus = 'exempt';
+            }
             let altTokenPill = `<span style="background:rgba(255,255,255,0.06); color:var(--text-muted); border:1px solid var(--border); padding:2px 8px; border-radius:10px; font-size:11px;">⚪ Unverified Alt</span>`;
-            if (altTokenStatus === 'active') {
+            if (altTokenStatus === 'exempt') {
+              altTokenPill = altStat.badge || `<span style="background:rgba(255,255,255,0.06); color:var(--text-muted); border:1px solid var(--border); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold;">⚪ Exempt</span>`;
+            } else if (altTokenStatus === 'active') {
               altTokenPill = `<span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold;">🟢 ${altStat.daysLeft}d Alt Sync</span>`;
             } else if (altTokenStatus === 'expiring') {
               altTokenPill = `<span style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold;">🟠 ${altStat.daysLeft}d Alt Sync</span>`;
@@ -30090,7 +30192,7 @@ const views = {
                 data-is-admin="false" 
                 data-has-alts="false" 
                 data-is-enrolled="${isEnrolled ? 'true' : 'false'}" 
-                data-token-status="unverified"
+                data-token-status="${unclaimMemStatus === 'active' ? 'unverified' : 'exempt'}"
                 data-membership-status="${unclaimMemStatus}"
                 data-is-claimed="false"
                 data-is-alt="false"

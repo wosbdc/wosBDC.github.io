@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.20] - 2026-09-07
+- 🔕 **Smart Alerts**: Inactive and departed accounts skip token sync reminders.
+- 🚫 **Banned Accounts**: Banned characters are exempt from token sync alerts.
+- 🎭 **Alt Filtering**: Departed alts never trigger bell sync alerts.
+- 📋 **Clean Copy**: Unsynced list excludes departed and banned players.
+
 ## [3.3.19] - 2026-09-07
 - 🔗 **Alt Manager**: Easily assign alts to any main account.
 - ❄️ **Titan Frost**: Restored runaway Frost alt to main account.
