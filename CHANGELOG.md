@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.3.36] - 2026-09-08
+- 🧹 **Streamlined Cards**: Removed redundant filler status text from bot cards.
+- 📐 **Compact Layout**: Reduced card padding and height for tighter window footprint.
+
 ## [3.3.35] - 2026-09-08
 - 🟢 **Active Indicator**: Bot cards display Active Now for running accounts.
 - ⏱️ **Last Active**: Cards show relative last active time for idle accounts.

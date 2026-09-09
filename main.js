@@ -5606,6 +5606,7 @@ window.getBotFleetSafetyHtml = () => {
     let badgeTitle = '● IDLE';
     let actionTag = '✅ Safe to log in';
     let detail = 'Routines completed • Idle';
+    let botCdText = '';
 
     if (isOffline) {
       safeCount++;
@@ -5633,6 +5634,7 @@ window.getBotFleetSafetyHtml = () => {
         const s = (rem % 60).toString().padStart(2, '0');
         remText = `${m}:${s} left`;
       }
+      botCdText = remText ? `⏳ Cooldown • ${remText}` : '⏳ Resting';
       detail = remText ? `City tab resting • ${remText}` : (fleetItem?.detail || 'Resting on City Tab');
     } else {
       safeCount++;
@@ -5641,6 +5643,8 @@ window.getBotFleetSafetyHtml = () => {
     let activityHtml = '';
     if (isBotActive) {
       activityHtml = `<div class="bot-fleet-activity active" id="bot-fleet-activity-${bot.id}"><span class="bot-fleet-activity-pulse">🟢</span> Active Now</div>`;
+    } else if (isBotCooldown) {
+      activityHtml = `<div class="bot-fleet-activity cooldown" id="bot-fleet-activity-${bot.id}">${botCdText || '⏳ Resting'}</div>`;
     } else {
       const lastEpoch = (fleetItem && fleetItem.lastActiveEpoch) ? fleetItem.lastActiveEpoch : (bot.lastActiveEpoch || 0);
       if (lastEpoch > 0) {
@@ -5659,7 +5663,7 @@ window.getBotFleetSafetyHtml = () => {
             <span class="bot-fleet-name">${bot.name}</span>
             <span class="bot-fleet-inst">${bot.inst}</span>
           </div>
-          <span class="bot-fleet-detail" id="bot-fleet-detail-${bot.id}">${detail}</span>
+          <span class="bot-fleet-detail" id="bot-fleet-detail-${bot.id}" style="display:none;">${detail}</span>
           ${activityHtml}
         </div>
         <div class="bot-fleet-badge ${badgeClass}" id="bot-fleet-badge-${bot.id}">
