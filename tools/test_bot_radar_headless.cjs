@@ -329,8 +329,10 @@ server.listen(PORT, async () => {
       const safePillA = document.getElementById('bot-fleet-safe-count')?.textContent?.trim();
       const angryCardA = document.getElementById('bot-fleet-item-angry');
       const angryTagA = document.getElementById('bot-fleet-tag-angry')?.textContent?.trim();
+      const angryActivityA = document.getElementById('bot-fleet-activity-angry')?.textContent?.trim();
       const bisquickCardA = document.getElementById('bot-fleet-item-bisquick');
       const bisquickTagA = document.getElementById('bot-fleet-tag-bisquick')?.textContent?.trim();
+      const bisquickActivityA = document.getElementById('bot-fleet-activity-bisquick')?.textContent?.trim();
 
       // Step B: Bisquick Active
       window.latestBotStatus = {
@@ -466,8 +468,10 @@ server.listen(PORT, async () => {
         safePillA,
         angryIsOccupiedA: angryCardA?.classList?.contains('occupied'),
         angryTagA,
+        angryActivityA,
         bisquickIsSafeA: bisquickCardA?.classList?.contains('safe'),
         bisquickTagA,
+        bisquickActivityA,
         accountB,
         bisquickIsOccupiedB: bisquickCardB?.classList?.contains('occupied'),
         bisquickTagB,
@@ -513,8 +517,14 @@ server.listen(PORT, async () => {
     if (mutationResult.accountA !== 'AngryGermanpapi (Inst 15)' || !mutationResult.angryIsOccupiedA || mutationResult.angryTagA !== '⛔ DO NOT LOG IN') {
       throw new Error(`Assertion Failed: Active bot safety warning failed! Result: ${JSON.stringify(mutationResult)}`);
     }
+    if (!mutationResult.angryActivityA || !mutationResult.angryActivityA.includes('Active Now')) {
+      throw new Error(`Assertion Failed: Active bot activity must show 'Active Now'! Found: "${mutationResult.angryActivityA}"`);
+    }
     if (!mutationResult.bisquickIsSafeA || mutationResult.bisquickTagA !== '✅ Safe to log in') {
       throw new Error(`Assertion Failed: Idle bot safe tag failed! Result: ${JSON.stringify(mutationResult)}`);
+    }
+    if (!mutationResult.bisquickActivityA || !mutationResult.bisquickActivityA.includes('Last active')) {
+      throw new Error(`Assertion Failed: Idle bot activity must show 'Last active'! Found: "${mutationResult.bisquickActivityA}"`);
     }
     if (!mutationResult.busyPillA.includes('1 OCCUPIED') || !mutationResult.safePillA.includes('6 SAFE TO LOGIN')) {
       throw new Error(`Assertion Failed: Fleet summary counters failed! Busy: "${mutationResult.busyPillA}", Safe: "${mutationResult.safePillA}"`);

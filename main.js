@@ -5544,6 +5544,23 @@ window.ALLIANCE_BOT_ROSTER = [
   { id: 'babyangry', name: 'BabyAngryGerman', inst: 'Inst 16' }
 ];
 
+window.formatBotRelativeTime = (epochSecs) => {
+  if (!epochSecs || Number(epochSecs) <= 0) return 'Standby';
+  const nowSecs = Math.floor(Date.now() / 1000);
+  const diffSecs = Math.max(0, nowSecs - Number(epochSecs));
+  
+  if (diffSecs < 60) return 'Just now';
+  const mins = Math.floor(diffSecs / 60);
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  const remMins = mins % 60;
+  if (hours < 24) {
+    return remMins > 0 ? `${hours}h ${remMins}m ago` : `${hours}h ago`;
+  }
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+};
+
 window.getBotFleetSafetyHtml = () => {
   const data = window.latestBotStatus || {};
   const health = (typeof window.getBotAutomationHealth === 'function')
@@ -5621,6 +5638,20 @@ window.getBotFleetSafetyHtml = () => {
       safeCount++;
     }
 
+    let activityHtml = '';
+    if (isBotActive) {
+      activityHtml = `<div class="bot-fleet-activity active" id="bot-fleet-activity-${bot.id}"><span class="bot-fleet-activity-pulse">🟢</span> Active Now</div>`;
+    } else {
+      const lastEpoch = (fleetItem && fleetItem.lastActiveEpoch) ? fleetItem.lastActiveEpoch : (bot.lastActiveEpoch || 0);
+      if (lastEpoch > 0) {
+        activityHtml = `<div class="bot-fleet-activity idle" id="bot-fleet-activity-${bot.id}">⏱️ Last active: ${window.formatBotRelativeTime(lastEpoch)}</div>`;
+      } else if (fleetItem && fleetItem.lastActiveTime) {
+        activityHtml = `<div class="bot-fleet-activity idle" id="bot-fleet-activity-${bot.id}">⏱️ Last active: ${fleetItem.lastActiveTime}</div>`;
+      } else {
+        activityHtml = `<div class="bot-fleet-activity idle" id="bot-fleet-activity-${bot.id}">⏱️ Last active: Standby</div>`;
+      }
+    }
+
     return `
       <div class="bot-fleet-item ${itemClass}" id="bot-fleet-item-${bot.id}">
         <div class="bot-fleet-item-info">
@@ -5629,6 +5660,7 @@ window.getBotFleetSafetyHtml = () => {
             <span class="bot-fleet-inst">${bot.inst}</span>
           </div>
           <span class="bot-fleet-detail" id="bot-fleet-detail-${bot.id}">${detail}</span>
+          ${activityHtml}
         </div>
         <div class="bot-fleet-badge ${badgeClass}" id="bot-fleet-badge-${bot.id}">
           <span id="bot-fleet-badgetext-${bot.id}">${badgeTitle}</span>

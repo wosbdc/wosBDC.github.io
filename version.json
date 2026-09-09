@@ -1,14 +1,15 @@
 {
-  "version": "3.3.34",
+  "version": "3.3.35",
   "releaseDate": "2026-09-08",
-  "title": "What's New in v3.3.34",
+  "title": "What's New in v3.3.35",
   "notes": [
-    "🏷️ Badge Rename: Compartment header badge now reads Active Account.",
-    "🧹 Label Cleanup: Removed redundant Active Account label above account name."
+    "🟢 Active Indicator: Bot cards display Active Now for running accounts.",
+    "⏱️ Last Active: Cards show relative last active time for idle accounts."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.34",
+    "version": "3.3.35",
     "latestChanges": [
+      "v3.3.35: Bot cards display Active Now and relative Last active times",
       "v3.3.34: Renamed Bots badge to Active Account, removed redundant label above account name",
       "v3.3.33: Renamed Rotation Queue to None, strictly Online/Offline Bot Server status, removed header badge and fleet load",
       "v3.3.32: Removed cooldown progress bar entirely, countdown timer is sufficient",

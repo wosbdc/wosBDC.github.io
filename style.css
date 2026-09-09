@@ -2250,4 +2250,34 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
 .bot-fleet-badge.cooldown .bot-fleet-tag { color: #fbbf24; }
 .bot-fleet-badge.safe .bot-fleet-tag { color: #34d399; }
 
+.bot-fleet-activity {
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 3px;
+  font-weight: 500;
+}
+
+.bot-fleet-activity.active {
+  color: #34d399;
+  font-weight: 600;
+}
+
+.bot-fleet-activity.idle {
+  color: #94a3b8;
+}
+
+.bot-fleet-activity-pulse {
+  display: inline-block;
+  font-size: 9px;
+  animation: pulseActiveDot 1.8s infinite;
+}
+
+@keyframes pulseActiveDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(1.15); }
+}
+
+
 
