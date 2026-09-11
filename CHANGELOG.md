@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [3.3.39] - 2026-09-08
+- 🧹 **Clean Tag**: Stripped square brackets from opponent tag in battle reports.
+
 ## [3.3.38] - 2026-09-08
 - 🏷️ **Tag Only**: Championship report displays opponent bracket tag only.
 - 🚫 **No State**: Removed state number from generated championship battle reports.

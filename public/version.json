@@ -1,15 +1,14 @@
 {
-  "version": "3.3.38",
+  "version": "3.3.39",
   "releaseDate": "2026-09-08",
-  "title": "What's New in v3.3.38",
+  "title": "What's New in v3.3.39",
   "notes": [
-    "🏷️ Tag Only: Championship report displays opponent bracket tag only.",
-    "🚫 No State: Removed state number from generated championship battle reports.",
-    "⚔️ Clean Output: Battle report formatted with clean Won or Lose outcome."
+    "🧹 Clean Tag: Stripped square brackets from opponent tag in battle reports."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.38",
+    "version": "3.3.39",
     "latestChanges": [
+      "v3.3.39: Stripped square brackets from opponent tag in battle reports",
       "v3.3.38: Refined championship report to show opponent tag only and removed state",
       "v3.3.37: Championship score removal, flag-driven victory logic, auto-report copying",
       "v3.3.36: Streamlined bot fleet cards to compact 2-line layout without filler text",

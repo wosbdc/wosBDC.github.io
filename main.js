@@ -13861,9 +13861,9 @@ window.getChampRoundReportData = (roundNum) => {
 window.extractAllianceTagOnly = (name, fallbackNum = 1) => {
     let raw = (name || '').trim();
     let match = raw.match(/\[([^\]]+)\]/);
-    if (match && match[1].trim()) return `[${match[1].trim()}]`;
-    if (raw) return raw.startsWith('[') ? raw : `[${raw}]`;
-    return `[Opponent ${fallbackNum}]`;
+    if (match && match[1].trim()) return match[1].trim();
+    if (raw) return raw.replace(/^[\[\(]+|[\]\)]+$/g, '').trim();
+    return `Opponent ${fallbackNum}`;
 };
 
 window.copyChampRoundReport = (roundNum) => {
