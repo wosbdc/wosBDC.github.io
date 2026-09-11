@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.3.42] - 2026-09-08
+- ⏱️ **Last Active**: Cooldown cards display relative last active time.
+- 🟢 **Safe To Login**: Cooldown accounts marked safe to log in.
+
 ## [3.3.41] - 2026-09-08
 - 🚩 **Flags Row**: Season flags moved to separate row.
 - 📋 **Round Colon**: Added colon after round number in battle reports.

@@ -88,9 +88,8 @@ function runStaticVerification() {
   assert(code.includes('window.getBotFleetSafetyHtml ='), 'getBotFleetSafetyHtml must be defined');
   assert(code.includes('bot-fleet-container'), 'HTML must include bot-fleet-container');
   assert(code.includes('⛔ DO NOT LOG IN'), 'HTML must include active warning tag');
-  assert(code.includes('✅ Safe to log in'), 'HTML must include safe tag');
-  assert(code.includes('⚠️ Resting between runs'), 'HTML must include cooldown tag');
-  console.log('  ✅ getBotFleetSafetyHtml contains all 3 safety states (Occupied, Cooldown, Safe).');
+  assert(code.includes('⏳ COOLDOWN'), 'HTML must include cooldown badge');
+  console.log('  ✅ getBotFleetSafetyHtml contains all safety states.');
 
   // 5. Views integration
   assert(code.includes('window.getBotFleetSafetyHtml') && code.includes('views.staff'), 'views.staff must embed safety matrix');
@@ -532,7 +531,7 @@ server.listen(PORT, async () => {
     if (mutationResult.accountB !== 'Bisquick (Inst 11)' || !mutationResult.bisquickIsOccupiedB || !mutationResult.angryIsSafeB) {
       throw new Error(`Assertion Failed: Dynamic rotation between bots failed! Result: ${JSON.stringify(mutationResult)}`);
     }
-    if (mutationResult.cdAccountC !== 'ShrimpLeprechaun (Inst 14)' || mutationResult.accountC !== 'None' || !mutationResult.hasCooldownBorder || !mutationResult.shrimpIsCooldownC || mutationResult.shrimpTagC !== '⚠️ Resting between runs') {
+    if (mutationResult.cdAccountC !== 'ShrimpLeprechaun (Inst 14)' || mutationResult.accountC !== 'None' || !mutationResult.hasCooldownBorder || !mutationResult.shrimpIsCooldownC || !mutationResult.shrimpTagC.includes('Safe to log in')) {
       throw new Error(`Assertion Failed: Cooldown resting state failed! Result: ${JSON.stringify(mutationResult)}`);
     }
     if (mutationResult.cdSubC !== 'Routine Rotation Rest') {

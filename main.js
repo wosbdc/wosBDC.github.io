@@ -5623,19 +5623,12 @@ window.getBotFleetSafetyHtml = () => {
       actionTag = '⛔ DO NOT LOG IN';
       detail = fleetItem?.detail || 'Running Wilderness / Daily Tasks';
     } else if (isBotCooldown) {
+      safeCount++;
       itemClass = 'cooldown';
       badgeClass = 'cooldown';
       badgeTitle = '⏳ COOLDOWN';
-      actionTag = '⚠️ Resting between runs';
-      let remText = cdRemainingText;
-      if (fleetItem && fleetItem.secondsLeft > 0) {
-        const rem = Math.max(0, fleetItem.secondsLeft - Math.floor((Date.now() - (data.receivedAt || Date.now())) / 1000));
-        const m = Math.floor(rem / 60).toString().padStart(2, '0');
-        const s = (rem % 60).toString().padStart(2, '0');
-        remText = `${m}:${s} left`;
-      }
-      botCdText = remText ? `⏳ Cooldown • ${remText}` : '⏳ Resting';
-      detail = remText ? `City tab resting • ${remText}` : (fleetItem?.detail || 'Resting on City Tab');
+      actionTag = '✅ Safe to log in';
+      detail = fleetItem?.detail || 'City tab idle • Safe to log in';
     } else {
       safeCount++;
     }
@@ -5643,10 +5636,11 @@ window.getBotFleetSafetyHtml = () => {
     let activityHtml = '';
     if (isBotActive) {
       activityHtml = `<div class="bot-fleet-activity active" id="bot-fleet-activity-${bot.id}"><span class="bot-fleet-activity-pulse">🟢</span> Active Now</div>`;
-    } else if (isBotCooldown) {
-      activityHtml = `<div class="bot-fleet-activity cooldown" id="bot-fleet-activity-${bot.id}">${botCdText || '⏳ Resting'}</div>`;
     } else {
-      const lastEpoch = (fleetItem && fleetItem.lastActiveEpoch) ? fleetItem.lastActiveEpoch : (bot.lastActiveEpoch || 0);
+      let lastEpoch = (fleetItem && fleetItem.lastActiveEpoch) ? fleetItem.lastActiveEpoch : (bot.lastActiveEpoch || 0);
+      if (lastEpoch <= 0 && isBotCooldown && (data.timestamp || data.receivedAt)) {
+        lastEpoch = Math.floor((data.timestamp || data.receivedAt) / 1000);
+      }
       if (lastEpoch > 0) {
         activityHtml = `<div class="bot-fleet-activity idle" id="bot-fleet-activity-${bot.id}">⏱️ Last active: ${window.formatBotRelativeTime(lastEpoch)}</div>`;
       } else if (fleetItem && fleetItem.lastActiveTime) {
