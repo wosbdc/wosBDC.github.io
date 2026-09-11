@@ -13846,24 +13846,30 @@ window.getChampRoundReportData = (roundNum) => {
         let ourFlags = Number(ourFlagsEl.value) || 0;
         let enemyFlags = Number(document.getElementById('adm_champ_r' + roundNum + '_enemy_flags')?.value) || 0;
         let enemyName = (document.getElementById('adm_champ_r' + roundNum + '_enemy_name')?.value || `Opponent ${roundNum}`).trim();
-        let enemyState = (document.getElementById('adm_champ_r' + roundNum + '_enemy_state')?.value || '').trim();
-        let outcome = (ourFlags > enemyFlags) ? 'Won' : (enemyFlags > ourFlags ? 'Lost' : ((ourFlags > 0 || enemyFlags > 0) ? 'Draw' : 'Pending'));
-        return { roundNum, ourFlags, enemyFlags, enemyName, enemyState, outcome };
+        let outcome = (ourFlags > enemyFlags) ? 'Won' : (enemyFlags > ourFlags ? 'Lose' : ((ourFlags > 0 || enemyFlags > 0) ? 'Draw' : 'Pending'));
+        return { roundNum, ourFlags, enemyFlags, enemyName, outcome };
     }
     const data = window._latestChampionshipMatchups || window.DEFAULT_CHAMPIONSHIP_MATCHUPS;
     const r = data?.rounds?.['r' + roundNum] || {};
     let ourFlags = (r.ourFlags !== undefined && r.ourFlags !== null && r.ourFlags !== '') ? Number(r.ourFlags) : 0;
     let enemyFlags = (r.enemyAlliance && r.enemyAlliance.flags !== undefined && r.enemyAlliance.flags !== null && r.enemyAlliance.flags !== '') ? Number(r.enemyAlliance.flags) : 0;
     let enemyName = (r.enemyAlliance?.name || `Opponent ${roundNum}`).trim();
-    let enemyState = (r.enemyAlliance?.state || '').trim();
-    let outcome = (ourFlags > enemyFlags) ? 'Won' : (enemyFlags > ourFlags ? 'Lost' : ((ourFlags > 0 || enemyFlags > 0) ? 'Draw' : 'Pending'));
-    return { roundNum, ourFlags, enemyFlags, enemyName, enemyState, outcome };
+    let outcome = (ourFlags > enemyFlags) ? 'Won' : (enemyFlags > ourFlags ? 'Lose' : ((ourFlags > 0 || enemyFlags > 0) ? 'Draw' : 'Pending'));
+    return { roundNum, ourFlags, enemyFlags, enemyName, outcome };
+};
+
+window.extractAllianceTagOnly = (name, fallbackNum = 1) => {
+    let raw = (name || '').trim();
+    let match = raw.match(/\[([^\]]+)\]/);
+    if (match && match[1].trim()) return `[${match[1].trim()}]`;
+    if (raw) return raw.startsWith('[') ? raw : `[${raw}]`;
+    return `[Opponent ${fallbackNum}]`;
 };
 
 window.copyChampRoundReport = (roundNum) => {
     const d = window.getChampRoundReportData(roundNum);
-    const stateTag = d.enemyState ? ` (#${d.enemyState.replace(/^#/, '')})` : '';
-    const text = `Alliance Championship Report\n\nRound ${d.roundNum} ${d.outcome}\nBDC: ${d.ourFlags} flags Vs ${d.enemyName}${stateTag}: ${d.enemyFlags} flags`;
+    const oppTag = window.extractAllianceTagOnly(d.enemyName, d.roundNum);
+    const text = `Alliance Championship Report\n\nRound ${d.roundNum} ${d.outcome}\nBDC: ${d.ourFlags} flags Vs ${oppTag} : ${d.enemyFlags} flags`;
 
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(text).then(() => {
@@ -13878,26 +13884,14 @@ window.copyChampRoundReport = (roundNum) => {
 };
 
 window.copyChampFullReport = () => {
-    let seasonName = document.getElementById('adm_champ_season_name')?.value || window._latestChampionshipMatchups?.seasonName || 'Upcoming Season';
     let roundsReports = [];
-    let wins = 0, losses = 0, draws = 0;
-    let totalOurFlags = 0, totalEnemyFlags = 0;
-
     for (let i = 1; i <= 5; i++) {
         const d = window.getChampRoundReportData(i);
-        totalOurFlags += d.ourFlags;
-        totalEnemyFlags += d.enemyFlags;
-        if (d.ourFlags > 0 || d.enemyFlags > 0) {
-            if (d.outcome === 'Won') wins++;
-            else if (d.outcome === 'Lost') losses++;
-            else if (d.outcome === 'Draw') draws++;
-        }
-        const stateTag = d.enemyState ? ` (#${d.enemyState.replace(/^#/, '')})` : '';
-        roundsReports.push(`Round ${d.roundNum} ${d.outcome}\nBDC: ${d.ourFlags} flags Vs ${d.enemyName}${stateTag}: ${d.enemyFlags} flags`);
+        const oppTag = window.extractAllianceTagOnly(d.enemyName, d.roundNum);
+        roundsReports.push(`Round ${d.roundNum} ${d.outcome}\nBDC: ${d.ourFlags} flags Vs ${oppTag} : ${d.enemyFlags} flags`);
     }
 
-    let headerLine = `Alliance Championship Report — ${seasonName}\nRecord: ${wins} Wins – ${losses} ${losses === 1 ? 'Loss' : 'Losses'}${draws > 0 ? ` – ${draws} Draws` : ''} | Total Flags: ${totalOurFlags} vs ${totalEnemyFlags}`;
-    const fullText = `${headerLine}\n\n${roundsReports.join('\n\n')}`;
+    const fullText = `Alliance Championship Report\n\n${roundsReports.join('\n\n')}`;
 
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(fullText).then(() => {

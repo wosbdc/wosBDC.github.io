@@ -102,6 +102,9 @@ function testChampionshipArchive() {
     if (!code.includes('window.copyChampFullReport()')) {
         errors.push('Full report copy button should be available');
     }
+    if (!code.includes('window.extractAllianceTagOnly =')) {
+        errors.push('window.extractAllianceTagOnly helper should be defined');
+    }
 
     if (errors.length > 0) {
         console.error('FAILED: Championship Archive Test Failed:');

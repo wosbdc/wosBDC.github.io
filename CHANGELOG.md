@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.38] - 2026-09-08
+- 🏷️ **Tag Only**: Championship report displays opponent bracket tag only.
+- 🚫 **No State**: Removed state number from generated championship battle reports.
+- ⚔️ **Clean Output**: Battle report formatted with clean Won or Lose outcome.
+
 ## [3.3.37] - 2026-09-08
 - 🏆 **Score Box Removed**: Cleaned championship matchups view; scores removed from all cards.
 - 🚩 **Flag Victory Logic**: Winners and tournament records now determined strictly by flags.
