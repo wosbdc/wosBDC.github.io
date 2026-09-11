@@ -1821,9 +1821,13 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
 
 .bot-radar-dual-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 14px;
   margin-bottom: 14px;
+}
+
+#bot-radar-cooldown-sub {
+  display: none !important;
 }
 
 @media (max-width: 640px) {

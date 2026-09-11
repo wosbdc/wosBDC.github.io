@@ -1,14 +1,15 @@
 {
-  "version": "3.3.42",
+  "version": "3.3.43",
   "releaseDate": "2026-09-08",
-  "title": "What's New in v3.3.42",
+  "title": "What's New in v3.3.43",
   "notes": [
-    "⏱️ Last Active: Cooldown cards display relative last active time.",
-    "🟢 Safe To Login: Cooldown accounts marked safe to log in."
+    "🤖 Smart Radar: Merged active and cooldown into dynamic deck.",
+    "🧹 Zero Filler: Removed generic task and event text."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.42",
+    "version": "3.3.43",
     "latestChanges": [
+      "v3.3.43: Merged active and cooldown into dynamic smart deck and removed filler text",
       "v3.3.42: Cooldown bot cards display Last Active relative times and safe to login tag",
       "v3.3.41: Added colon after round number in championship reports and moved flags to dedicated row",
       "v3.3.40: Formatted championship battle reports with centered text alignment",

@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.3.43] - 2026-09-08
+- 🤖 **Smart Radar**: Merged active and cooldown into dynamic deck.
+- 🧹 **Zero Filler**: Removed generic task and event text.
+
 ## [3.3.42] - 2026-09-08
 - ⏱️ **Last Active**: Cooldown cards display relative last active time.
 - 🟢 **Safe To Login**: Cooldown accounts marked safe to log in.

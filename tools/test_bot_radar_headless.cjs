@@ -320,6 +320,8 @@ server.listen(PORT, async () => {
       window.updateBotOperationsRadarDom();
 
       const accountA = document.getElementById('bot-radar-account-val')?.textContent?.trim();
+      const runnerDisplayA = document.getElementById('bot-radar-runner-compartment')?.style?.display;
+      const cdDisplayA = document.getElementById('bot-radar-cooldown-compartment')?.style?.display;
       const badgeA = document.getElementById('bot-radar-badge-el')?.textContent?.trim();
       const clockA = document.getElementById('bot-radar-clock')?.textContent?.trim();
       const clockDisplayA = document.getElementById('bot-radar-clock')?.style?.display;
@@ -370,6 +372,8 @@ server.listen(PORT, async () => {
       window.updateBotOperationsRadarDom();
 
       const accountC = document.getElementById('bot-radar-account-val')?.textContent?.trim();
+      const runnerDisplayC = document.getElementById('bot-radar-runner-compartment')?.style?.display;
+      const cdDisplayC = document.getElementById('bot-radar-cooldown-compartment')?.style?.display;
       const cdAccountC = document.getElementById('bot-radar-cooldown-val')?.textContent?.trim();
       const cdSubC = document.getElementById('bot-radar-cooldown-sub')?.textContent?.trim();
       const badgeC = document.getElementById('bot-radar-badge-el')?.textContent?.trim();
@@ -401,6 +405,8 @@ server.listen(PORT, async () => {
       window.updateBotOperationsRadarDom();
 
       const accountD = document.getElementById('bot-radar-account-val')?.textContent?.trim();
+      const runnerDisplayD = document.getElementById('bot-radar-runner-compartment')?.style?.display;
+      const cdDisplayD = document.getElementById('bot-radar-cooldown-compartment')?.style?.display;
       const stageD = document.getElementById('bot-radar-stage-val')?.textContent?.trim();
       const runnerBadgeD = document.getElementById('bot-radar-runner-badge')?.textContent?.trim();
       const cdAccountD = document.getElementById('bot-radar-cooldown-val')?.textContent?.trim();
@@ -459,6 +465,8 @@ server.listen(PORT, async () => {
 
       return {
         accountA,
+        runnerDisplayA,
+        cdDisplayA,
         badgeA,
         clockA,
         clockDisplayA,
@@ -478,6 +486,8 @@ server.listen(PORT, async () => {
         angryTagB,
         accountC,
         cdAccountC,
+        runnerDisplayC,
+        cdDisplayC,
         cdSubC,
         badgeC,
         clockC,
@@ -488,6 +498,8 @@ server.listen(PORT, async () => {
         shrimpTagC,
         shrimpDetailC,
         accountD,
+        runnerDisplayD,
+        cdDisplayD,
         stageD,
         runnerBadgeD,
         cdAccountD,
@@ -578,6 +590,15 @@ server.listen(PORT, async () => {
     }
     if (!mutationResult.dualGridD || !mutationResult.runnerCardD || !mutationResult.cooldownCardD) {
       throw new Error(`Assertion Failed: Dual compartment DOM elements missing! Result: ${JSON.stringify(mutationResult)}`);
+    }
+    if (mutationResult.runnerDisplayA === 'none' || mutationResult.cdDisplayA !== 'none') {
+      throw new Error(`Assertion Failed: Active runner must be visible and cooldown hidden when only runner is active! Got runner: "${mutationResult.runnerDisplayA}", cd: "${mutationResult.cdDisplayA}"`);
+    }
+    if (mutationResult.runnerDisplayC !== 'none' || mutationResult.cdDisplayC === 'none') {
+      throw new Error(`Assertion Failed: Active runner must be hidden and cooldown visible when only cooldown is active! Got runner: "${mutationResult.runnerDisplayC}", cd: "${mutationResult.cdDisplayC}"`);
+    }
+    if (mutationResult.runnerDisplayD === 'none' || mutationResult.cdDisplayD === 'none') {
+      throw new Error(`Assertion Failed: Both compartments must be visible in dual telemetry! Got runner: "${mutationResult.runnerDisplayD}", cd: "${mutationResult.cdDisplayD}"`);
     }
     console.log(`  ✅ Verified: Fleet Login Safety Matrix dynamically responds to bot rotation:`);
     console.log(`     1. ${mutationResult.accountA} -> Occupied: ${mutationResult.angryTagA}, Safe: ${mutationResult.bisquickTagA} (${mutationResult.busyPillA}, ${mutationResult.safePillA})`);
