@@ -105,6 +105,9 @@ function testChampionshipArchive() {
     if (!code.includes('window.extractAllianceTagOnly =')) {
         errors.push('window.extractAllianceTagOnly helper should be defined');
     }
+    if (!code.includes('Alliance Championship Report\\n            Round ${d.roundNum} ${d.outcome}\\n   BDC: ${d.ourFlags} flags Vs ${oppTag} : ${d.enemyFlags} flags')) {
+        errors.push('copyChampRoundReport should have centered alignment formatting');
+    }
 
     if (errors.length > 0) {
         console.error('FAILED: Championship Archive Test Failed:');

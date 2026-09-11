@@ -1,13 +1,14 @@
 {
-  "version": "3.3.39",
+  "version": "3.3.40",
   "releaseDate": "2026-09-08",
-  "title": "What's New in v3.3.39",
+  "title": "What's New in v3.3.40",
   "notes": [
-    "🧹 Clean Tag: Stripped square brackets from opponent tag in battle reports."
+    "📐 Centered Format: Centered text formatting for generated championship battle reports."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.39",
+    "version": "3.3.40",
     "latestChanges": [
+      "v3.3.40: Formatted championship battle reports with centered text alignment",
       "v3.3.39: Stripped square brackets from opponent tag in battle reports",
       "v3.3.38: Refined championship report to show opponent tag only and removed state",
       "v3.3.37: Championship score removal, flag-driven victory logic, auto-report copying",

@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## [3.3.40] - 2026-09-08
+- 📐 **Centered Format**: Centered text formatting for championship battle reports.
+
 ## [3.3.39] - 2026-09-08
 - 🧹 **Clean Tag**: Stripped square brackets from opponent tag in battle reports.
 

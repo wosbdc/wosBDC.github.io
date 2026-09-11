@@ -13869,7 +13869,7 @@ window.extractAllianceTagOnly = (name, fallbackNum = 1) => {
 window.copyChampRoundReport = (roundNum) => {
     const d = window.getChampRoundReportData(roundNum);
     const oppTag = window.extractAllianceTagOnly(d.enemyName, d.roundNum);
-    const text = `Alliance Championship Report\n\nRound ${d.roundNum} ${d.outcome}\nBDC: ${d.ourFlags} flags Vs ${oppTag} : ${d.enemyFlags} flags`;
+    const text = `Alliance Championship Report\n            Round ${d.roundNum} ${d.outcome}\n   BDC: ${d.ourFlags} flags Vs ${oppTag} : ${d.enemyFlags} flags`;
 
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(text).then(() => {
@@ -13888,7 +13888,7 @@ window.copyChampFullReport = () => {
     for (let i = 1; i <= 5; i++) {
         const d = window.getChampRoundReportData(i);
         const oppTag = window.extractAllianceTagOnly(d.enemyName, d.roundNum);
-        roundsReports.push(`Round ${d.roundNum} ${d.outcome}\nBDC: ${d.ourFlags} flags Vs ${oppTag} : ${d.enemyFlags} flags`);
+        roundsReports.push(`            Round ${d.roundNum} ${d.outcome}\n   BDC: ${d.ourFlags} flags Vs ${oppTag} : ${d.enemyFlags} flags`);
     }
 
     const fullText = `Alliance Championship Report\n\n${roundsReports.join('\n\n')}`;
