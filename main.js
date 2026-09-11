@@ -13828,13 +13828,87 @@ window.fetchChampionshipMatchups = async () => {
         if (snap && snap.exists() && snap.val()) {
             let val = snap.val();
             if (val && val.rounds && typeof val.rounds === 'object') {
+                window._latestChampionshipMatchups = val;
                 return val;
             }
         }
     } catch(e) {
         console.warn("fetchChampionshipMatchups error:", e);
     }
-    return JSON.parse(JSON.stringify(window.DEFAULT_CHAMPIONSHIP_MATCHUPS));
+    const def = JSON.parse(JSON.stringify(window.DEFAULT_CHAMPIONSHIP_MATCHUPS));
+    window._latestChampionshipMatchups = def;
+    return def;
+};
+
+window.getChampRoundReportData = (roundNum) => {
+    const ourFlagsEl = document.getElementById('adm_champ_r' + roundNum + '_our_flags');
+    if (ourFlagsEl) {
+        let ourFlags = Number(ourFlagsEl.value) || 0;
+        let enemyFlags = Number(document.getElementById('adm_champ_r' + roundNum + '_enemy_flags')?.value) || 0;
+        let enemyName = (document.getElementById('adm_champ_r' + roundNum + '_enemy_name')?.value || `Opponent ${roundNum}`).trim();
+        let enemyState = (document.getElementById('adm_champ_r' + roundNum + '_enemy_state')?.value || '').trim();
+        let outcome = (ourFlags > enemyFlags) ? 'Won' : (enemyFlags > ourFlags ? 'Lost' : ((ourFlags > 0 || enemyFlags > 0) ? 'Draw' : 'Pending'));
+        return { roundNum, ourFlags, enemyFlags, enemyName, enemyState, outcome };
+    }
+    const data = window._latestChampionshipMatchups || window.DEFAULT_CHAMPIONSHIP_MATCHUPS;
+    const r = data?.rounds?.['r' + roundNum] || {};
+    let ourFlags = (r.ourFlags !== undefined && r.ourFlags !== null && r.ourFlags !== '') ? Number(r.ourFlags) : 0;
+    let enemyFlags = (r.enemyAlliance && r.enemyAlliance.flags !== undefined && r.enemyAlliance.flags !== null && r.enemyAlliance.flags !== '') ? Number(r.enemyAlliance.flags) : 0;
+    let enemyName = (r.enemyAlliance?.name || `Opponent ${roundNum}`).trim();
+    let enemyState = (r.enemyAlliance?.state || '').trim();
+    let outcome = (ourFlags > enemyFlags) ? 'Won' : (enemyFlags > ourFlags ? 'Lost' : ((ourFlags > 0 || enemyFlags > 0) ? 'Draw' : 'Pending'));
+    return { roundNum, ourFlags, enemyFlags, enemyName, enemyState, outcome };
+};
+
+window.copyChampRoundReport = (roundNum) => {
+    const d = window.getChampRoundReportData(roundNum);
+    const stateTag = d.enemyState ? ` (#${d.enemyState.replace(/^#/, '')})` : '';
+    const text = `Alliance Championship Report\n\nRound ${d.roundNum} ${d.outcome}\nBDC: ${d.ourFlags} flags Vs ${d.enemyName}${stateTag}: ${d.enemyFlags} flags`;
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+            if (window.showToast) window.showToast(`📋 Copied Round ${roundNum} Report!`, 'success');
+        }).catch(err => {
+            console.error("Clipboard copy failed:", err);
+            prompt("Copy Round Report:", text);
+        });
+    } else {
+        prompt("Copy Round Report:", text);
+    }
+};
+
+window.copyChampFullReport = () => {
+    let seasonName = document.getElementById('adm_champ_season_name')?.value || window._latestChampionshipMatchups?.seasonName || 'Upcoming Season';
+    let roundsReports = [];
+    let wins = 0, losses = 0, draws = 0;
+    let totalOurFlags = 0, totalEnemyFlags = 0;
+
+    for (let i = 1; i <= 5; i++) {
+        const d = window.getChampRoundReportData(i);
+        totalOurFlags += d.ourFlags;
+        totalEnemyFlags += d.enemyFlags;
+        if (d.ourFlags > 0 || d.enemyFlags > 0) {
+            if (d.outcome === 'Won') wins++;
+            else if (d.outcome === 'Lost') losses++;
+            else if (d.outcome === 'Draw') draws++;
+        }
+        const stateTag = d.enemyState ? ` (#${d.enemyState.replace(/^#/, '')})` : '';
+        roundsReports.push(`Round ${d.roundNum} ${d.outcome}\nBDC: ${d.ourFlags} flags Vs ${d.enemyName}${stateTag}: ${d.enemyFlags} flags`);
+    }
+
+    let headerLine = `Alliance Championship Report — ${seasonName}\nRecord: ${wins} Wins – ${losses} ${losses === 1 ? 'Loss' : 'Losses'}${draws > 0 ? ` – ${draws} Draws` : ''} | Total Flags: ${totalOurFlags} vs ${totalEnemyFlags}`;
+    const fullText = `${headerLine}\n\n${roundsReports.join('\n\n')}`;
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(fullText).then(() => {
+            if (window.showToast) window.showToast(`📋 Copied Full Tournament Report!`, 'success');
+        }).catch(err => {
+            console.error("Clipboard copy failed:", err);
+            prompt("Copy Full Tournament Report:", fullText);
+        });
+    } else {
+        prompt("Copy Full Tournament Report:", fullText);
+    }
 };
 
 window.computeChampionshipDiffs = (prev, current) => {
@@ -14580,15 +14654,13 @@ window.renderChampionshipVaultBody = (activeKey = 'live') => {
 
     let matchCardsHtml = roundsList.map((r, idx) => {
         let rNum = r.roundNum || (idx + 1);
-        let ourScore = Number(r.ourScore) || 0;
         let ourFlags = (r.ourFlags !== undefined && r.ourFlags !== null && r.ourFlags !== '') ? Number(r.ourFlags) : 0;
-        let enemyScore = Number(r.enemyAlliance?.score) || 0;
         let enemyFlags = (r.enemyAlliance && r.enemyAlliance.flags !== undefined && r.enemyAlliance.flags !== null && r.enemyAlliance.flags !== '') ? Number(r.enemyAlliance.flags) : 0;
         let enemyName = (r.enemyAlliance && r.enemyAlliance.name) ? r.enemyAlliance.name : 'Opponent Alliance';
         let enemyState = (r.enemyAlliance && r.enemyAlliance.state) ? r.enemyAlliance.state : (idx === 0 ? '2045' : idx === 1 ? '1988' : idx === 2 ? '2102' : idx === 3 ? '2031' : '2015');
-        let isVictory = ourScore > enemyScore;
-        let isDefeat = enemyScore > ourScore;
-        let isDraw = (ourScore === enemyScore) && (ourScore > 0 || enemyScore > 0 || (ourFlags > 0 && enemyFlags > 0));
+        let isVictory = ourFlags > enemyFlags;
+        let isDefeat = enemyFlags > ourFlags;
+        let isDraw = (ourFlags === enemyFlags) && (ourFlags > 0 || enemyFlags > 0);
 
         let cardBg = isVictory 
             ? 'background: linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(16,185,129,0.3);' 
@@ -14597,9 +14669,6 @@ window.renderChampionshipVaultBody = (activeKey = 'live') => {
                 : (isDraw 
                     ? 'background: linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(245,158,11,0.3);'
                     : 'background: rgba(255,255,255,0.02); border: 1px solid var(--border);'));
-
-        let ourScoreColor = isVictory ? 'color:#10b981; font-weight:900; text-shadow:0 0 12px rgba(16,185,129,0.4);' : (isDraw ? 'color:#f59e0b; font-weight:900; text-shadow:0 0 12px rgba(245,158,11,0.4);' : 'color:var(--text-muted); opacity:0.75;');
-        let enemyScoreColor = isDefeat ? 'color:#ef4444; font-weight:900; text-shadow:0 0 12px rgba(239,68,68,0.4);' : (isDraw ? 'color:#f59e0b; font-weight:900; text-shadow:0 0 12px rgba(245,158,11,0.4);' : 'color:var(--text-muted); opacity:0.75;');
 
         let centerStatusHtml = isVictory 
             ? '<div style="background:rgba(16,185,129,0.2); border:1px solid rgba(16,185,129,0.4); color:#10b981; padding:2px 10px; border-radius:8px; font-weight:900; font-size:10px; letter-spacing:0.5px; margin-bottom:4px;">VICTORY</div>' 
@@ -14617,13 +14686,10 @@ window.renderChampionshipVaultBody = (activeKey = 'live') => {
                 </div>
                 <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
                     <!-- Left: Our Alliance -->
-                    <div style="flex:1; min-width:140px; text-align:right; display:flex; align-items:center; justify-content:flex-end; gap:10px;">
-                        <div>
-                            <div style="font-size:14px; font-weight:bold; color:var(--text-main);">[BDC]</div>
-                            <div style="font-size:10px; color:#38bdf8; font-weight:bold; letter-spacing:0.5px; margin-top:2px;">${escapeHTML(formatStateTag(r.ourState || displayData.ourState, '2089'))}</div>
-                            <div style="font-size:10px; color:#10b981; font-weight:bold; margin-top:3px; display:inline-flex; align-items:center; gap:3px; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); padding:1px 6px; border-radius:4px;"><span style="font-size:11px;">🚩</span> ${ourFlags} Flags</div>
-                        </div>
-                        <span style="font-size:22px; font-family:var(--mono); ${ourScoreColor}">${ourScore.toLocaleString()}</span>
+                    <div style="flex:1; min-width:140px; text-align:right; display:flex; flex-direction:column; align-items:flex-end;">
+                        <div style="font-size:14px; font-weight:bold; color:var(--text-main);">[BDC]</div>
+                        <div style="font-size:10px; color:#38bdf8; font-weight:bold; letter-spacing:0.5px; margin-top:2px;">${escapeHTML(formatStateTag(r.ourState || displayData.ourState, '2089'))}</div>
+                        <div style="font-size:11px; color:#10b981; font-weight:bold; margin-top:4px; display:inline-flex; align-items:center; gap:3px; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); padding:2px 8px; border-radius:4px;"><span style="font-size:11px;">🚩</span> ${ourFlags} Flags</div>
                     </div>
 
                     <!-- Center: Status & VS -->
@@ -14633,13 +14699,10 @@ window.renderChampionshipVaultBody = (activeKey = 'live') => {
                     </div>
 
                     <!-- Right: Opponent Alliance -->
-                    <div style="flex:1; min-width:140px; text-align:left; display:flex; align-items:center; justify-content:flex-start; gap:10px;">
-                        <span style="font-size:22px; font-family:var(--mono); ${enemyScoreColor}">${enemyScore.toLocaleString()}</span>
-                        <div>
-                            <div style="font-size:14px; font-weight:bold; color:var(--text-main);">${escapeHTML(enemyName)}</div>
-                            <div style="font-size:10px; color:#38bdf8; font-weight:bold; letter-spacing:0.5px; margin-top:2px;">${escapeHTML(formatStateTag(enemyState, '2045'))}</div>
-                            <div style="font-size:10px; color:#ef4444; font-weight:bold; margin-top:3px; display:inline-flex; align-items:center; gap:3px; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); padding:1px 6px; border-radius:4px;"><span style="font-size:11px;">🚩</span> ${enemyFlags} Flags</div>
-                        </div>
+                    <div style="flex:1; min-width:140px; text-align:left; display:flex; flex-direction:column; align-items:flex-start;">
+                        <div style="font-size:14px; font-weight:bold; color:var(--text-main);">${escapeHTML(enemyName)}</div>
+                        <div style="font-size:10px; color:#38bdf8; font-weight:bold; letter-spacing:0.5px; margin-top:2px;">${escapeHTML(formatStateTag(enemyState, '2045'))}</div>
+                        <div style="font-size:11px; color:#ef4444; font-weight:bold; margin-top:4px; display:inline-flex; align-items:center; gap:3px; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); padding:2px 8px; border-radius:4px;"><span style="font-size:11px;">🚩</span> ${enemyFlags} Flags</div>
                     </div>
                 </div>
             </div>
@@ -32197,15 +32260,13 @@ const views = {
 
             let roundsInputsHtml = [1, 2, 3, 4, 5].map(i => {
                 let r = roundsData['r' + i] || { roundNum: i, date: `Round ${i}`, ourScore: 0, ourFlags: 0, enemyAlliance: { name: `Opponent ${i}`, score: 0, flags: 0 } };
-                let ourScore = Number(r.ourScore) || 0;
                 let ourFlags = (r.ourFlags !== undefined && r.ourFlags !== null && r.ourFlags !== '') ? Number(r.ourFlags) : 0;
-                let enemyScore = Number(r.enemyAlliance?.score) || 0;
                 let enemyFlags = (r.enemyAlliance && r.enemyAlliance.flags !== undefined && r.enemyAlliance.flags !== null && r.enemyAlliance.flags !== '') ? Number(r.enemyAlliance.flags) : 0;
                 let enemyName = (r.enemyAlliance && r.enemyAlliance.name) ? r.enemyAlliance.name : '';
                 let enemyState = (r.enemyAlliance && r.enemyAlliance.state) ? r.enemyAlliance.state : '';
-                let isVictory = ourScore > enemyScore;
-                let isDefeat = enemyScore > ourScore;
-                let isDraw = (ourScore === enemyScore) && (ourScore > 0 || enemyScore > 0 || (ourFlags > 0 && enemyFlags > 0));
+                let isVictory = ourFlags > enemyFlags;
+                let isDefeat = enemyFlags > ourFlags;
+                let isDraw = (ourFlags === enemyFlags) && (ourFlags > 0 || enemyFlags > 0);
 
                 let liveBadge = isVictory 
                     ? '<span id="live_badge_r'+i+'" style="background:rgba(16,185,129,0.2); border:1px solid rgba(16,185,129,0.4); color:#10b981; padding:3px 10px; border-radius:10px; font-weight:bold; font-size:11px;">🏆 VICTORY</span>'
@@ -32217,27 +32278,22 @@ const views = {
 
                 return `
                     <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:16px 20px; display:flex; flex-direction:column; gap:12px; box-shadow:0 4px 15px rgba(0,0,0,0.2);">
-                        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:8px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:8px; flex-wrap:wrap; gap:8px;">
                             <span style="font-weight:900; font-size:13px; color:var(--accent); text-transform:uppercase; letter-spacing:1px;">⚔️ ROUND ${i}</span>
-                            <div style="display:flex; align-items:center; gap:8px;">
+                            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                                 ${liveBadge}
                                 <input type="text" id="adm_champ_r${i}_date" value="${escapeHTML(r.date || `Round ${i}`)}" oninput="window.triggerChampAutoSave()" placeholder="Date / Match Label" style="padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:11px; width:130px;">
+                                <button type="button" onclick="window.copyChampRoundReport(${i})" style="background:rgba(6,182,212,0.15); border:1px solid rgba(6,182,212,0.4); color:var(--accent); padding:4px 10px; border-radius:6px; font-weight:bold; font-size:11px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.25)'" onmouseout="this.style.background='rgba(6,182,212,0.15)'" title="Copy Round ${i} Report to clipboard">📋 Copy Report</button>
                             </div>
                         </div>
 
                         <div style="display:grid; grid-template-columns: 1fr auto 1fr; gap:14px; align-items:center;">
                             <!-- Left: Our Alliance -->
                             <div style="background:rgba(16,185,129,0.04); border:1px solid rgba(16,185,129,0.2); border-radius:8px; padding:12px; text-align:right;">
-                                <div style="font-size:11px; color:#10b981; font-weight:bold; text-transform:uppercase; margin-bottom:4px;">Our Alliance [BDC] • State #2089</div>
-                                <div style="display:grid; grid-template-columns: 2fr 1fr; gap:8px;">
-                                    <div>
-                                        <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:3px;">Our Score</label>
-                                        <input type="number" id="adm_champ_r${i}_our" value="${ourScore}" oninput="window.updateAdminChampPreview(${i}); window.autoCalculateChampRecord(true); window.triggerChampAutoSave();" style="width:100%; text-align:right; font-size:18px; font-family:var(--mono); font-weight:bold; color:var(--text-main); padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); box-sizing:border-box;">
-                                    </div>
-                                    <div>
-                                        <label style="font-size:10px; color:#10b981; font-weight:bold; display:block; margin-bottom:3px;">🚩 Our Flags</label>
-                                        <input type="number" id="adm_champ_r${i}_our_flags" value="${ourFlags}" min="0" placeholder="0" oninput="window.updateAdminChampPreview(${i}); window.autoCalculateChampRecord(true); window.triggerChampAutoSave();" style="width:100%; text-align:right; font-size:18px; font-family:var(--mono); font-weight:bold; color:#10b981; padding:8px 10px; border-radius:6px; border:1px solid rgba(16,185,129,0.4); background:var(--bg-main); box-sizing:border-box;">
-                                    </div>
+                                <div style="font-size:11px; color:#10b981; font-weight:bold; text-transform:uppercase; margin-bottom:6px;">Our Alliance [BDC] • State #2089</div>
+                                <div>
+                                    <label style="font-size:10px; color:#10b981; font-weight:bold; display:block; margin-bottom:3px;">🚩 Our Flags</label>
+                                    <input type="number" id="adm_champ_r${i}_our_flags" value="${ourFlags}" min="0" placeholder="0" oninput="window.updateAdminChampPreview(${i}); window.autoCalculateChampRecord(true); window.triggerChampAutoSave();" style="width:100%; text-align:right; font-size:18px; font-family:var(--mono); font-weight:bold; color:#10b981; padding:8px 10px; border-radius:6px; border:1px solid rgba(16,185,129,0.4); background:var(--bg-main); box-sizing:border-box;">
                                 </div>
                             </div>
 
@@ -32257,15 +32313,9 @@ const views = {
                                         <input type="text" id="adm_champ_r${i}_enemy_state" value="${escapeHTML(enemyState)}" oninput="window.triggerChampAutoSave()" placeholder="e.g. 2045" style="width:100%; font-size:13px; font-weight:bold; color:var(--text-main); padding:6px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); box-sizing:border-box;">
                                     </div>
                                 </div>
-                                <div style="display:grid; grid-template-columns: 2fr 1fr; gap:8px;">
-                                    <div>
-                                        <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:2px;">Opponent Score</label>
-                                        <input type="number" id="adm_champ_r${i}_enemy_score" value="${enemyScore}" oninput="window.updateAdminChampPreview(${i}); window.autoCalculateChampRecord(true); window.triggerChampAutoSave();" style="width:100%; text-align:left; font-size:18px; font-family:var(--mono); font-weight:bold; color:var(--text-main); padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); box-sizing:border-box;">
-                                    </div>
-                                    <div>
-                                        <label style="font-size:10px; color:#ef4444; font-weight:bold; display:block; margin-bottom:2px;">🚩 Opponent Flags</label>
-                                        <input type="number" id="adm_champ_r${i}_enemy_flags" value="${enemyFlags}" min="0" placeholder="0" oninput="window.updateAdminChampPreview(${i}); window.autoCalculateChampRecord(true); window.triggerChampAutoSave();" style="width:100%; text-align:left; font-size:18px; font-family:var(--mono); font-weight:bold; color:#ef4444; padding:8px 10px; border-radius:6px; border:1px solid rgba(239,68,68,0.4); background:var(--bg-main); box-sizing:border-box;">
-                                    </div>
+                                <div>
+                                    <label style="font-size:10px; color:#ef4444; font-weight:bold; display:block; margin-bottom:2px;">🚩 Opponent Flags</label>
+                                    <input type="number" id="adm_champ_r${i}_enemy_flags" value="${enemyFlags}" min="0" placeholder="0" oninput="window.updateAdminChampPreview(${i}); window.autoCalculateChampRecord(true); window.triggerChampAutoSave();" style="width:100%; text-align:left; font-size:18px; font-family:var(--mono); font-weight:bold; color:#ef4444; padding:8px 10px; border-radius:6px; border:1px solid rgba(239,68,68,0.4); background:var(--bg-main); box-sizing:border-box;">
                                 </div>
                             </div>
                         </div>
@@ -32310,6 +32360,9 @@ const views = {
                     <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
                         <button id="adm_champ_save_btn" onclick="window.saveChampionshipAdminMatchups(false)" style="background:var(--success); color:#fff; border:none; padding:11px 24px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13.5px; box-shadow:0 4px 15px rgba(16,185,129,0.3); display:inline-flex; align-items:center; gap:6px; transition:0.2s;">
                             💾 Save
+                        </button>
+                        <button type="button" onclick="window.copyChampFullReport()" style="background:linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(6,182,212,0.08) 100%); border:1px solid rgba(6,182,212,0.4); color:var(--accent); padding:10px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; transition:0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.3)'" onmouseout="this.style.background='rgba(6,182,212,0.2)'" title="Generate and copy full 5-round report to clipboard">
+                            📋 Copy Full Report
                         </button>
                         <span id="adm_champ_bottom_save_status" style="font-size:12px; color:#10b981; font-weight:bold; display:inline-flex; align-items:center; gap:5px;">☁️ All changes saved live</span>
                     </div>
@@ -32514,24 +32567,22 @@ const views = {
         };
 
         window.updateAdminChampPreview = (roundNum) => {
-            let our = Number(document.getElementById('adm_champ_r' + roundNum + '_our')?.value) || 0;
-            let opp = Number(document.getElementById('adm_champ_r' + roundNum + '_enemy_score')?.value) || 0;
             let oFlags = Number(document.getElementById('adm_champ_r' + roundNum + '_our_flags')?.value) || 0;
             let eFlags = Number(document.getElementById('adm_champ_r' + roundNum + '_enemy_flags')?.value) || 0;
             let badge = document.getElementById('live_badge_r' + roundNum);
             if (!badge) return;
 
-            if (our > opp) {
+            if (oFlags > eFlags) {
                 badge.innerHTML = '🏆 VICTORY';
                 badge.style.background = 'rgba(16,185,129,0.2)';
                 badge.style.border = '1px solid rgba(16,185,129,0.4)';
                 badge.style.color = '#10b981';
-            } else if (opp > our) {
+            } else if (eFlags > oFlags) {
                 badge.innerHTML = '💔 DEFEAT';
                 badge.style.background = 'rgba(239,68,68,0.2)';
                 badge.style.border = '1px solid rgba(239,68,68,0.4)';
                 badge.style.color = '#ef4444';
-            } else if (our > 0 || opp > 0 || oFlags > 0 || eFlags > 0) {
+            } else if (oFlags > 0 || eFlags > 0) {
                 badge.innerHTML = '⚖️ DRAW';
                 badge.style.background = 'rgba(245,158,11,0.2)';
                 badge.style.border = '1px solid rgba(245,158,11,0.4)';
@@ -32548,16 +32599,14 @@ const views = {
             let wins = 0, losses = 0, draws = 0;
             let ourTotalFlags = 0, enemyTotalFlags = 0;
             for (let i = 1; i <= 5; i++) {
-                let our = Number(document.getElementById('adm_champ_r' + i + '_our')?.value) || 0;
-                let opp = Number(document.getElementById('adm_champ_r' + i + '_enemy_score')?.value) || 0;
                 let oFlags = Number(document.getElementById('adm_champ_r' + i + '_our_flags')?.value) || 0;
                 let eFlags = Number(document.getElementById('adm_champ_r' + i + '_enemy_flags')?.value) || 0;
                 ourTotalFlags += oFlags;
                 enemyTotalFlags += eFlags;
-                if (our > 0 || opp > 0 || oFlags > 0 || eFlags > 0) {
-                    if (our > opp) wins++;
-                    else if (opp > our) losses++;
-                    else if (our === opp) draws++;
+                if (oFlags > 0 || eFlags > 0) {
+                    if (oFlags > eFlags) wins++;
+                    else if (eFlags > oFlags) losses++;
+                    else if (oFlags === eFlags) draws++;
                 }
             }
             let statusInput = document.getElementById('adm_champ_status_text');
@@ -32621,23 +32670,21 @@ const views = {
                 let rounds = {};
                 for (let i = 1; i <= 5; i++) {
                     let date = document.getElementById('adm_champ_r' + i + '_date')?.value || `Round ${i}`;
-                    let ourScore = Number(document.getElementById('adm_champ_r' + i + '_our')?.value) || 0;
                     let ourFlags = Number(document.getElementById('adm_champ_r' + i + '_our_flags')?.value) || 0;
                     let enemyName = document.getElementById('adm_champ_r' + i + '_enemy_name')?.value || `Opponent ${i}`;
                     let enemyState = document.getElementById('adm_champ_r' + i + '_enemy_state')?.value || '';
-                    let enemyScore = Number(document.getElementById('adm_champ_r' + i + '_enemy_score')?.value) || 0;
                     let enemyFlags = Number(document.getElementById('adm_champ_r' + i + '_enemy_flags')?.value) || 0;
 
                     rounds['r' + i] = {
                         roundNum: i,
                         date: date,
-                        ourScore: ourScore,
+                        ourScore: 0,
                         ourFlags: ourFlags,
                         ourState: '2089',
                         enemyAlliance: {
                             name: enemyName,
                             state: enemyState,
-                            score: enemyScore,
+                            score: 0,
                             flags: enemyFlags
                         }
                     };
@@ -38239,16 +38286,14 @@ window.resetBearTrapEvent = async () => {
         let totalEnemyFlags = 0;
 
         roundsList.forEach(r => {
-            let os = Number(r.ourScore) || 0;
-            let es = Number(r.enemyAlliance?.score) || 0;
             let of = (r.ourFlags !== undefined && r.ourFlags !== null && r.ourFlags !== '') ? Number(r.ourFlags) : 0;
             let ef = (r.enemyAlliance && r.enemyAlliance.flags !== undefined && r.enemyAlliance.flags !== null && r.enemyAlliance.flags !== '') ? Number(r.enemyAlliance.flags) : 0;
             totalOurFlags += of;
             totalEnemyFlags += ef;
-            if (os > 0 || es > 0 || of > 0 || ef > 0) {
-                if (os > es) winCount++;
-                else if (es > os) lossCount++;
-                else if (os === es) drawCount++;
+            if (of > 0 || ef > 0) {
+                if (of > ef) winCount++;
+                else if (ef > of) lossCount++;
+                else if (of === ef) drawCount++;
             }
         });
 
@@ -38273,15 +38318,13 @@ window.resetBearTrapEvent = async () => {
 
         let matchCardsHtml = roundsList.map((r, idx) => {
             let rNum = r.roundNum || (idx + 1);
-            let ourScore = Number(r.ourScore) || 0;
             let ourFlags = (r.ourFlags !== undefined && r.ourFlags !== null && r.ourFlags !== '') ? Number(r.ourFlags) : 0;
-            let enemyScore = Number(r.enemyAlliance?.score) || 0;
             let enemyFlags = (r.enemyAlliance && r.enemyAlliance.flags !== undefined && r.enemyAlliance.flags !== null && r.enemyAlliance.flags !== '') ? Number(r.enemyAlliance.flags) : 0;
             let enemyName = (r.enemyAlliance && r.enemyAlliance.name) ? r.enemyAlliance.name : 'Opponent Alliance';
             let enemyState = (r.enemyAlliance && r.enemyAlliance.state) ? r.enemyAlliance.state : (idx === 0 ? '2045' : idx === 1 ? '1988' : idx === 2 ? '2102' : idx === 3 ? '2031' : '2015');
-            let isVictory = ourScore > enemyScore;
-            let isDefeat = enemyScore > ourScore;
-            let isDraw = (ourScore === enemyScore) && (ourScore > 0 || enemyScore > 0 || (ourFlags > 0 && enemyFlags > 0));
+            let isVictory = ourFlags > enemyFlags;
+            let isDefeat = enemyFlags > ourFlags;
+            let isDraw = (ourFlags === enemyFlags) && (ourFlags > 0 || enemyFlags > 0);
 
             let cardBg = isVictory 
                 ? 'background: linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(16,185,129,0.35);' 
@@ -38290,9 +38333,6 @@ window.resetBearTrapEvent = async () => {
                     : (isDraw 
                         ? 'background: linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(245,158,11,0.35);'
                         : 'background: rgba(255,255,255,0.02); border: 1px solid var(--border);'));
-
-            let ourScoreColor = isVictory ? 'color:#10b981; font-weight:900; text-shadow:0 0 16px rgba(16,185,129,0.5);' : (isDraw ? 'color:#f59e0b; font-weight:900; text-shadow:0 0 16px rgba(245,158,11,0.5);' : 'color:var(--text-muted); opacity:0.75;');
-            let enemyScoreColor = isDefeat ? 'color:#ef4444; font-weight:900; text-shadow:0 0 16px rgba(239,68,68,0.5);' : (isDraw ? 'color:#f59e0b; font-weight:900; text-shadow:0 0 16px rgba(245,158,11,0.5);' : 'color:var(--text-muted); opacity:0.75;');
 
             let centerStatusHtml = isVictory 
                 ? '<div style="background:rgba(16,185,129,0.22); border:1px solid rgba(16,185,129,0.45); color:#10b981; padding:3px 12px; border-radius:10px; font-weight:900; font-size:11px; letter-spacing:0.5px; box-shadow:0 0 10px rgba(16,185,129,0.2); margin-bottom:6px;">VICTORY</div>' 
@@ -38304,19 +38344,19 @@ window.resetBearTrapEvent = async () => {
 
             return `
                 <div style="${cardBg} border-radius:14px; padding:16px 22px; box-shadow: 0 4px 20px rgba(0,0,0,0.25); transition: transform 0.2s ease, box-shadow 0.2s ease;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px; margin-bottom:12px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
                         <span style="font-weight:900; font-size:13px; color:var(--accent); text-transform:uppercase; letter-spacing:1px; display:flex; align-items:center; gap:6px;">⚔️ ROUND ${rNum}</span>
-                        <span style="font-size:11.5px; color:var(--text-muted); font-weight:bold;">${escapeHTML(r.date || `Round ${rNum}`)}</span>
+                        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                            <span style="font-size:11.5px; color:var(--text-muted); font-weight:bold;">${escapeHTML(r.date || `Round ${rNum}`)}</span>
+                            <button onclick="window.copyChampRoundReport(${rNum})" style="background:rgba(6,182,212,0.15); border:1px solid rgba(6,182,212,0.4); color:var(--accent); padding:3px 8px; border-radius:6px; font-weight:bold; font-size:11px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.25)'" onmouseout="this.style.background='rgba(6,182,212,0.15)'" title="Copy Round ${rNum} Report to clipboard">📋 Copy Report</button>
+                        </div>
                     </div>
                     <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
                         <!-- Left: Our Alliance -->
-                        <div style="flex:1; min-width:140px; text-align:right; display:flex; align-items:center; justify-content:flex-end; gap:14px;">
-                            <div>
-                                <div style="font-size:16px; font-weight:bold; color:var(--text-main);">[BDC]</div>
-                                <div style="font-size:11px; color:#38bdf8; font-weight:bold; letter-spacing:0.5px; margin-top:2px;">${escapeHTML(formatStateTag(r.ourState || champData.ourState, '2089'))}</div>
-                                <div style="font-size:11px; color:#10b981; font-weight:bold; margin-top:4px; display:inline-flex; align-items:center; gap:4px; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); padding:2px 8px; border-radius:6px;"><span style="font-size:12px;">🚩</span> ${ourFlags} Flags</div>
-                            </div>
-                            <span style="font-size:26px; font-family:var(--mono); ${ourScoreColor}">${ourScore.toLocaleString()}</span>
+                        <div style="flex:1; min-width:140px; text-align:right; display:flex; flex-direction:column; align-items:flex-end;">
+                            <div style="font-size:16px; font-weight:bold; color:var(--text-main);">[BDC]</div>
+                            <div style="font-size:11px; color:#38bdf8; font-weight:bold; letter-spacing:0.5px; margin-top:2px;">${escapeHTML(formatStateTag(r.ourState || champData.ourState, '2089'))}</div>
+                            <div style="font-size:12px; color:#10b981; font-weight:bold; margin-top:6px; display:inline-flex; align-items:center; gap:4px; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); padding:4px 10px; border-radius:6px;"><span style="font-size:13px;">🚩</span> ${ourFlags} Flags</div>
                         </div>
 
                         <!-- Center: Status & VS Medallion -->
@@ -38326,13 +38366,10 @@ window.resetBearTrapEvent = async () => {
                         </div>
 
                         <!-- Right: Opponent Alliance -->
-                        <div style="flex:1; min-width:140px; text-align:left; display:flex; align-items:center; justify-content:flex-start; gap:14px;">
-                            <span style="font-size:26px; font-family:var(--mono); ${enemyScoreColor}">${enemyScore.toLocaleString()}</span>
-                            <div>
-                                <div style="font-size:16px; font-weight:bold; color:var(--text-main);">${escapeHTML(enemyName)}</div>
-                                <div style="font-size:11px; color:#38bdf8; font-weight:bold; letter-spacing:0.5px; margin-top:2px;">${escapeHTML(formatStateTag(enemyState, '2045'))}</div>
-                                <div style="font-size:11px; color:#ef4444; font-weight:bold; margin-top:4px; display:inline-flex; align-items:center; gap:4px; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); padding:2px 8px; border-radius:6px;"><span style="font-size:12px;">🚩</span> ${enemyFlags} Flags</div>
-                            </div>
+                        <div style="flex:1; min-width:140px; text-align:left; display:flex; flex-direction:column; align-items:flex-start;">
+                            <div style="font-size:16px; font-weight:bold; color:var(--text-main);">${escapeHTML(enemyName)}</div>
+                            <div style="font-size:11px; color:#38bdf8; font-weight:bold; letter-spacing:0.5px; margin-top:2px;">${escapeHTML(formatStateTag(enemyState, '2045'))}</div>
+                            <div style="font-size:12px; color:#ef4444; font-weight:bold; margin-top:6px; display:inline-flex; align-items:center; gap:4px; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); padding:4px 10px; border-radius:6px;"><span style="font-size:13px;">🚩</span> ${enemyFlags} Flags</div>
                         </div>
                     </div>
                 </div>
@@ -38362,6 +38399,7 @@ window.resetBearTrapEvent = async () => {
                 </div>
                 <div style="margin-top:16px; display:flex; justify-content:center; gap:10px; flex-wrap:wrap;">
                     <button onclick="if(views.leaderboards) views.leaderboards('Alliance Championship');" style="background:linear-gradient(135deg, #FFD700, #F59E0B); color:#000; font-weight:900; border:none; padding:8px 16px; border-radius:8px; font-size:12.5px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 0 12px rgba(255,215,0,0.3);">👑 View All-Time Leaderboard ➔</button>
+                    <button onclick="window.copyChampFullReport()" style="background:linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(6,182,212,0.08) 100%); border:1px solid rgba(6,182,212,0.4); color:var(--accent); padding:6px 14px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.3)'" onmouseout="this.style.background='rgba(6,182,212,0.2)'">📋 Copy Full Report</button>
                     <button onclick="window.openChampionshipArchiveVaultModal('live')" style="background:linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(6,182,212,0.08) 100%); border:1px solid rgba(6,182,212,0.4); color:var(--accent); padding:6px 14px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.3)'" onmouseout="this.style.background='rgba(6,182,212,0.2)'">📜 Championship Archive Vault</button>
                     ${adminActionBtn}
                 </div>

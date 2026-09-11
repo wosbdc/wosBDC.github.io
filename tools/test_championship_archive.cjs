@@ -71,6 +71,38 @@ function testChampionshipArchive() {
         }
     }
 
+    // Score removal & report generator assertions
+    if (code.includes('id="adm_champ_r${i}_our"')) {
+        errors.push('adm_champ_r${i}_our score input should NOT exist in championshipAdmin');
+    }
+    if (code.includes('id="adm_champ_r${i}_enemy_score"')) {
+        errors.push('adm_champ_r${i}_enemy_score score input should NOT exist in championshipAdmin');
+    }
+    if (code.includes('${ourScoreColor}')) {
+        errors.push('ourScoreColor should be removed from public championship view');
+    }
+    if (code.includes('${enemyScoreColor}')) {
+        errors.push('enemyScoreColor should be removed from public championship view');
+    }
+    if (!code.includes('window.getChampRoundReportData =')) {
+        errors.push('window.getChampRoundReportData should be defined');
+    }
+    if (!code.includes('window.copyChampRoundReport =')) {
+        errors.push('window.copyChampRoundReport should be defined');
+    }
+    if (!code.includes('window.copyChampFullReport =')) {
+        errors.push('window.copyChampFullReport should be defined');
+    }
+    if (!code.includes('window.copyChampRoundReport(${i})')) {
+        errors.push('Admin view should have Copy Report button for each round');
+    }
+    if (!code.includes('window.copyChampRoundReport(${rNum})')) {
+        errors.push('Public view should have Copy Report button for each round');
+    }
+    if (!code.includes('window.copyChampFullReport()')) {
+        errors.push('Full report copy button should be available');
+    }
+
     if (errors.length > 0) {
         console.error('FAILED: Championship Archive Test Failed:');
         errors.forEach(e => console.error('  - ' + e));

@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.37] - 2026-09-08
+- 🏆 **Score Box Removed**: Cleaned championship matchups view; scores removed from all cards.
+- 🚩 **Flag Victory Logic**: Winners and tournament records now determined strictly by flags.
+- 📋 **Copy Round Report**: One-click Discord battle report generator for each round.
+- 📜 **Full Season Report**: Header button generates and copies full tournament summary.
+
 ## [3.3.36] - 2026-09-08
 - 🧹 **Streamlined Cards**: Removed redundant filler status text from bot cards.
 - 📐 **Compact Layout**: Reduced card padding and height for tighter window footprint.

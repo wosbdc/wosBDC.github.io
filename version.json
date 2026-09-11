@@ -1,14 +1,17 @@
 {
-  "version": "3.3.36",
+  "version": "3.3.37",
   "releaseDate": "2026-09-08",
-  "title": "What's New in v3.3.36",
+  "title": "What's New in v3.3.37",
   "notes": [
-    "🧹 Streamlined Cards: Removed redundant filler status text from bot cards.",
-    "📐 Compact Layout: Reduced card padding and height for tighter window footprint."
+    "🏆 Score Box Removed: Cleaned championship matchups view; scores removed from all cards.",
+    "🚩 Flag Victory Logic: Winners and tournament records now determined strictly by flags.",
+    "📋 Copy Round Report: One-click Discord battle report generator for each round.",
+    "📜 Full Season Report: Header button generates and copies full tournament summary."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.36",
+    "version": "3.3.37",
     "latestChanges": [
+      "v3.3.37: Championship score removal, flag-driven victory logic, auto-report copying",
       "v3.3.36: Streamlined bot fleet cards to compact 2-line layout without filler text",
       "v3.3.35: Bot cards display Active Now and relative Last active times",
       "v3.3.34: Renamed Bots badge to Active Account, removed redundant label above account name",
