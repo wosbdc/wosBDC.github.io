@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.3.41] - 2026-09-08
+- 🚩 **Flags Row**: Season flags moved to separate row.
+- 📋 **Round Colon**: Added colon after round number in battle reports.
+
 ## [3.3.40] - 2026-09-08
 - 📐 **Centered Format**: Centered text formatting for championship battle reports.
 

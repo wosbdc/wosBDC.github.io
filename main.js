@@ -13869,7 +13869,7 @@ window.extractAllianceTagOnly = (name, fallbackNum = 1) => {
 window.copyChampRoundReport = (roundNum) => {
     const d = window.getChampRoundReportData(roundNum);
     const oppTag = window.extractAllianceTagOnly(d.enemyName, d.roundNum);
-    const text = `Alliance Championship Report\n            Round ${d.roundNum} ${d.outcome}\n   BDC: ${d.ourFlags} flags Vs ${oppTag} : ${d.enemyFlags} flags`;
+    const text = `Alliance Championship Report\n\n            Round ${d.roundNum}: ${d.outcome}\n   BDC: ${d.ourFlags} flags Vs ${oppTag} : ${d.enemyFlags} flags`;
 
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(text).then(() => {
@@ -13888,7 +13888,7 @@ window.copyChampFullReport = () => {
     for (let i = 1; i <= 5; i++) {
         const d = window.getChampRoundReportData(i);
         const oppTag = window.extractAllianceTagOnly(d.enemyName, d.roundNum);
-        roundsReports.push(`            Round ${d.roundNum} ${d.outcome}\n   BDC: ${d.ourFlags} flags Vs ${oppTag} : ${d.enemyFlags} flags`);
+        roundsReports.push(`            Round ${d.roundNum}: ${d.outcome}\n   BDC: ${d.ourFlags} flags Vs ${oppTag} : ${d.enemyFlags} flags`);
     }
 
     const fullText = `Alliance Championship Report\n\n${roundsReports.join('\n\n')}`;
@@ -32326,7 +32326,8 @@ const views = {
                             <span id="adm_champ_save_status" style="font-size:11.5px; color:#10b981; font-weight:bold; display:inline-flex; align-items:center; gap:5px;">☁️ Auto-Save Active</span>
                         </div>
                     </div>
-                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:14px;">
+                    <!-- Row 1: Season Name & Status Record -->
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:14px;">
                         <div>
                             <label style="display:block; font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:bold; margin-bottom:4px;">Season Name / Title</label>
                             <input type="text" id="adm_champ_season_name" value="${escapeHTML(seasonNameVal)}" oninput="window.triggerChampAutoSave()" placeholder="e.g. Upcoming Season" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box; font-weight:bold;">
@@ -32335,6 +32336,10 @@ const views = {
                             <label style="display:block; font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:bold; margin-bottom:4px;">🔒 Status Text / Record (Auto-Calculated)</label>
                             <input type="text" id="adm_champ_status_text" value="${escapeHTML(statusTextVal)}" readonly placeholder="0 Wins – 0 Losses" style="width:100%; padding:10px; border-radius:6px; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.03); color:var(--text-main); font-weight:bold; cursor:not-allowed; box-sizing:border-box;" title="This field automatically updates as scores are entered below">
                         </div>
+                    </div>
+
+                    <!-- Row 2: Season Flag Counts on their own line -->
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:14px;">
                         <div>
                             <label style="display:block; font-size:11px; text-transform:uppercase; color:#10b981; font-weight:bold; margin-bottom:4px;">🔒 🚩 Our Season Flags (Auto-Calculated)</label>
                             <input type="number" id="adm_champ_our_season_flags" value="${champMatchupData.ourSeasonFlags !== undefined ? champMatchupData.ourSeasonFlags : ''}" readonly placeholder="0" style="width:100%; padding:10px; border-radius:6px; border:1px solid rgba(16,185,129,0.3); background:rgba(16,185,129,0.05); color:#10b981; box-sizing:border-box; font-weight:900; font-family:var(--mono); font-size:16px; cursor:not-allowed;" title="Sum of all our round flags">
