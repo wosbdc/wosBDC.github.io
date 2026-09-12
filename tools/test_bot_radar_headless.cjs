@@ -525,7 +525,7 @@ server.listen(PORT, async () => {
     if (!mutationResult) {
       throw new Error('Assertion Failed: window.updateBotOperationsRadarDom function not found!');
     }
-    if (mutationResult.accountA !== 'AngryGermanpapi (Inst 15)' || !mutationResult.angryIsOccupiedA || mutationResult.angryTagA !== '⛔ DO NOT LOG IN') {
+    if (mutationResult.accountA !== 'AngryGermanpapi' || !mutationResult.angryIsOccupiedA || mutationResult.angryTagA !== '⛔ DO NOT LOG IN') {
       throw new Error(`Assertion Failed: Active bot safety warning failed! Result: ${JSON.stringify(mutationResult)}`);
     }
     if (!mutationResult.angryActivityA || !mutationResult.angryActivityA.includes('Active Now')) {
@@ -540,10 +540,10 @@ server.listen(PORT, async () => {
     if (!mutationResult.busyPillA.includes('1 OCCUPIED') || !mutationResult.safePillA.includes('6 SAFE TO LOGIN')) {
       throw new Error(`Assertion Failed: Fleet summary counters failed! Busy: "${mutationResult.busyPillA}", Safe: "${mutationResult.safePillA}"`);
     }
-    if (mutationResult.accountB !== 'Bisquick (Inst 11)' || !mutationResult.bisquickIsOccupiedB || !mutationResult.angryIsSafeB) {
+    if (mutationResult.accountB !== 'Bisquick' || !mutationResult.bisquickIsOccupiedB || !mutationResult.angryIsSafeB) {
       throw new Error(`Assertion Failed: Dynamic rotation between bots failed! Result: ${JSON.stringify(mutationResult)}`);
     }
-    if (mutationResult.cdAccountC !== 'ShrimpLeprechaun (Inst 14)' || mutationResult.accountC !== 'None' || !mutationResult.hasCooldownBorder || !mutationResult.shrimpIsCooldownC || !mutationResult.shrimpTagC.includes('Safe to log in')) {
+    if (mutationResult.cdAccountC !== 'ShrimpLeprechaun' || mutationResult.accountC !== 'None' || !mutationResult.hasCooldownBorder || !mutationResult.shrimpIsCooldownC || !mutationResult.shrimpTagC.includes('Safe to log in')) {
       throw new Error(`Assertion Failed: Cooldown resting state failed! Result: ${JSON.stringify(mutationResult)}`);
     }
     if (mutationResult.cdSubC !== 'Routine Rotation Rest') {
@@ -585,7 +585,7 @@ server.listen(PORT, async () => {
     if (mutationResult.clockDisplayE !== 'none') {
       throw new Error(`Assertion Failed: Expected Cooldown Clock to be hidden (display:none) in Step E, got "${mutationResult.clockDisplayE}"`);
     }
-    if (mutationResult.accountD !== 'AngryGermanpapi (Inst 15)' || mutationResult.cdAccountD !== 'ShrimpLeprechaun (Inst 14)' || mutationResult.clockD !== '02:00:00') {
+    if (mutationResult.accountD !== 'AngryGermanpapi' || mutationResult.cdAccountD !== 'ShrimpLeprechaun' || mutationResult.clockD !== '02:00:00') {
       throw new Error(`Assertion Failed: Decoupled dual telemetry failed! Result: ${JSON.stringify(mutationResult)}`);
     }
     if (!mutationResult.dualGridD || !mutationResult.runnerCardD || !mutationResult.cooldownCardD) {

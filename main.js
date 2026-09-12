@@ -5442,6 +5442,11 @@ window.getBotAutomationHealth = (data = window.latestBotStatus || {}) => {
   };
 };
 
+window.cleanBotRadarName = (name) => {
+  if (!name || typeof name !== 'string') return '';
+  return name.replace(/\s*\(Inst\s*-?\d+\)/gi, '').trim();
+};
+
 window.getBotCooldownInfo = (data = window.latestBotStatus || {}) => {
   const status = (data.status || '').toUpperCase();
   const rawStage = (data.stage || '').replace(/^[?\s\u{1F6E1}\uFE0F]+/u, '').trim();
@@ -5506,9 +5511,9 @@ window.getBotCooldownInfo = (data = window.latestBotStatus || {}) => {
   if (isBlackout || /castle\s*battle|bear\s*trap|quiet\s*hours|foundry/i.test(eventName)) {
     accountDisplay = 'All Bot Accounts';
   } else if (rawCdAcc && !rawCdAcc.includes('Inst -1') && !/castle|bear|foundry|blackout/i.test(rawCdAcc)) {
-    accountDisplay = rawCdAcc;
+    accountDisplay = window.cleanBotRadarName(rawCdAcc) || 'All Bot Accounts';
   } else if (status === 'COOLDOWN' && rawAcc && !rawAcc.includes('Inst -1') && !/castle|bear|foundry|blackout/i.test(rawAcc)) {
-    accountDisplay = rawAcc;
+    accountDisplay = window.cleanBotRadarName(rawAcc) || 'All Bot Accounts';
   } else {
     accountDisplay = 'All Bot Accounts';
   }
@@ -5713,7 +5718,8 @@ window.getBotOperationsRadarHtml = () => {
      Boolean(data.isCooldownRunning) ||
      cdInfo.isBlackout)
   );
-  const cdAccount = isOffline ? 'None' : (hasCooldown ? cdInfo.accountDisplay : 'None');
+  const rawCdAccount = isOffline ? 'None' : (hasCooldown ? cdInfo.accountDisplay : 'None');
+  const cdAccount = (rawCdAccount === 'None' || rawCdAccount === 'All Bot Accounts') ? rawCdAccount : window.cleanBotRadarName(rawCdAccount);
 
   // Active Runner MUST be executing tasks or status === ACTIVE, have a non-empty active account, and NOT be the cooldown account
   const isCandidateValid = (acc) => Boolean(
@@ -5728,13 +5734,14 @@ window.getBotOperationsRadarHtml = () => {
     ? data.activeAccount
     : ((status === 'ACTIVE' && isCandidateValid(data.account)) ? data.account : '');
 
+  const cleanCandidate = window.cleanBotRadarName(candidateActive);
   const hasActiveRunner = !isOffline && Boolean(
     candidateActive &&
     (status !== 'COOLDOWN') &&
     (data.isExecutingTasks === true || status === 'ACTIVE') &&
-    (!hasCooldown || candidateActive !== cdAccount)
+    (!hasCooldown || (cleanCandidate !== cdAccount && candidateActive !== cdAccount))
   );
-  const activeRunner = (isOffline || !hasActiveRunner) ? 'None' : candidateActive;
+  const activeRunner = (isOffline || !hasActiveRunner) ? 'None' : cleanCandidate;
   const runnerPillText = isOffline ? 'OFFLINE' : (hasActiveRunner ? '● IN PROGRESS' : '⚪ IDLE');
   const runnerColor = isOffline ? '#ef4444' : (hasActiveRunner ? '#10b981' : 'var(--text-muted)');
 
@@ -5902,7 +5909,8 @@ window.updateBotOperationsRadarDom = () => {
      Boolean(data.isCooldownRunning) ||
      cdInfo.isBlackout)
   );
-  const cdAccount = isOffline ? 'None' : (hasCooldown ? cdInfo.accountDisplay : 'None');
+  const rawCdAccount = isOffline ? 'None' : (hasCooldown ? cdInfo.accountDisplay : 'None');
+  const cdAccount = (rawCdAccount === 'None' || rawCdAccount === 'All Bot Accounts') ? rawCdAccount : window.cleanBotRadarName(rawCdAccount);
 
   // Active Runner MUST be executing tasks or status === ACTIVE, have a non-empty active account, and NOT be the cooldown account
   const isCandidateValid = (acc) => Boolean(
@@ -5917,13 +5925,14 @@ window.updateBotOperationsRadarDom = () => {
     ? data.activeAccount
     : ((status === 'ACTIVE' && isCandidateValid(data.account)) ? data.account : '');
 
+  const cleanCandidate = window.cleanBotRadarName(candidateActive);
   const hasActiveRunner = !isOffline && Boolean(
     candidateActive &&
     (status !== 'COOLDOWN') &&
     (data.isExecutingTasks === true || status === 'ACTIVE') &&
-    (!hasCooldown || candidateActive !== cdAccount)
+    (!hasCooldown || (cleanCandidate !== cdAccount && candidateActive !== cdAccount))
   );
-  const activeRunner = (isOffline || !hasActiveRunner) ? 'None' : candidateActive;
+  const activeRunner = (isOffline || !hasActiveRunner) ? 'None' : cleanCandidate;
   const runnerPillText = isOffline ? 'OFFLINE' : (hasActiveRunner ? '● IN PROGRESS' : '⚪ IDLE');
   const runnerColor = isOffline ? '#ef4444' : (hasActiveRunner ? '#10b981' : 'var(--text-muted)');
 

@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.3.44] - 2026-09-12
+- 🏷️ **Clean Bot Name**: Stripped instance tags from active and cooldown cards.
+- 📡 **Telemetry Sanitized**: Bot radar displays clean account names without instance numbers.
+
 ## [3.3.43] - 2026-09-08
 - 🤖 **Smart Radar**: Merged active and cooldown into dynamic deck.
 - 🧹 **Zero Filler**: Removed generic task and event text.
