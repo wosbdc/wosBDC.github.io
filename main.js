@@ -3780,8 +3780,8 @@ window.fetchMercenaryData = async () => {
         const finalGid = gid || existing.gameId || '';
         const finalName = cleanN || chiefName || existing.name || 'Chief';
         const finalSigned = (isSigned !== undefined && isSigned !== null && isSigned !== '') ? isT(isSigned) : (existing.signedUp !== undefined ? existing.signedUp : false);
-        const finalPhase = (phase && typeof phase === 'string' && phase.trim()) ? phase.trim() : (existing.phase || "Champion's Initiation");
-        const finalDiff = (difficulty && typeof difficulty === 'string' && difficulty.trim()) ? difficulty.trim() : (existing.difficulty || "Hard");
+        const finalPhase = (phase && typeof phase === 'string' && phase.trim()) ? phase.trim() : (existing.phase || "");
+        const finalDiff = (difficulty && typeof difficulty === 'string' && difficulty.trim()) ? difficulty.trim() : (existing.difficulty || "");
         const finalUpdated = lastUpdated || existing.lastUpdated || Date.now();
 
         const entry = {
@@ -3841,7 +3841,7 @@ window.fetchMercenaryData = async () => {
     if (window.idToNameMap) {
         Object.entries(window.idToNameMap).forEach(([gid, name]) => {
             if (!result[gid] && !result[name]) {
-                addEntry(gid, name, false, "Champion's Initiation", "Hard", Date.now());
+                addEntry(gid, name, false, "", "", Date.now());
             }
         });
     }
@@ -3850,7 +3850,7 @@ window.fetchMercenaryData = async () => {
     return result;
 };
 
-window.updateMercenaryTier = async (gameId, phase = "Champion's Initiation", difficulty = "Hard") => {
+window.updateMercenaryTier = async (gameId, phase = "", difficulty = "") => {
     if (!gameId) return false;
     const gIdStr = gameId.toString().trim();
     const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name || "Admin") : "Admin";
@@ -3920,10 +3920,11 @@ window.updateMercenaryTier = async (gameId, phase = "Champion's Initiation", dif
         }
     }
 
+    const tierDesc = (phase || difficulty) ? `${phase || 'None'}: ${difficulty || 'None'}` : 'Unassigned';
     if (window.logAdminAction) {
-        window.logAdminAction("Mercenary Prestige Tier Update", `Set ${playerName} to ${phase} (${difficulty})`, playerName);
+        window.logAdminAction("Mercenary Prestige Tier Update", `Set ${playerName} to ${tierDesc}`, playerName);
     }
-    if (window.showToast) window.showToast(`Updated ${playerName} ➔ ${phase}: ${difficulty}`, "success");
+    if (window.showToast) window.showToast(`Updated ${playerName} ➔ ${tierDesc}`, "success");
     return true;
 };
 
@@ -3937,6 +3938,12 @@ window.onMercTierChange = async (gameId) => {
     if (!phaseSel || !diffSel) return;
     const phase = phaseSel.value;
     const diff = diffSel.value;
+
+    phaseSel.style.color = phase ? 'var(--text-main)' : 'var(--text-muted)';
+    phaseSel.style.border = phase ? '1px solid var(--border)' : '1px solid rgba(239,68,68,0.35)';
+    diffSel.style.color = diff ? 'var(--text-main)' : 'var(--text-muted)';
+    diffSel.style.border = diff ? '1px solid var(--border)' : '1px solid rgba(239,68,68,0.35)';
+
     await window.updateMercenaryTier(gameId, phase, diff);
 };
 
@@ -4241,7 +4248,7 @@ window.archiveAndResetMercenaryCycle = async () => {
         return;
     }
 
-    const confirmFirst = await window.customConfirm("🔄 Archive & Reset Mercenary Prestige?\n\nThis will:\n1. Save a timestamped snapshot of current completions to Firebase archives.\n2. Update player lifetime stats (increment miss counters for incomplete members).\n3. Reset all completion statuses back to Not Done for the new event cycle.\n\nProceed?");
+    const confirmFirst = await window.customConfirm("🔄 Archive & Reset Mercenary Prestige?\n\nThis will:\n1. Save a timestamped snapshot of current completions and tiers to Firebase archives.\n2. Update player lifetime stats (increment miss counters for incomplete members).\n3. Reset all completion statuses, initiation phases, and difficulty tiers back to blank for the new event cycle.\n\nProceed?");
     if (!confirmFirst) return;
 
     const confirmSecond = await window.customConfirm("⚠️ FINAL CONFIRMATION:\n\nAre you sure you want to reset Mercenary Prestige now?");
@@ -4301,7 +4308,9 @@ window.archiveAndResetMercenaryCycle = async () => {
             playerSnapshots.push({
                 gameId: gidStr,
                 name: p.name,
-                signedUp: isDone
+                signedUp: isDone,
+                phase: (rec && rec.phase) ? rec.phase : "",
+                difficulty: (rec && rec.difficulty) ? rec.difficulty : ""
             });
 
             // Update lifetime player event stats
@@ -4343,15 +4352,30 @@ window.archiveAndResetMercenaryCycle = async () => {
         await set(ref(db, 'player_event_stats'), statsObj);
         window._playerEventStatsCache = statsObj;
 
-        // 3. Reset live Mercenary status in activity_live & mercenary
+        // 3. Reset live Mercenary status & tiers in activity_live & mercenary
         for (const p of rosterList) {
             const gidStr = p.gameId.toString().trim();
             try {
-                await update(ref(db, `activity_live/${gidStr}`), { mercenary: false, updatedAt: timestamp });
+                await update(ref(db, `activity_live/${gidStr}`), {
+                    mercenary: false,
+                    mercenaryPhase: "",
+                    mercenaryDifficulty: "",
+                    updatedAt: timestamp
+                });
             } catch(e) {
                 await set(ref(db, `activity_live/${gidStr}/mercenary`), false).catch(() => null);
+                await set(ref(db, `activity_live/${gidStr}/mercenaryPhase`), "").catch(() => null);
+                await set(ref(db, `activity_live/${gidStr}/mercenaryDifficulty`), "").catch(() => null);
             }
-            await set(ref(db, `mercenary/${gidStr}`), { gameId: gidStr, name: p.name, signedUp: false, lastUpdated: timestamp, updatedBy: adminName }).catch(() => null);
+            await set(ref(db, `mercenary/${gidStr}`), {
+                gameId: gidStr,
+                name: p.name,
+                signedUp: false,
+                phase: "",
+                difficulty: "",
+                lastUpdated: timestamp,
+                updatedBy: adminName
+            }).catch(() => null);
         }
 
         window.clearAllEventCaches();
@@ -4790,10 +4814,19 @@ window.restoreEventArchiveSnapshot = async (eventType, archiveKey) => {
             const isDone = Boolean(p.signedUp || p.donated);
 
             // Update live activity node
+            const liveUpdates = { [cfg.liveKey]: isDone, updatedAt: timestamp };
+            if (eventType === 'mercenary' || eventType === 'mercenary_prestige') {
+                liveUpdates.mercenaryPhase = p.phase || "";
+                liveUpdates.mercenaryDifficulty = p.difficulty || "";
+            }
             try {
-                await update(ref(db, `activity_live/${gidStr}`), { [cfg.liveKey]: isDone, updatedAt: timestamp });
+                await update(ref(db, `activity_live/${gidStr}`), liveUpdates);
             } catch(e) {
                 await set(ref(db, `activity_live/${gidStr}/${cfg.liveKey}`), isDone).catch(() => null);
+                if (eventType === 'mercenary' || eventType === 'mercenary_prestige') {
+                    await set(ref(db, `activity_live/${gidStr}/mercenaryPhase`), p.phase || "").catch(() => null);
+                    await set(ref(db, `activity_live/${gidStr}/mercenaryDifficulty`), p.difficulty || "").catch(() => null);
+                }
             }
 
             // Update dedicated event table
@@ -4805,6 +4838,10 @@ window.restoreEventArchiveSnapshot = async (eventType, archiveKey) => {
                 lastUpdated: timestamp,
                 updatedBy: adminName
             };
+            if (eventType === 'mercenary' || eventType === 'mercenary_prestige') {
+                tablePayload.phase = p.phase || "";
+                tablePayload.difficulty = p.difficulty || "";
+            }
             await set(ref(db, `${cfg.tableKey}/${gidStr}`), tablePayload).catch(() => null);
         }
 
@@ -33578,6 +33615,7 @@ const views = {
                   ⚡ Set All Initiation Phase:
                 </span>
                 <select id="mercBatchPhaseSelect" style="background:var(--bg-main); color:var(--text-main); border:1px solid var(--border); border-radius:8px; padding:6px 12px; font-size:13px; font-weight:bold; cursor:pointer;">
+                  <option value="">-- Select Phase to Apply --</option>
                   ${window.MERCENARY_PHASES.map(ph => `<option value="${escapeHTML(ph)}">${escapeHTML(ph)}</option>`).join('')}
                 </select>
                 <button id="mercApplyBatchPhaseBtn" onclick="window.applyBatchMercenaryPhase()" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:white; border:none; padding:7px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 6px rgba(37,99,235,0.3); transition:0.2s;">
@@ -33616,18 +33654,20 @@ const views = {
                       let gIdStr = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (p.name ? p.name.toLowerCase().replace(/[^a-z0-9]/g, '_') : '');
                       let record = (window.getEventRecord ? window.getEventRecord(mercenaryData, p) : null) || mercenaryData[gIdStr] || (p.name ? mercenaryData[p.name] : {}) || {};
                       let isDone = record && record.signedUp;
-                      let currentPhase = record.phase || "Champion's Initiation";
-                      let currentDiff = record.difficulty || "Hard";
+                      let currentPhase = (record && record.phase) ? record.phase : "";
+                      let currentDiff = (record && record.difficulty) ? record.difficulty : "";
                       return `
                         <tr class="merc-row" data-name="${escapeHTML((p.name || '').toLowerCase())}" data-gid="${gIdStr}" data-signed="${isDone ? 'yes' : 'no'}" style="border-bottom:1px solid var(--border);">
                           <td class="merc-name-cell" style="padding:14px 20px; font-weight:bold; color:var(--text-main); font-size:15px;">${escapeHTML(p.name)}</td>
                           <td style="padding:14px 10px;">
-                            <select id="merc_phase_${gIdStr}" onchange="window.onMercTierChange('${gIdStr}')" style="background:var(--bg-main); color:var(--text-main); border:1px solid var(--border); border-radius:6px; padding:6px 10px; font-size:12px; font-weight:bold;">
+                            <select id="merc_phase_${gIdStr}" onchange="window.onMercTierChange('${gIdStr}')" style="background:var(--bg-main); color:${currentPhase ? 'var(--text-main)' : 'var(--text-muted)'}; border:1px solid ${currentPhase ? 'var(--border)' : 'rgba(239,68,68,0.35)'}; border-radius:6px; padding:6px 10px; font-size:12px; font-weight:bold; cursor:pointer;">
+                              <option value="" ${!currentPhase ? 'selected' : ''}>-- Select Phase --</option>
                               ${window.MERCENARY_PHASES.map(ph => `<option value="${escapeHTML(ph)}" ${currentPhase === ph ? 'selected' : ''}>${escapeHTML(ph)}</option>`).join('')}
                             </select>
                           </td>
                           <td style="padding:14px 10px;">
-                            <select id="merc_diff_${gIdStr}" onchange="window.onMercTierChange('${gIdStr}')" style="background:var(--bg-main); color:var(--text-main); border:1px solid var(--border); border-radius:6px; padding:6px 10px; font-size:12px; font-weight:bold;">
+                            <select id="merc_diff_${gIdStr}" onchange="window.onMercTierChange('${gIdStr}')" style="background:var(--bg-main); color:${currentDiff ? 'var(--text-main)' : 'var(--text-muted)'}; border:1px solid ${currentDiff ? 'var(--border)' : 'rgba(239,68,68,0.35)'}; border-radius:6px; padding:6px 10px; font-size:12px; font-weight:bold; cursor:pointer;">
+                              <option value="" ${!currentDiff ? 'selected' : ''}>-- Select Tier --</option>
                               ${Object.entries(window.MERCENARY_DIFFICULTIES).map(([dk, dv]) => `<option value="${dk}" ${currentDiff === dk ? 'selected' : ''}>${dv.label}</option>`).join('')}
                             </select>
                           </td>
@@ -33798,7 +33838,10 @@ const views = {
             const sel = document.getElementById('mercBatchPhaseSelect');
             if (!sel) return;
             const targetPhase = sel.value;
-            if (!targetPhase) return;
+            if (!targetPhase) {
+                if (window.showToast) window.showToast("Please select an Initiation Phase to apply", "error");
+                return;
+            }
 
             const btn = document.getElementById('mercApplyBatchPhaseBtn');
             const rows = document.querySelectorAll('.merc-row');
@@ -33830,9 +33873,13 @@ const views = {
                 const pName = row.querySelector('.merc-name-cell')?.textContent?.trim() || '';
                 const phaseSelect = row.querySelector(`select[id^="merc_phase_"]`);
                 const diffSelect = row.querySelector(`select[id^="merc_diff_"]`);
-                const curDiff = diffSelect ? diffSelect.value : "Hard";
+                const curDiff = diffSelect ? diffSelect.value : "";
 
-                if (phaseSelect) phaseSelect.value = targetPhase;
+                if (phaseSelect) {
+                    phaseSelect.value = targetPhase;
+                    phaseSelect.style.color = targetPhase ? 'var(--text-main)' : 'var(--text-muted)';
+                    phaseSelect.style.border = targetPhase ? '1px solid var(--border)' : '1px solid rgba(239,68,68,0.35)';
+                }
 
                 if (gid) {
                     actUpdates[`${gid}/name`] = pName || 'Chief';
@@ -38650,7 +38697,8 @@ window.resetBearTrapEvent = async () => {
     }
   },
   mercenary: async () => {
-    if (!currentUser) return window.renderMembersOnlyGuard("Mercenary Prestige");
+    const activeUser = currentUser || window.currentUser;
+    if (!activeUser) return window.renderMembersOnlyGuard("Mercenary Prestige");
     renderLoading("Loading Mercenary Prestige...");
     const app = document.getElementById('app');
     if (!app) return;
@@ -38698,7 +38746,7 @@ window.resetBearTrapEvent = async () => {
         });
 
         let percentDone = totalCount > 0 ? Math.round((yesCount / totalCount) * 100) : 0;
-        const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+        const isManager = window.getAdminLevel(activeUser) === 'R5' || window.getAdminLevel(activeUser) === 'R4';
 
         window.switchMercView = (tab) => {
           const wallDiv = document.getElementById('mercViewWall');
@@ -38807,10 +38855,22 @@ window.resetBearTrapEvent = async () => {
               ` : championList.map(p => {
                 let gIdStr = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : (window.nameToIdMap?.[(p.name || '').toLowerCase()] || p.name || ''));
                 let record = window.getEventRecord(mercenaryData, p) || {};
-                let phase = record.phase || "Champion's Initiation";
-                let phaseStyle = (window.MERCENARY_PHASE_STYLES && window.MERCENARY_PHASE_STYLES[phase]) || window.MERCENARY_PHASE_STYLES["Champion's Initiation"];
-                let diffKey = record.difficulty || "Hard";
-                let diffConfig = window.MERCENARY_DIFFICULTIES[diffKey] || window.MERCENARY_DIFFICULTIES["Hard"];
+                let phase = record.phase || "";
+                let phaseStyle = (phase && window.MERCENARY_PHASE_STYLES && window.MERCENARY_PHASE_STYLES[phase]) || {
+                    icon: "🛡️",
+                    color: "#94a3b8",
+                    bg: "rgba(148,163,184,0.12)",
+                    border: "rgba(148,163,184,0.35)",
+                    gradient: "linear-gradient(135deg, #64748b, #475569)"
+                };
+                let diffKey = record.difficulty || "";
+                let diffConfig = (diffKey && window.MERCENARY_DIFFICULTIES[diffKey]) || {
+                    color: "#94a3b8",
+                    stars: "",
+                    bg: "rgba(148,163,184,0.2)",
+                    border: "rgba(148,163,184,0.3)",
+                    label: "Unassigned"
+                };
                 let avatarUrl = window.getAvatarUrl ? window.getAvatarUrl(gIdStr, p.name) : `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=eab308&color=fff`;
 
                 let crestGradient = "linear-gradient(135deg, #3b82f6, #1d4ed8)";
@@ -38824,6 +38884,8 @@ window.resetBearTrapEvent = async () => {
                   crestGradient = "linear-gradient(135deg, #d97706, #92400e)";
                 } else if (diffKey === "Easy") {
                   crestGradient = "linear-gradient(135deg, #64748b, #334155)";
+                } else if (!diffKey) {
+                  crestGradient = "linear-gradient(135deg, #475569, #334155)";
                 }
 
                 return `
@@ -38846,15 +38908,15 @@ window.resetBearTrapEvent = async () => {
                     <div style="background:${crestGradient}; color:#ffffff; border-radius:12px; padding:10px 14px; width:100%; box-sizing:border-box; box-shadow:0 4px 14px ${diffConfig.bg}; border:1px solid ${diffConfig.border}; display:flex; flex-direction:column; align-items:center; gap:4px;">
                       <!-- Initiation Phase Chip (Distinct Phase Color) -->
                       <div style="background:rgba(0,0,0,0.35); border:1px solid ${phaseStyle.color}; color:${phaseStyle.color}; font-size:10px; font-weight:bold; padding:2px 8px; border-radius:10px; text-transform:uppercase; letter-spacing:0.5px; display:inline-flex; align-items:center; margin-bottom:2px;">
-                        ${escapeHTML(phase)}
+                        ${escapeHTML(phase || 'Unassigned')}
                       </div>
                       <!-- Difficulty Title -->
                       <div style="font-weight:900; font-size:13px; text-transform:uppercase; letter-spacing:1px; text-shadow:0 1px 3px rgba(0,0,0,0.6);">
-                        ${diffKey}
+                        ${diffKey || 'Unassigned'}
                       </div>
                       <!-- Star Rating -->
                       <div style="font-size:12px; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.8)); margin-top:1px;">
-                        ${diffConfig.stars}
+                        ${diffConfig.stars || ''}
                       </div>
                     </div>
                   </div>
@@ -38878,10 +38940,22 @@ window.resetBearTrapEvent = async () => {
                       let gIdStr = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : (window.nameToIdMap?.[(p.name || '').toLowerCase()] || p.name || ''));
                       let record = window.getEventRecord(mercenaryData, p) || {};
                       let isDone = record && record.signedUp;
-                      let phase = record.phase || "Champion's Initiation";
-                      let phaseStyle = (window.MERCENARY_PHASE_STYLES && window.MERCENARY_PHASE_STYLES[phase]) || window.MERCENARY_PHASE_STYLES["Champion's Initiation"];
-                      let diffKey = record.difficulty || "Hard";
-                      let diffConfig = window.MERCENARY_DIFFICULTIES[diffKey] || window.MERCENARY_DIFFICULTIES["Hard"];
+                      let phase = record.phase || "";
+                      let phaseStyle = (phase && window.MERCENARY_PHASE_STYLES && window.MERCENARY_PHASE_STYLES[phase]) || {
+                          icon: "🛡️",
+                          color: "#94a3b8",
+                          bg: "rgba(148,163,184,0.12)",
+                          border: "rgba(148,163,184,0.35)",
+                          gradient: "linear-gradient(135deg, #64748b, #475569)"
+                      };
+                      let diffKey = record.difficulty || "";
+                      let diffConfig = (diffKey && window.MERCENARY_DIFFICULTIES[diffKey]) || {
+                          color: "#94a3b8",
+                          stars: "",
+                          bg: "rgba(148,163,184,0.2)",
+                          border: "rgba(148,163,184,0.3)",
+                          label: "Unassigned"
+                      };
                       let avatarUrl = window.getAvatarUrl ? window.getAvatarUrl(gIdStr, p.name) : `https://ui-avatars.com/api/?name=${encodeURIComponent(p.name)}&background=3b82f6&color=fff`;
                       return `
                         <tr class="merc-pub-row" data-name="${escapeHTML(p.name.toLowerCase())}" data-phase="${escapeHTML(phase)}" data-diff="${escapeHTML(diffKey)}" style="border-bottom:1px solid rgba(255,255,255,0.05); transition:background 0.2s;">
@@ -38892,8 +38966,10 @@ window.resetBearTrapEvent = async () => {
                           <td style="padding:12px 16px; font-size:12px;">
                             ${isDone ? `
                               <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                                <span style="background:${phaseStyle.bg}; border:1px solid ${phaseStyle.border}; color:${phaseStyle.color}; font-weight:bold; padding:2px 8px; border-radius:10px; font-size:11px;">${phaseStyle.icon} ${escapeHTML(phase)}</span>
-                                <span style="color:${diffConfig.color}; font-weight:bold;">${diffConfig.label}</span>
+                                ${(phase || diffKey) ? `
+                                  ${phase ? `<span style="background:${phaseStyle.bg}; border:1px solid ${phaseStyle.border}; color:${phaseStyle.color}; font-weight:bold; padding:2px 8px; border-radius:10px; font-size:11px;">${phaseStyle.icon} ${escapeHTML(phase)}</span>` : ''}
+                                  ${diffKey ? `<span style="color:${diffConfig.color}; font-weight:bold;">${diffConfig.label}</span>` : ''}
+                                ` : `<span style="color:var(--text-muted);">Unassigned</span>`}
                               </div>
                             ` : `<span style="color:var(--text-muted);">-</span>`}
                           </td>

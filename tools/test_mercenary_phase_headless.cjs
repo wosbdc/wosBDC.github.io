@@ -69,6 +69,9 @@ function runStaticVerification() {
   assert(code.includes('id="mercBatchPhaseSelect"'), 'Must include mercBatchPhaseSelect in admin HTML');
   assert(code.includes('id="mercApplyBatchPhaseBtn"'), 'Must include mercApplyBatchPhaseBtn in admin HTML');
   assert(code.includes('window.getEventRecord(mercenaryData, p)'), 'Must use window.getEventRecord for resolving records');
+  assert(code.includes('-- Select Phase --'), 'Must include placeholder -- Select Phase --');
+  assert(code.includes('-- Select Tier --'), 'Must include placeholder -- Select Tier --');
+  assert(code.includes('-- Select Phase to Apply --'), 'Must include placeholder -- Select Phase to Apply --');
 
   console.log('  ✅ All structural assertions passed successfully.');
 }
@@ -156,9 +159,9 @@ async function runHeadlessBrowserTests() {
       window.isPlayerActiveMember = () => true;
 
       const mockMercData = {
-        '705413646': { gameId: '705413646', name: 'thadwarf', signedUp: false, phase: "Champion's Initiation", difficulty: "Hard" },
-        '111222333': { gameId: '111222333', name: 'FrostBite', signedUp: true, phase: "Champion's Initiation", difficulty: "Hard" },
-        '444555666': { gameId: '444555666', name: 'ShadowHunter', signedUp: false, phase: "Champion's Initiation", difficulty: "Hard" }
+        '705413646': { gameId: '705413646', name: 'thadwarf', signedUp: false, phase: "", difficulty: "" },
+        '111222333': { gameId: '111222333', name: 'FrostBite', signedUp: true, phase: "", difficulty: "" },
+        '444555666': { gameId: '444555666', name: 'ShadowHunter', signedUp: false, phase: "", difficulty: "" }
       };
       window.fetchMercenaryData = async () => {
         window.mercenaryCache = mockMercData;
@@ -174,7 +177,7 @@ async function runHeadlessBrowserTests() {
 
     await new Promise(r => setTimeout(r, 600));
 
-    // Test 1: DOM existence of Roster Table and Selects
+    // Test 1: DOM existence of Roster Table and Selects, verifying blank default state
     const rowCount = await page.evaluate(() => document.querySelectorAll('.merc-row').length);
     console.log(`  📊 Rendered ${rowCount} roster rows in Mercenary Admin table`);
     assert(rowCount >= 3, `Expected at least 3 rows, got ${rowCount}`);
@@ -183,29 +186,56 @@ async function runHeadlessBrowserTests() {
     const batchBtnExists = await page.evaluate(() => !!document.getElementById('mercApplyBatchPhaseBtn'));
     assert(batchSelectExists, 'mercBatchPhaseSelect must be rendered in DOM');
     assert(batchBtnExists, 'mercApplyBatchPhaseBtn must be rendered in DOM');
-    console.log('  ✅ Batch Set All Phase toolbar exists and is rendered');
+
+    const batchDefaultVal = await page.evaluate(() => document.getElementById('mercBatchPhaseSelect').value);
+    assert.strictEqual(batchDefaultVal, "", "mercBatchPhaseSelect must default to empty string placeholder");
+    console.log('  ✅ Batch Set All Phase toolbar exists and defaults to empty placeholder');
+
+    // Verify row dropdowns start blank
+    const firstGid = '705413646';
+    const initialPhaseVal = await page.evaluate((gid) => document.getElementById(`merc_phase_${gid}`)?.value, firstGid);
+    const initialDiffVal = await page.evaluate((gid) => document.getElementById(`merc_diff_${gid}`)?.value, firstGid);
+    console.log(`  Initial phase for ${firstGid}: "${initialPhaseVal}", diff: "${initialDiffVal}"`);
+    assert.strictEqual(initialPhaseVal, "", "Initiation Phase must initialize to blank until selected");
+    assert.strictEqual(initialDiffVal, "", "Difficulty Tier must initialize to blank until selected");
+    console.log('  ✅ Unassigned members correctly show blank phase and tier dropdowns');
 
     // Test 2: Test individual select change
-    const firstGid = '705413646';
     const phaseSelectId = `merc_phase_${firstGid}`;
-    const initialPhaseVal = await page.evaluate((id) => document.getElementById(id)?.value, phaseSelectId);
-    console.log(`  Initial phase for ${firstGid}: "${initialPhaseVal}"`);
+    const diffSelectId = `merc_diff_${firstGid}`;
 
-    // Mutate first select to "Epic Initiation"
+    // Mutate first select to "Epic Initiation" and "Insane"
     await page.evaluate(async (gid) => {
-      const sel = document.getElementById(`merc_phase_${gid}`);
-      sel.value = "Epic Initiation";
+      const pSel = document.getElementById(`merc_phase_${gid}`);
+      const dSel = document.getElementById(`merc_diff_${gid}`);
+      pSel.value = "Epic Initiation";
+      dSel.value = "Insane";
       await window.onMercTierChange(gid);
     }, firstGid);
 
     const updatedPhaseVal = await page.evaluate((id) => document.getElementById(id)?.value, phaseSelectId);
+    const updatedDiffVal = await page.evaluate((id) => document.getElementById(id)?.value, diffSelectId);
     assert.strictEqual(updatedPhaseVal, "Epic Initiation", "Phase select must update to Epic Initiation");
+    assert.strictEqual(updatedDiffVal, "Insane", "Difficulty select must update to Insane");
 
-    const cacheValue = await page.evaluate((gid) => window.mercenaryCache?.[gid]?.phase, firstGid);
-    assert.strictEqual(cacheValue, "Epic Initiation", "In-memory cache must reflect updated phase immediately");
-    console.log('  ✅ Individual Initiation Phase select update and cache sync verified');
+    const cacheValue = await page.evaluate((gid) => window.mercenaryCache?.[gid], firstGid);
+    assert.strictEqual(cacheValue?.phase, "Epic Initiation", "In-memory cache must reflect updated phase immediately");
+    assert.strictEqual(cacheValue?.difficulty, "Insane", "In-memory cache must reflect updated difficulty immediately");
+    console.log('  ✅ Individual Initiation Phase and Tier select update and cache sync verified');
 
-    // Test 3: Test Batch "Set All Initiation Phase"
+    // Test 3: Test Batch "Set All Initiation Phase" validation on empty selection
+    const toastMessage = await page.evaluate(async () => {
+      let toast = '';
+      window.showToast = (msg) => { toast = msg; };
+      const batchSel = document.getElementById('mercBatchPhaseSelect');
+      batchSel.value = "";
+      await window.applyBatchMercenaryPhase();
+      return toast;
+    });
+    assert(toastMessage.includes("Please select"), "Batch phase apply must show error toast when no phase selected");
+    console.log('  ✅ Batch phase apply correctly rejected empty target phase');
+
+    // Test 4: Test Batch "Set All Initiation Phase" with valid selection
     await page.evaluate(async () => {
       // Auto-confirm dialog
       window.confirm = () => true;
@@ -223,6 +253,23 @@ async function runHeadlessBrowserTests() {
     assert(allPhases.length >= 3, 'Must have at least 3 phase selects');
     assert(allPhases.every(ph => ph === "Legend's Initiation"), "All phase selects must now be 'Legend\'s Initiation'");
     console.log('  ✅ Batch "Set All Initiation Phase" successfully mutated all roster dropdowns');
+
+    // Test 5: Verify Public View (views.mercenary) renders safely with blank or assigned values
+    const publicResult = await page.evaluate(async () => {
+      try {
+        if (window.views && window.views.mercenary) {
+          await window.views.mercenary();
+          return {
+            hasWall: !!document.getElementById('mercViewWall')
+          };
+        }
+        return { error: 'window.views.mercenary not found' };
+      } catch (e) {
+        return { error: e.message, stack: e.stack };
+      }
+    });
+    assert(publicResult.hasWall, "Public Mercenary view Wall must render without errors: " + JSON.stringify(publicResult));
+    console.log('  ✅ Public Mercenary view (views.mercenary) rendered cleanly with 0 exceptions');
 
     // Test 4: Responsive Viewport Checks (zero horizontal overflow)
     const viewports = [

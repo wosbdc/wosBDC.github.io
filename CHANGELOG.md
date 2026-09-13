@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.46] - 2026-09-13
+- ⚪ **Blank Dropdowns**: Initiation Phase and Difficulty Tier start blank until selected.
+- 🔄 **Cycle Reset**: Resetting mercenary cycles restores dropdowns back to blank.
+- ⚡ **Batch Validation**: Prevents batch phase application if no phase is chosen.
+- 🛡️ **Public View**: Safely displays unassigned members on the public roster.
+
 ## [3.3.45] - 2026-09-13
 - ⚔️ **Phase Dropdowns**: Fixed Initiation Phase dropdowns to save reliably without resetting.
 - ⚡ **Set All Tool**: Added one-click batch tool to set all Initiation Phases.

@@ -1,15 +1,16 @@
 {
-  "version": "3.3.45",
+  "version": "3.3.46",
   "releaseDate": "2026-09-13",
-  "title": "What's New in v3.3.45",
+  "title": "What's New in v3.3.46",
   "notes": [
-    "⚔️ Phase Dropdowns: Fixed Initiation Phase dropdowns to save reliably without resetting.",
-    "⚡ Set All Tool: Added one-click batch tool to set all Initiation Phases.",
-    "🔄 Safe Sync: Prevented data clobbering between live activity and mercenary records."
+    "⚪ Blank Dropdowns: Initiation Phase and Difficulty Tier start blank until selected.",
+    "🔄 Cycle Reset: Resetting mercenary cycles restores dropdowns back to blank.",
+    "⚡ Batch Validation: Prevents batch phase application if no phase is chosen."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.45",
+    "version": "3.3.46",
     "latestChanges": [
+      "v3.3.46: Blank mercenary dropdowns until selected and reset integration",
       "v3.3.45: Fixed Mercenary Initiation Phase dropdowns and added Set All batch tool",
       "v3.3.44: Removed instance tags from bot names on operations radar",
       "v3.3.43: Merged active and cooldown into dynamic smart deck and removed filler text",
