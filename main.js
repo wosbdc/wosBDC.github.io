@@ -3768,23 +3768,31 @@ window.MERCENARY_DIFFICULTIES = {
     "Insane": { label: "Insane ⭐⭐⭐⭐⭐", stars: "⭐⭐⭐⭐⭐", color: "#ef4444", bg: "rgba(239,68,68,0.15)", border: "rgba(239,68,68,0.4)" }
 };
 
-// Fetch Mercenary Prestige Data natively from single master node activity_live
+// Fetch Mercenary Prestige Data natively from master node activity_live and mercenary node
 window.fetchMercenaryData = async () => {
     if (window.mercenaryCache) return window.mercenaryCache;
     const result = {};
     const isT = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
 
     const addEntry = (gid, chiefName, isSigned, phase, difficulty, lastUpdated) => {
-        const cleanN = window.cleanChiefName(chiefName);
+        const cleanN = window.cleanChiefName ? window.cleanChiefName(chiefName) : chiefName;
+        const existing = (gid && result[gid]) || (chiefName && result[chiefName]) || (cleanN && result[cleanN]) || {};
+        const finalGid = gid || existing.gameId || '';
+        const finalName = cleanN || chiefName || existing.name || 'Chief';
+        const finalSigned = (isSigned !== undefined && isSigned !== null && isSigned !== '') ? isT(isSigned) : (existing.signedUp !== undefined ? existing.signedUp : false);
+        const finalPhase = (phase && typeof phase === 'string' && phase.trim()) ? phase.trim() : (existing.phase || "Champion's Initiation");
+        const finalDiff = (difficulty && typeof difficulty === 'string' && difficulty.trim()) ? difficulty.trim() : (existing.difficulty || "Hard");
+        const finalUpdated = lastUpdated || existing.lastUpdated || Date.now();
+
         const entry = {
-            gameId: gid,
-            name: cleanN || chiefName,
-            signedUp: isSigned,
-            phase: phase || "Champion's Initiation",
-            difficulty: difficulty || "Hard",
-            lastUpdated: lastUpdated || Date.now()
+            gameId: finalGid,
+            name: finalName,
+            signedUp: finalSigned,
+            phase: finalPhase,
+            difficulty: finalDiff,
+            lastUpdated: finalUpdated
         };
-        if (gid) result[gid] = entry;
+        if (finalGid) result[finalGid] = entry;
         if (chiefName) {
             result[chiefName] = entry;
             result[chiefName.toLowerCase()] = entry;
@@ -3806,12 +3814,28 @@ window.fetchMercenaryData = async () => {
                     if (rec && typeof rec === 'object') {
                         const gid = rec.gameId ? String(rec.gameId).trim() : (/^\d{6,}$/.test(k) ? k : (window.nameToIdMap?.[k.toLowerCase()] || ''));
                         const chiefName = rec.name || (gid && window.idToNameMap ? window.idToNameMap[gid] : '') || (!/^\d+$/.test(k) ? k : 'Chief');
-                        addEntry(gid, chiefName, isT(rec.mercenary), rec.mercenaryPhase, rec.mercenaryDifficulty, rec.updatedAt);
+                        addEntry(gid, chiefName, rec.mercenary, rec.mercenaryPhase, rec.mercenaryDifficulty, rec.updatedAt);
                     }
                 });
             }
         }
     } catch(e) { console.warn("Firebase activity_live mercenary read error:", e); }
+
+    try {
+        const mercSnap = await get(ref(db, 'mercenary'));
+        if (mercSnap.exists()) {
+            const mObj = mercSnap.val() || {};
+            if (typeof mObj === 'object') {
+                Object.entries(mObj).forEach(([k, rec]) => {
+                    if (rec && typeof rec === 'object' && k !== 'boss_progress') {
+                        const gid = rec.gameId ? String(rec.gameId).trim() : (/^\d{6,}$/.test(k) ? k : (window.nameToIdMap?.[k.toLowerCase()] || ''));
+                        const chiefName = rec.name || (gid && window.idToNameMap ? window.idToNameMap[gid] : '') || (!/^\d+$/.test(k) ? k : 'Chief');
+                        addEntry(gid, chiefName, rec.signedUp, rec.phase, rec.difficulty, rec.lastUpdated);
+                    }
+                });
+            }
+        }
+    } catch(e) { console.warn("Firebase mercenary node read error:", e); }
 
     // Ensure all roster players are represented
     if (window.idToNameMap) {
@@ -3832,8 +3856,34 @@ window.updateMercenaryTier = async (gameId, phase = "Champion's Initiation", dif
     const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name || "Admin") : "Admin";
     let data = {};
     try { data = await window.fetchMercenaryData(); } catch(e) { console.error(e); }
-    const existing = data[gIdStr] || { gameId: gIdStr, name: 'Chief' };
+    const existing = (window.getEventRecord ? window.getEventRecord(data, { gameId: gIdStr, name: window.idToNameMap?.[gIdStr] }) : null) || data[gIdStr] || { gameId: gIdStr, name: (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief' };
     const playerName = existing.name || (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief';
+
+    // Immediately update in-memory cache to prevent race conditions
+    if (window.mercenaryCache) {
+        const updateObj = (obj) => {
+            if (!obj) return;
+            obj.phase = phase;
+            obj.difficulty = difficulty;
+            obj.lastUpdated = Date.now();
+        };
+        updateObj(window.mercenaryCache[gIdStr]);
+        updateObj(window.mercenaryCache[playerName]);
+        if (playerName) {
+            updateObj(window.mercenaryCache[playerName.toLowerCase()]);
+            const cleanN = window.cleanChiefName ? window.cleanChiefName(playerName) : playerName;
+            if (cleanN) {
+                updateObj(window.mercenaryCache[cleanN]);
+                updateObj(window.mercenaryCache[cleanN.toLowerCase()]);
+            }
+        }
+    }
+
+    // Keep DOM select inputs aligned if present
+    const pSel = document.getElementById(`merc_phase_${gIdStr}`);
+    if (pSel && pSel.value !== phase) pSel.value = phase;
+    const dSel = document.getElementById(`merc_diff_${gIdStr}`);
+    if (dSel && dSel.value !== difficulty) dSel.value = difficulty;
 
     try {
         await update(ref(db, `activity_live/${gIdStr}`), {
@@ -3842,15 +3892,34 @@ window.updateMercenaryTier = async (gameId, phase = "Champion's Initiation", dif
             mercenaryDifficulty: difficulty,
             updatedAt: Date.now()
         });
-    } catch(e) {}
+    } catch(e) {
+        try {
+            const snap = await get(ref(db, `activity_live/${gIdStr}`));
+            const currentRec = (snap && snap.exists()) ? snap.val() : { name: playerName };
+            currentRec.name = playerName;
+            currentRec.mercenaryPhase = phase;
+            currentRec.mercenaryDifficulty = difficulty;
+            currentRec.updatedAt = Date.now();
+            await set(ref(db, `activity_live/${gIdStr}`), currentRec);
+        } catch(setErr) {
+            console.error("Failed to update activity_live for mercenary tier:", setErr);
+        }
+    }
 
     try {
         await update(ref(db, `mercenary/${gIdStr}`), {
             gameId: gIdStr, name: playerName, phase: phase, difficulty: difficulty, lastUpdated: Date.now(), updatedBy: adminName
         });
-    } catch(e) {}
+    } catch(e) {
+        try {
+            await set(ref(db, `mercenary/${gIdStr}`), {
+                gameId: gIdStr, name: playerName, signedUp: !!existing.signedUp, phase: phase, difficulty: difficulty, lastUpdated: Date.now(), updatedBy: adminName
+            });
+        } catch(setErr) {
+            console.error("Failed to update mercenary node:", setErr);
+        }
+    }
 
-    window.clearAllEventCaches();
     if (window.logAdminAction) {
         window.logAdminAction("Mercenary Prestige Tier Update", `Set ${playerName} to ${phase} (${difficulty})`, playerName);
     }
@@ -3859,6 +3928,10 @@ window.updateMercenaryTier = async (gameId, phase = "Champion's Initiation", dif
 };
 
 window.onMercTierChange = async (gameId) => {
+    window._isLocalToggleActive = true;
+    clearTimeout(window._localToggleTimeout);
+    window._localToggleTimeout = setTimeout(() => { window._isLocalToggleActive = false; }, 2000);
+
     const phaseSel = document.getElementById(`merc_phase_${gameId}`);
     const diffSel = document.getElementById(`merc_diff_${gameId}`);
     if (!phaseSel || !diffSel) return;
@@ -3898,10 +3971,16 @@ window.toggleMercenaryStatus = async (gameId, forceStatus = null) => {
 
         // 2. Secondary write for legacy node
         try {
-            await set(ref(db, `mercenary/${gIdStr}`), {
-                gameId: gIdStr, name: playerName, signedUp: newSignedUpStatus, lastUpdated: Date.now(), updatedBy: adminName
+            await update(ref(db, `mercenary/${gIdStr}`), {
+                gameId: gIdStr, name: playerName, signedUp: newSignedUpStatus, phase: existing.phase || "Champion's Initiation", difficulty: existing.difficulty || "Hard", lastUpdated: Date.now(), updatedBy: adminName
             });
-        } catch(e) {}
+        } catch(e) {
+            try {
+                await set(ref(db, `mercenary/${gIdStr}`), {
+                    gameId: gIdStr, name: playerName, signedUp: newSignedUpStatus, phase: existing.phase || "Champion's Initiation", difficulty: existing.difficulty || "Hard", lastUpdated: Date.now(), updatedBy: adminName
+                });
+            } catch(sErr) {}
+        }
 
         window.clearAllEventCaches();
 
@@ -6224,17 +6303,17 @@ window.setupUserRealtimeSync = (uid) => {
 // Global Realtime Master Listener for Live Event Status across all devices
 let _isFirstActivityLoad = true;
 onValue(ref(db, 'activity_live'), async (snap) => {
+  // Skip full-page re-renders and cache clearing while the user is actively clicking/toggling locally
+  if (window._isLocalToggleActive) {
+    return;
+  }
+
   if (typeof window.clearAllEventCaches === 'function') {
     window.clearAllEventCaches();
   }
 
   if (_isFirstActivityLoad) {
     _isFirstActivityLoad = false;
-    return;
-  }
-
-  // Skip full-page re-renders while the user is actively clicking/toggling locally
-  if (window._isLocalToggleActive) {
     return;
   }
 
@@ -33490,6 +33569,23 @@ const views = {
                   📋 Copy Not Done List for Chat
                 </button>
               </div>
+            </div>
+
+            <!-- Bulk Action Toolbar -->
+            <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:12px 16px; display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:space-between;">
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <span style="font-size:13px; font-weight:bold; color:var(--text-main); display:flex; align-items:center; gap:6px;">
+                  ⚡ Set All Initiation Phase:
+                </span>
+                <select id="mercBatchPhaseSelect" style="background:var(--bg-main); color:var(--text-main); border:1px solid var(--border); border-radius:8px; padding:6px 12px; font-size:13px; font-weight:bold; cursor:pointer;">
+                  ${window.MERCENARY_PHASES.map(ph => `<option value="${escapeHTML(ph)}">${escapeHTML(ph)}</option>`).join('')}
+                </select>
+                <button id="mercApplyBatchPhaseBtn" onclick="window.applyBatchMercenaryPhase()" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:white; border:none; padding:7px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 6px rgba(37,99,235,0.3); transition:0.2s;">
+                  Apply to All
+                </button>
+              </div>
+              <div style="font-size:12px; color:var(--text-muted);">
+                Changes phase for all ${totalCount} members in one click
               </div>
             </div>
 
@@ -33518,7 +33614,7 @@ const views = {
                 <tbody id="mercTableBody">
                   ${rosterList.map(p => {
                       let gIdStr = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (p.name ? p.name.toLowerCase().replace(/[^a-z0-9]/g, '_') : '');
-                      let record = mercenaryData[gIdStr] || {};
+                      let record = (window.getEventRecord ? window.getEventRecord(mercenaryData, p) : null) || mercenaryData[gIdStr] || (p.name ? mercenaryData[p.name] : {}) || {};
                       let isDone = record && record.signedUp;
                       let currentPhase = record.phase || "Champion's Initiation";
                       let currentDiff = record.difficulty || "Hard";
@@ -33696,6 +33792,105 @@ const views = {
                     row.style.display = 'none';
                 }
             });
+        };
+
+        window.applyBatchMercenaryPhase = async () => {
+            const sel = document.getElementById('mercBatchPhaseSelect');
+            if (!sel) return;
+            const targetPhase = sel.value;
+            if (!targetPhase) return;
+
+            const btn = document.getElementById('mercApplyBatchPhaseBtn');
+            const rows = document.querySelectorAll('.merc-row');
+            if (!rows || rows.length === 0) {
+                if (window.showToast) window.showToast("No members found to update", "info");
+                return;
+            }
+
+            if (!confirm(`Are you sure you want to set Initiation Phase to "${targetPhase}" for ALL ${rows.length} members?`)) {
+                return;
+            }
+
+            window._isLocalToggleActive = true;
+            clearTimeout(window._localToggleTimeout);
+            window._localToggleTimeout = setTimeout(() => { window._isLocalToggleActive = false; }, 3000);
+
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = "Updating...";
+            }
+
+            const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name || "Admin") : "Admin";
+            const actUpdates = {};
+            const mercUpdates = {};
+            const now = Date.now();
+
+            rows.forEach(row => {
+                const gid = row.getAttribute('data-gid');
+                const pName = row.querySelector('.merc-name-cell')?.textContent?.trim() || '';
+                const phaseSelect = row.querySelector(`select[id^="merc_phase_"]`);
+                const diffSelect = row.querySelector(`select[id^="merc_diff_"]`);
+                const curDiff = diffSelect ? diffSelect.value : "Hard";
+
+                if (phaseSelect) phaseSelect.value = targetPhase;
+
+                if (gid) {
+                    actUpdates[`${gid}/name`] = pName || 'Chief';
+                    actUpdates[`${gid}/mercenaryPhase`] = targetPhase;
+                    actUpdates[`${gid}/mercenaryDifficulty`] = curDiff;
+                    actUpdates[`${gid}/updatedAt`] = now;
+
+                    mercUpdates[`${gid}/gameId`] = gid;
+                    mercUpdates[`${gid}/name`] = pName || 'Chief';
+                    mercUpdates[`${gid}/phase`] = targetPhase;
+                    mercUpdates[`${gid}/difficulty`] = curDiff;
+                    mercUpdates[`${gid}/lastUpdated`] = now;
+                    mercUpdates[`${gid}/updatedBy`] = adminName;
+                }
+
+                if (window.mercenaryCache) {
+                    const updateObj = (obj) => {
+                        if (!obj) return;
+                        obj.phase = targetPhase;
+                        obj.lastUpdated = now;
+                    };
+                    if (gid) updateObj(window.mercenaryCache[gid]);
+                    if (pName) {
+                        updateObj(window.mercenaryCache[pName]);
+                        updateObj(window.mercenaryCache[pName.toLowerCase()]);
+                        const cleanN = window.cleanChiefName ? window.cleanChiefName(pName) : pName;
+                        if (cleanN) {
+                            updateObj(window.mercenaryCache[cleanN]);
+                            updateObj(window.mercenaryCache[cleanN.toLowerCase()]);
+                        }
+                    }
+                }
+            });
+
+            try {
+                await update(ref(db, 'activity_live'), actUpdates);
+            } catch(e) {
+                console.warn("Batch activity_live update error:", e);
+            }
+
+            try {
+                await update(ref(db, 'mercenary'), mercUpdates);
+            } catch(e) {
+                console.warn("Batch mercenary update error:", e);
+            }
+
+            if (window.logAdminAction) {
+                window.logAdminAction("Mercenary Prestige Batch Phase", `Set all ${rows.length} members to ${targetPhase}`);
+            }
+
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = "Apply to All";
+            }
+
+            if (window.showToast) {
+                window.showToast(`Successfully set Initiation Phase to "${targetPhase}" for all members!`, "success");
+            }
         };
 
     } catch(e) {

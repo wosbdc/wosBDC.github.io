@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.45] - 2026-09-13
+- ⚔️ **Phase Dropdowns**: Fixed Initiation Phase dropdowns to save reliably without resetting.
+- ⚡ **Set All Tool**: Added one-click batch tool to set all Initiation Phases.
+- 🔄 **Safe Sync**: Prevented data clobbering between live activity and mercenary records.
+
 ## [3.3.44] - 2026-09-12
 - 🏷️ **Clean Bot Name**: Stripped instance tags from active and cooldown cards.
 - 📡 **Telemetry Sanitized**: Bot radar displays clean account names without instance numbers.

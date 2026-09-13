@@ -1,14 +1,16 @@
 {
-  "version": "3.3.44",
-  "releaseDate": "2026-09-12",
-  "title": "What's New in v3.3.44",
+  "version": "3.3.45",
+  "releaseDate": "2026-09-13",
+  "title": "What's New in v3.3.45",
   "notes": [
-    "🏷️ Clean Bot Name: Stripped instance tags from active and cooldown cards.",
-    "📡 Telemetry Sanitized: Bot radar displays clean account names without instance numbers."
+    "⚔️ Phase Dropdowns: Fixed Initiation Phase dropdowns to save reliably without resetting.",
+    "⚡ Set All Tool: Added one-click batch tool to set all Initiation Phases.",
+    "🔄 Safe Sync: Prevented data clobbering between live activity and mercenary records."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.44",
+    "version": "3.3.45",
     "latestChanges": [
+      "v3.3.45: Fixed Mercenary Initiation Phase dropdowns and added Set All batch tool",
       "v3.3.44: Removed instance tags from bot names on operations radar",
       "v3.3.43: Merged active and cooldown into dynamic smart deck and removed filler text",
       "v3.3.42: Cooldown bot cards display Last Active relative times and safe to login tag",
