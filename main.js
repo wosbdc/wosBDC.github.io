@@ -15501,6 +15501,8 @@ window.openAdminNoteModal = (itemId, currentNote = '', currentCategory = '', cur
     const existing = document.getElementById('feedbackAdminNoteModal');
     if (existing) existing.remove();
 
+    const currentVersionTag = 'v' + ((pkg && pkg.version) ? String(pkg.version).replace(/^v/i, '') : '3.3.47');
+
     const overlay = document.createElement('div');
     overlay.id = 'feedbackAdminNoteModal';
     overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:99999; display:flex; align-items:center; justify-content:center; padding:16px; box-sizing:border-box; animation: fadeIn 0.2s ease;';
@@ -15541,7 +15543,7 @@ window.openAdminNoteModal = (itemId, currentNote = '', currentCategory = '', cur
             <div>
                 <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Quick Templates (Click to insert):</label>
                 <div style="display:flex; gap:6px; flex-wrap:wrap;">
-                    <button type="button" onclick="window.insertAdminNoteTemplate('✅ Implemented in v2.9.64')" style="background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); color:#10b981; padding:3px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">✅ Implemented in v2.9.64</button>
+                    <button type="button" onclick="window.insertAdminNoteTemplate('✅ Implemented in ${currentVersionTag}')" style="background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); color:#10b981; padding:3px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;" title="Insert implemented note with current version ${currentVersionTag}">✅ Implemented in ${currentVersionTag}</button>
                     <button type="button" onclick="window.insertAdminNoteTemplate('🔍 Under Review / Testing')" style="background:rgba(234,179,8,0.12); border:1px solid rgba(234,179,8,0.3); color:#eab308; padding:3px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">🔍 In Review / Testing</button>
                     <button type="button" onclick="window.insertAdminNoteTemplate('🛠️ Fix Scheduled for Next Update')" style="background:rgba(6,182,212,0.12); border:1px solid rgba(6,182,212,0.3); color:#38bdf8; padding:3px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">🛠️ Scheduled in Next Update</button>
                     <button type="button" onclick="window.insertAdminNoteTemplate('ℹ️ Works as Intended (Game Mechanic)')" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); padding:3px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">ℹ️ Game Mechanic</button>

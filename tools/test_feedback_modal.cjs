@@ -106,6 +106,14 @@ assert(
   'openAdminNoteModal includes adminNoteCategoryInput dropdown'
 );
 
+// 10. Dynamic Versioning in Admin Resolution Quick Templates
+assert(
+  mainContent.includes("const currentVersionTag = 'v' + ((pkg && pkg.version) ? String(pkg.version).replace(/^v/i, '') : '3.3.47');") &&
+  mainContent.includes("${currentVersionTag}") &&
+  !mainContent.includes("v2.9.64"),
+  'openAdminNoteModal dynamically injects current build version into quick template button'
+);
+
 console.log('\nTest 3: Logic Simulation of Form Submission Validation');
 function simulateSubmit(type, category, title) {
   if (!type) {

@@ -1,15 +1,16 @@
 {
-  "version": "3.3.46",
+  "version": "3.3.47",
   "releaseDate": "2026-09-13",
-  "title": "What's New in v3.3.46",
+  "title": "What's New in v3.3.47",
   "notes": [
-    "⚪ Blank Dropdowns: Initiation Phase and Difficulty Tier start blank until selected.",
-    "🔄 Cycle Reset: Resetting mercenary cycles restores dropdowns back to blank.",
-    "⚡ Batch Validation: Prevents batch phase application if no phase is chosen."
+    "🏷️ Dynamic Version: Resolution template inserts live app build version.",
+    "🔄 Auto Update: Template buttons update with each new release.",
+    "🧹 Zero Hardcoding: Removed obsolete hardcoded version from editor."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.46",
+    "version": "3.3.47",
     "latestChanges": [
+      "v3.3.47: Dynamic version tag for Admin Resolution template buttons",
       "v3.3.46: Blank mercenary dropdowns until selected and reset integration",
       "v3.3.45: Fixed Mercenary Initiation Phase dropdowns and added Set All batch tool",
       "v3.3.44: Removed instance tags from bot names on operations radar",

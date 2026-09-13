@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.47] - 2026-09-13
+- 🏷️ **Dynamic Version**: Resolution template inserts live app build version.
+- 🔄 **Auto Update**: Template buttons update with each new release.
+- 🧹 **Zero Hardcoding**: Removed obsolete hardcoded version from editor.
+
 ## [3.3.46] - 2026-09-13
 - ⚪ **Blank Dropdowns**: Initiation Phase and Difficulty Tier start blank until selected.
 - 🔄 **Cycle Reset**: Resetting mercenary cycles restores dropdowns back to blank.
