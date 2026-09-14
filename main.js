@@ -27192,24 +27192,12 @@ const views = {
       }
     });
 
-    const u = currentUser || window.currentUser;
-    const isLeadershipUser = Boolean(u && (
-      (typeof window.isAdminUser === 'function' && window.isAdminUser(u)) ||
-      (typeof window.getAdminLevel === 'function' && (window.getAdminLevel(u) === 'R5' || window.getAdminLevel(u) === 'R4'))
-    ));
-
     app.innerHTML = `
       <div class="card fade-in" style="background: transparent; border: none; box-shadow: none;">
         <div style="text-align:center; margin-bottom:30px;">
           <h2 class="staff-title">👑 Alliance Leadership</h2>
           <p class="staff-subtitle">Meet the dedicated team keeping the alliance strong.</p>
         </div>
-
-        ${isLeadershipUser && typeof window.getBotFleetSafetyHtml === 'function' ? `
-        <div style="max-width: 720px; margin: 0 auto 35px auto;">
-          ${window.getBotFleetSafetyHtml()}
-        </div>
-        ` : ''}
         
         <div style="margin-bottom: 40px; display: flex; justify-content: center;">
           <div style="max-width: 350px; width: 100%;">
@@ -39003,9 +38991,10 @@ window.resetBearTrapEvent = async () => {
   
 
   schedule: async () => {
-    if (!currentUser) return window.renderMembersOnlyGuard("State Schedule & Events");
+    const activeUser = currentUser || window.currentUser;
+    if (!activeUser) return window.renderMembersOnlyGuard("State Schedule & Events");
     let currentTab = localStorage.getItem('scheduleView') || 'today';
-    const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+    const isManager = window.getAdminLevel(activeUser) === 'R5' || window.getAdminLevel(activeUser) === 'R4';
 
     window.refreshSchedule = async () => {
       const icon = document.getElementById('schRefreshIcon');
@@ -39241,32 +39230,10 @@ window.resetBearTrapEvent = async () => {
         });
       }
 
-      // Category columns (2-col grid for Rewards + Signups)
-      const listItems = (arr, color) => arr.map(x => `<div onclick="if(window.showToast) window.showToast('ℹ️ &quot;${escapeHTML(x)}&quot; is active for today with no specific timed alert.', 'info');" style="padding:6px 0;font-size:14px;color:var(--text-main);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;cursor:pointer;" title="Click for info"><span style="width:7px;height:7px;background:${color};border-radius:50%;flex-shrink:0;"></span>${x}</div>`).join('');
-
       let categoriesHtml = '';
 
-      const hasRewards  = rewards.length > 0;
-      const hasSignups  = signups.length > 0;
       const hasAllWeek  = allWeek.length > 0;
       const hasHolidays = holidays.length > 0;
-
-      if (hasRewards || hasSignups) {
-        categoriesHtml += `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;margin-top:20px;">`;
-        if (hasRewards) {
-          categoriesHtml += `<div style="background:var(--bg-main);border-radius:12px;padding:16px;">
-            ${sectionPill('🎁','Rewards','#eab308','rgba(234,179,8,0.12)')}
-            ${listItems(rewards,'#eab308')}
-          </div>`;
-        }
-        if (hasSignups) {
-          categoriesHtml += `<div style="background:var(--bg-main);border-radius:12px;padding:16px;">
-            ${sectionPill('📋','Sign-Ups','#10b981','rgba(16,185,129,0.12)')}
-            ${listItems(signups,'#10b981')}
-          </div>`;
-        }
-        categoriesHtml += `</div>`;
-      }
 
       if (hasAllWeek) {
         categoriesHtml += `<div style="background:var(--bg-main);border-radius:12px;padding:16px;margin-top:16px;">
@@ -39568,12 +39535,6 @@ window.resetBearTrapEvent = async () => {
                     </button>
                   `;
                 }
-              } else {
-                calRemBtn = `
-                  <button type="button" onclick="event.stopPropagation(); if(window.showToast) window.showToast('📅 &quot;${escapeHTML(evCleanName)}&quot; is an ongoing event with no specific timed schedule.', 'info');" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); color:var(--text-muted); padding:2px 6px; border-radius:4px; font-size:10px; cursor:pointer; display:inline-flex; align-items:center; gap:2px; margin-left:auto;" title="No timed schedule">
-                    <span>ℹ️</span>
-                  </button>
-                `;
               }
 
               html += `<li onclick="if(window.showToast) window.showToast('📅 &quot;${escapeHTML(evCleanName)}&quot; is listed for ${escapeHTML(day.dateStr)}.', 'info');" style="padding:6px 0; font-size:13px; color:var(--text-main); display:flex; align-items:center; justify-content:space-between; gap:8px; border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer;" title="Click for details">

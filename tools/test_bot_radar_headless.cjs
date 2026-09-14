@@ -92,11 +92,11 @@ function runStaticVerification() {
   console.log('  ✅ getBotFleetSafetyHtml contains all safety states.');
 
   // 5. Views integration
-  assert(code.includes('window.getBotFleetSafetyHtml') && code.includes('views.staff'), 'views.staff must embed safety matrix');
+  assert(code.includes('window.getBotFleetSafetyHtml'), 'getBotFleetSafetyHtml must be defined');
   assert(code.includes("document.querySelectorAll('.bot-fleet-container')"), 'DOM updater must refresh all fleet containers');
   assert(code.includes('bot-radar-server-tag'), 'DOM must include bot-radar-server-tag');
   assert(code.includes('bot_fleet_offline_alert'), 'Code must handle bot_fleet_offline_alert');
-  console.log('  ✅ Views, dual server tags, and alert hooks verified for staff and admin radar.');
+  console.log('  ✅ Views, dual server tags, and alert hooks verified for admin radar and bot fleet.');
 
   // 6. Automation Health & Staleness Watchdog
   assert(code.includes('window.getBotAutomationHealth ='), 'getBotAutomationHealth must be defined');
@@ -225,19 +225,13 @@ server.listen(PORT, async () => {
     if (staffAudit.radarInStaff) {
       throw new Error('Security Breach: #bot-operations-radar was found on Staff page! It must be restricted to Admin menu only.');
     }
-    if (!staffAudit.fleetInStaff) {
-      throw new Error('Assertion Failed: #bot-fleet-safety-container was NOT found on Staff page for R5 Leader!');
-    }
-    if (staffAudit.fleetItemCount !== 7) {
-      throw new Error(`Assertion Failed: Expected 7 bot fleet items on Staff page, found ${staffAudit.fleetItemCount}`);
-    }
-    if (staffAudit.guardianFound) {
-      throw new Error('Assertion Failed: Guardian was found in bot fleet! Guardian is not a bot and must be excluded.');
+    if (staffAudit.fleetInStaff) {
+      throw new Error('Security Breach: #bot-fleet-safety-container was found on Staff page for R5 Leader! Staff page must not leak bot info.');
     }
     console.log('  ✅ Verified: #bot-operations-radar is secluded from Staff page.');
-    console.log(`  ✅ Verified: Staff page contains 7-bot Fleet Safety Matrix for R5 Leadership (Guardian cleanly excluded).`);
+    console.log(`  ✅ Verified: Staff page contains ZERO bot fleet safety matrix or bot info for R5 Leadership.`);
 
-    // Test regular member (R2) visiting staff page: fleet matrix must be NULL!
+    // Test regular member (R2) visiting staff page: fleet matrix must also be strictly NULL!
     const regularMemberAudit = await page.evaluate(async () => {
       window.currentUser = { uid: '9999', email: 'member@bdc.com', displayName: 'Regular Member' };
       window.isAdminUser = () => false;

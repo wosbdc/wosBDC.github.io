@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.3.48] - 2026-09-14
+- 🔒 **Staff Security**: Removed bot telemetry from Alliance Leadership staff page.
+- 🗓️ **Clean Schedule**: Removed generic info squares and clutter from calendar.
+
 ## [3.3.47] - 2026-09-13
 - 🏷️ **Dynamic Version**: Resolution template inserts live app build version.
 - 🔄 **Auto Update**: Template buttons update with each new release.
