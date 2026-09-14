@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.3.49] - 2026-09-14
+- 👑 **Staff Names Restored**: Restored all leadership names and cards for public viewing.
+- 🔓 **Public Directory**: Removed members-only login guard from leadership staff page.
+
 ## [3.3.48] - 2026-09-14
 - 🔒 **Staff Security**: Removed bot telemetry from Alliance Leadership staff page.
 - 🗓️ **Clean Schedule**: Removed generic info squares and clutter from calendar.

@@ -1,14 +1,15 @@
 {
-  "version": "3.3.48",
+  "version": "3.3.49",
   "releaseDate": "2026-09-14",
-  "title": "What's New in v3.3.48",
+  "title": "What's New in v3.3.49",
   "notes": [
-    "🔒 Staff Security: Removed bot telemetry from Alliance Leadership staff page.",
-    "🗓️ Clean Schedule: Removed generic info squares and clutter from calendar."
+    "👑 Staff Names Restored: Restored all leadership names and cards for public viewing.",
+    "🔓 Public Directory: Removed members-only login guard from leadership staff page."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.48",
+    "version": "3.3.49",
     "latestChanges": [
+      "v3.3.49: Restored leadership staff names and made staff page public",
       "v3.3.48: Removed bot info from staff page and cleaned schedule info squares",
       "v3.3.47: Dynamic version tag for Admin Resolution template buttons",
       "v3.3.46: Blank mercenary dropdowns until selected and reset integration",

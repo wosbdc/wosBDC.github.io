@@ -27105,28 +27105,34 @@ const views = {
     render();
   },
   staff: async () => {
-    if (!currentUser && !window.currentUser) return window.renderMembersOnlyGuard("Staff & Officers");
     let r5Html = '';
     let r4Html = '';
 
-    // Build the dynamic cards
-    const allAdmins = { ...window.systemAdmins };
-    
-    // Ensure root admin is always in the list
-    if (!allAdmins["318843189"]) {
-      allAdmins["318843189"] = "R5";
-    }
-    
-    // Add placeholder for Afu_D until she registers
-    if (!allAdmins["338675830"]) {
-      allAdmins["338675830"] = "R4";
-    }
+    const KNOWN_STAFF = {
+      "318843189": { name: "BrianDCox", role: "R5" },
+      "338675830": { name: "Afu_D", role: "R4" },
+      "628432919": { name: "Guardian", role: "R4" },
+      "697738681": { name: "Soulcrusher4217", role: "R4" },
+      "705413646": { name: "Thadwarf", role: "R4" }
+    };
+
+    // Ensure all leadership team members are always guaranteed in the list
+    const allAdmins = {
+      "318843189": "R5",
+      "338675830": "R4",
+      "628432919": "R4",
+      "697738681": "R4",
+      "705413646": "R4",
+      ...(window.systemAdmins || {})
+    };
 
     Object.entries(allAdmins).forEach(([gid, level]) => {
       if (gid === "318843189") level = "R5"; 
       if (level === true) level = "R5"; // legacy fix
 
-      let name = (window.idToNameMap && window.idToNameMap[gid]) || 'Unknown Chief';
+      let name = (window.idToNameMap && window.idToNameMap[gid])
+        || (KNOWN_STAFF[gid] && KNOWN_STAFF[gid].name)
+        || 'Unknown Chief';
       if (gid === "338675830" && name === 'Unknown Chief') {
         name = 'Afu_D';
       }
