@@ -16400,6 +16400,80 @@ window.renderAdminFeedbackTab = async () => {
     }
 };
 
+window.copyMercenaryBossUnlockStatus = async () => {
+  let doneCount = 0;
+  if (window.mercenaryCache) {
+    Object.values(window.mercenaryCache).forEach(rec => {
+      if (rec && rec.signedUp) doneCount++;
+    });
+  }
+
+  let pData = window.mercenaryBossProgressCache || null;
+  if (!pData && window.fetchMercenaryBossProgress) {
+    try {
+      pData = await window.fetchMercenaryBossProgress().catch(() => null);
+    } catch(e) {}
+  }
+  pData = pData || {};
+
+  const captainsDef = [
+    { level: "Lv.1", key: "lv1", shortName: "Theodore", reqMembers: 10, reqCondition: "Lv.5 Easy+" },
+    { level: "Lv.2", key: "lv2", shortName: "Zenobia", reqMembers: 10, reqCondition: "Lv.5 Normal+" },
+    { level: "Lv.3", key: "lv3", shortName: "Helios", reqMembers: 15, reqCondition: "Lv.10 Normal+" },
+    { level: "Lv.4", key: "lv4", shortName: "Callisto", reqMembers: 15, reqCondition: "Lv.15 Hard+" },
+    { level: "Lv.5", key: "lv5", shortName: "Behemoth", reqMembers: 20, reqCondition: "Lv.20 Nightmare+" }
+  ];
+
+  let lines = [
+    "🎖️ [BDC] Phaethon Boss Unlocks:"
+  ];
+
+  captainsDef.forEach(c => {
+    const currentCount = (pData && pData[c.key] !== undefined && pData[c.key] !== null) ? parseInt(pData[c.key]) : doneCount;
+    const isUnlocked = currentCount >= c.reqMembers;
+    const needed = Math.max(0, c.reqMembers - currentCount);
+
+    if (isUnlocked) {
+      lines.push(`✅ ${c.level} ${c.shortName}: UNLOCKED`);
+    } else {
+      const icon = (currentCount > 0) ? "⏳" : "🔒";
+      lines.push(`${icon} ${c.level} ${c.shortName}: ${currentCount}/${c.reqMembers} (${needed} more needed @ ${c.reqCondition})`);
+    }
+  });
+
+  lines.push("👉 Remember: Do the highest in any Initiation Phase!");
+
+  const textToCopy = lines.join("\n");
+
+  let success = false;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    try {
+      await navigator.clipboard.writeText(textToCopy);
+      success = true;
+    } catch(e) {}
+  }
+
+  if (!success) {
+    const ta = document.createElement("textarea");
+    ta.value = textToCopy;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    try {
+      success = document.execCommand("copy");
+    } catch(e) {}
+    if (document.body.contains(ta)) document.body.removeChild(ta);
+  }
+
+  if (window.showToast) {
+    window.showToast("📋 Copied Phaethon Boss Unlock Status to clipboard!", "success");
+  }
+
+  return textToCopy;
+};
+
 window.renderMercenaryCaptainsSectionHtml = (clearedCount = null, bossProgress = null) => {
   let doneCount = clearedCount;
   if (doneCount === null) {
@@ -16487,9 +16561,14 @@ window.renderMercenaryCaptainsSectionHtml = (clearedCount = null, bossProgress =
         <span style="display:flex; align-items:center; gap:8px;">
           🎖️ Phaethon Mercenary Captain Boss Unlocks
         </span>
-        <span style="font-size:12px; background:rgba(234,179,8,0.15); border:1px solid rgba(234,179,8,0.4); color:#eab308; padding:4px 10px; border-radius:12px; font-weight:bold;">
-          🔥 ${doneCount} Roster Masters Cleared
-        </span>
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <button id="copyMercBossStatusBtn" onclick="window.copyMercenaryBossUnlockStatus()" style="background:rgba(234,179,8,0.15); border:1px solid rgba(234,179,8,0.4); color:#eab308; padding:5px 12px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:0.2s;" onmouseover="this.style.background='rgba(234,179,8,0.28)'" onmouseout="this.style.background='rgba(234,179,8,0.15)'" title="Copy compact boss unlock requirements and needed counts for alliance chat">
+            📋 Copy Boss Status
+          </button>
+          <span style="font-size:12px; background:rgba(234,179,8,0.15); border:1px solid rgba(234,179,8,0.4); color:#eab308; padding:4px 10px; border-radius:12px; font-weight:bold;">
+            🔥 ${doneCount} Roster Masters Cleared
+          </span>
+        </div>
       </div>
 
       <p style="color:var(--text-muted); font-size:13px; margin:0 0 16px 0; line-height:1.5;">

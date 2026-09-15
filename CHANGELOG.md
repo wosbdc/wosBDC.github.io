@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.3.51] - 2026-09-14
+- 🎖️ **Boss Copy**: Quick copy button for captain unlock requirements.
+- 👉 **Phase Reminder**: Reminds members to do highest difficulty each phase.
+
 ## [3.3.50] - 2026-09-14
 - ✏️ **Edit Chief Name**: Change player names with permanent numeric Game ID anchoring.
 - ⚡ **Streamlined Actions**: Organized actions dropdown into clean, compact, categorized sections.

@@ -1,15 +1,15 @@
 {
-  "version": "3.3.50",
+  "version": "3.3.51",
   "releaseDate": "2026-09-14",
-  "title": "What's New in v3.3.50",
+  "title": "What's New in v3.3.51",
   "notes": [
-    "✏️ Edit Chief Name: Change player names with permanent Game ID anchoring.",
-    "⚡ Streamlined Actions: Organized actions dropdown into clean, compact categories.",
-    "🧹 Zero Redundancy: Removed duplicate status buttons for a sleek dropdown."
+    "🎖️ Boss Unlock Copy: Added quick copy button for captain requirements.",
+    "👉 Phase Reminder: Highlights doing highest difficulty in any phase."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.50",
+    "version": "3.3.51",
     "latestChanges": [
+      "v3.3.51: Phaethon Boss Unlocks quick copy status button with phase reminder",
       "v3.3.50: Added Edit Chief Name modal and streamlined admin actions menu",
       "v3.3.49: Restored leadership staff names and made staff page public",
       "v3.3.48: Removed bot info from staff page and cleaned schedule info squares",
