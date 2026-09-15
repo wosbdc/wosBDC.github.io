@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.50] - 2026-09-14
+- ✏️ **Edit Chief Name**: Change player names with permanent numeric Game ID anchoring.
+- ⚡ **Streamlined Actions**: Organized actions dropdown into clean, compact, categorized sections.
+- 🧹 **Zero Redundancy**: Removed duplicate buttons for a sleek, compact dropdown experience.
+- 🔄 **Unified Sync**: Automatically synchronizes name changes across Firebase and Google Sheets.
+
 ## [3.3.49] - 2026-09-14
 - 👑 **Staff Names Restored**: Restored all leadership names and cards for public viewing.
 - 🔓 **Public Directory**: Removed members-only login guard from leadership staff page.

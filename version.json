@@ -1,14 +1,16 @@
 {
-  "version": "3.3.49",
+  "version": "3.3.50",
   "releaseDate": "2026-09-14",
-  "title": "What's New in v3.3.49",
+  "title": "What's New in v3.3.50",
   "notes": [
-    "👑 Staff Names Restored: Restored all leadership names and cards for public viewing.",
-    "🔓 Public Directory: Removed members-only login guard from leadership staff page."
+    "✏️ Edit Chief Name: Change player names with permanent Game ID anchoring.",
+    "⚡ Streamlined Actions: Organized actions dropdown into clean, compact categories.",
+    "🧹 Zero Redundancy: Removed duplicate status buttons for a sleek dropdown."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.49",
+    "version": "3.3.50",
     "latestChanges": [
+      "v3.3.50: Added Edit Chief Name modal and streamlined admin actions menu",
       "v3.3.49: Restored leadership staff names and made staff page public",
       "v3.3.48: Removed bot info from staff page and cleaned schedule info squares",
       "v3.3.47: Dynamic version tag for Admin Resolution template buttons",
