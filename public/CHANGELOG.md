@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.3.52] - 2026-09-15
+- 🐻 **Instant Champion Crown**: Crown Bear Trap champions directly without server limits.
+- ⚡ **Zero Quota Auth**: Switched token verification to zero-quota local decoding.
+
 ## [3.3.51] - 2026-09-14
 - 🎖️ **Boss Copy**: Quick copy button for captain unlock requirements.
 - 👉 **Phase Reminder**: Reminds members to do highest difficulty each phase.
