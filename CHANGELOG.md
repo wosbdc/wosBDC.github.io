@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.3.53] - 2026-09-18
+- 🛡️ **Preserve Sheet Rows**: Disabled auto-deletion of user empty spacing rows.
+- 🧹 **Smart Spacer Parsing**: Website ignores sheet spacer rows without losing data.
+
 ## [3.3.52] - 2026-09-15
 - 🐻 **Instant Champion Crown**: Crown Bear Trap champions directly without server limits.
 - ⚡ **Zero Quota Auth**: Switched token verification to zero-quota local decoding.

@@ -25751,54 +25751,74 @@ window.getUnifiedScheduleEvents = () => {
     });
   }
 
-  // 1. Parse Weekly Schedule Grid (sheets/schedule)
+  // 1. Parse Weekly Schedule Grid (sheets/schedule) - Resilient to empty spacing rows & blank Column A
   const schedGrid = (window.liveData && window.liveData['schedule']) ? window.liveData['schedule'] : null;
-  if (schedGrid && Array.isArray(schedGrid) && schedGrid.length >= 3) {
-    const headers = schedGrid[2];
-    if (Array.isArray(headers)) {
-      for (let c = 1; c < headers.length; c++) {
-        const header = String(headers[c] || '').trim();
-        if (!header) continue;
+  if (schedGrid && Array.isArray(schedGrid) && schedGrid.length >= 2) {
+    let headerRowIdx = -1;
+    for (let r = 0; r < Math.min(8, schedGrid.length); r++) {
+      if (Array.isArray(schedGrid[r]) && schedGrid[r].some(c => {
+        const s = String(c || '').toLowerCase();
+        return s.includes('today') || s.includes('tomorrow') || /\b\d{1,2}\/\d{1,2}\b/.test(s);
+      })) {
+        headerRowIdx = r;
+        break;
+      }
+    }
 
-        let colDate = null;
-        const md = header.match(/(\d{1,2})\/(\d{1,2})/);
-        if (md) {
-          colDate = new Date(Date.UTC(now.getUTCFullYear(), parseInt(md[1]) - 1, parseInt(md[2])));
-        } else if (header.toLowerCase().includes('today')) {
-          colDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-        } else if (header.toLowerCase().includes('tomorrow')) {
-          colDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
-        }
+    if (headerRowIdx !== -1) {
+      const headers = schedGrid[headerRowIdx];
+      if (Array.isArray(headers)) {
+        for (let c = 0; c < headers.length; c++) {
+          const header = String(headers[c] || '').trim();
+          if (!header) continue; // Skip blank columns (e.g. empty Column A)
 
-        if (!colDate) continue;
-
-        for (let r = 4; r <= 13; r++) {
-          if (!schedGrid[r]) continue;
-          const evName = String(schedGrid[r][c] || '').trim();
-          if (!evName || evName.toLowerCase() === 'events' || evName.toLowerCase() === 'rewards') continue;
-
-          let meta = { startUtc: '16:00', startPdt: '9:00 AM', durationMs: 3600000, emoji: '✨' };
-          const lower = evName.toLowerCase();
-          for (const [k, t] of Object.entries(window.STANDARD_EVENT_TIMES_MAP)) {
-            if (lower.includes(k)) { meta = t; break; }
+          let colDate = null;
+          const md = header.match(/(\d{1,2})\/(\d{1,2})/);
+          if (md) {
+            colDate = new Date(Date.UTC(now.getUTCFullYear(), parseInt(md[1]) - 1, parseInt(md[2])));
+          } else if (header.toLowerCase().includes('today')) {
+            colDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+          } else if (header.toLowerCase().includes('tomorrow')) {
+            colDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
           }
 
-          const [h, m] = meta.startUtc.split(':').map(Number);
-          const start = new Date(colDate);
-          start.setUTCHours(h, m, 0, 0);
-          const end = new Date(start.getTime() + meta.durationMs);
+          if (!colDate) continue;
 
-          addEvent(evName, start, end, meta.durationMs, meta.startUtc + ' UTC', meta.startPdt, meta.emoji, `${colDate.getUTCMonth() + 1}/${colDate.getUTCDate()}`, header);
+          for (let r = headerRowIdx + 1; r < schedGrid.length; r++) {
+            if (!schedGrid[r] || !Array.isArray(schedGrid[r])) continue;
+            // Stop if reached rewards section
+            const firstCell = String(schedGrid[r][c] || schedGrid[r][1] || schedGrid[r][0] || '').toLowerCase();
+            if (firstCell.includes('rewards events') || firstCell.includes('rewards list')) break;
+
+            const evName = String(schedGrid[r][c] || '').trim();
+            if (!evName || evName.toLowerCase() === 'events' || evName.toLowerCase() === 'rewards') continue; // Skip empty cells/spacers
+
+            let meta = { startUtc: '16:00', startPdt: '9:00 AM', durationMs: 3600000, emoji: '✨' };
+            const lower = evName.toLowerCase();
+            for (const [k, t] of Object.entries(window.STANDARD_EVENT_TIMES_MAP)) {
+              if (lower.includes(k)) { meta = t; break; }
+            }
+
+            const [h, m] = meta.startUtc.split(':').map(Number);
+            const start = new Date(colDate);
+            start.setUTCHours(h, m, 0, 0);
+            const end = new Date(start.getTime() + meta.durationMs);
+
+            addEvent(evName, start, end, meta.durationMs, meta.startUtc + ' UTC', meta.startPdt, meta.emoji, `${colDate.getUTCMonth() + 1}/${colDate.getUTCDate()}`, header);
+          }
         }
       }
     }
   }
 
-  // 2. Parse Timed Events Table (sheets/Schedule data)
+  // 2. Parse Timed Events Table (sheets/Schedule data) - Resilient to blank spacing rows
   const schedData = (window.liveData && window.liveData['Schedule data']) ? window.liveData['Schedule data'] : null;
   if (schedData && Array.isArray(schedData)) {
     schedData.forEach((row, idx) => {
       if (idx === 0 || !Array.isArray(row)) return;
+      // Skip completely blank rows (spacing rows)
+      if (row.every(cell => !cell || String(cell).trim() === '')) return;
+
       const title = String(row[2] || '').trim();
       const startDateVal = String(row[3] || '').trim();
       const startTimeVal = String(row[5] || '').trim();
@@ -25821,7 +25841,11 @@ window.getUnifiedScheduleEvents = () => {
         if (exactEnd > exactStart) durationMs = exactEnd.getTime() - exactStart.getTime();
       }
 
-      addEvent(title, exactStart, new Date(exactStart.getTime() + durationMs), durationMs, `${String(startT.h).padStart(2,'0')}:${String(startT.m).padStart(2,'0')} UTC`, startTimeVal, '✨', startDateVal);
+      // Skip past events that ended more than 24 hours ago
+      const exactEnd = new Date(exactStart.getTime() + durationMs);
+      if (exactEnd.getTime() < (now.getTime() - 24 * 3600000)) return;
+
+      addEvent(title, exactStart, exactEnd, durationMs, `${String(startT.h).padStart(2,'0')}:${String(startT.m).padStart(2,'0')} UTC`, startTimeVal, '✨', startDateVal);
     });
   }
 
@@ -40252,28 +40276,48 @@ window.parseSheetToScheduleLiveData = (sheetData) => {
     return { events, signups, rewards, allWeek, holidays, lastUpdated: Date.now() };
   }
 
-  // 1. Parse Timed Events from Column F (5), G (6), H (7), I (8)
+  // Detect which column offset holds event data (support Column F / index 5 or Column A / index 0)
+  let colOffset = 5;
+  for (let i = 0; i < Math.min(10, sheetData.length); i++) {
+    const row = sheetData[i];
+    if (!Array.isArray(row)) continue;
+    for (let c = 0; c < row.length; c++) {
+      const val = String(row[c] || '').toLowerCase();
+      if (val.includes("event's") || val === "events" || val.includes("bear trap")) {
+        colOffset = c;
+        break;
+      }
+    }
+  }
+
+  // Find Rewards section row index dynamically
   let rewardsRowIdx = -1;
   for (let i = 0; i < sheetData.length; i++) {
-    const cellVal = String(sheetData[i][5] || '').trim().toLowerCase();
-    if (cellVal === 'rewards' || cellVal.includes('reward event')) {
+    const row = sheetData[i];
+    if (!Array.isArray(row)) continue;
+    if (row.some(c => {
+      const cellVal = String(c || '').trim().toLowerCase();
+      return cellVal === 'rewards' || cellVal.includes('reward event') || cellVal === 'rewards list';
+    })) {
       rewardsRowIdx = i;
       break;
     }
   }
 
-  const eventEndIdx = rewardsRowIdx !== -1 ? rewardsRowIdx : Math.min(34, sheetData.length);
+  const eventEndIdx = rewardsRowIdx !== -1 ? rewardsRowIdx : sheetData.length;
 
-  for (let i = 1; i < eventEndIdx; i++) {
+  for (let i = 0; i < eventEndIdx; i++) {
     const row = sheetData[i];
     if (!row || !Array.isArray(row)) continue;
+    // Skip completely empty spacing rows
+    if (row.every(c => !c || String(c).trim() === '')) continue;
 
-    const eventName = String(row[5] || '').trim();
-    const dateRaw   = String(row[6] || '').trim();
-    const utcRaw    = String(row[7] || '').trim();
-    const pdtVal    = String(row[8] || '').trim();
+    const eventName = String(row[colOffset] || row[0] || '').trim();
+    const dateRaw   = String(row[colOffset + 1] || row[1] || '').trim();
+    const utcRaw    = String(row[colOffset + 2] || row[2] || '').trim();
+    const pdtVal    = String(row[colOffset + 3] || row[3] || '').trim();
 
-    if (!eventName || eventName.toLowerCase().includes("event's") || eventName.toLowerCase() === 'event') continue;
+    if (!eventName || eventName.toLowerCase().includes("event's") || eventName.toLowerCase() === 'event' || eventName.toLowerCase() === 'events') continue;
     if (dateRaw === '' && utcRaw === '' && pdtVal === '') continue;
 
     const eventDate = window.parseScheduleEventDate(dateRaw);
@@ -40300,14 +40344,15 @@ window.parseSheetToScheduleLiveData = (sheetData) => {
     for (let i = rewardsRowIdx + 1; i < sheetData.length; i++) {
       const row = sheetData[i];
       if (!row || !Array.isArray(row)) continue;
+      // Skip completely blank rows without aborting (preserves spacing rows!)
+      if (row.every(c => !c || String(c).trim() === '')) continue;
 
-      const r = String(row[5] || '').trim(); // Column F: Rewards
-      const g = String(row[6] || '').trim(); // Column G: Sign-ups
-      const h = String(row[7] || '').trim(); // Column H: All Week
-      const k = String(row[8] || '').trim(); // Column I: Holidays
+      const r = String(row[colOffset] || row[0] || '').trim();
+      const g = String(row[colOffset + 1] || row[1] || '').trim();
+      const h = String(row[colOffset + 2] || row[2] || '').trim();
+      const k = String(row[colOffset + 3] || row[3] || '').trim();
 
       const isBlank = (val) => !val || val === '' || val.toLowerCase() === 'no events' || val.toLowerCase() === 'n/a';
-      if (isBlank(r) && isBlank(g) && isBlank(h) && isBlank(k)) break;
 
       if (!isBlank(r) && !rewards.includes(r)) rewards.push(r);
       if (!isBlank(g) && !signups.includes(g)) signups.push(g);
