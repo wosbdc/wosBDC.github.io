@@ -39,6 +39,9 @@ tools/audit_*
 tools/deep_*
 !tools/check_window_bindings.cjs
 !tools/test_*.cjs
+__pycache__/
+*.pyc
+discord_gatekeeper_report_id.json
 *.bat
 *.txt
 *.bak

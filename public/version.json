@@ -1,14 +1,15 @@
 {
-  "version": "3.3.54",
+  "version": "3.3.55",
   "releaseDate": "2026-09-19",
-  "title": "What's New in v3.3.54",
+  "title": "What's New in v3.3.55",
   "notes": [
-    "🔒 Purged Leaked Webhook: Removed all hardcoded Discord webhooks from repository.",
-    "🌐 Web-Only GitHub: Untracked all offline bots and tools from git."
+    "🤖 Zero-Webhook Automation: Direct Discord Bot API dispatch eliminates webhook requirements completely.",
+    "🏰 Live Gatekeeper Restored: Restored Gatekeeper Report in Discord with real-time telemetry."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.54",
+    "version": "3.3.55",
     "latestChanges": [
+      "v3.3.55: Direct Discord Bot API dispatch for Gatekeeper report, zero-webhook requirement",
       "v3.3.54: Purged exposed webhooks, dynamic Firebase alert config, untracked offline scripts",
       "v3.3.53: Disabled Google Sheets automated row deletion and made parsers spacer-resilient",
       "v3.3.52: Decoupled Bear Trap crowning to Firebase-first and eliminated urlfetch quota errors",

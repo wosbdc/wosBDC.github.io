@@ -24671,11 +24671,6 @@ window.pushGatekeeperReportToDiscord = async function(btnEl = null, customPayloa
     let savedMsgId = (msgIdSnap && msgIdSnap.exists()) ? msgIdSnap.val() : '';
     let webhookUrl = (hookSnap && hookSnap.exists() && hookSnap.val()) ? hookSnap.val().trim() : ((altHookSnap && altHookSnap.exists() && altHookSnap.val()) ? altHookSnap.val().trim() : '');
 
-    if (!webhookUrl) {
-      if (window.showToast) window.showToast("⚠️ No Discord Webhook configured! Please configure one in Bots Hub.", "warning");
-      throw new Error("No Discord Webhook configured. Set your webhook URL in Bots Hub settings.");
-    }
-
     let success = false;
     let newMessageId = savedMsgId;
 
