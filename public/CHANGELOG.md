@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.54] - 2026-09-19
+- 🔒 **Purged Leaked Webhook**: Removed all hardcoded Discord webhooks from repository.
+- 🌐 **Web-Only GitHub**: Untracked all offline bots and tools from git.
+- ⚡ **Dynamic Alert Config**: Webhook URLs now load securely from Firebase settings.
+- 🛡️ **Hardened Gitignore**: Strictly blocked python, offline bots, and maintenance scripts.
+
 ## [3.3.53] - 2026-09-18
 - 🛡️ **Preserve Sheet Rows**: Disabled auto-deletion of user empty spacing rows.
 - 🧹 **Smart Spacer Parsing**: Website ignores sheet spacer rows without losing data.

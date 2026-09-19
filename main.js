@@ -21546,6 +21546,7 @@ window.saveDiscordAlertSettings = async () => {
   try {
     await set(ref(db, 'config/discordAlerts'), {
       discordWebhookUrl: url,
+      webhookUrl: url,
       discordAlertsEnabled: enabled,
       updatedAt: new Date().toISOString()
     });
@@ -24661,13 +24662,19 @@ window.pushGatekeeperReportToDiscord = async function(btnEl = null, customPayloa
     }
     
     // Check saved message ID & custom webhook URL in Firebase
-    const [msgIdSnap, hookSnap] = await Promise.all([
+    const [msgIdSnap, hookSnap, altHookSnap] = await Promise.all([
       get(ref(db, 'system/gatekeeper_report_msg_id')).catch(() => null),
+      get(ref(db, 'config/discordAlerts/discordWebhookUrl')).catch(() => null),
       get(ref(db, 'config/discordAlerts/webhookUrl')).catch(() => null)
     ]);
     
     let savedMsgId = (msgIdSnap && msgIdSnap.exists()) ? msgIdSnap.val() : '';
-    let webhookUrl = (hookSnap && hookSnap.exists() && hookSnap.val()) ? hookSnap.val().trim() : 'https://discord.com/api/webhooks/1537465776750203060/pjDG_gWRnnS6QyRXaxvrudoq7inLhFi_4xjk-2WfpuiTp3gNJVCS4eGuH0y9CoUL4dUY';
+    let webhookUrl = (hookSnap && hookSnap.exists() && hookSnap.val()) ? hookSnap.val().trim() : ((altHookSnap && altHookSnap.exists() && altHookSnap.val()) ? altHookSnap.val().trim() : '');
+
+    if (!webhookUrl) {
+      if (window.showToast) window.showToast("⚠️ No Discord Webhook configured! Please configure one in Bots Hub.", "warning");
+      throw new Error("No Discord Webhook configured. Set your webhook URL in Bots Hub settings.");
+    }
 
     let success = false;
     let newMessageId = savedMsgId;

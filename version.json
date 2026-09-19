@@ -1,14 +1,15 @@
 {
-  "version": "3.3.53",
-  "releaseDate": "2026-09-18",
-  "title": "What's New in v3.3.53",
+  "version": "3.3.54",
+  "releaseDate": "2026-09-19",
+  "title": "What's New in v3.3.54",
   "notes": [
-    "🛡️ Preserve Sheet Rows: Disabled auto-deletion of user empty spacing rows.",
-    "🧹 Smart Spacer Parsing: Website ignores sheet spacer rows without losing data."
+    "🔒 Purged Leaked Webhook: Removed all hardcoded Discord webhooks from repository.",
+    "🌐 Web-Only GitHub: Untracked all offline bots and tools from git."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.53",
+    "version": "3.3.54",
     "latestChanges": [
+      "v3.3.54: Purged exposed webhooks, dynamic Firebase alert config, untracked offline scripts",
       "v3.3.53: Disabled Google Sheets automated row deletion and made parsers spacer-resilient",
       "v3.3.52: Decoupled Bear Trap crowning to Firebase-first and eliminated urlfetch quota errors",
       "v3.3.51: Phaethon Boss Unlocks quick copy status button with phase reminder",
