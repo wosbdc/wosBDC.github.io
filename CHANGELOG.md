@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.56] - 2026-09-19
+- 🛡️ **Alliance Gatekeeper Restored**: Re-created dedicated webhook with custom Frost Knight avatar.
+- 🔒 **Theater Bot Separated**: Completely isolated Whiteout Survival alerts from Brian's Theater.
+- ⚡ **Dynamic Webhook Loading**: Apps Script loads webhook from Firebase with zero fallbacks.
+- 🧹 **Clean House Protocol**: Maintained strict two-backup limit and purged obsolete archives.
+
 ## [3.3.55] - 2026-09-19
 - 🤖 **Zero-Webhook Automation**: Direct Discord Bot API dispatch eliminates webhook requirements completely.
 - 🏰 **Live Gatekeeper Restored**: Restored Gatekeeper Report in Discord with real-time telemetry.

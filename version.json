@@ -1,14 +1,15 @@
 {
-  "version": "3.3.55",
+  "version": "3.3.56",
   "releaseDate": "2026-09-19",
-  "title": "What's New in v3.3.55",
+  "title": "What's New in v3.3.56",
   "notes": [
-    "🤖 Zero-Webhook Automation: Direct Discord Bot API dispatch eliminates webhook requirements completely.",
-    "🏰 Live Gatekeeper Restored: Restored Gatekeeper Report in Discord with real-time telemetry."
+    "🛡️ Dedicated Identity: Restored Alliance Gatekeeper with custom Frost Knight avatar.",
+    "🔒 Pure Separation: Isolated Whiteout Survival alerts completely from Brian's Theater."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.55",
+    "version": "3.3.56",
     "latestChanges": [
+      "v3.3.56: Dedicated Alliance Gatekeeper webhook restored, isolated from theater bot",
       "v3.3.55: Direct Discord Bot API dispatch for Gatekeeper report, zero-webhook requirement",
       "v3.3.54: Purged exposed webhooks, dynamic Firebase alert config, untracked offline scripts",
       "v3.3.53: Disabled Google Sheets automated row deletion and made parsers spacer-resilient",
