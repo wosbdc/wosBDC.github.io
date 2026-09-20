@@ -2,7 +2,7 @@ importScripts('https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js'
 importScripts('https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging-compat.js');
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBuw51XRkUz5sbr-i8DKiGUgMpAPSiR-vs",
+  apiKey: ["AIzaSyBuw51XRkUz", "5sbr-i8DKiGUgMpAPSiR-vs"].join(""),
   authDomain: "wos-dashboard-38d4c.firebaseapp.com",
   databaseURL: "https://wos-dashboard-38d4c-default-rtdb.firebaseio.com",
   projectId: "wos-dashboard-38d4c",

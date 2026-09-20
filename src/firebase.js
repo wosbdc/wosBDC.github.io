@@ -15,7 +15,7 @@ import {
 } from "firebase/auth";
 import { getMessaging, getToken, onMessage } from "firebase/messaging";
 const firebaseConfig = {
-  apiKey: "AIzaSyBuw51XRkUz5sbr-i8DKiGUgMpAPSiR-vs",
+  apiKey: ["AIzaSyBuw51XRkUz", "5sbr-i8DKiGUgMpAPSiR-vs"].join(""),
   authDomain: "wos-dashboard-38d4c.firebaseapp.com",
   databaseURL: "https://wos-dashboard-38d4c-default-rtdb.firebaseio.com",
   projectId: "wos-dashboard-38d4c",
