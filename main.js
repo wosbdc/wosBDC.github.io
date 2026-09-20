@@ -16775,11 +16775,43 @@ window.showMissedDaysReportModal = async (btnEl = null) => {
             }
         });
 
-        // 2. Extract unique player list deduplicated case-insensitively
+        // Helper to check if a player is departed (left), banned, or inactive
+        const isExcludedMember = (playerOrName) => {
+            if (!playerOrName) return true;
+            if (typeof playerOrName === 'object') {
+                const s = typeof window.normalizeMembershipStatus === 'function'
+                    ? window.normalizeMembershipStatus(playerOrName.membershipStatus || playerOrName.status)
+                    : (playerOrName.membershipStatus || playerOrName.status);
+                if (s === 'left' || s === 'banned') return true;
+                if (playerOrName.banned === true || playerOrName.isBanned === true || playerOrName.deleted === true || playerOrName.isDeleted === true) return true;
+            }
+            if (typeof window.isPlayerActiveMember === 'function' && !window.isPlayerActiveMember(playerOrName)) {
+                return true;
+            }
+            const nameStr = typeof playerOrName === 'string' ? playerOrName : (playerOrName.name || playerOrName.chiefName || '');
+            if (nameStr && window.rosterCache) {
+                const clean = (typeof window.cleanChiefName === 'function' ? window.cleanChiefName(nameStr) : nameStr).toLowerCase();
+                const raw = nameStr.toLowerCase().trim();
+                for (const r of Object.values(window.rosterCache)) {
+                    if (r && (r.name?.toLowerCase() === clean || r.name?.toLowerCase() === raw)) {
+                        const rStatus = typeof window.normalizeMembershipStatus === 'function'
+                            ? window.normalizeMembershipStatus(r.membershipStatus || r.status)
+                            : (r.membershipStatus || r.status);
+                        if (rStatus === 'left' || rStatus === 'banned' || r.banned === true || r.isBanned === true) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        };
+
+        // 2. Extract unique active player list deduplicated case-insensitively (strictly excluding left or banned players)
         const seenPlayerNames = new Map();
         if (rosterRawData && Object.keys(rosterRawData).length > 0) {
             Object.values(rosterRawData).forEach(p => {
-                if (p.name && typeof p.name === 'string') {
+                if (p && typeof p === 'object' && p.name && typeof p.name === 'string') {
+                    if (isExcludedMember(p)) return;
                     const cleanName = p.name.trim();
                     const lower = cleanName.toLowerCase();
                     if (cleanName && !seenPlayerNames.has(lower)) {
@@ -16791,6 +16823,7 @@ window.showMissedDaysReportModal = async (btnEl = null) => {
         if (seenPlayerNames.size === 0) {
             Object.keys(sdLiveData).forEach(k => {
                 if (k && typeof k === 'string') {
+                    if (isExcludedMember(k)) return;
                     const cleanName = k.trim();
                     const lower = cleanName.toLowerCase();
                     if (cleanName && !seenPlayerNames.has(lower)) {
@@ -16799,7 +16832,9 @@ window.showMissedDaysReportModal = async (btnEl = null) => {
                 }
             });
         }
-        const allPlayers = Array.from(seenPlayerNames.values()).sort((a,b) => a.localeCompare(b));
+        const allPlayers = Array.from(seenPlayerNames.values())
+            .filter(name => !isExcludedMember(name))
+            .sort((a,b) => a.localeCompare(b));
 
         // 3. Determine active days (days with > 0 scores)
         const isDayActive = {};
@@ -16815,6 +16850,7 @@ window.showMissedDaysReportModal = async (btnEl = null) => {
         const dayMissedMap = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
 
         allPlayers.forEach(pName => {
+            if (isExcludedMember(pName)) return;
             const lowerName = pName.trim().toLowerCase();
             const scores = sdLiveDataLowerMap[lowerName] || {};
             const missedDays = [];
@@ -16830,7 +16866,9 @@ window.showMissedDaysReportModal = async (btnEl = null) => {
             }
         });
 
-        const playersWithMisses = Object.keys(playerMissedMap).sort((a,b) => playerMissedMap[b].length - playerMissedMap[a].length || a.localeCompare(b));
+        const playersWithMisses = Object.keys(playerMissedMap)
+            .filter(pName => !isExcludedMember(pName))
+            .sort((a,b) => playerMissedMap[b].length - playerMissedMap[a].length || a.localeCompare(b));
 
         let copyText = `📅 ALLIANCE SHOWDOWN MISSED DAYS REPORT (Active Days 1-${maxActiveDay})\n`;
         copyText += `----------------------------------------\n`;

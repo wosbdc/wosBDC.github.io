@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.60] - 2026-09-20
+- 📋 **Missed Days**: Excluded left and banned players from attendance reports.
+- 🚀 **Deploy CI/CD**: Restored automated binding check and test suites for deployments.
+- 🛡️ **Site Deduplication**: Prevented duplicate player names across all event winner banners.
+
 ## [3.3.59] - 2026-09-20
 - 🛡️ **Production Clean**: Purged internal tools and dev scripts from repo.
 - 🧹 **Repo Sanitization**: Removed scratch test suites and transfer packages.

@@ -1,18 +1,17 @@
 {
-  "version": "3.3.58",
+  "version": "3.3.60",
   "releaseDate": "2026-09-20",
-  "title": "What's New in v3.3.58",
+  "title": "What's New in v3.3.60",
   "notes": [
-    "🛡️ Site-Wide Deduplication: Prevented duplicate player names across all event winner banners.",
-    "👑 Co-MVP Guard: Eliminated self-ties in all Showdown and championship calculations.",
-    "🐻 Bear Trap Sync: Merged Google Sheets and Firebase records case-insensitively.",
-    "🧹 Database Sanitizer: Prevented case collisions in roster and history stores automatically."
+    "📋 Missed Days: Excluded left and banned players from attendance reports.",
+    "🚀 Deploy CI/CD: Restored automated binding check and test suites for deployments.",
+    "🛡️ Site Deduplication: Prevented duplicate player names across all event winner banners."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.58",
+    "version": "3.3.60",
     "latestChanges": [
+      "v3.3.60: Excluded departed and banned players from Showdown Missed Days Report & restored CI/CD tests",
       "v3.3.58: Comprehensive site-wide deduplication and self-tie prevention across all events",
-      "v3.3.57: Fixed duplicate Showdown Day 1 winner tie and case deduplication",
       "v3.3.56: Dedicated Alliance Gatekeeper webhook restored, isolated from theater bot",
       "v3.3.55: Direct Discord Bot API dispatch for Gatekeeper report, zero-webhook requirement",
       "v3.3.54: Purged exposed webhooks, dynamic Firebase alert config, untracked offline scripts",
