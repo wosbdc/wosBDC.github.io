@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.57] - 2026-09-20
+- ⚔️ **Showdown Tie Fix**: Fixed duplicate player self-tie on Day 1.
+- 🔍 **Case Insensitive**: Deduplicated player names across casing variations.
+- 🛡️ **Self Tie Guard**: Prevented players from tying with themselves.
+- 🧹 **Database Cleaner**: Merged case-variant records in live Showdown scores.
+
 ## [3.3.56] - 2026-09-19
 - 🛡️ **Alliance Gatekeeper Restored**: Re-created dedicated webhook with custom Frost Knight avatar.
 - 🔒 **Theater Bot Separated**: Completely isolated Whiteout Survival alerts from Brian's Theater.

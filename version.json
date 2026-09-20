@@ -1,14 +1,15 @@
 {
-  "version": "3.3.56",
-  "releaseDate": "2026-09-19",
-  "title": "What's New in v3.3.56",
+  "version": "3.3.57",
+  "releaseDate": "2026-09-20",
+  "title": "What's New in v3.3.57",
   "notes": [
-    "🛡️ Dedicated Identity: Restored Alliance Gatekeeper with custom Frost Knight avatar.",
-    "🔒 Pure Separation: Isolated Whiteout Survival alerts completely from Brian's Theater."
+    "⚔️ Showdown Fix: Resolved duplicate player self-tie on Day 1.",
+    "🔍 Case-Insensitive Match: Merged casing variations in live Showdown scores."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.56",
+    "version": "3.3.57",
     "latestChanges": [
+      "v3.3.57: Fixed duplicate Showdown Day 1 winner tie and case deduplication",
       "v3.3.56: Dedicated Alliance Gatekeeper webhook restored, isolated from theater bot",
       "v3.3.55: Direct Discord Bot API dispatch for Gatekeeper report, zero-webhook requirement",
       "v3.3.54: Purged exposed webhooks, dynamic Firebase alert config, untracked offline scripts",

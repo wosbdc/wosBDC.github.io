@@ -265,31 +265,39 @@ window.runDatabaseNameCleanup = async (notify = false) => {
             }
         }
 
-        // 3. Clean showdown_live (Migrate MiaowÂ queen, PermaÂ Frost, etc.)
+        // 3. Clean showdown_live (Migrate MiaowÂ queen, PermaÂ Frost, etc. & merge case-variant duplicates)
         if (sdSnap && sdSnap.exists()) {
             const sdObj = sdSnap.val() || {};
             const newSd = {};
+            const lowerToKey = {};
             let sdChanged = false;
             const keysToRemove = [];
             for (const [k, scores] of Object.entries(sdObj)) {
                 if (!scores || typeof scores !== 'object' || k === 'error') continue;
                 const dirtyName = scores.name || k;
                 const cName = window.cleanChiefName(dirtyName);
-                if (cName !== k || (scores.name && scores.name !== cName)) {
-                    sdChanged = true;
-                    keysToRemove.push(k);
-                    cleanedShowdownCount++;
-                }
-                if (!newSd[cName]) {
+                if (!cName) continue;
+                const lName = cName.toLowerCase();
+                if (!lowerToKey[lName]) {
+                    lowerToKey[lName] = cName;
                     newSd[cName] = {
                         ...scores,
                         name: cName
                     };
-                } else {
-                    for (let di = 1; di <= 6; di++) {
-                        newSd[cName]['d' + di] = Math.max(newSd[cName]['d' + di] || 0, scores['d' + di] || 0);
+                    if (cName !== k || (scores.name && scores.name !== cName)) {
+                        sdChanged = true;
+                        keysToRemove.push(k);
+                        cleanedShowdownCount++;
                     }
-                    newSd[cName].total = [1,2,3,4,5,6].reduce((sum, di) => sum + (newSd[cName]['d'+di]||0), 0);
+                } else {
+                    const canonicalKey = lowerToKey[lName];
+                    sdChanged = true;
+                    keysToRemove.push(k);
+                    cleanedShowdownCount++;
+                    for (let di = 1; di <= 6; di++) {
+                        newSd[canonicalKey]['d' + di] = Math.max(newSd[canonicalKey]['d' + di] || 0, scores['d' + di] || 0);
+                    }
+                    newSd[canonicalKey].total = [1,2,3,4,5,6].reduce((sum, di) => sum + (newSd[canonicalKey]['d'+di]||0), 0);
                 }
             }
             if (sdChanged) {
@@ -12822,12 +12830,25 @@ window.showResetAndArchiveEventModal = async () => {
             if (liveData && liveData.error) delete liveData.error;
 
             let pList = [];
+            let lowerPMap = {};
             for (const [pName, scores] of Object.entries(liveData)) {
                 if (!scores || typeof scores !== 'object') continue;
+                const cleanName = window.cleanChiefName(scores.name || pName);
+                if (!cleanName) continue;
+                const lowerName = cleanName.toLowerCase();
                 let pd1 = scores.d1 || 0; let pd2 = scores.d2 || 0; let pd3 = scores.d3 || 0;
                 let pd4 = scores.d4 || 0; let pd5 = scores.d5 || 0; let pd6 = scores.d6 || 0;
-                let pTotal = pd1 + pd2 + pd3 + pd4 + pd5 + pd6;
-                pList.push({ name: pName, d1: pd1, d2: pd2, d3: pd3, d4: pd4, d5: pd5, d6: pd6, total: pTotal });
+                if (!lowerPMap[lowerName]) {
+                    const pObj = { name: cleanName, d1: pd1, d2: pd2, d3: pd3, d4: pd4, d5: pd5, d6: pd6, total: pd1 + pd2 + pd3 + pd4 + pd5 + pd6 };
+                    lowerPMap[lowerName] = pObj;
+                    pList.push(pObj);
+                } else {
+                    const existing = lowerPMap[lowerName];
+                    for (let i = 1; i <= 6; i++) {
+                        existing['d' + i] = Math.max(existing['d' + i] || 0, scores['d' + i] || 0);
+                    }
+                    existing.total = [1,2,3,4,5,6].reduce((sum, di) => sum + (existing['d' + di] || 0), 0);
+                }
             }
             pList.sort((a, b) => b.total - a.total);
 
@@ -16955,10 +16976,13 @@ function calculateAllTimeShowdown(historyData) {
             for (let di = 1; di <= 6; di++) {
                 let dScore = Number(p['d' + di]) || 0;
                 if (dScore > 0) {
+                    const normName = p.name.trim().toLowerCase();
                     if (dScore > topPlayers['d' + di].score) {
-                        topPlayers['d' + di] = { names: [p.name.trim().toLowerCase()], score: dScore };
+                        topPlayers['d' + di] = { names: [normName], score: dScore };
                     } else if (dScore === topPlayers['d' + di].score) {
-                        topPlayers['d' + di].names.push(p.name.trim().toLowerCase());
+                        if (!topPlayers['d' + di].names.includes(normName)) {
+                            topPlayers['d' + di].names.push(normName);
+                        }
                     }
                 }
             }
@@ -37397,15 +37421,19 @@ window.resetBearTrapEvent = async () => {
          
          const rawLiveData = liveSnap.val() || {};
          let liveData = {};
+         let lowerKeyMap = {};
          Object.entries(rawLiveData).forEach(([k, v]) => {
              if (!v || typeof v !== 'object' || k === 'error') return;
              const cleanK = window.cleanChiefName(v.name || k);
              if (!cleanK) return;
-             if (!liveData[cleanK]) {
+             const lowerK = cleanK.toLowerCase();
+             if (!lowerKeyMap[lowerK]) {
+                 lowerKeyMap[lowerK] = cleanK;
                  liveData[cleanK] = { ...v, name: cleanK };
              } else {
+                 const canonK = lowerKeyMap[lowerK];
                  for (let i = 1; i <= 6; i++) {
-                     liveData[cleanK]['d'+i] = Math.max(liveData[cleanK]['d'+i] || 0, v['d'+i] || 0);
+                     liveData[canonK]['d'+i] = Math.max(liveData[canonK]['d'+i] || 0, v['d'+i] || 0);
                  }
              }
          });
@@ -38148,16 +38176,21 @@ window.resetBearTrapEvent = async () => {
        
        // Sanitize and deduplicate live Showdown scores
        let sanitizedLiveMap = {};
+       let lowerLiveKeyMap = {};
        for (const [pKey, scores] of Object.entries(liveData)) {
           if (!scores || typeof scores !== 'object' || pKey === 'error') continue;
           const cleanName = window.cleanChiefName(scores.name || pKey);
           if (!cleanName) continue;
-          if (!sanitizedLiveMap[cleanName]) {
+          const lowerName = cleanName.toLowerCase();
+          if (!lowerLiveKeyMap[lowerName]) {
+             lowerLiveKeyMap[lowerName] = cleanName;
              sanitizedLiveMap[cleanName] = { ...scores, name: cleanName };
           } else {
+             const canonName = lowerLiveKeyMap[lowerName];
              for (let di = 1; di <= 6; di++) {
-                sanitizedLiveMap[cleanName]['d' + di] = Math.max(sanitizedLiveMap[cleanName]['d' + di] || 0, scores['d' + di] || 0);
+                sanitizedLiveMap[canonName]['d' + di] = Math.max(sanitizedLiveMap[canonName]['d' + di] || 0, scores['d' + di] || 0);
              }
+             sanitizedLiveMap[canonName].total = [1,2,3,4,5,6].reduce((sum, di) => sum + (sanitizedLiveMap[canonName]['d' + di] || 0), 0);
           }
        }
        liveData = sanitizedLiveMap;
@@ -38191,7 +38224,9 @@ window.resetBearTrapEvent = async () => {
                 if (dScore > topPlayers['d' + di].score) {
                    topPlayers['d' + di] = { names: [cleanName], score: dScore };
                 } else if (dScore === topPlayers['d' + di].score) {
-                   topPlayers['d' + di].names.push(cleanName);
+                   if (!topPlayers['d' + di].names.some(n => n.toLowerCase() === cleanName.toLowerCase())) {
+                      topPlayers['d' + di].names.push(cleanName);
+                   }
                 }
              }
           }
