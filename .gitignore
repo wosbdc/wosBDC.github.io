@@ -13,37 +13,30 @@ build/
 *.pem
 *.p12
 *.secret
+*secret*
 .clasprc.json
 secrets/
 *service_account*.json
 *credentials*.json
+*token*.json
+discord_config.json
 
 # Scratch, Research & Analysis Dumps
 BDC_Central_Command_Transfer_Package/
 scratch/
-scratch/*
+tools/
 temp/
 tmp/
 *.py
 *.pyw
 *.mjs
-tools/auto_giftcode_bot.mjs
-tools/bdc_*
-tools/BDC_*
-tools/inspect_*
-tools/fix_*
-tools/cleanup_*
-tools/repair_*
-tools/lookup_*
-tools/audit_*
-tools/deep_*
-!tools/check_window_bindings.cjs
-!tools/test_*.cjs
+*.cjs
 __pycache__/
 *.pyc
 discord_gatekeeper_report_id.json
 *.bat
-*.txt
+*.ps1
+*.sh
 *.bak
 *.zip
 *.tar.gz
@@ -55,27 +48,11 @@ top_part.js
 scratch_test.js
 test.js
 temp_*.css
-schedule.json
-whiteout.json
 
-# Logs
-logs/
+# OS & Logs
+.DS_Store
+Thumbs.db
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-# OS & Editor files
-.DS_Store
-Thumbs.db
-desktop.ini
-.vscode/*
-!.vscode/extensions.json
-.idea/
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
