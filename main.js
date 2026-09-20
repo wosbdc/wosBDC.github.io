@@ -242,22 +242,37 @@ window.runDatabaseNameCleanup = async (notify = false) => {
         if (rosterSnap && rosterSnap.exists()) {
             const rosterObj = rosterSnap.val() || {};
             const newRoster = {};
+            const lowerRosterKeys = {};
             let rosterChanged = false;
             for (const [k, p] of Object.entries(rosterObj)) {
                 if (!p || typeof p !== 'object' || k === 'Chief Name' || k === 'chief name') continue;
                 const dirtyName = p.name || p.chiefName || k;
                 const cName = window.cleanChiefName(dirtyName);
                 const canonKey = cName || k;
+                const lowerKey = canonKey.toLowerCase();
                 
                 if (cName !== dirtyName || canonKey !== k) {
                     rosterChanged = true;
                     cleanedRosterCount++;
                 }
-                newRoster[canonKey] = {
-                    ...p,
-                    name: cName,
-                    chiefName: cName
-                };
+                if (!lowerRosterKeys[lowerKey]) {
+                    lowerRosterKeys[lowerKey] = canonKey;
+                    newRoster[canonKey] = {
+                        ...p,
+                        name: cName,
+                        chiefName: cName
+                    };
+                } else {
+                    rosterChanged = true;
+                    cleanedRosterCount++;
+                    const existingKey = lowerRosterKeys[lowerKey];
+                    newRoster[existingKey] = {
+                        ...p,
+                        ...newRoster[existingKey],
+                        name: existingKey,
+                        chiefName: existingKey
+                    };
+                }
             }
             if (rosterChanged) {
                 await set(ref(db, 'roster_live'), newRoster).catch(e => console.warn("Error updating roster_live:", e));
@@ -321,6 +336,8 @@ window.runDatabaseNameCleanup = async (notify = false) => {
                 for (const [hKey, block] of Object.entries(newHist)) {
                     if (!block || typeof block !== 'object') continue;
                     if (Array.isArray(block.players)) {
+                        const seenPlayers = {};
+                        const dedupedPlayers = [];
                         block.players.forEach(p => {
                             if (p && p.name) {
                                 const cName = window.cleanChiefName(p.name);
@@ -329,8 +346,21 @@ window.runDatabaseNameCleanup = async (notify = false) => {
                                     histChanged = true;
                                     cleanedHistCount++;
                                 }
+                                const lName = cName.toLowerCase();
+                                if (!seenPlayers[lName]) {
+                                    seenPlayers[lName] = p;
+                                    dedupedPlayers.push(p);
+                                } else {
+                                    histChanged = true;
+                                    cleanedHistCount++;
+                                    const existing = seenPlayers[lName];
+                                    existing.total = Math.max(existing.total || 0, p.total || 0);
+                                    existing.horns = Math.max(existing.horns || 0, p.horns || 0);
+                                    existing.wins = Math.max(existing.wins || 0, p.wins || 0);
+                                }
                             }
                         });
+                        block.players = dedupedPlayers;
                     }
                     if (block.winners && typeof block.winners === 'object') {
                         for (const [wKey, wVal] of Object.entries(block.winners)) {
@@ -13798,6 +13828,7 @@ window.buildVaultModalContent = (activeKey = 'all', isAdminMode = false) => {
         if (allTimePlayers.length > 0 && allTimePlayers[0].horns > 0) {
             let maxHorns = allTimePlayers[0].horns;
             let topChamps = allTimePlayers.filter(p => p.horns === maxHorns);
+            topChamps = topChamps.filter((p, idx, self) => idx === self.findIndex(t => t.name.toLowerCase() === p.name.toLowerCase()));
             let champTitle = topChamps.length > 1 ? "👑 All-Time Co-Champions" : "👑 All-Time Champion";
             let champDisplayNames = topChamps.map(p => escapeHTML(p.name)).join(" & ");
             let avatarStack = renderAvatarStack(topChamps);
@@ -13849,6 +13880,7 @@ window.buildVaultModalContent = (activeKey = 'all', isAdminMode = false) => {
 
             let champScore = archivedPlayers.length > 0 ? archivedPlayers[0].total : 0;
             let topMvps = archivedPlayers.filter(p => p.total === champScore && champScore > 0);
+            topMvps = topMvps.filter((p, idx, self) => idx === self.findIndex(t => t.name.toLowerCase() === p.name.toLowerCase()));
             let mvpBannerHtml = '';
             if (topMvps.length > 0) {
                 let mvpTitle = topMvps.length > 1 ? "👑 Event Co-MVPs" : "👑 Event MVP";
@@ -14036,6 +14068,7 @@ window.buildShowdownHistoryCardHtml = (activeFilter = 'all') => {
         if (allTimePlayers.length > 0 && allTimePlayers[0].horns > 0) {
             let maxHorns = allTimePlayers[0].horns;
             let topChamps = allTimePlayers.filter(p => p.horns === maxHorns);
+            topChamps = topChamps.filter((p, idx, self) => idx === self.findIndex(t => t.name.toLowerCase() === p.name.toLowerCase()));
             let champTitle = topChamps.length > 1 ? "👑 All-Time Co-Champions" : "👑 All-Time Champion";
             let champDisplayNames = topChamps.map(p => escapeHTML(p.name)).join(" & ");
             let avatarStack = renderAvatarStack(topChamps);
@@ -37320,6 +37353,7 @@ window.resetBearTrapEvent = async () => {
             if (cParticipantList.length > 0) {
                let topGoldChamps = cParticipantList.filter(p => p.goldWins > 0);
                let topDisplay = topGoldChamps.length > 0 ? topGoldChamps.slice(0, 3) : cParticipantList.slice(0, 3);
+               topDisplay = topDisplay.filter((p, idx, self) => idx === self.findIndex(t => (t.name || '').toLowerCase() === (p.name || '').toLowerCase()));
                let champDisplayNames = topDisplay.map(p => escapeHTML(p.name)).join(" & ");
                let avatarStackHtml = (typeof renderAvatarStack === 'function') ? renderAvatarStack(topDisplay) : '';
                let headerBadge = topGoldChamps.length > 0 ? "🥇 Gold Tournament Champions" : "⚔️ Tournament Veteran Chiefs";
@@ -37500,6 +37534,7 @@ window.resetBearTrapEvent = async () => {
           if (hasLiveScores && players.length > 0 && players[0].horns > 0) {
               let maxHorns = players[0].horns;
               let topMvps = players.filter(p => p.horns === maxHorns);
+              topMvps = topMvps.filter((p, idx, self) => idx === self.findIndex(t => t.name.toLowerCase() === p.name.toLowerCase()));
               let mvpTitle = topMvps.length > 1 ? "👑 Showdown Co-MVPs" : "👑 Showdown MVP";
               let champDisplayNames = topMvps.map(p => escapeHTML(p.name)).join(" & ");
               let champName = topMvps[0].name;
@@ -37604,6 +37639,7 @@ window.resetBearTrapEvent = async () => {
               if (allTimePlayers.length > 0 && allTimePlayers[0].horns > 0) {
                   let maxHorns = allTimePlayers[0].horns;
                   let topChamps = allTimePlayers.filter(p => p.horns === maxHorns);
+                  topChamps = topChamps.filter((p, idx, self) => idx === self.findIndex(t => t.name.toLowerCase() === p.name.toLowerCase()));
                   let champTitle = topChamps.length > 1 ? "👑 All-Time Co-Champions" : "👑 All-Time Champion";
                   let champDisplayNames = topChamps.map(p => escapeHTML(p.name)).join(" & ");
                   let avatarStackHtml = renderAvatarStack(topChamps);
@@ -37762,11 +37798,18 @@ window.resetBearTrapEvent = async () => {
 
         // Merge Firebase Bear Trap wins with Google Sheets rows (preserving all historical players)
         if (!titleLower.includes('donation') && titleLower.includes('bear trap')) {
-            let winsMap = {};
+            let winsMap = {}; // key: lowercase, value: { name, score }
             if (board.rows && Array.isArray(board.rows)) {
                 board.rows.forEach(r => {
                     if (r && r[1]) {
-                        winsMap[r[1].toString().trim()] = parseInt(String(r[2]).replace(/,/g, '')) || 0;
+                        let rawName = r[1].toString().trim();
+                        let lName = rawName.toLowerCase();
+                        let score = parseInt(String(r[2]).replace(/,/g, '')) || 0;
+                        if (!winsMap[lName]) {
+                            winsMap[lName] = { name: rawName, score: score };
+                        } else {
+                            winsMap[lName].score = Math.max(winsMap[lName].score, score);
+                        }
                     }
                 });
             }
@@ -37775,6 +37818,7 @@ window.resetBearTrapEvent = async () => {
                 Object.values(fbBtWins).forEach(w => {
                     if (w && w.name) {
                         let pName = w.name.trim();
+                        let lName = pName.toLowerCase();
                         let addVal = 0;
                         if (titleLower.includes('all-time bear trap')) addVal = (w.bt1 || 0) + (w.bt2 || 0);
                         else if (titleLower.includes('bear trap 1')) addVal = w.bt1 || 0;
@@ -37782,15 +37826,20 @@ window.resetBearTrapEvent = async () => {
                         else if (titleLower.includes('both bear trap')) addVal = (w.bt1 > 0 && w.bt2 > 0) ? ((w.bt1 || 0) + (w.bt2 || 0)) : 0;
 
                         if (addVal > 0) {
-                            winsMap[pName] = Math.max(winsMap[pName] || 0, addVal);
+                            if (!winsMap[lName]) {
+                                winsMap[lName] = { name: pName, score: addVal };
+                            } else {
+                                winsMap[lName].score = Math.max(winsMap[lName].score, addVal);
+                                if (pName !== lName || !winsMap[lName].name) winsMap[lName].name = pName;
+                            }
                         }
                     }
                 });
             }
 
-            const sorted = Object.entries(winsMap).filter(kv => kv[1] > 0).sort((a,b) => b[1] - a[1]);
+            const sorted = Object.values(winsMap).filter(item => item.score > 0).sort((a,b) => b.score - a.score);
             if (sorted.length > 0) {
-                board.rows = sorted.map((kv, idx) => [idx + 1, kv[0], kv[1]]);
+                board.rows = sorted.map((item, idx) => [idx + 1, item.name, item.score]);
             }
 
             // All-Time Bear Trap Leaderboard shows Top 4 ONLY
@@ -37805,11 +37854,18 @@ window.resetBearTrapEvent = async () => {
         if (titleLower.includes('donation')) {
             if (titleLower.includes('all-time')) {
                 board.title = "All-Time Bear Trap Donations Leaderboard";
-                let mergedScores = {};
+                let mergedScores = {}; // key: lowercase, value: { name, score }
                 if (board.rows && Array.isArray(board.rows)) {
                     board.rows.forEach(r => {
                         if (r && r[1]) {
-                            mergedScores[r[1].toString().trim()] = parseInt(String(r[2]).replace(/,/g, '')) || 0;
+                            let rawName = r[1].toString().trim();
+                            let lName = rawName.toLowerCase();
+                            let score = parseInt(String(r[2]).replace(/,/g, '')) || 0;
+                            if (!mergedScores[lName]) {
+                                mergedScores[lName] = { name: rawName, score: score };
+                            } else {
+                                mergedScores[lName].score = Math.max(mergedScores[lName].score, score);
+                            }
                         }
                     });
                 }
@@ -37817,26 +37873,38 @@ window.resetBearTrapEvent = async () => {
                     Object.values(fbBtDonations).forEach(d => {
                         if (d && d.name) {
                             let pName = d.name.trim();
+                            let lName = pName.toLowerCase();
                             let fbAmt = d.allTime !== undefined ? d.allTime : (d.amount || 0);
                             if (fbAmt > 0) {
-                                mergedScores[pName] = Math.max(mergedScores[pName] || 0, fbAmt);
+                                if (!mergedScores[lName]) {
+                                    mergedScores[lName] = { name: pName, score: fbAmt };
+                                } else {
+                                    mergedScores[lName].score = Math.max(mergedScores[lName].score, fbAmt);
+                                    if (pName !== lName || !mergedScores[lName].name) mergedScores[lName].name = pName;
+                                }
                             }
                         }
                     });
                 }
-                const list = Object.entries(mergedScores).filter(kv => kv[1] > 0).sort((a,b) => b[1] - a[1]).slice(0, 4);
-                if (list.length > 0) board.rows = list.map((kv, idx) => [idx + 1, kv[0], kv[1]]);
+                const list = Object.values(mergedScores).filter(item => item.score > 0).sort((a,b) => b.score - a.score).slice(0, 4);
+                if (list.length > 0) board.rows = list.map((item, idx) => [idx + 1, item.name, item.score]);
             } else {
                 board.title = "Current Bear Trap Donations Leaderboard";
-                let currentScores = {};
+                let currentScores = {}; // key: lowercase, value: { name, score }
                 if (Object.keys(fbBtDonations).length > 0) {
                     // Firebase is authoritative for current event donations
                     Object.values(fbBtDonations).forEach(d => {
                         if (d && d.name) {
                             let pName = d.name.trim();
+                            let lName = pName.toLowerCase();
                             let fbAmt = d.current !== undefined ? d.current : 0;
                             if (fbAmt > 0) {
-                                currentScores[pName] = fbAmt;
+                                if (!currentScores[lName]) {
+                                    currentScores[lName] = { name: pName, score: fbAmt };
+                                } else {
+                                    currentScores[lName].score = Math.max(currentScores[lName].score, fbAmt);
+                                    if (pName !== lName || !currentScores[lName].name) currentScores[lName].name = pName;
+                                }
                             }
                         }
                     });
@@ -37844,16 +37912,22 @@ window.resetBearTrapEvent = async () => {
                     // Fallback to Google Sheets ONLY if Firebase node is completely empty
                     board.rows.forEach(r => {
                         if (r && r[1]) {
+                            let rawName = r[1].toString().trim();
+                            let lName = rawName.toLowerCase();
                             let amt = parseInt(String(r[2]).replace(/,/g, '')) || 0;
                             if (amt > 0) {
-                                currentScores[r[1].toString().trim()] = amt;
+                                if (!currentScores[lName]) {
+                                    currentScores[lName] = { name: rawName, score: amt };
+                                } else {
+                                    currentScores[lName].score = Math.max(currentScores[lName].score, amt);
+                                }
                             }
                         }
                     });
                 }
-                const list = Object.entries(currentScores).filter(kv => kv[1] > 0).sort((a,b) => b[1] - a[1]).slice(0, 4);
+                const list = Object.values(currentScores).filter(item => item.score > 0).sort((a,b) => b.score - a.score).slice(0, 4);
                 if (list.length > 0) {
-                    board.rows = list.map((kv, idx) => [idx + 1, kv[0], kv[1]]);
+                    board.rows = list.map((item, idx) => [idx + 1, item.name, item.score]);
                 } else {
                     board.rows = []; // Empty when all current donations are 0 after event reset
                 }
@@ -38273,11 +38347,13 @@ window.resetBearTrapEvent = async () => {
            let maxHorns = 0;
            for (const horns of Object.values(playerHorns)) if (horns > maxHorns) maxHorns = horns;
            mvpWinners = Object.keys(playerHorns).filter(name => playerHorns[name] === maxHorns);
+           mvpWinners = (mvpWinners || []).filter((name, idx, self) => idx === self.findIndex(n => n.toLowerCase() === name.toLowerCase()));
            mvpTitle = mvpWinners.length > 1 ? "👑 Showdown Co-MVPs" : "👑 Showdown MVP";
            mvpDisplayHorns = maxHorns;
        } else {
            let dayObj = topPlayers['d' + currentActiveDay];
            mvpWinners = (dayObj && dayObj.names) ? dayObj.names : [];
+           mvpWinners = (mvpWinners || []).filter((name, idx, self) => idx === self.findIndex(n => n.toLowerCase() === name.toLowerCase()));
            mvpTitle = mvpWinners.length > 1 ? `👑 DAY ${currentActiveDay} CO-MVPS` : `👑 DAY ${currentActiveDay} MVP`;
            mvpDisplayHorns = staticHorns['d' + currentActiveDay];
            mvpLabelText = `Day ${currentActiveDay} Horns`;
@@ -38359,7 +38435,9 @@ window.resetBearTrapEvent = async () => {
        allianceCard += `<tr><td style="font-weight:bold; position:sticky; left:0; background:var(--card-bg); z-index:2; box-shadow: 1px 0 0 var(--border);">Winners</td><td style="border-right: 1px solid rgba(255,255,255,0.12);"></td>`;
        for(let di=1; di<=6; di++) {
            let dayObj = topPlayers['d'+di];
-           let w = (dayObj && dayObj.names && dayObj.names.length > 0) ? dayObj.names.map(escapeHTML).join(' & ') : '';
+           let rawNames = (dayObj && dayObj.names && dayObj.names.length > 0) ? dayObj.names : [];
+           let uniqueDayNames = rawNames.filter((name, idx, self) => idx === self.findIndex(n => n.toLowerCase() === name.toLowerCase()));
+           let w = uniqueDayNames.map(escapeHTML).join(' & ');
            let style = "font-weight:bold; color:#FFD700; border-right: 1px solid rgba(255,255,255,0.06); text-align:center;";
            allianceCard += `<td style="${style}">${w}</td>`;
        }

@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.58] - 2026-09-20
+- 🛡️ **Deduplication**: Eliminated duplicate names across all winner banners.
+- 👑 **Co-MVP Guard**: Prevented duplicate self-ties across all showdown calculations.
+- 🐻 **Bear Trap**: Merged Google Sheets and Firebase records case-insensitively.
+- 🧹 **Database Sanitizer**: Auto-resolved casing collisions in roster and history stores.
+
 ## [3.3.57] - 2026-09-20
 - ⚔️ **Showdown Tie Fix**: Fixed duplicate player self-tie on Day 1.
 - 🔍 **Case Insensitive**: Deduplicated player names across casing variations.
