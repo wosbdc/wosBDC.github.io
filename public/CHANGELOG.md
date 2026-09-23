@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## [3.3.62] - 2026-09-23
+- 🏰 **Alliance Gatekeeper**: Logged Gatekeeper bot actions directly in Admin Logs.
+- 👤 **Admin Deduplication**: Eliminated duplicate case-variant names in Admin Log filters.
+- 🧹 **Database Sanitizer**: Standardized historical admin logs and name casing in Firebase.
+
+## [3.3.61] - 2026-09-20
+- ⚡ **Bandwidth Shield**: Flushed stale presence entries saving Realtime Database bandwidth.
+- 🧹 **Database Optimization**: Cleaned accumulated ghost sessions across realtime presence stores.
+- 🛡️ **Network Performance**: Streamlined client connections for ultra-low egress consumption.
+
 ## [3.3.60] - 2026-09-20
 - 📋 **Missed Days**: Excluded left and banned players from attendance reports.
 - 🚀 **Deploy CI/CD**: Restored automated binding check and test suites for deployments.

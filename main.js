@@ -38,6 +38,7 @@ window.cleanChiefName = (name) => {
     if (lower === 'dragon frost' || lower === 'dragonÂ frost') return 'Dragon Frost';
     if (lower === 'titan frost' || lower === 'titanÂ frost') return 'Titan Frost';
     if (lower === 'dwarf 2' || lower === 'dwarf2') return 'Dwarf 2';
+    if (lower === 'thadwarf' || lower === 'tha dwarf' || lower === 'tha_dwarf') return 'thadwarf';
     
     return str;
 };
@@ -380,8 +381,44 @@ window.runDatabaseNameCleanup = async (notify = false) => {
             }
         }
 
-        const totalCleaned = cleanedUsersCount + cleanedAltsCount + cleanedRosterCount + cleanedShowdownCount + cleanedHistCount;
-        console.log(`[Database Cleanup] Complete: Fixed ${cleanedUsersCount} user(s), ${cleanedAltsCount} alt(s), ${cleanedRosterCount} roster row(s), ${cleanedShowdownCount} showdown row(s), ${cleanedHistCount} history record(s).`);
+        // 5. Sanitize admin_logs (admin and target casing, e.g. Thadwarf -> thadwarf)
+        let cleanedAdminLogsCount = 0;
+        const logsSnap = await get(ref(db, 'admin_logs')).catch(() => null);
+        if (logsSnap && logsSnap.exists()) {
+            const logsData = logsSnap.val() || {};
+            const logUpdates = {};
+            for (const [lId, log] of Object.entries(logsData)) {
+                if (!log || typeof log !== 'object') continue;
+                let logChanged = false;
+                let newAdmin = log.admin;
+                let newTarget = log.target;
+                if (log.admin && typeof log.admin === 'string') {
+                    const cAdmin = window.cleanChiefName(log.admin);
+                    if (cAdmin !== log.admin) {
+                        newAdmin = cAdmin;
+                        logChanged = true;
+                    }
+                }
+                if (log.target && typeof log.target === 'string' && log.target !== '-') {
+                    const cTarget = window.cleanChiefName(log.target);
+                    if (cTarget !== log.target) {
+                        newTarget = cTarget;
+                        logChanged = true;
+                    }
+                }
+                if (logChanged) {
+                    logUpdates[`admin_logs/${lId}/admin`] = newAdmin;
+                    logUpdates[`admin_logs/${lId}/target`] = newTarget;
+                    cleanedAdminLogsCount++;
+                }
+            }
+            if (Object.keys(logUpdates).length > 0) {
+                await update(ref(db), logUpdates).catch(e => console.warn("Error updating admin_logs casing:", e));
+            }
+        }
+
+        const totalCleaned = cleanedUsersCount + cleanedAltsCount + cleanedRosterCount + cleanedShowdownCount + cleanedHistCount + cleanedAdminLogsCount;
+        console.log(`[Database Cleanup] Complete: Fixed ${cleanedUsersCount} user(s), ${cleanedAltsCount} alt(s), ${cleanedRosterCount} roster row(s), ${cleanedShowdownCount} showdown row(s), ${cleanedHistCount} history record(s), ${cleanedAdminLogsCount} admin log(s).`);
         
         if (notify && window.showToast) {
             window.showToast(`✨ Cleanup Complete: Sanitized ${totalCleaned} record(s) with clean names!`, "success");
@@ -2753,7 +2790,8 @@ export const refreshIdToNameMap = async () => {
             Object.values(users).forEach(u => {
                 if (u && u.gameId) {
                     const gStr = u.gameId.toString().trim();
-                    const nStr = (u.name || u.chiefName || "").toString().replace(/[\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]/g, ' ').trim();
+                    const rawName = (u.name || u.chiefName || "").toString().replace(/[\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]/g, ' ').trim();
+                    const nStr = window.cleanChiefName ? window.cleanChiefName(rawName) : rawName;
                     if (nStr && !/^\d+$/.test(nStr) && nStr !== gStr) {
                         idToNameMap[gStr] = nStr;
                         nameToIdMap[nStr] = gStr;
@@ -2764,7 +2802,8 @@ export const refreshIdToNameMap = async () => {
                     Object.entries(u.altTokens).forEach(([altGid, altObj]) => {
                         if (!altGid || !altObj) return;
                         const aGStr = altGid.toString().trim();
-                        const aNStr = (altObj.nickname || altObj.name || altObj.chiefName || "").toString().replace(/[\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]/g, ' ').trim();
+                        const rawAltName = (altObj.nickname || altObj.name || altObj.chiefName || "").toString().replace(/[\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]/g, ' ').trim();
+                        const aNStr = window.cleanChiefName ? window.cleanChiefName(rawAltName) : rawAltName;
                         if (aNStr && !/^\d+$/.test(aNStr) && aNStr !== aGStr) {
                             if (!idToNameMap[aGStr]) idToNameMap[aGStr] = aNStr;
                             if (!nameToIdMap[aNStr]) nameToIdMap[aNStr] = aGStr;
@@ -2781,7 +2820,8 @@ export const refreshIdToNameMap = async () => {
             Object.entries(alts).forEach(([altGid, altObj]) => {
                 if (!altGid || !altObj) return;
                 const aGStr = altGid.toString().trim();
-                const aNStr = (altObj.name || altObj.chiefName || altObj.nickname || "").toString().replace(/[\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]/g, ' ').trim();
+                const rawAltName = (altObj.name || altObj.chiefName || altObj.nickname || "").toString().replace(/[\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]/g, ' ').trim();
+                const aNStr = window.cleanChiefName ? window.cleanChiefName(rawAltName) : rawAltName;
                 if (aNStr && !/^\d+$/.test(aNStr) && aNStr !== aGStr) {
                     if (!idToNameMap[aGStr]) idToNameMap[aGStr] = aNStr;
                     if (!nameToIdMap[aNStr]) nameToIdMap[aNStr] = aGStr;
@@ -2797,7 +2837,8 @@ export const refreshIdToNameMap = async () => {
                 if (u && u.gameId) {
                     const gStr = u.gameId.toString().trim();
                     if (u.enrolled !== false) enrolledGameIds.add(gStr);
-                    const nStr = (u.name || "").toString().replace(/[\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]/g, ' ').trim();
+                    const rawGcName = (u.name || "").toString().replace(/[\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]/g, ' ').trim();
+                    const nStr = window.cleanChiefName ? window.cleanChiefName(rawGcName) : rawGcName;
                     if (nStr && !/^\d+$/.test(nStr) && nStr !== gStr) {
                         idToNameMap[gStr] = nStr;
                         nameToIdMap[nStr] = gStr;
@@ -2812,7 +2853,8 @@ export const refreshIdToNameMap = async () => {
             Object.values(rosterRawData).forEach(p => {
                 const gid = p.gameId ? String(p.gameId).trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : '');
                 if (p.name && gid) {
-                    const nStr = p.name.toString().replace(/[\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]/g, ' ').trim();
+                    const rawRosterName = p.name.toString().replace(/[\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]/g, ' ').trim();
+                    const nStr = window.cleanChiefName ? window.cleanChiefName(rawRosterName) : rawRosterName;
                     if (nStr && !/^\d+$/.test(nStr) && nStr !== gid) {
                         idToNameMap[gid] = nStr;
                         nameToIdMap[nStr] = gid;
@@ -2831,7 +2873,8 @@ export const refreshIdToNameMap = async () => {
                     const gStr = id.toString().trim();
                     enrolledGameIds.add(gStr);
                     if (name) {
-                        const nStr = name.toString().replace(/[\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]/g, ' ').trim();
+                        const rawSheetName = name.toString().replace(/[\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]/g, ' ').trim();
+                        const nStr = window.cleanChiefName ? window.cleanChiefName(rawSheetName) : rawSheetName;
                         if (nStr && !/^\d+$/.test(nStr) && nStr !== gStr) {
                             if (!idToNameMap[gStr]) idToNameMap[gStr] = nStr;
                             if (!nameToIdMap[nStr]) nameToIdMap[nStr] = gStr;
@@ -9514,12 +9557,22 @@ window.syncScheduleDirectly = async () => {
     }
 };
 
-window.logAdminAction = async (actionType, details, targetPlayer = '', metadata = null) => {
+window.logAdminAction = async (actionType, details, targetPlayer = '', metadata = null, adminOverride = null) => {
     try {
-        const adminName = (currentUser && currentUser.gameId && idToNameMap[currentUser.gameId]) 
-            ? idToNameMap[currentUser.gameId] 
-            : (currentUser && currentUser.email ? currentUser.email : "Admin");
-        const adminEmail = currentUser ? (currentUser.email || "") : "";
+        let adminName = adminOverride;
+        if (!adminName) {
+            adminName = (currentUser && currentUser.gameId && idToNameMap[currentUser.gameId]) 
+                ? idToNameMap[currentUser.gameId] 
+                : (currentUser && currentUser.email ? currentUser.email : "Admin");
+            if (window.cleanChiefName) {
+                adminName = window.cleanChiefName(adminName) || adminName;
+            }
+        }
+        let targetName = targetPlayer;
+        if (targetName && window.cleanChiefName && targetName !== '-') {
+            targetName = window.cleanChiefName(targetName) || targetName;
+        }
+        const adminEmail = adminOverride ? (metadata?.email || "system@gatekeeper.bot") : (currentUser ? (currentUser.email || "") : "");
         const logId = Date.now() + '_' + Math.random().toString(36).substr(2, 5);
         
         const now = new Date();
@@ -9529,7 +9582,7 @@ window.logAdminAction = async (actionType, details, targetPlayer = '', metadata 
             email: adminEmail,
             action: actionType,
             details: details,
-            target: targetPlayer,
+            target: targetName,
             timestamp: Date.now(),
             dateStr: now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
             timeStr: now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
@@ -17545,6 +17598,16 @@ window.triggerNewMemberAlerts = async (memberRecord) => {
           console.warn("Failed to create Discord webhook post:", postErr);
         }
       }
+      if (window.logAdminAction && memberRecord) {
+        const memName = (window.cleanChiefName ? window.cleanChiefName(memberRecord.name || 'New Member') : memberRecord.name) || 'New Member';
+        await window.logAdminAction(
+          "GateKeeper Alert",
+          `Synced new member alert for ${memName} (ID: ${memberRecord.gameId || 'N/A'}) to Discord`,
+          memName,
+          { source: "GateKeeper", actionCategory: "system", gameId: memberRecord.gameId || '' },
+          "Alliance Gatekeeper"
+        ).catch(() => null);
+      }
     }
   } catch(e) {
     console.warn("Error sending new member alerts:", e);
@@ -24820,6 +24883,15 @@ window.pushGatekeeperReportToDiscord = async function(btnEl = null, customPayloa
       if (newMessageId) {
         await set(ref(db, 'system/gatekeeper_report_msg_id'), newMessageId).catch(() => null);
       }
+      if (window.logAdminAction) {
+        await window.logAdminAction(
+          "GateKeeper Report",
+          `Published Master Alliance Gatekeeper Report to #alerts (Message ID: ${newMessageId || 'new'})`,
+          "Alliance Members",
+          { source: "GateKeeper", actionCategory: "system", messageId: newMessageId || null },
+          "Alliance Gatekeeper"
+        ).catch(() => null);
+      }
       if (window.showToast) window.showToast("🏰 Master Alliance Gatekeeper Report updated in #alerts!", "success");
       return { success: true };
     }
@@ -27480,7 +27552,7 @@ const views = {
       "338675830": { name: "Afu_D", role: "R4" },
       "628432919": { name: "Guardian", role: "R4" },
       "697738681": { name: "Soulcrusher4217", role: "R4" },
-      "705413646": { name: "Thadwarf", role: "R4" }
+      "705413646": { name: "thadwarf", role: "R4" }
     };
 
     // Ensure all leadership team members are always guaranteed in the list
@@ -27497,9 +27569,10 @@ const views = {
       if (gid === "318843189") level = "R5"; 
       if (level === true) level = "R5"; // legacy fix
 
-      let name = (window.idToNameMap && window.idToNameMap[gid])
+      let rawStaffName = (window.idToNameMap && window.idToNameMap[gid])
         || (KNOWN_STAFF[gid] && KNOWN_STAFF[gid].name)
         || 'Unknown Chief';
+      let name = window.cleanChiefName ? window.cleanChiefName(rawStaffName) : rawStaffName;
       if (gid === "338675830" && name === 'Unknown Chief') {
         name = 'Afu_D';
       }
@@ -28350,7 +28423,12 @@ const views = {
         let color = '#38bdf8';
         let icon = '⚡';
 
-        if (lower.includes('championship')) {
+        if (lower.includes('gatekeeper')) {
+          bg = 'rgba(14,165,233,0.18)';
+          border = 'rgba(14,165,233,0.45)';
+          color = '#38bdf8';
+          icon = '🏰';
+        } else if (lower.includes('championship')) {
           bg = 'rgba(56,189,248,0.15)';
           border = 'rgba(56,189,248,0.4)';
           color = '#38bdf8';
@@ -29161,6 +29239,17 @@ const views = {
 
         logItems.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 
+        logItems.forEach(item => {
+           if (item) {
+              if (item.admin && window.cleanChiefName) {
+                 item.admin = window.cleanChiefName(item.admin);
+              }
+              if (item.target && item.target !== '-' && window.cleanChiefName) {
+                 item.target = window.cleanChiefName(item.target);
+              }
+           }
+        });
+
         // Smart Batch Grouping: Group consecutive actions by same admin + action within 10-min window
         let groupedLogs = [];
         let currentBatch = [];
@@ -29212,15 +29301,19 @@ const views = {
         if (currentBatch.length > 0) groupedLogs.push(currentBatch);
 
         let tbodyHtml = '';
-        let uniqueAdmins = new Set();
+        let uniqueAdmins = new Map();
         let batchCounter = 0;
 
         groupedLogs.forEach(group => {
            batchCounter++;
            const firstLog = group[0];
            const lastLog = group[group.length - 1];
-           const adminName = firstLog.admin || 'Admin';
-           uniqueAdmins.add(adminName);
+           const adminRaw = firstLog.admin || 'Admin';
+           const adminName = (window.cleanChiefName ? window.cleanChiefName(adminRaw) : adminRaw) || adminRaw;
+           const adminKey = adminName.toLowerCase();
+           if (!uniqueAdmins.has(adminKey)) {
+              uniqueAdmins.set(adminKey, adminName);
+           }
 
            const d = new Date(firstLog.timestamp || Date.now());
            const dateStr = firstLog.dateStr || d.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
@@ -29436,9 +29529,13 @@ const views = {
         if (adminSelect) {
            const currentSelection = adminSelect.value;
            let selectHtml = '<option value="">👤 All Admins</option>';
-           Array.from(uniqueAdmins).sort().forEach(admin => {
-              selectHtml += `<option value="${admin.toLowerCase()}">${escapeHTML(admin)}</option>`;
-           });
+           selectHtml += '<option value="alliance gatekeeper">🏰 Alliance Gatekeeper</option>';
+           Array.from(uniqueAdmins.values())
+             .filter(admin => admin.toLowerCase() !== 'alliance gatekeeper')
+             .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
+             .forEach(admin => {
+                selectHtml += `<option value="${admin.toLowerCase()}">${escapeHTML(admin)}</option>`;
+             });
            adminSelect.innerHTML = selectHtml;
            adminSelect.value = currentSelection;
         }

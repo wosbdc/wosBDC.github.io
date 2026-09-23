@@ -1,16 +1,17 @@
 {
-  "version": "3.3.60",
-  "releaseDate": "2026-09-20",
-  "title": "What's New in v3.3.60",
+  "version": "3.3.62",
+  "releaseDate": "2026-09-23",
+  "title": "What's New in v3.3.62",
   "notes": [
-    "📋 Missed Days: Excluded left and banned players from attendance reports.",
-    "🚀 Deploy CI/CD: Restored automated binding check and test suites for deployments.",
-    "🛡️ Site Deduplication: Prevented duplicate player names across all event winner banners."
+    "🏰 Alliance Gatekeeper: Logged Gatekeeper bot actions directly in Admin Logs.",
+    "👤 Admin Deduplication: Eliminated duplicate case-variant names in Admin Log filters.",
+    "🧹 Database Sanitizer: Standardized historical admin logs and name casing in Firebase."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.60",
+    "version": "3.3.62",
     "latestChanges": [
-      "v3.3.60: Excluded departed and banned players from Showdown Missed Days Report & restored CI/CD tests",
+      "v3.3.62: Logged Gatekeeper bot actions and deduplicated admin log casing",
+      "v3.3.61: Flushed stale presence entries and optimized realtime database network egress",
       "v3.3.58: Comprehensive site-wide deduplication and self-tie prevention across all events",
       "v3.3.56: Dedicated Alliance Gatekeeper webhook restored, isolated from theater bot",
       "v3.3.55: Direct Discord Bot API dispatch for Gatekeeper report, zero-webhook requirement",
