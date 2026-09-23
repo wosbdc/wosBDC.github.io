@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.63] - 2026-09-23
+- 🐻 **Bear Trap Reset**: Fixed event reset duplicating lifetime donation points.
+- 📊 **Donation Baselines**: Restored accurate lifetime donation totals for all players.
+- 🧹 **Database Sanitizer**: Purged automated chatbot test donations and invalid logs.
+
 ## [3.3.62] - 2026-09-23
 - 🏰 **Alliance Gatekeeper**: Logged Gatekeeper bot actions directly in Admin Logs.
 - 👤 **Admin Deduplication**: Eliminated duplicate case-variant names in Admin Log filters.

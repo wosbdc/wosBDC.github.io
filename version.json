@@ -1,15 +1,16 @@
 {
-  "version": "3.3.62",
+  "version": "3.3.63",
   "releaseDate": "2026-09-23",
-  "title": "What's New in v3.3.62",
+  "title": "What's New in v3.3.63",
   "notes": [
-    "🏰 Alliance Gatekeeper: Logged Gatekeeper bot actions directly in Admin Logs.",
-    "👤 Admin Deduplication: Eliminated duplicate case-variant names in Admin Log filters.",
-    "🧹 Database Sanitizer: Standardized historical admin logs and name casing in Firebase."
+    "🐻 Bear Trap Reset: Fixed event reset duplicating lifetime donation points.",
+    "📊 Donation Baselines: Restored accurate lifetime donation totals for all players.",
+    "🧹 Database Sanitizer: Purged automated chatbot test donations and invalid logs."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.62",
+    "version": "3.3.63",
     "latestChanges": [
+      "v3.3.63: Fixed Bear Trap reset duplication and restored player donation baselines",
       "v3.3.62: Logged Gatekeeper bot actions and deduplicated admin log casing",
       "v3.3.61: Flushed stale presence entries and optimized realtime database network egress",
       "v3.3.58: Comprehensive site-wide deduplication and self-tie prevention across all events",

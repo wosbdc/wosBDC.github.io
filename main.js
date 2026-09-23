@@ -34667,8 +34667,6 @@ window.resetBearTrapEvent = async () => {
             const dons = donSnap.val();
             const donPromises = Object.entries(dons).map(([key, don]) => {
                 if (don) {
-                    const currentAmt = don.current !== undefined ? don.current : (don.amount || 0);
-                    don.allTime = (don.allTime || 0) + currentAmt;
                     don.current = 0;
                     don.amount = 0;
                     don.lastUpdated = Date.now();
