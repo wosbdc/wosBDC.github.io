@@ -61,28 +61,33 @@ function runStaticVerification() {
   new vm.Script(`(async () => {\n${strippedLines.join('\n')}\n})()`, { filename: 'main.js' });
   console.log('  ✅ main.js AST syntax validation passed with 0 syntax errors.');
 
-  // 2. 7-bot alliance roster assertion
+  // 2. 12-bot alliance roster assertion
   assert(code.includes('window.ALLIANCE_BOT_ROSTER = ['), 'Must define window.ALLIANCE_BOT_ROSTER');
   const expectedBots = [
+    'BrianDCox',
+    'Guardian',
     'Sentinel Frost',
-    'Bisquick',
+    'Bot 3',
+    'BisQuick',
     'Gingivitis',
     'BDCFdaddy',
-    'ShrimpLeprechaun',
+    'Shrimpleprechaun',
     'AngryGermanpapi',
-    'BabyAngryGerman'
+    'BabyAngryGerman',
+    'Bot 17',
+    'Bot 18'
   ];
   for (const bot of expectedBots) {
     assert(code.includes(bot), `Roster must contain ${bot}`);
   }
-  console.log('  ✅ 7-bot alliance roster verified in window.ALLIANCE_BOT_ROSTER.');
+  console.log('  ✅ 12-bot alliance roster verified in window.ALLIANCE_BOT_ROSTER.');
 
-  // 3. Guardian strictly excluded
-  const rosterIdx = code.indexOf('window.ALLIANCE_BOT_ROSTER = [');
-  const rosterEnd = code.indexOf('];', rosterIdx);
-  const rosterChunk = code.substring(rosterIdx, rosterEnd);
-  assert(!rosterChunk.includes('Guardian'), 'Guardian must NEVER be included in ALLIANCE_BOT_ROSTER');
-  console.log('  ✅ Guardian cleanly excluded from bot fleet roster.');
+  // 3. Sentinel Frost at Inst 2 & Dynamic Fleet Support
+  assert(code.includes("{ id: 'sentinel', name: 'Sentinel Frost', inst: 'Inst 2' }"), 'Sentinel Frost must be Inst 2 in ALLIANCE_BOT_ROSTER');
+  assert(code.includes('data.fleet && Array.isArray(data.fleet) && data.fleet.length > 0'), 'getBotFleetSafetyHtml must dynamically check data.fleet');
+  assert(code.includes("data.fleet.filter(b => b.status !== 'DISABLED')"), 'getBotFleetSafetyHtml must filter out DISABLED bots');
+  assert(code.includes('Inst ${bot.instance}') || code.includes('instDisplay'), 'Bot instance badges must format Inst ${bot.instance}');
+  console.log('  ✅ Sentinel Frost Inst 2, dynamic fleet array, and Inst badge formatting verified.');
 
   // 4. Safety Matrix generator & states
   assert(code.includes('window.getBotFleetSafetyHtml ='), 'getBotFleetSafetyHtml must be defined');
@@ -285,13 +290,13 @@ server.listen(PORT, async () => {
     if (!radarInAdmin || !radarInAdmin.found) {
       throw new Error('Assertion Failed: ' + (radarInAdmin?.error || 'Radar not found in Admin Bots tab'));
     }
-    if (radarInAdmin.count !== 7) {
-      throw new Error(`Assertion Failed: Expected 7 bots in Fleet Matrix inside Admin Bots tab, found ${radarInAdmin.count}`);
+    if (radarInAdmin.count < 12) {
+      throw new Error(`Assertion Failed: Expected at least 12 bots in Fleet Matrix inside Admin Bots tab, found ${radarInAdmin.count}`);
     }
-    if (radarInAdmin.guardianInFleet) {
-      throw new Error('Assertion Failed: Guardian must not be in the Admin Bots fleet matrix!');
+    if (!radarInAdmin.guardianInFleet) {
+      throw new Error('Assertion Failed: Guardian must be in the Admin Bots fleet matrix!');
     }
-    console.log(`  ✅ #bot-operations-radar verified in Admin Bots tab: Account="${radarInAdmin.account}", 7 bots in Fleet Safety Matrix`);
+    console.log(`  ✅ #bot-operations-radar verified in Admin Bots tab: Account="${radarInAdmin.account}", 12 bots in Fleet Safety Matrix`);
 
     // Verify Real Visual DOM Mutation: Simulate Multi-Account Rotation and Login Safety
     console.log('\n--- PHASE 3: BOT FLEET MATRIX ROTATION & ACCOUNT LOGIN SAFETY TEST ---');
@@ -457,6 +462,29 @@ server.listen(PORT, async () => {
       const badgeF = document.getElementById('bot-radar-badge-el')?.textContent?.trim();
       const serverValF = document.getElementById('bot-radar-server-val')?.textContent?.trim();
 
+      // Step G: Dynamic Live Fleet from Firebase (telemetry payload with data.fleet)
+      window.latestBotStatus = {
+        status: 'ACTIVE',
+        activeAccount: 'BrianDCox (Inst 0)',
+        serverOnline: true,
+        bothubOnline: true,
+        timestamp: Date.now(),
+        receivedAt: Date.now(),
+        fleet: [
+          { id: 'bot_0', name: 'BrianDCox', instance: 0, status: 'ACTIVE', detail: 'Running wilderness' },
+          { id: 'bot_1', name: 'Guardian', instance: 1, status: 'READY', detail: 'City tab idle' },
+          { id: 'bot_2', name: 'Sentinel Frost', instance: 2, status: 'READY', detail: 'City tab idle' },
+          { id: 'bot_3', name: 'Disabled Bot', instance: 99, status: 'DISABLED', detail: 'Disabled' }
+        ]
+      };
+      window.updateBotOperationsRadarDom();
+
+      const fleetItemsG = document.querySelectorAll('.bot-fleet-item');
+      const countG = fleetItemsG.length;
+      const bdcInstG = document.querySelector('#bot-fleet-item-briandcox .bot-fleet-inst')?.textContent?.trim();
+      const sentinelInstG = document.querySelector('#bot-fleet-item-sentinel .bot-fleet-inst')?.textContent?.trim();
+      const disabledExistsG = Array.from(fleetItemsG).some(el => el.textContent.includes('Disabled Bot'));
+
       return {
         accountA,
         runnerDisplayA,
@@ -512,7 +540,11 @@ server.listen(PORT, async () => {
         cdSubF,
         cdBadgeF,
         badgeF,
-        serverValF
+        serverValF,
+        countG,
+        bdcInstG,
+        sentinelInstG,
+        disabledExistsG
       };
     });
 
@@ -531,7 +563,7 @@ server.listen(PORT, async () => {
     if (!mutationResult.bisquickActivityA || !mutationResult.bisquickActivityA.includes('Last active')) {
       throw new Error(`Assertion Failed: Idle bot activity must show 'Last active'! Found: "${mutationResult.bisquickActivityA}"`);
     }
-    if (!mutationResult.busyPillA.includes('1 OCCUPIED') || !mutationResult.safePillA.includes('6 SAFE TO LOGIN')) {
+    if (!mutationResult.busyPillA.includes('1 OCCUPIED') || !mutationResult.safePillA.includes('11 SAFE TO LOGIN')) {
       throw new Error(`Assertion Failed: Fleet summary counters failed! Busy: "${mutationResult.busyPillA}", Safe: "${mutationResult.safePillA}"`);
     }
     if (mutationResult.accountB !== 'Bisquick' || !mutationResult.bisquickIsOccupiedB || !mutationResult.angryIsSafeB) {
@@ -594,11 +626,15 @@ server.listen(PORT, async () => {
     if (mutationResult.runnerDisplayD === 'none' || mutationResult.cdDisplayD === 'none') {
       throw new Error(`Assertion Failed: Both compartments must be visible in dual telemetry! Got runner: "${mutationResult.runnerDisplayD}", cd: "${mutationResult.cdDisplayD}"`);
     }
+    if (mutationResult.countG !== 3 || mutationResult.disabledExistsG || mutationResult.bdcInstG !== 'Inst 0' || mutationResult.sentinelInstG !== 'Inst 2') {
+      throw new Error(`Assertion Failed: Dynamic Live Fleet payload failed! Result: ${JSON.stringify({ countG: mutationResult.countG, disabledExistsG: mutationResult.disabledExistsG, bdcInstG: mutationResult.bdcInstG, sentinelInstG: mutationResult.sentinelInstG })}`);
+    }
     console.log(`  ✅ Verified: Fleet Login Safety Matrix dynamically responds to bot rotation:`);
     console.log(`     1. ${mutationResult.accountA} -> Occupied: ${mutationResult.angryTagA}, Safe: ${mutationResult.bisquickTagA} (${mutationResult.busyPillA}, ${mutationResult.safePillA})`);
     console.log(`     2. ${mutationResult.accountB} -> Occupied: ${mutationResult.bisquickTagB}, Reverted Angry: ${mutationResult.angryTagB}`);
     console.log(`     3. ${mutationResult.accountC} -> Resting: ${mutationResult.shrimpTagC} (${mutationResult.shrimpDetailC})`);
     console.log(`     4. Decoupled Dual Telemetry -> Active Runner: "${mutationResult.accountD}" (${mutationResult.stageD}, ${mutationResult.runnerBadgeD}), Cooldown: "${mutationResult.cdAccountD}" (${mutationResult.clockD})`);
+    console.log(`     5. Dynamic Live Fleet -> Rendered ${mutationResult.countG} active bots (disabled omitted), BrianDCox=${mutationResult.bdcInstG}, Sentinel=${mutationResult.sentinelInstG}`);
 
     console.log('\n--- PHASE 4: DUAL-APP RADAR HEALTH, BOTHUB OFFLINE & STALENESS TIMEOUT TEST ---');
     // Subphase 4A: Bot Server Offline (Hub Online)

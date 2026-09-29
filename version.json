@@ -1,15 +1,16 @@
 {
-  "version": "3.3.63",
-  "releaseDate": "2026-09-23",
-  "title": "What's New in v3.3.63",
+  "version": "3.3.64",
+  "releaseDate": "2026-09-29",
+  "title": "What's New in v3.3.64",
   "notes": [
-    "🐻 Bear Trap Reset: Fixed event reset duplicating lifetime donation points.",
-    "📊 Donation Baselines: Restored accurate lifetime donation totals for all players.",
-    "🧹 Database Sanitizer: Purged automated chatbot test donations and invalid logs."
+    "🤖 Live Bot Radar: Dynamically loads real-time fleet telemetry from Firebase database.",
+    "🛰️ Fleet Roster: Updated fallback roster to 12 bots with accurate instances.",
+    "🏷️ Instance Badges: Display live instance numbers directly from telemetry payload."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.63",
+    "version": "3.3.64",
     "latestChanges": [
+      "v3.3.64: Dynamic live bot fleet from Firebase, 12-bot fallback roster, and instance badges",
       "v3.3.63: Fixed Bear Trap reset duplication and restored player donation baselines",
       "v3.3.62: Logged Gatekeeper bot actions and deduplicated admin log casing",
       "v3.3.61: Flushed stale presence entries and optimized realtime database network egress",

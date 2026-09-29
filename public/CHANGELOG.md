@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.64] - 2026-09-29
+- 🤖 **Live Bot Radar**: Dynamically loads real-time fleet telemetry from Firebase database.
+- 🛰️ **Fleet Roster**: Updated fallback roster to 12 bots with accurate instances.
+- 🏷️ **Instance Badges**: Display live instance numbers directly from telemetry payload.
+
 ## [3.3.63] - 2026-09-23
 - 🐻 **Bear Trap Reset**: Fixed event reset duplicating lifetime donation points.
 - 📊 **Donation Baselines**: Restored accurate lifetime donation totals for all players.

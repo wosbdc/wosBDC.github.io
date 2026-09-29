@@ -5737,13 +5737,18 @@ onValue(ref(db, 'bot_status'), (snap) => {
 });
 
 window.ALLIANCE_BOT_ROSTER = [
-  { id: 'sentinel', name: 'Sentinel Frost', inst: 'Inst 4' },
-  { id: 'bisquick', name: 'Bisquick', inst: 'Inst 11' },
+  { id: 'briandcox', name: 'BrianDCox', inst: 'Inst 0' },
+  { id: 'guardian', name: 'Guardian', inst: 'Inst 1' },
+  { id: 'sentinel', name: 'Sentinel Frost', inst: 'Inst 2' },
+  { id: 'bot3', name: 'Bot 3', inst: 'Inst 3' },
+  { id: 'bisquick', name: 'BisQuick', inst: 'Inst 11' },
   { id: 'gingivitis', name: 'Gingivitis', inst: 'Inst 12' },
   { id: 'bdcfdaddy', name: 'BDCFdaddy', inst: 'Inst 13' },
-  { id: 'shrimp', name: 'ShrimpLeprechaun', inst: 'Inst 14' },
+  { id: 'shrimp', name: 'Shrimpleprechaun', inst: 'Inst 14' },
   { id: 'angry', name: 'AngryGermanpapi', inst: 'Inst 15' },
-  { id: 'babyangry', name: 'BabyAngryGerman', inst: 'Inst 16' }
+  { id: 'babyangry', name: 'BabyAngryGerman', inst: 'Inst 16' },
+  { id: 'bot17', name: 'Bot 17', inst: 'Inst 17' },
+  { id: 'bot18', name: 'Bot 18', inst: 'Inst 18' }
 ];
 
 window.formatBotRelativeTime = (epochSecs) => {
@@ -5787,21 +5792,38 @@ window.getBotFleetSafetyHtml = () => {
   let occupiedCount = 0;
   let safeCount = 0;
 
-  const cardsHtml = window.ALLIANCE_BOT_ROSTER.map(bot => {
+  const roster = (data.fleet && Array.isArray(data.fleet) && data.fleet.length > 0)
+    ? data.fleet.filter(b => b.status !== 'DISABLED')
+    : window.ALLIANCE_BOT_ROSTER;
+
+  const cardsHtml = roster.map(bot => {
     let fleetItem = null;
     if (data.fleet && Array.isArray(data.fleet)) {
-      fleetItem = data.fleet.find(f => f.name && f.name.includes(bot.name));
+      fleetItem = data.fleet.find(f => f === bot || (f.name && bot.name && (f.name.toLowerCase() === bot.name.toLowerCase() || f.name.includes(bot.name) || bot.name.includes(f.name))));
     }
 
-    const isBotActive = !isOffline && (fleetItem 
-      ? (fleetItem.status === 'ACTIVE') 
-      : ((status === 'ACTIVE' && activeAccount.includes(bot.name)) || (data.activeAccount && data.activeAccount.includes(bot.name))));
+    const fallbackMatch = window.ALLIANCE_BOT_ROSTER.find(b => 
+      (b.name && bot.name && b.name.toLowerCase() === bot.name.toLowerCase()) || 
+      (bot.short && b.name && b.name.toLowerCase() === String(bot.short).toLowerCase())
+    );
+    const botId = fallbackMatch ? fallbackMatch.id : (bot.id || (bot.name || '').toLowerCase().replace(/[^a-z0-9]/g, ''));
+
+    const instDisplay = (bot.instance !== undefined && bot.instance !== null)
+      ? (String(bot.instance).toLowerCase().startsWith('inst') ? String(bot.instance) : `Inst ${bot.instance}`)
+      : (bot.inst || '');
+
+    const isBotActive = !isOffline && (
+      (fleetItem && fleetItem.status === 'ACTIVE') ||
+      (status === 'ACTIVE' && activeAccount && bot.name && (activeAccount.toLowerCase().includes(bot.name.toLowerCase()) || bot.name.toLowerCase().includes(activeAccount.toLowerCase()))) ||
+      (data.activeAccount && bot.name && (data.activeAccount.toLowerCase().includes(bot.name.toLowerCase()) || bot.name.toLowerCase().includes(data.activeAccount.toLowerCase())))
+    );
       
-    const isBotCooldown = !isOffline && (fleetItem
-      ? (fleetItem.status === 'COOLDOWN')
-      : ((status === 'COOLDOWN' && (cooldownAccount.includes(bot.name) || activeAccount.includes(bot.name))) || 
-         (cooldownAccount && cooldownAccount.includes(bot.name) && secondsLeft > 0) || 
-         (status === 'COOLDOWN' && bot.id === 'shrimp' && !activeAccount)));
+    const isBotCooldown = !isOffline && !isBotActive && (
+      (fleetItem && fleetItem.status === 'COOLDOWN') ||
+      (status === 'COOLDOWN' && ((cooldownAccount && bot.name && cooldownAccount.toLowerCase().includes(bot.name.toLowerCase())) || (activeAccount && bot.name && activeAccount.toLowerCase().includes(bot.name.toLowerCase())))) || 
+      (cooldownAccount && bot.name && cooldownAccount.toLowerCase().includes(bot.name.toLowerCase()) && secondsLeft > 0) || 
+      (status === 'COOLDOWN' && botId === 'shrimp' && !activeAccount)
+    );
     
     let itemClass = 'safe';
     let badgeClass = 'safe';
@@ -5837,34 +5859,34 @@ window.getBotFleetSafetyHtml = () => {
 
     let activityHtml = '';
     if (isBotActive) {
-      activityHtml = `<div class="bot-fleet-activity active" id="bot-fleet-activity-${bot.id}"><span class="bot-fleet-activity-pulse">🟢</span> Active Now</div>`;
+      activityHtml = `<div class="bot-fleet-activity active" id="bot-fleet-activity-${botId}"><span class="bot-fleet-activity-pulse">🟢</span> Active Now</div>`;
     } else {
       let lastEpoch = (fleetItem && fleetItem.lastActiveEpoch) ? fleetItem.lastActiveEpoch : (bot.lastActiveEpoch || 0);
       if (lastEpoch <= 0 && isBotCooldown && (data.timestamp || data.receivedAt)) {
         lastEpoch = Math.floor((data.timestamp || data.receivedAt) / 1000);
       }
       if (lastEpoch > 0) {
-        activityHtml = `<div class="bot-fleet-activity idle" id="bot-fleet-activity-${bot.id}">⏱️ Last active: ${window.formatBotRelativeTime(lastEpoch)}</div>`;
+        activityHtml = `<div class="bot-fleet-activity idle" id="bot-fleet-activity-${botId}">⏱️ Last active: ${window.formatBotRelativeTime(lastEpoch)}</div>`;
       } else if (fleetItem && fleetItem.lastActiveTime) {
-        activityHtml = `<div class="bot-fleet-activity idle" id="bot-fleet-activity-${bot.id}">⏱️ Last active: ${fleetItem.lastActiveTime}</div>`;
+        activityHtml = `<div class="bot-fleet-activity idle" id="bot-fleet-activity-${botId}">⏱️ Last active: ${fleetItem.lastActiveTime}</div>`;
       } else {
-        activityHtml = `<div class="bot-fleet-activity idle" id="bot-fleet-activity-${bot.id}">⏱️ Last active: Standby</div>`;
+        activityHtml = `<div class="bot-fleet-activity idle" id="bot-fleet-activity-${botId}">⏱️ Last active: Standby</div>`;
       }
     }
 
     return `
-      <div class="bot-fleet-item ${itemClass}" id="bot-fleet-item-${bot.id}">
+      <div class="bot-fleet-item ${itemClass}" id="bot-fleet-item-${botId}" data-bot-id="${bot.id || botId}">
         <div class="bot-fleet-item-info">
           <div class="bot-fleet-name-row">
             <span class="bot-fleet-name">${bot.name}</span>
-            <span class="bot-fleet-inst">${bot.inst}</span>
+            <span class="bot-fleet-inst">${instDisplay}</span>
           </div>
-          <span class="bot-fleet-detail" id="bot-fleet-detail-${bot.id}" style="display:none;">${detail}</span>
+          <span class="bot-fleet-detail" id="bot-fleet-detail-${botId}" style="display:none;">${detail}</span>
           ${activityHtml}
         </div>
-        <div class="bot-fleet-badge ${badgeClass}" id="bot-fleet-badge-${bot.id}">
-          <span id="bot-fleet-badgetext-${bot.id}">${badgeTitle}</span>
-          <span class="bot-fleet-tag" id="bot-fleet-tag-${bot.id}">${actionTag}</span>
+        <div class="bot-fleet-badge ${badgeClass}" id="bot-fleet-badge-${botId}">
+          <span id="bot-fleet-badgetext-${botId}">${badgeTitle}</span>
+          <span class="bot-fleet-tag" id="bot-fleet-tag-${botId}">${actionTag}</span>
         </div>
       </div>
     `;
