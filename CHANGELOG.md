@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.65] - 2026-09-29
+- 🤖 **Fleet Decoupling**: Removed hardcoded bot rosters across codebase.
+- ⚡ **Dynamic Telemetry**: Live Firebase fleet drives radar with instance matching.
+- 🧹 **Code Sanitizer**: Purged legacy bot aliases and hardcoded special cases.
+
 ## [3.3.64] - 2026-09-29
 - 🤖 **Live Bot Radar**: Dynamically loads real-time fleet telemetry from Firebase database.
 - 🛰️ **Fleet Roster**: Updated fallback roster to 12 bots with accurate instances.

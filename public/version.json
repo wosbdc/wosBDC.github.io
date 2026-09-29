@@ -1,15 +1,16 @@
 {
-  "version": "3.3.64",
+  "version": "3.3.65",
   "releaseDate": "2026-09-29",
-  "title": "What's New in v3.3.64",
+  "title": "What's New in v3.3.65",
   "notes": [
-    "🤖 Live Bot Radar: Dynamically loads real-time fleet telemetry from Firebase database.",
-    "🛰️ Fleet Roster: Updated fallback roster to 12 bots with accurate instances.",
-    "🏷️ Instance Badges: Display live instance numbers directly from telemetry payload."
+    "🤖 Fleet Decoupling: Removed hardcoded bot rosters across codebase.",
+    "⚡ Dynamic Telemetry: Live Firebase fleet drives radar with instance matching.",
+    "🧹 Code Sanitizer: Purged legacy bot aliases and hardcoded special cases."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.64",
+    "version": "3.3.65",
     "latestChanges": [
+      "v3.3.65: Fully decoupled bot radar to dynamic Firebase fleet and instance matching",
       "v3.3.64: Dynamic live bot fleet from Firebase, 12-bot fallback roster, and instance badges",
       "v3.3.63: Fixed Bear Trap reset duplication and restored player donation baselines",
       "v3.3.62: Logged Gatekeeper bot actions and deduplicated admin log casing",

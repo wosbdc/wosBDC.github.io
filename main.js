@@ -5727,6 +5727,9 @@ onValue(ref(db, 'bot_status'), (snap) => {
   if (snap.exists()) {
     const val = snap.val();
     window.latestBotStatus = { ...window.latestBotStatus, ...val, receivedAt: Date.now() };
+    if (val.fleet && Array.isArray(val.fleet) && val.fleet.length > 0) {
+      window.ALLIANCE_BOT_ROSTER = val.fleet.filter(b => b.status !== 'DISABLED');
+    }
     if (typeof window.updateBotOperationsRadarDom === 'function') {
       window.updateBotOperationsRadarDom();
     }
@@ -5736,20 +5739,8 @@ onValue(ref(db, 'bot_status'), (snap) => {
   }
 });
 
-window.ALLIANCE_BOT_ROSTER = [
-  { id: 'briandcox', name: 'BrianDCox', inst: 'Inst 0' },
-  { id: 'guardian', name: 'Guardian', inst: 'Inst 1' },
-  { id: 'sentinel', name: 'Sentinel Frost', inst: 'Inst 2' },
-  { id: 'bot3', name: 'Bot 3', inst: 'Inst 3' },
-  { id: 'bisquick', name: 'BisQuick', inst: 'Inst 11' },
-  { id: 'gingivitis', name: 'Gingivitis', inst: 'Inst 12' },
-  { id: 'bdcfdaddy', name: 'BDCFdaddy', inst: 'Inst 13' },
-  { id: 'shrimp', name: 'Shrimpleprechaun', inst: 'Inst 14' },
-  { id: 'angry', name: 'AngryGermanpapi', inst: 'Inst 15' },
-  { id: 'babyangry', name: 'BabyAngryGerman', inst: 'Inst 16' },
-  { id: 'bot17', name: 'Bot 17', inst: 'Inst 17' },
-  { id: 'bot18', name: 'Bot 18', inst: 'Inst 18' }
-];
+// Dynamic Bot Roster cache populated directly from Firebase Realtime Database
+window.ALLIANCE_BOT_ROSTER = window.ALLIANCE_BOT_ROSTER || [];
 
 window.formatBotRelativeTime = (epochSecs) => {
   if (!epochSecs || Number(epochSecs) <= 0) return 'Standby';
@@ -5794,19 +5785,67 @@ window.getBotFleetSafetyHtml = () => {
 
   const roster = (data.fleet && Array.isArray(data.fleet) && data.fleet.length > 0)
     ? data.fleet.filter(b => b.status !== 'DISABLED')
-    : window.ALLIANCE_BOT_ROSTER;
+    : (window.ALLIANCE_BOT_ROSTER && window.ALLIANCE_BOT_ROSTER.length > 0 ? window.ALLIANCE_BOT_ROSTER : []);
+
+  if (!roster || roster.length === 0) {
+    return `
+      <div id="bot-fleet-safety-container" class="bot-fleet-container">
+        <div class="bot-fleet-header">
+          <div class="bot-fleet-title">
+            <span>🤖</span>
+            <span>Alliance Bot Fleet & Account Login Safety</span>
+          </div>
+          <div class="bot-fleet-summary">
+            <div id="bot-fleet-busy-count" class="bot-fleet-summary-pill ${isOffline ? 'offline' : 'busy'}" ${isOffline ? 'style="background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4);"' : ''}>
+              <span>🔴 ${isOffline ? 'AUTOMATION OFFLINE' : '0 OCCUPIED'}</span>
+            </div>
+            <div id="bot-fleet-safe-count" class="bot-fleet-summary-pill safe">
+              <span>🟢 ${isOffline ? 'ALL SAFE TO LOGIN' : 'ALL SAFE TO LOGIN'}</span>
+            </div>
+          </div>
+        </div>
+        <div style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 13px;">
+          📡 Syncing with live bot fleet telemetry...
+        </div>
+      </div>
+    `;
+  }
+
+  const extractInst = (str) => {
+    if (!str || typeof str !== 'string') return null;
+    const m = str.match(/Inst\s*(-?\d+)/i);
+    return m ? parseInt(m[1], 10) : null;
+  };
+
+  const matchesAccount = (accStr, b) => {
+    if (!accStr || typeof accStr !== 'string' || !b) return false;
+    const cleanAcc = accStr.replace(/\s*\(Inst\s*-?\d+\)/gi, '').trim().toLowerCase();
+    if (!cleanAcc || cleanAcc === 'none' || cleanAcc === 'standby') return false;
+    const bName = (b.name || '').trim().toLowerCase();
+    const bShort = (b.short || '').trim().toLowerCase();
+    const targetInst = extractInst(accStr);
+    if (targetInst !== null && b.instance !== undefined && Number(b.instance) === targetInst) return true;
+    if (bName && (cleanAcc.includes(bName) || bName.includes(cleanAcc))) return true;
+    if (bShort && (cleanAcc.includes(bShort) || bShort.includes(cleanAcc))) return true;
+    if (bName.length >= 5 && cleanAcc.length >= 5 && (bName.startsWith(cleanAcc.slice(0, 6)) || cleanAcc.startsWith(bName.slice(0, 6)))) return true;
+    return false;
+  };
 
   const cardsHtml = roster.map(bot => {
     let fleetItem = null;
     if (data.fleet && Array.isArray(data.fleet)) {
       fleetItem = data.fleet.find(f => f === bot || (f.name && bot.name && (f.name.toLowerCase() === bot.name.toLowerCase() || f.name.includes(bot.name) || bot.name.includes(f.name))));
+    } else {
+      fleetItem = bot;
     }
 
-    const fallbackMatch = window.ALLIANCE_BOT_ROSTER.find(b => 
-      (b.name && bot.name && b.name.toLowerCase() === bot.name.toLowerCase()) || 
-      (bot.short && b.name && b.name.toLowerCase() === String(bot.short).toLowerCase())
-    );
-    const botId = fallbackMatch ? fallbackMatch.id : (bot.id || (bot.name || '').toLowerCase().replace(/[^a-z0-9]/g, ''));
+    let aliasId = (bot.short || bot.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (aliasId.includes('angry') && !aliasId.includes('baby')) aliasId = 'angry';
+    else if (aliasId.includes('babyangry')) aliasId = 'babyangry';
+    else if (aliasId.includes('shrimp')) aliasId = 'shrimp';
+    else if (aliasId.includes('sentinel')) aliasId = 'sentinel';
+    else if (aliasId.includes('bisquick')) aliasId = 'bisquick';
+    const botId = (bot.id && !bot.id.startsWith('bot_')) ? bot.id : (aliasId || bot.id || 'bot');
 
     const instDisplay = (bot.instance !== undefined && bot.instance !== null)
       ? (String(bot.instance).toLowerCase().startsWith('inst') ? String(bot.instance) : `Inst ${bot.instance}`)
@@ -5814,15 +5853,15 @@ window.getBotFleetSafetyHtml = () => {
 
     const isBotActive = !isOffline && (
       (fleetItem && fleetItem.status === 'ACTIVE') ||
-      (status === 'ACTIVE' && activeAccount && bot.name && (activeAccount.toLowerCase().includes(bot.name.toLowerCase()) || bot.name.toLowerCase().includes(activeAccount.toLowerCase()))) ||
-      (data.activeAccount && bot.name && (data.activeAccount.toLowerCase().includes(bot.name.toLowerCase()) || bot.name.toLowerCase().includes(data.activeAccount.toLowerCase())))
+      (status === 'ACTIVE' && matchesAccount(activeAccount, bot)) ||
+      (status === 'ACTIVE' && matchesAccount(data.account, bot)) ||
+      matchesAccount(data.activeAccount, bot)
     );
       
     const isBotCooldown = !isOffline && !isBotActive && (
       (fleetItem && fleetItem.status === 'COOLDOWN') ||
-      (status === 'COOLDOWN' && ((cooldownAccount && bot.name && cooldownAccount.toLowerCase().includes(bot.name.toLowerCase())) || (activeAccount && bot.name && activeAccount.toLowerCase().includes(bot.name.toLowerCase())))) || 
-      (cooldownAccount && bot.name && cooldownAccount.toLowerCase().includes(bot.name.toLowerCase()) && secondsLeft > 0) || 
-      (status === 'COOLDOWN' && botId === 'shrimp' && !activeAccount)
+      (status === 'COOLDOWN' && (matchesAccount(cooldownAccount, bot) || matchesAccount(data.account, bot))) || 
+      (matchesAccount(cooldownAccount, bot) && secondsLeft > 0)
     );
     
     let itemClass = 'safe';

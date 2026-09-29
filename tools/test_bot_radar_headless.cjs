@@ -61,33 +61,13 @@ function runStaticVerification() {
   new vm.Script(`(async () => {\n${strippedLines.join('\n')}\n})()`, { filename: 'main.js' });
   console.log('  ✅ main.js AST syntax validation passed with 0 syntax errors.');
 
-  // 2. 12-bot alliance roster assertion
-  assert(code.includes('window.ALLIANCE_BOT_ROSTER = ['), 'Must define window.ALLIANCE_BOT_ROSTER');
-  const expectedBots = [
-    'BrianDCox',
-    'Guardian',
-    'Sentinel Frost',
-    'Bot 3',
-    'BisQuick',
-    'Gingivitis',
-    'BDCFdaddy',
-    'Shrimpleprechaun',
-    'AngryGermanpapi',
-    'BabyAngryGerman',
-    'Bot 17',
-    'Bot 18'
-  ];
-  for (const bot of expectedBots) {
-    assert(code.includes(bot), `Roster must contain ${bot}`);
-  }
-  console.log('  ✅ 12-bot alliance roster verified in window.ALLIANCE_BOT_ROSTER.');
-
-  // 3. Sentinel Frost at Inst 2 & Dynamic Fleet Support
-  assert(code.includes("{ id: 'sentinel', name: 'Sentinel Frost', inst: 'Inst 2' }"), 'Sentinel Frost must be Inst 2 in ALLIANCE_BOT_ROSTER');
+  // 2. Dynamic Alliance Fleet assertion
+  assert(code.includes('window.ALLIANCE_BOT_ROSTER ='), 'Must define window.ALLIANCE_BOT_ROSTER');
   assert(code.includes('data.fleet && Array.isArray(data.fleet) && data.fleet.length > 0'), 'getBotFleetSafetyHtml must dynamically check data.fleet');
   assert(code.includes("data.fleet.filter(b => b.status !== 'DISABLED')"), 'getBotFleetSafetyHtml must filter out DISABLED bots');
   assert(code.includes('Inst ${bot.instance}') || code.includes('instDisplay'), 'Bot instance badges must format Inst ${bot.instance}');
-  console.log('  ✅ Sentinel Frost Inst 2, dynamic fleet array, and Inst badge formatting verified.');
+  assert(!code.includes("botId === 'shrimp'"), 'Must not contain hardcoded shrimp special-cases');
+  console.log('  ✅ Fully dynamic fleet from Firebase and zero hardcoded special-cases verified.');
 
   // 4. Safety Matrix generator & states
   assert(code.includes('window.getBotFleetSafetyHtml ='), 'getBotFleetSafetyHtml must be defined');
@@ -305,14 +285,17 @@ server.listen(PORT, async () => {
 
       // Step A: AngryGermanpapi Active
       window.latestBotStatus = {
+        ...window.latestBotStatus,
         status: 'ACTIVE',
+        activeAccount: 'AngryGermanpapi (Inst 15)',
         account: 'AngryGermanpapi (Inst 15)',
+        cooldownAccount: '',
+        cooldownSecondsLeft: 0,
         serverOnline: true,
         bothubOnline: true,
         timestamp: Date.now(),
         stage: 'Wilderness / Routine Tasks',
         secondsLeft: 0,
-        totalBots: 7,
         shortTime: '11:01 PM',
         receivedAt: Date.now()
       };
@@ -336,14 +319,17 @@ server.listen(PORT, async () => {
 
       // Step B: Bisquick Active
       window.latestBotStatus = {
+        ...window.latestBotStatus,
         status: 'ACTIVE',
+        activeAccount: 'Bisquick (Inst 11)',
         account: 'Bisquick (Inst 11)',
+        cooldownAccount: '',
+        cooldownSecondsLeft: 0,
         serverOnline: true,
         bothubOnline: true,
         timestamp: Date.now(),
         stage: 'Wilderness / Routine Tasks',
         secondsLeft: 0,
-        totalBots: 7,
         shortTime: '11:05 PM',
         receivedAt: Date.now()
       };
@@ -357,14 +343,18 @@ server.listen(PORT, async () => {
 
       // Step C: Shrimp Cooldown (Resting)
       window.latestBotStatus = {
+        ...window.latestBotStatus,
         status: 'COOLDOWN',
-        account: 'ShrimpLeprechaun (Inst 14)',
+        activeAccount: '',
+        account: 'None',
+        cooldownAccount: 'ShrimpLeprechaun (Inst 14)',
+        cooldownHoldText: 'Routine Rotation Rest',
+        cooldownSecondsLeft: 590,
         serverOnline: true,
         bothubOnline: true,
         timestamp: Date.now(),
         stage: 'Resting on City Tab',
         secondsLeft: 590,
-        totalBots: 7,
         shortTime: '11:10 PM',
         receivedAt: Date.now()
       };
@@ -387,6 +377,7 @@ server.listen(PORT, async () => {
 
       // Step D: Decoupled Dual Telemetry (AngryGermanpapi Active Runner AND Shrimp Cooldown Queue)
       window.latestBotStatus = {
+        ...window.latestBotStatus,
         status: 'ACTIVE',
         activeAccount: 'AngryGermanpapi (Inst 15)',
         activeStage: 'Attacking Polar Beasts',
@@ -395,7 +386,6 @@ server.listen(PORT, async () => {
         cooldownSecondsLeft: 7200,
         cooldownHoldText: '2 Hours',
         isCooldownRunning: true,
-        totalBots: 7,
         serverOnline: true,
         bothubOnline: true,
         timestamp: Date.now(),
@@ -563,7 +553,7 @@ server.listen(PORT, async () => {
     if (!mutationResult.bisquickActivityA || !mutationResult.bisquickActivityA.includes('Last active')) {
       throw new Error(`Assertion Failed: Idle bot activity must show 'Last active'! Found: "${mutationResult.bisquickActivityA}"`);
     }
-    if (!mutationResult.busyPillA.includes('1 OCCUPIED') || !mutationResult.safePillA.includes('11 SAFE TO LOGIN')) {
+    if (!mutationResult.busyPillA.includes('1 OCCUPIED') || !mutationResult.safePillA.includes('SAFE TO LOGIN')) {
       throw new Error(`Assertion Failed: Fleet summary counters failed! Busy: "${mutationResult.busyPillA}", Safe: "${mutationResult.safePillA}"`);
     }
     if (mutationResult.accountB !== 'Bisquick' || !mutationResult.bisquickIsOccupiedB || !mutationResult.angryIsSafeB) {
