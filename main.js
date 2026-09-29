@@ -5723,12 +5723,68 @@ window.getBotCooldownInfo = (data = window.latestBotStatus || {}) => {
   };
 };
 
+window.extractBotInstance = (str) => {
+  if (!str || typeof str !== 'string') return null;
+  const m = str.match(/Inst\s*(-?\d+)/i);
+  return m ? parseInt(m[1], 10) : null;
+};
+
+window.matchesAccount = (accStr, b) => {
+  if (!accStr || typeof accStr !== 'string' || !b) return false;
+  const cleanAcc = accStr.replace(/\s*\(Inst\s*-?\d+\)/gi, '').trim().toLowerCase();
+  if (!cleanAcc || cleanAcc === 'none' || cleanAcc === 'standby') return false;
+  const bName = (b.name || '').trim().toLowerCase();
+  const bShort = (b.short || '').trim().toLowerCase();
+  const targetInst = window.extractBotInstance(accStr);
+  if (targetInst !== null && b.instance !== undefined && Number(b.instance) === targetInst) return true;
+  if (bName && (cleanAcc.includes(bName) || bName.includes(cleanAcc))) return true;
+  if (bShort && (cleanAcc.includes(bShort) || bShort.includes(cleanAcc))) return true;
+  if (bName.length >= 5 && cleanAcc.length >= 5 && (bName.startsWith(cleanAcc.slice(0, 6)) || cleanAcc.startsWith(bName.slice(0, 6)))) return true;
+  return false;
+};
+
+window.isAllianceBotOrActive = (bot, activeAccount = '', cooldownAccount = '') => {
+  if (!bot) return false;
+  if (bot.status === 'DISABLED' || bot.enabled === false) return false;
+  const name = (bot.name || '').trim();
+  const shortName = (bot.short || '').trim();
+  const inst = (bot.instance !== undefined && bot.instance !== null) ? Number(bot.instance) : null;
+
+  // Explicitly purge generic placeholder bot names (e.g. "Bot 17", "Bot 18", "Bot 19")
+  if (/^Bot\s*(?:17|18|\d{2,})$/i.test(name)) return false;
+  if (/^Bot\s*\d+$/i.test(name) && inst !== 3) return false;
+
+  // Always keep any bot currently executing duty or in cooldown hold
+  const rawStatus = (bot.status || '').toUpperCase();
+  if (rawStatus === 'ACTIVE' || rawStatus === 'COOLDOWN') return true;
+  if (window.matchesAccount(activeAccount, bot) || window.matchesAccount(cooldownAccount, bot)) return true;
+
+  // 10 Recognized Alliance Fleet instances:
+  // 0: BrianDCox, 1: Guardian, 2: Sentinel Frost, 3: Licker/Bot 3, 11: BisQuick,
+  // 12: Gingivitis, 13: BDCFdaddy, 14: Shrimpleprechaun, 15: AngryGermanpapi, 16: BabyAngryGerman
+  const ALLIANCE_INSTANCES = [0, 1, 2, 3, 11, 12, 13, 14, 15, 16];
+  if (inst !== null) {
+    return ALLIANCE_INSTANCES.includes(inst);
+  }
+
+  // Recognized Alliance Fleet names / stems
+  const lower = `${name} ${shortName}`.toLowerCase();
+  const ALLIANCE_KEYWORDS = [
+    'briandcox', 'guardian', 'sentinel', 'licker',
+    'bisquick', 'gingivitis', 'bdcfdaddy', 'shrimp',
+    'angrygerman', 'babyangry'
+  ];
+  if (ALLIANCE_KEYWORDS.some(kw => lower.includes(kw))) return true;
+
+  return false;
+};
+
 onValue(ref(db, 'bot_status'), (snap) => {
   if (snap.exists()) {
     const val = snap.val();
     window.latestBotStatus = { ...window.latestBotStatus, ...val, receivedAt: Date.now() };
     if (val.fleet && Array.isArray(val.fleet) && val.fleet.length > 0) {
-      window.ALLIANCE_BOT_ROSTER = val.fleet.filter(b => b.status !== 'DISABLED');
+      window.ALLIANCE_BOT_ROSTER = val.fleet.filter(b => b.status !== 'DISABLED' && window.isAllianceBotOrActive(b, val.activeAccount, val.cooldownAccount));
     }
     if (typeof window.updateBotOperationsRadarDom === 'function') {
       window.updateBotOperationsRadarDom();
@@ -5784,8 +5840,8 @@ window.getBotFleetSafetyHtml = () => {
   let safeCount = 0;
 
   const roster = (data.fleet && Array.isArray(data.fleet) && data.fleet.length > 0)
-    ? data.fleet.filter(b => b.status !== 'DISABLED')
-    : (window.ALLIANCE_BOT_ROSTER && window.ALLIANCE_BOT_ROSTER.length > 0 ? window.ALLIANCE_BOT_ROSTER : []);
+    ? data.fleet.filter(b => b.status !== 'DISABLED' && window.isAllianceBotOrActive(b, activeAccount, cooldownAccount))
+    : (window.ALLIANCE_BOT_ROSTER && window.ALLIANCE_BOT_ROSTER.length > 0 ? window.ALLIANCE_BOT_ROSTER.filter(b => b.status !== 'DISABLED' && window.isAllianceBotOrActive(b, activeAccount, cooldownAccount)) : []);
 
   if (!roster || roster.length === 0) {
     return `
@@ -5811,25 +5867,8 @@ window.getBotFleetSafetyHtml = () => {
     `;
   }
 
-  const extractInst = (str) => {
-    if (!str || typeof str !== 'string') return null;
-    const m = str.match(/Inst\s*(-?\d+)/i);
-    return m ? parseInt(m[1], 10) : null;
-  };
-
-  const matchesAccount = (accStr, b) => {
-    if (!accStr || typeof accStr !== 'string' || !b) return false;
-    const cleanAcc = accStr.replace(/\s*\(Inst\s*-?\d+\)/gi, '').trim().toLowerCase();
-    if (!cleanAcc || cleanAcc === 'none' || cleanAcc === 'standby') return false;
-    const bName = (b.name || '').trim().toLowerCase();
-    const bShort = (b.short || '').trim().toLowerCase();
-    const targetInst = extractInst(accStr);
-    if (targetInst !== null && b.instance !== undefined && Number(b.instance) === targetInst) return true;
-    if (bName && (cleanAcc.includes(bName) || bName.includes(cleanAcc))) return true;
-    if (bShort && (cleanAcc.includes(bShort) || bShort.includes(cleanAcc))) return true;
-    if (bName.length >= 5 && cleanAcc.length >= 5 && (bName.startsWith(cleanAcc.slice(0, 6)) || cleanAcc.startsWith(bName.slice(0, 6)))) return true;
-    return false;
-  };
+  const extractInst = window.extractBotInstance;
+  const matchesAccount = window.matchesAccount;
 
   const cardsHtml = roster.map(bot => {
     let fleetItem = null;

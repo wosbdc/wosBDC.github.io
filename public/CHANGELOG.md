@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.66] - 2026-09-29
+- 🧹 **Fleet Sanitizer**: Purged placeholder Bot 17 and Bot 18.
+- 🛡️ **Alliance Filtering**: Strictly displays verified 10 active alliance bots.
+- 📊 **Accurate Counters**: Login safety summary counters dynamically reflect active fleet.
+
 ## [3.3.65] - 2026-09-29
 - 🤖 **Fleet Decoupling**: Removed hardcoded bot rosters across codebase.
 - ⚡ **Dynamic Telemetry**: Live Firebase fleet drives radar with instance matching.

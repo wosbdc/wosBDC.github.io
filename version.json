@@ -1,15 +1,16 @@
 {
-  "version": "3.3.65",
+  "version": "3.3.66",
   "releaseDate": "2026-09-29",
-  "title": "What's New in v3.3.65",
+  "title": "What's New in v3.3.66",
   "notes": [
-    "🤖 Fleet Decoupling: Removed hardcoded bot rosters across codebase.",
-    "⚡ Dynamic Telemetry: Live Firebase fleet drives radar with instance matching.",
-    "🧹 Code Sanitizer: Purged legacy bot aliases and hardcoded special cases."
+    "🧹 Fleet Sanitizer: Purged placeholder Bot 17, 18, and non-alliance instances.",
+    "🛡️ Alliance Filtering: Strictly displays verified 10 active alliance bots.",
+    "📊 Accurate Counters: Login safety summary counters dynamically reflect active fleet."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.65",
+    "version": "3.3.66",
     "latestChanges": [
+      "v3.3.66: Purged Bot 17, 18 and filtered radar to 10 active alliance bots",
       "v3.3.65: Fully decoupled bot radar to dynamic Firebase fleet and instance matching",
       "v3.3.64: Dynamic live bot fleet from Firebase, 12-bot fallback roster, and instance badges",
       "v3.3.63: Fixed Bear Trap reset duplication and restored player donation baselines",

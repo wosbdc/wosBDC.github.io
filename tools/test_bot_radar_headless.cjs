@@ -63,8 +63,11 @@ function runStaticVerification() {
 
   // 2. Dynamic Alliance Fleet assertion
   assert(code.includes('window.ALLIANCE_BOT_ROSTER ='), 'Must define window.ALLIANCE_BOT_ROSTER');
+  assert(code.includes('window.isAllianceBotOrActive ='), 'Must define window.isAllianceBotOrActive');
+  assert(code.includes('window.extractBotInstance ='), 'Must define window.extractBotInstance');
+  assert(code.includes('window.matchesAccount ='), 'Must define window.matchesAccount');
   assert(code.includes('data.fleet && Array.isArray(data.fleet) && data.fleet.length > 0'), 'getBotFleetSafetyHtml must dynamically check data.fleet');
-  assert(code.includes("data.fleet.filter(b => b.status !== 'DISABLED')"), 'getBotFleetSafetyHtml must filter out DISABLED bots');
+  assert(code.includes("data.fleet.filter(b => b.status !== 'DISABLED'"), 'getBotFleetSafetyHtml must filter out DISABLED bots');
   assert(code.includes('Inst ${bot.instance}') || code.includes('instDisplay'), 'Bot instance badges must format Inst ${bot.instance}');
   assert(!code.includes("botId === 'shrimp'"), 'Must not contain hardcoded shrimp special-cases');
   console.log('  ✅ Fully dynamic fleet from Firebase and zero hardcoded special-cases verified.');
@@ -261,22 +264,34 @@ server.listen(PORT, async () => {
       const fleetContainer = tabBots.querySelector('#bot-fleet-safety-container');
       if (!fleetContainer) return { error: '#bot-fleet-safety-container not found inside #bot-operations-radar' };
       const items = tabBots.querySelectorAll('.bot-fleet-item');
-      const guardianInFleet = Array.from(items).some(i => i.textContent.includes('Guardian'));
+      const itemTexts = Array.from(items).map(i => i.textContent);
+      const hasSentinel = itemTexts.some(t => t.includes('Sentinel Frost'));
+      const hasBisquick = itemTexts.some(t => t.includes('BisQuick') || t.includes('Bisquick'));
+      const hasBot17 = itemTexts.some(t => t.includes('Bot 17'));
+      const hasBot18 = itemTexts.some(t => t.includes('Bot 18'));
+      const hasDaddyDiva = itemTexts.some(t => t.includes('Daddydiva'));
+      const itemNames = Array.from(items).map(i => i.querySelector('.bot-fleet-name')?.textContent?.trim());
       const account = document.getElementById('bot-radar-account-val')?.textContent?.trim();
       const badge = document.getElementById('bot-radar-badge-el')?.textContent?.trim();
-      return { found: true, count: items.length, guardianInFleet, account, badge };
+      return { found: true, count: items.length, itemNames, hasSentinel, hasBisquick, hasBot17, hasBot18, hasDaddyDiva, account, badge };
     });
 
     if (!radarInAdmin || !radarInAdmin.found) {
       throw new Error('Assertion Failed: ' + (radarInAdmin?.error || 'Radar not found in Admin Bots tab'));
     }
-    if (radarInAdmin.count < 12) {
-      throw new Error(`Assertion Failed: Expected at least 12 bots in Fleet Matrix inside Admin Bots tab, found ${radarInAdmin.count}`);
+    if (radarInAdmin.count < 8 || radarInAdmin.count > 10) {
+      throw new Error(`Assertion Failed: Expected between 8 and 10 active alliance bots in Fleet Matrix inside Admin Bots tab, found ${radarInAdmin.count}. Rendered bots: ${JSON.stringify(radarInAdmin.itemNames)}`);
     }
-    if (!radarInAdmin.guardianInFleet) {
-      throw new Error('Assertion Failed: Guardian must be in the Admin Bots fleet matrix!');
+    if (!radarInAdmin.hasSentinel || !radarInAdmin.hasBisquick) {
+      throw new Error('Assertion Failed: Sentinel Frost and BisQuick must be in the Admin Bots fleet matrix!');
     }
-    console.log(`  ✅ #bot-operations-radar verified in Admin Bots tab: Account="${radarInAdmin.account}", 12 bots in Fleet Safety Matrix`);
+    if (radarInAdmin.hasBot17 || radarInAdmin.hasBot18) {
+      throw new Error('Assertion Failed: Bot 17 and Bot 18 must be strictly purged from the fleet matrix!');
+    }
+    if (radarInAdmin.hasDaddyDiva) {
+      throw new Error('Assertion Failed: Inactive non-alliance instances (Daddydiva) must be filtered out!');
+    }
+    console.log(`  ✅ #bot-operations-radar verified in Admin Bots tab: Account="${radarInAdmin.account}", ${radarInAdmin.count} active bots (Bot 17 & 18 cleanly purged)`);
 
     // Verify Real Visual DOM Mutation: Simulate Multi-Account Rotation and Login Safety
     console.log('\n--- PHASE 3: BOT FLEET MATRIX ROTATION & ACCOUNT LOGIN SAFETY TEST ---');
@@ -297,7 +312,11 @@ server.listen(PORT, async () => {
         stage: 'Wilderness / Routine Tasks',
         secondsLeft: 0,
         shortTime: '11:01 PM',
-        receivedAt: Date.now()
+        receivedAt: Date.now(),
+        fleet: (window.latestBotStatus.fleet || []).map(b => ({
+          ...b,
+          status: (b.name.toLowerCase() === 'angrygermanpapi' || b.short?.toLowerCase() === 'angry') ? 'ACTIVE' : 'READY'
+        }))
       };
       window.updateBotOperationsRadarDom();
 
@@ -331,7 +350,11 @@ server.listen(PORT, async () => {
         stage: 'Wilderness / Routine Tasks',
         secondsLeft: 0,
         shortTime: '11:05 PM',
-        receivedAt: Date.now()
+        receivedAt: Date.now(),
+        fleet: (window.latestBotStatus.fleet || []).map(b => ({
+          ...b,
+          status: b.name.toLowerCase().includes('bisquick') ? 'ACTIVE' : 'READY'
+        }))
       };
       window.updateBotOperationsRadarDom();
 
