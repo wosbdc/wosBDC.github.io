@@ -5782,7 +5782,27 @@ onValue(ref(db, 'bot_status'), (snap) => {
     const val = snap.val();
     window.latestBotStatus = { ...window.latestBotStatus, ...val, receivedAt: Date.now() };
     if (val.fleet && Array.isArray(val.fleet) && val.fleet.length > 0) {
-      window.ALLIANCE_BOT_ROSTER = val.fleet.filter(b => window.isAllianceBotOrActive(b, val.activeAccount, val.cooldownAccount));
+      const activeAcc = val.activeAccount || val.account || '';
+      const coolAcc = val.cooldownAccount || '';
+      window.ALLIANCE_BOT_ROSTER = window.ALLIANCE_BOT_ROSTER.map(baseBot => {
+        const liveMatch = val.fleet.find(f => 
+          window.matchesAccount(baseBot.name, f) || 
+          window.matchesAccount(f.name, baseBot) || 
+          (f.instance !== undefined && baseBot.instance !== undefined && Number(f.instance) === Number(baseBot.instance))
+        );
+        return liveMatch ? { ...baseBot, ...liveMatch, id: baseBot.id, name: baseBot.name, instance: baseBot.instance, inst: baseBot.inst } : baseBot;
+      });
+      val.fleet.forEach(f => {
+        if (window.isAllianceBotOrActive(f, activeAcc, coolAcc)) {
+          const exists = window.ALLIANCE_BOT_ROSTER.some(m => 
+            window.matchesAccount(m.name, f) || 
+            (m.instance !== undefined && f.instance !== undefined && Number(m.instance) === Number(f.instance))
+          );
+          if (!exists) {
+            window.ALLIANCE_BOT_ROSTER.push(f);
+          }
+        }
+      });
     }
     if (typeof window.updateBotOperationsRadarDom === 'function') {
       window.updateBotOperationsRadarDom();
@@ -5855,9 +5875,56 @@ window.getBotFleetSafetyHtml = () => {
   let occupiedCount = 0;
   let safeCount = 0;
 
-  const roster = (data.fleet && Array.isArray(data.fleet) && data.fleet.length > 0)
-    ? data.fleet.filter(b => window.isAllianceBotOrActive(b, activeAccount, cooldownAccount))
-    : (window.ALLIANCE_BOT_ROSTER && window.ALLIANCE_BOT_ROSTER.length > 0 ? window.ALLIANCE_BOT_ROSTER.filter(b => window.isAllianceBotOrActive(b, activeAccount, cooldownAccount)) : []);
+  // Master baseline roster of all 17 alliance accounts (Inst 0 to 16)
+  const masterBase = [
+    { id: 'briandcox', name: 'BrianDCox', instance: 0, inst: 'Inst 0' },
+    { id: 'guardian', name: 'Guardian', instance: 1, inst: 'Inst 1' },
+    { id: 'sentinel', name: 'Sentinel Frost', instance: 2, inst: 'Inst 2' },
+    { id: 'licker', name: 'Licker', instance: 3, inst: 'Inst 3' },
+    { id: 'daddydiva', name: 'Daddydiva', instance: 4, inst: 'Inst 4' },
+    { id: 'fatnugget', name: 'fatnugget', instance: 5, inst: 'Inst 5' },
+    { id: 'creampuff', name: 'creampuff', instance: 6, inst: 'Inst 6' },
+    { id: 'cr3amp13', name: 'cr3amp13', instance: 7, inst: 'Inst 7' },
+    { id: 'juicypeach', name: 'Juicypeach', instance: 8, inst: 'Inst 8' },
+    { id: 'babyboi', name: 'BabyBoi', instance: 9, inst: 'Inst 9' },
+    { id: 'babygirl', name: 'Babygirl', instance: 10, inst: 'Inst 10' },
+    { id: 'bisquick', name: 'BisQuick', instance: 11, inst: 'Inst 11' },
+    { id: 'gingivitis', name: 'Gingivitis', instance: 12, inst: 'Inst 12' },
+    { id: 'bdcfdaddy', name: 'BDCFdaddy', instance: 13, inst: 'Inst 13' },
+    { id: 'shrimp', name: 'Shrimpleprechaun', instance: 14, inst: 'Inst 14' },
+    { id: 'angry', name: 'AngryGermanpapi', instance: 15, inst: 'Inst 15' },
+    { id: 'babyangry', name: 'BabyAngryGerman', instance: 16, inst: 'Inst 16' }
+  ];
+
+  const baseRoster = (window.ALLIANCE_BOT_ROSTER && window.ALLIANCE_BOT_ROSTER.length > 0)
+    ? window.ALLIANCE_BOT_ROSTER
+    : masterBase;
+
+  // Seamlessly merge live telemetry from data.fleet onto the 17 alliance accounts
+  const telemetryFleet = (data.fleet && Array.isArray(data.fleet) && data.fleet.length > 0) ? data.fleet : [];
+
+  const mergedRoster = baseRoster.map(baseBot => {
+    const liveMatch = telemetryFleet.find(f => 
+      window.matchesAccount(baseBot.name, f) || 
+      window.matchesAccount(f.name, baseBot) || 
+      (f.instance !== undefined && baseBot.instance !== undefined && Number(f.instance) === Number(baseBot.instance))
+    );
+    return liveMatch ? { ...baseBot, ...liveMatch, id: baseBot.id, name: baseBot.name, instance: baseBot.instance, inst: baseBot.inst } : baseBot;
+  });
+
+  telemetryFleet.forEach(f => {
+    if (window.isAllianceBotOrActive(f, activeAccount, cooldownAccount)) {
+      const exists = mergedRoster.some(m => 
+        window.matchesAccount(m.name, f) || 
+        (m.instance !== undefined && f.instance !== undefined && Number(m.instance) === Number(f.instance))
+      );
+      if (!exists) {
+        mergedRoster.push(f);
+      }
+    }
+  });
+
+  const roster = mergedRoster.filter(b => window.isAllianceBotOrActive(b, activeAccount, cooldownAccount));
 
   if (!roster || roster.length === 0) {
     return `
@@ -5939,7 +6006,7 @@ window.getBotFleetSafetyHtml = () => {
       badgeClass = 'occupied';
       badgeTitle = '● ACTIVE DUTY';
       actionTag = '⛔ DO NOT LOG IN';
-      detail = fleetItem?.detail || 'Running Wilderness / Daily Tasks';
+      detail = fleetItem?.detail || data.activeStage || data.stage || 'Running Wilderness / Daily Tasks';
     } else if (isBotCooldown) {
       safeCount++;
       itemClass = 'cooldown';

@@ -67,7 +67,7 @@ function runStaticVerification() {
   assert(code.includes('window.extractBotInstance ='), 'Must define window.extractBotInstance');
   assert(code.includes('window.matchesAccount ='), 'Must define window.matchesAccount');
   assert(code.includes('data.fleet && Array.isArray(data.fleet) && data.fleet.length > 0'), 'getBotFleetSafetyHtml must dynamically check data.fleet');
-  assert(code.includes('data.fleet.filter(b => window.isAllianceBotOrActive') || code.includes('data.fleet.filter'), 'getBotFleetSafetyHtml must filter data.fleet');
+  assert(code.includes('mergedRoster.filter(b => window.isAllianceBotOrActive') || code.includes('window.isAllianceBotOrActive'), 'getBotFleetSafetyHtml must filter with isAllianceBotOrActive');
   assert(code.includes('Inst ${bot.instance}') || code.includes('instDisplay'), 'Bot instance badges must format Inst ${bot.instance}');
   assert(!code.includes("botId === 'shrimp'"), 'Must not contain hardcoded shrimp special-cases');
   console.log('  ✅ Fully dynamic fleet from Firebase and zero hardcoded special-cases verified.');
@@ -497,6 +497,40 @@ server.listen(PORT, async () => {
       const sentinelInstG = document.querySelector('#bot-fleet-item-sentinel .bot-fleet-inst')?.textContent?.trim();
       const disabledExistsG = Array.from(fleetItemsG).some(el => el.textContent.includes('Disabled Bot'));
 
+      // Step H: Partial 7-bot Telemetry Payload with 'creampuff' Active Runner
+      window.latestBotStatus = {
+        status: 'ACTIVE',
+        account: 'creampuff',
+        activeAccount: 'creampuff',
+        activeStage: 'Wilderness / Routine Tasks',
+        serverOnline: true,
+        bothubOnline: true,
+        timestamp: Date.now(),
+        receivedAt: Date.now(),
+        fleet: [
+          { name: 'Sentinel Frost', status: 'STANDBY', safeToLogin: true, detail: 'Idle / Standby' },
+          { name: 'Bisquick', status: 'STANDBY', safeToLogin: true, detail: 'Idle / Standby' },
+          { name: 'Gingivitis', status: 'STANDBY', safeToLogin: true, detail: 'Idle / Standby' },
+          { name: 'BDCFdaddy', status: 'STANDBY', safeToLogin: true, detail: 'Idle / Standby' },
+          { name: 'ShrimpLeprechaun', status: 'STANDBY', safeToLogin: true, detail: 'Idle / Standby' },
+          { name: 'AngryGermanpapi', status: 'STANDBY', safeToLogin: true, detail: 'Idle / Standby' },
+          { name: 'BabyAngryGerman', status: 'STANDBY', safeToLogin: true, detail: 'Idle / Standby' }
+        ]
+      };
+      window.updateBotOperationsRadarDom();
+
+      const fleetItemsH = document.querySelectorAll('.bot-fleet-item');
+      const countH = fleetItemsH.length;
+      const creampuffItemH = document.getElementById('bot-fleet-item-creampuff');
+      const creampuffOccupiedH = creampuffItemH?.classList?.contains('occupied');
+      const creampuffTagH = document.getElementById('bot-fleet-tag-creampuff')?.textContent?.trim();
+      const bdcItemH = document.getElementById('bot-fleet-item-briandcox');
+      const bdcSafeH = bdcItemH?.classList?.contains('safe');
+      const hasBot17H = Array.from(fleetItemsH).some(el => el.textContent.includes('Bot 17'));
+      const hasBot18H = Array.from(fleetItemsH).some(el => el.textContent.includes('Bot 18'));
+      const busyPillH = document.getElementById('bot-fleet-busy-count')?.textContent?.trim();
+      const safePillH = document.getElementById('bot-fleet-safe-count')?.textContent?.trim();
+
       return {
         accountA,
         runnerDisplayA,
@@ -556,7 +590,15 @@ server.listen(PORT, async () => {
         countG,
         bdcInstG,
         sentinelInstG,
-        disabledExistsG
+        disabledExistsG,
+        countH,
+        creampuffOccupiedH,
+        creampuffTagH,
+        bdcSafeH,
+        hasBot17H,
+        hasBot18H,
+        busyPillH,
+        safePillH
       };
     });
 
@@ -638,8 +680,11 @@ server.listen(PORT, async () => {
     if (mutationResult.runnerDisplayD === 'none' || mutationResult.cdDisplayD === 'none') {
       throw new Error(`Assertion Failed: Both compartments must be visible in dual telemetry! Got runner: "${mutationResult.runnerDisplayD}", cd: "${mutationResult.cdDisplayD}"`);
     }
-    if (mutationResult.countG !== 3 || mutationResult.disabledExistsG || mutationResult.bdcInstG !== 'Inst 0' || mutationResult.sentinelInstG !== 'Inst 2') {
+    if (mutationResult.countG !== 17 || mutationResult.disabledExistsG || mutationResult.bdcInstG !== 'Inst 0' || mutationResult.sentinelInstG !== 'Inst 2') {
       throw new Error(`Assertion Failed: Dynamic Live Fleet payload failed! Result: ${JSON.stringify({ countG: mutationResult.countG, disabledExistsG: mutationResult.disabledExistsG, bdcInstG: mutationResult.bdcInstG, sentinelInstG: mutationResult.sentinelInstG })}`);
+    }
+    if (mutationResult.countH !== 17 || !mutationResult.creampuffOccupiedH || mutationResult.creampuffTagH !== '⛔ DO NOT LOG IN' || !mutationResult.bdcSafeH || mutationResult.hasBot17H || mutationResult.hasBot18H) {
+      throw new Error(`Assertion Failed: Step H partial telemetry overlay failed! Result: ${JSON.stringify({ countH: mutationResult.countH, creampuffOccupiedH: mutationResult.creampuffOccupiedH, creampuffTagH: mutationResult.creampuffTagH, bdcSafeH: mutationResult.bdcSafeH, hasBot17H: mutationResult.hasBot17H, hasBot18H: mutationResult.hasBot18H })}`);
     }
     console.log(`  ✅ Verified: Fleet Login Safety Matrix dynamically responds to bot rotation:`);
     console.log(`     1. ${mutationResult.accountA} -> Occupied: ${mutationResult.angryTagA}, Safe: ${mutationResult.bisquickTagA} (${mutationResult.busyPillA}, ${mutationResult.safePillA})`);
@@ -647,6 +692,7 @@ server.listen(PORT, async () => {
     console.log(`     3. ${mutationResult.accountC} -> Resting: ${mutationResult.shrimpTagC} (${mutationResult.shrimpDetailC})`);
     console.log(`     4. Decoupled Dual Telemetry -> Active Runner: "${mutationResult.accountD}" (${mutationResult.stageD}, ${mutationResult.runnerBadgeD}), Cooldown: "${mutationResult.cdAccountD}" (${mutationResult.clockD})`);
     console.log(`     5. Dynamic Live Fleet -> Rendered ${mutationResult.countG} active bots (disabled omitted), BrianDCox=${mutationResult.bdcInstG}, Sentinel=${mutationResult.sentinelInstG}`);
+    console.log(`     6. Step H Partial Telemetry (7 bots) -> All ${mutationResult.countH} accounts preserved, creampuff active (${mutationResult.creampuffTagH}), BrianDCox safe, Bot 17/18 absent (${mutationResult.busyPillH}, ${mutationResult.safePillH})`);
 
     console.log('\n--- PHASE 4: DUAL-APP RADAR HEALTH, BOTHUB OFFLINE & STALENESS TIMEOUT TEST ---');
     // Subphase 4A: Bot Server Offline (Hub Online)

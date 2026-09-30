@@ -1,15 +1,16 @@
 {
-  "version": "3.3.67",
-  "releaseDate": "2026-09-29",
-  "title": "What's New in v3.3.67",
+  "version": "3.3.68",
+  "releaseDate": "2026-09-30",
+  "title": "What's New in v3.3.68",
   "notes": [
-    "📱 Mobile Grid: Fits two bots per row on phones.",
-    "🧹 Sleek Cards: Replaced bulky squares with glowing status dots.",
-    "🛰️ Real Fleet: Displays 17 alliance accounts without placeholders."
+    "🛡️ Fleet Resilience: All 17 alliance bots always render.",
+    "⚡ Dynamic Telemetry: Merges live Firebase status onto master roster.",
+    "🔴 Active Bot: Accurately highlights active runner at all times."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.67",
+    "version": "3.3.68",
     "latestChanges": [
+      "v3.3.68: Permanent master fleet merging and resilient telemetry overlay",
       "v3.3.67: Option A 2-column mobile fleet grid and full fleet restoration",
       "v3.3.66: Purged Bot 17, 18 and filtered radar to 10 active alliance bots",
       "v3.3.65: Fully decoupled bot radar to dynamic Firebase fleet and instance matching",

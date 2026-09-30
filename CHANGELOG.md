@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.68] - 2026-09-30
+- 🛡️ **Fleet Resilience**: All 17 alliance bots always render.
+- ⚡ **Dynamic Telemetry**: Merges live Firebase status onto master roster.
+- 🔴 **Active Bot**: Accurately highlights active runner at all times.
+
 ## [3.3.67] - 2026-09-29
 - 📱 **Mobile Grid**: Fits two bots per row on phones.
 - 🧹 **Sleek Cards**: Replaced bulky squares with glowing status dots.
