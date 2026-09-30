@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.67] - 2026-09-29
+- 📱 **Mobile Grid**: Fits two bots per row on phones.
+- 🧹 **Sleek Cards**: Replaced bulky squares with glowing status dots.
+- 🛰️ **Real Fleet**: Displays 17 alliance accounts without placeholders.
+
 ## [3.3.66] - 2026-09-29
 - 🧹 **Fleet Sanitizer**: Purged placeholder Bot 17 and Bot 18.
 - 🛡️ **Alliance Filtering**: Strictly displays verified 10 active alliance bots.

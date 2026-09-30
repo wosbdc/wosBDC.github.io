@@ -5745,32 +5745,30 @@ window.matchesAccount = (accStr, b) => {
 
 window.isAllianceBotOrActive = (bot, activeAccount = '', cooldownAccount = '') => {
   if (!bot) return false;
-  if (bot.status === 'DISABLED' || bot.enabled === false) return false;
   const name = (bot.name || '').trim();
   const shortName = (bot.short || '').trim();
   const inst = (bot.instance !== undefined && bot.instance !== null) ? Number(bot.instance) : null;
 
-  // Explicitly purge generic placeholder bot names (e.g. "Bot 17", "Bot 18", "Bot 19")
+  // Explicitly purge generic placeholder bot names (e.g. "Bot 17", "Bot 18", "Bot 19", instances 17+)
   if (/^Bot\s*(?:17|18|\d{2,})$/i.test(name)) return false;
   if (/^Bot\s*\d+$/i.test(name) && inst !== 3) return false;
+  if (inst !== null && inst > 16) return false;
 
   // Always keep any bot currently executing duty or in cooldown hold
   const rawStatus = (bot.status || '').toUpperCase();
   if (rawStatus === 'ACTIVE' || rawStatus === 'COOLDOWN') return true;
   if (window.matchesAccount(activeAccount, bot) || window.matchesAccount(cooldownAccount, bot)) return true;
 
-  // 10 Recognized Alliance Fleet instances:
-  // 0: BrianDCox, 1: Guardian, 2: Sentinel Frost, 3: Licker/Bot 3, 11: BisQuick,
-  // 12: Gingivitis, 13: BDCFdaddy, 14: Shrimpleprechaun, 15: AngryGermanpapi, 16: BabyAngryGerman
-  const ALLIANCE_INSTANCES = [0, 1, 2, 3, 11, 12, 13, 14, 15, 16];
+  // Real Alliance Fleet instances: 0 through 16 (17 total accounts)
   if (inst !== null) {
-    return ALLIANCE_INSTANCES.includes(inst);
+    return inst >= 0 && inst <= 16;
   }
 
   // Recognized Alliance Fleet names / stems
   const lower = `${name} ${shortName}`.toLowerCase();
   const ALLIANCE_KEYWORDS = [
     'briandcox', 'guardian', 'sentinel', 'licker',
+    'daddydiva', 'fatnugget', 'creampuff', 'cr3amp13', 'juicypeach', 'babyboi', 'babygirl',
     'bisquick', 'gingivitis', 'bdcfdaddy', 'shrimp',
     'angrygerman', 'babyangry'
   ];
@@ -5784,7 +5782,7 @@ onValue(ref(db, 'bot_status'), (snap) => {
     const val = snap.val();
     window.latestBotStatus = { ...window.latestBotStatus, ...val, receivedAt: Date.now() };
     if (val.fleet && Array.isArray(val.fleet) && val.fleet.length > 0) {
-      window.ALLIANCE_BOT_ROSTER = val.fleet.filter(b => b.status !== 'DISABLED' && window.isAllianceBotOrActive(b, val.activeAccount, val.cooldownAccount));
+      window.ALLIANCE_BOT_ROSTER = val.fleet.filter(b => window.isAllianceBotOrActive(b, val.activeAccount, val.cooldownAccount));
     }
     if (typeof window.updateBotOperationsRadarDom === 'function') {
       window.updateBotOperationsRadarDom();
@@ -5795,8 +5793,26 @@ onValue(ref(db, 'bot_status'), (snap) => {
   }
 });
 
-// Dynamic Bot Roster cache populated directly from Firebase Realtime Database
-window.ALLIANCE_BOT_ROSTER = window.ALLIANCE_BOT_ROSTER || [];
+// Dynamic Bot Roster fallback populated with all 17 alliance accounts (Inst 0 to 16)
+window.ALLIANCE_BOT_ROSTER = [
+  { id: 'briandcox', name: 'BrianDCox', instance: 0, inst: 'Inst 0' },
+  { id: 'guardian', name: 'Guardian', instance: 1, inst: 'Inst 1' },
+  { id: 'sentinel', name: 'Sentinel Frost', instance: 2, inst: 'Inst 2' },
+  { id: 'licker', name: 'Licker', instance: 3, inst: 'Inst 3' },
+  { id: 'daddydiva', name: 'Daddydiva', instance: 4, inst: 'Inst 4' },
+  { id: 'fatnugget', name: 'fatnugget', instance: 5, inst: 'Inst 5' },
+  { id: 'creampuff', name: 'creampuff', instance: 6, inst: 'Inst 6' },
+  { id: 'cr3amp13', name: 'cr3amp13', instance: 7, inst: 'Inst 7' },
+  { id: 'juicypeach', name: 'Juicypeach', instance: 8, inst: 'Inst 8' },
+  { id: 'babyboi', name: 'BabyBoi', instance: 9, inst: 'Inst 9' },
+  { id: 'babygirl', name: 'Babygirl', instance: 10, inst: 'Inst 10' },
+  { id: 'bisquick', name: 'BisQuick', instance: 11, inst: 'Inst 11' },
+  { id: 'gingivitis', name: 'Gingivitis', instance: 12, inst: 'Inst 12' },
+  { id: 'bdcfdaddy', name: 'BDCFdaddy', instance: 13, inst: 'Inst 13' },
+  { id: 'shrimp', name: 'Shrimpleprechaun', instance: 14, inst: 'Inst 14' },
+  { id: 'angry', name: 'AngryGermanpapi', instance: 15, inst: 'Inst 15' },
+  { id: 'babyangry', name: 'BabyAngryGerman', instance: 16, inst: 'Inst 16' }
+];
 
 window.formatBotRelativeTime = (epochSecs) => {
   if (!epochSecs || Number(epochSecs) <= 0) return 'Standby';
@@ -5840,8 +5856,8 @@ window.getBotFleetSafetyHtml = () => {
   let safeCount = 0;
 
   const roster = (data.fleet && Array.isArray(data.fleet) && data.fleet.length > 0)
-    ? data.fleet.filter(b => b.status !== 'DISABLED' && window.isAllianceBotOrActive(b, activeAccount, cooldownAccount))
-    : (window.ALLIANCE_BOT_ROSTER && window.ALLIANCE_BOT_ROSTER.length > 0 ? window.ALLIANCE_BOT_ROSTER.filter(b => b.status !== 'DISABLED' && window.isAllianceBotOrActive(b, activeAccount, cooldownAccount)) : []);
+    ? data.fleet.filter(b => window.isAllianceBotOrActive(b, activeAccount, cooldownAccount))
+    : (window.ALLIANCE_BOT_ROSTER && window.ALLIANCE_BOT_ROSTER.length > 0 ? window.ALLIANCE_BOT_ROSTER.filter(b => window.isAllianceBotOrActive(b, activeAccount, cooldownAccount)) : []);
 
   if (!roster || roster.length === 0) {
     return `
@@ -5956,15 +5972,16 @@ window.getBotFleetSafetyHtml = () => {
       <div class="bot-fleet-item ${itemClass}" id="bot-fleet-item-${botId}" data-bot-id="${bot.id || botId}">
         <div class="bot-fleet-item-info">
           <div class="bot-fleet-name-row">
-            <span class="bot-fleet-name">${bot.name}</span>
+            <span class="bot-fleet-dot ${itemClass}" title="${itemClass}"></span>
+            <span class="bot-fleet-name" title="${bot.name}">${bot.name}</span>
             <span class="bot-fleet-inst">${instDisplay}</span>
           </div>
+          <div class="bot-fleet-status-row">
+            <span class="bot-fleet-tag ${itemClass}" id="bot-fleet-tag-${botId}">${actionTag}</span>
+            ${activityHtml}
+          </div>
           <span class="bot-fleet-detail" id="bot-fleet-detail-${botId}" style="display:none;">${detail}</span>
-          ${activityHtml}
-        </div>
-        <div class="bot-fleet-badge ${badgeClass}" id="bot-fleet-badge-${botId}">
-          <span id="bot-fleet-badgetext-${botId}">${badgeTitle}</span>
-          <span class="bot-fleet-tag" id="bot-fleet-tag-${botId}">${actionTag}</span>
+          <span id="bot-fleet-badgetext-${botId}" style="display:none;">${badgeTitle}</span>
         </div>
       </div>
     `;

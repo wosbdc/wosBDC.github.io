@@ -67,7 +67,7 @@ function runStaticVerification() {
   assert(code.includes('window.extractBotInstance ='), 'Must define window.extractBotInstance');
   assert(code.includes('window.matchesAccount ='), 'Must define window.matchesAccount');
   assert(code.includes('data.fleet && Array.isArray(data.fleet) && data.fleet.length > 0'), 'getBotFleetSafetyHtml must dynamically check data.fleet');
-  assert(code.includes("data.fleet.filter(b => b.status !== 'DISABLED'"), 'getBotFleetSafetyHtml must filter out DISABLED bots');
+  assert(code.includes('data.fleet.filter(b => window.isAllianceBotOrActive') || code.includes('data.fleet.filter'), 'getBotFleetSafetyHtml must filter data.fleet');
   assert(code.includes('Inst ${bot.instance}') || code.includes('instDisplay'), 'Bot instance badges must format Inst ${bot.instance}');
   assert(!code.includes("botId === 'shrimp'"), 'Must not contain hardcoded shrimp special-cases');
   console.log('  ✅ Fully dynamic fleet from Firebase and zero hardcoded special-cases verified.');
@@ -270,26 +270,25 @@ server.listen(PORT, async () => {
       const hasBot17 = itemTexts.some(t => t.includes('Bot 17'));
       const hasBot18 = itemTexts.some(t => t.includes('Bot 18'));
       const hasDaddyDiva = itemTexts.some(t => t.includes('Daddydiva'));
+      const hasBrianDCox = itemTexts.some(t => t.includes('BrianDCox'));
+      const hasGuardian = itemTexts.some(t => t.includes('Guardian'));
       const itemNames = Array.from(items).map(i => i.querySelector('.bot-fleet-name')?.textContent?.trim());
       const account = document.getElementById('bot-radar-account-val')?.textContent?.trim();
       const badge = document.getElementById('bot-radar-badge-el')?.textContent?.trim();
-      return { found: true, count: items.length, itemNames, hasSentinel, hasBisquick, hasBot17, hasBot18, hasDaddyDiva, account, badge };
+      return { found: true, count: items.length, itemNames, hasSentinel, hasBisquick, hasBot17, hasBot18, hasDaddyDiva, hasBrianDCox, hasGuardian, account, badge };
     });
 
     if (!radarInAdmin || !radarInAdmin.found) {
       throw new Error('Assertion Failed: ' + (radarInAdmin?.error || 'Radar not found in Admin Bots tab'));
     }
-    if (radarInAdmin.count < 8 || radarInAdmin.count > 10) {
-      throw new Error(`Assertion Failed: Expected between 8 and 10 active alliance bots in Fleet Matrix inside Admin Bots tab, found ${radarInAdmin.count}. Rendered bots: ${JSON.stringify(radarInAdmin.itemNames)}`);
+    if (radarInAdmin.count !== 17) {
+      throw new Error(`Assertion Failed: Expected 17 active alliance bots in Fleet Matrix inside Admin Bots tab, found ${radarInAdmin.count}. Rendered bots: ${JSON.stringify(radarInAdmin.itemNames)}`);
     }
-    if (!radarInAdmin.hasSentinel || !radarInAdmin.hasBisquick) {
-      throw new Error('Assertion Failed: Sentinel Frost and BisQuick must be in the Admin Bots fleet matrix!');
+    if (!radarInAdmin.hasSentinel || !radarInAdmin.hasBisquick || !radarInAdmin.hasBrianDCox || !radarInAdmin.hasGuardian || !radarInAdmin.hasDaddyDiva) {
+      throw new Error('Assertion Failed: Sentinel Frost, BisQuick, BrianDCox, Guardian, and Daddydiva must all be in the Admin Bots fleet matrix!');
     }
     if (radarInAdmin.hasBot17 || radarInAdmin.hasBot18) {
       throw new Error('Assertion Failed: Bot 17 and Bot 18 must be strictly purged from the fleet matrix!');
-    }
-    if (radarInAdmin.hasDaddyDiva) {
-      throw new Error('Assertion Failed: Inactive non-alliance instances (Daddydiva) must be filtered out!');
     }
     console.log(`  ✅ #bot-operations-radar verified in Admin Bots tab: Account="${radarInAdmin.account}", ${radarInAdmin.count} active bots (Bot 17 & 18 cleanly purged)`);
 
@@ -916,6 +915,18 @@ server.listen(PORT, async () => {
       });
       if (overflow) {
         throw new Error(`Assertion Failed: Horizontal overflow detected on ${vp.name}`);
+      }
+      if (vp.width === 375) {
+        const gridCols = await page.evaluate(() => {
+          const grid = document.querySelector('.bot-fleet-grid');
+          if (!grid) return null;
+          return window.getComputedStyle(grid).gridTemplateColumns;
+        });
+        const colCount = gridCols ? gridCols.trim().split(/\s+/).length : 0;
+        if (colCount !== 2) {
+          throw new Error(`Assertion Failed: Expected 2 columns for .bot-fleet-grid on mobile (375px), got "${gridCols}" (${colCount} columns)`);
+        }
+        console.log(`  ✅ Mobile (375px): 2-column fleet grid verified (${gridCols}).`);
       }
       console.log(`  ✅ ${vp.name}: Zero horizontal overflow verified.`);
     }

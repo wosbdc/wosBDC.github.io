@@ -1,15 +1,16 @@
 {
-  "version": "3.3.66",
+  "version": "3.3.67",
   "releaseDate": "2026-09-29",
-  "title": "What's New in v3.3.66",
+  "title": "What's New in v3.3.67",
   "notes": [
-    "🧹 Fleet Sanitizer: Purged placeholder Bot 17, 18, and non-alliance instances.",
-    "🛡️ Alliance Filtering: Strictly displays verified 10 active alliance bots.",
-    "📊 Accurate Counters: Login safety summary counters dynamically reflect active fleet."
+    "📱 Mobile Grid: Fits two bots per row on phones.",
+    "🧹 Sleek Cards: Replaced bulky squares with glowing status dots.",
+    "🛰️ Real Fleet: Displays 17 alliance accounts without placeholders."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.66",
+    "version": "3.3.67",
     "latestChanges": [
+      "v3.3.67: Option A 2-column mobile fleet grid and full fleet restoration",
       "v3.3.66: Purged Bot 17, 18 and filtered radar to 10 active alliance bots",
       "v3.3.65: Fully decoupled bot radar to dynamic Firebase fleet and instance matching",
       "v3.3.64: Dynamic live bot fleet from Firebase, 12-bot fallback roster, and instance badges",
