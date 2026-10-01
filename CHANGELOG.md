@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.72] - 2026-10-01
+- 🏛️ **Vault Mobile Cards**: Fixed historical matchup cards on phone screens.
+- 📱 **Fluid Responsive**: Clean three-column battle grid in archive modal.
+- 🧹 **Clean Status**: Stripped redundant Championship Series suffix across seasons.
+
 ## [3.3.71] - 2026-10-01
 - 📱 **Mobile Championship**: Fixed 5-round matchup cards for narrow phone screens.
 - ⚔️ **Balanced Layout**: Responsive three-column battle row across all mobile viewports.

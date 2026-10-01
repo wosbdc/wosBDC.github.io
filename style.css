@@ -2578,6 +2578,17 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
   .champ-match-round-title {
     font-size: 12px;
   }
+  #champVaultModalBody {
+    padding: 14px 10px !important;
+  }
+  #championshipArchiveVaultModal > div {
+    max-height: 95vh !important;
+    border-radius: 12px !important;
+  }
+  #championshipArchiveVaultModal .modal-header,
+  #championshipArchiveVaultModal > div > div:first-child {
+    padding: 12px 14px !important;
+  }
 }
 
 

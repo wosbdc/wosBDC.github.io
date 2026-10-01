@@ -141,6 +141,26 @@ function testChampionshipArchive() {
         errors.push('main.js must render .champ-match-team.enemy-team for right team');
     }
 
+    // Vault modal specific assertions
+    const vaultRenderIdx = code.indexOf('window.renderChampionshipVaultBody =');
+    if (vaultRenderIdx !== -1) {
+        const vaultRenderCode = code.substring(vaultRenderIdx, vaultRenderIdx + 7000);
+        if (!vaultRenderCode.includes('class="champ-match-battle-row"')) {
+            errors.push('renderChampionshipVaultBody must render .champ-match-battle-row for responsive mobile layout');
+        }
+        if (!vaultRenderCode.includes('champ-match-card')) {
+            errors.push('renderChampionshipVaultBody must render .champ-match-card for responsive cards');
+        }
+    }
+
+    // Clean status text assertion
+    if (!code.includes('window.cleanChampStatusText =')) {
+        errors.push('main.js must define window.cleanChampStatusText');
+    }
+    if (code.includes(": ' (Championship Series)'")) {
+        errors.push('autoCalculateChampRecord must not append (Championship Series) suffix');
+    }
+
     if (errors.length > 0) {
         console.error('FAILED: Championship Archive Test Failed:');
         errors.forEach(e => console.error('  - ' + e));

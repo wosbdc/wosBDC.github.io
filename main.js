@@ -14943,6 +14943,11 @@ window.archiveAndResetChampionshipSeason = async () => {
 
 window.archiveAndResetChampionshipCycle = window.archiveAndResetChampionshipSeason;
 
+window.cleanChampStatusText = (st) => {
+    if (!st || typeof st !== 'string') return '';
+    return st.replace(/\s*\(\s*championship\s+series\s*\)/gi, '').trim();
+};
+
 window.openChampionshipArchiveVaultModal = async (initialKey = 'live') => {
     let existingModal = document.getElementById('championshipArchiveVaultModal');
     if (existingModal) existingModal.remove();
@@ -15154,9 +15159,11 @@ window.restoreChampionshipArchive = async (tsKey) => {
     if (!confirmed) return;
 
     try {
+        const rawStatus = seasonData.statusText || '';
+        const cleanStatus = window.cleanChampStatusText ? window.cleanChampStatusText(rawStatus) : rawStatus;
         const payload = {
             seasonName: seasonData.seasonName || "Restored Season",
-            statusText: seasonData.statusText || "Championship Series",
+            statusText: cleanStatus,
             ourSeasonFlags: seasonData.ourSeasonFlags !== undefined ? seasonData.ourSeasonFlags : 0,
             enemySeasonFlags: seasonData.enemySeasonFlags !== undefined ? seasonData.enemySeasonFlags : 0,
             ourState: seasonData.ourState || "2089",
@@ -15274,11 +15281,14 @@ window.renderChampionshipVaultBody = (activeKey = 'live') => {
         }
     });
 
-    let optionsHtml = `<option value="live" ${activeKey === 'live' ? 'selected' : ''}>🌟 Current Season: ${escapeHTML(liveData.seasonName || 'Upcoming Season')}</option>`;
+    let liveCleanStatus = window.cleanChampStatusText ? window.cleanChampStatusText(liveData.statusText) : (liveData.statusText || '');
+    let liveRecordSuffix = liveCleanStatus ? ` (${liveCleanStatus})` : '';
+    let optionsHtml = `<option value="live" ${activeKey === 'live' ? 'selected' : ''}>🌟 Current Season: ${escapeHTML(liveData.seasonName || 'Upcoming Season')}${escapeHTML(liveRecordSuffix)}</option>`;
     historyKeys.forEach(k => {
         let entry = historyObj[k] || {};
         let sName = entry.seasonName || ('Season ' + new Date(Number(k)).toLocaleDateString());
-        let sRecord = entry.statusText ? ` (${entry.statusText})` : '';
+        let cleanStatus = window.cleanChampStatusText ? window.cleanChampStatusText(entry.statusText) : (entry.statusText || '');
+        let sRecord = cleanStatus ? ` (${cleanStatus})` : '';
 
         // Check if this particular entry is blank
         let isEntryBlank = false;
@@ -15349,47 +15359,41 @@ window.renderChampionshipVaultBody = (activeKey = 'live') => {
         let isDefeat = enemyFlags > ourFlags;
         let isDraw = (ourFlags === enemyFlags) && (ourFlags > 0 || enemyFlags > 0);
 
-        let cardBg = isVictory 
-            ? 'background: linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(16,185,129,0.3);' 
-            : (isDefeat 
-                ? 'background: linear-gradient(135deg, rgba(239,68,68,0.08) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(239,68,68,0.3);' 
-                : (isDraw 
-                    ? 'background: linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(245,158,11,0.3);'
-                    : 'background: rgba(255,255,255,0.02); border: 1px solid var(--border);'));
+        let cardModifier = isVictory ? 'is-victory' : (isDefeat ? 'is-defeat' : (isDraw ? 'is-draw' : 'is-pending'));
 
         let centerStatusHtml = isVictory 
-            ? '<div style="background:rgba(16,185,129,0.2); border:1px solid rgba(16,185,129,0.4); color:#10b981; padding:2px 10px; border-radius:8px; font-weight:900; font-size:10px; letter-spacing:0.5px; margin-bottom:4px;">VICTORY</div>' 
+            ? '<div class="champ-match-status-badge victory">VICTORY</div>' 
             : (isDefeat 
-                ? '<div style="background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:2px 10px; border-radius:8px; font-weight:900; font-size:10px; letter-spacing:0.5px; margin-bottom:4px;">DEFEAT</div>' 
+                ? '<div class="champ-match-status-badge defeat">DEFEAT</div>' 
                 : (isDraw 
-                    ? '<div style="background:rgba(245,158,11,0.2); border:1px solid rgba(245,158,11,0.4); color:#f59e0b; padding:2px 10px; border-radius:8px; font-weight:900; font-size:10px; letter-spacing:0.5px; margin-bottom:4px;">DRAW</div>'
+                    ? '<div class="champ-match-status-badge draw">DRAW</div>'
                     : ''));
 
         return `
-            <div style="${cardBg} border-radius:12px; padding:14px 18px; margin-bottom:12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
-                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px; margin-bottom:10px;">
-                    <span style="font-weight:900; font-size:12px; color:var(--accent); text-transform:uppercase; letter-spacing:1px;">⚔️ ROUND ${rNum}</span>
-                    <span style="font-size:11px; color:var(--text-muted); font-weight:bold;">${escapeHTML(r.date || `Round ${rNum}`)}</span>
+            <div class="champ-match-card ${cardModifier}" style="margin-bottom:12px;">
+                <div class="champ-match-header">
+                    <span class="champ-match-round-title">⚔️ ROUND ${rNum}</span>
+                    <span style="font-size:11.5px; color:var(--text-muted); font-weight:bold;">${escapeHTML(r.date || `Round ${rNum}`)}</span>
                 </div>
-                <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+                <div class="champ-match-battle-row">
                     <!-- Left: Our Alliance -->
-                    <div style="flex:1; min-width:140px; text-align:right; display:flex; flex-direction:column; align-items:flex-end;">
-                        <div style="font-size:14px; font-weight:bold; color:var(--text-main);">[BDC]</div>
-                        <div style="font-size:10px; color:#38bdf8; font-weight:bold; letter-spacing:0.5px; margin-top:2px;">${escapeHTML(formatStateTag(r.ourState || displayData.ourState, '2089'))}</div>
-                        <div style="font-size:11px; color:#10b981; font-weight:bold; margin-top:4px; display:inline-flex; align-items:center; gap:3px; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); padding:2px 8px; border-radius:4px;"><span style="font-size:11px;">🚩</span> ${ourFlags} Flags</div>
+                    <div class="champ-match-team our-team">
+                        <div class="champ-match-team-name" title="[BDC]">[BDC]</div>
+                        <div class="champ-match-team-state">${escapeHTML(formatStateTag(r.ourState || displayData.ourState, '2089'))}</div>
+                        <div class="champ-flags-badge our-flags"><span style="font-size:12px;">🚩</span> ${ourFlags} Flags</div>
                     </div>
 
                     <!-- Center: Status & VS -->
-                    <div style="flex-shrink:0; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+                    <div class="champ-match-vs-wrap">
                         ${centerStatusHtml}
-                        <div style="width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg, rgba(6,182,212,0.2), rgba(6,182,212,0.05)); border:1.5px solid rgba(6,182,212,0.4); display:flex; align-items:center; justify-content:center; font-weight:900; font-size:12px; font-style:italic; color:var(--accent);">VS</div>
+                        <div class="champ-match-vs-circle">VS</div>
                     </div>
 
                     <!-- Right: Opponent Alliance -->
-                    <div style="flex:1; min-width:140px; text-align:left; display:flex; flex-direction:column; align-items:flex-start;">
-                        <div style="font-size:14px; font-weight:bold; color:var(--text-main);">${escapeHTML(enemyName)}</div>
-                        <div style="font-size:10px; color:#38bdf8; font-weight:bold; letter-spacing:0.5px; margin-top:2px;">${escapeHTML(formatStateTag(enemyState, '2045'))}</div>
-                        <div style="font-size:11px; color:#ef4444; font-weight:bold; margin-top:4px; display:inline-flex; align-items:center; gap:3px; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); padding:2px 8px; border-radius:4px;"><span style="font-size:11px;">🚩</span> ${enemyFlags} Flags</div>
+                    <div class="champ-match-team enemy-team">
+                        <div class="champ-match-team-name" title="${escapeHTML(enemyName)}">${escapeHTML(enemyName)}</div>
+                        <div class="champ-match-team-state">${escapeHTML(formatStateTag(enemyState, '2045'))}</div>
+                        <div class="champ-flags-badge enemy-flags"><span style="font-size:12px;">🚩</span> ${enemyFlags} Flags</div>
                     </div>
                 </div>
             </div>
@@ -15414,20 +15418,20 @@ window.renderChampionshipVaultBody = (activeKey = 'live') => {
     ` : '';
 
     body.innerHTML = `
-        <div style="margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; background:rgba(255,255,200,0.02); padding:12px 18px; border-radius:10px; border:1px solid var(--border);">
+        <div style="margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; background:rgba(255,255,200,0.02); padding:12px 14px; border-radius:10px; border:1px solid var(--border); box-sizing:border-box;">
             <div style="font-weight:bold; font-size:13px; color:var(--text-main); display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                 <span>📅 Select Championship Season:</span>
                 ${purgeBlankBtnHtml}
             </div>
-            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                <select style="padding:8px 14px; border-radius:8px; border:1px solid var(--accent); background:var(--card-bg); color:var(--text-main); font-size:13px; font-weight:bold; cursor:pointer; min-width:280px;" onchange="window.renderChampionshipVaultBody(this.value)">
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; width:100%; max-width:100%;">
+                <select style="padding:8px 12px; border-radius:8px; border:1px solid var(--accent); background:var(--card-bg); color:var(--text-main); font-size:13px; font-weight:bold; cursor:pointer; flex:1; min-width:200px; max-width:100%; box-sizing:border-box;" onchange="window.renderChampionshipVaultBody(this.value)">
                     ${optionsHtml}
                 </select>
                 ${adminActionControlsHtml}
             </div>
         </div>
 
-        <div style="text-align:center; padding:16px; margin-bottom:18px; background:linear-gradient(135deg, rgba(6,182,212,0.1) 0%, rgba(6,182,212,0.02) 100%); border:1px solid rgba(6,182,212,0.3); border-radius:12px;">
+        <div style="text-align:center; padding:16px 12px; margin-bottom:18px; background:linear-gradient(135deg, rgba(6,182,212,0.1) 0%, rgba(6,182,212,0.02) 100%); border:1px solid rgba(6,182,212,0.3); border-radius:12px; box-sizing:border-box;">
             <div style="font-size:20px; font-weight:900; color:var(--text-main);">${escapeHTML(displayData.seasonName || 'Alliance Championship')}</div>
             <div style="margin-top:8px; display:flex; align-items:center; justify-content:center; gap:10px; font-size:16px; font-weight:900; flex-wrap:wrap;">
                 <span style="color:#10b981;">${winCount} Wins</span>
@@ -15445,7 +15449,7 @@ window.renderChampionshipVaultBody = (activeKey = 'live') => {
             </div>
         </div>
 
-        <div>${matchCardsHtml}</div>
+        <div style="display:flex; flex-direction:column; gap:12px;">${matchCardsHtml}</div>
     `;
 };
 
@@ -33508,7 +33512,7 @@ const views = {
             }
             let statusInput = document.getElementById('adm_champ_status_text');
             if (statusInput) {
-                let suffix = wins >= 4 ? ' (Tournament Champions)' : (wins >= 3 ? ' (Playoff Finalists)' : ' (Championship Series)');
+                let suffix = wins >= 4 ? ' (Tournament Champions)' : (wins >= 3 ? ' (Playoff Finalists)' : '');
                 statusInput.value = `${wins} Wins – ${losses} ${losses === 1 ? 'Loss' : 'Losses'}${draws > 0 ? ` – ${draws} ${draws === 1 ? 'Draw' : 'Draws'}` : ''}${suffix}`;
             }
             let ourFlagsInput = document.getElementById('adm_champ_our_season_flags');
