@@ -510,13 +510,13 @@ server.listen(PORT, async () => {
         timestamp: Date.now(),
         receivedAt: Date.now(),
         fleet: [
-          { name: 'Sentinel Frost', status: 'STANDBY', safeToLogin: true, detail: 'Idle / Standby', lastActiveTime: '12:20 PM', lastActiveEpoch: 1790796028 },
-          { name: 'Bisquick', status: 'STANDBY', safeToLogin: true, detail: 'Idle / Standby', lastActiveTime: '5:09 PM', lastActiveEpoch: 1790813382 },
-          { name: 'Gingivitis', status: 'STANDBY', safeToLogin: true, detail: 'Idle / Standby', lastActiveTime: '5:11 PM', lastActiveEpoch: 1790813472 },
-          { name: 'BDCFdaddy', status: 'STANDBY', safeToLogin: true, detail: 'Idle / Standby', lastActiveTime: '5:12 PM', lastActiveEpoch: 1790813547 },
-          { name: 'ShrimpLeprechaun', status: 'STANDBY', safeToLogin: true, detail: 'Idle / Standby', lastActiveTime: '5:13 PM', lastActiveEpoch: 1790813637 },
-          { name: 'AngryGermanpapi', status: 'STANDBY', safeToLogin: true, detail: 'Idle / Standby', lastActiveTime: '5:14 PM', lastActiveEpoch: 1790813667 },
-          { name: 'BabyAngryGerman', status: 'STANDBY', safeToLogin: true, detail: 'Idle / Standby', lastActiveTime: '8:44 PM', lastActiveEpoch: 1790221469 }
+          { name: 'Sentinel Frost', status: 'STANDBY', safeToLogin: true, detail: 'Idle / Standby', lastActiveTime: '12:20 PM', lastActiveEpoch: Math.floor(Date.now() / 1000) - 7200 }, // 2h ago
+          { name: 'Bisquick', status: 'STANDBY', safeToLogin: true, detail: 'Idle / Standby', lastActiveTime: '5:09 PM', lastActiveEpoch: Math.floor(Date.now() / 1000) - 840 }, // 14m ago
+          { name: 'Gingivitis', status: 'STANDBY', safeToLogin: true, detail: 'Idle / Standby', lastActiveTime: '5:11 PM', lastActiveEpoch: Math.floor(Date.now() / 1000) - 720 },
+          { name: 'BDCFdaddy', status: 'STANDBY', safeToLogin: true, detail: 'Idle / Standby', lastActiveTime: '5:12 PM', lastActiveEpoch: Math.floor(Date.now() / 1000) - 600 },
+          { name: 'ShrimpLeprechaun', status: 'STANDBY', safeToLogin: true, detail: 'Idle / Standby', lastActiveTime: '5:13 PM', lastActiveEpoch: Math.floor(Date.now() / 1000) - 480 },
+          { name: 'AngryGermanpapi', status: 'STANDBY', safeToLogin: true, detail: 'Idle / Standby', lastActiveTime: '5:14 PM', lastActiveEpoch: Math.floor(Date.now() / 1000) - 300 },
+          { name: 'BabyAngryGerman', status: 'STANDBY', safeToLogin: true, detail: 'Idle / Standby', lastActiveTime: '8:44 PM', lastActiveEpoch: Math.floor(Date.now() / 1000) - 90000 }
         ]
       };
       window.updateBotOperationsRadarDom();
@@ -622,8 +622,8 @@ server.listen(PORT, async () => {
     if (!mutationResult.bisquickIsSafeA || mutationResult.bisquickTagA !== '✅ Safe to log in') {
       throw new Error(`Assertion Failed: Idle bot safe tag failed! Result: ${JSON.stringify(mutationResult)}`);
     }
-    if (!mutationResult.bisquickActivityA || !mutationResult.bisquickActivityA.includes('Last active')) {
-      throw new Error(`Assertion Failed: Idle bot activity must show 'Last active'! Found: "${mutationResult.bisquickActivityA}"`);
+    if (!mutationResult.bisquickActivityA || (!mutationResult.bisquickActivityA.includes('ago') && !mutationResult.bisquickActivityA.includes('Standby'))) {
+      throw new Error(`Assertion Failed: Idle bot activity must show elapsed time or Standby! Found: "${mutationResult.bisquickActivityA}"`);
     }
     if (!mutationResult.busyPillA.includes('1 OCCUPIED') || !mutationResult.safePillA.includes('SAFE TO LOGIN')) {
       throw new Error(`Assertion Failed: Fleet summary counters failed! Busy: "${mutationResult.busyPillA}", Safe: "${mutationResult.safePillA}"`);
@@ -697,11 +697,11 @@ server.listen(PORT, async () => {
     if (!mutationResult.creampuffActivityH || !mutationResult.creampuffActivityH.includes('Active Now')) {
       throw new Error(`Assertion Failed: Active creampuff must display 'Active Now'! Found: "${mutationResult.creampuffActivityH}"`);
     }
-    if (!mutationResult.bisquickActivityH || !mutationResult.bisquickActivityH.includes('5:09 PM')) {
-      throw new Error(`Assertion Failed: Bisquick must display clock time '5:09 PM'! Found: "${mutationResult.bisquickActivityH}"`);
+    if (!mutationResult.bisquickActivityH || !mutationResult.bisquickActivityH.includes('14m ago')) {
+      throw new Error(`Assertion Failed: Bisquick must display relative elapsed time '14m ago'! Found: "${mutationResult.bisquickActivityH}"`);
     }
-    if (!mutationResult.sentinelActivityH || !mutationResult.sentinelActivityH.includes('12:20 PM')) {
-      throw new Error(`Assertion Failed: Sentinel Frost must display clock time '12:20 PM'! Found: "${mutationResult.sentinelActivityH}"`);
+    if (!mutationResult.sentinelActivityH || !mutationResult.sentinelActivityH.includes('2h ago')) {
+      throw new Error(`Assertion Failed: Sentinel Frost must display relative elapsed time '2h ago'! Found: "${mutationResult.sentinelActivityH}"`);
     }
     console.log(`  ✅ Verified: Fleet Login Safety Matrix dynamically responds to bot rotation:`);
     console.log(`     1. ${mutationResult.accountA} -> Occupied: ${mutationResult.angryTagA}, Safe: ${mutationResult.bisquickTagA} (${mutationResult.busyPillA}, ${mutationResult.safePillA})`);

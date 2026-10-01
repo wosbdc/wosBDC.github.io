@@ -2299,31 +2299,30 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
   line-height: 1;
 }
 
-.bot-fleet-time-clock {
-  font-weight: 600;
-}
-
+.bot-fleet-time-clock,
 .bot-fleet-time-rel {
-  color: #64748b;
-  font-size: 9px;
-  margin-left: 2px;
-}
-
-.bot-fleet-last-label {
+  font-weight: 600;
   color: #94a3b8;
   font-size: 9.5px;
 }
 
+.bot-fleet-last-label {
+  color: #64748b;
+  font-size: 9.5px;
+}
+
 @media (max-width: 640px) {
-  .bot-fleet-last-label,
-  .bot-fleet-time-rel {
+  .bot-fleet-last-label {
     display: none;
   }
   .bot-fleet-tag {
     font-size: 8.5px;
   }
   .bot-fleet-activity {
-    font-size: 9.5px;
+    font-size: 9px;
+  }
+  .bot-fleet-time-rel {
+    font-size: 9px;
   }
 }
 

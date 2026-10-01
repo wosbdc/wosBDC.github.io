@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.70] - 2026-09-30
+- ⏱️ **Elapsed Times**: Displays elapsed hr:min ago on all bot cards.
+- 📱 **Clean Layout**: Crisp mobile status row without text overflow or clipping.
+- 🟢 **Live Indicator**: Active running bot clearly displays Active Now status badge.
+
 ## [3.3.69] - 2026-09-30
 - ⏱️ **Active Times**: Displays exact clock time on all bot cards.
 - 💾 **Activity Cache**: Permanently stores bot activity timestamps across sessions.

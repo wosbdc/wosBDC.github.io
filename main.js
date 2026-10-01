@@ -5902,7 +5902,7 @@ window.formatBotRelativeTime = (epochSecs) => {
 window.formatBotLastActiveHtml = (epochSecs, timeStr, botId) => {
   const epoch = Number(epochSecs || 0);
   if (!epoch && !timeStr) {
-    return `<div class="bot-fleet-activity idle" id="bot-fleet-activity-${botId}" title="Last active: Standby"><span class="bot-fleet-time-icon">⏱️</span> <span class="bot-fleet-last-label">Last active: </span><span class="bot-fleet-time-clock">Standby</span></div>`;
+    return `<div class="bot-fleet-activity idle" id="bot-fleet-activity-${botId}" title="Last active: Standby"><span class="bot-fleet-time-icon">⏱️</span> <span class="bot-fleet-time-rel">Standby</span></div>`;
   }
 
   const nowSecs = Math.floor(Date.now() / 1000);
@@ -5918,8 +5918,14 @@ window.formatBotLastActiveHtml = (epochSecs, timeStr, botId) => {
       rel = m > 0 ? `${h}h ${m}m ago` : `${h}h ago`;
     } else {
       const d = Math.floor(diffSecs / 86400);
-      rel = `${d}d ago`;
+      const h = Math.floor((diffSecs % 86400) / 3600);
+      rel = h > 0 ? `${d}d ${h}h ago` : `${d}d ago`;
     }
+  }
+
+  // If epoch is missing but timeStr exists (e.g. "5:09 PM")
+  if (!rel && timeStr) {
+    rel = timeStr;
   }
 
   let clock = timeStr || '';
@@ -5928,16 +5934,13 @@ window.formatBotLastActiveHtml = (epochSecs, timeStr, botId) => {
     clock = dt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   }
 
-  const clockText = clock || rel || 'Standby';
-  const relSpan = (clock && rel) ? `<span class="bot-fleet-time-rel">(${rel})</span>` : '';
-  const fullTitle = (clock && rel) ? `Last active: ${clock} (${rel})` : `Last active: ${clockText}`;
+  const displayText = rel || 'Standby';
+  const fullTitle = clock ? `Last active: ${clock} (${displayText})` : `Last active: ${displayText}`;
 
   return `
     <div class="bot-fleet-activity idle" id="bot-fleet-activity-${botId}" title="${fullTitle}">
       <span class="bot-fleet-time-icon">⏱️</span>
-      <span class="bot-fleet-last-label">Last active: </span>
-      <span class="bot-fleet-time-clock">${clockText}</span>
-      ${relSpan}
+      <span class="bot-fleet-time-rel">${displayText}</span>
     </div>
   `;
 };
