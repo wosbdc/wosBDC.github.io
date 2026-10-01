@@ -1,15 +1,16 @@
 {
-  "version": "3.3.73",
+  "version": "3.3.74",
   "releaseDate": "2026-10-01",
-  "title": "What's New in v3.3.73",
+  "title": "What's New in v3.3.74",
   "notes": [
-    "🏷️ Tab Renaming: Renamed tabs to Signups and Season Edit.",
-    "📋 Simplified Admin: Clearer labels in Alliance Championship admin menu.",
-    "⚡ Quick Access: Faster navigation between signups and season editor."
+    "📅 Vault Dates: Replaced generic season titles with actual date ranges.",
+    "🏛️ Weekly History: Restored chronological weekly ranges across all archived seasons.",
+    "🔍 Clear Tracking: Instantly identify past seasons in championship vault selector."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.73",
+    "version": "3.3.74",
     "latestChanges": [
+      "v3.3.74: Replaced archive vault season titles with chronological weekly date ranges",
       "v3.3.73: Renamed championship admin tabs to Signups and Season Edit",
       "v3.3.72: Fixed Championship Archive Vault historical matchup cards for mobile",
       "v3.3.71: Fixed Alliance Championship 5-round matchup cards for mobile phones",

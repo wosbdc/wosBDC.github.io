@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.74] - 2026-10-01
+- 📅 **Vault Dates**: Replaced generic season titles with actual date ranges.
+- 🏛️ **Weekly History**: Chronological weekly ranges across all archived seasons.
+- 🔍 **Clear Tracking**: Easily identify past seasons in championship vault.
+
 ## [3.3.73] - 2026-10-01
 - 🏷️ **Tab Renaming**: Renamed tabs to Signups and Season Edit.
 - 📋 **Simplified Admin**: Cleaner labels in Alliance Championship admin menu.
