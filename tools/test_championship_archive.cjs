@@ -109,12 +109,44 @@ function testChampionshipArchive() {
         errors.push('copyChampRoundReport should have centered alignment and colon formatting');
     }
 
+    // Responsive mobile layout assertions
+    const stylePath = path.join(__dirname, '../style.css');
+    const styleContent = fs.readFileSync(stylePath, 'utf8');
+
+    if (!styleContent.includes('.champ-match-card')) {
+        errors.push('style.css must contain .champ-match-card styles');
+    }
+    if (!styleContent.includes('.champ-match-battle-row')) {
+        errors.push('style.css must contain .champ-match-battle-row styles');
+    }
+    if (!styleContent.includes('grid-template-columns: 1fr auto 1fr')) {
+        errors.push('.champ-match-battle-row must use balanced 3-column layout: 1fr auto 1fr');
+    }
+    if (!styleContent.includes('.champ-match-team')) {
+        errors.push('style.css must contain .champ-match-team styles');
+    }
+    if (!styleContent.includes('.champ-match-vs-circle')) {
+        errors.push('style.css must contain .champ-match-vs-circle styles');
+    }
+    if (!code.includes('class="champ-match-card')) {
+        errors.push('main.js must render .champ-match-card for matchup cards');
+    }
+    if (!code.includes('class="champ-match-battle-row"')) {
+        errors.push('main.js must render .champ-match-battle-row for 3-column battle layout');
+    }
+    if (!code.includes('class="champ-match-team our-team"')) {
+        errors.push('main.js must render .champ-match-team.our-team for left team');
+    }
+    if (!code.includes('class="champ-match-team enemy-team"')) {
+        errors.push('main.js must render .champ-match-team.enemy-team for right team');
+    }
+
     if (errors.length > 0) {
         console.error('FAILED: Championship Archive Test Failed:');
         errors.forEach(e => console.error('  - ' + e));
         process.exit(1);
     } else {
-        console.log('PASSED: Championship Archive Test Passed: All permission checks, vault controls, and blank season guards verified!');
+        console.log('PASSED: Championship Archive Test Passed: All permission checks, vault controls, blank season guards, and mobile responsive layout verified!');
         process.exit(0);
     }
 }

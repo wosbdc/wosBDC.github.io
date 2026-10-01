@@ -39403,50 +39403,44 @@ window.resetBearTrapEvent = async () => {
             let isDefeat = enemyFlags > ourFlags;
             let isDraw = (ourFlags === enemyFlags) && (ourFlags > 0 || enemyFlags > 0);
 
-            let cardBg = isVictory 
-                ? 'background: linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(16,185,129,0.35);' 
-                : (isDefeat 
-                    ? 'background: linear-gradient(135deg, rgba(239,68,68,0.08) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(239,68,68,0.35);' 
-                    : (isDraw 
-                        ? 'background: linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(245,158,11,0.35);'
-                        : 'background: rgba(255,255,255,0.02); border: 1px solid var(--border);'));
+            let cardModifier = isVictory ? 'is-victory' : (isDefeat ? 'is-defeat' : (isDraw ? 'is-draw' : 'is-pending'));
 
             let centerStatusHtml = isVictory 
-                ? '<div style="background:rgba(16,185,129,0.22); border:1px solid rgba(16,185,129,0.45); color:#10b981; padding:3px 12px; border-radius:10px; font-weight:900; font-size:11px; letter-spacing:0.5px; box-shadow:0 0 10px rgba(16,185,129,0.2); margin-bottom:6px;">VICTORY</div>' 
+                ? '<div class="champ-match-status-badge victory">VICTORY</div>' 
                 : (isDefeat 
-                    ? '<div style="background:rgba(239,68,68,0.22); border:1px solid rgba(239,68,68,0.45); color:#ef4444; padding:3px 12px; border-radius:10px; font-weight:900; font-size:11px; letter-spacing:0.5px; box-shadow:0 0 10px rgba(239,68,68,0.2); margin-bottom:6px;">DEFEAT</div>' 
+                    ? '<div class="champ-match-status-badge defeat">DEFEAT</div>' 
                     : (isDraw 
-                        ? '<div style="background:rgba(245,158,11,0.22); border:1px solid rgba(245,158,11,0.45); color:#f59e0b; padding:3px 12px; border-radius:10px; font-weight:900; font-size:11px; letter-spacing:0.5px; box-shadow:0 0 10px rgba(245,158,11,0.2); margin-bottom:6px;">DRAW</div>'
+                        ? '<div class="champ-match-status-badge draw">DRAW</div>'
                         : ''));
 
             return `
-                <div style="${cardBg} border-radius:14px; padding:16px 22px; box-shadow: 0 4px 20px rgba(0,0,0,0.25); transition: transform 0.2s ease, box-shadow 0.2s ease;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
-                        <span style="font-weight:900; font-size:13px; color:var(--accent); text-transform:uppercase; letter-spacing:1px; display:flex; align-items:center; gap:6px;">⚔️ ROUND ${rNum}</span>
-                        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                <div class="champ-match-card ${cardModifier}">
+                    <div class="champ-match-header">
+                        <span class="champ-match-round-title">⚔️ ROUND ${rNum}</span>
+                        <div class="champ-match-header-actions">
                             <span style="font-size:11.5px; color:var(--text-muted); font-weight:bold;">${escapeHTML(r.date || `Round ${rNum}`)}</span>
                             <button onclick="window.copyChampRoundReport(${rNum})" style="background:rgba(6,182,212,0.15); border:1px solid rgba(6,182,212,0.4); color:var(--accent); padding:3px 8px; border-radius:6px; font-weight:bold; font-size:11px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.25)'" onmouseout="this.style.background='rgba(6,182,212,0.15)'" title="Copy Round ${rNum} Report to clipboard">📋 Copy Report</button>
                         </div>
                     </div>
-                    <div style="display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+                    <div class="champ-match-battle-row">
                         <!-- Left: Our Alliance -->
-                        <div style="flex:1; min-width:140px; text-align:right; display:flex; flex-direction:column; align-items:flex-end;">
-                            <div style="font-size:16px; font-weight:bold; color:var(--text-main);">[BDC]</div>
-                            <div style="font-size:11px; color:#38bdf8; font-weight:bold; letter-spacing:0.5px; margin-top:2px;">${escapeHTML(formatStateTag(r.ourState || champData.ourState, '2089'))}</div>
-                            <div style="font-size:12px; color:#10b981; font-weight:bold; margin-top:6px; display:inline-flex; align-items:center; gap:4px; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); padding:4px 10px; border-radius:6px;"><span style="font-size:13px;">🚩</span> ${ourFlags} Flags</div>
+                        <div class="champ-match-team our-team">
+                            <div class="champ-match-team-name" title="[BDC]">[BDC]</div>
+                            <div class="champ-match-team-state">${escapeHTML(formatStateTag(r.ourState || champData.ourState, '2089'))}</div>
+                            <div class="champ-flags-badge our-flags"><span style="font-size:12px;">🚩</span> ${ourFlags} Flags</div>
                         </div>
 
                         <!-- Center: Status & VS Medallion -->
-                        <div style="flex-shrink:0; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+                        <div class="champ-match-vs-wrap">
                             ${centerStatusHtml}
-                            <div style="width:42px; height:42px; border-radius:50%; background:linear-gradient(135deg, rgba(6,182,212,0.25), rgba(6,182,212,0.05)); border:2px solid rgba(6,182,212,0.4); display:flex; align-items:center; justify-content:center; font-weight:900; font-size:13px; font-style:italic; color:var(--accent); box-shadow:0 0 15px rgba(6,182,212,0.2);">VS</div>
+                            <div class="champ-match-vs-circle">VS</div>
                         </div>
 
                         <!-- Right: Opponent Alliance -->
-                        <div style="flex:1; min-width:140px; text-align:left; display:flex; flex-direction:column; align-items:flex-start;">
-                            <div style="font-size:16px; font-weight:bold; color:var(--text-main);">${escapeHTML(enemyName)}</div>
-                            <div style="font-size:11px; color:#38bdf8; font-weight:bold; letter-spacing:0.5px; margin-top:2px;">${escapeHTML(formatStateTag(enemyState, '2045'))}</div>
-                            <div style="font-size:12px; color:#ef4444; font-weight:bold; margin-top:6px; display:inline-flex; align-items:center; gap:4px; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); padding:4px 10px; border-radius:6px;"><span style="font-size:13px;">🚩</span> ${enemyFlags} Flags</div>
+                        <div class="champ-match-team enemy-team">
+                            <div class="champ-match-team-name" title="${escapeHTML(enemyName)}">${escapeHTML(enemyName)}</div>
+                            <div class="champ-match-team-state">${escapeHTML(formatStateTag(enemyState, '2045'))}</div>
+                            <div class="champ-flags-badge enemy-flags"><span style="font-size:12px;">🚩</span> ${enemyFlags} Flags</div>
                         </div>
                     </div>
                 </div>
@@ -39454,12 +39448,12 @@ window.resetBearTrapEvent = async () => {
         }).join('');
 
         let html = `
-          <div style="max-width:900px; margin:0 auto; padding-bottom:40px; display:flex; flex-direction:column; gap:20px; animation: fadeIn 0.3s ease;">
+          <div style="max-width:900px; width:100%; margin:0 auto; padding: 0 10px 40px 10px; box-sizing:border-box; display:flex; flex-direction:column; gap:20px; animation: fadeIn 0.3s ease;">
             
             <!-- Tournament Title Banner -->
-            <div style="background:linear-gradient(135deg, rgba(6,182,212,0.12) 0%, rgba(6,182,212,0.02) 100%); border:1px solid rgba(6,182,212,0.3); border-radius:16px; padding:24px 20px; text-align:center; box-shadow: 0 6px 25px rgba(0,0,0,0.3);">
+            <div style="background:linear-gradient(135deg, rgba(6,182,212,0.12) 0%, rgba(6,182,212,0.02) 100%); border:1px solid rgba(6,182,212,0.3); border-radius:16px; padding:20px 16px; text-align:center; box-shadow: 0 6px 25px rgba(0,0,0,0.3); box-sizing:border-box;">
                 <div style="font-size:12px; font-weight:bold; color:var(--accent); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:4px;">${escapeHTML(seasonName)}</div>
-                <h1 style="margin:0; font-size:26px; font-weight:900; color:var(--text-main); letter-spacing:1px;">🏆 ALLIANCE CHAMPIONSHIP</h1>
+                <h1 style="margin:0; font-size:24px; font-weight:900; color:var(--text-main); letter-spacing:1px;">🏆 ALLIANCE CHAMPIONSHIP</h1>
                 <div style="margin-top:10px; display:flex; align-items:center; justify-content:center; gap:12px; flex-wrap:wrap;">
                     <span style="color:#10b981; font-weight:900; font-size:20px;">${winCount} Wins</span>
                     <span style="color:var(--text-muted); opacity:0.6; font-size:18px;">–</span>

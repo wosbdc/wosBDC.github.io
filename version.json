@@ -1,15 +1,16 @@
 {
-  "version": "3.3.70",
-  "releaseDate": "2026-09-30",
-  "title": "What's New in v3.3.70",
+  "version": "3.3.71",
+  "releaseDate": "2026-10-01",
+  "title": "What's New in v3.3.71",
   "notes": [
-    "⏱️ Elapsed Activity: Displays hr:min ago on all bot cards.",
-    "📱 Clean Layout: Crisp mobile and desktop relative time display.",
-    "🟢 Live Indicator: Active runner clearly displays Active Now."
+    "📱 Mobile Championship: Fixed 5-round matchup cards on phones.",
+    "⚔️ Balanced Layout: Responsive 3-column battle row across devices.",
+    "🛡️ Clean Alignment: Perfectly centered VS medallion with zero wrapping."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.70",
+    "version": "3.3.71",
     "latestChanges": [
+      "v3.3.71: Fixed Alliance Championship 5-round matchup cards for mobile phones",
       "v3.3.70: Displays hr:min ago elapsed times on bot cards across all viewports",
       "v3.3.69: Displays last active clock times across all 17 alliance accounts",
       "v3.3.68: Permanent master fleet merging and resilient telemetry overlay",

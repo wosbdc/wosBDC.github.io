@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.71] - 2026-10-01
+- 📱 **Mobile Championship**: Fixed 5-round matchup cards for narrow phone screens.
+- ⚔️ **Balanced Layout**: Responsive three-column battle row across all mobile viewports.
+- 🛡️ **Clean Geometry**: Centered VS medallion preventing awkward team wrapping or clipping.
+
 ## [3.3.70] - 2026-09-30
 - ⏱️ **Elapsed Times**: Displays elapsed hr:min ago on all bot cards.
 - 📱 **Clean Layout**: Crisp mobile status row without text overflow or clipping.
