@@ -73,6 +73,11 @@ function runStaticVerification() {
   assert(code.includes('-- Select Tier --'), 'Must include placeholder -- Select Tier --');
   assert(code.includes('-- Select Phase to Apply --'), 'Must include placeholder -- Select Phase to Apply --');
 
+  assert(code.includes('window.resetMercenaryBossProgress ='), 'Must define window.resetMercenaryBossProgress');
+  assert(code.includes('window.resetMercenaryBossProgress()'), 'Must include Reset Boss Counts button in Phaethon manager card');
+  assert(code.includes('mercenary/boss_progress'), 'Must reference mercenary/boss_progress');
+  assert(code.includes('archiveAndResetMercenaryCycle'), 'Must define archiveAndResetMercenaryCycle');
+
   console.log('  ✅ All structural assertions passed successfully.');
 }
 

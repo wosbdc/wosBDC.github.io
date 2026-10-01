@@ -3090,6 +3090,7 @@ window.clearAllEventCaches = () => {
     window.polarTerrorsCache = null;
     window.championshipCache = null;
     window.mercenaryCache = null;
+    window.mercenaryBossProgressCache = null;
     window.activityCache = null;
     window._activityMatrixLoaded = false;
 };
@@ -4186,6 +4187,33 @@ window.syncBossProgressFromMasters = async (rosterMasterCount) => {
     }
 };
 
+window.resetMercenaryBossProgress = async () => {
+    const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+    if (!isManager) {
+        if (window.showToast) window.showToast("Only R4/R5 managers can reset boss unlock counts", "error");
+        return;
+    }
+    const confirm = await window.customConfirm("🔄 Reset Phaethon Boss Unlock Counts?\n\nThis will reset all 5 boss unlock counts (Lv.1 to Lv.5) back to 0 for the alliance.\n\nProceed?");
+    if (!confirm) return;
+
+    const empty = { lv1: 0, lv2: 0, lv3: 0, lv4: 0, lv5: 0, updatedAt: Date.now() };
+    const ok = await window.saveMercenaryBossProgress(empty);
+    if (ok) {
+        window.mercenaryBossProgressCache = empty;
+        if (window.logAdminAction) {
+            window.logAdminAction("Reset Boss Unlocks", "Reset all 5 Phaethon Boss Unlock Manager counts back to 0.");
+        }
+        if (window.showToast) window.showToast("Phaethon Boss Unlock counts reset to 0! 🔄", "success");
+        if (typeof window.activeViewFunc === 'function') {
+            window.activeViewFunc();
+        } else if (window.views && window.views.mercenaryAdmin) {
+            window.views.mercenaryAdmin();
+        }
+    } else {
+        if (window.showToast) window.showToast("Failed to reset boss counts. Check network/permissions.", "error");
+    }
+};
+
 // Fetch Polar Terrors Data natively from single master node activity_live
 window.fetchPolarTerrorsData = async () => {
     if (window.polarTerrorsCache) return window.polarTerrorsCache;
@@ -4417,6 +4445,7 @@ window.archiveAndResetMercenaryCycle = async () => {
         });
 
         // 1. Save Archive to Firebase
+        const currentBossProgress = window.mercenaryBossProgressCache || await window.fetchMercenaryBossProgress().catch(() => ({ lv1: 0, lv2: 0, lv3: 0, lv4: 0, lv5: 0 }));
         const archivePayload = {
             timestamp: timestamp,
             dateStr: dateStr,
@@ -4425,7 +4454,8 @@ window.archiveAndResetMercenaryCycle = async () => {
             totalMembers: rosterList.length,
             yesCount: yesCount,
             noCount: noCount,
-            players: playerSnapshots
+            players: playerSnapshots,
+            bossProgress: currentBossProgress
         };
         await set(ref(db, `events_archive/mercenary/${timestamp}`), archivePayload);
 
@@ -4458,6 +4488,19 @@ window.archiveAndResetMercenaryCycle = async () => {
                 updatedBy: adminName
             }).catch(() => null);
         }
+
+        // 4. Reset Phaethon Boss Unlock Manager progress back to 0
+        const emptyBossProgress = {
+            lv1: 0,
+            lv2: 0,
+            lv3: 0,
+            lv4: 0,
+            lv5: 0,
+            updatedAt: timestamp
+        };
+        await set(ref(db, 'mercenary/boss_progress'), emptyBossProgress).catch(() => null);
+        await set(ref(db, 'mercenary_boss_progress'), emptyBossProgress).catch(() => null);
+        window.mercenaryBossProgressCache = emptyBossProgress;
 
         window.clearAllEventCaches();
 
@@ -4924,6 +4967,10 @@ window.restoreEventArchiveSnapshot = async (eventType, archiveKey) => {
                 tablePayload.difficulty = p.difficulty || "";
             }
             await set(ref(db, `${cfg.tableKey}/${gidStr}`), tablePayload).catch(() => null);
+        }
+
+        if ((eventType === 'mercenary' || eventType === 'mercenary_prestige') && archData.bossProgress) {
+            await window.saveMercenaryBossProgress(archData.bossProgress);
         }
 
         window.clearAllEventCaches();
@@ -17046,6 +17093,9 @@ window.renderMercenaryBossAdminCardHtml = (bossProgress) => {
             ⚙️ Phaethon Boss Unlock Manager (Alliance Progress)
           </h3>
           <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <button onclick="window.resetMercenaryBossProgress()" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:7px 14px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; transition:0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.25)'" onmouseout="this.style.background='rgba(239,68,68,0.15)'" title="Reset all 5 Phaethon Boss Unlock counts to 0">
+              🔄 Reset Boss Counts
+            </button>
             <button onclick="window.saveAllBossProgress()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:7px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(16,185,129,0.3);">
               💾 Save All Boss Counts
             </button>

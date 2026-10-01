@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.75] - 2026-10-01
+- 🔄 **Boss Reset**: Fixed reset for Phaethon Boss Unlock Manager.
+- ⚙️ **Direct Controls**: Added 1-click Reset Boss Counts button in admin.
+- 🧹 **Clean Cycles**: Automatically resets all boss counts on cycle archive.
+
 ## [3.3.74] - 2026-10-01
 - 📅 **Vault Dates**: Replaced generic season titles with actual date ranges.
 - 🏛️ **Weekly History**: Chronological weekly ranges across all archived seasons.
