@@ -5802,7 +5802,14 @@ onValue(ref(db, 'bot_status'), (snap) => {
             window.ALLIANCE_BOT_ROSTER.push(f);
           }
         }
+        if (f && f.name && (f.lastActiveEpoch || f.lastActiveTime) && typeof window.recordBotLastActiveTime === 'function') {
+          window.recordBotLastActiveTime(f.name, f.lastActiveEpoch, f.lastActiveTime);
+        }
       });
+    }
+    const liveActAcc = val.activeAccount || (val.status === 'ACTIVE' ? val.account : '');
+    if (liveActAcc && !val.isOffline && val.serverOnline !== false && val.status !== 'OFFLINE' && typeof window.recordBotLastActiveTime === 'function') {
+      window.recordBotLastActiveTime(liveActAcc, Math.floor(Date.now() / 1000));
     }
     if (typeof window.updateBotOperationsRadarDom === 'function') {
       window.updateBotOperationsRadarDom();
@@ -5834,6 +5841,47 @@ window.ALLIANCE_BOT_ROSTER = [
   { id: 'babyangry', name: 'BabyAngryGerman', instance: 16, inst: 'Inst 16' }
 ];
 
+window.getBotLastActiveCache = () => {
+  try {
+    const raw = localStorage.getItem('wos_bot_last_active_cache_v1');
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+};
+
+window.saveBotLastActiveCache = (cache) => {
+  try {
+    localStorage.setItem('wos_bot_last_active_cache_v1', JSON.stringify(cache));
+  } catch (e) {}
+};
+
+window.recordBotLastActiveTime = (botIdentifier, epochSecs, timeStr) => {
+  if (!botIdentifier) return;
+  const cleanId = String(botIdentifier).toLowerCase().replace(/[^a-z0-9]/g, '');
+  const cache = window.getBotLastActiveCache();
+  const existing = cache[cleanId] || {};
+  const newEpoch = Number(epochSecs || 0);
+  
+  let finalTime = timeStr || existing.timeStr;
+  if (!finalTime && newEpoch > 0) {
+    const d = new Date(newEpoch * 1000);
+    finalTime = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  } else if (!finalTime) {
+    const d = new Date();
+    finalTime = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  }
+
+  if (newEpoch >= (existing.epoch || 0) || !existing.epoch) {
+    cache[cleanId] = {
+      epoch: newEpoch || Math.floor(Date.now() / 1000),
+      timeStr: finalTime,
+      updatedAt: Date.now()
+    };
+    window.saveBotLastActiveCache(cache);
+  }
+};
+
 window.formatBotRelativeTime = (epochSecs) => {
   if (!epochSecs || Number(epochSecs) <= 0) return 'Standby';
   const nowSecs = Math.floor(Date.now() / 1000);
@@ -5849,6 +5897,49 @@ window.formatBotRelativeTime = (epochSecs) => {
   }
   const days = Math.floor(hours / 24);
   return `${days}d ago`;
+};
+
+window.formatBotLastActiveHtml = (epochSecs, timeStr, botId) => {
+  const epoch = Number(epochSecs || 0);
+  if (!epoch && !timeStr) {
+    return `<div class="bot-fleet-activity idle" id="bot-fleet-activity-${botId}" title="Last active: Standby"><span class="bot-fleet-time-icon">⏱️</span> <span class="bot-fleet-last-label">Last active: </span><span class="bot-fleet-time-clock">Standby</span></div>`;
+  }
+
+  const nowSecs = Math.floor(Date.now() / 1000);
+  const diffSecs = epoch > 0 ? Math.max(0, nowSecs - epoch) : 0;
+  
+  let rel = '';
+  if (epoch > 0) {
+    if (diffSecs < 60) rel = 'Just now';
+    else if (diffSecs < 3600) rel = `${Math.floor(diffSecs / 60)}m ago`;
+    else if (diffSecs < 86400) {
+      const h = Math.floor(diffSecs / 3600);
+      const m = Math.floor((diffSecs % 3600) / 60);
+      rel = m > 0 ? `${h}h ${m}m ago` : `${h}h ago`;
+    } else {
+      const d = Math.floor(diffSecs / 86400);
+      rel = `${d}d ago`;
+    }
+  }
+
+  let clock = timeStr || '';
+  if (!clock && epoch > 0) {
+    const dt = new Date(epoch * 1000);
+    clock = dt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  }
+
+  const clockText = clock || rel || 'Standby';
+  const relSpan = (clock && rel) ? `<span class="bot-fleet-time-rel">(${rel})</span>` : '';
+  const fullTitle = (clock && rel) ? `Last active: ${clock} (${rel})` : `Last active: ${clockText}`;
+
+  return `
+    <div class="bot-fleet-activity idle" id="bot-fleet-activity-${botId}" title="${fullTitle}">
+      <span class="bot-fleet-time-icon">⏱️</span>
+      <span class="bot-fleet-last-label">Last active: </span>
+      <span class="bot-fleet-time-clock">${clockText}</span>
+      ${relSpan}
+    </div>
+  `;
 };
 
 window.getBotFleetSafetyHtml = () => {
@@ -6020,19 +6111,24 @@ window.getBotFleetSafetyHtml = () => {
 
     let activityHtml = '';
     if (isBotActive) {
+      if (typeof window.recordBotLastActiveTime === 'function') {
+        window.recordBotLastActiveTime(bot.name, Math.floor(Date.now() / 1000));
+      }
       activityHtml = `<div class="bot-fleet-activity active" id="bot-fleet-activity-${botId}"><span class="bot-fleet-activity-pulse">🟢</span> Active Now</div>`;
     } else {
-      let lastEpoch = (fleetItem && fleetItem.lastActiveEpoch) ? fleetItem.lastActiveEpoch : (bot.lastActiveEpoch || 0);
+      const cache = (typeof window.getBotLastActiveCache === 'function') ? window.getBotLastActiveCache() : {};
+      const cleanAlias = (bot.short || bot.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      const cleanName = (bot.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      const cached = cache[cleanAlias] || cache[bot.id] || cache[cleanName] || {};
+      
+      let lastEpoch = (fleetItem && fleetItem.lastActiveEpoch) ? fleetItem.lastActiveEpoch : (bot.lastActiveEpoch || cached.epoch || 0);
       if (lastEpoch <= 0 && isBotCooldown && (data.timestamp || data.receivedAt)) {
         lastEpoch = Math.floor((data.timestamp || data.receivedAt) / 1000);
       }
-      if (lastEpoch > 0) {
-        activityHtml = `<div class="bot-fleet-activity idle" id="bot-fleet-activity-${botId}">⏱️ Last active: ${window.formatBotRelativeTime(lastEpoch)}</div>`;
-      } else if (fleetItem && fleetItem.lastActiveTime) {
-        activityHtml = `<div class="bot-fleet-activity idle" id="bot-fleet-activity-${botId}">⏱️ Last active: ${fleetItem.lastActiveTime}</div>`;
-      } else {
-        activityHtml = `<div class="bot-fleet-activity idle" id="bot-fleet-activity-${botId}">⏱️ Last active: Standby</div>`;
-      }
+      let lastTimeStr = (fleetItem && fleetItem.lastActiveTime) ? fleetItem.lastActiveTime : (cached.timeStr || '');
+      activityHtml = (typeof window.formatBotLastActiveHtml === 'function')
+        ? window.formatBotLastActiveHtml(lastEpoch, lastTimeStr, botId)
+        : `<div class="bot-fleet-activity idle" id="bot-fleet-activity-${botId}">⏱️ ${lastTimeStr || 'Standby'}</div>`;
     }
 
     return `

@@ -2286,12 +2286,45 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
   font-size: 10px;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   flex-shrink: 0;
+}
+
+.bot-fleet-time-icon {
+  font-size: 8.5px;
+  line-height: 1;
+}
+
+.bot-fleet-time-clock {
+  font-weight: 600;
+}
+
+.bot-fleet-time-rel {
+  color: #64748b;
+  font-size: 9px;
+  margin-left: 2px;
+}
+
+.bot-fleet-last-label {
+  color: #94a3b8;
+  font-size: 9.5px;
+}
+
+@media (max-width: 640px) {
+  .bot-fleet-last-label,
+  .bot-fleet-time-rel {
+    display: none;
+  }
+  .bot-fleet-tag {
+    font-size: 8.5px;
+  }
+  .bot-fleet-activity {
+    font-size: 9.5px;
+  }
 }
 
 .bot-fleet-activity.active {

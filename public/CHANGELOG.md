@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.69] - 2026-09-30
+- ⏱️ **Active Times**: Displays exact clock time on all bot cards.
+- 💾 **Activity Cache**: Permanently stores bot activity timestamps across sessions.
+- 📱 **Mobile Spacing**: Clean mobile status row with zero text clipping.
+- 🛰️ **Full Fleet**: Synced live telemetry for all seventeen alliance bots.
+
 ## [3.3.68] - 2026-09-30
 - 🛡️ **Fleet Resilience**: All 17 alliance bots always render.
 - ⚡ **Dynamic Telemetry**: Merges live Firebase status onto master roster.

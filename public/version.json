@@ -1,15 +1,16 @@
 {
-  "version": "3.3.68",
+  "version": "3.3.69",
   "releaseDate": "2026-09-30",
-  "title": "What's New in v3.3.68",
+  "title": "What's New in v3.3.69",
   "notes": [
-    "🛡️ Fleet Resilience: All 17 alliance bots always render.",
-    "⚡ Dynamic Telemetry: Merges live Firebase status onto master roster.",
-    "🔴 Active Bot: Accurately highlights active runner at all times."
+    "⏱️ Last Active Times: Displays clock time on all cards.",
+    "💾 Local Persistence: Permanently caches bot activity timestamps.",
+    "📱 Responsive Status: Clean mobile layout with zero clipping."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.68",
+    "version": "3.3.69",
     "latestChanges": [
+      "v3.3.69: Displays last active clock times across all 17 alliance accounts",
       "v3.3.68: Permanent master fleet merging and resilient telemetry overlay",
       "v3.3.67: Option A 2-column mobile fleet grid and full fleet restoration",
       "v3.3.66: Purged Bot 17, 18 and filtered radar to 10 active alliance bots",

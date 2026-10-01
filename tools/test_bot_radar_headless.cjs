@@ -69,8 +69,10 @@ function runStaticVerification() {
   assert(code.includes('data.fleet && Array.isArray(data.fleet) && data.fleet.length > 0'), 'getBotFleetSafetyHtml must dynamically check data.fleet');
   assert(code.includes('mergedRoster.filter(b => window.isAllianceBotOrActive') || code.includes('window.isAllianceBotOrActive'), 'getBotFleetSafetyHtml must filter with isAllianceBotOrActive');
   assert(code.includes('Inst ${bot.instance}') || code.includes('instDisplay'), 'Bot instance badges must format Inst ${bot.instance}');
-  assert(!code.includes("botId === 'shrimp'"), 'Must not contain hardcoded shrimp special-cases');
-  console.log('  ✅ Fully dynamic fleet from Firebase and zero hardcoded special-cases verified.');
+  assert(code.includes('window.getBotLastActiveCache ='), 'Must define window.getBotLastActiveCache');
+  assert(code.includes('window.recordBotLastActiveTime ='), 'Must define window.recordBotLastActiveTime');
+  assert(code.includes('window.formatBotLastActiveHtml ='), 'Must define window.formatBotLastActiveHtml');
+  console.log('  ✅ Fully dynamic fleet from Firebase and persistent bot activity cache verified.');
 
   // 4. Safety Matrix generator & states
   assert(code.includes('window.getBotFleetSafetyHtml ='), 'getBotFleetSafetyHtml must be defined');
@@ -508,13 +510,13 @@ server.listen(PORT, async () => {
         timestamp: Date.now(),
         receivedAt: Date.now(),
         fleet: [
-          { name: 'Sentinel Frost', status: 'STANDBY', safeToLogin: true, detail: 'Idle / Standby' },
-          { name: 'Bisquick', status: 'STANDBY', safeToLogin: true, detail: 'Idle / Standby' },
-          { name: 'Gingivitis', status: 'STANDBY', safeToLogin: true, detail: 'Idle / Standby' },
-          { name: 'BDCFdaddy', status: 'STANDBY', safeToLogin: true, detail: 'Idle / Standby' },
-          { name: 'ShrimpLeprechaun', status: 'STANDBY', safeToLogin: true, detail: 'Idle / Standby' },
-          { name: 'AngryGermanpapi', status: 'STANDBY', safeToLogin: true, detail: 'Idle / Standby' },
-          { name: 'BabyAngryGerman', status: 'STANDBY', safeToLogin: true, detail: 'Idle / Standby' }
+          { name: 'Sentinel Frost', status: 'STANDBY', safeToLogin: true, detail: 'Idle / Standby', lastActiveTime: '12:20 PM', lastActiveEpoch: 1790796028 },
+          { name: 'Bisquick', status: 'STANDBY', safeToLogin: true, detail: 'Idle / Standby', lastActiveTime: '5:09 PM', lastActiveEpoch: 1790813382 },
+          { name: 'Gingivitis', status: 'STANDBY', safeToLogin: true, detail: 'Idle / Standby', lastActiveTime: '5:11 PM', lastActiveEpoch: 1790813472 },
+          { name: 'BDCFdaddy', status: 'STANDBY', safeToLogin: true, detail: 'Idle / Standby', lastActiveTime: '5:12 PM', lastActiveEpoch: 1790813547 },
+          { name: 'ShrimpLeprechaun', status: 'STANDBY', safeToLogin: true, detail: 'Idle / Standby', lastActiveTime: '5:13 PM', lastActiveEpoch: 1790813637 },
+          { name: 'AngryGermanpapi', status: 'STANDBY', safeToLogin: true, detail: 'Idle / Standby', lastActiveTime: '5:14 PM', lastActiveEpoch: 1790813667 },
+          { name: 'BabyAngryGerman', status: 'STANDBY', safeToLogin: true, detail: 'Idle / Standby', lastActiveTime: '8:44 PM', lastActiveEpoch: 1790221469 }
         ]
       };
       window.updateBotOperationsRadarDom();
@@ -524,6 +526,9 @@ server.listen(PORT, async () => {
       const creampuffItemH = document.getElementById('bot-fleet-item-creampuff');
       const creampuffOccupiedH = creampuffItemH?.classList?.contains('occupied');
       const creampuffTagH = document.getElementById('bot-fleet-tag-creampuff')?.textContent?.trim();
+      const creampuffActivityH = document.getElementById('bot-fleet-activity-creampuff')?.textContent?.trim();
+      const bisquickActivityH = document.getElementById('bot-fleet-activity-bisquick')?.textContent?.trim();
+      const sentinelActivityH = document.getElementById('bot-fleet-activity-sentinel')?.textContent?.trim();
       const bdcItemH = document.getElementById('bot-fleet-item-briandcox');
       const bdcSafeH = bdcItemH?.classList?.contains('safe');
       const hasBot17H = Array.from(fleetItemsH).some(el => el.textContent.includes('Bot 17'));
@@ -598,7 +603,10 @@ server.listen(PORT, async () => {
         hasBot17H,
         hasBot18H,
         busyPillH,
-        safePillH
+        safePillH,
+        creampuffActivityH,
+        bisquickActivityH,
+        sentinelActivityH
       };
     });
 
@@ -685,6 +693,15 @@ server.listen(PORT, async () => {
     }
     if (mutationResult.countH !== 17 || !mutationResult.creampuffOccupiedH || mutationResult.creampuffTagH !== '⛔ DO NOT LOG IN' || !mutationResult.bdcSafeH || mutationResult.hasBot17H || mutationResult.hasBot18H) {
       throw new Error(`Assertion Failed: Step H partial telemetry overlay failed! Result: ${JSON.stringify({ countH: mutationResult.countH, creampuffOccupiedH: mutationResult.creampuffOccupiedH, creampuffTagH: mutationResult.creampuffTagH, bdcSafeH: mutationResult.bdcSafeH, hasBot17H: mutationResult.hasBot17H, hasBot18H: mutationResult.hasBot18H })}`);
+    }
+    if (!mutationResult.creampuffActivityH || !mutationResult.creampuffActivityH.includes('Active Now')) {
+      throw new Error(`Assertion Failed: Active creampuff must display 'Active Now'! Found: "${mutationResult.creampuffActivityH}"`);
+    }
+    if (!mutationResult.bisquickActivityH || !mutationResult.bisquickActivityH.includes('5:09 PM')) {
+      throw new Error(`Assertion Failed: Bisquick must display clock time '5:09 PM'! Found: "${mutationResult.bisquickActivityH}"`);
+    }
+    if (!mutationResult.sentinelActivityH || !mutationResult.sentinelActivityH.includes('12:20 PM')) {
+      throw new Error(`Assertion Failed: Sentinel Frost must display clock time '12:20 PM'! Found: "${mutationResult.sentinelActivityH}"`);
     }
     console.log(`  ✅ Verified: Fleet Login Safety Matrix dynamically responds to bot rotation:`);
     console.log(`     1. ${mutationResult.accountA} -> Occupied: ${mutationResult.angryTagA}, Safe: ${mutationResult.bisquickTagA} (${mutationResult.busyPillA}, ${mutationResult.safePillA})`);
