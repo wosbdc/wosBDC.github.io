@@ -1,15 +1,16 @@
 {
-  "version": "3.3.72",
+  "version": "3.3.73",
   "releaseDate": "2026-10-01",
-  "title": "What's New in v3.3.72",
+  "title": "What's New in v3.3.73",
   "notes": [
-    "🏛️ Vault Mobile Cards: Fixed historical matchup cards on phones.",
-    "📱 Fluid Responsive: Clean 3-column battle grid in archive modal.",
-    "🧹 Clean Status: Stripped (Championship Series) suffix across all seasons."
+    "🏷️ Tab Renaming: Renamed tabs to Signups and Season Edit.",
+    "📋 Simplified Admin: Clearer labels in Alliance Championship admin menu.",
+    "⚡ Quick Access: Faster navigation between signups and season editor."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.72",
+    "version": "3.3.73",
     "latestChanges": [
+      "v3.3.73: Renamed championship admin tabs to Signups and Season Edit",
       "v3.3.72: Fixed Championship Archive Vault historical matchup cards for mobile",
       "v3.3.71: Fixed Alliance Championship 5-round matchup cards for mobile phones",
       "v3.3.70: Displays hr:min ago elapsed times on bot cards across all viewports",

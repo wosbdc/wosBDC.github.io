@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.73] - 2026-10-01
+- 🏷️ **Tab Renaming**: Renamed tabs to Signups and Season Edit.
+- 📋 **Simplified Admin**: Cleaner labels in Alliance Championship admin menu.
+- ⚡ **Quick Navigation**: Seamlessly toggle between signups and season editor.
+
 ## [3.3.72] - 2026-10-01
 - 🏛️ **Vault Mobile Cards**: Fixed historical matchup cards on phone screens.
 - 📱 **Fluid Responsive**: Clean three-column battle grid in archive modal.

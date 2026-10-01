@@ -160,6 +160,19 @@ function testChampionshipArchive() {
     if (code.includes(": ' (Championship Series)'")) {
         errors.push('autoCalculateChampRecord must not append (Championship Series) suffix');
     }
+    // Tab label assertions
+    if (!code.includes('📋 Signups')) {
+        errors.push('views.championshipAdmin must render renamed tab: 📋 Signups');
+    }
+    if (!code.includes('⚔️ Season Edit')) {
+        errors.push('views.championshipAdmin must render renamed tab: ⚔️ Season Edit');
+    }
+    if (code.includes('Member Signups & Roster Tracker')) {
+        errors.push('Old tab label "Member Signups & Roster Tracker" should be replaced with "Signups"');
+    }
+    if (code.includes('5-Round Matchups & Scores Entry')) {
+        errors.push('Old tab label "5-Round Matchups & Scores Entry" should be replaced with "Season Edit"');
+    }
 
     if (errors.length > 0) {
         console.error('FAILED: Championship Archive Test Failed:');

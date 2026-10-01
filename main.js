@@ -33049,10 +33049,10 @@ const views = {
         let tabNavHtml = `
             <div style="display:flex; gap:10px; margin-bottom:18px; border-bottom:1px solid var(--border); padding-bottom:12px; flex-wrap:wrap;">
                 <button onclick="views.championshipAdmin('signups')" style="padding:10px 18px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:0.2s; ${activeTab === 'signups' ? 'background:var(--accent); color:#fff; border:none; box-shadow:0 4px 12px rgba(6,182,212,0.3);' : 'background:var(--card-bg); color:var(--text-muted); border:1px solid var(--border);'}">
-                    📋 Member Signups & Roster Tracker
+                    📋 Signups
                 </button>
                 <button onclick="views.championshipAdmin('matchups')" style="padding:10px 18px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:0.2s; ${activeTab === 'matchups' ? 'background:var(--accent); color:#fff; border:none; box-shadow:0 4px 12px rgba(6,182,212,0.3);' : 'background:var(--card-bg); color:var(--text-muted); border:1px solid var(--border);'}">
-                    ⚔️ 5-Round Matchups & Scores Entry
+                    ⚔️ Season Edit
                 </button>
             </div>
         `;
