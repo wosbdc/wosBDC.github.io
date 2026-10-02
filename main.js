@@ -4349,172 +4349,350 @@ window.archiveAndResetChampionshipCycle = async () => {
     return await window.archiveAndResetChampionshipSeason();
 };
 
-// ⚔️ Mercenary Prestige: Dedicated Archive & Reset Engine
-window.archiveAndResetMercenaryCycle = async () => {
+// ⚔️ Mercenary Prestige: Dedicated Archival & Reset Pipeline Modal
+window.showResetAndArchiveMercenaryModal = async () => {
     const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
     if (!isManager) {
-        if (window.showToast) window.showToast("Only R4/R5 managers can archive & reset Mercenary cycles", "error");
+        if (window.showToast) window.showToast("Only R4/R5 managers can reset Mercenary cycles", "error");
         return;
     }
 
-    const confirmFirst = await window.customConfirm("🔄 Archive & Reset Mercenary Prestige?\n\nThis will:\n1. Save a timestamped snapshot of current completions and tiers to Firebase archives.\n2. Update player lifetime stats (increment miss counters for incomplete members).\n3. Reset all completion statuses, initiation phases, and difficulty tiers back to blank for the new event cycle.\n\nProceed?");
-    if (!confirmFirst) return;
+    let existing = document.getElementById('mercResetPipelineModal');
+    if (existing) existing.remove();
 
-    const confirmSecond = await window.customConfirm("⚠️ FINAL CONFIRMATION:\n\nAre you sure you want to reset Mercenary Prestige now?");
-    if (!confirmSecond) return;
+    const overlay = document.createElement('div');
+    overlay.id = 'mercResetPipelineModal';
+    overlay.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px);
+        z-index: 10005; display: flex; justify-content: center; align-items: center;
+        padding: 20px; box-sizing: border-box; animation: fadeIn 0.2s ease;
+    `;
 
-    if (window.showToast) window.showToast("Archiving Mercenary Prestige cycle...", "info");
+    const currentDateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
-    try {
-        const timestamp = Date.now();
-        const dateStr = new Date(timestamp).toISOString().split('T')[0];
-        const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name || "Admin") : "Admin";
+    overlay.innerHTML = `
+        <div style="background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; width: 100%; max-width: 650px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.6);">
+            <div style="padding: 18px 24px; background: rgba(255,255,255,0.03); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-size: 18px; font-weight: bold; color: #ef4444; display: flex; align-items: center; gap: 10px;">
+                    🔄 Mercenary Prestige Archival & Reset Pipeline
+                </div>
+                <button id="mercPipelineCloseBtn" onclick="document.getElementById('mercResetPipelineModal').remove()" style="background: rgba(255,255,255,0.08); border: 1px solid var(--border); color: var(--text-main); font-size: 16px; font-weight: bold; cursor: pointer; padding: 4px 10px; border-radius: 8px; line-height: 1;">✕ Close</button>
+            </div>
+            
+            <div id="mercPipelineModalBody" style="padding: 24px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 18px;">
+                <div style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 12px; padding: 16px; color: var(--text-main); font-size: 13px; line-height: 1.5;">
+                    ⚠️ <b>Important Sequential Safeguard:</b><br>
+                    Current Mercenary Prestige completion statuses, initiation phases, difficulty tiers, and Phaethon Boss Unlock counts will be <b>archived to Vault History FIRST</b>. Once safely saved to Vault history, player lifetime stats will update, and the live tracker will be reset for the upcoming event cycle.
+                </div>
 
-        const [mercData, rosterData, statsObj] = await Promise.all([
-            window.fetchMercenaryData(),
-            window.fetchRoster().catch(() => ({})),
-            window.fetchPlayerEventStats()
-        ]);
+                <div style="display: flex; flex-direction: column; gap: 12px; background: rgba(255,255,255,0.02); padding: 16px; border-radius: 10px; border: 1px solid var(--border);">
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Archive Event Date Label:</label>
+                            <span style="font-size: 11px; color: var(--accent); font-weight: 600;">📅 Vault Cycle Label</span>
+                        </div>
+                        <input type="text" id="mercPipelineDateLabel" value="${escapeHTML(currentDateStr)}" placeholder="e.g. Oct 2, 2026 or 10/2 - 10/8" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-main); box-sizing: border-box; font-weight: bold;">
+                    </div>
+                </div>
 
-        let rosterList = [];
-        const seenGids = new Set();
-        const seenNames = new Set();
-        if (rosterData) {
-            Object.values(rosterData).forEach(p => {
-                if (!p || typeof p !== 'object') return;
-                const cleanName = window.cleanChiefName(p.name || p.chiefName || '');
-                const normName = (cleanName || p.name || '').toLowerCase().trim();
-                const gid = p.gameId ? String(p.gameId).trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : (window.nameToIdMap?.[normName] || ''));
-                if ((gid && seenGids.has(gid)) || (normName && seenNames.has(normName))) return;
-                if (cleanName && window.isPlayerActiveMember(p)) {
-                    if (!p.gameId && gid && /^\d+$/.test(gid)) p.gameId = gid;
-                    if (gid) seenGids.add(gid);
-                    if (normName) seenNames.add(normName);
-                    rosterList.push(p);
-                }
-            });
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
+                    <button onclick="window.runMercenaryResetPipeline(true)" style="background: rgba(168,85,247,0.18); border: 1px solid rgba(168,85,247,0.4); color: #c084fc; padding: 10px 16px; border-radius: 8px; font-weight: bold; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                        🧪 Run Simulation Demo (Safe Preview)
+                    </button>
+
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="document.getElementById('mercResetPipelineModal').remove()" style="background: var(--bg-main); border: 1px solid var(--border); color: var(--text-main); padding: 10px 18px; border-radius: 8px; font-weight: bold; cursor: pointer;">Cancel</button>
+                        <button id="mercStartPipelineBtn" onclick="window.runMercenaryResetPipeline(false)" style="background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; box-shadow: 0 4px 15px rgba(239,68,68,0.3);">🚀 Start Real Pipeline</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    window.runMercenaryResetPipeline = async (isDemo = false) => {
+        const dateLabel = document.getElementById('mercPipelineDateLabel')?.value?.trim() || currentDateStr;
+
+        const body = document.getElementById('mercPipelineModalBody');
+        const closeBtn = document.getElementById('mercPipelineCloseBtn');
+        if (closeBtn) closeBtn.style.display = 'none';
+
+        if (body) {
+            body.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <div style="font-weight: bold; font-size: 14px; color: var(--text-main);">
+                        ⚡ ${isDemo ? '🧪 Simulation Demo Mode (No data will be changed)' : 'Execution Progress'} (<span id="mercPipelinePct">0%</span>)
+                    </div>
+                    ${isDemo ? '<span style="background: rgba(168,85,247,0.2); color: #c084fc; border: 1px solid rgba(168,85,247,0.4); padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: bold;">TEST MODE</span>' : ''}
+                </div>
+                
+                <div style="background: rgba(255,255,255,0.05); border-radius: 10px; height: 10px; overflow: hidden; margin-bottom: 20px; border: 1px solid var(--border);">
+                    <div id="mercPipelineBar" style="background: linear-gradient(90deg, ${isDemo ? '#a855f7' : 'var(--accent)'}, #10b981); height: 100%; width: 0%; transition: width 0.4s ease;"></div>
+                </div>
+
+                <div id="mercPipelineSteps" style="display: flex; flex-direction: column; gap: 12px;">
+                    <div id="mercStep1" style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02); padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border);">
+                        <div style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-main);">
+                            <span>📁 Stage 1: Fetching Live Records & Formatting Archive</span>
+                        </div>
+                        <span id="mercStep1_badge" style="background: rgba(255,255,255,0.08); color: var(--text-muted); padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: bold;">Pending</span>
+                    </div>
+
+                    <div id="mercStep2" style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02); padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border);">
+                        <div style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-main);">
+                            <span>💾 Stage 2: Saving Snapshot to Vault History (Run 1st)</span>
+                        </div>
+                        <span id="mercStep2_badge" style="background: rgba(255,255,255,0.08); color: var(--text-muted); padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: bold;">Pending</span>
+                    </div>
+
+                    <div id="mercStep3" style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02); padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border);">
+                        <div style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-main);">
+                            <span>📊 Stage 3: Updating Player Lifetime Stats</span>
+                        </div>
+                        <span id="mercStep3_badge" style="background: rgba(255,255,255,0.08); color: var(--text-muted); padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: bold;">Pending</span>
+                    </div>
+
+                    <div id="mercStep4" style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02); padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border);">
+                        <div style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-main);">
+                            <span>🔄 Stage 4: Resetting Live Member Statuses & Boss Counts</span>
+                        </div>
+                        <span id="mercStep4_badge" style="background: rgba(255,255,255,0.08); color: var(--text-muted); padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: bold;">Pending</span>
+                    </div>
+
+                    <div id="mercStep5" style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02); padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border);">
+                        <div style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-main);">
+                            <span>📋 Stage 5: Logging Action & Refreshing Views</span>
+                        </div>
+                        <span id="mercStep5_badge" style="background: rgba(255,255,255,0.08); color: var(--text-muted); padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: bold;">Pending</span>
+                    </div>
+                </div>
+
+                <div id="mercPipelineDoneArea" style="display: none; flex-direction: column; align-items: center; gap: 12px; margin-top: 15px;">
+                    <div style="background: ${isDemo ? 'rgba(168,85,247,0.15)' : 'rgba(16,185,129,0.15)'}; border: 1px solid ${isDemo ? 'rgba(168,85,247,0.4)' : 'rgba(16,185,129,0.4)'}; color: ${isDemo ? '#c084fc' : '#10b981'}; padding: 12px 20px; border-radius: 12px; font-weight: bold; font-size: 14px; text-align: center; width: 100%; box-sizing: border-box;">
+                        ${isDemo ? '🧪 Simulation Demo Completed Successfully!<br><span style="font-size:12px; font-weight:normal; opacity:0.8;">(Safe Preview Mode: No actual data was modified or deleted)</span>' : '🎉 Mercenary Prestige Archival & Reset Pipeline Completed Successfully!'}
+                    </div>
+                    <button onclick="document.getElementById('mercResetPipelineModal').remove(); if(typeof views !== 'undefined' && views.mercenaryAdmin) views.mercenaryAdmin();" style="background: ${isDemo ? '#8b5cf6' : 'var(--success)'}; color: white; border: none; padding: 12px 30px; border-radius: 8px; font-weight: bold; font-size: 15px; cursor: pointer; box-shadow: 0 4px 15px rgba(139,92,246,0.3);">Done</button>
+                </div>
+            `;
         }
-        if (rosterList.length === 0 && window.idToNameMap) {
-            Object.entries(window.idToNameMap).forEach(([gid, name]) => {
-                if (window.isPlayerActiveMember({ gameId: gid, name: name })) {
-                    rosterList.push({ gameId: gid, name: name });
+
+        const updateStep = (stepNum, status, text, pct) => {
+            const badge = document.getElementById(`mercStep${stepNum}_badge`);
+            const container = document.getElementById(`mercStep${stepNum}`);
+            const bar = document.getElementById('mercPipelineBar');
+            const pctSpan = document.getElementById('mercPipelinePct');
+
+            if (bar) bar.style.width = pct + '%';
+            if (pctSpan) pctSpan.textContent = pct + '%';
+
+            if (badge) {
+                badge.textContent = text;
+                if (status === 'running') {
+                    badge.style.background = 'rgba(6,182,212,0.2)';
+                    badge.style.color = 'var(--accent)';
+                    badge.style.border = '1px solid rgba(6,182,212,0.4)';
+                    if (container) container.style.borderColor = 'var(--accent)';
+                } else if (status === 'done') {
+                    badge.style.background = 'rgba(16,185,129,0.2)';
+                    badge.style.color = '#10b981';
+                    badge.style.border = '1px solid rgba(16,185,129,0.4)';
+                    if (container) container.style.borderColor = 'rgba(16,185,129,0.4)';
+                } else if (status === 'error') {
+                    badge.style.background = 'rgba(239,68,68,0.2)';
+                    badge.style.color = '#ef4444';
+                    badge.style.border = '1px solid rgba(239,68,68,0.4)';
+                    if (container) container.style.borderColor = 'rgba(239,68,68,0.4)';
                 }
-            });
-        }
-
-        let yesCount = 0, noCount = 0;
-        let playerSnapshots = [];
-
-        rosterList.forEach(p => {
-            const gidStr = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (window.nameToIdMap?.[(p.name || '').toLowerCase()] || '');
-            const rec = window.getEventRecord(mercData, p);
-            const isDone = rec && Boolean(rec.signedUp);
-            if (isDone) {
-                yesCount++;
-            } else {
-                noCount++;
             }
-            playerSnapshots.push({
-                gameId: gidStr,
-                name: p.name,
-                signedUp: isDone,
-                phase: (rec && rec.phase) ? rec.phase : "",
-                difficulty: (rec && rec.difficulty) ? rec.difficulty : ""
-            });
-
-            // Update lifetime player event stats
-            const pStats = statsObj[gidStr] || {
-                gameId: gidStr,
-                name: p.name,
-                missedShowdown: 0,
-                missedChampionship: 0,
-                missedMercenary: 0,
-                missedPolarTerrors: 0,
-                missedBearTrap: 0,
-                totalCyclesTracked: 0,
-                totalMisses: 0
-            };
-            pStats.name = p.name;
-            pStats.totalCyclesTracked = (pStats.totalCyclesTracked || 0) + 1;
-            if (!isDone) {
-                pStats.missedMercenary = (pStats.missedMercenary || 0) + 1;
-            }
-            pStats.totalMisses = (pStats.missedShowdown || 0) + (pStats.missedChampionship || 0) + (pStats.missedMercenary || 0) + (pStats.missedPolarTerrors || 0) + (pStats.missedBearTrap || 0);
-            pStats.lastUpdated = timestamp;
-            statsObj[gidStr] = pStats;
-        });
-
-        // 1. Save Archive to Firebase
-        const currentBossProgress = window.mercenaryBossProgressCache || await window.fetchMercenaryBossProgress().catch(() => ({ lv1: 0, lv2: 0, lv3: 0, lv4: 0, lv5: 0 }));
-        const archivePayload = {
-            timestamp: timestamp,
-            dateStr: dateStr,
-            archivedBy: adminName,
-            event: 'Mercenary Prestige',
-            totalMembers: rosterList.length,
-            yesCount: yesCount,
-            noCount: noCount,
-            players: playerSnapshots,
-            bossProgress: currentBossProgress
         };
-        await set(ref(db, `events_archive/mercenary/${timestamp}`), archivePayload);
 
-        // 2. Update player_event_stats
-        await set(ref(db, 'player_event_stats'), statsObj);
-        window._playerEventStatsCache = statsObj;
+        const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-        // 3. Reset live Mercenary status & tiers in activity_live & mercenary
-        for (const p of rosterList) {
-            const gidStr = p.gameId.toString().trim();
-            try {
-                await update(ref(db, `activity_live/${gidStr}`), {
-                    mercenary: false,
-                    mercenaryPhase: "",
-                    mercenaryDifficulty: "",
-                    updatedAt: timestamp
+        try {
+            // Stage 1: Fetch live data & format archive
+            updateStep(1, 'running', '🔄 Fetching...', 10);
+            await sleep(400);
+
+            const timestamp = Date.now();
+            const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name || "Admin") : "Admin";
+
+            const [mercData, rosterData, statsObj] = await Promise.all([
+                window.fetchMercenaryData(),
+                window.fetchRoster().catch(() => ({})),
+                window.fetchPlayerEventStats()
+            ]);
+
+            let rosterList = [];
+            const seenGids = new Set();
+            const seenNames = new Set();
+            if (rosterData) {
+                Object.values(rosterData).forEach(p => {
+                    if (!p || typeof p !== 'object') return;
+                    const cleanName = window.cleanChiefName(p.name || p.chiefName || '');
+                    const normName = (cleanName || p.name || '').toLowerCase().trim();
+                    const gid = p.gameId ? String(p.gameId).trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : (window.nameToIdMap?.[normName] || ''));
+                    if ((gid && seenGids.has(gid)) || (normName && seenNames.has(normName))) return;
+                    if (cleanName && window.isPlayerActiveMember(p)) {
+                        if (!p.gameId && gid && /^\d+$/.test(gid)) p.gameId = gid;
+                        if (gid) seenGids.add(gid);
+                        if (normName) seenNames.add(normName);
+                        rosterList.push(p);
+                    }
                 });
-            } catch(e) {
-                await set(ref(db, `activity_live/${gidStr}/mercenary`), false).catch(() => null);
-                await set(ref(db, `activity_live/${gidStr}/mercenaryPhase`), "").catch(() => null);
-                await set(ref(db, `activity_live/${gidStr}/mercenaryDifficulty`), "").catch(() => null);
             }
-            await set(ref(db, `mercenary/${gidStr}`), {
-                gameId: gidStr,
-                name: p.name,
-                signedUp: false,
-                phase: "",
-                difficulty: "",
-                lastUpdated: timestamp,
-                updatedBy: adminName
-            }).catch(() => null);
+            if (rosterList.length === 0 && window.idToNameMap) {
+                Object.entries(window.idToNameMap).forEach(([gid, name]) => {
+                    if (window.isPlayerActiveMember({ gameId: gid, name: name })) {
+                        rosterList.push({ gameId: gid, name: name });
+                    }
+                });
+            }
+
+            let yesCount = 0, noCount = 0;
+            let playerSnapshots = [];
+
+            rosterList.forEach(p => {
+                const gidStr = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (window.nameToIdMap?.[(p.name || '').toLowerCase()] || '');
+                const rec = window.getEventRecord(mercData, p);
+                const isDone = rec && Boolean(rec.signedUp);
+                if (isDone) {
+                    yesCount++;
+                } else {
+                    noCount++;
+                }
+                playerSnapshots.push({
+                    gameId: gidStr,
+                    name: p.name,
+                    signedUp: isDone,
+                    phase: (rec && rec.phase) ? rec.phase : "",
+                    difficulty: (rec && rec.difficulty) ? rec.difficulty : ""
+                });
+
+                // Prepare stats update
+                const pStats = statsObj[gidStr] || {
+                    gameId: gidStr,
+                    name: p.name,
+                    missedShowdown: 0,
+                    missedChampionship: 0,
+                    missedMercenary: 0,
+                    missedPolarTerrors: 0,
+                    missedBearTrap: 0,
+                    totalCyclesTracked: 0,
+                    totalMisses: 0
+                };
+                pStats.name = p.name;
+                pStats.totalCyclesTracked = (pStats.totalCyclesTracked || 0) + 1;
+                if (!isDone) {
+                    pStats.missedMercenary = (pStats.missedMercenary || 0) + 1;
+                }
+                pStats.totalMisses = (pStats.missedShowdown || 0) + (pStats.missedChampionship || 0) + (pStats.missedMercenary || 0) + (pStats.missedPolarTerrors || 0) + (pStats.missedBearTrap || 0);
+                pStats.lastUpdated = timestamp;
+                statsObj[gidStr] = pStats;
+            });
+
+            const currentBossProgress = window.mercenaryBossProgressCache || await window.fetchMercenaryBossProgress().catch(() => ({ lv1: 0, lv2: 0, lv3: 0, lv4: 0, lv5: 0 }));
+            const archivePayload = {
+                timestamp: timestamp,
+                dateStr: dateLabel,
+                date: dateLabel,
+                archivedBy: adminName,
+                event: 'Mercenary Prestige',
+                totalMembers: rosterList.length,
+                yesCount: yesCount,
+                noCount: noCount,
+                players: playerSnapshots,
+                bossProgress: currentBossProgress
+            };
+
+            updateStep(1, 'done', '✅ Done', 25);
+            await sleep(400);
+
+            // Stage 2: Save Snapshot to Vault History (MUST RUN FIRST!)
+            updateStep(2, 'running', '💾 Archiving...', 35);
+            if (!isDemo) {
+                await set(ref(db, `events_archive/mercenary/${timestamp}`), archivePayload);
+                await set(ref(db, `events_archive/mercenary_prestige/${timestamp}`), archivePayload);
+            }
+            updateStep(2, 'done', isDemo ? '✅ Simulated' : '✅ Archived', 55);
+            await sleep(400);
+
+            // Stage 3: Updating Player Lifetime Stats
+            updateStep(3, 'running', '📊 Updating Stats...', 65);
+            if (!isDemo) {
+                await set(ref(db, 'player_event_stats'), statsObj);
+                window._playerEventStatsCache = statsObj;
+            }
+            updateStep(3, 'done', isDemo ? '✅ Simulated' : '✅ Updated', 75);
+            await sleep(400);
+
+            // Stage 4: Resetting Live Member Statuses & Boss Counts
+            updateStep(4, 'running', '🔄 Resetting...', 85);
+            if (!isDemo) {
+                for (const p of rosterList) {
+                    const gidStr = (p.gameId || '').toString().trim();
+                    if (!gidStr) continue;
+                    try {
+                        await update(ref(db, `activity_live/${gidStr}`), {
+                            mercenary: false,
+                            mercenaryPhase: "",
+                            mercenaryDifficulty: "",
+                            updatedAt: timestamp
+                        });
+                    } catch(e) {
+                        await set(ref(db, `activity_live/${gidStr}/mercenary`), false).catch(() => null);
+                        await set(ref(db, `activity_live/${gidStr}/mercenaryPhase`), "").catch(() => null);
+                        await set(ref(db, `activity_live/${gidStr}/mercenaryDifficulty`), "").catch(() => null);
+                    }
+                    await set(ref(db, `mercenary/${gidStr}`), {
+                        gameId: gidStr,
+                        name: p.name,
+                        signedUp: false,
+                        phase: "",
+                        difficulty: "",
+                        lastUpdated: timestamp,
+                        updatedBy: adminName
+                    }).catch(() => null);
+                }
+
+                // Reset Phaethon Boss Unlock Manager progress back to 0
+                const emptyBossProgress = {
+                    lv1: 0,
+                    lv2: 0,
+                    lv3: 0,
+                    lv4: 0,
+                    lv5: 0,
+                    updatedAt: timestamp
+                };
+                await set(ref(db, 'mercenary/boss_progress'), emptyBossProgress).catch(() => null);
+                await set(ref(db, 'mercenary_boss_progress'), emptyBossProgress).catch(() => null);
+                window.mercenaryBossProgressCache = emptyBossProgress;
+
+                window.clearAllEventCaches();
+            }
+            updateStep(4, 'done', isDemo ? '✅ Simulated' : '✅ Reset', 95);
+            await sleep(400);
+
+            // Stage 5: Logging Action & Refreshing Views
+            updateStep(5, 'running', '📋 Logging...', 98);
+            if (!isDemo && window.logAdminAction) {
+                window.logAdminAction("Mercenary Pipeline Executed", `Archived cycle ${dateLabel} (${yesCount} Done, ${noCount} Not Done) and reset live statuses.`);
+            }
+            updateStep(5, 'done', '✅ Completed', 100);
+
+            const doneArea = document.getElementById('mercPipelineDoneArea');
+            if (doneArea) doneArea.style.display = 'flex';
+
+        } catch(err) {
+            console.error("Mercenary Pipeline error:", err);
+            if (window.showToast) window.showToast("Pipeline error: " + err.message, "error");
         }
-
-        // 4. Reset Phaethon Boss Unlock Manager progress back to 0
-        const emptyBossProgress = {
-            lv1: 0,
-            lv2: 0,
-            lv3: 0,
-            lv4: 0,
-            lv5: 0,
-            updatedAt: timestamp
-        };
-        await set(ref(db, 'mercenary/boss_progress'), emptyBossProgress).catch(() => null);
-        await set(ref(db, 'mercenary_boss_progress'), emptyBossProgress).catch(() => null);
-        window.mercenaryBossProgressCache = emptyBossProgress;
-
-        window.clearAllEventCaches();
-
-        if (window.logAdminAction) {
-            window.logAdminAction("Archive & Reset Mercenary", `Archived cycle ${dateStr} (${yesCount} Done, ${noCount} Not Done) and reset for next cycle.`);
-        }
-
-        if (window.showToast) window.showToast(`Mercenary Prestige archived & reset successfully! 🎉`, "success");
-        if (window.views && window.views.mercenaryAdmin) window.views.mercenaryAdmin();
-    } catch(err) {
-        console.error("Archive Mercenary error:", err);
-        if (window.showToast) window.showToast("Error archiving Mercenary Prestige: " + err.message, "error");
-    }
+    };
 };
+
+window.showResetMercenaryModal = window.showResetAndArchiveMercenaryModal;
+window.archiveAndResetMercenaryCycle = window.showResetAndArchiveMercenaryModal;
 
 // 🐻‍❄️ Polar Terrors: Dedicated Archive & Reset Engine
 window.archiveAndResetPolarTerrorsCycle = async () => {
@@ -34478,8 +34656,8 @@ const views = {
                 <button onclick="window.showEventArchiveRestoreModal('mercenary_prestige')" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--accent); padding:8px 14px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; transition:0.2s;">
                   ↩️ Restore Archive
                 </button>
-                <button onclick="window.archiveAndResetMercenaryCycle()" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:white; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(239,68,68,0.3); transition:0.2s;">
-                  🔄 Archive & Reset Cycle
+                <button onclick="window.showResetAndArchiveMercenaryModal()" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:white; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(239,68,68,0.3); transition:0.2s;">
+                  🔄 Reset
                 </button>
               </div>
             </div>

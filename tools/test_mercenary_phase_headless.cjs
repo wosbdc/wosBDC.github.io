@@ -77,6 +77,16 @@ function runStaticVerification() {
   assert(code.includes('window.resetMercenaryBossProgress()'), 'Must include Reset Boss Counts button in Phaethon manager card');
   assert(code.includes('mercenary/boss_progress'), 'Must reference mercenary/boss_progress');
   assert(code.includes('archiveAndResetMercenaryCycle'), 'Must define archiveAndResetMercenaryCycle');
+  assert(code.includes('window.showResetAndArchiveMercenaryModal ='), 'Must define window.showResetAndArchiveMercenaryModal');
+  assert(code.includes('window.runMercenaryResetPipeline ='), 'Must define window.runMercenaryResetPipeline');
+  assert(code.includes('mercResetPipelineModal'), 'Must include mercResetPipelineModal DOM template');
+  assert(code.includes('mercPipelineDateLabel'), 'Must include mercPipelineDateLabel input');
+  assert(code.includes('Stage 1: Fetching Live Records'), 'Must include Stage 1 in pipeline');
+  assert(code.includes('Stage 2: Saving Snapshot to Vault History'), 'Must include Stage 2 in pipeline');
+  assert(code.includes('Stage 3: Updating Player Lifetime Stats'), 'Must include Stage 3 in pipeline');
+  assert(code.includes('Stage 4: Resetting Live Member Statuses'), 'Must include Stage 4 in pipeline');
+  assert(code.includes('Stage 5: Logging Action & Refreshing Views'), 'Must include Stage 5 in pipeline');
+  assert(code.includes('onclick="window.showResetAndArchiveMercenaryModal()"'), 'views.mercenaryAdmin must invoke showResetAndArchiveMercenaryModal');
 
   console.log('  ✅ All structural assertions passed successfully.');
 }
@@ -275,6 +285,54 @@ async function runHeadlessBrowserTests() {
     });
     assert(publicResult.hasWall, "Public Mercenary view Wall must render without errors: " + JSON.stringify(publicResult));
     console.log('  ✅ Public Mercenary view (views.mercenary) rendered cleanly with 0 exceptions');
+
+    // Test 5B: Mercenary Archival & Reset Pipeline Modal & Simulation Demo
+    console.log('  Testing Mercenary Archival & Reset Pipeline Modal & Simulation Demo...');
+    await page.evaluate(async () => {
+      if (window.views && window.views.mercenaryAdmin) {
+        await window.views.mercenaryAdmin();
+      }
+    });
+
+    const resetBtnText = await page.evaluate(() => {
+      const btn = Array.from(document.querySelectorAll('button')).find(b => b.getAttribute('onclick')?.includes('showResetAndArchiveMercenaryModal'));
+      return btn ? btn.textContent.trim() : '';
+    });
+    assert(resetBtnText.includes('Reset'), `Reset button text must be '🔄 Reset', got '${resetBtnText}'`);
+    console.log(`  ✅ Reset button verified in views.mercenaryAdmin (${resetBtnText})`);
+
+    await page.evaluate(async () => {
+      await window.showResetAndArchiveMercenaryModal();
+    });
+
+    const modalExists = await page.evaluate(() => !!document.getElementById('mercResetPipelineModal'));
+    assert(modalExists, "Mercenary Pipeline Modal must render in DOM");
+
+    const dateVal = await page.evaluate(() => document.getElementById('mercPipelineDateLabel')?.value);
+    assert(dateVal && dateVal.length > 0, "Archive Event Date Label must default to non-empty date");
+    console.log(`  ✅ Pipeline modal rendered with default date: "${dateVal}"`);
+
+    // Run Simulation Demo Mode
+    await page.evaluate(async () => {
+      await window.runMercenaryResetPipeline(true);
+    });
+
+    await new Promise(r => setTimeout(r, 2600));
+
+    const pipelineComplete = await page.evaluate(() => {
+      const pct = document.getElementById('mercPipelinePct')?.textContent;
+      const doneArea = document.getElementById('mercPipelineDoneArea');
+      const isDoneVisible = doneArea && window.getComputedStyle(doneArea).display !== 'none';
+      return { pct, isDoneVisible };
+    });
+
+    assert.strictEqual(pipelineComplete.pct, '100%', `Pipeline progress must reach 100%, got ${pipelineComplete.pct}`);
+    assert(pipelineComplete.isDoneVisible, "Pipeline Done Area must be visible after simulation execution");
+    console.log('  ✅ 5-Stage Simulation Demo executed and completed at 100%');
+
+    await page.evaluate(() => {
+      document.getElementById('mercResetPipelineModal')?.remove();
+    });
 
     // Test 4: Responsive Viewport Checks (zero horizontal overflow)
     const viewports = [

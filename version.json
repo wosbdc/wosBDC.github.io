@@ -1,15 +1,17 @@
 {
-  "version": "3.3.77",
+  "version": "3.3.78",
   "releaseDate": "2026-10-02",
-  "title": "What's New in v3.3.77",
+  "title": "What's New in v3.3.78",
   "notes": [
-    "🔗 Linked Dates: Linked enemy date to reset archive pipeline.",
-    "⚡ Live Sync: Event dates sync bidirectionally with settings.",
-    "🧹 Clean Reset: Pipeline reset clears event dates from DOM."
+    "🔄 Reset Pipeline: Added 5-stage reset checklist for Mercenary Tracker.",
+    "🛡️ Vault First: Saves completions and boss unlocks before resetting.",
+    "🔘 Button Renamed: Renamed admin cycle button to simple Reset.",
+    "🧪 Simulation Mode: Preview reset pipeline safely without modifying data."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.77",
+    "version": "3.3.78",
     "latestChanges": [
+      "v3.3.78: Added Mercenary Prestige archival and reset pipeline checklist and renamed button to Reset",
       "v3.3.77: Linked enemy date to reset archive pipeline with bidirectional sync and clean reset",
       "v3.3.76: Added event date input to Showdown Enemy Alliance Settings with auto-sync and reset support",
       "v3.3.75: Fixed Phaethon Boss Unlock Manager reset on cycle archive and added dedicated reset button",

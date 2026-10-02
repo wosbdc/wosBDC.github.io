@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.78] - 2026-10-02
+- 🔄 **Reset Pipeline**: Added 5-stage reset checklist for Mercenary Tracker.
+- 🛡️ **Vault First**: Saves completions and boss unlocks before resetting.
+- 🔘 **Button Renamed**: Renamed admin cycle button to simple Reset.
+- 🧪 **Simulation Mode**: Preview reset pipeline safely without modifying data.
+
 ## [3.3.77] - 2026-10-02
 - 🔗 **Linked Dates**: Linked enemy date to reset archive pipeline.
 - ⚡ **Live Sync**: Event dates sync bidirectionally with settings.
