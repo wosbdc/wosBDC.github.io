@@ -13073,6 +13073,35 @@ if (!window._autocompleteListenerAdded) {
     window._autocompleteListenerAdded = true;
 }
 
+window.syncSdPipelineDateToMeta = (val) => {
+    const metaDateInput = document.getElementById('metaEventDate');
+    if (metaDateInput) {
+        metaDateInput.value = val;
+    }
+    const dateBadge = document.getElementById('sdAdminHeaderDateBadge');
+    if (dateBadge) {
+        if (val && val.trim()) {
+            dateBadge.textContent = `📅 ${val.trim()}`;
+            dateBadge.style.display = 'inline-block';
+        } else {
+            dateBadge.style.display = 'none';
+        }
+    }
+    if (window.debouncedAutoSaveSdMeta) {
+        window.debouncedAutoSaveSdMeta();
+    }
+};
+
+window.syncSdPipelineEnemyToMeta = (val) => {
+    const metaEnemyInput = document.getElementById('metaEnemyName');
+    if (metaEnemyInput) {
+        metaEnemyInput.value = val;
+    }
+    if (window.debouncedAutoSaveSdMeta) {
+        window.debouncedAutoSaveSdMeta();
+    }
+};
+
 window.showResetAndArchiveEventModal = async () => {
     let existing = document.getElementById('sdResetPipelineModal');
     if (existing) existing.remove();
@@ -13089,14 +13118,24 @@ window.showResetAndArchiveEventModal = async () => {
     const currentDateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     let currentEnemyName = "[WWA] Whiteoutwarriors";
     let currentEventDate = "";
-    try {
-        const metaSnap = await get(ref(db, 'showdown_meta')).catch(() => null);
-        if (metaSnap && metaSnap.exists() && metaSnap.val()) {
-            const mv = metaSnap.val();
-            if (mv.enemyAlliance && mv.enemyAlliance.name) currentEnemyName = mv.enemyAlliance.name;
-            currentEventDate = mv.eventDate || (mv.enemyAlliance && mv.enemyAlliance.eventDate) || '';
-        }
-    } catch(e) {}
+
+    // 1. Live DOM priority: pick up active live values from Enemy Alliance Settings
+    const domEventDate = document.getElementById('metaEventDate')?.value?.trim();
+    const domEnemyName = document.getElementById('metaEnemyName')?.value?.trim();
+    if (domEventDate) currentEventDate = domEventDate;
+    if (domEnemyName) currentEnemyName = domEnemyName;
+
+    // 2. Fallback to Firebase showdown_meta if DOM inputs were absent or empty
+    if (!currentEventDate || !domEnemyName) {
+        try {
+            const metaSnap = await get(ref(db, 'showdown_meta')).catch(() => null);
+            if (metaSnap && metaSnap.exists() && metaSnap.val()) {
+                const mv = metaSnap.val();
+                if (mv.enemyAlliance && mv.enemyAlliance.name && !domEnemyName) currentEnemyName = mv.enemyAlliance.name;
+                if (!currentEventDate) currentEventDate = mv.eventDate || (mv.enemyAlliance && mv.enemyAlliance.eventDate) || '';
+            }
+        } catch(e) {}
+    }
 
     overlay.innerHTML = `
         <div style="background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; width: 100%; max-width: 650px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.6);">
@@ -13115,12 +13154,18 @@ window.showResetAndArchiveEventModal = async () => {
 
                 <div style="display: flex; flex-direction: column; gap: 12px; background: rgba(255,255,255,0.02); padding: 16px; border-radius: 10px; border: 1px solid var(--border);">
                     <div>
-                        <label style="display: block; font-size: 12px; font-weight: bold; color: var(--text-muted); margin-bottom: 4px;">Archive Event Date Label:</label>
-                        <input type="text" id="sdPipelineDateLabel" value="${escapeHTML(currentEventDate || currentDateStr)}" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-main); box-sizing: border-box; font-weight: bold;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Archive Event Date Label:</label>
+                            <span style="font-size: 11px; color: var(--accent); font-weight: 600;">🔗 Linked to Enemy Settings</span>
+                        </div>
+                        <input type="text" id="sdPipelineDateLabel" value="${escapeHTML(currentEventDate || currentDateStr)}" placeholder="e.g. 9/28 - 10/4" oninput="window.syncSdPipelineDateToMeta(this.value)" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-main); box-sizing: border-box; font-weight: bold;">
                     </div>
                     <div>
-                        <label style="display: block; font-size: 12px; font-weight: bold; color: var(--text-muted); margin-bottom: 4px;">Enemy Alliance Name:</label>
-                        <input type="text" id="sdPipelineEnemyName" value="${escapeHTML(currentEnemyName)}" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-main); box-sizing: border-box; font-weight: bold;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Enemy Alliance Name:</label>
+                            <span style="font-size: 11px; color: var(--accent); font-weight: 600;">🔗 Linked to Enemy Settings</span>
+                        </div>
+                        <input type="text" id="sdPipelineEnemyName" value="${escapeHTML(currentEnemyName)}" placeholder="e.g. [WWA] Whiteoutwarriors" oninput="window.syncSdPipelineEnemyToMeta(this.value)" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-main); box-sizing: border-box; font-weight: bold;">
                     </div>
                 </div>
 
@@ -13321,6 +13366,16 @@ window.showResetAndArchiveEventModal = async () => {
                     'enemyAlliance/eventDate': '',
                     'enemyAlliance/scores': { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 }
                 }).catch(() => null);
+
+                const metaDateInput = document.getElementById('metaEventDate');
+                if (metaDateInput) metaDateInput.value = '';
+                const metaEnemyInput = document.getElementById('metaEnemyName');
+                if (metaEnemyInput) metaEnemyInput.value = '[WWA] Whiteoutwarriors';
+                const dateBadge = document.getElementById('sdAdminHeaderDateBadge');
+                if (dateBadge) {
+                    dateBadge.textContent = '';
+                    dateBadge.style.display = 'none';
+                }
             }
             updateStep(4, 'done', isDemo ? '✅ Simulated' : '✅ Reset', 95);
             await sleep(500);
@@ -32779,11 +32834,11 @@ const views = {
             <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:15px; margin-bottom:20px;">
               <div>
                 <label style="font-weight:bold; color:var(--text-main); display:block; margin-bottom:5px;">Enemy Alliance Name</label>
-                <input type="text" id="metaEnemyName" value="${escapeHTML(meta.enemyAlliance.name || '')}" placeholder="e.g. [WWA] Whiteoutwarriors" oninput="window.debouncedAutoSaveSdMeta()" onblur="window.flushAutoSaveSdMeta()" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
+                <input type="text" id="metaEnemyName" value="${escapeHTML(meta.enemyAlliance.name || '')}" placeholder="e.g. [WWA] Whiteoutwarriors" oninput="window.debouncedAutoSaveSdMeta(); if(document.getElementById('sdPipelineEnemyName')) document.getElementById('sdPipelineEnemyName').value = this.value;" onblur="window.flushAutoSaveSdMeta()" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
               </div>
               <div>
                 <label style="font-weight:bold; color:var(--text-main); display:block; margin-bottom:5px;">Event Date <span style="font-size:11px; font-weight:normal; color:var(--text-muted);">(month/day - month/day)</span></label>
-                <input type="text" id="metaEventDate" value="${escapeHTML(eventDateVal)}" placeholder="e.g. 9/28 - 10/4" oninput="window.debouncedAutoSaveSdMeta()" onblur="window.flushAutoSaveSdMeta()" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
+                <input type="text" id="metaEventDate" value="${escapeHTML(eventDateVal)}" placeholder="e.g. 9/28 - 10/4" oninput="window.debouncedAutoSaveSdMeta(); if(document.getElementById('sdPipelineDateLabel')) document.getElementById('sdPipelineDateLabel').value = this.value;" onblur="window.flushAutoSaveSdMeta()" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
               </div>
             </div>
             

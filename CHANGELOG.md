@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.77] - 2026-10-02
+- 🔗 **Linked Dates**: Linked enemy date to reset archive pipeline.
+- ⚡ **Live Sync**: Event dates sync bidirectionally with settings.
+- 🧹 **Clean Reset**: Pipeline reset clears event dates from DOM.
+
 ## [3.3.76] - 2026-10-02
 - 📅 **Event Dates**: Added date input to Showdown Enemy Alliance Settings.
 - ⚡ **Auto-Save**: Event dates sync automatically to Firebase in real time.

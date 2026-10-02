@@ -181,7 +181,45 @@ if (mainCode.includes("currentEventDate = mv.eventDate || (mv.enemyAlliance && m
     process.exit(1);
 }
 
+// 5. Showdown Reset Pipeline Live Linkage & Reset Sync Assertions
+console.log("\nTest 5: Showdown Reset Pipeline Live Linkage & Reset Sync Assertions");
+
+if (mainCode.includes("window.syncSdPipelineDateToMeta = (val) => {") &&
+    mainCode.includes("window.syncSdPipelineEnemyToMeta = (val) => {")) {
+    console.log("  ✅ PASS: window.syncSdPipelineDateToMeta and window.syncSdPipelineEnemyToMeta are defined");
+} else {
+    console.error("  ❌ FAIL: Missing pipeline synchronization functions in main.js");
+    process.exit(1);
+}
+
+if (mainCode.includes("🔗 Linked to Enemy Settings") &&
+    mainCode.includes('oninput="window.syncSdPipelineDateToMeta(this.value)"') &&
+    mainCode.includes('oninput="window.syncSdPipelineEnemyToMeta(this.value)"')) {
+    console.log("  ✅ PASS: Reset modal displays linkage badge and calls sync functions on input");
+} else {
+    console.error("  ❌ FAIL: Reset modal missing linkage badge or oninput sync bindings");
+    process.exit(1);
+}
+
+if (mainCode.includes("const domEventDate = document.getElementById('metaEventDate')?.value?.trim();") &&
+    mainCode.includes("if (domEventDate) currentEventDate = domEventDate;")) {
+    console.log("  ✅ PASS: showResetAndArchiveEventModal prioritizes live DOM metaEventDate input");
+} else {
+    console.error("  ❌ FAIL: showResetAndArchiveEventModal does not prioritize live DOM metaEventDate");
+    process.exit(1);
+}
+
+if (mainCode.includes("if (metaDateInput) metaDateInput.value = '';") &&
+    mainCode.includes("if (dateBadge) {") &&
+    mainCode.includes("dateBadge.style.display = 'none';")) {
+    console.log("  ✅ PASS: Stage 4 reset pipeline properly clears live DOM metaEventDate and dateBadge");
+} else {
+    console.error("  ❌ FAIL: Stage 4 reset pipeline does not clear DOM inputs and badges");
+    process.exit(1);
+}
+
 console.log("\n==========================================");
 console.log("📊 ALL MISSED DAYS REPORT & EVENT DATE TESTS PASSED 100%");
 console.log("==========================================\n");
+
 
