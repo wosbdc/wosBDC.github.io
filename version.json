@@ -1,15 +1,17 @@
 {
-  "version": "3.3.75",
-  "releaseDate": "2026-10-01",
-  "title": "What's New in v3.3.75",
+  "version": "3.3.76",
+  "releaseDate": "2026-10-02",
+  "title": "What's New in v3.3.76",
   "notes": [
-    "🔄 Boss Reset: Fixed reset for Phaethon Boss Unlock Manager.",
-    "⚙️ Direct Controls: Added 1-click Reset Boss Counts button in admin.",
-    "🧹 Clean Cycles: Automatically resets all boss counts on cycle archive."
+    "📅 Event Dates: Added date input to Showdown Enemy Alliance Settings.",
+    "⚡ Auto-Save: Event dates sync automatically to Firebase in real time.",
+    "⚔️ Badge Display: Event dates display proudly across public Showdown views.",
+    "🔄 Smart Reset: Reset pipeline auto-prefills the active event date."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.75",
+    "version": "3.3.76",
     "latestChanges": [
+      "v3.3.76: Added event date input to Showdown Enemy Alliance Settings with auto-sync and reset support",
       "v3.3.75: Fixed Phaethon Boss Unlock Manager reset on cycle archive and added dedicated reset button",
       "v3.3.74: Replaced archive vault season titles with chronological weekly date ranges",
       "v3.3.73: Renamed championship admin tabs to Signups and Season Edit",

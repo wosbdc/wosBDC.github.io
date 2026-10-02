@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.76] - 2026-10-02
+- 📅 **Event Dates**: Added date input to Showdown Enemy Alliance Settings.
+- ⚡ **Auto-Save**: Event dates sync automatically to Firebase in real time.
+- ⚔️ **Badge Display**: Event dates display proudly across public Showdown views.
+- 🔄 **Smart Reset**: Reset pipeline auto-prefills the active event date.
+
 ## [3.3.75] - 2026-10-01
 - 🔄 **Boss Reset**: Fixed reset for Phaethon Boss Unlock Manager.
 - ⚙️ **Direct Controls**: Added 1-click Reset Boss Counts button in admin.

@@ -13088,9 +13088,14 @@ window.showResetAndArchiveEventModal = async () => {
 
     const currentDateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     let currentEnemyName = "[WWA] Whiteoutwarriors";
+    let currentEventDate = "";
     try {
-        const metaSnap = await get(ref(db, 'showdown_meta/enemyAlliance/name')).catch(() => null);
-        if (metaSnap && metaSnap.exists() && metaSnap.val()) currentEnemyName = metaSnap.val();
+        const metaSnap = await get(ref(db, 'showdown_meta')).catch(() => null);
+        if (metaSnap && metaSnap.exists() && metaSnap.val()) {
+            const mv = metaSnap.val();
+            if (mv.enemyAlliance && mv.enemyAlliance.name) currentEnemyName = mv.enemyAlliance.name;
+            currentEventDate = mv.eventDate || (mv.enemyAlliance && mv.enemyAlliance.eventDate) || '';
+        }
     } catch(e) {}
 
     overlay.innerHTML = `
@@ -13111,7 +13116,7 @@ window.showResetAndArchiveEventModal = async () => {
                 <div style="display: flex; flex-direction: column; gap: 12px; background: rgba(255,255,255,0.02); padding: 16px; border-radius: 10px; border: 1px solid var(--border);">
                     <div>
                         <label style="display: block; font-size: 12px; font-weight: bold; color: var(--text-muted); margin-bottom: 4px;">Archive Event Date Label:</label>
-                        <input type="text" id="sdPipelineDateLabel" value="${currentDateStr}" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-main); box-sizing: border-box; font-weight: bold;">
+                        <input type="text" id="sdPipelineDateLabel" value="${escapeHTML(currentEventDate || currentDateStr)}" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-main); box-sizing: border-box; font-weight: bold;">
                     </div>
                     <div>
                         <label style="display: block; font-size: 12px; font-weight: bold; color: var(--text-muted); margin-bottom: 4px;">Enemy Alliance Name:</label>
@@ -13275,9 +13280,10 @@ window.showResetAndArchiveEventModal = async () => {
 
             const archivePayload = {
                 date: dateLabel,
+                eventDate: dateLabel,
                 timestamp: timestamp,
                 players: pList.map((p, idx) => ({ rank: idx + 1, name: p.name, d1: p.d1, d2: p.d2, d3: p.d3, d4: p.d4, d5: p.d5, d6: p.d6, total: p.total })),
-                enemyAlliance: { name: enemyName, scores: {} },
+                enemyAlliance: { name: enemyName, eventDate: dateLabel, scores: {} },
                 tableRows: tableRows
             };
             updateStep(1, 'done', '✅ Done', 25);
@@ -13309,9 +13315,11 @@ window.showResetAndArchiveEventModal = async () => {
             // Stage 4: Reset Enemy Alliance Settings
             updateStep(4, 'running', '⚙️ Resetting...', 88);
             if (!isDemo) {
-                await set(ref(db, 'showdown_meta/enemyAlliance'), {
-                    name: "[WWA] Whiteoutwarriors",
-                    scores: { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 }
+                await update(ref(db, 'showdown_meta'), {
+                    eventDate: '',
+                    'enemyAlliance/name': "[WWA] Whiteoutwarriors",
+                    'enemyAlliance/eventDate': '',
+                    'enemyAlliance/scores': { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 }
                 }).catch(() => null);
             }
             updateStep(4, 'done', isDemo ? '✅ Simulated' : '✅ Reset', 95);
@@ -32646,6 +32654,7 @@ const views = {
        let meta = (metaSnap && metaSnap.exists() && metaSnap.val()) ? metaSnap.val() : {};
        if (!meta.enemyAlliance || typeof meta.enemyAlliance !== 'object') meta.enemyAlliance = { name: "[WWA] Whiteoutwarriors", scores: { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 } };
        if (!meta.enemyAlliance.scores || typeof meta.enemyAlliance.scores !== 'object') meta.enemyAlliance.scores = { d1:0, d2:0, d3:0, d4:0, d5:0, d6:0 };
+       const eventDateVal = meta.eventDate || (meta.enemyAlliance && meta.enemyAlliance.eventDate) || '';
        
        const rawSdLiveData = sdRes.sdLiveData || {};
        const sdLiveData = {};
@@ -32711,8 +32720,9 @@ const views = {
              <button onclick="if(document.querySelector('.navbar')) document.querySelector('.navbar').style.display='flex'; views.admin()" style="background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); padding:8px 14px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13px; display:inline-flex; align-items:center; gap:6px; transition:0.2s;">
                ⬅️ Back to Admin
              </button>
-             <h2 style="margin:0; color:var(--text-main); font-size:22px; display:flex; align-items:center; gap:8px;">
-               ⚔️ Showdown Data Entry
+             <h2 style="margin:0; color:var(--text-main); font-size:22px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+               <span>⚔️ Showdown Data Entry</span>
+               ${eventDateVal ? `<span id="sdAdminHeaderDateBadge" style="font-size:12px; font-weight:600; color:var(--accent); background:rgba(6,182,212,0.1); border:1px solid rgba(6,182,212,0.25); padding:2px 10px; border-radius:20px;">📅 ${escapeHTML(eventDateVal)}</span>` : '<span id="sdAdminHeaderDateBadge" style="display:none;"></span>'}
              </h2>
            </div>
          </div>
@@ -32766,9 +32776,15 @@ const views = {
             </div>
             <p style="color:var(--text-muted); font-size:14px;">Event goals are set to <b>3,333,333</b> daily (20M total). Horns, Winners, and Alliance Totals are automatically calculated in real time.</p>
             
-            <div style="margin-bottom:20px;">
-              <label style="font-weight:bold; color:var(--text-main); display:block; margin-bottom:5px;">Enemy Alliance Name</label>
-              <input type="text" id="metaEnemyName" value="${meta.enemyAlliance.name || ''}" oninput="window.debouncedAutoSaveSdMeta()" onblur="window.flushAutoSaveSdMeta()" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:15px; margin-bottom:20px;">
+              <div>
+                <label style="font-weight:bold; color:var(--text-main); display:block; margin-bottom:5px;">Enemy Alliance Name</label>
+                <input type="text" id="metaEnemyName" value="${escapeHTML(meta.enemyAlliance.name || '')}" placeholder="e.g. [WWA] Whiteoutwarriors" oninput="window.debouncedAutoSaveSdMeta()" onblur="window.flushAutoSaveSdMeta()" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
+              </div>
+              <div>
+                <label style="font-weight:bold; color:var(--text-main); display:block; margin-bottom:5px;">Event Date <span style="font-size:11px; font-weight:normal; color:var(--text-muted);">(month/day - month/day)</span></label>
+                <input type="text" id="metaEventDate" value="${escapeHTML(eventDateVal)}" placeholder="e.g. 9/28 - 10/4" oninput="window.debouncedAutoSaveSdMeta()" onblur="window.flushAutoSaveSdMeta()" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); box-sizing:border-box;">
+              </div>
             </div>
             
             <div style="background:var(--bg-main); padding:15px; border-radius:8px; border:1px solid var(--border); margin-bottom:20px; overflow-x:auto;">
@@ -32990,22 +33006,43 @@ const views = {
           }
           
           const enemyNameInput = document.getElementById('metaEnemyName');
-          let newMeta = { enemyAlliance: { name: enemyNameInput ? enemyNameInput.value : '', scores: {} } };
+          const eventDateInput = document.getElementById('metaEventDate');
+          const enemyName = enemyNameInput ? enemyNameInput.value.trim() : '';
+          const eventDate = eventDateInput ? eventDateInput.value.trim() : '';
           
+          let scores = {};
           for (let i = 1; i <= 6; i++) {
              const esInput = document.getElementById('meta_es_'+i);
-             newMeta.enemyAlliance.scores['d'+i] = esInput ? (Number(esInput.value) || 0) : 0;
+             scores['d'+i] = esInput ? (Number(esInput.value) || 0) : 0;
           }
           
           try {
-             await set(ref(db, 'showdown_meta'), newMeta);
+             await update(ref(db, 'showdown_meta'), {
+                eventDate: eventDate,
+                'enemyAlliance/name': enemyName,
+                'enemyAlliance/eventDate': eventDate,
+                'enemyAlliance/scores': scores
+             });
+
+             const dateBadge = document.getElementById('sdAdminHeaderDateBadge');
+             if (dateBadge) {
+                if (eventDate) {
+                   dateBadge.textContent = `📅 ${eventDate}`;
+                   dateBadge.style.display = 'inline-block';
+                } else {
+                   dateBadge.style.display = 'none';
+                }
+             }
 
              const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
              window.setSdStatus('sdEnemyAutoSaveStatus', `✅ Enemy settings saved (${nowTime})`, '#10b981');
              window.setSdStatus('sdMetaLiveIndicator', `✅ Saved to Firebase (${nowTime})`, '#10b981');
 
              if (!isAutoSave) {
-                window.logAdminAction("Enemy Alliance Update", `Updated Enemy Alliance name to '${newMeta.enemyAlliance.name || '[WWA] Whiteoutwarriors'}' and daily enemy scores`, newMeta.enemyAlliance.name);
+                const logDesc = eventDate 
+                    ? `Updated Enemy Alliance to '${enemyName || '[WWA] Whiteoutwarriors'}', Event Date '${eventDate}', and daily scores`
+                    : `Updated Enemy Alliance to '${enemyName || '[WWA] Whiteoutwarriors'}' and daily scores`;
+                window.logAdminAction("Enemy Alliance Update", logDesc, enemyName);
                 if(window.showToast) window.showToast("✅ Event Settings saved successfully!", "success");
              }
           } catch(e) {
@@ -38715,6 +38752,7 @@ window.resetBearTrapEvent = async () => {
        const enemyAlliance = (metaData && metaData.enemyAlliance && typeof metaData.enemyAlliance === 'object') ? metaData.enemyAlliance : { name: 'Enemy Alliance', scores: {} };
        const eScores = (enemyAlliance && enemyAlliance.scores && typeof enemyAlliance.scores === 'object') ? enemyAlliance.scores : {};
        const enemyName = enemyAlliance.name || 'Enemy Alliance';
+       const eventDate = metaData.eventDate || (enemyAlliance && enemyAlliance.eventDate) || '';
        
        let html = `<div style="display:flex; flex-direction:column; gap:20px;">`;
        
@@ -38856,7 +38894,10 @@ window.resetBearTrapEvent = async () => {
        }
 
        let allianceCard = `<div class="card">
-          <div class="card-title">⚔️ Alliance Progress</div>${titleRightHtml}
+          <div class="card-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <span>⚔️ Alliance Progress</span>
+            ${eventDate ? `<span style="font-size:12px; font-weight:600; color:var(--accent); background:rgba(6,182,212,0.1); border:1px solid rgba(6,182,212,0.25); padding:3px 10px; border-radius:20px;">📅 ${escapeHTML(eventDate)}</span>` : ''}
+          </div>${titleRightHtml}
           <div class="card-table-scroll" style="overflow-x:auto; width:100%; border-radius:8px; border:1px solid var(--border);">
           <table style="min-width:650px; border-collapse:collapse;"><thead><tr>
           <th style="position:sticky; left:0; background:var(--card-bg); z-index:6; box-shadow: 1px 0 0 var(--border);">Alliance's Showdown</th><th style="border-right: 1px solid rgba(255,255,255,0.12); text-align:center;">Total</th>${dayHeadersHtml}

@@ -146,6 +146,42 @@ if (dayMissedMap[1].includes("ChiefActive2") && !dayMissedMap[1].includes("Chief
     process.exit(1);
 }
 
+// 4. Showdown Event Date Input & Persistence Assertions
+console.log("\nTest 4: Showdown Event Date Input & Persistence Assertions");
+
+if (mainCode.includes('id="metaEventDate"') && mainCode.includes('(month/day - month/day)')) {
+    console.log("  ✅ PASS: metaEventDate input field rendered with month/day - month/day format hint");
+} else {
+    console.error("  ❌ FAIL: metaEventDate input field missing from Enemy Alliance Settings");
+    process.exit(1);
+}
+
+if (mainCode.includes("const eventDateInput = document.getElementById('metaEventDate');") &&
+    mainCode.includes("eventDate: eventDate") &&
+    mainCode.includes("'enemyAlliance/eventDate': eventDate")) {
+    console.log("  ✅ PASS: saveShowdownMeta extracts and saves eventDate to showdown_meta and enemyAlliance");
+} else {
+    console.error("  ❌ FAIL: saveShowdownMeta does not properly handle eventDate persistence");
+    process.exit(1);
+}
+
+if (mainCode.includes("const eventDate = metaData.eventDate || (enemyAlliance && enemyAlliance.eventDate) || '';") &&
+    mainCode.includes("📅 ${escapeHTML(eventDate)}")) {
+    console.log("  ✅ PASS: views.showdown extracts eventDate and renders the badge");
+} else {
+    console.error("  ❌ FAIL: views.showdown missing eventDate display badge");
+    process.exit(1);
+}
+
+if (mainCode.includes("currentEventDate = mv.eventDate || (mv.enemyAlliance && mv.enemyAlliance.eventDate) || '';") &&
+    mainCode.includes("id=\"sdPipelineDateLabel\" value=\"${escapeHTML(currentEventDate || currentDateStr)}\"")) {
+    console.log("  ✅ PASS: openShowdownResetPipelineModal prefills sdPipelineDateLabel with active eventDate");
+} else {
+    console.error("  ❌ FAIL: openShowdownResetPipelineModal does not prefill active eventDate");
+    process.exit(1);
+}
+
 console.log("\n==========================================");
-console.log("📊 ALL MISSED DAYS REPORT TESTS PASSED 100%");
+console.log("📊 ALL MISSED DAYS REPORT & EVENT DATE TESTS PASSED 100%");
 console.log("==========================================\n");
+
