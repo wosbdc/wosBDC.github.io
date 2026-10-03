@@ -1,16 +1,16 @@
 {
-  "version": "3.3.81",
+  "version": "3.3.82",
   "releaseDate": "2026-10-03",
-  "title": "What's New in v3.3.81",
+  "title": "What's New in v3.3.82",
   "notes": [
-    "🎁 Donation Breakdown: Shows exact points added per chief in admin logs.",
-    "👥 Batch Totals: Aggregates consecutive donations with cumulative points.",
-    "📋 Copy Details: Copies member names with point amounts attached."
+    "📱 Compact Logs: Streamlined Admin Action details modal layout.",
+    "🧹 Zero Redundancy: Removed repeated batch texts and subheader strips.",
+    "⚡ Clean Details: Sleek banner for batch action details."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.81",
+    "version": "3.3.82",
     "latestChanges": [
-      "v3.3.81: Added per-account donation amount breakdown in batched admin logs",
+      "v3.3.82: Streamlined and compacted Admin Action Details modal",
       "v3.3.80: Added membership status display and self-reactivation in Account Hub",
       "v3.3.79: Added Auto-Fill from Tracker button in Phaethon Boss Unlock Manager with tier-based qualification",
       "v3.3.78: Added Mercenary Prestige archival and reset pipeline checklist and renamed button to Reset",

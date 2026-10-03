@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.82] - 2026-10-03
+- 📱 **Compact Logs**: Streamlined Admin Action details modal layout.
+- 🧹 **Zero Redundancy**: Removed repeated batch texts and subheader strips.
+- ⚡ **Clean Details**: Sleek banner for batch action details.
+
 ## [3.3.81] - 2026-10-03
 - 🎁 **Donation Breakdown**: Shows exact points added per chief in admin logs.
 - 👥 **Batch Totals**: Aggregates consecutive donations with cumulative points.

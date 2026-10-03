@@ -175,6 +175,19 @@ async function main() {
     assert(text.includes('2. PlayerTwo (+60 pts • Total: 60)'));
   });
 
+  // 6. Test Compact Modal Layout Assertions
+  runTest('showLogDetailModal eliminates redundant date sub-header strip and uses compact header', () => {
+    assert(mainJs.includes('Admin: <strong style="color:#a78bfa;">'),
+      'Must embed admin name and date/time cleanly in header subtitle');
+    assert(mainJs.includes('Affected Chief(s)'),
+      'Must render clean Affected Chief(s) section header');
+  });
+
+  runTest('summaryHtml does not render redundant italic batch count text', () => {
+    assert(!mainJs.includes('consecutive actions batched</span>`'),
+      'summaryHtml must not contain duplicate italic consecutive actions batched text');
+  });
+
   console.log(`\n🎉 Test Suite Completed: ${passedTests}/${totalTests} tests passed.\n`);
   if (passedTests !== totalTests) {
     process.exit(1);

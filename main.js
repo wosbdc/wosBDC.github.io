@@ -29816,51 +29816,47 @@ const views = {
         modal.innerHTML = `
           <div style="background:var(--bg-card, #1e293b); border:1px solid var(--border, #334155); border-radius:16px; width:100%; max-width:480px; max-height:88vh; display:flex; flex-direction:column; box-shadow:0 25px 50px -12px rgba(0,0,0,0.6); overflow:hidden;" onclick="event.stopPropagation()">
             <!-- Header -->
-            <div style="padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.02);">
-              <div style="display:flex; align-items:center; gap:10px;">
-                <div style="background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:19px;">
+            <div style="padding:14px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.02);">
+              <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+                <div style="background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;">
                   ${isBatch ? '👥' : '📋'}
                 </div>
-                <div>
-                  <h3 style="margin:0; color:var(--text-main); font-size:16px; font-weight:700;">${escapeHTML(logData.action || 'Admin Action Details')}</h3>
-                  <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">
-                    ${isBatch ? `${memberCount} Target Chiefs` : (logData.target || 'General Action')} &bull; Admin: <span style="color:#a78bfa; font-weight:700;">${escapeHTML(logData.admin || 'Admin')}</span>
+                <div style="min-width:0;">
+                  <h3 style="margin:0; color:var(--text-main); font-size:15px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHTML(logData.action || 'Admin Action Details')}</h3>
+                  <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                    <span>Admin: <strong style="color:#a78bfa;">${escapeHTML(logData.admin || 'Admin')}</strong></span>
+                    <span style="opacity:0.4;">&bull;</span>
+                    <span>📅 ${escapeHTML(logData.dateStr || '')} ${escapeHTML(logData.timeStr || '')}</span>
                   </div>
                 </div>
               </div>
-              <button onclick="document.getElementById('logDetailModal')?.remove()" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:15px; transition:0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.2)'; this.style.color='#ef4444';" onmouseout="this.style.background='rgba(255,255,255,0.06)'; this.style.color='var(--text-main)';">✕</button>
-            </div>
-
-            <!-- Meta Sub-Header -->
-            <div style="padding:10px 20px; background:rgba(0,0,0,0.25); border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; font-size:12px; gap:8px; flex-wrap:wrap;">
-              <span style="color:var(--text-muted);">📅 <strong style="color:var(--text-main);">${escapeHTML(logData.dateStr || '')}</strong></span>
-              <span style="color:var(--text-muted); font-size:11.5px;">🕒 ${escapeHTML(logData.timeStr || '')}</span>
+              <button onclick="document.getElementById('logDetailModal')?.remove()" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:14px; transition:0.2s; flex-shrink:0;" onmouseover="this.style.background='rgba(239,68,68,0.2)'; this.style.color='#ef4444';" onmouseout="this.style.background='rgba(255,255,255,0.06)'; this.style.color='var(--text-main)';">✕</button>
             </div>
 
             <!-- Scrollable Content -->
-            <div style="padding:16px 20px; overflow-y:auto; -webkit-overflow-scrolling:touch; max-height:55vh; display:flex; flex-direction:column; gap:14px; scrollbar-width:thin; scrollbar-color:var(--accent) rgba(0,0,0,0.3);">
+            <div style="padding:14px 18px; overflow-y:auto; -webkit-overflow-scrolling:touch; max-height:55vh; display:flex; flex-direction:column; gap:12px; scrollbar-width:thin; scrollbar-color:var(--accent) rgba(0,0,0,0.3);">
               
-              <!-- Action Details Box -->
+              <!-- Action Details Banner / Notes Box -->
               ${logData.details ? `
-                <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:10px; padding:12px 14px;">
-                  <div style="font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:700; letter-spacing:0.5px; margin-bottom:4px;">📝 Action Details & Changes</div>
-                  <div style="font-size:13px; color:var(--text-main); line-height:1.5; word-break:break-word;">
+                <div style="background:rgba(56,189,248,0.06); border:1px solid rgba(56,189,248,0.2); border-radius:10px; padding:10px 12px; display:flex; align-items:flex-start; gap:8px;">
+                  <span style="font-size:14px; flex-shrink:0; line-height:1.4;">${isBatch ? '⚡' : '📝'}</span>
+                  <div style="font-size:12.5px; color:var(--text-main); line-height:1.45; word-break:break-word; flex:1;">
                     ${escapeHTML(logData.details)}
                   </div>
                 </div>
               ` : ''}
 
-              <!-- Summary Badges if batched -->
+              <!-- Summary Badges if present -->
               ${logData.summaryHtml ? `
-                <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
                   ${logData.summaryHtml}
                 </div>
               ` : ''}
 
               <!-- Target Chiefs List Section -->
               <div>
-                <div style="font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:700; letter-spacing:0.5px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-                  <span>👥 Target Chief(s) (${memberCount || (logData.target ? 1 : 0)})</span>
+                <div style="font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:700; letter-spacing:0.5px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
+                  <span>👥 Affected Chief(s) (${memberCount || (logData.target ? 1 : 0)})</span>
                 </div>
                 <div style="display:flex; flex-direction:column; gap:6px;">
                   ${membersListHtml}
@@ -30232,7 +30228,7 @@ const views = {
                  if (det.includes('no') || det.includes('❌')) noCount++;
               });
 
-              let summaryHtml = `<span style="color:var(--text-muted); font-size:12.5px; font-style:italic;">${group.length} consecutive actions batched</span>`;
+              let summaryHtml = '';
               if (yesCount > 0 || noCount > 0) {
                  let parts = [];
                  if (noCount > 0) parts.push(`<span style="background:rgba(239,68,68,0.12); color:#f87171; border:1px solid rgba(239,68,68,0.3); padding:2px 8px; border-radius:6px; font-size:11.5px; font-weight:600;">❌ ${noCount} set to NO</span>`);
