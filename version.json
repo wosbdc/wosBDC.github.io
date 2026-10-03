@@ -1,15 +1,16 @@
 {
-  "version": "3.3.79",
+  "version": "3.3.80",
   "releaseDate": "2026-10-03",
-  "title": "What's New in v3.3.79",
+  "title": "What's New in v3.3.80",
   "notes": [
-    "⚡ Auto-Fill Bosses: Added 1-click Auto-Fill from Mercenary Prestige Tracker.",
-    "🎯 Smart Tiers: Calculates boss levels from completed member tiers.",
-    "💾 Instant Save: Automatically saves calculated boss progress to Firebase."
+    "👥 Status Hub: View alliance membership status in Account Hub.",
+    "👋 Self Reactivate: Instantly restore active membership after returning.",
+    "🛡️ Alt Support: Restore returning linked alts to active."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.79",
+    "version": "3.3.80",
     "latestChanges": [
+      "v3.3.80: Added membership status display and self-reactivation in Account Hub",
       "v3.3.79: Added Auto-Fill from Tracker button in Phaethon Boss Unlock Manager with tier-based qualification",
       "v3.3.78: Added Mercenary Prestige archival and reset pipeline checklist and renamed button to Reset",
       "v3.3.77: Linked enemy date to reset archive pipeline with bidirectional sync and clean reset",

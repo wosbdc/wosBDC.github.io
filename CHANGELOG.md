@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.80] - 2026-10-03
+- 👥 **Status Hub**: View alliance membership status in Account Hub.
+- 👋 **Self Reactivate**: Instantly restore active membership after returning.
+- 🛡️ **Alt Support**: Restore returning linked alts to active.
+- 🔒 **Security Guard**: Blocks banned accounts from restoring their status.
+
 ## [3.3.79] - 2026-10-03
 - ⚡ **Auto-Fill Bosses**: Added 1-click Auto-Fill from Mercenary Prestige Tracker.
 - 🎯 **Smart Tiers**: Calculates boss levels from completed member tiers.

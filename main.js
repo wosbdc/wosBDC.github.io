@@ -1131,6 +1131,77 @@ window.updateMemberStatus = async (name, gid, uid, newStatus, reason = '', isAlt
     }
 };
 
+window.selfActivateMembershipStatus = async (gid, name, isAlt = false) => {
+    if (!currentUser) {
+        if (window.showToast) window.showToast("Please log in to update membership status", "error");
+        return false;
+    }
+
+    const cleanGid = gid ? String(gid).trim() : (currentUser.gameId ? String(currentUser.gameId).trim() : '');
+    const cleanName = window.cleanChiefName(name || currentUser.chiefName || currentUser.name || (cleanGid ? `Chief ${cleanGid}` : ''));
+
+    // Check if account is banned (only R4/R5 managers can unban)
+    let targetStatus = 'active';
+    if (isAlt && cleanGid) {
+        const aTok = (currentUser.altTokens && currentUser.altTokens[cleanGid]) || {};
+        const aData = (currentUser.linkedAltsData && currentUser.linkedAltsData[cleanGid]) || {};
+        const aSaved = (window.altProfilesMap && window.altProfilesMap[cleanGid]) || {};
+        const rItem = window.rosterCache && (window.rosterCache[cleanGid] || window.rosterCache[cleanName]);
+        targetStatus = window.normalizeMembershipStatus(aTok.membershipStatus || aData.membershipStatus || aSaved.membershipStatus || (rItem && (rItem.membershipStatus || rItem.status)) || 'active');
+    } else {
+        targetStatus = window.normalizeMembershipStatus(currentUser.membershipStatus || currentUser.status);
+    }
+    if (targetStatus === 'banned') {
+        if (window.showToast) window.showToast("This character is banned. Contact an R4/R5 leader for assistance.", "error");
+        return false;
+    }
+
+    try {
+        if (window.showToast) window.showToast("Restoring membership status to Active...", "info");
+        await window.executeUnifiedMemberUpdate({
+            gameId: cleanGid,
+            name: cleanName,
+            membershipStatus: 'active',
+            statusReason: 'Self-restored via Account Hub',
+            isAlt: Boolean(isAlt),
+            ownerUid: currentUser.uid || null,
+            actionLog: {
+                title: "Membership Status Self-Restored",
+                details: `Chief ${cleanName || cleanGid} restored their membership status to ACTIVE via Account Hub`
+            }
+        });
+
+        if (window.invalidateMemberCaches) {
+            window.invalidateMemberCaches({ roster: true, users: true, trackers: true });
+        }
+
+        if (currentUser) {
+            currentUser.membershipStatus = 'active';
+            currentUser.status = 'active';
+            if (isAlt && cleanGid && currentUser.linkedAltsData && currentUser.linkedAltsData[cleanGid]) {
+                currentUser.linkedAltsData[cleanGid].membershipStatus = 'active';
+                currentUser.linkedAltsData[cleanGid].status = 'active';
+            }
+            if (isAlt && cleanGid && currentUser.altTokens && currentUser.altTokens[cleanGid]) {
+                currentUser.altTokens[cleanGid].membershipStatus = 'active';
+                currentUser.altTokens[cleanGid].status = 'active';
+            }
+            try { localStorage.setItem('cached_current_user', JSON.stringify(currentUser)); } catch(e) {}
+        }
+
+        if (window.showToast) window.showToast(`🎉 Welcome back! ${cleanName || 'Your account'} is now marked 🟢 Active Member!`, "success");
+
+        if (window.views && typeof window.views.account === 'function') {
+            window.views.account();
+        }
+        return true;
+    } catch(err) {
+        console.error("selfActivateMembershipStatus error:", err);
+        if (window.showToast) window.showToast("Error restoring status: " + err.message, "error");
+        return false;
+    }
+};
+
 window.openChangeMembershipStatusModal = (name, gid, uid = null, currentStatus = 'active', isAlt = false) => {
     let existingModal = document.getElementById('changeMembershipStatusModal');
     if (existingModal) existingModal.remove();
@@ -35600,6 +35671,9 @@ window.resetBearTrapEvent = async () => {
   },
 
   account: async (defaultTab = null) => {
+    if (!currentUser && window.currentUser) {
+      currentUser = window.currentUser;
+    }
     if (!currentUser && auth && auth.currentUser) {
       currentUser = {
         uid: auth.currentUser.uid,
@@ -35611,6 +35685,7 @@ window.resetBearTrapEvent = async () => {
     if (currentUser && currentUser.email && currentUser.email.toLowerCase().includes('briandivacox')) {
       if (!currentUser.gameId) currentUser.gameId = '318843189';
     }
+    if (!currentUser && window.currentUser) currentUser = window.currentUser;
     if (!currentUser) return window.renderMembersOnlyGuard("User Account Hub");
     const targetTab = (typeof defaultTab === 'string' && defaultTab) ? defaultTab : (window.currentAccountHubTab || sessionStorage.getItem('activeAccountTab') || 'Profile');
     window.currentAccountHubTab = targetTab;
@@ -35684,7 +35759,7 @@ window.resetBearTrapEvent = async () => {
         const aSaved = (altProfilesMap && altProfilesMap[cleanGid]) || {};
         const rItem = window.rosterCache && (window.rosterCache[cleanGid] || window.rosterCache[aTok.nickname || aData.name]);
         const altStatus = window.normalizeMembershipStatus(aTok.membershipStatus || aData.membershipStatus || aSaved.membershipStatus || (rItem && (rItem.membershipStatus || rItem.status)) || 'active');
-        return altStatus === 'active';
+        return altStatus !== 'banned';
     });
 
     let currentChiefName = (currentUser.gameId && idToNameMap[currentUser.gameId] && !/^\d+$/.test(idToNameMap[currentUser.gameId])) 
@@ -35739,14 +35814,15 @@ window.resetBearTrapEvent = async () => {
         window.fetchRoster().catch(() => ({}));
     }
     
+    let rosterPlayer = null;
     if (rosterRawData) {
-        const p = Object.values(rosterRawData).find(rp => 
+        rosterPlayer = Object.values(rosterRawData).find(rp => 
             (rp.name && rp.name.toLowerCase() === currentChiefName.toLowerCase()) ||
             (rp.gameId && rp.gameId.toString().trim() === (currentUser.gameId || '').toString().trim())
         );
-        if (p) {
-            if (p.furnaceLevel || p.stove_lv) furnaceLevelStr = (p.furnaceLevel || p.stove_lv).toString();
-            const pDate = p.dateStarted || p.joinedDate;
+        if (rosterPlayer) {
+            if (rosterPlayer.furnaceLevel || rosterPlayer.stove_lv) furnaceLevelStr = (rosterPlayer.furnaceLevel || rosterPlayer.stove_lv).toString();
+            const pDate = rosterPlayer.dateStarted || rosterPlayer.joinedDate;
             if (pDate) {
                 const fmt = window.formatDateForDisplay(pDate);
                 if (fmt && fmt !== 'N/A') {
@@ -35754,8 +35830,8 @@ window.resetBearTrapEvent = async () => {
                     timeActiveStr = window.calculateTimeActive(pDate);
                 }
             }
-            if (p.timeActive && (!timeActiveStr || timeActiveStr === 'Unknown')) {
-                timeActiveStr = window.formatTimeActiveShort(p.timeActive.toString());
+            if (rosterPlayer.timeActive && (!timeActiveStr || timeActiveStr === 'Unknown')) {
+                timeActiveStr = window.formatTimeActiveShort(rosterPlayer.timeActive.toString());
             }
         }
     }
@@ -35783,6 +35859,23 @@ window.resetBearTrapEvent = async () => {
     const botStatusHtml = isEnrolled 
         ? `<div style="background:rgba(16,185,129,0.1); border:1px solid var(--success); color:var(--success); padding:8px 16px; border-radius:8px; font-weight:bold; font-size:14px; display:inline-flex; align-items:center; gap:8px;">&#x2705; Active Bot Link</div>`
         : `<div style="background:rgba(239,68,68,0.1); border:1px solid var(--danger); color:var(--danger); padding:8px 16px; border-radius:8px; font-weight:bold; font-size:14px; display:inline-flex; align-items:center; gap:8px;">&#x274C; No Bot Link</div>`;
+
+    // Resolve Alliance Membership Status for primary character
+    const rawUserStatus = currentUser.membershipStatus || currentUser.status || (rosterPlayer && (rosterPlayer.membershipStatus || rosterPlayer.status)) || 'active';
+    const primaryMemStatus = (typeof window.normalizeMembershipStatus === 'function')
+        ? window.normalizeMembershipStatus(rawUserStatus)
+        : String(rawUserStatus).toLowerCase().trim();
+
+    let primaryMemBadgeHtml = '';
+    let primaryMemActionBtnHtml = '';
+    if (primaryMemStatus === 'left') {
+        primaryMemBadgeHtml = `<span style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.45); padding:2px 8px; border-radius:6px; font-size:11px; font-weight:bold; display:inline-flex; align-items:center; gap:4px;" title="This character is currently marked as having left the alliance">🚪 Left Alliance</span>`;
+        primaryMemActionBtnHtml = `<button onclick="window.selfActivateMembershipStatus('${currentUser.gameId || ''}', '${window.escapeHTML(currentChiefName)}', false)" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:7px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 12px rgba(16,185,129,0.35); transition:transform 0.2s;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'" title="Rejoined the alliance? Click to restore status to Active">👋 Rejoined? Set to Active</button>`;
+    } else if (primaryMemStatus === 'banned') {
+        primaryMemBadgeHtml = `<span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.45); padding:2px 8px; border-radius:6px; font-size:11px; font-weight:bold; display:inline-flex; align-items:center; gap:4px;" title="This account is currently banned">🚫 Banned</span>`;
+    } else {
+        primaryMemBadgeHtml = `<span style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:2px 8px; border-radius:6px; font-size:11px; font-weight:bold; display:inline-flex; align-items:center; gap:4px;" title="Active alliance member">🟢 Active Member</span>`;
+    }
 
     // Pre-calculate statistics across all linked alts
     let totalAltsCount = links.length;
@@ -35898,12 +35991,16 @@ window.resetBearTrapEvent = async () => {
             }
         }
 
+        const altRawStatus = altTokenData?.membershipStatus || linkedAltData?.membershipStatus || altSaved?.membershipStatus || (window.rosterCache && (window.rosterCache[cleanGid]?.membershipStatus || window.rosterCache[cleanGid]?.status || window.rosterCache[altName]?.membershipStatus || window.rosterCache[altName]?.status)) || 'active';
+        const altMemStatus = window.normalizeMembershipStatus(altRawStatus);
+
         altCardsData.push({
             cleanGid,
             altName,
             altSaved,
             linkedAltData,
             altTokenData,
+            altMemStatus,
             flVal,
             flNumeric,
             joinedDateVal,
@@ -36008,6 +36105,7 @@ window.resetBearTrapEvent = async () => {
                             <span style="font-size:11px; color:#cbd5e1; font-family:monospace; background:rgba(0,0,0,0.4); padding:2px 7px; border-radius:6px; border:1px solid rgba(255,255,255,0.1);">
                                 ID: ${currentUser.gameId || 'Not Linked'}
                             </span>
+                            ${primaryMemBadgeHtml}
                             ${ tokenStatus.status === 'active' 
                                 ? `<span style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:2px 7px; border-radius:6px; font-size:10.5px; font-weight:bold; cursor:pointer;" onclick="window.openAccountHubVerifyModal()" title="30-Day Sync Active (${tokenStatus.daysLeft}d left)">🛡️ 30d Sync (${tokenStatus.daysLeft}d)</span>`
                                 : `<button onclick="window.openAccountHubVerifyModal()" style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); padding:2px 7px; border-radius:6px; font-size:10.5px; font-weight:bold; cursor:pointer;">⚠️ Setup Sync</button>`
@@ -36015,7 +36113,8 @@ window.resetBearTrapEvent = async () => {
                         </div>
                     </div>
                 </div>
-                <div style="flex-shrink:0;">
+                <div style="flex-shrink:0; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    ${primaryMemActionBtnHtml}
                     <span style="border:1px solid rgba(16,185,129,0.4); color:#10b981; background:rgba(16,185,129,0.15); border-radius:8px; padding:4px 10px; font-size:11.5px; font-weight:700; display:inline-flex; align-items:center; gap:4px;">🎁 Auto Redeem</span>
                 </div>
             </div>
@@ -36126,9 +36225,18 @@ window.resetBearTrapEvent = async () => {
         `;
 
         altCardsData.forEach(item => {
-              const { cleanGid, altName, flVal, flNumeric, joinedDateVal, timeActiveVal, foundInRoster, altTokenDaysRemaining, isAltTokenActive, tokenState, isAltEnrolled } = item;
+              const { cleanGid, altName, altMemStatus, flVal, flNumeric, joinedDateVal, timeActiveVal, foundInRoster, altTokenDaysRemaining, isAltTokenActive, tokenState, isAltEnrolled } = item;
               let flSpanId = `alt-fl-${cleanGid}`;
               const joinedDateFormatted = joinedDateVal ? window.formatDateForDisplay(joinedDateVal) : (timeActiveVal !== 'Unknown' ? 'Active' : 'N/A');
+
+              let altMemBadgeHtml = '';
+              if (altMemStatus === 'banned') {
+                  altMemBadgeHtml = `<span style="background:rgba(239,68,68,0.18); color:#ef4444; border:1px solid rgba(239,68,68,0.4); padding:1px 6px; border-radius:6px; font-size:10.5px; font-weight:bold;">🚫 Banned</span>`;
+              } else if (altMemStatus === 'left') {
+                  altMemBadgeHtml = `<span style="background:rgba(245,158,11,0.18); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); padding:1px 6px; border-radius:6px; font-size:10.5px; font-weight:bold;">🚪 Left</span>`;
+              } else {
+                  altMemBadgeHtml = `<span style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:1px 6px; border-radius:6px; font-size:10.5px; font-weight:bold;">🟢 Active</span>`;
+              }
               
               if (!foundInRoster && flVal === 'N/A') {
                   setTimeout(async () => {
@@ -36144,7 +36252,7 @@ window.resetBearTrapEvent = async () => {
               }
               
               linkedHtml += `
-              <div class="alt-account-card" data-gid="${cleanGid}" data-name="${window.escapeHTML(altName.toLowerCase())}" data-fl="${flNumeric}" data-token-status="${tokenState}" data-days="${altTokenDaysRemaining}" data-enrolled="${isAltEnrolled ? 'true' : 'false'}" style="background:rgba(15,23,42,0.7); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.09); border-radius:18px; padding:18px; box-shadow:0 8px 24px rgba(0,0,0,0.4); display:flex; flex-direction:column; justify-content:space-between; gap:14px; transition:transform 0.2s, box-shadow 0.2s;">
+              <div class="alt-account-card" data-gid="${cleanGid}" data-name="${window.escapeHTML(altName.toLowerCase())}" data-fl="${flNumeric}" data-token-status="${tokenState}" data-days="${altTokenDaysRemaining}" data-enrolled="${isAltEnrolled ? 'true' : 'false'}" data-mem-status="${altMemStatus}" style="background:rgba(15,23,42,0.7); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.09); border-radius:18px; padding:18px; box-shadow:0 8px 24px rgba(0,0,0,0.4); display:flex; flex-direction:column; justify-content:space-between; gap:14px; transition:transform 0.2s, box-shadow 0.2s;">
                   
                   <!-- Top Row: Avatar + Name/ID/Token Badge + Perks Badge -->
                   <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
@@ -36164,6 +36272,7 @@ window.resetBearTrapEvent = async () => {
                                   <span style="font-size:11px; color:#94a3b8; font-family:monospace; background:rgba(255,255,255,0.05); padding:1px 6px; border-radius:6px; border:1px solid rgba(255,255,255,0.08);">
                                       ID: ${cleanGid}
                                   </span>
+                                  ${altMemBadgeHtml}
                                   ${ isAltTokenActive
                                       ? `<span style="background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.4); padding:1px 6px; border-radius:6px; font-size:10.5px; font-weight:bold; cursor:pointer;" onclick="window.openAltVerifyModal('${cleanGid}')" title="30-Day Token Active (${altTokenDaysRemaining}d remaining). Click to renew early.">🛡️ 30d Sync (${altTokenDaysRemaining}d)</span>`
                                       : `<span style="background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.4); padding:1px 6px; border-radius:6px; font-size:10.5px; font-weight:bold; cursor:pointer;" onclick="window.openAltVerifyModal('${cleanGid}')" title="Unverified or expired token. Click to verify in game.">⚠️ 30-Day Sync</span>`
@@ -36210,6 +36319,10 @@ window.resetBearTrapEvent = async () => {
 
                   <!-- Bottom Row: Unified Action Buttons -->
                   <div style="display:flex; gap:6px; align-items:center; border-top:1px solid rgba(255,255,255,0.05); padding-top:12px; flex-wrap:wrap;">
+                      ${ altMemStatus === 'left'
+                          ? `<button onclick="window.selfActivateMembershipStatus('${cleanGid}', '${window.escapeHTML(altName)}', true)" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; border-radius:8px; padding:6px 12px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px; box-shadow:0 2px 8px rgba(16,185,129,0.3); transition:transform 0.2s;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'" title="Rejoined the alliance? Restore this alt to Active Member status">👋 Set to Active</button>`
+                          : ''
+                      }
                       ${ isAltTokenActive
                           ? `<button onclick="window.handleSyncAltProfile('${cleanGid}', this)" style="flex:1; min-width:110px; background:rgba(6,182,212,0.15); border:1px solid #06b6d4; color:#06b6d4; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px; transition:0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.25)'" onmouseout="this.style.background='rgba(6,182,212,0.15)'" title="Token active (${altTokenDaysRemaining}d remaining). Click to sync.">🔄 Sync Data</button>`
                           : `<button onclick="window.openAltVerifyModal('${cleanGid}')" style="flex:1; min-width:110px; background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px; box-shadow:0 2px 8px rgba(14,165,233,0.3);" title="Verify via in-game mail to bind 30-day auto-sync token">⚡ Setup 30-Day Token</button>`
@@ -36442,6 +36555,13 @@ window.resetBearTrapEvent = async () => {
                   <div class="id-card-stat-row" style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:8px;">
                       <span style="color:var(--text-muted); font-size:13px; text-transform:uppercase; letter-spacing:1px;">Time Active</span>
                       <span style="color:var(--text-main); font-weight:bold; font-size:13px; text-align:right;">${timeActiveStr}</span>
+                  </div>
+                  <div class="id-card-stat-row" style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:8px 12px; border-radius:8px;">
+                      <span style="color:var(--text-muted); font-size:13px; text-transform:uppercase; letter-spacing:1px;">Alliance Status</span>
+                      <div style="display:flex; align-items:center; gap:6px;">
+                          ${primaryMemBadgeHtml}
+                          ${primaryMemStatus === 'left' ? `<button onclick="window.selfActivateMembershipStatus('${currentUser.gameId || ''}', '${window.escapeHTML(currentChiefName)}', false)" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;" title="Rejoin alliance">Rejoin</button>` : ''}
+                      </div>
                   </div>
                   ${userBio ? `<div class="id-card-stat-row" style="background:rgba(255,255,255,0.03); padding:10px 12px; border-radius:8px; margin-top:2px;">
                       <div style="color:var(--text-muted); font-size:11px; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">💬 Status</div>
