@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.3.83] - 2026-10-03
+- 🏷️ **Target Chief**: Renamed admin table column to Target Chief.
+- 🧹 **Clean Rows**: Removed redundant Details button from table rows.
+
 ## [3.3.82] - 2026-10-03
 - 📱 **Compact Logs**: Streamlined Admin Action details modal layout.
 - 🧹 **Zero Redundancy**: Removed repeated batch texts and subheader strips.

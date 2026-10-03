@@ -188,6 +188,16 @@ async function main() {
       'summaryHtml must not contain duplicate italic consecutive actions batched text');
   });
 
+  // 7. Test Table Header and Clean Row Layout Assertions
+  runTest('Admin logs table header uses "Target Chief" and does not include "Target Chief(s) & Details"', () => {
+    assert(mainJs.includes('Target Chief</th>'), 'Must render Target Chief column header');
+    assert(!mainJs.includes('Target Chief(s) & Details'), 'Must not render redundant Target Chief(s) & Details header');
+  });
+
+  runTest('Admin logs table rows omit redundant Details button', () => {
+    assert(!mainJs.includes('🔍 Details</button>'), 'Must not render 🔍 Details button in table rows');
+  });
+
   console.log(`\n🎉 Test Suite Completed: ${passedTests}/${totalTests} tests passed.\n`);
   if (passedTests !== totalTests) {
     process.exit(1);

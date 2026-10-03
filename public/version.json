@@ -1,15 +1,15 @@
 {
-  "version": "3.3.82",
+  "version": "3.3.83",
   "releaseDate": "2026-10-03",
-  "title": "What's New in v3.3.82",
+  "title": "What's New in v3.3.83",
   "notes": [
-    "📱 Compact Logs: Streamlined Admin Action details modal layout.",
-    "🧹 Zero Redundancy: Removed repeated batch texts and subheader strips.",
-    "⚡ Clean Details: Sleek banner for batch action details."
+    "🏷️ Target Chief: Renamed admin table column to Target Chief.",
+    "🧹 Clean Rows: Removed redundant Details button from table rows."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.82",
+    "version": "3.3.83",
     "latestChanges": [
+      "v3.3.83: Renamed column to Target Chief and removed redundant Details button",
       "v3.3.82: Streamlined and compacted Admin Action Details modal",
       "v3.3.80: Added membership status display and self-reactivation in Account Hub",
       "v3.3.79: Added Auto-Fill from Tracker button in Phaethon Boss Unlock Manager with tier-based qualification",

@@ -30154,15 +30154,10 @@ const views = {
                      </td>
                      <td style="padding:12px 14px; white-space:nowrap;">${actionBadge}</td>
                      <td style="padding:12px 14px;">
-                       <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-                         <span title="${escapeHTML(hoverTitle)}" style="background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.35); color:#f59e0b; padding:4px 10px; border-radius:8px; font-size:12px; font-weight:700; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;">
+                          <span title="${escapeHTML(hoverTitle)}" style="background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.35); color:#f59e0b; padding:4px 10px; border-radius:8px; font-size:12px; font-weight:700; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;">
                            👥 Multiple (${singleExtracted.length})
                            <span style="font-size:10px; opacity:0.8;">ℹ️</span>
                          </span>
-                         <button onclick="event.stopPropagation(); window.showLogDetailModal('${batchId}')" style="background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; padding:3px 9px; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:0.2s;" onmouseover="this.style.background='rgba(56,189,248,0.2)';" onmouseout="this.style.background='rgba(56,189,248,0.1)';">
-                           🔍 Details
-                         </button>
-                       </div>
                      </td>
                    </tr>
                  `;
@@ -30201,16 +30196,11 @@ const views = {
                      </td>
                      <td style="padding:12px 14px; white-space:nowrap;">${actionBadge}</td>
                      <td style="padding:12px 14px;">
-                       <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
                          ${targetName ? `
                            <span style="font-weight:600; color:#38bdf8; font-size:13px; display:inline-flex; align-items:center; gap:5px; background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.22); padding:2px 8px; border-radius:6px;">
                              👤 ${escapeHTML(targetName)}
                            </span>
                          ` : `<span style="color:var(--text-muted); font-size:13px;">—</span>`}
-                         <button onclick="event.stopPropagation(); window.showLogDetailModal('${logId}')" style="background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--text-muted); padding:3px 8px; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:0.2s;" onmouseover="this.style.color='var(--accent)'; this.style.borderColor='var(--accent)';" onmouseout="this.style.color='var(--text-muted)'; this.style.borderColor='var(--border)';">
-                           🔍 Details
-                         </button>
-                       </div>
                      </td>
                    </tr>
                  `;
@@ -30328,15 +30318,10 @@ const views = {
                   </td>
                   <td style="padding:12px 14px; white-space:nowrap;">${actionBadge}</td>
                   <td style="padding:12px 14px;">
-                    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
                       <span title="${escapeHTML(hoverTitle)}" style="background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.35); color:#f59e0b; padding:4px 10px; border-radius:8px; font-size:12px; font-weight:700; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;">
                         👥 Multiple (${group.length})
                         <span style="font-size:10px; opacity:0.85;">ℹ️</span>
                       </span>
-                      <button onclick="event.stopPropagation(); window.showLogDetailModal('${batchId}')" style="background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; padding:3px 9px; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:0.2s;" onmouseover="this.style.background='rgba(56,189,248,0.2)';" onmouseout="this.style.background='rgba(56,189,248,0.1)';">
-                        🔍 Details
-                      </button>
-                    </div>
                   </td>
                 </tr>
               `;
@@ -32292,7 +32277,7 @@ const views = {
                         <th style="padding:12px 14px; width:180px; min-width:160px;">Date & Time</th>
                         <th style="padding:12px 14px; width:140px; min-width:120px;">Admin</th>
                         <th style="padding:12px 14px; width:220px; min-width:190px;">Action Category</th>
-                        <th style="padding:12px 14px; min-width:240px;">Target Chief(s) & Details</th>
+                        <th style="padding:12px 14px; min-width:180px;">Target Chief</th>
                       </tr>
                     </thead>
                     <tbody id="adminLogsTableBody">
