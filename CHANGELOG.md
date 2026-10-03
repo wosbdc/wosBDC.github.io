@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.81] - 2026-10-03
+- 🎁 **Donation Breakdown**: Shows exact points added per chief in admin logs.
+- 👥 **Batch Totals**: Aggregates consecutive donations with cumulative points.
+- 📋 **Copy Details**: Copies member names with point amounts attached.
+
 ## [3.3.80] - 2026-10-03
 - 👥 **Status Hub**: View alliance membership status in Account Hub.
 - 👋 **Self Reactivate**: Instantly restore active membership after returning.

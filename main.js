@@ -29261,30 +29261,62 @@ const views = {
         }
         if (!raw || raw === '-' || raw.toLowerCase() === 'none') return [];
 
+        const extractDonationMeta = (detailStr) => {
+          if (!detailStr) return { meta: '', amount: 0 };
+          const s = String(detailStr).trim();
+          // Match patterns: "Added +60 to BT1 (Total: 120)", "Added +60 to BT1", "+60 to BT1", "+60 donation points"
+          const mBt = s.match(/(?:Added\s*)?(\+\d[\d,]*)\s*(?:to\s*BT\d+)?(?:\s*\(Total:\s*([\d,]+)\))?/i);
+          if (mBt) {
+            const added = mBt[1];
+            const num = parseInt(added.replace(/[^\d]/g, ''), 10) || 0;
+            const tot = mBt[2] ? ` • Total: ${mBt[2]}` : '';
+            return { meta: `${added} pts${tot}`, amount: num, addedStr: added };
+          }
+          // Match pattern: "Updated active donation to 60"
+          const mUpd = s.match(/active donation to\s*(\d[\d,]*)/i);
+          if (mUpd) {
+            const num = parseInt(mUpd[1].replace(/[^\d]/g, ''), 10) || 0;
+            return { meta: `Total: ${mUpd[1]} pts`, amount: num, addedStr: `+${mUpd[1]}` };
+          }
+          return { meta: '', amount: 0 };
+        };
+
         if (raw.includes(',')) {
           const parts = raw.split(',').map(s => s.trim()).filter(Boolean);
           if (parts.length > 1) {
             return parts.map(part => {
               let name = part;
               let meta = '';
+              let amount = 0;
               const match = part.match(/^(.*?)\s*\((.*?)\)$/);
               if (match) {
                 name = match[1].trim();
                 meta = match[2].trim();
+                const numM = meta.match(/\+?(\d[\d,]*)/);
+                if (numM) amount = parseInt(numM[1].replace(/[^\d]/g, ''), 10) || 0;
               }
-              return { name: name || part, meta, raw: part };
+              return { name: name || part, meta, amount, raw: part };
             }).filter(m => m.name && m.name !== '-');
           }
         }
 
         let name = raw;
         let meta = '';
+        let amount = 0;
         const match = raw.match(/^(.*?)\s*\((.*?)\)$/);
         if (match) {
           name = match[1].trim();
           meta = match[2].trim();
+          const numM = meta.match(/\+?(\d[\d,]*)/);
+          if (numM) amount = parseInt(numM[1].replace(/[^\d]/g, ''), 10) || 0;
+        } else if (log.details) {
+          const don = extractDonationMeta(log.details);
+          if (don.meta) {
+            meta = don.meta;
+            amount = don.amount;
+          }
         }
-        return [{ name: name || raw, meta, raw }];
+        return [{ name: name || raw, meta, amount, raw }];
       };
 
       // Rich Unified Interactive Modal to View Action & Batched Member Details
@@ -30214,17 +30246,31 @@ const views = {
                  if (extracted.length > 0) {
                     allGroupMembers.push(...extracted);
                  } else if (l.target && l.target !== '-') {
-                    allGroupMembers.push({ name: l.target, meta: l.details || '', raw: l.target });
+                    allGroupMembers.push({ name: l.target, meta: l.details || '', amount: 0, raw: l.target });
                  }
               });
 
+              // Deduplicate per chief and aggregate amounts if multiple donations were made by/for same chief
               const uniqueMembers = [];
-              const seenKeys = new Set();
+              const memberMap = new Map();
               allGroupMembers.forEach(m => {
                  const key = (m.name || '').toLowerCase();
-                 if (key && !seenKeys.has(key)) {
-                    seenKeys.add(key);
-                    uniqueMembers.push(m);
+                 if (!key) return;
+                 if (!memberMap.has(key)) {
+                    const entry = { ...m };
+                    memberMap.set(key, entry);
+                    uniqueMembers.push(entry);
+                 } else {
+                    const existing = memberMap.get(key);
+                    if (m.amount) {
+                       existing.amount = (existing.amount || 0) + m.amount;
+                       // Extract latest total if available
+                       const totM = (m.meta || '').match(/Total:\s*([\d,]+)/i);
+                       const totStr = totM ? ` • Total: ${totM[1]}` : '';
+                       existing.meta = `+${existing.amount.toLocaleString()} pts${totStr}`;
+                    } else if (m.meta && !existing.meta) {
+                       existing.meta = m.meta;
+                    }
                  }
               });
 
@@ -30237,9 +30283,21 @@ const views = {
               }
 
               const isChampBatch = (firstLog.action || '').toLowerCase().includes('championship');
-              const batchDetailsText = isChampBatch
-                ? `${group.length} Championship matchup updates`
-                : `${group.length} consecutive actions batched (${uniqueMembers.length} chiefs affected)`;
+              const isDonationBatch = (firstLog.action || '').toLowerCase().includes('donation');
+              
+              let batchDetailsText = '';
+              if (isChampBatch) {
+                batchDetailsText = `${group.length} Championship matchup updates`;
+              } else if (isDonationBatch) {
+                const totalDonationPoints = uniqueMembers.reduce((sum, m) => sum + (m.amount || 0), 0);
+                if (totalDonationPoints > 0) {
+                  batchDetailsText = `${group.length} consecutive donations batched (+${totalDonationPoints.toLocaleString()} pts across ${uniqueMembers.length} chiefs)`;
+                } else {
+                  batchDetailsText = `${group.length} consecutive donations batched (${uniqueMembers.length} chiefs affected)`;
+                }
+              } else {
+                batchDetailsText = `${group.length} consecutive actions batched (${uniqueMembers.length} chiefs affected)`;
+              }
 
               window._batchedMembersMap = window._batchedMembersMap || {};
               window._batchedMembersMap[batchId] = {
