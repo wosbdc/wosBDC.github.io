@@ -4172,6 +4172,121 @@ window.saveAllBossProgress = async () => {
     }
 };
 
+window.autoFillBossProgressFromTracker = async () => {
+    const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+    if (!isManager) {
+        if (window.showToast) window.showToast("Only R4/R5 managers can auto-fill boss unlock counts", "error");
+        return;
+    }
+
+    let lv1 = 0, lv2 = 0, lv3 = 0, lv4 = 0, lv5 = 0;
+    let completedCount = 0;
+
+    // 1. First priority: inspect live DOM rows in #mercTableBody if currently rendered
+    const rows = document.querySelectorAll('.merc-row');
+    if (rows && rows.length > 0) {
+        rows.forEach(row => {
+            const isSigned = row.getAttribute('data-signed') === 'yes';
+            if (!isSigned) return;
+            completedCount++;
+
+            const gid = row.getAttribute('data-gid');
+            const diffSelect = document.getElementById(`merc_diff_${gid}`);
+            const diff = (diffSelect ? diffSelect.value : '') || '';
+            const diffNormalized = diff.toLowerCase().trim();
+
+            // Tier evaluation based on completed member:
+            // Easy (or unassigned): qualifies for Lv. 1 (Easy+)
+            // Normal: qualifies for Lv. 1, Lv. 2, Lv. 3 (Normal+)
+            // Hard: qualifies for Lv. 1, Lv. 2, Lv. 3, Lv. 4 (Hard+)
+            // Nightmare / Insane: qualifies for Lv. 1, Lv. 2, Lv. 3, Lv. 4, Lv. 5 (Nightmare+)
+            lv1++;
+            if (diffNormalized === 'normal' || diffNormalized.includes('normal')) {
+                lv2++;
+                lv3++;
+            } else if (diffNormalized === 'hard' || diffNormalized.includes('hard')) {
+                lv2++;
+                lv3++;
+                lv4++;
+            } else if (diffNormalized === 'nightmare' || diffNormalized.includes('nightmare') || diffNormalized === 'insane' || diffNormalized.includes('insane')) {
+                lv2++;
+                lv3++;
+                lv4++;
+                lv5++;
+            }
+        });
+    } else {
+        // 2. Fallback: inspect in-memory data / Firebase
+        const [mercData, rosterData] = await Promise.all([
+            window.fetchMercenaryData().catch(() => ({})),
+            window.fetchRoster().catch(() => ({}))
+        ]);
+
+        const rosterList = [];
+        const seenGids = new Set();
+        if (rosterData) {
+            Object.values(rosterData).forEach(p => {
+                if (!p || typeof p !== 'object') return;
+                const gid = p.gameId ? String(p.gameId).trim() : (p.name || '').toLowerCase().trim();
+                if (gid && seenGids.has(gid)) return;
+                if (p.name && p.gameId && window.isPlayerActiveMember(p)) {
+                    seenGids.add(gid);
+                    rosterList.push(p);
+                }
+            });
+        }
+
+        rosterList.forEach(p => {
+            const rec = window.getEventRecord ? window.getEventRecord(mercData, p) : mercData[p.gameId];
+            if (rec && rec.signedUp) {
+                completedCount++;
+                const diff = (rec.difficulty || '').toLowerCase().trim();
+                lv1++;
+                if (diff === 'normal' || diff.includes('normal')) {
+                    lv2++;
+                    lv3++;
+                } else if (diff === 'hard' || diff.includes('hard')) {
+                    lv2++;
+                    lv3++;
+                    lv4++;
+                } else if (diff === 'nightmare' || diff.includes('nightmare') || diff === 'insane' || diff.includes('insane')) {
+                    lv2++;
+                    lv3++;
+                    lv4++;
+                    lv5++;
+                }
+            }
+        });
+    }
+
+    // Set DOM inputs if present
+    ['lv1', 'lv2', 'lv3', 'lv4', 'lv5'].forEach(k => {
+        const input = document.getElementById(`boss_input_${k}`);
+        if (input) {
+            input.value = { lv1, lv2, lv3, lv4, lv5 }[k];
+        }
+    });
+
+    const newBp = { lv1, lv2, lv3, lv4, lv5, updatedAt: Date.now() };
+    const ok = await window.saveMercenaryBossProgress(newBp);
+    if (ok) {
+        window.mercenaryBossProgressCache = newBp;
+        if (window.logAdminAction) {
+            window.logAdminAction("Auto-Fill Boss Unlocks", `Auto-filled boss unlock counts from Mercenary Tracker: Lv1=${lv1}, Lv2=${lv2}, Lv3=${lv3}, Lv4=${lv4}, Lv5=${lv5} (${completedCount} Masters Done).`);
+        }
+        if (window.showToast) {
+            window.showToast(`⚡ Auto-filled boss unlock counts from tracker! (${completedCount} Masters: Lv1=${lv1}, Lv2=${lv2}, Lv3=${lv3}, Lv4=${lv4}, Lv5=${lv5})`, "success");
+        }
+        if (typeof window.activeViewFunc === 'function') {
+            window.activeViewFunc();
+        } else if (window.views && window.views.mercenaryAdmin) {
+            window.views.mercenaryAdmin();
+        }
+    } else {
+        if (window.showToast) window.showToast("Failed to save auto-filled boss unlock counts.", "error");
+    }
+};
+
 window.syncBossProgressFromMasters = async (rosterMasterCount) => {
     const bp = {
         lv1: rosterMasterCount,
@@ -17334,6 +17449,9 @@ window.renderMercenaryBossAdminCardHtml = (bossProgress) => {
             ⚙️ Phaethon Boss Unlock Manager (Alliance Progress)
           </h3>
           <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <button onclick="window.autoFillBossProgressFromTracker()" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#fff; border:none; padding:7px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(37,99,235,0.3); transition:0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'" title="Auto-fill counts for all 5 bosses based on completed members and their difficulty tiers">
+              ⚡ Auto-Fill from Tracker
+            </button>
             <button onclick="window.resetMercenaryBossProgress()" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:7px 14px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; transition:0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.25)'" onmouseout="this.style.background='rgba(239,68,68,0.15)'" title="Reset all 5 Phaethon Boss Unlock counts to 0">
               🔄 Reset Boss Counts
             </button>
@@ -17344,7 +17462,7 @@ window.renderMercenaryBossAdminCardHtml = (bossProgress) => {
         </div>
 
         <p style="color:var(--text-muted); font-size:13px; margin:0 0 16px 0; line-height:1.5;">
-          Directly enter the confirmed member count for each boss difficulty level. Adjust numbers below and click <b>💾 Save All Boss Counts</b> to update Firebase!
+          Click <b>⚡ Auto-Fill from Tracker</b> to calculate counts directly from completed members & their difficulty tiers, or manually adjust numbers below and click <b>💾 Save All Boss Counts</b>!
         </p>
 
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:14px;">

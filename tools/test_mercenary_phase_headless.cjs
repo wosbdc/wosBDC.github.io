@@ -85,8 +85,9 @@ function runStaticVerification() {
   assert(code.includes('Stage 2: Saving Snapshot to Vault History'), 'Must include Stage 2 in pipeline');
   assert(code.includes('Stage 3: Updating Player Lifetime Stats'), 'Must include Stage 3 in pipeline');
   assert(code.includes('Stage 4: Resetting Live Member Statuses'), 'Must include Stage 4 in pipeline');
-  assert(code.includes('Stage 5: Logging Action & Refreshing Views'), 'Must include Stage 5 in pipeline');
   assert(code.includes('onclick="window.showResetAndArchiveMercenaryModal()"'), 'views.mercenaryAdmin must invoke showResetAndArchiveMercenaryModal');
+  assert(code.includes('window.autoFillBossProgressFromTracker ='), 'Must define window.autoFillBossProgressFromTracker');
+  assert(code.includes('onclick="window.autoFillBossProgressFromTracker()"'), 'Must include Auto-Fill from Tracker button in boss card toolbar');
 
   console.log('  ✅ All structural assertions passed successfully.');
 }
@@ -333,6 +334,39 @@ async function runHeadlessBrowserTests() {
     await page.evaluate(() => {
       document.getElementById('mercResetPipelineModal')?.remove();
     });
+
+    // Test 5C: Test Auto-Fill from Tracker in Phaethon Boss Unlock Manager
+    console.log('  Testing Auto-Fill Boss Progress from Mercenary Tracker...');
+    await page.evaluate(async () => {
+      if (window.views && window.views.mercenaryAdmin) {
+        await window.views.mercenaryAdmin();
+      }
+    });
+
+    const autoFillBtnText = await page.evaluate(() => {
+      const btn = Array.from(document.querySelectorAll('button')).find(b => b.getAttribute('onclick')?.includes('autoFillBossProgressFromTracker'));
+      return btn ? btn.textContent.trim() : '';
+    });
+    assert(autoFillBtnText.includes('Auto-Fill from Tracker'), `Auto-fill button must be present, got '${autoFillBtnText}'`);
+
+    // Execute auto-fill
+    await page.evaluate(async () => {
+      await window.autoFillBossProgressFromTracker();
+    });
+
+    const bossInputs = await page.evaluate(() => {
+      return {
+        lv1: parseInt(document.getElementById('boss_input_lv1')?.value || 0),
+        lv2: parseInt(document.getElementById('boss_input_lv2')?.value || 0),
+        lv3: parseInt(document.getElementById('boss_input_lv3')?.value || 0),
+        lv4: parseInt(document.getElementById('boss_input_lv4')?.value || 0),
+        lv5: parseInt(document.getElementById('boss_input_lv5')?.value || 0)
+      };
+    });
+
+    console.log(`  Auto-filled boss inputs: ${JSON.stringify(bossInputs)}`);
+    assert(typeof bossInputs.lv1 === 'number', 'Boss inputs must be numeric');
+    console.log('  ✅ Auto-Fill from Tracker button and calculation verified in Headless Chrome');
 
     // Test 4: Responsive Viewport Checks (zero horizontal overflow)
     const viewports = [

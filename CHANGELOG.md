@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.79] - 2026-10-03
+- ⚡ **Auto-Fill Bosses**: Added 1-click Auto-Fill from Mercenary Prestige Tracker.
+- 🎯 **Smart Tiers**: Calculates boss levels from completed member tiers.
+- 💾 **Instant Save**: Automatically saves calculated boss progress to Firebase.
+
 ## [3.3.78] - 2026-10-02
 - 🔄 **Reset Pipeline**: Added 5-stage reset checklist for Mercenary Tracker.
 - 🛡️ **Vault First**: Saves completions and boss unlocks before resetting.
