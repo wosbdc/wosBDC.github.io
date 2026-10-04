@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.85] - 2026-10-04
+- 🔝 **Scroll Fixed**: Fixed downward page scroll jump when opening Bot Radar.
+- 📌 **Clean Top Dock**: Pinned admin tab and sub-tab transitions to page top.
+- 🧭 **Nav Isolation**: Isolated tab bar centering from whole-page vertical window scroll.
+
 ## [3.3.84] - 2026-10-04
 - 📡 **Radar Sub-Tab**: Added clean sub-tab navigation for Bot Operations Radar.
 - ⚙️ **Daemons View**: Moved daemons and webhooks to dedicated sub-tab view.

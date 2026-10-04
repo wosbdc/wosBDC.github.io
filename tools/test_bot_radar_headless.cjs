@@ -106,6 +106,11 @@ function runStaticVerification() {
   assert(code.includes('botsSubTabDaemonsContainer'), 'HTML must include botsSubTabDaemonsContainer');
   console.log('  ✅ Admin Bots Sub-Tabs partitioning & navigation verified.');
 
+  // 9. Scroll Isolation Verification
+  assert(!code.includes('clickedBtn.scrollIntoView'), 'clickedBtn.scrollIntoView must be removed to prevent whole-page vertical scroll jump');
+  assert(code.includes('adminNavEl.scrollTo'), 'adminNavEl must scroll horizontally instead of scrollIntoView');
+  console.log('  ✅ Scroll isolation & local adminNavEl horizontal scrolling verified.');
+
   console.log('\n🎉 ALL STATIC & STRUCTURAL ASSERTIONS PASSED 100%!\n');
 }
 
@@ -316,16 +321,19 @@ server.listen(PORT, async () => {
       // Initial state: radar visible, daemons hidden
       const initialRadarVisible = radarContainer.style.display !== 'none';
       const initialDaemonsHidden = daemonsContainer.style.display === 'none';
+      const scrollYInitial = window.scrollY;
 
       // Switch to daemons
       daemonsBtn.click();
       const switchedDaemonsVisible = daemonsContainer.style.display !== 'none';
       const switchedRadarHidden = radarContainer.style.display === 'none';
+      const scrollYDaemons = window.scrollY;
 
       // Switch back to radar
       radarBtn.click();
       const restoredRadarVisible = radarContainer.style.display !== 'none';
       const restoredDaemonsHidden = daemonsContainer.style.display === 'none';
+      const scrollYRadar = window.scrollY;
 
       return {
         initialRadarVisible,
@@ -333,7 +341,10 @@ server.listen(PORT, async () => {
         switchedDaemonsVisible,
         switchedRadarHidden,
         restoredRadarVisible,
-        restoredDaemonsHidden
+        restoredDaemonsHidden,
+        scrollYInitial,
+        scrollYDaemons,
+        scrollYRadar
       };
     });
 
@@ -349,7 +360,11 @@ server.listen(PORT, async () => {
     if (!subTabResult.restoredRadarVisible || !subTabResult.restoredDaemonsHidden) {
       throw new Error('Bots Sub-Tabs Restore to Radar Failed: Radar container should be restored to visible and Daemons hidden.');
     }
+    if (subTabResult.scrollYInitial !== 0 || subTabResult.scrollYDaemons !== 0 || subTabResult.scrollYRadar !== 0) {
+      throw new Error(`Bots Sub-Tabs Scroll Test Failed: Expected window.scrollY === 0, got initial=${subTabResult.scrollYInitial}, daemons=${subTabResult.scrollYDaemons}, radar=${subTabResult.scrollYRadar}`);
+    }
     console.log('  ✅ Bots Admin sub-tabs toggle (Radar vs Daemons) fully verified with interactive DOM mutation checks.');
+    console.log('  ✅ Zero downward scroll jump verified: window.scrollY strictly pinned at 0 across tab entry and sub-tab toggles.');
 
     // Verify Real Visual DOM Mutation: Simulate Multi-Account Rotation and Login Safety
     console.log('\n--- PHASE 3: BOT FLEET MATRIX ROTATION & ACCOUNT LOGIN SAFETY TEST ---');

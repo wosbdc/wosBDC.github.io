@@ -24509,6 +24509,7 @@ window.runNightlyMaintenanceSweep = async (btnEl = null) => {
 };
 
 window.switchBotsSubTab = (tabKey) => {
+  try { window.scrollTo({ top: 0, behavior: 'instant' }); } catch (_) {}
   const radarContainer = document.getElementById('botsSubTabRadarContainer');
   const daemonsContainer = document.getElementById('botsSubTabDaemonsContainer');
   const radarBtn = document.getElementById('botsSubTabBtnRadar');
@@ -28473,6 +28474,7 @@ const views = {
     `;
   },
   admin: async (initialTab) => {
+    try { window.scrollTo({ top: 0, behavior: 'instant' }); } catch (_) {}
     const navbar = document.querySelector('.navbar');
     if (navbar) navbar.style.display = 'block';
     const targetTab = initialTab || window._lastAdminTab || sessionStorage.getItem('activeAdminTab') || 'tab-tools';
@@ -30840,8 +30842,8 @@ const views = {
                 #adminTabNav::-webkit-scrollbar-track { background: transparent; }
                 .admin-tab-btn { flex-shrink: 0; user-select: none; }
               </style>
-              <button class="admin-tab-btn active" data-tab="tab-tools" style="background:none; border:none; color:var(--accent); font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid var(--accent); flex-shrink:0;">🛠️ Daily Tools</button>
-              <button class="admin-tab-btn" data-tab="tab-bots" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid transparent; flex-shrink:0;">🤖 Bots</button>
+              <button class="admin-tab-btn ${targetTab !== 'tab-bots' ? 'active' : ''}" data-tab="tab-tools" style="background:none; border:none; color:${targetTab !== 'tab-bots' ? 'var(--accent)' : 'var(--text-muted)'}; font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid ${targetTab !== 'tab-bots' ? 'var(--accent)' : 'transparent'}; flex-shrink:0;">🛠️ Daily Tools</button>
+              <button class="admin-tab-btn ${targetTab === 'tab-bots' ? 'active' : ''}" data-tab="tab-bots" style="background:none; border:none; color:${targetTab === 'tab-bots' ? 'var(--accent)' : 'var(--text-muted)'}; font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid ${targetTab === 'tab-bots' ? 'var(--accent)' : 'transparent'}; flex-shrink:0;">🤖 Bots</button>
               <button class="admin-tab-btn" data-tab="tab-indev" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid transparent; flex-shrink:0;">🧪 In-Dev</button>
               <button class="admin-tab-btn" data-tab="tab-feedback" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid transparent; flex-shrink:0;">💡 Feedback</button>
               <button class="admin-tab-btn" data-tab="tab-users" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid transparent; flex-shrink:0;">👥 Users</button>
@@ -30852,7 +30854,7 @@ const views = {
           </div>
           
           <!-- Tab 1: Daily Tools -->
-          <div id="tab-tools" class="admin-tab-content" style="display:block;">
+          <div id="tab-tools" class="admin-tab-content" style="display:${targetTab !== 'tab-bots' ? 'block' : 'none'};">
             <!-- Category 1: Active Alliance Events Tools -->
             <div style="background:var(--bg-main); padding:20px; border-radius:12px; border:1px solid var(--accent); margin-bottom:20px;">
               <h3 style="margin:0 0 5px 0; color:var(--accent); text-align:left; font-size:16px;">⚔️ Active Alliance Events Tools</h3>
@@ -30886,7 +30888,7 @@ const views = {
           </div>
 
           <!-- Tab: Bots Hub -->
-          <div id="tab-bots" class="admin-tab-content" style="display:none;">
+          <div id="tab-bots" class="admin-tab-content" style="display:${targetTab === 'tab-bots' ? 'block' : 'none'};">
             <!-- Bots Section Sub-Tabs Navigation -->
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:18px; padding:10px 14px; background:rgba(15,23,42,0.85); border:1px solid rgba(56,189,248,0.25); border-radius:12px; box-shadow:0 4px 14px rgba(0,0,0,0.25);">
               <div style="display:inline-flex; background:rgba(30,41,59,0.8); padding:4px; border-radius:10px; border:1px solid rgba(255,255,255,0.08); gap:6px;">
@@ -32440,7 +32442,15 @@ const views = {
           clickedBtn.style.borderBottom = '2px solid var(--accent)';
           
           try {
-            clickedBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            if (adminNavEl) {
+              const btnLeft = clickedBtn.offsetLeft;
+              const btnWidth = clickedBtn.offsetWidth;
+              const navWidth = adminNavEl.clientWidth;
+              adminNavEl.scrollTo({ left: btnLeft - (navWidth / 2) + (btnWidth / 2), behavior: 'smooth' });
+            }
+          } catch(err) {}
+          try {
+            window.scrollTo({ top: 0, behavior: 'instant' });
           } catch(err) {}
           
           const tabKey = clickedBtn.getAttribute('data-tab');
@@ -32489,6 +32499,9 @@ const views = {
               const defaultTabBtn = document.querySelector('.admin-tab-btn[data-tab="tab-tools"]');
               if (defaultTabBtn) defaultTabBtn.click();
           }
+          try {
+            window.scrollTo({ top: 0, behavior: 'instant' });
+          } catch(err) {}
       }, 50);
       
       window.frostDataLoaded = false;
