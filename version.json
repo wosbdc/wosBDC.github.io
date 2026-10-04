@@ -1,14 +1,16 @@
 {
-  "version": "3.3.83",
-  "releaseDate": "2026-10-03",
-  "title": "What's New in v3.3.83",
+  "version": "3.3.84",
+  "releaseDate": "2026-10-04",
+  "title": "What's New in v3.3.84",
   "notes": [
-    "🏷️ Target Chief: Renamed admin table column to Target Chief.",
-    "🧹 Clean Rows: Removed redundant Details button from table rows."
+    "📡 Radar Sub-Tab: Added clean sub-tab navigation for Bot Operations Radar.",
+    "⚙️ Daemons View: Moved daemons and webhooks to dedicated sub-tab view.",
+    "🧹 Clean Layout: Eliminated long scrolling in Bots admin hub."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.83",
+    "version": "3.3.84",
     "latestChanges": [
+      "v3.3.84: Added sub-tabs to Bots admin view for clean Radar focus",
       "v3.3.83: Renamed column to Target Chief and removed redundant Details button",
       "v3.3.82: Streamlined and compacted Admin Action Details modal",
       "v3.3.80: Added membership status display and self-reactivation in Account Hub",

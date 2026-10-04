@@ -24508,10 +24508,58 @@ window.runNightlyMaintenanceSweep = async (btnEl = null) => {
   }
 };
 
+window.switchBotsSubTab = (tabKey) => {
+  const radarContainer = document.getElementById('botsSubTabRadarContainer');
+  const daemonsContainer = document.getElementById('botsSubTabDaemonsContainer');
+  const radarBtn = document.getElementById('botsSubTabBtnRadar');
+  const daemonsBtn = document.getElementById('botsSubTabBtnDaemons');
+
+  if (tabKey === 'daemons') {
+    if (radarContainer) radarContainer.style.display = 'none';
+    if (daemonsContainer) daemonsContainer.style.display = 'block';
+    if (radarBtn) {
+      radarBtn.style.background = 'transparent';
+      radarBtn.style.color = 'var(--text-muted)';
+      radarBtn.style.boxShadow = 'none';
+      radarBtn.classList.remove('active');
+    }
+    if (daemonsBtn) {
+      daemonsBtn.style.background = 'linear-gradient(135deg, #8b5cf6, #6d28d9)';
+      daemonsBtn.style.color = '#fff';
+      daemonsBtn.style.boxShadow = '0 2px 10px rgba(139,92,246,0.35)';
+      daemonsBtn.classList.add('active');
+    }
+    if (typeof window.listenToMaintenanceTelemetry === 'function') {
+      window.listenToMaintenanceTelemetry();
+    }
+  } else {
+    if (radarContainer) radarContainer.style.display = 'block';
+    if (daemonsContainer) daemonsContainer.style.display = 'none';
+    if (radarBtn) {
+      radarBtn.style.background = 'linear-gradient(135deg, #0ea5e9, #0284c7)';
+      radarBtn.style.color = '#fff';
+      radarBtn.style.boxShadow = '0 2px 10px rgba(14,165,233,0.35)';
+      radarBtn.classList.add('active');
+    }
+    if (daemonsBtn) {
+      daemonsBtn.style.background = 'transparent';
+      daemonsBtn.style.color = 'var(--text-muted)';
+      daemonsBtn.style.boxShadow = 'none';
+      daemonsBtn.classList.remove('active');
+    }
+    if (typeof window.updateBotOperationsRadarDom === 'function') {
+      window.updateBotOperationsRadarDom();
+    }
+  }
+};
+
 window.openAllianceGiftCodesManager = () => {
   const botsTabBtn = document.querySelector('.admin-tab-btn[data-tab="tab-bots"]');
   if (botsTabBtn && !botsTabBtn.classList.contains('active')) {
     botsTabBtn.click();
+  }
+  if (typeof window.switchBotsSubTab === 'function') {
+    window.switchBotsSubTab('daemons');
   }
   const botsMain = document.getElementById('botsHubMainContainer');
   const gcManager = document.getElementById('allianceGiftCodesManagerContainer');
@@ -30839,10 +30887,31 @@ const views = {
 
           <!-- Tab: Bots Hub -->
           <div id="tab-bots" class="admin-tab-content" style="display:none;">
-            ${window.getBotOperationsRadarHtml ? window.getBotOperationsRadarHtml() : ''}
-            
-            <!-- Main Bots Hub View -->
-            <div id="botsHubMainContainer" style="display:flex; flex-direction:column; gap:20px; margin-bottom:20px;">
+            <!-- Bots Section Sub-Tabs Navigation -->
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:18px; padding:10px 14px; background:rgba(15,23,42,0.85); border:1px solid rgba(56,189,248,0.25); border-radius:12px; box-shadow:0 4px 14px rgba(0,0,0,0.25);">
+              <div style="display:inline-flex; background:rgba(30,41,59,0.8); padding:4px; border-radius:10px; border:1px solid rgba(255,255,255,0.08); gap:6px;">
+                <button id="botsSubTabBtnRadar" class="active" onclick="window.switchBotsSubTab('radar')" style="background:linear-gradient(135deg, #0ea5e9, #0284c7); color:#fff; border:none; padding:8px 16px; border-radius:8px; font-size:13px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 2px 10px rgba(14,165,233,0.35); transition:all 0.2s ease;">
+                  📡 Operations Radar
+                </button>
+                <button id="botsSubTabBtnDaemons" onclick="window.switchBotsSubTab('daemons')" style="background:transparent; color:var(--text-muted); border:none; padding:8px 16px; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:8px; transition:all 0.2s ease;">
+                  ⚙️ Background Daemons & Webhooks
+                </button>
+              </div>
+              <div style="font-size:12px; color:var(--text-muted); display:flex; align-items:center; gap:8px;">
+                <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#10b981; box-shadow:0 0 8px #10b981;"></span>
+                <span>Fleet Telemetry Active</span>
+              </div>
+            </div>
+
+            <!-- SubTab 1: Radar & Login Safety Grid -->
+            <div id="botsSubTabRadarContainer" style="display:block;">
+              ${window.getBotOperationsRadarHtml ? window.getBotOperationsRadarHtml() : ''}
+            </div>
+
+            <!-- SubTab 2: Background Daemons & Webhooks -->
+            <div id="botsSubTabDaemonsContainer" style="display:none;">
+              <!-- Main Bots Hub View -->
+              <div id="botsHubMainContainer" style="display:flex; flex-direction:column; gap:20px; margin-bottom:20px;">
               
               <!-- Hub Header -->
               <div style="background:linear-gradient(135deg, rgba(30,41,59,0.95), rgba(15,23,42,0.9)); padding:18px 20px; border-radius:14px; border:1px solid rgba(56,189,248,0.3); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
@@ -31129,6 +31198,8 @@ const views = {
 
             </div>
             <!-- End allianceGiftCodesManagerContainer -->
+            </div>
+            <!-- End botsSubTabDaemonsContainer -->
 
           </div>
 
@@ -32380,6 +32451,7 @@ const views = {
           const targetEl = document.getElementById(tabKey);
           if (targetEl) targetEl.style.display = 'block';
           if (tabKey === 'tab-bots') {
+            if (window.switchBotsSubTab) window.switchBotsSubTab('radar');
             if (window.updateBotOperationsRadarDom) window.updateBotOperationsRadarDom();
             if (window.backToBotsHub) window.backToBotsHub();
             if (window.listenToBotTelemetry) window.listenToBotTelemetry();

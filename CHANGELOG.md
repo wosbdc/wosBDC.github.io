@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.84] - 2026-10-04
+- 📡 **Radar Sub-Tab**: Added clean sub-tab navigation for Bot Operations Radar.
+- ⚙️ **Daemons View**: Moved daemons and webhooks to dedicated sub-tab view.
+- 🧹 **Clean Layout**: Eliminated long scrolling in Bots admin hub.
+
 ## [3.3.83] - 2026-10-03
 - 🏷️ **Target Chief**: Renamed admin table column to Target Chief.
 - 🧹 **Clean Rows**: Removed redundant Details button from table rows.

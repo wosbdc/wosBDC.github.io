@@ -98,6 +98,14 @@ function runStaticVerification() {
   assert(code.includes('window.getBotCooldownInfo ='), 'getBotCooldownInfo must be defined');
   console.log('  ✅ window.getBotCooldownInfo dynamic trigger event parser verified.');
 
+  // 8. Admin Bots Sub-Tabs Partitioning
+  assert(code.includes('window.switchBotsSubTab ='), 'switchBotsSubTab must be defined');
+  assert(code.includes('botsSubTabBtnRadar'), 'HTML must include botsSubTabBtnRadar');
+  assert(code.includes('botsSubTabBtnDaemons'), 'HTML must include botsSubTabBtnDaemons');
+  assert(code.includes('botsSubTabRadarContainer'), 'HTML must include botsSubTabRadarContainer');
+  assert(code.includes('botsSubTabDaemonsContainer'), 'HTML must include botsSubTabDaemonsContainer');
+  console.log('  ✅ Admin Bots Sub-Tabs partitioning & navigation verified.');
+
   console.log('\n🎉 ALL STATIC & STRUCTURAL ASSERTIONS PASSED 100%!\n');
 }
 
@@ -293,6 +301,55 @@ server.listen(PORT, async () => {
       throw new Error('Assertion Failed: Bot 17 and Bot 18 must be strictly purged from the fleet matrix!');
     }
     console.log(`  ✅ #bot-operations-radar verified in Admin Bots tab: Account="${radarInAdmin.account}", ${radarInAdmin.count} active bots (Bot 17 & 18 cleanly purged)`);
+
+    // Verify Bots Sub-Tabs Partitioning & Interactive Switching
+    const subTabResult = await page.evaluate(() => {
+      const radarBtn = document.getElementById('botsSubTabBtnRadar');
+      const daemonsBtn = document.getElementById('botsSubTabBtnDaemons');
+      const radarContainer = document.getElementById('botsSubTabRadarContainer');
+      const daemonsContainer = document.getElementById('botsSubTabDaemonsContainer');
+
+      if (!radarBtn || !daemonsBtn || !radarContainer || !daemonsContainer) {
+        return { error: 'Sub-tab buttons or containers missing' };
+      }
+
+      // Initial state: radar visible, daemons hidden
+      const initialRadarVisible = radarContainer.style.display !== 'none';
+      const initialDaemonsHidden = daemonsContainer.style.display === 'none';
+
+      // Switch to daemons
+      daemonsBtn.click();
+      const switchedDaemonsVisible = daemonsContainer.style.display !== 'none';
+      const switchedRadarHidden = radarContainer.style.display === 'none';
+
+      // Switch back to radar
+      radarBtn.click();
+      const restoredRadarVisible = radarContainer.style.display !== 'none';
+      const restoredDaemonsHidden = daemonsContainer.style.display === 'none';
+
+      return {
+        initialRadarVisible,
+        initialDaemonsHidden,
+        switchedDaemonsVisible,
+        switchedRadarHidden,
+        restoredRadarVisible,
+        restoredDaemonsHidden
+      };
+    });
+
+    if (!subTabResult || subTabResult.error) {
+      throw new Error('Bots Sub-Tabs Test Failed: ' + (subTabResult?.error || 'Unknown error'));
+    }
+    if (!subTabResult.initialRadarVisible || !subTabResult.initialDaemonsHidden) {
+      throw new Error('Bots Sub-Tabs Initial State Failed: Radar container should be visible and Daemons container should be hidden.');
+    }
+    if (!subTabResult.switchedDaemonsVisible || !subTabResult.switchedRadarHidden) {
+      throw new Error('Bots Sub-Tabs Switch to Daemons Failed: Daemons container should be visible and Radar hidden.');
+    }
+    if (!subTabResult.restoredRadarVisible || !subTabResult.restoredDaemonsHidden) {
+      throw new Error('Bots Sub-Tabs Restore to Radar Failed: Radar container should be restored to visible and Daemons hidden.');
+    }
+    console.log('  ✅ Bots Admin sub-tabs toggle (Radar vs Daemons) fully verified with interactive DOM mutation checks.');
 
     // Verify Real Visual DOM Mutation: Simulate Multi-Account Rotation and Login Safety
     console.log('\n--- PHASE 3: BOT FLEET MATRIX ROTATION & ACCOUNT LOGIN SAFETY TEST ---');
