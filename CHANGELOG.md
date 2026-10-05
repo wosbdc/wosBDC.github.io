@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.86] - 2026-10-05
+- 🛡️ **Database Hardened**: Locked root database rules against unauthenticated modifications.
+- 🔐 **Admin Scoped**: Secured admin actions exclusively to Chief and R4 staff.
+- 🧹 **Wildcards Removed**: Eliminated insecure wildcard rules across all database paths.
+
 ## [3.3.85] - 2026-10-04
 - 🔝 **Scroll Fixed**: Fixed downward page scroll jump when opening Bot Radar.
 - 📌 **Clean Top Dock**: Pinned admin tab and sub-tab transitions to page top.

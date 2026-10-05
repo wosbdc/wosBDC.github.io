@@ -1,15 +1,16 @@
 {
-  "version": "3.3.85",
-  "releaseDate": "2026-10-04",
-  "title": "What's New in v3.3.85",
+  "version": "3.3.86",
+  "releaseDate": "2026-10-05",
+  "title": "What's New in v3.3.86",
   "notes": [
-    "🔝 Scroll Fixed: Fixed downward page scroll jump when opening Bot Radar.",
-    "📌 Clean Top Dock: Pinned admin tab and sub-tab transitions to page top.",
-    "🧭 Nav Isolation: Isolated tab bar centering from whole-page vertical window scroll."
+    "🛡️ Database Hardening: Locked root database rules against unauthenticated modifications.",
+    "🔐 Granular Permissions: Secured admin actions exclusively to Chief and R4 staff.",
+    "🧹 Rule Protection: Eliminated wildcard rule vulnerability across all database nodes."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.85",
+    "version": "3.3.86",
     "latestChanges": [
+      "v3.3.86: Hardened Realtime Database security rules and eliminated wildcard write vulnerability",
       "v3.3.85: Fixed downward scroll jump and pinned Radar and Admin tabs to top",
       "v3.3.84: Added sub-tabs to Bots admin view for clean Radar focus",
       "v3.3.83: Renamed column to Target Chief and removed redundant Details button",

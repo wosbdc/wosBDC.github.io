@@ -29006,12 +29006,12 @@ const views = {
     
     try {
       const [usersSnap, rosterRawData, fcmSnap] = await Promise.all([
-        get(ref(db, 'users')),
+        get(ref(db, 'users')).catch(() => ({ val: () => ({}), exists: () => false })),
         window.fetchRoster(),
-        get(ref(db, 'fcmTokens'))
+        get(ref(db, 'fcmTokens')).catch(() => ({ val: () => ({}), exists: () => false }))
       ]);
-      const users = usersSnap.val() || {};
-      const fcmData = (fcmSnap && fcmSnap.exists()) ? (fcmSnap.val() || {}) : {};
+      const users = (usersSnap && typeof usersSnap.val === 'function') ? (usersSnap.val() || {}) : {};
+      const fcmData = (fcmSnap && typeof fcmSnap.exists === 'function' && fcmSnap.exists()) ? (fcmSnap.val() || {}) : {};
       
       await refreshIdToNameMap();
       if (window.deduplicateRosterLive) window.deduplicateRosterLive().catch(() => null);

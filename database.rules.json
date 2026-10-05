@@ -8,19 +8,43 @@
       ".read": true,
       ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() + '' == '318843189' || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())"
     },
+    "showdown_history": {
+      ".read": true,
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() + '' == '318843189' || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())"
+    },
+    "showdown_demo": {
+      ".read": true,
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() + '' == '318843189' || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())"
+    },
     "roster_live": {
       ".read": true,
-      ".write": "auth != null"
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() + '' == '318843189' || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())"
     },
     "users_alts": {
       ".read": true,
-      ".write": "auth != null"
+      "$gameId": {
+        ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() == $gameId || root.child('users').child(auth.uid).child('gameId').val() + '' == $gameId || root.child('users').child(auth.uid).child('linkedGameIds').hasChild('0') && root.child('users').child(auth.uid).child('linkedGameIds').child('0').val() + '' == $gameId || root.child('users').child(auth.uid).child('linkedGameIds').hasChild('1') && root.child('users').child(auth.uid).child('linkedGameIds').child('1').val() + '' == $gameId || root.child('users').child(auth.uid).child('linkedGameIds').hasChild('2') && root.child('users').child(auth.uid).child('linkedGameIds').child('2').val() + '' == $gameId || root.child('users').child(auth.uid).child('linkedGameIds').hasChild('3') && root.child('users').child(auth.uid).child('linkedGameIds').child('3').val() + '' == $gameId || root.child('users').child(auth.uid).child('linkedGameIds').hasChild('4') && root.child('users').child(auth.uid).child('linkedGameIds').child('4').val() + '' == $gameId || root.child('users').child(auth.uid).child('linkedGameIds').hasChild('5') && root.child('users').child(auth.uid).child('linkedGameIds').child('5').val() + '' == $gameId || root.child('users').child(auth.uid).child('linkedGameIds').hasChild('6') && root.child('users').child(auth.uid).child('linkedGameIds').child('6').val() + '' == $gameId || root.child('users').child(auth.uid).child('linkedGameIds').hasChild('7') && root.child('users').child(auth.uid).child('linkedGameIds').child('7').val() + '' == $gameId || root.child('users').child(auth.uid).child('linkedGameIds').hasChild('8') && root.child('users').child(auth.uid).child('linkedGameIds').child('8').val() + '' == $gameId || root.child('users').child(auth.uid).child('linkedGameIds').hasChild('9') && root.child('users').child(auth.uid).child('linkedGameIds').child('9').val() + '' == $gameId || (root.child('users').child(auth.uid).child('gameId').val() + '' == '318843189' || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists()))"
+      }
     },
     "giftcode_bot": {
       ".read": true,
-      ".write": "auth != null"
+      "$gameId": {
+        ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() == $gameId || root.child('users').child(auth.uid).child('gameId').val() + '' == $gameId || root.child('users').child(auth.uid).child('linkedGameIds').hasChild('0') && root.child('users').child(auth.uid).child('linkedGameIds').child('0').val() + '' == $gameId || root.child('users').child(auth.uid).child('linkedGameIds').hasChild('1') && root.child('users').child(auth.uid).child('linkedGameIds').child('1').val() + '' == $gameId || root.child('users').child(auth.uid).child('linkedGameIds').hasChild('2') && root.child('users').child(auth.uid).child('linkedGameIds').child('2').val() + '' == $gameId || root.child('users').child(auth.uid).child('linkedGameIds').hasChild('3') && root.child('users').child(auth.uid).child('linkedGameIds').child('3').val() + '' == $gameId || root.child('users').child(auth.uid).child('linkedGameIds').hasChild('4') && root.child('users').child(auth.uid).child('linkedGameIds').child('4').val() + '' == $gameId || root.child('users').child(auth.uid).child('linkedGameIds').hasChild('5') && root.child('users').child(auth.uid).child('linkedGameIds').child('5').val() + '' == $gameId || root.child('users').child(auth.uid).child('linkedGameIds').hasChild('6') && root.child('users').child(auth.uid).child('linkedGameIds').child('6').val() + '' == $gameId || root.child('users').child(auth.uid).child('linkedGameIds').hasChild('7') && root.child('users').child(auth.uid).child('linkedGameIds').child('7').val() + '' == $gameId || root.child('users').child(auth.uid).child('linkedGameIds').hasChild('8') && root.child('users').child(auth.uid).child('linkedGameIds').child('8').val() + '' == $gameId || root.child('users').child(auth.uid).child('linkedGameIds').hasChild('9') && root.child('users').child(auth.uid).child('linkedGameIds').child('9').val() + '' == $gameId || (root.child('users').child(auth.uid).child('gameId').val() + '' == '318843189' || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists()))"
+      }
+    },
+    "gift_codes_history": {
+      ".read": true,
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() + '' == '318843189' || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())"
     },
     "championship": {
+      ".read": true,
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() + '' == '318843189' || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())"
+    },
+    "championship_matchups": {
+      ".read": true,
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() + '' == '318843189' || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())"
+    },
+    "championship_meta": {
       ".read": true,
       ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() + '' == '318843189' || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())"
     },
@@ -36,6 +60,14 @@
       ".read": true,
       ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() + '' == '318843189' || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())"
     },
+    "activity_history_archives": {
+      ".read": true,
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() + '' == '318843189' || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())"
+    },
+    "beartrap": {
+      ".read": true,
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() + '' == '318843189' || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())"
+    },
     "beartrap_wins": {
       ".read": true,
       ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() + '' == '318843189' || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())"
@@ -44,7 +76,27 @@
       ".read": true,
       ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() + '' == '318843189' || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())"
     },
+    "bearTrapLog": {
+      ".read": true,
+      ".write": false
+    },
     "leaderboards": {
+      ".read": true,
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() + '' == '318843189' || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())"
+    },
+    "player_event_stats": {
+      ".read": true,
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() + '' == '318843189' || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())"
+    },
+    "events_archive": {
+      ".read": true,
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() + '' == '318843189' || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())"
+    },
+    "schedule_live": {
+      ".read": true,
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() + '' == '318843189' || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())"
+    },
+    "frost_clan": {
       ".read": true,
       ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() + '' == '318843189' || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())"
     },
@@ -89,12 +141,38 @@
       }
     },
     "fcmTokens": {
+      ".read": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() + '' == '318843189' || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())",
       "$token": {
         ".read": false,
         ".write": "auth != null"
       }
     },
-    "sheets": { ".read": true, ".write": false },
+    "community_feedback": {
+      ".read": true,
+      "$itemId": {
+        ".write": "auth != null && (!data.exists() || (root.child('users').child(auth.uid).child('gameId').val() + '' == '318843189' || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists()))",
+        "votes": {
+          "$voterUid": {
+            ".write": "auth != null && $voterUid === auth.uid"
+          }
+        },
+        "voteCount": {
+          ".write": "auth != null"
+        }
+      }
+    },
+    "sheets": {
+      ".read": true,
+      ".write": false
+    },
+    "sync_telemetry": {
+      ".read": true,
+      ".write": false
+    },
+    "bot_status": {
+      ".read": true,
+      ".write": false
+    },
     "config": {
       ".read": true,
       "rosterRegisteredOnly": {
@@ -113,11 +191,9 @@
         ".write": "auth != null && root.child('users').child(auth.uid).child('gameId').val() + '' == '318843189'"
       }
     },
-    "system": { ".read": true, ".write": false },
-    "bearTrapLog": { ".read": true, ".write": false },
-    "frost_clan": {
+    "system": {
       ".read": true,
-      ".write": "auth != null"
+      ".write": false
     },
     ".read": false,
     ".write": false
