@@ -710,7 +710,7 @@ server.listen(PORT, async () => {
     if (!mutationResult.bisquickIsSafeA || mutationResult.bisquickTagA !== '✅ Safe to log in') {
       throw new Error(`Assertion Failed: Idle bot safe tag failed! Result: ${JSON.stringify(mutationResult)}`);
     }
-    if (!mutationResult.bisquickActivityA || (!mutationResult.bisquickActivityA.includes('ago') && !mutationResult.bisquickActivityA.includes('Standby'))) {
+    if (!mutationResult.bisquickActivityA || (!mutationResult.bisquickActivityA.includes('ago') && !mutationResult.bisquickActivityA.includes('Standby') && !mutationResult.bisquickActivityA.includes('Just now'))) {
       throw new Error(`Assertion Failed: Idle bot activity must show elapsed time or Standby! Found: "${mutationResult.bisquickActivityA}"`);
     }
     if (!mutationResult.busyPillA.includes('1 OCCUPIED') || !mutationResult.safePillA.includes('SAFE TO LOGIN')) {

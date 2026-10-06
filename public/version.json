@@ -1,16 +1,17 @@
 {
-  "version": "3.3.89",
+  "version": "3.3.90",
   "releaseDate": "2026-10-05",
-  "title": "What's New in v3.3.89",
+  "title": "What's New in v3.3.90",
   "notes": [
-    "⚡ Direct Verification: Streamlined verification directly to high-speed cloud edge.",
-    "🛡️ Race Condition Fixed: Prevented duplicate requests from voiding mailbox codes.",
-    "🔄 Smart Retry: Highlights resend button when expired codes are detected.",
-    "🧹 Auto Clear: Automatically resets input for fast code re-entry."
+    "💾 Expired Tokens Cleared: Realtime Database records expired status automatically.",
+    "🛡️ Session Eviction: Purges dead cached sessions on game rejection.",
+    "⚠️ Daily Limit Guidance: Clarifies Century Games daily code quota limits.",
+    "🔄 Instant Status Sync: Alts reflect expired state immediately in UI."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.88",
+    "version": "3.3.90",
     "latestChanges": [
+      "v3.3.90: Persisted expired token state in database and handled daily code limits",
       "v3.3.88: Added live countdown timer and button locking for verification rate limit cooldowns",
       "v3.3.87: Fixed token sync unexpected token error with multi-tier fallback and sanitized error toasts",
       "v3.3.86: Hardened Realtime Database security rules and eliminated wildcard write vulnerability",

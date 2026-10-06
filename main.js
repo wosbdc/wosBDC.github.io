@@ -2280,9 +2280,7 @@ window.apiSendGameCaptcha = async (gameId) => {
   try {
     const vRes = await fetch(`${VERCEL_API_BASE}/send_code?id=${encodeURIComponent(cleanId)}`);
     const vData = await vRes.json();
-    if (vData && (vData.success || vData.code === 0 || vData.code === 1)) return vData;
-    // Specific Century Games responses (rate limit, limit reached, player not found)
-    if (vData && (vData.code === 101031005 || vData.code === 101031001 || vData.code === 101031018)) return vData;
+    if (vData && (vData.success || vData.code !== undefined)) return vData;
   } catch (e) {
     console.warn('Vercel Edge Proxy send_code failed, attempting fallback...', e);
   }
@@ -2588,7 +2586,7 @@ window.translateWosApiError = (msg, code = null) => {
   if (codeNum === 15030 || codeNum === 101031008 || codeNum === 15006 || cleanMsg.includes("未登录") || cleanMsg.includes("登录态已失效") || cleanMsg.includes("已失效") || cleanMsg.includes("token失效")) {
     return `${codeBadge}30-Day session token expired. Please enter a fresh in-game code to renew.`;
   }
-  if (codeNum === 101031005 || cleanMsg.includes("验证码发送次数已达上限") || cleanMsg.includes("次数已达上限") || cleanMsg.includes("上限")) {
+  if (codeNum === 101031005 || codeNum === 101031017 || cleanMsg.includes("验证码发送次数已达上限") || cleanMsg.includes("次数已达上限") || cleanMsg.includes("上限")) {
     return `${codeBadge}Daily verification code limit reached for this Game ID today. Please wait a while before requesting another code, or enter Chief Name manually.`;
   }
   if (codeNum === 101031002 || codeNum === 101031021 || cleanMsg.includes("验证码错误") || cleanMsg.includes("验证码无效") || cleanMsg.includes("验证码已过期")) {
@@ -23221,6 +23219,19 @@ window.openEditProfileModal = async () => {
 
               window.showToast(`✅ Synced from game! Furnace updated to ${finalStove || 'current'}`, "success");
            } else if (data && (data.expired || data.code === 15030 || data.code === 101031008 || data.code === 15006 || (data.message && data.message.includes('未登录')))) {
+              try {
+                await update(ref(db, `users/${currentUser.uid}`), {
+                  tokenExpired: true,
+                  'tokenStatus/status': 'expired',
+                  'tokenStatus/daysLeft': 0
+                });
+                currentUser.tokenExpired = true;
+                if (currentUser.tokenStatus) {
+                  currentUser.tokenStatus.status = 'expired';
+                  currentUser.tokenStatus.daysLeft = 0;
+                }
+                localStorage.setItem('cached_current_user', JSON.stringify(currentUser));
+              } catch(clearErr) {}
               window.showToast("30-Day session expired. Please enter new in-game code to refresh.", "warning");
               window.openAccountHubVerifyModal();
            } else {
@@ -23366,6 +23377,21 @@ window.handleSyncCenturyGamesProfile = async () => {
       window.showToast("Profile synced successfully!", "success");
       if (views.account) views.account();
     } else if (data && (data.expired || data.code === 15030 || data.code === 101031008 || data.code === 15006 || (data.message && data.message.includes('未登录')) || (data.rawMsg && data.rawMsg.includes('未登录')))) {
+      try {
+        await update(ref(db, `users/${currentUser.uid}`), {
+          tokenExpired: true,
+          'tokenStatus/status': 'expired',
+          'tokenStatus/daysLeft': 0
+        });
+        currentUser.tokenExpired = true;
+        if (currentUser.tokenStatus) {
+          currentUser.tokenStatus.status = 'expired';
+          currentUser.tokenStatus.daysLeft = 0;
+        }
+        localStorage.setItem('cached_current_user', JSON.stringify(currentUser));
+      } catch (clearErr) {
+        console.warn('Failed to update expired main token state in Firebase:', clearErr);
+      }
       window.showToast("30-Day session expired. Please enter new in-game code to refresh.", "warning");
       window.openAccountHubVerifyModal();
     } else {
@@ -23502,18 +23528,30 @@ window.openAccountHubVerifyModal = (targetGid = null, targetName = '') => {
           window.showToast("📩 Verification code sent to your in-game mailbox!", "info");
           if (codeInput) setTimeout(() => codeInput.focus(), 60);
         } else {
-          throw new Error(window.translateWosApiError(data ? data.message : 'Failed to dispatch in-game code.', data ? data.code : null));
+          const errCode = data ? data.code : null;
+          const errMsg = data ? (data.message || 'Failed to dispatch in-game code.') : 'Failed to dispatch in-game code.';
+          const thrownErr = new Error(window.translateWosApiError(errMsg, errCode));
+          thrownErr.code = errCode;
+          throw thrownErr;
         }
       } catch (err) {
         sendBtn.disabled = false;
         sendBtn.textContent = '📩 Send Code to In-Game Mail';
-        const msg = window.translateWosApiError(err.message || 'Error communicating with game servers.');
+        const rawCode = err && err.code ? Number(err.code) : null;
+        const msg = window.translateWosApiError(err.message || 'Error communicating with game servers.', rawCode);
         if (window.isWosRateLimitError(err)) {
           window.startVerificationCooldownTimer({
             durationSec: 60,
             feedbackEl: feedback,
             buttons: [sendBtn, submitCodeBtn]
           });
+        } else if (rawCode === 101031017 || rawCode === 101031005 || String(err.message || '').includes('101031017') || String(err.message || '').includes('101031005')) {
+          if (feedback) {
+            feedback.style.display = 'block';
+            feedback.style.color = '#f59e0b';
+            feedback.innerHTML = `⚠️ <strong>Daily Limit Reached</strong>: Century Games allows only a limited number of verification codes per day for this Game ID (resets at 00:00 UTC). If you have an active code received earlier today, you can enter it below, or enter your Chief Name manually.`;
+          }
+          if (codeSection) codeSection.style.display = 'block';
         } else if (feedback) {
           feedback.style.display = 'block';
           feedback.style.color = 'var(--danger)';
@@ -25355,6 +25393,24 @@ window.handleSyncAltProfile = async (gid, btnEl = null) => {
       window.showToast(`✨ Alt ${data.nickname || cleanName} stats & avatar synced!`, 'success');
       if (views.account) views.account('Alts');
     } else if (data && (data.expired || data.code === 15030 || data.code === 101031008 || data.code === 15006 || (data.message && data.message.includes('未登录')) || (data.rawMsg && data.rawMsg.includes('未登录')))) {
+      // Clear expired token in Firebase and local state so UI immediately reflects expired state
+      try {
+        await update(ref(db, `users/${currentUser.uid}/altTokens/${cleanGid}`), {
+          tokenExpired: true,
+          'tokenStatus/status': 'expired',
+          'tokenStatus/daysLeft': 0
+        });
+        if (currentUser.altTokens && currentUser.altTokens[cleanGid]) {
+          currentUser.altTokens[cleanGid].tokenExpired = true;
+          if (currentUser.altTokens[cleanGid].tokenStatus) {
+            currentUser.altTokens[cleanGid].tokenStatus.status = 'expired';
+            currentUser.altTokens[cleanGid].tokenStatus.daysLeft = 0;
+          }
+        }
+        localStorage.setItem('cached_current_user', JSON.stringify(currentUser));
+      } catch (clearErr) {
+        console.warn('Failed to update expired token state in Firebase:', clearErr);
+      }
       window.showToast(window.translateWosApiError(data.message || `30-day token expired for ${cleanName}. Please enter in-game code to renew.`, data.code), 'warning');
       window.openAltVerifyModal(cleanGid);
     } else {
@@ -26352,13 +26408,21 @@ window.openAltVerifyModal = (gid, altName = '') => {
       } catch (err) {
         sendBtn.disabled = false;
         sendBtn.textContent = '📩 Send Code to In-Game Mail';
-        const msg = window.translateWosApiError(err.message || 'Error communicating with game servers.');
+        const rawCode = err && err.code ? Number(err.code) : null;
+        const msg = window.translateWosApiError(err.message || 'Error communicating with game servers.', rawCode);
         if (window.isWosRateLimitError(err)) {
           window.startVerificationCooldownTimer({
             durationSec: 60,
             feedbackEl: feedback,
             buttons: [sendBtn, submitCodeBtn]
           });
+        } else if (rawCode === 101031017 || rawCode === 101031005 || String(err.message || '').includes('101031017') || String(err.message || '').includes('101031005')) {
+          if (feedback) {
+            feedback.style.display = 'block';
+            feedback.style.color = '#f59e0b';
+            feedback.innerHTML = `⚠️ <strong>Daily Limit Reached</strong>: Century Games allows only a limited number of verification codes per day for this Game ID (resets at 00:00 UTC). If you have an active code received earlier today, you can enter it below, or you can manage this alt manually.`;
+          }
+          if (codeSection) codeSection.style.display = 'block';
         } else if (feedback) {
           feedback.style.display = 'block';
           feedback.style.color = 'var(--danger)';

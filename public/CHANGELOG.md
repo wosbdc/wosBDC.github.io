@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.90] - 2026-10-05
+- 💾 **Expired Tokens Cleared**: Realtime Database records expired status automatically.
+- 🛡️ **Session Eviction**: Purges dead cached sessions on game rejection.
+- ⚠️ **Daily Limit Guidance**: Clarifies Century Games daily code quota limits.
+- 🔄 **Instant Status Sync**: Alts reflect expired state immediately in UI.
+
 ## [3.3.89] - 2026-10-05
 - ⚡ **Direct Verification**: Streamlined verification directly to high-speed cloud edge.
 - 🛡️ **Race Condition Fixed**: Prevented duplicate requests from voiding mailbox codes.
