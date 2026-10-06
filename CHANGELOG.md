@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.92] - 2026-10-06
+- 🔒 **Resend Lockout**: Mandatory 60s cooldown prevents rapid button clicks.
+- 🛡️ **Mailbox Protected**: Prevents duplicate requests from voiding in-game codes.
+- ⏳ **Countdown Badge**: Clear live countdown keeps you informed during cooldown.
+- ⚡ **Auto Unlock**: Buttons automatically re-enable when safe to resend.
+
 ## [3.3.91] - 2026-10-05
 - ⚡ **Direct Edge Proxy**: Switched verification to dedicated high-speed cloud edge.
 - 🛡️ **Cold Starts Eliminated**: Removed slow Google fallback causing false timeouts.

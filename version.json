@@ -1,16 +1,17 @@
 {
-  "version": "3.3.91",
-  "releaseDate": "2026-10-05",
-  "title": "What's New in v3.3.91",
+  "version": "3.3.92",
+  "releaseDate": "2026-10-06",
+  "title": "What's New in v3.3.92",
   "notes": [
-    "⚡ High-Speed Direct Edge: Switched verification to ultra-fast dedicated edge proxy.",
-    "🛡️ Google Cold Starts Eliminated: Removed slow fallback causing false timeouts.",
-    "🎯 Accurate Game Feedback: Displays exact Century Games code status instantly.",
-    "🚀 Sub-Second Responses: In-game mailbox verification executes in under 700ms."
+    "🔒 Resend Lockout Cooldown: Enforced mandatory 60s cooldown to protect active codes.",
+    "🛡️ Mailbox Code Protection: Prevents rapid clicks from voiding in-game codes.",
+    "⏳ Live Countdown Feedback: Clear countdown alerts keep you informed on cooldowns.",
+    "⚡ Instant UI Synchronization: Buttons automatically re-enable once cooldown completes safely."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.91",
+    "version": "3.3.92",
     "latestChanges": [
+      "v3.3.92: Enforced 60s cooldown lockout preventing duplicate verification requests",
       "v3.3.91: Switched in-game verification to dedicated high-speed edge proxy",
       "v3.3.90: Persisted expired token state in database and handled daily code limits",
       "v3.3.88: Added live countdown timer and button locking for verification rate limit cooldowns",

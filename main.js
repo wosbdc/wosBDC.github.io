@@ -2611,7 +2611,7 @@ window.isWosRateLimitError = (err, data = null) => {
   return false;
 };
 
-window.startVerificationCooldownTimer = ({ durationSec = 60, feedbackEl, buttons = [], onComplete = null } = {}) => {
+window.startVerificationCooldownTimer = ({ durationSec = 60, feedbackEl, buttons = [], onComplete = null, messagePrefix = '' } = {}) => {
   if (window.activeCooldownTimer) {
     clearInterval(window.activeCooldownTimer);
     window.activeCooldownTimer = null;
@@ -2635,7 +2635,9 @@ window.startVerificationCooldownTimer = ({ durationSec = 60, feedbackEl, buttons
       feedbackEl.style.display = 'block';
       feedbackEl.style.color = '#f59e0b';
       feedbackEl.style.fontWeight = 'bold';
-      feedbackEl.innerHTML = `⏳ [Code 101031018] Too many requests. Cooldown remaining: <span style="font-family:monospace; font-size:13.5px; background:rgba(245,158,11,0.2); padding:2px 8px; border-radius:6px; border:1px solid rgba(245,158,11,0.4); color:#fbbf24;">${remaining}s</span>`;
+      const defaultNotice = `⏳ [Code 101031018] Too many requests. Cooldown remaining: <span style="font-family:monospace; font-size:13.5px; background:rgba(245,158,11,0.2); padding:2px 8px; border-radius:6px; border:1px solid rgba(245,158,11,0.4); color:#fbbf24;">${remaining}s</span>`;
+      const customPrefix = messagePrefix ? `${messagePrefix} ` : '';
+      feedbackEl.innerHTML = customPrefix ? `${customPrefix} (Resend available in <span style="font-family:monospace; font-size:13.5px; background:rgba(245,158,11,0.2); padding:2px 8px; border-radius:6px; border:1px solid rgba(245,158,11,0.4); color:#fbbf24;">${remaining}s</span>)` : defaultNotice;
     }
 
     btnOriginals.forEach(({ btn }) => {
@@ -23499,14 +23501,13 @@ window.openAccountHubVerifyModal = (targetGid = null, targetName = '') => {
       try {
         let data = await window.apiSendGameCaptcha(activeTargetGid);
         if (data && (data.success || data.code === 0 || data.code === 1)) {
-          sendBtn.textContent = '🔄 Resend Code';
-          sendBtn.disabled = false;
           if (codeSection) codeSection.style.display = 'block';
-          if (feedback) {
-            feedback.style.display = 'block';
-            feedback.style.color = '#38bdf8';
-            feedback.textContent = 'Code dispatched! Check your Whiteout Survival system mail.';
-          }
+          window.startVerificationCooldownTimer({
+            durationSec: 60,
+            feedbackEl: feedback,
+            buttons: [sendBtn],
+            messagePrefix: '📩 Verification code sent! Check in-game mail.'
+          });
           window.showToast("📩 Verification code sent to your in-game mailbox!", "info");
           if (codeInput) setTimeout(() => codeInput.focus(), 60);
         } else {
@@ -26370,14 +26371,13 @@ window.openAltVerifyModal = (gid, altName = '') => {
       try {
         const data = await window.apiSendGameCaptcha(cleanGid);
         if (data && (data.success || data.code === 0 || data.code === 1)) {
-          sendBtn.textContent = '🔄 Resend Code';
-          sendBtn.disabled = false;
           if (codeSection) codeSection.style.display = 'block';
-          if (feedback) {
-            feedback.style.display = 'block';
-            feedback.style.color = '#38bdf8';
-            feedback.textContent = 'Code dispatched! Check your Whiteout Survival system mail.';
-          }
+          window.startVerificationCooldownTimer({
+            durationSec: 60,
+            feedbackEl: feedback,
+            buttons: [sendBtn],
+            messagePrefix: '📩 Verification code sent! Check in-game mail.'
+          });
           window.showToast(`📩 Verification code sent to ${cleanName}'s mail!`, 'info');
           if (codeInput) setTimeout(() => codeInput.focus(), 60);
         } else {
@@ -28352,6 +28352,15 @@ const views = {
             const resendBtn = document.getElementById('authPageResendCodeBtn');
             const fallbackBtn = document.getElementById('authPageFallbackManualBtn');
 
+            if (resendBtn) {
+              window.startVerificationCooldownTimer({
+                durationSec: 60,
+                feedbackEl: feedback,
+                buttons: [resendBtn],
+                messagePrefix: 'A 6-digit code was sent to your game mail.'
+              });
+            }
+
             if (fallbackBtn) fallbackBtn.addEventListener('click', renderManualForm);
             if (resendBtn) {
               resendBtn.addEventListener('click', async () => {
@@ -28360,11 +28369,13 @@ const views = {
                 try {
                   const data = await window.apiSendGameCaptcha(val);
                   if (data && (data.success || data.code === 0 || data.code === 1)) {
-                    if (feedback) {
-                      feedback.style.display = 'block';
-                      feedback.style.color = '#38bdf8';
-                      feedback.textContent = 'Fresh verification code dispatched to your in-game mailbox!';
-                    }
+                    window.startVerificationCooldownTimer({
+                      durationSec: 60,
+                      feedbackEl: feedback,
+                      buttons: [resendBtn],
+                      messagePrefix: 'Fresh verification code dispatched to your in-game mailbox!'
+                    });
+                    return;
                   } else {
                     const errCode = data ? data.code : null;
                     const errMsg = data ? (data.message || 'Failed to dispatch in-game code.') : 'Failed to dispatch in-game code.';
