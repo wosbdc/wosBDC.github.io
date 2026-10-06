@@ -2378,13 +2378,14 @@ window.apiSyncProfileWithToken = async (gameId, token, uid = '') => {
     const vData = await vRes.json();
     if (vData && (vData.success || vData.nickname)) return vData;
     if (vData && (vData.expired || vData.code === 15030 || vData.code === 101031008 || vData.code === 15006)) return vData;
+    // If Vercel proxy returned an error (e.g. code -1 or upstream syntax failure), don't halt—proceed to Tier 3!
   } catch (e) {}
 
   // Tier 3: Google Apps Script Web App
   try {
-    const gRes = await fetch(`${API_BASE_URL}?api=syncProfileWithToken&id=${encodeURIComponent(cleanId)}&cgToken=${encodeURIComponent(token || '')}`);
+    const gRes = await fetch(`${API_BASE_URL}?api=syncProfileWithToken&id=${encodeURIComponent(cleanId)}&role_id=${encodeURIComponent(cleanId)}&playerId=${encodeURIComponent(cleanId)}&cgToken=${encodeURIComponent(token || '')}&token=${encodeURIComponent(token || '')}`);
     const gData = await gRes.json();
-    if (gData && (gData.success || gData.code !== -1 || gData.expired || gData.nickname)) return gData;
+    if (gData && (gData.success || (gData.code !== undefined && gData.code !== -1) || gData.expired || gData.nickname)) return gData;
   } catch (e) {}
 
   return { success: false, error: 'Token synchronization service unavailable.' };
@@ -2572,19 +2573,19 @@ window.translateWosApiError = (msg, code = null) => {
   }
   let cleanMsg = (msg || '').toString().trim();
   
-  // Extract code from message if embedded (e.g. "[Code 15030]")
-  const extractedCodeMatch = cleanMsg.match(/\[Code\s*(\d+)\]/i);
+  // Extract code from message if embedded (e.g. "[Code 15030]" or "[Code -1]")
+  const extractedCodeMatch = cleanMsg.match(/\[Code\s*(-?\d+)\]/i);
   if (!code && extractedCodeMatch) {
     code = extractedCodeMatch[1];
   }
   // Strip duplicate code badges from raw text
-  cleanMsg = cleanMsg.replace(/\[Code\s*\d+\]\s*/gi, '').trim();
+  cleanMsg = cleanMsg.replace(/\[Code\s*-?\d+\]\s*/gi, '').trim();
 
   const codeNum = typeof code === 'number' ? code : (code ? parseInt(code, 10) : null);
   const codeBadge = (codeNum !== null && !isNaN(codeNum) && codeNum >= 0) ? `[Code ${codeNum}] ` : '';
 
   // Sanitize raw HTML or JSON syntax error strings
-  if (cleanMsg.includes("Unexpected token '<'") || cleanMsg.includes("is not valid JSON") || cleanMsg.includes("<!DOCTYPE") || cleanMsg.includes("<html") || cleanMsg.includes("502 Bad Gateway") || cleanMsg.includes("504 Gateway Time-out")) {
+  if (cleanMsg.includes("Unexpected token") || cleanMsg.includes("is not valid JSON") || cleanMsg.includes("<!DOCTYPE") || cleanMsg.includes("<html") || cleanMsg.includes("502 Bad Gateway") || cleanMsg.includes("504 Gateway Time-out") || codeNum === -1) {
     return "Game server connection timed out. Please retry in a few moments.";
   }
 
