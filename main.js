@@ -2286,7 +2286,15 @@ window.apiSendGameCaptcha = async (gameId) => {
   try {
     const vRes = await fetch(`${VERCEL_API_BASE}/send_code?id=${encodeURIComponent(cleanId)}`);
     const vData = await vRes.json();
-    if (vData) return vData;
+    if (vData && (vData.success || vData.code === 0 || vData.code === 1)) return vData;
+    if (vData && (vData.code === 101031005 || vData.code === 101031001)) return vData;
+  } catch (e) {}
+
+  // Tier 3: Google Apps Script Web App
+  try {
+    const gRes = await fetch(`${API_BASE_URL}?api=sendGameCaptcha&playerId=${encodeURIComponent(cleanId)}`);
+    const gData = await gRes.json();
+    if (gData && (gData.success || gData.code === 0 || gData.code === 1 || gData.code !== -1)) return gData;
   } catch (e) {}
 
   return { success: false, error: 'In-game verification service is temporarily busy. Please retry.' };
@@ -2310,7 +2318,15 @@ window.apiVerifyGameCaptcha = async (gameId, code, uid = '') => {
   try {
     const vRes = await fetch(`${VERCEL_API_BASE}/verify_code?id=${encodeURIComponent(cleanId)}&code=${encodeURIComponent(cleanCode)}`);
     const vData = await vRes.json();
-    if (vData) return vData;
+    if (vData && (vData.success || vData.token || vData.data?.token)) return vData;
+    if (vData && (vData.code === 101031002 || vData.code === 101031005)) return vData;
+  } catch (e) {}
+
+  // Tier 3: Google Apps Script Web App
+  try {
+    const gRes = await fetch(`${API_BASE_URL}?api=verifyGameCaptcha&playerId=${encodeURIComponent(cleanId)}&code=${encodeURIComponent(cleanCode)}`);
+    const gData = await gRes.json();
+    if (gData && (gData.success || gData.token || gData.data?.token || gData.code !== -1)) return gData;
   } catch (e) {}
 
   return { success: false, error: 'In-game verification service is temporarily busy. Please retry.' };
@@ -2330,7 +2346,14 @@ window.apiLookupPlayer = async (gameId) => {
   try {
     const vRes = await fetch(`${VERCEL_API_BASE}/verify?id=${encodeURIComponent(cleanId)}`);
     const vData = await vRes.json();
-    if (vData) return vData;
+    if (vData && (vData.success || vData.nickname)) return vData;
+  } catch (e) {}
+
+  // Tier 3: Google Apps Script Web App
+  try {
+    const gRes = await fetch(`${API_BASE_URL}?api=lookupPlayer&playerId=${encodeURIComponent(cleanId)}`);
+    const gData = await gRes.json();
+    if (gData && (gData.success || gData.nickname)) return gData;
   } catch (e) {}
 
   return { success: false, error: 'Player lookup service unavailable.' };
@@ -2353,7 +2376,15 @@ window.apiSyncProfileWithToken = async (gameId, token, uid = '') => {
   try {
     const vRes = await fetch(`${VERCEL_API_BASE}/sync_profile?id=${encodeURIComponent(cleanId)}&cgToken=${encodeURIComponent(token || '')}`);
     const vData = await vRes.json();
-    if (vData) return vData;
+    if (vData && (vData.success || vData.nickname)) return vData;
+    if (vData && (vData.expired || vData.code === 15030 || vData.code === 101031008 || vData.code === 15006)) return vData;
+  } catch (e) {}
+
+  // Tier 3: Google Apps Script Web App
+  try {
+    const gRes = await fetch(`${API_BASE_URL}?api=syncProfileWithToken&id=${encodeURIComponent(cleanId)}&cgToken=${encodeURIComponent(token || '')}`);
+    const gData = await gRes.json();
+    if (gData && (gData.success || gData.code !== -1 || gData.expired || gData.nickname)) return gData;
   } catch (e) {}
 
   return { success: false, error: 'Token synchronization service unavailable.' };
@@ -2374,7 +2405,14 @@ window.apiRedeemGiftCode = async (gameId, code, kid = '2089') => {
   try {
     const vRes = await fetch(`${VERCEL_API_BASE}/redeem?gameId=${encodeURIComponent(cleanId)}&code=${encodeURIComponent(cleanCode)}&kid=${encodeURIComponent(kid)}`);
     const vData = await vRes.json();
-    if (vData) return vData;
+    if (vData && (vData.success !== undefined || vData.status)) return vData;
+  } catch (e) {}
+
+  // Tier 3: Google Apps Script Web App
+  try {
+    const gRes = await fetch(`${API_BASE_URL}?api=redeemGiftCode&roleId=${encodeURIComponent(cleanId)}&code=${encodeURIComponent(cleanCode)}&kid=${encodeURIComponent(kid)}`);
+    const gData = await gRes.json();
+    if (gData && (gData.success !== undefined || gData.status)) return gData;
   } catch (e) {}
 
   return { success: false, error: 'Gift code service unavailable.' };
@@ -2543,7 +2581,12 @@ window.translateWosApiError = (msg, code = null) => {
   cleanMsg = cleanMsg.replace(/\[Code\s*\d+\]\s*/gi, '').trim();
 
   const codeNum = typeof code === 'number' ? code : (code ? parseInt(code, 10) : null);
-  const codeBadge = codeNum ? `[Code ${codeNum}] ` : '';
+  const codeBadge = (codeNum !== null && !isNaN(codeNum) && codeNum >= 0) ? `[Code ${codeNum}] ` : '';
+
+  // Sanitize raw HTML or JSON syntax error strings
+  if (cleanMsg.includes("Unexpected token '<'") || cleanMsg.includes("is not valid JSON") || cleanMsg.includes("<!DOCTYPE") || cleanMsg.includes("<html") || cleanMsg.includes("502 Bad Gateway") || cleanMsg.includes("504 Gateway Time-out")) {
+    return "Game server connection timed out. Please retry in a few moments.";
+  }
 
   if (codeNum === 15030 || codeNum === 101031008 || codeNum === 15006 || cleanMsg.includes("未登录") || cleanMsg.includes("登录态已失效") || cleanMsg.includes("已失效") || cleanMsg.includes("token失效")) {
     return `${codeBadge}30-Day session token expired. Please enter a fresh in-game code to renew.`;

@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.87] - 2026-10-05
+- 🔄 **Token Sync Restored**: Added resilient multi-tier cloud fallback for in-game token sync.
+- 🛡️ **Error Sanitized**: Sanitized raw HTML syntax error toasts into friendly notices.
+- ⚡ **Proxy Repaired**: Corrected Century Games API role endpoints and headers.
+- 🌐 **Zero-Downtime Fallback**: Integrated direct Google Apps Script sync for all bridges.
+
 ## [3.3.86] - 2026-10-05
 - 🛡️ **Database Hardened**: Locked root database rules against unauthenticated modifications.
 - 🔐 **Admin Scoped**: Secured admin actions exclusively to Chief and R4 staff.
