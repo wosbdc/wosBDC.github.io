@@ -2292,7 +2292,7 @@ window.apiSendGameCaptcha = async (gameId) => {
 
   // Tier 3: Google Apps Script Web App
   try {
-    const gRes = await fetch(`${API_BASE_URL}?api=sendGameCaptcha&playerId=${encodeURIComponent(cleanId)}`);
+    const gRes = await fetch(`${API_BASE_URL}?api=sendGameCaptcha&id=${encodeURIComponent(cleanId)}&playerId=${encodeURIComponent(cleanId)}&role_id=${encodeURIComponent(cleanId)}`);
     const gData = await gRes.json();
     if (gData && (gData.success || gData.code === 0 || gData.code === 1 || gData.code !== -1)) return gData;
   } catch (e) {}
@@ -2319,12 +2319,12 @@ window.apiVerifyGameCaptcha = async (gameId, code, uid = '') => {
     const vRes = await fetch(`${VERCEL_API_BASE}/verify_code?id=${encodeURIComponent(cleanId)}&code=${encodeURIComponent(cleanCode)}`);
     const vData = await vRes.json();
     if (vData && (vData.success || vData.token || vData.data?.token)) return vData;
-    if (vData && (vData.code === 101031002 || vData.code === 101031005)) return vData;
+    if (vData && (vData.code === 101031002 || vData.code === 101031005 || vData.code === 101031021)) return vData;
   } catch (e) {}
 
   // Tier 3: Google Apps Script Web App
   try {
-    const gRes = await fetch(`${API_BASE_URL}?api=verifyGameCaptcha&playerId=${encodeURIComponent(cleanId)}&code=${encodeURIComponent(cleanCode)}`);
+    const gRes = await fetch(`${API_BASE_URL}?api=verifyGameCaptcha&id=${encodeURIComponent(cleanId)}&playerId=${encodeURIComponent(cleanId)}&role_id=${encodeURIComponent(cleanId)}&code=${encodeURIComponent(cleanCode)}&captcha_code=${encodeURIComponent(cleanCode)}`);
     const gData = await gRes.json();
     if (gData && (gData.success || gData.token || gData.data?.token || gData.code !== -1)) return gData;
   } catch (e) {}
@@ -2351,7 +2351,7 @@ window.apiLookupPlayer = async (gameId) => {
 
   // Tier 3: Google Apps Script Web App
   try {
-    const gRes = await fetch(`${API_BASE_URL}?api=lookupPlayer&playerId=${encodeURIComponent(cleanId)}`);
+    const gRes = await fetch(`${API_BASE_URL}?api=lookupPlayer&id=${encodeURIComponent(cleanId)}&playerId=${encodeURIComponent(cleanId)}&gameId=${encodeURIComponent(cleanId)}&role_id=${encodeURIComponent(cleanId)}`);
     const gData = await gRes.json();
     if (gData && (gData.success || gData.nickname)) return gData;
   } catch (e) {}
@@ -2594,7 +2594,7 @@ window.translateWosApiError = (msg, code = null) => {
   if (codeNum === 101031005 || cleanMsg.includes("验证码发送次数已达上限") || cleanMsg.includes("次数已达上限") || cleanMsg.includes("上限")) {
     return `${codeBadge}Daily verification code limit reached for this Game ID today. Please wait a while before requesting another code, or enter Chief Name manually.`;
   }
-  if (codeNum === 101031002 || cleanMsg.includes("验证码错误") || cleanMsg.includes("验证码无效") || cleanMsg.includes("验证码已过期")) {
+  if (codeNum === 101031002 || codeNum === 101031021 || cleanMsg.includes("验证码错误") || cleanMsg.includes("验证码无效") || cleanMsg.includes("验证码已过期")) {
     return `${codeBadge}Invalid or expired verification code. Please check your in-game mailbox or request a new code.`;
   }
   if (codeNum === 101031001 || cleanMsg.includes("角色不存在") || cleanMsg.includes("用户不存在") || cleanMsg.includes("未找到")) {
