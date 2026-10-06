@@ -2600,8 +2600,8 @@ window.translateWosApiError = (msg, code = null) => {
   if (codeNum === 101031001 || cleanMsg.includes("角色不存在") || cleanMsg.includes("用户不存在") || cleanMsg.includes("未找到")) {
     return `${codeBadge}Player ID not found. Please double-check your numeric Game ID in Whiteout Survival.`;
   }
-  if (codeNum === 40001 || codeNum === 40003 || cleanMsg.includes("频繁") || cleanMsg.includes("稍后再试")) {
-    return `${codeBadge}Too many requests. Please wait a moment and try again.`;
+  if (codeNum === 40001 || codeNum === 40003 || codeNum === 101031018 || cleanMsg.includes("频繁") || cleanMsg.includes("稍后再试") || cleanMsg.toLowerCase().includes("too many requests")) {
+    return `${codeBadge}Too many requests. Please wait about 30–60 seconds and try again.`;
   }
   if (cleanMsg.includes("参数错误")) {
     return `${codeBadge}Invalid request parameters. Please verify your Game ID.`;
