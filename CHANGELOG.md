@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.89] - 2026-10-05
+- ⚡ **Direct Verification**: Streamlined verification directly to high-speed cloud edge.
+- 🛡️ **Race Condition Fixed**: Prevented duplicate requests from voiding mailbox codes.
+- 🔄 **Smart Retry**: Highlights resend button when expired codes are detected.
+- 🧹 **Auto Clear**: Automatically resets input for fast code re-entry.
+
 ## [3.3.88] - 2026-10-05
 - ⏳ **Live Countdown**: Added live countdown timer for rate limit cooldowns.
 - 🔒 **Button Locking**: Temporarily locks buttons with live seconds until cooldown expires.

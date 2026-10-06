@@ -1,12 +1,12 @@
 {
-  "version": "3.3.88",
+  "version": "3.3.89",
   "releaseDate": "2026-10-05",
-  "title": "What's New in v3.3.88",
+  "title": "What's New in v3.3.89",
   "notes": [
-    "⏳ Live Countdown: Added live countdown timer for rate limit cooldowns.",
-    "🔒 Button Locking: Temporarily locks buttons with live seconds until cooldown expires.",
-    "🔔 Auto Restore: Automatically re-enables buttons once cooldown completes.",
-    "🛡️ Site-Wide Support: Active across Account Hub, Alt Sync, and Register."
+    "⚡ Direct Verification: Streamlined verification directly to high-speed cloud edge.",
+    "🛡️ Race Condition Fixed: Prevented duplicate requests from voiding mailbox codes.",
+    "🔄 Smart Retry: Highlights resend button when expired codes are detected.",
+    "🧹 Auto Clear: Automatically resets input for fast code re-entry."
   ],
   "wosbdc_alliance_dashboard": {
     "version": "3.3.88",

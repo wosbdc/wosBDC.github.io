@@ -2268,34 +2268,33 @@ window.callBdcBackend = async (action, payload = {}, options = {}) => {
   return null;
 };
 
-// ⚡ 2-TIER HIGH-SPEED MULTI-CLOUD ARCHITECTURE (0 Google Quota Impact)
-// Tier 1: BDC Central Command (Local REST + Firebase RTDB Queue)
-// Tier 2: Vercel Serverless Edge Proxy (wos-vercel-proxy)
+// ⚡ HIGH-SPEED DIRECT CLOUD ARCHITECTURE (0 Google Quota Impact, Direct Low-Latency)
+// Tier 1: Vercel Serverless Edge Proxy (wos-vercel-proxy - <1.5s direct signing)
+// Tier 2: Google Apps Script Web App (API_BASE_URL fallback)
 
 window.apiSendGameCaptcha = async (gameId) => {
   const cleanId = String(gameId || '').trim();
   if (!cleanId) return { success: false, error: 'Missing game ID' };
 
-  // Tier 1: BDC Central Command
-  try {
-    const bdcRes = await window.callBdcBackend('send_code', { gameId: cleanId, roleId: cleanId });
-    if (bdcRes && (bdcRes.success || bdcRes.code === 0 || bdcRes.code === 1)) return bdcRes;
-  } catch (e) {}
-
-  // Tier 2: Vercel Serverless Edge Proxy
+  // Tier 1: Vercel Serverless Edge Proxy (Direct Century Games live bridge)
   try {
     const vRes = await fetch(`${VERCEL_API_BASE}/send_code?id=${encodeURIComponent(cleanId)}`);
     const vData = await vRes.json();
     if (vData && (vData.success || vData.code === 0 || vData.code === 1)) return vData;
-    if (vData && (vData.code === 101031005 || vData.code === 101031001)) return vData;
-  } catch (e) {}
+    // Specific Century Games responses (rate limit, limit reached, player not found)
+    if (vData && (vData.code === 101031005 || vData.code === 101031001 || vData.code === 101031018)) return vData;
+  } catch (e) {
+    console.warn('Vercel Edge Proxy send_code failed, attempting fallback...', e);
+  }
 
-  // Tier 3: Google Apps Script Web App
+  // Tier 2: Google Apps Script Web App
   try {
     const gRes = await fetch(`${API_BASE_URL}?api=sendGameCaptcha&id=${encodeURIComponent(cleanId)}&playerId=${encodeURIComponent(cleanId)}&role_id=${encodeURIComponent(cleanId)}`);
     const gData = await gRes.json();
     if (gData && (gData.success || gData.code === 0 || gData.code === 1 || gData.code !== -1)) return gData;
-  } catch (e) {}
+  } catch (e) {
+    console.warn('Google Apps Script sendGameCaptcha fallback failed:', e);
+  }
 
   return { success: false, error: 'In-game verification service is temporarily busy. Please retry.' };
 };
@@ -2305,29 +2304,26 @@ window.apiVerifyGameCaptcha = async (gameId, code, uid = '') => {
   const cleanCode = String(code || '').trim();
   if (!cleanId || !cleanCode) return { success: false, error: 'Missing game ID or code' };
 
-  const isMain = Boolean(currentUser && currentUser.gameId && cleanId === String(currentUser.gameId).trim());
-  const payloadUid = (isMain && uid) ? uid : '';
-
-  // Tier 1: BDC Central Command
-  try {
-    const bdcRes = await window.callBdcBackend('verify_code', { gameId: cleanId, roleId: cleanId, code: cleanCode, uid: payloadUid, isAlt: !isMain });
-    if (bdcRes && (bdcRes.success || bdcRes.token || bdcRes.data?.token)) return bdcRes;
-  } catch (e) {}
-
-  // Tier 2: Vercel Serverless Edge Proxy
+  // Tier 1: Vercel Serverless Edge Proxy (Direct Century Games live bridge)
   try {
     const vRes = await fetch(`${VERCEL_API_BASE}/verify_code?id=${encodeURIComponent(cleanId)}&code=${encodeURIComponent(cleanCode)}`);
     const vData = await vRes.json();
-    if (vData && (vData.success || vData.token || vData.data?.token)) return vData;
-    if (vData && (vData.code === 101031002 || vData.code === 101031005 || vData.code === 101031021)) return vData;
-  } catch (e) {}
+    // Return any explicit response from Century Games immediately without delay
+    if (vData && (vData.success || vData.token || vData.data?.token || vData.code !== undefined)) {
+      return vData;
+    }
+  } catch (e) {
+    console.warn('Vercel Edge Proxy verify_code failed, attempting fallback...', e);
+  }
 
-  // Tier 3: Google Apps Script Web App
+  // Tier 2: Google Apps Script Web App
   try {
     const gRes = await fetch(`${API_BASE_URL}?api=verifyGameCaptcha&id=${encodeURIComponent(cleanId)}&playerId=${encodeURIComponent(cleanId)}&role_id=${encodeURIComponent(cleanId)}&code=${encodeURIComponent(cleanCode)}&captcha_code=${encodeURIComponent(cleanCode)}`);
     const gData = await gRes.json();
     if (gData && (gData.success || gData.token || gData.data?.token || gData.code !== -1)) return gData;
-  } catch (e) {}
+  } catch (e) {
+    console.warn('Google Apps Script verifyGameCaptcha fallback failed:', e);
+  }
 
   return { success: false, error: 'In-game verification service is temporarily busy. Please retry.' };
 };
@@ -23666,13 +23662,28 @@ window.openAccountHubVerifyModal = (targetGid = null, targetName = '') => {
       } catch (err) {
         submitCodeBtn.disabled = false;
         submitCodeBtn.textContent = 'Verify & Bind';
-        const msg = window.translateWosApiError(err.message || 'Verification failed. Please retry.');
+        const rawCode = err && err.code ? Number(err.code) : null;
+        const msg = window.translateWosApiError(err.message || 'Verification failed. Please retry.', rawCode);
         if (window.isWosRateLimitError(err)) {
           window.startVerificationCooldownTimer({
             durationSec: 60,
             feedbackEl: feedback,
             buttons: [submitCodeBtn, sendBtn]
           });
+        } else if (rawCode === 101031021 || rawCode === 101031020 || String(err.message || '').includes('101031021')) {
+          if (codeInput) {
+            codeInput.value = '';
+            codeInput.focus();
+          }
+          if (sendBtn) {
+            sendBtn.style.animation = 'pulse 1s infinite alternate';
+            setTimeout(() => { if (sendBtn) sendBtn.style.animation = ''; }, 4000);
+          }
+          if (feedback) {
+            feedback.style.display = 'block';
+            feedback.style.color = '#f59e0b';
+            feedback.innerHTML = `⚠️ <strong>Code Expired or Invalid</strong>: Please click <strong>"🔄 Resend Code"</strong> above for a fresh 6-digit code.`;
+          }
         } else if (feedback) {
           feedback.style.display = 'block';
           feedback.style.color = 'var(--danger)';
@@ -26447,13 +26458,28 @@ window.openAltVerifyModal = (gid, altName = '') => {
       } catch (err) {
         submitCodeBtn.disabled = false;
         submitCodeBtn.textContent = 'Verify & Bind';
-        const msg = window.translateWosApiError(err.message || 'Verification failed.');
+        const rawCode = err && err.code ? Number(err.code) : null;
+        const msg = window.translateWosApiError(err.message || 'Verification failed.', rawCode);
         if (window.isWosRateLimitError(err)) {
           window.startVerificationCooldownTimer({
             durationSec: 60,
             feedbackEl: feedback,
             buttons: [submitCodeBtn, sendBtn]
           });
+        } else if (rawCode === 101031021 || rawCode === 101031020 || String(err.message || '').includes('101031021')) {
+          if (codeInput) {
+            codeInput.value = '';
+            codeInput.focus();
+          }
+          if (sendBtn) {
+            sendBtn.style.animation = 'pulse 1s infinite alternate';
+            setTimeout(() => { if (sendBtn) sendBtn.style.animation = ''; }, 4000);
+          }
+          if (feedback) {
+            feedback.style.display = 'block';
+            feedback.style.color = '#f59e0b';
+            feedback.innerHTML = `⚠️ <strong>Code Expired or Invalid</strong>: Please click <strong>"🔄 Resend Code"</strong> above for a fresh 6-digit code.`;
+          }
         } else if (feedback) {
           feedback.style.display = 'block';
           feedback.style.color = 'var(--danger)';
@@ -28387,16 +28413,31 @@ const views = {
                 } catch(err) {
                   confirmBtn.disabled = false;
                   confirmBtn.textContent = 'Confirm';
+                  const rawCode = err && err.code ? Number(err.code) : null;
                   if (window.isWosRateLimitError(err)) {
                     window.startVerificationCooldownTimer({
                       durationSec: 60,
                       feedbackEl: feedback,
                       buttons: [confirmBtn, resendBtn]
                     });
+                  } else if (rawCode === 101031021 || rawCode === 101031020 || String(err.message || '').includes('101031021')) {
+                    if (codeInput) {
+                      codeInput.value = '';
+                      codeInput.focus();
+                    }
+                    if (resendBtn) {
+                      resendBtn.style.animation = 'pulse 1s infinite alternate';
+                      setTimeout(() => { if (resendBtn) resendBtn.style.animation = ''; }, 4000);
+                    }
+                    if (feedback) {
+                      feedback.style.display = 'block';
+                      feedback.style.color = '#f59e0b';
+                      feedback.innerHTML = `⚠️ <strong>Code Expired or Invalid</strong>: Please click <strong>"🔄 Resend Code"</strong> below for a fresh 6-digit code.`;
+                    }
                   } else if (feedback) {
                     feedback.style.display = 'block';
                     feedback.style.color = 'var(--danger)';
-                    feedback.textContent = window.translateWosApiError(err.message || 'Verification failed. Please check code.');
+                    feedback.textContent = window.translateWosApiError(err.message || 'Verification failed. Please check code.', rawCode);
                   }
                 }
               };
