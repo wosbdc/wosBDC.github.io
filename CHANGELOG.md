@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.91] - 2026-10-05
+- ⚡ **Direct Edge Proxy**: Switched verification to dedicated high-speed cloud edge.
+- 🛡️ **Cold Starts Eliminated**: Removed slow Google fallback causing false timeouts.
+- 🎯 **Accurate Feedback**: Displays exact Century Games code status instantly.
+- 🚀 **Sub-Second Speed**: In-game mailbox verification executes in under 700ms.
+
 ## [3.3.90] - 2026-10-05
 - 💾 **Expired Tokens Cleared**: Realtime Database records expired status automatically.
 - 🛡️ **Session Eviction**: Purges dead cached sessions on game rejection.

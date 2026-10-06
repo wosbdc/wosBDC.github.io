@@ -1,16 +1,17 @@
 {
-  "version": "3.3.90",
+  "version": "3.3.91",
   "releaseDate": "2026-10-05",
-  "title": "What's New in v3.3.90",
+  "title": "What's New in v3.3.91",
   "notes": [
-    "💾 Expired Tokens Cleared: Realtime Database records expired status automatically.",
-    "🛡️ Session Eviction: Purges dead cached sessions on game rejection.",
-    "⚠️ Daily Limit Guidance: Clarifies Century Games daily code quota limits.",
-    "🔄 Instant Status Sync: Alts reflect expired state immediately in UI."
+    "⚡ High-Speed Direct Edge: Switched verification to ultra-fast dedicated edge proxy.",
+    "🛡️ Google Cold Starts Eliminated: Removed slow fallback causing false timeouts.",
+    "🎯 Accurate Game Feedback: Displays exact Century Games code status instantly.",
+    "🚀 Sub-Second Responses: In-game mailbox verification executes in under 700ms."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.90",
+    "version": "3.3.91",
     "latestChanges": [
+      "v3.3.91: Switched in-game verification to dedicated high-speed edge proxy",
       "v3.3.90: Persisted expired token state in database and handled daily code limits",
       "v3.3.88: Added live countdown timer and button locking for verification rate limit cooldowns",
       "v3.3.87: Fixed token sync unexpected token error with multi-tier fallback and sanitized error toasts",

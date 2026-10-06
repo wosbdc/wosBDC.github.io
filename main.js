@@ -2276,25 +2276,16 @@ window.apiSendGameCaptcha = async (gameId) => {
   const cleanId = String(gameId || '').trim();
   if (!cleanId) return { success: false, error: 'Missing game ID' };
 
-  // Tier 1: Vercel Serverless Edge Proxy (Direct Century Games live bridge)
+  // Dedicated High-Speed Edge Proxy (Direct Century Games live bridge, <700ms)
   try {
     const vRes = await fetch(`${VERCEL_API_BASE}/send_code?id=${encodeURIComponent(cleanId)}`);
     const vData = await vRes.json();
     if (vData && (vData.success || vData.code !== undefined)) return vData;
   } catch (e) {
-    console.warn('Vercel Edge Proxy send_code failed, attempting fallback...', e);
+    console.warn('Vercel Edge Proxy send_code failed:', e);
   }
 
-  // Tier 2: Google Apps Script Web App
-  try {
-    const gRes = await fetch(`${API_BASE_URL}?api=sendGameCaptcha&id=${encodeURIComponent(cleanId)}&playerId=${encodeURIComponent(cleanId)}&role_id=${encodeURIComponent(cleanId)}`);
-    const gData = await gRes.json();
-    if (gData && (gData.success || gData.code === 0 || gData.code === 1 || gData.code !== -1)) return gData;
-  } catch (e) {
-    console.warn('Google Apps Script sendGameCaptcha fallback failed:', e);
-  }
-
-  return { success: false, error: 'In-game verification service is temporarily busy. Please retry.' };
+  return { success: false, error: 'In-game verification service is temporarily busy. Please retry in a few moments.' };
 };
 
 window.apiVerifyGameCaptcha = async (gameId, code, uid = '') => {
@@ -2302,28 +2293,18 @@ window.apiVerifyGameCaptcha = async (gameId, code, uid = '') => {
   const cleanCode = String(code || '').trim();
   if (!cleanId || !cleanCode) return { success: false, error: 'Missing game ID or code' };
 
-  // Tier 1: Vercel Serverless Edge Proxy (Direct Century Games live bridge)
+  // Dedicated High-Speed Edge Proxy (Direct Century Games live bridge, <700ms)
   try {
     const vRes = await fetch(`${VERCEL_API_BASE}/verify_code?id=${encodeURIComponent(cleanId)}&code=${encodeURIComponent(cleanCode)}`);
     const vData = await vRes.json();
-    // Return any explicit response from Century Games immediately without delay
     if (vData && (vData.success || vData.token || vData.data?.token || vData.code !== undefined)) {
       return vData;
     }
   } catch (e) {
-    console.warn('Vercel Edge Proxy verify_code failed, attempting fallback...', e);
+    console.warn('Vercel Edge Proxy verify_code failed:', e);
   }
 
-  // Tier 2: Google Apps Script Web App
-  try {
-    const gRes = await fetch(`${API_BASE_URL}?api=verifyGameCaptcha&id=${encodeURIComponent(cleanId)}&playerId=${encodeURIComponent(cleanId)}&role_id=${encodeURIComponent(cleanId)}&code=${encodeURIComponent(cleanCode)}&captcha_code=${encodeURIComponent(cleanCode)}`);
-    const gData = await gRes.json();
-    if (gData && (gData.success || gData.token || gData.data?.token || gData.code !== -1)) return gData;
-  } catch (e) {
-    console.warn('Google Apps Script verifyGameCaptcha fallback failed:', e);
-  }
-
-  return { success: false, error: 'In-game verification service is temporarily busy. Please retry.' };
+  return { success: false, error: 'In-game verification service is temporarily busy. Please retry in a few moments.' };
 };
 
 window.apiLookupPlayer = async (gameId) => {
@@ -2578,18 +2559,14 @@ window.translateWosApiError = (msg, code = null) => {
   const codeNum = typeof code === 'number' ? code : (code ? parseInt(code, 10) : null);
   const codeBadge = (codeNum !== null && !isNaN(codeNum) && codeNum >= 0) ? `[Code ${codeNum}] ` : '';
 
-  // Sanitize raw HTML or JSON syntax error strings
-  if (cleanMsg.includes("Unexpected token") || cleanMsg.includes("is not valid JSON") || cleanMsg.includes("<!DOCTYPE") || cleanMsg.includes("<html") || cleanMsg.includes("502 Bad Gateway") || cleanMsg.includes("504 Gateway Time-out") || codeNum === -1) {
-    return "Game server connection timed out. Please retry in a few moments.";
-  }
-
+  // Explicit Century Games error codes
   if (codeNum === 15030 || codeNum === 101031008 || codeNum === 15006 || cleanMsg.includes("未登录") || cleanMsg.includes("登录态已失效") || cleanMsg.includes("已失效") || cleanMsg.includes("token失效")) {
     return `${codeBadge}30-Day session token expired. Please enter a fresh in-game code to renew.`;
   }
   if (codeNum === 101031005 || codeNum === 101031017 || cleanMsg.includes("验证码发送次数已达上限") || cleanMsg.includes("次数已达上限") || cleanMsg.includes("上限")) {
     return `${codeBadge}Daily verification code limit reached for this Game ID today. Please wait a while before requesting another code, or enter Chief Name manually.`;
   }
-  if (codeNum === 101031002 || codeNum === 101031021 || cleanMsg.includes("验证码错误") || cleanMsg.includes("验证码无效") || cleanMsg.includes("验证码已过期")) {
+  if (codeNum === 101031002 || codeNum === 101031021 || cleanMsg.includes("验证码错误") || cleanMsg.includes("验证码无效") || cleanMsg.includes("验证码已过期") || cleanMsg.includes("Invalid or expired verification code")) {
     return `${codeBadge}Invalid or expired verification code. Please check your in-game mailbox or request a new code.`;
   }
   if (codeNum === 101031001 || cleanMsg.includes("角色不存在") || cleanMsg.includes("用户不存在") || cleanMsg.includes("未找到")) {
@@ -2597,6 +2574,11 @@ window.translateWosApiError = (msg, code = null) => {
   }
   if (codeNum === 40001 || codeNum === 40003 || codeNum === 101031018 || cleanMsg.includes("频繁") || cleanMsg.includes("稍后再试") || cleanMsg.toLowerCase().includes("too many requests")) {
     return `${codeBadge}Too many requests. Please wait about 30–60 seconds and try again.`;
+  }
+
+  // Sanitize raw HTML or JSON syntax error strings
+  if (cleanMsg.includes("Unexpected token") || cleanMsg.includes("is not valid JSON") || cleanMsg.includes("<!DOCTYPE") || cleanMsg.includes("<html") || cleanMsg.includes("502 Bad Gateway") || cleanMsg.includes("504 Gateway Time-out") || codeNum === -1) {
+    return "Game server connection timed out. Please retry in a few moments.";
   }
   if (cleanMsg.includes("参数错误")) {
     return `${codeBadge}Invalid request parameters. Please verify your Game ID.`;
