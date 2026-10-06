@@ -2620,6 +2620,80 @@ window.translateWosApiError = (msg, code = null) => {
   return codeBadge ? `${codeBadge}${cleanMsg}` : cleanMsg;
 };
 
+// ⏳ Verification & Rate-Limit Live Countdown Timer
+window.activeCooldownTimer = null;
+window.isWosRateLimitError = (err, data = null) => {
+  const code = (data && data.code) || (err && (err.code || err.status)) || null;
+  const rawMsg = (data && (data.message || data.msg)) || (err && (err.message || String(err))) || '';
+  if (code === 101031018 || code === 40001 || code === 40003) return true;
+  if (typeof rawMsg === 'string') {
+    const lower = rawMsg.toLowerCase();
+    if (rawMsg.includes('101031018') || lower.includes('too many requests') || lower.includes('please wait about 30–60 seconds') || lower.includes('please wait about 30-60 seconds') || lower.includes('cooldown active') || lower.includes('rate limit')) {
+      return true;
+    }
+  }
+  return false;
+};
+
+window.startVerificationCooldownTimer = ({ durationSec = 60, feedbackEl, buttons = [], onComplete = null } = {}) => {
+  if (window.activeCooldownTimer) {
+    clearInterval(window.activeCooldownTimer);
+    window.activeCooldownTimer = null;
+  }
+
+  let remaining = Math.max(1, parseInt(durationSec, 10) || 60);
+
+  // Preserve original button texts & HTML
+  const btnOriginals = (buttons || []).filter(Boolean).map(btn => {
+    if (!btn.getAttribute('data-orig-html')) {
+      btn.setAttribute('data-orig-html', btn.innerHTML);
+    }
+    return {
+      btn,
+      originalHtml: btn.getAttribute('data-orig-html')
+    };
+  });
+
+  const updateUi = () => {
+    if (feedbackEl) {
+      feedbackEl.style.display = 'block';
+      feedbackEl.style.color = '#f59e0b';
+      feedbackEl.style.fontWeight = 'bold';
+      feedbackEl.innerHTML = `⏳ [Code 101031018] Too many requests. Cooldown remaining: <span style="font-family:monospace; font-size:13.5px; background:rgba(245,158,11,0.2); padding:2px 8px; border-radius:6px; border:1px solid rgba(245,158,11,0.4); color:#fbbf24;">${remaining}s</span>`;
+    }
+
+    btnOriginals.forEach(({ btn }) => {
+      btn.disabled = true;
+      btn.textContent = `⏳ Wait ${remaining}s...`;
+    });
+  };
+
+  updateUi();
+
+  window.activeCooldownTimer = setInterval(() => {
+    remaining--;
+    if (remaining > 0) {
+      updateUi();
+    } else {
+      clearInterval(window.activeCooldownTimer);
+      window.activeCooldownTimer = null;
+
+      btnOriginals.forEach(({ btn, originalHtml }) => {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+        btn.removeAttribute('data-orig-html');
+      });
+
+      if (feedbackEl) {
+        feedbackEl.style.color = '#10b981';
+        feedbackEl.innerHTML = '✅ Cooldown complete! You may now request or verify a code.';
+      }
+
+      if (typeof onComplete === 'function') onComplete();
+    }
+  }, 1000);
+};
+
 window.parseDateSafe = (dateInput) => {
     if (!dateInput) return null;
     if (dateInput instanceof Date) return isNaN(dateInput.getTime()) ? null : dateInput;
@@ -12284,13 +12358,34 @@ if (authVerifyGameIdBtn && authChiefConfirm) {
                 resendBtn.disabled = true;
                 resendBtn.textContent = 'Sending...';
                 try {
-                    await window.apiSendGameCaptcha(val);
-                    if (feedback) {
-                        feedback.style.display = 'block';
-                        feedback.style.color = '#38bdf8';
-                        feedback.textContent = 'Fresh verification code dispatched to your in-game mailbox!';
+                    const data = await window.apiSendGameCaptcha(val);
+                    if (data && (data.success || data.code === 0 || data.code === 1)) {
+                        if (feedback) {
+                            feedback.style.display = 'block';
+                            feedback.style.color = '#38bdf8';
+                            feedback.textContent = 'Fresh verification code dispatched to your in-game mailbox!';
+                        }
+                    } else {
+                        const errCode = data ? data.code : null;
+                        const errMsg = data ? (data.message || 'Failed to dispatch in-game code.') : 'Failed to dispatch in-game code.';
+                        const thrownErr = new Error(window.translateWosApiError(errMsg, errCode));
+                        thrownErr.code = errCode;
+                        throw thrownErr;
                     }
-                } catch(e) {}
+                } catch(e) {
+                    if (window.isWosRateLimitError(e)) {
+                        window.startVerificationCooldownTimer({
+                            durationSec: 60,
+                            feedbackEl: feedback,
+                            buttons: [resendBtn, submitBtn]
+                        });
+                        return;
+                    } else if (feedback) {
+                        feedback.style.display = 'block';
+                        feedback.style.color = 'var(--danger)';
+                        feedback.textContent = window.translateWosApiError(e.message || 'Failed to dispatch code.');
+                    }
+                }
                 resendBtn.disabled = false;
                 resendBtn.textContent = '🔄 Resend Code';
             });
@@ -12356,12 +12451,22 @@ if (authVerifyGameIdBtn && authChiefConfirm) {
                         authVerifyGameIdBtn.textContent = 'Verified ✅';
                         return;
                     } else {
-                        throw new Error(data.message || 'Invalid or expired code. Please try again.');
+                        const errCode = data ? data.code : null;
+                        const errMsg = data ? (data.message || 'Invalid or expired code. Please try again.') : 'Invalid or expired code. Please try again.';
+                        const thrownErr = new Error(window.translateWosApiError(errMsg, errCode));
+                        thrownErr.code = errCode;
+                        throw thrownErr;
                     }
                 } catch(err) {
                     submitBtn.disabled = false;
                     submitBtn.textContent = 'Confirm';
-                    if (feedback) {
+                    if (window.isWosRateLimitError(err)) {
+                        window.startVerificationCooldownTimer({
+                            durationSec: 60,
+                            feedbackEl: feedback,
+                            buttons: [submitBtn, resendBtn]
+                        });
+                    } else if (feedback) {
                         feedback.style.display = 'block';
                         feedback.style.color = 'var(--danger)';
                         feedback.textContent = window.translateWosApiError(err.message || 'Verification failed. Please check code.');
@@ -23407,7 +23512,13 @@ window.openAccountHubVerifyModal = (targetGid = null, targetName = '') => {
         sendBtn.disabled = false;
         sendBtn.textContent = '📩 Send Code to In-Game Mail';
         const msg = window.translateWosApiError(err.message || 'Error communicating with game servers.');
-        if (feedback) {
+        if (window.isWosRateLimitError(err)) {
+          window.startVerificationCooldownTimer({
+            durationSec: 60,
+            feedbackEl: feedback,
+            buttons: [sendBtn, submitCodeBtn]
+          });
+        } else if (feedback) {
           feedback.style.display = 'block';
           feedback.style.color = 'var(--danger)';
           feedback.textContent = msg;
@@ -23546,13 +23657,23 @@ window.openAccountHubVerifyModal = (targetGid = null, targetName = '') => {
             if (views.account) views.account('Alts');
           }
         } else {
-          throw new Error(window.translateWosApiError(data ? data.message : 'Invalid or expired in-game code.', data ? data.code : null));
+          const errCode = data ? data.code : null;
+          const errMsg = data ? (data.message || 'Invalid or expired in-game code.') : 'Invalid or expired in-game code.';
+          const thrownErr = new Error(window.translateWosApiError(errMsg, errCode));
+          thrownErr.code = errCode;
+          throw thrownErr;
         }
       } catch (err) {
         submitCodeBtn.disabled = false;
         submitCodeBtn.textContent = 'Verify & Bind';
         const msg = window.translateWosApiError(err.message || 'Verification failed. Please retry.');
-        if (feedback) {
+        if (window.isWosRateLimitError(err)) {
+          window.startVerificationCooldownTimer({
+            durationSec: 60,
+            feedbackEl: feedback,
+            buttons: [submitCodeBtn, sendBtn]
+          });
+        } else if (feedback) {
           feedback.style.display = 'block';
           feedback.style.color = 'var(--danger)';
           feedback.textContent = msg;
@@ -26211,13 +26332,23 @@ window.openAltVerifyModal = (gid, altName = '') => {
           window.showToast(`📩 Verification code sent to ${cleanName}'s mail!`, 'info');
           if (codeInput) setTimeout(() => codeInput.focus(), 60);
         } else {
-          throw new Error(window.translateWosApiError(data?.message || 'Failed to dispatch in-game code.', data?.code));
+          const errCode = data ? data.code : null;
+          const errMsg = data ? (data.message || 'Failed to dispatch in-game code.') : 'Failed to dispatch in-game code.';
+          const thrownErr = new Error(window.translateWosApiError(errMsg, errCode));
+          thrownErr.code = errCode;
+          throw thrownErr;
         }
       } catch (err) {
         sendBtn.disabled = false;
         sendBtn.textContent = '📩 Send Code to In-Game Mail';
         const msg = window.translateWosApiError(err.message || 'Error communicating with game servers.');
-        if (feedback) {
+        if (window.isWosRateLimitError(err)) {
+          window.startVerificationCooldownTimer({
+            durationSec: 60,
+            feedbackEl: feedback,
+            buttons: [sendBtn, submitCodeBtn]
+          });
+        } else if (feedback) {
           feedback.style.display = 'block';
           feedback.style.color = 'var(--danger)';
           feedback.textContent = msg;
@@ -26307,13 +26438,23 @@ window.openAltVerifyModal = (gid, altName = '') => {
           window.showToast(`🎉 30-Day sync token bound for ${data.nickname || cleanName}!`, 'success');
           if (views.account) views.account('Alts');
         } else {
-          throw new Error(window.translateWosApiError(data.message || 'Invalid or expired code.', data.code));
+          const errCode = data ? data.code : null;
+          const errMsg = data ? (data.message || 'Invalid or expired code.') : 'Invalid or expired code.';
+          const thrownErr = new Error(window.translateWosApiError(errMsg, errCode));
+          thrownErr.code = errCode;
+          throw thrownErr;
         }
       } catch (err) {
         submitCodeBtn.disabled = false;
         submitCodeBtn.textContent = 'Verify & Bind';
         const msg = window.translateWosApiError(err.message || 'Verification failed.');
-        if (feedback) {
+        if (window.isWosRateLimitError(err)) {
+          window.startVerificationCooldownTimer({
+            durationSec: 60,
+            feedbackEl: feedback,
+            buttons: [submitCodeBtn, sendBtn]
+          });
+        } else if (feedback) {
           feedback.style.display = 'block';
           feedback.style.color = 'var(--danger)';
           feedback.textContent = msg;
@@ -28145,13 +28286,34 @@ const views = {
                 resendBtn.disabled = true;
                 resendBtn.textContent = 'Sending...';
                 try {
-                  await window.apiSendGameCaptcha(val);
-                  if (feedback) {
-                    feedback.style.display = 'block';
-                    feedback.style.color = '#38bdf8';
-                    feedback.textContent = 'Fresh verification code dispatched to your in-game mailbox!';
+                  const data = await window.apiSendGameCaptcha(val);
+                  if (data && (data.success || data.code === 0 || data.code === 1)) {
+                    if (feedback) {
+                      feedback.style.display = 'block';
+                      feedback.style.color = '#38bdf8';
+                      feedback.textContent = 'Fresh verification code dispatched to your in-game mailbox!';
+                    }
+                  } else {
+                    const errCode = data ? data.code : null;
+                    const errMsg = data ? (data.message || 'Failed to dispatch in-game code.') : 'Failed to dispatch in-game code.';
+                    const thrownErr = new Error(window.translateWosApiError(errMsg, errCode));
+                    thrownErr.code = errCode;
+                    throw thrownErr;
                   }
-                } catch(e) {}
+                } catch(e) {
+                  if (window.isWosRateLimitError(e)) {
+                    window.startVerificationCooldownTimer({
+                      durationSec: 60,
+                      feedbackEl: feedback,
+                      buttons: [resendBtn, confirmBtn]
+                    });
+                    return;
+                  } else if (feedback) {
+                    feedback.style.display = 'block';
+                    feedback.style.color = 'var(--danger)';
+                    feedback.textContent = window.translateWosApiError(e.message || 'Failed to dispatch code.');
+                  }
+                }
                 resendBtn.disabled = false;
                 resendBtn.textContent = '🔄 Resend Code';
               });
@@ -28216,12 +28378,22 @@ const views = {
                       verifyBtn.textContent = 'Verified ✅';
                     }
                   } else {
-                    throw new Error(window.translateWosApiError(data?.message || 'Invalid or expired code.', data?.code));
+                    const errCode = data ? data.code : null;
+                    const errMsg = data ? (data.message || 'Invalid or expired code.') : 'Invalid or expired code.';
+                    const thrownErr = new Error(window.translateWosApiError(errMsg, errCode));
+                    thrownErr.code = errCode;
+                    throw thrownErr;
                   }
                 } catch(err) {
                   confirmBtn.disabled = false;
                   confirmBtn.textContent = 'Confirm';
-                  if (feedback) {
+                  if (window.isWosRateLimitError(err)) {
+                    window.startVerificationCooldownTimer({
+                      durationSec: 60,
+                      feedbackEl: feedback,
+                      buttons: [confirmBtn, resendBtn]
+                    });
+                  } else if (feedback) {
                     feedback.style.display = 'block';
                     feedback.style.color = 'var(--danger)';
                     feedback.textContent = window.translateWosApiError(err.message || 'Verification failed. Please check code.');
@@ -37631,12 +37803,22 @@ window.resetBearTrapEvent = async () => {
                           }
                           if (altAutoCodeInput) setTimeout(() => altAutoCodeInput.focus(), 60);
                       } else {
-                          throw new Error(window.translateWosApiError(data?.message || "Failed to dispatch code.", data?.code));
+                          const errCode = data ? data.code : null;
+                          const errMsg = data ? (data.message || "Failed to dispatch code.") : "Failed to dispatch code.";
+                          const thrownErr = new Error(window.translateWosApiError(errMsg, errCode));
+                          thrownErr.code = errCode;
+                          throw thrownErr;
                       }
                   } catch(err) {
                       altAutoSendCodeBtn.disabled = false;
                       altAutoSendCodeBtn.textContent = "Verify ID";
-                      if (altAutoFeedback) {
+                      if (window.isWosRateLimitError(err)) {
+                          window.startVerificationCooldownTimer({
+                              durationSec: 60,
+                              feedbackEl: altAutoFeedback,
+                              buttons: [altAutoSendCodeBtn, altAutoConfirmCodeBtn]
+                          });
+                      } else if (altAutoFeedback) {
                           altAutoFeedback.style.display = 'block';
                           altAutoFeedback.style.color = 'var(--danger)';
                           altAutoFeedback.textContent = window.translateWosApiError(err.message || "Failed to contact game servers.");
@@ -37702,12 +37884,22 @@ window.resetBearTrapEvent = async () => {
                           window.showToast(`🎉 Linked & verified ${data.nickname || gid} with 30-day token!`, "success");
                           if (views.account) views.account('Alts');
                       } else {
-                          throw new Error(window.translateWosApiError(data.message || "Invalid or expired code.", data.code));
+                          const errCode = data ? data.code : null;
+                          const errMsg = data ? (data.message || "Invalid or expired code.") : "Invalid or expired code.";
+                          const thrownErr = new Error(window.translateWosApiError(errMsg, errCode));
+                          thrownErr.code = errCode;
+                          throw thrownErr;
                       }
                   } catch(err) {
                       altAutoConfirmCodeBtn.disabled = false;
                       altAutoConfirmCodeBtn.textContent = "Confirm & Link";
-                      if (altAutoFeedback) {
+                      if (window.isWosRateLimitError(err)) {
+                          window.startVerificationCooldownTimer({
+                              durationSec: 60,
+                              feedbackEl: altAutoFeedback,
+                              buttons: [altAutoConfirmCodeBtn, altAutoSendCodeBtn]
+                          });
+                      } else if (altAutoFeedback) {
                           altAutoFeedback.style.display = 'block';
                           altAutoFeedback.style.color = 'var(--danger)';
                           altAutoFeedback.textContent = window.translateWosApiError(err.message || "Verification failed.");

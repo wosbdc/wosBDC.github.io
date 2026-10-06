@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.88] - 2026-10-05
+- ⏳ **Live Countdown**: Added live countdown timer for rate limit cooldowns.
+- 🔒 **Button Locking**: Temporarily locks buttons with live seconds until cooldown expires.
+- 🔔 **Auto Restore**: Automatically re-enables buttons once cooldown completes.
+- 🛡️ **Site-Wide Support**: Active across Account Hub, Alt Sync, and Register.
+
 ## [3.3.87] - 2026-10-05
 - 🔄 **Token Sync Restored**: Added resilient multi-tier cloud fallback for in-game token sync.
 - 🛡️ **Error Sanitized**: Sanitized raw HTML syntax error toasts into friendly notices.

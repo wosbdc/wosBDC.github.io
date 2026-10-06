@@ -1,15 +1,17 @@
 {
-  "version": "3.3.87",
+  "version": "3.3.88",
   "releaseDate": "2026-10-05",
-  "title": "What's New in v3.3.87",
+  "title": "What's New in v3.3.88",
   "notes": [
-    "🔄 Token Sync: Added reliable cloud fallback for token synchronization.",
-    "🛡️ Sanitized Errors: Converted raw HTML errors into friendly notices.",
-    "⚡ API Repaired: Corrected game role lookup endpoints and headers."
+    "⏳ Live Countdown: Added live countdown timer for rate limit cooldowns.",
+    "🔒 Button Locking: Temporarily locks buttons with live seconds until cooldown expires.",
+    "🔔 Auto Restore: Automatically re-enables buttons once cooldown completes.",
+    "🛡️ Site-Wide Support: Active across Account Hub, Alt Sync, and Register."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.87",
+    "version": "3.3.88",
     "latestChanges": [
+      "v3.3.88: Added live countdown timer and button locking for verification rate limit cooldowns",
       "v3.3.87: Fixed token sync unexpected token error with multi-tier fallback and sanitized error toasts",
       "v3.3.86: Hardened Realtime Database security rules and eliminated wildcard write vulnerability",
       "v3.3.85: Fixed downward scroll jump and pinned Radar and Admin tabs to top",
