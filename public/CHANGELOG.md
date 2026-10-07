@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.93] - 2026-10-06
+- 🏠 **Home Server Priority**: In-game verification routes through Central Command engine first.
+- 🛡️ **Code Expiration Fixed**: Eliminates IP-hopping and ensures exact header match.
+- 🔒 **Token Isolation**: Strictly preserves primary character tokens during alt linking.
+- ⚡ **Instant Responses**: Verified live Century Games responses under two seconds.
+
 ## [3.3.92] - 2026-10-06
 - 🔒 **Resend Lockout**: Mandatory 60s cooldown prevents rapid button clicks.
 - 🛡️ **Mailbox Protected**: Prevents duplicate requests from voiding in-game codes.

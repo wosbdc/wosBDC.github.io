@@ -2268,19 +2268,28 @@ window.callBdcBackend = async (action, payload = {}, options = {}) => {
   return null;
 };
 
-// ⚡ HIGH-SPEED DIRECT CLOUD ARCHITECTURE (0 Google Quota Impact, Direct Low-Latency)
-// Tier 1: Vercel Serverless Edge Proxy (wos-vercel-proxy - <1.5s direct signing)
-// Tier 2: Google Apps Script Web App (API_BASE_URL fallback)
-
+// ⚡ HIGH-SPEED DIRECT ARCHITECTURE (Tier 1: BDC Central Command Home Engine -> Tier 2: Dedicated Edge)
 window.apiSendGameCaptcha = async (gameId) => {
   const cleanId = String(gameId || '').trim();
   if (!cleanId) return { success: false, error: 'Missing game ID' };
 
-  // Dedicated High-Speed Edge Proxy (Direct Century Games live bridge, <700ms)
+  // Tier 1: BDC Central Command Home Server (via Direct REST or Realtime WebSocket /api_queue)
+  try {
+    const bdcRes = await window.callBdcBackend('send_code', { gameId: cleanId, roleId: cleanId }, { timeoutMs: 4000 });
+    if (bdcRes && (bdcRes.success || bdcRes.code !== undefined)) {
+      return { ...bdcRes, _source: 'home_server' };
+    }
+  } catch (e) {
+    console.warn('Central Command send_code error:', e);
+  }
+
+  // Tier 2: Dedicated Vercel Serverless Edge Proxy (<700ms)
   try {
     const vRes = await fetch(`${VERCEL_API_BASE}/send_code?id=${encodeURIComponent(cleanId)}`);
     const vData = await vRes.json();
-    if (vData && (vData.success || vData.code !== undefined)) return vData;
+    if (vData && (vData.success || vData.code !== undefined)) {
+      return { ...vData, _source: 'vercel_edge' };
+    }
   } catch (e) {
     console.warn('Vercel Edge Proxy send_code failed:', e);
   }
@@ -2293,12 +2302,31 @@ window.apiVerifyGameCaptcha = async (gameId, code, uid = '') => {
   const cleanCode = String(code || '').trim();
   if (!cleanId || !cleanCode) return { success: false, error: 'Missing game ID or code' };
 
-  // Dedicated High-Speed Edge Proxy (Direct Century Games live bridge, <700ms)
+  // Tier 1: BDC Central Command Home Server (via Direct REST or Realtime WebSocket /api_queue)
+  try {
+    const isMain = Boolean(currentUser && currentUser.gameId && cleanId === String(currentUser.gameId).trim());
+    const payloadUid = (isMain && uid) ? uid : '';
+    const bdcRes = await window.callBdcBackend('verify_code', { 
+      gameId: cleanId, 
+      roleId: cleanId, 
+      code: cleanCode, 
+      captcha_code: cleanCode,
+      uid: payloadUid 
+    }, { timeoutMs: 5000 });
+
+    if (bdcRes && (bdcRes.success || bdcRes.token || bdcRes.data?.token || bdcRes.code !== undefined)) {
+      return { ...bdcRes, _source: 'home_server' };
+    }
+  } catch (e) {
+    console.warn('Central Command verify_code error:', e);
+  }
+
+  // Tier 2: Dedicated Vercel Serverless Edge Proxy (<700ms)
   try {
     const vRes = await fetch(`${VERCEL_API_BASE}/verify_code?id=${encodeURIComponent(cleanId)}&code=${encodeURIComponent(cleanCode)}`);
     const vData = await vRes.json();
     if (vData && (vData.success || vData.token || vData.data?.token || vData.code !== undefined)) {
-      return vData;
+      return { ...vData, _source: 'vercel_edge' };
     }
   } catch (e) {
     console.warn('Vercel Edge Proxy verify_code failed:', e);

@@ -1,16 +1,17 @@
 {
-  "version": "3.3.92",
+  "version": "3.3.93",
   "releaseDate": "2026-10-06",
-  "title": "What's New in v3.3.92",
+  "title": "What's New in v3.3.93",
   "notes": [
-    "🔒 Resend Lockout Cooldown: Enforced mandatory 60s cooldown to protect active codes.",
-    "🛡️ Mailbox Code Protection: Prevents rapid clicks from voiding in-game codes.",
-    "⏳ Live Countdown Feedback: Clear countdown alerts keep you informed on cooldowns.",
-    "⚡ Instant UI Synchronization: Buttons automatically re-enable once cooldown completes safely."
+    "🏠 Home Server Pipeline Restored: In-game verification routes through Central Command first.",
+    "🛡️ Fixed Code Expiration: Eliminates IP-hopping and fixes User-Agent header matching.",
+    "🔒 Alt Token Isolation: Prevents alt verification from overwriting primary tokens.",
+    "⚡ Instant Verification: Verified live Century Games responses in under 2s."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.92",
+    "version": "3.3.93",
     "latestChanges": [
+      "v3.3.93: Restored home Central Command engine for in-game verification",
       "v3.3.92: Enforced 60s cooldown lockout preventing duplicate verification requests",
       "v3.3.91: Switched in-game verification to dedicated high-speed edge proxy",
       "v3.3.90: Persisted expired token state in database and handled daily code limits",
