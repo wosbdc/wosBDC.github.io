@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [3.3.94] - 2026-10-06
+- ⛔ **Hold Detected**: Catches code 101031017 rolling security holds instantly.
+- ⏳ **Live Countdown**: Displays hours, minutes, and seconds until hold clears.
+- 🔒 **Button Locked**: Prevents resending codes while under security hold.
+- 📬 **Mailbox Access**: Keeps verification input open for previous valid codes.
+- 🔄 **Auto Cleared**: Restores request buttons when rolling hold finishes.
+
 ## [3.3.93] - 2026-10-06
 - 🏠 **Home Server Priority**: In-game verification routes through Central Command engine first.
 - 🛡️ **Code Expiration Fixed**: Eliminates IP-hopping and ensures exact header match.

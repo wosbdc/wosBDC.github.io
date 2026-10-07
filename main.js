@@ -2592,7 +2592,7 @@ window.translateWosApiError = (msg, code = null) => {
     return `${codeBadge}30-Day session token expired. Please enter a fresh in-game code to renew.`;
   }
   if (codeNum === 101031005 || codeNum === 101031017 || cleanMsg.includes("验证码发送次数已达上限") || cleanMsg.includes("次数已达上限") || cleanMsg.includes("上限")) {
-    return `${codeBadge}Daily verification code limit reached for this Game ID today. Please wait a while before requesting another code, or enter Chief Name manually.`;
+    return `${codeBadge}24-Hour Rolling Limit Reached: Century Games has placed a 24-hour security hold on verification code requests for this Game ID. Please wait for the hold to expire, or enter Chief Name manually.`;
   }
   if (codeNum === 101031002 || codeNum === 101031021 || cleanMsg.includes("验证码错误") || cleanMsg.includes("验证码无效") || cleanMsg.includes("验证码已过期") || cleanMsg.includes("Invalid or expired verification code")) {
     return `${codeBadge}Invalid or expired verification code. Please check your in-game mailbox or request a new code.`;
@@ -2668,7 +2668,7 @@ window.startVerificationCooldownTimer = ({ durationSec = 60, feedbackEl, buttons
       feedbackEl.innerHTML = customPrefix ? `${customPrefix} (Resend available in <span style="font-family:monospace; font-size:13.5px; background:rgba(245,158,11,0.2); padding:2px 8px; border-radius:6px; border:1px solid rgba(245,158,11,0.4); color:#fbbf24;">${remaining}s</span>)` : defaultNotice;
     }
 
-    btnOriginals.forEach(({ btn }) => {
+  btnOriginals.forEach(({ btn }) => {
       btn.disabled = true;
       btn.textContent = `⏳ Wait ${remaining}s...`;
     });
@@ -2696,6 +2696,133 @@ window.startVerificationCooldownTimer = ({ durationSec = 60, feedbackEl, buttons
       }
 
       if (typeof onComplete === 'function') onComplete();
+    }
+  }, 1000);
+};
+
+// 🛑 24-Hour Rolling Security Hold Tracker for Century Games Code 101031017 / 101031005
+window.active24HrTimers = window.active24HrTimers || {};
+
+window.recordWos24HrLockout = (gameId) => {
+  const cleanId = String(gameId || '').trim();
+  if (!cleanId) return null;
+  const expiresAt = Date.now() + (24 * 60 * 60 * 1000); // 24 hours from right now
+  try {
+    const raw = localStorage.getItem('wos_24hr_holds') || '{}';
+    const holds = JSON.parse(raw);
+    holds[cleanId] = expiresAt;
+    localStorage.setItem('wos_24hr_holds', JSON.stringify(holds));
+  } catch (e) {
+    console.warn('Failed to save 24hr hold state:', e);
+  }
+  return expiresAt;
+};
+
+window.getWos24HrLockout = (gameId) => {
+  const cleanId = String(gameId || '').trim();
+  if (!cleanId) return 0;
+  try {
+    const raw = localStorage.getItem('wos_24hr_holds') || '{}';
+    const holds = JSON.parse(raw);
+    const exp = Number(holds[cleanId] || 0);
+    if (!exp) return 0;
+    const remainingMs = exp - Date.now();
+    if (remainingMs <= 0) {
+      delete holds[cleanId];
+      localStorage.setItem('wos_24hr_holds', JSON.stringify(holds));
+      return 0;
+    }
+    return Math.ceil(remainingMs / 1000);
+  } catch (e) {
+    return 0;
+  }
+};
+
+window.formatTimeRemaining = (seconds) => {
+  const sec = Math.max(0, parseInt(seconds, 10) || 0);
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  const pad = (n) => String(n).padStart(2, '0');
+  if (h > 0) return `${h}h ${pad(m)}m ${pad(s)}s`;
+  if (m > 0) return `${m}m ${pad(s)}s`;
+  return `${s}s`;
+};
+
+window.start24HourHoldTimer = ({ gameId, feedbackEl, buttons = [], codeSection = null }) => {
+  const cleanId = String(gameId || '').trim();
+  let remainingSec = window.getWos24HrLockout(cleanId);
+  if (!remainingSec) {
+    remainingSec = Math.ceil((window.recordWos24HrLockout(cleanId) - Date.now()) / 1000);
+  }
+
+  // Clear existing timer for this gameId if running
+  if (window.active24HrTimers[cleanId]) {
+    clearInterval(window.active24HrTimers[cleanId]);
+    delete window.active24HrTimers[cleanId];
+  }
+
+  const btnList = (buttons || []).filter(Boolean);
+  btnList.forEach(btn => {
+    if (!btn.getAttribute('data-orig-html')) {
+      btn.setAttribute('data-orig-html', btn.innerHTML);
+    }
+    btn.disabled = true;
+  });
+
+  if (codeSection) {
+    codeSection.style.display = 'block'; // Keep code input accessible if mailbox code already received
+  }
+
+  const renderHoldUi = () => {
+    const timeStr = window.formatTimeRemaining(remainingSec);
+    if (feedbackEl) {
+      feedbackEl.style.display = 'block';
+      feedbackEl.style.color = '#f59e0b';
+      feedbackEl.innerHTML = `
+        <div style="background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.4); border-radius:8px; padding:10px 12px; margin-top:8px;">
+          <div style="font-weight:700; color:#fbbf24; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+            <span>⛔ [Code 101031017] 24-Hour Rolling Security Hold Active</span>
+          </div>
+          <div style="font-size:12.5px; color:#fde68a; line-height:1.45;">
+            Century Games limits verification requests per Game ID. Account <strong>${window.escapeHTML(cleanId)}</strong> is on a rolling hold.
+          </div>
+          <div style="margin-top:6px; font-size:13px; font-weight:700; color:#fff;">
+            Hold expires in: <span style="font-family:monospace; background:rgba(0,0,0,0.4); padding:3px 8px; border-radius:5px; border:1px solid rgba(245,158,11,0.5); color:#fbbf24;">${timeStr}</span>
+          </div>
+          <div style="margin-top:6px; font-size:11.5px; color:#cbd5e1;">
+            💡 <em>If you already have a valid code received earlier in your mailbox, you may enter it below. Otherwise, avoid resending to prevent extending the penalty timer.</em>
+          </div>
+        </div>
+      `;
+    }
+
+    btnList.forEach(btn => {
+      btn.textContent = `⛔ Locked (${timeStr})`;
+    });
+  };
+
+  renderHoldUi();
+
+  window.active24HrTimers[cleanId] = setInterval(() => {
+    remainingSec--;
+    if (remainingSec > 0) {
+      renderHoldUi();
+    } else {
+      clearInterval(window.active24HrTimers[cleanId]);
+      delete window.active24HrTimers[cleanId];
+
+      btnList.forEach(btn => {
+        btn.disabled = false;
+        const orig = btn.getAttribute('data-orig-html');
+        if (orig) btn.innerHTML = orig;
+        btn.removeAttribute('data-orig-html');
+      });
+
+      if (feedbackEl) {
+        feedbackEl.style.color = '#10b981';
+        feedbackEl.innerHTML = '✅ <strong>24-Hour Security Hold Cleared</strong>: You may now request a new in-game verification code!';
+      }
     }
   }, 1000);
 };
@@ -12361,6 +12488,15 @@ if (authVerifyGameIdBtn && authChiefConfirm) {
 
         if (resendBtn) {
             resendBtn.addEventListener('click', async () => {
+                if (window.getWos24HrLockout(val) > 0) {
+                    window.start24HourHoldTimer({
+                        gameId: val,
+                        feedbackEl: feedback,
+                        buttons: [resendBtn],
+                        codeSection: document.getElementById('wosVerificationCard')
+                    });
+                    return;
+                }
                 resendBtn.disabled = true;
                 resendBtn.textContent = 'Sending...';
                 try {
@@ -12379,7 +12515,16 @@ if (authVerifyGameIdBtn && authChiefConfirm) {
                         throw thrownErr;
                     }
                 } catch(e) {
-                    if (window.isWosRateLimitError(e)) {
+                    const errCode = e ? e.code : null;
+                    if (errCode === 101031017 || errCode === 101031005 || String(e?.message || '').includes('101031017') || String(e?.message || '').includes('101031005') || String(e?.message || '').includes('24-Hour Rolling Limit')) {
+                        window.start24HourHoldTimer({
+                            gameId: val,
+                            feedbackEl: feedback,
+                            buttons: [resendBtn],
+                            codeSection: document.getElementById('wosVerificationCard')
+                        });
+                        return;
+                    } else if (window.isWosRateLimitError(e)) {
                         window.startVerificationCooldownTimer({
                             durationSec: 60,
                             feedbackEl: feedback,
@@ -12389,7 +12534,7 @@ if (authVerifyGameIdBtn && authChiefConfirm) {
                     } else if (feedback) {
                         feedback.style.display = 'block';
                         feedback.style.color = 'var(--danger)';
-                        feedback.textContent = window.translateWosApiError(e.message || 'Failed to dispatch code.');
+                        feedback.textContent = window.translateWosApiError(e.message || 'Failed to dispatch code.', errCode);
                     }
                 }
                 resendBtn.disabled = false;
@@ -12491,6 +12636,23 @@ if (authVerifyGameIdBtn && authChiefConfirm) {
         }
     };
 
+    // Check if Game ID is already in active 24-hour hold before requesting
+    if (window.getWos24HrLockout(val) > 0) {
+        authVerifyGameIdBtn.disabled = false;
+        authVerifyGameIdBtn.textContent = 'Verify';
+        renderVerificationBox();
+        const codeSectionEl = document.getElementById('wosVerificationCard');
+        const feedbackEl = document.getElementById('wosCodeFeedback');
+        const resendEl = document.getElementById('wosResendCodeBtn');
+        window.start24HourHoldTimer({
+            gameId: val,
+            feedbackEl: feedbackEl,
+            buttons: [resendEl],
+            codeSection: codeSectionEl
+        });
+        return;
+    }
+
     try {
         const sendData = await window.apiSendGameCaptcha(val);
         
@@ -12501,7 +12663,21 @@ if (authVerifyGameIdBtn && authChiefConfirm) {
             renderVerificationBox();
         } else {
             console.warn("Send captcha notice:", sendData);
-            const translatedMsg = window.translateWosApiError(sendData.message || 'Could not send in-game code. Please check your Game ID.');
+            const errCode = sendData ? sendData.code : null;
+            if (errCode === 101031017 || errCode === 101031005 || String(sendData?.message || '').includes('101031017') || String(sendData?.message || '').includes('101031005') || String(sendData?.message || '').includes('24-Hour Rolling Limit')) {
+                renderVerificationBox();
+                const codeSectionEl = document.getElementById('wosVerificationCard');
+                const feedbackEl = document.getElementById('wosCodeFeedback');
+                const resendEl = document.getElementById('wosResendCodeBtn');
+                window.start24HourHoldTimer({
+                    gameId: val,
+                    feedbackEl: feedbackEl,
+                    buttons: [resendEl],
+                    codeSection: codeSectionEl
+                });
+                return;
+            }
+            const translatedMsg = window.translateWosApiError(sendData.message || 'Could not send in-game code. Please check your Game ID.', errCode);
             authChiefConfirm.innerHTML = `
               <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:12px; margin-top:8px; font-size:12.5px; color:#f87171; text-align:left;">
                 ⚠️ ${window.escapeHTML(translatedMsg)}
@@ -12514,6 +12690,20 @@ if (authVerifyGameIdBtn && authChiefConfirm) {
         console.warn("Century Games API send error:", err);
         authVerifyGameIdBtn.disabled = false;
         authVerifyGameIdBtn.textContent = 'Verify';
+        const errCode = err ? err.code : null;
+        if (errCode === 101031017 || errCode === 101031005 || String(err?.message || '').includes('101031017') || String(err?.message || '').includes('101031005') || String(err?.message || '').includes('24-Hour Rolling Limit')) {
+            renderVerificationBox();
+            const codeSectionEl = document.getElementById('wosVerificationCard');
+            const feedbackEl = document.getElementById('wosCodeFeedback');
+            const resendEl = document.getElementById('wosResendCodeBtn');
+            window.start24HourHoldTimer({
+                gameId: val,
+                feedbackEl: feedbackEl,
+                buttons: [resendEl],
+                codeSection: codeSectionEl
+            });
+            return;
+        }
         authChiefConfirm.innerHTML = `
           <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:12px; margin-top:8px; font-size:12.5px; color:#f87171; text-align:left;">
             ⚠️ Network error connecting to game servers.
@@ -23511,6 +23701,30 @@ window.openAccountHubVerifyModal = (targetGid = null, targetName = '') => {
 
   let activeTargetGid = activeDisplayGid;
 
+  // Auto-detect existing 24-hour security hold on modal open
+  if (activeTargetGid && window.getWos24HrLockout(activeTargetGid) > 0) {
+    window.start24HourHoldTimer({
+      gameId: activeTargetGid,
+      feedbackEl: feedback,
+      buttons: [sendBtn],
+      codeSection: codeSection
+    });
+  }
+
+  if (gidInput) {
+    gidInput.addEventListener('input', () => {
+      const curGid = gidInput.value.trim();
+      if (curGid && window.getWos24HrLockout(curGid) > 0) {
+        window.start24HourHoldTimer({
+          gameId: curGid,
+          feedbackEl: feedback,
+          buttons: [sendBtn],
+          codeSection: codeSection
+        });
+      }
+    });
+  }
+
   if (sendBtn) {
     sendBtn.addEventListener('click', async () => {
       if (gidInput && gidInput.value.trim()) {
@@ -23524,6 +23738,18 @@ window.openAccountHubVerifyModal = (targetGid = null, targetName = '') => {
         }
         return;
       }
+
+      // Check if already on 24hr hold before dispatching
+      if (window.getWos24HrLockout(activeTargetGid) > 0) {
+        window.start24HourHoldTimer({
+          gameId: activeTargetGid,
+          feedbackEl: feedback,
+          buttons: [sendBtn],
+          codeSection: codeSection
+        });
+        return;
+      }
+
       sendBtn.disabled = true;
       sendBtn.textContent = 'Sending Code...';
       try {
@@ -23550,25 +23776,26 @@ window.openAccountHubVerifyModal = (targetGid = null, targetName = '') => {
         sendBtn.textContent = '📩 Send Code to In-Game Mail';
         const rawCode = err && err.code ? Number(err.code) : null;
         const msg = window.translateWosApiError(err.message || 'Error communicating with game servers.', rawCode);
-        if (window.isWosRateLimitError(err)) {
+        if (rawCode === 101031017 || rawCode === 101031005 || String(err.message || '').includes('101031017') || String(err.message || '').includes('101031005') || String(err.message || '').includes('24-Hour Rolling Limit')) {
+          window.start24HourHoldTimer({
+            gameId: activeTargetGid,
+            feedbackEl: feedback,
+            buttons: [sendBtn],
+            codeSection: codeSection
+          });
+          window.showToast("⛔ [Code 101031017] 24-Hour Rolling Security Hold triggered by Century Games.", "warning");
+        } else if (window.isWosRateLimitError(err)) {
           window.startVerificationCooldownTimer({
             durationSec: 60,
             feedbackEl: feedback,
             buttons: [sendBtn, submitCodeBtn]
           });
-        } else if (rawCode === 101031017 || rawCode === 101031005 || String(err.message || '').includes('101031017') || String(err.message || '').includes('101031005')) {
-          if (feedback) {
-            feedback.style.display = 'block';
-            feedback.style.color = '#f59e0b';
-            feedback.innerHTML = `⚠️ <strong>Daily Limit Reached</strong>: Century Games allows only a limited number of verification codes per day for this Game ID (resets at 00:00 UTC). If you have an active code received earlier today, you can enter it below, or enter your Chief Name manually.`;
-          }
-          if (codeSection) codeSection.style.display = 'block';
         } else if (feedback) {
           feedback.style.display = 'block';
           feedback.style.color = 'var(--danger)';
           feedback.textContent = msg;
+          window.showToast(msg, 'error');
         }
-        window.showToast(msg, 'error');
       }
     });
   }
@@ -26392,8 +26619,29 @@ window.openAltVerifyModal = (gid, altName = '') => {
   const codeInput = document.getElementById('altCaptchaInput');
   const feedback = document.getElementById('altVerifyFeedback');
 
+  // Auto-detect existing 24-hour security hold on modal open
+  if (cleanGid && window.getWos24HrLockout(cleanGid) > 0) {
+    window.start24HourHoldTimer({
+      gameId: cleanGid,
+      feedbackEl: feedback,
+      buttons: [sendBtn],
+      codeSection: codeSection
+    });
+  }
+
   if (sendBtn) {
     sendBtn.addEventListener('click', async () => {
+      // Check if already on 24hr hold before dispatching
+      if (window.getWos24HrLockout(cleanGid) > 0) {
+        window.start24HourHoldTimer({
+          gameId: cleanGid,
+          feedbackEl: feedback,
+          buttons: [sendBtn],
+          codeSection: codeSection
+        });
+        return;
+      }
+
       sendBtn.disabled = true;
       sendBtn.textContent = 'Sending Code...';
       try {
@@ -26420,25 +26668,26 @@ window.openAltVerifyModal = (gid, altName = '') => {
         sendBtn.textContent = '📩 Send Code to In-Game Mail';
         const rawCode = err && err.code ? Number(err.code) : null;
         const msg = window.translateWosApiError(err.message || 'Error communicating with game servers.', rawCode);
-        if (window.isWosRateLimitError(err)) {
+        if (rawCode === 101031017 || rawCode === 101031005 || String(err.message || '').includes('101031017') || String(err.message || '').includes('101031005') || String(err.message || '').includes('24-Hour Rolling Limit')) {
+          window.start24HourHoldTimer({
+            gameId: cleanGid,
+            feedbackEl: feedback,
+            buttons: [sendBtn],
+            codeSection: codeSection
+          });
+          window.showToast("⛔ [Code 101031017] 24-Hour Rolling Security Hold triggered by Century Games.", "warning");
+        } else if (window.isWosRateLimitError(err)) {
           window.startVerificationCooldownTimer({
             durationSec: 60,
             feedbackEl: feedback,
             buttons: [sendBtn, submitCodeBtn]
           });
-        } else if (rawCode === 101031017 || rawCode === 101031005 || String(err.message || '').includes('101031017') || String(err.message || '').includes('101031005')) {
-          if (feedback) {
-            feedback.style.display = 'block';
-            feedback.style.color = '#f59e0b';
-            feedback.innerHTML = `⚠️ <strong>Daily Limit Reached</strong>: Century Games allows only a limited number of verification codes per day for this Game ID (resets at 00:00 UTC). If you have an active code received earlier today, you can enter it below, or you can manage this alt manually.`;
-          }
-          if (codeSection) codeSection.style.display = 'block';
         } else if (feedback) {
           feedback.style.display = 'block';
           feedback.style.color = 'var(--danger)';
           feedback.textContent = msg;
+          window.showToast(msg, 'error');
         }
-        window.showToast(msg, 'error');
       }
     });
   }
@@ -28392,6 +28641,14 @@ const views = {
             if (fallbackBtn) fallbackBtn.addEventListener('click', renderManualForm);
             if (resendBtn) {
               resendBtn.addEventListener('click', async () => {
+                if (window.getWos24HrLockout(val) > 0) {
+                  window.start24HourHoldTimer({
+                    gameId: val,
+                    feedbackEl: feedback,
+                    buttons: [resendBtn]
+                  });
+                  return;
+                }
                 resendBtn.disabled = true;
                 resendBtn.textContent = 'Sending...';
                 try {
@@ -28412,7 +28669,15 @@ const views = {
                     throw thrownErr;
                   }
                 } catch(e) {
-                  if (window.isWosRateLimitError(e)) {
+                  const errCode = e ? e.code : null;
+                  if (errCode === 101031017 || errCode === 101031005 || String(e?.message || '').includes('101031017') || String(e?.message || '').includes('101031005') || String(e?.message || '').includes('24-Hour Rolling Limit')) {
+                    window.start24HourHoldTimer({
+                      gameId: val,
+                      feedbackEl: feedback,
+                      buttons: [resendBtn]
+                    });
+                    return;
+                  } else if (window.isWosRateLimitError(e)) {
                     window.startVerificationCooldownTimer({
                       durationSec: 60,
                       feedbackEl: feedback,
@@ -28422,7 +28687,7 @@ const views = {
                   } else if (feedback) {
                     feedback.style.display = 'block';
                     feedback.style.color = 'var(--danger)';
-                    feedback.textContent = window.translateWosApiError(e.message || 'Failed to dispatch code.');
+                    feedback.textContent = window.translateWosApiError(e.message || 'Failed to dispatch code.', errCode);
                   }
                 }
                 resendBtn.disabled = false;
@@ -28541,6 +28806,20 @@ const views = {
               }
               hideError();
               tempGameId = val;
+
+              // Check if already in 24hr security hold
+              if (window.getWos24HrLockout(val) > 0) {
+                renderInGameCodeBox(val);
+                const feedbackEl = document.getElementById('authPageCodeFeedback');
+                const resendEl = document.getElementById('authPageResendCodeBtn');
+                window.start24HourHoldTimer({
+                  gameId: val,
+                  feedbackEl: feedbackEl,
+                  buttons: [resendEl]
+                });
+                return;
+              }
+
               verifyBtn.disabled = true;
               verifyBtn.textContent = "Sending...";
               if (verificationArea) {
@@ -28553,7 +28832,19 @@ const views = {
                 if (sendData && (sendData.success || sendData.code === 0 || sendData.code === 1)) {
                   renderInGameCodeBox(val);
                 } else {
-                  const translatedMsg = window.translateWosApiError(sendData?.message || "Could not send in-game code. Check Game ID.", sendData?.code);
+                  const errCode = sendData ? sendData.code : null;
+                  if (errCode === 101031017 || errCode === 101031005 || String(sendData?.message || '').includes('101031017') || String(sendData?.message || '').includes('101031005') || String(sendData?.message || '').includes('24-Hour Rolling Limit')) {
+                    renderInGameCodeBox(val);
+                    const feedbackEl = document.getElementById('authPageCodeFeedback');
+                    const resendEl = document.getElementById('authPageResendCodeBtn');
+                    window.start24HourHoldTimer({
+                      gameId: val,
+                      feedbackEl: feedbackEl,
+                      buttons: [resendEl]
+                    });
+                    return;
+                  }
+                  const translatedMsg = window.translateWosApiError(sendData?.message || "Could not send in-game code. Check Game ID.", errCode);
                   if (verificationArea) {
                     verificationArea.innerHTML = `
                       <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:12px; margin-top:8px; font-size:12.5px; color:#f87171; text-align:left;">
@@ -28570,6 +28861,18 @@ const views = {
               } catch(err) {
                 verifyBtn.disabled = false;
                 verifyBtn.textContent = "📩 Verify ID";
+                const errCode = err ? err.code : null;
+                if (errCode === 101031017 || errCode === 101031005 || String(err?.message || '').includes('101031017') || String(err?.message || '').includes('101031005') || String(err?.message || '').includes('24-Hour Rolling Limit')) {
+                  renderInGameCodeBox(val);
+                  const feedbackEl = document.getElementById('authPageCodeFeedback');
+                  const resendEl = document.getElementById('authPageResendCodeBtn');
+                  window.start24HourHoldTimer({
+                    gameId: val,
+                    feedbackEl: feedbackEl,
+                    buttons: [resendEl]
+                  });
+                  return;
+                }
                 if (verificationArea) {
                   verificationArea.innerHTML = `
                     <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:12px; margin-top:8px; font-size:12.5px; color:#f87171; text-align:left;">
@@ -37897,6 +38200,19 @@ window.resetBearTrapEvent = async () => {
 
           // Auto-Link Step 1: Send verification code
           if (altAutoSendCodeBtn && altAutoGameIdInput) {
+              // Check existing 24-hr hold on input change
+              altAutoGameIdInput.addEventListener('input', () => {
+                  const curGid = altAutoGameIdInput.value.trim();
+                  if (curGid && window.getWos24HrLockout(curGid) > 0) {
+                      window.start24HourHoldTimer({
+                          gameId: curGid,
+                          feedbackEl: altAutoFeedback,
+                          buttons: [altAutoSendCodeBtn],
+                          codeSection: altAutoCodeBox
+                      });
+                  }
+              });
+
               altAutoSendCodeBtn.addEventListener('click', async () => {
                   const gid = altAutoGameIdInput.value.trim();
                   if (!gid) {
@@ -37909,6 +38225,17 @@ window.resetBearTrapEvent = async () => {
                   }
                   if (currentUser.linkedGameIds && currentUser.linkedGameIds.includes(gid)) {
                       window.showToast("This alt is already linked!", "warning");
+                      return;
+                  }
+
+                  // Check if already in 24-hour security hold
+                  if (window.getWos24HrLockout(gid) > 0) {
+                      window.start24HourHoldTimer({
+                          gameId: gid,
+                          feedbackEl: altAutoFeedback,
+                          buttons: [altAutoSendCodeBtn],
+                          codeSection: altAutoCodeBox
+                      });
                       return;
                   }
 
@@ -37938,7 +38265,16 @@ window.resetBearTrapEvent = async () => {
                   } catch(err) {
                       altAutoSendCodeBtn.disabled = false;
                       altAutoSendCodeBtn.textContent = "Verify ID";
-                      if (window.isWosRateLimitError(err)) {
+                      const errCode = err ? err.code : null;
+                      if (errCode === 101031017 || errCode === 101031005 || String(err?.message || '').includes('101031017') || String(err?.message || '').includes('101031005') || String(err?.message || '').includes('24-Hour Rolling Limit')) {
+                          window.start24HourHoldTimer({
+                              gameId: gid,
+                              feedbackEl: altAutoFeedback,
+                              buttons: [altAutoSendCodeBtn],
+                              codeSection: altAutoCodeBox
+                          });
+                          window.showToast("⛔ [Code 101031017] 24-Hour Rolling Security Hold triggered by Century Games.", "warning");
+                      } else if (window.isWosRateLimitError(err)) {
                           window.startVerificationCooldownTimer({
                               durationSec: 60,
                               feedbackEl: altAutoFeedback,
@@ -37947,7 +38283,7 @@ window.resetBearTrapEvent = async () => {
                       } else if (altAutoFeedback) {
                           altAutoFeedback.style.display = 'block';
                           altAutoFeedback.style.color = 'var(--danger)';
-                          altAutoFeedback.textContent = window.translateWosApiError(err.message || "Failed to contact game servers.");
+                          altAutoFeedback.textContent = window.translateWosApiError(err.message || "Failed to contact game servers.", errCode);
                       }
                   }
               });

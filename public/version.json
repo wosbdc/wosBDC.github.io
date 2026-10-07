@@ -1,16 +1,17 @@
 {
-  "version": "3.3.93",
+  "version": "3.3.94",
   "releaseDate": "2026-10-06",
-  "title": "What's New in v3.3.93",
+  "title": "What's New in v3.3.94",
   "notes": [
-    "🏠 Home Server Pipeline Restored: In-game verification routes through Central Command first.",
-    "🛡️ Fixed Code Expiration: Eliminates IP-hopping and fixes User-Agent header matching.",
-    "🔒 Alt Token Isolation: Prevents alt verification from overwriting primary tokens.",
-    "⚡ Instant Verification: Verified live Century Games responses in under 2s."
+    "⛔ 24-Hour Security Hold: Detects code 101031017 rolling holds and tracks countdown timer.",
+    "⏳ Live Countdown: Displays hours, minutes, and seconds until verification unlocks.",
+    "🔒 Button Locking: Disables resend actions to protect account security and prevent lock extension.",
+    "📬 Mailbox Access: Leaves verification code input accessible for earlier mailbox codes."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.93",
+    "version": "3.3.94",
     "latestChanges": [
+      "v3.3.94: Added 24-hour rolling security hold timer for Century Games code 101031017",
       "v3.3.93: Restored home Central Command engine for in-game verification",
       "v3.3.92: Enforced 60s cooldown lockout preventing duplicate verification requests",
       "v3.3.91: Switched in-game verification to dedicated high-speed edge proxy",
