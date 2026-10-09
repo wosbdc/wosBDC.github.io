@@ -1,16 +1,17 @@
 {
-  "version": "3.3.94",
-  "releaseDate": "2026-10-06",
-  "title": "What's New in v3.3.94",
+  "version": "3.3.95",
+  "releaseDate": "2026-10-09",
+  "title": "What's New in v3.3.95",
   "notes": [
-    "⛔ 24-Hour Security Hold: Detects code 101031017 rolling holds and tracks countdown timer.",
-    "⏳ Live Countdown: Displays hours, minutes, and seconds until verification unlocks.",
-    "🔒 Button Locking: Disables resend actions to protect account security and prevent lock extension.",
-    "📬 Mailbox Access: Leaves verification code input accessible for earlier mailbox codes."
+    "↩️ Donation Reversal: Revert Bear Trap donations in Admin Logs.",
+    "Row-Level Controls: Dedicated revert buttons next to affected chiefs.",
+    "Batch Reversal: Revert entire multi-member donation batches with one click.",
+    "Audit Tracking: Automatically logs reversals and tags original records."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.94",
+    "version": "3.3.95",
     "latestChanges": [
+      "v3.3.95: Added donation reversal and deletion in Admin Logs modal",
       "v3.3.94: Added 24-hour rolling security hold timer for Century Games code 101031017",
       "v3.3.93: Restored home Central Command engine for in-game verification",
       "v3.3.92: Enforced 60s cooldown lockout preventing duplicate verification requests",

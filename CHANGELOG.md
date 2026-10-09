@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [3.3.95] - 2026-10-09
+- ↩️ **Donation Reversal**: Revert donations directly in Admin Logs.
+- 👤 **Row-Level Controls**: Dedicated revert buttons next to affected chiefs.
+- 🗑️ **Batch Reversal**: Revert entire donation batches with one click.
+- 📝 **Audit Trail**: Automatically logs reversals and tags original records.
+- 🏷️ **Reverted Badges**: Displays clean reverted tags across all logs.
+
 ## [3.3.94] - 2026-10-06
 - ⛔ **Hold Detected**: Catches code 101031017 rolling security holds instantly.
 - ⏳ **Live Countdown**: Displays hours, minutes, and seconds until hold clears.

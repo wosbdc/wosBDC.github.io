@@ -30014,7 +30014,362 @@ const views = {
         return [{ name: name || raw, meta, amount, raw }];
       };
 
-      // Rich Unified Interactive Modal to View Action & Batched Member Details
+      // Revert an individual donation entry from Admin Logs modal
+      window.revertDonationEntry = async (chiefName, amount, logId, btnEl) => {
+        const isUserAdmin = (typeof window.isAdminUser === 'function' && window.isAdminUser(currentUser)) || Boolean(currentUser && (currentUser.isAdmin || currentUser.role === 'admin' || window.getAdminLevel?.(currentUser) !== false));
+        if (!isUserAdmin) {
+          if (typeof window.showToast === 'function') window.showToast("Only admins can revert donations", "error");
+          return false;
+        }
+
+        const deductAmt = Number(amount) || 0;
+        if (deductAmt <= 0) {
+          if (typeof window.showToast === 'function') window.showToast("Invalid donation amount to revert", "error");
+          return false;
+        }
+
+        const logData = window._batchedMembersMap && window._batchedMembersMap[logId];
+        const confirmMsg = `⚠️ Confirm Donation Reversal\n\nAre you sure you want to deduct ${deductAmt.toLocaleString()} Bear Trap points from ${chiefName}?\n\nThis will update Firebase, mirror to Google Sheets, and tag this log as [REVERTED].`;
+
+        let confirmed = false;
+        if (typeof window.customConfirm === 'function') {
+          confirmed = await window.customConfirm(confirmMsg);
+        } else {
+          confirmed = window.confirm(confirmMsg);
+        }
+        if (!confirmed) return false;
+
+        const originalBtnText = btnEl ? btnEl.innerHTML : '';
+        if (btnEl) {
+          btnEl.disabled = true;
+          btnEl.innerHTML = '⏳ Reverting...';
+          btnEl.style.opacity = '0.6';
+        }
+
+        try {
+          const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name || "Admin") : "Admin";
+
+          // 1. Deduct points from Firebase beartrap_donations
+          const donKey = chiefName.toLowerCase().replace(/[^a-z0-9]/g, '_');
+          const donRef = ref(db, `beartrap_donations/${donKey}`);
+          const donSnap = await get(donRef);
+          let donData = (donSnap && donSnap.exists()) ? donSnap.val() : { name: chiefName, current: 0, allTime: 0 };
+          const prevCurrent = Number(donData.current) || 0;
+          const prevAllTime = Number(donData.allTime) || 0;
+          donData.current = Math.max(0, prevCurrent - deductAmt);
+          donData.allTime = Math.max(0, prevAllTime - deductAmt);
+          donData.lastUpdated = Date.now();
+          await set(donRef, donData);
+
+          // 2. Mirror negative donation to Google Sheets via addDonation
+          try {
+            const donToken = await getAuthToken();
+            await fetch(`${API_BASE_URL}?api=addDonation&name=${encodeURIComponent(chiefName)}&amount=${-deductAmt}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(donToken)}`).catch(e => console.warn("Google Sheets deduction sync notice:", e));
+          } catch (sheetErr) {
+            console.warn("Failed to sync deduction to Google Sheets:", sheetErr);
+          }
+
+          // 3. Audit Log reversal action
+          if (typeof window.logAdminAction === 'function') {
+            window.logAdminAction("Bear Trap Donation Reverted", `Reverted -${deductAmt.toLocaleString()} pts from ${chiefName} (Previous: ${prevCurrent} ➔ New: ${donData.current})`, chiefName);
+          }
+
+          // 4. Tag original Firebase admin_logs entries if keys exist
+          const keysToTag = [];
+          if (logData) {
+            if (logData._fbKey) keysToTag.push(logData._fbKey);
+            if (logData.rawLog && logData.rawLog._fbKey) keysToTag.push(logData.rawLog._fbKey);
+            if (Array.isArray(logData.group)) {
+              logData.group.forEach(g => { if (g && g._fbKey) keysToTag.push(g._fbKey); });
+            }
+          }
+          const uniqueKeys = [...new Set(keysToTag)];
+          for (const fbKey of uniqueKeys) {
+            try {
+              const lRef = ref(db, `admin_logs/${fbKey}`);
+              const snap = await get(lRef);
+              if (snap && snap.exists()) {
+                const lVal = snap.val() || {};
+                if (!lVal.details?.includes('[REVERTED]')) {
+                  lVal.details = `[REVERTED by ${adminName} on ${new Date().toLocaleDateString('en-US', {month:'short', day:'numeric'})}] ${lVal.details || ''}`;
+                  lVal.isReverted = true;
+                  lVal.revertedBy = adminName;
+                  lVal.revertedAt = Date.now();
+                  await set(lRef, lVal);
+                }
+              }
+            } catch (errTag) {
+              console.warn("Could not tag admin_logs entry:", fbKey, errTag);
+            }
+          }
+
+          // 5. Invalidate caches
+          window.sheetCache = {};
+          if (window.liveData) {
+            window.liveData['LeaderBoards'] = null;
+            window.liveData['activity '] = null;
+          }
+          if (window.livePromises) {
+            window.livePromises['LeaderBoards'] = null;
+            window.livePromises['activity '] = null;
+          }
+          window.leaderboardsCache = null;
+
+          // 6. Update in-memory logData
+          if (logData) {
+            logData._revertedChiefs = logData._revertedChiefs || new Set();
+            logData._revertedChiefs.add(chiefName.toLowerCase());
+            if (logData.memberDetails) {
+              const item = logData.memberDetails.find(m => (m.name || '').toLowerCase() === chiefName.toLowerCase());
+              if (item) item.isReverted = true;
+            }
+            if (!logData.details?.includes('[REVERTED]')) {
+              logData.details = `[REVERTED by ${adminName}] ${logData.details || ''}`;
+            }
+            logData.isReverted = true;
+          }
+
+          // 7. Update UI element in modal
+          if (btnEl) {
+            const parent = btnEl.parentElement;
+            btnEl.remove();
+            if (parent) {
+              const revertedSpan = document.createElement('span');
+              revertedSpan.style.cssText = 'background:rgba(239,68,68,0.12); color:#f87171; font-size:11px; padding:2px 8px; border-radius:6px; font-weight:700; border:1px solid rgba(239,68,68,0.3);';
+              revertedSpan.textContent = '↩️ Reverted';
+              parent.appendChild(revertedSpan);
+            }
+          }
+
+          // Check if all member buttons in the modal are now reverted
+          const allRowBtns = document.querySelectorAll('#logDetailModal .revert-donation-btn');
+          if (allRowBtns.length === 0) {
+            const footerBtn = document.getElementById('revertEntireDonationLogBtn');
+            if (footerBtn) {
+              footerBtn.outerHTML = '<span style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); color:#f87171; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:700; display:inline-flex; align-items:center; gap:5px;">↩️ Reverted</span>';
+            }
+          }
+
+          // 8. Show Toast notification
+          if (typeof window.showToast === 'function') {
+            window.showToast(`✅ Successfully reverted ${deductAmt.toLocaleString()} donation pts for ${chiefName}! (New Current: ${donData.current.toLocaleString()})`, "success");
+          }
+
+          // 9. Re-fetch admin logs in background
+          if (typeof window.fetchAdminLog === 'function') {
+            window.fetchAdminLog();
+          }
+
+          return true;
+        } catch (err) {
+          console.error("Failed to revert donation:", err);
+          if (btnEl) {
+            btnEl.disabled = false;
+            btnEl.innerHTML = originalBtnText;
+            btnEl.style.opacity = '1';
+          }
+          if (typeof window.showToast === 'function') {
+            window.showToast("Failed to revert donation: " + err.message, "error");
+          }
+          return false;
+        }
+      };
+
+      // Revert an entire batched or single donation log entry
+      window.revertEntireDonationLog = async (logId, btnEl) => {
+        const isUserAdmin = (typeof window.isAdminUser === 'function' && window.isAdminUser(currentUser)) || Boolean(currentUser && (currentUser.isAdmin || currentUser.role === 'admin' || window.getAdminLevel?.(currentUser) !== false));
+        if (!isUserAdmin) {
+          if (typeof window.showToast === 'function') window.showToast("Only admins can revert donations", "error");
+          return false;
+        }
+
+        const logData = window._batchedMembersMap && window._batchedMembersMap[logId];
+        if (!logData) return false;
+
+        const listSource = (logData.memberDetails && logData.memberDetails.length > 0)
+          ? logData.memberDetails
+          : (logData.members && logData.members.length > 0)
+            ? logData.members.map(m => ({ name: m, meta: '', raw: m }))
+            : (logData.target && logData.target !== '-')
+              ? [{ name: logData.target, meta: '', raw: logData.target }]
+              : [];
+
+        if (listSource.length === 0) {
+          if (typeof window.showToast === 'function') window.showToast("No target chiefs found to revert", "error");
+          return false;
+        }
+
+        const resolveItemAmt = (item, detailsStr) => {
+          if (item && item.amount && Number(item.amount) > 0) return Number(item.amount);
+          if (item && item.meta) {
+            const m = String(item.meta).match(/\+?(\d[\d,]*)/);
+            if (m) return parseInt(m[1].replace(/[^\d]/g, ''), 10) || 0;
+          }
+          if (item && item.raw) {
+            const m = String(item.raw).match(/\+?(\d[\d,]*)/);
+            if (m) return parseInt(m[1].replace(/[^\d]/g, ''), 10) || 0;
+          }
+          if (detailsStr) {
+            const m = String(detailsStr).match(/(?:Added\s*)?\+?(\d[\d,]*)\s*(?:to\s*BT\d+|donation|pts)/i);
+            if (m) return parseInt(m[1].replace(/[^\d]/g, ''), 10) || 0;
+            const m2 = String(detailsStr).match(/active donation to\s*(\d[\d,]*)/i);
+            if (m2) return parseInt(m2[1].replace(/[^\d]/g, ''), 10) || 0;
+            const m3 = String(detailsStr).match(/\+(\d[\d,]*)/);
+            if (m3) return parseInt(m3[1].replace(/[^\d]/g, ''), 10) || 0;
+          }
+          return 0;
+        };
+
+        const pendingItems = listSource.filter(item => {
+          const name = typeof item === 'object' ? item.name : item;
+          const isReverted = item.isReverted || (logData._revertedChiefs && logData._revertedChiefs.has(name.toLowerCase()));
+          return !isReverted;
+        }).map(item => {
+          const name = typeof item === 'object' ? item.name : item;
+          const amount = resolveItemAmt(item, logData.details);
+          return { name, amount, itemRef: item };
+        });
+
+        if (pendingItems.length === 0) {
+          if (typeof window.showToast === 'function') window.showToast("All donations in this log have already been reverted", "info");
+          return false;
+        }
+
+        const totalPoints = pendingItems.reduce((sum, p) => sum + p.amount, 0);
+        const isMulti = pendingItems.length > 1;
+        const confirmMsg = isMulti
+          ? `⚠️ Confirm Batch Donation Reversal\n\nAre you sure you want to revert all donations in this batch?\n\n• Chiefs Affected: ${pendingItems.length}\n• Total Points to Deduct: ${totalPoints.toLocaleString()} pts\n\nPoints will be deducted from Firebase, mirrored to Google Sheets, and this batch log will be tagged as [REVERTED].`
+          : `⚠️ Confirm Donation Reversal\n\nAre you sure you want to revert ${totalPoints.toLocaleString()} donation points for ${pendingItems[0].name}?\n\nPoints will be deducted from Firebase, mirrored to Google Sheets, and this log will be tagged as [REVERTED].`;
+
+        let confirmed = false;
+        if (typeof window.customConfirm === 'function') {
+          confirmed = await window.customConfirm(confirmMsg);
+        } else {
+          confirmed = window.confirm(confirmMsg);
+        }
+        if (!confirmed) return false;
+
+        const originalBtnText = btnEl ? btnEl.innerHTML : '';
+        if (btnEl) {
+          btnEl.disabled = true;
+          btnEl.innerHTML = '⏳ Reverting...';
+          btnEl.style.opacity = '0.6';
+        }
+
+        try {
+          const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.name || "Admin") : "Admin";
+          const donToken = await getAuthToken();
+
+          for (const p of pendingItems) {
+            if (p.amount > 0) {
+              const donKey = p.name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+              const donRef = ref(db, `beartrap_donations/${donKey}`);
+              const donSnap = await get(donRef);
+              let donData = (donSnap && donSnap.exists()) ? donSnap.val() : { name: p.name, current: 0, allTime: 0 };
+              const prevCurrent = Number(donData.current) || 0;
+              const prevAllTime = Number(donData.allTime) || 0;
+              donData.current = Math.max(0, prevCurrent - p.amount);
+              donData.allTime = Math.max(0, prevAllTime - p.amount);
+              donData.lastUpdated = Date.now();
+              await set(donRef, donData);
+
+              try {
+                await fetch(`${API_BASE_URL}?api=addDonation&name=${encodeURIComponent(p.name)}&amount=${-p.amount}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(donToken)}`).catch(e => console.warn("Google Sheets deduction sync notice:", e));
+              } catch (errSheet) {}
+
+              p.itemRef.isReverted = true;
+              logData._revertedChiefs = logData._revertedChiefs || new Set();
+              logData._revertedChiefs.add(p.name.toLowerCase());
+            }
+          }
+
+          if (typeof window.logAdminAction === 'function') {
+            const summaryText = isMulti
+              ? `Reverted batch of ${pendingItems.length} donations (-${totalPoints.toLocaleString()} total pts)`
+              : `Reverted -${totalPoints.toLocaleString()} pts from ${pendingItems[0].name}`;
+            window.logAdminAction("Bear Trap Donation Reverted", summaryText, pendingItems.map(p => p.name).join(', '));
+          }
+
+          const keysToTag = [];
+          if (logData._fbKey) keysToTag.push(logData._fbKey);
+          if (logData.rawLog && logData.rawLog._fbKey) keysToTag.push(logData.rawLog._fbKey);
+          if (Array.isArray(logData.group)) {
+            logData.group.forEach(g => { if (g && g._fbKey) keysToTag.push(g._fbKey); });
+          }
+          const uniqueKeys = [...new Set(keysToTag)];
+          for (const fbKey of uniqueKeys) {
+            try {
+              const lRef = ref(db, `admin_logs/${fbKey}`);
+              const snap = await get(lRef);
+              if (snap && snap.exists()) {
+                const lVal = snap.val() || {};
+                if (!lVal.details?.includes('[REVERTED]')) {
+                  lVal.details = `[REVERTED by ${adminName} on ${new Date().toLocaleDateString('en-US', {month:'short', day:'numeric'})}] ${lVal.details || ''}`;
+                  lVal.isReverted = true;
+                  lVal.revertedBy = adminName;
+                  lVal.revertedAt = Date.now();
+                  await set(lRef, lVal);
+                }
+              }
+            } catch (errTag) {
+              console.warn("Could not tag admin_logs entry:", fbKey, errTag);
+            }
+          }
+
+          window.sheetCache = {};
+          if (window.liveData) {
+            window.liveData['LeaderBoards'] = null;
+            window.liveData['activity '] = null;
+          }
+          if (window.livePromises) {
+            window.livePromises['LeaderBoards'] = null;
+            window.livePromises['activity '] = null;
+          }
+          window.leaderboardsCache = null;
+
+          logData.isReverted = true;
+          if (!logData.details?.includes('[REVERTED]')) {
+            logData.details = `[REVERTED by ${adminName}] ${logData.details || ''}`;
+          }
+
+          document.querySelectorAll('#logDetailModal .revert-donation-btn').forEach(btn => {
+            const parent = btn.parentElement;
+            btn.remove();
+            if (parent) {
+              const revertedSpan = document.createElement('span');
+              revertedSpan.style.cssText = 'background:rgba(239,68,68,0.12); color:#f87171; font-size:11px; padding:2px 8px; border-radius:6px; font-weight:700; border:1px solid rgba(239,68,68,0.3);';
+              revertedSpan.textContent = '↩️ Reverted';
+              parent.appendChild(revertedSpan);
+            }
+          });
+
+          if (btnEl) {
+            btnEl.outerHTML = '<span style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); color:#f87171; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:700; display:inline-flex; align-items:center; gap:5px;">↩️ Reverted</span>';
+          }
+
+          if (typeof window.showToast === 'function') {
+            window.showToast(`✅ Successfully reverted ${totalPoints.toLocaleString()} donation pts across ${pendingItems.length} chief(s)!`, "success");
+          }
+
+          if (typeof window.fetchAdminLog === 'function') {
+            window.fetchAdminLog();
+          }
+
+          return true;
+        } catch (err) {
+          console.error("Failed to revert entire donation log:", err);
+          if (btnEl) {
+            btnEl.disabled = false;
+            btnEl.innerHTML = originalBtnText;
+            btnEl.style.opacity = '1';
+          }
+          if (typeof window.showToast === 'function') {
+            window.showToast("Failed to revert batch: " + err.message, "error");
+          }
+          return false;
+        }
+      };
+
       // Rich Unified Interactive Modal to View Action & Batched Member Details
       window.showLogDetailModal = async (logId) => {
         const logData = window._batchedMembersMap && window._batchedMembersMap[logId];
@@ -30478,26 +30833,73 @@ const views = {
           ? logData.memberDetails
           : (logData.members && logData.members.length > 0)
             ? logData.members.map(m => ({ name: m, meta: '', raw: m }))
-            : [];
+            : (logData.target && logData.target !== '-')
+              ? [{ name: logData.target, meta: '', raw: logData.target }]
+              : [];
 
         const isBatch = logData.isBatch || listSource.length > 1;
         const memberCount = listSource.length;
+
+        // Check if this log is a donation log
+        const actionStr = (logData.action || '').toLowerCase();
+        const detailsStr = (logData.details || '').toLowerCase();
+        const isDonationLog = actionStr.includes('donation') || 
+                              detailsStr.includes('donation') || 
+                              /(?:to\s*bt\d+|\+\d+\s*to|\+\d+\s*pts)/i.test(detailsStr);
+        const isLogAlreadyReverted = detailsStr.includes('[reverted') || Boolean(logData.isReverted);
+        const isUserAdmin = (typeof window.isAdminUser === 'function' && window.isAdminUser(currentUser)) || Boolean(currentUser && (currentUser.isAdmin || currentUser.role === 'admin' || window.getAdminLevel?.(currentUser) !== false));
+
+        const resolveItemAmt = (item, detailsText) => {
+          if (item && item.amount && Number(item.amount) > 0) return Number(item.amount);
+          if (item && item.meta) {
+            const m = String(item.meta).match(/\+?(\d[\d,]*)/);
+            if (m) return parseInt(m[1].replace(/[^\d]/g, ''), 10) || 0;
+          }
+          if (item && item.raw) {
+            const m = String(item.raw).match(/\+?(\d[\d,]*)/);
+            if (m) return parseInt(m[1].replace(/[^\d]/g, ''), 10) || 0;
+          }
+          if (detailsText) {
+            const m = String(detailsText).match(/(?:Added\s*)?\+?(\d[\d,]*)\s*(?:to\s*BT\d+|donation|pts)/i);
+            if (m) return parseInt(m[1].replace(/[^\d]/g, ''), 10) || 0;
+            const m2 = String(detailsText).match(/active donation to\s*(\d[\d,]*)/i);
+            if (m2) return parseInt(m2[1].replace(/[^\d]/g, ''), 10) || 0;
+            const m3 = String(detailsText).match(/\+(\d[\d,]*)/);
+            if (m3) return parseInt(m3[1].replace(/[^\d]/g, ''), 10) || 0;
+          }
+          return 0;
+        };
 
         const membersListHtml = listSource.length > 0
           ? listSource.map((item, idx) => {
               const name = typeof item === 'object' ? item.name : item;
               const meta = typeof item === 'object' ? item.meta : '';
+              const itemAmt = resolveItemAmt(item, logData.details);
+              const isChiefReverted = isLogAlreadyReverted || item.isReverted || (logData._revertedChiefs && logData._revertedChiefs.has(name.toLowerCase()));
+
+              let revertActionHtml = '';
+              if (isDonationLog && itemAmt > 0) {
+                if (isChiefReverted) {
+                  revertActionHtml = `<span style="background:rgba(239,68,68,0.12); color:#f87171; font-size:11px; padding:2px 8px; border-radius:6px; font-weight:700; border:1px solid rgba(239,68,68,0.3); flex-shrink:0;">↩️ Reverted</span>`;
+                } else if (isUserAdmin) {
+                  revertActionHtml = `<button class="revert-donation-btn" data-chief="${escapeHTML(name)}" data-amount="${itemAmt}" onclick="window.revertDonationEntry('${escapeHTML(name).replace(/'/g, "\\'")}', ${itemAmt}, '${logId}', this)" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#fca5a5; padding:3px 9px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; flex-shrink:0; transition:0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.3)'; this.style.color='#fff';" onmouseout="this.style.background='rgba(239,68,68,0.15)'; this.style.color='#fca5a5';" title="Deduct ${itemAmt.toLocaleString()} pts from ${escapeHTML(name)}">↩️ Revert</button>`;
+                }
+              }
+
               return `
                 <div style="display:flex; align-items:center; justify-content:space-between; padding:9px 12px; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:8px; font-size:13px; gap:8px; transition:background 0.15s ease;">
                   <div style="display:flex; align-items:center; gap:8px; min-width:0; flex:1;">
                     <span style="color:var(--text-muted); font-size:11px; font-family:monospace; width:22px; flex-shrink:0;">${idx + 1}.</span>
-                    <span style="font-weight:600; color:var(--text-main); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHTML(name)}</span>
+                    <span style="font-weight:600; color:var(--text-main); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; ${isChiefReverted ? 'text-decoration:line-through; opacity:0.6;' : ''}">${escapeHTML(name)}</span>
                   </div>
-                  ${meta ? `
-                    <span style="background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); color:#34d399; font-size:11px; padding:2px 8px; border-radius:6px; font-weight:600; white-space:nowrap; flex-shrink:0;">${escapeHTML(meta)}</span>
-                  ` : `
-                    <span style="background:rgba(56,189,248,0.1); color:#38bdf8; font-size:11px; padding:2px 8px; border-radius:6px; font-weight:600; flex-shrink:0;">Chief</span>
-                  `}
+                  <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+                    ${meta ? `
+                      <span style="background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); color:#34d399; font-size:11px; padding:2px 8px; border-radius:6px; font-weight:600; white-space:nowrap; flex-shrink:0; ${isChiefReverted ? 'text-decoration:line-through; opacity:0.6;' : ''}">${escapeHTML(meta)}</span>
+                    ` : `
+                      <span style="background:rgba(56,189,248,0.1); color:#38bdf8; font-size:11px; padding:2px 8px; border-radius:6px; font-weight:600; flex-shrink:0;">Chief</span>
+                    `}
+                    ${revertActionHtml}
+                  </div>
                 </div>
               `;
             }).join('')
@@ -30514,10 +30916,13 @@ const views = {
             <div style="padding:14px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.02);">
               <div style="display:flex; align-items:center; gap:10px; min-width:0;">
                 <div style="background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;">
-                  ${isBatch ? '👥' : '📋'}
+                  ${isDonationLog ? '🐻' : (isBatch ? '👥' : '📋')}
                 </div>
                 <div style="min-width:0;">
-                  <h3 style="margin:0; color:var(--text-main); font-size:15px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHTML(logData.action || 'Admin Action Details')}</h3>
+                  <h3 style="margin:0; color:var(--text-main); font-size:15px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:flex; align-items:center; gap:6px;">
+                    <span>${escapeHTML(logData.action || 'Admin Action Details')}</span>
+                    ${isLogAlreadyReverted ? `<span style="background:rgba(239,68,68,0.2); color:#f87171; border:1px solid rgba(239,68,68,0.4); font-size:10px; padding:1px 6px; border-radius:4px; font-weight:800;">REVERTED</span>` : ''}
+                  </h3>
                   <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
                     <span>Admin: <strong style="color:#a78bfa;">${escapeHTML(logData.admin || 'Admin')}</strong></span>
                     <span style="opacity:0.4;">&bull;</span>
@@ -30531,6 +30936,16 @@ const views = {
             <!-- Scrollable Content -->
             <div style="padding:14px 18px; overflow-y:auto; -webkit-overflow-scrolling:touch; max-height:55vh; display:flex; flex-direction:column; gap:12px; scrollbar-width:thin; scrollbar-color:var(--accent) rgba(0,0,0,0.3);">
               
+              <!-- Reversion Alert Banner if already reverted -->
+              ${isLogAlreadyReverted ? `
+                <div style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.35); border-radius:10px; padding:10px 14px; display:flex; align-items:center; gap:8px;">
+                  <span style="font-size:16px; flex-shrink:0;">↩️</span>
+                  <div style="font-size:12px; color:#fca5a5; font-weight:600; line-height:1.4;">
+                    <strong>DONATION REVERTED:</strong> The points associated with this donation log have been deducted and marked reverted.
+                  </div>
+                </div>
+              ` : ''}
+
               <!-- Action Details Banner / Notes Box -->
               ${logData.details ? `
                 <div style="background:rgba(56,189,248,0.06); border:1px solid rgba(56,189,248,0.2); border-radius:10px; padding:10px 12px; display:flex; align-items:flex-start; gap:8px;">
@@ -30561,13 +30976,24 @@ const views = {
             </div>
 
             <!-- Footer -->
-            <div style="padding:14px 20px; border-top:1px solid var(--border); display:flex; gap:10px; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02);">
-              <div>
+            <div style="padding:14px 20px; border-top:1px solid var(--border); display:flex; gap:10px; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); flex-wrap:wrap;">
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                 ${listSource.length > 0 || (logData.target && logData.target !== '-') ? `
                   <button onclick="window.copyBatchedMembersList('${logId}')" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); padding:8px 14px; border-radius:8px; font-size:12.5px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:0.2s;">
                     📋 Copy Details
                   </button>
                 ` : ''}
+                ${(isDonationLog && isUserAdmin) ? (
+                  isLogAlreadyReverted ? `
+                    <span style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); color:#f87171; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:700; display:inline-flex; align-items:center; gap:5px;">
+                      ↩️ Reverted
+                    </span>
+                  ` : `
+                    <button id="revertEntireDonationLogBtn" onclick="window.revertEntireDonationLog('${logId}', this)" style="background:linear-gradient(135deg, rgba(239,68,68,0.2), rgba(185,28,28,0.25)); border:1px solid #ef4444; color:#fca5a5; padding:8px 14px; border-radius:8px; font-size:12.5px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.4)'; this.style.color='#fff';" onmouseout="this.style.background='linear-gradient(135deg, rgba(239,68,68,0.2), rgba(185,28,28,0.25))'; this.style.color='#fca5a5';">
+                      ${isBatch ? '🗑️ Revert Entire Batch' : '↩️ Revert Donation'}
+                    </button>
+                  `
+                ) : ''}
               </div>
               <button onclick="document.getElementById('logDetailModal')?.remove()" style="background:var(--accent); color:white; border:none; padding:8px 20px; border-radius:8px; font-size:12.5px; font-weight:bold; cursor:pointer;">
                 Done
@@ -30692,7 +31118,7 @@ const views = {
           const logSnap = await get(ref(db, 'admin_logs'));
           if (logSnap.exists()) {
              let fbLogs = logSnap.val() || {};
-             logItems = Object.values(fbLogs);
+             logItems = Object.entries(fbLogs).map(([k, v]) => ({ ...(v || {}), _fbKey: k }));
              fetchedFromFirebase = true;
           }
         } catch(e) {
@@ -30831,7 +31257,8 @@ const views = {
                    memberDetails: singleExtracted,
                    group: group,
                    metadata: firstLog.metadata || null,
-                   rawLog: firstLog
+                   rawLog: firstLog,
+                   _fbKey: firstLog._fbKey
                  };
 
                  const actionBadge = window.getAdminActionBadgeHtml(firstLog.action || 'Batch Action', true, singleExtracted.length);
@@ -30875,7 +31302,8 @@ const views = {
                    members: targetName ? [targetName] : [],
                    memberDetails: singleExtracted.length > 0 ? singleExtracted : (targetName ? [{ name: targetName, meta: '', raw: targetName }] : []),
                    metadata: firstLog.metadata || null,
-                   rawLog: firstLog
+                   rawLog: firstLog,
+                   _fbKey: firstLog._fbKey
                  };
                  
                  tbodyHtml += `
@@ -30995,9 +31423,11 @@ const views = {
                 memberDetails: uniqueMembers,
                 group: group,
                 metadata: firstLog.metadata || null,
-                rawLog: firstLog
+                rawLog: firstLog,
+                _fbKey: firstLog._fbKey
               };
 
+              const isRevertedLog = (firstLog.details || '').includes('[REVERTED]') || Boolean(firstLog.isReverted);
               const actionBadge = window.getAdminActionBadgeHtml(firstLog.action || 'Batch Action', true, group.length);
 
               tbodyHtml += `
@@ -31011,7 +31441,7 @@ const views = {
                   <td style="padding:12px 14px; white-space:nowrap;">
                     <span style="color:#a78bfa; font-weight:700; font-size:13px;">${escapeHTML(adminName)}</span>
                   </td>
-                  <td style="padding:12px 14px; white-space:nowrap;">${actionBadge}</td>
+                  <td style="padding:12px 14px; white-space:nowrap;">${actionBadge} ${isRevertedLog ? `<span style="background:rgba(239,68,68,0.15); color:#f87171; border:1px solid rgba(239,68,68,0.35); padding:1px 6px; border-radius:4px; font-size:10px; font-weight:700; margin-left:4px;">REVERTED</span>` : ''}</td>
                   <td style="padding:12px 14px;">
                       <span title="${escapeHTML(hoverTitle)}" style="background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.35); color:#f59e0b; padding:4px 10px; border-radius:8px; font-size:12px; font-weight:700; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;">
                         👥 Multiple (${group.length})
