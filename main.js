@@ -5759,7 +5759,7 @@ window.updateBearTrapDonationInline = async (gameId, newDonationStr) => {
         donData.allTime = (donData.allTime || 0) + diff;
         donData.lastUpdated = Date.now();
         await set(donRef, donData);
-           if (addAmt > 0) await window.autoSyncBtSignup(finalName);
+        if (addAmt > 0) await window.autoSyncBtSignup(chiefName);
         
         if (window.logAdminAction) {
             window.logAdminAction("Bear Trap Donation", `Updated ${chiefName}'s active donation to ${addAmt}`, chiefName);
@@ -13319,14 +13319,18 @@ window.liveData = {};
             }
             
             todaysLogs.forEach(log => {
+              const amtNum = Number(log.amount) || 0;
+              const isNegative = amtNum < 0;
+              const amtFormatted = isNegative ? `-${Math.abs(amtNum).toLocaleString()}` : `+${amtNum.toLocaleString()}`;
+              const amtColor = isNegative ? 'var(--danger, #ef4444)' : 'var(--success, #10b981)';
               html += `
                 <div style="padding:10px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
                   <div>
-                    <div style="font-weight:bold; color:var(--text-main); font-size:14px;">${log.name}</div>
-                    <div style="font-size:11px; color:var(--text-muted);">${log.timestamp} • ${log.email}</div>
+                    <div style="font-weight:bold; color:var(--text-main); font-size:14px;">${escapeHTML(log.name || '')}</div>
+                    <div style="font-size:11px; color:var(--text-muted);">${escapeHTML(log.timestamp || '')} • ${escapeHTML(log.email || '')}</div>
                   </div>
                   <div style="text-align:right;">
-                    <div style="color:var(--success); font-weight:bold; font-size:14px;">+${log.amount}</div>
+                    <div style="color:${amtColor}; font-weight:bold; font-size:14px;">${amtFormatted}</div>
                     <div style="font-size:11px; color:var(--text-muted);">Total: ${log.newTotal}</div>
                   </div>
                 </div>
@@ -18437,12 +18441,16 @@ window.loadUserPersonalLog = async (chiefName, filterMode = 'today') => {
                         let targetClean = targetStr.replace(/[^a-z0-9]/g, '');
                         if (targetStr.includes(nameLower) || (nameClean && targetClean.includes(nameClean))) {
                             let d = new Date(row[0]);
+                            const amtVal = Number(row[3]) || 0;
+                            const isValNeg = amtVal < 0;
+                            const amtStr = isValNeg ? `-${Math.abs(amtVal).toLocaleString()}` : `+${amtVal.toLocaleString()}`;
+                            const verbStr = isValNeg ? 'Deducted' : 'Added';
                             userLogs.push({
                                 id: 'sheets_' + i,
                                 admin: row[1] || 'Admin',
-                                action: 'Bear Trap Donation Recorded',
+                                action: isValNeg ? 'Bear Trap Donation Deducted' : 'Bear Trap Donation Recorded',
                                 target: row[2],
-                                details: `Added +${row[3] || 0} Bear Trap donation points (New Total: ${row[4] || 0})`,
+                                details: `${verbStr} ${amtStr} Bear Trap donation points (New Total: ${row[4] || 0})`,
                                 timestamp: isNaN(d.getTime()) ? Date.now() : d.getTime(),
                                 dateStr: isNaN(d.getTime()) ? 'Past Record' : d.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}),
                                 timeStr: isNaN(d.getTime()) ? '' : d.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'})
@@ -18553,6 +18561,8 @@ window.loadUserPersonalLog = async (chiefName, filterMode = 'today') => {
                 timeDisp = log.dateStr ? `${log.dateStr} ${log.timeStr || ''}` : 'Past Record';
             }
             
+            const cleanPersonalDetails = String(log.details || '').replace(/\+\s*-/g, '-').replace(/\bAdded\s*-/gi, 'Deducted -');
+            
             html += `
               <div style="display:flex; align-items:center; gap:10px; padding:10px 12px; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:10px; transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='rgba(255,255,255,0.03)'">
                 <div style="width:34px; height:34px; border-radius:50%; background:${badgeBg}; border:1px solid ${badgeBorder}; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0;">${icon}</div>
@@ -18561,7 +18571,7 @@ window.loadUserPersonalLog = async (chiefName, filterMode = 'today') => {
                     <div style="font-weight:bold; color:var(--text-main); font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHTML(log.action || 'Activity Recorded')}</div>
                     <div style="font-size:11px; color:var(--text-muted); flex-shrink:0; white-space:nowrap;">${timeDisp}</div>
                   </div>
-                  <div style="color:var(--text-muted); font-size:12px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHTML(log.details || '')} <span style="font-size:11px; opacity:0.8;">(by <strong style="color:var(--accent);">${escapeHTML(log.admin || 'Admin')}</strong>)</span></div>
+                  <div style="color:var(--text-muted); font-size:12px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHTML(cleanPersonalDetails)} <span style="font-size:11px; opacity:0.8;">(by <strong style="color:var(--accent);">${escapeHTML(log.admin || 'Admin')}</strong>)</span></div>
                 </div>
               </div>
             `;
@@ -29957,23 +29967,31 @@ const views = {
         if (!raw || raw === '-' || raw.toLowerCase() === 'none') return [];
 
         const extractDonationMeta = (detailStr) => {
-          if (!detailStr) return { meta: '', amount: 0 };
+          if (!detailStr) return { meta: '', amount: 0, isNegative: false };
           const s = String(detailStr).trim();
-          // Match patterns: "Added +60 to BT1 (Total: 120)", "Added +60 to BT1", "+60 to BT1", "+60 donation points"
-          const mBt = s.match(/(?:Added\s*)?(\+\d[\d,]*)\s*(?:to\s*BT\d+)?(?:\s*\(Total:\s*([\d,]+)\))?/i);
-          if (mBt) {
-            const added = mBt[1];
-            const num = parseInt(added.replace(/[^\d]/g, ''), 10) || 0;
-            const tot = mBt[2] ? ` • Total: ${mBt[2]}` : '';
-            return { meta: `${added} pts${tot}`, amount: num, addedStr: added };
+          // Match patterns:
+          // "Added +60 to BT1 (Total: 120)"
+          // "Deducted -48 Bear Trap donation points (New Total: 1,328)"
+          // "Added +-48 Bear Trap donation points (New Total: 1,328)"
+          // "+60 to BT1", "-48 to BT1"
+          const mBt = s.match(/(?:(Added|Deducted|Reverted)\s*)?([+-]?\s*[-+]?)(\d[\d,]*)\s*(?:points|Bear Trap donation points|to\s*BT\d+)?(?:\s*\((?:New Total|Total):\s*([\d,]+)\))?/i);
+          if (mBt && mBt[3]) {
+            const verb = (mBt[1] || '').toLowerCase();
+            const signStr = (mBt[2] || '').replace(/\s+/g, '');
+            const rawDigits = mBt[3];
+            const num = parseInt(rawDigits.replace(/[^\d]/g, ''), 10) || 0;
+            const isNeg = verb === 'deducted' || verb === 'reverted' || signStr.includes('-');
+            const added = isNeg ? `-${num.toLocaleString()}` : `+${num.toLocaleString()}`;
+            const tot = mBt[4] ? ` • Total: ${mBt[4]}` : '';
+            return { meta: `${added} pts${tot}`, amount: isNeg ? -num : num, isNegative: isNeg, addedStr: added };
           }
           // Match pattern: "Updated active donation to 60"
           const mUpd = s.match(/active donation to\s*(\d[\d,]*)/i);
           if (mUpd) {
             const num = parseInt(mUpd[1].replace(/[^\d]/g, ''), 10) || 0;
-            return { meta: `Total: ${mUpd[1]} pts`, amount: num, addedStr: `+${mUpd[1]}` };
+            return { meta: `Total: ${mUpd[1]} pts`, amount: num, isNegative: false, addedStr: `+${mUpd[1]}` };
           }
-          return { meta: '', amount: 0 };
+          return { meta: '', amount: 0, isNegative: false };
         };
 
         if (raw.includes(',')) {
@@ -29983,14 +30001,19 @@ const views = {
               let name = part;
               let meta = '';
               let amount = 0;
+              let isNegative = false;
               const match = part.match(/^(.*?)\s*\((.*?)\)$/);
               if (match) {
                 name = match[1].trim();
-                meta = match[2].trim();
-                const numM = meta.match(/\+?(\d[\d,]*)/);
-                if (numM) amount = parseInt(numM[1].replace(/[^\d]/g, ''), 10) || 0;
+                meta = match[2].trim().replace(/\+\s*-/g, '-');
+                isNegative = meta.includes('-') && !meta.includes('+-') || meta.startsWith('-');
+                const numM = meta.match(/[+-]?\s*(\d[\d,]*)/);
+                if (numM) {
+                  const val = parseInt(numM[1].replace(/[^\d]/g, ''), 10) || 0;
+                  amount = isNegative ? -val : val;
+                }
               }
-              return { name: name || part, meta, amount, raw: part };
+              return { name: name || part, meta, amount, isNegative, raw: part };
             }).filter(m => m.name && m.name !== '-');
           }
         }
@@ -29998,20 +30021,26 @@ const views = {
         let name = raw;
         let meta = '';
         let amount = 0;
+        let isNegative = false;
         const match = raw.match(/^(.*?)\s*\((.*?)\)$/);
         if (match) {
           name = match[1].trim();
-          meta = match[2].trim();
-          const numM = meta.match(/\+?(\d[\d,]*)/);
-          if (numM) amount = parseInt(numM[1].replace(/[^\d]/g, ''), 10) || 0;
+          meta = match[2].trim().replace(/\+\s*-/g, '-');
+          isNegative = meta.includes('-') && !meta.includes('+-') || meta.startsWith('-');
+          const numM = meta.match(/[+-]?\s*(\d[\d,]*)/);
+          if (numM) {
+            const val = parseInt(numM[1].replace(/[^\d]/g, ''), 10) || 0;
+            amount = isNegative ? -val : val;
+          }
         } else if (log.details) {
           const don = extractDonationMeta(log.details);
           if (don.meta) {
             meta = don.meta;
             amount = don.amount;
+            isNegative = don.isNegative;
           }
         }
-        return [{ name: name || raw, meta, amount, raw }];
+        return [{ name: name || raw, meta, amount, isNegative, raw }];
       };
 
       // Revert an individual donation entry from Admin Logs modal
@@ -30893,9 +30922,14 @@ const views = {
                     <span style="font-weight:600; color:var(--text-main); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; ${isChiefReverted ? 'text-decoration:line-through; opacity:0.6;' : ''}">${escapeHTML(name)}</span>
                   </div>
                   <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
-                    ${meta ? `
-                      <span style="background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); color:#34d399; font-size:11px; padding:2px 8px; border-radius:6px; font-weight:600; white-space:nowrap; flex-shrink:0; ${isChiefReverted ? 'text-decoration:line-through; opacity:0.6;' : ''}">${escapeHTML(meta)}</span>
-                    ` : `
+                    ${meta ? (() => {
+                      const metaClean = String(meta).replace(/\+\s*-/g, '-');
+                      const isMetaNeg = (typeof item === 'object' && item.isNegative) || metaClean.startsWith('-') || (metaClean.includes('-') && !metaClean.includes('+-'));
+                      const metaBg = isMetaNeg ? 'rgba(239,68,68,0.12)' : 'rgba(16,185,129,0.12)';
+                      const metaBorder = isMetaNeg ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.3)';
+                      const metaColor = isMetaNeg ? '#f87171' : '#34d399';
+                      return `<span style="background:${metaBg}; border:1px solid ${metaBorder}; color:${metaColor}; font-size:11px; padding:2px 8px; border-radius:6px; font-weight:600; white-space:nowrap; flex-shrink:0; ${isChiefReverted ? 'text-decoration:line-through; opacity:0.6;' : ''}">${escapeHTML(metaClean)}</span>`;
+                    })() : `
                       <span style="background:rgba(56,189,248,0.1); color:#38bdf8; font-size:11px; padding:2px 8px; border-radius:6px; font-weight:600; flex-shrink:0;">Chief</span>
                     `}
                     ${revertActionHtml}
@@ -30951,7 +30985,7 @@ const views = {
                 <div style="background:rgba(56,189,248,0.06); border:1px solid rgba(56,189,248,0.2); border-radius:10px; padding:10px 12px; display:flex; align-items:flex-start; gap:8px;">
                   <span style="font-size:14px; flex-shrink:0; line-height:1.4;">${isBatch ? '⚡' : '📝'}</span>
                   <div style="font-size:12.5px; color:var(--text-main); line-height:1.45; word-break:break-word; flex:1;">
-                    ${escapeHTML(logData.details)}
+                    ${escapeHTML(String(logData.details || '').replace(/\+\s*-/g, '-').replace(/\bAdded\s*-/gi, 'Deducted -'))}
                   </div>
                 </div>
               ` : ''}
@@ -31138,9 +31172,15 @@ const views = {
                       logItems.push({
                          id: 'sheets_' + i,
                          admin: row[1] || 'Admin',
-                         action: 'Donation Recorded',
+                         action: (Number(row[3]) || 0) < 0 ? 'Donation Deducted' : 'Donation Recorded',
                          target: row[2] || '',
-                         details: `Added ${row[3] || ''} donation points (New Total: ${row[4] !== undefined ? row[4] : ''})`,
+                         details: (() => {
+                            const amtVal = Number(row[3]) || 0;
+                            const isValNeg = amtVal < 0;
+                            const amtStr = isValNeg ? `-${Math.abs(amtVal).toLocaleString()}` : `+${amtVal.toLocaleString()}`;
+                            const verbStr = isValNeg ? 'Deducted' : 'Added';
+                            return `${verbStr} ${amtStr} donation points (New Total: ${row[4] !== undefined ? row[4] : ''})`;
+                         })(),
                          timestamp: isNaN(d.getTime()) ? Date.now() : d.getTime(),
                          dateStr: isNaN(d.getTime()) ? 'Legacy Record' : d.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}),
                          timeStr: isNaN(d.getTime()) ? '' : d.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'})
@@ -31372,13 +31412,18 @@ const views = {
                  } else {
                     const existing = memberMap.get(key);
                     if (m.amount) {
-                       existing.amount = (existing.amount || 0) + m.amount;
+                       const mVal = m.isNegative ? -Math.abs(m.amount) : m.amount;
+                       existing.amount = (existing.amount || 0) + mVal;
                        // Extract latest total if available
                        const totM = (m.meta || '').match(/Total:\s*([\d,]+)/i);
                        const totStr = totM ? ` • Total: ${totM[1]}` : '';
-                       existing.meta = `+${existing.amount.toLocaleString()} pts${totStr}`;
+                       const isExistNeg = existing.amount < 0;
+                       const existSign = isExistNeg ? `-${Math.abs(existing.amount).toLocaleString()}` : `+${existing.amount.toLocaleString()}`;
+                       existing.meta = `${existSign} pts${totStr}`;
+                       existing.isNegative = isExistNeg;
                     } else if (m.meta && !existing.meta) {
                        existing.meta = m.meta;
+                       existing.isNegative = m.isNegative;
                     }
                  }
               });
@@ -31401,6 +31446,8 @@ const views = {
                 const totalDonationPoints = uniqueMembers.reduce((sum, m) => sum + (m.amount || 0), 0);
                 if (totalDonationPoints > 0) {
                   batchDetailsText = `${group.length} consecutive donations batched (+${totalDonationPoints.toLocaleString()} pts across ${uniqueMembers.length} chiefs)`;
+                } else if (totalDonationPoints < 0) {
+                  batchDetailsText = `${group.length} consecutive donations batched (${totalDonationPoints.toLocaleString()} pts across ${uniqueMembers.length} chiefs)`;
                 } else {
                   batchDetailsText = `${group.length} consecutive donations batched (${uniqueMembers.length} chiefs affected)`;
                 }
@@ -36752,8 +36799,10 @@ window.resetBearTrapEvent = async () => {
            const donToken = await getAuthToken();
            fetch(`${API_BASE_URL}?api=addDonation&name=${encodeURIComponent(finalName)}&amount=${encodeURIComponent(entry.amount)}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(donToken)}`).catch(() => null);
            
-           processedSummaries.push(`${finalName} (+${addAmt.toLocaleString()} ➔ New Total: ${donData.current.toLocaleString()})`);
-           resultsHTML += `✅ <b>${finalName}</b>: +${addAmt.toLocaleString()} (New Current Total: ${donData.current.toLocaleString()})<br>`;
+           const isAddNeg = addAmt < 0;
+           const signStr = isAddNeg ? `-${Math.abs(addAmt).toLocaleString()}` : `+${addAmt.toLocaleString()}`;
+           processedSummaries.push(`${finalName} (${signStr} ➔ New Total: ${donData.current.toLocaleString()})`);
+           resultsHTML += `✅ <b>${finalName}</b>: ${signStr} (New Current Total: ${donData.current.toLocaleString()})<br>`;
          } catch(e) {
            resultsHTML += `❌ <b>${entry.name}</b>: Error updating donation: ${e.message}<br>`;
          }
@@ -36764,8 +36813,13 @@ window.resetBearTrapEvent = async () => {
       resultsHTML += "</div>";
       statusDiv.innerHTML = resultsHTML;
 
-      const playerSummary = processedSummaries.length > 0 ? processedSummaries.join(', ') : entries.map(e => `${e.name} (+${Number(e.amount).toLocaleString()})`).join(', ');
-      window.logAdminAction("Bear Trap Donations Added", `Added multi-donation batch for ${entries.length} player(s)`, playerSummary);
+      const playerSummary = processedSummaries.length > 0 ? processedSummaries.join(', ') : entries.map(e => {
+        const a = Number(e.amount) || 0;
+        return `${e.name} (${a < 0 ? '-' : '+'}${Math.abs(a).toLocaleString()})`;
+      }).join(', ');
+      const hasNegative = entries.some(e => (Number(e.amount) || 0) < 0);
+      const actionTitle = hasNegative ? "Bear Trap Donations Updated" : "Bear Trap Donations Added";
+      window.logAdminAction(actionTitle, `${hasNegative ? 'Updated' : 'Added'} multi-donation batch for ${entries.length} player(s)`, playerSummary);
       
       // Reset form
       const cont = document.getElementById('beartrapEntries');
@@ -40432,10 +40486,16 @@ window.resetBearTrapEvent = async () => {
           todaysLogs.forEach(log => {
              let d = new Date(log.timestamp);
              let timeStr = d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+             const amtNum = Number(log.amount) || 0;
+             const isNeg = amtNum < 0;
+             const verb = isNeg ? 'deducted' : 'donated';
+             const amtStr = isNeg ? `-${Math.abs(amtNum).toLocaleString()}` : `+${amtNum.toLocaleString()}`;
+             const colorStr = isNeg ? 'var(--danger, #ef4444)' : 'var(--success, #10b981)';
+             const plural = Math.abs(amtNum) !== 1 ? 's' : '';
              logHtml += `<li style="padding:8px 0; border-bottom:1px dashed var(--border); font-size:13px; color:var(--text-muted);">
                 <span style="color:var(--accent); font-weight:bold;">${timeStr}</span>: 
-                <span style="color:var(--text-main); font-weight:bold;">${log.name}</span> donated 
-                <span style="color:var(--success); font-weight:bold;">+${log.amount}</span> trap${log.amount !== 1 ? 's' : ''}
+                <span style="color:var(--text-main); font-weight:bold;">${escapeHTML(log.name || '')}</span> ${verb} 
+                <span style="color:${colorStr}; font-weight:bold;">${amtStr}</span> trap${plural}
              </li>`;
           });
           
@@ -44365,8 +44425,12 @@ window.promptBearTrap = async (name) => {
     donData.allTime = (donData.allTime || 0) + addAmt;
     donData.lastUpdated = Date.now();
     await set(donRef, donData);
-           if (addAmt > 0) await window.autoSyncBtSignup(finalName);
-    window.logAdminAction("Single Bear Trap Donation Added", `Added +${addAmt.toLocaleString()} Bear Trap donation points to ${name}`, name);
+    if (addAmt > 0) await window.autoSyncBtSignup(name);
+    const isAddNeg = addAmt < 0;
+    const signFormatted = isAddNeg ? `-${Math.abs(addAmt).toLocaleString()}` : `+${addAmt.toLocaleString()}`;
+    const actionTitle = isAddNeg ? "Single Bear Trap Donation Deducted" : "Single Bear Trap Donation Added";
+    const actionVerb = isAddNeg ? "Deducted" : "Added";
+    window.logAdminAction(actionTitle, `${actionVerb} ${signFormatted} Bear Trap donation points to ${name}`, name);
 
     const donToken2 = await getAuthToken();
     const res = await fetch(`${API_BASE_URL}?api=addDonation&name=${encodeURIComponent(name)}&amount=${encodeURIComponent(amt)}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(donToken2)}`).then(r => r.json()).catch(() => ({ success: true, newTotal: donData.current }));

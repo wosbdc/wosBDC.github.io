@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [3.3.96] - 2026-10-10
+- ➖ **Negative Donations**: Cleanly formats deduction logs with proper minus signs.
+- 🎨 **Danger Badges**: Renders negative donation amounts in styled red badges.
+- 📝 **Audit Trail**: Accurately labels deducted points across all activity feeds.
+- 👥 **Batched Summaries**: Fixes multi-member deduction totals and member breakdowns.
+- ✨ **Clean Formatting**: Eliminates ugly +- signs across all admin modals.
+
 ## [3.3.95] - 2026-10-09
 - ↩️ **Donation Reversal**: Revert donations directly in Admin Logs.
 - 👤 **Row-Level Controls**: Dedicated revert buttons next to affected chiefs.

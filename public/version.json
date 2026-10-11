@@ -1,16 +1,17 @@
 {
-  "version": "3.3.95",
-  "releaseDate": "2026-10-09",
-  "title": "What's New in v3.3.95",
+  "version": "3.3.96",
+  "releaseDate": "2026-10-10",
+  "title": "What's New in v3.3.96",
   "notes": [
-    "↩️ Donation Reversal: Revert Bear Trap donations in Admin Logs.",
-    "Row-Level Controls: Dedicated revert buttons next to affected chiefs.",
-    "Batch Reversal: Revert entire multi-member donation batches with one click.",
-    "Audit Tracking: Automatically logs reversals and tags original records."
+    "➖ Deduction Formatting: Cleanly formats donation deduction logs.",
+    "🎨 Styled Badges: Displays negative donation amounts in red.",
+    "📝 Audit Trail: Accurately labels deducted points across activity logs.",
+    "👥 Batch Summaries: Correctly totals multi-member donation deduction amounts."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.95",
+    "version": "3.3.96",
     "latestChanges": [
+      "v3.3.96: Fixed negative donation deduction formatting and badge styling",
       "v3.3.95: Added donation reversal and deletion in Admin Logs modal",
       "v3.3.94: Added 24-hour rolling security hold timer for Century Games code 101031017",
       "v3.3.93: Restored home Central Command engine for in-game verification",
