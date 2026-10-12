@@ -1,16 +1,16 @@
 {
-  "version": "3.3.96",
-  "releaseDate": "2026-10-10",
-  "title": "What's New in v3.3.96",
+  "version": "3.3.97",
+  "releaseDate": "2026-10-11",
+  "title": "What's New in v3.3.97",
   "notes": [
-    "➖ Deduction Formatting: Cleanly formats donation deduction logs.",
-    "🎨 Styled Badges: Displays negative donation amounts in red.",
-    "📝 Audit Trail: Accurately labels deducted points across activity logs.",
-    "👥 Batch Summaries: Correctly totals multi-member donation deduction amounts."
+    "🤖 Bot Amounts: Displays exact donation points for bot donations.",
+    "📝 Personal Activity: Fixed details display in Personal Battle Log.",
+    "👥 Batch Integrity: Preserves member donation points in multi-player logs."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.96",
+    "version": "3.3.97",
     "latestChanges": [
+      "v3.3.97: Fixed bot donation amount display in Personal Activity Log",
       "v3.3.96: Fixed negative donation deduction formatting and badge styling",
       "v3.3.95: Added donation reversal and deletion in Admin Logs modal",
       "v3.3.94: Added 24-hour rolling security hold timer for Century Games code 101031017",

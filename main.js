@@ -10598,16 +10598,7 @@ window._executeLogBearTrapWinner = async (name, trap) => {
         const btModal = document.getElementById('btCrownModal');
         if (btModal) btModal.style.display = 'none';
 
-        // 5. Decoupled Asynchronous Sync to Google Sheets (non-blocking background)
-        (async () => {
-            try {
-                const token = (typeof getAuthToken === 'function' ? await getAuthToken() : null) || "n5fTnxcK5J5ddNsT77AhZIoQGTogW3ROpk4k03Sv";
-                const url = `${API_BASE_URL}?api=addBearTrapEventWin&name=${encodeURIComponent(name)}&trap=${encodeURIComponent(trap)}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(token)}&secret=n5fTnxcK5J5ddNsT77AhZIoQGTogW3ROpk4k03Sv`;
-                fetch(url, { mode: 'no-cors' }).catch(() => null);
-            } catch (sheetErr) {
-                console.warn("Background sheet sync error:", sheetErr);
-            }
-        })();
+
     } catch (e) {
         console.error("Error crowning Bear Trap winner:", e);
         window.showToast(`Error: ${e.message}`, "error");
@@ -18389,12 +18380,22 @@ window.loadUserPersonalLog = async (chiefName, filterMode = 'today') => {
                     
                     if (matchesTarget || matchesDetails || isGlobalBearTrapLog) {
                         let finalLog = { ...log };
-                        // If log target is a multi-player batch string containing this player, extract player's personal detail
-                        if (log.target && log.target.toLowerCase().includes(nameLower)) {
+                        // If log target is a genuine multi-player comma-separated batch string containing this player, extract player's personal detail
+                        if (log.target && log.target.includes(',') && log.target.toLowerCase().includes(nameLower)) {
                             const parts = log.target.split(/,\s*/);
                             const playerPart = parts.find(p => p.toLowerCase().includes(nameLower));
                             if (playerPart) {
-                                finalLog.details = `Batch Donation: ${playerPart}`;
+                                // If playerPart contains points info like "BrianDCox (+16)" or "BrianDCox (-48)"
+                                const matchMeta = playerPart.match(/^(.*?)\s*\((.*?)\)$/);
+                                if (matchMeta && matchMeta[2]) {
+                                    const metaClean = matchMeta[2].replace(/\+\s*-/g, '-');
+                                    finalLog.details = `Batch Donation: ${metaClean}`;
+                                } else if (log.details && (log.details.includes('+') || log.details.includes('-') || /\d+/.test(log.details))) {
+                                    // Retain the existing donation amount details if present
+                                    finalLog.details = log.details;
+                                } else {
+                                    finalLog.details = `Batch Donation: ${playerPart}`;
+                                }
                             }
                         }
                         userLogs.push(finalLog);
@@ -30090,13 +30091,6 @@ const views = {
           donData.lastUpdated = Date.now();
           await set(donRef, donData);
 
-          // 2. Mirror negative donation to Google Sheets via addDonation
-          try {
-            const donToken = await getAuthToken();
-            await fetch(`${API_BASE_URL}?api=addDonation&name=${encodeURIComponent(chiefName)}&amount=${-deductAmt}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(donToken)}`).catch(e => console.warn("Google Sheets deduction sync notice:", e));
-          } catch (sheetErr) {
-            console.warn("Failed to sync deduction to Google Sheets:", sheetErr);
-          }
 
           // 3. Audit Log reversal action
           if (typeof window.logAdminAction === 'function') {
@@ -30302,9 +30296,6 @@ const views = {
               donData.lastUpdated = Date.now();
               await set(donRef, donData);
 
-              try {
-                await fetch(`${API_BASE_URL}?api=addDonation&name=${encodeURIComponent(p.name)}&amount=${-p.amount}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(donToken)}`).catch(e => console.warn("Google Sheets deduction sync notice:", e));
-              } catch (errSheet) {}
 
               p.itemRef.isReverted = true;
               logData._revertedChiefs = logData._revertedChiefs || new Set();
@@ -36795,9 +36786,6 @@ window.resetBearTrapEvent = async () => {
            donData.lastUpdated = Date.now();
            await set(donRef, donData);
            if (addAmt > 0) await window.autoSyncBtSignup(finalName);
-
-           const donToken = await getAuthToken();
-           fetch(`${API_BASE_URL}?api=addDonation&name=${encodeURIComponent(finalName)}&amount=${encodeURIComponent(entry.amount)}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(donToken)}`).catch(() => null);
            
            const isAddNeg = addAmt < 0;
            const signStr = isAddNeg ? `-${Math.abs(addAmt).toLocaleString()}` : `+${addAmt.toLocaleString()}`;
@@ -44432,20 +44420,14 @@ window.promptBearTrap = async (name) => {
     const actionVerb = isAddNeg ? "Deducted" : "Added";
     window.logAdminAction(actionTitle, `${actionVerb} ${signFormatted} Bear Trap donation points to ${name}`, name);
 
-    const donToken2 = await getAuthToken();
-    const res = await fetch(`${API_BASE_URL}?api=addDonation&name=${encodeURIComponent(name)}&amount=${encodeURIComponent(amt)}&admin=${encodeURIComponent(adminName)}&token=${encodeURIComponent(donToken2)}`).then(r => r.json()).catch(() => ({ success: true, newTotal: donData.current }));
-    if (res && res.success) {
-      window.showToast("Successfully added! New Total: " + res.newTotal, "success");
-      window.sheetCache = {}; 
-      window.liveData['LeaderBoards'] = null; window.livePromises['LeaderBoards'] = null;
-      window.liveData['activity '] = null; window.livePromises['activity '] = null;
-      if (document.getElementById('uniSearchInput')) {
-        window.searchPlayerFull(name);
-      } else {
-        views.roster();
-      }
+    window.showToast("Successfully added! New Total: " + donData.current, "success");
+    window.sheetCache = {}; 
+    window.liveData['LeaderBoards'] = null; window.livePromises['LeaderBoards'] = null;
+    window.liveData['activity '] = null; window.livePromises['activity '] = null;
+    if (document.getElementById('uniSearchInput')) {
+      window.searchPlayerFull(name);
     } else {
-      window.showToast("Error: " + res.message, "error");
+      views.roster();
     }
   } catch (err) {
     window.showToast("Network Error: " + err.message, "error");

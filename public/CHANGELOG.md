@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.97] - 2026-10-11
+- 🤖 **Bot Amounts**: Displays exact donation points for bot donations.
+- 📝 **Activity Details**: Shows complete donation points in Personal Battle Log.
+- 👥 **Batch Integrity**: Preserves individual member points in multi-player logs.
+- ✨ **Clean Logs**: Eliminates ambiguous batch labels on single donations.
+
 ## [3.3.96] - 2026-10-10
 - ➖ **Negative Donations**: Cleanly formats deduction logs with proper minus signs.
 - 🎨 **Danger Badges**: Renders negative donation amounts in styled red badges.
