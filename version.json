@@ -1,16 +1,16 @@
 {
-  "version": "3.3.99",
+  "version": "3.3.100",
   "releaseDate": "2026-10-14",
-  "title": "What's New in v3.3.99",
+  "title": "What's New in v3.3.100",
   "notes": [
-    "📢 Onboarding Hub: Added member invite launcher in Admin Menu.",
-    "📋 Multi-Format Templates: Discord, In-Game Mail, and Chat Pin formats.",
-    "⚡ Instant Copy: One-click clipboard copy with live confirmation.",
-    "🔗 Dynamic Links: Real-time portal URL updating across templates."
+    "📢 Action Relocation: Moved Share Member Invite next to Copy Unsynced.",
+    "👥 Unified Controls: Streamlined player database action toolbar in Admin Menu.",
+    "✨ Clean Interface: Preserved top toolbar space for core administrative tasks."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.99",
+    "version": "3.3.100",
     "latestChanges": [
+      "v3.3.100: Relocated Share Member Invite button next to Copy Unsynced in database box",
       "v3.3.99: Added Member Invite and Announcement Hub to Admin Menu",
       "v3.3.98: Fixed Championship archival error by sanitizing player stats keys",
       "v3.3.97: Fixed bot donation amount display in Personal Activity Log",

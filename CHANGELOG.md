@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.100] - 2026-10-14
+- 📢 **Button Relocation**: Moved Share Member Invite next to Copy Unsynced.
+- 👥 **Roster Controls**: Grouped all member outreach buttons in database toolbar.
+- ✨ **Clean Toolbar**: Reserved top admin toolbar for core account tools.
+
 ## [3.3.99] - 2026-10-14
 - 📢 **Invite Hub**: Added member invite tool to Admin Menu.
 - 🎮 **Discord Format**: Pre-formatted announcement with key portal features.

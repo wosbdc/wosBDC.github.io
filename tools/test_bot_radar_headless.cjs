@@ -997,7 +997,11 @@ server.listen(PORT, async () => {
       window.getAdminLevel = () => 'R2';
 
       await window.openAllianceAlertsModal();
-      await new Promise(r => setTimeout(r, 200));
+      for (let i = 0; i < 20; i++) {
+        if (document.getElementById('notificationsModalOverlay')) break;
+        await new Promise(r => setTimeout(r, 50));
+      }
+      await new Promise(r => setTimeout(r, 250));
 
       const modal = document.getElementById('notificationsModalOverlay');
       const hasModal = modal !== null;
@@ -1026,7 +1030,11 @@ server.listen(PORT, async () => {
       window.getAdminLevel = () => 'R5';
 
       await window.openAllianceAlertsModal();
-      await new Promise(r => setTimeout(r, 200));
+      for (let i = 0; i < 20; i++) {
+        if (document.getElementById('notificationsModalOverlay')) break;
+        await new Promise(r => setTimeout(r, 50));
+      }
+      await new Promise(r => setTimeout(r, 250));
 
       const modal = document.getElementById('notificationsModalOverlay');
       const hasModal = modal !== null;

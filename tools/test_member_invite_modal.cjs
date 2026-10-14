@@ -84,7 +84,8 @@ function runStaticVerification() {
   // Verify buttons in Admin sections
   assert(code.includes('onclick="window.openMemberInviteModal()"'), 'Admin markup must include openMemberInviteModal handler');
   assert(code.includes('Member Invite & Announcement Hub'), 'Daily Tools must have Member Invite & Announcement Hub button');
-  assert(code.includes('Share Member Invite'), 'Users tab toolbar must have Share Member Invite button');
+  assert(code.includes('Share Member Invite'), 'Database box must have Share Member Invite button');
+  assert(code.includes('window.copyUnsyncedTokensList()') && code.includes('Share Member Invite'), 'Database box must place Share Member Invite adjacent to Copy Unsynced');
   console.log('  ✅ Static signatures, buttons, and template contents confirmed');
 }
 
@@ -257,6 +258,34 @@ async function runHeadlessVerification() {
     });
     assert(modalClosed, 'Modal must be removed from DOM after close');
     console.log('  ✅ Modal closed and removed from DOM cleanly');
+
+    // Test 9: Verify Share Member Invite button in Database box inside Admin Users view
+    const btnInDatabaseBox = await page.evaluate(async () => {
+      window.isAdminUser = () => true;
+      window.isGoogleAuthVerified = async () => true;
+      window.getAdminLevel = () => 'R5';
+      window.fetchRoster = async () => [];
+
+      if (window.views && window.views.admin) {
+        await window.views.admin('tab-users');
+      }
+      for (let i = 0; i < 30; i++) {
+        if (document.querySelector('button[onclick*="copyUnsyncedTokensList"]')) break;
+        await new Promise(r => setTimeout(r, 50));
+      }
+      const unsyncBtn = document.querySelector('button[onclick*="copyUnsyncedTokensList"]');
+      const shareBtn = document.querySelector('button[onclick*="openMemberInviteModal"]');
+      return {
+        hasUnsyncBtn: !!unsyncBtn,
+        hasShareBtn: !!shareBtn,
+        nextBtnTag: unsyncBtn ? unsyncBtn.nextElementSibling?.tagName : null,
+        nextBtnText: unsyncBtn ? unsyncBtn.nextElementSibling?.textContent : null,
+        nextBtnOnclick: unsyncBtn ? unsyncBtn.nextElementSibling?.getAttribute('onclick') : null
+      };
+    });
+    assert(btnInDatabaseBox.hasShareBtn, 'Share Member Invite button must exist');
+    assert(btnInDatabaseBox.nextBtnOnclick && btnInDatabaseBox.nextBtnOnclick.includes('openMemberInviteModal'), 'Share Member Invite button must exist in Database Box directly next to Copy Unsynced button');
+    console.log('  ✅ Share Member Invite button verified in Alliance Members & Player Database box next to Copy Unsynced');
 
     // Filter out expected benign non-fatal messages if any
     const fatalErrors = consoleErrors.filter(e => 

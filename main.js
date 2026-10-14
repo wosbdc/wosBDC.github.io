@@ -32616,10 +32616,7 @@ const views = {
 
           <!-- Tab 2: Users -->
           <div id="tab-users" class="admin-tab-content" style="display:none;">
-            <div style="display:flex; justify-content:flex-end; align-items:center; margin-bottom:15px; gap:10px; flex-wrap:wrap;">
-                <button onclick="window.openMemberInviteModal()" style="background:linear-gradient(135deg, #10b981, #059669); border:none; color:#fff; padding:8px 14px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13px; display:flex; align-items:center; gap:6px; box-shadow:0 2px 8px rgba(16,185,129,0.25); transition:0.2s;">
-                    <span>📢</span> Share Member Invite
-                </button>
+            <div style="display:flex; justify-content:flex-end; align-items:center; margin-bottom:15px; gap:10px;">
                 <button onclick="window.openAdminAssignAltModal()" style="background:linear-gradient(135deg, #0284c7, #0369a1); border:none; color:#fff; padding:8px 14px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13px; display:flex; align-items:center; gap:6px; box-shadow:0 2px 8px rgba(2,132,199,0.25); transition:0.2s;">
                     <span>🔗</span> Assign Alt Account
                 </button>
@@ -32986,6 +32983,11 @@ const views = {
                     <!-- Copy Unsynced Tokens Button -->
                     <button onclick="window.copyUnsyncedTokensList()" style="background:rgba(245,158,11,0.12); color:#f59e0b; border:1px solid rgba(245,158,11,0.35); padding:9px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s; white-space:nowrap; flex-shrink:0; display:inline-flex; align-items:center; gap:5px;" onmouseover="this.style.background='rgba(245,158,11,0.22)'" onmouseout="this.style.background='rgba(245,158,11,0.12)'" title="Copy all alliance characters with expired or unverified in-game sync tokens">
                       📋 Copy Unsynced (${tokenExpiredCount + tokenUnverifiedCount})
+                    </button>
+
+                    <!-- Share Member Invite Button -->
+                    <button onclick="window.openMemberInviteModal()" style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.35); padding:9px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s; white-space:nowrap; flex-shrink:0; display:inline-flex; align-items:center; gap:5px;" onmouseover="this.style.background='rgba(16,185,129,0.22)'" onmouseout="this.style.background='rgba(16,185,129,0.12)'" title="Open Alliance Member Onboarding & Invite Hub with Discord, Mail, and Chat templates">
+                      📢 Share Member Invite
                     </button>
                   </div>
                 </div>
