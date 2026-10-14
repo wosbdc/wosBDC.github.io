@@ -1,15 +1,17 @@
 {
-  "version": "3.3.98",
+  "version": "3.3.99",
   "releaseDate": "2026-10-14",
-  "title": "What's New in v3.3.98",
+  "title": "What's New in v3.3.99",
   "notes": [
-    "🏆 Championship Archival: Fixed crash caused by missing Game IDs.",
-    "🛡️ Key Sanitation: Blocks invalid and empty keys in stats.",
-    "🔒 Event Protection: Fortified Bear Trap, Polar Terrors, and Mercenary."
+    "📢 Onboarding Hub: Added member invite launcher in Admin Menu.",
+    "📋 Multi-Format Templates: Discord, In-Game Mail, and Chat Pin formats.",
+    "⚡ Instant Copy: One-click clipboard copy with live confirmation.",
+    "🔗 Dynamic Links: Real-time portal URL updating across templates."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.98",
+    "version": "3.3.99",
     "latestChanges": [
+      "v3.3.99: Added Member Invite and Announcement Hub to Admin Menu",
       "v3.3.98: Fixed Championship archival error by sanitizing player stats keys",
       "v3.3.97: Fixed bot donation amount display in Personal Activity Log",
       "v3.3.96: Fixed negative donation deduction formatting and badge styling",

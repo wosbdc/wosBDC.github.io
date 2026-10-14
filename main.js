@@ -9732,6 +9732,218 @@ window.openAdminAssignAltModal = async (prefillChiefOrGid = null, prefillAltGid 
   });
 };
 
+// 📢 Alliance Member Onboarding & Invite Hub
+window.openMemberInviteModal = (initialTab = 'discord') => {
+  const activeUser = currentUser || window.currentUser;
+  if (!activeUser || !(typeof window.isAdminUser === 'function' && window.isAdminUser(activeUser))) {
+    if (window.showToast) window.showToast("Access Denied: Staff permissions required.", "error");
+    return;
+  }
+
+  const oldModal = document.getElementById('memberInviteModalOverlay');
+  if (oldModal && oldModal.parentNode) oldModal.parentNode.removeChild(oldModal);
+
+  let defaultUrl = 'https://wosbdc.github.io/';
+  if (typeof window !== 'undefined' && window.location) {
+    const origin = window.location.origin || '';
+    if (origin && !origin.includes('localhost') && !origin.includes('127.0.0.1')) {
+      defaultUrl = origin + (window.location.pathname.startsWith('/') ? window.location.pathname : '/' + window.location.pathname);
+    }
+  }
+
+  let activeFormat = initialTab; // 'discord' | 'mail' | 'chat'
+  let currentSiteUrl = defaultUrl.trim();
+
+  const getTemplateText = (format, url) => {
+    const cleanUrl = (url || '').trim() || defaultUrl;
+    if (format === 'discord') {
+      return `@everyone 
+## 🏰 Welcome to the Official BDC Alliance Portal! 🚀
+
+Chiefs, we’ve officially upgraded how our alliance coordinates, tracks events, and earns rewards! The **BDC Alliance Web Portal** is live, and every member can now claim their official profile.
+
+### 🌟 Why You Should Claim Your Account Today:
+* 🎁 **Automated Gift Code Delivery:** Never miss a code again! Codes are automatically claimed to your in-game mailbox.
+* ⏰ **Your Personal Event Clock:** Live countdowns for Bear Trap, Championship, and events synced to **your local timezone**.
+* 🐻 **Bear Trap & Personal Battle Log:** View your live trap contributions, donation streaks, and attendance badges.
+* ⚔️ **Alliance Championship Center:** Check your signup status, battle rounds, and opponent scout stats.
+* 🛡️ **Link Alts & Farms:** Manage all your characters in one spot with instant account switching.
+* 🎫 **Direct Leadership Ticket Desk:** Submit leave-of-absence notices, feedback, or support requests straight to R4/R5.
+
+---
+
+### 🔗 How to Get Started (Takes 30 Seconds):
+1. Go to: ${cleanUrl}
+2. Tap **Claim Account** / **Sign Up**
+3. Search for your **Chief Name** or enter your **Game ID** to link your profile!
+
+*Have questions or need help claiming your chief? Reach out to any R4 or drop a message here in chat!*`;
+    } else if (format === 'mail') {
+      return `📢 Attention BDC Chiefs! Claim Your Official Alliance Portal Account! 🏰
+
+We have launched the official BDC Alliance Website, packed with exclusive tools to keep our alliance coordinated and reward our active members:
+
+🎁 Instant Gift Code Drops – Free gems, speedups, and packs sent straight to your in-game mailbox automatically!
+⏰ Local Time Event Schedule – Real-time countdowns for Bear Trap, Mercenary, and Championship in your local timezone.
+🐻 Bear Trap & Battle Hub – Check your donations, view leaderboards, and track your attendance stats.
+⚔️ Championship Tracker – See round lineups, signups, and battle intel.
+🛡️ Main + Alt Support – Link all your accounts under one login.
+
+👉 How to Claim Your Profile:
+1. Visit: ${cleanUrl}
+2. Click "Claim Account" or "Register"
+3. Enter your Chief Name and Player ID
+
+Takes less than 60 seconds. Claim your profile today so you never miss out on rewards or event alerts! 🚀`;
+    } else {
+      return `📢 Claim Your BDC Alliance Profile! 🎁 Free auto gift codes to your mailbox, local event countdowns, Bear Trap logs & Championship intel! 👉 Claim here in 30s: ${cleanUrl}`;
+    }
+  };
+
+  const modalOverlay = document.createElement('div');
+  modalOverlay.id = 'memberInviteModalOverlay';
+  modalOverlay.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,0.88); backdrop-filter:blur(12px); z-index:99999; display:flex; align-items:center; justify-content:center; animation:fadeIn 0.2s ease; padding:16px; box-sizing:border-box;';
+
+  modalOverlay.innerHTML = `
+    <div class="card" style="width:100%; max-width:680px; background:linear-gradient(145deg, rgba(15,23,42,0.98), rgba(30,41,59,0.96)); border:1px solid rgba(56,189,248,0.4); padding:24px; border-radius:22px; box-shadow:0 25px 60px rgba(0,0,0,0.85); text-align:left; animation:zoomIn 0.2s forwards; color:var(--text-main); max-height:92vh; display:flex; flex-direction:column; box-sizing:border-box;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:12px; flex-shrink:0;">
+        <h3 style="margin:0; color:#fff; font-size:18px; font-weight:bold; display:flex; align-items:center; gap:8px;">
+          📢 Member Invite & Announcement Hub
+        </h3>
+        <button id="closeMemberInviteModalBtn" style="background:none; border:none; color:var(--text-muted); font-size:26px; cursor:pointer; line-height:1;">&times;</button>
+      </div>
+
+      <p style="margin:0 0 14px 0; font-size:12px; color:#94a3b8; flex-shrink:0;">
+        Copy and share official alliance onboarding messages to invite members to link and claim their profiles on the portal.
+      </p>
+
+      <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:12px; margin-bottom:14px; flex-shrink:0;">
+        <label style="display:block; font-size:11px; font-weight:bold; color:#38bdf8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">
+          🔗 Portal Website URL (Inserted into Invite Text)
+        </label>
+        <input id="memberInviteUrlInput" type="text" value="${window.escapeHTML(currentSiteUrl)}" placeholder="https://wosbdc.github.io/" style="width:100%; box-sizing:border-box; background:rgba(15,23,42,0.8); border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:8px 12px; color:#fff; font-size:13px; font-family:monospace;">
+      </div>
+
+      <div style="display:flex; gap:8px; margin-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:8px; flex-shrink:0; overflow-x:auto;">
+        <button id="inviteTabBtnDiscord" class="invite-format-tab" data-format="discord" style="background:${activeFormat === 'discord' ? 'linear-gradient(135deg, #6366f1, #4f46e5)' : 'rgba(255,255,255,0.05)'}; color:#fff; border:none; padding:7px 14px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.2s;">
+          🎮 Discord (Option 2)
+        </button>
+        <button id="inviteTabBtnMail" class="invite-format-tab" data-format="mail" style="background:${activeFormat === 'mail' ? 'linear-gradient(135deg, #0ea5e9, #0284c7)' : 'rgba(255,255,255,0.05)'}; color:#fff; border:none; padding:7px 14px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.2s;">
+          ✉️ In-Game Mail (Option 1)
+        </button>
+        <button id="inviteTabBtnChat" class="invite-format-tab" data-format="chat" style="background:${activeFormat === 'chat' ? 'linear-gradient(135deg, #10b981, #059669)' : 'rgba(255,255,255,0.05)'}; color:#fff; border:none; padding:7px 14px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.2s;">
+          📌 Short Chat Pin (Option 3)
+        </button>
+      </div>
+
+      <div style="position:relative; flex:1; min-height:180px; display:flex; flex-direction:column; margin-bottom:14px;">
+        <textarea id="memberInviteTextArea" rows="10" style="width:100%; flex:1; box-sizing:border-box; background:rgba(15,23,42,0.9); border:1px solid rgba(255,255,255,0.12); border-radius:10px; padding:12px; color:#e2e8f0; font-size:13px; font-family:monospace; line-height:1.5; resize:none;"></textarea>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; flex-shrink:0;">
+        <div id="memberInviteMetaCount" style="font-size:12px; color:#94a3b8;">
+          Ready to copy
+        </div>
+        <div style="display:flex; gap:10px;">
+          <button id="closeMemberInviteBottomBtn" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:#fff; padding:9px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13px;">
+            Close
+          </button>
+          <button id="copyMemberInviteBtn" style="background:linear-gradient(135deg, #10b981, #059669); border:none; color:#fff; padding:9px 20px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13px; display:flex; align-items:center; gap:8px; box-shadow:0 4px 14px rgba(16,185,129,0.35); transition:0.2s;">
+            <span id="copyBtnIcon">📋</span> <span id="copyBtnText">Copy to Clipboard</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modalOverlay);
+
+  const urlInput = document.getElementById('memberInviteUrlInput');
+  const textArea = document.getElementById('memberInviteTextArea');
+  const countDisplay = document.getElementById('memberInviteMetaCount');
+  const copyBtn = document.getElementById('copyMemberInviteBtn');
+  const copyBtnText = document.getElementById('copyBtnText');
+  const copyBtnIcon = document.getElementById('copyBtnIcon');
+  const tabDiscord = document.getElementById('inviteTabBtnDiscord');
+  const tabMail = document.getElementById('inviteTabBtnMail');
+  const tabChat = document.getElementById('inviteTabBtnChat');
+
+  const updateDisplay = () => {
+    const text = getTemplateText(activeFormat, currentSiteUrl);
+    textArea.value = text;
+    const charCount = text.length;
+    const lineCount = text.split('\n').length;
+    countDisplay.textContent = `${charCount} characters • ${lineCount} lines`;
+
+    if (tabDiscord) tabDiscord.style.background = activeFormat === 'discord' ? 'linear-gradient(135deg, #6366f1, #4f46e5)' : 'rgba(255,255,255,0.05)';
+    if (tabMail) tabMail.style.background = activeFormat === 'mail' ? 'linear-gradient(135deg, #0ea5e9, #0284c7)' : 'rgba(255,255,255,0.05)';
+    if (tabChat) tabChat.style.background = activeFormat === 'chat' ? 'linear-gradient(135deg, #10b981, #059669)' : 'rgba(255,255,255,0.05)';
+  };
+
+  if (urlInput) {
+    urlInput.addEventListener('input', (e) => {
+      currentSiteUrl = e.target.value;
+      updateDisplay();
+    });
+  }
+
+  if (tabDiscord) tabDiscord.addEventListener('click', () => { activeFormat = 'discord'; updateDisplay(); });
+  if (tabMail) tabMail.addEventListener('click', () => { activeFormat = 'mail'; updateDisplay(); });
+  if (tabChat) tabChat.addEventListener('click', () => { activeFormat = 'chat'; updateDisplay(); });
+
+  if (textArea) {
+    textArea.addEventListener('input', () => {
+      const charCount = textArea.value.length;
+      const lineCount = textArea.value.split('\n').length;
+      countDisplay.textContent = `${charCount} characters (customized) • ${lineCount} lines`;
+    });
+  }
+
+  if (copyBtn) {
+    copyBtn.addEventListener('click', async () => {
+      const textToCopy = textArea ? textArea.value : '';
+      let copied = false;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        try {
+          await navigator.clipboard.writeText(textToCopy);
+          copied = true;
+        } catch (err) {}
+      }
+      if (!copied && textArea) {
+        textArea.select();
+        document.execCommand('copy');
+        copied = true;
+      }
+
+      const formatName = activeFormat === 'discord' ? 'Discord announcement' : (activeFormat === 'mail' ? 'In-Game mail' : 'Chat pin');
+      if (window.showToast) {
+        window.showToast(`Copied ${formatName} to clipboard! 📋`, 'success');
+      }
+
+      if (copyBtnText) copyBtnText.textContent = 'Copied!';
+      if (copyBtnIcon) copyBtnIcon.textContent = '✅';
+      copyBtn.style.background = 'linear-gradient(135deg, #059669, #047857)';
+      setTimeout(() => {
+        if (copyBtnText) copyBtnText.textContent = 'Copy to Clipboard';
+        if (copyBtnIcon) copyBtnIcon.textContent = '📋';
+        copyBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+      }, 2000);
+    });
+  }
+
+  const closeModal = () => {
+    if (modalOverlay && modalOverlay.parentNode) modalOverlay.parentNode.removeChild(modalOverlay);
+  };
+
+  document.getElementById('closeMemberInviteModalBtn')?.addEventListener('click', closeModal);
+  document.getElementById('closeMemberInviteBottomBtn')?.addEventListener('click', closeModal);
+  modalOverlay.addEventListener('click', (e) => {
+    if (e.target === modalOverlay) closeModal();
+  });
+
+  updateDisplay();
+};
+
 window.adminLinkAltAccountPromptByChief = async (chiefName) => {
   await window.openAdminAssignAltModal(chiefName);
 };
@@ -32029,6 +32241,7 @@ const views = {
               <p style="margin:0 0 15px 0; font-size:12px; color:var(--text-muted); text-align:left;">Manage Chief profiles, fix game IDs, review signups, and sync master sheets.</p>
               
               <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:12px;">
+                <button onclick="window.openMemberInviteModal()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:12px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; box-shadow:0 4px 12px rgba(16,185,129,0.3); display:flex; align-items:center; justify-content:center; gap:8px;">📢 Member Invite & Announcement Hub</button>
                 <button onclick="views.feedback()" style="background:linear-gradient(135deg, #06b6d4, #8b5cf6); color:#fff; border:none; padding:12px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; box-shadow:0 4px 12px rgba(6,182,212,0.3); display:flex; align-items:center; justify-content:center; gap:8px;">💡 Feature & Bug Tracker</button>
                 <button onclick="views.admin('tab-users')" style="background:linear-gradient(135deg, #6366f1, #4f46e5); color:#fff; border:none; padding:12px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; box-shadow:0 4px 12px rgba(99,102,241,0.3); display:flex; align-items:center; justify-content:center; gap:8px;">👥 Member Database & User Hub</button>
                 <button onclick="document.querySelector('.admin-tab-btn[data-tab=\'tab-users\']')?.click(); if(window.showToast) window.showToast('Click 🛠️ Repair ID next to any member in the table to swap or fix IDs!', 'info');" style="background:linear-gradient(135deg, #a855f7, #9333ea); color:#fff; border:none; padding:12px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; box-shadow:0 4px 12px rgba(168,85,247,0.3); display:flex; align-items:center; justify-content:center; gap:8px;">🛠️ Chief Character & ID Repair</button>
@@ -32403,7 +32616,10 @@ const views = {
 
           <!-- Tab 2: Users -->
           <div id="tab-users" class="admin-tab-content" style="display:none;">
-            <div style="display:flex; justify-content:flex-end; align-items:center; margin-bottom:15px; gap:10px;">
+            <div style="display:flex; justify-content:flex-end; align-items:center; margin-bottom:15px; gap:10px; flex-wrap:wrap;">
+                <button onclick="window.openMemberInviteModal()" style="background:linear-gradient(135deg, #10b981, #059669); border:none; color:#fff; padding:8px 14px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13px; display:flex; align-items:center; gap:6px; box-shadow:0 2px 8px rgba(16,185,129,0.25); transition:0.2s;">
+                    <span>📢</span> Share Member Invite
+                </button>
                 <button onclick="window.openAdminAssignAltModal()" style="background:linear-gradient(135deg, #0284c7, #0369a1); border:none; color:#fff; padding:8px 14px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13px; display:flex; align-items:center; gap:6px; box-shadow:0 2px 8px rgba(2,132,199,0.25); transition:0.2s;">
                     <span>🔗</span> Assign Alt Account
                 </button>

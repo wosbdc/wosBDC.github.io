@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [3.3.99] - 2026-10-14
+- 📢 **Invite Hub**: Added member invite tool to Admin Menu.
+- 🎮 **Discord Format**: Pre-formatted announcement with key portal features.
+- ✉️ **Game Mail**: Cleanly formatted template for in-game mail.
+- 📌 **Chat Pin**: Short two-line reminder for pinned alliance chat.
+- 🔗 **Dynamic Links**: Automatically updates portal link across all templates.
+- 📋 **Instant Copy**: One-click clipboard copy with live status confirmation.
+
 ## [3.3.98] - 2026-10-14
 - 🏆 **Championship Fix**: Resolved archival crash caused by missing Game IDs.
 - 🛡️ **Key Sanitation**: Automatically strips empty and invalid database keys.
