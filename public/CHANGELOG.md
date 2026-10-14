@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.101] - 2026-10-14
+- 🔗 **Shortcut URL**: Defaulted invite link to shortcut https://tiny.cc/wosBDC.
+- 💾 **Link Persistence**: Automatically saves and remembers custom portal URLs.
+- ↺ **Reset Button**: Added one-click reset to restore shortcut URL.
+
 ## [3.3.100] - 2026-10-14
 - 📢 **Button Relocation**: Moved Share Member Invite next to Copy Unsynced.
 - 👥 **Roster Controls**: Grouped all member outreach buttons in database toolbar.

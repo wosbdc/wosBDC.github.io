@@ -9743,19 +9743,17 @@ window.openMemberInviteModal = (initialTab = 'discord') => {
   const oldModal = document.getElementById('memberInviteModalOverlay');
   if (oldModal && oldModal.parentNode) oldModal.parentNode.removeChild(oldModal);
 
-  let defaultUrl = 'https://wosbdc.github.io/';
-  if (typeof window !== 'undefined' && window.location) {
-    const origin = window.location.origin || '';
-    if (origin && !origin.includes('localhost') && !origin.includes('127.0.0.1')) {
-      defaultUrl = origin + (window.location.pathname.startsWith('/') ? window.location.pathname : '/' + window.location.pathname);
-    }
-  }
+  const SHORTCUT_DEFAULT_URL = 'https://tiny.cc/wosBDC';
+  let savedCustomUrl = '';
+  try {
+    savedCustomUrl = (localStorage.getItem('wos_member_invite_custom_url') || '').trim();
+  } catch (e) {}
 
   let activeFormat = initialTab; // 'discord' | 'mail' | 'chat'
-  let currentSiteUrl = defaultUrl.trim();
+  let currentSiteUrl = savedCustomUrl || SHORTCUT_DEFAULT_URL;
 
   const getTemplateText = (format, url) => {
-    const cleanUrl = (url || '').trim() || defaultUrl;
+    const cleanUrl = (url || '').trim() || currentSiteUrl || SHORTCUT_DEFAULT_URL;
     if (format === 'discord') {
       return `@everyone 
 ## 🏰 Welcome to the Official BDC Alliance Portal! 🚀
@@ -9818,10 +9816,18 @@ Takes less than 60 seconds. Claim your profile today so you never miss out on re
       </p>
 
       <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:12px; margin-bottom:14px; flex-shrink:0;">
-        <label style="display:block; font-size:11px; font-weight:bold; color:#38bdf8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">
-          🔗 Portal Website URL (Inserted into Invite Text)
-        </label>
-        <input id="memberInviteUrlInput" type="text" value="${window.escapeHTML(currentSiteUrl)}" placeholder="https://wosbdc.github.io/" style="width:100%; box-sizing:border-box; background:rgba(15,23,42,0.8); border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:8px 12px; color:#fff; font-size:13px; font-family:monospace;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:6px;">
+          <label style="font-size:11px; font-weight:bold; color:#38bdf8; text-transform:uppercase; letter-spacing:0.5px;">
+            🔗 Portal Website URL (Inserted into Invite Text)
+          </label>
+          <button id="memberInviteResetUrlBtn" type="button" style="background:none; border:none; color:#94a3b8; font-size:11px; cursor:pointer; text-decoration:underline; padding:0; transition:0.2s;" onmouseover="this.style.color='#38bdf8';" onmouseout="this.style.color='#94a3b8';" title="Reset back to shortcut URL https://tiny.cc/wosBDC">
+            ↺ Reset to ${SHORTCUT_DEFAULT_URL}
+          </button>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <input id="memberInviteUrlInput" type="text" value="${window.escapeHTML(currentSiteUrl)}" placeholder="${SHORTCUT_DEFAULT_URL}" style="flex:1; box-sizing:border-box; background:rgba(15,23,42,0.8); border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:8px 12px; color:#fff; font-size:13px; font-family:monospace;">
+          <span id="memberInviteSavedBadge" style="font-size:11px; color:#10b981; font-weight:bold; opacity:0; transition:opacity 0.25s ease; white-space:nowrap;">✓ Saved</span>
+        </div>
       </div>
 
       <div style="display:flex; gap:8px; margin-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:8px; flex-shrink:0; overflow-x:auto;">
@@ -9880,10 +9886,43 @@ Takes less than 60 seconds. Claim your profile today so you never miss out on re
     if (tabChat) tabChat.style.background = activeFormat === 'chat' ? 'linear-gradient(135deg, #10b981, #059669)' : 'rgba(255,255,255,0.05)';
   };
 
+  const persistUrl = (newUrl) => {
+    const clean = (newUrl || '').trim();
+    currentSiteUrl = clean || SHORTCUT_DEFAULT_URL;
+    try {
+      if (clean && clean !== SHORTCUT_DEFAULT_URL) {
+        localStorage.setItem('wos_member_invite_custom_url', clean);
+      } else {
+        localStorage.removeItem('wos_member_invite_custom_url');
+      }
+    } catch (e) {}
+
+    const badge = document.getElementById('memberInviteSavedBadge');
+    if (badge) {
+      badge.style.opacity = '1';
+      clearTimeout(window._inviteSaveTimer);
+      window._inviteSaveTimer = setTimeout(() => {
+        if (badge) badge.style.opacity = '0';
+      }, 1500);
+    }
+    updateDisplay();
+  };
+
   if (urlInput) {
     urlInput.addEventListener('input', (e) => {
-      currentSiteUrl = e.target.value;
-      updateDisplay();
+      persistUrl(e.target.value);
+    });
+    urlInput.addEventListener('change', (e) => {
+      persistUrl(e.target.value);
+    });
+  }
+
+  const resetBtn = document.getElementById('memberInviteResetUrlBtn');
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      if (urlInput) urlInput.value = SHORTCUT_DEFAULT_URL;
+      persistUrl(SHORTCUT_DEFAULT_URL);
+      if (window.showToast) window.showToast("Reset invite URL to " + SHORTCUT_DEFAULT_URL, "info");
     });
   }
 

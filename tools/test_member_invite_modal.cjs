@@ -72,6 +72,9 @@ function runStaticVerification() {
   assert(code.includes('window.openMemberInviteModal ='), 'main.js must define window.openMemberInviteModal');
   assert(code.includes('memberInviteModalOverlay'), 'main.js must define memberInviteModalOverlay');
   assert(code.includes('memberInviteUrlInput'), 'main.js must provide memberInviteUrlInput');
+  assert(code.includes('memberInviteResetUrlBtn'), 'main.js must provide memberInviteResetUrlBtn');
+  assert(code.includes('wos_member_invite_custom_url'), 'main.js must persist custom url to localStorage');
+  assert(code.includes('https://tiny.cc/wosBDC'), 'main.js must default to shortcut URL https://tiny.cc/wosBDC');
   assert(code.includes('memberInviteTextArea'), 'main.js must provide memberInviteTextArea');
   assert(code.includes('inviteTabBtnDiscord'), 'main.js must provide inviteTabBtnDiscord');
   assert(code.includes('inviteTabBtnMail'), 'main.js must provide inviteTabBtnMail');
@@ -169,14 +172,15 @@ async function runHeadlessVerification() {
     assert(modalExists, 'memberInviteModalOverlay must be rendered in DOM');
     console.log('  ✅ Member Invite modal opened and rendered in DOM');
 
-    // Test 2: Verify default Discord template content
+    // Test 2: Verify default Discord template content & shortcut URL
     const defaultText = await page.evaluate(() => {
       const ta = document.getElementById('memberInviteTextArea');
       return ta ? ta.value : '';
     });
     assert(defaultText.includes('Welcome to the Official BDC Alliance Portal'), 'Default Discord template must be loaded');
     assert(defaultText.includes('Automated Gift Code Delivery'), 'Default Discord template must contain features');
-    console.log('  ✅ Discord template text correctly populated');
+    assert(defaultText.includes('https://tiny.cc/wosBDC'), 'Default template must include shortcut URL https://tiny.cc/wosBDC');
+    console.log('  ✅ Discord template text correctly populated with https://tiny.cc/wosBDC default');
 
     // Test 3: Sub-tab switching to In-Game Mail
     await page.evaluate(() => {
@@ -188,6 +192,7 @@ async function runHeadlessVerification() {
       return document.getElementById('memberInviteTextArea').value;
     });
     assert(mailText.includes('Attention BDC Chiefs! Claim Your Official Alliance Portal Account!'), 'Mail template must load on tab switch');
+    assert(mailText.includes('https://tiny.cc/wosBDC'), 'Mail template must include shortcut URL');
     console.log('  ✅ In-Game Mail sub-tab switched and template updated');
 
     // Test 4: Sub-tab switching to Short Chat Pin
@@ -200,21 +205,38 @@ async function runHeadlessVerification() {
       return document.getElementById('memberInviteTextArea').value;
     });
     assert(chatText.includes('Claim Your BDC Alliance Profile! 🎁'), 'Chat Pin template must load on tab switch');
+    assert(chatText.includes('https://tiny.cc/wosBDC'), 'Chat Pin template must include shortcut URL');
     console.log('  ✅ Short Chat Pin sub-tab switched and template updated');
 
-    // Test 5: Dynamic URL update
-    await page.evaluate(() => {
+    // Test 5: Dynamic URL update & localStorage persistence
+    const storageCheck = await page.evaluate(() => {
       const urlInput = document.getElementById('memberInviteUrlInput');
       urlInput.value = 'https://portal.bdcalliance.org';
       urlInput.dispatchEvent(new Event('input', { bubbles: true }));
+      urlInput.dispatchEvent(new Event('change', { bubbles: true }));
+      return localStorage.getItem('wos_member_invite_custom_url');
     });
     await new Promise(r => setTimeout(r, 100));
+    assert.strictEqual(storageCheck, 'https://portal.bdcalliance.org', 'Edited URL must be saved to localStorage');
 
     const updatedChatText = await page.evaluate(() => {
       return document.getElementById('memberInviteTextArea').value;
     });
     assert(updatedChatText.includes('https://portal.bdcalliance.org'), 'Template must update dynamically with custom URL');
-    console.log('  ✅ Dynamic URL updating successfully re-rendered template');
+    console.log('  ✅ Custom URL persisted to localStorage and re-rendered template');
+
+    // Test 5B: Reset button restores https://tiny.cc/wosBDC
+    const resetResult = await page.evaluate(() => {
+      document.getElementById('memberInviteResetUrlBtn').click();
+      const val = document.getElementById('memberInviteUrlInput').value;
+      const text = document.getElementById('memberInviteTextArea').value;
+      const saved = localStorage.getItem('wos_member_invite_custom_url');
+      return { val, text, saved };
+    });
+    assert.strictEqual(resetResult.val, 'https://tiny.cc/wosBDC', 'Input must reset to https://tiny.cc/wosBDC');
+    assert(resetResult.text.includes('https://tiny.cc/wosBDC'), 'Template must revert to https://tiny.cc/wosBDC');
+    assert(!resetResult.saved, 'localStorage override must be cleared on reset');
+    console.log('  ✅ Reset button successfully restored default shortcut URL https://tiny.cc/wosBDC');
 
     // Test 6: 1-Click Copy action and visual status change
     await page.evaluate(() => {

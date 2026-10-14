@@ -1,15 +1,16 @@
 {
-  "version": "3.3.100",
+  "version": "3.3.101",
   "releaseDate": "2026-10-14",
-  "title": "What's New in v3.3.100",
+  "title": "What's New in v3.3.101",
   "notes": [
-    "📢 Action Relocation: Moved Share Member Invite next to Copy Unsynced.",
-    "👥 Unified Controls: Streamlined player database action toolbar in Admin Menu.",
-    "✨ Clean Interface: Preserved top toolbar space for core administrative tasks."
+    "🔗 Shortcut URL: Defaulted invite link to https://tiny.cc/wosBDC.",
+    "💾 Link Persistence: Automatically saves custom invite URLs across sessions.",
+    "↺ One-Click Reset: Added instant reset to restore default shortcut."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.100",
+    "version": "3.3.101",
     "latestChanges": [
+      "v3.3.101: Defaulted invite URL to https://tiny.cc/wosBDC and persisted custom links",
       "v3.3.100: Relocated Share Member Invite button next to Copy Unsynced in database box",
       "v3.3.99: Added Member Invite and Announcement Hub to Admin Menu",
       "v3.3.98: Fixed Championship archival error by sanitizing player stats keys",
