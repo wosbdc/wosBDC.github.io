@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.98] - 2026-10-14
+- 🏆 **Championship Fix**: Resolved archival crash caused by missing Game IDs.
+- 🛡️ **Key Sanitation**: Automatically strips empty and invalid database keys.
+- 🐻 **Event Protection**: Safeguarded Bear Trap, Polar Terrors, and Mercenary archival.
+- 🔄 **Safe Reset**: Guaranteed zero crashes during post-event status resets.
+
 ## [3.3.97] - 2026-10-11
 - 🤖 **Bot Amounts**: Displays exact donation points for bot donations.
 - 📝 **Activity Details**: Shows complete donation points in Personal Battle Log.

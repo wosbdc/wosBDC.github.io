@@ -4764,13 +4764,28 @@ window.togglePolarTerrorsStatus = async (gameId, forceStatus = null) => {
     }
 };
 
+// Defensive Firebase Key Sanitizer for player_event_stats & event dictionaries
+window.sanitizeStatsObject = (stats) => {
+    if (!stats || typeof stats !== 'object') return {};
+    const clean = {};
+    for (const [rawKey, val] of Object.entries(stats)) {
+        if (!rawKey || typeof rawKey !== 'string') continue;
+        const key = rawKey.trim();
+        // Firebase keys must be non-empty strings and cannot contain '.', '#', '$', '/', '[', or ']'
+        if (!key || /[.#$\[\]/]/.test(key)) continue;
+        if (!val || typeof val !== 'object') continue;
+        clean[key] = val;
+    }
+    return clean;
+};
+
 // Persistent Player Lifetime Event Stats
 window.fetchPlayerEventStats = async () => {
-    if (window._playerEventStatsCache) return window._playerEventStatsCache;
+    if (window._playerEventStatsCache) return window.sanitizeStatsObject(window._playerEventStatsCache);
     try {
         const snap = await get(ref(db, 'player_event_stats'));
         if (snap && snap.exists()) {
-            window._playerEventStatsCache = snap.val() || {};
+            window._playerEventStatsCache = window.sanitizeStatsObject(snap.val() || {});
         } else {
             window._playerEventStatsCache = {};
         }
@@ -4991,7 +5006,8 @@ window.showResetAndArchiveMercenaryModal = async () => {
             let playerSnapshots = [];
 
             rosterList.forEach(p => {
-                const gidStr = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (window.nameToIdMap?.[(p.name || '').toLowerCase()] || '');
+                const rawGid = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (window.nameToIdMap?.[(p.name || '').toLowerCase()] || '');
+                const gidStr = (rawGid && typeof rawGid === 'string') ? rawGid.trim() : '';
                 const rec = window.getEventRecord(mercData, p);
                 const isDone = rec && Boolean(rec.signedUp);
                 if (isDone) {
@@ -5007,26 +5023,28 @@ window.showResetAndArchiveMercenaryModal = async () => {
                     difficulty: (rec && rec.difficulty) ? rec.difficulty : ""
                 });
 
-                // Prepare stats update
-                const pStats = statsObj[gidStr] || {
-                    gameId: gidStr,
-                    name: p.name,
-                    missedShowdown: 0,
-                    missedChampionship: 0,
-                    missedMercenary: 0,
-                    missedPolarTerrors: 0,
-                    missedBearTrap: 0,
-                    totalCyclesTracked: 0,
-                    totalMisses: 0
-                };
-                pStats.name = p.name;
-                pStats.totalCyclesTracked = (pStats.totalCyclesTracked || 0) + 1;
-                if (!isDone) {
-                    pStats.missedMercenary = (pStats.missedMercenary || 0) + 1;
+                // Prepare stats update only for valid non-empty Firebase key
+                if (gidStr && !/[.#$\[\]/]/.test(gidStr)) {
+                    const pStats = statsObj[gidStr] || {
+                        gameId: gidStr,
+                        name: p.name,
+                        missedShowdown: 0,
+                        missedChampionship: 0,
+                        missedMercenary: 0,
+                        missedPolarTerrors: 0,
+                        missedBearTrap: 0,
+                        totalCyclesTracked: 0,
+                        totalMisses: 0
+                    };
+                    pStats.name = p.name;
+                    pStats.totalCyclesTracked = (pStats.totalCyclesTracked || 0) + 1;
+                    if (!isDone) {
+                        pStats.missedMercenary = (pStats.missedMercenary || 0) + 1;
+                    }
+                    pStats.totalMisses = (pStats.missedShowdown || 0) + (pStats.missedChampionship || 0) + (pStats.missedMercenary || 0) + (pStats.missedPolarTerrors || 0) + (pStats.missedBearTrap || 0);
+                    pStats.lastUpdated = timestamp;
+                    statsObj[gidStr] = pStats;
                 }
-                pStats.totalMisses = (pStats.missedShowdown || 0) + (pStats.missedChampionship || 0) + (pStats.missedMercenary || 0) + (pStats.missedPolarTerrors || 0) + (pStats.missedBearTrap || 0);
-                pStats.lastUpdated = timestamp;
-                statsObj[gidStr] = pStats;
             });
 
             const currentBossProgress = window.mercenaryBossProgressCache || await window.fetchMercenaryBossProgress().catch(() => ({ lv1: 0, lv2: 0, lv3: 0, lv4: 0, lv5: 0 }));
@@ -5055,11 +5073,12 @@ window.showResetAndArchiveMercenaryModal = async () => {
             updateStep(2, 'done', isDemo ? '✅ Simulated' : '✅ Archived', 55);
             await sleep(400);
 
-            // Stage 3: Updating Player Lifetime Stats
+            // Stage 3: Updating Player Lifetime Stats (guaranteed sanitized against invalid/empty keys)
             updateStep(3, 'running', '📊 Updating Stats...', 65);
             if (!isDemo) {
-                await set(ref(db, 'player_event_stats'), statsObj);
-                window._playerEventStatsCache = statsObj;
+                const sanitizedStatsObj = window.sanitizeStatsObject ? window.sanitizeStatsObject(statsObj) : statsObj;
+                await set(ref(db, 'player_event_stats'), sanitizedStatsObj);
+                window._playerEventStatsCache = sanitizedStatsObj;
             }
             updateStep(3, 'done', isDemo ? '✅ Simulated' : '✅ Updated', 75);
             await sleep(400);
@@ -5190,7 +5209,8 @@ window.archiveAndResetPolarTerrorsCycle = async () => {
         let playerSnapshots = [];
 
         rosterList.forEach(p => {
-            const gidStr = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (window.nameToIdMap?.[(p.name || '').toLowerCase()] || '');
+            const rawGid = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (window.nameToIdMap?.[(p.name || '').toLowerCase()] || '');
+            const gidStr = (rawGid && typeof rawGid === 'string') ? rawGid.trim() : '';
             const rec = window.getEventRecord(polarData, p);
             const isDone = rec && Boolean(rec.signedUp);
             if (isDone) {
@@ -5204,26 +5224,28 @@ window.archiveAndResetPolarTerrorsCycle = async () => {
                 signedUp: isDone
             });
 
-            // Update lifetime player event stats
-            const pStats = statsObj[gidStr] || {
-                gameId: gidStr,
-                name: p.name,
-                missedShowdown: 0,
-                missedChampionship: 0,
-                missedMercenary: 0,
-                missedPolarTerrors: 0,
-                missedBearTrap: 0,
-                totalCyclesTracked: 0,
-                totalMisses: 0
-            };
-            pStats.name = p.name;
-            pStats.totalCyclesTracked = (pStats.totalCyclesTracked || 0) + 1;
-            if (!isDone) {
-                pStats.missedPolarTerrors = (pStats.missedPolarTerrors || 0) + 1;
+            // Update lifetime player event stats only for valid non-empty Firebase key
+            if (gidStr && !/[.#$\[\]/]/.test(gidStr)) {
+                const pStats = statsObj[gidStr] || {
+                    gameId: gidStr,
+                    name: p.name,
+                    missedShowdown: 0,
+                    missedChampionship: 0,
+                    missedMercenary: 0,
+                    missedPolarTerrors: 0,
+                    missedBearTrap: 0,
+                    totalCyclesTracked: 0,
+                    totalMisses: 0
+                };
+                pStats.name = p.name;
+                pStats.totalCyclesTracked = (pStats.totalCyclesTracked || 0) + 1;
+                if (!isDone) {
+                    pStats.missedPolarTerrors = (pStats.missedPolarTerrors || 0) + 1;
+                }
+                pStats.totalMisses = (pStats.missedShowdown || 0) + (pStats.missedChampionship || 0) + (pStats.missedMercenary || 0) + (pStats.missedPolarTerrors || 0) + (pStats.missedBearTrap || 0);
+                pStats.lastUpdated = timestamp;
+                statsObj[gidStr] = pStats;
             }
-            pStats.totalMisses = (pStats.missedShowdown || 0) + (pStats.missedChampionship || 0) + (pStats.missedMercenary || 0) + (pStats.missedPolarTerrors || 0) + (pStats.missedBearTrap || 0);
-            pStats.lastUpdated = timestamp;
-            statsObj[gidStr] = pStats;
         });
 
         // 1. Save Archive to Firebase
@@ -5239,13 +5261,16 @@ window.archiveAndResetPolarTerrorsCycle = async () => {
         };
         await set(ref(db, `events_archive/polar_terrors/${timestamp}`), archivePayload);
 
-        // 2. Update player_event_stats
-        await set(ref(db, 'player_event_stats'), statsObj);
-        window._playerEventStatsCache = statsObj;
+        // 2. Update player_event_stats (guaranteed sanitized against invalid/empty keys)
+        const sanitizedStatsObj = window.sanitizeStatsObject ? window.sanitizeStatsObject(statsObj) : statsObj;
+        await set(ref(db, 'player_event_stats'), sanitizedStatsObj);
+        window._playerEventStatsCache = sanitizedStatsObj;
 
         // 3. Reset live Polar Terrors status in activity_live & polarterrors
         for (const p of rosterList) {
-            const gidStr = p.gameId.toString().trim();
+            const rawGid = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (window.nameToIdMap?.[(p.name || '').toLowerCase()] || '');
+            const gidStr = (rawGid && typeof rawGid === 'string') ? rawGid.trim() : '';
+            if (!gidStr || /[.#$\[\]/]/.test(gidStr)) continue;
             try {
                 await update(ref(db, `activity_live/${gidStr}`), { polarTerrors: false, updatedAt: timestamp });
             } catch(e) {
@@ -5328,7 +5353,8 @@ window.archiveAndResetBearTrapCycle = async () => {
         let playerSnapshots = [];
 
         rosterList.forEach(p => {
-            const gidStr = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (window.nameToIdMap?.[(p.name || '').toLowerCase()] || '');
+            const rawGid = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (window.nameToIdMap?.[(p.name || '').toLowerCase()] || '');
+            const gidStr = (rawGid && typeof rawGid === 'string') ? rawGid.trim() : '';
             const rec = window.getEventRecord(btData, p);
             const isDone = rec && (isT(rec.donated) || isT(rec.signedUp));
             if (isDone) {
@@ -5343,26 +5369,28 @@ window.archiveAndResetBearTrapCycle = async () => {
                 donated: Boolean(isDone)
             });
 
-            // Update lifetime player event stats
-            const pStats = statsObj[gidStr] || {
-                gameId: gidStr,
-                name: p.name,
-                missedShowdown: 0,
-                missedChampionship: 0,
-                missedMercenary: 0,
-                missedPolarTerrors: 0,
-                missedBearTrap: 0,
-                totalCyclesTracked: 0,
-                totalMisses: 0
-            };
-            pStats.name = p.name;
-            pStats.totalCyclesTracked = (pStats.totalCyclesTracked || 0) + 1;
-            if (!isDone) {
-                pStats.missedBearTrap = (pStats.missedBearTrap || 0) + 1;
+            // Update lifetime player event stats only for valid non-empty Firebase key
+            if (gidStr && !/[.#$\[\]/]/.test(gidStr)) {
+                const pStats = statsObj[gidStr] || {
+                    gameId: gidStr,
+                    name: p.name,
+                    missedShowdown: 0,
+                    missedChampionship: 0,
+                    missedMercenary: 0,
+                    missedPolarTerrors: 0,
+                    missedBearTrap: 0,
+                    totalCyclesTracked: 0,
+                    totalMisses: 0
+                };
+                pStats.name = p.name;
+                pStats.totalCyclesTracked = (pStats.totalCyclesTracked || 0) + 1;
+                if (!isDone) {
+                    pStats.missedBearTrap = (pStats.missedBearTrap || 0) + 1;
+                }
+                pStats.totalMisses = (pStats.missedShowdown || 0) + (pStats.missedChampionship || 0) + (pStats.missedMercenary || 0) + (pStats.missedPolarTerrors || 0) + (pStats.missedBearTrap || 0);
+                pStats.lastUpdated = timestamp;
+                statsObj[gidStr] = pStats;
             }
-            pStats.totalMisses = (pStats.missedShowdown || 0) + (pStats.missedChampionship || 0) + (pStats.missedMercenary || 0) + (pStats.missedPolarTerrors || 0) + (pStats.missedBearTrap || 0);
-            pStats.lastUpdated = timestamp;
-            statsObj[gidStr] = pStats;
         });
 
         // 1. Save Archive to Firebase
@@ -5378,13 +5406,16 @@ window.archiveAndResetBearTrapCycle = async () => {
         };
         await set(ref(db, `events_archive/bear_trap/${timestamp}`), archivePayload);
 
-        // 2. Update player_event_stats
-        await set(ref(db, 'player_event_stats'), statsObj);
-        window._playerEventStatsCache = statsObj;
+        // 2. Update player_event_stats (guaranteed sanitized against invalid/empty keys)
+        const sanitizedStatsObj = window.sanitizeStatsObject ? window.sanitizeStatsObject(statsObj) : statsObj;
+        await set(ref(db, 'player_event_stats'), sanitizedStatsObj);
+        window._playerEventStatsCache = sanitizedStatsObj;
 
         // 3. Reset live Bear Trap status in activity_live & beartrap
         for (const p of rosterList) {
-            const gidStr = p.gameId.toString().trim();
+            const rawGid = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (window.nameToIdMap?.[(p.name || '').toLowerCase()] || '');
+            const gidStr = (rawGid && typeof rawGid === 'string') ? rawGid.trim() : '';
+            if (!gidStr || /[.#$\[\]/]/.test(gidStr)) continue;
             try {
                 await update(ref(db, `activity_live/${gidStr}`), { bearTrap: false, updatedAt: timestamp });
             } catch(e) {
@@ -15675,7 +15706,8 @@ window.archiveAndResetChampionshipSeason = async () => {
         let playerSnapshots = [];
 
         rosterList.forEach(p => {
-            const gidStr = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (window.nameToIdMap?.[(p.name || '').toLowerCase()] || '');
+            const rawGid = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (window.nameToIdMap?.[(p.name || '').toLowerCase()] || '');
+            const gidStr = (rawGid && typeof rawGid === 'string') ? rawGid.trim() : '';
             const rec = window.getEventRecord(champData, p);
             const isSigned = rec && isT(rec.signedUp);
             if (isSigned) {
@@ -15689,26 +15721,28 @@ window.archiveAndResetChampionshipSeason = async () => {
                 signedUp: Boolean(isSigned)
             });
 
-            // Update lifetime player event stats
-            const pStats = statsObj[gidStr] || {
-                gameId: gidStr,
-                name: p.name,
-                missedShowdown: 0,
-                missedChampionship: 0,
-                missedMercenary: 0,
-                missedPolarTerrors: 0,
-                missedBearTrap: 0,
-                totalCyclesTracked: 0,
-                totalMisses: 0
-            };
-            pStats.name = p.name;
-            pStats.totalCyclesTracked = (pStats.totalCyclesTracked || 0) + 1;
-            if (!isSigned) {
-                pStats.missedChampionship = (pStats.missedChampionship || 0) + 1;
+            // Update lifetime player event stats only if valid non-empty Firebase key
+            if (gidStr && !/[.#$\[\]/]/.test(gidStr)) {
+                const pStats = statsObj[gidStr] || {
+                    gameId: gidStr,
+                    name: p.name,
+                    missedShowdown: 0,
+                    missedChampionship: 0,
+                    missedMercenary: 0,
+                    missedPolarTerrors: 0,
+                    missedBearTrap: 0,
+                    totalCyclesTracked: 0,
+                    totalMisses: 0
+                };
+                pStats.name = p.name;
+                pStats.totalCyclesTracked = (pStats.totalCyclesTracked || 0) + 1;
+                if (!isSigned) {
+                    pStats.missedChampionship = (pStats.missedChampionship || 0) + 1;
+                }
+                pStats.totalMisses = (pStats.missedShowdown || 0) + (pStats.missedChampionship || 0) + (pStats.missedMercenary || 0) + (pStats.missedPolarTerrors || 0) + (pStats.missedBearTrap || 0);
+                pStats.lastUpdated = timestamp;
+                statsObj[gidStr] = pStats;
             }
-            pStats.totalMisses = (pStats.missedShowdown || 0) + (pStats.missedChampionship || 0) + (pStats.missedMercenary || 0) + (pStats.missedPolarTerrors || 0) + (pStats.missedBearTrap || 0);
-            pStats.lastUpdated = timestamp;
-            statsObj[gidStr] = pStats;
         });
 
         // 5. Save Attendance Archive to Firebase
@@ -15724,13 +15758,16 @@ window.archiveAndResetChampionshipSeason = async () => {
         };
         await set(ref(db, `events_archive/championship/${timestamp}`), archivePayload);
 
-        // 6. Update player_event_stats
-        await set(ref(db, 'player_event_stats'), statsObj);
-        window._playerEventStatsCache = statsObj;
+        // 6. Update player_event_stats (guaranteed sanitized against invalid/empty keys)
+        const sanitizedStatsObj = window.sanitizeStatsObject ? window.sanitizeStatsObject(statsObj) : statsObj;
+        await set(ref(db, 'player_event_stats'), sanitizedStatsObj);
+        window._playerEventStatsCache = sanitizedStatsObj;
 
         // 7. Reset live Championship status in activity_live & championship (YES -> NO)
         for (const p of rosterList) {
-            const gidStr = p.gameId.toString().trim();
+            const rawGid = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (window.nameToIdMap?.[(p.name || '').toLowerCase()] || '');
+            const gidStr = (rawGid && typeof rawGid === 'string') ? rawGid.trim() : '';
+            if (!gidStr || /[.#$\[\]/]/.test(gidStr)) continue;
             try {
                 await update(ref(db, `activity_live/${gidStr}`), { championship: false, updatedAt: timestamp });
             } catch(e) {
@@ -31542,11 +31579,12 @@ const views = {
 
       // Fetch / Cache persistent player event stats from Firebase
       window.fetchPlayerEventStats = async () => {
-        if (window._playerEventStatsCache) return window._playerEventStatsCache;
+        if (window._playerEventStatsCache) return window.sanitizeStatsObject ? window.sanitizeStatsObject(window._playerEventStatsCache) : window._playerEventStatsCache;
         try {
           const snap = await get(ref(db, 'player_event_stats'));
           if (snap && snap.exists()) {
-            window._playerEventStatsCache = snap.val() || {};
+            const raw = snap.val() || {};
+            window._playerEventStatsCache = window.sanitizeStatsObject ? window.sanitizeStatsObject(raw) : raw;
           } else {
             window._playerEventStatsCache = {};
           }
@@ -31595,7 +31633,9 @@ const views = {
           // 3. Increment lifetime stats for missed events
           for (const p of matrixList) {
             if (!p.gameId) continue;
-            const gIdStr = p.gameId.toString().trim();
+            const rawGid = p.gameId.toString().trim();
+            const gIdStr = rawGid || '';
+            if (!gIdStr || /[.#$\[\]/]/.test(gIdStr)) continue;
             const pStats = statsObj[gIdStr] || {
               gameId: gIdStr,
               name: p.name,
@@ -31623,9 +31663,10 @@ const views = {
             statsObj[gIdStr] = pStats;
           }
 
-          // Write updated stats back to Firebase
-          await set(ref(db, 'player_event_stats'), statsObj);
-          window._playerEventStatsCache = statsObj;
+          // Write updated stats back to Firebase (guaranteed sanitized against invalid/empty keys)
+          const sanitizedStatsObj = window.sanitizeStatsObject ? window.sanitizeStatsObject(statsObj) : statsObj;
+          await set(ref(db, 'player_event_stats'), sanitizedStatsObj);
+          window._playerEventStatsCache = sanitizedStatsObj;
 
           // 4. Reset activity_live for next cycle
           const resetObj = {};

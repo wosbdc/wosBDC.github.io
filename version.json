@@ -1,15 +1,16 @@
 {
-  "version": "3.3.97",
-  "releaseDate": "2026-10-11",
-  "title": "What's New in v3.3.97",
+  "version": "3.3.98",
+  "releaseDate": "2026-10-14",
+  "title": "What's New in v3.3.98",
   "notes": [
-    "🤖 Bot Amounts: Displays exact donation points for bot donations.",
-    "📝 Personal Activity: Fixed details display in Personal Battle Log.",
-    "👥 Batch Integrity: Preserves member donation points in multi-player logs."
+    "🏆 Championship Archival: Fixed crash caused by missing Game IDs.",
+    "🛡️ Key Sanitation: Blocks invalid and empty keys in stats.",
+    "🔒 Event Protection: Fortified Bear Trap, Polar Terrors, and Mercenary."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.97",
+    "version": "3.3.98",
     "latestChanges": [
+      "v3.3.98: Fixed Championship archival error by sanitizing player stats keys",
       "v3.3.97: Fixed bot donation amount display in Personal Activity Log",
       "v3.3.96: Fixed negative donation deduction formatting and badge styling",
       "v3.3.95: Added donation reversal and deletion in Admin Logs modal",
