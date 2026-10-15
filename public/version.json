@@ -1,16 +1,17 @@
 {
-  "version": "3.3.104",
-  "releaseDate": "2026-10-14",
-  "title": "What's New in v3.3.104",
+  "version": "3.3.105",
+  "releaseDate": "2026-10-15",
+  "title": "What's New in v3.3.105",
   "notes": [
-    "🔧 Build Fix: Fixed GitHub Actions CI version check.",
-    "⚠️ Update Alert: Shows Waiting on Update alert for active round.",
-    "⏩ Alert Advance: Entering flags automatically moves alert forward.",
-    "🛡️ Scout Protection: Pre-scouted opponents never trigger false draw."
+    "🤖 Bot Filter: Excluded bots and system accounts from report.",
+    "👥 Alt Handling: Excluded secondary alts with zero showdown participation.",
+    "⚡ Real-time Sync: Auto-flushed live scores and added refresh button.",
+    "⚔️ Dual Views: Filter between active participants and all mains."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.104",
+    "version": "3.3.105",
     "latestChanges": [
+      "v3.3.105: Excluded bots and non-participating alts from Showdown Missed Days Report",
       "v3.3.104: Synchronized dashboard and root versions for GitHub Actions build test suite",
       "v3.3.103: Added Championship Waiting on Update alert and dynamic progression",
       "v3.3.102: Added round locking and tournament round navigator to Alliance Championship Suite",

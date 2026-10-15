@@ -18194,6 +18194,11 @@ window.renderMercenaryBossAdminCardHtml = (bossProgress) => {
 
 // Showdown Missed Days Report Modal
 window.showMissedDaysReportModal = async (btnEl = null) => {
+    // 1. Immediately flush any pending debounced auto-save from Showdown Data Entry
+    if (typeof window.flushAutoSaveSdEntry === 'function') {
+        try { window.flushAutoSaveSdEntry(); } catch(e) {}
+    }
+
     let origHtml = '';
     if (btnEl) {
         origHtml = btnEl.innerHTML;
@@ -18204,28 +18209,89 @@ window.showMissedDaysReportModal = async (btnEl = null) => {
     try {
         let sdRes = {};
         let rosterRawData = {};
+        let altsData = {};
         try {
-            [sdRes, rosterRawData] = await Promise.all([
+            const [sdFetched, rosterFetched, altsSnap] = await Promise.all([
                 window.fetchMergedShowdown(),
-                window.fetchRoster().catch(() => ({}))
+                window.fetchRoster(true).catch(() => ({})),
+                get(ref(db, 'users_alts')).catch(() => null)
             ]);
+            sdRes = sdFetched || {};
+            rosterRawData = rosterFetched || {};
+            if (altsSnap && altsSnap.exists && altsSnap.exists()) {
+                altsData = altsSnap.val() || {};
+            }
         } catch(e) {
             console.error("Error fetching showdown data for missed report:", e);
         }
 
-        const sdLiveData = (sdRes && sdRes.sdLiveData) || {};
+        // Merge in-memory live edits if currently in showdownAdmin view for 0ms latency
+        let sdLiveData = (sdRes && sdRes.sdLiveData) || {};
+        if (window._currentSdLiveData && typeof window._currentSdLiveData === 'object') {
+            sdLiveData = { ...sdLiveData, ...window._currentSdLiveData };
+        }
 
-        // 1. Build case-insensitive lookup for sdLiveData
-        const sdLiveDataLowerMap = {};
-        Object.entries(sdLiveData).forEach(([k, scores]) => {
-            if (k && typeof k === 'string') {
-                sdLiveDataLowerMap[k.trim().toLowerCase()] = scores;
+        // Helper to identify automated bot and service accounts
+        const isBotAccount = (name, gid) => {
+            if (!name) return false;
+            const n = (typeof window.cleanChiefName === 'function' ? window.cleanChiefName(name) : name).toLowerCase().trim();
+            if (n === 'gatekeeper' || n === 'wosrewards') return true;
+            if (/^lord\d{6,}$/i.test(n)) return true;
+            if (n.endsWith('bot') || n.startsWith('bot ')) return true;
+            if (String(gid) === '861818874' || String(gid) === '264551456') return true;
+            return false;
+        };
+
+        // Extract registered alts
+        const altNamesSet = new Set();
+        const altGidsSet = new Set();
+        Object.entries(altsData).forEach(([altGid, a]) => {
+            if (altGid) altGidsSet.add(String(altGid).trim());
+            if (a && typeof a === 'object') {
+                if (a.name) altNamesSet.add((window.cleanChiefName ? window.cleanChiefName(a.name) : a.name).toLowerCase().trim());
+                if (a.nickname) altNamesSet.add((window.cleanChiefName ? window.cleanChiefName(a.nickname) : a.nickname).toLowerCase().trim());
             }
         });
 
-        // Helper to check if a player is departed (left), banned, or inactive
+        // 1. Build comprehensive case-insensitive & clean lookup for sdLiveData
+        const sdLiveDataLowerMap = {};
+        Object.entries(sdLiveData).forEach(([k, scores]) => {
+            if (!scores || typeof scores !== 'object') return;
+            const cleanK = (typeof window.cleanChiefName === 'function' ? window.cleanChiefName(k) : k).trim().toLowerCase();
+            const rawK = k.trim().toLowerCase();
+            sdLiveDataLowerMap[cleanK] = scores;
+            sdLiveDataLowerMap[rawK] = scores;
+            if (scores.name) {
+                const cleanScoreName = (typeof window.cleanChiefName === 'function' ? window.cleanChiefName(scores.name) : scores.name).trim().toLowerCase();
+                sdLiveDataLowerMap[cleanScoreName] = scores;
+                sdLiveDataLowerMap[scores.name.trim().toLowerCase()] = scores;
+            }
+            if (scores.gameId || scores.id) {
+                sdLiveDataLowerMap[String(scores.gameId || scores.id).trim()] = scores;
+            }
+        });
+
+        const getScoresForPlayer = (playerOrName) => {
+            if (!playerOrName) return null;
+            const nameStr = typeof playerOrName === 'string' ? playerOrName : (playerOrName.name || playerOrName.chiefName || '');
+            const clean = (typeof window.cleanChiefName === 'function' ? window.cleanChiefName(nameStr) : nameStr).trim().toLowerCase();
+            const raw = nameStr.trim().toLowerCase();
+            const gid = typeof playerOrName === 'object' ? String(playerOrName.gameId || playerOrName.id || '').trim() : '';
+            return sdLiveDataLowerMap[clean] || sdLiveDataLowerMap[raw] || (gid ? sdLiveDataLowerMap[gid] : null) || null;
+        };
+
+        // Helper to check if a player is departed (left), banned, inactive, or bot
         const isExcludedMember = (playerOrName) => {
             if (!playerOrName) return true;
+            const nameStr = typeof playerOrName === 'string' ? playerOrName : (playerOrName.name || playerOrName.chiefName || '');
+            const clean = (typeof window.cleanChiefName === 'function' ? window.cleanChiefName(nameStr) : nameStr).toLowerCase().trim();
+            const raw = nameStr.toLowerCase().trim();
+            const gid = typeof playerOrName === 'object' ? String(playerOrName.gameId || playerOrName.id || '').trim() : '';
+
+            // Strictly exclude bot accounts
+            if (isBotAccount(nameStr, gid)) return true;
+
+            // Strictly exclude departed, banned, deleted
             if (typeof playerOrName === 'object') {
                 const s = typeof window.normalizeMembershipStatus === 'function'
                     ? window.normalizeMembershipStatus(playerOrName.membershipStatus || playerOrName.status)
@@ -18236,12 +18302,9 @@ window.showMissedDaysReportModal = async (btnEl = null) => {
             if (typeof window.isPlayerActiveMember === 'function' && !window.isPlayerActiveMember(playerOrName)) {
                 return true;
             }
-            const nameStr = typeof playerOrName === 'string' ? playerOrName : (playerOrName.name || playerOrName.chiefName || '');
             if (nameStr && window.rosterCache) {
-                const clean = (typeof window.cleanChiefName === 'function' ? window.cleanChiefName(nameStr) : nameStr).toLowerCase();
-                const raw = nameStr.toLowerCase().trim();
                 for (const r of Object.values(window.rosterCache)) {
-                    if (r && (r.name?.toLowerCase() === clean || r.name?.toLowerCase() === raw)) {
+                    if (r && ((r.name && window.cleanChiefName(r.name).toLowerCase() === clean) || r.name?.toLowerCase() === raw || (gid && String(r.gameId).trim() === gid))) {
                         const rStatus = typeof window.normalizeMembershipStatus === 'function'
                             ? window.normalizeMembershipStatus(r.membershipStatus || r.status)
                             : (r.membershipStatus || r.status);
@@ -18251,219 +18314,311 @@ window.showMissedDaysReportModal = async (btnEl = null) => {
                     }
                 }
             }
+
+            // Exclude non-participating secondary alts (alts with 0 showdown scores)
+            const isAlt = Boolean(
+                (typeof playerOrName === 'object' && playerOrName.isAlt) ||
+                altNamesSet.has(clean) ||
+                altNamesSet.has(raw) ||
+                (gid && altGidsSet.has(gid))
+            );
+            if (isAlt) {
+                const sc = getScoresForPlayer(playerOrName);
+                const hasParticipation = sc && [1,2,3,4,5,6].some(d => Number(sc['d'+d] || 0) > 0);
+                if (!hasParticipation) {
+                    return true;
+                }
+            }
+
+            // Exclude ghost records with 0 scores that are not in the active roster
+            const inRoster = rosterRawData && Object.values(rosterRawData).some(r => r && ((r.name && window.cleanChiefName(r.name).toLowerCase() === clean) || r.name?.toLowerCase() === raw));
+            if (!inRoster) {
+                const sc = getScoresForPlayer(playerOrName);
+                const hasParticipation = sc && [1,2,3,4,5,6].some(d => Number(sc['d'+d] || 0) > 0);
+                if (!hasParticipation) {
+                    return true;
+                }
+            }
+
             return false;
         };
 
-        // 2. Extract unique active player list deduplicated case-insensitively (strictly excluding left or banned players)
-        const seenPlayerNames = new Map();
-        if (rosterRawData && Object.keys(rosterRawData).length > 0) {
-            Object.values(rosterRawData).forEach(p => {
-                if (p && typeof p === 'object' && p.name && typeof p.name === 'string') {
-                    if (isExcludedMember(p)) return;
-                    const cleanName = p.name.trim();
-                    const lower = cleanName.toLowerCase();
-                    if (cleanName && !seenPlayerNames.has(lower)) {
-                        seenPlayerNames.set(lower, cleanName);
-                    }
-                }
-            });
-        }
-        if (seenPlayerNames.size === 0) {
-            Object.keys(sdLiveData).forEach(k => {
-                if (k && typeof k === 'string') {
-                    if (isExcludedMember(k)) return;
-                    const cleanName = k.trim();
-                    const lower = cleanName.toLowerCase();
-                    if (cleanName && !seenPlayerNames.has(lower)) {
-                        seenPlayerNames.set(lower, cleanName);
-                    }
-                }
-            });
-        }
-        const allPlayers = Array.from(seenPlayerNames.values())
-            .filter(name => !isExcludedMember(name))
-            .sort((a,b) => a.localeCompare(b));
-
-        // 3. Determine active days (days with > 0 scores)
-        const isDayActive = {};
+        // Determine active days (days with > 0 scores)
         let maxActiveDay = 0;
         for (let d = 1; d <= 6; d++) {
             let dayHasScore = Object.values(sdLiveData).some(scores => scores && Number(scores['d'+d] || 0) > 0);
-            isDayActive[d] = dayHasScore;
             if (dayHasScore) maxActiveDay = d;
         }
         if (maxActiveDay === 0) maxActiveDay = 1;
 
-        const playerMissedMap = {};
-        const dayMissedMap = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
-
-        allPlayers.forEach(pName => {
-            if (isExcludedMember(pName)) return;
-            const lowerName = pName.trim().toLowerCase();
-            const scores = sdLiveDataLowerMap[lowerName] || {};
-            const missedDays = [];
-            for (let d = 1; d <= maxActiveDay; d++) {
-                const score = Number(scores['d' + d] || 0);
-                if (score === 0) {
-                    missedDays.push(d);
-                    dayMissedMap[d].push(pName);
-                }
-            }
-            if (missedDays.length > 0) {
-                playerMissedMap[pName] = missedDays;
+        // Build Candidate Lists for Dual Views
+        // 1. Active Showdown Participants: chiefs who actively have entered Showdown scores
+        const activeSdParticipantNames = new Set();
+        Object.entries(sdLiveData).forEach(([k, scores]) => {
+            if (isExcludedMember(k)) return;
+            const hasScore = scores && [1,2,3,4,5,6].some(d => Number(scores['d'+d] || 0) > 0);
+            if (hasScore) {
+                const cName = window.cleanChiefName(scores.name || k);
+                if (cName) activeSdParticipantNames.add(cName);
             }
         });
 
-        const playersWithMisses = Object.keys(playerMissedMap)
-            .filter(pName => !isExcludedMember(pName))
-            .sort((a,b) => playerMissedMap[b].length - playerMissedMap[a].length || a.localeCompare(b));
-
-        let copyText = `📅 ALLIANCE SHOWDOWN MISSED DAYS REPORT (Active Days 1-${maxActiveDay})\n`;
-        copyText += `----------------------------------------\n`;
-        if (playersWithMisses.length === 0) {
-            copyText += `🎉 Perfect Attendance! 0 players missed any active days!\n`;
-        } else {
-            playersWithMisses.forEach(pName => {
-                const daysStr = playerMissedMap[pName].map(d => `Day ${d}`).join(', ');
-                copyText += `• ${pName}: ${daysStr} (${playerMissedMap[pName].length} missed)\n`;
+        // 2. All Mains + Participating Alts
+        const allMainNames = new Set();
+        if (rosterRawData && Object.keys(rosterRawData).length > 0) {
+            Object.values(rosterRawData).forEach(p => {
+                if (p && typeof p === 'object' && p.name && typeof p.name === 'string') {
+                    if (isExcludedMember(p)) return;
+                    const cleanName = window.cleanChiefName(p.name);
+                    if (cleanName) allMainNames.add(cleanName);
+                }
             });
         }
-        copyText += `----------------------------------------\nTotal Players with Missed Days: ${playersWithMisses.length}`;
+        // Also ensure all active showdown participants are included
+        activeSdParticipantNames.forEach(name => allMainNames.add(name));
+
+        const computeMissedData = (playerList) => {
+            const playerMissedMap = {};
+            const dayMissedMap = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
+
+            const allPlayers = playerList;
+            allPlayers.forEach(pName => {
+                if (isExcludedMember(pName)) return;
+                const scores = getScoresForPlayer(pName) || {};
+                const missedDays = [];
+                for (let d = 1; d <= maxActiveDay; d++) {
+                    const score = Number(scores['d' + d] || 0);
+                    if (score === 0) {
+                        missedDays.push(d);
+                        dayMissedMap[d].push(pName);
+                    }
+                }
+                if (missedDays.length > 0) {
+                    playerMissedMap[pName] = missedDays;
+                }
+            });
+
+            const playersWithMisses = Object.keys(playerMissedMap)
+                .filter(pName => !isExcludedMember(pName))
+                .sort((a,b) => playerMissedMap[b].length - playerMissedMap[a].length || a.localeCompare(b));
+
+            return { playerMissedMap, dayMissedMap, playersWithMisses };
+        };
+
+        const activeListSorted = Array.from(activeSdParticipantNames).sort((a,b) => a.localeCompare(b));
+        const allListSorted = Array.from(allMainNames).sort((a,b) => a.localeCompare(b));
+
+        // Default to active Showdown roster if available, otherwise all eligible mains
+        let currentFilter = activeListSorted.length > 0 ? 'active_roster' : 'all_mains';
+
+        // Helper to generate clipboard text
+        const generateCopyText = (filterMode) => {
+            const listToUse = filterMode === 'active_roster' ? activeListSorted : allListSorted;
+            const { playerMissedMap, playersWithMisses } = computeMissedData(listToUse);
+            const modeLabel = filterMode === 'active_roster' ? 'Active Showdown Participants' : 'All Alliance Members';
+            let copyText = `📅 ALLIANCE SHOWDOWN MISSED DAYS REPORT (${modeLabel}, Days 1-${maxActiveDay})\n`;
+            copyText += `----------------------------------------\n`;
+            if (playersWithMisses.length === 0) {
+                copyText += `🎉 Perfect Attendance! 0 players missed any active days!\n`;
+            } else {
+                playersWithMisses.forEach(pName => {
+                    const daysStr = playerMissedMap[pName].map(d => `Day ${d}`).join(', ');
+                    copyText += `• ${pName}: ${daysStr} (${playerMissedMap[pName].length} missed)\n`;
+                });
+            }
+            copyText += `----------------------------------------\nTotal Players with Missed Days: ${playersWithMisses.length}`;
+            return copyText;
+        };
+
+        const nowSyncTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
         const modal = document.createElement('div');
+        modal.id = 'showdownMissedReportModal';
         modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); backdrop-filter:blur(6px); z-index:10002; display:flex; justify-content:center; align-items:center; animation:fadeIn 0.2s ease; padding:15px; box-sizing:border-box;';
 
-        let dayCardsHtml = '';
-        for (let d = 1; d <= 6; d++) {
-            const active = d <= maxActiveDay;
-            const missedList = Array.from(new Set(dayMissedMap[d] || []));
-            if (!active) {
-                dayCardsHtml += `
-                    <div style="background:var(--bg-main); border:1px dashed var(--border); border-radius:10px; padding:12px 14px; opacity:0.8;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                            <span style="font-weight:bold; color:var(--text-muted); font-size:14px;">Day ${d}</span>
-                            <span style="background:rgba(234,179,8,0.15); color:#eab308; border:1px solid rgba(234,179,8,0.3); font-size:11px; font-weight:bold; padding:2px 8px; border-radius:12px;">
-                                ⏳ Pending
-                            </span>
-                        </div>
-                        <div style="font-size:12px; color:var(--text-muted); font-style:italic;">Day not started yet</div>
-                    </div>
-                `;
-            } else {
-                dayCardsHtml += `
-                    <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:12px 14px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                            <span style="font-weight:bold; color:var(--text-main); font-size:14px;">Day ${d}</span>
-                            <span style="background:${missedList.length > 0 ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)'}; color:${missedList.length > 0 ? '#ef4444' : '#10b981'}; border:1px solid ${missedList.length > 0 ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.3)'}; font-size:11px; font-weight:bold; padding:2px 8px; border-radius:12px;">
-                                ${missedList.length > 0 ? `${missedList.length} Missed` : '✅ All Scored'}
-                            </span>
-                        </div>
-                        ${missedList.length === 0 ? '<div style="font-size:12px; color:var(--text-muted); font-style:italic;">100% Participation</div>' : `
-                            <div style="font-size:12px; color:var(--text-muted); max-height:80px; overflow-y:auto; line-height:1.4;">
-                                ${missedList.map(name => `<div>• ${window.escapeHTML(name)}</div>`).join('')}
+        const renderModalBody = () => {
+            const listToUse = currentFilter === 'active_roster' ? activeListSorted : allListSorted;
+            const { playerMissedMap, dayMissedMap, playersWithMisses } = computeMissedData(listToUse);
+
+            let dayCardsHtml = '';
+            for (let d = 1; d <= 6; d++) {
+                const active = d <= maxActiveDay;
+                const missedList = Array.from(new Set(dayMissedMap[d] || []));
+                if (!active) {
+                    dayCardsHtml += `
+                        <div style="background:var(--bg-main); border:1px dashed var(--border); border-radius:10px; padding:12px 14px; opacity:0.8;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                <span style="font-weight:bold; color:var(--text-muted); font-size:14px;">Day ${d}</span>
+                                <span style="background:rgba(234,179,8,0.15); color:#eab308; border:1px solid rgba(234,179,8,0.3); font-size:11px; font-weight:bold; padding:2px 8px; border-radius:12px;">
+                                    ⏳ Pending
+                                </span>
                             </div>
-                        `}
-                    </div>
-                `;
-            }
-        }
-
-        let playerRowsHtml = '';
-        if (playersWithMisses.length === 0) {
-            playerRowsHtml = `<tr><td colspan="3" style="padding:20px; text-align:center; color:var(--success); font-weight:bold;">🎉 100% Perfect Attendance! 0 players missed any active days.</td></tr>`;
-        } else {
-            playerRowsHtml = playersWithMisses.map(pName => {
-                const missedDays = playerMissedMap[pName];
-                const badges = missedDays.map(d => `<span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:2px 6px; border-radius:4px; font-size:11px; font-weight:bold;">Day ${d}</span>`).join(' ');
-                return `
-                    <tr style="border-bottom:1px solid var(--border);">
-                        <td style="padding:10px; font-weight:bold; color:var(--text-main);">${window.escapeHTML(pName)}</td>
-                        <td style="padding:10px;">${badges}</td>
-                        <td style="padding:10px; text-align:right; font-weight:bold; color:var(--danger);">${missedDays.length}</td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        modal.innerHTML = `
-            <div style="background:var(--card-bg); border:1px solid var(--accent); border-radius:16px; width:100%; max-width:680px; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 25px 60px rgba(0,0,0,0.8); overflow:hidden;">
-                <div style="padding:20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; background:linear-gradient(135deg, rgba(239,68,68,0.1), transparent);">
-                    <div>
-                        <h3 style="margin:0; color:var(--text-main); font-size:18px; display:flex; align-items:center; gap:8px;">
-                            📋 Showdown Missed Days Report
-                        </h3>
-                        <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">Showing active Days 1 through ${maxActiveDay} (${playersWithMisses.length} player(s) missed scores)</div>
-                    </div>
-                    <button id="closeMissedReportX" style="background:none; border:none; color:var(--text-muted); font-size:24px; cursor:pointer; padding:0;">&times;</button>
-                </div>
-
-                <div style="padding:20px; overflow-y:auto; display:flex; flex-direction:column; gap:20px;">
-                    <div>
-                        <div style="font-size:13px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; margin-bottom:10px;">📅 Daily Breakdown</div>
-                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px;">
-                            ${dayCardsHtml}
+                            <div style="font-size:12px; color:var(--text-muted); font-style:italic;">Day not started yet</div>
                         </div>
-                    </div>
-
-                    <div>
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                            <div style="font-size:13px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">👤 Players with Missed Days (${playersWithMisses.length})</div>
-                        </div>
-                        <div style="max-height:260px; overflow-y:auto; border:1px solid var(--border); border-radius:10px; background:var(--bg-main);">
-                            <table style="width:100%; border-collapse:collapse; text-align:left; font-size:13px;">
-                                <thead>
-                                    <tr style="border-bottom:1px solid var(--border); background:rgba(255,255,255,0.03); color:var(--text-muted); font-size:11px; text-transform:uppercase;">
-                                        <th style="padding:10px;">Chief Name</th>
-                                        <th style="padding:10px;">Missed Days</th>
-                                        <th style="padding:10px; text-align:right;">Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${playerRowsHtml}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <div style="padding:15px 20px; border-top:1px solid var(--border); background:rgba(0,0,0,0.2); display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
-                    <button id="copyMissedListBtn" style="background:var(--accent); color:#fff; border:none; padding:10px 18px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(14,165,233,0.3);">
-                        📋 Copy Missed List to Clipboard
-                    </button>
-                    <button id="closeMissedReportBtn" style="background:var(--bg-main); color:var(--text-main); border:1px solid var(--border); padding:10px 18px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer;">
-                        Close
-                    </button>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-
-        const closeModal = () => modal.remove();
-        modal.querySelector('#closeMissedReportX').addEventListener('click', closeModal);
-        modal.querySelector('#closeMissedReportBtn').addEventListener('click', closeModal);
-
-        modal.querySelector('#copyMissedListBtn').addEventListener('click', () => {
-            const doCopy = (txt) => {
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                    navigator.clipboard.writeText(txt).then(() => {
-                        if (window.showToast) window.showToast(`Copied Showdown Missed Days list to clipboard!`, 'success');
-                    }).catch(() => fallbackCopy(txt));
+                    `;
                 } else {
-                    fallbackCopy(txt);
+                    dayCardsHtml += `
+                        <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:12px 14px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                <span style="font-weight:bold; color:var(--text-main); font-size:14px;">Day ${d}</span>
+                                <span style="background:${missedList.length > 0 ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)'}; color:${missedList.length > 0 ? '#ef4444' : '#10b981'}; border:1px solid ${missedList.length > 0 ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.3)'}; font-size:11px; font-weight:bold; padding:2px 8px; border-radius:12px;">
+                                    ${missedList.length > 0 ? `${missedList.length} Missed` : '✅ All Scored'}
+                                </span>
+                            </div>
+                            ${missedList.length === 0 ? '<div style="font-size:12px; color:var(--text-muted); font-style:italic;">100% Participation</div>' : `
+                                <div style="font-size:12px; color:var(--text-muted); max-height:80px; overflow-y:auto; line-height:1.4;">
+                                    ${missedList.map(name => `<div>• ${window.escapeHTML(name)}</div>`).join('')}
+                                </div>
+                            `}
+                        </div>
+                    `;
                 }
-            };
-            const fallbackCopy = (txt) => {
-                const ta = document.createElement('textarea');
-                ta.value = txt;
-                document.body.appendChild(ta);
-                ta.select();
-                document.execCommand('copy');
-                document.body.removeChild(ta);
-                if (window.showToast) window.showToast(`Copied Showdown Missed Days list to clipboard!`, 'success');
-            };
-            doCopy(copyText);
-        });
+            }
+
+            let playerRowsHtml = '';
+            if (playersWithMisses.length === 0) {
+                playerRowsHtml = `<tr><td colspan="3" style="padding:24px; text-align:center; color:var(--success); font-weight:bold; font-size:14px;">🎉 100% Perfect Attendance! 0 players missed any active days.</td></tr>`;
+            } else {
+                playerRowsHtml = playersWithMisses.map(pName => {
+                    const missedDays = playerMissedMap[pName] || [];
+                    const badges = missedDays.map(d => `<span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:2px 6px; border-radius:4px; font-size:11px; font-weight:bold;">Day ${d}</span>`).join(' ');
+                    return `
+                        <tr style="border-bottom:1px solid var(--border);">
+                            <td style="padding:10px; font-weight:bold; color:var(--text-main);">${window.escapeHTML(pName)}</td>
+                            <td style="padding:10px;">${badges}</td>
+                            <td style="padding:10px; text-align:right; font-weight:bold; color:var(--danger);">${missedDays.length}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            return `
+                <div style="background:var(--card-bg); border:1px solid var(--accent); border-radius:16px; width:100%; max-width:720px; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 25px 60px rgba(0,0,0,0.8); overflow:hidden;">
+                    <div style="padding:18px 20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; background:linear-gradient(135deg, rgba(239,68,68,0.1), transparent);">
+                        <div>
+                            <h3 style="margin:0; color:var(--text-main); font-size:18px; display:flex; align-items:center; gap:8px;">
+                                <span>📋 Showdown Missed Days Report</span>
+                                <span style="font-size:11px; background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:2px 8px; border-radius:12px; font-weight:normal;">⚡ Live Updated: ${nowSyncTime}</span>
+                            </h3>
+                            <div style="font-size:12px; color:var(--text-muted); margin-top:3px;">Showing active Days 1 through ${maxActiveDay} &bull; ${playersWithMisses.length} player(s) flagged for misses</div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <button id="refreshMissedReportBtn" style="background:rgba(255,255,255,0.08); border:1px solid var(--border); color:var(--text-main); padding:6px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:4px;" title="Re-fetch live data from Firebase">
+                                🔄 Refresh
+                            </button>
+                            <button id="closeMissedReportX" style="background:none; border:none; color:var(--text-muted); font-size:24px; cursor:pointer; padding:0; line-height:1;">&times;</button>
+                        </div>
+                    </div>
+
+                    <!-- View Filter Tabs -->
+                    <div style="padding:10px 20px 0; display:flex; gap:8px; border-bottom:1px solid var(--border); background:rgba(0,0,0,0.15);">
+                        <button id="tabActiveSdRoster" style="padding:8px 14px; border:none; border-bottom:2px solid ${currentFilter === 'active_roster' ? 'var(--accent)' : 'transparent'}; background:none; color:${currentFilter === 'active_roster' ? 'var(--accent)' : 'var(--text-muted)'}; font-weight:bold; font-size:12.5px; cursor:pointer; display:flex; align-items:center; gap:6px;">
+                            ⚔️ Active Showdown Roster (${activeListSorted.length})
+                        </button>
+                        <button id="tabAllMains" style="padding:8px 14px; border:none; border-bottom:2px solid ${currentFilter === 'all_mains' ? 'var(--accent)' : 'transparent'}; background:none; color:${currentFilter === 'all_mains' ? 'var(--accent)' : 'var(--text-muted)'}; font-weight:bold; font-size:12.5px; cursor:pointer; display:flex; align-items:center; gap:6px;">
+                            👥 All Alliance Mains (${allListSorted.length})
+                        </button>
+                    </div>
+
+                    <div style="padding:20px; overflow-y:auto; display:flex; flex-direction:column; gap:20px;">
+                        <div>
+                            <div style="font-size:12.5px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; margin-bottom:10px; letter-spacing:0.5px;">📅 Daily Breakdown</div>
+                            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:10px;">
+                                ${dayCardsHtml}
+                            </div>
+                        </div>
+
+                        <div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                                <div style="font-size:12.5px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">👤 Players with Missed Days (${playersWithMisses.length})</div>
+                                <span style="font-size:11px; color:var(--text-muted); font-style:italic;">Bots &amp; non-participating alts automatically excluded</span>
+                            </div>
+                            <div style="max-height:260px; overflow-y:auto; border:1px solid var(--border); border-radius:10px; background:var(--bg-main);">
+                                <table style="width:100%; border-collapse:collapse; text-align:left; font-size:13px;">
+                                    <thead>
+                                        <tr style="border-bottom:1px solid var(--border); background:rgba(255,255,255,0.03); color:var(--text-muted); font-size:11px; text-transform:uppercase;">
+                                            <th style="padding:10px;">Chief Name</th>
+                                            <th style="padding:10px;">Missed Days</th>
+                                            <th style="padding:10px; text-align:right;">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${playerRowsHtml}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="padding:14px 20px; border-top:1px solid var(--border); background:rgba(0,0,0,0.2); display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+                        <button id="copyMissedListBtn" style="background:var(--accent); color:#fff; border:none; padding:10px 18px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(14,165,233,0.3);">
+                            📋 Copy Missed List to Clipboard
+                        </button>
+                        <button id="closeMissedReportBtn" style="background:var(--bg-main); color:var(--text-main); border:1px solid var(--border); padding:10px 18px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer;">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            `;
+        };
+
+        const attachModalEvents = () => {
+            const closeModal = () => modal.remove();
+            modal.querySelector('#closeMissedReportX')?.addEventListener('click', closeModal);
+            modal.querySelector('#closeMissedReportBtn')?.addEventListener('click', closeModal);
+
+            modal.querySelector('#refreshMissedReportBtn')?.addEventListener('click', async () => {
+                modal.remove();
+                await window.showMissedDaysReportModal();
+                if (window.showToast) window.showToast("⚡ Missed Days Report re-synced with live Firebase data", "info");
+            });
+
+            modal.querySelector('#tabActiveSdRoster')?.addEventListener('click', () => {
+                if (currentFilter === 'active_roster') return;
+                currentFilter = 'active_roster';
+                modal.innerHTML = renderModalBody();
+                attachModalEvents();
+            });
+
+            modal.querySelector('#tabAllMains')?.addEventListener('click', () => {
+                if (currentFilter === 'all_mains') return;
+                currentFilter = 'all_mains';
+                modal.innerHTML = renderModalBody();
+                attachModalEvents();
+            });
+
+            modal.querySelector('#copyMissedListBtn')?.addEventListener('click', () => {
+                const txt = generateCopyText(currentFilter);
+                const doCopy = (str) => {
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(str).then(() => {
+                            if (window.showToast) window.showToast(`Copied Showdown Missed Days list to clipboard!`, 'success');
+                        }).catch(() => fallbackCopy(str));
+                    } else {
+                        fallbackCopy(str);
+                    }
+                };
+                const fallbackCopy = (str) => {
+                    const ta = document.createElement('textarea');
+                    ta.value = str;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                    if (window.showToast) window.showToast(`Copied Showdown Missed Days list to clipboard!`, 'success');
+                };
+                doCopy(txt);
+            });
+        };
+
+        // Remove any existing modal if already open
+        const existingModal = document.getElementById('showdownMissedReportModal');
+        if (existingModal) existingModal.remove();
+
+        modal.innerHTML = renderModalBody();
+        document.body.appendChild(modal);
+        attachModalEvents();
+
     } catch(err) {
         console.error("Error opening Showdown Missed Days Report:", err);
         if (window.showToast) window.showToast("Error opening report: " + err.message, "error");

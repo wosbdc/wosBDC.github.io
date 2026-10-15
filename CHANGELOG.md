@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.105] - 2026-10-15
+- 🤖 **Bot Filter**: Excluded bots and automated service accounts from missed report.
+- 👥 **Alt Filter**: Excluded secondary alts with zero showdown participation.
+- ⚡ **Live Sync**: Added instant auto-save flush and real-time refresh button.
+- ⚔️ **Dual Views**: Added toggle between active participants and all mains.
+
 ## [3.3.104] - 2026-10-14
 - 🔧 **Build Fix**: Fixed automated build failure in test runner.
 - 🔄 **Version Sync**: Synchronized dashboard versions across all project files.
