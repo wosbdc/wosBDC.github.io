@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.3.104] - 2026-10-14
+- 🔧 **Build Fix**: Fixed automated build failure in test runner.
+- 🔄 **Version Sync**: Synchronized dashboard versions across all project files.
+
 ## [3.3.103] - 2026-10-14
 - ⚠️ **Update Alert**: Shows prominent Waiting on Update alert for active round.
 - ⏩ **Alert Advance**: Entering flags automatically shifts the alert forward.

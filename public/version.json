@@ -1,16 +1,18 @@
 {
-  "version": "3.3.103",
+  "version": "3.3.104",
   "releaseDate": "2026-10-14",
-  "title": "What's New in v3.3.103",
+  "title": "What's New in v3.3.104",
   "notes": [
+    "🔧 Build Fix: Fixed GitHub Actions CI version check.",
     "⚠️ Update Alert: Shows Waiting on Update alert for active round.",
     "⏩ Alert Advance: Entering flags automatically moves alert forward.",
-    "🛡️ Scout Protection: Pre-scouted opponents never trigger false draw.",
-    "⏳ Upcoming Label: Unplayed rounds cleanly marked as upcoming."
+    "🛡️ Scout Protection: Pre-scouted opponents never trigger false draw."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.102",
+    "version": "3.3.104",
     "latestChanges": [
+      "v3.3.104: Synchronized dashboard and root versions for GitHub Actions build test suite",
+      "v3.3.103: Added Championship Waiting on Update alert and dynamic progression",
       "v3.3.102: Added round locking and tournament round navigator to Alliance Championship Suite",
       "v3.3.101: Defaulted invite URL to https://tiny.cc/wosBDC and persisted custom links",
       "v3.3.100: Relocated Share Member Invite button next to Copy Unsynced in database box",
