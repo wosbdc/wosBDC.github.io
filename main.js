@@ -35201,7 +35201,8 @@ const views = {
             // 1. Analyze 5 rounds and compute lock states & guidance metrics
             window._champRoundLockState = window._champRoundLockState || {};
             const roundDetails = [];
-            let nextRoundNum = 1;
+            let nextRoundNum = 5;
+            let foundNext = false;
             let completedRoundsCount = 0;
 
             for (let i = 1; i <= 5; i++) {
@@ -35210,16 +35211,18 @@ const views = {
                 let enemyFlags = (r.enemyAlliance && r.enemyAlliance.flags !== undefined && r.enemyAlliance.flags !== null && r.enemyAlliance.flags !== '') ? Number(r.enemyAlliance.flags) : 0;
                 let enemyName = (r.enemyAlliance && r.enemyAlliance.name) ? r.enemyAlliance.name.trim() : '';
                 let enemyState = (r.enemyAlliance && r.enemyAlliance.state) ? r.enemyAlliance.state.trim() : '';
-                let isVictory = ourFlags > enemyFlags;
-                let isDefeat = enemyFlags > ourFlags;
-                let isDraw = (ourFlags === enemyFlags) && (ourFlags > 0 || enemyFlags > 0);
+                
+                // A round is ONLY completed/fought if battle flags have been entered! Pre-scouted opponents do NOT make it completed or a draw.
+                let hasBattleFlags = (ourFlags > 0 || enemyFlags > 0);
+                let isVictory = hasBattleFlags && (ourFlags > enemyFlags);
+                let isDefeat = hasBattleFlags && (enemyFlags > ourFlags);
+                let isDraw = hasBattleFlags && (ourFlags === enemyFlags);
 
-                let hasData = (ourFlags > 0 || enemyFlags > 0 || (enemyName !== '' && !enemyName.startsWith('Opponent ') && enemyName !== 'Opponent Alliance'));
-                if (hasData) completedRoundsCount++;
-
-                // Default lock state: lock if data is entered, unlock if blank/pending
-                if (window._champRoundLockState[i] === undefined) {
-                    window._champRoundLockState[i] = hasData;
+                if (hasBattleFlags) {
+                    completedRoundsCount++;
+                } else if (!foundNext) {
+                    nextRoundNum = i;
+                    foundNext = true;
                 }
 
                 roundDetails.push({
@@ -35229,48 +35232,57 @@ const views = {
                     enemyFlags,
                     enemyName,
                     enemyState,
-                    hasData,
+                    hasBattleFlags,
                     isVictory,
                     isDefeat,
                     isDraw
                 });
             }
 
-            // Next round to update is the first round that has no data entered yet
+            const allRoundsCompleted = (completedRoundsCount === 5);
+            if (allRoundsCompleted) nextRoundNum = 5;
+            window._champNextRoundNum = nextRoundNum;
+
+            // Default lock states:
+            // - Completed rounds (with battle flags): locked by default
+            // - Current active round waiting on update: unlocked by default so user can edit immediately
+            // - Upcoming rounds: locked by default to prevent accidental edits
             for (let i = 1; i <= 5; i++) {
-                if (!roundDetails[i - 1].hasData) {
-                    nextRoundNum = i;
-                    break;
-                }
-                if (i === 5) {
-                    nextRoundNum = 5;
+                if (window._champRoundLockState[i] === undefined) {
+                    if (allRoundsCompleted) {
+                        window._champRoundLockState[i] = true;
+                    } else if (i === nextRoundNum) {
+                        window._champRoundLockState[i] = false;
+                    } else {
+                        window._champRoundLockState[i] = true;
+                    }
                 }
             }
-            const allRoundsCompleted = (completedRoundsCount === 5);
-            window._champNextRoundNum = nextRoundNum;
 
             // Build Stepper Chips
             let stepperChipsHtml = roundDetails.map(rd => {
                 const isCurrentNext = (rd.i === nextRoundNum && !allRoundsCompleted);
-                const isDone = rd.hasData;
+                const isDone = rd.hasBattleFlags;
                 const isLocked = Boolean(window._champRoundLockState[rd.i]);
 
                 let outcomeTag = isDone 
                     ? (rd.isVictory ? '<span id="champ_stepper_outcome_'+rd.i+'" style="color:#10b981; font-weight:bold;">WON</span>' : (rd.isDefeat ? '<span id="champ_stepper_outcome_'+rd.i+'" style="color:#ef4444; font-weight:bold;">LOST</span>' : '<span id="champ_stepper_outcome_'+rd.i+'" style="color:#f59e0b; font-weight:bold;">DRAW</span>'))
-                    : (isCurrentNext ? '<span id="champ_stepper_outcome_'+rd.i+'" style="color:var(--accent); font-weight:bold;">⚡ NEXT UP</span>' : '<span id="champ_stepper_outcome_'+rd.i+'" style="color:var(--text-muted);">PENDING</span>');
+                    : (isCurrentNext 
+                        ? '<span id="champ_stepper_outcome_'+rd.i+'" style="color:#f59e0b; font-weight:900; display:inline-flex; align-items:center; gap:3px;">⚠️ WAITING ON UPDATE</span>' 
+                        : '<span id="champ_stepper_outcome_'+rd.i+'" style="color:var(--text-muted); font-weight:600;">⏳ UPCOMING</span>');
 
                 let chipBorder = isCurrentNext 
-                    ? 'border:2px solid var(--accent); background:rgba(6,182,212,0.12); box-shadow:0 0 12px rgba(6,182,212,0.3);' 
+                    ? 'border:2px solid #f59e0b; background:rgba(245,158,11,0.12); box-shadow:0 0 14px rgba(245,158,11,0.35);' 
                     : (isDone 
-                        ? 'border:1px solid rgba(16,185,129,0.35); background:rgba(16,185,129,0.05);' 
-                        : 'border:1px solid var(--border); background:rgba(255,255,255,0.02); opacity:0.8;');
+                        ? 'border:1px solid rgba(16,185,129,0.35); background:rgba(16,185,129,0.06);' 
+                        : 'border:1px solid var(--border); background:rgba(255,255,255,0.02); opacity:0.75;');
 
                 let oppShortName = rd.enemyName ? window.extractAllianceTagOnly(rd.enemyName, rd.i) : `Opponent ${rd.i}`;
 
                 return `
                     <div class="champ-stepper-chip" id="champ_stepper_chip_${rd.i}" onclick="window.jumpToChampRound(${rd.i})" style="${chipBorder} border-radius:10px; padding:10px 12px; cursor:pointer; display:flex; flex-direction:column; gap:4px; min-width:115px; transition:all 0.2s ease;" title="Click to jump to Round ${rd.i}">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span style="font-size:11px; font-weight:900; text-transform:uppercase; color:${isCurrentNext ? 'var(--accent)' : 'var(--text-main)'};">R${rd.i}</span>
+                            <span style="font-size:11px; font-weight:900; text-transform:uppercase; color:${isCurrentNext ? '#f59e0b' : 'var(--text-main)'};">R${rd.i}</span>
                             <span id="champ_stepper_lock_${rd.i}" style="font-size:11px;">${isLocked ? '🔒' : '🔓'}</span>
                         </div>
                         <div id="champ_stepper_score_${rd.i}" style="font-size:12px; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--text-main);">
@@ -35291,21 +35303,21 @@ const views = {
                             <span style="font-weight:900; font-size:14px; color:var(--text-main); display:flex; align-items:center; gap:6px;">
                                 🧭 Tournament Round Guide
                             </span>
-                            <span id="champ_guide_status_badge" style="font-size:11px; font-weight:bold; background:${allRoundsCompleted ? 'rgba(16,185,129,0.15)' : 'rgba(6,182,212,0.15)'}; color:${allRoundsCompleted ? '#10b981' : 'var(--accent)'}; border:1px solid ${allRoundsCompleted ? 'rgba(16,185,129,0.35)' : 'rgba(6,182,212,0.35)'}; padding:2px 10px; border-radius:12px;">
-                                ${allRoundsCompleted ? '✅ All 5 Rounds Recorded' : `👉 Round ${nextRoundNum} Needs Update`}
+                            <span id="champ_guide_status_badge" style="font-size:11px; font-weight:bold; background:${allRoundsCompleted ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)'}; color:${allRoundsCompleted ? '#10b981' : '#f59e0b'}; border:1px solid ${allRoundsCompleted ? 'rgba(16,185,129,0.35)' : 'rgba(245,158,11,0.4)'}; padding:2px 10px; border-radius:12px;">
+                                ${allRoundsCompleted ? '✅ All 5 Rounds Recorded' : `⚠️ Round ${nextRoundNum} Waiting on Update`}
                             </span>
                         </div>
 
                         <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                             ${!allRoundsCompleted ? `
-                                <button type="button" id="champJumpNextBtn" onclick="window.jumpToChampRound(${nextRoundNum})" style="background:linear-gradient(135deg, rgba(6,182,212,0.25), rgba(59,130,246,0.25)); border:1px solid var(--accent); color:var(--accent); padding:6px 12px; border-radius:8px; font-weight:bold; font-size:11.5px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; transition:0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.35)'" onmouseout="this.style.background='rgba(6,182,212,0.25)'" title="Scroll directly to Round ${nextRoundNum}">
+                                <button type="button" id="champJumpNextBtn" onclick="window.jumpToChampRound(${nextRoundNum})" style="background:rgba(245,158,11,0.15); border:1px solid #f59e0b; color:#f59e0b; padding:6px 12px; border-radius:8px; font-weight:bold; font-size:11.5px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; transition:0.2s;" onmouseover="this.style.background='rgba(245,158,11,0.25)'" onmouseout="this.style.background='rgba(245,158,11,0.15)'" title="Scroll directly to Round ${nextRoundNum}">
                                     🎯 Jump to Round ${nextRoundNum}
                                 </button>
                             ` : ''}
 
                             <div style="display:inline-flex; background:var(--bg-main); border:1px solid var(--border); border-radius:8px; padding:2px;">
                                 <button type="button" class="champ-view-filter-btn" id="champViewFilter_all" onclick="window.filterChampRoundView('all')" style="background:var(--accent); color:white; border:none; padding:5px 11px; border-radius:6px; font-size:11.5px; font-weight:bold; cursor:pointer;">All (5)</button>
-                                <button type="button" class="champ-view-filter-btn" id="champViewFilter_next" onclick="window.filterChampRoundView('next')" style="background:transparent; color:var(--text-muted); border:none; padding:5px 11px; border-radius:6px; font-size:11.5px; font-weight:bold; cursor:pointer;" title="Focus only on the round currently needing an update">🎯 Focus Next (${nextRoundNum})</button>
+                                <button type="button" class="champ-view-filter-btn" id="champViewFilter_next" onclick="window.filterChampRoundView('next')" style="background:transparent; color:var(--text-muted); border:none; padding:5px 11px; border-radius:6px; font-size:11.5px; font-weight:bold; cursor:pointer;" title="Focus only on the round currently needing an update">🎯 Focus Round (${nextRoundNum})</button>
                             </div>
                         </div>
                     </div>
@@ -35326,23 +35338,26 @@ const views = {
                 const isVictory = rd.isVictory;
                 const isDefeat = rd.isDefeat;
                 const isDraw = rd.isDraw;
+                const hasBattleFlags = rd.hasBattleFlags;
                 const isLocked = Boolean(window._champRoundLockState[i]);
                 const isCurrentNext = (i === nextRoundNum && !allRoundsCompleted);
 
-                let liveBadge = isVictory 
-                    ? '<span id="live_badge_r'+i+'" style="background:rgba(16,185,129,0.2); border:1px solid rgba(16,185,129,0.4); color:#10b981; padding:3px 10px; border-radius:10px; font-weight:bold; font-size:11px;">🏆 VICTORY</span>'
-                    : (isDefeat 
-                        ? '<span id="live_badge_r'+i+'" style="background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:3px 10px; border-radius:10px; font-weight:bold; font-size:11px;">💔 DEFEAT</span>' 
-                        : (isDraw 
-                            ? '<span id="live_badge_r'+i+'" style="background:rgba(245,158,11,0.2); border:1px solid rgba(245,158,11,0.4); color:#f59e0b; padding:3px 10px; border-radius:10px; font-weight:bold; font-size:11px;">⚖️ DRAW</span>'
-                            : '<span id="live_badge_r'+i+'" style="background:rgba(255,255,255,0.05); color:var(--text-muted); padding:3px 10px; border-radius:10px; font-size:11px;">PENDING</span>'));
+                let liveBadge = hasBattleFlags
+                    ? (isVictory 
+                        ? '<span id="live_badge_r'+i+'" style="background:rgba(16,185,129,0.2); border:1px solid rgba(16,185,129,0.4); color:#10b981; padding:3px 10px; border-radius:10px; font-weight:bold; font-size:11px;">🏆 VICTORY</span>'
+                        : (isDefeat 
+                            ? '<span id="live_badge_r'+i+'" style="background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:3px 10px; border-radius:10px; font-weight:bold; font-size:11px;">💔 DEFEAT</span>' 
+                            : '<span id="live_badge_r'+i+'" style="background:rgba(245,158,11,0.2); border:1px solid rgba(245,158,11,0.4); color:#f59e0b; padding:3px 10px; border-radius:10px; font-weight:bold; font-size:11px;">⚖️ DRAW</span>'))
+                    : (isCurrentNext
+                        ? '<span id="live_badge_r'+i+'" style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.3); color:#f59e0b; padding:3px 10px; border-radius:10px; font-weight:bold; font-size:11px;">⏳ READY FOR INPUT</span>'
+                        : '<span id="live_badge_r'+i+'" style="background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--text-muted); padding:3px 10px; border-radius:10px; font-size:11px;">⏳ UPCOMING</span>');
 
                 let cardStyle = isCurrentNext 
-                    ? 'border:2px solid var(--accent); box-shadow:0 0 20px rgba(6,182,212,0.25); background:linear-gradient(180deg, rgba(6,182,212,0.04) 0%, var(--card-bg) 60px);' 
+                    ? 'border:2px solid #f59e0b; box-shadow:0 0 20px rgba(245,158,11,0.25); background:linear-gradient(180deg, rgba(245,158,11,0.05) 0%, var(--card-bg) 60px);' 
                     : 'border:1px solid var(--border); box-shadow:0 4px 15px rgba(0,0,0,0.2); background:var(--card-bg);';
 
                 let nextRoundHeaderBadge = isCurrentNext 
-                    ? `<span id="champ_next_badge_r${i}" style="background:linear-gradient(135deg, rgba(6,182,212,0.25), rgba(59,130,246,0.25)); border:1px solid var(--accent); color:var(--accent); padding:3px 10px; border-radius:12px; font-weight:900; font-size:10.5px; display:inline-flex; align-items:center; gap:5px; letter-spacing:0.5px;">⚡ NEXT ROUND TO UPDATE</span>` 
+                    ? `<span id="champ_next_badge_r${i}" style="background:rgba(245,158,11,0.2); border:1px solid #f59e0b; color:#f59e0b; padding:3px 10px; border-radius:12px; font-weight:900; font-size:10.5px; display:inline-flex; align-items:center; gap:5px; letter-spacing:0.5px;">⚠️ WAITING ON UPDATE (CURRENT ROUND)</span>` 
                     : `<span id="champ_next_badge_r${i}" style="display:none;"></span>`;
 
                 return `
@@ -35381,7 +35396,7 @@ const views = {
                                 <div style="display:grid; grid-template-columns: 2fr 1fr; gap:8px; margin-bottom:6px;">
                                     <div>
                                         <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:2px;">Tag & Name</label>
-                                        <input type="text" id="adm_champ_r${i}_enemy_name" value="${escapeHTML(enemyName)}" oninput="window.triggerChampAutoSave()" placeholder="e.g. [KOR] KoreaKings" ${isLocked ? 'disabled' : ''} style="width:100%; font-size:13px; font-weight:bold; color:var(--text-main); padding:6px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); box-sizing:border-box; ${isLocked ? 'opacity:0.55; cursor:not-allowed;' : 'opacity:1; cursor:text;'}">
+                                        <input type="text" id="adm_champ_r${i}_enemy_name" value="${escapeHTML(enemyName)}" oninput="window.triggerChampAutoSave(); window.recalcChampNavigator && window.recalcChampNavigator();" placeholder="e.g. [KOR] KoreaKings" ${isLocked ? 'disabled' : ''} style="width:100%; font-size:13px; font-weight:bold; color:var(--text-main); padding:6px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); box-sizing:border-box; ${isLocked ? 'opacity:0.55; cursor:not-allowed;' : 'opacity:1; cursor:text;'}">
                                     </div>
                                     <div>
                                         <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:2px;">State #</label>
@@ -35734,56 +35749,197 @@ const views = {
             }
         };
 
-        window.updateAdminChampPreview = (roundNum) => {
-            let oFlags = Number(document.getElementById('adm_champ_r' + roundNum + '_our_flags')?.value) || 0;
-            let eFlags = Number(document.getElementById('adm_champ_r' + roundNum + '_enemy_flags')?.value) || 0;
-            let badge = document.getElementById('live_badge_r' + roundNum);
-            if (!badge) return;
+        window.recalcChampNavigator = () => {
+            let nextRoundNum = 5;
+            let foundNext = false;
+            let completedCount = 0;
 
-            if (oFlags > eFlags) {
-                badge.innerHTML = '🏆 VICTORY';
-                badge.style.background = 'rgba(16,185,129,0.2)';
-                badge.style.border = '1px solid rgba(16,185,129,0.4)';
-                badge.style.color = '#10b981';
-            } else if (eFlags > oFlags) {
-                badge.innerHTML = '💔 DEFEAT';
-                badge.style.background = 'rgba(239,68,68,0.2)';
-                badge.style.border = '1px solid rgba(239,68,68,0.4)';
-                badge.style.color = '#ef4444';
-            } else if (oFlags > 0 || eFlags > 0) {
-                badge.innerHTML = '⚖️ DRAW';
-                badge.style.background = 'rgba(245,158,11,0.2)';
-                badge.style.border = '1px solid rgba(245,158,11,0.4)';
-                badge.style.color = '#f59e0b';
-            } else {
-                badge.innerHTML = 'PENDING';
-                badge.style.background = 'rgba(255,255,255,0.05)';
-                badge.style.border = '1px solid var(--border)';
-                badge.style.color = 'var(--text-muted)';
+            const roundsStatus = [];
+
+            for (let i = 1; i <= 5; i++) {
+                let oFlags = Number(document.getElementById('adm_champ_r' + i + '_our_flags')?.value) || 0;
+                let eFlags = Number(document.getElementById('adm_champ_r' + i + '_enemy_flags')?.value) || 0;
+                let enemyNameInput = document.getElementById('adm_champ_r' + i + '_enemy_name');
+                let enemyName = enemyNameInput ? enemyNameInput.value.trim() : '';
+
+                let hasBattleFlags = (oFlags > 0 || eFlags > 0);
+                if (hasBattleFlags) {
+                    completedCount++;
+                } else if (!foundNext) {
+                    nextRoundNum = i;
+                    foundNext = true;
+                }
+
+                roundsStatus.push({
+                    i,
+                    oFlags,
+                    eFlags,
+                    enemyName,
+                    hasBattleFlags,
+                    isVictory: hasBattleFlags && (oFlags > eFlags),
+                    isDefeat: hasBattleFlags && (eFlags > oFlags),
+                    isDraw: hasBattleFlags && (oFlags === eFlags)
+                });
             }
 
-            // Sync Stepper chip in Navigator live
-            const stepperScore = document.getElementById(`champ_stepper_score_${roundNum}`);
-            const stepperOutcome = document.getElementById(`champ_stepper_outcome_${roundNum}`);
-            if (stepperScore) {
-                stepperScore.textContent = (oFlags > 0 || eFlags > 0) ? `🚩 ${oFlags} - ${eFlags}` : `Opponent ${roundNum}`;
-            }
-            if (stepperOutcome) {
-                if (oFlags > eFlags) {
-                    stepperOutcome.innerHTML = 'WON';
-                    stepperOutcome.style.color = '#10b981';
-                } else if (eFlags > oFlags) {
-                    stepperOutcome.innerHTML = 'LOST';
-                    stepperOutcome.style.color = '#ef4444';
-                } else if (oFlags > 0 || eFlags > 0) {
-                    stepperOutcome.innerHTML = 'DRAW';
-                    stepperOutcome.style.color = '#f59e0b';
+            const allDone = (completedCount === 5);
+            if (allDone) nextRoundNum = 5;
+            window._champNextRoundNum = nextRoundNum;
+
+            // Update top guide status badge
+            const guideBadge = document.getElementById('champ_guide_status_badge');
+            if (guideBadge) {
+                if (allDone) {
+                    guideBadge.textContent = '✅ All 5 Rounds Recorded';
+                    guideBadge.style.background = 'rgba(16,185,129,0.15)';
+                    guideBadge.style.color = '#10b981';
+                    guideBadge.style.borderColor = 'rgba(16,185,129,0.35)';
                 } else {
-                    const isNext = (roundNum === window._champNextRoundNum);
-                    stepperOutcome.innerHTML = isNext ? '⚡ NEXT UP' : 'PENDING';
-                    stepperOutcome.style.color = isNext ? 'var(--accent)' : 'var(--text-muted)';
+                    guideBadge.textContent = `⚠️ Round ${nextRoundNum} Waiting on Update`;
+                    guideBadge.style.background = 'rgba(245,158,11,0.15)';
+                    guideBadge.style.color = '#f59e0b';
+                    guideBadge.style.borderColor = 'rgba(245,158,11,0.4)';
                 }
             }
+
+            // Update jump button
+            const jumpBtn = document.getElementById('champJumpNextBtn');
+            if (jumpBtn) {
+                if (allDone) {
+                    jumpBtn.style.display = 'none';
+                } else {
+                    jumpBtn.style.display = 'inline-flex';
+                    jumpBtn.textContent = `🎯 Jump to Round ${nextRoundNum}`;
+                    jumpBtn.setAttribute('onclick', `window.jumpToChampRound(${nextRoundNum})`);
+                }
+            }
+
+            // Update focus filter button label
+            const btnNext = document.getElementById('champViewFilter_next');
+            if (btnNext) {
+                btnNext.textContent = `🎯 Focus Round (${nextRoundNum})`;
+            }
+
+            // Update each round's stepper chip and round card
+            roundsStatus.forEach(st => {
+                const i = st.i;
+                const isCurrentNext = (i === nextRoundNum && !allDone);
+                const chip = document.getElementById(`champ_stepper_chip_${i}`);
+                const stepperScore = document.getElementById(`champ_stepper_score_${i}`);
+                const stepperOutcome = document.getElementById(`champ_stepper_outcome_${i}`);
+                const card = document.getElementById(`champ_round_card_${i}`);
+                const nextBadge = document.getElementById(`champ_next_badge_r${i}`);
+                const liveBadge = document.getElementById(`live_badge_r${i}`);
+
+                let oppShortName = st.enemyName ? (window.extractAllianceTagOnly ? window.extractAllianceTagOnly(st.enemyName, i) : st.enemyName) : `Opponent ${i}`;
+
+                if (chip) {
+                    if (isCurrentNext) {
+                        chip.style.border = '2px solid #f59e0b';
+                        chip.style.background = 'rgba(245,158,11,0.12)';
+                        chip.style.boxShadow = '0 0 14px rgba(245,158,11,0.35)';
+                        chip.style.opacity = '1';
+                    } else if (st.hasBattleFlags) {
+                        chip.style.border = '1px solid rgba(16,185,129,0.35)';
+                        chip.style.background = 'rgba(16,185,129,0.06)';
+                        chip.style.boxShadow = 'none';
+                        chip.style.opacity = '1';
+                    } else {
+                        chip.style.border = '1px solid var(--border)';
+                        chip.style.background = 'rgba(255,255,255,0.02)';
+                        chip.style.boxShadow = 'none';
+                        chip.style.opacity = '0.75';
+                    }
+                }
+
+                if (stepperScore) {
+                    stepperScore.textContent = st.hasBattleFlags ? `🚩 ${st.oFlags} - ${st.eFlags}` : oppShortName;
+                }
+
+                if (stepperOutcome) {
+                    if (st.hasBattleFlags) {
+                        if (st.isVictory) {
+                            stepperOutcome.innerHTML = 'WON';
+                            stepperOutcome.style.color = '#10b981';
+                        } else if (st.isDefeat) {
+                            stepperOutcome.innerHTML = 'LOST';
+                            stepperOutcome.style.color = '#ef4444';
+                        } else {
+                            stepperOutcome.innerHTML = 'DRAW';
+                            stepperOutcome.style.color = '#f59e0b';
+                        }
+                    } else if (isCurrentNext) {
+                        stepperOutcome.innerHTML = '⚠️ WAITING ON UPDATE';
+                        stepperOutcome.style.color = '#f59e0b';
+                    } else {
+                        stepperOutcome.innerHTML = '⏳ UPCOMING';
+                        stepperOutcome.style.color = 'var(--text-muted)';
+                    }
+                }
+
+                if (card) {
+                    if (isCurrentNext) {
+                        card.style.border = '2px solid #f59e0b';
+                        card.style.boxShadow = '0 0 20px rgba(245,158,11,0.25)';
+                        card.style.background = 'linear-gradient(180deg, rgba(245,158,11,0.05) 0%, var(--card-bg) 60px)';
+                    } else {
+                        card.style.border = '1px solid var(--border)';
+                        card.style.boxShadow = '0 4px 15px rgba(0,0,0,0.2)';
+                        card.style.background = 'var(--card-bg)';
+                    }
+                }
+
+                if (nextBadge) {
+                    if (isCurrentNext) {
+                        nextBadge.innerHTML = '⚠️ WAITING ON UPDATE (CURRENT ROUND)';
+                        nextBadge.style.display = 'inline-flex';
+                        nextBadge.style.background = 'rgba(245,158,11,0.2)';
+                        nextBadge.style.border = '1px solid #f59e0b';
+                        nextBadge.style.color = '#f59e0b';
+                    } else {
+                        nextBadge.style.display = 'none';
+                    }
+                }
+
+                if (liveBadge) {
+                    if (st.hasBattleFlags) {
+                        if (st.isVictory) {
+                            liveBadge.innerHTML = '🏆 VICTORY';
+                            liveBadge.style.background = 'rgba(16,185,129,0.2)';
+                            liveBadge.style.border = '1px solid rgba(16,185,129,0.4)';
+                            liveBadge.style.color = '#10b981';
+                        } else if (st.isDefeat) {
+                            liveBadge.innerHTML = '💔 DEFEAT';
+                            liveBadge.style.background = 'rgba(239,68,68,0.2)';
+                            liveBadge.style.border = '1px solid rgba(239,68,68,0.4)';
+                            liveBadge.style.color = '#ef4444';
+                        } else {
+                            liveBadge.innerHTML = '⚖️ DRAW';
+                            liveBadge.style.background = 'rgba(245,158,11,0.2)';
+                            liveBadge.style.border = '1px solid rgba(245,158,11,0.4)';
+                            liveBadge.style.color = '#f59e0b';
+                        }
+                    } else if (isCurrentNext) {
+                        liveBadge.innerHTML = '⏳ READY FOR INPUT';
+                        liveBadge.style.background = 'rgba(245,158,11,0.15)';
+                        liveBadge.style.border = '1px solid rgba(245,158,11,0.3)';
+                        liveBadge.style.color = '#f59e0b';
+                    } else {
+                        liveBadge.innerHTML = '⏳ UPCOMING';
+                        liveBadge.style.background = 'rgba(255,255,255,0.05)';
+                        liveBadge.style.border = '1px solid var(--border)';
+                        liveBadge.style.color = 'var(--text-muted)';
+                    }
+                }
+            });
+
+            if (window.champRoundViewFilter === 'next') {
+                window.filterChampRoundView('next');
+            }
+        };
+
+        window.updateAdminChampPreview = (roundNum) => {
+            window.recalcChampNavigator();
         };
 
         window.autoCalculateChampRecord = (silent = false) => {

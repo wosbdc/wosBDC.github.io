@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.103] - 2026-10-14
+- ⚠️ **Update Alert**: Shows prominent Waiting on Update alert for active round.
+- ⏩ **Alert Advance**: Entering flags automatically shifts the alert forward.
+- 🛡️ **Scout Protection**: Pre-scouted opponents never falsely register as draw.
+- ⏳ **Upcoming Label**: Unplayed rounds cleanly marked as upcoming matches.
+
 ## [3.3.102] - 2026-10-14
 - 🔒 **Round Locking**: Protects entered Championship battle data from accidental edits.
 - 🔓 **One-Click Unlock**: Easily unlock any round when changes are needed.

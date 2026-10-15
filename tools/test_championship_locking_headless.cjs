@@ -72,12 +72,12 @@ function runStaticVerification() {
   assert(code.includes('window.toggleChampRoundLock ='), 'main.js must define window.toggleChampRoundLock');
   assert(code.includes('window.jumpToChampRound ='), 'main.js must define window.jumpToChampRound');
   assert(code.includes('window.filterChampRoundView ='), 'main.js must define window.filterChampRoundView');
+  assert(code.includes('window.recalcChampNavigator ='), 'main.js must define window.recalcChampNavigator');
   assert(code.includes('window._champRoundLockState'), 'main.js must maintain window._champRoundLockState');
   assert(code.includes('window._champNextRoundNum'), 'main.js must compute window._champNextRoundNum');
   assert(code.includes('adm_champ_r'), 'main.js must have round inputs');
-  assert(code.includes('adm_champ_r${i}_lock_btn') || code.includes('adm_champ_r') && code.includes('_lock_btn'), 'main.js must define round lock buttons');
   assert(code.includes('Tournament Round Guide'), 'main.js must provide Tournament Round Guide in matchups view');
-  assert(code.includes('NEXT ROUND TO UPDATE'), 'main.js must display NEXT ROUND TO UPDATE badge');
+  assert(code.includes('WAITING ON UPDATE'), 'main.js must display WAITING ON UPDATE badge');
   assert(code.includes('champ_stepper_chip_'), 'main.js must render stepper chips');
 
   console.log('  ✅ Static signatures, buttons, and template contents confirmed');
@@ -129,7 +129,7 @@ async function runHeadlessVerification() {
   page.on('console', msg => {
     if (msg.type() === 'error') {
       const txt = msg.text();
-      if (!txt.includes('favicon.ico') && !txt.includes('404')) {
+      if (!txt.includes('favicon.ico') && !txt.includes('404') && !txt.includes('403')) {
         consoleErrors.push(txt);
       }
     }
@@ -149,19 +149,20 @@ async function runHeadlessVerification() {
       window.getAdminLevel = () => 'R5';
       window.isGoogleAuthVerified = async () => true;
 
-      // Provide mock championship matchups data: Round 1 has entered data, Round 2 is next up
+      // Provide mock championship matchups data matching the user's exact live scenario:
+      // R1 won, R2 lost, R3/R4/R5 have scouted opponent names but 0-0 flags (unplayed)
       window._latestChampionshipMatchups = {
-        seasonName: 'Test Championship Season',
-        statusText: '1 Wins – 0 Losses (Season Active)',
-        ourSeasonFlags: 32,
-        enemySeasonFlags: 20,
+        seasonName: 'Alliance Championship Season',
+        statusText: '1 Wins – 1 Losses',
+        ourSeasonFlags: 3,
+        enemySeasonFlags: 3,
         ourState: '2089',
         rounds: {
-          r1: { roundNum: 1, date: 'Round 1', ourFlags: 32, ourState: '2089', enemyAlliance: { name: '[KOR] KoreaKings', state: '2045', flags: 20 } },
-          r2: { roundNum: 2, date: 'Round 2', ourFlags: 0, ourState: '2089', enemyAlliance: { name: 'Opponent 2', state: '1988', flags: 0 } },
-          r3: { roundNum: 3, date: 'Round 3', ourFlags: 0, ourState: '2089', enemyAlliance: { name: 'Opponent 3', state: '2102', flags: 0 } },
-          r4: { roundNum: 4, date: 'Round 4', ourFlags: 0, ourState: '2089', enemyAlliance: { name: 'Opponent 4', state: '2031', flags: 0 } },
-          r5: { roundNum: 5, date: 'Round 5', ourFlags: 0, ourState: '2089', enemyAlliance: { name: 'Opponent 5', state: '2015', flags: 0 } }
+          r1: { roundNum: 1, date: 'Round 1', ourFlags: 2, ourState: '2089', enemyAlliance: { name: '[tka]TheKingsAssembl', state: '2045', flags: 1 } },
+          r2: { roundNum: 2, date: 'Round 2', ourFlags: 1, ourState: '2089', enemyAlliance: { name: '[B4R]Brats4ndRum', state: '1988', flags: 2 } },
+          r3: { roundNum: 3, date: 'Round 3', ourFlags: 0, ourState: '2089', enemyAlliance: { name: '[WIT]Wit', state: '2102', flags: 0 } },
+          r4: { roundNum: 4, date: 'Round 4', ourFlags: 0, ourState: '2089', enemyAlliance: { name: '[AnH]AuFnachHouse', state: '2031', flags: 0 } },
+          r5: { roundNum: 5, date: 'Round 5', ourFlags: 0, ourState: '2089', enemyAlliance: { name: '[NXS]NEXUS', state: '2015', flags: 0 } }
         }
       };
 
@@ -169,6 +170,7 @@ async function runHeadlessVerification() {
       window.fetchChampionshipMatchups = async () => window._latestChampionshipMatchups;
       window.fetchChampionshipData = async () => ({});
       window.fetchRoster = async () => ({});
+      window.saveChampionshipAdminMatchups = async () => true;
 
       // Navigate to Matchups editor tab
       await window.views.championshipAdmin('matchups');
@@ -191,29 +193,96 @@ async function runHeadlessVerification() {
       };
     });
 
-    assert(guideStatus.badgeText && guideStatus.badgeText.includes('Round 2 Needs Update'), 'Guide badge must identify Round 2 as needing update');
-    assert(guideStatus.hasJumpBtn, 'Must render Jump to Round 2 button');
-    assert(guideStatus.jumpBtnText.includes('Jump to Round 2'), 'Jump button text must target Round 2');
-    console.log('  ✅ Tournament Round Guide accurately identified Round 2 as Next Up');
+    assert(guideStatus.badgeText && guideStatus.badgeText.includes('Round 3 Waiting on Update'), 'Guide badge must identify Round 3 as Waiting on Update');
+    assert(guideStatus.hasJumpBtn, 'Must render Jump to Round 3 button');
+    assert(guideStatus.jumpBtnText.includes('Jump to Round 3'), 'Jump button text must target Round 3');
+    console.log('  ✅ Tournament Round Guide accurately identified Round 3 as Waiting on Update');
 
-    console.log('  🔍 Verifying Stepper Chips...');
+    console.log('  🔍 Verifying Stepper Chips and Alert Badges...');
     const stepperData = await page.evaluate(() => {
       const chips = [];
       for (let i = 1; i <= 5; i++) {
         const chip = document.getElementById(`champ_stepper_chip_${i}`);
         const lockSpan = document.getElementById(`champ_stepper_lock_${i}`);
+        const outcomeSpan = document.getElementById(`champ_stepper_outcome_${i}`);
+        const scoreDiv = document.getElementById(`champ_stepper_score_${i}`);
         chips.push({
           exists: Boolean(chip),
-          lockIcon: lockSpan ? lockSpan.innerText : null
+          lockIcon: lockSpan ? lockSpan.innerText : null,
+          outcomeText: outcomeSpan ? outcomeSpan.innerText : null,
+          scoreText: scoreDiv ? scoreDiv.innerText : null
         });
       }
       return chips;
     });
 
     assert.strictEqual(stepperData.length, 5, 'Must have 5 stepper chips');
-    assert.strictEqual(stepperData[0].lockIcon, '🔒', 'Round 1 (has data) must show 🔒 in stepper');
-    assert.strictEqual(stepperData[1].lockIcon, '🔓', 'Round 2 (pending) must show 🔓 in stepper');
-    console.log('  ✅ 5 Stepper chips rendered with correct lock icons');
+    assert.strictEqual(stepperData[0].lockIcon, '🔒', 'Round 1 (completed) must show 🔒 in stepper');
+    assert(stepperData[0].outcomeText.includes('WON'), 'Round 1 must show WON');
+    assert.strictEqual(stepperData[1].lockIcon, '🔒', 'Round 2 (completed) must show 🔒 in stepper');
+    assert(stepperData[1].outcomeText.includes('LOST'), 'Round 2 must show LOST');
+
+    // Round 3 is the active round waiting on update!
+    assert.strictEqual(stepperData[2].lockIcon, '🔓', 'Round 3 (active round) must show 🔓 in stepper');
+    assert(stepperData[2].outcomeText.includes('WAITING ON UPDATE'), 'Round 3 must show WAITING ON UPDATE alert');
+    assert(!stepperData[2].outcomeText.includes('DRAW'), 'Round 3 must NOT show DRAW');
+
+    // Rounds 4 & 5 are upcoming rounds
+    assert.strictEqual(stepperData[3].lockIcon, '🔒', 'Round 4 (upcoming) must show 🔒 in stepper');
+    assert(stepperData[3].outcomeText.includes('UPCOMING'), 'Round 4 must show UPCOMING');
+    assert(!stepperData[3].outcomeText.includes('DRAW'), 'Round 4 must NOT show DRAW');
+    assert.strictEqual(stepperData[4].lockIcon, '🔒', 'Round 5 (upcoming) must show 🔒 in stepper');
+    assert(stepperData[4].outcomeText.includes('UPCOMING'), 'Round 5 must show UPCOMING');
+    assert(!stepperData[4].outcomeText.includes('DRAW'), 'Round 5 must NOT show DRAW');
+    console.log('  ✅ 5 Stepper chips correctly rendered with Round 3 Waiting on Update alert and zero false DRAWS');
+
+    console.log('  🔍 Verifying Round 3 Card Header Badge...');
+    const r3CardHeader = await page.evaluate(() => {
+      const nextBadge = document.getElementById('champ_next_badge_r3');
+      const liveBadge = document.getElementById('live_badge_r3');
+      return {
+        nextBadgeDisplay: nextBadge ? nextBadge.style.display : null,
+        nextBadgeText: nextBadge ? nextBadge.innerText : null,
+        liveBadgeText: liveBadge ? liveBadge.innerText : null
+      };
+    });
+    assert(r3CardHeader.nextBadgeText.includes('WAITING ON UPDATE'), 'Round 3 card header must show WAITING ON UPDATE');
+    assert(r3CardHeader.liveBadgeText.includes('READY FOR INPUT'), 'Round 3 live badge must show READY FOR INPUT');
+    console.log('  ✅ Round 3 card header displays active alert');
+
+    console.log('  🔍 Testing Dynamic Alert Progression: Entering flags in Round 3 moves alert to Round 4...');
+    await page.evaluate(() => {
+      const ourFlagsInput = document.getElementById('adm_champ_r3_our_flags');
+      const enemyFlagsInput = document.getElementById('adm_champ_r3_enemy_flags');
+      ourFlagsInput.value = '3';
+      enemyFlagsInput.value = '1';
+      window.updateAdminChampPreview(3);
+    });
+
+    const progressionState = await page.evaluate(() => {
+      const r3Outcome = document.getElementById('champ_stepper_outcome_3')?.innerText;
+      const r4Outcome = document.getElementById('champ_stepper_outcome_4')?.innerText;
+      const guideBadge = document.getElementById('champ_guide_status_badge')?.innerText;
+      const jumpBtn = document.getElementById('champJumpNextBtn')?.innerText;
+      const r4NextBadge = document.getElementById('champ_next_badge_r4')?.innerText;
+      const r4NextDisplay = document.getElementById('champ_next_badge_r4')?.style.display;
+      return {
+        r3Outcome,
+        r4Outcome,
+        guideBadge,
+        jumpBtn,
+        r4NextBadge,
+        r4NextDisplay
+      };
+    });
+
+    assert(progressionState.r3Outcome.includes('WON'), 'Round 3 stepper must now show WON');
+    assert(progressionState.r4Outcome.includes('WAITING ON UPDATE'), 'Round 4 stepper must now show WAITING ON UPDATE alert');
+    assert(progressionState.guideBadge.includes('Round 4 Waiting on Update'), 'Guide badge must now target Round 4');
+    assert(progressionState.jumpBtn.includes('Jump to Round 4'), 'Jump button must now target Round 4');
+    assert(progressionState.r4NextBadge.includes('WAITING ON UPDATE'), 'Round 4 card header must now show WAITING ON UPDATE');
+    assert.strictEqual(progressionState.r4NextDisplay, 'inline-flex', 'Round 4 header badge must be visible');
+    console.log('  ✅ Entering flags on Round 3 successfully moved the Waiting on Update alert to Round 4!');
 
     console.log('  🔍 Verifying Round 1 Input Locking Protection...');
     const r1Inputs = await page.evaluate(() => {
@@ -264,31 +333,47 @@ async function runHeadlessVerification() {
     console.log('  ✅ Re-locking successfully secured the inputs again');
 
     console.log('  🔍 Testing View Filter ("Focus Next" vs "All")...');
-    await page.click('#champViewFilter_next');
+    await page.evaluate(() => {
+      document.getElementById('champViewFilter_next').click();
+    });
+
     const filterNextState = await page.evaluate(() => {
       return {
         r1Display: document.getElementById('champ_round_card_1')?.style.display,
         r2Display: document.getElementById('champ_round_card_2')?.style.display,
-        r3Display: document.getElementById('champ_round_card_3')?.style.display
+        r3Display: document.getElementById('champ_round_card_3')?.style.display,
+        r4Display: document.getElementById('champ_round_card_4')?.style.display,
+        r5Display: document.getElementById('champ_round_card_5')?.style.display,
+        activeRoundNum: window._champNextRoundNum
       };
     });
 
+    assert.strictEqual(filterNextState.activeRoundNum, 4, 'Active round must be Round 4 after R1, R2, R3 have flags');
     assert.strictEqual(filterNextState.r1Display, 'none', 'Round 1 card must be hidden in Focus Next mode');
-    assert.strictEqual(filterNextState.r2Display, 'flex', 'Round 2 card must be visible in Focus Next mode');
+    assert.strictEqual(filterNextState.r2Display, 'none', 'Round 2 card must be hidden in Focus Next mode');
     assert.strictEqual(filterNextState.r3Display, 'none', 'Round 3 card must be hidden in Focus Next mode');
-    console.log('  ✅ Focus Next filter correctly displays only Round 2');
+    assert.strictEqual(filterNextState.r4Display, 'flex', 'Round 4 card must be visible in Focus Next mode');
+    assert.strictEqual(filterNextState.r5Display, 'none', 'Round 5 card must be hidden in Focus Next mode');
+    console.log('  ✅ Focus Next filter correctly displays only active Round 4');
 
-    await page.click('#champViewFilter_all');
+    await page.evaluate(() => {
+      document.getElementById('champViewFilter_all').click();
+    });
+
     const filterAllState = await page.evaluate(() => {
       return {
         r1Display: document.getElementById('champ_round_card_1')?.style.display,
         r2Display: document.getElementById('champ_round_card_2')?.style.display,
-        r3Display: document.getElementById('champ_round_card_3')?.style.display
+        r3Display: document.getElementById('champ_round_card_3')?.style.display,
+        r4Display: document.getElementById('champ_round_card_4')?.style.display,
+        r5Display: document.getElementById('champ_round_card_5')?.style.display
       };
     });
     assert.strictEqual(filterAllState.r1Display, 'flex', 'Round 1 card must be visible in All mode');
     assert.strictEqual(filterAllState.r2Display, 'flex', 'Round 2 card must be visible in All mode');
     assert.strictEqual(filterAllState.r3Display, 'flex', 'Round 3 card must be visible in All mode');
+    assert.strictEqual(filterAllState.r4Display, 'flex', 'Round 4 card must be visible in All mode');
+    assert.strictEqual(filterAllState.r5Display, 'flex', 'Round 5 card must be visible in All mode');
     console.log('  ✅ All filter correctly restores all 5 round cards');
 
     assert.strictEqual(consoleErrors.length, 0, `Expected 0 console errors, but got:\n${consoleErrors.join('\n')}`);

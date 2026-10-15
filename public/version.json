@@ -1,13 +1,12 @@
 {
-  "version": "3.3.102",
+  "version": "3.3.103",
   "releaseDate": "2026-10-14",
-  "title": "What's New in v3.3.102",
+  "title": "What's New in v3.3.103",
   "notes": [
-    "🔒 Round Locking: Protects entered Championship battle data from accidental edits.",
-    "🔓 One-Click Unlock: Easily unlock any round when changes are needed.",
-    "🧭 Round Guide: Added tournament progress stepper tracking all 5 rounds.",
-    "⚡ Update Guidance: Highlights next active round needing battle score updates.",
-    "🎯 Focus Mode: Jump directly or filter to the active round."
+    "⚠️ Update Alert: Shows Waiting on Update alert for active round.",
+    "⏩ Alert Advance: Entering flags automatically moves alert forward.",
+    "🛡️ Scout Protection: Pre-scouted opponents never trigger false draw.",
+    "⏳ Upcoming Label: Unplayed rounds cleanly marked as upcoming."
   ],
   "wosbdc_alliance_dashboard": {
     "version": "3.3.102",
