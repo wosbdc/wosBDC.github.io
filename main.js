@@ -35198,15 +35198,136 @@ const views = {
             const statusTextVal = champMatchupData.statusText || '0 Wins – 0 Losses (New Season)';
             const roundsData = champMatchupData.rounds || {};
 
-            let roundsInputsHtml = [1, 2, 3, 4, 5].map(i => {
+            // 1. Analyze 5 rounds and compute lock states & guidance metrics
+            window._champRoundLockState = window._champRoundLockState || {};
+            const roundDetails = [];
+            let nextRoundNum = 1;
+            let completedRoundsCount = 0;
+
+            for (let i = 1; i <= 5; i++) {
                 let r = roundsData['r' + i] || { roundNum: i, date: `Round ${i}`, ourScore: 0, ourFlags: 0, enemyAlliance: { name: `Opponent ${i}`, score: 0, flags: 0 } };
                 let ourFlags = (r.ourFlags !== undefined && r.ourFlags !== null && r.ourFlags !== '') ? Number(r.ourFlags) : 0;
                 let enemyFlags = (r.enemyAlliance && r.enemyAlliance.flags !== undefined && r.enemyAlliance.flags !== null && r.enemyAlliance.flags !== '') ? Number(r.enemyAlliance.flags) : 0;
-                let enemyName = (r.enemyAlliance && r.enemyAlliance.name) ? r.enemyAlliance.name : '';
-                let enemyState = (r.enemyAlliance && r.enemyAlliance.state) ? r.enemyAlliance.state : '';
+                let enemyName = (r.enemyAlliance && r.enemyAlliance.name) ? r.enemyAlliance.name.trim() : '';
+                let enemyState = (r.enemyAlliance && r.enemyAlliance.state) ? r.enemyAlliance.state.trim() : '';
                 let isVictory = ourFlags > enemyFlags;
                 let isDefeat = enemyFlags > ourFlags;
                 let isDraw = (ourFlags === enemyFlags) && (ourFlags > 0 || enemyFlags > 0);
+
+                let hasData = (ourFlags > 0 || enemyFlags > 0 || (enemyName !== '' && !enemyName.startsWith('Opponent ') && enemyName !== 'Opponent Alliance'));
+                if (hasData) completedRoundsCount++;
+
+                // Default lock state: lock if data is entered, unlock if blank/pending
+                if (window._champRoundLockState[i] === undefined) {
+                    window._champRoundLockState[i] = hasData;
+                }
+
+                roundDetails.push({
+                    i,
+                    r,
+                    ourFlags,
+                    enemyFlags,
+                    enemyName,
+                    enemyState,
+                    hasData,
+                    isVictory,
+                    isDefeat,
+                    isDraw
+                });
+            }
+
+            // Next round to update is the first round that has no data entered yet
+            for (let i = 1; i <= 5; i++) {
+                if (!roundDetails[i - 1].hasData) {
+                    nextRoundNum = i;
+                    break;
+                }
+                if (i === 5) {
+                    nextRoundNum = 5;
+                }
+            }
+            const allRoundsCompleted = (completedRoundsCount === 5);
+            window._champNextRoundNum = nextRoundNum;
+
+            // Build Stepper Chips
+            let stepperChipsHtml = roundDetails.map(rd => {
+                const isCurrentNext = (rd.i === nextRoundNum && !allRoundsCompleted);
+                const isDone = rd.hasData;
+                const isLocked = Boolean(window._champRoundLockState[rd.i]);
+
+                let outcomeTag = isDone 
+                    ? (rd.isVictory ? '<span id="champ_stepper_outcome_'+rd.i+'" style="color:#10b981; font-weight:bold;">WON</span>' : (rd.isDefeat ? '<span id="champ_stepper_outcome_'+rd.i+'" style="color:#ef4444; font-weight:bold;">LOST</span>' : '<span id="champ_stepper_outcome_'+rd.i+'" style="color:#f59e0b; font-weight:bold;">DRAW</span>'))
+                    : (isCurrentNext ? '<span id="champ_stepper_outcome_'+rd.i+'" style="color:var(--accent); font-weight:bold;">⚡ NEXT UP</span>' : '<span id="champ_stepper_outcome_'+rd.i+'" style="color:var(--text-muted);">PENDING</span>');
+
+                let chipBorder = isCurrentNext 
+                    ? 'border:2px solid var(--accent); background:rgba(6,182,212,0.12); box-shadow:0 0 12px rgba(6,182,212,0.3);' 
+                    : (isDone 
+                        ? 'border:1px solid rgba(16,185,129,0.35); background:rgba(16,185,129,0.05);' 
+                        : 'border:1px solid var(--border); background:rgba(255,255,255,0.02); opacity:0.8;');
+
+                let oppShortName = rd.enemyName ? window.extractAllianceTagOnly(rd.enemyName, rd.i) : `Opponent ${rd.i}`;
+
+                return `
+                    <div class="champ-stepper-chip" id="champ_stepper_chip_${rd.i}" onclick="window.jumpToChampRound(${rd.i})" style="${chipBorder} border-radius:10px; padding:10px 12px; cursor:pointer; display:flex; flex-direction:column; gap:4px; min-width:115px; transition:all 0.2s ease;" title="Click to jump to Round ${rd.i}">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-size:11px; font-weight:900; text-transform:uppercase; color:${isCurrentNext ? 'var(--accent)' : 'var(--text-main)'};">R${rd.i}</span>
+                            <span id="champ_stepper_lock_${rd.i}" style="font-size:11px;">${isLocked ? '🔒' : '🔓'}</span>
+                        </div>
+                        <div id="champ_stepper_score_${rd.i}" style="font-size:12px; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--text-main);">
+                            ${isDone ? `🚩 ${rd.ourFlags} - ${rd.enemyFlags}` : escapeHTML(oppShortName)}
+                        </div>
+                        <div style="font-size:10.5px; display:flex; justify-content:space-between; align-items:center;">
+                            ${outcomeTag}
+                            <span style="font-size:10px; color:var(--text-muted);">${escapeHTML(rd.r.date || `Round ${rd.i}`)}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            let navigatorHtml = `
+                <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:16px 20px; margin-bottom:18px; box-shadow:0 4px 15px rgba(0,0,0,0.2);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+                        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                            <span style="font-weight:900; font-size:14px; color:var(--text-main); display:flex; align-items:center; gap:6px;">
+                                🧭 Tournament Round Guide
+                            </span>
+                            <span id="champ_guide_status_badge" style="font-size:11px; font-weight:bold; background:${allRoundsCompleted ? 'rgba(16,185,129,0.15)' : 'rgba(6,182,212,0.15)'}; color:${allRoundsCompleted ? '#10b981' : 'var(--accent)'}; border:1px solid ${allRoundsCompleted ? 'rgba(16,185,129,0.35)' : 'rgba(6,182,212,0.35)'}; padding:2px 10px; border-radius:12px;">
+                                ${allRoundsCompleted ? '✅ All 5 Rounds Recorded' : `👉 Round ${nextRoundNum} Needs Update`}
+                            </span>
+                        </div>
+
+                        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                            ${!allRoundsCompleted ? `
+                                <button type="button" id="champJumpNextBtn" onclick="window.jumpToChampRound(${nextRoundNum})" style="background:linear-gradient(135deg, rgba(6,182,212,0.25), rgba(59,130,246,0.25)); border:1px solid var(--accent); color:var(--accent); padding:6px 12px; border-radius:8px; font-weight:bold; font-size:11.5px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; transition:0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.35)'" onmouseout="this.style.background='rgba(6,182,212,0.25)'" title="Scroll directly to Round ${nextRoundNum}">
+                                    🎯 Jump to Round ${nextRoundNum}
+                                </button>
+                            ` : ''}
+
+                            <div style="display:inline-flex; background:var(--bg-main); border:1px solid var(--border); border-radius:8px; padding:2px;">
+                                <button type="button" class="champ-view-filter-btn" id="champViewFilter_all" onclick="window.filterChampRoundView('all')" style="background:var(--accent); color:white; border:none; padding:5px 11px; border-radius:6px; font-size:11.5px; font-weight:bold; cursor:pointer;">All (5)</button>
+                                <button type="button" class="champ-view-filter-btn" id="champViewFilter_next" onclick="window.filterChampRoundView('next')" style="background:transparent; color:var(--text-muted); border:none; padding:5px 11px; border-radius:6px; font-size:11.5px; font-weight:bold; cursor:pointer;" title="Focus only on the round currently needing an update">🎯 Focus Next (${nextRoundNum})</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:10px;">
+                        ${stepperChipsHtml}
+                    </div>
+                </div>
+            `;
+
+            let roundsInputsHtml = roundDetails.map(rd => {
+                const i = rd.i;
+                const r = rd.r;
+                const ourFlags = rd.ourFlags;
+                const enemyFlags = rd.enemyFlags;
+                const enemyName = rd.enemyName;
+                const enemyState = rd.enemyState;
+                const isVictory = rd.isVictory;
+                const isDefeat = rd.isDefeat;
+                const isDraw = rd.isDraw;
+                const isLocked = Boolean(window._champRoundLockState[i]);
+                const isCurrentNext = (i === nextRoundNum && !allRoundsCompleted);
 
                 let liveBadge = isVictory 
                     ? '<span id="live_badge_r'+i+'" style="background:rgba(16,185,129,0.2); border:1px solid rgba(16,185,129,0.4); color:#10b981; padding:3px 10px; border-radius:10px; font-weight:bold; font-size:11px;">🏆 VICTORY</span>'
@@ -35216,13 +35337,27 @@ const views = {
                             ? '<span id="live_badge_r'+i+'" style="background:rgba(245,158,11,0.2); border:1px solid rgba(245,158,11,0.4); color:#f59e0b; padding:3px 10px; border-radius:10px; font-weight:bold; font-size:11px;">⚖️ DRAW</span>'
                             : '<span id="live_badge_r'+i+'" style="background:rgba(255,255,255,0.05); color:var(--text-muted); padding:3px 10px; border-radius:10px; font-size:11px;">PENDING</span>'));
 
+                let cardStyle = isCurrentNext 
+                    ? 'border:2px solid var(--accent); box-shadow:0 0 20px rgba(6,182,212,0.25); background:linear-gradient(180deg, rgba(6,182,212,0.04) 0%, var(--card-bg) 60px);' 
+                    : 'border:1px solid var(--border); box-shadow:0 4px 15px rgba(0,0,0,0.2); background:var(--card-bg);';
+
+                let nextRoundHeaderBadge = isCurrentNext 
+                    ? `<span id="champ_next_badge_r${i}" style="background:linear-gradient(135deg, rgba(6,182,212,0.25), rgba(59,130,246,0.25)); border:1px solid var(--accent); color:var(--accent); padding:3px 10px; border-radius:12px; font-weight:900; font-size:10.5px; display:inline-flex; align-items:center; gap:5px; letter-spacing:0.5px;">⚡ NEXT ROUND TO UPDATE</span>` 
+                    : `<span id="champ_next_badge_r${i}" style="display:none;"></span>`;
+
                 return `
-                    <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:16px 20px; display:flex; flex-direction:column; gap:12px; box-shadow:0 4px 15px rgba(0,0,0,0.2);">
+                    <div id="champ_round_card_${i}" class="champ-round-card" data-round="${i}" style="${cardStyle} border-radius:12px; padding:16px 20px; display:flex; flex-direction:column; gap:12px; transition:all 0.25s ease;">
                         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:8px; flex-wrap:wrap; gap:8px;">
-                            <span style="font-weight:900; font-size:13px; color:var(--accent); text-transform:uppercase; letter-spacing:1px;">⚔️ ROUND ${i}</span>
-                            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                                <span style="font-weight:900; font-size:13px; color:var(--accent); text-transform:uppercase; letter-spacing:1px;">⚔️ ROUND ${i}</span>
+                                ${nextRoundHeaderBadge}
                                 ${liveBadge}
-                                <input type="text" id="adm_champ_r${i}_date" value="${escapeHTML(r.date || `Round ${i}`)}" oninput="window.triggerChampAutoSave()" placeholder="Date / Match Label" style="padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:11px; width:130px;">
+                            </div>
+                            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                <button type="button" id="adm_champ_r${i}_lock_btn" onclick="window.toggleChampRoundLock(${i})" style="background:${isLocked ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)'}; border:1px solid ${isLocked ? 'rgba(239,68,68,0.4)' : 'rgba(16,185,129,0.4)'}; color:${isLocked ? '#ef4444' : '#10b981'}; padding:4px 10px; border-radius:6px; font-weight:bold; font-size:11px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; transition:0.2s;" title="${isLocked ? `Click to unlock Round ${i} for editing` : `Click to lock Round ${i} to prevent accidental changes`}">
+                                    ${isLocked ? '🔒 Locked (Unlock to Edit)' : '🔓 Unlocked (Click to Lock)'}
+                                </button>
+                                <input type="text" id="adm_champ_r${i}_date" value="${escapeHTML(r.date || `Round ${i}`)}" oninput="window.triggerChampAutoSave()" placeholder="Date / Match Label" ${isLocked ? 'disabled' : ''} style="padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:11px; width:130px; ${isLocked ? 'opacity:0.55; cursor:not-allowed;' : 'opacity:1; cursor:text;'}">
                                 <button type="button" onclick="window.copyChampRoundReport(${i})" style="background:rgba(6,182,212,0.15); border:1px solid rgba(6,182,212,0.4); color:var(--accent); padding:4px 10px; border-radius:6px; font-weight:bold; font-size:11px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:0.2s;" onmouseover="this.style.background='rgba(6,182,212,0.25)'" onmouseout="this.style.background='rgba(6,182,212,0.15)'" title="Copy Round ${i} Report to clipboard">📋 Copy Report</button>
                             </div>
                         </div>
@@ -35233,7 +35368,7 @@ const views = {
                                 <div style="font-size:11px; color:#10b981; font-weight:bold; text-transform:uppercase; margin-bottom:6px;">Our Alliance [BDC] • State #2089</div>
                                 <div>
                                     <label style="font-size:10px; color:#10b981; font-weight:bold; display:block; margin-bottom:3px;">🚩 Our Flags</label>
-                                    <input type="number" id="adm_champ_r${i}_our_flags" value="${ourFlags}" min="0" placeholder="0" oninput="window.updateAdminChampPreview(${i}); window.autoCalculateChampRecord(true); window.triggerChampAutoSave();" style="width:100%; text-align:right; font-size:18px; font-family:var(--mono); font-weight:bold; color:#10b981; padding:8px 10px; border-radius:6px; border:1px solid rgba(16,185,129,0.4); background:var(--bg-main); box-sizing:border-box;">
+                                    <input type="number" id="adm_champ_r${i}_our_flags" value="${ourFlags}" min="0" placeholder="0" oninput="window.updateAdminChampPreview(${i}); window.autoCalculateChampRecord(true); window.triggerChampAutoSave();" ${isLocked ? 'disabled' : ''} style="width:100%; text-align:right; font-size:18px; font-family:var(--mono); font-weight:bold; color:#10b981; padding:8px 10px; border-radius:6px; border:1px solid rgba(16,185,129,0.4); background:var(--bg-main); box-sizing:border-box; ${isLocked ? 'opacity:0.55; cursor:not-allowed;' : 'opacity:1; cursor:text;'}">
                                 </div>
                             </div>
 
@@ -35246,16 +35381,16 @@ const views = {
                                 <div style="display:grid; grid-template-columns: 2fr 1fr; gap:8px; margin-bottom:6px;">
                                     <div>
                                         <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:2px;">Tag & Name</label>
-                                        <input type="text" id="adm_champ_r${i}_enemy_name" value="${escapeHTML(enemyName)}" oninput="window.triggerChampAutoSave()" placeholder="e.g. [KOR] KoreaKings" style="width:100%; font-size:13px; font-weight:bold; color:var(--text-main); padding:6px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); box-sizing:border-box;">
+                                        <input type="text" id="adm_champ_r${i}_enemy_name" value="${escapeHTML(enemyName)}" oninput="window.triggerChampAutoSave()" placeholder="e.g. [KOR] KoreaKings" ${isLocked ? 'disabled' : ''} style="width:100%; font-size:13px; font-weight:bold; color:var(--text-main); padding:6px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); box-sizing:border-box; ${isLocked ? 'opacity:0.55; cursor:not-allowed;' : 'opacity:1; cursor:text;'}">
                                     </div>
                                     <div>
                                         <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:2px;">State #</label>
-                                        <input type="text" id="adm_champ_r${i}_enemy_state" value="${escapeHTML(enemyState)}" oninput="window.triggerChampAutoSave()" placeholder="e.g. 2045" style="width:100%; font-size:13px; font-weight:bold; color:var(--text-main); padding:6px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); box-sizing:border-box;">
+                                        <input type="text" id="adm_champ_r${i}_enemy_state" value="${escapeHTML(enemyState)}" oninput="window.triggerChampAutoSave()" placeholder="e.g. 2045" ${isLocked ? 'disabled' : ''} style="width:100%; font-size:13px; font-weight:bold; color:var(--text-main); padding:6px 10px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); box-sizing:border-box; ${isLocked ? 'opacity:0.55; cursor:not-allowed;' : 'opacity:1; cursor:text;'}">
                                     </div>
                                 </div>
                                 <div>
                                     <label style="font-size:10px; color:#ef4444; font-weight:bold; display:block; margin-bottom:2px;">🚩 Opponent Flags</label>
-                                    <input type="number" id="adm_champ_r${i}_enemy_flags" value="${enemyFlags}" min="0" placeholder="0" oninput="window.updateAdminChampPreview(${i}); window.autoCalculateChampRecord(true); window.triggerChampAutoSave();" style="width:100%; text-align:left; font-size:18px; font-family:var(--mono); font-weight:bold; color:#ef4444; padding:8px 10px; border-radius:6px; border:1px solid rgba(239,68,68,0.4); background:var(--bg-main); box-sizing:border-box;">
+                                    <input type="number" id="adm_champ_r${i}_enemy_flags" value="${enemyFlags}" min="0" placeholder="0" oninput="window.updateAdminChampPreview(${i}); window.autoCalculateChampRecord(true); window.triggerChampAutoSave();" ${isLocked ? 'disabled' : ''} style="width:100%; text-align:left; font-size:18px; font-family:var(--mono); font-weight:bold; color:#ef4444; padding:8px 10px; border-radius:6px; border:1px solid rgba(239,68,68,0.4); background:var(--bg-main); box-sizing:border-box; ${isLocked ? 'opacity:0.55; cursor:not-allowed;' : 'opacity:1; cursor:text;'}">
                                 </div>
                             </div>
                         </div>
@@ -35297,7 +35432,9 @@ const views = {
                     </div>
                 </div>
 
-                <div style="display:flex; flex-direction:column; gap:14px; margin-bottom:20px;">
+                ${navigatorHtml}
+
+                <div id="champ_rounds_container" style="display:flex; flex-direction:column; gap:14px; margin-bottom:20px;">
                     ${roundsInputsHtml}
                 </div>
 
@@ -35511,6 +35648,92 @@ const views = {
             });
         };
 
+        window.toggleChampRoundLock = (roundNum) => {
+            window._champRoundLockState = window._champRoundLockState || {};
+            const newState = !window._champRoundLockState[roundNum];
+            window._champRoundLockState[roundNum] = newState;
+
+            const btn = document.getElementById(`adm_champ_r${roundNum}_lock_btn`);
+            const stepperLock = document.getElementById(`champ_stepper_lock_${roundNum}`);
+            const inputs = [
+                document.getElementById(`adm_champ_r${roundNum}_date`),
+                document.getElementById(`adm_champ_r${roundNum}_our_flags`),
+                document.getElementById(`adm_champ_r${roundNum}_enemy_name`),
+                document.getElementById(`adm_champ_r${roundNum}_enemy_state`),
+                document.getElementById(`adm_champ_r${roundNum}_enemy_flags`)
+            ];
+
+            inputs.forEach(inp => {
+                if (inp) {
+                    inp.disabled = newState;
+                    inp.style.opacity = newState ? '0.55' : '1';
+                    inp.style.cursor = newState ? 'not-allowed' : 'text';
+                }
+            });
+
+            if (btn) {
+                btn.innerHTML = newState ? '🔒 Locked (Unlock to Edit)' : '🔓 Unlocked (Click to Lock)';
+                btn.style.background = newState ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)';
+                btn.style.borderColor = newState ? 'rgba(239,68,68,0.4)' : 'rgba(16,185,129,0.4)';
+                btn.style.color = newState ? '#ef4444' : '#10b981';
+                btn.title = newState ? `Click to unlock Round ${roundNum} for editing` : `Click to lock Round ${roundNum} to prevent accidental changes`;
+            }
+
+            if (stepperLock) {
+                stepperLock.textContent = newState ? '🔒' : '🔓';
+            }
+
+            if (window.showToast) {
+                window.showToast(newState ? `🔒 Round ${roundNum} locked to prevent accidental changes` : `🔓 Round ${roundNum} unlocked for editing`, newState ? 'info' : 'success');
+            }
+        };
+
+        window.jumpToChampRound = (roundNum) => {
+            if (window.champRoundViewFilter === 'next' && roundNum !== window._champNextRoundNum) {
+                window.filterChampRoundView('all');
+            }
+            const card = document.getElementById(`champ_round_card_${roundNum}`);
+            if (card) {
+                if (card.style.display === 'none') {
+                    window.filterChampRoundView('all');
+                }
+                card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                card.style.transition = 'outline 0.3s ease';
+                card.style.outline = '3px solid var(--accent)';
+                setTimeout(() => { if (card) card.style.outline = 'none'; }, 1800);
+            }
+        };
+
+        window.champRoundViewFilter = 'all';
+        window.filterChampRoundView = (filter) => {
+            window.champRoundViewFilter = filter;
+            const btnAll = document.getElementById('champViewFilter_all');
+            const btnNext = document.getElementById('champViewFilter_next');
+            if (btnAll && btnNext) {
+                if (filter === 'all') {
+                    btnAll.style.background = 'var(--accent)';
+                    btnAll.style.color = 'white';
+                    btnNext.style.background = 'transparent';
+                    btnNext.style.color = 'var(--text-muted)';
+                } else {
+                    btnNext.style.background = 'var(--accent)';
+                    btnNext.style.color = 'white';
+                    btnAll.style.background = 'transparent';
+                    btnAll.style.color = 'var(--text-muted)';
+                }
+            }
+
+            for (let i = 1; i <= 5; i++) {
+                const card = document.getElementById(`champ_round_card_${i}`);
+                if (!card) continue;
+                if (filter === 'all') {
+                    card.style.display = 'flex';
+                } else if (filter === 'next') {
+                    card.style.display = (i === window._champNextRoundNum) ? 'flex' : 'none';
+                }
+            }
+        };
+
         window.updateAdminChampPreview = (roundNum) => {
             let oFlags = Number(document.getElementById('adm_champ_r' + roundNum + '_our_flags')?.value) || 0;
             let eFlags = Number(document.getElementById('adm_champ_r' + roundNum + '_enemy_flags')?.value) || 0;
@@ -35537,6 +35760,29 @@ const views = {
                 badge.style.background = 'rgba(255,255,255,0.05)';
                 badge.style.border = '1px solid var(--border)';
                 badge.style.color = 'var(--text-muted)';
+            }
+
+            // Sync Stepper chip in Navigator live
+            const stepperScore = document.getElementById(`champ_stepper_score_${roundNum}`);
+            const stepperOutcome = document.getElementById(`champ_stepper_outcome_${roundNum}`);
+            if (stepperScore) {
+                stepperScore.textContent = (oFlags > 0 || eFlags > 0) ? `🚩 ${oFlags} - ${eFlags}` : `Opponent ${roundNum}`;
+            }
+            if (stepperOutcome) {
+                if (oFlags > eFlags) {
+                    stepperOutcome.innerHTML = 'WON';
+                    stepperOutcome.style.color = '#10b981';
+                } else if (eFlags > oFlags) {
+                    stepperOutcome.innerHTML = 'LOST';
+                    stepperOutcome.style.color = '#ef4444';
+                } else if (oFlags > 0 || eFlags > 0) {
+                    stepperOutcome.innerHTML = 'DRAW';
+                    stepperOutcome.style.color = '#f59e0b';
+                } else {
+                    const isNext = (roundNum === window._champNextRoundNum);
+                    stepperOutcome.innerHTML = isNext ? '⚡ NEXT UP' : 'PENDING';
+                    stepperOutcome.style.color = isNext ? 'var(--accent)' : 'var(--text-muted)';
+                }
             }
         };
 

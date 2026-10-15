@@ -1,15 +1,18 @@
 {
-  "version": "3.3.101",
+  "version": "3.3.102",
   "releaseDate": "2026-10-14",
-  "title": "What's New in v3.3.101",
+  "title": "What's New in v3.3.102",
   "notes": [
-    "🔗 Shortcut URL: Defaulted invite link to https://tiny.cc/wosBDC.",
-    "💾 Link Persistence: Automatically saves custom invite URLs across sessions.",
-    "↺ One-Click Reset: Added instant reset to restore default shortcut."
+    "🔒 Round Locking: Protects entered Championship battle data from accidental edits.",
+    "🔓 One-Click Unlock: Easily unlock any round when changes are needed.",
+    "🧭 Round Guide: Added tournament progress stepper tracking all 5 rounds.",
+    "⚡ Update Guidance: Highlights next active round needing battle score updates.",
+    "🎯 Focus Mode: Jump directly or filter to the active round."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.101",
+    "version": "3.3.102",
     "latestChanges": [
+      "v3.3.102: Added round locking and tournament round navigator to Alliance Championship Suite",
       "v3.3.101: Defaulted invite URL to https://tiny.cc/wosBDC and persisted custom links",
       "v3.3.100: Relocated Share Member Invite button next to Copy Unsynced in database box",
       "v3.3.99: Added Member Invite and Announcement Hub to Admin Menu",

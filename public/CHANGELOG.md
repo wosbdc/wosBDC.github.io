@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [3.3.102] - 2026-10-14
+- 🔒 **Round Locking**: Protects entered Championship battle data from accidental edits.
+- 🔓 **One-Click Unlock**: Easily unlock any round when changes are needed.
+- 🧭 **Round Guide**: Added tournament progress stepper tracking all 5 rounds.
+- ⚡ **Update Guidance**: Highlights next active round needing battle score updates.
+- 🎯 **Focus Mode**: Jump directly or filter to the active round.
+
 ## [3.3.101] - 2026-10-14
 - 🔗 **Shortcut URL**: Defaulted invite link to shortcut https://tiny.cc/wosBDC.
 - 💾 **Link Persistence**: Automatically saves and remembers custom portal URLs.
