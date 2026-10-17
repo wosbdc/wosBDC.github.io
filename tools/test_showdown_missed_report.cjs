@@ -57,7 +57,9 @@ console.log("  ✅ PASS: Auto-save debounce flush & in-memory live merge verifie
 assert(mainCode.includes('id="tabActiveSdRoster"'), 'showMissedDaysReportModal must render Active Showdown Roster tab');
 assert(mainCode.includes('id="tabAllMains"'), 'showMissedDaysReportModal must render All Alliance Mains tab');
 assert(mainCode.includes('id="refreshMissedReportBtn"'), 'showMissedDaysReportModal must render live refresh button');
-console.log("  ✅ PASS: Dual-view filter tabs and live refresh button verified");
+assert(mainCode.includes('generateDayCopyText'), 'showMissedDaysReportModal must define generateDayCopyText helper');
+assert(mainCode.includes('copy-day-missed-btn'), 'showMissedDaysReportModal must render copy-day-missed-btn on active day cards');
+console.log("  ✅ PASS: Dual-view filter tabs, live refresh button, and day-by-day copy buttons verified");
 
 // 3. Functional Simulation of Exclusion Filter
 console.log("\nTest 3: Functional Simulation of Missed Days Filtering");
@@ -407,6 +409,21 @@ async function runHeadlessVerification() {
     assert(!mainsTabContent.includes('wosrewards'), 'All Mains view must also exclude wosrewards');
     assert(!mainsTabContent.includes('Babyboi'), 'All Mains view must also exclude non-participating farm alts');
     console.log("  ✅ PASS: Tab switching to All Mains includes lord players and maintains bot/farm alt exclusion rules");
+
+    // Test Day 1 Copy Button in live DOM
+    const dayBtnExists = await page.evaluate(() => !!document.getElementById('copyDayBtn_1'));
+    assert(dayBtnExists, "Day 1 card must render Copy Day 1 button");
+
+    await page.evaluate(() => {
+      document.getElementById('copyDayBtn_1')?.click();
+    });
+
+    await page.waitForFunction(() => {
+      const btn = document.getElementById('copyDayBtn_1');
+      return btn && btn.innerText.includes('Copied Day 1');
+    }, { timeout: 4000 });
+
+    console.log("  ✅ PASS: Day-by-day clipboard copy button triggers visual confirmation state");
 
     // Test responsive viewport checks
     const viewports = [

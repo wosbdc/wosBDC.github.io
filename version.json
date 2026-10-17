@@ -1,16 +1,16 @@
 {
-  "version": "3.3.106",
+  "version": "3.3.107",
   "releaseDate": "2026-10-16",
-  "title": "What's New in v3.3.106",
+  "title": "What's New in v3.3.107",
   "notes": [
-    "👑 Lord Accounts: Restored lord player accounts to active alliance roster.",
-    "⚔️ Event Tracking: Auto-enrolls participating alts across all alliance events.",
-    "🌾 Parked Alts: Exempts inactive farm alts from event missed penalties.",
-    "🤖 Bot Filter: Keeps only pure backend service bots cleanly isolated."
+    "📋 Day Copy: Added individual day copy buttons to missed report.",
+    "⚡ Instant Feedback: Shows quick confirmation when copying daily missed lists.",
+    "👥 Team Alignment: Makes holding chiefs accountable on specific days effortless."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.106",
+    "version": "3.3.107",
     "latestChanges": [
+      "v3.3.107: Added day-by-day copy to clipboard buttons in Showdown Missed Days Report",
       "v3.3.106: Activity-based auto-enrollment across all events and lord accounts restored",
       "v3.3.105: Excluded bots and non-participating alts from Showdown Missed Days Report",
       "v3.3.104: Synchronized dashboard and root versions for GitHub Actions build test suite",

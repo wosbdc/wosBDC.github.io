@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.107] - 2026-10-16
+- 📋 **Day Copy**: Added individual day copy buttons to missed report.
+- ⚡ **Instant Feedback**: Shows quick confirmation when copying daily missed lists.
+- 👥 **Team Alignment**: Makes holding chiefs accountable on specific days effortless.
+
 ## [3.3.106] - 2026-10-16
 - 👑 **Lord Accounts**: Restored lord player accounts to active alliance roster.
 - ⚔️ **Event Tracking**: Auto-enrolls participating alts across all alliance events.

@@ -18430,6 +18430,26 @@ window.showMissedDaysReportModal = async (btnEl = null) => {
             return copyText;
         };
 
+        // Helper to generate day-specific clipboard text
+        const generateDayCopyText = (dayNum, filterMode) => {
+            const listToUse = filterMode === 'active_roster' ? activeListSorted : allListSorted;
+            const { dayMissedMap } = computeMissedData(listToUse);
+            const missedList = Array.from(new Set(dayMissedMap[dayNum] || [])).sort((a,b) => a.localeCompare(b));
+            const modeLabel = filterMode === 'active_roster' ? 'Active Showdown Participants' : 'All Alliance Members';
+            let copyText = `📅 ALLIANCE SHOWDOWN - DAY ${dayNum} MISSED REPORT (${modeLabel})\n`;
+            copyText += `----------------------------------------\n`;
+            if (missedList.length === 0) {
+                copyText += `🎉 100% Perfect Attendance! 0 chiefs missed Day ${dayNum} missions.\n`;
+            } else {
+                copyText += `The following ${missedList.length} chief(s) missed their missions on Day ${dayNum}:\n`;
+                missedList.forEach(name => {
+                    copyText += `• ${name}\n`;
+                });
+            }
+            copyText += `----------------------------------------\nTotal Missed Day ${dayNum}: ${missedList.length}`;
+            return copyText;
+        };
+
         const nowSyncTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
         const modal = document.createElement('div');
@@ -18458,18 +18478,23 @@ window.showMissedDaysReportModal = async (btnEl = null) => {
                     `;
                 } else {
                     dayCardsHtml += `
-                        <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:12px 14px;">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                                <span style="font-weight:bold; color:var(--text-main); font-size:14px;">Day ${d}</span>
-                                <span style="background:${missedList.length > 0 ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)'}; color:${missedList.length > 0 ? '#ef4444' : '#10b981'}; border:1px solid ${missedList.length > 0 ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.3)'}; font-size:11px; font-weight:bold; padding:2px 8px; border-radius:12px;">
-                                    ${missedList.length > 0 ? `${missedList.length} Missed` : '✅ All Scored'}
-                                </span>
-                            </div>
-                            ${missedList.length === 0 ? '<div style="font-size:12px; color:var(--text-muted); font-style:italic;">100% Participation</div>' : `
-                                <div style="font-size:12px; color:var(--text-muted); max-height:80px; overflow-y:auto; line-height:1.4;">
-                                    ${missedList.map(name => `<div>• ${window.escapeHTML(name)}</div>`).join('')}
+                        <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:12px 14px; display:flex; flex-direction:column; justify-content:space-between;">
+                            <div>
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                    <span style="font-weight:bold; color:var(--text-main); font-size:14px;">Day ${d}</span>
+                                    <span style="background:${missedList.length > 0 ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)'}; color:${missedList.length > 0 ? '#ef4444' : '#10b981'}; border:1px solid ${missedList.length > 0 ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.3)'}; font-size:11px; font-weight:bold; padding:2px 8px; border-radius:12px;">
+                                        ${missedList.length > 0 ? `${missedList.length} Missed` : '✅ All Scored'}
+                                    </span>
                                 </div>
-                            `}
+                                ${missedList.length === 0 ? '<div style="font-size:12px; color:var(--text-muted); font-style:italic;">100% Participation</div>' : `
+                                    <div style="font-size:12px; color:var(--text-muted); max-height:80px; overflow-y:auto; line-height:1.4;">
+                                        ${missedList.map(name => `<div>• ${window.escapeHTML(name)}</div>`).join('')}
+                                    </div>
+                                `}
+                            </div>
+                            <button class="copy-day-missed-btn" data-day="${d}" id="copyDayBtn_${d}" style="margin-top:10px; width:100%; background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); border-radius:6px; padding:6px 8px; font-size:11.5px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:5px; transition:0.2s;" title="Copy Day ${d} missed list to clipboard">
+                                📋 Copy Day ${d}
+                            </button>
                         </div>
                     `;
                 }
@@ -18587,27 +18612,57 @@ window.showMissedDaysReportModal = async (btnEl = null) => {
                 attachModalEvents();
             });
 
+            const fallbackCopy = (str, msg) => {
+                const ta = document.createElement('textarea');
+                ta.value = str;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                if (window.showToast) window.showToast(msg || `Copied to clipboard!`, 'success');
+            };
+
+            const copyStringToClipboard = (str, msg) => {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    return navigator.clipboard.writeText(str).then(() => {
+                        if (window.showToast) window.showToast(msg || `Copied to clipboard!`, 'success');
+                        return true;
+                    }).catch(() => {
+                        fallbackCopy(str, msg);
+                        return true;
+                    });
+                } else {
+                    fallbackCopy(str, msg);
+                    return Promise.resolve(true);
+                }
+            };
+
             modal.querySelector('#copyMissedListBtn')?.addEventListener('click', () => {
                 const txt = generateCopyText(currentFilter);
-                const doCopy = (str) => {
-                    if (navigator.clipboard && navigator.clipboard.writeText) {
-                        navigator.clipboard.writeText(str).then(() => {
-                            if (window.showToast) window.showToast(`Copied Showdown Missed Days list to clipboard!`, 'success');
-                        }).catch(() => fallbackCopy(str));
-                    } else {
-                        fallbackCopy(str);
-                    }
-                };
-                const fallbackCopy = (str) => {
-                    const ta = document.createElement('textarea');
-                    ta.value = str;
-                    document.body.appendChild(ta);
-                    ta.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(ta);
-                    if (window.showToast) window.showToast(`Copied Showdown Missed Days list to clipboard!`, 'success');
-                };
-                doCopy(txt);
+                copyStringToClipboard(txt, `Copied Showdown Missed Days list to clipboard!`);
+            });
+
+            // Wire individual day copy buttons
+            modal.querySelectorAll('.copy-day-missed-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const dayNum = parseInt(btn.getAttribute('data-day'), 10);
+                    if (!dayNum) return;
+                    const txt = generateDayCopyText(dayNum, currentFilter);
+                    const originalHtml = btn.innerHTML;
+                    copyStringToClipboard(txt, `📋 Copied Day ${dayNum} missed chiefs to clipboard!`).then(() => {
+                        btn.style.background = 'rgba(16,185,129,0.2)';
+                        btn.style.borderColor = '#10b981';
+                        btn.style.color = '#10b981';
+                        btn.innerHTML = `✅ Copied Day ${dayNum}!`;
+                        setTimeout(() => {
+                            btn.style.background = 'rgba(255,255,255,0.06)';
+                            btn.style.borderColor = 'var(--border)';
+                            btn.style.color = 'var(--text-main)';
+                            btn.innerHTML = originalHtml;
+                        }, 2000);
+                    });
+                });
             });
         };
 
