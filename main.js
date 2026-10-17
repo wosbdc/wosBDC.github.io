@@ -18576,8 +18576,8 @@ window.showMissedDaysReportModal = async (btnEl = null) => {
                     </div>
 
                     <div style="padding:14px 20px; border-top:1px solid var(--border); background:rgba(0,0,0,0.2); display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
-                        <button id="copyMissedListBtn" style="background:var(--accent); color:#fff; border:none; padding:10px 18px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(14,165,233,0.3);">
-                            📋 Copy Missed List to Clipboard
+                        <button id="copyMissedListBtn" style="background:var(--accent); color:#fff; border:none; padding:10px 18px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(14,165,233,0.3); transition:background 0.2s;" title="Copy overall Showdown event summary to clipboard">
+                            📋 Event Summary
                         </button>
                         <button id="closeMissedReportBtn" style="background:var(--bg-main); color:var(--text-main); border:1px solid var(--border); padding:10px 18px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer;">
                             Close
@@ -18638,8 +18638,19 @@ window.showMissedDaysReportModal = async (btnEl = null) => {
             };
 
             modal.querySelector('#copyMissedListBtn')?.addEventListener('click', () => {
+                const btn = modal.querySelector('#copyMissedListBtn');
+                const originalHtml = btn ? btn.innerHTML : '📋 Event Summary';
                 const txt = generateCopyText(currentFilter);
-                copyStringToClipboard(txt, `Copied Showdown Missed Days list to clipboard!`);
+                copyStringToClipboard(txt, `📋 Copied Event Summary to clipboard!`).then(() => {
+                    if (btn) {
+                        btn.style.background = '#10b981';
+                        btn.innerHTML = `✅ Copied Summary!`;
+                        setTimeout(() => {
+                            btn.style.background = 'var(--accent)';
+                            btn.innerHTML = originalHtml;
+                        }, 2000);
+                    }
+                });
             });
 
             // Wire individual day copy buttons

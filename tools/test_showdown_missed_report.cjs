@@ -425,6 +425,20 @@ async function runHeadlessVerification() {
 
     console.log("  ✅ PASS: Day-by-day clipboard copy button triggers visual confirmation state");
 
+    // Test Event Summary Copy Button in live DOM
+    const eventSummaryBtnText = await page.evaluate(() => document.getElementById('copyMissedListBtn')?.innerText || '');
+    assert(eventSummaryBtnText.includes('Event Summary'), "Footer copy button must be labeled Event Summary");
+
+    await page.evaluate(() => {
+      document.getElementById('copyMissedListBtn')?.click();
+    });
+
+    await page.waitForFunction(() => {
+      const btn = document.getElementById('copyMissedListBtn');
+      return btn && btn.innerText.includes('Copied Summary');
+    }, { timeout: 4000 });
+    console.log("  ✅ PASS: Event Summary copy button labeled and triggers visual confirmation state");
+
     // Test responsive viewport checks
     const viewports = [
       { name: 'Mobile', width: 375, height: 667 },

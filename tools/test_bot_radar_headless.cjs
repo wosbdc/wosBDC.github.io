@@ -1025,6 +1025,8 @@ server.listen(PORT, async () => {
 
     // Step B: R5 Leader opens Bell modal -> MUST see confidential alert!
     const leaderBellResult = await page.evaluate(async () => {
+      document.getElementById('notificationsModalOverlay')?.remove();
+      try { localStorage.removeItem('dismissed_bell_items'); } catch(e) {}
       window.currentUser = { uid: '318843189', email: 'admin@bdc.com', displayName: 'R5 Leader' };
       window.isAdminUser = () => true;
       window.getAdminLevel = () => 'R5';

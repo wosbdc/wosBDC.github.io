@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## [3.3.108] - 2026-10-16
+- 📋 **Event Summary**: Renamed missed list copy button to Event Summary.
+- ⚡ **Visual State**: Added instant confirmation feedback when copying event summary.
+
 ## [3.3.107] - 2026-10-16
 - 📋 **Day Copy**: Added individual day copy buttons to missed report.
 - ⚡ **Instant Feedback**: Shows quick confirmation when copying daily missed lists.

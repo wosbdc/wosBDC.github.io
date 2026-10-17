@@ -1,15 +1,15 @@
 {
-  "version": "3.3.107",
+  "version": "3.3.108",
   "releaseDate": "2026-10-16",
-  "title": "What's New in v3.3.107",
+  "title": "What's New in v3.3.108",
   "notes": [
-    "📋 Day Copy: Added individual day copy buttons to missed report.",
-    "⚡ Instant Feedback: Shows quick confirmation when copying daily missed lists.",
-    "👥 Team Alignment: Makes holding chiefs accountable on specific days effortless."
+    "📋 Event Summary: Renamed missed list copy button to Event Summary.",
+    "⚡ Visual State: Added instant confirmation feedback when copying event summary."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.107",
+    "version": "3.3.108",
     "latestChanges": [
+      "v3.3.108: Renamed copy missed list button to Event Summary with confirmation feedback",
       "v3.3.107: Added day-by-day copy to clipboard buttons in Showdown Missed Days Report",
       "v3.3.106: Activity-based auto-enrollment across all events and lord accounts restored",
       "v3.3.105: Excluded bots and non-participating alts from Showdown Missed Days Report",
