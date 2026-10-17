@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.106] - 2026-10-16
+- 👑 **Lord Accounts**: Restored lord player accounts to active alliance roster.
+- ⚔️ **Event Tracking**: Auto-enrolls participating alts across all alliance events.
+- 🌾 **Parked Alts**: Exempts inactive farm alts from event missed penalties.
+- 🤖 **Bot Filter**: Keeps only pure backend service bots cleanly isolated.
+
 ## [3.3.105] - 2026-10-15
 - 🤖 **Bot Filter**: Excluded bots and automated service accounts from missed report.
 - 👥 **Alt Filter**: Excluded secondary alts with zero showdown participation.

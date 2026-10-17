@@ -18231,16 +18231,16 @@ window.showMissedDaysReportModal = async (btnEl = null) => {
             sdLiveData = { ...sdLiveData, ...window._currentSdLiveData };
         }
 
-        // Helper to identify automated bot and service accounts
+        // Helper to identify automated bot and service accounts (excludes backend utility bots only)
         const isBotAccount = (name, gid) => {
             if (!name) return false;
             const n = (typeof window.cleanChiefName === 'function' ? window.cleanChiefName(name) : name).toLowerCase().trim();
             if (n === 'gatekeeper' || n === 'wosrewards') return true;
-            if (/^lord\d{6,}$/i.test(n)) return true;
             if (n.endsWith('bot') || n.startsWith('bot ')) return true;
             if (String(gid) === '861818874' || String(gid) === '264551456') return true;
             return false;
         };
+        window.isBotAccount = isBotAccount;
 
         // Extract registered alts
         const altNamesSet = new Set();

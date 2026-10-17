@@ -45,8 +45,8 @@ if (mainCode.includes('allPlayers.forEach(pName => {') && mainCode.includes('if 
 // Bot filtering assertions
 assert(mainCode.includes('isBotAccount'), 'main.js must define isBotAccount');
 assert(mainCode.includes('gatekeeper') && mainCode.includes('wosrewards'), 'isBotAccount must check gatekeeper and wosrewards');
-assert(mainCode.includes('/^lord\\d{6,}$/i'), 'isBotAccount must check lord bot accounts');
-console.log("  ✅ PASS: isBotAccount gates gatekeeper, wosrewards, and lord accounts");
+assert(!mainCode.includes('/^lord\\d{6,}$/i'), 'isBotAccount must NOT treat lord player accounts as bots');
+console.log("  ✅ PASS: isBotAccount gates gatekeeper and wosrewards service bots while allowing lord player accounts");
 
 // Auto-save flush and in-memory live merge assertions
 assert(mainCode.includes('window.flushAutoSaveSdEntry()'), 'showMissedDaysReportModal must flush pending debounced auto-save');
@@ -95,7 +95,6 @@ const isBotAccount = (name) => {
     if (!name) return false;
     const n = name.toLowerCase().trim();
     if (n === 'gatekeeper' || n === 'wosrewards') return true;
-    if (/^lord\d{6,}$/i.test(n)) return true;
     return false;
 };
 
@@ -143,7 +142,8 @@ const allPlayers = Array.from(seenPlayerNames.values()).filter(name => !isExclud
 
 assert(allPlayers.includes("ChiefActive1") && allPlayers.includes("ChiefActive2"), "Active mains must be included");
 assert(!allPlayers.includes("ChiefLeft") && !allPlayers.includes("ChiefBanned") && !allPlayers.includes("ChiefDeparted"), "Left and banned must be excluded");
-assert(!allPlayers.includes("GateKeeper") && !allPlayers.includes("wosrewards") && !allPlayers.includes("lord319285336"), "Bots must be excluded");
+assert(!allPlayers.includes("GateKeeper") && !allPlayers.includes("wosrewards"), "Bots must be excluded");
+assert(allPlayers.includes("lord319285336"), "Lord accounts are valid players and must be included in roster tracking");
 assert(!allPlayers.includes("AltNonParticipating"), "Non-participating alts must be excluded");
 assert(allPlayers.includes("AltParticipating"), "Participating alts with scores must be included");
 console.log("  ✅ PASS: Bot filtering & Alt participation rules verified in simulation");
@@ -170,8 +170,9 @@ const playersWithMisses = Object.keys(playerMissedMap).filter(name => !isExclude
 assert(!playersWithMisses.includes("ChiefLeft") && !playersWithMisses.includes("ChiefBanned"), "Excluded players omitted from misses");
 assert(!playersWithMisses.includes("GateKeeper") && !playersWithMisses.includes("AltNonParticipating"), "Bots and non-participating alts omitted from misses");
 assert(playersWithMisses.includes("ChiefActive2") && playersWithMisses.includes("AltParticipating"), "Active members with misses correctly identified");
+assert(playersWithMisses.includes("lord319285336") && playerMissedMap["lord319285336"].length === 3, "Lord accounts must be held accountable for missed days");
 assert(!playersWithMisses.includes("ChiefActive1"), "Member with perfect attendance (ChiefActive1) has 0 misses");
-console.log("  ✅ PASS: Missed days correctly computed (ChiefActive2 missed Day 2, AltParticipating missed Day 1)");
+console.log("  ✅ PASS: Missed days correctly computed (ChiefActive2 missed Day 2, AltParticipating missed Day 1, lord319285336 missed Days 1-3)");
 
 // 4. Showdown Event Date Input & Persistence Assertions
 console.log("\nTest 4: Showdown Event Date Input & Persistence Assertions");
@@ -385,7 +386,6 @@ async function runHeadlessVerification() {
     // Strictly assert bot and non-participating alts are NOT rendered in table
     assert(!modalData.tableText.includes('GateKeeper'), 'GateKeeper bot must NOT be in missed list');
     assert(!modalData.tableText.includes('wosrewards'), 'wosrewards bot must NOT be in missed list');
-    assert(!modalData.tableText.includes('lord319285336'), 'lord319285336 bot must NOT be in missed list');
     assert(!modalData.tableText.includes('Babyboi'), 'Non-participating alt Babyboi must NOT be in missed list');
     assert(!modalData.tableText.includes('Cr3amp13'), 'Non-participating alt Cr3amp13 must NOT be in missed list');
     assert(!modalData.tableText.includes('aku tasya'), 'Ghost record aku tasya must NOT be in missed list');
@@ -402,10 +402,11 @@ async function runHeadlessVerification() {
       return modal?.querySelector('table')?.innerText || '';
     });
 
+    assert(mainsTabContent.includes('lord319285336') || mainsTabContent.includes('lord320989720') || mainsTabContent.includes('lord743783306'), 'All Mains view must include lord player accounts');
     assert(!mainsTabContent.includes('GateKeeper'), 'All Mains view must also exclude GateKeeper');
     assert(!mainsTabContent.includes('wosrewards'), 'All Mains view must also exclude wosrewards');
-    assert(!mainsTabContent.includes('Babyboi'), 'All Mains view must also exclude non-participating alts');
-    console.log("  ✅ PASS: Tab switching to All Mains maintains bot and alt exclusion rules");
+    assert(!mainsTabContent.includes('Babyboi'), 'All Mains view must also exclude non-participating farm alts');
+    console.log("  ✅ PASS: Tab switching to All Mains includes lord players and maintains bot/farm alt exclusion rules");
 
     // Test responsive viewport checks
     const viewports = [

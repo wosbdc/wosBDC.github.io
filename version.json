@@ -1,16 +1,17 @@
 {
-  "version": "3.3.105",
-  "releaseDate": "2026-10-15",
-  "title": "What's New in v3.3.105",
+  "version": "3.3.106",
+  "releaseDate": "2026-10-16",
+  "title": "What's New in v3.3.106",
   "notes": [
-    "🤖 Bot Filter: Excluded bots and system accounts from report.",
-    "👥 Alt Handling: Excluded secondary alts with zero showdown participation.",
-    "⚡ Real-time Sync: Auto-flushed live scores and added refresh button.",
-    "⚔️ Dual Views: Filter between active participants and all mains."
+    "👑 Lord Accounts: Restored lord player accounts to active alliance roster.",
+    "⚔️ Event Tracking: Auto-enrolls participating alts across all alliance events.",
+    "🌾 Parked Alts: Exempts inactive farm alts from event missed penalties.",
+    "🤖 Bot Filter: Keeps only pure backend service bots cleanly isolated."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.105",
+    "version": "3.3.106",
     "latestChanges": [
+      "v3.3.106: Activity-based auto-enrollment across all events and lord accounts restored",
       "v3.3.105: Excluded bots and non-participating alts from Showdown Missed Days Report",
       "v3.3.104: Synchronized dashboard and root versions for GitHub Actions build test suite",
       "v3.3.103: Added Championship Waiting on Update alert and dynamic progression",
