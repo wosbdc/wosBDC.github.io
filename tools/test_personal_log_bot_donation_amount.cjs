@@ -161,7 +161,7 @@ async function runHeadlessBrowserTests() {
   }
 
   const rootDir = path.join(__dirname, '..');
-  const PORT = 8098;
+  const PORT = 8099;
 
   const mimeTypes = {
     '.html': 'text/html',

@@ -5,7 +5,7 @@ const path = require('path');
 const vm = require('vm');
 const assert = require('assert');
 
-const PORT = 8097;
+const PORT = 8106;
 const DIST_DIR = path.resolve(__dirname, '..', 'dist');
 
 // Dynamic resolution for puppeteer-core or puppeteer

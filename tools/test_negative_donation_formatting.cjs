@@ -181,7 +181,7 @@ async function runHeadlessBrowserTests() {
   }
 
   const rootDir = path.join(__dirname, '..');
-  const PORT = 8097;
+  const PORT = 8107;
 
   // Simple static file server
   const mimeTypes = {

@@ -1,14 +1,18 @@
 {
-  "version": "3.3.108",
-  "releaseDate": "2026-10-16",
-  "title": "What's New in v3.3.108",
+  "version": "3.3.110",
+  "releaseDate": "2026-10-20",
+  "title": "What's New in v3.3.110",
   "notes": [
-    "📋 Event Summary: Renamed missed list copy button to Event Summary.",
-    "⚡ Visual State: Added instant confirmation feedback when copying event summary."
+    "🔄 Reset Pipeline: Added multi-stage archival and reset pipeline modal.",
+    "🎯 Scope Options: Choose full reset, signups only, or matchups only.",
+    "🧪 Safe Simulation: Added simulation demo mode to preview without modifying data.",
+    "🔘 Unified Buttons: Standardized all Championship reset buttons across views.",
+    "🛡️ Quota Guard: Blocked raw video payloads to protect database bandwidth."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.108",
+    "version": "3.3.110",
     "latestChanges": [
+      "v3.3.110: Added Championship multi-stage reset pipeline modal, scope options, and quota guard",
       "v3.3.108: Renamed copy missed list button to Event Summary with confirmation feedback",
       "v3.3.107: Added day-by-day copy to clipboard buttons in Showdown Missed Days Report",
       "v3.3.106: Activity-based auto-enrollment across all events and lord accounts restored",

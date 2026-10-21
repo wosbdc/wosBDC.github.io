@@ -15856,194 +15856,494 @@ window.saveChampionshipMatchups = async (data, skipLog = false) => {
     return true;
 };
 
-window.archiveAndResetChampionshipSeason = async () => {
+window.archiveAndResetChampionshipSeason = async (initialScope = 'full') => {
+    return await window.showResetAndArchiveChampionshipModal(initialScope);
+};
+
+window.showResetAndArchiveChampionshipModal = async (initialScope = 'full') => {
     const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
     if (!isManager) {
         if (window.showToast) window.showToast("Only R4/R5 managers can archive & reset Championship", "error");
         return;
     }
 
-    const confirmFirst = await window.customConfirm("🔄 Archive & Reset Alliance Championship?\n\nThis will:\n1. Save a timestamped snapshot of current 5-round battle matchups and scores to history.\n2. Save a timestamped snapshot of all member signups to attendance archives.\n3. Clean battle info (scores, flags, opponent names) for the upcoming season.\n4. Reset all member signups from YES back to NO in the tracker.\n\nProceed?");
-    if (!confirmFirst) return;
+    let existing = document.getElementById('champResetPipelineModal');
+    if (existing) existing.remove();
 
-    const confirmSecond = await window.customConfirm("⚠️ FINAL CONFIRMATION:\n\nAre you sure you want to reset Alliance Championship signups & battle info now?");
-    if (!confirmSecond) return;
+    const overlay = document.createElement('div');
+    overlay.id = 'champResetPipelineModal';
+    overlay.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px);
+        z-index: 10005; display: flex; justify-content: center; align-items: center;
+        padding: 20px; box-sizing: border-box; animation: fadeIn 0.2s ease;
+    `;
 
-    if (window.showToast) window.showToast("Archiving Championship battle info & resetting signups...", "info");
-    try {
-        const timestamp = Date.now();
-        const dateStr = new Date(timestamp).toISOString().split('T')[0];
-        const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.displayName || currentUser.name || "Admin") : "Admin";
-        const isT = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
+    const currentDateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const activeScope = (initialScope === 'signups' || initialScope === 'matchups') ? initialScope : 'full';
 
-        // 1. Fetch current data in parallel
-        const [currentMatchups, champData, rosterData, statsObj] = await Promise.all([
-            window.fetchChampionshipMatchups().catch(() => window.DEFAULT_CHAMPIONSHIP_MATCHUPS),
-            window.fetchChampionshipData().catch(() => ({})),
-            window.fetchRoster().catch(() => ({})),
-            window.fetchPlayerEventStats().catch(() => ({}))
-        ]);
+    overlay.innerHTML = `
+        <div style="background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; width: 100%; max-width: 660px; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.6);">
+            <div style="padding: 18px 24px; background: rgba(255,255,255,0.03); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-size: 18px; font-weight: bold; color: #ef4444; display: flex; align-items: center; gap: 10px;">
+                    🔄 Alliance Championship Archival & Reset Pipeline
+                </div>
+                <button id="champPipelineCloseBtn" onclick="document.getElementById('champResetPipelineModal').remove()" style="background: rgba(255,255,255,0.08); border: 1px solid var(--border); color: var(--text-main); font-size: 16px; font-weight: bold; cursor: pointer; padding: 4px 10px; border-radius: 8px; line-height: 1;">✕ Close</button>
+            </div>
+            
+            <div id="champPipelineModalBody" style="padding: 24px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 18px;">
+                <div style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 12px; padding: 16px; color: var(--text-main); font-size: 13px; line-height: 1.5;">
+                    ⚠️ <b>Important Sequential Safeguard:</b><br>
+                    Current Championship battle matchups and/or member signups will be <b>archived to Vault History FIRST</b>. Once safely saved to Vault history, player lifetime stats will update, and the live records will be reset for the upcoming season or tournament.
+                </div>
 
-        // Guard against archiving an unplayed / empty season
-        let hasAnyBattleData = false;
-        if (currentMatchups && currentMatchups.rounds) {
-            Object.values(currentMatchups.rounds).forEach(r => {
-                if (Number(r.ourScore) > 0 || Number(r.enemyAlliance?.score) > 0 || Number(r.ourFlags) > 0 || Number(r.enemyAlliance?.flags) > 0 || (r.enemyAlliance?.name && r.enemyAlliance.name !== `Opponent ${r.roundNum}` && r.enemyAlliance.name.trim() !== '')) {
-                    hasAnyBattleData = true;
+                <div style="display: flex; flex-direction: column; gap: 14px; background: rgba(255,255,255,0.02); padding: 16px; border-radius: 10px; border: 1px solid var(--border);">
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <label style="font-size: 12px; font-weight: bold; color: var(--text-muted);">Archive Event Date / Season Label:</label>
+                            <span style="font-size: 11px; color: var(--accent); font-weight: 600;">📅 Vault Cycle Label</span>
+                        </div>
+                        <input type="text" id="champPipelineDateLabel" value="${escapeHTML(currentDateStr)}" placeholder="e.g. Oct 20, 2026 or Season 12" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-main); color: var(--text-main); box-sizing: border-box; font-weight: bold;">
+                    </div>
+
+                    <div>
+                        <label style="font-size: 12px; font-weight: bold; color: var(--text-muted); display: block; margin-bottom: 8px;">Select Reset Scope:</label>
+                        <input type="hidden" id="champPipelineScope" value="${activeScope}">
+                        
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <!-- Option 1: Full Reset -->
+                            <div id="champScopeCard_full" onclick="window.setChampPipelineScope('full')" style="padding: 12px 14px; border-radius: 8px; border: 1px solid ${activeScope === 'full' ? 'var(--accent)' : 'var(--border)'}; background: ${activeScope === 'full' ? 'rgba(6,182,212,0.1)' : 'rgba(255,255,255,0.02)'}; cursor: pointer; display: flex; align-items: flex-start; gap: 10px; transition: 0.2s;">
+                                <input type="radio" name="champScopeRadio" id="champScopeRadio_full" value="full" ${activeScope === 'full' ? 'checked' : ''} style="margin-top: 3px; cursor: pointer;">
+                                <div style="flex: 1;">
+                                    <div style="font-size: 13.5px; font-weight: bold; color: var(--text-main); display: flex; align-items: center; gap: 6px;">
+                                        🌟 Full Season Reset (Signups & Matchups) <span style="font-size: 10.5px; background: rgba(6,182,212,0.2); color: var(--accent); padding: 1px 6px; border-radius: 8px; font-weight: 600;">Standard</span>
+                                    </div>
+                                    <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">
+                                        Archives 5-round battle scores & member signups to Vault, updates player misses stats, and resets both scores and signups (YES ➔ NO).
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Option 2: Signups Only -->
+                            <div id="champScopeCard_signups" onclick="window.setChampPipelineScope('signups')" style="padding: 12px 14px; border-radius: 8px; border: 1px solid ${activeScope === 'signups' ? 'var(--accent)' : 'var(--border)'}; background: ${activeScope === 'signups' ? 'rgba(6,182,212,0.1)' : 'rgba(255,255,255,0.02)'}; cursor: pointer; display: flex; align-items: flex-start; gap: 10px; transition: 0.2s;">
+                                <input type="radio" name="champScopeRadio" id="champScopeRadio_signups" value="signups" ${activeScope === 'signups' ? 'checked' : ''} style="margin-top: 3px; cursor: pointer;">
+                                <div style="flex: 1;">
+                                    <div style="font-size: 13.5px; font-weight: bold; color: var(--text-main); display: flex; align-items: center; gap: 6px;">
+                                        🛡️ Member Signups Only (YES ➔ NO)
+                                    </div>
+                                    <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">
+                                        Archives member signups to Attendance Vault, updates lifetime player misses stats, and resets signups back to NO. Leaves 5-round matchups untouched.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Option 3: Matchups Only -->
+                            <div id="champScopeCard_matchups" onclick="window.setChampPipelineScope('matchups')" style="padding: 12px 14px; border-radius: 8px; border: 1px solid ${activeScope === 'matchups' ? 'var(--accent)' : 'var(--border)'}; background: ${activeScope === 'matchups' ? 'rgba(6,182,212,0.1)' : 'rgba(255,255,255,0.02)'}; cursor: pointer; display: flex; align-items: flex-start; gap: 10px; transition: 0.2s;">
+                                <input type="radio" name="champScopeRadio" id="champScopeRadio_matchups" value="matchups" ${activeScope === 'matchups' ? 'checked' : ''} style="margin-top: 3px; cursor: pointer;">
+                                <div style="flex: 1;">
+                                    <div style="font-size: 13.5px; font-weight: bold; color: var(--text-main); display: flex; align-items: center; gap: 6px;">
+                                        ⚔️ 5-Round Matchups Only (Archive Season)
+                                    </div>
+                                    <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">
+                                        Archives 5-round battle scores & opponent info to Vault History, and resets matchups to New Season template. Leaves member signups untouched.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
+                    <button onclick="window.runChampionshipResetPipeline(true)" style="background: rgba(168,85,247,0.18); border: 1px solid rgba(168,85,247,0.4); color: #c084fc; padding: 10px 16px; border-radius: 8px; font-weight: bold; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: 0.2s;">
+                        🧪 Run Simulation Demo (Safe Preview)
+                    </button>
+
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="document.getElementById('champResetPipelineModal').remove()" style="background: var(--bg-main); border: 1px solid var(--border); color: var(--text-main); padding: 10px 18px; border-radius: 8px; font-weight: bold; cursor: pointer;">Cancel</button>
+                        <button id="champStartPipelineBtn" onclick="window.runChampionshipResetPipeline(false)" style="background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; box-shadow: 0 4px 15px rgba(239,68,68,0.3); transition: 0.2s;">🚀 Start Real Pipeline</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    window.setChampPipelineScope = (scope) => {
+        const input = document.getElementById('champPipelineScope');
+        if (input) input.value = scope;
+        ['full', 'signups', 'matchups'].forEach(s => {
+            const card = document.getElementById('champScopeCard_' + s);
+            const radio = document.getElementById('champScopeRadio_' + s);
+            if (card) {
+                if (s === scope) {
+                    card.style.borderColor = 'var(--accent)';
+                    card.style.background = 'rgba(6,182,212,0.1)';
+                } else {
+                    card.style.borderColor = 'var(--border)';
+                    card.style.background = 'rgba(255,255,255,0.02)';
                 }
-            });
-        }
-        if (!hasAnyBattleData && (!currentMatchups.seasonName || currentMatchups.seasonName === "Upcoming Season")) {
-            const proceedBlank = await window.customConfirm("⚠️ BLANK SEASON WARNING:\n\nThe current live season has no recorded battle scores, flags, or opponent names.\n\nArchiving now will save an empty season to the Vault. Are you sure you want to proceed?");
-            if (!proceedBlank) return;
-        }
-
-        // 2. Archive Battle Matchups to championship_meta/history
-        await set(ref(db, `championship_meta/history/${timestamp}`), {
-            ...currentMatchups,
-            archivedAt: timestamp,
-            archivedBy: adminName
+            }
+            if (radio) radio.checked = (s === scope);
         });
+    };
 
-        // 3. Clean/Reset Live Battle Matchups in Firebase
-        const resetMatchups = {
-            seasonName: "Upcoming Season",
-            statusText: "0 Wins – 0 Losses (New Season)",
-            ourSeasonFlags: 0,
-            enemySeasonFlags: 0,
-            ourState: "2089",
-            rounds: {
-                "r1": { roundNum: 1, date: "Round 1", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "", state: "", score: 0, flags: 0 } },
-                "r2": { roundNum: 2, date: "Round 2", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "", state: "", score: 0, flags: 0 } },
-                "r3": { roundNum: 3, date: "Round 3", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "", state: "", score: 0, flags: 0 } },
-                "r4": { roundNum: 4, date: "Round 4", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "", state: "", score: 0, flags: 0 } },
-                "r5": { roundNum: 5, date: "Round 5", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "", state: "", score: 0, flags: 0 } }
-            },
-            updatedAt: timestamp,
-            updatedBy: adminName
+    window.runChampionshipResetPipeline = async (isDemo = false) => {
+        const scope = document.getElementById('champPipelineScope')?.value || 'full';
+        const dateLabel = document.getElementById('champPipelineDateLabel')?.value?.trim() || currentDateStr;
+
+        const body = document.getElementById('champPipelineModalBody');
+        const closeBtn = document.getElementById('champPipelineCloseBtn');
+        if (closeBtn) closeBtn.style.display = 'none';
+
+        if (body) {
+            body.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <div style="font-weight: bold; font-size: 14px; color: var(--text-main);">
+                        ⚡ ${isDemo ? '🧪 Simulation Demo Mode (No data will be changed)' : 'Execution Progress'} (<span id="champPipelinePct">0%</span>)
+                    </div>
+                    ${isDemo ? '<span style="background: rgba(168,85,247,0.2); color: #c084fc; border: 1px solid rgba(168,85,247,0.4); padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: bold;">TEST MODE</span>' : ''}
+                </div>
+                
+                <div style="background: rgba(255,255,255,0.05); border-radius: 10px; height: 10px; overflow: hidden; margin-bottom: 20px; border: 1px solid var(--border);">
+                    <div id="champPipelineBar" style="background: linear-gradient(90deg, ${isDemo ? '#a855f7' : 'var(--accent)'}, #10b981); height: 100%; width: 0%; transition: width 0.4s ease;"></div>
+                </div>
+
+                <div id="champPipelineSteps" style="display: flex; flex-direction: column; gap: 12px;">
+                    <div id="champStep1" style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02); padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border);">
+                        <div style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-main);">
+                            <span>📁 Stage 1: Reading Live Records & Validating Data</span>
+                        </div>
+                        <span id="champStep1_badge" style="background: rgba(255,255,255,0.08); color: var(--text-muted); padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: bold;">Pending</span>
+                    </div>
+
+                    <div id="champStep2" style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02); padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border);">
+                        <div style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-main);">
+                            <span>💾 Stage 2: Archiving 5-Round Matchups to Vault History</span>
+                        </div>
+                        <span id="champStep2_badge" style="background: rgba(255,255,255,0.08); color: var(--text-muted); padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: bold;">Pending</span>
+                    </div>
+
+                    <div id="champStep3" style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02); padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border);">
+                        <div style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-main);">
+                            <span>📜 Stage 3: Archiving Member Signups to Attendance Vault</span>
+                        </div>
+                        <span id="champStep3_badge" style="background: rgba(255,255,255,0.08); color: var(--text-muted); padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: bold;">Pending</span>
+                    </div>
+
+                    <div id="champStep4" style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02); padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border);">
+                        <div style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-main);">
+                            <span>📊 Stage 4: Updating Lifetime Player Event Stats & Misses</span>
+                        </div>
+                        <span id="champStep4_badge" style="background: rgba(255,255,255,0.08); color: var(--text-muted); padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: bold;">Pending</span>
+                    </div>
+
+                    <div id="champStep5" style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02); padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border);">
+                        <div style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-main);">
+                            <span>🔄 Stage 5: Resetting Live State (${scope === 'signups' ? 'Signups Only' : (scope === 'matchups' ? 'Matchups Only' : 'Scores & Signups')})</span>
+                        </div>
+                        <span id="champStep5_badge" style="background: rgba(255,255,255,0.08); color: var(--text-muted); padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: bold;">Pending</span>
+                    </div>
+
+                    <div id="champStep6" style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02); padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border);">
+                        <div style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-main);">
+                            <span>📋 Stage 6: Logging Action & Refreshing Views</span>
+                        </div>
+                        <span id="champStep6_badge" style="background: rgba(255,255,255,0.08); color: var(--text-muted); padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: bold;">Pending</span>
+                    </div>
+                </div>
+
+                <div id="champPipelineDoneArea" style="display: none; flex-direction: column; align-items: center; gap: 12px; margin-top: 15px;">
+                    <div style="background: ${isDemo ? 'rgba(168,85,247,0.15)' : 'rgba(16,185,129,0.15)'}; border: 1px solid ${isDemo ? 'rgba(168,85,247,0.4)' : 'rgba(16,185,129,0.4)'}; color: ${isDemo ? '#c084fc' : '#10b981'}; padding: 12px 20px; border-radius: 12px; font-weight: bold; font-size: 14px; text-align: center; width: 100%; box-sizing: border-box;">
+                        ${isDemo ? '🧪 Simulation Demo Completed Successfully!<br><span style="font-size:12px; font-weight:normal; opacity:0.8;">(Safe Preview Mode: No actual data was modified or deleted)</span>' : '🎉 Alliance Championship Archival & Reset Pipeline Completed Successfully!'}
+                    </div>
+                    <button onclick="document.getElementById('champResetPipelineModal').remove(); if(typeof views !== 'undefined' && views.championshipAdmin) views.championshipAdmin();" style="background: ${isDemo ? '#8b5cf6' : 'var(--success)'}; color: white; border: none; padding: 12px 30px; border-radius: 8px; font-weight: bold; font-size: 15px; cursor: pointer; box-shadow: 0 4px 15px rgba(139,92,246,0.3);">Done</button>
+                </div>
+            `;
+        }
+
+        const updateStep = (stepNum, status, text, pct) => {
+            const badge = document.getElementById(`champStep${stepNum}_badge`);
+            const container = document.getElementById(`champStep${stepNum}`);
+            const bar = document.getElementById('champPipelineBar');
+            const pctSpan = document.getElementById('champPipelinePct');
+
+            if (bar) bar.style.width = pct + '%';
+            if (pctSpan) pctSpan.textContent = pct + '%';
+
+            if (badge) {
+                badge.textContent = text;
+                if (status === 'running') {
+                    badge.style.background = 'rgba(6,182,212,0.2)';
+                    badge.style.color = 'var(--accent)';
+                    badge.style.border = '1px solid rgba(6,182,212,0.4)';
+                    if (container) container.style.borderColor = 'var(--accent)';
+                } else if (status === 'done') {
+                    badge.style.background = 'rgba(16,185,129,0.2)';
+                    badge.style.color = '#10b981';
+                    badge.style.border = '1px solid rgba(16,185,129,0.4)';
+                    if (container) container.style.borderColor = 'rgba(16,185,129,0.4)';
+                } else if (status === 'skipped') {
+                    badge.style.background = 'rgba(255,255,255,0.06)';
+                    badge.style.color = 'var(--text-muted)';
+                    badge.style.border = '1px solid var(--border)';
+                    if (container) {
+                        container.style.opacity = '0.6';
+                        container.style.borderColor = 'var(--border)';
+                    }
+                } else if (status === 'error') {
+                    badge.style.background = 'rgba(239,68,68,0.2)';
+                    badge.style.color = '#ef4444';
+                    badge.style.border = '1px solid rgba(239,68,68,0.4)';
+                    if (container) container.style.borderColor = 'rgba(239,68,68,0.4)';
+                }
+            }
         };
-        await set(ref(db, 'championship_matchups'), resetMatchups);
 
-        // 4. Process Roster and Archive Signups
-        let rosterList = [];
-        const seenGids = new Set();
-        const seenNames = new Set();
-        if (rosterData) {
-            Object.values(rosterData).forEach(p => {
-                if (!p || typeof p !== 'object') return;
-                const cleanName = window.cleanChiefName(p.name || p.chiefName || '');
-                const normName = (cleanName || p.name || '').toLowerCase().trim();
-                const gid = p.gameId ? String(p.gameId).trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : (window.nameToIdMap?.[normName] || ''));
-                if ((gid && seenGids.has(gid)) || (normName && seenNames.has(normName))) return;
-                if (cleanName && window.isPlayerActiveMember(p)) {
-                    if (!p.gameId && gid && /^\d+$/.test(gid)) p.gameId = gid;
-                    if (gid) seenGids.add(gid);
-                    if (normName) seenNames.add(normName);
-                    rosterList.push(p);
+        const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+        try {
+            // Stage 1: Fetch live data & validate
+            updateStep(1, 'running', '🔄 Fetching...', 15);
+            await sleep(350);
+
+            const timestamp = Date.now();
+            const adminName = currentUser ? ((window.idToNameMap && window.idToNameMap[currentUser.gameId]) || currentUser.displayName || currentUser.name || "Admin") : "Admin";
+
+            const [currentMatchups, champData, rosterData, statsObj] = await Promise.all([
+                window.fetchChampionshipMatchups().catch(() => window.DEFAULT_CHAMPIONSHIP_MATCHUPS),
+                window.fetchChampionshipData().catch(() => ({})),
+                window.fetchRoster().catch(() => ({})),
+                window.fetchPlayerEventStats().catch(() => ({}))
+            ]);
+
+            // Guard against archiving an unplayed / empty season if scope includes matchups
+            let hasAnyBattleData = false;
+            if (currentMatchups && currentMatchups.rounds) {
+                Object.values(currentMatchups.rounds).forEach(r => {
+                    if (Number(r.ourScore) > 0 || Number(r.enemyAlliance?.score) > 0 || Number(r.ourFlags) > 0 || Number(r.enemyAlliance?.flags) > 0 || (r.enemyAlliance?.name && r.enemyAlliance.name !== `Opponent ${r.roundNum}` && r.enemyAlliance.name.trim() !== '')) {
+                        hasAnyBattleData = true;
+                    }
+                });
+            }
+
+            if (!isDemo && (scope === 'full' || scope === 'matchups') && !hasAnyBattleData && (!currentMatchups.seasonName || currentMatchups.seasonName === "Upcoming Season")) {
+                const proceedBlank = await window.customConfirm("⚠️ BLANK SEASON WARNING:\n\nThe current live season has no recorded battle scores, flags, or opponent names.\n\nArchiving now will save an empty season to the Vault. Are you sure you want to proceed?");
+                if (!proceedBlank) {
+                    if (closeBtn) closeBtn.style.display = 'block';
+                    updateStep(1, 'error', 'Cancelled', 15);
+                    return;
                 }
-            });
-        }
-        if (rosterList.length === 0 && window.idToNameMap) {
-            Object.entries(window.idToNameMap).forEach(([gid, name]) => {
-                const gidStr = gid ? gid.toString().trim() : '';
-                if (gidStr && !seenGids.has(gidStr) && window.isPlayerActiveMember({ gameId: gid, name: name })) {
-                    seenGids.add(gidStr);
-                    rosterList.push({ gameId: gid, name: name });
+            }
+
+            updateStep(1, 'done', 'Verified ✓', 20);
+            await sleep(250);
+
+            // Stage 2: Archive 5-Round Matchups to Vault History
+            if (scope === 'full' || scope === 'matchups') {
+                updateStep(2, 'running', '💾 Archiving...', 35);
+                await sleep(350);
+
+                if (!isDemo) {
+                    await set(ref(db, `championship_meta/history/${timestamp}`), {
+                        ...currentMatchups,
+                        archivedAt: timestamp,
+                        archivedBy: adminName,
+                        dateStr: dateLabel,
+                        cycleLabel: dateLabel
+                    });
                 }
-            });
-        }
-
-        let yesCount = 0, noCount = 0;
-        let playerSnapshots = [];
-
-        rosterList.forEach(p => {
-            const rawGid = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (window.nameToIdMap?.[(p.name || '').toLowerCase()] || '');
-            const gidStr = (rawGid && typeof rawGid === 'string') ? rawGid.trim() : '';
-            const rec = window.getEventRecord(champData, p);
-            const isSigned = rec && isT(rec.signedUp);
-            if (isSigned) {
-                yesCount++;
+                updateStep(2, 'done', 'Archived ✓', 40);
             } else {
-                noCount++;
+                updateStep(2, 'skipped', 'Skipped (Scope)', 40);
             }
-            playerSnapshots.push({
-                gameId: gidStr,
-                name: p.name,
-                signedUp: Boolean(isSigned)
-            });
+            await sleep(200);
 
-            // Update lifetime player event stats only if valid non-empty Firebase key
-            if (gidStr && !/[.#$\[\]/]/.test(gidStr)) {
-                const pStats = statsObj[gidStr] || {
-                    gameId: gidStr,
-                    name: p.name,
-                    missedShowdown: 0,
-                    missedChampionship: 0,
-                    missedMercenary: 0,
-                    missedPolarTerrors: 0,
-                    missedBearTrap: 0,
-                    totalCyclesTracked: 0,
-                    totalMisses: 0
-                };
-                pStats.name = p.name;
-                pStats.totalCyclesTracked = (pStats.totalCyclesTracked || 0) + 1;
-                if (!isSigned) {
-                    pStats.missedChampionship = (pStats.missedChampionship || 0) + 1;
+            // Stage 3: Process Roster and Archive Signups
+            let rosterList = [];
+            const seenGids = new Set();
+            const seenNames = new Set();
+            if (rosterData) {
+                Object.values(rosterData).forEach(p => {
+                    if (!p || typeof p !== 'object') return;
+                    const cleanName = window.cleanChiefName(p.name || p.chiefName || '');
+                    const normName = (cleanName || p.name || '').toLowerCase().trim();
+                    const gid = p.gameId ? String(p.gameId).trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : (window.nameToIdMap?.[normName] || ''));
+                    if ((gid && seenGids.has(gid)) || (normName && seenNames.has(normName))) return;
+                    if (cleanName && window.isPlayerActiveMember(p)) {
+                        if (!p.gameId && gid && /^\d+$/.test(gid)) p.gameId = gid;
+                        if (gid) seenGids.add(gid);
+                        if (normName) seenNames.add(normName);
+                        rosterList.push(p);
+                    }
+                });
+            }
+            if (rosterList.length === 0 && window.idToNameMap) {
+                Object.entries(window.idToNameMap).forEach(([gid, name]) => {
+                    const gidStr = gid ? gid.toString().trim() : '';
+                    if (gidStr && !seenGids.has(gidStr) && window.isPlayerActiveMember({ gameId: gid, name: name })) {
+                        seenGids.add(gidStr);
+                        rosterList.push({ gameId: gid, name: name });
+                    }
+                });
+            }
+
+            let yesCount = 0, noCount = 0;
+            let playerSnapshots = [];
+            const isT = (v) => v === true || v === 'true' || v === 'yes' || v === 'YES' || v === 1;
+
+            if (scope === 'full' || scope === 'signups') {
+                updateStep(3, 'running', '📜 Archiving...', 55);
+                await sleep(350);
+
+                rosterList.forEach(p => {
+                    const rawGid = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (window.nameToIdMap?.[(p.name || '').toLowerCase()] || '');
+                    const gidStr = (rawGid && typeof rawGid === 'string') ? rawGid.trim() : '';
+                    const rec = window.getEventRecord(champData, p);
+                    const isSigned = rec && isT(rec.signedUp);
+                    if (isSigned) {
+                        yesCount++;
+                    } else {
+                        noCount++;
+                    }
+                    playerSnapshots.push({
+                        gameId: gidStr,
+                        name: p.name,
+                        signedUp: Boolean(isSigned)
+                    });
+
+                    // Update lifetime player event stats only if valid non-empty Firebase key
+                    if (gidStr && !/[.#$\[\]/]/.test(gidStr)) {
+                        const pStats = statsObj[gidStr] || {
+                            gameId: gidStr,
+                            name: p.name,
+                            missedShowdown: 0,
+                            missedChampionship: 0,
+                            missedMercenary: 0,
+                            missedPolarTerrors: 0,
+                            missedBearTrap: 0,
+                            totalCyclesTracked: 0,
+                            totalMisses: 0
+                        };
+                        pStats.name = p.name;
+                        pStats.totalCyclesTracked = (pStats.totalCyclesTracked || 0) + 1;
+                        if (!isSigned) {
+                            pStats.missedChampionship = (pStats.missedChampionship || 0) + 1;
+                        }
+                        pStats.totalMisses = (pStats.missedShowdown || 0) + (pStats.missedChampionship || 0) + (pStats.missedMercenary || 0) + (pStats.missedPolarTerrors || 0) + (pStats.missedBearTrap || 0);
+                        pStats.lastUpdated = timestamp;
+                        statsObj[gidStr] = pStats;
+                    }
+                });
+
+                if (!isDemo) {
+                    const archivePayload = {
+                        timestamp: timestamp,
+                        dateStr: dateLabel,
+                        date: dateLabel,
+                        archivedBy: adminName,
+                        event: 'Alliance Championship',
+                        totalMembers: rosterList.length,
+                        yesCount: yesCount,
+                        noCount: noCount,
+                        players: playerSnapshots
+                    };
+                    await set(ref(db, `events_archive/championship/${timestamp}`), archivePayload);
                 }
-                pStats.totalMisses = (pStats.missedShowdown || 0) + (pStats.missedChampionship || 0) + (pStats.missedMercenary || 0) + (pStats.missedPolarTerrors || 0) + (pStats.missedBearTrap || 0);
-                pStats.lastUpdated = timestamp;
-                statsObj[gidStr] = pStats;
+                updateStep(3, 'done', 'Archived ✓', 60);
+            } else {
+                updateStep(3, 'skipped', 'Skipped (Scope)', 60);
             }
-        });
+            await sleep(200);
 
-        // 5. Save Attendance Archive to Firebase
-        const archivePayload = {
-            timestamp: timestamp,
-            dateStr: dateStr,
-            archivedBy: adminName,
-            event: 'Alliance Championship',
-            totalMembers: rosterList.length,
-            yesCount: yesCount,
-            noCount: noCount,
-            players: playerSnapshots
-        };
-        await set(ref(db, `events_archive/championship/${timestamp}`), archivePayload);
+            // Stage 4: Update Player Lifetime Stats
+            if (scope === 'full' || scope === 'signups') {
+                updateStep(4, 'running', '📊 Updating...', 75);
+                await sleep(350);
 
-        // 6. Update player_event_stats (guaranteed sanitized against invalid/empty keys)
-        const sanitizedStatsObj = window.sanitizeStatsObject ? window.sanitizeStatsObject(statsObj) : statsObj;
-        await set(ref(db, 'player_event_stats'), sanitizedStatsObj);
-        window._playerEventStatsCache = sanitizedStatsObj;
-
-        // 7. Reset live Championship status in activity_live & championship (YES -> NO)
-        for (const p of rosterList) {
-            const rawGid = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (window.nameToIdMap?.[(p.name || '').toLowerCase()] || '');
-            const gidStr = (rawGid && typeof rawGid === 'string') ? rawGid.trim() : '';
-            if (!gidStr || /[.#$\[\]/]/.test(gidStr)) continue;
-            try {
-                await update(ref(db, `activity_live/${gidStr}`), { championship: false, updatedAt: timestamp });
-            } catch(e) {
-                await set(ref(db, `activity_live/${gidStr}/championship`), false).catch(() => null);
+                if (!isDemo) {
+                    const sanitizedStatsObj = window.sanitizeStatsObject ? window.sanitizeStatsObject(statsObj) : statsObj;
+                    await set(ref(db, 'player_event_stats'), sanitizedStatsObj);
+                    window._playerEventStatsCache = sanitizedStatsObj;
+                }
+                updateStep(4, 'done', 'Updated ✓', 80);
+            } else {
+                updateStep(4, 'skipped', 'Skipped (Scope)', 80);
             }
-            await set(ref(db, `championship/${gidStr}`), { gameId: gidStr, name: p.name, signedUp: false, lastUpdated: timestamp, updatedBy: adminName }).catch(() => null);
-        }
+            await sleep(200);
 
-        window.clearAllEventCaches();
+            // Stage 5: Reset Live State
+            updateStep(5, 'running', '🔄 Resetting...', 90);
+            await sleep(350);
 
-        if (window.logAdminAction) {
-            window.logAdminAction("Archive & Reset Championship", `Archived season (${currentMatchups.seasonName || 'Season'}) & signups (${yesCount} YES, ${noCount} NO), cleaned battle info and reset tracker to NO.`);
-        }
+            if (!isDemo) {
+                // Reset Matchups if full or matchups scope
+                if (scope === 'full' || scope === 'matchups') {
+                    const resetMatchups = {
+                        seasonName: "Upcoming Season",
+                        statusText: "0 Wins – 0 Losses (New Season)",
+                        ourSeasonFlags: 0,
+                        enemySeasonFlags: 0,
+                        ourState: "2089",
+                        rounds: {
+                            "r1": { roundNum: 1, date: "Round 1", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "", state: "", score: 0, flags: 0 } },
+                            "r2": { roundNum: 2, date: "Round 2", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "", state: "", score: 0, flags: 0 } },
+                            "r3": { roundNum: 3, date: "Round 3", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "", state: "", score: 0, flags: 0 } },
+                            "r4": { roundNum: 4, date: "Round 4", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "", state: "", score: 0, flags: 0 } },
+                            "r5": { roundNum: 5, date: "Round 5", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "", state: "", score: 0, flags: 0 } }
+                        },
+                        updatedAt: timestamp,
+                        updatedBy: adminName
+                    };
+                    await set(ref(db, 'championship_matchups'), resetMatchups);
+                }
 
-        if (window.showToast) window.showToast("Championship archived, battle info cleaned & signups reset to NO! 🎉", "success");
-        if (window.views && window.views.championshipAdmin) {
-            window.views.championshipAdmin();
+                // Reset Signups if full or signups scope
+                if (scope === 'full' || scope === 'signups') {
+                    for (const p of rosterList) {
+                        const rawGid = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (window.nameToIdMap?.[(p.name || '').toLowerCase()] || '');
+                        const gidStr = (rawGid && typeof rawGid === 'string') ? rawGid.trim() : '';
+                        if (!gidStr || /[.#$\[\]/]/.test(gidStr)) continue;
+                        try {
+                            await update(ref(db, `activity_live/${gidStr}`), { championship: false, updatedAt: timestamp });
+                        } catch(e) {
+                            await set(ref(db, `activity_live/${gidStr}/championship`), false).catch(() => null);
+                        }
+                        await set(ref(db, `championship/${gidStr}`), { gameId: gidStr, name: p.name, signedUp: false, lastUpdated: timestamp, updatedBy: adminName }).catch(() => null);
+                    }
+                }
+            }
+            updateStep(5, 'done', 'Reset ✓', 95);
+            await sleep(200);
+
+            // Stage 6: Action Log & Refresh Views
+            updateStep(6, 'running', '📋 Finalizing...', 100);
+            await sleep(300);
+
+            if (!isDemo) {
+                window.clearAllEventCaches();
+
+                if (window.logAdminAction) {
+                    const scopeLabel = scope === 'full' ? 'Full Season Reset' : (scope === 'signups' ? 'Signups Only Reset' : 'Matchups Only Reset');
+                    window.logAdminAction("Championship Reset Pipeline", `Executed ${scopeLabel} (Date: ${dateLabel}).`);
+                }
+
+                if (window.showToast) window.showToast("Championship reset pipeline executed successfully! 🎉", "success");
+            }
+
+            updateStep(6, 'done', 'Complete ✓', 100);
+
+            const doneArea = document.getElementById('champPipelineDoneArea');
+            if (doneArea) doneArea.style.display = 'flex';
+        } catch(err) {
+            console.error("Championship Reset Pipeline error:", err);
+            if (closeBtn) closeBtn.style.display = 'block';
+            if (window.showToast) window.showToast("Pipeline error: " + err.message, "error");
         }
-    } catch(err) {
-        console.error("Archive Championship error:", err);
-        if (window.showToast) window.showToast("Error archiving Championship: " + err.message, "error");
-    }
+    };
 };
 
-window.archiveAndResetChampionshipCycle = window.archiveAndResetChampionshipSeason;
+window.archiveAndResetChampionshipCycle = window.showResetAndArchiveChampionshipModal;
 
 window.cleanChampStatusText = (st) => {
     if (!st || typeof st !== 'string') return '';
@@ -16969,6 +17269,20 @@ window.openFeedbackImageLightbox = (url) => window.openFeedbackMediaLightbox(url
 
 window.submitFeedbackItem = async (payload) => {
     try {
+        // STRICT QUOTA GUARD: Block any raw base64 video URLs from entering Realtime Database
+        let safeVideoUrl = payload.videoUrl || null;
+        if (safeVideoUrl && safeVideoUrl.startsWith('data:video/')) {
+            console.warn('[Quota Guard] Blocked base64 video payload from being saved to Realtime Database.');
+            safeVideoUrl = null;
+        }
+
+        // STRICT QUOTA GUARD: Block images larger than 120 KB from being saved directly
+        let safeImageUrl = payload.imageUrl || null;
+        if (safeImageUrl && safeImageUrl.startsWith('data:image/') && safeImageUrl.length > 120 * 1024) {
+            console.warn('[Quota Guard] Blocked oversize base64 image payload from being saved to Realtime Database.');
+            safeImageUrl = null;
+        }
+
         const newRef = push(ref(db, 'community_feedback'));
         const ticketId = newRef.key;
         const now = Date.now();
@@ -16979,10 +17293,10 @@ window.submitFeedbackItem = async (payload) => {
             category: payload.category || 'General UI',
             title: payload.title || '',
             description: payload.description || '',
-            imageUrl: payload.imageUrl || null,
-            videoUrl: payload.videoUrl || null,
-            videoThumbnail: payload.videoThumbnail || null,
-            mediaType: payload.mediaType || (payload.videoUrl ? 'video' : (payload.imageUrl ? 'image' : null)),
+            imageUrl: safeImageUrl,
+            videoUrl: safeVideoUrl,
+            videoThumbnail: payload.videoThumbnail && !payload.videoThumbnail.startsWith('data:video/') ? payload.videoThumbnail : null,
+            mediaType: payload.mediaType || (safeVideoUrl ? 'video' : (safeImageUrl ? 'image' : null)),
             mediaDuration: payload.mediaDuration || null,
             mediaSize: payload.mediaSize || null,
             mediaName: payload.mediaName || null,
@@ -17529,11 +17843,21 @@ window.openSubmitFeedbackModal = (defaultType = '') => {
                     }
                 })
                 .catch((driveErr) => {
-                    console.log("Drive auto-upload fallback active (in-database storage):", driveErr);
-                    if (prevDetails) {
-                        const durText = processed.duration ? window.formatVideoDuration(processed.duration) : '';
-                        const sizeMb = processed.sizeBytes ? `${(processed.sizeBytes / (1024 * 1024)).toFixed(1)} MB` : '';
-                        prevDetails.innerHTML = `<span style="color:#10b981;">✓ Ready (In-Database Storage)</span> ${durText ? `• ${durText}` : ''} ${sizeMb ? `• ${sizeMb}` : ''}`;
+                    console.log("Drive auto-upload failed:", driveErr);
+                    if (isVideo) {
+                        // STRICT QUOTA SAFEGUARD: Disallow direct in-database video base64 storage
+                        attachedMedia = null;
+                        updatePreview(null);
+                        if (prevDetails) {
+                            prevDetails.innerHTML = `<span style="color:#ef4444;">⚠️ Video upload failed. Please paste a Google Drive, YouTube, or Discord link below instead.</span>`;
+                        }
+                        if (window.showToast) window.showToast("Video upload failed. Please use an external link instead to preserve server quotas.", "warning");
+                    } else {
+                        // For images, allow lightweight compressed fallback (strictly capped < 80 KB)
+                        if (prevDetails) {
+                            const sizeKb = processed.sizeBytes ? `${(processed.sizeBytes / 1024).toFixed(0)} KB` : '';
+                            prevDetails.innerHTML = `<span style="color:#10b981;">✓ Ready (Compressed Image)</span> ${sizeKb ? `• ${sizeKb}` : ''}`;
+                        }
                     }
                 });
 
@@ -35401,14 +35725,14 @@ const views = {
                 <!-- Roster Table Footer Actions -->
                 <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; background:rgba(255,255,255,0.02); padding:16px 20px; border-radius:12px; border:1px solid var(--border); margin-top:16px;">
                     <div style="font-size:12px; color:var(--text-muted);">
-                        ⚠️ <strong>Event Reset</strong> archives current signups & battle info, cleans 5-round scores, and resets all member signups to NO.
+                        ⚠️ <strong>Reset Signups Pipeline</strong> archives signups to Vault, records member attendance, and resets member statuses from YES back to NO.
                     </div>
                     <div style="display:flex; gap:10px; flex-wrap:wrap;">
                         <button onclick="window.openChampionshipArchiveVaultModal('live')" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--accent); padding:10px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px;">
                             📜 Open Archive Vault
                         </button>
-                        <button onclick="window.archiveAndResetChampionshipSeason()" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:white; border:none; padding:10px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(239,68,68,0.3);">
-                            🔄 Event Reset (Archive & Reset)
+                        <button onclick="window.showResetAndArchiveChampionshipModal('signups')" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:white; border:none; padding:10px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(239,68,68,0.3); transition:0.2s;">
+                            🔄 Reset Signups Pipeline
                         </button>
                     </div>
                 </div>
@@ -35688,8 +36012,8 @@ const views = {
                         <button onclick="window.openChampionshipArchiveVaultModal('live')" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--accent); padding:10px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px;">
                             📜 Open Archive Vault
                         </button>
-                        <button onclick="window.archiveAndResetChampionshipSeason()" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:white; border:none; padding:10px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(239,68,68,0.3);">
-                            🔄 Archive Season & Reset
+                        <button onclick="window.showResetAndArchiveChampionshipModal('matchups')" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:white; border:none; padding:10px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(239,68,68,0.3); transition:0.2s;">
+                            🔄 Archive Season Pipeline
                         </button>
                     </div>
                 </div>
@@ -35715,8 +36039,8 @@ const views = {
                 <button onclick="if(document.querySelector('.navbar')) document.querySelector('.navbar').style.display='flex'; views.championship();" style="background:linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(6,182,212,0.05) 100%); color:var(--accent); border:1px solid rgba(6,182,212,0.4); padding:8px 14px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; transition:0.2s;">
                   👁️ View Public Dashboard
                 </button>
-                <button onclick="window.archiveAndResetChampionshipSeason()" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:white; border:none; padding:8px 14px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(239,68,68,0.3); transition:0.2s;">
-                  🔄 Event Reset
+                <button onclick="window.showResetAndArchiveChampionshipModal('full')" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:white; border:none; padding:8px 14px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(239,68,68,0.3); transition:0.2s;">
+                  🔄 Event Reset Pipeline
                 </button>
               </div>
             </div>

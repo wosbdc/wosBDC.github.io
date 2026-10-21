@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [3.3.110] - 2026-10-20
+- 🔄 **Reset Pipeline**: Added multi-stage archival and reset pipeline modal.
+- 🎯 **Scope Options**: Choose full reset, signups only, or matchups only.
+- 🧪 **Safe Simulation**: Added simulation demo mode to preview without modifying data.
+- 🔘 **Unified Buttons**: Standardized all Championship reset buttons across views.
+- 🛡️ **Quota Guard**: Blocked raw video payloads to protect database bandwidth.
+
 ## [3.3.108] - 2026-10-16
 - 📋 **Event Summary**: Renamed missed list copy button to Event Summary.
 - ⚡ **Visual State**: Added instant confirmation feedback when copying event summary.

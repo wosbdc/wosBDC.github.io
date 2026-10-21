@@ -156,7 +156,7 @@ async function runHeadlessVerification() {
   }
 
   // Spin up local HTTP server to serve test harness
-  const PORT = 8119;
+  const PORT = 8120;
   const htmlContent = `
     <!DOCTYPE html>
     <html lang="en">
