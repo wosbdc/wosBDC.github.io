@@ -16507,22 +16507,63 @@ window.saveChampSeasonSetup = async () => {
     }
 };
 
+window.autoFillChampScheduleDates = () => {
+    try {
+        // 1. Check unified schedule events for championship / tournament events
+        const unifiedEvents = (typeof window.getUnifiedScheduleEvents === 'function') ? window.getUnifiedScheduleEvents() : [];
+        let champEvents = unifiedEvents.filter(e => /champ/i.test(e.name || '')).sort((a,b) => (a.start?.getTime?.() || 0) - (b.start?.getTime?.() || 0));
+
+        let baseDate = null;
+        if (champEvents.length > 0 && champEvents[0].start) {
+            baseDate = new Date(champEvents[0].start);
+        }
+
+        // If no explicit event found, calculate upcoming/current tournament week's Monday (UTC)
+        if (!baseDate || isNaN(baseDate.getTime())) {
+            const now = new Date();
+            const dayOfWeek = now.getUTCDay(); // 0: Sun, 1: Mon, ..., 6: Sat
+            const diffToMonday = (dayOfWeek === 0 ? 1 : (dayOfWeek === 6 ? 2 : (1 - dayOfWeek)));
+            baseDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + diffToMonday));
+        }
+
+        const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+        for (let i = 1; i <= 5; i++) {
+            const targetDate = new Date(baseDate.getTime() + (i - 1) * 86400000);
+            const m = targetDate.getUTCMonth() + 1;
+            const d = targetDate.getUTCDate();
+            const dayName = days[i - 1];
+            const formatted = `${dayName} ${m}/${d}`;
+
+            const input = document.getElementById(`champ_setup_r${i}_date`);
+            if (input) {
+                input.value = formatted;
+                input.style.borderColor = 'var(--success)';
+                input.style.boxShadow = '0 0 8px rgba(16,185,129,0.4)';
+                setTimeout(() => {
+                    if (input) {
+                        input.style.borderColor = '';
+                        input.style.boxShadow = '';
+                    }
+                }, 1200);
+            }
+        }
+
+        if (window.showToast) {
+            window.showToast('📅 5-day tournament dates auto-filled from schedule!', 'success');
+        }
+    } catch (err) {
+        console.error('autoFillChampScheduleDates error:', err);
+        if (window.showToast) window.showToast('Could not auto-fill dates: ' + err.message, 'error');
+    }
+};
+
 window.onChampQuickCheckIn = async (gameId, chiefName, tileElement) => {
     if (!gameId) return;
 
-    // 1. Shrink and remove tile smoothly
+    // 1. Remove tile if present
     const tile = tileElement || document.getElementById(`champ_tile_${gameId}`);
-    if (tile) {
-        tile.style.transform = 'scale(0.85)';
-        tile.style.opacity = '0';
-        setTimeout(() => {
-            if (tile && tile.parentNode) tile.parentNode.removeChild(tile);
-            const grid = document.getElementById('champWaitingGrid');
-            const emptyMsg = document.getElementById('champWaitingEmptyMsg');
-            if (grid && emptyMsg && grid.children.length === 0) {
-                emptyMsg.style.display = 'block';
-            }
-        }, 180);
+    if (tile && tile.parentNode) {
+        tile.parentNode.removeChild(tile);
     }
 
     // 2. Update table row data attribute & button
@@ -16539,12 +16580,37 @@ window.onChampQuickCheckIn = async (gameId, chiefName, tileElement) => {
         }
     }
 
-    // 3. Update stats UI counters
+    // 3. Update search card in-place if rendered
+    const searchBadge = document.getElementById(`champ_search_badge_${gameId}`);
+    if (searchBadge) {
+        searchBadge.style.background = 'rgba(16,185,129,0.15)';
+        searchBadge.style.color = '#10b981';
+        searchBadge.innerHTML = '✅ Signed Up';
+    }
+    const searchAction = document.getElementById(`champ_search_action_${gameId}`);
+    if (searchAction) {
+        searchAction.innerHTML = `
+            <button onclick="window.onChampQuickUndo('${gameId}', '${escapeHTML(chiefName || '')}')" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); color:#ef4444; padding:6px 14px; border-radius:6px; font-weight:bold; font-size:11px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+                ↩️ Undo to NO
+            </button>
+        `;
+    }
+    const searchItem = document.getElementById(`champ_search_item_${gameId}`);
+    if (searchItem) {
+        searchItem.style.borderColor = 'rgba(16,185,129,0.4)';
+    }
+
+    // 4. Update stats UI counters
     if (typeof window.updateChampStatsUI === 'function') {
         window.updateChampStatsUI();
     }
 
-    // 4. Save to Firebase
+    // 5. Update filter if table is visible
+    if (typeof window.filterChampTable === 'function') {
+        window.filterChampTable();
+    }
+
+    // 6. Save to Firebase
     try {
         const timestamp = Date.now();
         const adminName = (currentUser && currentUser.displayName) ? currentUser.displayName : (currentUser?.email || 'Admin');
@@ -16587,8 +16653,30 @@ window.onChampQuickUndo = async (gameId, chiefName) => {
         }
     }
 
+    const searchBadge = document.getElementById(`champ_search_badge_${gameId}`);
+    if (searchBadge) {
+        searchBadge.style.background = 'rgba(245,158,11,0.15)';
+        searchBadge.style.color = '#f59e0b';
+        searchBadge.innerHTML = '⏳ Pending';
+    }
+    const searchAction = document.getElementById(`champ_search_action_${gameId}`);
+    if (searchAction) {
+        searchAction.innerHTML = `
+            <button onclick="window.onChampQuickCheckIn('${gameId}', '${escapeHTML(chiefName || '')}')" style="background:var(--success); color:white; border:none; padding:7px 16px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer; box-shadow:0 2px 8px rgba(16,185,129,0.3); display:inline-flex; align-items:center; gap:4px;">
+                🟢 Mark YES
+            </button>
+        `;
+    }
+    const searchItem = document.getElementById(`champ_search_item_${gameId}`);
+    if (searchItem) {
+        searchItem.style.borderColor = 'rgba(245,158,11,0.4)';
+    }
+
     if (typeof window.updateChampStatsUI === 'function') {
         window.updateChampStatsUI();
+    }
+    if (typeof window.filterChampTable === 'function') {
+        window.filterChampTable();
     }
 
     try {
@@ -16610,9 +16698,6 @@ window.onChampQuickUndo = async (gameId, chiefName) => {
 
         if (window.showToast) {
             window.showToast(`Restored ${chiefName || 'Chief'} to NO`, 'info');
-        }
-        if (typeof views !== 'undefined' && views.championshipAdmin) {
-            views.championshipAdmin('signups');
         }
     } catch(err) {
         console.error("onChampQuickUndo error:", err);
@@ -16637,7 +16722,7 @@ window.onChampChiefSearchInput = (query) => {
     if (matches.length === 0) {
         container.style.display = 'block';
         container.innerHTML = `
-            <div style="background:rgba(255,255,255,0.03); border:1px dashed var(--border); border-radius:8px; padding:12px; font-size:13px; color:var(--text-muted); text-align:center;">
+            <div style="background:rgba(255,255,255,0.03); border:1px dashed var(--border); border-radius:8px; padding:14px; font-size:13px; color:var(--text-muted); text-align:center;">
                 No members found matching "<strong>${escapeHTML(query)}</strong>"
             </div>
         `;
@@ -16648,27 +16733,27 @@ window.onChampChiefSearchInput = (query) => {
     container.style.flexDirection = 'column';
     container.style.gap = '8px';
 
-    container.innerHTML = matches.slice(0, 6).map(r => {
+    container.innerHTML = matches.slice(0, 10).map(r => {
         const name = r.querySelector('.champ-name-cell')?.textContent || r.getAttribute('data-name') || '';
         const gid = r.getAttribute('data-gid') || '';
         const isSigned = r.getAttribute('data-signed') === 'yes';
 
         return `
-            <div style="display:flex; justify-content:space-between; align-items:center; background:var(--card-bg); border:1px solid ${isSigned ? 'rgba(16,185,129,0.3)' : 'rgba(245,158,11,0.3)'}; border-radius:8px; padding:10px 14px;">
+            <div id="champ_search_item_${gid}" style="display:flex; justify-content:space-between; align-items:center; background:var(--card-bg); border:1px solid ${isSigned ? 'rgba(16,185,129,0.35)' : 'rgba(245,158,11,0.35)'}; border-radius:8px; padding:10px 14px; transition:0.2s;">
                 <div style="display:flex; align-items:center; gap:8px;">
                     <span style="font-size:14px; font-weight:bold; color:var(--text-main);">${escapeHTML(name)}</span>
-                    <span style="font-size:11px; padding:2px 8px; border-radius:10px; font-weight:bold; ${isSigned ? 'background:rgba(16,185,129,0.15); color:#10b981;' : 'background:rgba(245,158,11,0.15); color:#f59e0b;'}">
+                    <span id="champ_search_badge_${gid}" style="font-size:11px; padding:2px 8px; border-radius:10px; font-weight:bold; ${isSigned ? 'background:rgba(16,185,129,0.15); color:#10b981;' : 'background:rgba(245,158,11,0.15); color:#f59e0b;'}">
                         ${isSigned ? '✅ Signed Up' : '⏳ Pending'}
                     </span>
                 </div>
-                <div>
+                <div id="champ_search_action_${gid}">
                     ${!isSigned ? `
-                        <button onclick="window.onChampQuickCheckIn('${gid}', '${escapeHTML(name)}'); document.getElementById('champChiefSearchInput').value=''; document.getElementById('champSearchTypeaheadResults').style.display='none';" style="background:var(--success); color:white; border:none; padding:6px 14px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer; box-shadow:0 2px 8px rgba(16,185,129,0.3);">
+                        <button onclick="window.onChampQuickCheckIn('${gid}', '${escapeHTML(name)}')" style="background:var(--success); color:white; border:none; padding:7px 16px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer; box-shadow:0 2px 8px rgba(16,185,129,0.3); display:inline-flex; align-items:center; gap:4px;">
                             🟢 Mark YES
                         </button>
                     ` : `
-                        <button onclick="window.onChampQuickUndo('${gid}', '${escapeHTML(name)}'); document.getElementById('champChiefSearchInput').value=''; document.getElementById('champSearchTypeaheadResults').style.display='none';" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); color:#ef4444; padding:5px 12px; border-radius:6px; font-weight:bold; font-size:11px; cursor:pointer;">
-                            Undo to NO
+                        <button onclick="window.onChampQuickUndo('${gid}', '${escapeHTML(name)}')" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); color:#ef4444; padding:6px 14px; border-radius:6px; font-weight:bold; font-size:11px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+                            ↩️ Undo to NO
                         </button>
                     `}
                 </div>
@@ -35898,7 +35983,7 @@ const views = {
     }
   },
 
-  championshipAdmin: async (activeTab = 'signups') => {
+  championshipAdmin: async (activeTab = null) => {
     const app = document.getElementById('app');
     if (!app) return;
 
@@ -35908,7 +35993,7 @@ const views = {
        return;
     }
 
-    const isAlreadyMounted = Boolean(document.getElementById('champTableBody') || document.getElementById('adm_champ_season_name'));
+    const isAlreadyMounted = Boolean(document.getElementById('champTableBody') || document.getElementById('adm_champ_season_name') || document.getElementById('champSignupsLockedCard'));
     const savedScrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0;
 
     if (!isAlreadyMounted) {
@@ -35926,6 +36011,17 @@ const views = {
             window.fetchRoster().catch(() => ({})),
             window.fetchChampionshipMatchups().catch(() => window.DEFAULT_CHAMPIONSHIP_MATCHUPS)
         ]);
+
+        const isPriorSeasonFinished = Boolean(
+            (champMatchupData.rounds?.r5?.ourFlags > 0 || champMatchupData.rounds?.r5?.enemyAlliance?.flags > 0) &&
+            champMatchupData.seasonState !== 'signups_open'
+        );
+        const isSeasonConfigured = !isPriorSeasonFinished && champMatchupData.seasonState !== 'unconfigured';
+
+        let effectiveTab = activeTab;
+        if (!effectiveTab) {
+            effectiveTab = isSeasonConfigured ? 'signups' : 'setup';
+        }
 
         let rosterList = [];
         const seenGids = new Set();
@@ -35969,13 +36065,13 @@ const views = {
 
         let tabNavHtml = `
             <div style="display:flex; gap:10px; margin-bottom:18px; border-bottom:1px solid var(--border); padding-bottom:12px; flex-wrap:wrap;">
-                <button onclick="views.championshipAdmin('setup')" style="padding:10px 18px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:0.2s; ${activeTab === 'setup' ? 'background:var(--accent); color:#fff; border:none; box-shadow:0 4px 12px rgba(6,182,212,0.3);' : 'background:var(--card-bg); color:var(--text-muted); border:1px solid var(--border);'}">
+                <button onclick="views.championshipAdmin('setup')" style="padding:10px 18px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:0.2s; ${effectiveTab === 'setup' ? 'background:var(--accent); color:#fff; border:none; box-shadow:0 4px 12px rgba(6,182,212,0.3);' : 'background:var(--card-bg); color:var(--text-muted); border:1px solid var(--border);'}">
                     1. 🛠️ Season Setup
                 </button>
-                <button onclick="views.championshipAdmin('signups')" style="padding:10px 18px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:0.2s; ${activeTab === 'signups' ? 'background:var(--accent); color:#fff; border:none; box-shadow:0 4px 12px rgba(6,182,212,0.3);' : 'background:var(--card-bg); color:var(--text-muted); border:1px solid var(--border);'}">
-                    2. 📋 Signups
+                <button onclick="views.championshipAdmin('signups')" style="padding:10px 18px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:0.2s; ${effectiveTab === 'signups' ? 'background:var(--accent); color:#fff; border:none; box-shadow:0 4px 12px rgba(6,182,212,0.3);' : 'background:var(--card-bg); color:var(--text-muted); border:1px solid var(--border);'}">
+                    ${!isSeasonConfigured ? '2. 🔒 Signups (Locked)' : '2. 📋 Signups'}
                 </button>
-                <button onclick="views.championshipAdmin('matchups')" style="padding:10px 18px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:0.2s; ${activeTab === 'matchups' ? 'background:var(--accent); color:#fff; border:none; box-shadow:0 4px 12px rgba(6,182,212,0.3);' : 'background:var(--card-bg); color:var(--text-muted); border:1px solid var(--border);'}">
+                <button onclick="views.championshipAdmin('matchups')" style="padding:10px 18px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:0.2s; ${effectiveTab === 'matchups' ? 'background:var(--accent); color:#fff; border:none; box-shadow:0 4px 12px rgba(6,182,212,0.3);' : 'background:var(--card-bg); color:var(--text-muted); border:1px solid var(--border);'}">
                     3. ⚔️ Season Edit
                 </button>
             </div>
@@ -35983,7 +36079,7 @@ const views = {
 
         let mainContentHtml = '';
 
-        if (activeTab === 'setup') {
+        if (effectiveTab === 'setup') {
             const seasonNameVal = champMatchupData.seasonName || 'Season ' + (new Date().getMonth() + 1);
             const roundsData = champMatchupData.rounds || {};
 
@@ -36049,6 +36145,24 @@ const views = {
                         <input type="text" id="champ_setup_season_name" value="${escapeHTML(seasonNameVal)}" placeholder="e.g. Season 24" style="width:100%; max-width:400px; box-sizing:border-box; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:15px; font-weight:bold;">
                     </div>
 
+                    <!-- Schedule Dates Tip & Auto-Fill from Google Calendar / Schedule -->
+                    <div style="background:linear-gradient(135deg, rgba(6,182,212,0.1), rgba(59,130,246,0.1)); border:1px solid rgba(6,182,212,0.3); border-radius:10px; padding:12px 16px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="font-size:18px;">💡</span>
+                            <span style="font-size:13px; color:var(--text-main);">
+                                <strong>Schedule Tip:</strong> Enter the 5 dates matching the official alliance schedule or Google Calendar.
+                            </span>
+                        </div>
+                        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                            <button type="button" id="btnAutoFillChampDates" onclick="window.autoFillChampScheduleDates()" style="background:var(--accent); color:white; border:none; padding:8px 16px; border-radius:6px; font-weight:bold; font-size:12.5px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 8px rgba(6,182,212,0.35); transition:0.2s;">
+                                📅 Auto-Fill Dates from Schedule
+                            </button>
+                            <a href="https://calendar.google.com/calendar/u/0/r?cid=1fd926f7d75aab23357b1b15579316a4ea4c02760849f94df8604eef9b7b1258@group.calendar.google.com" target="_blank" rel="noopener noreferrer" style="background:rgba(255,255,255,0.06); color:var(--text-muted); border:1px solid var(--border); padding:7px 14px; border-radius:6px; font-weight:600; font-size:12px; text-decoration:none; display:inline-flex; align-items:center; gap:5px;">
+                                🗓️ Open Google Cal ↗
+                            </a>
+                        </div>
+                    </div>
+
                     <div style="font-size:13px; font-weight:bold; color:var(--text-main); margin-bottom:12px; display:flex; align-items:center; gap:6px;">
                         ⚔️ 5-Day Opponent Alliance Schedule:
                     </div>
@@ -36076,154 +36190,139 @@ const views = {
                     </div>
                 </div>
             `;
-        } else if (activeTab === 'signups') {
-            const isPriorSeasonFinished = (champMatchupData.rounds?.r5?.ourFlags > 0 || champMatchupData.rounds?.r5?.enemyAlliance?.flags > 0) && champMatchupData.seasonState !== 'signups_open';
-
-            let priorWarningBanner = '';
-            if (isPriorSeasonFinished) {
-                priorWarningBanner = `
-                    <div style="background:linear-gradient(135deg, rgba(239,68,68,0.15), rgba(245,158,11,0.15)); border:2px solid #ef4444; border-radius:12px; padding:16px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-                        <div>
-                            <div style="font-weight:900; color:#ef4444; font-size:15px; display:flex; align-items:center; gap:6px;">
-                                ⚠️ Prior Season Battle Data Detected
-                            </div>
-                            <div style="font-size:12.5px; color:var(--text-muted); margin-top:3px;">
-                                Round 5 has recorded battle scores from the previous tournament. Please configure <strong>Step 1: Season Setup</strong> to reset attendance cleanly before taking signups.
-                            </div>
+        } else if (effectiveTab === 'signups') {
+            if (!isSeasonConfigured) {
+                // Setup Lock Barrier Gate: Prevent access to signups until Step 1 is configured
+                mainContentHtml = `
+                    <div id="champSignupsLockedCard" style="background:var(--card-bg); border:2px dashed rgba(239,68,68,0.4); border-radius:16px; padding:36px 20px; text-align:center; max-width:640px; margin:20px auto; box-shadow:0 8px 30px rgba(0,0,0,0.2);">
+                        <div style="font-size:48px; margin-bottom:12px;">🔒</div>
+                        <h2 style="margin:0 0 10px 0; color:var(--text-main); font-size:20px;">Member Signups are Locked</h2>
+                        <p style="margin:0 auto 20px auto; font-size:13.5px; color:var(--text-muted); line-height:1.6; max-width:480px;">
+                            The championship check-in desk is locked until the upcoming tournament is initialized in <strong>Step 1: Season Setup</strong>. This dummy-proof safeguard ensures previous tournament attendance and battle records are never accidentally mixed with new event signups.
+                        </p>
+                        <div style="display:flex; justify-content:center; gap:12px; flex-wrap:wrap;">
+                            <button id="btnLockedGoToSetup" onclick="views.championshipAdmin('setup')" style="background:var(--accent); color:white; border:none; padding:12px 24px; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 14px rgba(6,182,212,0.35); transition:0.2s;">
+                                🛠️ Go to Step 1: Season Setup ➔
+                            </button>
+                            <button onclick="window.openChampionshipArchiveVaultModal('live')" style="background:var(--bg-main); color:var(--text-main); border:1px solid var(--border); padding:12px 20px; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                                📜 Open Archive Vault
+                            </button>
                         </div>
-                        <button onclick="views.championshipAdmin('setup')" style="background:#ef4444; color:white; border:none; padding:9px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 10px rgba(239,68,68,0.35);">
-                            🛠️ Go to Step 1: Season Setup ➔
+                    </div>
+                `;
+            } else {
+                mainContentHtml = `
+                    <!-- Summary KPI Cards -->
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:15px; margin-bottom:18px;">
+                      <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:16px; text-align:center;">
+                        <div style="font-size:12px; color:var(--text-muted); text-transform:uppercase; font-weight:bold;">Total Roster</div>
+                        <div id="champStatTotal" style="font-size:28px; font-weight:bold; color:var(--text-main); margin-top:4px;">${totalCount}</div>
+                      </div>
+                      <div style="background:var(--card-bg); border:1px solid rgba(16,185,129,0.3); border-radius:12px; padding:16px; text-align:center;">
+                        <div style="font-size:12px; color:#10b981; text-transform:uppercase; font-weight:bold;">✅ Signed-up (YES)</div>
+                        <div id="champStatYes" style="font-size:28px; font-weight:bold; color:#10b981; margin-top:4px;">${yesCount}</div>
+                      </div>
+                      <div style="background:var(--card-bg); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:16px; text-align:center;">
+                        <div style="font-size:12px; color:#ef4444; text-transform:uppercase; font-weight:bold;">❌ Not Signed up (NO)</div>
+                        <div id="champStatNo" style="font-size:28px; font-weight:bold; color:#ef4444; margin-top:4px;">${noCount}</div>
+                      </div>
+                      <div style="background:var(--card-bg); border:1px solid rgba(59,130,246,0.3); border-radius:12px; padding:16px; text-align:center;">
+                        <div style="font-size:12px; color:#60a5fa; text-transform:uppercase; font-weight:bold;">Response Rate</div>
+                        <div id="champStatPct" style="font-size:28px; font-weight:bold; color:#60a5fa; margin-top:4px;">${percentSignedUp}%</div>
+                      </div>
+                    </div>
+
+                    <!-- Missing Members Quick-Copy Banner -->
+                    <div style="background:linear-gradient(135deg, rgba(239,68,68,0.12), rgba(245,158,11,0.12)); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:16px; margin-bottom:18px;">
+                      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                        <h3 style="margin:0; color:#ef4444; font-size:16px; display:flex; align-items:center; gap:8px;">
+                          ⚠️ Members Pending / Missing Signup <span id="missingCountTitle">(${missingNames.length})</span>
+                        </h3>
+                        <button onclick="window.copyMissingChampionshipList()" style="background:#ef4444; color:white; border:none; padding:8px 16px; border-radius:6px; font-weight:bold; cursor:pointer; font-size:12px; box-shadow:0 2px 8px rgba(239,68,68,0.3);">
+                          📋 Event Summary
                         </button>
+                      </div>
+                    </div>
+
+                    <!-- Instant Search Typeahead Check-In Desk (No bulky tiles) -->
+                    <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:18px; margin-bottom:18px;">
+                      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+                        <div style="font-weight:bold; font-size:14px; color:var(--text-main); display:flex; align-items:center; gap:6px;">
+                          🔍 Chief Search & Quick Check-In Desk
+                        </div>
+                        <div style="font-size:12px; color:var(--text-muted);">
+                          Type a name to check in or undo attendance
+                        </div>
+                      </div>
+                      <input type="text" id="champChiefSearchInput" placeholder="🔍 Type chief name to look up... (e.g. Brian)" style="width:100%; box-sizing:border-box; padding:12px 16px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:14px;" oninput="window.onChampChiefSearchInput(this.value)" autocomplete="off">
+                      <div id="champSearchTypeaheadResults" style="display:none; margin-top:12px;"></div>
+                    </div>
+
+                    <!-- Filter Controls & Step 3 Advance -->
+                    <div style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; align-items:center; justify-content:space-between;">
+                      <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                        <button id="champFilterBtnNo" class="champ-filter-btn active" data-filter="no" onclick="window.setChampFilter('no')" style="padding:8px 14px; border-radius:8px; border:1px solid #f59e0b; background:#f59e0b; color:#fff; font-weight:bold; cursor:pointer; font-size:13px; box-shadow:0 2px 8px rgba(245,158,11,0.3);">⏳ Waiting Response (<span id="btnNoCount">${noCount}</span>)</button>
+                        <button id="champFilterBtnYes" class="champ-filter-btn" data-filter="yes" onclick="window.setChampFilter('yes')" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-weight:bold; cursor:pointer; font-size:13px;">✅ Signed Up (<span id="btnYesCount">${yesCount}</span>)</button>
+                        <button id="champFilterBtnAll" class="champ-filter-btn" data-filter="all" onclick="window.setChampFilter('all')" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-weight:bold; cursor:pointer; font-size:13px;">👥 All Members (<span id="btnTotalCount">${totalCount}</span>)</button>
+                      </div>
+                      <div style="display:flex; gap:8px;">
+                        <button id="btnToggleChampTable" onclick="window.toggleChampRosterTable()" style="background:var(--bg-main); color:var(--text-main); border:1px solid var(--border); padding:8px 14px; border-radius:8px; font-weight:600; font-size:13px; cursor:pointer;">
+                          👁️ View Full Roster List
+                        </button>
+                        <button onclick="views.championshipAdmin('matchups')" style="background:linear-gradient(135deg, #06b6d4, #0891b2); color:white; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(6,182,212,0.3);">
+                          ⚔️ Step 3: Matchups ➔
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- Clean Roster Table (Collapsible, Default Hidden so Mobile Stays Lean & Fast) -->
+                    <div id="champTableContainer" style="display:none; background:var(--card-bg); border:1px solid var(--border); border-radius:12px; overflow:hidden; margin-bottom:18px;">
+                      <table style="width:100%; border-collapse:collapse; text-align:left; font-size:14px;">
+                        <thead>
+                          <tr style="background:var(--bg-main); border-bottom:1px solid var(--border); color:var(--text-muted); font-size:12px; text-transform:uppercase;">
+                            <th style="padding:12px 20px;">Chief Name</th>
+                            <th style="padding:12px 20px; text-align:right;">Signup Status</th>
+                          </tr>
+                        </thead>
+                        <tbody id="champTableBody">
+                          ${rosterList.map(p => {
+                              let gIdStr = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : (window.nameToIdMap?.[(p.name || '').toLowerCase()] || p.name || ''));
+                              let record = window.getEventRecord(championshipData, p);
+                              let isSignedUp = record && isT(record.signedUp);
+                              return `
+                                <tr class="champ-row" data-name="${escapeHTML((p.name || '').toLowerCase())}" data-gid="${gIdStr}" data-signed="${isSignedUp ? 'yes' : 'no'}" style="border-bottom:1px solid var(--border);">
+                                  <td class="champ-name-cell" style="padding:14px 20px; font-weight:bold; color:var(--text-main); font-size:15px;">${escapeHTML(p.name)}</td>
+                                  <td style="padding:14px 20px; text-align:right;">
+                                    <button class="champ-toggle-btn" onclick="window.onChampToggle('${gIdStr}', this)" style="background:${isSignedUp ? '#10b981' : 'rgba(239,68,68,0.15)'}; color:${isSignedUp ? '#ffffff' : '#ef4444'}; border:${isSignedUp ? 'none' : '1px solid rgba(239,68,68,0.4)'}; padding:6px 20px; border-radius:20px; font-weight:bold; cursor:pointer; font-size:13px; transition:0.2s; box-shadow:${isSignedUp ? '0 2px 8px rgba(16,185,129,0.35)' : 'none'};">
+                                      ${isSignedUp ? '✅ YES' : '❌ NO'}
+                                    </button>
+                                  </td>
+                                </tr>
+                              `;
+                          }).join('')}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <!-- Hidden search input for existing filterChampTable callers -->
+                    <input type="hidden" id="champSearchInput" value="">
+
+                    <!-- Roster Table Footer Actions -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; background:rgba(255,255,255,0.02); padding:16px 20px; border-radius:12px; border:1px solid var(--border); margin-top:16px;">
+                        <div style="font-size:12px; color:var(--text-muted);">
+                            ⚠️ <strong>Reset Signups Pipeline</strong> archives signups to Vault, records member attendance, and resets member statuses from YES back to NO.
+                        </div>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                            <button onclick="window.openChampionshipArchiveVaultModal('live')" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--accent); padding:10px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px;">
+                                📜 Open Archive Vault
+                            </button>
+                            <button onclick="window.showResetAndArchiveChampionshipModal('signups')" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:white; border:none; padding:10px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(239,68,68,0.3); transition:0.2s;">
+                                🔄 Reset Signups Pipeline
+                            </button>
+                        </div>
                     </div>
                 `;
             }
-
-            mainContentHtml = `
-                ${priorWarningBanner}
-
-                <!-- Summary KPI Cards -->
-                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:15px; margin-bottom:18px;">
-                  <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:16px; text-align:center;">
-                    <div style="font-size:12px; color:var(--text-muted); text-transform:uppercase; font-weight:bold;">Total Roster</div>
-                    <div id="champStatTotal" style="font-size:28px; font-weight:bold; color:var(--text-main); margin-top:4px;">${totalCount}</div>
-                  </div>
-                  <div style="background:var(--card-bg); border:1px solid rgba(16,185,129,0.3); border-radius:12px; padding:16px; text-align:center;">
-                    <div style="font-size:12px; color:#10b981; text-transform:uppercase; font-weight:bold;">✅ Signed-up (YES)</div>
-                    <div id="champStatYes" style="font-size:28px; font-weight:bold; color:#10b981; margin-top:4px;">${yesCount}</div>
-                  </div>
-                  <div style="background:var(--card-bg); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:16px; text-align:center;">
-                    <div style="font-size:12px; color:#ef4444; text-transform:uppercase; font-weight:bold;">❌ Not Signed up (NO)</div>
-                    <div id="champStatNo" style="font-size:28px; font-weight:bold; color:#ef4444; margin-top:4px;">${noCount}</div>
-                  </div>
-                  <div style="background:var(--card-bg); border:1px solid rgba(59,130,246,0.3); border-radius:12px; padding:16px; text-align:center;">
-                    <div style="font-size:12px; color:#60a5fa; text-transform:uppercase; font-weight:bold;">Response Rate</div>
-                    <div id="champStatPct" style="font-size:28px; font-weight:bold; color:#60a5fa; margin-top:4px;">${percentSignedUp}%</div>
-                  </div>
-                </div>
-
-                <!-- Missing Members Quick-Copy Banner -->
-                <div style="background:linear-gradient(135deg, rgba(239,68,68,0.12), rgba(245,158,11,0.12)); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:16px; margin-bottom:18px;">
-                  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-                    <h3 style="margin:0; color:#ef4444; font-size:16px; display:flex; align-items:center; gap:8px;">
-                      ⚠️ Members Pending / Missing Signup <span id="missingCountTitle">(${missingNames.length})</span>
-                    </h3>
-                    <button onclick="window.copyMissingChampionshipList()" style="background:#ef4444; color:white; border:none; padding:8px 16px; border-radius:6px; font-weight:bold; cursor:pointer; font-size:12px; box-shadow:0 2px 8px rgba(239,68,68,0.3);">
-                      📋 Event Summary
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Instant Search Typeahead Bar -->
-                <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:16px; margin-bottom:18px;">
-                  <input type="text" id="champChiefSearchInput" placeholder="🔍 Type chief name to check in... (e.g. Brian)" style="width:100%; box-sizing:border-box; padding:12px 16px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:14px;" oninput="window.onChampChiefSearchInput(this.value)" autocomplete="off">
-                  <div id="champSearchTypeaheadResults" style="display:none; margin-top:10px;"></div>
-                </div>
-
-                <!-- Filter Controls & Step 3 Advance -->
-                <div style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; align-items:center; justify-content:space-between;">
-                  <div style="display:flex; gap:6px; flex-wrap:wrap;">
-                    <button id="champFilterBtnNo" class="champ-filter-btn active" data-filter="no" onclick="window.setChampFilter('no')" style="padding:8px 14px; border-radius:8px; border:1px solid #f59e0b; background:#f59e0b; color:#fff; font-weight:bold; cursor:pointer; font-size:13px; box-shadow:0 2px 8px rgba(245,158,11,0.3);">⏳ Waiting Response (<span id="btnNoCount">${noCount}</span>)</button>
-                    <button id="champFilterBtnYes" class="champ-filter-btn" data-filter="yes" onclick="window.setChampFilter('yes')" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-weight:bold; cursor:pointer; font-size:13px;">✅ Signed Up (<span id="btnYesCount">${yesCount}</span>)</button>
-                    <button id="champFilterBtnAll" class="champ-filter-btn" data-filter="all" onclick="window.setChampFilter('all')" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-weight:bold; cursor:pointer; font-size:13px;">👥 All Members (<span id="btnTotalCount">${totalCount}</span>)</button>
-                  </div>
-                  <button onclick="views.championshipAdmin('matchups')" style="background:linear-gradient(135deg, #06b6d4, #0891b2); color:white; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 10px rgba(6,182,212,0.3);">
-                    ⚔️ Advance to Step 3: Matchups ➔
-                  </button>
-                </div>
-
-                <!-- Section 1: Shrinking Waiting Response Grid (Default Active) -->
-                <div id="champWaitingSection" style="display:block; margin-bottom:18px;">
-                  <div style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">
-                    👉 <strong>1-Tap Quick Check-In:</strong> Tap any chief below to mark them YES. The tile will disappear from this waiting list in real-time!
-                  </div>
-                  <div id="champWaitingGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:10px;">
-                    ${rosterList.filter(p => {
-                        let record = window.getEventRecord(championshipData, p);
-                        return !(record && isT(record.signedUp));
-                    }).map(p => {
-                        let gIdStr = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : (window.nameToIdMap?.[(p.name || '').toLowerCase()] || p.name || ''));
-                        return `
-                          <div class="champ-touch-tile" id="champ_tile_${escapeHTML(gIdStr)}" onclick="window.onChampQuickCheckIn('${gIdStr}', '${escapeHTML(p.name)}', this)" style="background:var(--card-bg); border:1px solid rgba(245,158,11,0.3); border-radius:10px; padding:12px; cursor:pointer; text-align:center; transition:all 0.15s ease; user-select:none; box-shadow:0 2px 8px rgba(0,0,0,0.15);" onmouseover="this.style.borderColor='#f59e0b'; this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='rgba(245,158,11,0.3)'; this.style.transform='none'">
-                            <div style="font-weight:bold; font-size:14px; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHTML(p.name)}</div>
-                            <div style="font-size:11px; color:#f59e0b; font-weight:600; margin-top:5px;">⏳ Tap to Mark YES ➔</div>
-                          </div>
-                        `;
-                    }).join('')}
-                  </div>
-                  <div id="champWaitingEmptyMsg" style="display:${noCount === 0 ? 'block' : 'none'}; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); border-radius:12px; padding:24px; text-align:center; margin-top:10px;">
-                    <div style="font-size:28px; margin-bottom:8px;">🎉</div>
-                    <div style="font-size:16px; font-weight:bold; color:#10b981;">100% Check-In Complete!</div>
-                    <div style="font-size:13px; color:var(--text-muted); margin-top:4px;">All members have responded and are checked in for this tournament.</div>
-                  </div>
-                </div>
-
-                <!-- Section 2: Full Roster Table (Used for All Members and Signed Up views, ensuring 100% backward compatibility) -->
-                <div id="champTableContainer" style="display:none; background:var(--card-bg); border:1px solid var(--border); border-radius:12px; overflow:hidden;">
-                  <table style="width:100%; border-collapse:collapse; text-align:left; font-size:14px;">
-                    <thead>
-                      <tr style="background:var(--bg-main); border-bottom:1px solid var(--border); color:var(--text-muted); font-size:12px; text-transform:uppercase;">
-                        <th style="padding:12px 20px;">Chief Name</th>
-                        <th style="padding:12px 20px; text-align:right;">Signup Status</th>
-                      </tr>
-                    </thead>
-                    <tbody id="champTableBody">
-                      ${rosterList.map(p => {
-                          let gIdStr = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : (window.nameToIdMap?.[(p.name || '').toLowerCase()] || p.name || ''));
-                          let record = window.getEventRecord(championshipData, p);
-                          let isSignedUp = record && isT(record.signedUp);
-                          return `
-                            <tr class="champ-row" data-name="${escapeHTML((p.name || '').toLowerCase())}" data-gid="${gIdStr}" data-signed="${isSignedUp ? 'yes' : 'no'}" style="border-bottom:1px solid var(--border);">
-                              <td class="champ-name-cell" style="padding:14px 20px; font-weight:bold; color:var(--text-main); font-size:15px;">${escapeHTML(p.name)}</td>
-                              <td style="padding:14px 20px; text-align:right;">
-                                <button class="champ-toggle-btn" onclick="window.onChampToggle('${gIdStr}', this)" style="background:${isSignedUp ? '#10b981' : 'rgba(239,68,68,0.15)'}; color:${isSignedUp ? '#ffffff' : '#ef4444'}; border:${isSignedUp ? 'none' : '1px solid rgba(239,68,68,0.4)'}; padding:6px 20px; border-radius:20px; font-weight:bold; cursor:pointer; font-size:13px; transition:0.2s; box-shadow:${isSignedUp ? '0 2px 8px rgba(16,185,129,0.35)' : 'none'};">
-                                  ${isSignedUp ? '✅ YES' : '❌ NO'}
-                                </button>
-                              </td>
-                            </tr>
-                          `;
-                      }).join('')}
-                    </tbody>
-                  </table>
-                </div>
-
-                <!-- Hidden search input for existing filterChampTable callers -->
-                <input type="hidden" id="champSearchInput" value="">
-
-                <!-- Roster Table Footer Actions -->
-                <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; background:rgba(255,255,255,0.02); padding:16px 20px; border-radius:12px; border:1px solid var(--border); margin-top:16px;">
-                    <div style="font-size:12px; color:var(--text-muted);">
-                        ⚠️ <strong>Reset Signups Pipeline</strong> archives signups to Vault, records member attendance, and resets member statuses from YES back to NO.
-                    </div>
-                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                        <button onclick="window.openChampionshipArchiveVaultModal('live')" style="background:var(--card-bg); color:var(--text-main); border:1px solid var(--accent); padding:10px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px;">
-                            📜 Open Archive Vault
-                        </button>
-                        <button onclick="window.showResetAndArchiveChampionshipModal('signups')" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:white; border:none; padding:10px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(239,68,68,0.3); transition:0.2s;">
-                            🔄 Reset Signups Pipeline
-                        </button>
-                    </div>
-                </div>
-            `;
         } else {
             // MATCHUPS EDITOR
             const seasonNameVal = champMatchupData.seasonName || 'Upcoming Season';
@@ -36678,6 +36777,17 @@ const views = {
 
         window.champCurrentFilter = 'no';
 
+        window.toggleChampRosterTable = () => {
+            const tableContainer = document.getElementById('champTableContainer');
+            if (!tableContainer) return;
+            const isHidden = tableContainer.style.display === 'none';
+            tableContainer.style.display = isHidden ? 'block' : 'none';
+            const toggleBtn = document.getElementById('btnToggleChampTable');
+            if (toggleBtn) {
+                toggleBtn.innerHTML = isHidden ? '🙈 Hide Roster List' : '👁️ View Full Roster List';
+            }
+        };
+
         window.setChampFilter = (filter) => {
             window.champCurrentFilter = filter;
             document.querySelectorAll('.champ-filter-btn').forEach(b => {
@@ -36700,15 +36810,11 @@ const views = {
                 }
             });
 
-            const waitingSection = document.getElementById('champWaitingSection');
             const tableContainer = document.getElementById('champTableContainer');
-
-            if (filter === 'no') {
-                if (waitingSection) waitingSection.style.display = 'block';
-                if (tableContainer) tableContainer.style.display = 'none';
-            } else {
-                if (waitingSection) waitingSection.style.display = 'none';
-                if (tableContainer) tableContainer.style.display = 'block';
+            if (tableContainer) {
+                tableContainer.style.display = 'block';
+                const toggleBtn = document.getElementById('btnToggleChampTable');
+                if (toggleBtn) toggleBtn.innerHTML = '🙈 Hide Roster List';
             }
             window.filterChampTable();
         };

@@ -76,17 +76,22 @@ function runStaticVerification() {
   assert(code.includes('window.onChampQuickCheckIn ='), 'main.js must define window.onChampQuickCheckIn');
   assert(code.includes('window.onChampQuickUndo ='), 'main.js must define window.onChampQuickUndo');
   assert(code.includes('window.onChampChiefSearchInput ='), 'main.js must define window.onChampChiefSearchInput');
+  assert(code.includes('window.autoFillChampScheduleDates ='), 'main.js must define window.autoFillChampScheduleDates');
+  assert(code.includes('window.toggleChampRosterTable ='), 'main.js must define window.toggleChampRosterTable');
 
   // Step 1 setup elements
   assert(code.includes('champ_setup_season_name'), 'main.js must support season name setup input');
   assert(code.includes('btnSaveChampSeasonSetup'), 'main.js must provide save schedule & unlock signups button');
+  assert(code.includes('btnAutoFillChampDates'), 'main.js must provide auto-fill dates button');
   assert(code.includes('champ_setup_r${i}_enemy_tag'), 'main.js must support opponent tag input');
   assert(code.includes('champ_setup_r${i}_enemy_name'), 'main.js must support opponent name input');
 
-  // Step 2 check-in desk elements
+  // Step 2 check-in desk & gating elements
+  assert(code.includes('champSignupsLockedCard'), 'main.js must render locked barrier card when season is not setup');
+  assert(code.includes('btnLockedGoToSetup'), 'main.js must render button to go to setup from lock barrier');
   assert(code.includes('champChiefSearchInput'), 'main.js must provide typeahead search input for chiefs');
-  assert(code.includes('champWaitingGrid'), 'main.js must render shrinking touch tile grid');
-  assert(code.includes('champWaitingSection'), 'main.js must render waiting section');
+  assert(code.includes('champSearchTypeaheadResults'), 'main.js must render typeahead search results');
+  assert(code.includes('btnToggleChampTable'), 'main.js must provide toggle button for full roster table');
   assert(code.includes('📋 Event Summary'), 'main.js must rename quick-copy button to Event Summary');
 
   // Step 3 celebration modal elements
@@ -197,28 +202,47 @@ async function runHeadlessVerification() {
       window.cleanChiefName = n => n;
     });
 
-    // 1. Verify Step 1: Pre-Tournament Season Setup
-    console.log('  🔍 Testing Step 1: Pre-Tournament Season Setup View...');
+    // 1. Verify Setup Lock Barrier Gate when Prior Round 5 Battle Data Exists
+    console.log('  🔍 Testing Setup Lock Barrier Gate on unconfigured/prior tournament...');
     await page.evaluate(async () => {
-      await views.championshipAdmin('setup');
+      await views.championshipAdmin('signups');
     });
 
+    await page.waitForSelector('#champSignupsLockedCard', { timeout: 5000 });
+    const lockTitle = await page.$eval('#champSignupsLockedCard h2', el => el.textContent);
+    assert(lockTitle.includes('Member Signups are Locked'), 'Signups screen must display locked barrier card');
+    console.log('  ✅ Gated Barrier successfully locked signups when previous battle data detected');
+
+    // Test 1-click navigate to Step 1 from barrier
+    await page.click('#btnLockedGoToSetup');
     await page.waitForSelector('#champ_setup_season_name', { timeout: 5000 });
     const setupTitleVal = await page.$eval('#champ_setup_season_name', el => el.value);
-    assert(setupTitleVal.includes('Season 24'), 'Season title must be pre-populated');
+    assert(setupTitleVal.includes('Season 24'), 'Season title must be pre-populated in Step 1');
 
+    // 2. Test Step 1: Pre-Tournament Season Setup & Schedule Dates Auto-Fill
+    console.log('  🔍 Testing Step 1: Schedule Dates Tip & Auto-Fill from Schedule...');
     const day1TagExists = await page.$('#champ_setup_r1_enemy_tag');
     const day5TagExists = await page.$('#champ_setup_r5_enemy_tag');
     assert(day1TagExists, 'Day 1 enemy tag input must render');
     assert(day5TagExists, 'Day 5 enemy tag input must render');
 
-    const saveSetupBtn = await page.$('#btnSaveChampSeasonSetup');
-    assert(saveSetupBtn, 'Save Schedule button must render in Step 1');
-    console.log('  ✅ Step 1: Season Setup inputs and controls verified');
+    // Clear and auto-fill dates
+    await page.$eval('#champ_setup_r1_date', el => el.value = '');
+    await page.click('#btnAutoFillChampDates');
+    await new Promise(r => setTimeout(r, 200));
 
-    // 2. Verify Step 2: Member Check-In Desk
-    console.log('  🔍 Testing Step 2: Shrinking Mobile Check-In Desk...');
+    const day1DateVal = await page.$eval('#champ_setup_r1_date', el => el.value);
+    const day5DateVal = await page.$eval('#champ_setup_r5_date', el => el.value);
+    assert(day1DateVal && day1DateVal.includes('Mon'), 'Day 1 date must be auto-filled with Monday');
+    assert(day5DateVal && day5DateVal.includes('Fri'), 'Day 5 date must be auto-filled with Friday');
+    console.log(`  ✅ Dates auto-filled successfully: Day 1 = "${day1DateVal}", Day 5 = "${day5DateVal}"`);
+
+    // 3. Save / Initialize new season to unlock Step 2: Signups
+    console.log('  🔍 Initializing new tournament season to unlock Step 2...');
     await page.evaluate(async () => {
+      window.DEFAULT_CHAMPIONSHIP_MATCHUPS.seasonState = 'signups_open';
+      window.DEFAULT_CHAMPIONSHIP_MATCHUPS.rounds.r5.ourFlags = 0;
+      window.DEFAULT_CHAMPIONSHIP_MATCHUPS.rounds.r5.enemyAlliance.flags = 0;
       await views.championshipAdmin('signups');
     });
 
@@ -227,7 +251,12 @@ async function runHeadlessVerification() {
     const statNo = await page.$eval('#champStatNo', el => el.textContent.trim());
     assert.strictEqual(statYes, '1', 'Signed up count must equal 1');
     assert.strictEqual(statNo, '4', 'Waiting response count must equal 4');
-    console.log(`  ✅ Live KPIs verified: Signed Up = ${statYes}, Waiting = ${statNo}`);
+    console.log(`  ✅ Signups unlocked! Live KPIs: Signed Up = ${statYes}, Waiting = ${statNo}`);
+
+    // Verify bulky touch tile grid is completely REMOVED from DOM
+    const bulkyGridExists = await page.evaluate(() => Boolean(document.getElementById('champWaitingGrid')));
+    assert(!bulkyGridExists, 'Bulky 50-person touch tile grid must NOT exist in DOM');
+    console.log('  ✅ Bulky touch tile grid successfully eliminated (clean, lightweight layout)');
 
     // Verify copy button label is '📋 Event Summary'
     const eventSummaryBtnText = await page.evaluate(() => {
@@ -236,40 +265,10 @@ async function runHeadlessVerification() {
       return found ? found.textContent.trim() : null;
     });
     assert(eventSummaryBtnText && eventSummaryBtnText.includes('Event Summary'), 'Quick-copy button must be labeled "Event Summary"');
-    console.log('  ✅ Quick-copy button successfully verified as "📋 Event Summary"');
+    console.log('  ✅ Quick-copy button verified as "📋 Event Summary"');
 
-    // Verify shrinking compact touch tile grid
-    const initialTileCount = await page.evaluate(() => {
-      const grid = document.getElementById('champWaitingGrid');
-      return grid ? grid.querySelectorAll('.champ-touch-tile').length : 0;
-    });
-    assert.strictEqual(initialTileCount, 4, 'Waiting grid must contain 4 pending chief tiles');
-    console.log('  ✅ Compact touch tile grid verified with 4 waiting chiefs');
-
-    // 3. Test 1-Tap Quick Check-In on a waiting tile (e.g. Thor)
-    console.log('  🔍 Testing 1-Tap Quick Check-In on waiting chief tile...');
-    await page.evaluate(() => {
-      const tile = document.getElementById('champ_tile_1002');
-      if (tile) tile.click();
-    });
-
-    // Wait briefly for smooth shrink transition
-    await new Promise(r => setTimeout(r, 350));
-
-    const postTapTileCount = await page.evaluate(() => {
-      const grid = document.getElementById('champWaitingGrid');
-      return grid ? grid.querySelectorAll('.champ-touch-tile').length : 0;
-    });
-    assert.strictEqual(postTapTileCount, 3, 'Waiting tile grid must shrink from 4 to 3 tiles after 1 tap');
-
-    const updatedStatYes = await page.$eval('#champStatYes', el => el.textContent.trim());
-    const updatedStatNo = await page.$eval('#champStatNo', el => el.textContent.trim());
-    assert.strictEqual(updatedStatYes, '2', 'Signed up count must increment to 2');
-    assert.strictEqual(updatedStatNo, '3', 'Waiting count must decrement to 3');
-    console.log('  ✅ 1-Tap Quick Check-In immediately shrank the grid and updated counters!');
-
-    // 4. Test Instant Search Typeahead
-    console.log('  🔍 Testing Instant Search Typeahead Bar...');
+    // 4. Test Streamlined Chief Search & Quick Check-In Desk
+    console.log('  🔍 Testing Streamlined Chief Search & Check-In Desk...');
     await page.type('#champChiefSearchInput', 'Iron');
     await new Promise(r => setTimeout(r, 200));
 
@@ -278,6 +277,59 @@ async function runHeadlessVerification() {
       return res && res.textContent.includes('Ironman') && res.textContent.includes('Mark YES');
     });
     assert(searchMatchFound, 'Search typeahead must display matching chief with Mark YES button');
+
+    // 1-Click Check-In: Click Mark YES
+    await page.waitForSelector('#champ_search_action_1003 button', { timeout: 3000 });
+    await page.click('#champ_search_action_1003 button');
+    await new Promise(r => setTimeout(r, 300));
+
+    const updatedStatYes = await page.$eval('#champStatYes', el => el.textContent.trim());
+    assert.strictEqual(updatedStatYes, '2', 'Signed up count must increment to 2 after checking in Ironman');
+
+    const searchItemState = await page.evaluate(() => {
+      const badge = document.getElementById('champ_search_badge_1003');
+      const action = document.getElementById('champ_search_action_1003');
+      return {
+        badgeText: badge ? badge.textContent.trim() : '',
+        btnText: action ? action.textContent.trim() : ''
+      };
+    });
+    assert(searchItemState.badgeText.includes('Signed Up'), 'Search card badge must update to Signed Up');
+    assert(searchItemState.btnText.includes('Undo to NO'), 'Search card action button must change to Undo to NO');
+    console.log('  ✅ In-place Check-In verified: live badge, Undo to NO button, and KPI counters updated');
+
+    // 1-Click Undo: Click Undo to NO
+    await page.click('#champ_search_action_1003 button');
+    await new Promise(r => setTimeout(r, 300));
+
+    const revertedStatYes = await page.$eval('#champStatYes', el => el.textContent.trim());
+    assert.strictEqual(revertedStatYes, '1', 'Signed up count must revert to 1 after undo');
+
+    const revertedItemState = await page.evaluate(() => {
+      const badge = document.getElementById('champ_search_badge_1003');
+      const action = document.getElementById('champ_search_action_1003');
+      return {
+        badgeText: badge ? badge.textContent.trim() : '',
+        btnText: action ? action.textContent.trim() : ''
+      };
+    });
+    assert(revertedItemState.badgeText.includes('Pending'), 'Search card badge must revert to Pending');
+    assert(revertedItemState.btnText.includes('Mark YES'), 'Search card action button must revert to Mark YES');
+    console.log('  ✅ In-place Undo verified: status reverted to NO smoothly');
+
+    // Test Toggle Roster Table View button
+    console.log('  🔍 Testing Toggle Full Roster Table button...');
+    const initialTableDisplay = await page.$eval('#champTableContainer', el => el.style.display);
+    assert.strictEqual(initialTableDisplay, 'none', 'Roster table must be collapsed by default');
+
+    await page.click('#btnToggleChampTable');
+    const openedTableDisplay = await page.$eval('#champTableContainer', el => el.style.display);
+    assert.strictEqual(openedTableDisplay, 'block', 'Roster table must expand when toggle button clicked');
+
+    await page.click('#btnToggleChampTable');
+    const closedTableDisplay = await page.$eval('#champTableContainer', el => el.style.display);
+    assert.strictEqual(closedTableDisplay, 'none', 'Roster table must collapse when clicked again');
+    console.log('  ✅ Toggle Roster Table button verified expanding and collapsing cleanly');
     console.log('  ✅ Typeahead search accurately surfaced Ironman with 1-click [🟢 Mark YES]');
 
     // 5. Verify Step 3: Matchups & Round 5 Auto-Archive Celebration Modal

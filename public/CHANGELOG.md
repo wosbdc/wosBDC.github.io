@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [3.3.112] - 2026-10-21
+- 🔒 **Setup Lock**: Gated signups until tournament is configured in Step 1.
+- 🔍 **Search Desk**: Streamlined check-in desk with real-time chief lookup.
+- 🧹 **Clean Layout**: Removed bulky 50-person tiles for faster mobile viewing.
+- 📅 **Date Auto-Fill**: Added 1-click tournament date auto-fill from schedule.
+- 🗓️ **Google Calendar**: Added direct link to the official alliance calendar.
+- 👁️ **Roster Toggle**: Collapsible table view keeps check-in lean and tidy.
+
 ## [3.3.111] - 2026-10-21
 - 🛠️ **Step Setup**: Added 5-day tournament opponent pre-setup wizard.
 - 🔒 **Data Protection**: Automatically resets attendance to prevent checking stale records.
