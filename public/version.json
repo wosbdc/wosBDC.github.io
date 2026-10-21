@@ -1,17 +1,18 @@
 {
-  "version": "3.3.113",
+  "version": "3.3.114",
   "releaseDate": "2026-10-21",
-  "title": "What's New in v3.3.113",
+  "title": "What's New in v3.3.114",
   "notes": [
-    "📅 Season Date: Clear label and empty default date input.",
-    "🏷️ Blank Opponents: Cleared placeholder opponent alliance tags and names.",
-    "🔒 Locked Rounds: Fixed Round 1 through Round 5 badges.",
-    "🚫 Tab Lockdown: Hid Signups and Edit tabs until configured.",
-    "⚠️ Setup Alert: Added popup alert guiding managers to setup tab."
+    "📊 Sheet Dates: Auto-fill tournament dates directly from Google Sheets.",
+    "📅 Season Date: Auto-populates formatted Season Date range with one click.",
+    "⚔️ 5-Day Rounds: Auto-fills all five battle round dates automatically.",
+    "⚡ Inline Button: Added quick auto-fill button directly beside date input.",
+    "✨ Visual Pulse: Inputs glow green when dates are loaded successfully."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.113",
+    "version": "3.3.114",
     "latestChanges": [
+      "v3.3.114: Added direct Google Sheets date auto-fill for Season Date and 5-day tournament rounds",
       "v3.3.113: Blank opponent defaults, locked round numbers, and strict tab lockdown with alert",
       "v3.3.112: Streamlined Championship check-in desk, added setup lock gate, and schedule date auto-pull",
       "v3.3.111: Added 3-step Championship guided setup, mobile check-in desk, and Round 5 prompt",

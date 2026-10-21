@@ -16582,28 +16582,124 @@ window.saveChampSeasonSetup = async () => {
     }
 };
 
-window.autoFillChampScheduleDates = () => {
-    try {
-        // 1. Check unified schedule events for championship / tournament events
-        const unifiedEvents = (typeof window.getUnifiedScheduleEvents === 'function') ? window.getUnifiedScheduleEvents() : [];
-        let champEvents = unifiedEvents.filter(e => /champ/i.test(e.name || '')).sort((a,b) => (a.start?.getTime?.() || 0) - (b.start?.getTime?.() || 0));
+window.autoFillChampScheduleDates = async () => {
+    const btn1 = document.getElementById('btnAutoFillChampDates');
+    const btn2 = document.getElementById('btnAutoFillChampDatesInline');
+    const setBtnLoading = (loading) => {
+        if (btn1) {
+            btn1.disabled = loading;
+            btn1.innerHTML = loading ? '⏳ Fetching Sheet Dates...' : '📅 Auto-Fill Dates from Google Sheet';
+        }
+        if (btn2) {
+            btn2.disabled = loading;
+            btn2.innerHTML = loading ? '⏳ Fetching Sheet Dates...' : '⚡ Auto-Fill from Google Sheet';
+        }
+    };
 
-        let baseDate = null;
-        if (champEvents.length > 0 && champEvents[0].start) {
-            baseDate = new Date(champEvents[0].start);
+    setBtnLoading(true);
+
+    try {
+        let baseStartDate = null;
+        let foundSource = '';
+
+        // 1. Live query to Google Sheets (Schedule data tab or data tab)
+        if (typeof API_BASE_URL !== 'undefined' && API_BASE_URL) {
+            try {
+                // Try 'Schedule data' tab first (Google Calendar sync sheet)
+                let res = await fetch(`${API_BASE_URL}?api=getScheduleData&sheetName=Schedule%20data`, { signal: AbortSignal.timeout(6000) });
+                let json = await res.json();
+                let rows = (json && json.success && Array.isArray(json.data)) ? json.data : null;
+
+                // Fallback to default 'data' tab if needed
+                if (!rows || rows.length < 2) {
+                    res = await fetch(`${API_BASE_URL}?api=getScheduleData`, { signal: AbortSignal.timeout(6000) });
+                    json = await res.json();
+                    if (json && json.success && Array.isArray(json.data)) {
+                        rows = json.data;
+                    }
+                }
+
+                if (rows && Array.isArray(rows)) {
+                    for (let r = 0; r < rows.length; r++) {
+                        const row = rows[r];
+                        if (!Array.isArray(row)) continue;
+                        
+                        // Check if row corresponds to Alliance Championship
+                        const rowStr = row.map(c => String(c || '')).join(' ');
+                        if (/alliance\s*champ/i.test(rowStr) || /championship/i.test(rowStr)) {
+                            // Find ISO date strings or date objects in the row
+                            let datesInRow = [];
+                            for (let c = 0; c < row.length; c++) {
+                                const val = String(row[c] || '').trim();
+                                if (/^\d{4}-\d{2}-\d{2}/.test(val)) {
+                                    const parsed = new Date(val);
+                                    if (!isNaN(parsed.getTime()) && parsed.getUTCFullYear() >= 2024) {
+                                        datesInRow.push(parsed);
+                                    }
+                                }
+                            }
+
+                            if (datesInRow.length > 0) {
+                                datesInRow.sort((a, b) => a.getTime() - b.getTime());
+                                baseStartDate = datesInRow[0];
+                                foundSource = 'Google Sheets (' + (json.sheetName || 'Schedule data') + ')';
+                                break;
+                            }
+                        }
+                    }
+                }
+            } catch (sheetErr) {
+                console.warn('Google Sheet schedule fetch note:', sheetErr);
+            }
         }
 
-        // If no explicit event found, calculate upcoming/current tournament week's Monday (UTC)
-        if (!baseDate || isNaN(baseDate.getTime())) {
+        // 2. Secondary check: Unified schedule events cache
+        if (!baseStartDate) {
+            const unifiedEvents = (typeof window.getUnifiedScheduleEvents === 'function') ? window.getUnifiedScheduleEvents() : [];
+            let champEvents = unifiedEvents.filter(e => /champ/i.test(e.name || '')).sort((a,b) => (a.start?.getTime?.() || 0) - (b.start?.getTime?.() || 0));
+            if (champEvents.length > 0 && champEvents[0].start) {
+                baseStartDate = new Date(champEvents[0].start);
+                foundSource = 'Unified Schedule';
+            }
+        }
+
+        // 3. Fallback: Calculate upcoming/current tournament week's Monday (UTC)
+        if (!baseStartDate || isNaN(baseStartDate.getTime())) {
             const now = new Date();
             const dayOfWeek = now.getUTCDay(); // 0: Sun, 1: Mon, ..., 6: Sat
             const diffToMonday = (dayOfWeek === 0 ? 1 : (dayOfWeek === 6 ? 2 : (1 - dayOfWeek)));
-            baseDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + diffToMonday));
+            baseStartDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + diffToMonday));
+            foundSource = 'Tournament Schedule Default';
         }
 
+        // 4. Format Season Date range (e.g. Oct 19 – Oct 23, 2026)
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const startM = monthNames[baseStartDate.getUTCMonth()];
+        const startD = baseStartDate.getUTCDate();
+        const endDay5 = new Date(baseStartDate.getTime() + 4 * 86400000);
+        const endM = monthNames[endDay5.getUTCMonth()];
+        const endD = endDay5.getUTCDate();
+        const endY = endDay5.getUTCFullYear();
+        const formattedSeasonDate = `${startM} ${startD} – ${endM} ${endD}, ${endY}`;
+
+        // 5. Populate Season Date input
+        const seasonNameInput = document.getElementById('champ_setup_season_name');
+        if (seasonNameInput) {
+            seasonNameInput.value = formattedSeasonDate;
+            seasonNameInput.style.borderColor = 'var(--success)';
+            seasonNameInput.style.boxShadow = '0 0 10px rgba(16,185,129,0.4)';
+            setTimeout(() => {
+                if (seasonNameInput) {
+                    seasonNameInput.style.borderColor = '';
+                    seasonNameInput.style.boxShadow = '';
+                }
+            }, 1500);
+        }
+
+        // 6. Populate all 5 battle round dates (Mon 10/19 through Fri 10/23)
         const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
         for (let i = 1; i <= 5; i++) {
-            const targetDate = new Date(baseDate.getTime() + (i - 1) * 86400000);
+            const targetDate = new Date(baseStartDate.getTime() + (i - 1) * 86400000);
             const m = targetDate.getUTCMonth() + 1;
             const d = targetDate.getUTCDate();
             const dayName = days[i - 1];
@@ -16619,16 +16715,18 @@ window.autoFillChampScheduleDates = () => {
                         input.style.borderColor = '';
                         input.style.boxShadow = '';
                     }
-                }, 1200);
+                }, 1500);
             }
         }
 
         if (window.showToast) {
-            window.showToast('📅 5-day tournament dates auto-filled from schedule!', 'success');
+            window.showToast(`📅 Season date and 5-day tournament dates auto-filled from ${foundSource}!`, 'success');
         }
     } catch (err) {
         console.error('autoFillChampScheduleDates error:', err);
         if (window.showToast) window.showToast('Could not auto-fill dates: ' + err.message, 'error');
+    } finally {
+        setBtnLoading(false);
     }
 };
 
@@ -36240,7 +36338,12 @@ const views = {
                         <label style="font-size:12px; font-weight:bold; color:var(--text-main); display:block; margin-bottom:6px;">
                             📅 Season Date :
                         </label>
-                        <input type="text" id="champ_setup_season_name" value="${escapeHTML(seasonDateVal)}" placeholder="e.g. Oct 19 – Oct 23, 2026" style="width:100%; max-width:400px; box-sizing:border-box; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:14px; font-weight:bold;">
+                        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                            <input type="text" id="champ_setup_season_name" value="${escapeHTML(seasonDateVal)}" placeholder="e.g. Oct 19 – Oct 23, 2026" style="flex:1; min-width:240px; max-width:400px; box-sizing:border-box; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:14px; font-weight:bold;">
+                            <button type="button" id="btnAutoFillChampDatesInline" onclick="window.autoFillChampScheduleDates()" style="background:var(--accent); color:white; border:none; padding:10px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 8px rgba(6,182,212,0.35); transition:0.2s;">
+                                ⚡ Auto-Fill from Google Sheet
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Schedule Dates Tip & Auto-Fill from Google Calendar / Schedule -->
@@ -36253,7 +36356,7 @@ const views = {
                         </div>
                         <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
                             <button type="button" id="btnAutoFillChampDates" onclick="window.autoFillChampScheduleDates()" style="background:var(--accent); color:white; border:none; padding:8px 16px; border-radius:6px; font-weight:bold; font-size:12.5px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 8px rgba(6,182,212,0.35); transition:0.2s;">
-                                📅 Auto-Fill Dates from Schedule
+                                📅 Auto-Fill Dates from Google Sheet
                             </button>
                             <a href="https://calendar.google.com/calendar/u/0/r?cid=1fd926f7d75aab23357b1b15579316a4ea4c02760849f94df8604eef9b7b1258@group.calendar.google.com" target="_blank" rel="noopener noreferrer" style="background:rgba(255,255,255,0.06); color:var(--text-muted); border:1px solid var(--border); padding:7px 14px; border-radius:6px; font-weight:600; font-size:12px; text-decoration:none; display:inline-flex; align-items:center; gap:5px;">
                                 🗓️ Open Google Cal ↗

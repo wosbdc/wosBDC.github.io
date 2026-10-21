@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [3.3.114] - 2026-10-21
+- 📊 **Sheet Dates**: Auto-fill tournament dates directly from Google Sheets.
+- 📅 **Season Date**: Auto-populates formatted Season Date range with one click.
+- ⚔️ **5-Day Rounds**: Auto-fills all five battle round dates automatically.
+- ⚡ **Inline Button**: Added quick auto-fill button directly beside date input.
+- ✨ **Visual Pulse**: Inputs glow green when dates are loaded successfully.
+
 ## [3.3.113] - 2026-10-21
 - 📅 **Season Date**: Clear label and empty default date input.
 - 🏷️ **Blank Opponents**: Cleared placeholder opponent alliance tags and names.

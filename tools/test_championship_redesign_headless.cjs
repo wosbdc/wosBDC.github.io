@@ -89,6 +89,7 @@ function runStaticVerification() {
   assert(code.includes('Go Back to Setup Tab!'), 'main.js must display Go Back to Setup Tab! alert heading');
   assert(code.includes('btnSaveChampSeasonSetup'), 'main.js must provide save schedule & unlock signups button');
   assert(code.includes('btnAutoFillChampDates'), 'main.js must provide auto-fill dates button');
+  assert(code.includes('btnAutoFillChampDatesInline'), 'main.js must provide inline auto-fill button adjacent to season date');
   assert(code.includes('champ_setup_r${i}_enemy_tag'), 'main.js must support opponent tag input');
   assert(code.includes('champ_setup_r${i}_enemy_name'), 'main.js must support opponent name input');
 
@@ -264,21 +265,27 @@ async function runHeadlessVerification() {
     assert(alertModalClosed, 'Alert modal must close cleanly when button clicked');
     console.log('  ✅ "Go Back to Setup Tab!" alert modal verified on locked tab navigation');
 
-    // 4. Test Step 1: Schedule Dates Auto-Fill from Google Calendar / Schedule
-    console.log('  🔍 Testing Step 1: Schedule Dates Tip & Auto-Fill from Schedule...');
-    await page.click('#btnAutoFillChampDates');
-    await new Promise(r => setTimeout(r, 200));
+    // 4. Test Step 1: Schedule Dates Auto-Fill from Google Sheet / Schedule
+    console.log('  🔍 Testing Step 1: Schedule Dates Auto-Fill from Google Sheet...');
+    await page.click('#btnAutoFillChampDatesInline');
+    
+    // Wait for auto-fill to resolve and populate fields
+    await page.waitForFunction(() => {
+      const el = document.getElementById('champ_setup_season_name');
+      return el && el.value.trim().length > 0;
+    }, { timeout: 8000 });
 
+    const autoSeasonDate = await page.$eval('#champ_setup_season_name', el => el.value);
     const autoDay1Date = await page.$eval('#champ_setup_r1_date', el => el.value);
     const autoDay5Date = await page.$eval('#champ_setup_r5_date', el => el.value);
+    assert(autoSeasonDate && autoSeasonDate.includes('–'), `Season Date must be auto-filled with date range, got "${autoSeasonDate}"`);
     assert(autoDay1Date && autoDay1Date.includes('Mon'), 'Day 1 date must be auto-filled with Monday');
     assert(autoDay5Date && autoDay5Date.includes('Fri'), 'Day 5 date must be auto-filled with Friday');
-    console.log(`  ✅ Dates auto-filled successfully: Day 1 = "${autoDay1Date}", Day 5 = "${autoDay5Date}"`);
+    console.log(`  ✅ Dates auto-filled successfully from Google Sheet: Season Date = "${autoSeasonDate}", Day 1 = "${autoDay1Date}", Day 5 = "${autoDay5Date}"`);
 
     // 5. Fill valid 5-day opponents and save Step 1 schedule to unlock Step 2
     console.log('  🔍 Filling 5-day opponent alliances and saving schedule...');
     await page.evaluate(async () => {
-      document.getElementById('champ_setup_season_name').value = 'Oct 19 – Oct 23, 2026';
       for (let i = 1; i <= 5; i++) {
         document.getElementById(`champ_setup_r${i}_enemy_tag`).value = `[OPP${i}]`;
         document.getElementById(`champ_setup_r${i}_enemy_name`).value = `Alliance ${i}`;
