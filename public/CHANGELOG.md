@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [3.3.118] - 2026-10-21
+- 📅 **Today View**: Restored live events, countdown badges, and daily rewards.
+- 📊 **Date Parsing**: Seamlessly parses ISO timestamps from Google Sheets formulas.
+- 🕒 **Timezone Fix**: Prevents date drift across all player timezones globally.
+- 🎁 **Daily Rewards**: Added daily reward events section to today view.
+- ⚡ **Direct Sync**: Force-refreshes weekly grid directly from Google Sheets tabs.
+
 ## [3.3.117] - 2026-10-21
 - 🏷️ **Tag Box**: Removed redundant Tag box from Championship Setup.
 - ⚔️ **Unified Opponents**: Combined Tag and Name into single input field.

@@ -1,16 +1,18 @@
 {
-  "version": "3.3.117",
+  "version": "3.3.118",
   "releaseDate": "2026-10-21",
-  "title": "What's New in v3.3.117",
+  "title": "What's New in v3.3.118",
   "notes": [
-    "🏷️ Tag Box: Removed redundant Tag box from Championship Setup.",
-    "⚔️ Unified Opponent: Single Tag and Name input field.",
-    "⚡ Zero Double Entry: Seamless data flow between Setup and Matchups.",
-    "🤖 Auto Tagging: Auto-extracts bracketed tags when saving schedule."
+    "📅 Today View: Restored live events, countdown badges, and daily rewards.",
+    "📊 Date Parsing: Seamlessly parses ISO timestamps from Google Sheets formulas.",
+    "🕒 Timezone Fix: Prevents date drift across all player timezones globally.",
+    "🎁 Daily Rewards: Added daily reward events section to today view.",
+    "⚡ Direct Sync: Force-refreshes weekly grid directly from Google Sheets tabs."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.117",
+    "version": "3.3.118",
     "latestChanges": [
+      "v3.3.118: Fixed Today Schedule view with ISO date parsing and live sheet sync",
       "v3.3.117: Removed redundant Tag box from Championship Setup and unified opponent input",
       "v3.3.116: Mobile-first Championship admin redesign and live Google Sheet date sync",
       "v3.3.115: Removed per-round date inputs and schedule tip box, centralizing on Season Date",

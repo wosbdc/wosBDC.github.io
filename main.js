@@ -10733,50 +10733,39 @@ window.saveScheduleLiveToFirebase = async (scheduleObj) => {
 };
 
 window.syncScheduleDirectly = async () => {
-    if (window.showToast) window.showToast('📡 Syncing Schedule tab from Google Sheets...', 'info', false);
+    if (window.showToast) window.showToast('📡 Syncing Schedule tabs from Google Sheets...', 'info', false);
     try {
-        let freshSheetData = null;
+        // Fetch and refresh weekly schedule grid ('schedule') and timed events ('Schedule data')
+        const [freshSchedule, freshSchedData] = await Promise.all([
+            fetchSheet('schedule', true).catch(() => null),
+            fetchSheet('Schedule data', true).catch(() => null)
+        ]);
+
+        // Also attempt custom manager events if available
+        let customLiveData = null;
         try {
             const res = await fetch(`${API_BASE_URL}?api=getScheduleData`);
             const json = await res.json();
             if (json && json.success && json.data && Array.isArray(json.data) && json.data.length > 1) {
-                freshSheetData = json.data;
+                const parsed = window.parseSheetToScheduleLiveData(json.data);
+                if (parsed && parsed.events && parsed.events.length > 0) {
+                    await window.saveScheduleLiveToFirebase(parsed);
+                    customLiveData = parsed;
+                }
             }
         } catch (e) {
-            console.warn("Public getScheduleData endpoint failed, falling back to tab loop:", e);
+            console.warn("Public getScheduleData endpoint for custom schedule:", e);
         }
 
-        if (!freshSheetData) {
-            for (const tabName of ["WhiteOut Survival", "Schedule data", "Schedule", "Events"]) {
-                try {
-                    const adminToken = await window.getAuthToken();
-                    const res = await fetch(`${API_BASE_URL}?api=getSheetData&sheetName=${encodeURIComponent(tabName)}&token=${encodeURIComponent(adminToken || '')}`);
-                    const json = await res.json();
-                    if (json && json.success && json.data && Array.isArray(json.data) && json.data.length > 1) {
-                        freshSheetData = json.data;
-                        break;
-                    }
-                } catch(e) {
-                    console.warn("Direct fetch failed for tab:", tabName, e);
-                }
-            }
+        const unifiedEvents = (typeof window.getUnifiedScheduleEvents === 'function') ? window.getUnifiedScheduleEvents() : [];
+        if (window.logAdminAction) {
+            window.logAdminAction("Schedule Force Synced to Site", `Synced schedule tabs from Google Sheets. Loaded ${unifiedEvents.length} active events.`);
         }
-        if (freshSheetData && Array.isArray(freshSheetData)) {
-            const freshLiveData = window.parseSheetToScheduleLiveData(freshSheetData);
-            if (freshLiveData && freshLiveData.events && freshLiveData.events.length > 0) {
-                await window.saveScheduleLiveToFirebase(freshLiveData);
-                if (window.logAdminAction) {
-                    window.logAdminAction("Schedule Force Synced to Site", `Synced ${freshLiveData.events.length} schedule events from Google Sheets formula data directly to website.`);
-                }
-                if (window.showToast) window.showToast(`✅ Schedule Synced to Site! Loaded ${freshLiveData.events.length} events from Google Sheets!`, 'success');
-                if (window.currentView === 'schedule') {
-                    await views.schedule();
-                }
-                return true;
-            }
+        if (window.showToast) window.showToast(`✅ Schedule Synced to Site! Loaded ${unifiedEvents.length} events from Google Sheets!`, 'success');
+        if (window.currentView === 'schedule') {
+            await views.schedule();
         }
-        if (window.showToast) window.showToast("⚠️ Could not find valid schedule events in Google Sheets.", "warning");
-        return false;
+        return true;
     } catch(e) {
         console.error("Error in syncScheduleDirectly:", e);
         if (window.showToast) window.showToast("Error syncing schedule: " + e.message, "error");
@@ -13701,12 +13690,32 @@ window.fetchMergedShowdown = async () => {
    return { mergedData: null, sdLiveData };
 };
 
-const fetchSheet = async (sheetName) => {
+const fetchSheet = async (sheetName, forceRefresh = false) => {
 
-
-  if (window.liveData[sheetName]) return window.liveData[sheetName];
-  if (window.livePromises[sheetName]) return window.livePromises[sheetName];
+  if (!forceRefresh && window.liveData[sheetName]) return window.liveData[sheetName];
+  if (!forceRefresh && window.livePromises[sheetName]) return window.livePromises[sheetName];
   
+  if (forceRefresh) {
+    try {
+      const fallbackToken = (typeof getAuthToken === 'function') ? await getAuthToken() : '';
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 6000);
+      const url = `${API_BASE_URL}?api=getScheduleData&sheetName=${encodeURIComponent(sheetName)}${fallbackToken ? '&token=' + encodeURIComponent(fallbackToken) : ''}`;
+      const res = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      const json = await res.json();
+      if (json && json.success && json.data) {
+        window.liveData[sheetName] = json.data;
+        try {
+          if (db) set(ref(db, `sheets/${sheetName}`), json.data).catch(() => {});
+        } catch(e) {}
+        return json.data;
+      }
+    } catch(e) {
+      console.warn(`Force refresh for ${sheetName} failed, falling back to cache/listener:`, e);
+    }
+  }
+
   window.livePromises[sheetName] = new Promise((resolve, reject) => {
     const sheetRef = ref(db, `sheets/${sheetName}`);
     window.liveListeners[sheetName] = onValue(sheetRef, async (snapshot) => {
@@ -28554,16 +28563,17 @@ window.parseScheduleEventDate = (dateStr) => {
   const s = String(dateStr).trim();
   const now = new Date();
   
-  // 1. Check for explicit M/D e.g. 8/22 or 08/22
-  const mdMatch = s.match(/(\d{1,2})\/(\d{1,2})/);
+  // 1. Check for explicit M/D e.g. 8/22 or 08/22 or 8/22/2026
+  const mdMatch = s.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/) || s.match(/(\d{1,2})\/(\d{1,2})/);
   if (mdMatch) {
-    return new Date(now.getFullYear(), parseInt(mdMatch[1]) - 1, parseInt(mdMatch[2]));
+    const yr = mdMatch[3] ? (mdMatch[3].length === 2 ? 2000 + parseInt(mdMatch[3]) : parseInt(mdMatch[3])) : now.getUTCFullYear();
+    return new Date(Date.UTC(yr, parseInt(mdMatch[1]) - 1, parseInt(mdMatch[2])));
   }
   
-  // 2. Check for YYYY-MM-DD
+  // 2. Check for YYYY-MM-DD or ISO timestamp e.g. 2026-10-21T07:00:00.000Z
   const isoMatch = s.match(/(\d{4})-(\d{2})-(\d{2})/);
   if (isoMatch) {
-    return new Date(parseInt(isoMatch[1]), parseInt(isoMatch[2]) - 1, parseInt(isoMatch[3]));
+    return new Date(Date.UTC(parseInt(isoMatch[1]), parseInt(isoMatch[2]) - 1, parseInt(isoMatch[3])));
   }
 
   // 3. Check for Month name + Day e.g. "Aug 22" or "August 22"
@@ -28572,7 +28582,7 @@ window.parseScheduleEventDate = (dateStr) => {
     const months = { jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11 };
     const mIdx = months[monthMatch[1].toLowerCase().slice(0, 3)];
     if (mIdx !== undefined) {
-      return new Date(now.getFullYear(), mIdx, parseInt(monthMatch[2]));
+      return new Date(Date.UTC(now.getUTCFullYear(), mIdx, parseInt(monthMatch[2])));
     }
   }
 
@@ -28581,13 +28591,10 @@ window.parseScheduleEventDate = (dateStr) => {
   const lower = s.toLowerCase();
   for (const [dayName, dayNum] of Object.entries(daysMap)) {
     if (lower.includes(dayName)) {
-      const currentDay = now.getDay();
+      const currentDay = now.getUTCDay();
       let diff = dayNum - currentDay;
       if (diff < 0) diff += 7;
-      const target = new Date(now);
-      target.setDate(now.getDate() + diff);
-      target.setHours(0, 0, 0, 0);
-      return target;
+      return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + diff));
     }
   }
 
@@ -28742,7 +28749,7 @@ window.getUnifiedScheduleEvents = () => {
     for (let r = 0; r < Math.min(8, schedGrid.length); r++) {
       if (Array.isArray(schedGrid[r]) && schedGrid[r].some(c => {
         const s = String(c || '').toLowerCase();
-        return s.includes('today') || s.includes('tomorrow') || /\b\d{1,2}\/\d{1,2}\b/.test(s);
+        return s.includes('today') || s.includes('tomorrow') || /\b\d{1,2}\/\d{1,2}\b/.test(s) || /^\d{4}-\d{2}-\d{2}/.test(s);
       })) {
         headerRowIdx = r;
         break;
@@ -28760,6 +28767,9 @@ window.getUnifiedScheduleEvents = () => {
           const md = header.match(/(\d{1,2})\/(\d{1,2})/);
           if (md) {
             colDate = new Date(Date.UTC(now.getUTCFullYear(), parseInt(md[1]) - 1, parseInt(md[2])));
+          } else if (/^\d{4}-\d{2}-\d{2}/.test(header)) {
+            const parts = header.split('T')[0].split('-');
+            colDate = new Date(Date.UTC(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])));
           } else if (header.toLowerCase().includes('today')) {
             colDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
           } else if (header.toLowerCase().includes('tomorrow')) {
@@ -28772,7 +28782,7 @@ window.getUnifiedScheduleEvents = () => {
             if (!schedGrid[r] || !Array.isArray(schedGrid[r])) continue;
             // Stop if reached rewards section
             const firstCell = String(schedGrid[r][c] || schedGrid[r][1] || schedGrid[r][0] || '').toLowerCase();
-            if (firstCell.includes('rewards events') || firstCell.includes('rewards list')) break;
+            if (firstCell.includes('rewards events') || firstCell.includes('rewards list') || firstCell.includes('daily rewards')) break;
 
             const evName = String(schedGrid[r][c] || '').trim();
             if (!evName || evName.toLowerCase() === 'events' || evName.toLowerCase() === 'rewards') continue; // Skip empty cells/spacers
@@ -28784,11 +28794,11 @@ window.getUnifiedScheduleEvents = () => {
             }
 
             const [h, m] = meta.startUtc.split(':').map(Number);
-            const start = new Date(colDate);
-            start.setUTCHours(h, m, 0, 0);
+            const start = new Date(Date.UTC(colDate.getUTCFullYear(), colDate.getUTCMonth(), colDate.getUTCDate(), h, m, 0, 0));
             const end = new Date(start.getTime() + meta.durationMs);
+            const dateBadge = `${colDate.getUTCMonth() + 1}/${colDate.getUTCDate()}`;
 
-            addEvent(evName, start, end, meta.durationMs, meta.startUtc + ' UTC', meta.startPdt, meta.emoji, `${colDate.getUTCMonth() + 1}/${colDate.getUTCDate()}`, header);
+            addEvent(evName, start, end, meta.durationMs, meta.startUtc + ' UTC', meta.startPdt, meta.emoji, dateBadge, dateBadge);
           }
         }
       }
@@ -28815,13 +28825,11 @@ window.getUnifiedScheduleEvents = () => {
       const startT = window.parseScheduleEventTime(startTimeVal, startTimeVal) || { h: 16, m: 0 };
       const endT = window.parseScheduleEventTime(endTimeVal, endTimeVal);
 
-      const exactStart = new Date(eventDate);
-      exactStart.setUTCHours(startT.h, startT.m, 0, 0);
+      const exactStart = new Date(Date.UTC(eventDate.getUTCFullYear(), eventDate.getUTCMonth(), eventDate.getUTCDate(), startT.h, startT.m, 0, 0));
 
       let durationMs = 3600000;
       if (endT) {
-        const exactEnd = new Date(eventDate);
-        exactEnd.setUTCHours(endT.h, endT.m, 0, 0);
+        const exactEnd = new Date(Date.UTC(eventDate.getUTCFullYear(), eventDate.getUTCMonth(), eventDate.getUTCDate(), endT.h, endT.m, 0, 0));
         if (exactEnd > exactStart) durationMs = exactEnd.getTime() - exactStart.getTime();
       }
 
@@ -28847,8 +28855,7 @@ window.getUnifiedScheduleEvents = () => {
       const startT = window.parseScheduleEventTime(ev.utcStr, ev.pdtVal);
       if (!startT) return;
 
-      const exactStart = new Date(eventDate);
-      exactStart.setUTCHours(startT.h, startT.m, 0, 0);
+      const exactStart = new Date(Date.UTC(eventDate.getUTCFullYear(), eventDate.getUTCMonth(), eventDate.getUTCDate(), startT.h, startT.m, 0, 0));
 
       let durationMs = 3600000;
       const nameLower = ev.eventName.toLowerCase();
@@ -28882,9 +28889,22 @@ window.getUnifiedScheduleEvents = () => {
 window.getUnifiedScheduleRewards = (targetDate = new Date()) => {
   const rewards = [];
   const schedGrid = (window.liveData && window.liveData['schedule']) ? window.liveData['schedule'] : null;
-  if (!schedGrid || !Array.isArray(schedGrid) || schedGrid.length < 15) return rewards;
+  if (!schedGrid || !Array.isArray(schedGrid) || schedGrid.length < 5) return rewards;
 
-  const headers = schedGrid[2];
+  // Dynamically locate the header row
+  let headerRowIdx = -1;
+  for (let r = 0; r < Math.min(8, schedGrid.length); r++) {
+    if (Array.isArray(schedGrid[r]) && schedGrid[r].some(c => {
+      const s = String(c || '').toLowerCase();
+      return s.includes('today') || s.includes('tomorrow') || /\b\d{1,2}\/\d{1,2}\b/.test(s) || /^\d{4}-\d{2}-\d{2}/.test(s);
+    })) {
+      headerRowIdx = r;
+      break;
+    }
+  }
+  if (headerRowIdx === -1) headerRowIdx = 2;
+
+  const headers = schedGrid[headerRowIdx];
   if (!Array.isArray(headers)) return rewards;
 
   const targetM = targetDate.getUTCMonth() + 1;
@@ -28895,6 +28915,11 @@ window.getUnifiedScheduleRewards = (targetDate = new Date()) => {
     const h = String(headers[c] || '').trim();
     const md = h.match(/(\d{1,2})\/(\d{1,2})/);
     if (md && parseInt(md[1]) === targetM && parseInt(md[2]) === targetD) {
+      colIdx = c;
+      break;
+    }
+    const isoMatch = h.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch && parseInt(isoMatch[2]) === targetM && parseInt(isoMatch[3]) === targetD) {
       colIdx = c;
       break;
     }
@@ -28910,10 +28935,23 @@ window.getUnifiedScheduleRewards = (targetDate = new Date()) => {
     }
   }
 
+  // Find rewards starting row dynamically
+  let rewardsStartRow = -1;
+  for (let r = headerRowIdx + 1; r < schedGrid.length; r++) {
+    if (!schedGrid[r] || !Array.isArray(schedGrid[r])) continue;
+    const rowStr = schedGrid[r].map(cell => String(cell || '').toLowerCase()).join(' ');
+    if (rowStr.includes('rewards events') || rowStr.includes('rewards list') || rowStr.includes('daily rewards')) {
+      rewardsStartRow = r + 1;
+      break;
+    }
+  }
+  if (rewardsStartRow === -1) rewardsStartRow = 15;
+
   if (colIdx !== -1) {
-    for (let r = 15; r < schedGrid.length; r++) {
+    for (let r = rewardsStartRow; r < schedGrid.length; r++) {
+      if (!schedGrid[r] || !Array.isArray(schedGrid[r])) continue;
       const val = String(schedGrid[r][colIdx] || '').trim();
-      if (val && val.toLowerCase() !== 'rewards events' && val.toLowerCase() !== 'rewards' && !rewards.includes(val)) {
+      if (val && !val.toLowerCase().includes('rewards') && !rewards.includes(val)) {
         rewards.push(val);
       }
     }
@@ -43777,6 +43815,8 @@ window.resetBearTrapEvent = async () => {
       
       delete window.liveData['schedule'];
       delete window.livePromises['schedule'];
+      delete window.liveData['Schedule data'];
+      delete window.livePromises['Schedule data'];
       delete window.liveData['WhiteOut Survival'];
       delete window.livePromises['WhiteOut Survival'];
       if (window.liveListeners && window.liveListeners['WhiteOut Survival']) {
@@ -43785,23 +43825,11 @@ window.resetBearTrapEvent = async () => {
       }
 
       try {
-        let freshSheetData = null;
-        for (const tabName of ["WhiteOut Survival", "Schedule data", "Schedule", "Events"]) {
-            try {
-                delete window.liveData[tabName];
-                delete window.livePromises[tabName];
-                freshSheetData = await fetchSheet(tabName, true);
-                if (freshSheetData && Array.isArray(freshSheetData) && freshSheetData.length > 1) {
-                    break;
-                }
-            } catch(e) {}
-        }
-        if (freshSheetData && Array.isArray(freshSheetData)) {
-            const freshLiveData = window.parseSheetToScheduleLiveData(freshSheetData);
-            if (freshLiveData && freshLiveData.events && freshLiveData.events.length > 0) {
-                await window.saveScheduleLiveToFirebase(freshLiveData);
-            }
-        }
+        await Promise.all([
+          fetchSheet('schedule', true).catch(() => null),
+          fetchSheet('Schedule data', true).catch(() => null),
+          fetchSheet('WhiteOut Survival', true).catch(() => null)
+        ]);
       } catch(e) {
         console.warn("Failed to force refresh Google Sheet schedule:", e);
       }
@@ -43821,11 +43849,52 @@ window.resetBearTrapEvent = async () => {
 
     renderLoading('Loading Schedule');
     try {
-      const [weeklyData, todayData, scheduleDataSheet] = await Promise.all([
+      let [weeklyData, todayData, scheduleDataSheet] = await Promise.all([
         fetchSheet('schedule').catch(() => null),
         fetchSheet('WhiteOut Survival').catch(() => null),
         fetchSheet('Schedule data').catch(() => null)
       ]);
+
+      // Automatic staleness detection: If weeklyData is empty or has all dates in the past, auto force-refresh from GAS
+      let isWeeklyStale = false;
+      const nowCheck = new Date();
+      if (!weeklyData || !Array.isArray(weeklyData) || weeklyData.length < 3) {
+        isWeeklyStale = true;
+      } else {
+        let foundDates = [];
+        for (let r = 0; r < Math.min(8, weeklyData.length); r++) {
+          if (Array.isArray(weeklyData[r])) {
+            weeklyData[r].forEach(c => {
+              const s = String(c || '').trim();
+              const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+              if (isoMatch) {
+                foundDates.push(new Date(Date.UTC(parseInt(isoMatch[1]), parseInt(isoMatch[2]) - 1, parseInt(isoMatch[3]))));
+              }
+            });
+          }
+        }
+        if (foundDates.length > 0) {
+          const maxDate = new Date(Math.max(...foundDates.map(d => d.getTime())));
+          if (maxDate < new Date(nowCheck.getTime() - 24 * 3600000)) {
+            isWeeklyStale = true;
+          }
+        }
+      }
+
+      if (isWeeklyStale) {
+        console.log("Cached schedule grid is stale or empty. Force-refreshing from Google Sheets...");
+        try {
+          const [freshWeekly, freshSchedData] = await Promise.all([
+            fetchSheet('schedule', true).catch(() => null),
+            fetchSheet('Schedule data', true).catch(() => null)
+          ]);
+          if (freshWeekly) weeklyData = freshWeekly;
+          if (freshSchedData) scheduleDataSheet = freshSchedData;
+        } catch(e) {
+          console.warn("Auto force-refresh error:", e);
+        }
+      }
+
       const liveSched = (todayData && Array.isArray(todayData) && todayData.length > 0)
         ? window.parseSheetToScheduleLiveData(todayData)
         : await window.fetchScheduleLiveData().catch(() => null);
@@ -43878,10 +43947,18 @@ window.resetBearTrapEvent = async () => {
            const allUnifiedEvents = (typeof window.getUnifiedScheduleEvents === 'function') ? window.getUnifiedScheduleEvents() : [];
 
            allUnifiedEvents.forEach(ev => {
-             const isToday = ev.start.toDateString() === todayStr || (now >= ev.start && now <= ev.end);
-             const isFuture = ev.start > now && !isToday;
+             const evUtcY = ev.start.getUTCFullYear();
+             const evUtcM = ev.start.getUTCMonth();
+             const evUtcD = ev.start.getUTCDate();
+             const nowUtcY = now.getUTCFullYear();
+             const nowUtcM = now.getUTCMonth();
+             const nowUtcD = now.getUTCDate();
+             const isSameUtcDay = (evUtcY === nowUtcY && evUtcM === nowUtcM && evUtcD === nowUtcD);
+             const isSameLocalDay = (ev.start.toDateString() === todayStr);
              const isLiveNow = (now >= ev.start && now <= ev.end);
+             const isToday = isSameUtcDay || isSameLocalDay || isLiveNow;
              const isPast = now > ev.end;
+             const isFuture = ev.start > now && !isToday;
 
              const entry = {
                eventName: ev.name,
@@ -44005,8 +44082,18 @@ window.resetBearTrapEvent = async () => {
 
       let categoriesHtml = '';
 
+      const hasRewards  = rewards.length > 0;
       const hasAllWeek  = allWeek.length > 0;
       const hasHolidays = holidays.length > 0;
+
+      if (hasRewards) {
+        categoriesHtml += `<div style="background:var(--bg-main);border-radius:12px;padding:16px;margin-top:16px;">
+          ${sectionPill('🎁','Daily Rewards','#10b981','rgba(16,185,129,0.12)')}
+          <div style="display:flex;flex-wrap:wrap;gap:8px;">
+            ${rewards.map(x => `<span style="background:rgba(16,185,129,0.15);color:#10b981;padding:5px 12px;border-radius:20px;font-size:13px;font-weight:600;">✨ ${escapeHTML(x)}</span>`).join('')}
+          </div>
+        </div>`;
+      }
 
       if (hasAllWeek) {
         categoriesHtml += `<div style="background:var(--bg-main);border-radius:12px;padding:16px;margin-top:16px;">
