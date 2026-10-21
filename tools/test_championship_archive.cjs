@@ -164,7 +164,7 @@ function testChampionshipArchive() {
     if (!code.includes('📋 Signups')) {
         errors.push('views.championshipAdmin must render renamed tab: 📋 Signups');
     }
-    if (!code.includes('⚔️ Season Edit')) {
+    if (!code.includes('⚔️ Matchups') && !code.includes('⚔️ Season Edit')) {
         errors.push('views.championshipAdmin must render renamed tab: ⚔️ Season Edit');
     }
     if (code.includes('Member Signups & Roster Tracker')) {

@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [3.3.116] - 2026-10-21
+- 📱 **Mobile Header**: Compact header with balanced quick action buttons.
+- 📑 **Segmented Tabs**: 3-column navigation designed for mobile phone screens.
+- 📊 **Google Sheets**: Live date sync with exact tournament range.
+- ⚔️ **Opponent Cards**: Streamlined 2-row layout optimized for mobile screens.
+- 💾 **Primary Actions**: Full-width save button with balanced utilities below.
+
 ## [3.3.115] - 2026-10-21
 - 📅 **Season Date**: Centralized tournament date on Season Date title.
 - 🧹 **Round Dates**: Removed redundant date boxes from all round cards.

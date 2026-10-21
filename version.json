@@ -1,16 +1,18 @@
 {
-  "version": "3.3.115",
+  "version": "3.3.116",
   "releaseDate": "2026-10-21",
-  "title": "What's New in v3.3.115",
+  "title": "What's New in v3.3.116",
   "notes": [
-    "📅 Season Date: Centralized tournament date on Season Date title.",
-    "🧹 Round Dates: Removed redundant date boxes from all round cards.",
-    "📦 Tip Box: Removed cluttered tip box for a cleaner layout.",
-    "⚡ Unified Actions: Placed auto-fill and calendar link beside date input."
+    "📱 Mobile Header: Compact header with balanced quick actions.",
+    "📑 Segmented Tabs: 3-column navigation designed for mobile screens.",
+    "📊 Google Sheets: Live date sync with exact tournament range.",
+    "⚔️ Opponent Cards: Streamlined 2-row layout optimized for phones.",
+    "💾 Primary Actions: Full-width save button with balanced utilities."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.115",
+    "version": "3.3.116",
     "latestChanges": [
+      "v3.3.116: Mobile-first Championship admin redesign and live Google Sheet date sync",
       "v3.3.115: Removed per-round date inputs and schedule tip box, centralizing on Season Date",
       "v3.3.114: Added direct Google Sheets date auto-fill for Season Date and 5-day tournament rounds",
       "v3.3.113: Blank opponent defaults, locked round numbers, and strict tab lockdown with alert",

@@ -235,8 +235,8 @@ async function runHeadlessVerification() {
     console.log('  🔍 Testing Strict Tab Lockdown: Step 2 & Step 3 must NOT be rendered when schedule incomplete...');
     const signupsLockedBtnText = await page.$eval('#tabBtnSignups', el => el.textContent.trim());
     const matchupsLockedBtnText = await page.$eval('#tabBtnMatchups', el => el.textContent.trim());
-    assert(signupsLockedBtnText.includes('🔒 Signups (Locked)'), 'Signups tab button must be locked with lock icon');
-    assert(matchupsLockedBtnText.includes('🔒 Season Edit (Locked)'), 'Season Edit tab button must be locked with lock icon');
+    assert(signupsLockedBtnText.includes('🔒 Signups'), 'Signups tab button must be locked with lock icon');
+    assert(matchupsLockedBtnText.includes('🔒 Matchups'), 'Matchups tab button must be locked with lock icon');
 
     // Confirm that neither signups roster nor matchups editor is rendered in the DOM
     const rosterTableInDOM = await page.evaluate(() => Boolean(document.getElementById('champTableBody')));
@@ -278,7 +278,8 @@ async function runHeadlessVerification() {
     const perRoundDateInput = await page.$('#champ_setup_r1_date');
     assert(!perRoundDateInput, 'Per-round date inputs must be removed from Step 1 (centralized on Season Date)');
     assert(autoSeasonDate && autoSeasonDate.includes('–'), `Season Date must be auto-filled with date range, got "${autoSeasonDate}"`);
-    console.log(`  ✅ Tournament date centralized on Season Date: "${autoSeasonDate}" (per-round date inputs cleanly removed)`);
+    assert(autoSeasonDate.includes('Oct 19') && autoSeasonDate.includes('Oct 25'), `Season Date must reflect live Google Sheet dates (Oct 19 - Oct 25), got "${autoSeasonDate}"`);
+    console.log(`  ✅ Tournament date centralized on live Google Sheet Season Date: "${autoSeasonDate}" (per-round date inputs cleanly removed)`);
 
     // 5. Fill valid 5-day opponents and save Step 1 schedule to unlock Step 2
     console.log('  🔍 Filling 5-day opponent alliances and saving schedule...');

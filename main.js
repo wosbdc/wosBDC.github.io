@@ -16601,6 +16601,7 @@ window.autoFillChampScheduleDates = async () => {
 
     try {
         let baseStartDate = null;
+        let baseEndDate = null;
         let foundSource = '';
 
         // 1. Live query to Google Sheets (Schedule data tab or data tab)
@@ -16643,6 +16644,9 @@ window.autoFillChampScheduleDates = async () => {
                             if (datesInRow.length > 0) {
                                 datesInRow.sort((a, b) => a.getTime() - b.getTime());
                                 baseStartDate = datesInRow[0];
+                                if (datesInRow.length > 1) {
+                                    baseEndDate = datesInRow[datesInRow.length - 1];
+                                }
                                 foundSource = 'Google Sheets (' + (json.sheetName || 'Schedule data') + ')';
                                 break;
                             }
@@ -16660,6 +16664,7 @@ window.autoFillChampScheduleDates = async () => {
             let champEvents = unifiedEvents.filter(e => /champ/i.test(e.name || '')).sort((a,b) => (a.start?.getTime?.() || 0) - (b.start?.getTime?.() || 0));
             if (champEvents.length > 0 && champEvents[0].start) {
                 baseStartDate = new Date(champEvents[0].start);
+                if (champEvents[0].end) baseEndDate = new Date(champEvents[0].end);
                 foundSource = 'Unified Schedule';
             }
         }
@@ -16673,14 +16678,18 @@ window.autoFillChampScheduleDates = async () => {
             foundSource = 'Tournament Schedule Default';
         }
 
-        // 4. Format Season Date range (e.g. Oct 19 – Oct 23, 2026)
+        let baseEndDateFinal = baseEndDate;
+        if (!baseEndDateFinal || isNaN(baseEndDateFinal.getTime())) {
+            baseEndDateFinal = new Date(baseStartDate.getTime() + 6 * 86400000); // 7-day tournament week default
+        }
+
+        // 4. Format Season Date range using actual sheet start & end dates (e.g. Oct 19 – Oct 25, 2026)
         const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         const startM = monthNames[baseStartDate.getUTCMonth()];
         const startD = baseStartDate.getUTCDate();
-        const endDay5 = new Date(baseStartDate.getTime() + 4 * 86400000);
-        const endM = monthNames[endDay5.getUTCMonth()];
-        const endD = endDay5.getUTCDate();
-        const endY = endDay5.getUTCFullYear();
+        const endM = monthNames[baseEndDateFinal.getUTCMonth()];
+        const endD = baseEndDateFinal.getUTCDate();
+        const endY = baseEndDateFinal.getUTCFullYear();
         const formattedSeasonDate = `${startM} ${startD} – ${endM} ${endD}, ${endY}`;
 
         // 5. Populate Season Date input
@@ -36248,15 +36257,15 @@ const views = {
         let percentSignedUp = totalCount > 0 ? Math.round((yesCount / totalCount) * 100) : 0;
 
         let tabNavHtml = `
-            <div style="display:flex; gap:10px; margin-bottom:18px; border-bottom:1px solid var(--border); padding-bottom:12px; flex-wrap:wrap;">
-                <button onclick="views.championshipAdmin('setup')" style="padding:10px 18px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:0.2s; ${effectiveTab === 'setup' ? 'background:var(--accent); color:#fff; border:none; box-shadow:0 4px 12px rgba(6,182,212,0.3);' : 'background:var(--card-bg); color:var(--text-muted); border:1px solid var(--border);'}">
-                    1. 🛠️ Season Setup
+            <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:6px; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:12px;">
+                <button onclick="views.championshipAdmin('setup')" style="padding:10px 4px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; text-align:center; gap:4px; transition:0.2s; min-height:42px; ${effectiveTab === 'setup' ? 'background:var(--accent); color:#fff; border:none; box-shadow:0 4px 12px rgba(6,182,212,0.3);' : 'background:var(--card-bg); color:var(--text-muted); border:1px solid var(--border);'}">
+                    1. 🛠️ Setup
                 </button>
-                <button id="tabBtnSignups" onclick="${isScheduleDone ? "views.championshipAdmin('signups')" : "window.showChampSetupLockedAlert('signups')"}" style="padding:10px 18px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:0.2s; ${effectiveTab === 'signups' ? 'background:var(--accent); color:#fff; border:none; box-shadow:0 4px 12px rgba(6,182,212,0.3);' : (!isScheduleDone ? 'background:rgba(239,68,68,0.1); color:#ef4444; border:1px dashed rgba(239,68,68,0.4);' : 'background:var(--card-bg); color:var(--text-muted); border:1px solid var(--border);')}">
-                    ${!isScheduleDone ? '2. 🔒 Signups (Locked)' : '2. 📋 Signups'}
+                <button id="tabBtnSignups" onclick="${isScheduleDone ? "views.championshipAdmin('signups')" : "window.showChampSetupLockedAlert('signups')"}" style="padding:10px 4px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; text-align:center; gap:4px; transition:0.2s; min-height:42px; ${effectiveTab === 'signups' ? 'background:var(--accent); color:#fff; border:none; box-shadow:0 4px 12px rgba(6,182,212,0.3);' : (!isScheduleDone ? 'background:rgba(239,68,68,0.1); color:#ef4444; border:1px dashed rgba(239,68,68,0.4);' : 'background:var(--card-bg); color:var(--text-muted); border:1px solid var(--border);')}">
+                    ${!isScheduleDone ? '2. 🔒 Signups' : '2. 📋 Signups'}
                 </button>
-                <button id="tabBtnMatchups" onclick="${isScheduleDone ? "views.championshipAdmin('matchups')" : "window.showChampSetupLockedAlert('matchups')"}" style="padding:10px 18px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:0.2s; ${effectiveTab === 'matchups' ? 'background:var(--accent); color:#fff; border:none; box-shadow:0 4px 12px rgba(6,182,212,0.3);' : (!isScheduleDone ? 'background:rgba(239,68,68,0.1); color:#ef4444; border:1px dashed rgba(239,68,68,0.4);' : 'background:var(--card-bg); color:var(--text-muted); border:1px solid var(--border);')}">
-                    ${!isScheduleDone ? '3. 🔒 Season Edit (Locked)' : '3. ⚔️ Season Edit'}
+                <button id="tabBtnMatchups" onclick="${isScheduleDone ? "views.championshipAdmin('matchups')" : "window.showChampSetupLockedAlert('matchups')"}" style="padding:10px 4px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; text-align:center; gap:4px; transition:0.2s; min-height:42px; ${effectiveTab === 'matchups' ? 'background:var(--accent); color:#fff; border:none; box-shadow:0 4px 12px rgba(6,182,212,0.3);' : (!isScheduleDone ? 'background:rgba(239,68,68,0.1); color:#ef4444; border:1px dashed rgba(239,68,68,0.4);' : 'background:var(--card-bg); color:var(--text-muted); border:1px solid var(--border);')}">
+                    ${!isScheduleDone ? '3. 🔒 Matchups' : '3. ⚔️ Matchups'}
                 </button>
             </div>
         `;
@@ -36287,27 +36296,27 @@ const views = {
                 }
 
                 daysInputsHtml += `
-                    <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:12px; padding:16px; display:flex; flex-direction:column; gap:10px;">
+                    <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:12px; padding:14px; display:flex; flex-direction:column; gap:10px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
                             <div style="display:flex; align-items:center; gap:8px;">
-                                <span style="font-weight:900; font-size:13.5px; color:var(--accent); background:rgba(6,182,212,0.12); border:1px solid rgba(6,182,212,0.3); padding:4px 10px; border-radius:6px; display:inline-flex; align-items:center; gap:5px;">
+                                <span style="font-weight:900; font-size:13px; color:var(--accent); background:rgba(6,182,212,0.12); border:1px solid rgba(6,182,212,0.3); padding:4px 10px; border-radius:6px; display:inline-flex; align-items:center; gap:5px;">
                                     🔒 Round ${i} (Day ${i})
                                 </span>
                                 <span style="font-size:11px; color:var(--text-muted); font-weight:600;">Fixed Round #</span>
                             </div>
                         </div>
-                        <div style="display:grid; grid-template-columns: 90px 1fr 100px; gap:10px;">
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
                             <div>
                                 <label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:3px; font-weight:600;">Tag</label>
-                                <input type="text" id="champ_setup_r${i}_enemy_tag" value="${escapeHTML(enemyTag)}" placeholder="[TAG]" style="width:100%; box-sizing:border-box; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:13px; font-weight:bold;">
-                            </div>
-                            <div>
-                                <label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:3px; font-weight:600;">Opponent Alliance Name</label>
-                                <input type="text" id="champ_setup_r${i}_enemy_name" value="${escapeHTML(enemyName)}" placeholder="e.g. Apex Predators" style="width:100%; box-sizing:border-box; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:13px;">
+                                <input type="text" id="champ_setup_r${i}_enemy_tag" value="${escapeHTML(enemyTag)}" placeholder="[TAG]" style="width:100%; box-sizing:border-box; padding:9px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:13px; font-weight:bold;">
                             </div>
                             <div>
                                 <label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:3px; font-weight:600;">State #</label>
-                                <input type="text" id="champ_setup_r${i}_enemy_state" value="${escapeHTML(enemyState)}" placeholder="2045" style="width:100%; box-sizing:border-box; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:13px;">
+                                <input type="text" id="champ_setup_r${i}_enemy_state" value="${escapeHTML(enemyState)}" placeholder="2045" style="width:100%; box-sizing:border-box; padding:9px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:13px;">
+                            </div>
+                            <div style="grid-column: 1 / -1;">
+                                <label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:3px; font-weight:600;">Opponent Alliance Name</label>
+                                <input type="text" id="champ_setup_r${i}_enemy_name" value="${escapeHTML(enemyName)}" placeholder="e.g. Apex Predators" style="width:100%; box-sizing:border-box; padding:9px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:13px;">
                             </div>
                         </div>
                     </div>
@@ -36316,13 +36325,13 @@ const views = {
 
             mainContentHtml = `
                 <!-- Step 1 Setup Card -->
-                <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:18px;">
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+                <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:18px 14px; margin-bottom:18px;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
                         <div>
-                            <h3 style="margin:0 0 4px 0; color:var(--text-main); font-size:18px; display:inline-flex; align-items:center; gap:8px;">
+                            <h3 style="margin:0 0 4px 0; color:var(--text-main); font-size:17px; display:inline-flex; align-items:center; gap:8px;">
                                 🛠️ Step 1: Pre-Tournament Season Setup
                             </h3>
-                            <p style="margin:0; font-size:13px; color:var(--text-muted);">
+                            <p style="margin:0; font-size:12.5px; color:var(--text-muted);">
                                 Enter the season date and scheduled 5-day opponent alliances. Saving resets member signups to NO and unlocks Step 2.
                             </p>
                         </div>
@@ -36331,17 +36340,17 @@ const views = {
                         </div>
                     </div>
 
-                    <div style="margin-bottom:18px; background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:14px;">
+                    <div style="margin-bottom:16px; background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:14px;">
                         <label style="font-size:12px; font-weight:bold; color:var(--text-main); display:block; margin-bottom:6px;">
                             📅 Season Date :
                         </label>
-                        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-                            <input type="text" id="champ_setup_season_name" value="${escapeHTML(seasonDateVal)}" placeholder="e.g. Oct 19 – Oct 23, 2026" style="flex:1; min-width:240px; max-width:400px; box-sizing:border-box; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:14px; font-weight:bold;">
-                            <button type="button" id="btnAutoFillChampDatesInline" onclick="window.autoFillChampScheduleDates()" style="background:var(--accent); color:white; border:none; padding:10px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 8px rgba(6,182,212,0.35); transition:0.2s;">
+                        <input type="text" id="champ_setup_season_name" value="${escapeHTML(seasonDateVal)}" placeholder="e.g. Oct 19 – Oct 25, 2026" style="width:100%; box-sizing:border-box; padding:11px 14px; border-radius:8px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:14px; font-weight:bold; margin-bottom:10px;">
+                        <div style="display:grid; grid-template-columns: 1fr auto; gap:8px;">
+                            <button type="button" id="btnAutoFillChampDatesInline" onclick="window.autoFillChampScheduleDates()" style="background:var(--accent); color:white; border:none; padding:10px 14px; border-radius:8px; font-weight:bold; font-size:12.5px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 2px 8px rgba(6,182,212,0.35); min-height:42px;">
                                 ⚡ Auto-Fill from Google Sheet
                             </button>
-                            <a href="https://calendar.google.com/calendar/u/0/r?cid=1fd926f7d75aab23357b1b15579316a4ea4c02760849f94df8604eef9b7b1258@group.calendar.google.com" target="_blank" rel="noopener noreferrer" style="background:rgba(255,255,255,0.06); color:var(--text-muted); border:1px solid var(--border); padding:9px 14px; border-radius:8px; font-weight:600; font-size:12px; text-decoration:none; display:inline-flex; align-items:center; gap:5px;">
-                                🗓️ Open Google Cal ↗
+                            <a href="https://calendar.google.com/calendar/u/0/r?cid=1fd926f7d75aab23357b1b15579316a4ea4c02760849f94df8604eef9b7b1258@group.calendar.google.com" target="_blank" rel="noopener noreferrer" style="background:rgba(255,255,255,0.06); color:var(--text-muted); border:1px solid var(--border); padding:10px 14px; border-radius:8px; font-weight:600; font-size:12px; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; gap:5px; min-height:42px; box-sizing:border-box;">
+                                🗓️ Cal ↗
                             </a>
                         </div>
                     </div>
@@ -36358,16 +36367,16 @@ const views = {
                         💡 <strong>Dummy-Proof Safeguard:</strong> Saving this schedule unlocks member check-in and resets previous attendance to NO so you never accidentally check in members over stale season data.
                     </div>
 
-                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-                        <button id="btnSaveChampSeasonSetup" onclick="window.saveChampSeasonSetup()" style="background:var(--success); color:#fff; border:none; padding:12px 26px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; box-shadow:0 4px 15px rgba(16,185,129,0.3); display:inline-flex; align-items:center; gap:8px; transition:0.2s;">
-                            💾 Save Schedule & Unlock Member Signups ➔
+                    <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
+                        <button id="btnSaveChampSeasonSetup" onclick="window.saveChampSeasonSetup()" style="width:100%; background:var(--success); color:#fff; border:none; padding:13px 18px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:14px; box-shadow:0 4px 15px rgba(16,185,129,0.3); display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:48px;">
+                            💾 Save Schedule & Unlock Signups ➔
                         </button>
-                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                            <button onclick="window.openChampionshipArchiveVaultModal('live')" style="background:var(--bg-main); color:var(--text-main); border:1px solid var(--border); padding:10px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px;">
-                                📜 Open Archive Vault
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; width:100%;">
+                            <button onclick="window.openChampionshipArchiveVaultModal('live')" style="background:var(--bg-main); color:var(--text-main); border:1px solid var(--border); padding:10px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:12.5px; display:inline-flex; align-items:center; justify-content:center; gap:5px; min-height:40px;">
+                                📜 Archive Vault
                             </button>
-                            <button onclick="window.showResetAndArchiveChampionshipModal('full')" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:white; border:none; padding:10px 16px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(239,68,68,0.3); transition:0.2s;">
-                                🔄 Event Reset Pipeline
+                            <button onclick="window.showResetAndArchiveChampionshipModal('full')" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:white; border:none; padding:10px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:12.5px; display:inline-flex; align-items:center; justify-content:center; gap:5px; box-shadow:0 4px 12px rgba(239,68,68,0.3); min-height:40px;">
+                                🔄 Reset Pipeline
                             </button>
                         </div>
                     </div>
@@ -36795,24 +36804,24 @@ const views = {
         let html = `
           <div style="display:flex; flex-direction:column; gap:20px; max-width:900px; margin:0 auto; padding-bottom:40px; animation: fadeIn 0.3s ease;">
             
-            <div style="border-bottom: 2px solid var(--accent); padding-bottom: 12px; margin-bottom: 5px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-              <div style="display:flex; align-items:center; gap:12px;">
-                <button onclick="if(document.querySelector('.navbar')) document.querySelector('.navbar').style.display='flex'; views.admin()" style="background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); padding:8px 14px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13px; display:inline-flex; align-items:center; gap:6px; transition:0.2s;">
-                  ⬅️ Back to Admin
+            <div style="border-bottom: 2px solid var(--accent); padding-bottom: 12px; margin-bottom: 5px; display:flex; flex-direction:column; gap:10px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                <button onclick="if(document.querySelector('.navbar')) document.querySelector('.navbar').style.display='flex'; views.admin()" style="background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12.5px; display:inline-flex; align-items:center; gap:5px; flex-shrink:0;">
+                  ⬅️ Admin
                 </button>
-                <div>
-                  <h2 style="margin:0; color:var(--text-main); font-size:22px; display:flex; align-items:center; gap:10px;">
-                    🏆 Alliance Championship Management Suite
+                <div style="text-align:right;">
+                  <h2 style="margin:0; color:var(--text-main); font-size:18px; font-weight:900; line-height:1.2;">
+                    🏆 Alliance Championship
                   </h2>
-                  <p style="margin:4px 0 0 0; color:var(--text-muted); font-size:13px;">Manage member event signups, track missing responses, and enter 5-Round battle matchup scores.</p>
+                  <p style="margin:2px 0 0 0; color:var(--text-muted); font-size:11.5px;">Guided 3-Step Tournament Admin</p>
                 </div>
               </div>
-              <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-                <button onclick="if(document.querySelector('.navbar')) document.querySelector('.navbar').style.display='flex'; views.championship();" style="background:linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(6,182,212,0.05) 100%); color:var(--accent); border:1px solid rgba(6,182,212,0.4); padding:8px 14px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; transition:0.2s;">
-                  👁️ View Public Dashboard
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                <button onclick="if(document.querySelector('.navbar')) document.querySelector('.navbar').style.display='flex'; views.championship();" style="background:linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(6,182,212,0.05) 100%); color:var(--accent); border:1px solid rgba(6,182,212,0.4); padding:9px 10px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:12px; display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:40px;">
+                  👁️ Public Dashboard
                 </button>
-                <button onclick="window.showResetAndArchiveChampionshipModal('full')" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:white; border:none; padding:8px 14px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(239,68,68,0.3); transition:0.2s;">
-                  🔄 Event Reset Pipeline
+                <button onclick="window.showResetAndArchiveChampionshipModal('full')" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:white; border:none; padding:9px 10px; border-radius:8px; font-weight:bold; cursor:pointer; font-size:12px; display:inline-flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 3px 10px rgba(239,68,68,0.3); min-height:40px;">
+                  🔄 Reset Pipeline
                 </button>
               </div>
             </div>
