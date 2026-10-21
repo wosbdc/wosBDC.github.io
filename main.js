@@ -16495,13 +16495,22 @@ window.saveChampSeasonSetup = async () => {
         const existingRounds = (window.DEFAULT_CHAMPIONSHIP_MATCHUPS?.rounds || {});
         for (let i = 1; i <= 5; i++) {
             const date = (document.getElementById(`champ_setup_r${i}_date`)?.value || '').trim() || existingRounds['r' + i]?.date || `Round ${i} (Day ${i})`;
-            const tag = (document.getElementById(`champ_setup_r${i}_enemy_tag`)?.value || '').trim();
             let name = (document.getElementById(`champ_setup_r${i}_enemy_name`)?.value || '').trim();
             const state = (document.getElementById(`champ_setup_r${i}_enemy_state`)?.value || '').trim();
 
-            if (!name && tag) name = tag;
+            // Auto-extract tag if present in brackets (e.g. "[KOR] KoreaKings" -> tag="[KOR]")
+            let tag = '';
+            const tagMatch = name.match(/\[([^\]]+)\]/);
+            if (tagMatch) {
+                tag = `[${tagMatch[1].trim()}]`;
+            } else if (name) {
+                const autoTag = window.extractAllianceTagOnly ? window.extractAllianceTagOnly(name, i) : '';
+                if (autoTag && autoTag !== `Opponent ${i}`) {
+                    tag = `[${autoTag}]`;
+                }
+            }
 
-            if (!name && !tag) {
+            if (!name) {
                 missingRounds.push(`Round ${i}`);
             }
 
@@ -36295,6 +36304,15 @@ const views = {
                     enemyState = '';
                 }
 
+                // Seamlessly combine legacy separated tag and name (e.g. tag="[XYZ]", name="Alpha" -> "[XYZ] Alpha")
+                let combinedEnemy = enemyName;
+                if (enemyTag) {
+                    const formattedTag = enemyTag.startsWith('[') ? enemyTag : `[${enemyTag}]`;
+                    if (!combinedEnemy.includes(enemyTag) && !combinedEnemy.includes(formattedTag)) {
+                        combinedEnemy = combinedEnemy ? `${formattedTag} ${combinedEnemy}` : formattedTag;
+                    }
+                }
+
                 daysInputsHtml += `
                     <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:12px; padding:14px; display:flex; flex-direction:column; gap:10px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
@@ -36305,18 +36323,14 @@ const views = {
                                 <span style="font-size:11px; color:var(--text-muted); font-weight:600;">Fixed Round #</span>
                             </div>
                         </div>
-                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                        <div style="display:grid; grid-template-columns: 2fr 1fr; gap:8px;">
                             <div>
-                                <label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:3px; font-weight:600;">Tag</label>
-                                <input type="text" id="champ_setup_r${i}_enemy_tag" value="${escapeHTML(enemyTag)}" placeholder="[TAG]" style="width:100%; box-sizing:border-box; padding:9px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:13px; font-weight:bold;">
+                                <label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:3px; font-weight:600;">Opponent Alliance (Tag & Name)</label>
+                                <input type="text" id="champ_setup_r${i}_enemy_name" value="${escapeHTML(combinedEnemy)}" placeholder="e.g. [KOR] KoreaKings" style="width:100%; box-sizing:border-box; padding:9px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:13px; font-weight:bold;">
                             </div>
                             <div>
                                 <label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:3px; font-weight:600;">State #</label>
                                 <input type="text" id="champ_setup_r${i}_enemy_state" value="${escapeHTML(enemyState)}" placeholder="2045" style="width:100%; box-sizing:border-box; padding:9px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:13px;">
-                            </div>
-                            <div style="grid-column: 1 / -1;">
-                                <label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:3px; font-weight:600;">Opponent Alliance Name</label>
-                                <input type="text" id="champ_setup_r${i}_enemy_name" value="${escapeHTML(enemyName)}" placeholder="e.g. Apex Predators" style="width:100%; box-sizing:border-box; padding:9px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:13px;">
                             </div>
                         </div>
                     </div>

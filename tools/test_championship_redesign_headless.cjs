@@ -89,7 +89,7 @@ function runStaticVerification() {
   assert(code.includes('Go Back to Setup Tab!'), 'main.js must display Go Back to Setup Tab! alert heading');
   assert(code.includes('btnSaveChampSeasonSetup'), 'main.js must provide save schedule & unlock signups button');
   assert(code.includes('btnAutoFillChampDatesInline'), 'main.js must provide inline auto-fill button adjacent to season date');
-  assert(code.includes('champ_setup_r${i}_enemy_tag'), 'main.js must support opponent tag input');
+  assert(!code.includes('champ_setup_r${i}_enemy_tag'), 'Redundant separate opponent tag input must be removed from Step 1');
   assert(code.includes('champ_setup_r${i}_enemy_name'), 'main.js must support opponent name input');
 
   // Step 2 check-in desk & gating elements
@@ -218,10 +218,10 @@ async function runHeadlessVerification() {
     const seasonDateVal = await page.$eval('#champ_setup_season_name', el => el.value);
     assert.strictEqual(seasonDateVal, '', 'Season Date input must be empty by default');
 
-    const day1TagVal = await page.$eval('#champ_setup_r1_enemy_tag', el => el.value);
+    const day1TagInput = await page.$('#champ_setup_r1_enemy_tag');
+    assert(!day1TagInput, 'Separate enemy tag input must NOT exist in DOM (centralized into Tag & Name)');
     const day1NameVal = await page.$eval('#champ_setup_r1_enemy_name', el => el.value);
     const day1StateVal = await page.$eval('#champ_setup_r1_enemy_state', el => el.value);
-    assert.strictEqual(day1TagVal, '', 'Day 1 enemy tag input must be blank by default');
     assert.strictEqual(day1NameVal, '', 'Day 1 enemy name input must be blank by default');
     assert.strictEqual(day1StateVal, '', 'Day 1 enemy state input must be blank by default');
 
@@ -285,8 +285,7 @@ async function runHeadlessVerification() {
     console.log('  🔍 Filling 5-day opponent alliances and saving schedule...');
     await page.evaluate(async () => {
       for (let i = 1; i <= 5; i++) {
-        document.getElementById(`champ_setup_r${i}_enemy_tag`).value = `[OPP${i}]`;
-        document.getElementById(`champ_setup_r${i}_enemy_name`).value = `Alliance ${i}`;
+        document.getElementById(`champ_setup_r${i}_enemy_name`).value = `[OPP${i}] Alliance ${i}`;
         document.getElementById(`champ_setup_r${i}_enemy_state`).value = `${2040 + i}`;
       }
       window.saveChampionshipMatchups = async (payload) => {

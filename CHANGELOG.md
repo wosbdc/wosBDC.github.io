@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.117] - 2026-10-21
+- 🏷️ **Tag Box**: Removed redundant Tag box from Championship Setup.
+- ⚔️ **Unified Opponents**: Combined Tag and Name into single input field.
+- ⚡ **Zero Double Entry**: Seamless data flow between Setup and Matchups.
+- 🤖 **Auto Tagging**: Auto-extracts bracketed tags when saving schedule.
+
 ## [3.3.116] - 2026-10-21
 - 📱 **Mobile Header**: Compact header with balanced quick action buttons.
 - 📑 **Segmented Tabs**: 3-column navigation designed for mobile phone screens.

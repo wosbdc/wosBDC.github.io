@@ -1,17 +1,17 @@
 {
-  "version": "3.3.116",
+  "version": "3.3.117",
   "releaseDate": "2026-10-21",
-  "title": "What's New in v3.3.116",
+  "title": "What's New in v3.3.117",
   "notes": [
-    "📱 Mobile Header: Compact header with balanced quick actions.",
-    "📑 Segmented Tabs: 3-column navigation designed for mobile screens.",
-    "📊 Google Sheets: Live date sync with exact tournament range.",
-    "⚔️ Opponent Cards: Streamlined 2-row layout optimized for phones.",
-    "💾 Primary Actions: Full-width save button with balanced utilities."
+    "🏷️ Tag Box: Removed redundant Tag box from Championship Setup.",
+    "⚔️ Unified Opponent: Single Tag and Name input field.",
+    "⚡ Zero Double Entry: Seamless data flow between Setup and Matchups.",
+    "🤖 Auto Tagging: Auto-extracts bracketed tags when saving schedule."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.116",
+    "version": "3.3.117",
     "latestChanges": [
+      "v3.3.117: Removed redundant Tag box from Championship Setup and unified opponent input",
       "v3.3.116: Mobile-first Championship admin redesign and live Google Sheet date sync",
       "v3.3.115: Removed per-round date inputs and schedule tip box, centralizing on Season Date",
       "v3.3.114: Added direct Google Sheets date auto-fill for Season Date and 5-day tournament rounds",
