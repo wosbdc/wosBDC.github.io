@@ -88,7 +88,6 @@ function runStaticVerification() {
   assert(code.includes('champSetupLockedAlertModal'), 'main.js must define #champSetupLockedAlertModal');
   assert(code.includes('Go Back to Setup Tab!'), 'main.js must display Go Back to Setup Tab! alert heading');
   assert(code.includes('btnSaveChampSeasonSetup'), 'main.js must provide save schedule & unlock signups button');
-  assert(code.includes('btnAutoFillChampDates'), 'main.js must provide auto-fill dates button');
   assert(code.includes('btnAutoFillChampDatesInline'), 'main.js must provide inline auto-fill button adjacent to season date');
   assert(code.includes('champ_setup_r${i}_enemy_tag'), 'main.js must support opponent tag input');
   assert(code.includes('champ_setup_r${i}_enemy_name'), 'main.js must support opponent name input');
@@ -276,12 +275,10 @@ async function runHeadlessVerification() {
     }, { timeout: 8000 });
 
     const autoSeasonDate = await page.$eval('#champ_setup_season_name', el => el.value);
-    const autoDay1Date = await page.$eval('#champ_setup_r1_date', el => el.value);
-    const autoDay5Date = await page.$eval('#champ_setup_r5_date', el => el.value);
+    const perRoundDateInput = await page.$('#champ_setup_r1_date');
+    assert(!perRoundDateInput, 'Per-round date inputs must be removed from Step 1 (centralized on Season Date)');
     assert(autoSeasonDate && autoSeasonDate.includes('–'), `Season Date must be auto-filled with date range, got "${autoSeasonDate}"`);
-    assert(autoDay1Date && autoDay1Date.includes('Mon'), 'Day 1 date must be auto-filled with Monday');
-    assert(autoDay5Date && autoDay5Date.includes('Fri'), 'Day 5 date must be auto-filled with Friday');
-    console.log(`  ✅ Dates auto-filled successfully from Google Sheet: Season Date = "${autoSeasonDate}", Day 1 = "${autoDay1Date}", Day 5 = "${autoDay5Date}"`);
+    console.log(`  ✅ Tournament date centralized on Season Date: "${autoSeasonDate}" (per-round date inputs cleanly removed)`);
 
     // 5. Fill valid 5-day opponents and save Step 1 schedule to unlock Step 2
     console.log('  🔍 Filling 5-day opponent alliances and saving schedule...');

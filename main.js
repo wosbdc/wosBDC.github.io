@@ -16492,8 +16492,9 @@ window.saveChampSeasonSetup = async () => {
         
         let missingRounds = [];
         let rounds = {};
+        const existingRounds = (window.DEFAULT_CHAMPIONSHIP_MATCHUPS?.rounds || {});
         for (let i = 1; i <= 5; i++) {
-            const date = (document.getElementById(`champ_setup_r${i}_date`)?.value || '').trim() || `Round ${i}`;
+            const date = (document.getElementById(`champ_setup_r${i}_date`)?.value || '').trim() || existingRounds['r' + i]?.date || `Round ${i} (Day ${i})`;
             const tag = (document.getElementById(`champ_setup_r${i}_enemy_tag`)?.value || '').trim();
             let name = (document.getElementById(`champ_setup_r${i}_enemy_name`)?.value || '').trim();
             const state = (document.getElementById(`champ_setup_r${i}_enemy_state`)?.value || '').trim();
@@ -16588,7 +16589,7 @@ window.autoFillChampScheduleDates = async () => {
     const setBtnLoading = (loading) => {
         if (btn1) {
             btn1.disabled = loading;
-            btn1.innerHTML = loading ? '⏳ Fetching Sheet Dates...' : '📅 Auto-Fill Dates from Google Sheet';
+            btn1.innerHTML = loading ? '⏳ Fetching Sheet Dates...' : '📅 Auto-Fill Season Date from Google Sheet';
         }
         if (btn2) {
             btn2.disabled = loading;
@@ -16720,7 +16721,7 @@ window.autoFillChampScheduleDates = async () => {
         }
 
         if (window.showToast) {
-            window.showToast(`📅 Season date and 5-day tournament dates auto-filled from ${foundSource}!`, 'success');
+            window.showToast(`📅 Season Date auto-filled from ${foundSource}!`, 'success');
         }
     } catch (err) {
         console.error('autoFillChampScheduleDates error:', err);
@@ -36294,10 +36295,6 @@ const views = {
                                 </span>
                                 <span style="font-size:11px; color:var(--text-muted); font-weight:600;">Fixed Round #</span>
                             </div>
-                            <div style="display:flex; align-items:center; gap:6px;">
-                                <label for="champ_setup_r${i}_date" style="font-size:11px; color:var(--text-muted); font-weight:bold;">Date:</label>
-                                <input type="text" id="champ_setup_r${i}_date" value="${escapeHTML(dateVal)}" placeholder="Date e.g. Mon 10/19" style="width:160px; padding:6px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px;">
-                            </div>
                         </div>
                         <div style="display:grid; grid-template-columns: 90px 1fr 100px; gap:10px;">
                             <div>
@@ -36343,22 +36340,7 @@ const views = {
                             <button type="button" id="btnAutoFillChampDatesInline" onclick="window.autoFillChampScheduleDates()" style="background:var(--accent); color:white; border:none; padding:10px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 8px rgba(6,182,212,0.35); transition:0.2s;">
                                 ⚡ Auto-Fill from Google Sheet
                             </button>
-                        </div>
-                    </div>
-
-                    <!-- Schedule Dates Tip & Auto-Fill from Google Calendar / Schedule -->
-                    <div style="background:linear-gradient(135deg, rgba(6,182,212,0.1), rgba(59,130,246,0.1)); border:1px solid rgba(6,182,212,0.3); border-radius:10px; padding:12px 16px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <span style="font-size:18px;">💡</span>
-                            <span style="font-size:13px; color:var(--text-main);">
-                                <strong>Schedule Tip:</strong> Enter the 5 dates matching the official alliance schedule or Google Calendar.
-                            </span>
-                        </div>
-                        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                            <button type="button" id="btnAutoFillChampDates" onclick="window.autoFillChampScheduleDates()" style="background:var(--accent); color:white; border:none; padding:8px 16px; border-radius:6px; font-weight:bold; font-size:12.5px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 8px rgba(6,182,212,0.35); transition:0.2s;">
-                                📅 Auto-Fill Dates from Google Sheet
-                            </button>
-                            <a href="https://calendar.google.com/calendar/u/0/r?cid=1fd926f7d75aab23357b1b15579316a4ea4c02760849f94df8604eef9b7b1258@group.calendar.google.com" target="_blank" rel="noopener noreferrer" style="background:rgba(255,255,255,0.06); color:var(--text-muted); border:1px solid var(--border); padding:7px 14px; border-radius:6px; font-weight:600; font-size:12px; text-decoration:none; display:inline-flex; align-items:center; gap:5px;">
+                            <a href="https://calendar.google.com/calendar/u/0/r?cid=1fd926f7d75aab23357b1b15579316a4ea4c02760849f94df8604eef9b7b1258@group.calendar.google.com" target="_blank" rel="noopener noreferrer" style="background:rgba(255,255,255,0.06); color:var(--text-muted); border:1px solid var(--border); padding:9px 14px; border-radius:8px; font-weight:600; font-size:12px; text-decoration:none; display:inline-flex; align-items:center; gap:5px;">
                                 🗓️ Open Google Cal ↗
                             </a>
                         </div>

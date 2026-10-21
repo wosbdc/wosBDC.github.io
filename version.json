@@ -1,17 +1,17 @@
 {
-  "version": "3.3.114",
+  "version": "3.3.115",
   "releaseDate": "2026-10-21",
-  "title": "What's New in v3.3.114",
+  "title": "What's New in v3.3.115",
   "notes": [
-    "📊 Sheet Dates: Auto-fill tournament dates directly from Google Sheets.",
-    "📅 Season Date: Auto-populates formatted Season Date range with one click.",
-    "⚔️ 5-Day Rounds: Auto-fills all five battle round dates automatically.",
-    "⚡ Inline Button: Added quick auto-fill button directly beside date input.",
-    "✨ Visual Pulse: Inputs glow green when dates are loaded successfully."
+    "📅 Season Date: Centralized tournament date on Season Date title.",
+    "🧹 Round Dates: Removed redundant date boxes from all round cards.",
+    "📦 Tip Box: Removed cluttered tip box for a cleaner layout.",
+    "⚡ Unified Actions: Placed auto-fill and calendar link beside date input."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.114",
+    "version": "3.3.115",
     "latestChanges": [
+      "v3.3.115: Removed per-round date inputs and schedule tip box, centralizing on Season Date",
       "v3.3.114: Added direct Google Sheets date auto-fill for Season Date and 5-day tournament rounds",
       "v3.3.113: Blank opponent defaults, locked round numbers, and strict tab lockdown with alert",
       "v3.3.112: Streamlined Championship check-in desk, added setup lock gate, and schedule date auto-pull",

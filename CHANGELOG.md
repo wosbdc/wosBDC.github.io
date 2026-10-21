@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.115] - 2026-10-21
+- 📅 **Season Date**: Centralized tournament date on Season Date title.
+- 🧹 **Round Dates**: Removed redundant date boxes from all round cards.
+- 📦 **Tip Box**: Removed cluttered tip box for a cleaner layout.
+- ⚡ **Unified Actions**: Placed auto-fill and calendar link beside date input.
+
 ## [3.3.114] - 2026-10-21
 - 📊 **Sheet Dates**: Auto-fill tournament dates directly from Google Sheets.
 - 📅 **Season Date**: Auto-populates formatted Season Date range with one click.
