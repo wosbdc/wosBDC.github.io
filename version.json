@@ -1,17 +1,17 @@
 {
-  "version": "3.3.118",
+  "version": "3.3.119",
   "releaseDate": "2026-10-21",
-  "title": "What's New in v3.3.118",
+  "title": "What's New in v3.3.119",
   "notes": [
-    "📅 Today View: Restored live events, countdown badges, and daily rewards.",
-    "📊 Date Parsing: Seamlessly parses ISO timestamps from Google Sheets formulas.",
-    "🕒 Timezone Fix: Prevents date drift across all player timezones globally.",
-    "🎁 Daily Rewards: Added daily reward events section to today view.",
-    "⚡ Direct Sync: Force-refreshes weekly grid directly from Google Sheets tabs."
+    "🛡️ Data Sanitizer: Filtered out raw spreadsheet numbers and personal calculations.",
+    "🎁 Daily Rewards: Displays only genuine daily reward events for today.",
+    "📅 Upcoming Events: Restored full list of upcoming weekly alliance events.",
+    "🔄 Live Sync: Synced clean schedule data directly to Firebase RTDB."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.118",
+    "version": "3.3.119",
     "latestChanges": [
+      "v3.3.119: Purged junk spreadsheet calculations and restored clean Schedule events",
       "v3.3.118: Fixed Today Schedule view with ISO date parsing and live sheet sync",
       "v3.3.117: Removed redundant Tag box from Championship Setup and unified opponent input",
       "v3.3.116: Mobile-first Championship admin redesign and live Google Sheet date sync",

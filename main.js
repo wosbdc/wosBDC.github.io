@@ -28706,6 +28706,24 @@ window.STANDARD_EVENT_TIMES_MAP = {
   'mercenary prestige': { startUtc: '16:30', startPdt: '9:30 AM', durationMs: 30 * 60000, emoji: '🎖️' }
 };
 
+window.isScheduleJunkItem = (val) => {
+  if (!val || typeof val !== 'string') return true;
+  const s = val.trim();
+  if (!s || s.toLowerCase() === 'no events' || s.toLowerCase() === 'n/a' || s.toLowerCase() === 'none') return true;
+  // Pure numbers, formatted integers/floats, currency e.g. "1", "2", "3,000,000", "175,118,715", "$2,009.35", "20.09"
+  if (/^[$€£]?\s*[\d,.\s+-]+%?$/.test(s)) return true;
+  // Times/hours e.g. "5:00 PM", "09:00 AM", "14:17:00", "PDT", "UTC", "16:00"
+  if (/^\d{1,2}:\d{2}(?::\d{2})?(?:\s*(?:AM|PM|UTC|PDT))?$/i.test(s)) return true;
+  if (/^(?:PDT|UTC|AM|PM|Time|Hours|Date|Current|Previous|Rallies|Alliance Total|Loss)$/i.test(s)) return true;
+  // Personal spreadsheet labels and training/VIP calculators
+  if (/^(?:vip plan|goal troops|training|required|top_up|money|buy gems|gems bank|loss|account life|personal data|need|current)/i.test(s)) return true;
+  // Invalid date formulas e.g. "7 (7/2)", "7 (6/30)"
+  if (/^\d+\s*\(\d+\/\d+\)$/.test(s)) return true;
+  // Chief ranking numbers e.g. "#1 damage ranking", "#1 Total Points"
+  if (/^#\d+\s+/i.test(s)) return true;
+  return false;
+};
+
 window.getUnifiedScheduleEvents = () => {
   const events = [];
   const seenKeys = new Set();
@@ -43867,8 +43885,11 @@ window.resetBearTrapEvent = async () => {
             weeklyData[r].forEach(c => {
               const s = String(c || '').trim();
               const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+              const mdMatch = s.match(/(\d{1,2})\/(\d{1,2})/);
               if (isoMatch) {
                 foundDates.push(new Date(Date.UTC(parseInt(isoMatch[1]), parseInt(isoMatch[2]) - 1, parseInt(isoMatch[3]))));
+              } else if (mdMatch) {
+                foundDates.push(new Date(Date.UTC(nowCheck.getUTCFullYear(), parseInt(mdMatch[1]) - 1, parseInt(mdMatch[2]))));
               }
             });
           }
@@ -43878,6 +43899,8 @@ window.resetBearTrapEvent = async () => {
           if (maxDate < new Date(nowCheck.getTime() - 24 * 3600000)) {
             isWeeklyStale = true;
           }
+        } else {
+          isWeeklyStale = true;
         }
       }
 
@@ -43981,16 +44004,20 @@ window.resetBearTrapEvent = async () => {
              }
            });
 
-           // Rewards from weekly schedule grid
+           // Rewards from weekly schedule grid (authoritative daily rewards source)
            if (typeof window.getUnifiedScheduleRewards === 'function') {
              rewards = window.getUnifiedScheduleRewards(now);
            }
            if (liveSched && Array.isArray(liveSched.rewards)) {
-             liveSched.rewards.forEach(r => { if (!rewards.includes(r)) rewards.push(r); });
+             liveSched.rewards.forEach(r => {
+               const s = String(r || '').trim();
+               if (s && !window.isScheduleJunkItem(s) && !rewards.includes(s)) rewards.push(s);
+             });
            }
-           signups = (liveSched && liveSched.signups) || [];
-           const rawAllWeek = (liveSched && liveSched.allWeek) || [];
-           holidays = (liveSched && liveSched.holidays) || [];
+           rewards = rewards.filter(r => !window.isScheduleJunkItem(r) && r.length >= 3);
+           signups = ((liveSched && liveSched.signups) || []).filter(s => !window.isScheduleJunkItem(s) && s.length >= 3);
+           const rawAllWeek = ((liveSched && liveSched.allWeek) || []).filter(w => !window.isScheduleJunkItem(w) && w.length >= 3);
+           holidays = ((liveSched && liveSched.holidays) || []).filter(h => !window.isScheduleJunkItem(h) && h.length >= 3);
 
            // Filter allWeek: only show events actively ongoing, never expired past events (e.g. past Showdown)
            const schedDataRows = (window.liveData && window.liveData['Schedule data']) || [];
@@ -44842,7 +44869,7 @@ window.parseSheetToScheduleLiveData = (sheetData) => {
   }
 
   // Detect which column offset holds event data (support Column F / index 5 or Column A / index 0)
-  let colOffset = 5;
+  let colOffset = -1;
   for (let i = 0; i < Math.min(10, sheetData.length); i++) {
     const row = sheetData[i];
     if (!Array.isArray(row)) continue;
@@ -44853,7 +44880,9 @@ window.parseSheetToScheduleLiveData = (sheetData) => {
         break;
       }
     }
+    if (colOffset !== -1) break;
   }
+  if (colOffset === -1) colOffset = 5;
 
   // Find Rewards section row index dynamically
   let rewardsRowIdx = -1;
@@ -44869,20 +44898,19 @@ window.parseSheetToScheduleLiveData = (sheetData) => {
     }
   }
 
-  const eventEndIdx = rewardsRowIdx !== -1 ? rewardsRowIdx : sheetData.length;
+  const eventEndIdx = rewardsRowIdx !== -1 ? rewardsRowIdx : Math.min(sheetData.length, 14);
 
   for (let i = 0; i < eventEndIdx; i++) {
     const row = sheetData[i];
     if (!row || !Array.isArray(row)) continue;
-    // Skip completely empty spacing rows
     if (row.every(c => !c || String(c).trim() === '')) continue;
 
-    const eventName = String(row[colOffset] || row[0] || '').trim();
-    const dateRaw   = String(row[colOffset + 1] || row[1] || '').trim();
-    const utcRaw    = String(row[colOffset + 2] || row[2] || '').trim();
-    const pdtVal    = String(row[colOffset + 3] || row[3] || '').trim();
+    const eventName = String(row[colOffset] || '').trim();
+    const dateRaw   = String(row[colOffset + 1] || '').trim();
+    const utcRaw    = String(row[colOffset + 2] || '').trim();
+    const pdtVal    = String(row[colOffset + 3] || '').trim();
 
-    if (!eventName || eventName.toLowerCase().includes("event's") || eventName.toLowerCase() === 'event' || eventName.toLowerCase() === 'events') continue;
+    if (!eventName || window.isScheduleJunkItem(eventName) || eventName.toLowerCase().includes("event's") || eventName.toLowerCase() === 'event' || eventName.toLowerCase() === 'events') continue;
     if (dateRaw === '' && utcRaw === '' && pdtVal === '') continue;
 
     const eventDate = window.parseScheduleEventDate(dateRaw);
@@ -44906,23 +44934,27 @@ window.parseSheetToScheduleLiveData = (sheetData) => {
 
   // 2. Parse Category Lists (Rewards, Sign-Ups, All Week, Holidays)
   if (rewardsRowIdx !== -1) {
+    let consecutiveBlanks = 0;
     for (let i = rewardsRowIdx + 1; i < sheetData.length; i++) {
       const row = sheetData[i];
       if (!row || !Array.isArray(row)) continue;
-      // Skip completely blank rows without aborting (preserves spacing rows!)
-      if (row.every(c => !c || String(c).trim() === '')) continue;
 
-      const r = String(row[colOffset] || row[0] || '').trim();
-      const g = String(row[colOffset + 1] || row[1] || '').trim();
-      const h = String(row[colOffset + 2] || row[2] || '').trim();
-      const k = String(row[colOffset + 3] || row[3] || '').trim();
+      const r = String(row[colOffset] || '').trim();
+      const g = String(row[colOffset + 1] || '').trim();
+      const h = String(row[colOffset + 2] || '').trim();
+      const k = String(row[colOffset + 3] || '').trim();
 
-      const isBlank = (val) => !val || val === '' || val.toLowerCase() === 'no events' || val.toLowerCase() === 'n/a';
+      if (!r && !g && !h && !k) {
+        consecutiveBlanks++;
+        if (consecutiveBlanks >= 2) break; // End of category table
+        continue;
+      }
+      consecutiveBlanks = 0;
 
-      if (!isBlank(r) && !rewards.includes(r)) rewards.push(r);
-      if (!isBlank(g) && !signups.includes(g)) signups.push(g);
-      if (!isBlank(h) && !allWeek.includes(h)) allWeek.push(h);
-      if (!isBlank(k) && !holidays.includes(k)) holidays.push(k);
+      if (!window.isScheduleJunkItem(r) && !rewards.includes(r)) rewards.push(r);
+      if (!window.isScheduleJunkItem(g) && !signups.includes(g)) signups.push(g);
+      if (!window.isScheduleJunkItem(h) && !allWeek.includes(h)) allWeek.push(h);
+      if (!window.isScheduleJunkItem(k) && !holidays.includes(k)) holidays.push(k);
     }
   }
 

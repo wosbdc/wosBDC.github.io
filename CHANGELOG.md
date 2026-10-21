@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.119] - 2026-10-21
+- 🛡️ **Data Sanitizer**: Filtered out raw spreadsheet numbers and personal calculations.
+- 🎁 **Daily Rewards**: Displays only genuine daily reward events for today.
+- 📅 **Upcoming Events**: Restored full list of upcoming weekly alliance events.
+- 🔄 **Live Sync**: Synced clean schedule data directly to Firebase RTDB.
+
 ## [3.3.118] - 2026-10-21
 - 📅 **Today View**: Restored live events, countdown badges, and daily rewards.
 - 📊 **Date Parsing**: Seamlessly parses ISO timestamps from Google Sheets formulas.

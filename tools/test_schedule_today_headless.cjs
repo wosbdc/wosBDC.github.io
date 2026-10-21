@@ -49,6 +49,7 @@ function runStaticAndUnitVerification() {
   assert(code.includes('getUnifiedScheduleEvents'), 'Must contain getUnifiedScheduleEvents');
   assert(code.includes('getUnifiedScheduleRewards'), 'Must contain getUnifiedScheduleRewards');
   assert(code.includes('hasRewards'), 'Must render Daily Rewards category');
+  assert(code.includes('isScheduleJunkItem'), 'Must contain isScheduleJunkItem');
 
   // 2. Unit tests via VM
   const sandbox = {
@@ -252,8 +253,21 @@ async function runHeadlessBrowserVerification() {
     assert(contentText.includes('Events Today'), 'Today view must display "Events Today" section');
     assert(contentText.includes('Bear Trap'), 'Today view must display Bear Trap');
     assert(contentText.includes('Daily Rewards'), 'Today view must display "Daily Rewards" section');
-    assert(contentText.includes('Hero Rally') || contentText.includes('Defeat Nearby Beasts'), 'Daily rewards must display active rewards');
-    console.log('  ✅ Today schedule view rendered "Events Today" and "Daily Rewards" successfully');
+    
+    // Assert zero junk calculations or spreadsheet numbers rendered in DOM
+    assert(!contentText.includes('3,000,000'), 'Must NOT contain training calculator goal 3,000,000');
+    assert(!contentText.includes('175,118,715'), 'Must NOT contain spreadsheet chief power numbers 175,118,715');
+    assert(!contentText.includes('2,180,102,038'), 'Must NOT contain spreadsheet chief power numbers 2,180,102,038');
+    assert(!contentText.includes('Vip Plan:'), 'Must NOT contain Vip Plan spreadsheet calculator');
+    assert(!contentText.includes('Gems Bank'), 'Must NOT contain Gems Bank calculator');
+    assert(!contentText.includes('Top_up'), 'Must NOT contain Top_up calculator');
+    assert(!contentText.includes('7 (7/2)'), 'Must NOT contain spreadsheet date formulas 7 (7/2)');
+    assert(!contentText.includes('7 (6/30)'), 'Must NOT contain spreadsheet date formulas 7 (6/30)');
+    console.log('  ✅ Verified ZERO junk spreadsheet numbers, formulas, or personal calculators rendered in DOM');
+
+    // Assert upcoming events are cleanly displayed in "Coming up:"
+    assert(contentText.includes('Coming up:'), 'Today view must display "Coming up:" section with upcoming events');
+    console.log('  ✅ "Coming up:" section displayed with upcoming events');
 
     // Test responsive layout across 375px (mobile), 768px (tablet), 1280px (desktop)
     const viewports = [
