@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.120] - 2026-10-21
+- 🗓️ **Rewards Editor**: Full event and reward scheduler synced with Sheets.
+- 🔍 **Smart Filters**: Filter by category, status, or live search instantly.
+- ➕ **Add & Delete**: Create new events or delete outdated rows easily.
+- ⚡ **Quick Dates**: One-tap Today, +1d, +2d, and +6d date shortcuts.
+
 ## [3.3.119] - 2026-10-21
 - 🛡️ **Data Sanitizer**: Filtered out raw spreadsheet numbers and personal calculations.
 - 🎁 **Daily Rewards**: Displays only genuine daily reward events for today.

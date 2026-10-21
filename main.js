@@ -28761,7 +28761,8 @@ window.getUnifiedScheduleEvents = () => {
   }
 
   // 1. Parse Weekly Schedule Grid (sheets/schedule) - Resilient to empty spacing rows & blank Column A
-  const schedGrid = (window.liveData && window.liveData['schedule']) ? window.liveData['schedule'] : null;
+  const editorLiveOverride = Boolean(window._cachedScheduleLive && window._cachedScheduleLive.fromRewardsEditor && Array.isArray(window._cachedScheduleLive.events));
+  const schedGrid = (!editorLiveOverride && window.liveData && window.liveData['schedule']) ? window.liveData['schedule'] : null;
   if (schedGrid && Array.isArray(schedGrid) && schedGrid.length >= 2) {
     let headerRowIdx = -1;
     for (let r = 0; r < Math.min(8, schedGrid.length); r++) {
@@ -28824,7 +28825,7 @@ window.getUnifiedScheduleEvents = () => {
   }
 
   // 2. Parse Timed Events Table (sheets/Schedule data) - Resilient to blank spacing rows
-  const schedData = (window.liveData && window.liveData['Schedule data']) ? window.liveData['Schedule data'] : null;
+  const schedData = (!editorLiveOverride && window.liveData && window.liveData['Schedule data']) ? window.liveData['Schedule data'] : null;
   if (schedData && Array.isArray(schedData)) {
     schedData.forEach((row, idx) => {
       if (idx === 0 || !Array.isArray(row)) return;
@@ -43918,9 +43919,14 @@ window.resetBearTrapEvent = async () => {
         }
       }
 
-      const liveSched = (todayData && Array.isArray(todayData) && todayData.length > 0)
+      const fbLiveSched = await window.fetchScheduleLiveData().catch(() => null);
+      const parsedSheetSched = (todayData && Array.isArray(todayData) && todayData.length > 0)
         ? window.parseSheetToScheduleLiveData(todayData)
-        : await window.fetchScheduleLiveData().catch(() => null);
+        : null;
+      const liveSched = (fbLiveSched && fbLiveSched.fromRewardsEditor)
+        ? fbLiveSched
+        : (parsedSheetSched || fbLiveSched);
+      window._cachedScheduleLive = liveSched;
 
       const renderTabs = () => {
         if (window._scheduleCountdownTimer) clearInterval(window._scheduleCountdownTimer);
@@ -43940,7 +43946,10 @@ window.resetBearTrapEvent = async () => {
                 <span>🔔</span> <span>Event Reminders</span>
               </button>
               ${isManager ? `
-                <button onclick="window.openScheduleEditorModal()" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:7px 14px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12px; display:flex; align-items:center; gap:5px; box-shadow:0 2px 8px rgba(16,185,129,0.3);">
+                <button id="btnOpenRewardsEditor" onclick="window.openScheduleEditorModal('search')" style="background:linear-gradient(135deg, #f59e0b, #d97706); color:#fff; border:none; padding:7px 14px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12px; display:flex; align-items:center; gap:5px; box-shadow:0 2px 8px rgba(245,158,11,0.3);" title="Open Rewards & Events Scheduler (Add, Edit Dates, or Delete)">
+                  🗓️ Rewards & Events Editor
+                </button>
+                <button id="btnManageSchedule" onclick="window.openScheduleEditorModal('search')" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:7px 14px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12px; display:flex; align-items:center; gap:5px; box-shadow:0 2px 8px rgba(16,185,129,0.3);">
                   ⚙️ Manage Schedule
                 </button>
                 <button onclick="window.syncScheduleDirectly()" style="background:linear-gradient(135deg, #3b82f6, #2563eb); color:#fff; border:none; padding:7px 14px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12px; display:flex; align-items:center; gap:5px; box-shadow:0 2px 8px rgba(59,130,246,0.3);" title="Sync schedule from Google Sheets formulas live to the website">
@@ -44004,15 +44013,19 @@ window.resetBearTrapEvent = async () => {
              }
            });
 
-           // Rewards from weekly schedule grid (authoritative daily rewards source)
-           if (typeof window.getUnifiedScheduleRewards === 'function') {
-             rewards = window.getUnifiedScheduleRewards(now);
-           }
-           if (liveSched && Array.isArray(liveSched.rewards)) {
-             liveSched.rewards.forEach(r => {
-               const s = String(r || '').trim();
-               if (s && !window.isScheduleJunkItem(s) && !rewards.includes(s)) rewards.push(s);
-             });
+           // Rewards from Rewards Editor or weekly schedule grid (authoritative daily rewards source)
+           if (liveSched && liveSched.fromRewardsEditor && Array.isArray(liveSched.rewards)) {
+             rewards = [...liveSched.rewards];
+           } else {
+             if (typeof window.getUnifiedScheduleRewards === 'function') {
+               rewards = window.getUnifiedScheduleRewards(now);
+             }
+             if (liveSched && Array.isArray(liveSched.rewards)) {
+               liveSched.rewards.forEach(r => {
+                 const s = String(r || '').trim();
+                 if (s && !window.isScheduleJunkItem(s) && !rewards.includes(s)) rewards.push(s);
+               });
+             }
            }
            rewards = rewards.filter(r => !window.isScheduleJunkItem(r) && r.length >= 3);
            signups = ((liveSched && liveSched.signups) || []).filter(s => !window.isScheduleJunkItem(s) && s.length >= 3);
@@ -44995,79 +45008,427 @@ window.saveScheduleToFirebase = async (scheduleObj) => {
   }
 };
 
-window.openScheduleEditorModal = async () => {
-  const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+// ============================================================================
+// 🗓️ REWARDS & EVENTS SCHEDULER / EDITOR ENGINE (GOOGLE SHEETS 'data' TAB SYNC)
+// ============================================================================
+
+window.getLocalTodayIsoStr = () => {
+  const now = new Date();
+  const pdtMs = now.getTime() - (7 * 3600000);
+  const pdtDate = new Date(pdtMs);
+  return `${pdtDate.getUTCFullYear()}-${String(pdtDate.getUTCMonth() + 1).padStart(2, '0')}-${String(pdtDate.getUTCDate()).padStart(2, '0')}`;
+};
+
+window.formatDataSheetDateISO = (rawVal) => {
+  if (!rawVal && rawVal !== 0) return '';
+  const s = String(rawVal).trim();
+  if (!s) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  if (/^\d{4}-\d{2}-\d{2}T/.test(s)) return s.split('T')[0];
+  const mdy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (mdy) {
+    const yr = mdy[3].length === 2 ? '20' + mdy[3] : mdy[3];
+    return `${yr}-${String(mdy[1]).padStart(2, '0')}-${String(mdy[2]).padStart(2, '0')}`;
+  }
+  const md = s.match(/^(\d{1,2})\/(\d{1,2})$/);
+  if (md) {
+    const yr = new Date().getUTCFullYear();
+    return `${yr}-${String(md[1]).padStart(2, '0')}-${String(md[2]).padStart(2, '0')}`;
+  }
+  const d = new Date(s);
+  if (!isNaN(d.getTime()) && d.getUTCFullYear() >= 2020) {
+    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+  }
+  return '';
+};
+
+window.formatDataSheetTimeUTC = (rawVal, sectionKey = 'rewards') => {
+  const defaultTime = sectionKey === 'timed' ? '16:00' : '00:00';
+  if (!rawVal && rawVal !== 0) return defaultTime;
+  const s = String(rawVal).trim();
+  if (!s) return defaultTime;
+  const m24 = s.match(/^(\d{1,2}):(\d{2})$/);
+  if (m24) return `${String(m24[1]).padStart(2, '0')}:${m24[2]}`;
+  const m12 = s.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (m12) {
+    let h = parseInt(m12[1], 10);
+    const min = m12[2];
+    const ap = m12[3].toUpperCase();
+    if (ap === 'PM' && h < 12) h += 12;
+    if (ap === 'AM' && h === 12) h = 0;
+    return `${String(h).padStart(2, '0')}:${min}`;
+  }
+  if (/^\d{4}-\d{2}-\d{2}T/.test(s)) {
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) {
+      // Google Sheets 1899 time-only cells in America/Los_Angeles serialize with +8h offset in UTC ISO
+      const sheetH = (d.getUTCHours() - 8 + 24) % 24;
+      const sheetM = d.getUTCMinutes();
+      return `${String(sheetH).padStart(2, '0')}:${String(sheetM).padStart(2, '0')}`;
+    }
+  }
+  return defaultTime;
+};
+
+window.utcTimeToPdtStr = (utcHHmm) => {
+  if (!utcHHmm) return '';
+  const m = String(utcHHmm).trim().match(/^(\d{1,2}):(\d{2})/);
+  if (!m) return '';
+  const utcH = parseInt(m[1], 10);
+  const utcM = m[2];
+  const pdtH24 = (utcH - 7 + 24) % 24;
+  const ap = pdtH24 >= 12 ? 'PM' : 'AM';
+  let h12 = pdtH24 % 12;
+  if (h12 === 0) h12 = 12;
+  return `${h12}:${utcM} ${ap}`;
+};
+
+window.parseDataSheetToRewardsCatalog = (rows) => {
+  if (!Array.isArray(rows) || rows.length < 3) return [];
+  const todayIso = window.getLocalTodayIsoStr();
+  const items = [];
+  let currentSecKey = 'timed';
+  let currentSecLabel = 'Timed Events';
+
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!Array.isArray(row)) continue;
+    const rowNum = i + 1;
+    const colI = String(row[8] || '').trim();
+    const colJ = String(row[9] || '').trim();
+    const lowerI = colI.toLowerCase();
+    const lowerJ = colJ.toLowerCase();
+
+    if (lowerI.includes('edit: schedule')) continue;
+
+    const isHeader = (lowerJ === 'start date') ||
+                     (lowerI === "event's" || lowerI === 'events' || lowerI === 'rewards events' || lowerI === 'signups' || lowerI === 'hoildays' || lowerI === 'holidays' || lowerI === 'new year prelude');
+    if (isHeader) {
+      if (lowerI.includes('reward')) {
+        currentSecKey = 'rewards';
+        currentSecLabel = 'Rewards Events';
+      } else if (lowerI.includes('signup') || lowerI.includes('sign-up')) {
+        currentSecKey = 'signups';
+        currentSecLabel = 'Signups';
+      } else if (lowerI.includes('hoilday') || lowerI.includes('holiday')) {
+        currentSecKey = 'holidays';
+        currentSecLabel = 'Holidays';
+      } else if (lowerI.includes('new year')) {
+        currentSecKey = 'newyear';
+        currentSecLabel = 'New Year Prelude';
+      } else {
+        currentSecKey = 'timed';
+        currentSecLabel = 'Timed Events';
+      }
+      continue;
+    }
+
+    if (!colI) continue;
+    if (colI.length === 1 && !row[9] && !row[12]) continue; // skip stray single char like 'h' on row 81
+
+    const startDate = window.formatDataSheetDateISO(row[9]);
+    const endDate = window.formatDataSheetDateISO(row[12]);
+    const startUtc = window.formatDataSheetTimeUTC(row[10], currentSecKey);
+    const endUtc = window.formatDataSheetTimeUTC(row[13], currentSecKey);
+    const startPdt = String(row[11] || '').trim() || window.utcTimeToPdtStr(startUtc);
+    const endPdt = String(row[14] || '').trim() || window.utcTimeToPdtStr(endUtc);
+
+    let status = 'nodates';
+    if (startDate || endDate) {
+      const cmpEnd = endDate || startDate;
+      status = (cmpEnd < todayIso) ? 'expired' : 'active';
+    }
+
+    items.push({
+      id: `rew_row_${rowNum}`,
+      row: rowNum,
+      section: currentSecKey,
+      sectionLabel: currentSecLabel,
+      title: colI,
+      startDate,
+      endDate,
+      startUtc,
+      endUtc,
+      startPdt,
+      endPdt,
+      status
+    });
+  }
+  return items;
+};
+
+window.fetchRewardsEditorCatalog = async (forceRefreshSheet = false) => {
+  const todayIso = window.getLocalTodayIsoStr();
+  if (!forceRefreshSheet) {
+    try {
+      const snap = await get(ref(db, 'rewards_editor_catalog'));
+      if (snap.exists() && snap.val() && Array.isArray(snap.val().items) && snap.val().items.length > 0) {
+        return snap.val().items.map(it => {
+          const s = it.startDate || it.start || '';
+          const e = it.endDate || it.end || '';
+          let status = 'nodates';
+          if (s || e) status = ((e || s) < todayIso) ? 'expired' : 'active';
+          return { ...it, startDate: s, endDate: e, status };
+        });
+      }
+    } catch (e) {
+      console.warn('rewards_editor_catalog read warning:', e);
+    }
+  }
+
+  // Fetch 'data' sheet from Google Apps Script API or Firebase /sheets/data
+  let dataRows = null;
+  if (typeof API_BASE_URL !== 'undefined' && API_BASE_URL) {
+    try {
+      const res = await fetch(`${API_BASE_URL}?api=getScheduleData&sheetName=data`, { signal: AbortSignal.timeout(7000) });
+      const json = await res.json();
+      if (json && json.success && Array.isArray(json.data) && json.data.length > 5) {
+        dataRows = json.data;
+        if (window.liveData) window.liveData['data'] = dataRows;
+      }
+    } catch (err) {
+      console.warn('Direct GAS data sheet fetch fallback:', err);
+    }
+  }
+
+  if (!dataRows) {
+    try {
+      const sheetSnap = await get(ref(db, 'sheets/data'));
+      if (sheetSnap.exists() && Array.isArray(sheetSnap.val())) {
+        dataRows = sheetSnap.val();
+      }
+    } catch (err2) {}
+  }
+
+  if (!dataRows && window.liveData && Array.isArray(window.liveData['data'])) {
+    dataRows = window.liveData['data'];
+  }
+
+  const parsed = window.parseDataSheetToRewardsCatalog(dataRows || []);
+  if (parsed.length > 0) {
+    try {
+      await set(ref(db, 'rewards_editor_catalog'), {
+        items: parsed,
+        lastUpdated: Date.now()
+      });
+    } catch (e) {}
+  }
+  return parsed;
+};
+
+window.computeScheduleLiveFromRewardsCatalog = (catalogItems, existingLive = {}) => {
+  const todayIso = window.getLocalTodayIsoStr();
+  const [tY, tM, tD] = todayIso.split('-').map(Number);
+  const baseUtcMs = Date.UTC(tY, tM - 1, tD);
+
+  // 1. Timed Events (section === 'timed' with endDate >= todayIso)
+  const events = [];
+  const timedItems = (catalogItems || []).filter(it => it.section === 'timed' && (it.startDate || it.endDate));
+  timedItems.forEach(it => {
+    const sIso = it.startDate || it.endDate;
+    const eIso = it.endDate || it.startDate;
+    if (eIso < todayIso) return;
+    if (String(it.title || '').trim().toLowerCase() === 'testing') return;
+
+    const [, mStr, dStr] = sIso.split('-');
+    const dateStr = `${parseInt(mStr, 10)}/${parseInt(dStr, 10)}`;
+    const utcStr = it.startUtc || '16:00';
+    const endUtcStr = it.endUtc || '';
+    const pdtVal = it.startPdt || window.utcTimeToPdtStr(utcStr);
+
+    const name = String(it.title || '').trim();
+    const isBearTrap = name.includes('Bear Trap') || name.includes('🪤') || name.includes('🐻');
+    const isJoe = name.includes('Crazy Joe') || name.includes('🔥');
+    const isCastle = name.includes('Castle') || name.includes('🏰');
+    const isBia = name.includes('Brothers') || name.includes('⚔️');
+    const isShield = name.toLowerCase().includes('shield') || name.toLowerCase().includes('sheild');
+    const emoji = isBearTrap ? '🪤' : (isJoe ? '🔥' : (isCastle ? '🏰' : (isBia ? '⚔️' : (isShield ? '🛡️' : '✨'))));
+
+    events.push({
+      id: `ev_row_${it.row}_${sIso}`,
+      row: it.row,
+      eventName: name,
+      dateStr,
+      isoDate: sIso,
+      endIsoDate: eIso,
+      utcStr,
+      endUtcStr,
+      pdtVal,
+      emoji
+    });
+  });
+
+  events.sort((a, b) => {
+    const cmpDate = String(a.isoDate || '').localeCompare(String(b.isoDate || ''));
+    if (cmpDate !== 0) return cmpDate;
+    return String(a.utcStr || '').localeCompare(String(b.utcStr || ''));
+  });
+
+  // 2. 8-Day Daily Rewards Matrix (section === 'rewards')
+  const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const rewardsByDay = {};
+  let todayRewards = [];
+  const rewardItems = (catalogItems || []).filter(it => it.section === 'rewards' && (it.startDate || it.endDate));
+
+  for (let offset = 0; offset < 8; offset++) {
+    const dObj = new Date(baseUtcMs + offset * 86400000);
+    const dIso = `${dObj.getUTCFullYear()}-${String(dObj.getUTCMonth() + 1).padStart(2, '0')}-${String(dObj.getUTCDate()).padStart(2, '0')}`;
+    const mNum = dObj.getUTCMonth() + 1;
+    const dNum = dObj.getUTCDate();
+    const dayPrefix = offset === 0 ? 'Today' : (offset === 1 ? 'Tomorrow' : weekdays[dObj.getUTCDay()]);
+    const colLabel = `${dayPrefix} ${mNum}/${dNum}`;
+
+    const dayList = [];
+    rewardItems.forEach(it => {
+      const sIso = it.startDate || it.endDate;
+      const eIso = it.endDate || it.startDate;
+      if (sIso <= dIso && eIso >= dIso) {
+        const cleanTitle = String(it.title || '').trim();
+        if (cleanTitle && !window.isScheduleJunkItem(cleanTitle) && !dayList.includes(cleanTitle)) {
+          dayList.push(cleanTitle);
+        }
+      }
+    });
+    dayList.sort((a, b) => a.localeCompare(b));
+    rewardsByDay[colLabel] = dayList;
+    if (offset === 0) todayRewards = [...dayList];
+  }
+
+  // 3. Signups (section === 'signups')
+  const signups = [];
+  (catalogItems || []).filter(it => it.section === 'signups' && (it.startDate || it.endDate)).forEach(it => {
+    const sIso = it.startDate || it.endDate;
+    const eIso = it.endDate || it.startDate;
+    if (sIso <= todayIso && eIso >= todayIso) {
+      const cleanTitle = String(it.title || '').trim();
+      if (cleanTitle && !window.isScheduleJunkItem(cleanTitle) && !signups.includes(cleanTitle)) {
+        signups.push(cleanTitle);
+      }
+    }
+  });
+
+  // 4. Holidays & New Year (section === 'holidays' || section === 'newyear')
+  const holidays = [];
+  (catalogItems || []).filter(it => (it.section === 'holidays' || it.section === 'newyear') && (it.startDate || it.endDate)).forEach(it => {
+    const sIso = it.startDate || it.endDate;
+    const eIso = it.endDate || it.startDate;
+    if (sIso <= todayIso && eIso >= todayIso) {
+      const cleanTitle = String(it.title || '').trim();
+      if (cleanTitle && !window.isScheduleJunkItem(cleanTitle) && !holidays.includes(cleanTitle)) {
+        holidays.push(cleanTitle);
+      }
+    }
+  });
+
+  // 5. Preserve valid All-Week items
+  const allWeek = Array.isArray(existingLive?.allWeek)
+    ? existingLive.allWeek.filter(w => !window.isScheduleJunkItem(w))
+    : [];
+
+  return {
+    events,
+    rewards: todayRewards,
+    rewardsByDay,
+    signups,
+    allWeek,
+    holidays,
+    fromRewardsEditor: true,
+    lastUpdated: Date.now()
+  };
+};
+
+window.syncRewardsCatalogChangeEverywhere = async (catalogItems, queueOp = null, existingLive = {}) => {
+  const todayIso = window.getLocalTodayIsoStr();
+  const normalizedCatalog = (catalogItems || []).map(it => {
+    const s = it.startDate || '';
+    const e = it.endDate || '';
+    let status = 'nodates';
+    if (s || e) status = ((e || s) < todayIso) ? 'expired' : 'active';
+    return {
+      ...it,
+      startDate: s,
+      endDate: e,
+      startPdt: it.startPdt || window.utcTimeToPdtStr(it.startUtc),
+      endPdt: it.endPdt || window.utcTimeToPdtStr(it.endUtc),
+      status
+    };
+  });
+
+  // 1. Save catalog to Firebase RTDB (/rewards_editor_catalog)
+  await set(ref(db, 'rewards_editor_catalog'), {
+    items: normalizedCatalog,
+    lastUpdated: Date.now()
+  });
+
+  // 2. Recompute schedule_live & save to Firebase RTDB (/schedule_live)
+  const newScheduleLive = window.computeScheduleLiveFromRewardsCatalog(normalizedCatalog, existingLive);
+  window._cachedScheduleLive = newScheduleLive;
+  await window.saveScheduleToFirebase(newScheduleLive);
+
+  // 3. Queue operation in Firebase (/rewards_editor_queue) & dispatch to Google Apps Script
+  if (queueOp && queueOp.action) {
+    try {
+      const opRef = push(ref(db, 'rewards_editor_queue'));
+      await set(opRef, {
+        ...queueOp,
+        timestamp: Date.now()
+      });
+    } catch (qErr) {
+      console.warn('Queue push warning:', qErr);
+    }
+
+    if (typeof API_BASE_URL !== 'undefined' && API_BASE_URL) {
+      const apiAction = queueOp.action === 'add'
+        ? 'addRewardsEditorItem'
+        : (queueOp.action === 'delete' ? 'deleteRewardsEditorItem' : 'saveRewardsEditorItem');
+      const params = new URLSearchParams({
+        api: apiAction,
+        row: String(queueOp.row || ''),
+        section: String(queueOp.section || ''),
+        title: String(queueOp.title || ''),
+        startDate: String(queueOp.startDate || ''),
+        endDate: String(queueOp.endDate || ''),
+        startUtc: String(queueOp.startUtc || ''),
+        endUtc: String(queueOp.endUtc || '')
+      });
+      fetch(`${API_BASE_URL}?${params.toString()}`, { mode: 'no-cors' }).catch(() => null);
+    }
+  }
+
+  return { catalog: normalizedCatalog, scheduleLive: newScheduleLive };
+};
+
+window.openScheduleEditorModal = async (initialTab = 'search') => {
+  const activeUser = currentUser || window.currentUser;
+  const isManager = window.getAdminLevel(activeUser) === 'R5' || window.getAdminLevel(activeUser) === 'R4';
   if (!isManager) {
     if (window.showToast) window.showToast("Only R4/R5 managers can edit the event schedule", "error");
     return;
   }
 
   let liveData = await window.fetchScheduleLiveData();
-  
-  // If schedule_live is missing, initialize from current Google Sheets data if available
   if (!liveData) {
     let sheetData = window.liveData ? window.liveData['WhiteOut Survival'] : null;
-    let events = [];
-    let signups = [], rewards = [], allWeek = [], holidays = [];
-
-    if (sheetData && Array.isArray(sheetData)) {
-      const now = new Date();
-      for (let i = 1; i < Math.min(34, sheetData.length); i++) {
-        const row = sheetData[i];
-        const eventName = row[5];
-        const dateRaw   = row[6];
-        const utcRaw    = row[7];
-        const pdtVal    = row[8];
-        if (!eventName || String(eventName).trim() === '') continue;
-        if (String(eventName).includes("Event's")) continue;
-        if (String(eventName).trim() === 'Rewards') break;
-
-        const isBearTrap = String(eventName).includes('Bear Trap') || String(eventName).includes('🪤') || String(eventName).includes('🐻');
-        const isJoe = String(eventName).includes('Crazy Joe') || String(eventName).includes('🔥');
-        const isCastle = String(eventName).includes('Castle') || String(eventName).includes('🏰');
-        const isBia = String(eventName).includes('Brothers') || String(eventName).includes('⚔️');
-        let emoji = isBearTrap ? '🪤' : (isJoe ? '🔥' : (isCastle ? '🏰' : (isBia ? '⚔️' : '✨')));
-
-        events.push({
-          id: 'ev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-          eventName: String(eventName).trim(),
-          dateStr: String(dateRaw || '').trim(),
-          utcStr: String(utcRaw || '').trim(),
-          pdtVal: String(pdtVal || '').trim(),
-          emoji: emoji
-        });
-      }
-
-      let headerRowIdx = -1;
-      for (let i = 0; i < sheetData.length; i++) {
-        const cell = String(sheetData[i][5] || '').trim().toLowerCase();
-        if (cell === 'rewards') { headerRowIdx = i; break; }
-      }
-      if (headerRowIdx !== -1) {
-        for (let i = headerRowIdx + 1; i < sheetData.length; i++) {
-          const r = sheetData[i][5], g = sheetData[i][6], h = sheetData[i][7], k = sheetData[i][8];
-          const anyVal = [r,g,h,k].some(v => v && String(v).trim() !== '');
-          if (!anyVal) break;
-          const skip = (v) => !v || String(v).trim() === '' || String(v).trim().toLowerCase() === 'no events';
-          if (!skip(r)) rewards.push(String(r).trim());
-          if (!skip(g)) signups.push(String(g).trim());
-          if (!skip(h)) allWeek.push(String(h).trim());
-          if (!skip(k)) holidays.push(String(k).trim());
-        }
-      }
-    }
-
-    liveData = { events, signups, rewards, allWeek, holidays };
+    liveData = (sheetData && Array.isArray(sheetData))
+      ? window.parseSheetToScheduleLiveData(sheetData)
+      : { events: [], signups: [], rewards: [], allWeek: [], holidays: [] };
   }
 
-  let activeModalTab = 'timed';
+  let catalogItems = await window.fetchRewardsEditorCatalog(false);
+
+  let activeModalTab = initialTab || 'search';
+  let activeSectionFilter = 'all';
+  let activeStatusFilter = 'all';
+  let currentSearchQuery = '';
+  let isAddRewardMode = false;
+  let pendingDeleteConfirm = false;
+  let selectedRewardRow = catalogItems.length > 0 ? catalogItems[0].row : -1;
+
   const modalId = 'scheduleEditorModal';
   const overlayId = 'scheduleEditorModalOverlay';
 
-  let existingModal = document.getElementById(modalId);
-  let existingOverlay = document.getElementById(overlayId);
-  if (existingModal) existingModal.remove();
-  if (existingOverlay) existingOverlay.remove();
+  document.getElementById(modalId)?.remove();
+  document.getElementById(overlayId)?.remove();
 
   const overlay = document.createElement('div');
   overlay.id = overlayId;
@@ -45075,7 +45436,7 @@ window.openScheduleEditorModal = async () => {
 
   const modal = document.createElement('div');
   modal.id = modalId;
-  modal.style.cssText = 'position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width:92%; max-width:850px; max-height:90vh; background:var(--card-bg); border:1px solid var(--border); border-radius:16px; padding:24px; box-shadow:0 20px 50px rgba(0,0,0,0.6); z-index:9999; display:flex; flex-direction:column; gap:16px; overflow:hidden; color:var(--text-main); animation:slideUp 0.3s;';
+  modal.style.cssText = 'position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); width:94%; max-width:960px; max-height:92vh; background:var(--card-bg); border:1px solid var(--border); border-radius:16px; padding:20px; box-shadow:0 20px 50px rgba(0,0,0,0.6); z-index:9999; display:flex; flex-direction:column; gap:14px; overflow:hidden; color:var(--text-main); animation:slideUp 0.25s; box-sizing:border-box;';
 
   const currentEvents = [...(liveData.events || [])];
   const currentSignups = [...(liveData.signups || [])];
@@ -45083,18 +45444,13 @@ window.openScheduleEditorModal = async () => {
   const currentAllWeek = [...(liveData.allWeek || [])];
   const currentHolidays = [...(liveData.holidays || [])];
 
-  // Load custom presets from Firebase if available
   let customPresets = [];
   try {
-    const db = window.firebaseDb;
-    const { ref, get } = window.firebaseDatabase || {};
-    if (db && ref && get) {
-      const snap = await get(ref(db, 'schedule_presets'));
-      if (snap.exists() && Array.isArray(snap.val())) {
-        customPresets = snap.val();
-      }
+    const snap = await get(ref(db, 'schedule_presets'));
+    if (snap.exists() && Array.isArray(snap.val())) {
+      customPresets = snap.val();
     }
-  } catch(e) { console.error("Error loading schedule presets:", e); }
+  } catch (e) {}
 
   const defaultPresets = [
     { name: "Bear Trap", utc: "16:00", endUtc: "16:30", emoji: "🪤" },
@@ -45116,35 +45472,239 @@ window.openScheduleEditorModal = async () => {
     }
   });
 
+  const getFilteredCatalogItems = () => {
+    const q = currentSearchQuery.trim().toLowerCase();
+    return catalogItems.filter(item => {
+      if (activeSectionFilter !== 'all') {
+        if (activeSectionFilter === 'holidays' && (item.section === 'holidays' || item.section === 'newyear')) {
+          // match
+        } else if (item.section !== activeSectionFilter) {
+          return false;
+        }
+      }
+      if (activeStatusFilter !== 'all' && item.status !== activeStatusFilter) {
+        return false;
+      }
+      if (q && !String(item.title || '').toLowerCase().includes(q) && !String(item.sectionLabel || '').toLowerCase().includes(q)) {
+        return false;
+      }
+      return true;
+    });
+  };
+
   const renderModalContent = () => {
+    const todayIso = window.getLocalTodayIsoStr();
+    const filteredCatalog = getFilteredCatalogItems();
+    const selectedItem = (!isAddRewardMode && selectedRewardRow !== -1)
+      ? (catalogItems.find(i => i.row === selectedRewardRow) || filteredCatalog[0] || null)
+      : null;
+    if (!isAddRewardMode && selectedItem && selectedRewardRow !== selectedItem.row) {
+      selectedRewardRow = selectedItem.row;
+    }
+
+    const activeCount = catalogItems.filter(i => i.status === 'active').length;
+    const expiredCount = catalogItems.filter(i => i.status === 'expired').length;
+    const noDatesCount = catalogItems.filter(i => i.status === 'nodates').length;
+
+    const sectionBadgeMeta = (sec) => {
+      if (sec === 'timed') return { icon: '⏱️', label: 'Timed Event', color: '#38bdf8', bg: 'rgba(56,189,248,0.12)' };
+      if (sec === 'signups') return { icon: '📝', label: 'Sign-Ups', color: '#10b981', bg: 'rgba(16,185,129,0.12)' };
+      if (sec === 'holidays' || sec === 'newyear') return { icon: '🎉', label: 'Holiday', color: '#f97316', bg: 'rgba(249,115,22,0.12)' };
+      return { icon: '🎁', label: 'Rewards', color: '#eab308', bg: 'rgba(234,179,8,0.12)' };
+    };
+
     modal.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:14px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:12px; gap:10px;">
         <div style="display:flex; align-items:center; gap:10px;">
-          <div style="font-size:24px;">📅</div>
+          <div style="font-size:24px;">🗓️</div>
           <div>
-            <h3 style="margin:0; font-size:20px; color:var(--text-main);">Live Schedule Manager</h3>
-            <p style="margin:2px 0 0 0; font-size:12px; color:var(--text-muted);">Edits push directly to Firebase and update all website visitors in real-time (&lt;100ms).</p>
+            <h3 style="margin:0; font-size:19px; color:var(--text-main);">Rewards &amp; Events Scheduler</h3>
+            <p style="margin:2px 0 0 0; font-size:12px; color:var(--text-muted);">Synced with Google Sheets <code style="color:var(--accent);">data</code> tab (Cols I–O) &amp; live 8-day website schedule.</p>
           </div>
         </div>
-        <button id="schModalCloseBtn" style="background:transparent; border:none; color:var(--text-muted); font-size:24px; cursor:pointer; font-weight:bold;">&times;</button>
+        <button id="schModalCloseBtn" style="background:transparent; border:none; color:var(--text-muted); font-size:24px; cursor:pointer; font-weight:bold; line-height:1;">&times;</button>
       </div>
 
       <!-- Navigation Subtabs -->
-      <div style="display:flex; gap:10px; border-bottom:1px solid var(--border); padding-bottom:10px; flex-wrap:wrap;">
-        <button id="schTabBtnTimed" style="padding:8px 16px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; background:${activeModalTab === 'timed' ? 'var(--accent)' : 'var(--bg-main)'}; color:${activeModalTab === 'timed' ? '#fff' : 'var(--text-muted)'}; transition:0.2s;">
-          ⏱️ Timed Events (${currentEvents.length})
-        </button>
-        <button id="schTabBtnSearch" style="padding:8px 16px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; background:${activeModalTab === 'search' ? 'var(--accent)' : 'var(--bg-main)'}; color:${activeModalTab === 'search' ? '#fff' : 'var(--text-muted)'}; transition:0.2s;">
-          🔍 Search & Update Dates
-        </button>
-        <button id="schTabBtnCats" style="padding:8px 16px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; background:${activeModalTab === 'cats' ? 'var(--accent)' : 'var(--bg-main)'}; color:${activeModalTab === 'cats' ? '#fff' : 'var(--text-muted)'}; transition:0.2s;">
-          📋 Category Lists
-        </button>
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:10px; flex-wrap:wrap; gap:8px;">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button id="schTabBtnSearch" style="padding:8px 14px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; background:${activeModalTab === 'search' ? 'var(--accent)' : 'var(--bg-main)'}; color:${activeModalTab === 'search' ? '#fff' : 'var(--text-muted)'}; transition:0.2s;">
+            🗓️ Rewards &amp; Events Editor (${catalogItems.length})
+          </button>
+          <button id="schTabBtnTimed" style="padding:8px 14px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; background:${activeModalTab === 'timed' ? 'var(--accent)' : 'var(--bg-main)'}; color:${activeModalTab === 'timed' ? '#fff' : 'var(--text-muted)'}; transition:0.2s;">
+            ⏱️ Custom Timed Events (${currentEvents.length})
+          </button>
+          <button id="schTabBtnCats" style="padding:8px 14px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:13px; background:${activeModalTab === 'cats' ? 'var(--accent)' : 'var(--bg-main)'}; color:${activeModalTab === 'cats' ? '#fff' : 'var(--text-muted)'}; transition:0.2s;">
+            📋 Category Lists
+          </button>
+        </div>
+        ${activeModalTab === 'search' ? `
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button id="schOpenAddRewardBtn" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:7px 14px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; box-shadow:0 2px 8px rgba(16,185,129,0.3);">
+              ➕ Add New Event / Reward
+            </button>
+            <button id="schRefreshSheetCatalogBtn" style="background:var(--bg-main); color:var(--text-main); border:1px solid var(--border); padding:7px 12px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer;" title="Pull fresh rows from Google Sheets 'data' tab">
+              🔄 Sync Sheet
+            </button>
+          </div>
+        ` : ''}
       </div>
 
       <!-- Main Body Content Area (Scrollable) -->
-      <div style="flex:1; overflow-y:auto; padding-right:4px; display:flex; flex-direction:column; gap:16px;">
-        ${activeModalTab === 'timed' ? `
+      <div style="flex:1; overflow-y:auto; padding-right:4px; display:flex; flex-direction:column; gap:14px; min-height:0;">
+        ${activeModalTab === 'search' ? `
+          <!-- Search & Filter Bar -->
+          <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:12px; display:flex; flex-direction:column; gap:10px;">
+            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+              <div style="flex:1; min-width:200px; position:relative;">
+                <input type="text" id="schSearchQuery" value="${escapeHTML(currentSearchQuery)}" placeholder="🔍 Search for events or rewards (e.g. Lucky Wheel, Bear Trap, King of Icefield, Mercenary)..." style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; box-sizing:border-box;">
+              </div>
+              <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                <button class="sch-status-pill" data-status="all" style="padding:5px 10px; border-radius:999px; font-size:11px; font-weight:bold; cursor:pointer; border:1px solid ${activeStatusFilter === 'all' ? 'var(--accent)' : 'var(--border)'}; background:${activeStatusFilter === 'all' ? 'rgba(14,165,233,0.2)' : 'var(--card-bg)'}; color:${activeStatusFilter === 'all' ? '#38bdf8' : 'var(--text-muted)'};">All (${catalogItems.length})</button>
+                <button class="sch-status-pill" data-status="active" style="padding:5px 10px; border-radius:999px; font-size:11px; font-weight:bold; cursor:pointer; border:1px solid ${activeStatusFilter === 'active' ? '#10b981' : 'var(--border)'}; background:${activeStatusFilter === 'active' ? 'rgba(16,185,129,0.2)' : 'var(--card-bg)'}; color:#10b981;">✅ Set (${activeCount})</button>
+                <button class="sch-status-pill" data-status="expired" style="padding:5px 10px; border-radius:999px; font-size:11px; font-weight:bold; cursor:pointer; border:1px solid ${activeStatusFilter === 'expired' ? '#ef4444' : 'var(--border)'}; background:${activeStatusFilter === 'expired' ? 'rgba(239,68,68,0.2)' : 'var(--card-bg)'}; color:#ef4444;">❌ Expired (${expiredCount})</button>
+                <button class="sch-status-pill" data-status="nodates" style="padding:5px 10px; border-radius:999px; font-size:11px; font-weight:bold; cursor:pointer; border:1px solid ${activeStatusFilter === 'nodates' ? '#eab308' : 'var(--border)'}; background:${activeStatusFilter === 'nodates' ? 'rgba(234,179,8,0.2)' : 'var(--card-bg)'}; color:#eab308;">⚠️ No Dates (${noDatesCount})</button>
+              </div>
+            </div>
+
+            <!-- Section Filter Pills -->
+            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+              <button class="sch-sec-pill" data-sec="all" style="padding:5px 12px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; border:1px solid ${activeSectionFilter === 'all' ? 'var(--accent)' : 'var(--border)'}; background:${activeSectionFilter === 'all' ? 'var(--accent)' : 'var(--card-bg)'}; color:${activeSectionFilter === 'all' ? '#fff' : 'var(--text-muted)'};">All Sections</button>
+              <button class="sch-sec-pill" data-sec="rewards" style="padding:5px 12px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; border:1px solid ${activeSectionFilter === 'rewards' ? '#eab308' : 'var(--border)'}; background:${activeSectionFilter === 'rewards' ? 'rgba(234,179,8,0.2)' : 'var(--card-bg)'}; color:${activeSectionFilter === 'rewards' ? '#eab308' : 'var(--text-muted)'};">🎁 Rewards Events</button>
+              <button class="sch-sec-pill" data-sec="timed" style="padding:5px 12px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; border:1px solid ${activeSectionFilter === 'timed' ? '#38bdf8' : 'var(--border)'}; background:${activeSectionFilter === 'timed' ? 'rgba(56,189,248,0.2)' : 'var(--card-bg)'}; color:${activeSectionFilter === 'timed' ? '#38bdf8' : 'var(--text-muted)'};">⏱️ Timed Events</button>
+              <button class="sch-sec-pill" data-sec="signups" style="padding:5px 12px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; border:1px solid ${activeSectionFilter === 'signups' ? '#10b981' : 'var(--border)'}; background:${activeSectionFilter === 'signups' ? 'rgba(16,185,129,0.2)' : 'var(--card-bg)'}; color:${activeSectionFilter === 'signups' ? '#10b981' : 'var(--text-muted)'};">📝 Sign-Ups</button>
+              <button class="sch-sec-pill" data-sec="holidays" style="padding:5px 12px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; border:1px solid ${activeSectionFilter === 'holidays' ? '#f97316' : 'var(--border)'}; background:${activeSectionFilter === 'holidays' ? 'rgba(249,115,22,0.2)' : 'var(--card-bg)'}; color:${activeSectionFilter === 'holidays' ? '#f97316' : 'var(--text-muted)'};">🎉 Holidays &amp; Seasonal</button>
+            </div>
+          </div>
+
+          <!-- Split Workspace: Left List + Right Editor Card -->
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(290px, 1fr)); gap:14px; align-items:start;">
+            <!-- Left: Items List -->
+            <div id="schSearchList" style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:8px; max-height:380px; overflow-y:auto; display:flex; flex-direction:column; gap:6px;">
+              ${filteredCatalog.length === 0 ? `
+                <div style="padding:24px; text-align:center; color:var(--text-muted); font-size:13px;">
+                  No matching events or rewards found. Click <strong>➕ Add New Event / Reward</strong> to create one!
+                </div>
+              ` : filteredCatalog.map(item => {
+                const isSel = !isAddRewardMode && selectedItem && item.row === selectedItem.row;
+                const s = item.startDate || '';
+                const e = item.endDate || '';
+                let statusColor = '#eab308';
+                let statusLine = '⚠️ No dates set';
+                if (s || e) {
+                  if ((e || s) < todayIso) {
+                    statusColor = '#ef4444';
+                    statusLine = `❌ Expired (${s || '?'} to ${e || '?'})`;
+                  } else {
+                    statusColor = '#10b981';
+                    statusLine = `✅ Set (${s || '?'} to ${e || '?'})`;
+                  }
+                }
+                const secMeta = sectionBadgeMeta(item.section);
+                return `
+                  <div class="sch-search-item" data-row="${item.row}" style="padding:10px 12px; border-radius:8px; background:${isSel ? 'rgba(14,165,233,0.16)' : 'var(--card-bg)'}; border:1px solid ${isSel ? 'var(--accent)' : 'var(--border)'}; border-left:4px solid ${statusColor}; cursor:pointer; display:flex; flex-direction:column; gap:4px; transition:0.15s;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
+                      <span style="font-weight:bold; font-size:13px; color:var(--text-main);">${escapeHTML(item.title)}</span>
+                      <span style="font-size:10px; font-weight:bold; padding:2px 6px; border-radius:4px; background:${secMeta.bg}; color:${secMeta.color}; white-space:nowrap;">${secMeta.icon} ${secMeta.label}</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px;">
+                      <span style="color:${statusColor}; font-weight:bold;">${escapeHTML(statusLine)}</span>
+                      <span style="color:var(--text-muted);">${escapeHTML(item.startUtc || '08:00')} UTC • Row #${item.row}</span>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+
+            <!-- Right: Selected Item / Add New Editor Card -->
+            <div id="schSearchEditor" style="background:var(--bg-main); border:1px solid ${isAddRewardMode ? '#10b981' : 'var(--border)'}; border-radius:10px; padding:16px; display:flex; flex-direction:column; gap:12px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:8px;">
+                <div id="schSelectedItemTitle" style="font-weight:bold; font-size:14px; color:${isAddRewardMode ? '#10b981' : 'var(--accent)'};">
+                  ${isAddRewardMode ? '➕ Add New Event or Reward' : (selectedItem ? `✏️ Editing: ${escapeHTML(selectedItem.title)} (Row #${selectedItem.row})` : 'Select an event from the list')}
+                </div>
+                ${isAddRewardMode ? `
+                  <button id="schCancelAddModeBtn" type="button" style="background:transparent; border:1px solid var(--border); color:var(--text-muted); padding:3px 8px; border-radius:6px; font-size:11px; cursor:pointer;">Cancel</button>
+                ` : ''}
+              </div>
+
+              <!-- Section Selector (Visible in Add Mode, Badge in Edit Mode) -->
+              <div style="display:${isAddRewardMode ? 'block' : 'none'};">
+                <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px; text-transform:uppercase;">Category Section (Google Sheet 'data' Tab)</label>
+                <select id="schEditorSectionSelect" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; box-sizing:border-box;">
+                  <option value="rewards">🎁 Rewards Events (8-Day Daily Matrix)</option>
+                  <option value="timed">⏱️ Timed Events (Today &amp; Upcoming Schedule)</option>
+                  <option value="signups">📝 Sign-Ups Requiring Action</option>
+                  <option value="holidays">🎉 Holidays &amp; Seasonal Events</option>
+                </select>
+              </div>
+
+              <!-- Event / Reward Title (Col I) -->
+              <div>
+                <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px; text-transform:uppercase;">Event / Reward Name (Col I)</label>
+                <input type="text" id="schEditorTitleInput" value="${escapeHTML(isAddRewardMode ? '' : (selectedItem?.title || ''))}" placeholder="e.g. Lucky Wheel, Frostdragon Tyrant, Bear Trap..." style="width:100%; padding:9px 12px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; box-sizing:border-box;">
+              </div>
+
+              <!-- Start Date (Col J) & End Date (Col M) -->
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(135px, 1fr)); gap:10px;">
+                <div>
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <label style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Start (Col J)</label>
+                    <button id="schSetStartTodayBtn" type="button" style="font-size:10px; font-weight:bold; color:var(--accent); cursor:pointer; text-transform:uppercase; background:rgba(14,165,233,0.15); border:1px solid rgba(14,165,233,0.3); padding:2px 6px; border-radius:4px;">Today</button>
+                  </div>
+                  <input type="date" id="schSearchStartDate" value="${escapeHTML(isAddRewardMode ? todayIso : (selectedItem?.startDate || ''))}" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; box-sizing:border-box;">
+                </div>
+
+                <div>
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; gap:4px; flex-wrap:wrap;">
+                    <label style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">End (Col M)</label>
+                    <div style="display:flex; gap:3px;">
+                      <button id="schSetEndTodayBtn" type="button" style="font-size:10px; font-weight:bold; color:var(--accent); cursor:pointer; text-transform:uppercase; background:rgba(14,165,233,0.15); border:1px solid rgba(14,165,233,0.3); padding:2px 5px; border-radius:4px;">Today</button>
+                      <button id="schAdd1DayBtn" type="button" style="font-size:10px; font-weight:bold; color:#10b981; cursor:pointer; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.3); padding:2px 5px; border-radius:4px;">+1d</button>
+                      <button id="schAdd2DaysBtn" type="button" style="font-size:10px; font-weight:bold; color:#10b981; cursor:pointer; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.3); padding:2px 5px; border-radius:4px;">+2d</button>
+                      <button id="schAdd6DaysBtn" type="button" style="font-size:10px; font-weight:bold; color:#10b981; cursor:pointer; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.3); padding:2px 5px; border-radius:4px;">+6d</button>
+                      <button id="schClearDatesBtn" type="button" style="font-size:10px; font-weight:bold; color:#eab308; cursor:pointer; background:rgba(234,179,8,0.15); border:1px solid rgba(234,179,8,0.3); padding:2px 5px; border-radius:4px;">Clear</button>
+                    </div>
+                  </div>
+                  <input type="date" id="schSearchEndDate" value="${escapeHTML(isAddRewardMode ? todayIso : (selectedItem?.endDate || ''))}" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; box-sizing:border-box;">
+                </div>
+              </div>
+
+              <!-- Start UTC (Col K) & End UTC (Col N) -->
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(135px, 1fr)); gap:10px;">
+                <div>
+                  <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px; text-transform:uppercase;">Start UTC (Col K)</label>
+                  <input type="time" id="schSearchUtc" value="${escapeHTML(isAddRewardMode ? '00:00' : (selectedItem?.startUtc || '00:00'))}" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; box-sizing:border-box;">
+                </div>
+                <div>
+                  <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px; text-transform:uppercase;">End UTC (Col N)</label>
+                  <input type="time" id="schSearchEndUtc" value="${escapeHTML(isAddRewardMode ? '00:00' : (selectedItem?.endUtc || '00:00'))}" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; box-sizing:border-box;">
+                </div>
+              </div>
+
+              <!-- Save & Delete Controls -->
+              <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:4px;">
+                <button id="schSaveSearchItemBtn" type="button" style="flex:1; padding:10px 14px; border-radius:8px; border:none; background:linear-gradient(135deg, #10b981, #059669); color:#fff; font-weight:bold; font-size:13px; cursor:pointer; box-shadow:0 4px 12px rgba(16,185,129,0.3);">
+                  ${isAddRewardMode ? '➕ Create Event &amp; Sync Live' : '💾 Save Dates &amp; Sync Live'}
+                </button>
+                ${(!isAddRewardMode && selectedItem) ? `
+                  <button id="schDeleteRewardItemBtn" type="button" style="padding:10px 14px; border-radius:8px; border:1px solid rgba(239,68,68,0.4); background:rgba(239,68,68,0.15); color:#ef4444; font-weight:bold; font-size:13px; cursor:pointer;">
+                    🗑️ Delete
+                  </button>
+                ` : ''}
+              </div>
+
+              ${pendingDeleteConfirm && selectedItem ? `
+                <div id="schDeleteConfirmBar" style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.4); border-radius:8px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+                  <span style="font-size:12px; font-weight:bold; color:#ef4444;">⚠️ Delete "${escapeHTML(selectedItem.title)}" (Row #${selectedItem.row})?</span>
+                  <div style="display:flex; gap:6px;">
+                    <button id="schConfirmDeleteYesBtn" type="button" style="background:#ef4444; color:#fff; border:none; padding:5px 12px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">Yes, Delete</button>
+                    <button id="schConfirmDeleteNoBtn" type="button" style="background:var(--card-bg); color:var(--text-muted); border:1px solid var(--border); padding:5px 10px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">Cancel</button>
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        ` : activeModalTab === 'timed' ? `
           <!-- Preloaded Event Select & Presets Bar -->
           <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:12px; display:flex; flex-direction:column; gap:10px;">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
@@ -45172,7 +45732,7 @@ window.openScheduleEditorModal = async () => {
             </div>
             <div style="width:85px;">
               <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">Date (M/D)</label>
-              <input type="text" id="schNewDate" placeholder="8/7" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; text-align:center; box-sizing:border-box;">
+              <input type="text" id="schNewDate" placeholder="10/21" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; text-align:center; box-sizing:border-box;">
             </div>
             <div style="width:90px;">
               <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">Start UTC</label>
@@ -45235,91 +45795,23 @@ window.openScheduleEditorModal = async () => {
               </tbody>
             </table>
           </div>
-        ` : activeModalTab === 'search' ? `
-          <!-- Search & Quick Date Update Tab (Replica of Google Sheets Rewards Editor) -->
-          <div style="display:flex; flex-direction:column; gap:14px;">
-            <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:12px;">
-              <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase;">🔍 Search Event or Reward</label>
-              <input type="text" id="schSearchQuery" placeholder="Type event name (e.g. Bear Trap, Crazy Joe, Foundry, SvS)..." style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:14px; box-sizing:border-box;">
-            </div>
-
-            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">
-              <!-- Items List -->
-              <div id="schSearchList" style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:10px; max-height:300px; overflow-y:auto; display:flex; flex-direction:column; gap:6px;">
-                ${allPresets.map(p => `
-                  <div class="sch-search-item" data-preset='${JSON.stringify(p)}' style="padding:10px; border-radius:6px; background:var(--card-bg); border:1px solid var(--border); cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-weight:bold; font-size:13px; color:var(--text-main);">${p.emoji || '✨'} ${escapeHTML(p.name)}</span>
-                    <span style="font-size:11px; font-weight:bold; color:var(--text-muted);">${p.utc}${p.endUtc ? '-' + p.endUtc : ''} UTC</span>
-                  </div>
-                `).join('')}
-              </div>
-
-              <!-- Selected Item Quick Date Editor -->
-              <div id="schSearchEditor" style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:16px; display:flex; flex-direction:column; gap:12px;">
-                <div id="schSelectedItemTitle" style="font-weight:bold; font-size:15px; color:var(--accent);">Select an event from list left</div>
-                <div style="display:flex; gap:10px;">
-                  <div style="flex:1;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                      <label style="font-size:11px; font-weight:bold; color:var(--text-muted);">Date (M/D)</label>
-                      <button id="schSetTodayBtn" type="button" style="font-size:10px; font-weight:bold; color:var(--accent); cursor:pointer; text-transform:uppercase; background:rgba(14,165,233,0.15); border:1px solid rgba(14,165,233,0.3); padding:2px 6px; border-radius:4px;">Today</button>
-                    </div>
-                    <input type="text" id="schSearchDate" placeholder="8/7" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; text-align:center; box-sizing:border-box;">
-                  </div>
-                  <div style="width:90px;">
-                    <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">Start UTC</label>
-                    <input type="text" id="schSearchUtc" placeholder="16:00" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; text-align:center; box-sizing:border-box;">
-                  </div>
-                  <div style="width:90px;">
-                    <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">End UTC</label>
-                    <input type="text" id="schSearchEndUtc" placeholder="16:30" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; text-align:center; box-sizing:border-box;">
-                  </div>
-                </div>
-                <button id="schSaveSearchItemBtn" style="width:100%; padding:10px; border-radius:8px; border:none; background:linear-gradient(135deg, #10b981, #059669); color:#fff; font-weight:bold; font-size:13px; cursor:pointer; box-shadow:0 4px 12px rgba(16,185,129,0.3);">💾 Update Event Date</button>
-              </div>
-            </div>
-          </div>
         ` : `
-          <!-- Category Lists Tab with Quick Add Preloaded Badges -->
-          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:16px;">
+          <!-- Category Lists Tab -->
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:14px;">
             <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:14px;">
               <div style="font-weight:bold; font-size:13px; color:#10b981; margin-bottom:6px;">🟢 Sign-Ups Requiring Events</div>
-              <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
-                <button class="sch-cat-quick" data-target="schCatSignups" data-val="Sunfire Castle R5 Registration" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(16,185,129,0.4); background:rgba(16,185,129,0.12); color:#10b981; font-size:11px; font-weight:bold; cursor:pointer;">+ Castle R5</button>
-                <button class="sch-cat-quick" data-target="schCatSignups" data-val="SvS Troop Training Registration" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(16,185,129,0.4); background:rgba(16,185,129,0.12); color:#10b981; font-size:11px; font-weight:bold; cursor:pointer;">+ SvS Training</button>
-                <button class="sch-cat-quick" data-target="schCatSignups" data-val="Foundry Team Signups" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(16,185,129,0.4); background:rgba(16,185,129,0.12); color:#10b981; font-size:11px; font-weight:bold; cursor:pointer;">+ Foundry Team</button>
-              </div>
               <textarea id="schCatSignups" rows="5" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-family:monospace; font-size:12px; box-sizing:border-box;">${currentSignups.join('\n')}</textarea>
             </div>
-
             <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:14px;">
-              <div style="font-weight:bold; font-size:13px; color:#eab308; margin-bottom:6px;">🟡 Rewards & Payout Track</div>
-              <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
-                <button class="sch-cat-quick" data-target="schCatRewards" data-val="Foundry Battle Payouts" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(234,179,8,0.4); background:rgba(234,179,8,0.12); color:#eab308; font-size:11px; font-weight:bold; cursor:pointer;">+ Foundry Payouts</button>
-                <button class="sch-cat-quick" data-target="schCatRewards" data-val="Alliance Mobilization Rewards" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(234,179,8,0.4); background:rgba(234,179,8,0.12); color:#eab308; font-size:11px; font-weight:bold; cursor:pointer;">+ Alliance Mobilization</button>
-                <button class="sch-cat-quick" data-target="schCatRewards" data-val="Canyon Clash Victory Chests" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(234,179,8,0.4); background:rgba(234,179,8,0.12); color:#eab308; font-size:11px; font-weight:bold; cursor:pointer;">+ Canyon Clash</button>
-                <button class="sch-cat-quick" data-target="schCatRewards" data-val="SvS Victory Rewards" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(234,179,8,0.4); background:rgba(234,179,8,0.12); color:#eab308; font-size:11px; font-weight:bold; cursor:pointer;">+ SvS Victory</button>
-              </div>
+              <div style="font-weight:bold; font-size:13px; color:#eab308; margin-bottom:6px;">🟡 Rewards &amp; Payout Track</div>
               <textarea id="schCatRewards" rows="5" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-family:monospace; font-size:12px; box-sizing:border-box;">${currentRewards.join('\n')}</textarea>
             </div>
-
             <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:14px;">
               <div style="font-weight:bold; font-size:13px; color:#a855f7; margin-bottom:6px;">🟣 All-Week Daily Routines</div>
-              <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
-                <button class="sch-cat-quick" data-target="schCatAllWeek" data-val="Daily Intel Missions" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(168,85,247,0.4); background:rgba(168,85,247,0.12); color:#a855f7; font-size:11px; font-weight:bold; cursor:pointer;">+ Daily Intel</button>
-                <button class="sch-cat-quick" data-target="schCatAllWeek" data-val="Alliance Tech Donations" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(168,85,247,0.4); background:rgba(168,85,247,0.12); color:#a855f7; font-size:11px; font-weight:bold; cursor:pointer;">+ Tech Donations</button>
-                <button class="sch-cat-quick" data-target="schCatAllWeek" data-val="Bear Trap Rallies" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(168,85,247,0.4); background:rgba(168,85,247,0.12); color:#a855f7; font-size:11px; font-weight:bold; cursor:pointer;">+ Bear Trap</button>
-                <button class="sch-cat-quick" data-target="schCatAllWeek" data-val="Auto Gift Codes Enrolled" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(168,85,247,0.4); background:rgba(168,85,247,0.12); color:#a855f7; font-size:11px; font-weight:bold; cursor:pointer;">+ Gift Codes</button>
-              </div>
               <textarea id="schCatAllWeek" rows="5" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-family:monospace; font-size:12px; box-sizing:border-box;">${currentAllWeek.join('\n')}</textarea>
             </div>
-
             <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:14px;">
-              <div style="font-weight:bold; font-size:13px; color:#f97316; margin-bottom:6px;">🟠 Holidays & Announcements</div>
-              <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
-                <button class="sch-cat-quick" data-target="schCatHolidays" data-val="State Warmup Week" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(249,115,22,0.4); background:rgba(249,115,22,0.12); color:#f97316; font-size:11px; font-weight:bold; cursor:pointer;">+ State Warmup</button>
-                <button class="sch-cat-quick" data-target="schCatHolidays" data-val="Frostfire Prep Phase" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(249,115,22,0.4); background:rgba(249,115,22,0.12); color:#f97316; font-size:11px; font-weight:bold; cursor:pointer;">+ Frostfire Prep</button>
-                <button class="sch-cat-quick" data-target="schCatHolidays" data-val="Alliance Championship Week" style="padding:3px 8px; border-radius:12px; border:1px solid rgba(249,115,22,0.4); background:rgba(249,115,22,0.12); color:#f97316; font-size:11px; font-weight:bold; cursor:pointer;">+ Championship</button>
-              </div>
+              <div style="font-weight:bold; font-size:13px; color:#f97316; margin-bottom:6px;">🟠 Holidays &amp; Announcements</div>
               <textarea id="schCatHolidays" rows="5" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-family:monospace; font-size:12px; box-sizing:border-box;">${currentHolidays.join('\n')}</textarea>
             </div>
           </div>
@@ -45327,14 +45819,15 @@ window.openScheduleEditorModal = async () => {
       </div>
 
       <!-- Modal Footer Controls -->
-      <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border); padding-top:14px; flex-wrap:wrap; gap:10px;">
-        <div style="display:flex; gap:8px; flex-wrap:wrap;">
-          <button id="schAutoFillBtn" style="background:rgba(14,165,233,0.15); border:1px solid rgba(14,165,233,0.4); color:var(--accent); padding:8px 14px; border-radius:8px; cursor:pointer; font-size:12px; font-weight:bold;" title="Instantly fill standard schedule templates">⚡ Instant Auto-Fill Schedule</button>
-          <button id="schImportSheetBtn" style="background:var(--bg-main); border:1px solid var(--border); color:var(--text-main); padding:8px 14px; border-radius:8px; cursor:pointer; font-size:12px; font-weight:bold;">📥 Import from Google Sheets</button>
+      <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border); padding-top:12px; flex-wrap:wrap; gap:10px;">
+        <div style="font-size:11px; color:var(--text-muted);">
+          💡 Changes in <strong>Rewards &amp; Events Editor</strong> automatically recalculate the 8-day Daily Rewards &amp; Timed Events schedule.
         </div>
         <div style="display:flex; gap:10px;">
-          <button id="schCancelBtn" style="background:var(--bg-main); border:1px solid var(--border); color:var(--text-muted); padding:8px 16px; border-radius:8px; cursor:pointer; font-size:13px; font-weight:bold;">Cancel</button>
-          <button id="schSaveBtn" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:8px 22px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13px; box-shadow:0 4px 12px rgba(16,185,129,0.3);">💾 Save Live Schedule</button>
+          <button id="schCancelBtn" style="background:var(--bg-main); border:1px solid var(--border); color:var(--text-muted); padding:8px 16px; border-radius:8px; cursor:pointer; font-size:13px; font-weight:bold;">Close</button>
+          ${activeModalTab !== 'search' ? `
+            <button id="schSaveBtn" style="background:linear-gradient(135deg, #10b981, #059669); color:#fff; border:none; padding:8px 20px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13px; box-shadow:0 4px 12px rgba(16,185,129,0.3);">💾 Save Custom Lists</button>
+          ` : ''}
         </div>
       </div>
     `;
@@ -45347,82 +45840,267 @@ window.openScheduleEditorModal = async () => {
     modal.querySelector('#schTabBtnSearch')?.addEventListener('click', () => { activeModalTab = 'search'; renderModalContent(); });
     modal.querySelector('#schTabBtnCats')?.addEventListener('click', () => { activeModalTab = 'cats'; renderModalContent(); });
 
-    let selectedSearchItem = null;
+    // Search Input (preserves focus & cursor position)
+    const searchInputEl = modal.querySelector('#schSearchQuery');
+    if (searchInputEl) {
+      searchInputEl.addEventListener('input', (e) => {
+        currentSearchQuery = e.target.value || '';
+        const pos = e.target.selectionStart;
+        renderModalContent();
+        const newInput = modal.querySelector('#schSearchQuery');
+        if (newInput) {
+          newInput.focus();
+          try { newInput.setSelectionRange(pos, pos); } catch (err) {}
+        }
+      });
+    }
 
-    modal.querySelector('#schSearchQuery')?.addEventListener('input', (e) => {
-      const q = String(e.target.value || '').trim().toLowerCase();
-      modal.querySelectorAll('.sch-search-item').forEach(el => {
-        const txt = el.textContent.toLowerCase();
-        if (!q || txt.includes(q)) el.style.display = 'flex';
-        else el.style.display = 'none';
+    // Section & Status Filter Pills
+    modal.querySelectorAll('.sch-sec-pill').forEach(btn => {
+      btn.addEventListener('click', () => {
+        activeSectionFilter = btn.getAttribute('data-sec') || 'all';
+        isAddRewardMode = false;
+        pendingDeleteConfirm = false;
+        renderModalContent();
       });
     });
 
+    modal.querySelectorAll('.sch-status-pill').forEach(btn => {
+      btn.addEventListener('click', () => {
+        activeStatusFilter = btn.getAttribute('data-status') || 'all';
+        isAddRewardMode = false;
+        pendingDeleteConfirm = false;
+        renderModalContent();
+      });
+    });
+
+    // Select Item from List
     modal.querySelectorAll('.sch-search-item').forEach(el => {
       el.addEventListener('click', () => {
-        try {
-          const item = JSON.parse(el.getAttribute('data-preset'));
-          selectedSearchItem = item;
-          const titleEl = modal.querySelector('#schSelectedItemTitle');
-          const dateEl = modal.querySelector('#schSearchDate');
-          const utcEl = modal.querySelector('#schSearchUtc');
-          const endUtcEl = modal.querySelector('#schSearchEndUtc');
-          if (titleEl) titleEl.textContent = `${item.emoji || '✨'} ${item.name}`;
-          const now = new Date();
-          if (dateEl && !dateEl.value) dateEl.value = `${now.getMonth() + 1}/${now.getDate()}`;
-          if (utcEl) utcEl.value = item.utc || '16:00';
-          if (endUtcEl) endUtcEl.value = item.endUtc || '';
-        } catch(err) { console.error(err); }
+        const r = parseInt(el.getAttribute('data-row'), 10);
+        if (!isNaN(r)) {
+          selectedRewardRow = r;
+          isAddRewardMode = false;
+          pendingDeleteConfirm = false;
+          renderModalContent();
+        }
       });
     });
 
-    modal.querySelector('#schSetTodayBtn')?.addEventListener('click', () => {
-      const dateEl = modal.querySelector('#schSearchDate');
-      const now = new Date();
-      if (dateEl) dateEl.value = `${now.getMonth() + 1}/${now.getDate()}`;
+    // Open Add New Mode
+    modal.querySelector('#schOpenAddRewardBtn')?.addEventListener('click', () => {
+      isAddRewardMode = true;
+      pendingDeleteConfirm = false;
+      renderModalContent();
+      modal.querySelector('#schEditorTitleInput')?.focus();
     });
 
-    modal.querySelector('#schSaveSearchItemBtn')?.addEventListener('click', () => {
-      if (!selectedSearchItem) {
-        if (window.showToast) window.showToast("Please click an event from the list on the left", "error");
-        return;
-      }
-      const dateEl = modal.querySelector('#schSearchDate');
-      const utcEl = modal.querySelector('#schSearchUtc');
-      const endUtcEl = modal.querySelector('#schSearchEndUtc');
-
-      const dateStr = String(dateEl?.value || '').trim();
-      const utcStr = String(utcEl?.value || '').trim() || selectedSearchItem.utc || '16:00';
-      const endUtcStr = String(endUtcEl?.value || '').trim() || selectedSearchItem.endUtc || '';
-
-      if (!dateStr) {
-        if (window.showToast) window.showToast("Please enter or set a date", "error");
-        return;
-      }
-
-      // Check if event already exists in currentEvents, update or push
-      const existingIdx = currentEvents.findIndex(ev => ev.eventName.toLowerCase() === selectedSearchItem.name.toLowerCase());
-      if (existingIdx >= 0) {
-        currentEvents[existingIdx].dateStr = dateStr;
-        currentEvents[existingIdx].utcStr = utcStr;
-        currentEvents[existingIdx].endUtcStr = endUtcStr;
-      } else {
-        currentEvents.push({
-          id: 'ev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-          eventName: selectedSearchItem.name,
-          dateStr: dateStr,
-          utcStr: utcStr,
-          endUtcStr: endUtcStr,
-          pdtVal: '',
-          emoji: selectedSearchItem.emoji || '✨'
-        });
-      }
-
-      if (window.showToast) window.showToast(`Updated '${selectedSearchItem.name}' for ${dateStr}!`, "success");
-      activeModalTab = 'timed';
+    modal.querySelector('#schCancelAddModeBtn')?.addEventListener('click', () => {
+      isAddRewardMode = false;
+      pendingDeleteConfirm = false;
       renderModalContent();
     });
 
+    modal.querySelector('#schEditorSectionSelect')?.addEventListener('change', (e) => {
+      const sec = e.target.value;
+      const utcEl = modal.querySelector('#schSearchUtc');
+      const endUtcEl = modal.querySelector('#schSearchEndUtc');
+      if (utcEl) utcEl.value = sec === 'timed' ? '16:00' : '00:00';
+      if (endUtcEl) endUtcEl.value = sec === 'timed' ? '16:30' : '00:00';
+    });
+
+    // Sync from Google Sheet button
+    modal.querySelector('#schRefreshSheetCatalogBtn')?.addEventListener('click', async () => {
+      const btn = modal.querySelector('#schRefreshSheetCatalogBtn');
+      if (btn) { btn.disabled = true; btn.textContent = '⏳ Syncing...'; }
+      catalogItems = await window.fetchRewardsEditorCatalog(true);
+      if (catalogItems.length > 0 && selectedRewardRow === -1) {
+        selectedRewardRow = catalogItems[0].row;
+      }
+      if (window.showToast) window.showToast(`Synced ${catalogItems.length} events & rewards from Google Sheet!`, 'success');
+      renderModalContent();
+    });
+
+    // Quick Date Shortcut Buttons
+    modal.querySelector('#schSetStartTodayBtn')?.addEventListener('click', () => {
+      const sEl = modal.querySelector('#schSearchStartDate');
+      if (sEl) sEl.value = window.getLocalTodayIsoStr();
+    });
+
+    modal.querySelector('#schSetEndTodayBtn')?.addEventListener('click', () => {
+      const eEl = modal.querySelector('#schSearchEndDate');
+      if (eEl) eEl.value = window.getLocalTodayIsoStr();
+    });
+
+    const shiftEndFromStart = (addDays) => {
+      const sEl = modal.querySelector('#schSearchStartDate');
+      const eEl = modal.querySelector('#schSearchEndDate');
+      const baseStr = (sEl && sEl.value) ? sEl.value : window.getLocalTodayIsoStr();
+      if (sEl && !sEl.value) sEl.value = baseStr;
+      const [y, m, d] = baseStr.split('-').map(Number);
+      const dt = new Date(Date.UTC(y, m - 1, d + addDays));
+      if (eEl) {
+        eEl.value = `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`;
+      }
+    };
+
+    modal.querySelector('#schAdd1DayBtn')?.addEventListener('click', () => shiftEndFromStart(1));
+    modal.querySelector('#schAdd2DaysBtn')?.addEventListener('click', () => shiftEndFromStart(2));
+    modal.querySelector('#schAdd6DaysBtn')?.addEventListener('click', () => shiftEndFromStart(6));
+
+    modal.querySelector('#schClearDatesBtn')?.addEventListener('click', () => {
+      const sEl = modal.querySelector('#schSearchStartDate');
+      const eEl = modal.querySelector('#schSearchEndDate');
+      if (sEl) sEl.value = '';
+      if (eEl) eEl.value = '';
+    });
+
+    // Save or Create Event/Reward in Catalog
+    modal.querySelector('#schSaveSearchItemBtn')?.addEventListener('click', async () => {
+      const titleEl = modal.querySelector('#schEditorTitleInput');
+      const startEl = modal.querySelector('#schSearchStartDate');
+      const endEl = modal.querySelector('#schSearchEndDate');
+      const utcEl = modal.querySelector('#schSearchUtc');
+      const endUtcEl = modal.querySelector('#schSearchEndUtc');
+      const secEl = modal.querySelector('#schEditorSectionSelect');
+      const saveBtn = modal.querySelector('#schSaveSearchItemBtn');
+
+      const title = String(titleEl?.value || '').trim();
+      const startDate = String(startEl?.value || '').trim();
+      const endDate = String(endEl?.value || '').trim() || startDate;
+      const startUtc = String(utcEl?.value || '00:00').trim();
+      const endUtc = String(endUtcEl?.value || '00:00').trim();
+
+      if (!title) {
+        if (window.showToast) window.showToast("Please enter an Event or Reward name", "error");
+        return;
+      }
+
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = '⏳ Saving & Syncing...';
+      }
+
+      if (isAddRewardMode) {
+        const section = String(secEl?.value || 'rewards').trim();
+        const sectionLabels = {
+          rewards: 'Rewards Events',
+          timed: 'Timed Events',
+          signups: 'Signups',
+          holidays: 'Holidays',
+          newyear: 'New Year Prelude'
+        };
+        const maxRow = catalogItems.reduce((mx, it) => Math.max(mx, Number(it.row) || 0), 78);
+        const newRow = maxRow + 1;
+        const newItem = {
+          id: `rew_row_${newRow}`,
+          row: newRow,
+          section,
+          sectionLabel: sectionLabels[section] || 'Rewards Events',
+          title,
+          startDate,
+          endDate,
+          startUtc,
+          endUtc,
+          startPdt: window.utcTimeToPdtStr(startUtc),
+          endPdt: window.utcTimeToPdtStr(endUtc)
+        };
+        catalogItems.push(newItem);
+        const res = await window.syncRewardsCatalogChangeEverywhere(
+          catalogItems,
+          { action: 'add', section, title, startDate, endDate, startUtc, endUtc },
+          liveData
+        );
+        catalogItems = res.catalog;
+        liveData = res.scheduleLive;
+        currentEvents.length = 0; currentEvents.push(...(liveData.events || []));
+        currentRewards.length = 0; currentRewards.push(...(liveData.rewards || []));
+        currentSignups.length = 0; currentSignups.push(...(liveData.signups || []));
+        currentHolidays.length = 0; currentHolidays.push(...(liveData.holidays || []));
+        isAddRewardMode = false;
+        selectedRewardRow = newRow;
+        if (window.showToast) window.showToast(`➕ Added "${title}" & updated live schedule!`, "success");
+      } else {
+        const idx = catalogItems.findIndex(i => i.row === selectedRewardRow);
+        if (idx === -1) {
+          if (window.showToast) window.showToast("Please select an item from the list first", "error");
+          if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '💾 Save Dates & Sync Live'; }
+          return;
+        }
+        catalogItems[idx] = {
+          ...catalogItems[idx],
+          title,
+          startDate,
+          endDate,
+          startUtc,
+          endUtc,
+          startPdt: window.utcTimeToPdtStr(startUtc),
+          endPdt: window.utcTimeToPdtStr(endUtc)
+        };
+        const res = await window.syncRewardsCatalogChangeEverywhere(
+          catalogItems,
+          { action: 'save', row: selectedRewardRow, title, startDate, endDate, startUtc, endUtc },
+          liveData
+        );
+        catalogItems = res.catalog;
+        liveData = res.scheduleLive;
+        currentEvents.length = 0; currentEvents.push(...(liveData.events || []));
+        currentRewards.length = 0; currentRewards.push(...(liveData.rewards || []));
+        currentSignups.length = 0; currentSignups.push(...(liveData.signups || []));
+        currentHolidays.length = 0; currentHolidays.push(...(liveData.holidays || []));
+        if (window.showToast) window.showToast(`💾 Updated "${title}" & synced live schedule!`, "success");
+      }
+
+      renderModalContent();
+      if (typeof views !== 'undefined' && views.schedule && document.getElementById('schedule-content')) {
+        views.schedule();
+      }
+    });
+
+    // Delete Item Flow
+    modal.querySelector('#schDeleteRewardItemBtn')?.addEventListener('click', () => {
+      pendingDeleteConfirm = true;
+      renderModalContent();
+    });
+
+    modal.querySelector('#schConfirmDeleteNoBtn')?.addEventListener('click', () => {
+      pendingDeleteConfirm = false;
+      renderModalContent();
+    });
+
+    modal.querySelector('#schConfirmDeleteYesBtn')?.addEventListener('click', async () => {
+      const targetItem = catalogItems.find(i => i.row === selectedRewardRow);
+      if (!targetItem) return;
+      const yesBtn = modal.querySelector('#schConfirmDeleteYesBtn');
+      if (yesBtn) { yesBtn.disabled = true; yesBtn.textContent = 'Deleting...'; }
+
+      const delRow = targetItem.row;
+      const delTitle = targetItem.title;
+      catalogItems = catalogItems.filter(i => i.row !== delRow);
+      pendingDeleteConfirm = false;
+
+      const res = await window.syncRewardsCatalogChangeEverywhere(
+        catalogItems,
+        { action: 'delete', row: delRow, title: delTitle },
+        liveData
+      );
+      catalogItems = res.catalog;
+      liveData = res.scheduleLive;
+      currentEvents.length = 0; currentEvents.push(...(liveData.events || []));
+      currentRewards.length = 0; currentRewards.push(...(liveData.rewards || []));
+      currentSignups.length = 0; currentSignups.push(...(liveData.signups || []));
+      currentHolidays.length = 0; currentHolidays.push(...(liveData.holidays || []));
+
+      const remaining = getFilteredCatalogItems();
+      selectedRewardRow = remaining.length > 0 ? remaining[0].row : -1;
+      if (window.showToast) window.showToast(`🗑️ Deleted "${delTitle}" & updated live schedule!`, "info");
+      renderModalContent();
+      if (typeof views !== 'undefined' && views.schedule && document.getElementById('schedule-content')) {
+        views.schedule();
+      }
+    });
+
+    // Custom Timed Events Tab Listeners
     modal.querySelector('#schPreloadedSelect')?.addEventListener('change', (e) => {
       const valStr = e.target.value;
       if (!valStr) return;
@@ -45440,19 +46118,6 @@ window.openScheduleEditorModal = async () => {
       } catch(err) { console.error(err); }
     });
 
-    modal.querySelectorAll('.sch-cat-quick').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const targetId = btn.getAttribute('data-target');
-        const val = btn.getAttribute('data-val');
-        const txtEl = modal.querySelector('#' + targetId);
-        if (txtEl && val) {
-          const currentTxt = txtEl.value.trim();
-          txtEl.value = currentTxt ? `${currentTxt}\n${val}` : val;
-          if (window.showToast) window.showToast(`Added '${val}'!`, 'info');
-        }
-      });
-    });
-
     modal.querySelectorAll('.sch-preset-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const name = btn.getAttribute('data-name');
@@ -45467,7 +46132,7 @@ window.openScheduleEditorModal = async () => {
           dateStr: `${m}/${d}`,
           utcStr: utc,
           endUtcStr: endUtc,
-          pdtVal: '',
+          pdtVal: window.utcTimeToPdtStr(utc),
           emoji: emoji
         });
         renderModalContent();
@@ -45483,7 +46148,7 @@ window.openScheduleEditorModal = async () => {
 
       const name = String(nameEl?.value || '').trim();
       const dateStr = String(dateEl?.value || '').trim();
-      const utcStr = String(utcEl?.value || '').trim();
+      const utcStr = String(utcEl?.value || '').trim() || '16:00';
       const endUtcStr = String(endUtcEl?.value || '').trim();
       const emoji = emojiEl?.value || '✨';
 
@@ -45496,9 +46161,9 @@ window.openScheduleEditorModal = async () => {
         id: 'ev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
         eventName: name,
         dateStr: dateStr || `${new Date().getMonth() + 1}/${new Date().getDate()}`,
-        utcStr: utcStr || '16:00',
+        utcStr: utcStr,
         endUtcStr: endUtcStr,
-        pdtVal: '',
+        pdtVal: window.utcTimeToPdtStr(utcStr),
         emoji: emoji
       });
 
@@ -45525,18 +46190,12 @@ window.openScheduleEditorModal = async () => {
       const updatedCustom = [...customPresets, newPreset];
 
       try {
-        const db = window.firebaseDb;
-        const { ref, set } = window.firebaseDatabase || {};
-        if (db && ref && set) {
-          await set(ref(db, 'schedule_presets'), updatedCustom);
-          customPresets.push(newPreset);
-          allPresets.push(newPreset);
-          window.logAdminAction("Schedule Preset Added", `Saved '${name}' (${utc} UTC) to preloaded schedule presets catalog.`);
-          if (window.showToast) window.showToast(`⭐ Saved '${name}' to preloaded presets!`, "success");
-          renderModalContent();
-        }
+        await set(ref(db, 'schedule_presets'), updatedCustom);
+        customPresets.push(newPreset);
+        allPresets.push(newPreset);
+        if (window.showToast) window.showToast(`⭐ Saved '${name}' to preloaded presets!`, "success");
+        renderModalContent();
       } catch(err) {
-        console.error("Failed to save schedule preset:", err);
         if (window.showToast) window.showToast("Failed to save preset to Firebase", "error");
       }
     });
@@ -45573,116 +46232,24 @@ window.openScheduleEditorModal = async () => {
       if (holidaysTa) finalHolidays = holidaysTa.value.split('\n').map(s => s.trim()).filter(Boolean);
 
       const scheduleObj = {
+        ...liveData,
         events: currentEvents,
         signups: finalSignups,
         rewards: finalRewards,
         allWeek: finalAllWeek,
-        holidays: finalHolidays
+        holidays: finalHolidays,
+        fromRewardsEditor: true
       };
 
+      window._cachedScheduleLive = scheduleObj;
       const ok = await window.saveScheduleToFirebase(scheduleObj);
       if (ok) {
         closeModal();
         if (window.activeViewFunc) window.activeViewFunc();
         else if (views.schedule) views.schedule();
       } else {
-        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '💾 Save Live Schedule'; }
+        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '💾 Save Custom Lists'; }
       }
-    });
-
-    modal.querySelector('#schAutoFillBtn')?.addEventListener('click', () => {
-      const now = new Date();
-      const todayStr = `${now.getMonth() + 1}/${now.getDate()}`;
-      
-      currentEvents.length = 0;
-      currentEvents.push(
-        { id: 'ev_1', eventName: 'Bear Trap', dateStr: todayStr, utcStr: '16:00', endUtcStr: '16:30', emoji: '🪤' },
-        { id: 'ev_2', eventName: 'Crazy Joe', dateStr: todayStr, utcStr: '14:00', endUtcStr: '14:30', emoji: '🔥' },
-        { id: 'ev_3', eventName: 'Sunfire Castle Battle', dateStr: todayStr, utcStr: '12:00', endUtcStr: '20:00', emoji: '🏰' },
-        { id: 'ev_4', eventName: 'Brothers in Arms K.E.', dateStr: todayStr, utcStr: '00:00', endUtcStr: '23:59', emoji: '⚔️' },
-        { id: 'ev_5', eventName: 'Polar Terrors Rally', dateStr: todayStr, utcStr: '16:00', endUtcStr: '16:45', emoji: '🐻‍❄️' }
-      );
-
-      currentSignups.length = 0;
-      currentSignups.push("Sunfire Castle R5 Registration", "SvS Troop Training Registration", "Foundry Team Signups");
-
-      currentRewards.length = 0;
-      currentRewards.push("Foundry Battle Payouts", "Alliance Mobilization Rewards", "Canyon Clash Victory Chests", "SvS Victory Rewards");
-
-      currentAllWeek.length = 0;
-      currentAllWeek.push("Daily Intel Missions", "Alliance Tech Donations", "Bear Trap Rallies", "Auto Gift Codes Enrolled");
-
-      currentHolidays.length = 0;
-      currentHolidays.push("State Warmup Week", "Frostfire Prep Phase", "Alliance Championship Week");
-
-      if (window.showToast) window.showToast("⚡ Auto-filled standard schedule template! Click 'Save Live Schedule' to apply.", "success");
-      renderModalContent();
-    });
-
-    modal.querySelector('#schImportSheetBtn')?.addEventListener('click', async () => {
-      let sheetData = window.liveData ? window.liveData['WhiteOut Survival'] : null;
-      if (!sheetData) {
-        try { sheetData = await fetchSheet('WhiteOut Survival'); } catch(e) {}
-      }
-      if (!sheetData || !Array.isArray(sheetData)) {
-        // Fallback: auto fill default template
-        modal.querySelector('#schAutoFillBtn')?.click();
-        if (window.showToast) window.showToast("Loaded default schedule template. Click Save Live Schedule to push live.", "info");
-        return;
-      }
-
-      currentEvents.length = 0;
-      currentSignups.length = 0;
-      currentRewards.length = 0;
-      currentAllWeek.length = 0;
-      currentHolidays.length = 0;
-
-      for (let i = 1; i < Math.min(34, sheetData.length); i++) {
-        const row = sheetData[i];
-        const eventName = row[5];
-        const dateRaw   = row[6];
-        const utcRaw    = row[7];
-        const pdtVal    = row[8];
-        if (!eventName || String(eventName).trim() === '') continue;
-        if (String(eventName).includes("Event's")) continue;
-        if (String(eventName).trim() === 'Rewards') break;
-
-        const isBearTrap = String(eventName).includes('Bear Trap') || String(eventName).includes('🪤') || String(eventName).includes('🐻');
-        const isJoe = String(eventName).includes('Crazy Joe') || String(eventName).includes('🔥');
-        const isCastle = String(eventName).includes('Castle') || String(eventName).includes('🏰');
-        const isBia = String(eventName).includes('Brothers') || String(eventName).includes('⚔️');
-        let emoji = isBearTrap ? '🪤' : (isJoe ? '🔥' : (isCastle ? '🏰' : (isBia ? '⚔️' : '✨')));
-
-        currentEvents.push({
-          id: 'ev_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-          eventName: String(eventName).trim(),
-          dateStr: String(dateRaw || '').trim(),
-          utcStr: String(utcRaw || '').trim(),
-          pdtVal: String(pdtVal || '').trim(),
-          emoji: emoji
-        });
-      }
-
-      let headerRowIdx = -1;
-      for (let i = 0; i < sheetData.length; i++) {
-        const cell = String(sheetData[i][5] || '').trim().toLowerCase();
-        if (cell === 'rewards') { headerRowIdx = i; break; }
-      }
-      if (headerRowIdx !== -1) {
-        for (let i = headerRowIdx + 1; i < sheetData.length; i++) {
-          const r = sheetData[i][5], g = sheetData[i][6], h = sheetData[i][7], k = sheetData[i][8];
-          const anyVal = [r,g,h,k].some(v => v && String(v).trim() !== '');
-          if (!anyVal) break;
-          const skip = (v) => !v || String(v).trim() === '' || String(v).trim().toLowerCase() === 'no events';
-          if (!skip(r)) currentRewards.push(String(r).trim());
-          if (!skip(g)) currentSignups.push(String(g).trim());
-          if (!skip(h)) currentAllWeek.push(String(h).trim());
-          if (!skip(k)) currentHolidays.push(String(k).trim());
-        }
-      }
-
-      if (window.showToast) window.showToast("Imported schedule from Google Sheets!", "info");
-      renderModalContent();
     });
   };
 

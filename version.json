@@ -1,16 +1,17 @@
 {
-  "version": "3.3.119",
+  "version": "3.3.120",
   "releaseDate": "2026-10-21",
-  "title": "What's New in v3.3.119",
+  "title": "What's New in v3.3.120",
   "notes": [
-    "🛡️ Data Sanitizer: Filtered out raw spreadsheet numbers and personal calculations.",
-    "🎁 Daily Rewards: Displays only genuine daily reward events for today.",
-    "📅 Upcoming Events: Restored full list of upcoming weekly alliance events.",
-    "🔄 Live Sync: Synced clean schedule data directly to Firebase RTDB."
+    "🗓️ Rewards Editor: Full event and reward scheduler synced with Sheets.",
+    "🔍 Smart Filters: Filter by category, status, or live search instantly.",
+    "➕ Add & Delete: Create new events or delete outdated rows easily.",
+    "⚡ Quick Dates: One-tap Today, +1d, +2d, and +6d date shortcuts."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.119",
+    "version": "3.3.120",
     "latestChanges": [
+      "v3.3.120: Built full Rewards & Events Scheduler with Add, Edit Dates, and Delete",
       "v3.3.119: Purged junk spreadsheet calculations and restored clean Schedule events",
       "v3.3.118: Fixed Today Schedule view with ISO date parsing and live sheet sync",
       "v3.3.117: Removed redundant Tag box from Championship Setup and unified opponent input",
