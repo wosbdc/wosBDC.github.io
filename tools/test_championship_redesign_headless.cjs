@@ -78,9 +78,15 @@ function runStaticVerification() {
   assert(code.includes('window.onChampChiefSearchInput ='), 'main.js must define window.onChampChiefSearchInput');
   assert(code.includes('window.autoFillChampScheduleDates ='), 'main.js must define window.autoFillChampScheduleDates');
   assert(code.includes('window.toggleChampRosterTable ='), 'main.js must define window.toggleChampRosterTable');
+  assert(code.includes('window.isChampScheduleDoneCorrectly ='), 'main.js must define window.isChampScheduleDoneCorrectly');
+  assert(code.includes('window.showChampSetupLockedAlert ='), 'main.js must define window.showChampSetupLockedAlert');
 
   // Step 1 setup elements
   assert(code.includes('champ_setup_season_name'), 'main.js must support season name setup input');
+  assert(code.includes('Season Date :'), 'main.js must label season name as Season Date :');
+  assert(code.includes('Fixed Round #'), 'main.js must display locked fixed round # badge');
+  assert(code.includes('champSetupLockedAlertModal'), 'main.js must define #champSetupLockedAlertModal');
+  assert(code.includes('Go Back to Setup Tab!'), 'main.js must display Go Back to Setup Tab! alert heading');
   assert(code.includes('btnSaveChampSeasonSetup'), 'main.js must provide save schedule & unlock signups button');
   assert(code.includes('btnAutoFillChampDates'), 'main.js must provide auto-fill dates button');
   assert(code.includes('champ_setup_r${i}_enemy_tag'), 'main.js must support opponent tag input');
@@ -165,20 +171,20 @@ async function runHeadlessVerification() {
       };
       window.getAdminLevel = () => 'R5';
 
-      // Mock championship matchup state
+      // Mock championship unconfigured state with blank defaults
       window.DEFAULT_CHAMPIONSHIP_MATCHUPS = {
-        seasonName: 'Season 24',
-        statusText: '4 Wins – 1 Defeat',
-        ourSeasonFlags: 125,
-        enemySeasonFlags: 84,
+        seasonName: '',
+        statusText: '0 Wins – 0 Losses (New Season)',
+        ourSeasonFlags: 0,
+        enemySeasonFlags: 0,
         ourState: '2089',
-        seasonState: 'battles',
+        seasonState: 'unconfigured',
         rounds: {
-          r1: { roundNum: 1, date: 'Round 1', ourScore: 0, ourFlags: 25, ourState: '2089', enemyAlliance: { name: '[AAA] Alpha', state: '2040', score: 0, flags: 15 } },
-          r2: { roundNum: 2, date: 'Round 2', ourScore: 0, ourFlags: 28, ourState: '2089', enemyAlliance: { name: '[BBB] Beta', state: '2042', score: 0, flags: 12 } },
-          r3: { roundNum: 3, date: 'Round 3', ourScore: 0, ourFlags: 22, ourState: '2089', enemyAlliance: { name: '[CCC] Gamma', state: '2050', score: 0, flags: 20 } },
-          r4: { roundNum: 4, date: 'Round 4', ourScore: 0, ourFlags: 20, ourState: '2089', enemyAlliance: { name: '[DDD] Delta', state: '2055', score: 0, flags: 24 } },
-          r5: { roundNum: 5, date: 'Round 5', ourScore: 0, ourFlags: 30, ourState: '2089', enemyAlliance: { name: '[EEE] Omega', state: '2060', score: 0, flags: 13 } }
+          r1: { roundNum: 1, date: 'Round 1', ourScore: 0, ourFlags: 0, ourState: '2089', enemyAlliance: { tag: '', name: '', state: '', score: 0, flags: 0 } },
+          r2: { roundNum: 2, date: 'Round 2', ourScore: 0, ourFlags: 0, ourState: '2089', enemyAlliance: { tag: '', name: '', state: '', score: 0, flags: 0 } },
+          r3: { roundNum: 3, date: 'Round 3', ourScore: 0, ourFlags: 0, ourState: '2089', enemyAlliance: { tag: '', name: '', state: '', score: 0, flags: 0 } },
+          r4: { roundNum: 4, date: 'Round 4', ourScore: 0, ourFlags: 0, ourState: '2089', enemyAlliance: { tag: '', name: '', state: '', score: 0, flags: 0 } },
+          r5: { roundNum: 5, date: 'Round 5', ourScore: 0, ourFlags: 0, ourState: '2089', enemyAlliance: { tag: '', name: '', state: '', score: 0, flags: 0 } }
         }
       };
 
@@ -202,50 +208,90 @@ async function runHeadlessVerification() {
       window.cleanChiefName = n => n;
     });
 
-    // 1. Verify Setup Lock Barrier Gate when Prior Round 5 Battle Data Exists
-    console.log('  🔍 Testing Setup Lock Barrier Gate on unconfigured/prior tournament...');
+    // 1. Verify Step 1 defaults: Season Date is blank, opponent tags/names/states are blank, rounds are locked
+    console.log('  🔍 Testing Blank Opponent Defaults and Locked Round Numbers in Step 1...');
     await page.evaluate(async () => {
-      await views.championshipAdmin('signups');
+      await views.championshipAdmin();
     });
 
-    await page.waitForSelector('#champSignupsLockedCard', { timeout: 5000 });
-    const lockTitle = await page.$eval('#champSignupsLockedCard h2', el => el.textContent);
-    assert(lockTitle.includes('Member Signups are Locked'), 'Signups screen must display locked barrier card');
-    console.log('  ✅ Gated Barrier successfully locked signups when previous battle data detected');
-
-    // Test 1-click navigate to Step 1 from barrier
-    await page.click('#btnLockedGoToSetup');
     await page.waitForSelector('#champ_setup_season_name', { timeout: 5000 });
-    const setupTitleVal = await page.$eval('#champ_setup_season_name', el => el.value);
-    assert(setupTitleVal.includes('Season 24'), 'Season title must be pre-populated in Step 1');
+    const seasonDateVal = await page.$eval('#champ_setup_season_name', el => el.value);
+    assert.strictEqual(seasonDateVal, '', 'Season Date input must be empty by default');
 
-    // 2. Test Step 1: Pre-Tournament Season Setup & Schedule Dates Auto-Fill
+    const day1TagVal = await page.$eval('#champ_setup_r1_enemy_tag', el => el.value);
+    const day1NameVal = await page.$eval('#champ_setup_r1_enemy_name', el => el.value);
+    const day1StateVal = await page.$eval('#champ_setup_r1_enemy_state', el => el.value);
+    assert.strictEqual(day1TagVal, '', 'Day 1 enemy tag input must be blank by default');
+    assert.strictEqual(day1NameVal, '', 'Day 1 enemy name input must be blank by default');
+    assert.strictEqual(day1StateVal, '', 'Day 1 enemy state input must be blank by default');
+
+    const fixedRoundText = await page.evaluate(() => {
+      return document.querySelector('#app')?.textContent.includes('Fixed Round #');
+    });
+    assert(fixedRoundText, 'Locked fixed round badge must be visible in Step 1');
+    console.log('  ✅ Blank defaults (Season Date, opponent tags/names/states) and locked round badges verified');
+
+    // 2. Verify Strict Tab Lockdown: Other pages must NOT even show when schedule is unconfigured
+    console.log('  🔍 Testing Strict Tab Lockdown: Step 2 & Step 3 must NOT be rendered when schedule incomplete...');
+    const signupsLockedBtnText = await page.$eval('#tabBtnSignups', el => el.textContent.trim());
+    const matchupsLockedBtnText = await page.$eval('#tabBtnMatchups', el => el.textContent.trim());
+    assert(signupsLockedBtnText.includes('🔒 Signups (Locked)'), 'Signups tab button must be locked with lock icon');
+    assert(matchupsLockedBtnText.includes('🔒 Season Edit (Locked)'), 'Season Edit tab button must be locked with lock icon');
+
+    // Confirm that neither signups roster nor matchups editor is rendered in the DOM
+    const rosterTableInDOM = await page.evaluate(() => Boolean(document.getElementById('champTableBody')));
+    const matchupsSaveBtnInDOM = await page.evaluate(() => Boolean(document.getElementById('adm_champ_save_btn')));
+    assert(!rosterTableInDOM, 'Signups roster table must NOT be rendered in DOM when schedule is incomplete');
+    assert(!matchupsSaveBtnInDOM, 'Matchups editor must NOT be rendered in DOM when schedule is incomplete');
+    console.log('  ✅ Other pages are completely withheld from rendering (strict page lockdown verified)');
+
+    // 3. Test Clicking Locked Tab pops up "Go Back to Setup Tab!" alert modal
+    console.log('  🔍 Testing Alert Modal on locked tab click...');
+    await page.click('#tabBtnSignups');
+    await page.waitForSelector('#champSetupLockedAlertModal', { timeout: 3000 });
+
+    const alertHeader = await page.$eval('#champSetupLockedAlertModal h3', el => el.textContent.trim());
+    assert.strictEqual(alertHeader, 'Go Back to Setup Tab!', 'Alert modal header must say "Go Back to Setup Tab!"');
+
+    // Click "Go Back to Setup Tab" button inside the alert modal
+    await page.evaluate(() => {
+      const modalBtn = document.querySelector('#champSetupLockedAlertModal button');
+      if (modalBtn) modalBtn.click();
+    });
+    await new Promise(r => setTimeout(r, 200));
+
+    const alertModalClosed = await page.evaluate(() => !document.getElementById('champSetupLockedAlertModal'));
+    assert(alertModalClosed, 'Alert modal must close cleanly when button clicked');
+    console.log('  ✅ "Go Back to Setup Tab!" alert modal verified on locked tab navigation');
+
+    // 4. Test Step 1: Schedule Dates Auto-Fill from Google Calendar / Schedule
     console.log('  🔍 Testing Step 1: Schedule Dates Tip & Auto-Fill from Schedule...');
-    const day1TagExists = await page.$('#champ_setup_r1_enemy_tag');
-    const day5TagExists = await page.$('#champ_setup_r5_enemy_tag');
-    assert(day1TagExists, 'Day 1 enemy tag input must render');
-    assert(day5TagExists, 'Day 5 enemy tag input must render');
-
-    // Clear and auto-fill dates
-    await page.$eval('#champ_setup_r1_date', el => el.value = '');
     await page.click('#btnAutoFillChampDates');
     await new Promise(r => setTimeout(r, 200));
 
-    const day1DateVal = await page.$eval('#champ_setup_r1_date', el => el.value);
-    const day5DateVal = await page.$eval('#champ_setup_r5_date', el => el.value);
-    assert(day1DateVal && day1DateVal.includes('Mon'), 'Day 1 date must be auto-filled with Monday');
-    assert(day5DateVal && day5DateVal.includes('Fri'), 'Day 5 date must be auto-filled with Friday');
-    console.log(`  ✅ Dates auto-filled successfully: Day 1 = "${day1DateVal}", Day 5 = "${day5DateVal}"`);
+    const autoDay1Date = await page.$eval('#champ_setup_r1_date', el => el.value);
+    const autoDay5Date = await page.$eval('#champ_setup_r5_date', el => el.value);
+    assert(autoDay1Date && autoDay1Date.includes('Mon'), 'Day 1 date must be auto-filled with Monday');
+    assert(autoDay5Date && autoDay5Date.includes('Fri'), 'Day 5 date must be auto-filled with Friday');
+    console.log(`  ✅ Dates auto-filled successfully: Day 1 = "${autoDay1Date}", Day 5 = "${autoDay5Date}"`);
 
-    // 3. Save / Initialize new season to unlock Step 2: Signups
-    console.log('  🔍 Initializing new tournament season to unlock Step 2...');
+    // 5. Fill valid 5-day opponents and save Step 1 schedule to unlock Step 2
+    console.log('  🔍 Filling 5-day opponent alliances and saving schedule...');
     await page.evaluate(async () => {
-      window.DEFAULT_CHAMPIONSHIP_MATCHUPS.seasonState = 'signups_open';
-      window.DEFAULT_CHAMPIONSHIP_MATCHUPS.rounds.r5.ourFlags = 0;
-      window.DEFAULT_CHAMPIONSHIP_MATCHUPS.rounds.r5.enemyAlliance.flags = 0;
-      await views.championshipAdmin('signups');
+      document.getElementById('champ_setup_season_name').value = 'Oct 19 – Oct 23, 2026';
+      for (let i = 1; i <= 5; i++) {
+        document.getElementById(`champ_setup_r${i}_enemy_tag`).value = `[OPP${i}]`;
+        document.getElementById(`champ_setup_r${i}_enemy_name`).value = `Alliance ${i}`;
+        document.getElementById(`champ_setup_r${i}_enemy_state`).value = `${2040 + i}`;
+      }
+      window.saveChampionshipMatchups = async (payload) => {
+        window.DEFAULT_CHAMPIONSHIP_MATCHUPS = payload;
+      };
+      await window.saveChampSeasonSetup();
     });
+    await new Promise(r => setTimeout(r, 600));
 
+    // Verify Step 2 is now unlocked!
     await page.waitForSelector('#champStatYes', { timeout: 5000 });
     const statYes = await page.$eval('#champStatYes', el => el.textContent.trim());
     const statNo = await page.$eval('#champStatNo', el => el.textContent.trim());

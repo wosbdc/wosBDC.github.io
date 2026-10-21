@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [3.3.113] - 2026-10-21
+- 📅 **Season Date**: Clear label and empty default date input.
+- 🏷️ **Blank Opponents**: Cleared placeholder opponent alliance tags and names.
+- 🔒 **Locked Rounds**: Fixed Round 1 through Round 5 badges.
+- 🚫 **Tab Lockdown**: Hid Signups and Edit tabs until configured.
+- ⚠️ **Setup Alert**: Added popup alert guiding managers to setup tab.
+
 ## [3.3.112] - 2026-10-21
 - 🔒 **Setup Lock**: Gated signups until tournament is configured in Step 1.
 - 🔍 **Search Desk**: Streamlined check-in desk with real-time chief lookup.

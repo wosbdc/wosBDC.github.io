@@ -1,18 +1,18 @@
 {
-  "version": "3.3.112",
+  "version": "3.3.113",
   "releaseDate": "2026-10-21",
-  "title": "What's New in v3.3.112",
+  "title": "What's New in v3.3.113",
   "notes": [
-    "🔒 Setup Lock: Gated signups until tournament is configured in Step 1.",
-    "🔍 Search Desk: Streamlined check-in desk with real-time chief lookup.",
-    "🧹 Clean Layout: Removed bulky 50-person tiles for faster mobile viewing.",
-    "📅 Date Auto-Fill: Added 1-click tournament date auto-fill from schedule.",
-    "🗓️ Google Calendar: Added direct link to the official alliance calendar.",
-    "👁️ Roster Toggle: Collapsible table view keeps check-in lean and tidy."
+    "📅 Season Date: Clear label and empty default date input.",
+    "🏷️ Blank Opponents: Cleared placeholder opponent alliance tags and names.",
+    "🔒 Locked Rounds: Fixed Round 1 through Round 5 badges.",
+    "🚫 Tab Lockdown: Hid Signups and Edit tabs until configured.",
+    "⚠️ Setup Alert: Added popup alert guiding managers to setup tab."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.112",
+    "version": "3.3.113",
     "latestChanges": [
+      "v3.3.113: Blank opponent defaults, locked round numbers, and strict tab lockdown with alert",
       "v3.3.112: Streamlined Championship check-in desk, added setup lock gate, and schedule date auto-pull",
       "v3.3.111: Added 3-step Championship guided setup, mobile check-in desk, and Round 5 prompt",
       "v3.3.110: Added Championship multi-stage reset pipeline modal, scope options, and quota guard",

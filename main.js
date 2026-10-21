@@ -15599,15 +15599,16 @@ window.buildShowdownHistoryCardHtml = (activeFilter = 'all') => {
 
 // 🏆 Alliance Championship 5-Round Matchup & Archive Suite
 window.DEFAULT_CHAMPIONSHIP_MATCHUPS = {
-    seasonName: "Upcoming Season",
+    seasonName: "",
     statusText: "0 Wins – 0 Losses (New Season)",
     ourState: "2089",
+    seasonState: "unconfigured",
     rounds: {
-        "r1": { roundNum: 1, date: "Round 1", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "Opponent 1", state: "2045", score: 0, flags: 0 } },
-        "r2": { roundNum: 2, date: "Round 2", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "Opponent 2", state: "1988", score: 0, flags: 0 } },
-        "r3": { roundNum: 3, date: "Round 3", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "Opponent 3", state: "2102", score: 0, flags: 0 } },
-        "r4": { roundNum: 4, date: "Round 4", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "Opponent 4", state: "2031", score: 0, flags: 0 } },
-        "r5": { roundNum: 5, date: "Round 5", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "Opponent 5", state: "2015", score: 0, flags: 0 } }
+        "r1": { roundNum: 1, date: "Round 1", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { tag: "", name: "", state: "", score: 0, flags: 0 } },
+        "r2": { roundNum: 2, date: "Round 2", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { tag: "", name: "", state: "", score: 0, flags: 0 } },
+        "r3": { roundNum: 3, date: "Round 3", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { tag: "", name: "", state: "", score: 0, flags: 0 } },
+        "r4": { roundNum: 4, date: "Round 4", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { tag: "", name: "", state: "", score: 0, flags: 0 } },
+        "r5": { roundNum: 5, date: "Round 5", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { tag: "", name: "", state: "", score: 0, flags: 0 } }
     }
 };
 
@@ -16421,6 +16422,64 @@ window.onChampModalArchiveNow = async () => {
     await window.showResetAndArchiveChampionshipModal('full');
 };
 
+window.isChampScheduleDoneCorrectly = (champMatchupData) => {
+    if (!champMatchupData || typeof champMatchupData !== 'object') return false;
+    if (champMatchupData.seasonState === 'unconfigured') return false;
+
+    // 1. If prior season battle scores exist on round 5 and season not reset to signups_open
+    const r5 = champMatchupData.rounds?.r5;
+    const isPriorSeasonFinished = Boolean(
+        (r5 && (Number(r5.ourFlags || 0) > 0 || Number(r5.enemyAlliance?.flags || 0) > 0)) &&
+        champMatchupData.seasonState !== 'signups_open'
+    );
+    if (isPriorSeasonFinished) return false;
+
+    // 2. All 5 rounds must have opponent information (not blank and not placeholder)
+    const rounds = champMatchupData.rounds || {};
+    for (let i = 1; i <= 5; i++) {
+        const r = rounds['r' + i];
+        if (!r) return false;
+        const enemy = r.enemyAlliance || {};
+        const name = (enemy.name || '').trim();
+        const tag = (enemy.tag || '').trim();
+        if (!name && !tag) return false;
+        if (/^Opponent\s*\d*$/i.test(name) && !tag) return false;
+    }
+
+    return true;
+};
+
+window.showChampSetupLockedAlert = (targetTab = 'signups') => {
+    const tabName = targetTab === 'signups' ? 'Member Signups' : 'Season Matchups & Edit';
+    if (window.showToast) {
+        window.showToast(`⚠️ Please complete Step 1: Season Setup first before accessing ${tabName}!`, 'warning');
+    }
+
+    const existingModal = document.getElementById('champSetupLockedAlertModal');
+    if (existingModal) existingModal.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'champSetupLockedAlertModal';
+    modal.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(5px); z-index:999999; display:flex; align-items:center; justify-content:center; padding:16px; animation:fadeIn 0.2s ease;';
+    modal.innerHTML = `
+        <div style="background:var(--card-bg, #1e293b); border:2px solid #ef4444; border-radius:16px; max-width:480px; width:100%; padding:28px 24px; text-align:center; box-shadow:0 12px 35px rgba(0,0,0,0.5);">
+            <div style="font-size:48px; margin-bottom:12px;">🔒</div>
+            <h3 style="margin:0 0 10px 0; color:#ef4444; font-size:20px; font-weight:800;">
+                Go Back to Setup Tab!
+            </h3>
+            <p style="margin:0 0 20px 0; font-size:14px; color:var(--text-main, #f1f5f9); line-height:1.6;">
+                The <strong>${escapeHTML(tabName)}</strong> tab is locked! The tournament schedule is not set up yet. You must enter all 5 opponent days in <strong>Step 1: Season Setup</strong> and save it before you can view this page.
+            </p>
+            <div style="display:flex; justify-content:center; gap:10px;">
+                <button id="btnAlertGoBackSetup" onclick="document.getElementById('champSetupLockedAlertModal')?.remove(); if(typeof views !== 'undefined' && views.championshipAdmin) views.championshipAdmin('setup');" style="background:#ef4444; color:white; border:none; padding:12px 26px; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer; box-shadow:0 3px 12px rgba(239,68,68,0.4); display:inline-flex; align-items:center; gap:6px;">
+                    🛠️ Go Back to Setup Tab ➔
+                </button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+};
+
 window.saveChampSeasonSetup = async () => {
     const saveBtn = document.getElementById('btnSaveChampSeasonSetup');
     if (saveBtn) {
@@ -16429,17 +16488,21 @@ window.saveChampSeasonSetup = async () => {
     }
 
     try {
-        const seasonName = (document.getElementById('champ_setup_season_name')?.value || '').trim() || 'Upcoming Season';
+        const seasonDate = (document.getElementById('champ_setup_season_name')?.value || '').trim();
         
+        let missingRounds = [];
         let rounds = {};
         for (let i = 1; i <= 5; i++) {
-            const date = document.getElementById(`champ_setup_r${i}_date`)?.value || `Round ${i}`;
+            const date = (document.getElementById(`champ_setup_r${i}_date`)?.value || '').trim() || `Round ${i}`;
             const tag = (document.getElementById(`champ_setup_r${i}_enemy_tag`)?.value || '').trim();
             let name = (document.getElementById(`champ_setup_r${i}_enemy_name`)?.value || '').trim();
             const state = (document.getElementById(`champ_setup_r${i}_enemy_state`)?.value || '').trim();
 
             if (!name && tag) name = tag;
-            if (!name) name = `Opponent ${i}`;
+
+            if (!name && !tag) {
+                missingRounds.push(`Round ${i}`);
+            }
 
             rounds[`r${i}`] = {
                 roundNum: i,
@@ -16457,8 +16520,19 @@ window.saveChampSeasonSetup = async () => {
             };
         }
 
+        if (missingRounds.length > 0) {
+            if (window.showToast) {
+                window.showToast(`⚠️ Please enter opponent alliance for: ${missingRounds.join(', ')}`, 'warning');
+            }
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '💾 Save Schedule & Unlock Member Signups ➔';
+            }
+            return;
+        }
+
         const newMatchupPayload = {
-            seasonName: seasonName,
+            seasonName: seasonDate,
             statusText: "0 Wins – 0 Losses (New Season)",
             ourSeasonFlags: 0,
             enemySeasonFlags: 0,
@@ -16473,7 +16547,7 @@ window.saveChampSeasonSetup = async () => {
         const adminName = (currentUser && currentUser.displayName) ? currentUser.displayName : (currentUser?.email || 'Admin');
         
         const roster = await window.fetchRoster().catch(() => ({}));
-        if (roster) {
+        if (typeof db !== 'undefined' && db && typeof ref === 'function' && roster) {
             for (const p of Object.values(roster)) {
                 if (!p || typeof p !== 'object') continue;
                 const rawGid = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (window.nameToIdMap?.[(p.name || '').toLowerCase()] || '');
@@ -16488,6 +16562,7 @@ window.saveChampSeasonSetup = async () => {
             }
         }
 
+        window.DEFAULT_CHAMPIONSHIP_MATCHUPS = newMatchupPayload;
         await window.saveChampionshipMatchups(newMatchupPayload, false);
         window.clearAllEventCaches();
 
@@ -16560,6 +16635,10 @@ window.autoFillChampScheduleDates = () => {
 window.onChampQuickCheckIn = async (gameId, chiefName, tileElement) => {
     if (!gameId) return;
 
+    window._isLocalToggleActive = true;
+    clearTimeout(window._localToggleTimeout);
+    window._localToggleTimeout = setTimeout(() => { window._isLocalToggleActive = false; }, 2000);
+
     // 1. Remove tile if present
     const tile = tileElement || document.getElementById(`champ_tile_${gameId}`);
     if (tile && tile.parentNode) {
@@ -16615,18 +16694,20 @@ window.onChampQuickCheckIn = async (gameId, chiefName, tileElement) => {
         const timestamp = Date.now();
         const adminName = (currentUser && currentUser.displayName) ? currentUser.displayName : (currentUser?.email || 'Admin');
         
-        await update(ref(db, `activity_live/${gameId}`), {
-            championship: true,
-            updatedAt: timestamp
-        }).catch(() => null);
+        if (typeof db !== 'undefined' && db && typeof ref === 'function') {
+            await update(ref(db, `activity_live/${gameId}`), {
+                championship: true,
+                updatedAt: timestamp
+            }).catch(() => null);
 
-        await set(ref(db, `championship/${gameId}`), {
-            gameId: gameId,
-            name: chiefName || 'Chief',
-            signedUp: true,
-            lastUpdated: timestamp,
-            updatedBy: adminName
-        }).catch(() => null);
+            await set(ref(db, `championship/${gameId}`), {
+                gameId: gameId,
+                name: chiefName || 'Chief',
+                signedUp: true,
+                lastUpdated: timestamp,
+                updatedBy: adminName
+            }).catch(() => null);
+        }
 
         if (window.showToast) {
             window.showToast(`✅ Checked in ${chiefName || 'Chief'}!`, 'success');
@@ -16639,6 +16720,10 @@ window.onChampQuickCheckIn = async (gameId, chiefName, tileElement) => {
 
 window.onChampQuickUndo = async (gameId, chiefName) => {
     if (!gameId) return;
+
+    window._isLocalToggleActive = true;
+    clearTimeout(window._localToggleTimeout);
+    window._localToggleTimeout = setTimeout(() => { window._isLocalToggleActive = false; }, 2000);
 
     const row = document.querySelector(`.champ-row[data-gid="${gameId}"]`);
     if (row) {
@@ -16683,18 +16768,20 @@ window.onChampQuickUndo = async (gameId, chiefName) => {
         const timestamp = Date.now();
         const adminName = (currentUser && currentUser.displayName) ? currentUser.displayName : (currentUser?.email || 'Admin');
 
-        await update(ref(db, `activity_live/${gameId}`), {
-            championship: false,
-            updatedAt: timestamp
-        }).catch(() => null);
+        if (typeof db !== 'undefined' && db && typeof ref === 'function') {
+            await update(ref(db, `activity_live/${gameId}`), {
+                championship: false,
+                updatedAt: timestamp
+            }).catch(() => null);
 
-        await set(ref(db, `championship/${gameId}`), {
-            gameId: gameId,
-            name: chiefName || 'Chief',
-            signedUp: false,
-            lastUpdated: timestamp,
-            updatedBy: adminName
-        }).catch(() => null);
+            await set(ref(db, `championship/${gameId}`), {
+                gameId: gameId,
+                name: chiefName || 'Chief',
+                signedUp: false,
+                lastUpdated: timestamp,
+                updatedBy: adminName
+            }).catch(() => null);
+        }
 
         if (window.showToast) {
             window.showToast(`Restored ${chiefName || 'Chief'} to NO`, 'info');
@@ -36012,16 +36099,14 @@ const views = {
             window.fetchChampionshipMatchups().catch(() => window.DEFAULT_CHAMPIONSHIP_MATCHUPS)
         ]);
 
-        const isPriorSeasonFinished = Boolean(
-            (champMatchupData.rounds?.r5?.ourFlags > 0 || champMatchupData.rounds?.r5?.enemyAlliance?.flags > 0) &&
-            champMatchupData.seasonState !== 'signups_open'
-        );
-        const isSeasonConfigured = !isPriorSeasonFinished && champMatchupData.seasonState !== 'unconfigured';
+        const isScheduleDone = window.isChampScheduleDoneCorrectly(champMatchupData);
 
-        let effectiveTab = activeTab;
-        if (!effectiveTab) {
-            effectiveTab = isSeasonConfigured ? 'signups' : 'setup';
+        if (!isScheduleDone && activeTab && activeTab !== 'setup') {
+            window.showChampSetupLockedAlert(activeTab);
+            activeTab = 'setup';
         }
+
+        let effectiveTab = isScheduleDone ? (activeTab || 'signups') : 'setup';
 
         let rosterList = [];
         const seenGids = new Set();
@@ -36068,11 +36153,11 @@ const views = {
                 <button onclick="views.championshipAdmin('setup')" style="padding:10px 18px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:0.2s; ${effectiveTab === 'setup' ? 'background:var(--accent); color:#fff; border:none; box-shadow:0 4px 12px rgba(6,182,212,0.3);' : 'background:var(--card-bg); color:var(--text-muted); border:1px solid var(--border);'}">
                     1. 🛠️ Season Setup
                 </button>
-                <button onclick="views.championshipAdmin('signups')" style="padding:10px 18px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:0.2s; ${effectiveTab === 'signups' ? 'background:var(--accent); color:#fff; border:none; box-shadow:0 4px 12px rgba(6,182,212,0.3);' : 'background:var(--card-bg); color:var(--text-muted); border:1px solid var(--border);'}">
-                    ${!isSeasonConfigured ? '2. 🔒 Signups (Locked)' : '2. 📋 Signups'}
+                <button id="tabBtnSignups" onclick="${isScheduleDone ? "views.championshipAdmin('signups')" : "window.showChampSetupLockedAlert('signups')"}" style="padding:10px 18px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:0.2s; ${effectiveTab === 'signups' ? 'background:var(--accent); color:#fff; border:none; box-shadow:0 4px 12px rgba(6,182,212,0.3);' : (!isScheduleDone ? 'background:rgba(239,68,68,0.1); color:#ef4444; border:1px dashed rgba(239,68,68,0.4);' : 'background:var(--card-bg); color:var(--text-muted); border:1px solid var(--border);')}">
+                    ${!isScheduleDone ? '2. 🔒 Signups (Locked)' : '2. 📋 Signups'}
                 </button>
-                <button onclick="views.championshipAdmin('matchups')" style="padding:10px 18px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:0.2s; ${effectiveTab === 'matchups' ? 'background:var(--accent); color:#fff; border:none; box-shadow:0 4px 12px rgba(6,182,212,0.3);' : 'background:var(--card-bg); color:var(--text-muted); border:1px solid var(--border);'}">
-                    3. ⚔️ Season Edit
+                <button id="tabBtnMatchups" onclick="${isScheduleDone ? "views.championshipAdmin('matchups')" : "window.showChampSetupLockedAlert('matchups')"}" style="padding:10px 18px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:0.2s; ${effectiveTab === 'matchups' ? 'background:var(--accent); color:#fff; border:none; box-shadow:0 4px 12px rgba(6,182,212,0.3);' : (!isScheduleDone ? 'background:rgba(239,68,68,0.1); color:#ef4444; border:1px dashed rgba(239,68,68,0.4);' : 'background:var(--card-bg); color:var(--text-muted); border:1px solid var(--border);')}">
+                    ${!isScheduleDone ? '3. 🔒 Season Edit (Locked)' : '3. ⚔️ Season Edit'}
                 </button>
             </div>
         `;
@@ -36080,28 +36165,41 @@ const views = {
         let mainContentHtml = '';
 
         if (effectiveTab === 'setup') {
-            const seasonNameVal = champMatchupData.seasonName || 'Season ' + (new Date().getMonth() + 1);
+            const rawSeasonName = champMatchupData.seasonName || '';
+            const isPlaceholderSeason = /^Season\s*\d*$/i.test(rawSeasonName) || /Upcoming Season/i.test(rawSeasonName);
+            const seasonDateVal = isPlaceholderSeason ? '' : rawSeasonName;
             const roundsData = champMatchupData.rounds || {};
 
             let daysInputsHtml = '';
             for (let i = 1; i <= 5; i++) {
                 const r = roundsData['r' + i] || {};
                 const enemy = r.enemyAlliance || {};
-                const dateVal = r.date || `Day ${i} (Round ${i})`;
-                const enemyTag = enemy.tag || (typeof window.extractAllianceTagOnly === 'function' ? window.extractAllianceTagOnly(enemy.name || '', i) : '');
-                let enemyName = enemy.name || '';
-                if (enemyTag && enemyName.startsWith(enemyTag)) {
-                    enemyName = enemyName.slice(enemyTag.length).trim();
+                const dateVal = (r.date && !/^Round\s*\d*$/i.test(r.date) && !/^Day\s*\d*$/i.test(r.date)) ? r.date : '';
+                
+                let enemyTag = (enemy.tag || '').trim();
+                let enemyName = (enemy.name || '').trim();
+                let enemyState = (enemy.state || '').trim();
+
+                // Treat placeholders like Opponent 1 or TAG as completely blank
+                if (/^Opponent\s*\d*$/i.test(enemyName)) enemyName = '';
+                if (/^Opponent\s*\d*$/i.test(enemyTag) || /^\[?TAG\]?$/i.test(enemyTag)) enemyTag = '';
+                if (['2045', '1988', '2102', '2031', '2015'].includes(enemyState) && !enemyName && !enemyTag) {
+                    enemyState = '';
                 }
-                const enemyState = enemy.state || '';
 
                 daysInputsHtml += `
                     <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:12px; padding:16px; display:flex; flex-direction:column; gap:10px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-                            <span style="font-weight:bold; font-size:14px; color:var(--text-main); display:inline-flex; align-items:center; gap:6px;">
-                                📅 Day ${i} (Round ${i})
-                            </span>
-                            <input type="text" id="champ_setup_r${i}_date" value="${escapeHTML(dateVal)}" placeholder="Date e.g. Mon / Round ${i}" style="width:160px; padding:6px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="font-weight:900; font-size:13.5px; color:var(--accent); background:rgba(6,182,212,0.12); border:1px solid rgba(6,182,212,0.3); padding:4px 10px; border-radius:6px; display:inline-flex; align-items:center; gap:5px;">
+                                    🔒 Round ${i} (Day ${i})
+                                </span>
+                                <span style="font-size:11px; color:var(--text-muted); font-weight:600;">Fixed Round #</span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <label for="champ_setup_r${i}_date" style="font-size:11px; color:var(--text-muted); font-weight:bold;">Date:</label>
+                                <input type="text" id="champ_setup_r${i}_date" value="${escapeHTML(dateVal)}" placeholder="Date e.g. Mon 10/19" style="width:160px; padding:6px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px;">
+                            </div>
                         </div>
                         <div style="display:grid; grid-template-columns: 90px 1fr 100px; gap:10px;">
                             <div>
@@ -36130,7 +36228,7 @@ const views = {
                                 🛠️ Step 1: Pre-Tournament Season Setup
                             </h3>
                             <p style="margin:0; font-size:13px; color:var(--text-muted);">
-                                Enter the season title and scheduled 5-day opponent alliances. Saving resets member signups to NO and unlocks Step 2.
+                                Enter the season date and scheduled 5-day opponent alliances. Saving resets member signups to NO and unlocks Step 2.
                             </p>
                         </div>
                         <div style="display:flex; gap:8px; align-items:center;">
@@ -36140,9 +36238,9 @@ const views = {
 
                     <div style="margin-bottom:18px; background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:14px;">
                         <label style="font-size:12px; font-weight:bold; color:var(--text-main); display:block; margin-bottom:6px;">
-                            🏆 Season Title / Number:
+                            📅 Season Date :
                         </label>
-                        <input type="text" id="champ_setup_season_name" value="${escapeHTML(seasonNameVal)}" placeholder="e.g. Season 24" style="width:100%; max-width:400px; box-sizing:border-box; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:15px; font-weight:bold;">
+                        <input type="text" id="champ_setup_season_name" value="${escapeHTML(seasonDateVal)}" placeholder="e.g. Oct 19 – Oct 23, 2026" style="width:100%; max-width:400px; box-sizing:border-box; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:14px; font-weight:bold;">
                     </div>
 
                     <!-- Schedule Dates Tip & Auto-Fill from Google Calendar / Schedule -->
@@ -36191,7 +36289,7 @@ const views = {
                 </div>
             `;
         } else if (effectiveTab === 'signups') {
-            if (!isSeasonConfigured) {
+            if (!isScheduleDone) {
                 // Setup Lock Barrier Gate: Prevent access to signups until Step 1 is configured
                 mainContentHtml = `
                     <div id="champSignupsLockedCard" style="background:var(--card-bg); border:2px dashed rgba(239,68,68,0.4); border-radius:16px; padding:36px 20px; text-align:center; max-width:640px; margin:20px auto; box-shadow:0 8px 30px rgba(0,0,0,0.2);">

@@ -169,12 +169,13 @@ async function runHeadlessVerification() {
         ourSeasonFlags: 7,
         enemySeasonFlags: 3,
         ourState: "2089",
+        seasonState: "signups_open",
         rounds: {
           "r1": { roundNum: 1, date: "Round 1", ourScore: 100, ourFlags: 2, ourState: "2089", enemyAlliance: { name: "[ABC] Alpha", state: "2045", score: 50, flags: 0 } },
           "r2": { roundNum: 2, date: "Round 2", ourScore: 120, ourFlags: 2, ourState: "2089", enemyAlliance: { name: "[DEF] Beta", state: "2046", score: 60, flags: 1 } },
           "r3": { roundNum: 3, date: "Round 3", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "[GHI] Gamma", state: "2047", score: 0, flags: 0 } },
-          "r4": { roundNum: 4, date: "Round 4", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "", state: "", score: 0, flags: 0 } },
-          "r5": { roundNum: 5, date: "Round 5", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "", state: "", score: 0, flags: 0 } }
+          "r4": { roundNum: 4, date: "Round 4", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "[JKL] Delta", state: "2048", score: 0, flags: 0 } },
+          "r5": { roundNum: 5, date: "Round 5", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "[MNO] Epsilon", state: "2049", score: 0, flags: 0 } }
         }
       };
 
