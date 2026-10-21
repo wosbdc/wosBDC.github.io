@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [3.3.111] - 2026-10-21
+- 🛠️ **Step Setup**: Added 5-day tournament opponent pre-setup wizard.
+- 🔒 **Data Protection**: Automatically resets attendance to prevent checking stale records.
+- 📱 **Mobile Check-In**: Instant 1-tap tile grid shrinks as members respond.
+- 🔍 **Chief Typeahead**: Quick search bar finds members and checks in instantly.
+- 🏆 **Round 5 Prompt**: Prompts to archive season when Round 5 finishes.
+- 📋 **Event Summary**: One-click summary button copies attendance and missing chiefs.
+
 ## [3.3.110] - 2026-10-20
 - 🔄 **Reset Pipeline**: Added multi-stage archival and reset pipeline modal.
 - 🎯 **Scope Options**: Choose full reset, signups only, or matchups only.

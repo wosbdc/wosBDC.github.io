@@ -187,7 +187,10 @@ async function runHeadlessVerification() {
       }
     });
 
-    await new Promise(r => setTimeout(r, 600));
+    await page.waitForFunction(() => {
+      const el = document.querySelector('#accTabSectionProfile');
+      return el && el.innerText.includes('Left Alliance');
+    }, { timeout: 10000 });
 
     // Test 1: DOM existence of Primary Character membership badge '🚪 Left Alliance'
     const primaryBadgeText = await page.evaluate(() => {
