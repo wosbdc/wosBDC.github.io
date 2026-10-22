@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.122] - 2026-10-22
+- 📱 **Compact Mobile Boxes**: Smaller two-row bot cards fit smartphone screens without scrolling.
+- ⚡ **Slim Server Bars**: Single-line Bot Hub and Server status pills on mobile.
+- 🎯 **Tighter Radar Deck**: Reduced padding across active account and cooldown headers.
+
 ## [3.3.121] - 2026-10-22
 - 🤖 **Modern Fleet Grid**: Sleek two-column bot cards with glowing status dots.
 - 🔴 **Active Now Badge**: Red corner ribbon highlights active accounts right away.

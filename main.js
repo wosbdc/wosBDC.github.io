@@ -6834,14 +6834,12 @@ window.getBotFleetSafetyHtml = () => {
         ${isBotActive ? activityHtml : ''}
         <div class="bot-fleet-item-info">
           <div class="bot-fleet-name-row">
+            <span class="bot-fleet-dot ${itemClass}" title="${itemClass}"></span>
             <span class="bot-fleet-name" title="${bot.name}">${bot.name}</span>
-          </div>
-          <div class="bot-fleet-inst-row">
-            <span class="bot-fleet-inst">${instDisplay}</span>
           </div>
           <div class="bot-fleet-status-row">
             <div class="bot-fleet-status-left">
-              <span class="bot-fleet-dot ${itemClass}" title="${itemClass}"></span>
+              <span class="bot-fleet-inst">${instDisplay}</span>
               <span class="bot-fleet-tag ${itemClass}" id="bot-fleet-tag-${botId}">${actionTag}</span>
             </div>
             ${isBotActive ? activeNowFooterHtml : activityHtml}
@@ -7000,7 +6998,7 @@ window.getBotOperationsRadarHtml = () => {
   const cooldownPillClass = isOffline ? 'offline' : (hasCooldown ? 'cooldown' : 'idle');
 
   return `
-    <div id="bot-operations-radar" class="${cardBorderClass}" style="max-width: 720px; margin: 0 auto 35px auto;">
+    <div id="bot-operations-radar" class="${cardBorderClass}" style="max-width: 720px; margin: 0 auto 14px auto;">
       <div class="bot-radar-header">
         <div class="bot-radar-title-group">
           <div class="bot-radar-icon">🤖</div>
@@ -7053,7 +7051,7 @@ window.getBotOperationsRadarHtml = () => {
         </div>
       </div>
 
-      <div class="bot-radar-footer-row" style="margin-top: 14px;">
+      <div class="bot-radar-footer-row">
         <span id="bot-radar-last-updated">Last broadcast: ${shortTime}</span>
         <span class="bot-radar-db-indicator">
           <span class="bot-radar-pulse-dot"></span>

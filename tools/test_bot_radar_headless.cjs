@@ -1078,16 +1078,29 @@ server.listen(PORT, async () => {
         throw new Error(`Assertion Failed: Horizontal overflow detected on ${vp.name}`);
       }
       if (vp.width === 375) {
-        const gridCols = await page.evaluate(() => {
+        const mobileMetrics = await page.evaluate(() => {
           const grid = document.querySelector('.bot-fleet-grid');
-          if (!grid) return null;
-          return window.getComputedStyle(grid).gridTemplateColumns;
+          const item = document.querySelector('.bot-fleet-item');
+          const miniBox = document.querySelector('.bot-radar-mini-box');
+          const radarCard = document.getElementById('bot-operations-radar');
+          return {
+            gridCols: grid ? window.getComputedStyle(grid).gridTemplateColumns : null,
+            itemHeight: item ? item.getBoundingClientRect().height : 0,
+            miniBoxFlexDir: miniBox ? window.getComputedStyle(miniBox).flexDirection : null,
+            radarHeight: radarCard ? Math.round(radarCard.getBoundingClientRect().height) : 0
+          };
         });
-        const colCount = gridCols ? gridCols.trim().split(/\s+/).length : 0;
+        const colCount = mobileMetrics.gridCols ? mobileMetrics.gridCols.trim().split(/\s+/).length : 0;
         if (colCount !== 2) {
-          throw new Error(`Assertion Failed: Expected 2 columns for .bot-fleet-grid on mobile (375px), got "${gridCols}" (${colCount} columns)`);
+          throw new Error(`Assertion Failed: Expected 2 columns for .bot-fleet-grid on mobile (375px), got "${mobileMetrics.gridCols}" (${colCount} columns)`);
         }
-        console.log(`  ✅ Mobile (375px): 2-column fleet grid verified (${gridCols}).`);
+        if (mobileMetrics.itemHeight > 52) {
+          throw new Error(`Assertion Failed: Expected compact .bot-fleet-item height <= 52px on mobile, got ${mobileMetrics.itemHeight}px`);
+        }
+        if (mobileMetrics.miniBoxFlexDir !== 'row') {
+          throw new Error(`Assertion Failed: Expected .bot-radar-mini-box flex-direction "row" on mobile, got "${mobileMetrics.miniBoxFlexDir}"`);
+        }
+        console.log(`  ✅ Mobile (375px): 2-column fleet grid verified (${mobileMetrics.gridCols}), compact card height=${Math.round(mobileMetrics.itemHeight)}px, total radar height=${mobileMetrics.radarHeight}px.`);
       }
       console.log(`  ✅ ${vp.name}: Zero horizontal overflow verified.`);
     }
