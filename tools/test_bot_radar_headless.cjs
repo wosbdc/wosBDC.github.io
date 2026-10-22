@@ -773,8 +773,8 @@ server.listen(PORT, async () => {
     if (mutationResult.runnerDisplayC !== 'none' || mutationResult.cdDisplayC === 'none') {
       throw new Error(`Assertion Failed: Active runner must be hidden and cooldown visible when only cooldown is active! Got runner: "${mutationResult.runnerDisplayC}", cd: "${mutationResult.cdDisplayC}"`);
     }
-    if (mutationResult.runnerDisplayD === 'none' || mutationResult.cdDisplayD === 'none') {
-      throw new Error(`Assertion Failed: Both compartments must be visible in dual telemetry! Got runner: "${mutationResult.runnerDisplayD}", cd: "${mutationResult.cdDisplayD}"`);
+    if (mutationResult.runnerDisplayD === 'none' || mutationResult.cdDisplayD !== 'none') {
+      throw new Error(`Assertion Failed: Only Active Runner compartment must be visible when runner is active! Got runner: "${mutationResult.runnerDisplayD}", cd: "${mutationResult.cdDisplayD}"`);
     }
     if (mutationResult.countG !== 17 || mutationResult.disabledExistsG || mutationResult.bdcInstG !== 'Inst 0' || mutationResult.sentinelInstG !== 'Inst 2') {
       throw new Error(`Assertion Failed: Dynamic Live Fleet payload failed! Result: ${JSON.stringify({ countG: mutationResult.countG, disabledExistsG: mutationResult.disabledExistsG, bdcInstG: mutationResult.bdcInstG, sentinelInstG: mutationResult.sentinelInstG })}`);

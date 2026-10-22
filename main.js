@@ -6806,11 +6806,13 @@ window.getBotFleetSafetyHtml = () => {
     }
 
     let activityHtml = '';
+    let activeNowFooterHtml = '';
     if (isBotActive) {
       if (typeof window.recordBotLastActiveTime === 'function') {
         window.recordBotLastActiveTime(bot.name, Math.floor(Date.now() / 1000));
       }
-      activityHtml = `<div class="bot-fleet-activity active" id="bot-fleet-activity-${botId}"><span class="bot-fleet-activity-pulse">🟢</span> Active Now</div>`;
+      activityHtml = `<div class="bot-fleet-activity active bot-fleet-active-ribbon" id="bot-fleet-activity-${botId}">Active Now</div>`;
+      activeNowFooterHtml = `<span class="bot-fleet-now-lbl">Now</span>`;
     } else {
       const cache = (typeof window.getBotLastActiveCache === 'function') ? window.getBotLastActiveCache() : {};
       const cleanAlias = (bot.short || bot.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -6824,20 +6826,25 @@ window.getBotFleetSafetyHtml = () => {
       let lastTimeStr = (fleetItem && fleetItem.lastActiveTime) ? fleetItem.lastActiveTime : (cached.timeStr || '');
       activityHtml = (typeof window.formatBotLastActiveHtml === 'function')
         ? window.formatBotLastActiveHtml(lastEpoch, lastTimeStr, botId)
-        : `<div class="bot-fleet-activity idle" id="bot-fleet-activity-${botId}">⏱️ ${lastTimeStr || 'Standby'}</div>`;
+        : `<div class="bot-fleet-activity idle" id="bot-fleet-activity-${botId}"><span class="bot-fleet-time-rel">${lastTimeStr || 'Standby'}</span></div>`;
     }
 
     return `
       <div class="bot-fleet-item ${itemClass}" id="bot-fleet-item-${botId}" data-bot-id="${bot.id || botId}">
+        ${isBotActive ? activityHtml : ''}
         <div class="bot-fleet-item-info">
           <div class="bot-fleet-name-row">
-            <span class="bot-fleet-dot ${itemClass}" title="${itemClass}"></span>
             <span class="bot-fleet-name" title="${bot.name}">${bot.name}</span>
+          </div>
+          <div class="bot-fleet-inst-row">
             <span class="bot-fleet-inst">${instDisplay}</span>
           </div>
           <div class="bot-fleet-status-row">
-            <span class="bot-fleet-tag ${itemClass}" id="bot-fleet-tag-${botId}">${actionTag}</span>
-            ${activityHtml}
+            <div class="bot-fleet-status-left">
+              <span class="bot-fleet-dot ${itemClass}" title="${itemClass}"></span>
+              <span class="bot-fleet-tag ${itemClass}" id="bot-fleet-tag-${botId}">${actionTag}</span>
+            </div>
+            ${isBotActive ? activeNowFooterHtml : activityHtml}
           </div>
           <span class="bot-fleet-detail" id="bot-fleet-detail-${botId}" style="display:none;">${detail}</span>
           <span id="bot-fleet-badgetext-${botId}" style="display:none;">${badgeTitle}</span>
@@ -7028,7 +7035,7 @@ window.getBotOperationsRadarHtml = () => {
         </div>
 
         <!-- Compartment 2: Cooldown Hold Queue -->
-        <div id="bot-radar-cooldown-compartment" class="bot-radar-compartment cooldown-card ${isOffline ? 'is-offline' : ''}" style="${(hasCooldown && !isOffline) ? '' : 'display:none;'}">
+        <div id="bot-radar-cooldown-compartment" class="bot-radar-compartment cooldown-card ${isOffline ? 'is-offline' : ''}" style="${(hasCooldown && !hasActiveRunner && !isOffline) ? '' : 'display:none;'}">
           <div class="bot-radar-comp-header">
             <span id="bot-radar-comp-badge-cooldown" class="bot-radar-comp-badge cooldown ${isOffline ? 'is-offline' : ''}">⏳ COOLDOWN</span>
             <div style="display:flex; align-items:center; gap:8px;">
@@ -7178,7 +7185,7 @@ window.updateBotOperationsRadarDom = () => {
   if (accValEl) accValEl.textContent = activeRunner;
 
   const showRunner = hasActiveRunner || !hasCooldown;
-  const showCooldown = hasCooldown && !isOffline;
+  const showCooldown = hasCooldown && !hasActiveRunner && !isOffline;
 
   const runnerCompEl = document.getElementById('bot-radar-runner-compartment');
   if (runnerCompEl) {
@@ -7355,7 +7362,7 @@ if (!window._botRadarInterval) {
     const runnerBadgeEl = document.getElementById('bot-radar-runner-badge');
     const hasActiveRunner = !isOffline && runnerBadgeEl && runnerBadgeEl.classList.contains('active');
     const showRunner = hasActiveRunner || !hasCooldown;
-    const showCooldown = hasCooldown && !isOffline;
+    const showCooldown = hasCooldown && !hasActiveRunner && !isOffline;
 
     if (runnerCompEl && runnerCompEl.style.display !== (showRunner ? '' : 'none')) {
       runnerCompEl.style.display = showRunner ? '' : 'none';

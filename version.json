@@ -1,16 +1,16 @@
 {
-  "version": "3.3.120",
-  "releaseDate": "2026-10-21",
-  "title": "What's New in v3.3.120",
+  "version": "3.3.121",
+  "releaseDate": "2026-10-22",
+  "title": "What's New in v3.3.121",
   "notes": [
-    "🗓️ Rewards Editor: Full event and reward scheduler synced with Sheets.",
-    "🔍 Smart Filters: Filter by category, status, or live search instantly.",
-    "➕ Add & Delete: Create new events or delete outdated rows easily.",
-    "⚡ Quick Dates: One-tap Today, +1d, +2d, and +6d date shortcuts."
+    "🤖 Modern Fleet Grid: Sleek two-column bot cards with glowing status dots.",
+    "🔴 Active Now Badge: Red corner ribbon highlights active accounts right away.",
+    "🎯 Unified Status Box: Single top status box prevents duplicate cooldown banners."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.120",
+    "version": "3.3.121",
     "latestChanges": [
+      "v3.3.121: Upgraded Bot Operations Radar to sleek 2-column card layout and unified top status deck",
       "v3.3.120: Built full Rewards & Events Scheduler with Add, Edit Dates, and Delete",
       "v3.3.119: Purged junk spreadsheet calculations and restored clean Schedule events",
       "v3.3.118: Fixed Today Schedule view with ISO date parsing and live sheet sync",

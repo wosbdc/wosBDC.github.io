@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.121] - 2026-10-22
+- 🤖 **Modern Fleet Grid**: Sleek two-column bot cards with glowing status dots.
+- 🔴 **Active Now Badge**: Red corner ribbon highlights active accounts right away.
+- 🎯 **Unified Status Box**: Single top status box prevents duplicate cooldown banners.
+
 ## [3.3.120] - 2026-10-21
 - 🗓️ **Rewards Editor**: Full event and reward scheduler synced with Sheets.
 - 🔍 **Smart Filters**: Filter by category, status, or live search instantly.
