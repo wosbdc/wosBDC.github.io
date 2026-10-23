@@ -16072,7 +16072,7 @@ window.showResetAndArchiveChampionshipModal = async (initialScope = 'full') => {
                     <div style="background: ${isDemo ? 'rgba(168,85,247,0.15)' : 'rgba(16,185,129,0.15)'}; border: 1px solid ${isDemo ? 'rgba(168,85,247,0.4)' : 'rgba(16,185,129,0.4)'}; color: ${isDemo ? '#c084fc' : '#10b981'}; padding: 12px 20px; border-radius: 12px; font-weight: bold; font-size: 14px; text-align: center; width: 100%; box-sizing: border-box;">
                         ${isDemo ? '🧪 Simulation Demo Completed Successfully!<br><span style="font-size:12px; font-weight:normal; opacity:0.8;">(Safe Preview Mode: No actual data was modified or deleted)</span>' : '🎉 Alliance Championship Archival & Reset Pipeline Completed Successfully!'}
                     </div>
-                    <button onclick="document.getElementById('champResetPipelineModal').remove(); if(typeof views !== 'undefined' && views.championshipAdmin) views.championshipAdmin();" style="background: ${isDemo ? '#8b5cf6' : 'var(--success)'}; color: white; border: none; padding: 12px 30px; border-radius: 8px; font-weight: bold; font-size: 15px; cursor: pointer; box-shadow: 0 4px 15px rgba(139,92,246,0.3);">Done</button>
+                    <button onclick="window._champBypassCooldown = false; document.getElementById('champResetPipelineModal').remove(); if(typeof views !== 'undefined' && views.championshipAdmin) views.championshipAdmin();" style="background: ${isDemo ? '#8b5cf6' : 'var(--success)'}; color: white; border: none; padding: 12px 30px; border-radius: 8px; font-weight: bold; font-size: 15px; cursor: pointer; box-shadow: 0 4px 15px rgba(139,92,246,0.3);">Done</button>
                 </div>
             `;
         }
@@ -16294,12 +16294,14 @@ window.showResetAndArchiveChampionshipModal = async (initialScope = 'full') => {
             if (!isDemo) {
                 // Reset Matchups if full or matchups scope
                 if (scope === 'full' || scope === 'matchups') {
+                    window._champBypassCooldown = false;
                     const resetMatchups = {
                         seasonName: "Upcoming Season",
                         statusText: "0 Wins – 0 Losses (New Season)",
                         ourSeasonFlags: 0,
                         enemySeasonFlags: 0,
                         ourState: "2089",
+                        seasonState: "cooldown",
                         rounds: {
                             "r1": { roundNum: 1, date: "Round 1", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "", state: "", score: 0, flags: 0 } },
                             "r2": { roundNum: 2, date: "Round 2", ourScore: 0, ourFlags: 0, ourState: "2089", enemyAlliance: { name: "", state: "", score: 0, flags: 0 } },
@@ -16438,7 +16440,7 @@ window.onChampModalArchiveNow = async () => {
 
 window.isChampScheduleDoneCorrectly = (champMatchupData) => {
     if (!champMatchupData || typeof champMatchupData !== 'object') return false;
-    if (champMatchupData.seasonState === 'unconfigured') return false;
+    if (champMatchupData.seasonState === 'unconfigured' || champMatchupData.seasonState === 'cooldown') return false;
 
     // 1. If prior season battle scores exist on round 5 and season not reset to signups_open
     const r5 = champMatchupData.rounds?.r5;
@@ -16463,10 +16465,319 @@ window.isChampScheduleDoneCorrectly = (champMatchupData) => {
     return true;
 };
 
+// ==========================================
+// ⏳ SCHEDULE-DRIVEN ALLIANCE CHAMPIONSHIP COOLDOWN ENGINE
+// ==========================================
+window._champBypassCooldown = false;
+window._champCooldownInterval = null;
+window._lastChampScheduleStatus = null;
+
+window.getChampionshipScheduleStatus = async (champMatchupData, forceFetch = false) => {
+    const nowMs = Date.now();
+    const isScheduleDone = window.isChampScheduleDoneCorrectly(champMatchupData);
+
+    // 1. Ensure Schedule data is loaded in window.liveData
+    if (!window.liveData) window.liveData = {};
+    if (forceFetch || !window.liveData['Schedule data']) {
+        let loadedFromSheetApi = false;
+        if (forceFetch && typeof API_BASE_URL !== 'undefined' && API_BASE_URL) {
+            try {
+                const res = await fetch(`${API_BASE_URL}?api=getScheduleData&sheetName=Schedule%20data`, { signal: AbortSignal.timeout(5000) });
+                const json = await res.json();
+                if (json && json.success && Array.isArray(json.data) && json.data.length > 1) {
+                    window.liveData['Schedule data'] = json.data;
+                    loadedFromSheetApi = true;
+                }
+            } catch (e) {
+                console.warn('Schedule API sync fallback to Firebase:', e);
+            }
+        }
+        if (!loadedFromSheetApi && typeof db !== 'undefined' && db && typeof get === 'function' && typeof ref === 'function') {
+            try {
+                const snap = await get(ref(db, 'sheets/Schedule data'));
+                if (snap && snap.exists()) {
+                    window.liveData['Schedule data'] = snap.val();
+                }
+            } catch (e) {
+                console.warn('Firebase Schedule data fetch note:', e);
+            }
+        }
+    }
+
+    // 2. Scan Schedule data for Alliance Championship start/end dates
+    let rawStartDate = null;
+    let rawEndDate = null;
+    let startH = 0;
+    let startM = 0;
+    let scheduleNotes = 'Weekly Tournament';
+    let scheduleSource = 'Event Schedule (Schedule data)';
+
+    const parseTimeHoursMins = (timeVal) => {
+        const s = String(timeVal || '').trim();
+        if (!s || /^12:00(?::00)?\s*AM$/i.test(s) || /^00?:00(?::00)?(?:\s*UTC)?$/i.test(s)) {
+            return { h: 0, m: 0 };
+        }
+        const ampm = s.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)/i);
+        if (ampm) {
+            let h = parseInt(ampm[1], 10);
+            const m = parseInt(ampm[2], 10);
+            const isPm = ampm[3].toUpperCase() === 'PM';
+            if (isPm && h < 12) h += 12;
+            if (!isPm && h === 12) h = 0;
+            return { h, m };
+        }
+        const hm = s.match(/^(\d{1,2}):(\d{2})/);
+        if (hm) {
+            return { h: parseInt(hm[1], 10), m: parseInt(hm[2], 10) };
+        }
+        return { h: 0, m: 0 };
+    };
+
+    const schedRows = window.liveData['Schedule data'];
+    if (Array.isArray(schedRows)) {
+        for (let r = 1; r < schedRows.length; r++) {
+            const row = schedRows[r];
+            if (!Array.isArray(row)) continue;
+            const evTitle = String(row[2] || '').trim();
+            const rowJoined = row.map(c => String(c || '')).join(' ');
+            if (/alliance\s*champ/i.test(evTitle) || /alliance\s*champ/i.test(rowJoined)) {
+                const dStart = window.parseScheduleEventDate ? window.parseScheduleEventDate(row[3]) : null;
+                const dEnd = window.parseScheduleEventDate ? window.parseScheduleEventDate(row[4]) : null;
+                if (dStart && !isNaN(dStart.getTime())) {
+                    rawStartDate = dStart;
+                    rawEndDate = (dEnd && !isNaN(dEnd.getTime())) ? dEnd : new Date(dStart.getTime() + 6 * 86400000);
+                    const parsedT = parseTimeHoursMins(row[5]);
+                    startH = parsedT.h;
+                    startM = parsedT.m;
+                    if (row[9] && String(row[9]).trim()) {
+                        scheduleNotes = String(row[9]).trim();
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    // Secondary check: Unified Schedule Events if not found in Schedule data
+    if (!rawStartDate && typeof window.getUnifiedScheduleEvents === 'function') {
+        const unified = window.getUnifiedScheduleEvents() || [];
+        const champEv = unified.find(e => /alliance\s*champ/i.test(e.name || '') || /championship/i.test(e.name || ''));
+        if (champEv && champEv.start) {
+            rawStartDate = new Date(champEv.start);
+            rawEndDate = champEv.end ? new Date(champEv.end) : new Date(rawStartDate.getTime() + 6 * 86400000);
+            scheduleSource = 'Unified Event Schedule';
+        }
+    }
+
+    // Fallback: Current/Upcoming Monday 00:00 UTC
+    if (!rawStartDate || isNaN(rawStartDate.getTime())) {
+        const now = new Date(nowMs);
+        const day = now.getUTCDay(); // 0=Sun, 1=Mon...
+        const diffToMon = (day === 0 ? -6 : 1 - day);
+        rawStartDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + diffToMon, 0, 0, 0));
+        rawEndDate = new Date(rawStartDate.getTime() + 6 * 86400000);
+        scheduleSource = 'Standard Weekly Schedule (Monday 00:00 UTC)';
+    }
+
+    const formatRangeShort = (sMs, eMs) => {
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const sd = new Date(sMs);
+        const ed = new Date(eMs);
+        return `${months[sd.getUTCMonth()]} ${sd.getUTCDate()} – ${months[ed.getUTCMonth()]} ${ed.getUTCDate()}, ${ed.getUTCFullYear()}`;
+    };
+
+    const formatUtcFull = (ms) => {
+        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const d = new Date(ms);
+        const hh = String(d.getUTCHours()).padStart(2, '0');
+        const mm = String(d.getUTCMinutes()).padStart(2, '0');
+        return `${days[d.getUTCDay()]}, ${months[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()} • ${hh}:${mm} UTC`;
+    };
+
+    const formatLocalFull = (ms) => {
+        try {
+            const d = new Date(ms);
+            return d.toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
+        } catch (e) {
+            return '';
+        }
+    };
+
+    let sheetStartMs = Date.UTC(rawStartDate.getUTCFullYear(), rawStartDate.getUTCMonth(), rawStartDate.getUTCDate(), startH, startM, 0, 0);
+    let sheetEndMs = Date.UTC(rawEndDate.getUTCFullYear(), rawEndDate.getUTCMonth(), rawEndDate.getUTCDate(), 23, 59, 59, 999);
+    const originalSheetRangeLabel = formatRangeShort(sheetStartMs, sheetEndMs);
+
+    // Roll forward by 7-day increments if the sheet row's end date is in the past
+    let activeCycleStartMs = sheetStartMs;
+    let activeCycleEndMs = sheetEndMs;
+    while (activeCycleEndMs < nowMs) {
+        activeCycleStartMs += 7 * 86400000;
+        activeCycleEndMs += 7 * 86400000;
+    }
+
+    let isOnCooldown = false;
+    let targetStartMs = activeCycleStartMs;
+    let targetEndMs = activeCycleEndMs;
+    let previousCycleLabel = '';
+
+    if (!isScheduleDone) {
+        if (activeCycleStartMs > nowMs) {
+            // Case A: The scheduled start date in the sheet is in the future
+            isOnCooldown = true;
+            targetStartMs = activeCycleStartMs;
+            targetEndMs = activeCycleEndMs;
+            const prevStartMs = activeCycleStartMs - 7 * 86400000;
+            const prevEndMs = activeCycleStartMs - 1000;
+            previousCycleLabel = formatRangeShort(prevStartMs, prevEndMs);
+        } else {
+            // Case B: activeCycleStartMs <= nowMs <= activeCycleEndMs
+            // Check if this week's tournament already ran and was reset/archived (e.g., past the initial 48h Mon-Tue setup window, or explicitly reset during this cycle)
+            const updatedAtMs = Number(champMatchupData?.updatedAt || 0);
+            const pastRegistrationWindow = (nowMs - activeCycleStartMs) >= (2 * 86400000);
+            const resetDuringCurrentCycle = (updatedAtMs > activeCycleStartMs + 12 * 3600000) && (champMatchupData?.seasonState === 'cooldown' || /Upcoming Season/i.test(champMatchupData?.seasonName || '') || pastRegistrationWindow);
+
+            if (pastRegistrationWindow || resetDuringCurrentCycle) {
+                isOnCooldown = true;
+                previousCycleLabel = formatRangeShort(activeCycleStartMs, activeCycleEndMs);
+                // Next scheduled tournament starts immediately after activeCycleEndMs (Monday 00:00 UTC)
+                const nextEndDay = new Date(activeCycleEndMs);
+                targetStartMs = Date.UTC(nextEndDay.getUTCFullYear(), nextEndDay.getUTCMonth(), nextEndDay.getUTCDate() + 1, startH, startM, 0, 0);
+                targetEndMs = targetStartMs + 6 * 86400000;
+            } else {
+                // Event has started (within Monday/Tuesday setup window and not yet reset for next week)
+                isOnCooldown = false;
+                targetStartMs = activeCycleStartMs;
+                targetEndMs = activeCycleEndMs;
+            }
+        }
+    }
+
+    const statusObj = {
+        isOnCooldown,
+        isScheduleDone,
+        targetStartMs,
+        targetEndMs,
+        remainingMs: Math.max(0, targetStartMs - nowMs),
+        nextStartUtcLabel: formatUtcFull(targetStartMs),
+        nextStartLocalLabel: formatLocalFull(targetStartMs),
+        nextSeasonRangeLabel: formatRangeShort(targetStartMs, targetEndMs),
+        sheetCycleRangeLabel: previousCycleLabel || originalSheetRangeLabel,
+        scheduleSource,
+        scheduleNotes,
+        resetBy: champMatchupData?.updatedBy || 'Admin'
+    };
+
+    window._lastChampScheduleStatus = statusObj;
+    return statusObj;
+};
+
+window.startChampCooldownTicker = (targetStartMs) => {
+    if (window._champCooldownInterval) {
+        clearInterval(window._champCooldownInterval);
+        window._champCooldownInterval = null;
+    }
+
+    const updateDigits = () => {
+        const adminSecEl = document.getElementById('champCdSecs');
+        const pubSecEl = document.getElementById('pubChampCdSecs');
+        if (!adminSecEl && !pubSecEl) {
+            if (window._champCooldownInterval) {
+                clearInterval(window._champCooldownInterval);
+                window._champCooldownInterval = null;
+            }
+            return;
+        }
+
+        const diff = Math.max(0, targetStartMs - Date.now());
+        const days = Math.floor(diff / 86400000);
+        const hours = Math.floor((diff % 86400000) / 3600000);
+        const mins = Math.floor((diff % 3600000) / 60000);
+        const secs = Math.floor((diff % 60000) / 1000);
+
+        const dStr = String(days).padStart(2, '0');
+        const hStr = String(hours).padStart(2, '0');
+        const mStr = String(mins).padStart(2, '0');
+        const sStr = String(secs).padStart(2, '0');
+
+        const setEl = (id, val) => {
+            const el = document.getElementById(id);
+            if (el && el.textContent !== val) el.textContent = val;
+        };
+
+        setEl('champCdDays', dStr);
+        setEl('champCdHours', hStr);
+        setEl('champCdMins', mStr);
+        setEl('champCdSecs', sStr);
+
+        setEl('pubChampCdDays', dStr);
+        setEl('pubChampCdHours', hStr);
+        setEl('pubChampCdMins', mStr);
+        setEl('pubChampCdSecs', sStr);
+
+        if (diff <= 0) {
+            if (window._champCooldownInterval) {
+                clearInterval(window._champCooldownInterval);
+                window._champCooldownInterval = null;
+            }
+            if (document.getElementById('champCooldownGateCard') && typeof views !== 'undefined' && views.championshipAdmin) {
+                if (window.showToast) window.showToast('🏆 Alliance Championship has started! Season Setup is now unlocked.', 'success');
+                views.championshipAdmin('setup');
+            }
+        }
+    };
+
+    updateDigits();
+    window._champCooldownInterval = setInterval(updateDigits, 1000);
+};
+
+window.unlockChampSetupEarly = async () => {
+    window._champBypassCooldown = true;
+    if (window.showToast) {
+        window.showToast('🛠️ Early Setup Override enabled — Pre-configuring next season.', 'info');
+    }
+    if (typeof views !== 'undefined' && views.championshipAdmin) {
+        await views.championshipAdmin('setup');
+    }
+};
+
+window.syncChampCooldownFromSchedule = async () => {
+    const btn = document.getElementById('btnSyncChampCooldownSchedule');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '⏳ Syncing Schedule...';
+    }
+    try {
+        const champMatchupData = await window.fetchChampionshipMatchups().catch(() => window.DEFAULT_CHAMPIONSHIP_MATCHUPS);
+        const status = await window.getChampionshipScheduleStatus(champMatchupData, true);
+        if (window.showToast) {
+            window.showToast(`📅 Synced with Schedule: Next start ${status.nextStartUtcLabel}`, 'success');
+        }
+        if (typeof views !== 'undefined' && views.championshipAdmin) {
+            await views.championshipAdmin();
+        }
+    } catch (e) {
+        if (window.showToast) window.showToast('Schedule sync error: ' + e.message, 'error');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '🔄 Sync Schedule';
+        }
+    }
+};
+
 window.showChampSetupLockedAlert = (targetTab = 'signups') => {
     const tabName = targetTab === 'signups' ? 'Member Signups' : 'Season Matchups & Edit';
+    const schedStatus = window._lastChampScheduleStatus;
+    const isCooldownActive = Boolean(schedStatus && schedStatus.isOnCooldown && !window._champBypassCooldown);
+
     if (window.showToast) {
-        window.showToast(`⚠️ Please complete Step 1: Season Setup first before accessing ${tabName}!`, 'warning');
+        window.showToast(
+            isCooldownActive
+                ? `⏳ Alliance Championship is on cooldown until ${schedStatus.nextStartUtcLabel}!`
+                : `⚠️ Please complete Step 1: Season Setup first before accessing ${tabName}!`,
+            'warning'
+        );
     }
 
     const existingModal = document.getElementById('champSetupLockedAlertModal');
@@ -16475,7 +16786,25 @@ window.showChampSetupLockedAlert = (targetTab = 'signups') => {
     const modal = document.createElement('div');
     modal.id = 'champSetupLockedAlertModal';
     modal.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(5px); z-index:999999; display:flex; align-items:center; justify-content:center; padding:16px; animation:fadeIn 0.2s ease;';
-    modal.innerHTML = `
+    modal.innerHTML = isCooldownActive ? `
+        <div style="background:var(--card-bg, #1e293b); border:2px solid #f59e0b; border-radius:16px; max-width:480px; width:100%; padding:24px 20px; text-align:center; box-shadow:0 12px 35px rgba(0,0,0,0.5);">
+            <div style="font-size:42px; margin-bottom:10px;">⏳</div>
+            <h3 style="margin:0 0 8px 0; color:#f59e0b; font-size:19px; font-weight:800;">
+                Event on Cooldown Until Next Start!
+            </h3>
+            <p style="margin:0 0 18px 0; font-size:13.5px; color:var(--text-main, #f1f5f9); line-height:1.55;">
+                The <strong>${escapeHTML(tabName)}</strong> tab is locked while Alliance Championship is on cooldown. According to the Event Schedule, the next tournament begins on <strong>${escapeHTML(schedStatus.nextStartUtcLabel)}</strong>.
+            </p>
+            <div style="display:flex; justify-content:center; gap:8px; flex-wrap:wrap;">
+                <button id="btnAlertStayCooldown" onclick="document.getElementById('champSetupLockedAlertModal')?.remove();" style="background:#f59e0b; color:#000; border:none; padding:10px 20px; border-radius:8px; font-weight:900; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                    ⏳ Back to Cooldown
+                </button>
+                <button id="btnAlertUnlockEarly" onclick="document.getElementById('champSetupLockedAlertModal')?.remove(); window.unlockChampSetupEarly();" style="background:var(--bg-main); color:var(--text-main); border:1px solid var(--border); padding:10px 16px; border-radius:8px; font-weight:bold; font-size:12.5px; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                    🛠️ Setup Early Override
+                </button>
+            </div>
+        </div>
+    ` : `
         <div style="background:var(--card-bg, #1e293b); border:2px solid #ef4444; border-radius:16px; max-width:480px; width:100%; padding:28px 24px; text-align:center; box-shadow:0 12px 35px rgba(0,0,0,0.5);">
             <div style="font-size:48px; margin-bottom:12px;">🔒</div>
             <h3 style="margin:0 0 10px 0; color:#ef4444; font-size:20px; font-weight:800;">
@@ -16681,7 +17010,12 @@ window.autoFillChampScheduleDates = async () => {
             }
         }
 
-        // 2. Secondary check: Unified schedule events cache
+        // 2. Secondary check: Schedule Cooldown Engine / Schedule data in Firebase / Unified schedule events
+        if (!baseStartDate && window._lastChampScheduleStatus && window._lastChampScheduleStatus.targetStartMs) {
+            baseStartDate = new Date(window._lastChampScheduleStatus.targetStartMs);
+            baseEndDate = new Date(window._lastChampScheduleStatus.targetEndMs || (window._lastChampScheduleStatus.targetStartMs + 6 * 86400000));
+            foundSource = window._lastChampScheduleStatus.scheduleSource || 'Event Schedule';
+        }
         if (!baseStartDate) {
             const unifiedEvents = (typeof window.getUnifiedScheduleEvents === 'function') ? window.getUnifiedScheduleEvents() : [];
             let champEvents = unifiedEvents.filter(e => /champ/i.test(e.name || '')).sort((a,b) => (a.start?.getTime?.() || 0) - (b.start?.getTime?.() || 0));
@@ -36259,7 +36593,7 @@ const views = {
        return;
     }
 
-    const isAlreadyMounted = Boolean(document.getElementById('champTableBody') || document.getElementById('adm_champ_season_name') || document.getElementById('champSignupsLockedCard'));
+    const isAlreadyMounted = Boolean(document.getElementById('champTableBody') || document.getElementById('adm_champ_season_name') || document.getElementById('champSignupsLockedCard') || document.getElementById('champCooldownGateCard') || document.getElementById('champ_setup_season_name'));
     const savedScrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0;
 
     if (!isAlreadyMounted) {
@@ -36279,13 +36613,20 @@ const views = {
         ]);
 
         const isScheduleDone = window.isChampScheduleDoneCorrectly(champMatchupData);
+        if (activeTab === 'cooldown') {
+            window._champBypassCooldown = false;
+        } else if (activeTab === 'setup') {
+            window._champBypassCooldown = true;
+        }
+        const schedStatus = await window.getChampionshipScheduleStatus(champMatchupData);
+        const isCooldownGated = !isScheduleDone && schedStatus.isOnCooldown && !window._champBypassCooldown;
 
-        if (!isScheduleDone && activeTab && activeTab !== 'setup') {
+        if (!isScheduleDone && activeTab && activeTab !== 'setup' && activeTab !== 'cooldown') {
             window.showChampSetupLockedAlert(activeTab);
-            activeTab = 'setup';
+            activeTab = isCooldownGated ? 'cooldown' : 'setup';
         }
 
-        let effectiveTab = isScheduleDone ? (activeTab || 'signups') : 'setup';
+        let effectiveTab = isScheduleDone ? (activeTab || 'signups') : (isCooldownGated ? 'cooldown' : 'setup');
 
         let rosterList = [];
         const seenGids = new Set();
@@ -36329,8 +36670,8 @@ const views = {
 
         let tabNavHtml = `
             <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:6px; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:12px;">
-                <button onclick="views.championshipAdmin('setup')" style="padding:10px 4px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; text-align:center; gap:4px; transition:0.2s; min-height:42px; ${effectiveTab === 'setup' ? 'background:var(--accent); color:#fff; border:none; box-shadow:0 4px 12px rgba(6,182,212,0.3);' : 'background:var(--card-bg); color:var(--text-muted); border:1px solid var(--border);'}">
-                    1. 🛠️ Setup
+                <button id="tabBtnSetupOrCooldown" onclick="${isCooldownGated ? "views.championshipAdmin('cooldown')" : "views.championshipAdmin('setup')"}" style="padding:10px 4px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; text-align:center; gap:4px; transition:0.2s; min-height:42px; ${(effectiveTab === 'setup' || effectiveTab === 'cooldown') ? (effectiveTab === 'cooldown' ? 'background:linear-gradient(135deg, #f59e0b, #d97706); color:#000; border:none; box-shadow:0 4px 12px rgba(245,158,11,0.35);' : 'background:var(--accent); color:#fff; border:none; box-shadow:0 4px 12px rgba(6,182,212,0.3);') : 'background:var(--card-bg); color:var(--text-muted); border:1px solid var(--border);'}">
+                    ${isCooldownGated ? '1. ⏳ Cooldown' : '1. 🛠️ Setup'}
                 </button>
                 <button id="tabBtnSignups" onclick="${isScheduleDone ? "views.championshipAdmin('signups')" : "window.showChampSetupLockedAlert('signups')"}" style="padding:10px 4px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; text-align:center; gap:4px; transition:0.2s; min-height:42px; ${effectiveTab === 'signups' ? 'background:var(--accent); color:#fff; border:none; box-shadow:0 4px 12px rgba(6,182,212,0.3);' : (!isScheduleDone ? 'background:rgba(239,68,68,0.1); color:#ef4444; border:1px dashed rgba(239,68,68,0.4);' : 'background:var(--card-bg); color:var(--text-muted); border:1px solid var(--border);')}">
                     ${!isScheduleDone ? '2. 🔒 Signups' : '2. 📋 Signups'}
@@ -36343,7 +36684,79 @@ const views = {
 
         let mainContentHtml = '';
 
-        if (effectiveTab === 'setup') {
+        if (effectiveTab === 'cooldown') {
+            const initDiff = Math.max(0, schedStatus.targetStartMs - Date.now());
+            const initDays = String(Math.floor(initDiff / 86400000)).padStart(2, '0');
+            const initHours = String(Math.floor((initDiff % 86400000) / 3600000)).padStart(2, '0');
+            const initMins = String(Math.floor((initDiff % 3600000) / 60000)).padStart(2, '0');
+            const initSecs = String(Math.floor((initDiff % 60000) / 1000)).padStart(2, '0');
+
+            mainContentHtml = `
+                <div id="champCooldownGateCard" style="background:linear-gradient(145deg, rgba(15,23,42,0.96), rgba(30,41,59,0.92)); border:1px solid rgba(245,158,11,0.4); border-radius:14px; padding:18px 14px; margin-bottom:16px; box-shadow:0 8px 28px rgba(0,0,0,0.35); text-align:center;">
+                    <div style="display:inline-flex; align-items:center; gap:6px; background:rgba(245,158,11,0.14); border:1px solid rgba(245,158,11,0.38); color:#fbbf24; padding:4px 12px; border-radius:999px; font-size:11px; font-weight:800; letter-spacing:0.6px; text-transform:uppercase; margin-bottom:10px;">
+                        ⏳ Event Cooldown • Synced from Schedule
+                    </div>
+                    <h3 style="margin:0 0 6px 0; color:var(--text-main); font-size:19px; font-weight:900;">
+                        Next Alliance Championship Countdown
+                    </h3>
+                    <p style="margin:0 auto 14px auto; font-size:12.5px; color:var(--text-muted); max-width:520px; line-height:1.45;">
+                        The previous tournament season has been archived and reset. <strong>Step 1: Season Setup</strong> is gated on cooldown and will automatically unlock when the next scheduled tournament begins.
+                    </p>
+
+                    <!-- Live 4-Box Countdown Grid -->
+                    <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; max-width:400px; margin:0 auto 16px auto;">
+                        <div style="background:rgba(15,23,42,0.85); border:1px solid rgba(6,182,212,0.35); border-radius:10px; padding:10px 6px; box-shadow:inset 0 2px 8px rgba(0,0,0,0.4);">
+                            <div id="champCdDays" style="font-size:24px; font-weight:900; font-family:var(--mono, monospace); color:#38bdf8; line-height:1.1;">${initDays}</div>
+                            <div style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.8px; margin-top:3px;">Days</div>
+                        </div>
+                        <div style="background:rgba(15,23,42,0.85); border:1px solid rgba(6,182,212,0.35); border-radius:10px; padding:10px 6px; box-shadow:inset 0 2px 8px rgba(0,0,0,0.4);">
+                            <div id="champCdHours" style="font-size:24px; font-weight:900; font-family:var(--mono, monospace); color:#38bdf8; line-height:1.1;">${initHours}</div>
+                            <div style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.8px; margin-top:3px;">Hours</div>
+                        </div>
+                        <div style="background:rgba(15,23,42,0.85); border:1px solid rgba(6,182,212,0.35); border-radius:10px; padding:10px 6px; box-shadow:inset 0 2px 8px rgba(0,0,0,0.4);">
+                            <div id="champCdMins" style="font-size:24px; font-weight:900; font-family:var(--mono, monospace); color:#38bdf8; line-height:1.1;">${initMins}</div>
+                            <div style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.8px; margin-top:3px;">Mins</div>
+                        </div>
+                        <div style="background:rgba(15,23,42,0.85); border:1px solid rgba(245,158,11,0.45); border-radius:10px; padding:10px 6px; box-shadow:inset 0 2px 8px rgba(0,0,0,0.4);">
+                            <div id="champCdSecs" style="font-size:24px; font-weight:900; font-family:var(--mono, monospace); color:#fbbf24; line-height:1.1;">${initSecs}</div>
+                            <div style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.8px; margin-top:3px;">Secs</div>
+                        </div>
+                    </div>
+
+                    <!-- Schedule Telemetry Card -->
+                    <div style="background:rgba(15,23,42,0.65); border:1px solid var(--border); border-radius:10px; padding:12px; margin-bottom:14px; text-align:left; display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:10px;">
+                        <div style="background:rgba(6,182,212,0.06); border:1px solid rgba(6,182,212,0.22); border-radius:8px; padding:9px 11px;">
+                            <div style="font-size:10.5px; color:var(--accent); font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">📅 Next Scheduled Event Start</div>
+                            <div id="champCdNextStartUtc" style="font-size:13px; font-weight:800; color:var(--text-main); margin-top:3px;">${escapeHTML(schedStatus.nextStartUtcLabel)}</div>
+                            ${schedStatus.nextStartLocalLabel ? `<div style="font-size:11px; color:var(--text-muted); margin-top:2px;">🕒 Local: ${escapeHTML(schedStatus.nextStartLocalLabel)}</div>` : ''}
+                        </div>
+                        <div style="background:rgba(16,185,129,0.06); border:1px solid rgba(16,185,129,0.22); border-radius:8px; padding:9px 11px;">
+                            <div style="font-size:10.5px; color:#10b981; font-weight:800; text-transform:uppercase; letter-spacing:0.5px;">🗓️ Upcoming Season Window</div>
+                            <div id="champCdNextSeasonWindow" style="font-size:13px; font-weight:800; color:var(--text-main); margin-top:3px;">${escapeHTML(schedStatus.nextSeasonRangeLabel)}</div>
+                            <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">✅ Previous: ${escapeHTML(schedStatus.sheetCycleRangeLabel)} (Archived)</div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+                        <button type="button" onclick="window.openChampionshipArchiveVaultModal('live')" style="background:var(--bg-main); color:var(--text-main); border:1px solid var(--border); padding:10px 12px; border-radius:8px; font-weight:bold; font-size:12.5px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:42px;">
+                            📜 Archive Vault
+                        </button>
+                        <button type="button" onclick="if(document.querySelector('.navbar')) document.querySelector('.navbar').style.display='flex'; views.schedule();" style="background:rgba(6,182,212,0.12); color:var(--accent); border:1px solid rgba(6,182,212,0.35); padding:10px 12px; border-radius:8px; font-weight:bold; font-size:12.5px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:42px;">
+                            📅 View Schedule
+                        </button>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                        <button type="button" id="btnSyncChampCooldownSchedule" onclick="window.syncChampCooldownFromSchedule()" style="background:rgba(255,255,255,0.04); color:var(--text-muted); border:1px solid var(--border); padding:9px 10px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:5px; min-height:40px;">
+                            🔄 Sync Schedule
+                        </button>
+                        <button type="button" id="btnUnlockChampSetupEarly" onclick="window.unlockChampSetupEarly()" style="background:rgba(245,158,11,0.15); color:#fbbf24; border:1px solid rgba(245,158,11,0.4); padding:9px 10px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:5px; min-height:40px;" title="Admin Override: Open Step 1 Season Setup before the event countdown ends">
+                            🛠️ Setup Early
+                        </button>
+                    </div>
+                </div>
+            `;
+        } else if (effectiveTab === 'setup') {
             const rawSeasonName = champMatchupData.seasonName || '';
             const isPlaceholderSeason = /^Season\s*\d*$/i.test(rawSeasonName) || /Upcoming Season/i.test(rawSeasonName);
             const seasonDateVal = isPlaceholderSeason ? '' : rawSeasonName;
@@ -36399,9 +36812,21 @@ const views = {
                 `;
             }
 
+            const earlyOverrideBannerHtml = (schedStatus.isOnCooldown && window._champBypassCooldown) ? `
+                <div style="background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.4); border-radius:10px; padding:10px 12px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                    <div style="font-size:12px; color:#fbbf24; font-weight:700;">
+                        ⚡ <strong>Early Setup Override Active</strong> • Scheduled Start: ${escapeHTML(schedStatus.nextStartUtcLabel)}
+                    </div>
+                    <button type="button" id="btnReturnToChampCooldown" onclick="window._champBypassCooldown = false; views.championshipAdmin('cooldown');" style="background:rgba(245,158,11,0.2); color:#fbbf24; border:1px solid rgba(245,158,11,0.5); padding:6px 12px; border-radius:6px; font-weight:800; font-size:11.5px; cursor:pointer; display:inline-flex; align-items:center; gap:5px;">
+                        ⏳ Back to Cooldown Timer
+                    </button>
+                </div>
+            ` : '';
+
             mainContentHtml = `
                 <!-- Step 1 Setup Card -->
                 <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:18px 14px; margin-bottom:18px;">
+                    ${earlyOverrideBannerHtml}
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
                         <div>
                             <h3 style="margin:0 0 4px 0; color:var(--text-main); font-size:17px; display:inline-flex; align-items:center; gap:8px;">
@@ -36914,6 +37339,9 @@ const views = {
         `;
 
         app.innerHTML = html;
+        if (effectiveTab === 'cooldown' && typeof window.startChampCooldownTicker === 'function') {
+            window.startChampCooldownTicker(schedStatus.targetStartMs);
+        }
         if (isAlreadyMounted && savedScrollY > 0) {
             window.scrollTo({ top: savedScrollY, behavior: 'instant' });
         }
@@ -43367,6 +43795,8 @@ window.resetBearTrapEvent = async () => {
             window.fetchRoster().catch(() => ({}))
         ]);
 
+        const isScheduleDone = window.isChampScheduleDoneCorrectly(champData);
+        const schedStatus = await window.getChampionshipScheduleStatus(champData);
         const seasonName = champData.seasonName || 'Upcoming Season';
         const rounds = champData.rounds || {};
         const roundsList = [1, 2, 3, 4, 5].map(i => rounds['r' + i] || { roundNum: i, date: `Round ${i}`, ourScore: 0, ourFlags: 0, enemyAlliance: { name: 'Opponent Alliance', score: 0, flags: 0 } });
@@ -43398,7 +43828,7 @@ window.resetBearTrapEvent = async () => {
 
         let isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
         let adminActionBtn = isManager ? `
-            <button onclick="if(views.championshipAdmin) views.championshipAdmin('matchups');" style="background:rgba(255,215,0,0.15); border:1px solid rgba(255,215,0,0.4); color:#FFD700; padding:6px 14px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; transition:0.2s;" onmouseover="this.style.background='rgba(255,215,0,0.25)'" onmouseout="this.style.background='rgba(255,215,0,0.15)'" title="Edit 5-round scores and opponent alliances">✏️ Edit Matchups</button>
+            <button onclick="if(views.championshipAdmin) views.championshipAdmin(${isScheduleDone ? "'matchups'" : "'cooldown'"});" style="background:rgba(255,215,0,0.15); border:1px solid rgba(255,215,0,0.4); color:#FFD700; padding:6px 14px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; transition:0.2s;" onmouseover="this.style.background='rgba(255,215,0,0.25)'" onmouseout="this.style.background='rgba(255,215,0,0.15)'" title="Open Alliance Championship Admin">${isScheduleDone ? '✏️ Edit Matchups' : '⚙️ Admin Suite'}</button>
         ` : '';
 
         let formatStateTag = (st, fallback = '2089') => {
@@ -43491,9 +43921,44 @@ window.resetBearTrapEvent = async () => {
                 </div>
             </div>
 
-            <!-- 5-Round Matchup Cards -->
+            <!-- 5-Round Matchup Cards or Schedule Cooldown Card -->
             <div style="display:flex; flex-direction:column; gap:14px;">
-                ${matchCardsHtml}
+                ${(!isScheduleDone && schedStatus.isOnCooldown) ? (() => {
+                    const diff = Math.max(0, schedStatus.targetStartMs - Date.now());
+                    const d = String(Math.floor(diff / 86400000)).padStart(2, '0');
+                    const h = String(Math.floor((diff % 86400000) / 3600000)).padStart(2, '0');
+                    const m = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
+                    const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
+                    return `
+                        <div id="pubChampCooldownCard" style="background:linear-gradient(145deg, rgba(15,23,42,0.95), rgba(30,41,59,0.9)); border:1px solid rgba(245,158,11,0.4); border-radius:16px; padding:22px 16px; text-align:center; box-shadow:0 8px 25px rgba(0,0,0,0.3);">
+                            <div style="display:inline-flex; align-items:center; gap:6px; background:rgba(245,158,11,0.14); border:1px solid rgba(245,158,11,0.38); color:#fbbf24; padding:4px 12px; border-radius:999px; font-size:11px; font-weight:800; letter-spacing:0.6px; text-transform:uppercase; margin-bottom:10px;">
+                                ⏳ Event Cooldown • Synced with Schedule
+                            </div>
+                            <h3 style="margin:0 0 6px 0; color:var(--text-main); font-size:19px; font-weight:900;">Next Tournament Starts In</h3>
+                            <p style="margin:0 auto 14px auto; font-size:12.5px; color:var(--text-muted); max-width:480px;">
+                                Next Scheduled Start: <strong style="color:var(--text-main);">${escapeHTML(schedStatus.nextStartUtcLabel)}</strong> (${escapeHTML(schedStatus.nextSeasonRangeLabel)})
+                            </p>
+                            <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; max-width:380px; margin:0 auto;">
+                                <div style="background:rgba(15,23,42,0.85); border:1px solid rgba(6,182,212,0.35); border-radius:10px; padding:10px 6px;">
+                                    <div id="pubChampCdDays" style="font-size:22px; font-weight:900; font-family:var(--mono, monospace); color:#38bdf8;">${d}</div>
+                                    <div style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Days</div>
+                                </div>
+                                <div style="background:rgba(15,23,42,0.85); border:1px solid rgba(6,182,212,0.35); border-radius:10px; padding:10px 6px;">
+                                    <div id="pubChampCdHours" style="font-size:22px; font-weight:900; font-family:var(--mono, monospace); color:#38bdf8;">${h}</div>
+                                    <div style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Hours</div>
+                                </div>
+                                <div style="background:rgba(15,23,42,0.85); border:1px solid rgba(6,182,212,0.35); border-radius:10px; padding:10px 6px;">
+                                    <div id="pubChampCdMins" style="font-size:22px; font-weight:900; font-family:var(--mono, monospace); color:#38bdf8;">${m}</div>
+                                    <div style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Mins</div>
+                                </div>
+                                <div style="background:rgba(15,23,42,0.85); border:1px solid rgba(245,158,11,0.45); border-radius:10px; padding:10px 6px;">
+                                    <div id="pubChampCdSecs" style="font-size:22px; font-weight:900; font-family:var(--mono, monospace); color:#fbbf24;">${s}</div>
+                                    <div style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Secs</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                })() : matchCardsHtml}
             </div>
 
             <!-- Leaderboard & Hall of Fame Gateway Banner -->
@@ -43516,6 +43981,9 @@ window.resetBearTrapEvent = async () => {
         `;
 
         app.innerHTML = html;
+        if (!isScheduleDone && schedStatus.isOnCooldown && typeof window.startChampCooldownTicker === 'function') {
+            window.startChampCooldownTicker(schedStatus.targetStartMs);
+        }
     } catch(err) {
         console.error("Error loading championship view:", err);
         renderError("Failed to load Alliance Championship: " + err.message);

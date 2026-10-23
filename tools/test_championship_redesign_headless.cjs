@@ -79,6 +79,10 @@ function runStaticVerification() {
   assert(code.includes('window.autoFillChampScheduleDates ='), 'main.js must define window.autoFillChampScheduleDates');
   assert(code.includes('window.toggleChampRosterTable ='), 'main.js must define window.toggleChampRosterTable');
   assert(code.includes('window.isChampScheduleDoneCorrectly ='), 'main.js must define window.isChampScheduleDoneCorrectly');
+  assert(code.includes('window.getChampionshipScheduleStatus ='), 'main.js must define window.getChampionshipScheduleStatus');
+  assert(code.includes('window.startChampCooldownTicker ='), 'main.js must define window.startChampCooldownTicker');
+  assert(code.includes('window.unlockChampSetupEarly ='), 'main.js must define window.unlockChampSetupEarly');
+  assert(code.includes('champCooldownGateCard'), 'main.js must define #champCooldownGateCard for pre-event cooldown');
   assert(code.includes('window.showChampSetupLockedAlert ='), 'main.js must define window.showChampSetupLockedAlert');
 
   // Step 1 setup elements
@@ -208,12 +212,43 @@ async function runHeadlessVerification() {
       window.cleanChiefName = n => n;
     });
 
-    // 1. Verify Step 1 defaults: Season Date is blank, opponent tags/names/states are blank, rounds are locked
-    console.log('  🔍 Testing Blank Opponent Defaults and Locked Round Numbers in Step 1...');
+    // 1. Verify Cooldown Gate & Step 1 defaults
+    console.log('  🔍 Testing Schedule-Driven Cooldown Countdown Gate and Early Setup Override...');
     await page.evaluate(async () => {
+      window._champBypassCooldown = false;
       await views.championshipAdmin();
     });
 
+    await page.waitForSelector('#champCooldownGateCard', { timeout: 5000 });
+    const setupInputWhileCooldown = await page.$('#champ_setup_season_name');
+    assert(!setupInputWhileCooldown, 'Setup page must NOT show while event is on cooldown');
+
+    const cdDays = await page.$eval('#champCdDays', el => el.textContent.trim());
+    const cdNextStart = await page.$eval('#champCdNextStartUtc', el => el.textContent.trim());
+    assert(/^\d{2,}$/.test(cdDays), 'Cooldown timer Days box must render numeric digits');
+    assert(cdNextStart.includes('UTC'), `Next scheduled start must display UTC timestamp from Schedule, got "${cdNextStart}"`);
+
+    // Check Cooldown Gate responsive layout on 375px mobile before unlocking
+    await page.setViewport({ width: 375, height: 812 });
+    await new Promise(r => setTimeout(r, 150));
+    const cdScrollW = await page.evaluate(() => document.documentElement.scrollWidth);
+    const cdClientW = await page.evaluate(() => document.documentElement.clientWidth);
+    assert(cdScrollW <= cdClientW, `Cooldown Gate horizontal overflow at 375px (${cdScrollW}px > ${cdClientW}px)`);
+    await page.setViewport({ width: 1280, height: 900 });
+    console.log(`  ✅ Cooldown Countdown Gate & 375px mobile layout verified (Next Start: ${cdNextStart})`);
+
+    // Click Early Setup Override button to unlock Step 1 Setup
+    await page.click('#btnUnlockChampSetupEarly');
+    await page.waitForSelector('#champ_setup_season_name', { timeout: 5000 });
+
+    // Verify Return to Cooldown Timer button works and then re-open Setup
+    const returnBtnExists = await page.evaluate(() => Boolean(document.getElementById('btnReturnToChampCooldown')));
+    assert(returnBtnExists, 'Early Setup Override banner must include Back to Cooldown Timer button');
+    await page.click('#btnReturnToChampCooldown');
+    await page.waitForSelector('#champCooldownGateCard', { timeout: 5000 });
+    await page.click('#btnUnlockChampSetupEarly');
+
+    console.log('  🔍 Testing Blank Opponent Defaults and Locked Round Numbers in Step 1...');
     await page.waitForSelector('#champ_setup_season_name', { timeout: 5000 });
     const seasonDateVal = await page.$eval('#champ_setup_season_name', el => el.value);
     assert.strictEqual(seasonDateVal, '', 'Season Date input must be empty by default');

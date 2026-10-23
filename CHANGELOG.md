@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.123] - 2026-10-23
+- ⏳ **Cooldown Gate**: Hides Championship setup until scheduled event starts.
+- 📅 **Schedule Sync**: Pulls next tournament start directly from Schedule.
+- 🛠️ **Early Override**: Lets admins unlock Season Setup early anytime.
+
 ## [3.3.122] - 2026-10-22
 - 📱 **Compact Mobile Boxes**: Smaller two-row bot cards fit smartphone screens without scrolling.
 - ⚡ **Slim Server Bars**: Single-line Bot Hub and Server status pills on mobile.

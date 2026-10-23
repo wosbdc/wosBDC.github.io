@@ -1,15 +1,16 @@
 {
-  "version": "3.3.122",
-  "releaseDate": "2026-10-22",
-  "title": "What's New in v3.3.122",
+  "version": "3.3.123",
+  "releaseDate": "2026-10-23",
+  "title": "What's New in v3.3.123",
   "notes": [
-    "📱 Compact Mobile Boxes: Smaller two-row bot cards fit smartphone screens without scrolling.",
-    "⚡ Slim Server Bars: Single-line Bot Hub and Server status pills on mobile.",
-    "🎯 Tighter Radar Deck: Reduced padding across active account and cooldown headers."
+    "⏳ Cooldown Gate: Hides Championship setup until scheduled event starts.",
+    "📅 Schedule Sync: Pulls next tournament start directly from Schedule.",
+    "🛠️ Early Override: Lets admins unlock Season Setup early anytime."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.122",
+    "version": "3.3.123",
     "latestChanges": [
+      "v3.3.123: Added schedule-driven cooldown countdown gate for Alliance Championship",
       "v3.3.122: Compacted Bot Operations Radar and 2-column fleet boxes for zero-scroll smartphone viewing",
       "v3.3.121: Upgraded Bot Operations Radar to sleek 2-column card layout and unified top status deck",
       "v3.3.120: Built full Rewards & Events Scheduler with Add, Edit Dates, and Delete",
