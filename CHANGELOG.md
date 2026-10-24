@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.126] - 2026-10-23
+- 🔥 **Hero Spotlight**: Current active events pop with glowing live hero banner.
+- ⏰ **Clean Separation**: Upcoming events and completed events separated into distinct sections.
+- ⏱️ **Live Ticking Timer**: Monospace digital countdown updates every second in real time.
+- ✨ **High Contrast**: Elevated cards provide clear hierarchy across the entire schedule.
+
 ## [3.3.125] - 2026-10-23
 - 💾 **Instant Scheduler Save**: Fixed saving and syncing button hang.
 - 🛡️ **Safe Firebase Keys**: Sanitized daily reward keys for clean sync.

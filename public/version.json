@@ -1,15 +1,16 @@
 {
-  "version": "3.3.125",
+  "version": "3.3.126",
   "releaseDate": "2026-10-23",
-  "title": "What's New in v3.3.125",
+  "title": "What's New in v3.3.126",
   "notes": [
-    "💾 Instant Scheduler Save: Fixed saving and syncing button hang.",
-    "🛡️ Safe Firebase Keys: Sanitized daily reward keys for clean sync.",
-    "⚡ Fast Sync Fallback: Added timeout recovery and REST sync fallback."
+    "🔥 Live Event Hero Spotlight: Added glowing live event hero banner.",
+    "⏰ Clean Schedule Sections: Separated upcoming today and completed events cleanly.",
+    "⏱️ Realtime Countdown Clock: Hero banner ticks every second live."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.125",
+    "version": "3.3.126",
     "latestChanges": [
+      "v3.3.126: Elevated active event to glowing Hero Spotlight banner and cleaned Today Schedule view",
       "v3.3.125: Fixed Rewards & Events Scheduler saving and syncing hang with Firebase key sanitization and REST fallback",
       "v3.3.124: Added interactive popup calendar for Start/End dates and 24-hour UTC time picker in Scheduler",
       "v3.3.123: Added schedule-driven cooldown countdown gate for Alliance Championship",

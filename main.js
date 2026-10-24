@@ -44585,36 +44585,84 @@ window.resetBearTrapEvent = async () => {
       const sectionPill = (icon, label, color, bg) =>
         `<div style="display:inline-flex;align-items:center;gap:6px;background:${bg};color:${color};padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:12px;">${icon} ${label}</div>`;
 
-      // Today's Events rows
-      let todayRows = '';
-      if (todayEvents.length === 0) {
-        todayRows = `<div onclick="if(window.showToast) window.showToast('🎉 Rest day! No timed events are scheduled for today.', 'info');" style="padding:14px 0;text-align:center;color:var(--text-muted);font-style:italic;cursor:pointer;" title="Click for info">🎉 Rest day — no timed events today!</div>`;
-      } else {
-        todayEvents.forEach(ev => {
-          const strikeStyle = ev.isPast ? 'opacity:0.45;text-decoration:line-through;' : '';
-          const countdownId = 'cd_' + Math.random().toString(36).slice(2,8);
-          let countdownHtml = '';
+      // ── Partition Today's Events: Live Now, Upcoming Today, and Completed ──
+      const liveEvents = todayEvents.filter(ev => ev.isLiveNow);
+      const upcomingToday = todayEvents.filter(ev => !ev.isLiveNow && !ev.isPast);
+      const pastToday = todayEvents.filter(ev => ev.isPast && !ev.isLiveNow);
 
-          if (ev.isLiveNow) {
-            const diffMs = (ev.eventEndDateTime || new Date(ev.eventDateTime.getTime() + 30 * 60000)) - now;
-            const mins = Math.max(1, Math.floor(diffMs / 60000));
-            const hrs = Math.floor(mins / 60);
-            const remMins = mins % 60;
-            const label = hrs > 0 ? `Ends in ${hrs}h ${remMins}m` : `Ends in ${mins}m`;
-            countdownHtml = `<span id="${countdownId}" style="background:linear-gradient(135deg, #10b981, #059669);color:#fff;font-size:11px;font-weight:bold;padding:4px 10px;border-radius:12px;box-shadow:0 0 10px rgba(16,185,129,0.5);animation:pulse 2s infinite;white-space:nowrap;">🟢 LIVE (${label})</span>`;
-            if (!window._scheduleCountdowns) window._scheduleCountdowns = [];
-            window._scheduleCountdowns.push({ id: countdownId, target: ev.eventEndDateTime, type: 'end' });
-          } else if (ev.eventDateTime && !ev.isPast) {
-            const diffMs = ev.eventDateTime - now;
-            const hrs = Math.floor(diffMs / 3600000);
-            const mins = Math.floor((diffMs % 3600000) / 60000);
-            const label = hrs > 0 ? `in ${hrs}h ${mins}m` : `in ${mins}m`;
-            countdownHtml = `<span id="${countdownId}" style="background:rgba(16,185,129,0.15);color:#10b981;font-size:11px;font-weight:700;padding:3px 8px;border-radius:10px;white-space:nowrap;">${label}</span>`;
-            if (!window._scheduleCountdowns) window._scheduleCountdowns = [];
-            window._scheduleCountdowns.push({ id: countdownId, target: ev.eventDateTime, type: 'start' });
-          } else if (ev.isPast) {
-            countdownHtml = `<span style="background:rgba(100,100,100,0.15);color:var(--text-muted);font-size:11px;padding:3px 8px;border-radius:10px;">Done</span>`;
-          }
+      let heroLiveCardsHtml = '';
+      if (liveEvents.length > 0) {
+        liveEvents.forEach(ev => {
+          const countdownId = 'sch_hero_cd_' + Math.random().toString(36).slice(2,8);
+          const diffMs = Math.max(0, (ev.eventEndDateTime || new Date(ev.eventDateTime.getTime() + 30 * 60000)) - now);
+          const totalSecs = Math.floor(diffMs / 1000);
+          const h = Math.floor(totalSecs / 3600);
+          const m = Math.floor((totalSecs % 3600) / 60);
+          const s = totalSecs % 60;
+          const initialTimeStr = h > 0 ? `${h}h ${m}m ${s}s` : `${m}m ${s}s`;
+
+          if (!window._scheduleCountdowns) window._scheduleCountdowns = [];
+          window._scheduleCountdowns.push({
+            id: countdownId,
+            target: (ev.eventEndDateTime || new Date(ev.eventDateTime.getTime() + 30 * 60000)),
+            type: 'hero_end'
+          });
+
+          const isRemSet = (typeof window.isEventReminderSet === 'function') && ev.eventDateTime && window.isEventReminderSet(ev.eventName, ev.eventDateTime.getTime());
+
+          heroLiveCardsHtml += `
+            <div class="sch-hero-live-card" style="margin-bottom: 20px; position: relative; overflow: hidden; border-radius: 16px; border: 1.5px solid rgba(16,185,129,0.55); background: linear-gradient(135deg, rgba(16,185,129,0.15) 0%, rgba(15,23,42,0.95) 100%); box-shadow: 0 0 25px rgba(16,185,129,0.22); padding: 20px 22px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+                <div style="display:flex; align-items:center; gap:16px; min-width:260px; flex:1;">
+                  <div style="background:rgba(16,185,129,0.22); color:#10b981; width:52px; height:52px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:26px; flex-shrink:0; box-shadow:0 0 16px rgba(16,185,129,0.45);">
+                    🔥
+                  </div>
+                  <div>
+                    <div style="font-weight:800; color:#10b981; font-size:11.5px; text-transform:uppercase; letter-spacing:1px; margin-bottom:4px; display:flex; align-items:center; gap:7px;">
+                      <span style="width:8px; height:8px; border-radius:50%; background:#10b981; box-shadow:0 0 8px #10b981; animation:pulse 1.5s infinite;"></span>
+                      ACTIVE ALLIANCE EVENT • LIVE NOW
+                    </div>
+                    <div style="font-weight:800; color:var(--text-main); font-size:19px; line-height:1.3;">
+                      ${ev.emoji} ${escapeHTML(ev.eventName)}
+                    </div>
+                    <div style="font-size:12.5px; color:var(--text-muted); margin-top:4px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                      <span>🕒 Ends at <strong style="color:var(--text-main);">${ev.eventEndDateTime ? ev.eventEndDateTime.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }) : (ev.localTimeStr || '')} local</strong></span>
+                      ${ev.utcDisplay ? `<span style="opacity:0.8; font-family:monospace;">(${ev.utcDisplay})</span>` : ''}
+                    </div>
+                  </div>
+                </div>
+
+                <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px; min-width:180px;">
+                  <div style="text-align:right;">
+                    <div style="font-weight:bold; color:var(--text-muted); font-size:11px; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:3px;">Time Remaining</div>
+                    <div id="${countdownId}" style="font-weight:800; color:#10b981; font-size:22px; font-family:monospace; background:rgba(0,0,0,0.55); padding:6px 16px; border-radius:10px; border:1px solid rgba(16,185,129,0.45); text-shadow:0 0 12px rgba(16,185,129,0.5); white-space:nowrap; letter-spacing:0.5px;">
+                      ${initialTimeStr} left
+                    </div>
+                  </div>
+                  ${ev.eventDateTime ? `
+                    <button onclick="window.openEventReminderModal('${escapeHTML(ev.eventName)}', ${ev.eventDateTime.getTime()}, '${ev.emoji}', '', '${escapeHTML(ev.utcDisplay || '')}')" style="background:${isRemSet ? 'rgba(16,185,129,0.2)' : 'rgba(255,255,255,0.08)'}; border:1px solid ${isRemSet ? '#10b981' : 'rgba(255,255,255,0.2)'}; color:${isRemSet ? '#10b981' : '#fff'}; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:0.15s;" title="Manage Event Reminder">
+                      <span>🔔</span> <span>${isRemSet ? 'Reminder Set' : 'Reminder'}</span>
+                    </button>
+                  ` : ''}
+                </div>
+              </div>
+            </div>
+          `;
+        });
+      }
+
+      // ── Upcoming Events Today Rows ──
+      let upcomingRowsHtml = '';
+      if (upcomingToday.length > 0) {
+        upcomingToday.forEach(ev => {
+          const countdownId = 'cd_up_' + Math.random().toString(36).slice(2,8);
+          const diffMs = ev.eventDateTime - now;
+          const hrs = Math.floor(diffMs / 3600000);
+          const mins = Math.floor((diffMs % 3600000) / 60000);
+          const label = hrs > 0 ? `in ${hrs}h ${mins}m` : `in ${mins}m`;
+
+          if (!window._scheduleCountdowns) window._scheduleCountdowns = [];
+          window._scheduleCountdowns.push({ id: countdownId, target: ev.eventDateTime, type: 'start' });
 
           const isRemSet = (typeof window.isEventReminderSet === 'function') && ev.eventDateTime && window.isEventReminderSet(ev.eventName, ev.eventDateTime.getTime());
           let remAlarmLabel = 'Remind';
@@ -44627,23 +44675,70 @@ window.resetBearTrapEvent = async () => {
               remAlarmLabel = 'Reminding';
             }
           }
-          const remBtnHtml = (ev.eventDateTime && !ev.isPast) ? `
-            <button onclick="window.openEventReminderModal('${escapeHTML(ev.eventName)}', ${ev.eventDateTime.getTime()}, '${ev.emoji}', '', '${escapeHTML(ev.utcDisplay || '')}')" style="background:${isRemSet ? 'rgba(16,185,129,0.2)' : 'rgba(56,189,248,0.12)'}; border:1px solid ${isRemSet ? '#10b981' : 'rgba(56,189,248,0.35)'}; color:${isRemSet ? '#10b981' : '#38bdf8'}; padding:4px 9px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:0.15s;" title="Manage Event Reminder">
+          const remBtnHtml = ev.eventDateTime ? `
+            <button onclick="window.openEventReminderModal('${escapeHTML(ev.eventName)}', ${ev.eventDateTime.getTime()}, '${ev.emoji}', '', '${escapeHTML(ev.utcDisplay || '')}')" style="background:${isRemSet ? 'rgba(16,185,129,0.2)' : 'rgba(56,189,248,0.12)'}; border:1px solid ${isRemSet ? '#10b981' : 'rgba(56,189,248,0.35)'}; color:${isRemSet ? '#10b981' : '#38bdf8'}; padding:5px 11px; border-radius:7px; font-size:11.5px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:5px; transition:0.15s;" title="Manage Event Reminder">
               <span>${isRemSet ? '✓' : '🔔'}</span> <span>${remAlarmLabel}</span>
             </button>
           ` : '';
 
-          todayRows += `
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg-main);border-radius:10px;margin-bottom:8px;gap:10px;${strikeStyle}flex-wrap:wrap;">
-              <span style="font-size:14px;font-weight:600;color:var(--text-main);">${ev.emoji} ${ev.eventName}</span>
+          upcomingRowsHtml += `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:rgba(255,255,255,0.035);border:1px solid rgba(255,255,255,0.08);border-radius:10px;margin-bottom:8px;gap:12px;flex-wrap:wrap;transition:0.15s;">
+              <span style="font-size:14.5px;font-weight:600;color:var(--text-main);">${ev.emoji} ${escapeHTML(ev.eventName)}</span>
               <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-                ${ev.utcDisplay ? `<span style="font-size:13px;color:var(--text-muted);">${ev.utcDisplay}</span>` : ''}
-                ${ev.localTimeStr ? `<span style="font-size:13px;font-weight:600;color:var(--text-main);">${ev.localTimeStr} local</span>` : ev.pdtVal ? `<span style="font-size:13px;color:var(--text-muted);">${ev.pdtVal} PDT</span>` : ''}
-                ${countdownHtml}
+                ${ev.utcDisplay ? `<span style="font-size:12.5px;color:var(--text-muted);font-family:monospace;">${ev.utcDisplay}</span>` : ''}
+                ${ev.localTimeStr ? `<span style="font-size:13px;font-weight:700;color:var(--text-main);">${ev.localTimeStr} local</span>` : ev.pdtVal ? `<span style="font-size:12.5px;color:var(--text-muted);">${ev.pdtVal} PDT</span>` : ''}
+                <span id="${countdownId}" style="background:rgba(56,189,248,0.15);color:#38bdf8;border:1px solid rgba(56,189,248,0.35);font-size:11px;font-weight:700;padding:3px 9px;border-radius:10px;white-space:nowrap;">${label}</span>
                 ${remBtnHtml}
               </div>
             </div>`;
         });
+      }
+
+      // ── Completed Earlier Today Rows ──
+      let pastRowsHtml = '';
+      if (pastToday.length > 0) {
+        pastToday.forEach(ev => {
+          pastRowsHtml += `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:rgba(255,255,255,0.015);border:1px solid rgba(255,255,255,0.05);border-radius:8px;margin-bottom:6px;gap:8px;opacity:0.6;text-decoration:line-through;flex-wrap:wrap;">
+              <span style="font-size:13px;font-weight:500;color:var(--text-muted);">${ev.emoji} ${escapeHTML(ev.eventName)}</span>
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;text-decoration:none;">
+                ${ev.utcDisplay ? `<span style="font-size:12px;color:var(--text-muted);">${ev.utcDisplay}</span>` : ''}
+                ${ev.localTimeStr ? `<span style="font-size:12px;color:var(--text-muted);">${ev.localTimeStr} local</span>` : ''}
+                <span style="background:rgba(100,100,100,0.18);color:var(--text-muted);font-size:10.5px;padding:2px 8px;border-radius:8px;font-weight:600;">Done</span>
+              </div>
+            </div>`;
+        });
+      }
+
+      let todaySectionContent = '';
+      if (todayEvents.length === 0) {
+        todaySectionContent = `
+          <div onclick="if(window.showToast) window.showToast('🎉 Rest day! No timed events are scheduled for today.', 'info');" style="padding:18px 0;text-align:center;color:var(--text-muted);font-style:italic;cursor:pointer;" title="Click for info">
+            🎉 Rest day — no timed events today!
+          </div>`;
+      } else {
+        todaySectionContent = `
+          ${heroLiveCardsHtml}
+          ${upcomingRowsHtml ? `
+            <div style="${heroLiveCardsHtml ? 'margin-top:18px;' : ''}">
+              ${heroLiveCardsHtml ? `<div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;display:flex;align-items:center;gap:6px;"><span>⏰</span> <span>Upcoming Today</span></div>` : ''}
+              ${upcomingRowsHtml}
+            </div>
+          ` : ''}
+          ${(!upcomingRowsHtml && !heroLiveCardsHtml && pastRowsHtml) ? `
+            <div style="padding:12px 16px;text-align:center;color:var(--text-muted);font-size:13px;font-style:italic;margin-bottom:8px;">
+              ✨ All scheduled timed events for today have concluded!
+            </div>
+          ` : ''}
+          ${pastRowsHtml ? `
+            <div style="margin-top:${(heroLiveCardsHtml || upcomingRowsHtml) ? '18px' : '0'};padding-top:${(heroLiveCardsHtml || upcomingRowsHtml) ? '14px' : '0'};border-top:${(heroLiveCardsHtml || upcomingRowsHtml) ? '1px dashed var(--border)' : 'none'};">
+              <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+                <span>✓</span> <span>Completed Earlier Today</span>
+              </div>
+              ${pastRowsHtml}
+            </div>
+          ` : ''}
+        `;
       }
 
       let categoriesHtml = '';
@@ -44653,7 +44748,7 @@ window.resetBearTrapEvent = async () => {
       const hasHolidays = holidays.length > 0;
 
       if (hasRewards) {
-        categoriesHtml += `<div style="background:var(--bg-main);border-radius:12px;padding:16px;margin-top:16px;">
+        categoriesHtml += `<div style="background:var(--bg-main);border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:16px;">
           ${sectionPill('🎁','Daily Rewards','#10b981','rgba(16,185,129,0.12)')}
           <div style="display:flex;flex-wrap:wrap;gap:8px;">
             ${rewards.map(x => `<span style="background:rgba(16,185,129,0.15);color:#10b981;padding:5px 12px;border-radius:20px;font-size:13px;font-weight:600;">✨ ${escapeHTML(x)}</span>`).join('')}
@@ -44662,7 +44757,7 @@ window.resetBearTrapEvent = async () => {
       }
 
       if (hasAllWeek) {
-        categoriesHtml += `<div style="background:var(--bg-main);border-radius:12px;padding:16px;margin-top:16px;">
+        categoriesHtml += `<div style="background:var(--bg-main);border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:16px;">
           ${sectionPill('📆','All Week','#818cf8','rgba(129,140,248,0.12)')}
           <div style="display:flex;flex-wrap:wrap;gap:8px;">
             ${allWeek.map(x => `<span style="background:rgba(129,140,248,0.15);color:#818cf8;padding:5px 12px;border-radius:20px;font-size:13px;font-weight:600;">${x}</span>`).join('')}
@@ -44671,7 +44766,7 @@ window.resetBearTrapEvent = async () => {
       }
 
       if (hasHolidays) {
-        categoriesHtml += `<div style="background:var(--bg-main);border-radius:12px;padding:16px;margin-top:16px;">
+        categoriesHtml += `<div style="background:var(--bg-main);border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:16px;">
           ${sectionPill('🎉','Holidays','#f97316','rgba(249,115,22,0.12)')}
           <div style="display:flex;flex-wrap:wrap;gap:8px;">
             ${holidays.map(x => `<span style="background:rgba(249,115,22,0.15);color:#f97316;padding:5px 12px;border-radius:20px;font-size:13px;font-weight:600;">${x}</span>`).join('')}
@@ -44682,7 +44777,7 @@ window.resetBearTrapEvent = async () => {
       // Coming up:
       let upcomingHtml = '';
       if (upcomingEvents.length > 0) {
-        upcomingHtml = `<div style="background:var(--bg-main);border-radius:12px;padding:16px;margin-top:16px;">
+        upcomingHtml = `<div style="background:var(--bg-main);border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:16px;">
           ${sectionPill('📅','Coming up:','var(--accent)','rgba(59,130,246,0.12)')}`;
 
         upcomingEvents.forEach(ev => {
@@ -44704,7 +44799,7 @@ window.resetBearTrapEvent = async () => {
           ` : '';
 
           upcomingHtml += `<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:6px;">
-            <span style="font-size:14px;color:var(--text-main);font-weight:500;">${ev.emoji} ${ev.eventName}</span>
+            <span style="font-size:14px;color:var(--text-main);font-weight:500;">${ev.emoji} ${escapeHTML(ev.eventName)}</span>
             <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
               <span style="font-size:12px;color:var(--text-muted);">${ev.dateLabel}</span>
               ${ev.utcDisplay ? `<span style="font-size:12px;color:var(--text-muted);">${ev.utcDisplay}</span>` : ''}
@@ -44720,9 +44815,9 @@ window.resetBearTrapEvent = async () => {
       contentDiv.innerHTML = `
         <div class="card" style="background:var(--card-bg);border:1px solid var(--border);border-top:3px solid var(--accent);border-radius:16px;padding:24px;animation:fadeIn 0.3s ease;">
 
-          <div style="background:var(--bg-main);border-radius:12px;padding:16px;">
+          <div style="background:var(--bg-main);border:1px solid var(--border);border-radius:12px;padding:16px;">
             ${sectionPill('⏰','Events Today','#60a5fa','rgba(96,165,250,0.12)')}
-            ${todayRows}
+            ${todaySectionContent}
           </div>
 
           ${categoriesHtml}
@@ -44738,12 +44833,30 @@ window.resetBearTrapEvent = async () => {
             const el = document.getElementById(cd.id);
             if (!el) return;
             const diff = cd.target - n;
-            if (diff <= 0) { el.textContent = 'Now'; el.style.background = 'rgba(239,68,68,0.15)'; el.style.color = '#ef4444'; return; }
-            const h = Math.floor(diff / 3600000);
-            const m = Math.floor((diff % 3600000) / 60000);
-            el.textContent = h > 0 ? `in ${h}h ${m}m` : `in ${m}m`;
+            if (diff <= 0) {
+              if (cd.type === 'hero_end') {
+                el.textContent = 'Ended';
+                el.style.color = '#ef4444';
+              } else {
+                el.textContent = 'Now';
+                el.style.background = 'rgba(239,68,68,0.15)';
+                el.style.color = '#ef4444';
+              }
+              return;
+            }
+            if (cd.type === 'hero_end') {
+              const totalSecs = Math.floor(diff / 1000);
+              const h = Math.floor(totalSecs / 3600);
+              const m = Math.floor((totalSecs % 3600) / 60);
+              const s = totalSecs % 60;
+              el.textContent = h > 0 ? `${h}h ${m}m ${s}s left` : `${m}m ${s}s left`;
+            } else {
+              const h = Math.floor(diff / 3600000);
+              const m = Math.floor((diff % 3600000) / 60000);
+              el.textContent = h > 0 ? `in ${h}h ${m}m` : `in ${m}m`;
+            }
           });
-        }, 30000);
+        }, 1000);
       }
 
     

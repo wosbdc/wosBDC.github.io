@@ -1,5 +1,26 @@
 # CHANGELOG
 
+## [3.3.126] - 2026-10-23
+- 🔥 **Hero Spotlight**: Current active events pop with glowing live hero banner.
+- ⏰ **Clean Separation**: Upcoming events and completed events separated into distinct sections.
+- ⏱️ **Live Ticking Timer**: Monospace digital countdown updates every second in real time.
+- ✨ **High Contrast**: Elevated cards provide clear hierarchy across the entire schedule.
+
+## [3.3.125] - 2026-10-23
+- 💾 **Instant Scheduler Save**: Fixed saving and syncing button hang.
+- 🛡️ **Safe Firebase Keys**: Sanitized daily reward keys for clean sync.
+- ⚡ **Fast Sync Fallback**: Added timeout recovery and REST sync fallback.
+
+## [3.3.124] - 2026-10-23
+- 📅 **Popup Calendar**: Start and end dates open interactive calendars.
+- 🕒 **24-Hour Times**: Full 24-hour UTC time input and picker.
+- ⚡ **Quick Presets**: One-tap 24-hour UTC slots with PDT preview.
+
+## [3.3.123] - 2026-10-23
+- ⏳ **Cooldown Gate**: Hides Championship setup until scheduled event starts.
+- 📅 **Schedule Sync**: Pulls next tournament start directly from Schedule.
+- 🛠️ **Early Override**: Lets admins unlock Season Setup early anytime.
+
 ## [3.3.122] - 2026-10-22
 - 📱 **Compact Mobile Boxes**: Smaller two-row bot cards fit smartphone screens without scrolling.
 - ⚡ **Slim Server Bars**: Single-line Bot Hub and Server status pills on mobile.

@@ -233,6 +233,23 @@ async function runHeadlessBrowserVerification() {
         ['Delete', 'Update', 'Title', 'Start', 'End', 'Start Time', 'End Time'],
         [false, true, 'Castle Battle', todayUtcIso, todayUtcIso, '5:00 AM', '10:00 AM']
       ];
+
+      // Ensure deterministic active live event for test suite
+      const origGetEvents = window.getUnifiedScheduleEvents;
+      window.getUnifiedScheduleEvents = () => {
+        const baseEvents = origGetEvents ? origGetEvents() : [];
+        const n = new Date();
+        const liveEvent = {
+          name: 'Brothers in Arms K. E. (24hrs no gathering)',
+          start: new Date(n.getTime() - 2 * 3600000),
+          end: new Date(n.getTime() + 22 * 3600000),
+          utcDisplay: '00:00 UTC',
+          pdtVal: '5:00 PM PDT',
+          emoji: '⚔️',
+          dateLabel: 'Today'
+        };
+        return [liveEvent, ...baseEvents];
+      };
     });
 
     // Render Today Schedule View
@@ -245,6 +262,15 @@ async function runHeadlessBrowserVerification() {
 
     // Wait for schedule content card to render
     await page.waitForSelector('#schedule-content', { timeout: 8000 });
+
+    // Assert that Live Event Hero Spotlight Card renders prominently with glowing border & badge
+    const heroCardExists = await page.$('.sch-hero-live-card');
+    assert(heroCardExists, 'Today view must render .sch-hero-live-card when an event is live');
+    const heroCardText = await page.$eval('.sch-hero-live-card', el => el.textContent);
+    assert(heroCardText.includes('ACTIVE ALLIANCE EVENT • LIVE NOW'), 'Hero card must contain "ACTIVE ALLIANCE EVENT • LIVE NOW" badge');
+    assert(heroCardText.includes('Brothers in Arms K. E.'), 'Hero card must feature live event title "Brothers in Arms K. E."');
+    assert(heroCardText.includes('Time Remaining'), 'Hero card must display "Time Remaining" header');
+    console.log('  ✅ Live Event Hero Spotlight card rendered with glowing emerald banner and digital timer!');
 
     const contentText = await page.$eval('#schedule-content', el => el.textContent);
     console.log('   --- RENDERED HTML TEXT ---');
