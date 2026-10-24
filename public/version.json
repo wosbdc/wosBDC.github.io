@@ -1,16 +1,17 @@
 {
-  "version": "3.3.128",
+  "version": "3.3.129",
   "releaseDate": "2026-10-23",
-  "title": "What's New in v3.3.128",
+  "title": "What's New in v3.3.129",
   "notes": [
-    "🔒 Locked Daily Rewards: Daily rewards locked to full day 00:00-24:00 UTC.",
-    "⏱️ Locked Event Times: Timed events lock to sheet times by default.",
-    "🔓 Unlock Toggle: Tap unlock to customize hours and lock back anytime.",
-    "💾 Seamless Sync: Date updates preserve locked times without manual entry."
+    "⚔️ Multi-Day Events: Fixed multi-day event end-times and active status.",
+    "🔥 Live Event Restoration: Restored Brothers in Arms into active Hero Spotlight.",
+    "🕒 Accurate Countdown: Time remaining accurately counts down across multi-day spans.",
+    "📅 Detailed End Timestamps: Shows clear day and local time event ends."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.128",
+    "version": "3.3.129",
     "latestChanges": [
+      "v3.3.129: Restored active multi-day events like Brothers in Arms across days and fixed end-date calculation",
       "v3.3.128: Locked-in Daily Rewards full-day times and locked Google Sheet event times with unlock toggle",
       "v3.3.127: Full 24:00 UTC end-time support, time normalization, and time clarity",
       "v3.3.126: Elevated active event to glowing Hero Spotlight banner and cleaned Today Schedule view",

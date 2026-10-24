@@ -29226,29 +29226,34 @@ window.getUnifiedScheduleEvents = () => {
 
       const title = String(row[2] || '').trim();
       const startDateVal = String(row[3] || '').trim();
+      const endDateVal = String(row[4] || row[3] || '').trim();
       const startTimeVal = String(row[5] || '').trim();
       const endTimeVal = String(row[6] || '').trim();
       if (!title || !startDateVal) return;
 
       const eventDate = window.parseScheduleEventDate(startDateVal);
       if (!eventDate) return;
+      const endEventDate = window.parseScheduleEventDate(endDateVal) || eventDate;
 
       const startT = window.parseScheduleEventTime(startTimeVal, startTimeVal) || { h: 16, m: 0 };
       const endT = window.parseScheduleEventTime(endTimeVal, endTimeVal);
 
       const exactStart = new Date(Date.UTC(eventDate.getUTCFullYear(), eventDate.getUTCMonth(), eventDate.getUTCDate(), startT.h, startT.m, 0, 0));
 
-      let durationMs = 3600000;
-      if (endT) {
-        const exactEnd = new Date(Date.UTC(eventDate.getUTCFullYear(), eventDate.getUTCMonth(), eventDate.getUTCDate(), endT.h, endT.m, 0, 0));
-        if (exactEnd > exactStart) durationMs = exactEnd.getTime() - exactStart.getTime();
+      let exactEnd = null;
+      if (endT && endEventDate) {
+        exactEnd = new Date(Date.UTC(endEventDate.getUTCFullYear(), endEventDate.getUTCMonth(), endEventDate.getUTCDate(), endT.h, endT.m, 0, 0));
       }
+      if (!exactEnd || exactEnd <= exactStart) {
+        exactEnd = new Date(exactStart.getTime() + 3600000);
+      }
+      const durationMs = exactEnd.getTime() - exactStart.getTime();
 
       // Skip past events that ended more than 24 hours ago
-      const exactEnd = new Date(exactStart.getTime() + durationMs);
       if (exactEnd.getTime() < (now.getTime() - 24 * 3600000)) return;
 
-      addEvent(title, exactStart, exactEnd, durationMs, `${String(startT.h).padStart(2,'0')}:${String(startT.m).padStart(2,'0')} UTC`, startTimeVal, '✨', startDateVal);
+      const displayUtcStr = `${String(startT.h).padStart(2,'0')}:${String(startT.m).padStart(2,'0')}${endT ? ' - ' + String(endT.h).padStart(2,'0') + ':' + String(endT.m).padStart(2,'0') : ''} UTC`;
+      addEvent(title, exactStart, exactEnd, durationMs, displayUtcStr, startTimeVal, '✨', startDateVal);
     });
   }
 
@@ -29261,37 +29266,38 @@ window.getUnifiedScheduleEvents = () => {
   if (liveSched && Array.isArray(liveSched.events)) {
     liveSched.events.forEach(ev => {
       if (!ev || !ev.eventName) return;
-      const eventDate = window.parseScheduleEventDate(ev.dateStr);
+      const eventDate = window.parseScheduleEventDate(ev.dateStr || ev.isoDate);
       if (!eventDate) return;
       const startT = window.parseScheduleEventTime(ev.utcStr, ev.pdtVal);
       if (!startT) return;
 
       const exactStart = new Date(Date.UTC(eventDate.getUTCFullYear(), eventDate.getUTCMonth(), eventDate.getUTCDate(), startT.h, startT.m, 0, 0));
 
-      let durationMs = 3600000;
+      const endEventDate = (ev.endIsoDate || ev.endDate) ? window.parseScheduleEventDate(ev.endIsoDate || ev.endDate) : eventDate;
+      let exactEnd = null;
+
       if (ev.endUtcStr) {
         const endT = window.parseScheduleEventTime(ev.endUtcStr, ev.endPdtVal);
-        if (endT) {
-          let diffH = endT.h - startT.h;
-          let diffM = endT.m - startT.m;
-          let calculatedMs = (diffH * 60 + diffM) * 60000;
-          if (calculatedMs <= 0) {
-            calculatedMs += 24 * 3600000;
-          }
-          if (calculatedMs > 0) {
-            durationMs = calculatedMs;
-          }
+        if (endT && endEventDate) {
+          exactEnd = new Date(Date.UTC(endEventDate.getUTCFullYear(), endEventDate.getUTCMonth(), endEventDate.getUTCDate(), endT.h, endT.m, 0, 0));
         }
-      } else {
-        const nameLower = ev.eventName.toLowerCase();
-        if (nameLower.includes('bear trap') || nameLower.includes('🪤') || nameLower.includes('🐻')) durationMs = 30 * 60 * 1000;
-        else if (nameLower.includes('brothers in arms') || nameLower.includes('k. e.') || nameLower.includes('ke') || nameLower.includes('svs')) durationMs = 24 * 3600 * 1000;
-        else if (nameLower.includes('castle') || nameLower.includes('sunfire')) durationMs = 4 * 3600 * 1000;
-        else if (nameLower.includes('foundry') || nameLower.includes('canyon')) durationMs = 2 * 3600 * 1000;
-        else if (nameLower.includes('shield')) durationMs = 8 * 3600 * 1000;
       }
 
-      addEvent(ev.eventName, exactStart, new Date(exactStart.getTime() + durationMs), durationMs, `${String(startT.h).padStart(2,'0')}:${String(startT.m).padStart(2,'0')} UTC`, ev.pdtVal, ev.emoji, ev.dateStr);
+      if (!exactEnd || exactEnd <= exactStart) {
+        const nameLower = ev.eventName.toLowerCase();
+        let fallbackMs = 3600000;
+        if (nameLower.includes('bear trap') || nameLower.includes('🪤') || nameLower.includes('🐻')) fallbackMs = 30 * 60 * 1000;
+        else if (nameLower.includes('brothers in arms') || nameLower.includes('k. e.') || nameLower.includes('ke') || nameLower.includes('svs')) fallbackMs = 24 * 3600 * 1000;
+        else if (nameLower.includes('castle') || nameLower.includes('sunfire')) fallbackMs = 4 * 3600 * 1000;
+        else if (nameLower.includes('foundry') || nameLower.includes('canyon')) fallbackMs = 2 * 3600 * 1000;
+        else if (nameLower.includes('shield')) fallbackMs = 8 * 3600 * 1000;
+        exactEnd = new Date(exactStart.getTime() + fallbackMs);
+      }
+
+      const durationMs = exactEnd.getTime() - exactStart.getTime();
+
+      const displayUtcStr = `${String(startT.h).padStart(2,'0')}:${String(startT.m).padStart(2,'0')}${ev.endUtcStr ? ' - ' + ev.endUtcStr : ''} UTC`;
+      addEvent(ev.eventName, exactStart, exactEnd, durationMs, displayUtcStr, ev.pdtVal, ev.emoji, ev.dateStr);
     });
   }
 
@@ -44641,7 +44647,7 @@ window.resetBearTrapEvent = async () => {
                       ${ev.emoji} ${escapeHTML(ev.eventName)}
                     </div>
                     <div style="font-size:12.5px; color:var(--text-muted); margin-top:4px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                      <span>🕒 Ends at <strong style="color:var(--text-main);">${ev.eventEndDateTime ? ev.eventEndDateTime.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }) : (ev.localTimeStr || '')} local</strong></span>
+                      <span>🕒 Ends <strong style="color:var(--text-main);">${ev.eventEndDateTime ? (ev.eventEndDateTime.toDateString() === now.toDateString() ? `at ${ev.eventEndDateTime.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })} local` : `on ${ev.eventEndDateTime.toLocaleDateString([], { weekday: 'short', month: 'numeric', day: 'numeric' })} at ${ev.eventEndDateTime.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })} local`) : (ev.localTimeStr ? `at ${ev.localTimeStr} local` : '')}</strong></span>
                       ${ev.utcDisplay ? `<span style="opacity:0.8; font-family:monospace;">(${ev.utcDisplay})</span>` : ''}
                     </div>
                   </div>

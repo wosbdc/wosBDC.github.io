@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.129] - 2026-10-23
+- ⚔️ **Multi-Day Events**: Fixed multi-day event end-times and active status.
+- 🔥 **Live Event Restoration**: Restored Brothers in Arms into active Hero Spotlight.
+- 🕒 **Accurate Countdown**: Time remaining accurately counts down across multi-day spans.
+- 📅 **Detailed End Timestamps**: Shows clear day and local time event ends.
+
 ## [3.3.128] - 2026-10-23
 - 🔒 **Locked Daily Rewards**: Daily rewards locked to full day 00:00-24:00 UTC.
 - ⏱️ **Locked Event Times**: Timed events lock to sheet times by default.
