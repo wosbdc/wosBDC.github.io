@@ -1,15 +1,16 @@
 {
-  "version": "3.3.123",
+  "version": "3.3.124",
   "releaseDate": "2026-10-23",
-  "title": "What's New in v3.3.123",
+  "title": "What's New in v3.3.124",
   "notes": [
-    "⏳ Cooldown Gate: Hides Championship setup until scheduled event starts.",
-    "📅 Schedule Sync: Pulls next tournament start directly from Schedule.",
-    "🛠️ Early Override: Lets admins unlock Season Setup early anytime."
+    "📅 Popup Calendar: Start and end dates open interactive calendars.",
+    "🕒 24-Hour Times: Full 24-hour UTC time input and picker.",
+    "⚡ Quick Presets: One-tap 24-hour UTC slots with PDT preview."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.123",
+    "version": "3.3.124",
     "latestChanges": [
+      "v3.3.124: Added interactive popup calendar for Start/End dates and 24-hour UTC time picker in Scheduler",
       "v3.3.123: Added schedule-driven cooldown countdown gate for Alliance Championship",
       "v3.3.122: Compacted Bot Operations Radar and 2-column fleet boxes for zero-scroll smartphone viewing",
       "v3.3.121: Upgraded Bot Operations Radar to sleek 2-column card layout and unified top status deck",

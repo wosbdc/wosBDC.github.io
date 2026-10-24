@@ -86,7 +86,13 @@ function runStaticAndUnitVerification() {
   assert.strictEqual(sandbox.window.formatDataSheetTimeUTC('1899-12-30T08:00:00.000Z', 'rewards'), '00:00');
   assert.strictEqual(sandbox.window.utcTimeToPdtStr('16:00'), '9:00 AM');
   assert.strictEqual(sandbox.window.utcTimeToPdtStr('00:00'), '5:00 PM');
-  console.log('  ✅ Timezone & 1899 ISO time conversions verified (16:00 UTC -> 9:00 AM PDT)');
+  assert.strictEqual(sandbox.window.normalize24HrTimeStr('16:00'), '16:00');
+  assert.strictEqual(sandbox.window.normalize24HrTimeStr('1600'), '16:00');
+  assert.strictEqual(sandbox.window.normalize24HrTimeStr('930'), '09:30');
+  assert.strictEqual(sandbox.window.normalize24HrTimeStr('4:30 PM'), '16:30');
+  assert.strictEqual(sandbox.window.normalize24HrTimeStr('2359'), '23:59');
+  assert.strictEqual(sandbox.window.normalize24HrTimeStr('0'), '00:00');
+  console.log('  ✅ Timezone, 1899 ISO, and 24-hour UTC time normalizations verified (1600 -> 16:00 UTC -> 9:00 AM PDT)');
 
   // Test parsing sample 'data' sheet rows
   const todayIso = sandbox.window.getLocalTodayIsoStr();
@@ -273,12 +279,47 @@ async function runHeadlessBrowserVerification() {
     // Reset Status Filter to All
     await page.click('.sch-status-pill[data-status="all"]');
 
-    // Test Adding a New Reward Event
+    // Test Adding a New Reward Event + Interactive Calendar Popup & 24-Hour UTC Time Picker
     await page.click('#schOpenAddRewardBtn');
     await page.waitForSelector('#schEditorSectionSelect', { visible: true, timeout: 3000 });
     await page.select('#schEditorSectionSelect', 'rewards');
     await page.focus('#schEditorTitleInput');
     await page.keyboard.type('Frostdragon Tyrant Test');
+
+    // Verify clicking Start Date opens Interactive Popup Calendar (#schCalendarPopover)
+    await page.click('#schSearchStartDate');
+    await page.waitForSelector('#schCalendarPopover', { visible: true, timeout: 3000 });
+    await page.click('#schCalPickToday');
+    const calClosedAfterStart = await page.evaluate(() => !document.getElementById('schCalendarPopover'));
+    assert(calClosedAfterStart, 'Calendar popover must close after picking Today on Start Date');
+
+    // Verify clicking End Date opens Interactive Popup Calendar (#schCalendarPopover)
+    await page.click('#schSearchEndDate');
+    await page.waitForSelector('#schCalendarPopover', { visible: true, timeout: 3000 });
+    await page.click('#schCalPickPlus6');
+    console.log('  ✅ Interactive Popup Calendar verified on both Start Date and End Date inputs!');
+
+    // Verify clicking Start UTC opens 24-Hour Time Picker (#schTimePickerPopover) and supports 24-hour selection
+    await page.click('#schSearchUtc');
+    await page.waitForSelector('#schTimePickerPopover', { visible: true, timeout: 3000 });
+    await page.click('.sch-tp-hour-btn[data-hour="16"]');
+    await page.click('.sch-tp-min-btn[data-min="30"]');
+    const startUtc24Val = await page.$eval('#schSearchUtc', el => el.value);
+    const startUtcPdtText = await page.$eval('#schSearchUtcPdtBadge', el => el.textContent.trim());
+    assert.strictEqual(startUtc24Val, '16:30', '24-Hour Time Picker must set Start UTC to 16:30');
+    assert.strictEqual(startUtcPdtText, '9:30 AM PDT', 'PDT preview badge must update to 9:30 AM PDT for 16:30 UTC');
+
+    // Verify direct 24-hour compact typing (e.g. "2145" -> "21:45") on End UTC
+    await page.evaluate(() => {
+      const endUtc = document.getElementById('schSearchEndUtc');
+      endUtc.value = '2145';
+      endUtc.dispatchEvent(new Event('input', { bubbles: true }));
+      endUtc.dispatchEvent(new Event('blur', { bubbles: true }));
+    });
+    const endUtc24Val = await page.$eval('#schSearchEndUtc', el => el.value);
+    assert.strictEqual(endUtc24Val, '21:45', 'Direct 24-hour input "2145" must normalize to "21:45"');
+    console.log('  ✅ 24-Hour UTC Time Picker & 24h input normalization verified (16:30 & 21:45 UTC)!');
+
     await page.click('#schSetStartTodayBtn');
     await page.click('#schAdd2DaysBtn');
     await page.click('#schSaveSearchItemBtn');

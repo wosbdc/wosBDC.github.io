@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.124] - 2026-10-23
+- 📅 **Popup Calendar**: Start and end dates open interactive calendars.
+- 🕒 **24-Hour Times**: Full 24-hour UTC time input and picker.
+- ⚡ **Quick Presets**: One-tap 24-hour UTC slots with PDT preview.
+
 ## [3.3.123] - 2026-10-23
 - ⏳ **Cooldown Gate**: Hides Championship setup until scheduled event starts.
 - 📅 **Schedule Sync**: Pulls next tournament start directly from Schedule.

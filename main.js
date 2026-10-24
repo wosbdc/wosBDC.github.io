@@ -45556,6 +45556,395 @@ window.utcTimeToPdtStr = (utcHHmm) => {
   return `${h12}:${utcM} ${ap}`;
 };
 
+window.normalize24HrTimeStr = (rawVal, fallback = '00:00') => {
+  if (rawVal === undefined || rawVal === null) return fallback;
+  const s = String(rawVal).trim();
+  if (!s) return fallback;
+
+  // 1. Check 12-hour AM/PM if pasted or typed (e.g. "4:30 PM" -> "16:30")
+  const m12 = s.match(/^(\d{1,2})(?::(\d{1,2}))?(?::\d{1,2})?\s*(AM|PM)$/i);
+  if (m12) {
+    let h = parseInt(m12[1], 10);
+    const min = parseInt(m12[2] || '0', 10);
+    const ap = m12[3].toUpperCase();
+    if (ap === 'PM' && h < 12) h += 12;
+    if (ap === 'AM' && h === 12) h = 0;
+    h = Math.max(0, Math.min(23, h));
+    const clampedM = Math.max(0, Math.min(59, min));
+    return `${String(h).padStart(2, '0')}:${String(clampedM).padStart(2, '0')}`;
+  }
+
+  // 2. Standard 24-hour HH:MM or H:MM (e.g. "16:00", "0:00", "23:59")
+  const m24 = s.match(/^(\d{1,2}):(\d{1,2})(?::\d{1,2})?(?:\s*UTC)?$/i);
+  if (m24) {
+    const h = Math.max(0, Math.min(23, parseInt(m24[1], 10)));
+    const min = Math.max(0, Math.min(59, parseInt(m24[2], 10)));
+    return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+  }
+
+  // 3. Compact 3 or 4 digit military/24h time (e.g. "1600" -> "16:00", "930" -> "09:30")
+  const mCompact = s.match(/^(\d{3,4})$/);
+  if (mCompact) {
+    const digits = mCompact[1].padStart(4, '0');
+    const h = Math.max(0, Math.min(23, parseInt(digits.slice(0, 2), 10)));
+    const min = Math.max(0, Math.min(59, parseInt(digits.slice(2, 4), 10)));
+    return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+  }
+
+  // 4. Single or double digit hour (e.g. "16" -> "16:00", "0" -> "00:00")
+  const mHourOnly = s.match(/^(\d{1,2})$/);
+  if (mHourOnly) {
+    const h = Math.max(0, Math.min(23, parseInt(mHourOnly[1], 10)));
+    return `${String(h).padStart(2, '0')}:00`;
+  }
+
+  return fallback;
+};
+
+window.closeSchPopovers = () => {
+  document.getElementById('schCalendarPopover')?.remove();
+  document.getElementById('schTimePickerPopover')?.remove();
+};
+
+window.openSchPopupCalendar = (targetInputId) => {
+  window.closeSchPopovers();
+  const inputEl = document.getElementById(targetInputId);
+  if (!inputEl) return;
+
+  const todayIso = window.getLocalTodayIsoStr();
+  const parseIsoOrMd = (val) => {
+    const s = String(val || '').trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    const md = s.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?$/);
+    if (md) {
+      const y = md[3] ? (md[3].length === 2 ? 2000 + parseInt(md[3], 10) : parseInt(md[3], 10)) : new Date().getFullYear();
+      return `${y}-${String(parseInt(md[1], 10)).padStart(2, '0')}-${String(parseInt(md[2], 10)).padStart(2, '0')}`;
+    }
+    return '';
+  };
+
+  let selectedIso = parseIsoOrMd(inputEl.value) || todayIso;
+  let [viewYear, viewMonth] = selectedIso.split('-').map(Number);
+  if (!viewYear || !viewMonth) {
+    const [ty, tm] = todayIso.split('-').map(Number);
+    viewYear = ty;
+    viewMonth = tm;
+  }
+
+  const pop = document.createElement('div');
+  pop.id = 'schCalendarPopover';
+  pop.style.cssText = 'position:fixed; z-index:100050; width:286px; max-width:calc(100vw - 16px); background:linear-gradient(145deg, #0f172a, #1e293b); border:1px solid rgba(56,189,248,0.45); border-radius:12px; padding:12px; box-shadow:0 16px 40px rgba(0,0,0,0.75); color:#f8fafc; font-family:inherit; box-sizing:border-box; user-select:none;';
+
+  const positionPopover = () => {
+    const rect = inputEl.getBoundingClientRect();
+    const popW = Math.min(286, window.innerWidth - 16);
+    const popH = 310;
+    let left = Math.max(8, Math.min(rect.left, window.innerWidth - popW - 8));
+    let top = rect.bottom + 6;
+    if (top + popH > window.innerHeight - 8 && rect.top - popH - 6 > 8) {
+      top = rect.top - popH - 6;
+    } else if (top + popH > window.innerHeight - 8) {
+      top = Math.max(8, window.innerHeight - popH - 8);
+    }
+    pop.style.left = `${left}px`;
+    pop.style.top = `${top}px`;
+  };
+
+  const applyIsoToInput = (isoVal) => {
+    if (!isoVal) {
+      inputEl.value = '';
+    } else if (inputEl.dataset.dateFormat === 'md') {
+      const [, m, d] = isoVal.split('-');
+      inputEl.value = `${parseInt(m, 10)}/${parseInt(d, 10)}`;
+      inputEl.dataset.isoValue = isoVal;
+    } else {
+      inputEl.value = isoVal;
+    }
+    inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+    inputEl.dispatchEvent(new Event('change', { bubbles: true }));
+
+    // If setting Start Date and End Date is blank or before Start Date, auto-sync End Date
+    if (targetInputId === 'schSearchStartDate' && isoVal) {
+      const endEl = document.getElementById('schSearchEndDate');
+      if (endEl && (!endEl.value || endEl.value < isoVal)) {
+        endEl.value = isoVal;
+        endEl.dispatchEvent(new Event('input', { bubbles: true }));
+        endEl.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    } else if (targetInputId === 'schNewDate' && isoVal) {
+      const endEl = document.getElementById('schNewEndDate');
+      if (endEl && !endEl.value) {
+        const [, m, d] = isoVal.split('-');
+        endEl.value = `${parseInt(m, 10)}/${parseInt(d, 10)}`;
+        endEl.dataset.isoValue = isoVal;
+      }
+    }
+  };
+
+  const renderCal = () => {
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const firstDayWeek = new Date(Date.UTC(viewYear, viewMonth - 1, 1)).getUTCDay();
+    const daysInMonth = new Date(Date.UTC(viewYear, viewMonth, 0)).getUTCDate();
+    const curValIso = parseIsoOrMd(inputEl.value);
+
+    const startInputIso = parseIsoOrMd(document.getElementById('schSearchStartDate')?.value || '');
+    const endInputIso = parseIsoOrMd(document.getElementById('schSearchEndDate')?.value || '');
+
+    let cellsHtml = '';
+    for (let b = 0; b < firstDayWeek; b++) {
+      cellsHtml += `<div></div>`;
+    }
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dIso = `${viewYear}-${String(viewMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const isSelected = dIso === curValIso;
+      const isToday = dIso === todayIso;
+      const isInRange = startInputIso && endInputIso && dIso >= startInputIso && dIso <= endInputIso;
+
+      const bg = isSelected
+        ? 'linear-gradient(135deg, #10b981, #059669)'
+        : (isInRange ? 'rgba(14,165,233,0.22)' : 'rgba(255,255,255,0.03)');
+      const border = isSelected
+        ? '1px solid #34d399'
+        : (isToday ? '1px solid #38bdf8' : '1px solid rgba(255,255,255,0.06)');
+      const color = isSelected ? '#fff' : (isToday ? '#38bdf8' : '#e2e8f0');
+
+      cellsHtml += `
+        <button type="button" class="sch-cal-day-btn" data-iso="${dIso}" style="padding:6px 0; border-radius:6px; background:${bg}; border:${border}; color:${color}; font-weight:${isSelected || isToday ? '800' : '600'}; font-size:12px; cursor:pointer; text-align:center;">
+          ${day}
+        </button>
+      `;
+    }
+
+    pop.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid rgba(255,255,255,0.1);">
+        <button type="button" id="schCalPrevMonth" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; width:28px; height:28px; border-radius:6px; cursor:pointer; font-weight:bold;">◀</button>
+        <div style="font-size:13px; font-weight:800; color:#38bdf8;">📅 ${monthNames[viewMonth - 1]} ${viewYear}</div>
+        <div style="display:flex; gap:4px;">
+          <button type="button" id="schCalNextMonth" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; width:28px; height:28px; border-radius:6px; cursor:pointer; font-weight:bold;">▶</button>
+          <button type="button" id="schCalCloseBtn" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.35); color:#ef4444; width:28px; height:28px; border-radius:6px; cursor:pointer; font-weight:bold;">✕</button>
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(7, 1fr); gap:3px; text-align:center; font-size:10px; font-weight:800; color:#94a3b8; margin-bottom:4px; text-transform:uppercase;">
+        <div>Su</div><div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(7, 1fr); gap:3px; margin-bottom:8px;">
+        ${cellsHtml}
+      </div>
+      <div style="display:flex; justify-content:space-between; gap:4px; border-top:1px solid rgba(255,255,255,0.08); padding-top:8px;">
+        <button type="button" id="schCalPickToday" style="flex:1; background:rgba(14,165,233,0.18); border:1px solid rgba(14,165,233,0.4); color:#38bdf8; padding:5px 6px; border-radius:6px; font-size:11px; font-weight:800; cursor:pointer;">Today</button>
+        <button type="button" id="schCalPickPlus1" style="flex:1; background:rgba(16,185,129,0.16); border:1px solid rgba(16,185,129,0.35); color:#10b981; padding:5px 6px; border-radius:6px; font-size:11px; font-weight:800; cursor:pointer;">+1d</button>
+        <button type="button" id="schCalPickPlus6" style="flex:1; background:rgba(16,185,129,0.16); border:1px solid rgba(16,185,129,0.35); color:#10b981; padding:5px 6px; border-radius:6px; font-size:11px; font-weight:800; cursor:pointer;">+6d</button>
+        <button type="button" id="schCalPickClear" style="background:rgba(234,179,8,0.15); border:1px solid rgba(234,179,8,0.35); color:#eab308; padding:5px 8px; border-radius:6px; font-size:11px; font-weight:800; cursor:pointer;">Clear</button>
+      </div>
+    `;
+
+    pop.querySelector('#schCalPrevMonth')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      viewMonth--;
+      if (viewMonth < 1) { viewMonth = 12; viewYear--; }
+      renderCal();
+    });
+    pop.querySelector('#schCalNextMonth')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      viewMonth++;
+      if (viewMonth > 12) { viewMonth = 1; viewYear++; }
+      renderCal();
+    });
+    pop.querySelector('#schCalCloseBtn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      pop.remove();
+    });
+
+    pop.querySelectorAll('.sch-cal-day-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const iso = btn.getAttribute('data-iso');
+        applyIsoToInput(iso);
+        pop.remove();
+      });
+    });
+
+    pop.querySelector('#schCalPickToday')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      applyIsoToInput(todayIso);
+      pop.remove();
+    });
+    const shiftDays = (add) => {
+      const base = parseIsoOrMd(document.getElementById('schSearchStartDate')?.value || inputEl.value) || todayIso;
+      const [y, m, d] = base.split('-').map(Number);
+      const dt = new Date(Date.UTC(y, m - 1, d + add));
+      const iso = `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`;
+      applyIsoToInput(iso);
+      pop.remove();
+    };
+    pop.querySelector('#schCalPickPlus1')?.addEventListener('click', (e) => { e.stopPropagation(); shiftDays(1); });
+    pop.querySelector('#schCalPickPlus6')?.addEventListener('click', (e) => { e.stopPropagation(); shiftDays(6); });
+    pop.querySelector('#schCalPickClear')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      applyIsoToInput('');
+      pop.remove();
+    });
+  };
+
+  document.body.appendChild(pop);
+  renderCal();
+  positionPopover();
+
+  setTimeout(() => {
+    const outsideClick = (ev) => {
+      if (!pop.contains(ev.target) && ev.target !== inputEl) {
+        pop.remove();
+        document.removeEventListener('mousedown', outsideClick);
+      }
+    };
+    document.addEventListener('mousedown', outsideClick);
+  }, 20);
+};
+
+window.openSch24HrTimePicker = (targetInputId) => {
+  window.closeSchPopovers();
+  const inputEl = document.getElementById(targetInputId);
+  if (!inputEl) return;
+
+  let current24 = window.normalize24HrTimeStr(inputEl.value, '00:00');
+  let [selH, selM] = current24.split(':').map(Number);
+  if (isNaN(selH)) selH = 0;
+  if (isNaN(selM)) selM = 0;
+
+  const pop = document.createElement('div');
+  pop.id = 'schTimePickerPopover';
+  pop.style.cssText = 'position:fixed; z-index:100050; width:292px; max-width:calc(100vw - 16px); background:linear-gradient(145deg, #0f172a, #1e293b); border:1px solid rgba(56,189,248,0.45); border-radius:12px; padding:12px; box-shadow:0 16px 40px rgba(0,0,0,0.75); color:#f8fafc; font-family:inherit; box-sizing:border-box; user-select:none;';
+
+  const positionPopover = () => {
+    const rect = inputEl.getBoundingClientRect();
+    const popW = Math.min(292, window.innerWidth - 16);
+    const popH = 315;
+    let left = Math.max(8, Math.min(rect.left, window.innerWidth - popW - 8));
+    let top = rect.bottom + 6;
+    if (top + popH > window.innerHeight - 8 && rect.top - popH - 6 > 8) {
+      top = rect.top - popH - 6;
+    } else if (top + popH > window.innerHeight - 8) {
+      top = Math.max(8, window.innerHeight - popH - 8);
+    }
+    pop.style.left = `${left}px`;
+    pop.style.top = `${top}px`;
+  };
+
+  const applyTime = (hh, mm, closeAfter = false) => {
+    selH = hh;
+    selM = mm;
+    const formatted = `${String(selH).padStart(2, '0')}:${String(selM).padStart(2, '0')}`;
+    inputEl.value = formatted;
+    inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+    inputEl.dispatchEvent(new Event('change', { bubbles: true }));
+    if (closeAfter) {
+      pop.remove();
+    } else {
+      renderTimePop();
+    }
+  };
+
+  const presets = ['00:00', '08:00', '09:30', '12:00', '14:00', '16:00', '16:30', '17:00', '19:00', '20:00', '23:59'];
+  const minutesList = [0, 15, 30, 45, 59];
+
+  const renderTimePop = () => {
+    const curFormatted = `${String(selH).padStart(2, '0')}:${String(selM).padStart(2, '0')}`;
+    const pdtEquiv = window.utcTimeToPdtStr(curFormatted);
+
+    let hoursHtml = '';
+    for (let h = 0; h < 24; h++) {
+      const hStr = String(h).padStart(2, '0');
+      const isSel = h === selH;
+      hoursHtml += `
+        <button type="button" class="sch-tp-hour-btn" data-hour="${h}" style="padding:5px 0; border-radius:6px; background:${isSel ? 'linear-gradient(135deg, #0ea5e9, #0284c7)' : 'rgba(255,255,255,0.04)'}; border:1px solid ${isSel ? '#38bdf8' : 'rgba(255,255,255,0.08)'}; color:${isSel ? '#fff' : '#cbd5e1'}; font-weight:${isSel ? '900' : '600'}; font-size:11.5px; cursor:pointer; font-family:monospace;">
+          ${hStr}
+        </button>
+      `;
+    }
+
+    let minsHtml = minutesList.map(m => {
+      const mStr = String(m).padStart(2, '0');
+      const isSel = m === selM;
+      return `
+        <button type="button" class="sch-tp-min-btn" data-min="${m}" style="flex:1; padding:5px 0; border-radius:6px; background:${isSel ? 'linear-gradient(135deg, #10b981, #059669)' : 'rgba(255,255,255,0.04)'}; border:1px solid ${isSel ? '#34d399' : 'rgba(255,255,255,0.08)'}; color:${isSel ? '#fff' : '#cbd5e1'}; font-weight:${isSel ? '900' : '700'}; font-size:11.5px; cursor:pointer; font-family:monospace;">
+          :${mStr}
+        </button>
+      `;
+    }).join('');
+
+    let presetsHtml = presets.map(p => {
+      const isSel = p === curFormatted;
+      return `
+        <button type="button" class="sch-tp-preset-btn" data-time="${p}" style="padding:3px 7px; border-radius:5px; background:${isSel ? 'rgba(16,185,129,0.25)' : 'rgba(14,165,233,0.12)'}; border:1px solid ${isSel ? '#10b981' : 'rgba(14,165,233,0.3)'}; color:${isSel ? '#34d399' : '#38bdf8'}; font-size:10.5px; font-weight:800; cursor:pointer; font-family:monospace;">
+          ${p}
+        </button>
+      `;
+    }).join('');
+
+    pop.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid rgba(255,255,255,0.1);">
+        <div>
+          <div style="font-size:12px; font-weight:800; color:#38bdf8;">🕒 24-Hour UTC Time</div>
+          <div style="font-size:10.5px; color:#94a3b8;">Selected: <strong style="color:#fff; font-family:monospace;">${curFormatted} UTC</strong> (${pdtEquiv} PDT)</div>
+        </div>
+        <button type="button" id="schTpDoneBtn" style="background:linear-gradient(135deg, #10b981, #059669); border:none; color:#fff; padding:5px 10px; border-radius:6px; cursor:pointer; font-weight:800; font-size:11px;">✓ Done</button>
+      </div>
+      <div style="font-size:10px; font-weight:800; color:#94a3b8; text-transform:uppercase; margin-bottom:4px;">⚡ Quick 24h UTC Presets</div>
+      <div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:8px;">
+        ${presetsHtml}
+      </div>
+      <div style="font-size:10px; font-weight:800; color:#94a3b8; text-transform:uppercase; margin-bottom:4px;">Hour (00 – 23 UTC)</div>
+      <div style="display:grid; grid-template-columns:repeat(6, 1fr); gap:4px; margin-bottom:8px;">
+        ${hoursHtml}
+      </div>
+      <div style="font-size:10px; font-weight:800; color:#94a3b8; text-transform:uppercase; margin-bottom:4px;">Minute (:00 – :59)</div>
+      <div style="display:flex; gap:4px;">
+        ${minsHtml}
+      </div>
+    `;
+
+    pop.querySelector('#schTpDoneBtn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      pop.remove();
+    });
+    pop.querySelectorAll('.sch-tp-preset-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const [ph, pm] = btn.getAttribute('data-time').split(':').map(Number);
+        applyTime(ph, pm, true);
+      });
+    });
+    pop.querySelectorAll('.sch-tp-hour-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const h = parseInt(btn.getAttribute('data-hour'), 10);
+        applyTime(h, selM, false);
+      });
+    });
+    pop.querySelectorAll('.sch-tp-min-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const m = parseInt(btn.getAttribute('data-min'), 10);
+        applyTime(selH, m, true);
+      });
+    });
+  };
+
+  document.body.appendChild(pop);
+  renderTimePop();
+  positionPopover();
+
+  setTimeout(() => {
+    const outsideClick = (ev) => {
+      if (!pop.contains(ev.target) && ev.target !== inputEl) {
+        pop.remove();
+        document.removeEventListener('mousedown', outsideClick);
+      }
+    };
+    document.addEventListener('mousedown', outsideClick);
+  }, 20);
+};
+
 window.parseDataSheetToRewardsCatalog = (rows) => {
   if (!Array.isArray(rows) || rows.length < 3) return [];
   const todayIso = window.getLocalTodayIsoStr();
@@ -46117,19 +46506,22 @@ window.openScheduleEditorModal = async (initialTab = 'search') => {
                 <input type="text" id="schEditorTitleInput" value="${escapeHTML(isAddRewardMode ? '' : (selectedItem?.title || ''))}" placeholder="e.g. Lucky Wheel, Frostdragon Tyrant, Bear Trap..." style="width:100%; padding:9px 12px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; box-sizing:border-box;">
               </div>
 
-              <!-- Start Date (Col J) & End Date (Col M) -->
+              <!-- Start Date (Col J) & End Date (Col M) with Popup Calendar -->
               <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(135px, 1fr)); gap:10px;">
                 <div>
                   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                    <label style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Start (Col J)</label>
+                    <label style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Start Date (Col J)</label>
                     <button id="schSetStartTodayBtn" type="button" style="font-size:10px; font-weight:bold; color:var(--accent); cursor:pointer; text-transform:uppercase; background:rgba(14,165,233,0.15); border:1px solid rgba(14,165,233,0.3); padding:2px 6px; border-radius:4px;">Today</button>
                   </div>
-                  <input type="date" id="schSearchStartDate" value="${escapeHTML(isAddRewardMode ? todayIso : (selectedItem?.startDate || ''))}" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; box-sizing:border-box;">
+                  <div style="position:relative; display:flex; align-items:center;">
+                    <input type="text" id="schSearchStartDate" value="${escapeHTML(isAddRewardMode ? todayIso : (selectedItem?.startDate || ''))}" placeholder="YYYY-MM-DD" onclick="window.openSchPopupCalendar('schSearchStartDate')" style="width:100%; padding:8px 32px 8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; box-sizing:border-box; cursor:pointer; font-family:monospace;">
+                    <button type="button" id="btnCalStartDate" onclick="window.openSchPopupCalendar('schSearchStartDate')" style="position:absolute; right:4px; background:transparent; border:none; font-size:14px; cursor:pointer; padding:4px;" title="Open Calendar">📅</button>
+                  </div>
                 </div>
 
                 <div>
                   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; gap:4px; flex-wrap:wrap;">
-                    <label style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">End (Col M)</label>
+                    <label style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">End Date (Col M)</label>
                     <div style="display:flex; gap:3px;">
                       <button id="schSetEndTodayBtn" type="button" style="font-size:10px; font-weight:bold; color:var(--accent); cursor:pointer; text-transform:uppercase; background:rgba(14,165,233,0.15); border:1px solid rgba(14,165,233,0.3); padding:2px 5px; border-radius:4px;">Today</button>
                       <button id="schAdd1DayBtn" type="button" style="font-size:10px; font-weight:bold; color:#10b981; cursor:pointer; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.3); padding:2px 5px; border-radius:4px;">+1d</button>
@@ -46138,19 +46530,34 @@ window.openScheduleEditorModal = async (initialTab = 'search') => {
                       <button id="schClearDatesBtn" type="button" style="font-size:10px; font-weight:bold; color:#eab308; cursor:pointer; background:rgba(234,179,8,0.15); border:1px solid rgba(234,179,8,0.3); padding:2px 5px; border-radius:4px;">Clear</button>
                     </div>
                   </div>
-                  <input type="date" id="schSearchEndDate" value="${escapeHTML(isAddRewardMode ? todayIso : (selectedItem?.endDate || ''))}" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; box-sizing:border-box;">
+                  <div style="position:relative; display:flex; align-items:center;">
+                    <input type="text" id="schSearchEndDate" value="${escapeHTML(isAddRewardMode ? todayIso : (selectedItem?.endDate || ''))}" placeholder="YYYY-MM-DD" onclick="window.openSchPopupCalendar('schSearchEndDate')" style="width:100%; padding:8px 32px 8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; box-sizing:border-box; cursor:pointer; font-family:monospace;">
+                    <button type="button" id="btnCalEndDate" onclick="window.openSchPopupCalendar('schSearchEndDate')" style="position:absolute; right:4px; background:transparent; border:none; font-size:14px; cursor:pointer; padding:4px;" title="Open Calendar">📅</button>
+                  </div>
                 </div>
               </div>
 
-              <!-- Start UTC (Col K) & End UTC (Col N) -->
+              <!-- Start UTC (Col K) & End UTC (Col N) — True 24-Hour Format (00:00 - 23:59) -->
               <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(135px, 1fr)); gap:10px;">
                 <div>
-                  <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px; text-transform:uppercase;">Start UTC (Col K)</label>
-                  <input type="time" id="schSearchUtc" value="${escapeHTML(isAddRewardMode ? '00:00' : (selectedItem?.startUtc || '00:00'))}" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; box-sizing:border-box;">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <label style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Start UTC 24h (Col K)</label>
+                    <span id="schSearchUtcPdtBadge" style="font-size:10px; color:#38bdf8; font-weight:bold;">${escapeHTML(window.utcTimeToPdtStr(isAddRewardMode ? '00:00' : (selectedItem?.startUtc || '00:00')))} PDT</span>
+                  </div>
+                  <div style="position:relative; display:flex; align-items:center;">
+                    <input type="text" id="schSearchUtc" inputmode="numeric" maxlength="8" value="${escapeHTML(window.normalize24HrTimeStr(isAddRewardMode ? '00:00' : (selectedItem?.startUtc || '00:00')))}" placeholder="00:00 - 23:59" onclick="window.openSch24HrTimePicker('schSearchUtc')" style="width:100%; padding:8px 52px 8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; box-sizing:border-box; font-family:monospace;">
+                    <button type="button" id="btnOpenStartUtc24h" onclick="window.openSch24HrTimePicker('schSearchUtc')" style="position:absolute; right:4px; background:rgba(14,165,233,0.16); border:1px solid rgba(14,165,233,0.35); color:#38bdf8; border-radius:4px; font-size:10px; font-weight:800; cursor:pointer; padding:3px 6px;" title="Open 24-Hour Time Picker">24h 🕒</button>
+                  </div>
                 </div>
                 <div>
-                  <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px; text-transform:uppercase;">End UTC (Col N)</label>
-                  <input type="time" id="schSearchEndUtc" value="${escapeHTML(isAddRewardMode ? '00:00' : (selectedItem?.endUtc || '00:00'))}" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; box-sizing:border-box;">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <label style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">End UTC 24h (Col N)</label>
+                    <span id="schSearchEndUtcPdtBadge" style="font-size:10px; color:#38bdf8; font-weight:bold;">${escapeHTML(window.utcTimeToPdtStr(isAddRewardMode ? '00:00' : (selectedItem?.endUtc || '00:00')))} PDT</span>
+                  </div>
+                  <div style="position:relative; display:flex; align-items:center;">
+                    <input type="text" id="schSearchEndUtc" inputmode="numeric" maxlength="8" value="${escapeHTML(window.normalize24HrTimeStr(isAddRewardMode ? '00:00' : (selectedItem?.endUtc || '00:00')))}" placeholder="00:00 - 23:59" onclick="window.openSch24HrTimePicker('schSearchEndUtc')" style="width:100%; padding:8px 52px 8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; box-sizing:border-box; font-family:monospace;">
+                    <button type="button" id="btnOpenEndUtc24h" onclick="window.openSch24HrTimePicker('schSearchEndUtc')" style="position:absolute; right:4px; background:rgba(14,165,233,0.16); border:1px solid rgba(14,165,233,0.35); color:#38bdf8; border-radius:4px; font-size:10px; font-weight:800; cursor:pointer; padding:3px 6px;" title="Open 24-Hour Time Picker">24h 🕒</button>
+                  </div>
                 </div>
               </div>
 
@@ -46199,21 +46606,25 @@ window.openScheduleEditorModal = async (initialTab = 'search') => {
 
           <!-- Add Event Form -->
           <div style="background:var(--bg-main); border:1px solid var(--border); border-radius:10px; padding:14px; display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
-            <div style="flex:1; min-width:140px;">
+            <div style="flex:1; min-width:130px;">
               <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">Event Name</label>
               <input type="text" id="schNewName" placeholder="e.g. Bear Trap 2" style="width:100%; padding:8px 12px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; box-sizing:border-box;">
             </div>
-            <div style="width:85px;">
-              <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">Date (M/D)</label>
-              <input type="text" id="schNewDate" placeholder="10/21" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; text-align:center; box-sizing:border-box;">
+            <div style="width:110px;">
+              <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">Start Date 📅</label>
+              <input type="text" id="schNewDate" data-date-format="md" placeholder="10/24" onclick="window.openSchPopupCalendar('schNewDate')" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; text-align:center; box-sizing:border-box; cursor:pointer; font-family:monospace;">
             </div>
-            <div style="width:90px;">
-              <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">Start UTC</label>
-              <input type="text" id="schNewUtc" placeholder="16:00" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; text-align:center; box-sizing:border-box;">
+            <div style="width:110px;">
+              <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">End Date 📅</label>
+              <input type="text" id="schNewEndDate" data-date-format="md" placeholder="10/24" onclick="window.openSchPopupCalendar('schNewEndDate')" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; text-align:center; box-sizing:border-box; cursor:pointer; font-family:monospace;">
             </div>
-            <div style="width:90px;">
-              <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">End UTC (Opt)</label>
-              <input type="text" id="schNewEndUtc" placeholder="16:30" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; text-align:center; box-sizing:border-box;">
+            <div style="width:100px;">
+              <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">Start UTC (24h)</label>
+              <input type="text" id="schNewUtc" inputmode="numeric" maxlength="8" placeholder="16:00" onclick="window.openSch24HrTimePicker('schNewUtc')" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; text-align:center; box-sizing:border-box; font-family:monospace;">
+            </div>
+            <div style="width:100px;">
+              <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">End UTC (24h)</label>
+              <input type="text" id="schNewEndUtc" inputmode="numeric" maxlength="8" placeholder="16:30" onclick="window.openSch24HrTimePicker('schNewEndUtc')" style="width:100%; padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; text-align:center; box-sizing:border-box; font-family:monospace;">
             </div>
             <div style="width:75px;">
               <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px;">Emoji</label>
@@ -46428,6 +46839,27 @@ window.openScheduleEditorModal = async (initialTab = 'search') => {
       if (eEl) eEl.value = '';
     });
 
+    // Live 24-hour normalization & PDT preview on Start/End UTC inputs
+    const bind24HrUtcInput = (inputSelector, badgeSelector) => {
+      const inp = modal.querySelector(inputSelector);
+      const badge = badgeSelector ? modal.querySelector(badgeSelector) : null;
+      if (!inp) return;
+      inp.addEventListener('input', () => {
+        const norm = window.normalize24HrTimeStr(inp.value, '00:00');
+        if (badge) badge.textContent = `${window.utcTimeToPdtStr(norm)} PDT`;
+      });
+      inp.addEventListener('blur', () => {
+        if (inp.value.trim()) {
+          inp.value = window.normalize24HrTimeStr(inp.value, '00:00');
+          if (badge) badge.textContent = `${window.utcTimeToPdtStr(inp.value)} PDT`;
+        }
+      });
+    };
+    bind24HrUtcInput('#schSearchUtc', '#schSearchUtcPdtBadge');
+    bind24HrUtcInput('#schSearchEndUtc', '#schSearchEndUtcPdtBadge');
+    bind24HrUtcInput('#schNewUtc', null);
+    bind24HrUtcInput('#schNewEndUtc', null);
+
     // Save or Create Event/Reward in Catalog
     modal.querySelector('#schSaveSearchItemBtn')?.addEventListener('click', async () => {
       const titleEl = modal.querySelector('#schEditorTitleInput');
@@ -46441,8 +46873,8 @@ window.openScheduleEditorModal = async (initialTab = 'search') => {
       const title = String(titleEl?.value || '').trim();
       const startDate = String(startEl?.value || '').trim();
       const endDate = String(endEl?.value || '').trim() || startDate;
-      const startUtc = String(utcEl?.value || '00:00').trim();
-      const endUtc = String(endUtcEl?.value || '00:00').trim();
+      const startUtc = window.normalize24HrTimeStr(utcEl?.value || '00:00', '00:00');
+      const endUtc = window.normalize24HrTimeStr(endUtcEl?.value || '00:00', '00:00');
 
       if (!title) {
         if (window.showToast) window.showToast("Please enter an Event or Reward name", "error");
@@ -46621,8 +47053,9 @@ window.openScheduleEditorModal = async (initialTab = 'search') => {
 
       const name = String(nameEl?.value || '').trim();
       const dateStr = String(dateEl?.value || '').trim();
-      const utcStr = String(utcEl?.value || '').trim() || '16:00';
-      const endUtcStr = String(endUtcEl?.value || '').trim();
+      const utcStr = window.normalize24HrTimeStr(utcEl?.value || '16:00', '16:00');
+      const rawEndUtc = String(endUtcEl?.value || '').trim();
+      const endUtcStr = rawEndUtc ? window.normalize24HrTimeStr(rawEndUtc, '') : '';
       const emoji = emojiEl?.value || '✨';
 
       if (!name) {
@@ -46727,6 +47160,7 @@ window.openScheduleEditorModal = async (initialTab = 'search') => {
   };
 
   const closeModal = () => {
+    window.closeSchPopovers();
     modal.remove();
     overlay.remove();
   };
