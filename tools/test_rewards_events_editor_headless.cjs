@@ -50,6 +50,7 @@ function runStaticAndUnitVerification() {
   assert(code.includes('window.saveFirebaseNodeWithFallback ='), 'Must define saveFirebaseNodeWithFallback with timeout & REST fallback');
   assert(code.includes('schOpenAddRewardBtn'), 'Must include Add New Event/Reward button in modal');
   assert(code.includes('schDeleteRewardItemBtn'), 'Must include Delete button in modal');
+  assert(code.includes('schToggleTimeLockBtn'), 'Must include Toggle Time Lock button in modal');
 
   const dbRulesPath = path.resolve(__dirname, '..', 'database.rules.json');
   const dbRules = JSON.parse(fs.readFileSync(dbRulesPath, 'utf8'));
@@ -304,27 +305,32 @@ async function runHeadlessBrowserVerification() {
     // Reset Status Filter to All
     await page.click('.sch-status-pill[data-status="all"]');
 
-    // Test Adding a New Reward Event + Interactive Calendar Popup & 24-Hour UTC Time Picker
+    // Test Adding a New Reward Event + Locked All-Day Times & Interactive Calendar Popup
     await page.click('#schOpenAddRewardBtn');
     await page.waitForSelector('#schEditorSectionSelect', { visible: true, timeout: 3000 });
     await page.select('#schEditorSectionSelect', 'rewards');
-    await page.focus('#schEditorTitleInput');
-    await page.keyboard.type('Frostdragon Tyrant Test');
 
-    // Verify clicking Start Date opens Interactive Popup Calendar (#schCalendarPopover)
-    await page.click('#schSearchStartDate');
-    await page.waitForSelector('#schCalendarPopover', { visible: true, timeout: 3000 });
-    await page.click('#schCalPickToday');
-    const calClosedAfterStart = await page.evaluate(() => !document.getElementById('schCalendarPopover'));
-    assert(calClosedAfterStart, 'Calendar popover must close after picking Today on Start Date');
+    // Verify Daily Rewards are locked as Fixed All-Day Events (00:00 – 24:00 UTC)
+    const rewardLockedText = await page.$eval('#schSearchEditor', el => el.textContent);
+    assert(rewardLockedText.includes('Fixed All-Day Event (00:00 – 24:00 UTC)'), 'Daily Rewards must display locked fixed all-day badge');
+    const startUtcRewardVal = await page.$eval('#schSearchUtc', el => el.value);
+    const endUtcRewardVal = await page.$eval('#schSearchEndUtc', el => el.value);
+    assert.strictEqual(startUtcRewardVal, '00:00', 'Locked Daily Reward Start UTC must be 00:00');
+    assert.strictEqual(endUtcRewardVal, '24:00', 'Locked Daily Reward End UTC must be 24:00');
+    console.log('  ✅ Daily Rewards locked times verified (Fixed All-Day 00:00 – 24:00 UTC, 5:00 PM – 5:00 PM PDT)');
 
-    // Verify clicking End Date opens Interactive Popup Calendar (#schCalendarPopover)
-    await page.click('#schSearchEndDate');
-    await page.waitForSelector('#schCalendarPopover', { visible: true, timeout: 3000 });
-    await page.click('#schCalPickPlus6');
-    console.log('  ✅ Interactive Popup Calendar verified on both Start Date and End Date inputs!');
+    // Test Timed Events: Verify Sheet Times Locking and [🔓 Unlock to Edit] Toggle
+    await page.select('#schEditorSectionSelect', 'timed');
+    const timedLockedText = await page.$eval('#schSearchEditor', el => el.textContent);
+    assert(timedLockedText.includes('Locked Sheet Times:'), 'Timed events must show locked Google Sheet times badge');
+    assert(timedLockedText.includes('Unlock to Edit'), 'Timed events must have [🔓 Unlock to Edit] button');
 
-    // Verify clicking Start UTC opens 24-Hour Time Picker (#schTimePickerPopover) and supports 24-hour selection
+    // Click Unlock to Edit
+    await page.click('#schToggleTimeLockBtn');
+    const unlockBtnText = await page.$eval('#schToggleTimeLockBtn', el => el.textContent.trim());
+    assert(unlockBtnText.includes('Lock Times'), 'Button must change to [🔒 Lock Times] when unlocked');
+
+    // Verify 24-Hour Time Picker and Normalization when unlocked
     await page.click('#schSearchUtc');
     await page.waitForSelector('#schTimePickerPopover', { visible: true, timeout: 3000 });
     await page.click('.sch-tp-hour-btn[data-hour="16"]');
@@ -345,7 +351,31 @@ async function runHeadlessBrowserVerification() {
     const endUtcPdtText = await page.$eval('#schSearchEndUtcPdtBadge', el => el.textContent.trim());
     assert.strictEqual(endUtc24Val, '24:00', 'Direct 24-hour input "2400" must normalize to "24:00"');
     assert(endUtcPdtText.includes('5:00 PM'), 'PDT preview badge for 24:00 UTC must display 5:00 PM');
-    console.log('  ✅ 24-Hour UTC Time Picker & 24:00 end-of-day normalization verified (16:30 & 24:00 UTC)!');
+    console.log('  ✅ Timed Event [🔓 Unlock to Edit] & 24-Hour Time Picker verified (16:30 & 24:00 UTC)!');
+
+    // Re-lock times
+    await page.click('#schToggleTimeLockBtn');
+    const relockedText = await page.$eval('#schSearchEditor', el => el.textContent);
+    assert(relockedText.includes('Locked Sheet Times:'), 'Must re-lock into Locked Sheet Times badge');
+    console.log('  ✅ Timed Event [🔒 Lock Times] re-locking verified');
+
+    // Switch back to Rewards section to complete adding Frostdragon Tyrant Test
+    await page.select('#schEditorSectionSelect', 'rewards');
+    await page.focus('#schEditorTitleInput');
+    await page.keyboard.type('Frostdragon Tyrant Test');
+
+    // Verify clicking Start Date opens Interactive Popup Calendar (#schCalendarPopover)
+    await page.click('#schSearchStartDate');
+    await page.waitForSelector('#schCalendarPopover', { visible: true, timeout: 3000 });
+    await page.click('#schCalPickToday');
+    const calClosedAfterStart = await page.evaluate(() => !document.getElementById('schCalendarPopover'));
+    assert(calClosedAfterStart, 'Calendar popover must close after picking Today on Start Date');
+
+    // Verify clicking End Date opens Interactive Popup Calendar (#schCalendarPopover)
+    await page.click('#schSearchEndDate');
+    await page.waitForSelector('#schCalendarPopover', { visible: true, timeout: 3000 });
+    await page.click('#schCalPickPlus6');
+    console.log('  ✅ Interactive Popup Calendar verified on both Start Date and End Date inputs!');
 
     await page.click('#schSetStartTodayBtn');
     await page.click('#schAdd2DaysBtn');

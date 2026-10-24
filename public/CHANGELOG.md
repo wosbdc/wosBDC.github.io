@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.128] - 2026-10-23
+- 🔒 **Locked Daily Rewards**: Daily rewards locked to full day 00:00-24:00 UTC.
+- ⏱️ **Locked Event Times**: Timed events lock to sheet times by default.
+- 🔓 **Unlock Toggle**: Tap unlock to customize hours and lock back anytime.
+- 💾 **Seamless Sync**: Date updates preserve locked times without manual entry.
+
 ## [3.3.127] - 2026-10-23
 - 🕒 **24:00 UTC Support**: Allows scheduling 24:00 midnight end times in Scheduler.
 - 🌐 **Game Time Clarity**: Added clear UTC reset guidance and local PDT previews.

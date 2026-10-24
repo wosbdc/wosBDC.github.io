@@ -46441,6 +46441,10 @@ window.syncRewardsCatalogChangeEverywhere = async (catalogItems, queueOp = null,
     const e = it.endDate || '';
     let status = 'nodates';
     if (s || e) status = ((e || s) < todayIso) ? 'expired' : 'active';
+    const isRewLike = String(it.section || 'rewards') !== 'timed';
+    const sUtc = String(it.startUtc || (isRewLike ? '00:00' : '16:00'));
+    let eUtc = String(it.endUtc || (isRewLike ? '24:00' : '16:30'));
+    if (isRewLike && (!eUtc || eUtc === '00:00')) eUtc = '24:00';
     return {
       id: it.id || `rew_row_${it.row || 0}`,
       row: Number(it.row) || 0,
@@ -46449,10 +46453,10 @@ window.syncRewardsCatalogChangeEverywhere = async (catalogItems, queueOp = null,
       title: String(it.title || '').trim(),
       startDate: s,
       endDate: e,
-      startUtc: String(it.startUtc || '00:00'),
-      endUtc: String(it.endUtc || '00:00'),
-      startPdt: it.startPdt || window.utcTimeToPdtStr(it.startUtc),
-      endPdt: it.endPdt || window.utcTimeToPdtStr(it.endUtc),
+      startUtc: sUtc,
+      endUtc: eUtc,
+      startPdt: it.startPdt || window.utcTimeToPdtStr(sUtc),
+      endPdt: it.endPdt || window.utcTimeToPdtStr(eUtc),
       status
     };
   });
@@ -46549,6 +46553,8 @@ window.openScheduleEditorModal = async (initialTab = 'search') => {
   let activeStatusFilter = 'all';
   let currentSearchQuery = '';
   let isAddRewardMode = false;
+  let addModeSection = 'rewards';
+  let isTimesUnlocked = false;
   let pendingDeleteConfirm = false;
   let selectedRewardRow = catalogItems.length > 0 ? catalogItems[0].row : -1;
 
@@ -46633,6 +46639,27 @@ window.openScheduleEditorModal = async (initialTab = 'search') => {
     const activeCount = catalogItems.filter(i => i.status === 'active').length;
     const expiredCount = catalogItems.filter(i => i.status === 'expired').length;
     const noDatesCount = catalogItems.filter(i => i.status === 'nodates').length;
+
+    const currentItemSection = isAddRewardMode ? addModeSection : (selectedItem?.section || 'rewards');
+    const isRewardLike = currentItemSection !== 'timed';
+
+    const defaultStartUtc = isRewardLike ? '00:00' : '16:00';
+    const defaultEndUtc = isRewardLike ? '24:00' : '16:30';
+
+    const curStartUtc = window.normalize24HrTimeStr(
+      isAddRewardMode
+        ? defaultStartUtc
+        : (selectedItem?.startUtc || defaultStartUtc),
+      defaultStartUtc
+    );
+    const curEndUtc = window.normalize24HrTimeStr(
+      isAddRewardMode
+        ? defaultEndUtc
+        : (isRewardLike ? '24:00' : (selectedItem?.endUtc || defaultEndUtc)),
+      defaultEndUtc
+    );
+    const curStartPdt = window.utcTimeToPdtStr(curStartUtc);
+    const curEndPdt = window.utcTimeToPdtStr(curEndUtc);
 
     const sectionBadgeMeta = (sec) => {
       if (sec === 'timed') return { icon: '⏱️', label: 'Timed Event', color: '#38bdf8', bg: 'rgba(56,189,248,0.12)' };
@@ -46759,10 +46786,10 @@ window.openScheduleEditorModal = async (initialTab = 'search') => {
               <div style="display:${isAddRewardMode ? 'block' : 'none'};">
                 <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:4px; text-transform:uppercase;">Category Section (Google Sheet 'data' Tab)</label>
                 <select id="schEditorSectionSelect" style="width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; box-sizing:border-box;">
-                  <option value="rewards">🎁 Rewards Events (8-Day Daily Matrix)</option>
-                  <option value="timed">⏱️ Timed Events (Today &amp; Upcoming Schedule)</option>
-                  <option value="signups">📝 Sign-Ups Requiring Action</option>
-                  <option value="holidays">🎉 Holidays &amp; Seasonal Events</option>
+                  <option value="rewards" ${addModeSection === 'rewards' ? 'selected' : ''}>🎁 Rewards Events (8-Day Daily Matrix)</option>
+                  <option value="timed" ${addModeSection === 'timed' ? 'selected' : ''}>⏱️ Timed Events (Today &amp; Upcoming Schedule)</option>
+                  <option value="signups" ${addModeSection === 'signups' ? 'selected' : ''}>📝 Sign-Ups Requiring Action</option>
+                  <option value="holidays" ${addModeSection === 'holidays' ? 'selected' : ''}>🎉 Holidays &amp; Seasonal Events</option>
                 </select>
               </div>
 
@@ -46803,34 +46830,85 @@ window.openScheduleEditorModal = async (initialTab = 'search') => {
                 </div>
               </div>
 
-              <!-- Start UTC (Col K) & End UTC (Col N) — True 24-Hour Format (00:00 - 24:00) -->
-              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(135px, 1fr)); gap:10px;">
-                <div>
-                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                    <label style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Start UTC 24h (Col K)</label>
-                    <span id="schSearchUtcPdtBadge" style="font-size:10px; color:#38bdf8; font-weight:bold;">${escapeHTML(window.utcTimeToPdtStr(isAddRewardMode ? '00:00' : (selectedItem?.startUtc || '00:00')))} PDT</span>
+              <!-- Time Configuration (Locked All-Day for Rewards vs Locked Sheet Times / Unlocked for Timed Events) -->
+              ${isRewardLike ? `
+                <div style="background:rgba(234,179,8,0.1); border:1px solid rgba(234,179,8,0.3); border-radius:10px; padding:12px; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+                  <div style="display:flex; align-items:center; gap:10px;">
+                    <span style="font-size:22px;">🔒</span>
+                    <div>
+                      <div style="font-size:12px; font-weight:bold; color:#eab308; display:flex; align-items:center; gap:6px;">
+                        <span>Fixed All-Day Event (00:00 – 24:00 UTC)</span>
+                        <span style="background:rgba(234,179,8,0.25); color:#facc15; font-size:10px; padding:1px 6px; border-radius:4px; font-weight:800; text-transform:uppercase;">Locked</span>
+                      </div>
+                      <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">
+                        Daily rewards, signups &amp; holiday milestones run for the full 24h game cycle (5:00 PM – 5:00 PM PDT).
+                      </div>
+                    </div>
                   </div>
-                  <div style="position:relative; display:flex; align-items:center;">
-                    <input type="text" id="schSearchUtc" inputmode="numeric" maxlength="8" value="${escapeHTML(window.normalize24HrTimeStr(isAddRewardMode ? '00:00' : (selectedItem?.startUtc || '00:00')))}" placeholder="00:00 - 23:59" onclick="window.openSch24HrTimePicker('schSearchUtc')" style="width:100%; padding:8px 52px 8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; box-sizing:border-box; font-family:monospace;">
-                    <button type="button" id="btnOpenStartUtc24h" onclick="window.openSch24HrTimePicker('schSearchUtc')" style="position:absolute; right:4px; background:rgba(14,165,233,0.16); border:1px solid rgba(14,165,233,0.35); color:#38bdf8; border-radius:4px; font-size:10px; font-weight:800; cursor:pointer; padding:3px 6px;" title="Open 24-Hour Time Picker">24h 🕒</button>
+                  <div style="text-align:right;">
+                    <span style="font-family:monospace; font-size:12px; font-weight:bold; color:#facc15;">00:00 – 24:00 UTC</span>
+                    <div style="font-size:10px; color:#38bdf8; font-weight:bold;">5:00 PM – 5:00 PM PDT</div>
+                  </div>
+                  <input type="hidden" id="schSearchUtc" value="00:00">
+                  <input type="hidden" id="schSearchEndUtc" value="24:00">
+                </div>
+              ` : !isTimesUnlocked ? `
+                <div style="background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.3); border-radius:10px; padding:12px; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+                  <div style="display:flex; align-items:center; gap:10px;">
+                    <span style="font-size:22px;">🔒</span>
+                    <div>
+                      <div style="font-size:12px; font-weight:bold; color:#38bdf8; display:flex; align-items:center; gap:6px;">
+                        <span>Locked Sheet Times: <span style="font-family:monospace; color:#fff;">${escapeHTML(curStartUtc)} – ${escapeHTML(curEndUtc)} UTC</span></span>
+                        <span style="background:rgba(56,189,248,0.25); color:#38bdf8; font-size:10px; padding:1px 6px; border-radius:4px; font-weight:800; text-transform:uppercase;">Locked</span>
+                      </div>
+                      <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">
+                        Scheduled window: <strong style="color:#38bdf8;">${curStartPdt} – ${curEndPdt} PDT</strong> (automatically locked from Google Sheet data).
+                      </div>
+                    </div>
+                  </div>
+                  <button id="schToggleTimeLockBtn" type="button" style="background:rgba(56,189,248,0.18); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; padding:6px 12px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:4px; transition:all 0.15s;">
+                    🔓 Unlock to Edit
+                  </button>
+                  <input type="hidden" id="schSearchUtc" value="${escapeHTML(curStartUtc)}">
+                  <input type="hidden" id="schSearchEndUtc" value="${escapeHTML(curEndUtc)}">
+                </div>
+              ` : `
+                <div style="background:rgba(234,179,8,0.06); border:1px dashed rgba(234,179,8,0.4); border-radius:10px; padding:12px; display:flex; flex-direction:column; gap:10px;">
+                  <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:11px; font-weight:bold; color:#f59e0b; display:flex; align-items:center; gap:4px;">
+                      ⚠️ Custom Event Time Window (Unlocked)
+                    </span>
+                    <button id="schToggleTimeLockBtn" type="button" style="background:rgba(234,179,8,0.15); border:1px solid rgba(234,179,8,0.35); color:#facc15; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:4px;">
+                      🔒 Lock Times
+                    </button>
+                  </div>
+                  <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(135px, 1fr)); gap:10px;">
+                    <div>
+                      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                        <label style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Start UTC 24h (Col K)</label>
+                        <span id="schSearchUtcPdtBadge" style="font-size:10px; color:#38bdf8; font-weight:bold;">${curStartPdt} PDT</span>
+                      </div>
+                      <div style="position:relative; display:flex; align-items:center;">
+                        <input type="text" id="schSearchUtc" inputmode="numeric" maxlength="8" value="${escapeHTML(curStartUtc)}" placeholder="00:00 - 23:59" onclick="window.openSch24HrTimePicker('schSearchUtc')" style="width:100%; padding:8px 52px 8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; box-sizing:border-box; font-family:monospace;">
+                        <button type="button" id="btnOpenStartUtc24h" onclick="window.openSch24HrTimePicker('schSearchUtc')" style="position:absolute; right:4px; background:rgba(14,165,233,0.16); border:1px solid rgba(14,165,233,0.35); color:#38bdf8; border-radius:4px; font-size:10px; font-weight:800; cursor:pointer; padding:3px 6px;" title="Open 24-Hour Time Picker">24h 🕒</button>
+                      </div>
+                    </div>
+                    <div>
+                      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                        <label style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">End UTC 24h (Col N)</label>
+                        <span id="schSearchEndUtcPdtBadge" style="font-size:10px; color:#38bdf8; font-weight:bold;">${curEndPdt} PDT</span>
+                      </div>
+                      <div style="position:relative; display:flex; align-items:center;">
+                        <input type="text" id="schSearchEndUtc" inputmode="numeric" maxlength="8" value="${escapeHTML(curEndUtc)}" placeholder="00:00 - 24:00" onclick="window.openSch24HrTimePicker('schSearchEndUtc')" style="width:100%; padding:8px 52px 8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; box-sizing:border-box; font-family:monospace;">
+                        <button type="button" id="btnOpenEndUtc24h" onclick="window.openSch24HrTimePicker('schSearchEndUtc')" style="position:absolute; right:4px; background:rgba(14,165,233,0.16); border:1px solid rgba(14,165,233,0.35); color:#38bdf8; border-radius:4px; font-size:10px; font-weight:800; cursor:pointer; padding:3px 6px;" title="Open 24-Hour Time Picker">24h 🕒</button>
+                      </div>
+                    </div>
+                  </div>
+                  <div style="font-size:11px; color:#cbd5e1; background:rgba(14,165,233,0.1); border:1px solid rgba(14,165,233,0.3); border-radius:8px; padding:7px 10px; line-height:1.45;">
+                    <strong style="color:#38bdf8;">🌐 UTC Game Time:</strong> Daily reset is <strong>00:00 UTC</strong> (5:00 PM PDT). For 24-hour events, set Start: <strong style="color:#34d399; font-family:monospace;">00:00</strong> and End: <strong style="color:#34d399; font-family:monospace;">24:00</strong>.
                   </div>
                 </div>
-                <div>
-                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                    <label style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">End UTC 24h (Col N)</label>
-                    <span id="schSearchEndUtcPdtBadge" style="font-size:10px; color:#38bdf8; font-weight:bold;">${escapeHTML(window.utcTimeToPdtStr(isAddRewardMode ? '24:00' : (selectedItem?.endUtc || '00:00')))} PDT</span>
-                  </div>
-                  <div style="position:relative; display:flex; align-items:center;">
-                    <input type="text" id="schSearchEndUtc" inputmode="numeric" maxlength="8" value="${escapeHTML(window.normalize24HrTimeStr(isAddRewardMode ? '24:00' : (selectedItem?.endUtc || '00:00')))}" placeholder="00:00 - 24:00" onclick="window.openSch24HrTimePicker('schSearchEndUtc')" style="width:100%; padding:8px 52px 8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-weight:bold; font-size:13px; box-sizing:border-box; font-family:monospace;">
-                    <button type="button" id="btnOpenEndUtc24h" onclick="window.openSch24HrTimePicker('schSearchEndUtc')" style="position:absolute; right:4px; background:rgba(14,165,233,0.16); border:1px solid rgba(14,165,233,0.35); color:#38bdf8; border-radius:4px; font-size:10px; font-weight:800; cursor:pointer; padding:3px 6px;" title="Open 24-Hour Time Picker">24h 🕒</button>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Time Helper Guidance -->
-              <div style="font-size:11px; color:#cbd5e1; background:rgba(14,165,233,0.1); border:1px solid rgba(14,165,233,0.3); border-radius:8px; padding:7px 10px; line-height:1.45;">
-                <strong style="color:#38bdf8;">🌐 UTC Game Time:</strong> Daily reset is <strong>00:00 UTC</strong> (5:00 PM PDT). For 24-hour events, set Start: <strong style="color:#34d399; font-family:monospace;">00:00</strong> and End: <strong style="color:#34d399; font-family:monospace;">24:00</strong>.
-              </div>
+              `}
 
               <!-- Save & Delete Controls -->
               <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:4px;">
@@ -47036,6 +47114,7 @@ window.openScheduleEditorModal = async (initialTab = 'search') => {
         if (!isNaN(r)) {
           selectedRewardRow = r;
           isAddRewardMode = false;
+          isTimesUnlocked = false;
           pendingDeleteConfirm = false;
           renderModalContent();
         }
@@ -47045,6 +47124,7 @@ window.openScheduleEditorModal = async (initialTab = 'search') => {
     // Open Add New Mode
     modal.querySelector('#schOpenAddRewardBtn')?.addEventListener('click', () => {
       isAddRewardMode = true;
+      isTimesUnlocked = false;
       pendingDeleteConfirm = false;
       renderModalContent();
       modal.querySelector('#schEditorTitleInput')?.focus();
@@ -47052,16 +47132,43 @@ window.openScheduleEditorModal = async (initialTab = 'search') => {
 
     modal.querySelector('#schCancelAddModeBtn')?.addEventListener('click', () => {
       isAddRewardMode = false;
+      isTimesUnlocked = false;
       pendingDeleteConfirm = false;
       renderModalContent();
     });
 
     modal.querySelector('#schEditorSectionSelect')?.addEventListener('change', (e) => {
-      const sec = e.target.value;
-      const utcEl = modal.querySelector('#schSearchUtc');
-      const endUtcEl = modal.querySelector('#schSearchEndUtc');
-      if (utcEl) utcEl.value = sec === 'timed' ? '16:00' : '00:00';
-      if (endUtcEl) endUtcEl.value = sec === 'timed' ? '16:30' : '00:00';
+      addModeSection = e.target.value;
+      isTimesUnlocked = false;
+      const titleVal = modal.querySelector('#schEditorTitleInput')?.value;
+      const startVal = modal.querySelector('#schSearchStartDate')?.value;
+      const endVal = modal.querySelector('#schSearchEndDate')?.value;
+      renderModalContent();
+      if (titleVal && modal.querySelector('#schEditorTitleInput')) {
+        modal.querySelector('#schEditorTitleInput').value = titleVal;
+      }
+      if (startVal && modal.querySelector('#schSearchStartDate')) {
+        modal.querySelector('#schSearchStartDate').value = startVal;
+      }
+      if (endVal && modal.querySelector('#schSearchEndDate')) {
+        modal.querySelector('#schSearchEndDate').value = endVal;
+      }
+    });
+
+    // Toggle Unlock / Lock for Timed Event Time Window
+    modal.querySelector('#schToggleTimeLockBtn')?.addEventListener('click', () => {
+      if (isTimesUnlocked) {
+        const uInp = modal.querySelector('#schSearchUtc');
+        const euInp = modal.querySelector('#schSearchEndUtc');
+        if (selectedItem) {
+          if (uInp) selectedItem.startUtc = window.normalize24HrTimeStr(uInp.value, '16:00');
+          if (euInp) selectedItem.endUtc = window.normalize24HrTimeStr(euInp.value, '16:30');
+          selectedItem.startPdt = window.utcTimeToPdtStr(selectedItem.startUtc);
+          selectedItem.endPdt = window.utcTimeToPdtStr(selectedItem.endUtc);
+        }
+      }
+      isTimesUnlocked = !isTimesUnlocked;
+      renderModalContent();
     });
 
     // Sync from Google Sheet button
@@ -47150,8 +47257,10 @@ window.openScheduleEditorModal = async (initialTab = 'search') => {
       const title = String(titleEl?.value || '').trim();
       const startDate = String(startEl?.value || '').trim();
       const endDate = String(endEl?.value || '').trim() || startDate;
-      const startUtc = window.normalize24HrTimeStr(utcEl?.value || '00:00', '00:00');
-      const endUtc = window.normalize24HrTimeStr(endUtcEl?.value || '00:00', '00:00');
+      const itemSec = isAddRewardMode ? String(secEl?.value || 'rewards').trim() : (selectedItem?.section || 'rewards');
+      const isItemRewardLike = itemSec !== 'timed';
+      const startUtc = window.normalize24HrTimeStr(utcEl?.value || (isItemRewardLike ? '00:00' : '16:00'), isItemRewardLike ? '00:00' : '16:00');
+      const endUtc = window.normalize24HrTimeStr(endUtcEl?.value || (isItemRewardLike ? '24:00' : '16:30'), isItemRewardLike ? '24:00' : '16:30');
 
       if (!title) {
         if (window.showToast) window.showToast("Please enter an Event or Reward name", "error");
