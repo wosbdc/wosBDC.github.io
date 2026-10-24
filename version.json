@@ -1,17 +1,19 @@
 {
-  "version": "3.3.135",
+  "version": "3.3.136",
   "releaseDate": "2026-10-24",
-  "title": "What's New in v3.3.135",
+  "title": "What's New in v3.3.136",
   "notes": [
-    "🛡️ Admin Users: Restored real Chief names across member directory.",
-    "👥 Unclaimed Roster: Resolved in-game names for all roster members.",
-    "👑 Staff Roles: Fixed Chief name resolution for alliance staff.",
-    "🔗 Alt Accounts: Real Chief names now display for alts.",
-    "🔄 Smart Refresh: Live database refresh synchronizes all member identities."
+    "⚔️ Showdown Alignment: Excluded secondary alts from required roster.",
+    "⭐ Mains Only: Added 1-tap switcher for mains and active alts.",
+    "🤖 Bot Exclusion: Filtered out automated utility bots from mercenary events.",
+    "✕ Search Clear: Added instant 1-tap clear button to search.",
+    "📱 Admin Pagination: Added smartphone pagination to eliminate long directory scrolling.",
+    "⭐ Default View: Admin directory defaults to Mains for clean browsing."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.135",
+    "version": "3.3.136",
     "latestChanges": [
+      "v3.3.136: Added Mercenary search clear, Showdown alt exclusion, and Admin Users smartphone pagination",
       "v3.3.135: Resolved chief names in Admin Users directory and unclaimed roster to prevent numeric IDs",
       "v3.3.134: Fixed chief name resolution in Mercenary Prestige tracker to prevent numeric gamer IDs",
       "v3.3.133: Remodeled Mercenary Prestige Tracker with milestone scout levels and real-time rally deck",

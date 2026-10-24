@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## [3.3.136] - 2026-10-24
+- ⚔️ **Showdown Alignment**: Excluded secondary alts from required roster.
+- ⭐ **Mains Only Filter**: Added 1-tap switcher for mains versus active alts.
+- 🤖 **Bot Exclusion**: Filtered out automated utility bots from mercenary events.
+- ✕ **Search Clear**: Added instant 1-tap clear button to player search.
+- 📱 **Admin Pagination**: Added smartphone pagination to eliminate long directory scrolling.
+- ⭐ **Default View**: Admin directory defaults to Mains for clean browsing.
+
 ## [3.3.135] - 2026-10-24
 - 🛡️ **Admin Users**: Restored real Chief names across member directory.
 - 👥 **Unclaimed Roster**: Resolved in-game names for all roster members.

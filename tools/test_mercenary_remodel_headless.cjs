@@ -233,7 +233,7 @@ async function runHeadlessBrowserTests() {
     // 3b. Assert Bulletproof Chief Name Resolution: ZERO numeric Gamer IDs in DOM
     const nameCells = await page.evaluate(() => {
       const cells = Array.from(document.querySelectorAll('.merc-name-cell'));
-      return cells.map(c => c.textContent.trim());
+      return cells.map(c => (c.querySelector('.merc-chief-name')?.textContent || c.textContent).replace(/\s*ALT\s*$/, '').trim());
     });
     console.log('    Debug nameCells:', nameCells);
     assert(nameCells.includes('thadwarf'), 'thadwarf must be resolved from key/idToNameMap instead of numeric gameId');

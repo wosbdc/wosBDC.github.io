@@ -91,6 +91,74 @@ window.resolveChiefName = (rawName, gameId = '', key = '', chiefNameField = '') 
 };
 
 /**
+ * 🤖 Universal Bot & Utility Account Detector
+ * Excludes automated backend bots (gatekeeper, wosrewards, service IDs) from competitive events.
+ */
+window.isBotAccount = (name, gid) => {
+    if (!name && !gid) return false;
+    const n = (typeof window.cleanChiefName === 'function' ? window.cleanChiefName(name || '') : String(name || '')).toLowerCase().trim();
+    if (n === 'gatekeeper' || n === 'wosrewards') return true;
+    if (n.endsWith('bot') || n.startsWith('bot ')) return true;
+    const gStr = String(gid || '').trim();
+    if (gStr === '861818874' || gStr === '264551456') return true;
+    return false;
+};
+
+/**
+ * 🎭 Universal Alt Account Registry Resolver
+ * Ingests users and users_alts to return sets of alt names and game IDs.
+ */
+window.getRegisteredAltSets = async () => {
+    const altNamesSet = new Set();
+    const altGidsSet = new Set();
+    try {
+        const [usersSnap, altsSnap] = await Promise.all([
+            get(ref(db, 'users')).catch(() => null),
+            get(ref(db, 'users_alts')).catch(() => null)
+        ]);
+        if (usersSnap && usersSnap.exists()) {
+            const users = usersSnap.val() || {};
+            Object.values(users).forEach(u => {
+                if (!u || typeof u !== 'object') return;
+                const checkAlt = (aid, aData) => {
+                    if (aid) altGidsSet.add(String(aid).trim());
+                    if (aData && typeof aData === 'object') {
+                        const an = aData.nickname || aData.name || aData.chiefName;
+                        if (an) {
+                            altNamesSet.add(String(an).trim().toLowerCase());
+                            if (window.cleanChiefName) altNamesSet.add(window.cleanChiefName(an).toLowerCase().trim());
+                        }
+                    }
+                };
+                if (u.altTokens && typeof u.altTokens === 'object') {
+                    Object.entries(u.altTokens).forEach(([aid, at]) => checkAlt(aid, at));
+                }
+                if (u.linkedAltsData && typeof u.linkedAltsData === 'object') {
+                    Object.entries(u.linkedAltsData).forEach(([aid, at]) => checkAlt(aid, at));
+                }
+                if (u.linkedGameIds && Array.isArray(u.linkedGameIds)) {
+                    u.linkedGameIds.forEach(aid => { if (aid) altGidsSet.add(String(aid).trim()); });
+                }
+            });
+        }
+        if (altsSnap && altsSnap.exists()) {
+            const alts = altsSnap.val() || {};
+            Object.entries(alts).forEach(([aid, a]) => {
+                if (aid) altGidsSet.add(String(aid).trim());
+                if (a && typeof a === 'object') {
+                    const an = a.name || a.chiefName || a.nickname;
+                    if (an) {
+                        altNamesSet.add(String(an).trim().toLowerCase());
+                        if (window.cleanChiefName) altNamesSet.add(window.cleanChiefName(an).toLowerCase().trim());
+                    }
+                }
+            });
+        }
+    } catch(e) {}
+    return { altNamesSet, altGidsSet };
+};
+
+/**
  * 👥 Single Unified Chief List Resolver
  * Aggregates and deduplicates all chiefs across Registered Users, Linked Alts,
  * Roster Live, and Showdown Live into a single source of truth with sanitized names.
@@ -31965,9 +32033,30 @@ const views = {
         }
     };
 
-    window.currentAdminUserPopulationTab = 'all';
+    window.currentAdminUserPopulationTab = 'mains';
+    window._adminUserPage = 1;
+    window._adminUserPageSize = (typeof window !== 'undefined' && window.innerWidth <= 768) ? 15 : 25;
+
+    window.setAdminUserPageSize = (size) => {
+        window._adminUserPageSize = (size === 'all') ? 'all' : parseInt(size, 10);
+        window._adminUserPage = 1;
+        window.filterAdminUsersList(false);
+    };
+
+    window.changeAdminUserPage = (delta) => {
+        window._adminUserPage = (window._adminUserPage || 1) + delta;
+        window.filterAdminUsersList(false);
+        const container = document.getElementById('adminUsersTable') || document.getElementById('tab-users');
+        if (container) {
+            try {
+                container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch(e) {}
+        }
+    };
+
     window.setAdminUserPopulationTab = (tabName, btnEl) => {
         window.currentAdminUserPopulationTab = tabName;
+        window._adminUserPage = 1;
         document.querySelectorAll('.admin-user-filter-tab').forEach(b => {
             b.classList.remove('active');
             b.style.background = 'transparent';
@@ -32001,7 +32090,7 @@ const views = {
                 btnEl.style.color = '#fff';
             }
         }
-        window.filterAdminUsersList();
+        window.filterAdminUsersList(false);
     };
 
     // Backward-compatibility alias
@@ -32034,13 +32123,19 @@ const views = {
         window._userActionsClickListenerAdded = true;
     }
 
-    window.filterAdminUsersList = () => {
+    window.filterAdminUsersList = (resetPage = false) => {
         const searchVal = (document.getElementById('adminUserSearchInput')?.value || '').toLowerCase().trim();
-        const activeTab = window.currentAdminUserPopulationTab || 'all';
+        if (resetPage === true || window._lastAdminUserSearchVal !== searchVal) {
+            window._adminUserPage = 1;
+            window._lastAdminUserSearchVal = searchVal;
+        }
+
+        const activeTab = window.currentAdminUserPopulationTab || 'mains';
         const tokenFilter = document.getElementById('adminUserTokenFilter')?.value || 'all';
         const attrFilter = document.getElementById('adminUserAttrFilter')?.value || 'all';
 
         const rows = document.querySelectorAll('.admin-user-row');
+        const matchedRows = [];
         let visibleCount = 0;
 
         let countAll = 0;
@@ -32161,13 +32256,69 @@ const views = {
                 if (isAltCollapsed && !isExplicitAltTab && !isStatusTab && !isStatusAttr && !isSpecificSearchMatch) {
                     row.style.display = 'none';
                 } else {
-                    row.style.display = '';
-                    visibleCount++;
+                    matchedRows.push(row);
                 }
             } else {
                 row.style.display = 'none';
             }
         });
+
+        // Smart client-side pagination slice
+        const totalMatching = matchedRows.length;
+        const isShowAll = window._adminUserPageSize === 'all';
+        const pageSize = isShowAll ? (totalMatching || 1) : (window._adminUserPageSize || 15);
+        const totalPages = isShowAll ? 1 : Math.max(1, Math.ceil(totalMatching / pageSize));
+
+        if (window._adminUserPage > totalPages) window._adminUserPage = totalPages;
+        if (window._adminUserPage < 1) window._adminUserPage = 1;
+
+        const startIdx = isShowAll ? 0 : (window._adminUserPage - 1) * pageSize;
+        const endIdx = isShowAll ? totalMatching : Math.min(startIdx + pageSize, totalMatching);
+
+        matchedRows.forEach((row, idx) => {
+            if (idx >= startIdx && idx < endIdx) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        // Render pagination controls bar
+        const pagContainer = document.getElementById('adminUserPaginationContainer');
+        if (pagContainer) {
+            if (totalMatching === 0) {
+                pagContainer.innerHTML = '';
+            } else {
+                pagContainer.innerHTML = `
+                  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; padding:12px 16px; background:var(--card-bg); border:1px solid var(--border); border-radius:12px; margin-top:14px; box-shadow:0 2px 8px rgba(0,0,0,0.15);">
+                    <div style="font-size:12.5px; color:var(--text-muted); font-weight:600;">
+                      Showing <strong style="color:var(--text-main);">${totalMatching > 0 ? startIdx + 1 : 0}–${endIdx}</strong> of <strong style="color:var(--text-main);">${totalMatching}</strong> members
+                    </div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                      <button type="button" onclick="window.changeAdminUserPage(-1)" ${window._adminUserPage <= 1 ? 'disabled' : ''} style="background:${window._adminUserPage <= 1 ? 'rgba(255,255,255,0.03)' : 'var(--bg-main)'}; color:${window._adminUserPage <= 1 ? 'var(--text-muted)' : 'var(--text-main)'}; border:1px solid var(--border); padding:6px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:${window._adminUserPage <= 1 ? 'not-allowed' : 'pointer'}; opacity:${window._adminUserPage <= 1 ? '0.4' : '1'}; transition:0.15s;">
+                        ◀ Prev
+                      </button>
+                      <span style="font-size:12px; font-weight:bold; color:var(--text-main); padding:0 4px;">
+                        Page ${window._adminUserPage} of ${totalPages}
+                      </span>
+                      <button type="button" onclick="window.changeAdminUserPage(1)" ${window._adminUserPage >= totalPages ? 'disabled' : ''} style="background:${window._adminUserPage >= totalPages ? 'rgba(255,255,255,0.03)' : 'var(--bg-main)'}; color:${window._adminUserPage >= totalPages ? 'var(--text-muted)' : 'var(--text-main)'}; border:1px solid var(--border); padding:6px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:${window._adminUserPage >= totalPages ? 'not-allowed' : 'pointer'}; opacity:${window._adminUserPage >= totalPages ? '0.4' : '1'}; transition:0.15s;">
+                        Next ▶
+                      </button>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                      <span style="font-size:11.5px; color:var(--text-muted); font-weight:bold;">Per Page:</span>
+                      <select onchange="window.setAdminUserPageSize(this.value)" style="background:var(--bg-main); color:var(--text-main); border:1px solid var(--border); border-radius:6px; padding:4px 8px; font-size:12px; font-weight:bold; cursor:pointer;">
+                        <option value="15" ${window._adminUserPageSize == 15 ? 'selected' : ''}>15</option>
+                        <option value="25" ${window._adminUserPageSize == 25 ? 'selected' : ''}>25</option>
+                        <option value="50" ${window._adminUserPageSize == 50 ? 'selected' : ''}>50</option>
+                        <option value="all" ${window._adminUserPageSize === 'all' ? 'selected' : ''}>All</option>
+                      </select>
+                    </div>
+                  </div>
+                `;
+            }
+        }
 
         // Helper to update dropdown option label
         const updateSelectOptionText = (selectId, optVal, text) => {
@@ -32313,7 +32464,8 @@ const views = {
         if (window.showToast) window.showToast("User database refreshed!", "success");
     };
 
-    if (!window.isAdminUser(currentUser)) {
+    const activeAdminUser = currentUser || window.currentUser;
+    if (!window.isAdminUser(activeAdminUser)) {
       views.home();
       return;
     }
@@ -32326,7 +32478,7 @@ const views = {
     }
     
 
-    const isR5 = window.getAdminLevel(currentUser) === 'R5';
+    const isR5 = window.getAdminLevel(activeAdminUser) === 'R5';
     
     try {
       const [usersSnap, rosterRawData, fcmSnap] = await Promise.all([
@@ -35322,7 +35474,7 @@ const views = {
 
                       <!-- Primary Segmented Switcher -->
                       <div style="display:inline-flex; background:var(--bg-main); padding:3px; border-radius:10px; border:1px solid var(--border); gap:4px; flex-wrap:wrap;">
-                        <button class="admin-user-filter-tab active" data-tab="all" onclick="window.setAdminUserPopulationTab('all', this)" style="background:var(--accent); color:#fff; border:none; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+                        <button class="admin-user-filter-tab" data-tab="all" onclick="window.setAdminUserPopulationTab('all', this)" style="background:transparent; color:var(--text-muted); border:none; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
                           👥 All (${totalMembersCount})
                         </button>
                         <button class="admin-user-filter-tab" data-tab="active" onclick="window.setAdminUserPopulationTab('active', this)" style="background:transparent; color:var(--text-muted); border:none; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
@@ -35334,7 +35486,7 @@ const views = {
                         <button class="admin-user-filter-tab" data-tab="banned" onclick="window.setAdminUserPopulationTab('banned', this)" style="background:transparent; color:var(--text-muted); border:none; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
                           🚫 Banned (${bannedMembersCount})
                         </button>
-                        <button class="admin-user-filter-tab" data-tab="mains" onclick="window.setAdminUserPopulationTab('mains', this)" style="background:transparent; color:var(--text-muted); border:none; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
+                        <button class="admin-user-filter-tab active" data-tab="mains" onclick="window.setAdminUserPopulationTab('mains', this)" style="background:#3b82f6; color:#fff; border:none; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
                           ⭐ Mains (${totalMainsCount})
                         </button>
                         <button class="admin-user-filter-tab" data-tab="alts" onclick="window.setAdminUserPopulationTab('alts', this)" style="background:transparent; color:var(--text-muted); border:none; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;">
@@ -35354,12 +35506,12 @@ const views = {
                   <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
                     <!-- Search Input -->
                     <div style="position:relative; flex:2 1 220px; min-width:200px;">
-                      <input type="text" id="adminUserSearchInput" oninput="window.filterAdminUsersList()" placeholder="🔍 Search Name, Game ID, or Email..." style="width:100%; padding:9px 30px 9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; font-weight:bold; box-sizing:border-box;">
-                      <button onclick="let i=document.getElementById('adminUserSearchInput'); if(i){i.value=''; window.filterAdminUsersList(); i.focus();}" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text-muted); cursor:pointer; font-weight:bold; font-size:14px;">✕</button>
+                      <input type="text" id="adminUserSearchInput" oninput="window.filterAdminUsersList(true)" placeholder="🔍 Search Name, Game ID, or Email..." style="width:100%; padding:9px 30px 9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; font-weight:bold; box-sizing:border-box;">
+                      <button onclick="let i=document.getElementById('adminUserSearchInput'); if(i){i.value=''; window.filterAdminUsersList(true); i.focus();}" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text-muted); cursor:pointer; font-weight:bold; font-size:14px;">✕</button>
                     </div>
 
                     <!-- Feature Attributes Selector with Live Counters -->
-                    <select id="adminUserAttrFilter" onchange="window.filterAdminUsersList()" style="flex:1 1 170px; min-width:160px; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer; outline:none; box-sizing:border-box;">
+                    <select id="adminUserAttrFilter" onchange="window.filterAdminUsersList(true)" style="flex:1 1 170px; min-width:160px; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer; outline:none; box-sizing:border-box;">
                       <option value="all">🏷️ Attributes: All (${totalMembersCount})</option>
                       <option value="push_on">🔔 Push: Enabled (${pushEnabledCount})</option>
                       <option value="push_off">🔕 Push: Disabled (${pushDisabledCount})</option>
@@ -35371,7 +35523,7 @@ const views = {
                     </select>
 
                     <!-- 30-Day Token Status Selector with Live Counters -->
-                    <select id="adminUserTokenFilter" onchange="window.filterAdminUsersList()" style="flex:1 1 150px; min-width:140px; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer; outline:none; box-sizing:border-box;">
+                    <select id="adminUserTokenFilter" onchange="window.filterAdminUsersList(true)" style="flex:1 1 150px; min-width:140px; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer; outline:none; box-sizing:border-box;">
                       <option value="all">🛡️ Token: All (${totalMembersCount})</option>
                       <option value="active">🟢 Active Sync (${tokenActiveCount})</option>
                       <option value="expiring">🟠 Expiring Soon (${tokenExpiringCount})</option>
@@ -35961,6 +36113,9 @@ const views = {
       
       html += `</tbody></table></div>
             
+            <!-- Client-Side Smartphone & Desktop Pagination Controls -->
+            <div id="adminUserPaginationContainer"></div>
+            
             <!-- Floating Bulk Action Toolbar -->
             <div id="adminBulkFloatingToolbar" style="display:none; position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:rgba(15,23,42,0.95); backdrop-filter:blur(14px); border:1.5px solid var(--accent); border-radius:14px; padding:12px 20px; box-shadow:0 10px 35px rgba(0,0,0,0.8), 0 0 20px rgba(6,182,212,0.25); z-index:9990; align-items:center; gap:12px; flex-wrap:wrap; animation:slideUp 0.25s ease;">
               <div style="display:flex; align-items:center; gap:8px;">
@@ -36199,6 +36354,9 @@ const views = {
           if (el) el.textContent = `${res.displayCount}`;
         });
       }
+      if (typeof window.filterAdminUsersList === 'function') {
+        window.filterAdminUsersList();
+      }
       
       // Bind Admin Tabs & Enable Horizontal Mouse Wheel / Drag Scrolling
       const adminNavEl = document.getElementById('adminTabNav');
@@ -36260,6 +36418,9 @@ const views = {
           window.activeViewFunc = () => views.admin(tabKey);
           const targetEl = document.getElementById(tabKey);
           if (targetEl) targetEl.style.display = 'block';
+          if (tabKey === 'tab-users') {
+            if (window.filterAdminUsersList) window.filterAdminUsersList();
+          }
           if (tabKey === 'tab-bots') {
             if (window.switchBotsSubTab) window.switchBotsSubTab('radar');
             if (window.updateBotOperationsRadarDom) window.updateBotOperationsRadarDom();
@@ -39430,10 +39591,11 @@ const views = {
     try {
         window.mercenaryCache = null;
         await window.refreshIdToNameMap().catch(() => null);
-        const [mercenaryData, rosterData, bossProgressData] = await Promise.all([
+        const [mercenaryData, rosterData, bossProgressData, altSets] = await Promise.all([
             window.fetchMercenaryData(),
             window.fetchRoster().catch(() => ({})),
-            window.fetchMercenaryBossProgress().catch(() => ({}))
+            window.fetchMercenaryBossProgress().catch(() => ({})),
+            window.getRegisteredAltSets ? window.getRegisteredAltSets() : Promise.resolve({ altNamesSet: new Set(), altGidsSet: new Set() })
         ]);
 
         let rosterList = [];
@@ -39446,8 +39608,30 @@ const views = {
                 const resolvedName = window.resolveChiefName(p.name, gid, k, p.chiefName);
                 p.name = resolvedName;
                 p.chiefName = resolvedName;
+
+                // Exclude automated bots (gatekeeper, wosrewards, service IDs)
+                if (typeof window.isBotAccount === 'function' && window.isBotAccount(p.name, gid)) return;
+
                 if (p.name && p.gameId && window.isPlayerActiveMember(p)) {
                     seenGids.add(gid);
+
+                    // Alt account detection
+                    const normN = (p.name || '').toLowerCase().trim();
+                    const cleanN = typeof window.cleanChiefName === 'function' ? window.cleanChiefName(p.name).toLowerCase().trim() : normN;
+                    const isAlt = Boolean(
+                        (gid && altSets.altGidsSet && altSets.altGidsSet.has(gid)) ||
+                        (altSets.altNamesSet && (altSets.altNamesSet.has(normN) || altSets.altNamesSet.has(cleanN)))
+                    );
+                    p.isAlt = isAlt;
+
+                    let gIdStr = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (p.name ? p.name.toLowerCase().replace(/[^a-z0-9]/g, '_') : '');
+                    let record = (window.getEventRecord ? window.getEventRecord(mercenaryData, p) : null) || mercenaryData[gIdStr] || (p.name ? mercenaryData[p.name] : {}) || {};
+                    let isDone = record && record.signedUp;
+                    let scoutLvl = (record && record.scoutLevel !== undefined) ? parseInt(record.scoutLevel) || 0 : (isDone ? 25 : 0);
+                    let currentPhase = (record && record.phase) ? record.phase : "";
+                    let currentDiff = (record && record.difficulty) ? record.difficulty : "";
+                    p.hasParticipation = Boolean(scoutLvl > 0 || isDone || currentPhase || currentDiff);
+
                     rosterList.push(p);
                 }
             });
@@ -39456,13 +39640,17 @@ const views = {
         // Sort roster by name
         rosterList.sort((a,b) => (a.name || '').localeCompare(b.name || ''));
 
-        // Calculate statistics
-        let totalCount = rosterList.length;
+        // Default roster mode: 'mains' (exclude non-participating secondary alts) vs 'all'
+        window.mercRosterMode = window.mercRosterMode || 'mains';
+        const initialRoster = (window.mercRosterMode === 'all') ? rosterList : rosterList.filter(p => !p.isAlt || p.hasParticipation);
+
+        // Calculate statistics based on active roster mode
+        let totalCount = initialRoster.length;
         let yesCount = 0;
         let needsPushCount = 0;
         let missingNames = [];
 
-        rosterList.forEach(p => {
+        initialRoster.forEach(p => {
             let gIdStr = (p.gameId && p.gameId.toString().trim()) ? p.gameId.toString().trim() : (p.name ? p.name.toLowerCase().replace(/[^a-z0-9]/g, '_') : '');
             let record = (window.getEventRecord ? window.getEventRecord(mercenaryData, p) : null) || mercenaryData[gIdStr] || (p.name ? mercenaryData[p.name] : {}) || {};
             let isDone = record && record.signedUp;
@@ -39563,7 +39751,20 @@ const views = {
 
             <!-- Search & Filter Controls -->
             <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:16px; display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:space-between;">
-              <input type="text" id="mercSearchInput" placeholder="🔍 Filter player name..." style="flex:1; min-width:200px; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:14px;" onkeyup="window.filterMercTable()">
+              <div style="position:relative; flex:1; min-width:200px;">
+                <input type="text" id="mercSearchInput" placeholder="🔍 Filter player name..." style="width:100%; box-sizing:border-box; padding:10px 34px 10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:14px;" onkeyup="window.filterMercTable()" onkeydown="if(event.key==='Escape'){ window.clearMercSearch(); }">
+                <button id="mercClearSearchBtn" onclick="window.clearMercSearch()" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text-muted); cursor:pointer; font-weight:bold; font-size:16px; padding:4px 6px; line-height:1;" title="Clear search">✕</button>
+              </div>
+
+              <!-- Dual Mode Switcher: Mains Only (Showdown Alignment) vs All Roster -->
+              <div style="display:inline-flex; background:var(--bg-main); padding:3px; border-radius:10px; border:1px solid var(--border); gap:4px;">
+                <button id="mercModeBtnMains" onclick="window.setMercRosterMode('mains')" style="${window.mercRosterMode === 'mains' ? 'background:linear-gradient(135deg, #3b82f6, #2563eb); color:#fff;' : 'background:transparent; color:var(--text-muted);'} border:none; padding:7px 13px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;" title="Show main chiefs and alts who are actively participating (Showdown aligned)">
+                  ⭐ Mains Only
+                </button>
+                <button id="mercModeBtnAll" onclick="window.setMercRosterMode('all')" style="${window.mercRosterMode === 'all' ? 'background:linear-gradient(135deg, #3b82f6, #2563eb); color:#fff;' : 'background:transparent; color:var(--text-muted);'} border:none; padding:7px 13px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; transition:0.2s;" title="Show all registered alliance characters including secondary alts">
+                  👥 All (${rosterList.length})
+                </button>
+              </div>
               
               <div style="display:flex; gap:6px; flex-wrap:wrap;">
                 <button id="mercFilterBtnAll" class="merc-filter-btn active" data-filter="all" onclick="window.setMercFilter('all')" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--accent); color:white; font-weight:bold; cursor:pointer; font-size:13px;">All (${totalCount})</button>
@@ -39591,9 +39792,12 @@ const views = {
                       let scoutLvl = (record && record.scoutLevel !== undefined) ? parseInt(record.scoutLevel) || 0 : (isDone ? 25 : 0);
                       let currentPhase = (record && record.phase) ? record.phase : "";
                       let currentDiff = (record && record.difficulty) ? record.difficulty : "";
+                      const isRowHidden = (window.mercRosterMode === 'mains' && p.isAlt && !p.hasParticipation);
                       return `
-                        <tr class="merc-row" data-name="${escapeHTML((p.name || '').toLowerCase())}" data-gid="${gIdStr}" data-signed="${(scoutLvl >= 25 || isDone) ? 'yes' : 'no'}" data-scout-level="${scoutLvl}" style="border-bottom:1px solid var(--border);">
-                          <td class="merc-name-cell" style="padding:14px 20px; font-weight:bold; color:var(--text-main); font-size:15px;">${escapeHTML(p.name)}</td>
+                        <tr class="merc-row" data-name="${escapeHTML((p.name || '').toLowerCase())}" data-gid="${gIdStr}" data-signed="${(scoutLvl >= 25 || isDone) ? 'yes' : 'no'}" data-scout-level="${scoutLvl}" data-is-alt="${p.isAlt ? 'true' : 'false'}" data-has-participation="${p.hasParticipation ? 'true' : 'false'}" style="border-bottom:1px solid var(--border); ${isRowHidden ? 'display:none;' : ''}">
+                          <td class="merc-name-cell" style="padding:14px 20px; font-weight:bold; color:var(--text-main); font-size:15px;">
+                            <span class="merc-chief-name">${escapeHTML(p.name)}</span>${p.isAlt ? `<span style="background:rgba(168,85,247,0.15); color:#c084fc; border:1px solid rgba(168,85,247,0.3); font-size:10px; padding:2px 6px; border-radius:6px; margin-left:6px; font-weight:bold;" title="Linked Alt Account">ALT</span>` : ''}
+                          </td>
                           <td style="padding:14px 10px;">
                             <select id="merc_phase_${gIdStr}" onchange="window.onMercTierChange('${gIdStr}')" style="background:var(--bg-main); color:${currentPhase ? 'var(--text-main)' : 'var(--text-muted)'}; border:1px solid ${currentPhase ? 'var(--border)' : 'rgba(239,68,68,0.35)'}; border-radius:6px; padding:6px 10px; font-size:12px; font-weight:bold; cursor:pointer;">
                               <option value="" ${!currentPhase ? 'selected' : ''}>-- Select Phase --</option>
@@ -39646,15 +39850,52 @@ const views = {
         }
         window.mercMissingNames = missingNames;
 
+        window.setMercRosterMode = (mode) => {
+            window.mercRosterMode = mode;
+            const btnMains = document.getElementById('mercModeBtnMains');
+            const btnAll = document.getElementById('mercModeBtnAll');
+            if (btnMains && btnAll) {
+                if (mode === 'mains') {
+                    btnMains.style.background = 'linear-gradient(135deg, #3b82f6, #2563eb)';
+                    btnMains.style.color = '#fff';
+                    btnAll.style.background = 'transparent';
+                    btnAll.style.color = 'var(--text-muted)';
+                } else {
+                    btnAll.style.background = 'linear-gradient(135deg, #3b82f6, #2563eb)';
+                    btnAll.style.color = '#fff';
+                    btnMains.style.background = 'transparent';
+                    btnMains.style.color = 'var(--text-muted)';
+                }
+            }
+            window.filterMercTable();
+            window.updateMercStatsUI();
+        };
+
+        window.clearMercSearch = () => {
+            const inp = document.getElementById('mercSearchInput');
+            if (inp) {
+                inp.value = '';
+                window.filterMercTable();
+                inp.focus();
+            }
+        };
+
         window.updateMercStatsUI = () => {
             let total = 0, yes = 0, push = 0;
             let missingList = [];
+            const rosterMode = window.mercRosterMode || 'mains';
 
             document.querySelectorAll('.merc-row').forEach(row => {
+                const isAlt = row.getAttribute('data-is-alt') === 'true';
+                const hasPart = row.getAttribute('data-has-participation') === 'true';
+
+                // Skip non-participating alts in mains mode
+                if (rosterMode === 'mains' && isAlt && !hasPart) return;
+
                 total++;
                 const isSigned = row.getAttribute('data-signed') === 'yes';
                 const sLvl = parseInt(row.getAttribute('data-scout-level')) || 0;
-                const pName = row.querySelector('.merc-name-cell')?.textContent || '';
+                const pName = row.querySelector('.merc-name-cell')?.textContent?.replace(/\s*ALT\s*$/, '').trim() || '';
                 if (isSigned || sLvl >= 25) {
                     yes++;
                 } else {
@@ -39748,12 +39989,21 @@ const views = {
         window.filterMercTable = () => {
             const query = (document.getElementById('mercSearchInput')?.value || '').toLowerCase().trim();
             const filter = window.mercCurrentFilter || 'all';
+            const rosterMode = window.mercRosterMode || 'mains';
 
             document.querySelectorAll('.merc-row').forEach(row => {
                 const name = row.getAttribute('data-name');
                 const gid = row.getAttribute('data-gid');
                 const signed = row.getAttribute('data-signed');
                 const sLvl = parseInt(row.getAttribute('data-scout-level')) || 0;
+                const isAlt = row.getAttribute('data-is-alt') === 'true';
+                const hasPart = row.getAttribute('data-has-participation') === 'true';
+
+                // Mode check: if Mains Only, hide non-participating alts
+                if (rosterMode === 'mains' && isAlt && !hasPart) {
+                    row.style.display = 'none';
+                    return;
+                }
 
                 const matchesSearch = !query || name.includes(query) || gid.includes(query);
                 let matchesFilter = true;
@@ -44857,10 +45107,11 @@ window.resetBearTrapEvent = async () => {
     try {
         window.mercenaryCache = null;
         await window.refreshIdToNameMap().catch(() => null);
-        const [mercenaryData, rosterData, bossProgressData] = await Promise.all([
+        const [mercenaryData, rosterData, bossProgressData, altSets] = await Promise.all([
             window.fetchMercenaryData().catch(() => ({})),
             window.fetchRoster().catch(() => ({})),
-            window.fetchMercenaryBossProgress().catch(() => ({}))
+            window.fetchMercenaryBossProgress().catch(() => ({})),
+            window.getRegisteredAltSets ? window.getRegisteredAltSets() : Promise.resolve({ altNamesSet: new Set(), altGidsSet: new Set() })
         ]);
 
         let rosterList = [];
@@ -44873,9 +45124,31 @@ window.resetBearTrapEvent = async () => {
                 const cleanName = window.resolveChiefName(p.name, gid, k, p.chiefName);
                 p.name = cleanName;
                 p.chiefName = cleanName;
+
+                // Exclude automated bots (gatekeeper, wosrewards, service IDs)
+                if (typeof window.isBotAccount === 'function' && window.isBotAccount(cleanName, gid)) return;
+
                 const normName = cleanName.toLowerCase().trim();
                 if ((gid && seenGids.has(gid)) || (normName && seenNames.has(normName))) return;
                 if (cleanName && window.isPlayerActiveMember(p)) {
+                    // Alt account detection
+                    const cleanN = typeof window.cleanChiefName === 'function' ? window.cleanChiefName(cleanName).toLowerCase().trim() : normName;
+                    const isAlt = Boolean(
+                        (gid && altSets.altGidsSet && altSets.altGidsSet.has(gid)) ||
+                        (altSets.altNamesSet && (altSets.altNamesSet.has(normName) || altSets.altNamesSet.has(cleanN)))
+                    );
+
+                    let record = window.getEventRecord(mercenaryData, p) || {};
+                    let isDone = record && record.signedUp;
+                    let scoutLvl = (record && record.scoutLevel !== undefined) ? parseInt(record.scoutLevel) || 0 : (isDone ? 25 : 0);
+                    let hasPart = Boolean(scoutLvl > 0 || isDone || record.phase || record.difficulty);
+
+                    // Showdown Alignment: Exclude non-participating secondary alts from required roster
+                    if (isAlt && !hasPart) return;
+
+                    p.isAlt = isAlt;
+                    p.hasParticipation = hasPart;
+
                     if (!p.gameId && gid && /^\d+$/.test(gid)) p.gameId = gid;
                     if (gid) seenGids.add(gid);
                     if (normName) seenNames.add(normName);
@@ -44916,6 +45189,15 @@ window.resetBearTrapEvent = async () => {
             rosterDiv.style.display = 'block';
             if (btnWall) { btnWall.style.background = 'var(--bg-main)'; btnWall.style.color = 'var(--text-muted)'; }
             if (btnRoster) { btnRoster.style.background = 'var(--accent)'; btnRoster.style.color = '#fff'; }
+          }
+        };
+
+        window.clearMercPublicSearch = () => {
+          const inp = document.getElementById('mercPublicSearch');
+          if (inp) {
+            inp.value = '';
+            window.filterMercPublicTable();
+            inp.focus();
           }
         };
 
@@ -44996,7 +45278,10 @@ window.resetBearTrapEvent = async () => {
                   <option value="">All Tiers ⭐</option>
                   ${Object.entries(window.MERCENARY_DIFFICULTIES).map(([dk, dv]) => `<option value="${dk}">${dv.label}</option>`).join('')}
                 </select>
-                <input type="text" id="mercPublicSearch" placeholder="🔍 Search Chief..." onkeyup="window.filterMercPublicTable()" style="padding:8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; outline:none; min-width:160px;">
+                <div style="position:relative; min-width:170px;">
+                  <input type="text" id="mercPublicSearch" placeholder="🔍 Search Chief..." onkeyup="window.filterMercPublicTable()" onkeydown="if(event.key==='Escape'){ window.clearMercPublicSearch(); }" style="padding:8px 30px 8px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; outline:none; width:100%; box-sizing:border-box;">
+                  <button id="mercPublicClearSearchBtn" onclick="window.clearMercPublicSearch()" style="position:absolute; right:6px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text-muted); cursor:pointer; font-weight:bold; font-size:14px; padding:2px 4px; line-height:1;" title="Clear search">✕</button>
+                </div>
               </div>
             </div>
 
