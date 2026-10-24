@@ -46,8 +46,16 @@ function runStaticAndUnitVerification() {
   assert(code.includes('window.computeScheduleLiveFromRewardsCatalog ='), 'Must define computeScheduleLiveFromRewardsCatalog');
   assert(code.includes('window.fetchRewardsEditorCatalog ='), 'Must define fetchRewardsEditorCatalog');
   assert(code.includes('window.syncRewardsCatalogChangeEverywhere ='), 'Must define syncRewardsCatalogChangeEverywhere');
+  assert(code.includes('window.sanitizeFirebaseObject ='), 'Must define sanitizeFirebaseObject for RTDB safety');
+  assert(code.includes('window.saveFirebaseNodeWithFallback ='), 'Must define saveFirebaseNodeWithFallback with timeout & REST fallback');
   assert(code.includes('schOpenAddRewardBtn'), 'Must include Add New Event/Reward button in modal');
   assert(code.includes('schDeleteRewardItemBtn'), 'Must include Delete button in modal');
+
+  const dbRulesPath = path.resolve(__dirname, '..', 'database.rules.json');
+  const dbRules = JSON.parse(fs.readFileSync(dbRulesPath, 'utf8'));
+  assert(dbRules.rules.rewards_editor_catalog, 'database.rules.json must include rewards_editor_catalog permissions');
+  assert(dbRules.rules.rewards_editor_queue, 'database.rules.json must include rewards_editor_queue permissions');
+  assert(dbRules.rules.schedule_presets, 'database.rules.json must include schedule_presets permissions');
 
   // Extract pure functions for VM unit testing
   const startIdx = code.indexOf('window.getLocalTodayIsoStr = () => {');
@@ -129,7 +137,12 @@ function runStaticAndUnitVerification() {
   assert(computed.rewards.includes('Lucky Wheel'), 'Today rewards must include Lucky Wheel');
   assert(!computed.rewards.includes('Snowbusters'), 'Today rewards must NOT include expired Snowbusters');
   assert(computed.signups.includes('Alliance Championship Sign-ups'), 'Active signups must include Alliance Championship Sign-ups');
-  console.log('  ✅ computeScheduleLiveFromRewardsCatalog accurately computes Timed Events, 8-Day Rewards, and Signups');
+  const rewardDayKeys = Object.keys(computed.rewardsByDay || {});
+  assert(rewardDayKeys.length === 8, 'Should compute 8 days of rewardsByDay');
+  for (const k of rewardDayKeys) {
+    assert(!/[/.#$\[\]]/.test(k), `rewardsByDay key "${k}" must not contain illegal Firebase characters`);
+  }
+  console.log('  ✅ computeScheduleLiveFromRewardsCatalog accurately computes Timed Events, 8-Day Rewards (Firebase-safe keys), and Signups');
 }
 
 async function runHeadlessBrowserVerification() {
@@ -217,24 +230,32 @@ async function runHeadlessBrowserVerification() {
       ];
 
       window._testCatalogStore = [...sampleCatalog];
+      window._testFirebaseSavedNodes = {};
       window.fetchRewardsEditorCatalog = async () => {
         return [...window._testCatalogStore];
       };
-      window.syncRewardsCatalogChangeEverywhere = async (catalogItems, queueOp, existingLive) => {
-        const todayStr = window.getLocalTodayIsoStr();
-        window._testCatalogStore = catalogItems.map(it => {
-          const s = it.startDate || '';
-          const e = it.endDate || '';
-          let status = 'nodates';
-          if (s || e) status = ((e || s) < todayStr) ? 'expired' : 'active';
-          return { ...it, status };
-        });
-        const newLive = window.computeScheduleLiveFromRewardsCatalog(window._testCatalogStore, existingLive);
-        window._cachedScheduleLive = newLive;
-        window.fetchScheduleLiveData = async () => newLive;
-        return { catalog: window._testCatalogStore, scheduleLive: newLive };
+      // Intercept low-level saveFirebaseNodeWithFallback so real syncRewardsCatalogChangeEverywhere runs 100% of its logic
+      window.saveFirebaseNodeWithFallback = async (nodePath, value) => {
+        const cleanVal = window.sanitizeFirebaseObject ? window.sanitizeFirebaseObject(value) : value;
+        const verifyKeys = (obj) => {
+          if (!obj || typeof obj !== 'object') return;
+          for (const k of Object.keys(obj)) {
+            if (/[/.#$\[\]]/.test(k)) {
+              throw new Error(`Illegal Firebase key detected on node "${nodePath}": "${k}"`);
+            }
+            verifyKeys(obj[k]);
+          }
+        };
+        verifyKeys(cleanVal);
+        window._testFirebaseSavedNodes[nodePath] = cleanVal;
+        if (nodePath === 'rewards_editor_catalog' && Array.isArray(cleanVal.items)) {
+          window._testCatalogStore = [...cleanVal.items];
+        }
+        return true;
       };
-      window.fetchScheduleLiveData = async () => window.computeScheduleLiveFromRewardsCatalog(window._testCatalogStore, {});
+      window.fetchScheduleLiveData = async () => {
+        return window._cachedScheduleLive || window.computeScheduleLiveFromRewardsCatalog(window._testCatalogStore, {});
+      };
     });
 
     // Render Schedule View
@@ -323,6 +344,24 @@ async function runHeadlessBrowserVerification() {
     await page.click('#schSetStartTodayBtn');
     await page.click('#schAdd2DaysBtn');
     await page.click('#schSaveSearchItemBtn');
+
+    // Verify Save button never hangs on "Saving & Syncing..." and both Firebase nodes were saved cleanly
+    const saveBtnState = await page.$eval('#schSaveSearchItemBtn', el => ({
+      text: el.textContent.trim(),
+      disabled: el.disabled
+    }));
+    assert(!saveBtnState.text.includes('Saving & Syncing'), `Save button must not hang on Saving & Syncing, got: "${saveBtnState.text}"`);
+    assert(!saveBtnState.disabled, 'Save button must be re-enabled after save completes');
+
+    const savedNodesCheck = await page.evaluate(() => ({
+      hasCatalog: !!window._testFirebaseSavedNodes['rewards_editor_catalog'],
+      hasScheduleLive: !!window._testFirebaseSavedNodes['schedule_live'],
+      rewardDayKeys: Object.keys((window._testFirebaseSavedNodes['schedule_live'] || {}).rewardsByDay || {})
+    }));
+    assert(savedNodesCheck.hasCatalog, 'Real syncRewardsCatalogChangeEverywhere must save rewards_editor_catalog node');
+    assert(savedNodesCheck.hasScheduleLive, 'Real syncRewardsCatalogChangeEverywhere must save schedule_live node');
+    assert(savedNodesCheck.rewardDayKeys.every(k => !k.includes('/')), 'All saved rewardsByDay keys must be free of "/"');
+    console.log('  ✅ Save & Sync verified with real syncRewardsCatalogChangeEverywhere (zero button hang, Firebase-safe keys)');
 
     // Verify new item appears in catalog list AND in Schedule Today View Daily Rewards!
     const afterAddTexts = await page.$$eval('.sch-search-item', els => els.map(e => e.textContent));

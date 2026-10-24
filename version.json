@@ -1,15 +1,16 @@
 {
-  "version": "3.3.124",
+  "version": "3.3.125",
   "releaseDate": "2026-10-23",
-  "title": "What's New in v3.3.124",
+  "title": "What's New in v3.3.125",
   "notes": [
-    "📅 Popup Calendar: Start and end dates open interactive calendars.",
-    "🕒 24-Hour Times: Full 24-hour UTC time input and picker.",
-    "⚡ Quick Presets: One-tap 24-hour UTC slots with PDT preview."
+    "💾 Instant Scheduler Save: Fixed saving and syncing button hang.",
+    "🛡️ Safe Firebase Keys: Sanitized daily reward keys for clean sync.",
+    "⚡ Fast Sync Fallback: Added timeout recovery and REST sync fallback."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.124",
+    "version": "3.3.125",
     "latestChanges": [
+      "v3.3.125: Fixed Rewards & Events Scheduler saving and syncing hang with Firebase key sanitization and REST fallback",
       "v3.3.124: Added interactive popup calendar for Start/End dates and 24-hour UTC time picker in Scheduler",
       "v3.3.123: Added schedule-driven cooldown countdown gate for Alliance Championship",
       "v3.3.122: Compacted Bot Operations Radar and 2-column fleet boxes for zero-scroll smartphone viewing",

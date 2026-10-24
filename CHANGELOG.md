@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## [3.3.125] - 2026-10-23
+- 💾 **Instant Scheduler Save**: Fixed saving and syncing button hang.
+- 🛡️ **Safe Firebase Keys**: Sanitized daily reward keys for clean sync.
+- ⚡ **Fast Sync Fallback**: Added timeout recovery and REST sync fallback.
+
 ## [3.3.124] - 2026-10-23
 - 📅 **Popup Calendar**: Start and end dates open interactive calendars.
 - 🕒 **24-Hour Times**: Full 24-hour UTC time input and picker.

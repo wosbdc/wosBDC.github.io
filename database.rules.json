@@ -96,6 +96,18 @@
       ".read": true,
       ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() + '' == '318843189' || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())"
     },
+    "rewards_editor_catalog": {
+      ".read": true,
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() + '' == '318843189' || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())"
+    },
+    "rewards_editor_queue": {
+      ".read": true,
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() + '' == '318843189' || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())"
+    },
+    "schedule_presets": {
+      ".read": true,
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() + '' == '318843189' || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())"
+    },
     "frost_clan": {
       ".read": true,
       ".write": "auth != null && (root.child('users').child(auth.uid).child('gameId').val() + '' == '318843189' || root.child('config/admins').child(root.child('users').child(auth.uid).child('gameId').val() + '').exists())"

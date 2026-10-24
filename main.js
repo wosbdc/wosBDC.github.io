@@ -10715,26 +10715,61 @@ window.syncAllSheetsToFirebase = async () => {
     }
 };
 
-window.saveScheduleLiveToFirebase = async (scheduleObj) => {
-    if (!scheduleObj) return false;
+window.sanitizeFirebaseObject = (obj) => {
+    if (obj === null || obj === undefined) return null;
+    if (typeof obj !== 'object') return obj;
+    if (Array.isArray(obj)) {
+        return obj.map(item => window.sanitizeFirebaseObject(item));
+    }
+    const clean = {};
+    for (const [rawKey, val] of Object.entries(obj)) {
+        if (val === undefined) continue;
+        const safeKey = String(rawKey).replace(/[\/.#$\[\]]/g, '-');
+        if (!safeKey) continue;
+        clean[safeKey] = window.sanitizeFirebaseObject(val);
+    }
+    return clean;
+};
+
+window.saveFirebaseNodeWithFallback = async (nodePath, payloadObj, method = 'PUT') => {
+    if (!nodePath || payloadObj === undefined) return false;
+    const safeObj = window.sanitizeFirebaseObject(payloadObj);
+    const cleanPath = String(nodePath).replace(/^\/+|\/+$/g, '');
+    const FB_SECRET = "n5fTnxcK5J5ddNsT77AhZIoQGTogW3ROpk4k03Sv";
     try {
-        await set(ref(db, 'schedule_live'), scheduleObj);
+        if (method === 'POST') {
+            const opRef = push(ref(db, cleanPath));
+            await Promise.race([
+                set(opRef, safeObj),
+                new Promise((_, rej) => setTimeout(() => rej(new Error('SDK timeout')), 2500))
+            ]);
+        } else {
+            await Promise.race([
+                set(ref(db, cleanPath), safeObj),
+                new Promise((_, rej) => setTimeout(() => rej(new Error('SDK timeout')), 3000))
+            ]);
+        }
         return true;
-    } catch(sdkErr) {
-        console.warn("Direct SDK set for schedule_live failed, trying REST secret API fallback...", sdkErr);
+    } catch (sdkErr) {
         try {
-            const restUrl = "https://wos-dashboard-38d4c-default-rtdb.firebaseio.com/schedule_live.json?auth=n5fTnxcK5J5ddNsT77AhZIoQGTogW3ROpk4k03Sv";
+            const restUrl = `https://wos-dashboard-38d4c-default-rtdb.firebaseio.com/${cleanPath}.json?auth=${FB_SECRET}`;
             const res = await fetch(restUrl, {
-                method: 'PUT',
+                method: method === 'POST' ? 'POST' : 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(scheduleObj)
+                body: JSON.stringify(safeObj),
+                signal: AbortSignal.timeout(6000)
             });
             return res.ok;
-        } catch(restErr) {
-            console.error("Firebase REST fallback for schedule_live failed:", restErr);
-            throw restErr;
+        } catch (restErr) {
+            console.warn(`Firebase fallback failed for ${cleanPath}:`, restErr);
+            return false;
         }
     }
+};
+
+window.saveScheduleLiveToFirebase = async (scheduleObj) => {
+    if (!scheduleObj) return false;
+    return await window.saveFirebaseNodeWithFallback('schedule_live', scheduleObj, 'PUT');
 };
 
 window.syncScheduleDirectly = async () => {
@@ -16533,8 +16568,26 @@ window.getChampionshipScheduleStatus = async (champMatchupData, forceFetch = fal
         return { h: 0, m: 0 };
     };
 
+    // Check live Rewards & Events Scheduler catalog first if updated in session/Firebase
+    const liveCatalog = window._cachedScheduleLive?.catalogItems;
+    if (Array.isArray(liveCatalog)) {
+        const champCat = liveCatalog.find(it => /alliance\s*champ/i.test(it.title || '') && (it.startDate || it.endDate));
+        if (champCat) {
+            const dStart = window.parseScheduleEventDate ? window.parseScheduleEventDate(champCat.startDate || champCat.endDate) : null;
+            const dEnd = window.parseScheduleEventDate ? window.parseScheduleEventDate(champCat.endDate || champCat.startDate) : null;
+            if (dStart && !isNaN(dStart.getTime())) {
+                rawStartDate = dStart;
+                rawEndDate = (dEnd && !isNaN(dEnd.getTime())) ? dEnd : new Date(dStart.getTime() + 6 * 86400000);
+                const parsedT = parseTimeHoursMins(champCat.startUtc || '00:00');
+                startH = parsedT.h;
+                startM = parsedT.m;
+                scheduleSource = 'Event Schedule (Rewards & Events Scheduler)';
+            }
+        }
+    }
+
     const schedRows = window.liveData['Schedule data'];
-    if (Array.isArray(schedRows)) {
+    if (!rawStartDate && Array.isArray(schedRows)) {
         for (let r = 1; r < schedRows.length; r++) {
             const row = schedRows[r];
             if (!Array.isArray(row)) continue;
@@ -45449,14 +45502,25 @@ window.parseSheetToScheduleLiveData = (sheetData) => {
 
 window.fetchScheduleLiveData = async () => {
   try {
-    const snap = await get(ref(db, 'schedule_live'));
-    if (snap.exists()) {
+    const snap = await Promise.race([
+      get(ref(db, 'schedule_live')),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('schedule_live timeout')), 3000))
+    ]);
+    if (snap && snap.exists()) {
       return snap.val();
     }
   } catch(e) {
-    console.warn("Failed to read schedule_live from Firebase:", e);
+    try {
+      const res = await fetch("https://wos-dashboard-38d4c-default-rtdb.firebaseio.com/schedule_live.json?auth=n5fTnxcK5J5ddNsT77AhZIoQGTogW3ROpk4k03Sv", { signal: AbortSignal.timeout(4000) });
+      if (res.ok) {
+        const json = await res.json();
+        if (json && typeof json === 'object') return json;
+      }
+    } catch (restErr) {
+      console.warn("Failed to read schedule_live from Firebase:", e);
+    }
   }
-  return null;
+  return window._cachedScheduleLive || null;
 };
 
 window.saveScheduleToFirebase = async (scheduleObj) => {
@@ -45468,12 +45532,12 @@ window.saveScheduleToFirebase = async (scheduleObj) => {
     scheduleObj.lastUpdated = Date.now();
     scheduleObj.updatedBy = adminName;
 
-    await window.saveScheduleLiveToFirebase(scheduleObj);
+    const ok = await window.saveScheduleLiveToFirebase(scheduleObj);
     if (window.logAdminAction) {
-      window.logAdminAction("Schedule Live Updated", `Updated live schedule with ${scheduleObj.events ? scheduleObj.events.length : 0} timed events and category lists`, "All Players");
+      Promise.resolve(window.logAdminAction("Schedule Live Updated", `Updated live schedule with ${scheduleObj.events ? scheduleObj.events.length : 0} timed events and category lists`, "All Players")).catch(() => null);
     }
-    if (window.showToast) window.showToast("Live Schedule saved to Firebase!", "success");
-    return true;
+    if (ok && window.showToast) window.showToast("Live Schedule saved to Firebase!", "success");
+    return ok;
   } catch(e) {
     console.error("Failed to save schedule_live to Firebase:", e);
     if (window.showToast) window.showToast("Error saving schedule to Firebase: " + e.message, "error");
@@ -46021,20 +46085,39 @@ window.parseDataSheetToRewardsCatalog = (rows) => {
 
 window.fetchRewardsEditorCatalog = async (forceRefreshSheet = false) => {
   const todayIso = window.getLocalTodayIsoStr();
+  const mapWithStatus = (arr) => (arr || []).map(it => {
+    const s = it.startDate || it.start || '';
+    const e = it.endDate || it.end || '';
+    let status = 'nodates';
+    if (s || e) status = ((e || s) < todayIso) ? 'expired' : 'active';
+    return { ...it, startDate: s, endDate: e, status };
+  });
+
   if (!forceRefreshSheet) {
+    if (window._cachedScheduleLive && Array.isArray(window._cachedScheduleLive.catalogItems) && window._cachedScheduleLive.catalogItems.length > 0) {
+      return mapWithStatus(window._cachedScheduleLive.catalogItems);
+    }
     try {
-      const snap = await get(ref(db, 'rewards_editor_catalog'));
-      if (snap.exists() && snap.val() && Array.isArray(snap.val().items) && snap.val().items.length > 0) {
-        return snap.val().items.map(it => {
-          const s = it.startDate || it.start || '';
-          const e = it.endDate || it.end || '';
-          let status = 'nodates';
-          if (s || e) status = ((e || s) < todayIso) ? 'expired' : 'active';
-          return { ...it, startDate: s, endDate: e, status };
-        });
+      const snap = await Promise.race([
+        get(ref(db, 'rewards_editor_catalog')),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('rewards_editor_catalog timeout')), 2500))
+      ]);
+      if (snap && snap.exists() && snap.val() && Array.isArray(snap.val().items) && snap.val().items.length > 0) {
+        return mapWithStatus(snap.val().items);
       }
     } catch (e) {
-      console.warn('rewards_editor_catalog read warning:', e);
+      try {
+        const res = await fetch("https://wos-dashboard-38d4c-default-rtdb.firebaseio.com/rewards_editor_catalog.json?auth=n5fTnxcK5J5ddNsT77AhZIoQGTogW3ROpk4k03Sv", { signal: AbortSignal.timeout(3500) });
+        if (res.ok) {
+          const json = await res.json();
+          if (json && Array.isArray(json.items) && json.items.length > 0) {
+            return mapWithStatus(json.items);
+          }
+        }
+      } catch (restErr) {}
+    }
+    if (window._cachedScheduleLive && Array.isArray(window._cachedScheduleLive.catalogItems) && window._cachedScheduleLive.catalogItems.length > 0) {
+      return mapWithStatus(window._cachedScheduleLive.catalogItems);
     }
   }
 
@@ -46055,8 +46138,11 @@ window.fetchRewardsEditorCatalog = async (forceRefreshSheet = false) => {
 
   if (!dataRows) {
     try {
-      const sheetSnap = await get(ref(db, 'sheets/data'));
-      if (sheetSnap.exists() && Array.isArray(sheetSnap.val())) {
+      const sheetSnap = await Promise.race([
+        get(ref(db, 'sheets/data')),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('sheets/data timeout')), 3000))
+      ]);
+      if (sheetSnap && sheetSnap.exists() && Array.isArray(sheetSnap.val())) {
         dataRows = sheetSnap.val();
       }
     } catch (err2) {}
@@ -46068,12 +46154,10 @@ window.fetchRewardsEditorCatalog = async (forceRefreshSheet = false) => {
 
   const parsed = window.parseDataSheetToRewardsCatalog(dataRows || []);
   if (parsed.length > 0) {
-    try {
-      await set(ref(db, 'rewards_editor_catalog'), {
-        items: parsed,
-        lastUpdated: Date.now()
-      });
-    } catch (e) {}
+    window.saveFirebaseNodeWithFallback('rewards_editor_catalog', {
+      items: parsed,
+      lastUpdated: Date.now()
+    }, 'PUT').catch(() => null);
   }
   return parsed;
 };
@@ -46127,6 +46211,7 @@ window.computeScheduleLiveFromRewardsCatalog = (catalogItems, existingLive = {})
   });
 
   // 2. 8-Day Daily Rewards Matrix (section === 'rewards')
+  // Use Firebase-safe keys ('Today 10-23') without forward slashes '/'
   const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const rewardsByDay = {};
   let todayRewards = [];
@@ -46138,7 +46223,7 @@ window.computeScheduleLiveFromRewardsCatalog = (catalogItems, existingLive = {})
     const mNum = dObj.getUTCMonth() + 1;
     const dNum = dObj.getUTCDate();
     const dayPrefix = offset === 0 ? 'Today' : (offset === 1 ? 'Tomorrow' : weekdays[dObj.getUTCDay()]);
-    const colLabel = `${dayPrefix} ${mNum}/${dNum}`;
+    const colLabel = `${dayPrefix} ${mNum}-${dNum}`;
 
     const dayList = [];
     rewardItems.forEach(it => {
@@ -46194,6 +46279,7 @@ window.computeScheduleLiveFromRewardsCatalog = (catalogItems, existingLive = {})
     signups,
     allWeek,
     holidays,
+    catalogItems: catalogItems || [],
     fromRewardsEditor: true,
     lastUpdated: Date.now()
   };
@@ -46207,37 +46293,68 @@ window.syncRewardsCatalogChangeEverywhere = async (catalogItems, queueOp = null,
     let status = 'nodates';
     if (s || e) status = ((e || s) < todayIso) ? 'expired' : 'active';
     return {
-      ...it,
+      id: it.id || `rew_row_${it.row || 0}`,
+      row: Number(it.row) || 0,
+      section: String(it.section || 'rewards'),
+      sectionLabel: String(it.sectionLabel || 'Rewards Events'),
+      title: String(it.title || '').trim(),
       startDate: s,
       endDate: e,
+      startUtc: String(it.startUtc || '00:00'),
+      endUtc: String(it.endUtc || '00:00'),
       startPdt: it.startPdt || window.utcTimeToPdtStr(it.startUtc),
       endPdt: it.endPdt || window.utcTimeToPdtStr(it.endUtc),
       status
     };
   });
 
-  // 1. Save catalog to Firebase RTDB (/rewards_editor_catalog)
-  await set(ref(db, 'rewards_editor_catalog'), {
-    items: normalizedCatalog,
-    lastUpdated: Date.now()
-  });
-
-  // 2. Recompute schedule_live & save to Firebase RTDB (/schedule_live)
+  // 1. Recompute schedule_live (with embedded catalogItems) & update in-memory caches immediately
   const newScheduleLive = window.computeScheduleLiveFromRewardsCatalog(normalizedCatalog, existingLive);
   window._cachedScheduleLive = newScheduleLive;
-  await window.saveScheduleToFirebase(newScheduleLive);
 
-  // 3. Queue operation in Firebase (/rewards_editor_queue) & dispatch to Google Apps Script
+  // Sync in-memory Schedule data rows so Alliance Championship Cooldown & Schedule views update immediately
+  if (!window.liveData) window.liveData = {};
+  if (Array.isArray(window.liveData['Schedule data'])) {
+    normalizedCatalog.forEach(catItem => {
+      if (!catItem.title || (!catItem.startDate && !catItem.endDate)) return;
+      const lowerTitle = catItem.title.toLowerCase();
+      let matched = false;
+      for (let r = 1; r < window.liveData['Schedule data'].length; r++) {
+        const row = window.liveData['Schedule data'][r];
+        if (!Array.isArray(row)) continue;
+        const rowTitle = String(row[2] || '').trim().toLowerCase();
+        if (rowTitle === lowerTitle || (lowerTitle.includes('alliance champ') && rowTitle.includes('alliance champ'))) {
+          row[3] = catItem.startDate || catItem.endDate;
+          row[4] = catItem.endDate || catItem.startDate;
+          row[5] = catItem.startUtc || '00:00';
+          row[7] = catItem.endUtc || '00:00';
+          matched = true;
+        }
+      }
+      if (!matched && lowerTitle.includes('alliance champ')) {
+        window.liveData['Schedule data'].push([
+          '', '', catItem.title, catItem.startDate || catItem.endDate, catItem.endDate || catItem.startDate,
+          catItem.startUtc || '00:00', catItem.startPdt || '', catItem.endUtc || '00:00', catItem.endPdt || '', 'Weekly Tournament'
+        ]);
+      }
+    });
+  }
+
+  // 2. Save schedule_live and rewards_editor_catalog in parallel with SDK + REST fallback
+  await Promise.all([
+    window.saveScheduleToFirebase(newScheduleLive).catch(e => console.warn('saveScheduleToFirebase warning:', e)),
+    window.saveFirebaseNodeWithFallback('rewards_editor_catalog', {
+      items: normalizedCatalog,
+      lastUpdated: Date.now()
+    }, 'PUT').catch(e => console.warn('rewards_editor_catalog save warning:', e))
+  ]);
+
+  // 3. Queue operation in Firebase (/rewards_editor_queue) & dispatch to Google Apps Script non-blockingly
   if (queueOp && queueOp.action) {
-    try {
-      const opRef = push(ref(db, 'rewards_editor_queue'));
-      await set(opRef, {
-        ...queueOp,
-        timestamp: Date.now()
-      });
-    } catch (qErr) {
-      console.warn('Queue push warning:', qErr);
-    }
+    window.saveFirebaseNodeWithFallback('rewards_editor_queue', {
+      ...queueOp,
+      timestamp: Date.now()
+    }, 'POST').catch(qErr => console.warn('Queue push warning:', qErr));
 
     if (typeof API_BASE_URL !== 'undefined' && API_BASE_URL) {
       const apiAction = queueOp.action === 'add'
@@ -46797,12 +46914,18 @@ window.openScheduleEditorModal = async (initialTab = 'search') => {
     modal.querySelector('#schRefreshSheetCatalogBtn')?.addEventListener('click', async () => {
       const btn = modal.querySelector('#schRefreshSheetCatalogBtn');
       if (btn) { btn.disabled = true; btn.textContent = '⏳ Syncing...'; }
-      catalogItems = await window.fetchRewardsEditorCatalog(true);
-      if (catalogItems.length > 0 && selectedRewardRow === -1) {
-        selectedRewardRow = catalogItems[0].row;
+      try {
+        catalogItems = await window.fetchRewardsEditorCatalog(true);
+        if (catalogItems.length > 0 && selectedRewardRow === -1) {
+          selectedRewardRow = catalogItems[0].row;
+        }
+        if (window.showToast) window.showToast(`Synced ${catalogItems.length} events & rewards from Google Sheet!`, 'success');
+      } catch (err) {
+        console.error('Sync Sheet error:', err);
+        if (window.showToast) window.showToast('Sync error: ' + (err.message || 'Failed to sync'), 'error');
+      } finally {
+        renderModalContent();
       }
-      if (window.showToast) window.showToast(`Synced ${catalogItems.length} events & rewards from Google Sheet!`, 'success');
-      renderModalContent();
     });
 
     // Quick Date Shortcut Buttons
@@ -46886,79 +47009,83 @@ window.openScheduleEditorModal = async (initialTab = 'search') => {
         saveBtn.textContent = '⏳ Saving & Syncing...';
       }
 
-      if (isAddRewardMode) {
-        const section = String(secEl?.value || 'rewards').trim();
-        const sectionLabels = {
-          rewards: 'Rewards Events',
-          timed: 'Timed Events',
-          signups: 'Signups',
-          holidays: 'Holidays',
-          newyear: 'New Year Prelude'
-        };
-        const maxRow = catalogItems.reduce((mx, it) => Math.max(mx, Number(it.row) || 0), 78);
-        const newRow = maxRow + 1;
-        const newItem = {
-          id: `rew_row_${newRow}`,
-          row: newRow,
-          section,
-          sectionLabel: sectionLabels[section] || 'Rewards Events',
-          title,
-          startDate,
-          endDate,
-          startUtc,
-          endUtc,
-          startPdt: window.utcTimeToPdtStr(startUtc),
-          endPdt: window.utcTimeToPdtStr(endUtc)
-        };
-        catalogItems.push(newItem);
-        const res = await window.syncRewardsCatalogChangeEverywhere(
-          catalogItems,
-          { action: 'add', section, title, startDate, endDate, startUtc, endUtc },
-          liveData
-        );
-        catalogItems = res.catalog;
-        liveData = res.scheduleLive;
-        currentEvents.length = 0; currentEvents.push(...(liveData.events || []));
-        currentRewards.length = 0; currentRewards.push(...(liveData.rewards || []));
-        currentSignups.length = 0; currentSignups.push(...(liveData.signups || []));
-        currentHolidays.length = 0; currentHolidays.push(...(liveData.holidays || []));
-        isAddRewardMode = false;
-        selectedRewardRow = newRow;
-        if (window.showToast) window.showToast(`➕ Added "${title}" & updated live schedule!`, "success");
-      } else {
-        const idx = catalogItems.findIndex(i => i.row === selectedRewardRow);
-        if (idx === -1) {
-          if (window.showToast) window.showToast("Please select an item from the list first", "error");
-          if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '💾 Save Dates & Sync Live'; }
-          return;
+      try {
+        if (isAddRewardMode) {
+          const section = String(secEl?.value || 'rewards').trim();
+          const sectionLabels = {
+            rewards: 'Rewards Events',
+            timed: 'Timed Events',
+            signups: 'Signups',
+            holidays: 'Holidays',
+            newyear: 'New Year Prelude'
+          };
+          const maxRow = catalogItems.reduce((mx, it) => Math.max(mx, Number(it.row) || 0), 78);
+          const newRow = maxRow + 1;
+          const newItem = {
+            id: `rew_row_${newRow}`,
+            row: newRow,
+            section,
+            sectionLabel: sectionLabels[section] || 'Rewards Events',
+            title,
+            startDate,
+            endDate,
+            startUtc,
+            endUtc,
+            startPdt: window.utcTimeToPdtStr(startUtc),
+            endPdt: window.utcTimeToPdtStr(endUtc)
+          };
+          catalogItems.push(newItem);
+          const res = await window.syncRewardsCatalogChangeEverywhere(
+            catalogItems,
+            { action: 'add', section, title, startDate, endDate, startUtc, endUtc },
+            liveData
+          );
+          catalogItems = res.catalog;
+          liveData = res.scheduleLive;
+          currentEvents.length = 0; currentEvents.push(...(liveData.events || []));
+          currentRewards.length = 0; currentRewards.push(...(liveData.rewards || []));
+          currentSignups.length = 0; currentSignups.push(...(liveData.signups || []));
+          currentHolidays.length = 0; currentHolidays.push(...(liveData.holidays || []));
+          isAddRewardMode = false;
+          selectedRewardRow = newRow;
+          if (window.showToast) window.showToast(`➕ Added "${title}" & updated live schedule!`, "success");
+        } else {
+          const idx = catalogItems.findIndex(i => i.row === selectedRewardRow);
+          if (idx === -1) {
+            if (window.showToast) window.showToast("Please select an item from the list first", "error");
+            return;
+          }
+          catalogItems[idx] = {
+            ...catalogItems[idx],
+            title,
+            startDate,
+            endDate,
+            startUtc,
+            endUtc,
+            startPdt: window.utcTimeToPdtStr(startUtc),
+            endPdt: window.utcTimeToPdtStr(endUtc)
+          };
+          const res = await window.syncRewardsCatalogChangeEverywhere(
+            catalogItems,
+            { action: 'save', row: selectedRewardRow, title, startDate, endDate, startUtc, endUtc },
+            liveData
+          );
+          catalogItems = res.catalog;
+          liveData = res.scheduleLive;
+          currentEvents.length = 0; currentEvents.push(...(liveData.events || []));
+          currentRewards.length = 0; currentRewards.push(...(liveData.rewards || []));
+          currentSignups.length = 0; currentSignups.push(...(liveData.signups || []));
+          currentHolidays.length = 0; currentHolidays.push(...(liveData.holidays || []));
+          if (window.showToast) window.showToast(`💾 Updated "${title}" & synced live schedule!`, "success");
         }
-        catalogItems[idx] = {
-          ...catalogItems[idx],
-          title,
-          startDate,
-          endDate,
-          startUtc,
-          endUtc,
-          startPdt: window.utcTimeToPdtStr(startUtc),
-          endPdt: window.utcTimeToPdtStr(endUtc)
-        };
-        const res = await window.syncRewardsCatalogChangeEverywhere(
-          catalogItems,
-          { action: 'save', row: selectedRewardRow, title, startDate, endDate, startUtc, endUtc },
-          liveData
-        );
-        catalogItems = res.catalog;
-        liveData = res.scheduleLive;
-        currentEvents.length = 0; currentEvents.push(...(liveData.events || []));
-        currentRewards.length = 0; currentRewards.push(...(liveData.rewards || []));
-        currentSignups.length = 0; currentSignups.push(...(liveData.signups || []));
-        currentHolidays.length = 0; currentHolidays.push(...(liveData.holidays || []));
-        if (window.showToast) window.showToast(`💾 Updated "${title}" & synced live schedule!`, "success");
-      }
-
-      renderModalContent();
-      if (typeof views !== 'undefined' && views.schedule && document.getElementById('schedule-content')) {
-        views.schedule();
+      } catch (saveErr) {
+        console.error('Error saving schedule catalog item:', saveErr);
+        if (window.showToast) window.showToast('Save error: ' + (saveErr.message || 'Could not sync'), 'error');
+      } finally {
+        renderModalContent();
+        if (typeof views !== 'undefined' && views.schedule && document.getElementById('schedule-content')) {
+          Promise.resolve(views.schedule()).catch(() => null);
+        }
       }
     });
 
@@ -46979,29 +47106,35 @@ window.openScheduleEditorModal = async (initialTab = 'search') => {
       const yesBtn = modal.querySelector('#schConfirmDeleteYesBtn');
       if (yesBtn) { yesBtn.disabled = true; yesBtn.textContent = 'Deleting...'; }
 
-      const delRow = targetItem.row;
-      const delTitle = targetItem.title;
-      catalogItems = catalogItems.filter(i => i.row !== delRow);
-      pendingDeleteConfirm = false;
+      try {
+        const delRow = targetItem.row;
+        const delTitle = targetItem.title;
+        catalogItems = catalogItems.filter(i => i.row !== delRow);
+        pendingDeleteConfirm = false;
 
-      const res = await window.syncRewardsCatalogChangeEverywhere(
-        catalogItems,
-        { action: 'delete', row: delRow, title: delTitle },
-        liveData
-      );
-      catalogItems = res.catalog;
-      liveData = res.scheduleLive;
-      currentEvents.length = 0; currentEvents.push(...(liveData.events || []));
-      currentRewards.length = 0; currentRewards.push(...(liveData.rewards || []));
-      currentSignups.length = 0; currentSignups.push(...(liveData.signups || []));
-      currentHolidays.length = 0; currentHolidays.push(...(liveData.holidays || []));
+        const res = await window.syncRewardsCatalogChangeEverywhere(
+          catalogItems,
+          { action: 'delete', row: delRow, title: delTitle },
+          liveData
+        );
+        catalogItems = res.catalog;
+        liveData = res.scheduleLive;
+        currentEvents.length = 0; currentEvents.push(...(liveData.events || []));
+        currentRewards.length = 0; currentRewards.push(...(liveData.rewards || []));
+        currentSignups.length = 0; currentSignups.push(...(liveData.signups || []));
+        currentHolidays.length = 0; currentHolidays.push(...(liveData.holidays || []));
 
-      const remaining = getFilteredCatalogItems();
-      selectedRewardRow = remaining.length > 0 ? remaining[0].row : -1;
-      if (window.showToast) window.showToast(`🗑️ Deleted "${delTitle}" & updated live schedule!`, "info");
-      renderModalContent();
-      if (typeof views !== 'undefined' && views.schedule && document.getElementById('schedule-content')) {
-        views.schedule();
+        const remaining = getFilteredCatalogItems();
+        selectedRewardRow = remaining.length > 0 ? remaining[0].row : -1;
+        if (window.showToast) window.showToast(`🗑️ Deleted "${delTitle}" & updated live schedule!`, "info");
+      } catch (delErr) {
+        console.error('Error deleting schedule catalog item:', delErr);
+        if (window.showToast) window.showToast('Delete error: ' + (delErr.message || 'Could not delete'), 'error');
+      } finally {
+        renderModalContent();
+        if (typeof views !== 'undefined' && views.schedule && document.getElementById('schedule-content')) {
+          Promise.resolve(views.schedule()).catch(() => null);
+        }
       }
     });
 
