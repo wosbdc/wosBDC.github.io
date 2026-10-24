@@ -19,7 +19,7 @@
 - [x] **5. Version Bump & App Store Changelog (`v3.3.133`)**
   - [x] Bump version to `3.3.133` in `package.json`, `version.json`, and `public/version.json`
   - [x] Update `CHANGELOG.md` and `public/CHANGELOG.md` with App Store style notes ($\le 10$ words per bullet)
-- [/] **6. Git Commit, Push & Process Cleanup**
-  - [ ] Commit and push to GitHub `origin/main` with `v3.3.133 : Remodeled Mercenary Prestige Tracker with milestone scout levels and real-time rally deck`
-  - [ ] Proactively terminate background tasks and processes
-  - [ ] Explicitly announce "Ready for Testing" to the user
+- [x] **6. Git Commit, Push & Process Cleanup**
+  - [x] Commit and push to GitHub `origin/main` with `v3.3.133 : Remodeled Mercenary Prestige Tracker with milestone scout levels and real-time rally deck`
+  - [x] Proactively terminate background tasks and processes
+  - [x] Explicitly announce "Ready for Testing" to the user
