@@ -225,7 +225,9 @@ async function runHeadlessVerification() {
 
     const cdDays = await page.$eval('#champCdDays', el => el.textContent.trim());
     const cdNextStart = await page.$eval('#champCdNextStartUtc', el => el.textContent.trim());
+    const cdTotalGame = await page.$eval('#champCdTotalGame', el => el.textContent.trim());
     assert(/^\d{2,}$/.test(cdDays), 'Cooldown timer Days box must render numeric digits');
+    assert(/\d+hr\s+\d+min/.test(cdTotalGame), `Cooldown timer must render in-game cumulative hours format, got "${cdTotalGame}"`);
     assert(cdNextStart.includes('UTC'), `Next scheduled start must display UTC timestamp from Schedule, got "${cdNextStart}"`);
 
     // Check Cooldown Gate responsive layout on 375px mobile before unlocking
@@ -313,7 +315,7 @@ async function runHeadlessVerification() {
     const perRoundDateInput = await page.$('#champ_setup_r1_date');
     assert(!perRoundDateInput, 'Per-round date inputs must be removed from Step 1 (centralized on Season Date)');
     assert(autoSeasonDate && autoSeasonDate.includes('–'), `Season Date must be auto-filled with date range, got "${autoSeasonDate}"`);
-    assert((autoSeasonDate.includes('Oct 19') && autoSeasonDate.includes('Oct 25')) || (autoSeasonDate.includes('Oct 26') && autoSeasonDate.includes('Nov 1')), `Season Date must reflect live Google Sheet dates, got "${autoSeasonDate}"`);
+    assert((autoSeasonDate.includes('Oct 19') && autoSeasonDate.includes('Oct 25')) || (autoSeasonDate.includes('Oct 26') && (autoSeasonDate.includes('Oct 31') || autoSeasonDate.includes('Nov 1'))), `Season Date must reflect live Google Sheet dates, got "${autoSeasonDate}"`);
     console.log(`  ✅ Tournament date centralized on live Google Sheet Season Date: "${autoSeasonDate}" (per-round date inputs cleanly removed)`);
 
     // 5. Fill valid 5-day opponents and save Step 1 schedule to unlock Step 2

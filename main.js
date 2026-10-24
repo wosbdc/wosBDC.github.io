@@ -16598,7 +16598,7 @@ window.getChampionshipScheduleStatus = async (champMatchupData, forceFetch = fal
                 const dEnd = window.parseScheduleEventDate ? window.parseScheduleEventDate(row[4]) : null;
                 if (dStart && !isNaN(dStart.getTime())) {
                     rawStartDate = dStart;
-                    rawEndDate = (dEnd && !isNaN(dEnd.getTime())) ? dEnd : new Date(dStart.getTime() + 6 * 86400000);
+                    rawEndDate = (dEnd && !isNaN(dEnd.getTime())) ? dEnd : new Date(dStart.getTime() + 5 * 86400000);
                     const parsedT = parseTimeHoursMins(row[5]);
                     startH = parsedT.h;
                     startM = parsedT.m;
@@ -16617,7 +16617,7 @@ window.getChampionshipScheduleStatus = async (champMatchupData, forceFetch = fal
         const champEv = unified.find(e => /alliance\s*champ/i.test(e.name || '') || /championship/i.test(e.name || ''));
         if (champEv && champEv.start) {
             rawStartDate = new Date(champEv.start);
-            rawEndDate = champEv.end ? new Date(champEv.end) : new Date(rawStartDate.getTime() + 6 * 86400000);
+            rawEndDate = champEv.end ? new Date(champEv.end) : new Date(rawStartDate.getTime() + 5 * 86400000);
             scheduleSource = 'Unified Event Schedule';
         }
     }
@@ -16628,7 +16628,7 @@ window.getChampionshipScheduleStatus = async (champMatchupData, forceFetch = fal
         const day = now.getUTCDay(); // 0=Sun, 1=Mon...
         const diffToMon = (day === 0 ? -6 : 1 - day);
         rawStartDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + diffToMon, 0, 0, 0));
-        rawEndDate = new Date(rawStartDate.getTime() + 6 * 86400000);
+        rawEndDate = new Date(rawStartDate.getTime() + 5 * 86400000);
         scheduleSource = 'Standard Weekly Schedule (Monday 00:00 UTC)';
     }
 
@@ -16696,7 +16696,7 @@ window.getChampionshipScheduleStatus = async (champMatchupData, forceFetch = fal
                 // Next scheduled tournament starts immediately after activeCycleEndMs (Monday 00:00 UTC)
                 const nextEndDay = new Date(activeCycleEndMs);
                 targetStartMs = Date.UTC(nextEndDay.getUTCFullYear(), nextEndDay.getUTCMonth(), nextEndDay.getUTCDate() + 1, startH, startM, 0, 0);
-                targetEndMs = targetStartMs + 6 * 86400000;
+                targetEndMs = targetStartMs + 5 * 86400000;
             } else {
                 // Event has started (within Monday/Tuesday setup window and not yet reset for next week)
                 isOnCooldown = false;
@@ -16706,12 +16706,19 @@ window.getChampionshipScheduleStatus = async (champMatchupData, forceFetch = fal
         }
     }
 
+    const remainingDiffMs = Math.max(0, targetStartMs - nowMs);
+    const totalRemainingHours = Math.floor(remainingDiffMs / 3600000);
+    const totalRemainingMins = Math.floor((remainingDiffMs % 3600000) / 60000);
+
     const statusObj = {
         isOnCooldown,
         isScheduleDone,
         targetStartMs,
         targetEndMs,
-        remainingMs: Math.max(0, targetStartMs - nowMs),
+        remainingMs: remainingDiffMs,
+        totalRemainingHours,
+        totalRemainingMins,
+        inGameRemainingLabel: `${totalRemainingHours}hr ${totalRemainingMins}min`,
         nextStartUtcLabel: formatUtcFull(targetStartMs),
         nextStartLocalLabel: formatLocalFull(targetStartMs),
         nextSeasonRangeLabel: formatRangeShort(targetStartMs, targetEndMs),
@@ -16743,6 +16750,7 @@ window.startChampCooldownTicker = (targetStartMs) => {
         }
 
         const diff = Math.max(0, targetStartMs - Date.now());
+        const totalHours = Math.floor(diff / 3600000);
         const days = Math.floor(diff / 86400000);
         const hours = Math.floor((diff % 86400000) / 3600000);
         const mins = Math.floor((diff % 3600000) / 60000);
@@ -16752,6 +16760,7 @@ window.startChampCooldownTicker = (targetStartMs) => {
         const hStr = String(hours).padStart(2, '0');
         const mStr = String(mins).padStart(2, '0');
         const sStr = String(secs).padStart(2, '0');
+        const inGameFormatStr = `${totalHours}hr ${mStr}min`;
 
         const setEl = (id, val) => {
             const el = document.getElementById(id);
@@ -16762,11 +16771,13 @@ window.startChampCooldownTicker = (targetStartMs) => {
         setEl('champCdHours', hStr);
         setEl('champCdMins', mStr);
         setEl('champCdSecs', sStr);
+        setEl('champCdTotalGame', inGameFormatStr);
 
         setEl('pubChampCdDays', dStr);
         setEl('pubChampCdHours', hStr);
         setEl('pubChampCdMins', mStr);
         setEl('pubChampCdSecs', sStr);
+        setEl('pubChampCdTotalGame', inGameFormatStr);
 
         if (diff <= 0) {
             if (window._champCooldownInterval) {
@@ -17066,7 +17077,7 @@ window.autoFillChampScheduleDates = async () => {
         // 2. Secondary check: Schedule Cooldown Engine / Schedule data in Firebase / Unified schedule events
         if (!baseStartDate && window._lastChampScheduleStatus && window._lastChampScheduleStatus.targetStartMs) {
             baseStartDate = new Date(window._lastChampScheduleStatus.targetStartMs);
-            baseEndDate = new Date(window._lastChampScheduleStatus.targetEndMs || (window._lastChampScheduleStatus.targetStartMs + 6 * 86400000));
+            baseEndDate = new Date(window._lastChampScheduleStatus.targetEndMs || (window._lastChampScheduleStatus.targetStartMs + 5 * 86400000));
             foundSource = window._lastChampScheduleStatus.scheduleSource || 'Event Schedule';
         }
         if (!baseStartDate) {
@@ -17090,7 +17101,7 @@ window.autoFillChampScheduleDates = async () => {
 
         let baseEndDateFinal = baseEndDate;
         if (!baseEndDateFinal || isNaN(baseEndDateFinal.getTime())) {
-            baseEndDateFinal = new Date(baseStartDate.getTime() + 6 * 86400000); // 7-day tournament week default
+            baseEndDateFinal = new Date(baseStartDate.getTime() + 5 * 86400000); // 6-day tournament cycle default (Mon to Sat)
         }
 
         // 4. Format Season Date range using actual sheet start & end dates (e.g. Oct 19 – Oct 25, 2026)
@@ -36887,6 +36898,7 @@ const views = {
 
         if (effectiveTab === 'cooldown') {
             const initDiff = Math.max(0, schedStatus.targetStartMs - Date.now());
+            const initTotalHours = Math.floor(initDiff / 3600000);
             const initDays = String(Math.floor(initDiff / 86400000)).padStart(2, '0');
             const initHours = String(Math.floor((initDiff % 86400000) / 3600000)).padStart(2, '0');
             const initMins = String(Math.floor((initDiff % 3600000) / 60000)).padStart(2, '0');
@@ -36905,7 +36917,7 @@ const views = {
                     </p>
 
                     <!-- Live 4-Box Countdown Grid -->
-                    <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; max-width:400px; margin:0 auto 16px auto;">
+                    <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; max-width:400px; margin:0 auto 12px auto;">
                         <div style="background:rgba(15,23,42,0.85); border:1px solid rgba(6,182,212,0.35); border-radius:10px; padding:10px 6px; box-shadow:inset 0 2px 8px rgba(0,0,0,0.4);">
                             <div id="champCdDays" style="font-size:24px; font-weight:900; font-family:var(--mono, monospace); color:#38bdf8; line-height:1.1;">${initDays}</div>
                             <div style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.8px; margin-top:3px;">Days</div>
@@ -36922,6 +36934,13 @@ const views = {
                             <div id="champCdSecs" style="font-size:24px; font-weight:900; font-family:var(--mono, monospace); color:#fbbf24; line-height:1.1;">${initSecs}</div>
                             <div style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.8px; margin-top:3px;">Secs</div>
                         </div>
+                    </div>
+
+                    <!-- Cumulative In-Game Timer Badge -->
+                    <div style="margin-bottom:16px;">
+                        <span style="display:inline-flex; align-items:center; gap:6px; background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.35); color:#fbbf24; padding:5px 14px; border-radius:20px; font-size:12.5px; font-weight:800; letter-spacing:0.4px;">
+                            🎮 In-Game Format: <strong id="champCdTotalGame" style="color:#fde047; font-family:var(--mono, monospace);">${initTotalHours}hr ${initMins}min</strong>
+                        </span>
                     </div>
 
                     <!-- Schedule Telemetry Card -->
@@ -44126,6 +44145,7 @@ window.resetBearTrapEvent = async () => {
             <div style="display:flex; flex-direction:column; gap:14px;">
                 ${(!isScheduleDone && schedStatus.isOnCooldown) ? (() => {
                     const diff = Math.max(0, schedStatus.targetStartMs - Date.now());
+                    const totalHours = Math.floor(diff / 3600000);
                     const d = String(Math.floor(diff / 86400000)).padStart(2, '0');
                     const h = String(Math.floor((diff % 86400000) / 3600000)).padStart(2, '0');
                     const m = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
@@ -44156,6 +44176,12 @@ window.resetBearTrapEvent = async () => {
                                     <div id="pubChampCdSecs" style="font-size:22px; font-weight:900; font-family:var(--mono, monospace); color:#fbbf24;">${s}</div>
                                     <div style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Secs</div>
                                 </div>
+                            </div>
+                            <!-- Cumulative In-Game Timer Badge -->
+                            <div style="margin-top:12px;">
+                                <span style="display:inline-flex; align-items:center; gap:6px; background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.35); color:#fbbf24; padding:5px 14px; border-radius:20px; font-size:12.5px; font-weight:800; letter-spacing:0.4px;">
+                                    🎮 In-Game Format: <strong id="pubChampCdTotalGame" style="color:#fde047; font-family:var(--mono, monospace);">${totalHours}hr ${m}min</strong>
+                                </span>
                             </div>
                         </div>
                     `;

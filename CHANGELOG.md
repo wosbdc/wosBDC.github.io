@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.131] - 2026-10-24
+- 🎮 **In-Game Timer Format**: Added exact cumulative hours countdown matching game client.
+- ⏱️ **Total Hours Display**: Displays combined hours alongside 4-box day counter.
+- 🗓️ **Tournament Dates**: Aligned championship duration to 6-day cycle (Oct 26-31).
+- ⚡ **Live Ticker**: Real-time ticker dynamically updates in-game hours every second.
+
 ## [3.3.130] - 2026-10-23
 - 🎫 **Support Ticket Desk**: Replaced bug tracker with alliance support desk.
 - 🆘 **Account Help**: Added character verification and account assistance tickets.

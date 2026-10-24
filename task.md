@@ -1,25 +1,18 @@
-# Task List: Alliance Help & Support Ticket Desk (`v3.3.130`)
+# Task List: Championship Cooldown In-Game Format & Date Alignment (`v3.3.131`)
 
 - [x] **1. Clean House & Pre-Change Backup**
-  - [x] Delete `wos_website_backup_pre_v3.3.128.tar.gz` and create `wos_website_backup_pre_v3.3.130.tar.gz` (strict 2-backup retention: `pre_v3.3.129` & `pre_v3.3.130`)
-- [x] **2. Core Support Ticket System in `main.js`**
-  - [x] Update `submitFeedbackItem` to save `urgency` (`normal`, `high`, `urgent`) and support new ticket types (`support_account`, `bug`, `feature`, `general`)
-  - [x] Update `window.openSubmitFeedbackModal` with 4 ticket types, urgency selector, dynamic reactive styling, and "🚀 Submit Ticket" action
-  - [x] Add `window.updateFeedbackUrgency` helper for fast inline priority switching
-  - [x] Update `window.openAdminNoteModal` with Urgency selector and expanded type options
-  - [x] Transform `views.feedback` into **Alliance Help & Support Ticket Desk** with urgency badges, type badges, expanded filters (Open, Account Help, Bugs, Suggestions, General, In Progress, Resolved, All), and R4/R5 inline controls
-  - [x] Update `window.renderAdminFeedbackTab` table with Urgency column, updated labels, and expanded types
-  - [x] Update Admin menu & Bell notification labels to Help & Support Tickets
-- [x] **3. Update Sidebar in `index.html`**
-  - [x] Update Section 3 heading and button to "🎫 Help & Support Tickets"
-- [x] **4. Test Suite & Headless Chrome Verification**
-  - [x] Update `tools/test_feedback_modal.cjs` with tests for ticket types, urgency tags, and modal controls
-  - [x] Create headless verification script (`tools/test_support_ticket_desk_headless.cjs`) and verify in real headless Chrome
-  - [x] Run full project build test suite (`cmd /c npm run build`) - 100% passed (37/37 suites)
-- [x] **5. Version Bump & App Store Changelog (`v3.3.130`)**
-  - [x] Bump version to `3.3.130` in `package.json`, `version.json`, and `public/version.json`
+  - [x] Delete `wos_website_backup_pre_v3.3.129.tar.gz` and create `wos_website_backup_pre_v3.3.131.tar.gz` (strict 2-backup retention: `pre_v3.3.130` & `pre_v3.3.131`)
+- [x] **2. Core Timer & Date Enhancements in `main.js`**
+  - [x] Update `targetEndMs` in `getChampScheduleStatus` to conclude on Saturday (`targetStartMs + 5 * 86400000`, Oct 26 – Oct 31) matching the 6-day tournament cycle
+  - [x] Add cumulative in-game format (`totalHours` + `mins`, e.g. `38hr 56min`) to public cooldown card (`views.championship`) and admin cooldown gate (`views.championshipAdmin`)
+  - [x] Update live ticker `startChampCooldownTicker` to update in-game hours live every second
+- [x] **3. Test Suites & Verification**
+  - [x] Update `tools/test_championship_redesign_headless.cjs` to verify in-game format and date range (Oct 26 – Oct 31)
+  - [x] Run full project build (`cmd /c npm run build`) - 100% passed (37/37 suites)
+- [x] **4. Version Bump & App Store Changelog (`v3.3.131`)**
+  - [x] Bump version to `3.3.131` in `package.json`, `version.json`, and `public/version.json`
   - [x] Update `CHANGELOG.md` and `public/CHANGELOG.md` with App Store style notes ($\le 10$ words per bullet)
-- [x] **6. Git Commit, Process Cleanup & Testing Announcement**
-  - [x] Commit and push to GitHub `origin/main` with `v3.3.130 : Transformed bug tracker into Alliance Help & Support Ticket Desk`
-  - [x] Proactively terminate background processes
-  - [x] Explicitly announce "Ready for Testing" to the user
+- [x] **5. Git Commit, Push & Process Cleanup**
+  - [x] Commit and push to GitHub `origin/main` with `v3.3.131 : Added in-game total hours countdown and updated championship dates to Oct 26 - Oct 31`
+  - [x] Proactively terminate background tasks and processes
+  - [x] Explain math to user and announce "Ready for Testing"

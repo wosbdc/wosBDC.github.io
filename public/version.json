@@ -1,19 +1,17 @@
 {
-  "version": "3.3.130",
-  "releaseDate": "2026-10-23",
-  "title": "What's New in v3.3.130",
+  "version": "3.3.131",
+  "releaseDate": "2026-10-24",
+  "title": "What's New in v3.3.131",
   "notes": [
-    "🎫 Support Ticket Desk: Replaced bug tracker with alliance support desk.",
-    "🆘 Account Help: Added character verification and account assistance tickets.",
-    "🚨 Urgency Priority: Set urgent, high, or normal ticket priorities.",
-    "🐞 Bug Reports: Report website or gameplay glitches with ease.",
-    "💡 Feature Suggestions: Submit and upvote community ideas for developers.",
-    "❓ General Questions: Ask questions directly to alliance leadership.",
-    "✨ Resolution Workflow: Leadership status pipeline with custom reply notes."
+    "🎮 In-Game Timer: Displays exact cumulative hours matching game client.",
+    "⏱️ Total Hours: Bridges standard day units with raw hour counts.",
+    "🗓️ Date Alignment: Aligned championship tournament to 6-day cycle.",
+    "⚡ Live Ticker: Real-time ticker updates total hours dynamically every second."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.130",
+    "version": "3.3.131",
     "latestChanges": [
+      "v3.3.131: Added in-game total hours countdown format and aligned championship season window to Oct 26 - Oct 31",
       "v3.3.130: Transformed bug tracker into Alliance Help & Support Ticket Desk with urgency tags and support categories",
       "v3.3.129: Restored active multi-day events like Brothers in Arms across days and fixed end-date calculation",
       "v3.3.128: Locked-in Daily Rewards full-day times and locked Google Sheet event times with unlock toggle",
