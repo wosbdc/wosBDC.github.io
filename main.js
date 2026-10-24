@@ -18311,7 +18311,8 @@ window.submitFeedbackItem = async (payload) => {
         const userUid = currentUser?.uid || ('anon_' + Math.random().toString(36).substr(2, 6));
         const item = {
             id: ticketId,
-            type: payload.type || 'feature',
+            type: payload.type || 'general',
+            urgency: payload.urgency || 'normal',
             category: payload.category || 'General UI',
             title: payload.title || '',
             description: payload.description || '',
@@ -18486,7 +18487,13 @@ window.updateFeedbackType = async (itemId, newType) => {
             type: newType,
             updatedAt: Date.now()
         });
-        const typeLabel = newType === 'feature' ? '💡 Feature Request' : '🐞 Bug Report';
+        const typeLabels = {
+            support_account: '🆘 Account & Verification Help',
+            bug: '🐞 Bug Report',
+            feature: '💡 Feature Idea',
+            general: '❓ General Question'
+        };
+        const typeLabel = typeLabels[newType] || newType;
         if (window.showToast) window.showToast(`Ticket type updated to ${typeLabel}!`, "success");
         if (typeof window.activeFeedbackRender === 'function') window.activeFeedbackRender();
         if (typeof window.renderAdminFeedbackTab === 'function') window.renderAdminFeedbackTab();
@@ -18496,7 +18503,29 @@ window.updateFeedbackType = async (itemId, newType) => {
     }
 };
 
-window.openAdminNoteModal = (itemId, currentNote = '', currentCategory = '', currentType = 'bug') => {
+window.updateFeedbackUrgency = async (itemId, newUrgency) => {
+    if (!itemId || !newUrgency) return;
+    try {
+        await update(ref(db, `community_feedback/${itemId}`), {
+            urgency: newUrgency,
+            updatedAt: Date.now()
+        });
+        const urgencyLabels = {
+            urgent: '🔴 Urgent',
+            high: '🟡 High',
+            normal: '🟢 Normal'
+        };
+        const label = urgencyLabels[newUrgency] || newUrgency;
+        if (window.showToast) window.showToast(`Ticket urgency set to ${label}!`, "success");
+        if (typeof window.activeFeedbackRender === 'function') window.activeFeedbackRender();
+        if (typeof window.renderAdminFeedbackTab === 'function') window.renderAdminFeedbackTab();
+    } catch (err) {
+        console.error("Failed to update ticket urgency:", err);
+        if (window.showToast) window.showToast("Failed to update urgency: " + err.message, "error");
+    }
+};
+
+window.openAdminNoteModal = (itemId, currentNote = '', currentCategory = '', currentType = 'general', currentUrgency = 'normal') => {
     const existing = document.getElementById('feedbackAdminNoteModal');
     if (existing) existing.remove();
 
@@ -18515,24 +18544,34 @@ window.openAdminNoteModal = (itemId, currentNote = '', currentCategory = '', cur
                     </div>
                     <div>
                         <h3 style="margin:0; font-size:17px; color:var(--text-main); font-weight:800;">Admin Resolution & Ticket Editor</h3>
-                        <p style="margin:2px 0 0 0; font-size:11.5px; color:var(--text-muted);">Update developer notes, reclassify type or category, and log changelog tags.</p>
+                        <p style="margin:2px 0 0 0; font-size:11.5px; color:var(--text-muted);">Update staff notes, adjust urgency priority, reclassify type or category.</p>
                     </div>
                 </div>
                 <button onclick="document.getElementById('feedbackAdminNoteModal')?.remove()" style="background:none; border:none; color:var(--text-muted); font-size:20px; cursor:pointer; padding:4px 8px; border-radius:6px;">✕</button>
             </div>
 
-            <!-- Type & Category Selectors for Admins -->
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <!-- Type, Urgency & Category Selectors for Admins -->
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
                 <div>
                     <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Ticket Type:</label>
-                    <select id="adminNoteTypeInput" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; font-weight:bold; box-sizing:border-box;">
-                        <option value="bug" ${currentType !== 'feature' ? 'selected' : ''}>🐞 Bug Report</option>
-                        <option value="feature" ${currentType === 'feature' ? 'selected' : ''}>💡 Feature Request</option>
+                    <select id="adminNoteTypeInput" style="width:100%; padding:9px 8px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; font-weight:bold; box-sizing:border-box;">
+                        <option value="support_account" ${currentType === 'support_account' ? 'selected' : ''}>🆘 Account Help</option>
+                        <option value="bug" ${currentType === 'bug' ? 'selected' : ''}>🐞 Bug Report</option>
+                        <option value="feature" ${currentType === 'feature' ? 'selected' : ''}>💡 Feature Idea</option>
+                        <option value="general" ${currentType === 'general' ? 'selected' : ''}>❓ General Question</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Urgency Priority:</label>
+                    <select id="adminNoteUrgencyInput" style="width:100%; padding:9px 8px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; font-weight:bold; box-sizing:border-box;">
+                        <option value="normal" ${currentUrgency !== 'high' && currentUrgency !== 'urgent' ? 'selected' : ''}>🟢 Normal</option>
+                        <option value="high" ${currentUrgency === 'high' ? 'selected' : ''}>🟡 High</option>
+                        <option value="urgent" ${currentUrgency === 'urgent' ? 'selected' : ''}>🔴 Urgent</option>
                     </select>
                 </div>
                 <div>
                     <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Category / Area:</label>
-                    <select id="adminNoteCategoryInput" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; font-weight:bold; box-sizing:border-box;">
+                    <select id="adminNoteCategoryInput" style="width:100%; padding:9px 8px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:12px; font-weight:bold; box-sizing:border-box;">
                         ${window.FEEDBACK_CATEGORIES.map(c => `<option value="${c.value}" ${currentCategory === c.value ? 'selected' : ''}>${c.label}</option>`).join('')}
                     </select>
                 </div>
@@ -18602,12 +18641,14 @@ window.openAdminNoteModal = (itemId, currentNote = '', currentCategory = '', cur
             const noteVal = document.getElementById('adminNoteInput')?.value.trim() || '';
             const catVal = document.getElementById('adminNoteCategoryInput')?.value;
             const typeVal = document.getElementById('adminNoteTypeInput')?.value;
+            const urgencyVal = document.getElementById('adminNoteUrgencyInput')?.value;
             const updatePayload = {
                 adminNote: noteVal,
                 updatedAt: Date.now()
             };
             if (catVal) updatePayload.category = catVal;
             if (typeVal) updatePayload.type = typeVal;
+            if (urgencyVal) updatePayload.urgency = urgencyVal;
             await update(ref(db, `community_feedback/${itemId}`), updatePayload);
             overlay.remove();
             if (window.showToast) window.showToast("Admin changes saved!", "success");
@@ -18618,7 +18659,8 @@ window.openAdminNoteModal = (itemId, currentNote = '', currentCategory = '', cur
 };
 
 window.openSubmitFeedbackModal = (defaultType = '') => {
-    if (!currentUser) {
+    const activeUser = currentUser || window.currentUser;
+    if (!activeUser) {
         if (window.showToast) window.showToast("Please sign in to submit suggestions or bugs!", "warning");
         if (views.login) views.login();
         return;
@@ -18627,7 +18669,8 @@ window.openSubmitFeedbackModal = (defaultType = '') => {
     const existing = document.getElementById('submitFeedbackModal');
     if (existing) existing.remove();
 
-    let selectedType = defaultType; // 'bug' or 'feature' or ''
+    let selectedType = defaultType; // 'support_account', 'bug', 'feature', 'general' or ''
+    let selectedUrgency = 'normal'; // 'normal', 'high', 'urgent'
     let attachedMedia = null; // { type: 'image'|'video'|'external_video', dataUrl, thumbnail, duration, sizeBytes, name }
 
     const overlay = document.createElement('div');
@@ -18637,32 +18680,55 @@ window.openSubmitFeedbackModal = (defaultType = '') => {
     const authorName = (window.idToNameMap && currentUser?.gameId && window.idToNameMap[currentUser.gameId]) || currentUser?.displayName || 'Chief';
     const authorGid = currentUser?.gameId || '';
 
+    const isAccount = selectedType === 'support_account';
     const isBug = selectedType === 'bug';
     const isFeat = selectedType === 'feature';
+    const isGen = selectedType === 'general';
 
     overlay.innerHTML = `
         <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:16px; padding:24px; max-width:560px; width:100%; box-shadow:0 12px 40px rgba(0,0,0,0.6); max-height:90vh; overflow-y:auto;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--border); padding-bottom:12px;">
                 <div style="display:flex; align-items:center; gap:10px;">
-                    <div id="fbModalHeaderIcon" style="width:36px; height:36px; border-radius:10px; background:${isBug ? 'linear-gradient(135deg, rgba(239,68,68,0.2), rgba(168,85,247,0.2))' : isFeat ? 'linear-gradient(135deg, rgba(6,182,212,0.2), rgba(168,85,247,0.2))' : 'linear-gradient(135deg, rgba(6,182,212,0.2), rgba(168,85,247,0.2))'}; border:1px solid ${isBug ? 'rgba(239,68,68,0.4)' : 'rgba(6,182,212,0.4)'}; display:flex; align-items:center; justify-content:center; font-size:18px;">
-                        ${isBug ? '🐞' : isFeat ? '💡' : '📝'}
+                    <div id="fbModalHeaderIcon" style="width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg, rgba(6,182,212,0.2), rgba(168,85,247,0.2)); border:1px solid rgba(6,182,212,0.4); display:flex; align-items:center; justify-content:center; font-size:18px;">
+                        ${isAccount ? '🆘' : isBug ? '🐞' : isFeat ? '💡' : isGen ? '❓' : '🎫'}
                     </div>
                     <div>
-                        <h3 id="fbModalHeaderTitle" style="margin:0; font-size:17px; color:var(--text-main); font-weight:800;">${isBug ? 'Report Bug' : isFeat ? 'Submit Idea / Feature Request' : 'Submit Idea or Report Bug'}</h3>
-                        <p style="margin:2px 0 0 0; font-size:11px; color:var(--text-muted);">Share your feedback with alliance developers & managers</p>
+                        <h3 id="fbModalHeaderTitle" style="margin:0; font-size:17px; color:var(--text-main); font-weight:800;">${isAccount ? 'Account & Verification Help' : isBug ? 'Report Bug / Issue' : isFeat ? 'Submit Feature Request' : isGen ? 'General Support & Help' : 'Submit Help & Support Ticket'}</h3>
+                        <p style="margin:2px 0 0 0; font-size:11px; color:var(--text-muted);">Reach out to alliance leadership for account help, report issues, or suggest improvements</p>
                     </div>
                 </div>
                 <button onclick="document.getElementById('submitFeedbackModal')?.remove()" style="background:none; border:none; color:var(--text-muted); font-size:20px; cursor:pointer;">✕</button>
             </div>
 
-            <!-- Type Selector Dropdown -->
+            <!-- Ticket Type Selector Dropdown -->
             <div style="margin-bottom:14px;">
-                <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Feedback Type <span style="color:#ef4444; font-size:12px;">*</span></label>
+                <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Ticket Type <span style="color:#ef4444; font-size:12px;">*</span></label>
                 <select id="fbTypeInput" onchange="window.selectFeedbackType(this.value); this.style.borderColor='var(--border)';" style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; font-weight:bold; box-sizing:border-box;">
-                    <option value="" disabled ${!selectedType ? 'selected' : ''}>-- Select Type: Bug Report or Feature (Required) --</option>
-                    <option value="bug" ${selectedType === 'bug' ? 'selected' : ''}>🐞 Bug Report</option>
+                    <option value="" disabled ${!selectedType ? 'selected' : ''}>-- Select Ticket Type (Required) --</option>
+                    <option value="support_account" ${selectedType === 'support_account' ? 'selected' : ''}>🆘 Account & Verification Help</option>
+                    <option value="bug" ${selectedType === 'bug' ? 'selected' : ''}>🐞 Bug Report / Issue</option>
                     <option value="feature" ${selectedType === 'feature' ? 'selected' : ''}>💡 Feature Request / Idea</option>
+                    <option value="general" ${selectedType === 'general' ? 'selected' : ''}>❓ General Question / Other Help</option>
                 </select>
+            </div>
+
+            <!-- Urgency Priority Selector -->
+            <div style="margin-bottom:14px;">
+                <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Urgency Priority <span style="color:#ef4444; font-size:12px;">*</span></label>
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
+                    <label id="urgencyOptNormal" onclick="window.selectFeedbackUrgency('normal')" style="border:1.5px solid #10b981; background:rgba(16,185,129,0.12); padding:8px 10px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:8px; font-size:12px; font-weight:bold; color:#10b981; transition:0.2s;">
+                        <input type="radio" name="fbUrgencyRadio" value="normal" checked style="accent-color:#10b981; cursor:pointer;">
+                        <span>🟢 Normal</span>
+                    </label>
+                    <label id="urgencyOptHigh" onclick="window.selectFeedbackUrgency('high')" style="border:1.5px solid var(--border); background:rgba(255,255,255,0.03); padding:8px 10px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:8px; font-size:12px; font-weight:bold; color:var(--text-main); transition:0.2s;">
+                        <input type="radio" name="fbUrgencyRadio" value="high" style="accent-color:#eab308; cursor:pointer;">
+                        <span>🟡 High</span>
+                    </label>
+                    <label id="urgencyOptUrgent" onclick="window.selectFeedbackUrgency('urgent')" style="border:1.5px solid var(--border); background:rgba(255,255,255,0.03); padding:8px 10px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:8px; font-size:12px; font-weight:bold; color:var(--text-main); transition:0.2s;">
+                        <input type="radio" name="fbUrgencyRadio" value="urgent" style="accent-color:#ef4444; cursor:pointer;">
+                        <span>🔴 Urgent</span>
+                    </label>
+                </div>
             </div>
 
             <!-- Category Picker -->
@@ -18677,13 +18743,13 @@ window.openSubmitFeedbackModal = (defaultType = '') => {
             <!-- Title Input -->
             <div style="margin-bottom:14px;">
                 <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Title <span style="color:#ef4444; font-size:12px;">*</span></label>
-                <input type="text" id="fbTitleInput" oninput="this.style.borderColor='var(--border)'" placeholder="${isBug ? 'e.g. Shield alert not triggering, score calculation issue...' : isFeat ? 'e.g. Add flag counts to Championship 5-round cards...' : 'e.g. Brief summary of the bug or idea...'}" style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; font-weight:bold; box-sizing:border-box;">
+                <input type="text" id="fbTitleInput" oninput="this.style.borderColor='var(--border)'" placeholder="${isAccount ? 'e.g. In-game verification code not received, alt account link error...' : isBug ? 'e.g. Shield alert not triggering, score calculation issue...' : isFeat ? 'e.g. Add flag counts to Championship 5-round cards...' : 'e.g. Brief summary of your question or issue...'}" style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; font-weight:bold; box-sizing:border-box;">
             </div>
 
             <!-- Description Textarea -->
             <div style="margin-bottom:14px;">
                 <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Description / Details</label>
-                <textarea id="fbDescInput" rows="4" placeholder="${isBug ? 'Explain what bug occurred, where you saw it, and steps to reproduce...' : isFeat ? 'Explain what feature you\'d like to see, or details on how it should work...' : 'Provide details, steps to reproduce for bugs, or explain how your feature idea should work...'}" style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; box-sizing:border-box; resize:vertical; line-height:1.4;"></textarea>
+                <textarea id="fbDescInput" rows="4" placeholder="${isAccount ? 'Provide details on your account issue, character name or game ID, and what happened...' : isBug ? 'Explain what bug occurred, where you saw it, and steps to reproduce...' : isFeat ? 'Explain what feature you\'d like to see, or details on how it should work...' : 'Provide details or background on what you need assistance with...'}" style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:13px; box-sizing:border-box; resize:vertical; line-height:1.4;"></textarea>
             </div>
 
             <!-- Media Attachment: Image or Video -->
@@ -18976,6 +19042,33 @@ window.openSubmitFeedbackModal = (defaultType = '') => {
         if (extVideoInput) extVideoInput.value = '';
     });
 
+    window.selectFeedbackUrgency = (u) => {
+        selectedUrgency = u;
+        const optNormal = document.getElementById('urgencyOptNormal');
+        const optHigh = document.getElementById('urgencyOptHigh');
+        const optUrgent = document.getElementById('urgencyOptUrgent');
+        if (!optNormal || !optHigh || !optUrgent) return;
+        
+        const rNormal = optNormal.querySelector('input');
+        const rHigh = optHigh.querySelector('input');
+        const rUrgent = optUrgent.querySelector('input');
+        if (rNormal) rNormal.checked = (u === 'normal');
+        if (rHigh) rHigh.checked = (u === 'high');
+        if (rUrgent) rUrgent.checked = (u === 'urgent');
+
+        optNormal.style.border = (u === 'normal') ? '1.5px solid #10b981' : '1.5px solid var(--border)';
+        optNormal.style.background = (u === 'normal') ? 'rgba(16,185,129,0.12)' : 'rgba(255,255,255,0.03)';
+        optNormal.style.color = (u === 'normal') ? '#10b981' : 'var(--text-main)';
+
+        optHigh.style.border = (u === 'high') ? '1.5px solid #eab308' : '1.5px solid var(--border)';
+        optHigh.style.background = (u === 'high') ? 'rgba(234,179,8,0.15)' : 'rgba(255,255,255,0.03)';
+        optHigh.style.color = (u === 'high') ? '#eab308' : 'var(--text-main)';
+
+        optUrgent.style.border = (u === 'urgent') ? '1.5px solid #ef4444' : '1.5px solid var(--border)';
+        optUrgent.style.background = (u === 'urgent') ? 'rgba(239,68,68,0.18)' : 'rgba(255,255,255,0.03)';
+        optUrgent.style.color = (u === 'urgent') ? '#ef4444' : 'var(--text-main)';
+    };
+
     window.selectFeedbackType = (t) => {
         selectedType = t;
         const typeSelect = document.getElementById('fbTypeInput');
@@ -18985,7 +19078,20 @@ window.openSubmitFeedbackModal = (defaultType = '') => {
         const titleInput = document.getElementById('fbTitleInput');
         const descInput = document.getElementById('fbDescInput');
 
-        if (t === 'feature') {
+        if (t === 'support_account') {
+            if (headerIcon) {
+                headerIcon.textContent = '🆘';
+                headerIcon.style.background = 'linear-gradient(135deg, rgba(239,68,68,0.2), rgba(249,115,22,0.2))';
+                headerIcon.style.border = '1px solid rgba(239,68,68,0.4)';
+            }
+            if (headerTitle) headerTitle.textContent = 'Account & Verification Help';
+            if (titleInput && (!titleInput.value || titleInput.value.includes('e.g.'))) {
+                titleInput.placeholder = 'e.g. In-game verification code not received, alt account link error...';
+            }
+            if (descInput && !descInput.value) {
+                descInput.placeholder = 'Provide details on your account issue, character name or game ID, and what happened...';
+            }
+        } else if (t === 'feature') {
             if (headerIcon) {
                 headerIcon.textContent = '💡';
                 headerIcon.style.background = 'linear-gradient(135deg, rgba(6,182,212,0.2), rgba(168,85,247,0.2))';
@@ -19004,25 +19110,38 @@ window.openSubmitFeedbackModal = (defaultType = '') => {
                 headerIcon.style.background = 'linear-gradient(135deg, rgba(239,68,68,0.2), rgba(168,85,247,0.2))';
                 headerIcon.style.border = '1px solid rgba(239,68,68,0.4)';
             }
-            if (headerTitle) headerTitle.textContent = 'Report Bug';
+            if (headerTitle) headerTitle.textContent = 'Report Bug / Issue';
             if (titleInput && (!titleInput.value || titleInput.value.includes('e.g.'))) {
                 titleInput.placeholder = 'e.g. Shield alert not triggering, score calculation issue...';
             }
             if (descInput && !descInput.value) {
                 descInput.placeholder = 'Explain what bug occurred, where you saw it, and steps to reproduce...';
             }
+        } else if (t === 'general') {
+            if (headerIcon) {
+                headerIcon.textContent = '❓';
+                headerIcon.style.background = 'linear-gradient(135deg, rgba(168,85,247,0.2), rgba(6,182,212,0.2))';
+                headerIcon.style.border = '1px solid rgba(168,85,247,0.4)';
+            }
+            if (headerTitle) headerTitle.textContent = 'General Support & Help';
+            if (titleInput && (!titleInput.value || titleInput.value.includes('e.g.'))) {
+                titleInput.placeholder = 'e.g. Event schedule question, alliance rules query...';
+            }
+            if (descInput && !descInput.value) {
+                descInput.placeholder = 'Provide details or background on what you need assistance with...';
+            }
         } else {
             if (headerIcon) {
-                headerIcon.textContent = '📝';
+                headerIcon.textContent = '🎫';
                 headerIcon.style.background = 'linear-gradient(135deg, rgba(6,182,212,0.2), rgba(168,85,247,0.2))';
                 headerIcon.style.border = '1px solid rgba(6,182,212,0.3)';
             }
-            if (headerTitle) headerTitle.textContent = 'Report Bug or Submit Idea';
+            if (headerTitle) headerTitle.textContent = 'Submit Help & Support Ticket';
             if (titleInput && (!titleInput.value || titleInput.value.includes('e.g.'))) {
-                titleInput.placeholder = 'e.g. Brief title summarizing the bug or idea...';
+                titleInput.placeholder = 'e.g. Brief summary of your question or issue...';
             }
             if (descInput && !descInput.value) {
-                descInput.placeholder = 'Provide details, steps to reproduce for bugs, or explain how your feature idea should work...';
+                descInput.placeholder = 'Provide details on your issue or inquiry...';
             }
         }
     };
@@ -19041,7 +19160,7 @@ window.openSubmitFeedbackModal = (defaultType = '') => {
         const submitBtn = document.getElementById('btnSubmitFeedbackSend');
 
         if (!finalType) {
-            if (window.showToast) window.showToast("⚠️ Please select a Feedback Type (Bug Report or Feature Request)!", "warning");
+            if (window.showToast) window.showToast("⚠️ Please select a Ticket Type before submitting!", "warning");
             const tSelect = document.getElementById('fbTypeInput');
             if (tSelect) {
                 tSelect.style.borderColor = '#ef4444';
@@ -19081,6 +19200,7 @@ window.openSubmitFeedbackModal = (defaultType = '') => {
 
             await window.submitFeedbackItem({
                 type: finalType,
+                urgency: selectedUrgency || 'normal',
                 category: category,
                 title: title,
                 description: desc,
@@ -19117,7 +19237,7 @@ window.renderAdminFeedbackTab = async () => {
     container.innerHTML = `
         <div style="text-align:center; padding:30px; color:var(--text-muted);">
             <div style="border:3px solid rgba(255,255,255,0.1); border-top-color:#06b6d4; border-radius:50%; width:28px; height:28px; animation:spin 1s linear infinite; margin:0 auto 10px;"></div>
-            Loading Feature & Bug Tracker tickets...
+            Loading Help & Support tickets...
         </div>
     `;
 
@@ -19126,9 +19246,9 @@ window.renderAdminFeedbackTab = async () => {
         if (items.length === 0) {
             container.innerHTML = `
                 <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:30px; text-align:center; color:var(--text-muted);">
-                    <div style="font-size:32px; margin-bottom:8px;">💡</div>
-                    <div style="font-size:15px; font-weight:bold; color:var(--text-main);">No feature requests or bug reports logged yet!</div>
-                    <button onclick="window.openSubmitFeedbackModal()" style="margin-top:12px; background:var(--accent); color:#fff; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; cursor:pointer;">➕ Submit First Ticket</button>
+                    <div style="font-size:32px; margin-bottom:8px;">🎫</div>
+                    <div style="font-size:15px; font-weight:bold; color:var(--text-main);">No help or support tickets logged yet!</div>
+                    <button onclick="window.openSubmitFeedbackModal()" style="margin-top:12px; background:var(--accent); color:#fff; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; cursor:pointer;">➕ Open First Ticket</button>
                 </div>
             `;
             return;
@@ -19169,17 +19289,14 @@ window.renderAdminFeedbackTab = async () => {
         // --- Build table rows ---
         let rowsHtml = '';
         if (filtered.length === 0) {
-            rowsHtml = `<tr><td colspan="8" style="padding:30px; text-align:center; color:var(--text-muted); font-size:13px;">No tickets in this category. 🎉</td></tr>`;
+            rowsHtml = `<tr><td colspan="9" style="padding:30px; text-align:center; color:var(--text-muted); font-size:13px;">No tickets in this category. 🎉</td></tr>`;
         } else {
             rowsHtml = filtered.map(item => {
-                const isFeat = item.type === 'feature';
                 const isCompleted = item.status === 'completed';
                 const isInProgress = item.status === 'in_progress';
                 const isArchived = item.status === 'archived';
                 const isPending = !item.status || item.status === 'pending';
-                const typeBadge = isFeat
-                    ? '<span style="background:rgba(6,182,212,0.15); color:#06b6d4; border:1px solid rgba(6,182,212,0.3); padding:2px 8px; border-radius:6px; font-size:11px; font-weight:bold;">💡 FEATURE</span>'
-                    : '<span style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3); padding:2px 8px; border-radius:6px; font-size:11px; font-weight:bold;">🐞 BUG</span>';
+                const urgency = item.urgency || 'normal';
                 const rowBg = isCompleted ? 'rgba(16,185,129,0.04)' : isInProgress ? 'rgba(59,130,246,0.04)' : isArchived ? 'rgba(255,255,255,0.02)' : 'transparent';
                 return `
                 <tr style="border-bottom:1px solid var(--border); background:${rowBg}; opacity:${isArchived ? '0.6' : '1'};">
@@ -19187,9 +19304,18 @@ window.renderAdminFeedbackTab = async () => {
                         <input type="checkbox" onchange="window.toggleFeedbackCompleted('${item.id}', this.checked)" ${isCompleted ? 'checked' : ''} style="width:18px; height:18px; accent-color:#10b981; cursor:pointer;" title="Mark Completed / Done">
                     </td>
                     <td style="padding:12px; white-space:nowrap;">
-                        <select onchange="window.updateFeedbackType('${item.id}', this.value)" style="padding:4px 8px; border-radius:6px; border:1px solid ${isFeat ? 'rgba(6,182,212,0.4)' : 'rgba(239,68,68,0.4)'}; background:${isFeat ? 'rgba(6,182,212,0.12)' : 'rgba(239,68,68,0.12)'}; color:${isFeat ? '#06b6d4' : '#ef4444'}; font-size:11px; font-weight:bold; cursor:pointer;" title="Change Ticket Type">
-                            <option value="bug" ${!isFeat ? 'selected' : ''}>🐞 BUG</option>
-                            <option value="feature" ${isFeat ? 'selected' : ''}>💡 FEATURE</option>
+                        <select onchange="window.updateFeedbackUrgency('${item.id}', this.value)" style="padding:4px 6px; border-radius:6px; border:1px solid ${urgency === 'urgent' ? 'rgba(239,68,68,0.4)' : urgency === 'high' ? 'rgba(234,179,8,0.4)' : 'rgba(16,185,129,0.3)'}; background:${urgency === 'urgent' ? 'rgba(239,68,68,0.15)' : urgency === 'high' ? 'rgba(234,179,8,0.15)' : 'rgba(16,185,129,0.1)'}; color:${urgency === 'urgent' ? '#ef4444' : urgency === 'high' ? '#eab308' : '#10b981'}; font-size:11px; font-weight:bold; cursor:pointer;" title="Change Urgency Priority">
+                            <option value="normal" ${urgency !== 'high' && urgency !== 'urgent' ? 'selected' : ''}>🟢 Normal</option>
+                            <option value="high" ${urgency === 'high' ? 'selected' : ''}>🟡 High</option>
+                            <option value="urgent" ${urgency === 'urgent' ? 'selected' : ''}>🔴 Urgent</option>
+                        </select>
+                    </td>
+                    <td style="padding:12px; white-space:nowrap;">
+                        <select onchange="window.updateFeedbackType('${item.id}', this.value)" style="padding:4px 6px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:11px; font-weight:bold; cursor:pointer;" title="Change Ticket Type">
+                            <option value="support_account" ${item.type === 'support_account' ? 'selected' : ''}>🆘 Account</option>
+                            <option value="bug" ${item.type === 'bug' ? 'selected' : ''}>🐞 Bug</option>
+                            <option value="feature" ${item.type === 'feature' ? 'selected' : ''}>💡 Feature</option>
+                            <option value="general" ${item.type === 'general' ? 'selected' : ''}>❓ General</option>
                         </select>
                     </td>
                     <td style="padding:12px;">
@@ -19217,7 +19343,7 @@ window.renderAdminFeedbackTab = async () => {
                         </select>
                     </td>
                     <td style="padding:12px; white-space:nowrap; text-align:right;">
-                        <button onclick="window.openAdminNoteModal('${item.id}', '${escapeHTML(item.adminNote || '')}', '${escapeHTML(item.category || '')}', '${escapeHTML(item.type || 'bug')}')" style="background:rgba(6,182,212,0.12); border:1px solid rgba(6,182,212,0.3); color:var(--accent); padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;" title="Add or edit resolution note">✏️ Note</button>
+                        <button onclick="window.openAdminNoteModal('${item.id}', '${escapeHTML(item.adminNote || '')}', '${escapeHTML(item.category || '')}', '${escapeHTML(item.type || 'general')}', '${escapeHTML(item.urgency || 'normal')}')" style="background:rgba(6,182,212,0.12); border:1px solid rgba(6,182,212,0.3); color:var(--accent); padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;" title="Add or edit resolution note">✏️ Note</button>
                         <button onclick="window.deleteFeedbackItem('${item.id}')" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; padding:4px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; margin-left:4px;" title="Delete ticket">🗑️</button>
                     </td>
                 </tr>`;
@@ -19240,7 +19366,8 @@ window.renderAdminFeedbackTab = async () => {
                     <thead>
                         <tr style="border-bottom:2px solid var(--border); color:var(--text-muted); font-size:11px; text-transform:uppercase; letter-spacing:0.5px;">
                             <th style="padding:10px 12px; text-align:center; width:40px;">Done</th>
-                            <th style="padding:10px 12px; width:90px;">Type</th>
+                            <th style="padding:10px 12px; width:95px;">Priority</th>
+                            <th style="padding:10px 12px; width:95px;">Type</th>
                             <th style="padding:10px 12px;">Title & Details</th>
                             <th style="padding:10px 12px; width:130px;">Category</th>
                             <th style="padding:10px 12px; width:120px;">Submitted By</th>
@@ -33886,7 +34013,7 @@ const views = {
               <button class="admin-tab-btn ${targetTab !== 'tab-bots' ? 'active' : ''}" data-tab="tab-tools" style="background:none; border:none; color:${targetTab !== 'tab-bots' ? 'var(--accent)' : 'var(--text-muted)'}; font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid ${targetTab !== 'tab-bots' ? 'var(--accent)' : 'transparent'}; flex-shrink:0;">🛠️ Daily Tools</button>
               <button class="admin-tab-btn ${targetTab === 'tab-bots' ? 'active' : ''}" data-tab="tab-bots" style="background:none; border:none; color:${targetTab === 'tab-bots' ? 'var(--accent)' : 'var(--text-muted)'}; font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid ${targetTab === 'tab-bots' ? 'var(--accent)' : 'transparent'}; flex-shrink:0;">🤖 Bots</button>
               <button class="admin-tab-btn" data-tab="tab-indev" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid transparent; flex-shrink:0;">🧪 In-Dev</button>
-              <button class="admin-tab-btn" data-tab="tab-feedback" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid transparent; flex-shrink:0;">💡 Feedback</button>
+              <button class="admin-tab-btn" data-tab="tab-feedback" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid transparent; flex-shrink:0;">🎫 Tickets</button>
               <button class="admin-tab-btn" data-tab="tab-users" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid transparent; flex-shrink:0;">👥 Users</button>
               ${isR5 ? `<button class="admin-tab-btn" data-tab="tab-settings" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid transparent; flex-shrink:0;">⚙️ Settings</button>` : ''}
               <button class="admin-tab-btn" data-tab="tab-logs" style="background:none; border:none; color:var(--text-muted); font-weight:bold; font-size:15px; cursor:pointer; padding:6px 12px; border-bottom:2px solid transparent; flex-shrink:0;">📋 Logs</button>
@@ -34264,14 +34391,14 @@ const views = {
             </div>
           </div>
 
-          <!-- Tab: Feedback & Bug Tracker -->
+          <!-- Tab: Support Tickets -->
           <div id="tab-feedback" class="admin-tab-content" style="display:none;">
             <div style="background:var(--bg-main); padding:20px; border-radius:12px; border:1px solid rgba(6,182,212,0.35); margin-bottom:20px;">
                   <div style="display:flex; align-items:center; gap:12px;">
-                    <div style="width:40px; height:40px; border-radius:10px; background:linear-gradient(135deg, rgba(6,182,212,0.2), rgba(168,85,247,0.2)); display:flex; align-items:center; justify-content:center; font-size:20px; border:1px solid rgba(6,182,212,0.4);">💡</div>
+                    <div style="width:40px; height:40px; border-radius:10px; background:linear-gradient(135deg, rgba(6,182,212,0.2), rgba(168,85,247,0.2)); display:flex; align-items:center; justify-content:center; font-size:20px; border:1px solid rgba(6,182,212,0.4);">🎫</div>
                     <div>
-                      <h3 style="margin:0; color:#38bdf8; font-size:18px; font-weight:800;">Alliance Feature & Bug Tracker</h3>
-                      <p style="margin:2px 0 0 0; font-size:12px; color:var(--text-muted);">Manage member feedback, toggle status, and mark tasks completed.</p>
+                      <h3 style="margin:0; color:#38bdf8; font-size:18px; font-weight:800;">Alliance Help & Support Tickets</h3>
+                      <p style="margin:2px 0 0 0; font-size:12px; color:var(--text-muted);">Manage member support tickets, account issues, bug reports, and resolution notes.</p>
                     </div>
                   </div>
                   <div style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -34279,7 +34406,7 @@ const views = {
                       👁️ Open Member Hub
                     </button>
                     <button onclick="window.openSubmitFeedbackModal()" style="background:linear-gradient(135deg, #06b6d4, #8b5cf6); color:#fff; border:none; padding:8px 16px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:12px; display:flex; align-items:center; gap:6px; box-shadow:0 2px 10px rgba(6,182,212,0.3);">
-                      ➕ Add Request / Bug
+                      ➕ Open Support Ticket
                     </button>
                   </div>
                 </div>
@@ -45151,7 +45278,8 @@ window.resetBearTrapEvent = async () => {
 
   
   feedback: async (initialFilter = 'open') => {
-    if (!currentUser) return window.renderMembersOnlyGuard("Feature Request & Bug Tracker");
+    const activeUser = currentUser || window.currentUser;
+    if (!activeUser) return window.renderMembersOnlyGuard("Alliance Help & Support Tickets");
     const navbar = document.querySelector('.navbar');
     if (navbar) navbar.style.display = 'flex';
 
@@ -45159,7 +45287,7 @@ window.resetBearTrapEvent = async () => {
     localStorage.setItem('last_seen_feedback_timestamp', String(Date.now()));
     if (typeof window.updateNewMemberBadge === 'function') window.updateNewMemberBadge();
 
-    renderLoading("Loading Feature & Bug Tracker...");
+    renderLoading("Loading Help & Support Tickets...");
     const app = document.getElementById('app');
     if (!app) return;
 
@@ -45171,10 +45299,10 @@ window.resetBearTrapEvent = async () => {
     try {
         let activeFilter = initialFilter || 'open';
         let searchQuery = '';
-        let activeSort = 'top';
+        let activeSort = 'urgency';
 
         let items = [];
-        const isManager = window.getAdminLevel(currentUser) === 'R5' || window.getAdminLevel(currentUser) === 'R4';
+        const isManager = window.getAdminLevel(activeUser) === 'R5' || window.getAdminLevel(activeUser) === 'R4';
 
         const getPillStyle = (isActive, color) => {
             if (isActive) {
@@ -45186,19 +45314,23 @@ window.resetBearTrapEvent = async () => {
 
         const renderFeedbackUI = () => {
             const counts = {
-                open:        items.filter(i => !i.status || i.status === 'pending' || i.status === 'in_progress').length,
-                feature:     items.filter(i => i.type === 'feature' && i.status !== 'archived').length,
-                bug:         items.filter(i => i.type === 'bug' && i.status !== 'archived').length,
-                pending:     items.filter(i => i.status === 'pending' || !i.status).length,
-                in_progress: items.filter(i => i.status === 'in_progress').length,
-                completed:   items.filter(i => i.status === 'completed').length,
-                all:         items.length
+                open:            items.filter(i => !i.status || i.status === 'pending' || i.status === 'in_progress').length,
+                support_account: items.filter(i => i.type === 'support_account' && i.status !== 'archived').length,
+                bug:             items.filter(i => i.type === 'bug' && i.status !== 'archived').length,
+                feature:         items.filter(i => i.type === 'feature' && i.status !== 'archived').length,
+                general:         items.filter(i => (i.type === 'general' || (!i.type && !['support_account','bug','feature'].includes(i.type))) && i.status !== 'archived').length,
+                pending:         items.filter(i => i.status === 'pending' || !i.status).length,
+                in_progress:     items.filter(i => i.status === 'in_progress').length,
+                completed:       items.filter(i => i.status === 'completed').length,
+                all:             items.length
             };
 
             let filtered = items.filter(item => {
                 if (activeFilter === 'open') return !item.status || item.status === 'pending' || item.status === 'in_progress';
-                if (activeFilter === 'feature') return item.type === 'feature' && item.status !== 'archived';
+                if (activeFilter === 'support_account') return item.type === 'support_account' && item.status !== 'archived';
                 if (activeFilter === 'bug') return item.type === 'bug' && item.status !== 'archived';
+                if (activeFilter === 'feature') return item.type === 'feature' && item.status !== 'archived';
+                if (activeFilter === 'general') return (item.type === 'general' || !item.type) && item.status !== 'archived';
                 if (activeFilter === 'pending' && item.status !== 'pending' && item.status) return false;
                 if (activeFilter === 'in_progress' && item.status !== 'in_progress') return false;
                 if (activeFilter === 'completed' && item.status !== 'completed') return false;
@@ -45214,7 +45346,10 @@ window.resetBearTrapEvent = async () => {
                 return true;
             });
 
-            if (activeSort === 'top') {
+            if (activeSort === 'urgency') {
+                const urgencyScore = (u) => u === 'urgent' ? 3 : (u === 'high' ? 2 : 1);
+                filtered.sort((a, b) => urgencyScore(b.urgency) - urgencyScore(a.urgency) || (b.createdAt || 0) - (a.createdAt || 0));
+            } else if (activeSort === 'top') {
                 filtered.sort((a, b) => (b.voteCount || 0) - (a.voteCount || 0) || (b.createdAt || 0) - (a.createdAt || 0));
             } else if (activeSort === 'newest') {
                 filtered.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
@@ -45226,14 +45361,13 @@ window.resetBearTrapEvent = async () => {
             if (filtered.length === 0) {
                 cardsHtml = `
                     <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:14px; padding:40px 20px; text-align:center; color:var(--text-muted);">
-                        <div style="font-size:36px; margin-bottom:10px;">🔍</div>
-                        <div style="font-size:16px; font-weight:bold; color:var(--text-main);">No submissions match your filter</div>
-                        <p style="font-size:12px; margin-top:4px;">Try selecting a different filter or click "➕ Submit Request / Bug" to add one!</p>
+                        <div style="font-size:36px; margin-bottom:10px;">🎫</div>
+                        <div style="font-size:16px; font-weight:bold; color:var(--text-main);">No support tickets match your filter</div>
+                        <p style="font-size:12px; margin-top:4px;">Try selecting a different filter or click "➕ Open Support Ticket" to create one!</p>
                     </div>
                 `;
             } else {
                 cardsHtml = filtered.map(item => {
-                    const isFeat = item.type === 'feature';
                     const userUid = currentUser?.uid;
                     const hasVoted = !!(item.votes && userUid && item.votes[userUid]);
                     const voteCount = item.voteCount || (item.votes ? Object.keys(item.votes).filter(k => item.votes[k]).length : 0);
@@ -45241,13 +45375,30 @@ window.resetBearTrapEvent = async () => {
                     const isCompleted = item.status === 'completed';
                     const isInProgress = item.status === 'in_progress';
                     const isPending = !item.status || item.status === 'pending';
+                    const urgency = item.urgency || 'normal';
 
-                    let typeBadge = isFeat
-                        ? `<span style="background:rgba(6,182,212,0.18); border:1px solid rgba(6,182,212,0.4); color:#06b6d4; padding:3px 10px; border-radius:8px; font-size:11px; font-weight:900; letter-spacing:0.5px; display:inline-flex; align-items:center; gap:4px; box-shadow:0 0 10px rgba(6,182,212,0.2);">💡 FEATURE</span>`
-                        : `<span style="background:rgba(239,68,68,0.18); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:3px 10px; border-radius:8px; font-size:11px; font-weight:900; letter-spacing:0.5px; display:inline-flex; align-items:center; gap:4px; box-shadow:0 0 10px rgba(239,68,68,0.2);">🐞 BUG</span>`;
+                    let typeBadge = '';
+                    if (item.type === 'support_account') {
+                        typeBadge = `<span style="background:rgba(239,68,68,0.18); border:1px solid rgba(239,68,68,0.4); color:#f87171; padding:3px 10px; border-radius:8px; font-size:11px; font-weight:900; letter-spacing:0.5px; display:inline-flex; align-items:center; gap:4px; box-shadow:0 0 10px rgba(239,68,68,0.2);">🆘 ACCOUNT HELP</span>`;
+                    } else if (item.type === 'bug') {
+                        typeBadge = `<span style="background:rgba(239,68,68,0.18); border:1px solid rgba(239,68,68,0.4); color:#ef4444; padding:3px 10px; border-radius:8px; font-size:11px; font-weight:900; letter-spacing:0.5px; display:inline-flex; align-items:center; gap:4px; box-shadow:0 0 10px rgba(239,68,68,0.2);">🐞 BUG</span>`;
+                    } else if (item.type === 'feature') {
+                        typeBadge = `<span style="background:rgba(6,182,212,0.18); border:1px solid rgba(6,182,212,0.4); color:#06b6d4; padding:3px 10px; border-radius:8px; font-size:11px; font-weight:900; letter-spacing:0.5px; display:inline-flex; align-items:center; gap:4px; box-shadow:0 0 10px rgba(6,182,212,0.2);">💡 FEATURE</span>`;
+                    } else {
+                        typeBadge = `<span style="background:rgba(168,85,247,0.18); border:1px solid rgba(168,85,247,0.4); color:#c084fc; padding:3px 10px; border-radius:8px; font-size:11px; font-weight:900; letter-spacing:0.5px; display:inline-flex; align-items:center; gap:4px; box-shadow:0 0 10px rgba(168,85,247,0.2);">❓ QUESTION</span>`;
+                    }
+
+                    let urgencyBadge = '';
+                    if (urgency === 'urgent') {
+                        urgencyBadge = `<span style="background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.5); color:#ef4444; padding:3px 8px; border-radius:6px; font-size:10.5px; font-weight:900; letter-spacing:0.5px; display:inline-flex; align-items:center; gap:4px; box-shadow:0 0 10px rgba(239,68,68,0.25);">🔴 URGENT</span>`;
+                    } else if (urgency === 'high') {
+                        urgencyBadge = `<span style="background:rgba(234,179,8,0.18); border:1px solid rgba(234,179,8,0.45); color:#eab308; padding:3px 8px; border-radius:6px; font-size:10.5px; font-weight:800; letter-spacing:0.5px; display:inline-flex; align-items:center; gap:4px;">🟡 HIGH</span>`;
+                    } else {
+                        urgencyBadge = `<span style="background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.35); color:#10b981; padding:3px 8px; border-radius:6px; font-size:10.5px; font-weight:800; letter-spacing:0.5px; display:inline-flex; align-items:center; gap:4px;">🟢 NORMAL</span>`;
+                    }
 
                     let statusBadge = isCompleted
-                        ? `<span style="background:rgba(16,185,129,0.2); border:1px solid rgba(16,185,129,0.45); color:#10b981; padding:4px 12px; border-radius:8px; font-size:11px; font-weight:900; letter-spacing:0.5px; display:inline-flex; align-items:center; gap:5px; box-shadow:0 0 12px rgba(16,185,129,0.3);">✓ COMPLETED</span>`
+                        ? `<span style="background:rgba(16,185,129,0.2); border:1px solid rgba(16,185,129,0.45); color:#10b981; padding:4px 12px; border-radius:8px; font-size:11px; font-weight:900; letter-spacing:0.5px; display:inline-flex; align-items:center; gap:5px; box-shadow:0 0 12px rgba(16,185,129,0.3);">✓ RESOLVED</span>`
                         : (isInProgress
                             ? `<span style="background:rgba(59,130,246,0.2); border:1px solid rgba(59,130,246,0.45); color:#3b82f6; padding:4px 12px; border-radius:8px; font-size:11px; font-weight:900; letter-spacing:0.5px; display:inline-flex; align-items:center; gap:5px; box-shadow:0 0 12px rgba(59,130,246,0.25);">🔵 IN PROGRESS</span>`
                             : `<span style="background:rgba(234,179,8,0.15); border:1px solid rgba(234,179,8,0.35); color:#eab308; padding:4px 12px; border-radius:8px; font-size:11px; font-weight:bold; letter-spacing:0.5px; display:inline-flex; align-items:center; gap:5px;">🟡 UNDER REVIEW</span>`);
@@ -45256,32 +45407,42 @@ window.resetBearTrapEvent = async () => {
                         ? 'border:1px solid rgba(16,185,129,0.35); background:linear-gradient(135deg, rgba(16,185,129,0.04) 0%, rgba(255,255,255,0.01) 100%);'
                         : (isInProgress
                             ? 'border:1px solid rgba(59,130,246,0.35); background:linear-gradient(135deg, rgba(59,130,246,0.04) 0%, rgba(255,255,255,0.01) 100%);'
-                            : 'border:1px solid var(--border); background:var(--card-bg);');
+                            : (urgency === 'urgent'
+                                ? 'border:1px solid rgba(239,68,68,0.35); background:linear-gradient(135deg, rgba(239,68,68,0.04) 0%, rgba(255,255,255,0.01) 100%);'
+                                : 'border:1px solid var(--border); background:var(--card-bg);'));
 
                     let adminControlsHtml = isManager ? `
-                        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; border-top:1px solid rgba(255,255,255,0.06); padding-top:10px; margin-top:10px;">
+                        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; border-top:1px solid rgba(255,255,255,0.06); padding-top:10px; margin-top:10px;">
                             <label style="display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:bold; color:${isCompleted ? '#10b981' : 'var(--text-muted)'}; cursor:pointer;">
                                 <input type="checkbox" onchange="window.toggleFeedbackCompleted('${item.id}', this.checked)" ${isCompleted ? 'checked' : ''} style="width:16px; height:16px; accent-color:#10b981; cursor:pointer;">
                                 <span>Done</span>
                             </label>
 
-                            <select onchange="window.updateFeedbackType('${item.id}', this.value)" style="padding:4px 8px; border-radius:6px; border:1px solid ${isFeat ? 'rgba(6,182,212,0.4)' : 'rgba(239,68,68,0.4)'}; background:${isFeat ? 'rgba(6,182,212,0.12)' : 'rgba(239,68,68,0.12)'}; color:${isFeat ? '#06b6d4' : '#ef4444'}; font-size:11px; font-weight:bold; cursor:pointer;" title="Change Type">
-                                <option value="bug" ${!isFeat ? 'selected' : ''}>🐞 Bug</option>
-                                <option value="feature" ${isFeat ? 'selected' : ''}>💡 Feature</option>
+                            <select onchange="window.updateFeedbackUrgency('${item.id}', this.value)" style="padding:4px 6px; border-radius:6px; border:1px solid ${urgency === 'urgent' ? 'rgba(239,68,68,0.4)' : urgency === 'high' ? 'rgba(234,179,8,0.4)' : 'rgba(16,185,129,0.3)'}; background:${urgency === 'urgent' ? 'rgba(239,68,68,0.15)' : urgency === 'high' ? 'rgba(234,179,8,0.15)' : 'rgba(16,185,129,0.1)'}; color:${urgency === 'urgent' ? '#ef4444' : urgency === 'high' ? '#eab308' : '#10b981'}; font-size:11px; font-weight:bold; cursor:pointer;" title="Change Priority">
+                                <option value="normal" ${urgency !== 'high' && urgency !== 'urgent' ? 'selected' : ''}>🟢 Normal</option>
+                                <option value="high" ${urgency === 'high' ? 'selected' : ''}>🟡 High</option>
+                                <option value="urgent" ${urgency === 'urgent' ? 'selected' : ''}>🔴 Urgent</option>
+                            </select>
+
+                            <select onchange="window.updateFeedbackType('${item.id}', this.value)" style="padding:4px 6px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:11px; font-weight:bold; cursor:pointer;" title="Change Ticket Type">
+                                <option value="support_account" ${item.type === 'support_account' ? 'selected' : ''}>🆘 Account</option>
+                                <option value="bug" ${item.type === 'bug' ? 'selected' : ''}>🐞 Bug</option>
+                                <option value="feature" ${item.type === 'feature' ? 'selected' : ''}>💡 Feature</option>
+                                <option value="general" ${item.type === 'general' ? 'selected' : ''}>❓ General</option>
                             </select>
                             
-                            <select onchange="window.updateFeedbackStatus('${item.id}', this.value)" style="padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:11px; font-weight:bold;" title="Update Status">
+                            <select onchange="window.updateFeedbackStatus('${item.id}', this.value)" style="padding:4px 6px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:11px; font-weight:bold;" title="Update Status">
                                 <option value="pending" ${isPending ? 'selected' : ''}>🟡 Under Review</option>
                                 <option value="in_progress" ${isInProgress ? 'selected' : ''}>🔵 In Progress</option>
-                                <option value="completed" ${isCompleted ? 'selected' : ''}>✅ Completed</option>
+                                <option value="completed" ${isCompleted ? 'selected' : ''}>✅ Resolved</option>
                                 <option value="archived" ${item.status === 'archived' ? 'selected' : ''}>⚪ Archived</option>
                             </select>
 
-                            <select onchange="window.updateFeedbackCategory('${item.id}', this.value)" style="padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:11px; font-weight:bold; cursor:pointer;" title="Reclassify Category">
+                            <select onchange="window.updateFeedbackCategory('${item.id}', this.value)" style="padding:4px 6px; border-radius:6px; border:1px solid var(--border); background:var(--bg-main); color:var(--text-main); font-size:11px; font-weight:bold; cursor:pointer;" title="Reclassify Category">
                                 ${window.FEEDBACK_CATEGORIES.map(c => `<option value="${c.value}" ${(item.category || 'General UI') === c.value ? 'selected' : ''}>${c.label}</option>`).join('')}
                             </select>
 
-                            <button onclick="window.openAdminNoteModal('${item.id}', '${escapeHTML(item.adminNote || '')}', '${escapeHTML(item.category || '')}', '${escapeHTML(item.type || 'bug')}')" style="background:rgba(6,182,212,0.12); border:1px solid rgba(6,182,212,0.3); color:var(--accent); padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
+                            <button onclick="window.openAdminNoteModal('${item.id}', '${escapeHTML(item.adminNote || '')}', '${escapeHTML(item.category || '')}', '${escapeHTML(item.type || 'general')}', '${escapeHTML(item.urgency || 'normal')}')" style="background:rgba(6,182,212,0.12); border:1px solid rgba(6,182,212,0.3); color:var(--accent); padding:4px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">
                                 ✏️ ${item.adminNote ? 'Edit Note' : 'Add Note'}
                             </button>
 
@@ -45295,18 +45456,19 @@ window.resetBearTrapEvent = async () => {
                         <div class="feedback-card" style="${cardBorder} border-radius:14px; padding:18px 22px; display:flex; flex-direction:column; gap:10px; box-shadow:0 4px 20px rgba(0,0,0,0.25); transition:transform 0.2s ease, box-shadow 0.2s ease;">
                             <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;">
                                 <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                    ${urgencyBadge}
                                     ${typeBadge}
                                     <span style="font-size:11px; color:var(--text-muted); font-weight:bold; background:var(--bg-main); border:1px solid var(--border); padding:2px 8px; border-radius:6px;">[${escapeHTML(item.category || 'General')}]</span>
                                 </div>
                                 <div style="display:flex; align-items:center; gap:10px;">
-                                    <button onclick="window.toggleFeedbackVote('${item.id}')" style="${hasVoted ? 'background:linear-gradient(135deg, rgba(6,182,212,0.3), rgba(168,85,247,0.3)); border:1.5px solid #06b6d4; color:#38bdf8;' : 'background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--text-main);'} padding:6px 14px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13px; display:inline-flex; align-items:center; gap:6px; transition:0.2s;" title="Upvote this idea">
+                                    <button onclick="window.toggleFeedbackVote('${item.id}')" style="${hasVoted ? 'background:linear-gradient(135deg, rgba(6,182,212,0.3), rgba(168,85,247,0.3)); border:1.5px solid #06b6d4; color:#38bdf8;' : 'background:rgba(255,255,255,0.05); border:1px solid var(--border); color:var(--text-main);'} padding:6px 14px; border-radius:8px; cursor:pointer; font-weight:bold; font-size:13px; display:inline-flex; align-items:center; gap:6px; transition:0.2s;" title="Upvote this ticket">
                                         <span>👍</span> <span>${voteCount}</span>
                                     </button>
                                 </div>
                             </div>
                             <div>
                                 <h3 style="margin:0 0 6px 0; font-size:16px; font-weight:bold; color:var(--text-main); line-height:1.3;">
-                                    ${escapeHTML(item.title || 'Untitled Request')}
+                                    ${escapeHTML(item.title || 'Untitled Ticket')}
                                 </h3>
                                 ${item.description ? `<p style="margin:0; font-size:13px; color:var(--text-muted); line-height:1.45; white-space:pre-line;">${escapeHTML(item.description)}</p>` : ''}
                                 ${item.videoUrl ? `
@@ -45327,7 +45489,7 @@ window.resetBearTrapEvent = async () => {
                             </div>
                             ${item.adminNote ? `
                                 <div style="background:rgba(56,189,248,0.07); border:1px solid rgba(56,189,248,0.25); border-radius:10px; padding:10px 14px; margin-top:2px;">
-                                    <div style="font-size:11px; font-weight:bold; color:#38bdf8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; display:flex; align-items:center; gap:5px;"><span>✨</span> Admin / Developer Note</div>
+                                    <div style="font-size:11px; font-weight:bold; color:#38bdf8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; display:flex; align-items:center; gap:5px;"><span>✨</span> Leadership / Resolution Note</div>
                                     <div style="font-size:12.5px; color:var(--text-main); line-height:1.5; white-space:pre-wrap; word-break:break-word;">${escapeHTML(item.adminNote)}</div>
                                 </div>
                             ` : ''}
@@ -45349,22 +45511,23 @@ window.resetBearTrapEvent = async () => {
                 <div style="max-width:960px; margin:0 auto; padding-bottom:50px; display:flex; flex-direction:column; gap:18px; animation: fadeIn 0.3s ease;">
                     <div style="background:linear-gradient(135deg, rgba(6,182,212,0.12) 0%, rgba(168,85,247,0.06) 100%); border:1px solid rgba(6,182,212,0.35); border-radius:16px; padding:22px 24px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; box-shadow:0 6px 25px rgba(0,0,0,0.3);">
                         <div style="display:flex; align-items:center; gap:14px;">
-                            <div style="width:44px; height:44px; border-radius:12px; background:linear-gradient(135deg, #06b6d4, #8b5cf6); display:flex; align-items:center; justify-content:center; font-size:22px; box-shadow:0 4px 15px rgba(6,182,212,0.4); flex-shrink:0;">💡</div>
+                            <div style="width:44px; height:44px; border-radius:12px; background:linear-gradient(135deg, #06b6d4, #8b5cf6); display:flex; align-items:center; justify-content:center; font-size:22px; box-shadow:0 4px 15px rgba(6,182,212,0.4); flex-shrink:0;">🎫</div>
                             <div>
-                                <h1 style="margin:0; font-size:22px; font-weight:900; color:var(--text-main); letter-spacing:0.5px;">Alliance Feature & Bug Tracker</h1>
-                                <p style="margin:2px 0 0 0; font-size:12px; color:var(--text-muted);">Suggest new features, report game/website bugs, and vote on community priorities.</p>
+                                <h1 style="margin:0; font-size:22px; font-weight:900; color:var(--text-main); letter-spacing:0.5px;">Alliance Help & Support Tickets</h1>
+                                <p style="margin:2px 0 0 0; font-size:12px; color:var(--text-muted);">Submit support requests, report bugs, suggest features, and track resolutions with alliance leadership.</p>
                             </div>
                         </div>
-                        <button onclick="window.openSubmitFeedbackModal()" style="background:linear-gradient(135deg, #06b6d4, #8b5cf6); color:#fff; border:none; padding:10px 18px; border-radius:10px; font-weight:bold; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 4px 14px rgba(6,182,212,0.35); transition:0.2s;">➕ Submit Request / Bug</button>
+                        <button onclick="window.openSubmitFeedbackModal()" style="background:linear-gradient(135deg, #06b6d4, #8b5cf6); color:#fff; border:none; padding:10px 18px; border-radius:10px; font-weight:bold; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 4px 14px rgba(6,182,212,0.35); transition:0.2s;">➕ Open Support Ticket</button>
                     </div>
                     <div style="display:flex; flex-direction:column; gap:12px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
                             <div style="flex:1; min-width:240px; position:relative;">
-                                <input type="text" id="feedbackSearchInput" value="${escapeHTML(searchQuery)}" placeholder="🔍 Search suggestions, bugs, or categories..." style="width:100%; padding:10px 14px; border-radius:10px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:13px; box-sizing:border-box;">
+                                <input type="text" id="feedbackSearchInput" value="${escapeHTML(searchQuery)}" placeholder="🔍 Search tickets, bugs, or categories..." style="width:100%; padding:10px 14px; border-radius:10px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:13px; box-sizing:border-box;">
                             </div>
                             <div style="display:flex; align-items:center; gap:8px;">
                                 <span style="font-size:11px; font-weight:bold; color:var(--text-muted); text-transform:uppercase;">Sort:</span>
                                 <select id="feedbackSortSelect" style="padding:8px 12px; border-radius:8px; border:1px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:12px; font-weight:bold; cursor:pointer;">
+                                    <option value="urgency" ${activeSort === 'urgency' ? 'selected' : ''}>🚨 Priority (Urgent First)</option>
                                     <option value="top" ${activeSort === 'top' ? 'selected' : ''}>🔥 Top Upvoted</option>
                                     <option value="newest" ${activeSort === 'newest' ? 'selected' : ''}>🆕 Newest First</option>
                                     <option value="oldest" ${activeSort === 'oldest' ? 'selected' : ''}>🕒 Oldest First</option>
@@ -45373,10 +45536,12 @@ window.resetBearTrapEvent = async () => {
                         </div>
                         <div style="display:flex; gap:8px; flex-wrap:wrap; overflow-x:auto; padding-bottom:4px;">
                             <button class="fb-pill ${activeFilter === 'open' ? 'active' : ''}" data-filter="open" style="${getPillStyle(activeFilter === 'open', '#eab308')}">🟡 Open (${counts.open})</button>
-                            <button class="fb-pill ${activeFilter === 'feature' ? 'active' : ''}" data-filter="feature" style="${getPillStyle(activeFilter === 'feature', '#06b6d4')}">💡 Features (${counts.feature})</button>
+                            <button class="fb-pill ${activeFilter === 'support_account' ? 'active' : ''}" data-filter="support_account" style="${getPillStyle(activeFilter === 'support_account', '#f87171')}">🆘 Account Help (${counts.support_account})</button>
                             <button class="fb-pill ${activeFilter === 'bug' ? 'active' : ''}" data-filter="bug" style="${getPillStyle(activeFilter === 'bug', '#ef4444')}">🐞 Bugs (${counts.bug})</button>
+                            <button class="fb-pill ${activeFilter === 'feature' ? 'active' : ''}" data-filter="feature" style="${getPillStyle(activeFilter === 'feature', '#06b6d4')}">💡 Suggestions (${counts.feature})</button>
+                            <button class="fb-pill ${activeFilter === 'general' ? 'active' : ''}" data-filter="general" style="${getPillStyle(activeFilter === 'general', '#c084fc')}">❓ General (${counts.general})</button>
                             <button class="fb-pill ${activeFilter === 'in_progress' ? 'active' : ''}" data-filter="in_progress" style="${getPillStyle(activeFilter === 'in_progress', '#3b82f6')}">🔵 In Progress (${counts.in_progress})</button>
-                            <button class="fb-pill ${activeFilter === 'completed' ? 'active' : ''}" data-filter="completed" style="${getPillStyle(activeFilter === 'completed', '#10b981')}">✅ Completed (${counts.completed})</button>
+                            <button class="fb-pill ${activeFilter === 'completed' ? 'active' : ''}" data-filter="completed" style="${getPillStyle(activeFilter === 'completed', '#10b981')}">✅ Resolved (${counts.completed})</button>
                             <button class="fb-pill ${activeFilter === 'all' ? 'active' : ''}" data-filter="all" style="${getPillStyle(activeFilter === 'all', '#94a3b8')}">📋 All (${counts.all})</button>
                         </div>
                     </div>
@@ -45418,7 +45583,7 @@ window.resetBearTrapEvent = async () => {
 
     } catch(err) {
         console.error("Error loading feedback view:", err);
-        renderError("Failed to load Feature & Bug Tracker: " + err.message);
+        renderError("Failed to load Help & Support Tickets: " + err.message);
     }
   },
 

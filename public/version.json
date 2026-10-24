@@ -1,16 +1,20 @@
 {
-  "version": "3.3.129",
+  "version": "3.3.130",
   "releaseDate": "2026-10-23",
-  "title": "What's New in v3.3.129",
+  "title": "What's New in v3.3.130",
   "notes": [
-    "⚔️ Multi-Day Events: Fixed multi-day event end-times and active status.",
-    "🔥 Live Event Restoration: Restored Brothers in Arms into active Hero Spotlight.",
-    "🕒 Accurate Countdown: Time remaining accurately counts down across multi-day spans.",
-    "📅 Detailed End Timestamps: Shows clear day and local time event ends."
+    "🎫 Support Ticket Desk: Replaced bug tracker with alliance support desk.",
+    "🆘 Account Help: Added character verification and account assistance tickets.",
+    "🚨 Urgency Priority: Set urgent, high, or normal ticket priorities.",
+    "🐞 Bug Reports: Report website or gameplay glitches with ease.",
+    "💡 Feature Suggestions: Submit and upvote community ideas for developers.",
+    "❓ General Questions: Ask questions directly to alliance leadership.",
+    "✨ Resolution Workflow: Leadership status pipeline with custom reply notes."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.129",
+    "version": "3.3.130",
     "latestChanges": [
+      "v3.3.130: Transformed bug tracker into Alliance Help & Support Ticket Desk with urgency tags and support categories",
       "v3.3.129: Restored active multi-day events like Brothers in Arms across days and fixed end-date calculation",
       "v3.3.128: Locked-in Daily Rewards full-day times and locked Google Sheet event times with unlock toggle",
       "v3.3.127: Full 24:00 UTC end-time support, time normalization, and time clarity",

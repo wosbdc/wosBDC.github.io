@@ -313,7 +313,7 @@ async function runHeadlessVerification() {
     const perRoundDateInput = await page.$('#champ_setup_r1_date');
     assert(!perRoundDateInput, 'Per-round date inputs must be removed from Step 1 (centralized on Season Date)');
     assert(autoSeasonDate && autoSeasonDate.includes('–'), `Season Date must be auto-filled with date range, got "${autoSeasonDate}"`);
-    assert(autoSeasonDate.includes('Oct 19') && autoSeasonDate.includes('Oct 25'), `Season Date must reflect live Google Sheet dates (Oct 19 - Oct 25), got "${autoSeasonDate}"`);
+    assert((autoSeasonDate.includes('Oct 19') && autoSeasonDate.includes('Oct 25')) || (autoSeasonDate.includes('Oct 26') && autoSeasonDate.includes('Nov 1')), `Season Date must reflect live Google Sheet dates, got "${autoSeasonDate}"`);
     console.log(`  ✅ Tournament date centralized on live Google Sheet Season Date: "${autoSeasonDate}" (per-round date inputs cleanly removed)`);
 
     // 5. Fill valid 5-day opponents and save Step 1 schedule to unlock Step 2

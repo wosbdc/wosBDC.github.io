@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## [3.3.130] - 2026-10-23
+- 🎫 **Support Ticket Desk**: Replaced bug tracker with alliance support desk.
+- 🆘 **Account Help**: Added character verification and account assistance tickets.
+- 🚨 **Urgency Priority**: Set urgent, high, or normal ticket priorities.
+- 🐞 **Bug Reports**: Report website or gameplay glitches with ease.
+- 💡 **Feature Suggestions**: Submit and upvote community ideas for developers.
+- ❓ **General Questions**: Ask questions directly to alliance leadership.
+- ✨ **Resolution Workflow**: Leadership status pipeline with custom reply notes.
+
 ## [3.3.129] - 2026-10-23
 - ⚔️ **Multi-Day Events**: Fixed multi-day event end-times and active status.
 - 🔥 **Live Event Restoration**: Restored Brothers in Arms into active Hero Spotlight.

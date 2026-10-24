@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
-console.log('🧪 Starting Feedback Modal & Category Management Test Suite...\n');
+console.log('🧪 Starting Feedback & Support Ticket Desk Test Suite...\n');
 
 let passedTests = 0;
 let totalTests = 0;
@@ -27,7 +27,7 @@ try {
   assert(false, 'main.js compilation failed: ' + err.message);
 }
 
-console.log('\nTest 2: Codebase Verification for Required Type Dropdown, Category & Admin Editing');
+console.log('\nTest 2: Codebase Verification for Required Type Dropdown, Category, Urgency & Admin Controls');
 const mainContent = fs.readFileSync('main.js', 'utf8');
 
 // 1. openSubmitFeedbackModal signature defaults to '' so users must actively pick
@@ -42,8 +42,18 @@ assert(
   'fbTypeInput dropdown exists in DOM template'
 );
 assert(
-  mainContent.includes('-- Select Type: Bug Report or Feature (Required) --'),
+  mainContent.includes('-- Select Ticket Type (Required) --'),
   'Blank required placeholder option exists in fbTypeInput'
+);
+assert(
+  mainContent.includes('value="support_account"') && mainContent.includes('value="general"'),
+  'Ticket type dropdown includes Account Help and General Question options'
+);
+
+// 2b. Urgency priority selector exists
+assert(
+  mainContent.includes('name="fbUrgencyRadio"') && mainContent.includes('window.selectFeedbackUrgency'),
+  'Urgency priority selector exists in submit modal'
 );
 
 // 3. Required category with blank placeholder option
@@ -55,7 +65,7 @@ assert(
 // 4. Type & Category validation in handleFeedbackSubmit
 assert(
   mainContent.includes('const typeSelectVal = document.getElementById(\'fbTypeInput\')?.value;') &&
-  mainContent.includes('Please select a Feedback Type (Bug Report or Feature Request)!'),
+  mainContent.includes('Please select a Ticket Type before submitting!'),
   'handleFeedbackSubmit requires type and alerts user if empty'
 );
 assert(
@@ -70,15 +80,21 @@ assert(mainContent.includes('Alliance Championship'), 'Alliance Championship cat
 assert(mainContent.includes('Bear Trap'), 'Bear Trap category exists');
 assert(mainContent.includes('Mercenary Prestige'), 'Mercenary Prestige category exists');
 
-// 6. window.updateFeedbackType and window.updateFeedbackCategory defined
+// 6. window.updateFeedbackType, window.updateFeedbackCategory and window.updateFeedbackUrgency defined
 assert(mainContent.includes('window.updateFeedbackType = async (itemId, newType) => {'), 'window.updateFeedbackType is defined');
 assert(mainContent.includes('window.updateFeedbackCategory = async (itemId, newCategory) => {'), 'window.updateFeedbackCategory is defined');
+assert(mainContent.includes('window.updateFeedbackUrgency = async (itemId, newUrgency) => {'), 'window.updateFeedbackUrgency is defined');
 
-// 7. Admin Feedback table includes type and category update selects
+// 7. Admin Feedback table includes urgency, type and category update selects
 assert(
   mainContent.includes("onchange=\"window.updateFeedbackType('${item.id}', this.value)\"") &&
   mainContent.includes('title="Change Ticket Type"'),
   'Admin table includes editable type dropdown'
+);
+assert(
+  mainContent.includes("onchange=\"window.updateFeedbackUrgency('${item.id}', this.value)\"") &&
+  mainContent.includes('title="Change Urgency Priority"'),
+  'Admin table includes editable urgency dropdown'
 );
 assert(
   mainContent.includes("onchange=\"window.updateFeedbackCategory('${item.id}', this.value)\"") &&
@@ -86,20 +102,28 @@ assert(
   'Admin table includes reclassify category dropdown'
 );
 
-// 8. Community feedback cards include type and category update selects for managers
+// 8. Community feedback cards include urgency, type and category update selects for managers
 assert(
   mainContent.includes("window.updateFeedbackType('${item.id}', this.value)"),
   'Community feedback cards include type dropdown in manager controls'
+);
+assert(
+  mainContent.includes("window.updateFeedbackUrgency('${item.id}', this.value)"),
+  'Community feedback cards include urgency dropdown in manager controls'
 );
 assert(
   mainContent.includes("window.updateFeedbackCategory('${item.id}', this.value)"),
   'Community feedback cards include category dropdown in manager controls'
 );
 
-// 9. Admin Resolution note modal includes type and category selectors
+// 9. Admin Resolution note modal includes type, urgency and category selectors
 assert(
   mainContent.includes('id="adminNoteTypeInput"'),
   'openAdminNoteModal includes adminNoteTypeInput dropdown'
+);
+assert(
+  mainContent.includes('id="adminNoteUrgencyInput"'),
+  'openAdminNoteModal includes adminNoteUrgencyInput dropdown'
 );
 assert(
   mainContent.includes('id="adminNoteCategoryInput"'),
@@ -115,7 +139,7 @@ assert(
 );
 
 console.log('\nTest 3: Logic Simulation of Form Submission Validation');
-function simulateSubmit(type, category, title) {
+function simulateSubmit(type, category, title, urgency = 'normal') {
   if (!type) {
     return { success: false, error: 'MISSING_TYPE' };
   }
@@ -125,7 +149,7 @@ function simulateSubmit(type, category, title) {
   if (!title) {
     return { success: false, error: 'MISSING_TITLE' };
   }
-  return { success: true, payload: { type, category, title } };
+  return { success: true, payload: { type, category, title, urgency } };
 }
 
 assert(simulateSubmit('', 'Bear Trap', 'My Issue').success === false, 'Empty type fails validation');
@@ -134,8 +158,10 @@ assert(simulateSubmit('bug', '', 'My Issue').success === false, 'Empty category 
 assert(simulateSubmit('bug', '', 'My Issue').error === 'MISSING_CATEGORY', 'Empty category returns MISSING_CATEGORY');
 assert(simulateSubmit('bug', 'Bear Trap', '').success === false, 'Empty title fails validation');
 assert(simulateSubmit('bug', 'Bear Trap', '').error === 'MISSING_TITLE', 'Empty title returns MISSING_TITLE');
-assert(simulateSubmit('bug', 'Bear Trap', 'Bug with trap score').success === true, 'Valid submission succeeds');
+assert(simulateSubmit('bug', 'Bear Trap', 'Bug with trap score').success === true, 'Valid bug submission succeeds');
 assert(simulateSubmit('feature', 'Alliance Championship', 'Add flags to cards').success === true, 'Valid feature submission succeeds');
+assert(simulateSubmit('support_account', 'Account Hub', 'Character verify issue', 'urgent').success === true, 'Valid account support submission with urgent priority succeeds');
+assert(simulateSubmit('general', 'General UI', 'Question on reset time', 'normal').success === true, 'Valid general question submission succeeds');
 
 console.log('\n========================================');
 console.log('Test Summary: ' + passedTests + '/' + totalTests + ' tests passed');

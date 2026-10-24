@@ -1,13 +1,25 @@
-# Task: v3.3.88 Live Countdown Timer for Verification Rate Limits
+# Task List: Alliance Help & Support Ticket Desk (`v3.3.130`)
 
-## 🎯 Active Tasks
-- [x] Verify project backup & strict 2-backup retention (`pre_v3.3.87` & `pre_v3.3.88`)
-- [x] Implement `window.isWosRateLimitError` and refine `window.startVerificationCooldownTimer` in `main.js`
-- [x] Connect `startVerificationCooldownTimer` to `openAltVerifyModal` (`sendBtn` and `submitCodeBtn`)
-- [x] Connect `startVerificationCooldownTimer` to Account Settings & Auth verification flows (`renderVerificationBox`, `renderInGameCodeBox`, and Alt Auto Link)
-- [x] Create automated headless verification script (`tools/test_cooldown_countdown.cjs`)
-- [x] Run automated tests & verify 100% pass across all layers
-- [x] Bump version to `3.3.88` in `package.json`, `version.json`, and `public/version.json`
-- [x] Update `CHANGELOG.md` and `public/CHANGELOG.md` with App Store style notes (strict $\le 10$ words)
-- [x] Commit and push to GitHub (`v3.3.88 : Added live countdown timer for in-game verification rate limits`)
-- [x] Mandatory task closure and process cleanup protocol
+- [x] **1. Clean House & Pre-Change Backup**
+  - [x] Delete `wos_website_backup_pre_v3.3.128.tar.gz` and create `wos_website_backup_pre_v3.3.130.tar.gz` (strict 2-backup retention: `pre_v3.3.129` & `pre_v3.3.130`)
+- [x] **2. Core Support Ticket System in `main.js`**
+  - [x] Update `submitFeedbackItem` to save `urgency` (`normal`, `high`, `urgent`) and support new ticket types (`support_account`, `bug`, `feature`, `general`)
+  - [x] Update `window.openSubmitFeedbackModal` with 4 ticket types, urgency selector, dynamic reactive styling, and "🚀 Submit Ticket" action
+  - [x] Add `window.updateFeedbackUrgency` helper for fast inline priority switching
+  - [x] Update `window.openAdminNoteModal` with Urgency selector and expanded type options
+  - [x] Transform `views.feedback` into **Alliance Help & Support Ticket Desk** with urgency badges, type badges, expanded filters (Open, Account Help, Bugs, Suggestions, General, In Progress, Resolved, All), and R4/R5 inline controls
+  - [x] Update `window.renderAdminFeedbackTab` table with Urgency column, updated labels, and expanded types
+  - [x] Update Admin menu & Bell notification labels to Help & Support Tickets
+- [x] **3. Update Sidebar in `index.html`**
+  - [x] Update Section 3 heading and button to "🎫 Help & Support Tickets"
+- [x] **4. Test Suite & Headless Chrome Verification**
+  - [x] Update `tools/test_feedback_modal.cjs` with tests for ticket types, urgency tags, and modal controls
+  - [x] Create headless verification script (`tools/test_support_ticket_desk_headless.cjs`) and verify in real headless Chrome
+  - [x] Run full project build test suite (`cmd /c npm run build`) - 100% passed (37/37 suites)
+- [x] **5. Version Bump & App Store Changelog (`v3.3.130`)**
+  - [x] Bump version to `3.3.130` in `package.json`, `version.json`, and `public/version.json`
+  - [x] Update `CHANGELOG.md` and `public/CHANGELOG.md` with App Store style notes ($\le 10$ words per bullet)
+- [x] **6. Git Commit, Process Cleanup & Testing Announcement**
+  - [x] Commit and push to GitHub `origin/main` with `v3.3.130 : Transformed bug tracker into Alliance Help & Support Ticket Desk`
+  - [x] Proactively terminate background processes
+  - [x] Explicitly announce "Ready for Testing" to the user
