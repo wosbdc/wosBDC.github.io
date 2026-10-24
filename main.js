@@ -16796,12 +16796,12 @@ window.startChampCooldownTicker = (targetStartMs) => {
 };
 
 window.unlockChampSetupEarly = async () => {
-    window._champBypassCooldown = true;
+    window._champBypassCooldown = false;
     if (window.showToast) {
-        window.showToast('🛠️ Early Setup Override enabled — Pre-configuring next season.', 'info');
+        window.showToast('⏳ Season Setup is locked while on cooldown. Please wait until the event opens.', 'warning');
     }
     if (typeof views !== 'undefined' && views.championshipAdmin) {
-        await views.championshipAdmin('setup');
+        await views.championshipAdmin('cooldown');
     }
 };
 
@@ -16833,7 +16833,7 @@ window.syncChampCooldownFromSchedule = async () => {
 window.showChampSetupLockedAlert = (targetTab = 'signups') => {
     const tabName = targetTab === 'signups' ? 'Member Signups' : 'Season Matchups & Edit';
     const schedStatus = window._lastChampScheduleStatus;
-    const isCooldownActive = Boolean(schedStatus && schedStatus.isOnCooldown && !window._champBypassCooldown);
+    const isCooldownActive = Boolean(schedStatus && schedStatus.isOnCooldown);
 
     if (window.showToast) {
         window.showToast(
@@ -16860,11 +16860,8 @@ window.showChampSetupLockedAlert = (targetTab = 'signups') => {
                 The <strong>${escapeHTML(tabName)}</strong> tab is locked while Alliance Championship is on cooldown. According to the Event Schedule, the next tournament begins on <strong>${escapeHTML(schedStatus.nextStartUtcLabel)}</strong>.
             </p>
             <div style="display:flex; justify-content:center; gap:8px; flex-wrap:wrap;">
-                <button id="btnAlertStayCooldown" onclick="document.getElementById('champSetupLockedAlertModal')?.remove();" style="background:#f59e0b; color:#000; border:none; padding:10px 20px; border-radius:8px; font-weight:900; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
-                    ⏳ Back to Cooldown
-                </button>
-                <button id="btnAlertUnlockEarly" onclick="document.getElementById('champSetupLockedAlertModal')?.remove(); window.unlockChampSetupEarly();" style="background:var(--bg-main); color:var(--text-main); border:1px solid var(--border); padding:10px 16px; border-radius:8px; font-weight:bold; font-size:12.5px; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
-                    🛠️ Setup Early Override
+                <button id="btnAlertStayCooldown" onclick="document.getElementById('champSetupLockedAlertModal')?.remove();" style="background:#f59e0b; color:#000; border:none; padding:10px 24px; border-radius:8px; font-weight:900; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                    ⏳ Understood • Wait for Event
                 </button>
             </div>
         </div>
@@ -36825,17 +36822,17 @@ const views = {
         ]);
 
         const isScheduleDone = window.isChampScheduleDoneCorrectly(champMatchupData);
-        if (activeTab === 'cooldown') {
-            window._champBypassCooldown = false;
-        } else if (activeTab === 'setup') {
-            window._champBypassCooldown = true;
-        }
         const schedStatus = await window.getChampionshipScheduleStatus(champMatchupData);
-        const isCooldownGated = !isScheduleDone && schedStatus.isOnCooldown && !window._champBypassCooldown;
+        window._lastChampScheduleStatus = schedStatus;
+        window._champBypassCooldown = false;
+        const isCooldownGated = !isScheduleDone && Boolean(schedStatus && schedStatus.isOnCooldown);
 
-        if (!isScheduleDone && activeTab && activeTab !== 'setup' && activeTab !== 'cooldown') {
+        if (!isScheduleDone && isCooldownGated && activeTab && activeTab !== 'cooldown') {
             window.showChampSetupLockedAlert(activeTab);
-            activeTab = isCooldownGated ? 'cooldown' : 'setup';
+            activeTab = 'cooldown';
+        } else if (!isScheduleDone && !isCooldownGated && activeTab && activeTab !== 'setup' && activeTab !== 'cooldown') {
+            window.showChampSetupLockedAlert(activeTab);
+            activeTab = 'setup';
         }
 
         let effectiveTab = isScheduleDone ? (activeTab || 'signups') : (isCooldownGated ? 'cooldown' : 'setup');
@@ -36966,12 +36963,9 @@ const views = {
                             📅 View Schedule
                         </button>
                     </div>
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-                        <button type="button" id="btnSyncChampCooldownSchedule" onclick="window.syncChampCooldownFromSchedule()" style="background:rgba(255,255,255,0.04); color:var(--text-muted); border:1px solid var(--border); padding:9px 10px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:5px; min-height:40px;">
+                    <div>
+                        <button type="button" id="btnSyncChampCooldownSchedule" onclick="window.syncChampCooldownFromSchedule()" style="width:100%; max-width:280px; margin:0 auto; background:rgba(255,255,255,0.04); color:var(--text-muted); border:1px solid var(--border); padding:9px 12px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:5px; min-height:40px;">
                             🔄 Sync Schedule
-                        </button>
-                        <button type="button" id="btnUnlockChampSetupEarly" onclick="window.unlockChampSetupEarly()" style="background:rgba(245,158,11,0.15); color:#fbbf24; border:1px solid rgba(245,158,11,0.4); padding:9px 10px; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:5px; min-height:40px;" title="Admin Override: Open Step 1 Season Setup before the event countdown ends">
-                            🛠️ Setup Early
                         </button>
                     </div>
                 </div>
@@ -37032,21 +37026,9 @@ const views = {
                 `;
             }
 
-            const earlyOverrideBannerHtml = (schedStatus.isOnCooldown && window._champBypassCooldown) ? `
-                <div style="background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.4); border-radius:10px; padding:10px 12px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-                    <div style="font-size:12px; color:#fbbf24; font-weight:700;">
-                        ⚡ <strong>Early Setup Override Active</strong> • Scheduled Start: ${escapeHTML(schedStatus.nextStartUtcLabel)}
-                    </div>
-                    <button type="button" id="btnReturnToChampCooldown" onclick="window._champBypassCooldown = false; views.championshipAdmin('cooldown');" style="background:rgba(245,158,11,0.2); color:#fbbf24; border:1px solid rgba(245,158,11,0.5); padding:6px 12px; border-radius:6px; font-weight:800; font-size:11.5px; cursor:pointer; display:inline-flex; align-items:center; gap:5px;">
-                        ⏳ Back to Cooldown Timer
-                    </button>
-                </div>
-            ` : '';
-
             mainContentHtml = `
                 <!-- Step 1 Setup Card -->
                 <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:12px; padding:18px 14px; margin-bottom:18px;">
-                    ${earlyOverrideBannerHtml}
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
                         <div>
                             <h3 style="margin:0 0 4px 0; color:var(--text-main); font-size:17px; display:inline-flex; align-items:center; gap:8px;">

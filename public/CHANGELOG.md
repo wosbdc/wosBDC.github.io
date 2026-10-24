@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## [3.3.132] - 2026-10-24
+- 🔒 **Override Button Removed**: Removed early override button from cooldown card.
+- ⏳ **Strict Event Gating**: Season Setup remains locked until tournament begins.
+- 🚫 **Bypass Prevention**: Blocked unauthorized early setup navigation during cooldown.
+- 🎯 **Automatic Unlock**: Step 1 unlocks automatically when event officially opens.
+
 ## [3.3.131] - 2026-10-24
 - 🎮 **In-Game Timer Format**: Added exact cumulative hours countdown matching game client.
 - ⏱️ **Total Hours Display**: Displays combined hours alongside 4-box day counter.

@@ -239,16 +239,36 @@ async function runHeadlessVerification() {
     await page.setViewport({ width: 1280, height: 900 });
     console.log(`  ✅ Cooldown Countdown Gate & 375px mobile layout verified (Next Start: ${cdNextStart})`);
 
-    // Click Early Setup Override button to unlock Step 1 Setup
-    await page.click('#btnUnlockChampSetupEarly');
-    await page.waitForSelector('#champ_setup_season_name', { timeout: 5000 });
+    // Verify Early Setup Override button is strictly removed from Cooldown Gate
+    const overrideBtn = await page.$('#btnUnlockChampSetupEarly');
+    assert(!overrideBtn, 'Early setup override button must NOT exist on cooldown gate (users must wait till event opens)');
+    console.log('  ✅ Verified early setup override button is strictly absent from DOM');
 
-    // Verify Return to Cooldown Timer button works and then re-open Setup
-    const returnBtnExists = await page.evaluate(() => Boolean(document.getElementById('btnReturnToChampCooldown')));
-    assert(returnBtnExists, 'Early Setup Override banner must include Back to Cooldown Timer button');
-    await page.click('#btnReturnToChampCooldown');
-    await page.waitForSelector('#champCooldownGateCard', { timeout: 5000 });
-    await page.click('#btnUnlockChampSetupEarly');
+    // Test that clicking tabs while on cooldown displays locked alert modal without override option
+    await page.click('#tabBtnSignups');
+    await page.waitForSelector('#champSetupLockedAlertModal', { timeout: 5000 });
+    const alertOverrideBtn = await page.$('#btnAlertUnlockEarly');
+    assert(!alertOverrideBtn, 'Early setup override button must NOT exist in locked alert modal');
+    await page.click('#btnAlertStayCooldown');
+    await page.waitForFunction(() => !document.getElementById('champSetupLockedAlertModal'), { timeout: 3000 });
+    console.log('  ✅ Strict lockdown verified: Attempted tab navigation blocked without override bypass');
+
+    // Simulate event officially opening (countdown reaching 0)
+    console.log('  🔍 Simulating tournament start/opening (unlocking Step 1 Setup)...');
+    await page.evaluate(async () => {
+      const openStatus = {
+        isOnCooldown: false,
+        isScheduleDone: false,
+        targetStartMs: Date.now() - 1000,
+        targetEndMs: Date.now() + 5 * 86400000,
+        remainingMs: 0,
+        nextStartUtcLabel: 'Event Active',
+        nextSeasonRangeLabel: 'Oct 26 – Oct 31, 2026'
+      };
+      window.getChampionshipScheduleStatus = async () => openStatus;
+      window._lastChampScheduleStatus = openStatus;
+      await views.championshipAdmin('setup');
+    });
 
     console.log('  🔍 Testing Blank Opponent Defaults and Locked Round Numbers in Step 1...');
     await page.waitForSelector('#champ_setup_season_name', { timeout: 5000 });
