@@ -62,6 +62,7 @@ function runStaticVerification() {
   console.log('  ✅ main.js AST syntax validation passed with 0 syntax errors.');
 
   // 2. Structural function definitions
+  assert(code.includes('window.resolveChiefName ='), 'Must define window.resolveChiefName');
   assert(code.includes('window.updateMercenaryScoutLevel ='), 'Must define window.updateMercenaryScoutLevel');
   assert(code.includes('window.onMercScoutLevelSelect ='), 'Must define window.onMercScoutLevelSelect');
   assert(code.includes('window.computeAndSyncMercenaryBossProgress ='), 'Must define window.computeAndSyncMercenaryBossProgress');
@@ -162,7 +163,8 @@ async function runHeadlessBrowserTests() {
         '100002': 'Chief Bob',
         '100003': 'Chief Charlie',
         '100004': 'Chief Diana',
-        '100005': 'Chief Ethan'
+        '100005': 'Chief Ethan',
+        '705413646': 'thadwarf'
       };
 
       window.fetchRoster = async () => ({
@@ -170,7 +172,8 @@ async function runHeadlessBrowserTests() {
         '100002': { gameId: '100002', name: 'Chief Bob', status: 'Active' },
         '100003': { gameId: '100003', name: 'Chief Charlie', status: 'Active' },
         '100004': { gameId: '100004', name: 'Chief Diana', status: 'Active' },
-        '100005': { gameId: '100005', name: 'Chief Ethan', status: 'Active' }
+        '100005': { gameId: '100005', name: 'Chief Ethan', status: 'Active' },
+        'thadwarf': { gameId: '705413646', name: '705413646', status: 'Active' }
       });
 
       window.fetchMercenaryData = async () => ({
@@ -178,7 +181,8 @@ async function runHeadlessBrowserTests() {
         '100002': { gameId: '100002', name: 'Chief Bob', signedUp: false, scoutLevel: 10, phase: "Champion's Initiation", difficulty: 'Normal' },
         '100003': { gameId: '100003', name: 'Chief Charlie', signedUp: false, scoutLevel: 5, phase: "Champion's Initiation", difficulty: 'Normal' },
         '100004': { gameId: '100004', name: 'Chief Diana', signedUp: false, scoutLevel: 0, phase: "Champion's Initiation", difficulty: 'Hard' },
-        '100005': { gameId: '100005', name: 'Chief Ethan', signedUp: false, scoutLevel: 0, phase: "Champion's Initiation", difficulty: 'Easy' }
+        '100005': { gameId: '100005', name: 'Chief Ethan', signedUp: false, scoutLevel: 0, phase: "Champion's Initiation", difficulty: 'Easy' },
+        '705413646': { gameId: '705413646', name: '705413646', signedUp: false, scoutLevel: 10, phase: "Champion's Initiation", difficulty: 'Hard' }
       });
 
       window.fetchMercenaryBossProgress = async () => ({
@@ -223,8 +227,19 @@ async function runHeadlessBrowserTests() {
     const pillsCount = await page.evaluate(() => {
       return document.querySelectorAll('.merc-milestone-pill').length;
     });
-    assert(pillsCount >= 30, `Expected at least 30 milestone pills (6 per row across 5 members), got ${pillsCount}`);
+    assert(pillsCount >= 30, `Expected at least 30 milestone pills (6 per row across members), got ${pillsCount}`);
     console.log(`  ✅ Verified ${pillsCount} 1-Tap Milestone Pills [0, 5, 10, 15, 20, 25 ★] rendered in roster.`);
+
+    // 3b. Assert Bulletproof Chief Name Resolution: ZERO numeric Gamer IDs in DOM
+    const nameCells = await page.evaluate(() => {
+      const cells = Array.from(document.querySelectorAll('.merc-name-cell'));
+      return cells.map(c => c.textContent.trim());
+    });
+    console.log('    Debug nameCells:', nameCells);
+    assert(nameCells.includes('thadwarf'), 'thadwarf must be resolved from key/idToNameMap instead of numeric gameId');
+    const numericNames = nameCells.filter(n => /^\d+$/.test(n));
+    assert.strictEqual(numericNames.length, 0, `Zero numeric Gamer IDs permitted as Chief Names in DOM, found: ${numericNames.join(', ')}`);
+    console.log(`  ✅ Bulletproof Chief Name Resolution verified: all ${nameCells.length} members resolved to real Chief names (${nameCells.join(', ')}).`);
 
     // 4. Test clicking milestone pill [ 15 ] on Chief Charlie
     console.log('  Testing milestone pill click and real-time boss unlock recalculation...');
@@ -304,7 +319,7 @@ async function runHeadlessBrowserTests() {
       const rows = Array.from(document.querySelectorAll('.merc-row'));
       return rows.filter(r => r.style.display !== 'none').length;
     });
-    assert(visiblePushRows > 0 && visiblePushRows < 5, `Expected filtered subset for Needs Push, got ${visiblePushRows}`);
+    assert(visiblePushRows > 0 && visiblePushRows < 6, `Expected filtered subset for Needs Push, got ${visiblePushRows}`);
 
     await page.evaluate(() => {
       window.setMercFilter('yes');
@@ -322,7 +337,7 @@ async function runHeadlessBrowserTests() {
       const rows = Array.from(document.querySelectorAll('.merc-row'));
       return rows.filter(r => r.style.display !== 'none').length;
     });
-    assert.strictEqual(visibleAllRows, 5, 'All filter must show all 5 members');
+    assert.strictEqual(visibleAllRows, 6, 'All filter must show all 6 members');
     console.log('  ✅ Quick Filter Pills (All | Needs Push | Completed 25) verified.');
 
     // 8. Test Public View views.mercenary()
@@ -344,7 +359,15 @@ async function runHeadlessBrowserTests() {
     const publicRosterBadges = await page.evaluate(() => {
       return document.querySelectorAll('.merc-pub-row').length;
     });
-    assert.strictEqual(publicRosterBadges, 5, 'Public view roster must show all 5 members with status badges');
+    assert.strictEqual(publicRosterBadges, 6, 'Public view roster must show all 6 members with status badges');
+
+    const publicNames = await page.evaluate(() => {
+      const rows = Array.from(document.querySelectorAll('.merc-pub-row td:first-child'));
+      return rows.map(r => r.textContent.trim());
+    });
+    assert(publicNames.includes('thadwarf'), 'Public view roster must include resolved chief thadwarf');
+    const numericPubNames = publicNames.filter(n => /^\d+$/.test(n));
+    assert.strictEqual(numericPubNames.length, 0, `Zero numeric Gamer IDs permitted in public roster, found: ${numericPubNames.join(', ')}`);
     console.log('  ✅ Public View views.mercenary() renders Command Deck and roster milestone badges.');
 
     // 9. Responsive layout audit (Mobile 375px, Tablet 768px, Desktop 1280px)

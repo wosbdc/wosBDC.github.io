@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [3.3.134] - 2026-10-24
+- 🛡️ **Name Resolver**: Enforced bulletproof Chief Name resolution across roster.
+- 🚫 **Zero Gamer IDs**: Numeric IDs never masquerade as Chief Names.
+- ⚔️ **Mercenary Tracker**: Restored real Chief in-game names in tracker.
+- 📢 **Rally Report**: Real Chief names populate in-game chat broadcasts.
+- 🧹 **Database Healing**: Repaired corrupted numeric names in Firebase roster.
+
 ## [3.3.133] - 2026-10-24
 - ⚔️ **Command Deck**: Elevated 5 Phaethon Boss meters to the top.
 - 🎯 **Milestone Pills**: Added 1-tap scout level pills for members.

@@ -44,6 +44,53 @@ window.cleanChiefName = (name) => {
 };
 
 /**
+ * 🛡️ Universal Bulletproof Chief Name Resolver
+ * Ensures that numeric Gamer IDs (e.g. "705413646", "734789138") NEVER masquerade as Chief Names.
+ * Checks rawName, chiefNameField, object/db key, and idToNameMap fallback.
+ */
+window.resolveChiefName = (rawName, gameId = '', key = '', chiefNameField = '') => {
+    const isValidName = (val) => {
+        if (!val && val !== 0) return false;
+        const s = String(val).trim();
+        if (!s) return false;
+        if (/^\d+$/.test(s)) return false; // Pure numeric digits is a Gamer ID, NOT a chief name!
+        const lower = s.toLowerCase();
+        if (lower === 'undefined' || lower === 'null' || lower === 'chief name' || lower === 'game id' || lower === '[object object]') return false;
+        return true;
+    };
+
+    // 1. Check rawName
+    if (isValidName(rawName)) {
+        return window.cleanChiefName(rawName);
+    }
+    // 2. Check chiefNameField
+    if (isValidName(chiefNameField)) {
+        return window.cleanChiefName(chiefNameField);
+    }
+    // 3. Check key (in roster_live or sheets, the key is frequently the true chief name)
+    if (isValidName(key)) {
+        return window.cleanChiefName(key);
+    }
+    // 4. Check window.idToNameMap
+    const gid = gameId ? String(gameId).trim() : (rawName && /^\d+$/.test(String(rawName).trim()) ? String(rawName).trim() : (key && /^\d+$/.test(String(key).trim()) ? String(key).trim() : ''));
+    if (gid && window.idToNameMap && isValidName(window.idToNameMap[gid])) {
+        return window.cleanChiefName(window.idToNameMap[gid]);
+    }
+    // 5. Check window.nameToIdMap reverse lookup if key or name was a lower/slug variant
+    if (window.nameToIdMap) {
+        if (isValidName(key) && window.nameToIdMap[String(key).toLowerCase()]) {
+            return window.cleanChiefName(key);
+        }
+    }
+    // 6. Last resort fallbacks
+    if (isValidName(key)) return window.cleanChiefName(key);
+    if (isValidName(chiefNameField)) return window.cleanChiefName(chiefNameField);
+    if (isValidName(rawName)) return window.cleanChiefName(rawName);
+
+    return gid ? `Chief ${gid}` : 'Chief';
+};
+
+/**
  * 👥 Single Unified Chief List Resolver
  * Aggregates and deduplicates all chiefs across Registered Users, Linked Alts,
  * Roster Live, and Showdown Live into a single source of truth with sanitized names.
@@ -239,7 +286,7 @@ window.runDatabaseNameCleanup = async (notify = false) => {
             }
         }
 
-        // 2. Clean roster_live
+        // 2. Clean roster_live (Repair numeric gamer IDs and restore true Chief names)
         if (rosterSnap && rosterSnap.exists()) {
             const rosterObj = rosterSnap.val() || {};
             const newRoster = {};
@@ -247,12 +294,12 @@ window.runDatabaseNameCleanup = async (notify = false) => {
             let rosterChanged = false;
             for (const [k, p] of Object.entries(rosterObj)) {
                 if (!p || typeof p !== 'object' || k === 'Chief Name' || k === 'chief name') continue;
-                const dirtyName = p.name || p.chiefName || k;
-                const cName = window.cleanChiefName(dirtyName);
-                const canonKey = cName || k;
+                const gid = p.gameId ? String(p.gameId).trim() : (/^\d{6,}$/.test(k) ? k : '');
+                const cName = window.resolveChiefName(p.name, gid, k, p.chiefName);
+                const canonKey = (!/^\d+$/.test(k) && k.trim() !== '') ? k : (cName || gid);
                 const lowerKey = canonKey.toLowerCase();
                 
-                if (cName !== dirtyName || canonKey !== k) {
+                if (cName !== p.name || cName !== p.chiefName || canonKey !== k) {
                     rosterChanged = true;
                     cleanedRosterCount++;
                 }
@@ -261,7 +308,8 @@ window.runDatabaseNameCleanup = async (notify = false) => {
                     newRoster[canonKey] = {
                         ...p,
                         name: cName,
-                        chiefName: cName
+                        chiefName: cName,
+                        gameId: gid || p.gameId || ''
                     };
                 } else {
                     rosterChanged = true;
@@ -270,8 +318,9 @@ window.runDatabaseNameCleanup = async (notify = false) => {
                     newRoster[existingKey] = {
                         ...p,
                         ...newRoster[existingKey],
-                        name: existingKey,
-                        chiefName: existingKey
+                        name: cName || existingKey,
+                        chiefName: cName || existingKey,
+                        gameId: gid || newRoster[existingKey].gameId || p.gameId || ''
                     };
                 }
             }
@@ -449,8 +498,8 @@ window.deduplicateRosterLive = async () => {
         for (const [key, p] of Object.entries(rosterObj)) {
             if (!p || typeof p !== 'object' || key === 'Chief Name' || key === 'chief name') continue;
 
-            const gid = p.gameId ? p.gameId.toString().trim() : '';
-            const name = window.cleanChiefName(p.name || p.chiefName || key);
+            const gid = p.gameId ? p.gameId.toString().trim() : (/^\d{6,}$/.test(key) ? key : '');
+            const name = window.resolveChiefName(p.name, gid, key, p.chiefName);
             const normName = name.toLowerCase();
 
             if (!name && !gid) continue;
@@ -473,6 +522,8 @@ window.deduplicateRosterLive = async () => {
                     cleanedObj[existingKey] = {
                         ...p,
                         ...cleanedObj[existingKey],
+                        name: cleanedObj[existingKey].name || name,
+                        chiefName: cleanedObj[existingKey].chiefName || name,
                         furnaceLevel: cleanedObj[existingKey].furnaceLevel || p.furnaceLevel || p.stove_lv || '',
                         stove_lv: cleanedObj[existingKey].stove_lv || p.stove_lv || p.furnaceLevel || ''
                     };
@@ -483,6 +534,7 @@ window.deduplicateRosterLive = async () => {
                 cleanedObj[canonicalKey] = {
                     ...p,
                     name: name,
+                    chiefName: name,
                     gameId: gid
                 };
                 if (gid) seenGameIds.add(gid);
@@ -561,11 +613,11 @@ window.fetchRoster = async (forceFresh = false) => {
            const seenGids = new Set();
            const seenNames = new Set();
            const entriesToAlias = [];
+           const dirtyEntriesToHeal = [];
 
            for (const [k, p] of Object.entries(cached)) {
                if (!p || typeof p !== 'object') continue;
-               const name = window.cleanChiefName(p.name || p.chiefName || (/^\d{6,}$/.test(k) ? '' : k));
-               const normName = name.toLowerCase();
+
                let gid = p.gameId ? String(p.gameId).trim() : '';
                if (!gid && p.tokenStatus && p.tokenStatus.gameId) {
                    gid = String(p.tokenStatus.gameId).trim();
@@ -573,11 +625,21 @@ window.fetchRoster = async (forceFresh = false) => {
                if (!gid && /^\d{6,}$/.test(k)) {
                    gid = k;
                }
+
+               // Bulletproof Chief Name Resolution: Never allow numeric Gamer IDs as Chief Names
+               const name = window.resolveChiefName(p.name, gid, k, p.chiefName);
+               const normName = name.toLowerCase();
+
                if (!gid && window.nameToIdMap) {
                    gid = window.nameToIdMap[normName] || window.nameToIdMap[name] || '';
                }
                const furnaceLevel = p.furnaceLevel || p.stove_lv || 'F30';
                const memStatus = window.normalizeMembershipStatus(p.membershipStatus || p.status || 'active');
+
+               // Queue background self-healing for records with corrupted numeric names in Firebase
+               if (p.name && /^\d+$/.test(String(p.name).trim()) && name && !/^\d+$/.test(name)) {
+                   dirtyEntriesToHeal.push({ key: k, cleanName: name, gid: gid });
+               }
 
                // If already registered in primary map by either GID or Name, do not create duplicate enumerable entry
                if ((gid && seenGids.has(gid)) || (normName && seenNames.has(normName))) {
@@ -589,8 +651,8 @@ window.fetchRoster = async (forceFresh = false) => {
 
                const entry = {
                    ...p,
-                   name: name || p.name || k,
-                   chiefName: name || p.chiefName || k,
+                   name: name,
+                   chiefName: name,
                    gameId: gid,
                    furnaceLevel: furnaceLevel,
                    stove_lv: furnaceLevel,
@@ -601,6 +663,21 @@ window.fetchRoster = async (forceFresh = false) => {
                const primaryKey = name || gid || k;
                deduplicated[primaryKey] = entry;
                entriesToAlias.push({ primaryKey, entry, gid, name, normName, k });
+           }
+
+           // Background self-heal corrupted numeric names in Firebase roster_live
+           if (dirtyEntriesToHeal.length > 0) {
+               setTimeout(async () => {
+                   try {
+                       const healUpdates = {};
+                       dirtyEntriesToHeal.forEach(item => {
+                           healUpdates[`roster_live/${item.key}/name`] = item.cleanName;
+                           healUpdates[`roster_live/${item.key}/chiefName`] = item.cleanName;
+                           if (item.gid) healUpdates[`roster_live/${item.key}/gameId`] = item.gid;
+                       });
+                       await update(ref(db), healUpdates).catch(() => null);
+                   } catch(e) {}
+               }, 100);
            }
 
            // Define non-enumerable aliases so lookup by gid or lowercase name works seamlessly
@@ -3172,16 +3249,14 @@ export const refreshIdToNameMap = async () => {
 
         // 3. Map Roster Sheet
         if (rosterRawData) {
-            Object.values(rosterRawData).forEach(p => {
-                const gid = p.gameId ? String(p.gameId).trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : '');
-                if (p.name && gid) {
-                    const rawRosterName = p.name.toString().replace(/[\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]/g, ' ').trim();
-                    const nStr = window.cleanChiefName ? window.cleanChiefName(rawRosterName) : rawRosterName;
-                    if (nStr && !/^\d+$/.test(nStr) && nStr !== gid) {
-                        idToNameMap[gid] = nStr;
-                        nameToIdMap[nStr] = gid;
-                        nameToIdMap[nStr.toLowerCase()] = gid;
-                    }
+            Object.entries(rosterRawData).forEach(([k, p]) => {
+                if (!p || typeof p !== 'object') return;
+                const gid = p.gameId ? String(p.gameId).trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : (/^\d{6,}$/.test(k) ? k : ''));
+                const resolved = window.resolveChiefName(p.name, gid, k, p.chiefName);
+                if (gid && resolved && !/^\d+$/.test(resolved) && resolved !== gid) {
+                    idToNameMap[gid] = resolved;
+                    nameToIdMap[resolved] = gid;
+                    nameToIdMap[resolved.toLowerCase()] = gid;
                 }
             });
         }
@@ -4182,7 +4257,7 @@ window.fetchMercenaryData = async () => {
         const cleanN = window.cleanChiefName ? window.cleanChiefName(chiefName) : chiefName;
         const existing = (gid && result[gid]) || (chiefName && result[chiefName]) || (cleanN && result[cleanN]) || {};
         const finalGid = gid || existing.gameId || '';
-        const finalName = cleanN || chiefName || existing.name || 'Chief';
+        const finalName = window.resolveChiefName(cleanN || chiefName || existing.name, finalGid, '', existing.chiefName);
         const finalSigned = (isSigned !== undefined && isSigned !== null && isSigned !== '') ? isT(isSigned) : (existing.signedUp !== undefined ? existing.signedUp : false);
         const finalPhase = (phase && typeof phase === 'string' && phase.trim()) ? phase.trim() : (existing.phase || "");
         const finalDiff = (difficulty && typeof difficulty === 'string' && difficulty.trim()) ? difficulty.trim() : (existing.difficulty || "");
@@ -4218,6 +4293,11 @@ window.fetchMercenaryData = async () => {
             result[cleanN.toLowerCase()] = entry;
             result[cleanN.toLowerCase().replace(/[^a-z0-9]/g, '_')] = entry;
         }
+        if (finalName && finalName !== chiefName && finalName !== cleanN) {
+            result[finalName] = entry;
+            result[finalName.toLowerCase()] = entry;
+            result[finalName.toLowerCase().replace(/[^a-z0-9]/g, '_')] = entry;
+        }
     };
 
     try {
@@ -4228,7 +4308,7 @@ window.fetchMercenaryData = async () => {
                 Object.entries(actObj).forEach(([k, rec]) => {
                     if (rec && typeof rec === 'object') {
                         const gid = rec.gameId ? String(rec.gameId).trim() : (/^\d{6,}$/.test(k) ? k : (window.nameToIdMap?.[k.toLowerCase()] || ''));
-                        const chiefName = rec.name || (gid && window.idToNameMap ? window.idToNameMap[gid] : '') || (!/^\d+$/.test(k) ? k : 'Chief');
+                        const chiefName = window.resolveChiefName(rec.name, gid, k, rec.chiefName);
                         const sLvl = rec.mercenaryScoutLevel !== undefined ? rec.mercenaryScoutLevel : rec.scoutLevel;
                         addEntry(gid, chiefName, rec.mercenary, rec.mercenaryPhase, rec.mercenaryDifficulty, rec.updatedAt, sLvl);
                     }
@@ -4245,7 +4325,7 @@ window.fetchMercenaryData = async () => {
                 Object.entries(mObj).forEach(([k, rec]) => {
                     if (rec && typeof rec === 'object' && k !== 'boss_progress') {
                         const gid = rec.gameId ? String(rec.gameId).trim() : (/^\d{6,}$/.test(k) ? k : (window.nameToIdMap?.[k.toLowerCase()] || ''));
-                        const chiefName = rec.name || (gid && window.idToNameMap ? window.idToNameMap[gid] : '') || (!/^\d+$/.test(k) ? k : 'Chief');
+                        const chiefName = window.resolveChiefName(rec.name, gid, k, rec.chiefName);
                         const sLvl = rec.scoutLevel !== undefined ? rec.scoutLevel : rec.mercenaryScoutLevel;
                         addEntry(gid, chiefName, rec.signedUp, rec.phase, rec.difficulty, rec.lastUpdated, sLvl);
                     }
@@ -4274,7 +4354,7 @@ window.updateMercenaryTier = async (gameId, phase = "", difficulty = "") => {
     let data = {};
     try { data = await window.fetchMercenaryData(); } catch(e) { console.error(e); }
     const existing = (window.getEventRecord ? window.getEventRecord(data, { gameId: gIdStr, name: window.idToNameMap?.[gIdStr] }) : null) || data[gIdStr] || { gameId: gIdStr, name: (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief' };
-    const playerName = existing.name || (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief';
+    const playerName = window.resolveChiefName(existing.name, gIdStr, '', existing.chiefName);
 
     // Immediately update in-memory cache to prevent race conditions
     if (window.mercenaryCache) {
@@ -4378,7 +4458,7 @@ window.updateMercenaryScoutLevel = async (gameId, targetLevel) => {
     let data = {};
     try { data = await window.fetchMercenaryData(); } catch(e) { console.error(e); }
     const existing = (window.getEventRecord ? window.getEventRecord(data, { gameId: gIdStr, name: window.idToNameMap?.[gIdStr] }) : null) || data[gIdStr] || { gameId: gIdStr, name: (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief', signedUp: false, scoutLevel: 0 };
-    const playerName = existing.name || (window.idToNameMap && window.idToNameMap[gIdStr]) || 'Chief';
+    const playerName = window.resolveChiefName(existing.name, gIdStr, '', existing.chiefName);
 
     // 1. Update in-memory cache immediately
     if (window.mercenaryCache) {
@@ -4691,6 +4771,9 @@ window.computeAndSyncMercenaryBossProgress = async () => {
                 if (!p || typeof p !== 'object') return;
                 const gid = p.gameId ? String(p.gameId).trim() : (p.name || '').toLowerCase().trim();
                 if (gid && seenGids.has(gid)) return;
+                const resolvedName = window.resolveChiefName(p.name, gid, '', p.chiefName);
+                p.name = resolvedName;
+                p.chiefName = resolvedName;
                 if (p.name && p.gameId && window.isPlayerActiveMember(p)) {
                     seenGids.add(gid);
                     rosterList.push(p);
@@ -4843,6 +4926,9 @@ window.openMercenaryRallyReportModal = async () => {
             if (!p || typeof p !== 'object') return;
             const gid = p.gameId ? String(p.gameId).trim() : (p.name || '').toLowerCase().trim();
             if (gid && seenGids.has(gid)) return;
+            const resolvedName = window.resolveChiefName(p.name, gid, '', p.chiefName);
+            p.name = resolvedName;
+            p.chiefName = resolvedName;
             if (p.name && p.gameId && window.isPlayerActiveMember(p)) {
                 seenGids.add(gid);
                 rosterList.push(p);
@@ -5611,11 +5697,13 @@ window.archiveAndResetPolarTerrorsCycle = async () => {
         const seenGids = new Set();
         const seenNames = new Set();
         if (rosterData) {
-            Object.values(rosterData).forEach(p => {
+            Object.entries(rosterData).forEach(([k, p]) => {
                 if (!p || typeof p !== 'object') return;
-                const cleanName = window.cleanChiefName(p.name || p.chiefName || '');
-                const normName = (cleanName || p.name || '').toLowerCase().trim();
-                const gid = p.gameId ? String(p.gameId).trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : (window.nameToIdMap?.[normName] || ''));
+                const gid = p.gameId ? String(p.gameId).trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : (/^\d{6,}$/.test(k) ? k : ''));
+                const cleanName = window.resolveChiefName(p.name, gid, k, p.chiefName);
+                p.name = cleanName;
+                p.chiefName = cleanName;
+                const normName = cleanName.toLowerCase().trim();
                 if ((gid && seenGids.has(gid)) || (normName && seenNames.has(normName))) return;
                 if (cleanName && window.isPlayerActiveMember(p)) {
                     if (!p.gameId && gid && /^\d+$/.test(gid)) p.gameId = gid;
@@ -5756,11 +5844,13 @@ window.archiveAndResetBearTrapCycle = async () => {
         const seenGids = new Set();
         const seenNames = new Set();
         if (rosterData) {
-            Object.values(rosterData).forEach(p => {
+            Object.entries(rosterData).forEach(([k, p]) => {
                 if (!p || typeof p !== 'object') return;
-                const cleanName = window.cleanChiefName(p.name || p.chiefName || '');
-                const normName = (cleanName || p.name || '').toLowerCase().trim();
-                const gid = p.gameId ? String(p.gameId).trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : (window.nameToIdMap?.[normName] || ''));
+                const gid = p.gameId ? String(p.gameId).trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : (/^\d{6,}$/.test(k) ? k : ''));
+                const cleanName = window.resolveChiefName(p.name, gid, k, p.chiefName);
+                p.name = cleanName;
+                p.chiefName = cleanName;
+                const normName = cleanName.toLowerCase().trim();
                 if ((gid && seenGids.has(gid)) || (normName && seenNames.has(normName))) return;
                 if (cleanName && window.isPlayerActiveMember(p)) {
                     if (!p.gameId && gid && /^\d+$/.test(gid)) p.gameId = gid;
@@ -37335,11 +37425,13 @@ const views = {
         const seenGids = new Set();
         const seenNames = new Set();
         if (rosterData) {
-            Object.values(rosterData).forEach(p => {
+            Object.entries(rosterData).forEach(([k, p]) => {
                 if (!p || typeof p !== 'object') return;
-                const cleanName = window.cleanChiefName(p.name || p.chiefName || '');
-                const normName = (cleanName || p.name || '').toLowerCase().trim();
-                const gid = p.gameId ? String(p.gameId).trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : (window.nameToIdMap?.[normName] || ''));
+                const gid = p.gameId ? String(p.gameId).trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : (/^\d{6,}$/.test(k) ? k : ''));
+                const cleanName = window.resolveChiefName(p.name, gid, k, p.chiefName);
+                p.name = cleanName;
+                p.chiefName = cleanName;
+                const normName = cleanName.toLowerCase().trim();
                 if ((gid && seenGids.has(gid)) || (normName && seenNames.has(normName))) return;
                 if (cleanName && window.isPlayerActiveMember(p)) {
                     if (!p.gameId && gid && /^\d+$/.test(gid)) p.gameId = gid;
@@ -38698,11 +38790,13 @@ const views = {
         const seenGids = new Set();
         const seenNames = new Set();
         if (rosterData) {
-            Object.values(rosterData).forEach(p => {
+            Object.entries(rosterData).forEach(([k, p]) => {
                 if (!p || typeof p !== 'object') return;
-                const cleanName = window.cleanChiefName(p.name || p.chiefName || '');
-                const normName = (cleanName || p.name || '').toLowerCase().trim();
-                const gid = p.gameId ? String(p.gameId).trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : (window.nameToIdMap?.[normName] || ''));
+                const gid = p.gameId ? String(p.gameId).trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : (/^\d{6,}$/.test(k) ? k : ''));
+                const cleanName = window.resolveChiefName(p.name, gid, k, p.chiefName);
+                p.name = cleanName;
+                p.chiefName = cleanName;
+                const normName = cleanName.toLowerCase().trim();
                 if ((gid && seenGids.has(gid)) || (normName && seenNames.has(normName))) return;
                 if (cleanName && window.isPlayerActiveMember(p)) {
                     if (!p.gameId && gid && /^\d+$/.test(gid)) p.gameId = gid;
@@ -38949,11 +39043,13 @@ const views = {
         const seenGids = new Set();
         const seenNames = new Set();
         if (rosterData) {
-            Object.values(rosterData).forEach(p => {
+            Object.entries(rosterData).forEach(([k, p]) => {
                 if (!p || typeof p !== 'object') return;
-                const cleanName = window.cleanChiefName(p.name || p.chiefName || '');
-                const normName = (cleanName || p.name || '').toLowerCase().trim();
-                const gid = p.gameId ? String(p.gameId).trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : (window.nameToIdMap?.[normName] || ''));
+                const gid = p.gameId ? String(p.gameId).trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : (/^\d{6,}$/.test(k) ? k : ''));
+                const cleanName = window.resolveChiefName(p.name, gid, k, p.chiefName);
+                p.name = cleanName;
+                p.chiefName = cleanName;
+                const normName = cleanName.toLowerCase().trim();
                 if ((gid && seenGids.has(gid)) || (normName && seenNames.has(normName))) return;
                 if (cleanName && window.isPlayerActiveMember(p)) {
                     if (!p.gameId && gid && /^\d+$/.test(gid)) p.gameId = gid;
@@ -39297,6 +39393,7 @@ const views = {
 
     try {
         window.mercenaryCache = null;
+        await window.refreshIdToNameMap().catch(() => null);
         const [mercenaryData, rosterData, bossProgressData] = await Promise.all([
             window.fetchMercenaryData(),
             window.fetchRoster().catch(() => ({})),
@@ -39306,9 +39403,13 @@ const views = {
         let rosterList = [];
         const seenGids = new Set();
         if (rosterData) {
-            Object.values(rosterData).forEach(p => {
-                const gid = p.gameId ? String(p.gameId).trim() : (p.name || '').toLowerCase().trim();
+            Object.entries(rosterData).forEach(([k, p]) => {
+                if (!p || typeof p !== 'object') return;
+                const gid = p.gameId ? String(p.gameId).trim() : (/^\d{6,}$/.test(k) ? k : (p.name || '').toLowerCase().trim());
                 if (gid && seenGids.has(gid)) return;
+                const resolvedName = window.resolveChiefName(p.name, gid, k, p.chiefName);
+                p.name = resolvedName;
+                p.chiefName = resolvedName;
                 if (p.name && p.gameId && window.isPlayerActiveMember(p)) {
                     seenGids.add(gid);
                     rosterList.push(p);
@@ -44719,6 +44820,7 @@ window.resetBearTrapEvent = async () => {
 
     try {
         window.mercenaryCache = null;
+        await window.refreshIdToNameMap().catch(() => null);
         const [mercenaryData, rosterData, bossProgressData] = await Promise.all([
             window.fetchMercenaryData().catch(() => ({})),
             window.fetchRoster().catch(() => ({})),
@@ -44729,11 +44831,13 @@ window.resetBearTrapEvent = async () => {
         const seenGids = new Set();
         const seenNames = new Set();
         if (rosterData) {
-            Object.values(rosterData).forEach(p => {
+            Object.entries(rosterData).forEach(([k, p]) => {
                 if (!p || typeof p !== 'object') return;
-                const cleanName = window.cleanChiefName(p.name || p.chiefName || '');
-                const normName = (cleanName || p.name || '').toLowerCase().trim();
-                const gid = p.gameId ? String(p.gameId).trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : (window.nameToIdMap?.[normName] || ''));
+                const gid = p.gameId ? String(p.gameId).trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : (/^\d{6,}$/.test(k) ? k : ''));
+                const cleanName = window.resolveChiefName(p.name, gid, k, p.chiefName);
+                p.name = cleanName;
+                p.chiefName = cleanName;
+                const normName = cleanName.toLowerCase().trim();
                 if ((gid && seenGids.has(gid)) || (normName && seenNames.has(normName))) return;
                 if (cleanName && window.isPlayerActiveMember(p)) {
                     if (!p.gameId && gid && /^\d+$/.test(gid)) p.gameId = gid;
