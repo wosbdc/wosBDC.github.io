@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## [3.3.135] - 2026-10-24
+- 🛡️ **Admin Users**: Restored real Chief names across member directory.
+- 👥 **Unclaimed Roster**: Resolved in-game names for all roster members.
+- 👑 **Staff Roles**: Fixed Chief name resolution for alliance staff.
+- 🔗 **Alt Accounts**: Real Chief names now display for alts.
+- 🔄 **Smart Refresh**: Live database refresh synchronizes all member identities.
+
 ## [3.3.134] - 2026-10-24
 - 🛡️ **Name Resolver**: Enforced bulletproof Chief Name resolution across roster.
 - 🚫 **Zero Gamer IDs**: Numeric IDs never masquerade as Chief Names.

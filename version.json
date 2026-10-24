@@ -1,17 +1,18 @@
 {
-  "version": "3.3.134",
+  "version": "3.3.135",
   "releaseDate": "2026-10-24",
-  "title": "What's New in v3.3.134",
+  "title": "What's New in v3.3.135",
   "notes": [
-    "🛡️ Name Resolver: Enforced bulletproof Chief Name resolution across roster.",
-    "🚫 Zero Gamer IDs: Numeric IDs never masquerade as Chief Names.",
-    "⚔️ Mercenary Tracker: Restored real Chief in-game names in tracker.",
-    "📢 Rally Report: Real Chief names populate in-game chat broadcasts.",
-    "🧹 Database Self-Healing: Repaired corrupted numeric names in Firebase roster."
+    "🛡️ Admin Users: Restored real Chief names across member directory.",
+    "👥 Unclaimed Roster: Resolved in-game names for all roster members.",
+    "👑 Staff Roles: Fixed Chief name resolution for alliance staff.",
+    "🔗 Alt Accounts: Real Chief names now display for alts.",
+    "🔄 Smart Refresh: Live database refresh synchronizes all member identities."
   ],
   "wosbdc_alliance_dashboard": {
-    "version": "3.3.134",
+    "version": "3.3.135",
     "latestChanges": [
+      "v3.3.135: Resolved chief names in Admin Users directory and unclaimed roster to prevent numeric IDs",
       "v3.3.134: Fixed chief name resolution in Mercenary Prestige tracker to prevent numeric gamer IDs",
       "v3.3.133: Remodeled Mercenary Prestige Tracker with milestone scout levels and real-time rally deck",
       "v3.3.132: Removed championship cooldown early override button and enforced strict event gating",

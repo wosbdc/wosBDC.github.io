@@ -220,18 +220,31 @@ window.runDatabaseNameCleanup = async (notify = false) => {
                 let changed = false;
                 const updates = {};
                 
-                if (u.name) {
-                    const cName = window.cleanChiefName(u.name);
-                    if (cName !== u.name) {
-                        updates.name = cName;
+                const uGid = u.gameId ? String(u.gameId).trim() : '';
+                const resolvedUName = window.resolveChiefName(u.name, uGid, uid, u.chiefName || (window.idToNameMap && window.idToNameMap[uGid]));
+                if (resolvedUName && !/^\d+$/.test(resolvedUName)) {
+                    if (u.name !== resolvedUName) {
+                        updates.name = resolvedUName;
                         changed = true;
                     }
-                }
-                if (u.chiefName) {
-                    const cChief = window.cleanChiefName(u.chiefName);
-                    if (cChief !== u.chiefName) {
-                        updates.chiefName = cChief;
+                    if (u.chiefName !== resolvedUName) {
+                        updates.chiefName = resolvedUName;
                         changed = true;
+                    }
+                } else {
+                    if (u.name) {
+                        const cName = window.cleanChiefName(u.name);
+                        if (cName !== u.name) {
+                            updates.name = cName;
+                            changed = true;
+                        }
+                    }
+                    if (u.chiefName) {
+                        const cChief = window.cleanChiefName(u.chiefName);
+                        if (cChief !== u.chiefName) {
+                            updates.chiefName = cChief;
+                            changed = true;
+                        }
                     }
                 }
                 
@@ -618,12 +631,15 @@ window.fetchRoster = async (forceFresh = false) => {
            for (const [k, p] of Object.entries(cached)) {
                if (!p || typeof p !== 'object') continue;
 
-               let gid = p.gameId ? String(p.gameId).trim() : '';
+               let gid = p.gameId ? String(p.gameId).trim() : (p.id ? String(p.id).trim() : (p.gid ? String(p.gid).trim() : ''));
                if (!gid && p.tokenStatus && p.tokenStatus.gameId) {
                    gid = String(p.tokenStatus.gameId).trim();
                }
                if (!gid && /^\d{6,}$/.test(k)) {
                    gid = k;
+               }
+               if (!gid && p.name && /^\d{6,}$/.test(String(p.name).trim())) {
+                   gid = String(p.name).trim();
                }
 
                // Bulletproof Chief Name Resolution: Never allow numeric Gamer IDs as Chief Names
@@ -3251,7 +3267,13 @@ export const refreshIdToNameMap = async () => {
         if (rosterRawData) {
             Object.entries(rosterRawData).forEach(([k, p]) => {
                 if (!p || typeof p !== 'object') return;
-                const gid = p.gameId ? String(p.gameId).trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : (/^\d{6,}$/.test(k) ? k : ''));
+                let gid = p.gameId ? String(p.gameId).trim() : (p.id ? String(p.id).trim() : (p.gid ? String(p.gid).trim() : (p.tokenStatus?.gameId ? String(p.tokenStatus.gameId).trim() : '')));
+                if (!gid && /^\d{6,}$/.test(k)) {
+                    gid = k;
+                }
+                if (!gid && p.name && /^\d{6,}$/.test(String(p.name).trim())) {
+                    gid = String(p.name).trim();
+                }
                 const resolved = window.resolveChiefName(p.name, gid, k, p.chiefName);
                 if (gid && resolved && !/^\d+$/.test(resolved) && resolved !== gid) {
                     idToNameMap[gid] = resolved;
@@ -10835,7 +10857,12 @@ window.renderStaffRoles = () => {
     `;
     
     html += Object.entries(window.systemAdmins).map(([gid, level]) => {
-        let n = idToNameMap[gid] || "Not Found";
+        const rMatch = window.rosterCache && (window.rosterCache[gid] || Object.values(window.rosterCache).find(rp => rp && String(rp.gameId || rp.id || rp.gid || '').trim() === String(gid)));
+        const rName = rMatch ? (rMatch.chiefName || rMatch.name) : '';
+        let n = window.resolveChiefName('', gid, '', (idToNameMap && idToNameMap[gid]) || rName);
+        if (!n || /^\d+$/.test(n) || n === `Chief ${gid}`) {
+            n = (idToNameMap && idToNameMap[gid]) || rName || `Chief ${gid}`;
+        }
         let lvlStr = (level === true || level === "R5") ? "R5" : "R4";
         let lvlColor = (lvlStr === "R5") ? "#FFD700" : "var(--accent)";
         let lvlBg = (lvlStr === "R5") ? "rgba(255,215,0,0.1)" : "rgba(52,152,219,0.1)";
@@ -32273,6 +32300,8 @@ const views = {
             window.liveListeners["giftcodebot"]();
             delete window.liveListeners["giftcodebot"];
         }
+        window.rosterCache = null;
+        await refreshIdToNameMap().catch(() => null);
         await views.admin('tab-users');
         
         // Ensure Users tab stays active
@@ -35046,9 +35075,12 @@ const views = {
               const altOwnerMap = {};
 
               Object.entries(users).forEach(([uid, u]) => {
-                if (u.gameId) registeredGids.add(String(u.gameId).trim().toLowerCase());
+                const uGid = String(u.gameId || '').trim();
+                if (uGid) registeredGids.add(uGid.toLowerCase());
                 
-                const ownerName = idToNameMap[u.gameId] || u.chiefName || u.name || 'User';
+                const rMatch = rosterRawData && (rosterRawData[uGid] || Object.values(rosterRawData).find(rp => rp && String(rp.gameId || rp.id || rp.gid || '').trim() === uGid));
+                const rName = rMatch ? (rMatch.chiefName || rMatch.name) : '';
+                const ownerName = window.resolveChiefName(u.chiefName || u.name, uGid, uid, (idToNameMap && idToNameMap[uGid]) || rName);
 
                 const userAltGids = new Set();
                 if (u.altTokens && typeof u.altTokens === 'object') {
@@ -35070,7 +35102,8 @@ const views = {
                   altOwnerMap[altGid] = { ownerUid: uid, ownerName, ownerUser: u };
 
                   const aTok = (u.altTokens && u.altTokens[altGid]) || (u.linkedAltsData && u.linkedAltsData[altGid]) || (u.departedAlts && u.departedAlts[altGid]) || {};
-                  const altName = aTok.nickname || aTok.name || aTok.chiefName || idToNameMap[altGid] || `Alt (${altGid})`;
+                  let altName = window.resolveChiefName(aTok.nickname || aTok.name || aTok.chiefName, altGid, '', (idToNameMap && idToNameMap[altGid]));
+                  if (!altName || /^\d+$/.test(altName)) altName = (idToNameMap && idToNameMap[altGid]) || `Alt (${altGid})`;
                   const altFurnace = aTok.stove_lv || aTok.furnaceLevel || '';
 
                   allAltsList.push({
@@ -35090,21 +35123,15 @@ const views = {
               const seenUnclaimedKeys = new Set();
 
               if (rosterRawData && typeof rosterRawData === 'object') {
-                Object.values(rosterRawData).forEach(p => {
+                Object.entries(rosterRawData).forEach(([k, p]) => {
                   if (!p) return;
-                  let rawGid = String(p.id || p.gameId || p.gid || '').trim();
-                  let rawName = String(p.chiefName || p.name || '').trim();
+                  let rawGid = String(p.gameId || p.id || p.gid || '').trim();
+                  if (!rawGid && /^\d{6,}$/.test(k)) rawGid = k;
+                  if (!rawGid && p.name && /^\d{6,}$/.test(String(p.name).trim())) rawGid = String(p.name).trim();
 
-                  if (!rawGid && /^\d{6,}$/.test(rawName)) {
-                    rawGid = rawName;
-                    rawName = (p.chiefName && !/^\d+$/.test(p.chiefName) ? p.chiefName : '') || idToNameMap[rawGid] || '';
-                  } else if (/^\d{6,}$/.test(rawName)) {
-                    const mappedName = idToNameMap[rawGid] || idToNameMap[rawName];
-                    if (mappedName) rawName = mappedName;
-                  }
-
-                  if (!rawName || /^\d{6,}$/.test(rawName)) {
-                    if (rawGid && idToNameMap[rawGid]) rawName = idToNameMap[rawGid];
+                  let rawName = window.resolveChiefName(p.name, rawGid, k, p.chiefName || (idToNameMap && idToNameMap[rawGid]));
+                  if (!rawName || /^\d+$/.test(rawName)) {
+                    if (rawGid && idToNameMap && idToNameMap[rawGid]) rawName = idToNameMap[rawGid];
                     else if (rawGid) rawName = `Chief ${rawGid}`;
                   }
 
@@ -35116,7 +35143,10 @@ const views = {
                   let isClaimed = (pGid && registeredGids.has(pGid));
                   if (!isClaimed) {
                     isClaimed = Object.values(users).some(u => {
-                      const uName = (idToNameMap[u.gameId] || u.chiefName || u.name || '').trim().toLowerCase();
+                      const uGidInner = String(u.gameId || '').trim();
+                      const uRMatch = rosterRawData && (rosterRawData[uGidInner] || Object.values(rosterRawData).find(rp => rp && String(rp.gameId || rp.id || rp.gid || '').trim() === uGidInner));
+                      const uRName = uRMatch ? (uRMatch.chiefName || uRMatch.name) : '';
+                      const uName = window.resolveChiefName(u.chiefName || u.name, uGidInner, '', (idToNameMap && idToNameMap[uGidInner]) || uRName).trim().toLowerCase();
                       return uName && uName === pNameLower;
                     });
                   }
@@ -35131,7 +35161,9 @@ const views = {
                       window._currentUnclaimedRosterList.push({
                         ...p,
                         name: rawName,
-                        gameId: rawGid || p.gameId || p.id || ''
+                        chiefName: rawName,
+                        gameId: rawGid || p.gameId || p.id || '',
+                        key: k
                       });
                     }
                   }
@@ -35417,18 +35449,25 @@ const views = {
       userEntries.sort((a, b) => {
         const uGidA = String(a.u.gameId || '').trim();
         const uGidB = String(b.u.gameId || '').trim();
-        const nameA = (idToNameMap[uGidA] || a.u.chiefName || a.u.name || '').toLowerCase();
-        const nameB = (idToNameMap[uGidB] || b.u.chiefName || b.u.name || '').toLowerCase();
+        const rMatchA = rosterRawData && (rosterRawData[uGidA] || Object.values(rosterRawData).find(rp => rp && String(rp.gameId || rp.id || rp.gid || '').trim() === uGidA));
+        const rMatchB = rosterRawData && (rosterRawData[uGidB] || Object.values(rosterRawData).find(rp => rp && String(rp.gameId || rp.id || rp.gid || '').trim() === uGidB));
+        const rNameA = rMatchA ? (rMatchA.chiefName || rMatchA.name) : '';
+        const rNameB = rMatchB ? (rMatchB.chiefName || rMatchB.name) : '';
+        const nameA = window.resolveChiefName(a.u.chiefName || a.u.name, uGidA, a.uid, (idToNameMap && idToNameMap[uGidA]) || rNameA).toLowerCase();
+        const nameB = window.resolveChiefName(b.u.chiefName || b.u.name, uGidB, b.uid, (idToNameMap && idToNameMap[uGidB]) || rNameB).toLowerCase();
         return nameA.localeCompare(nameB);
       });
 
       for (const item of userEntries) {
         const { uid, u, createdMs, isNew } = item;
         const uGidStr = String(u.gameId || '').trim();
-        let cName = idToNameMap[uGidStr] || u.chiefName || u.name || '';
+        const rMatch = rosterRawData && (rosterRawData[uGidStr] || Object.values(rosterRawData).find(rp => rp && String(rp.gameId || rp.id || rp.gid || '').trim() === uGidStr));
+        const rChiefName = rMatch ? (rMatch.chiefName || rMatch.name) : '';
+        let cName = window.resolveChiefName(u.chiefName || u.name, uGidStr, uid, (idToNameMap && idToNameMap[uGidStr]) || rChiefName);
         
-        if (!cName || /^\d{6,}$/.test(cName)) {
-          if (uGidStr && idToNameMap[uGidStr]) cName = idToNameMap[uGidStr];
+        if (!cName || /^\d+$/.test(cName)) {
+          if (rChiefName && !/^\d+$/.test(rChiefName)) cName = window.cleanChiefName(rChiefName);
+          else if (uGidStr && idToNameMap && idToNameMap[uGidStr]) cName = idToNameMap[uGidStr];
           else if (uGidStr) cName = `Chief ${uGidStr}`;
           else cName = 'Unknown User';
         }
@@ -35649,13 +35688,14 @@ const views = {
             const aTok = (u.altTokens && u.altTokens[altGidStr]) || {};
             const aData = (u.linkedAltsData && u.linkedAltsData[altGidStr]) || {};
             const aDep = (u.departedAlts && u.departedAlts[altGidStr]) || {};
-            let altName = aTok.nickname || aTok.name || aTok.chiefName || aData.name || aData.chiefName || aDep.name || idToNameMap[altGidStr] || `Alt (${altGidStr})`;
+            let altName = window.resolveChiefName(aTok.nickname || aTok.name || aTok.chiefName || aData.name || aData.chiefName || aDep.name, altGidStr, '', (idToNameMap && idToNameMap[altGidStr]));
             let altFurnace = aTok.stove_lv || aTok.furnaceLevel || aData.stove_lv || aData.furnaceLevel || '';
             const rEntry = rosterRawData && (rosterRawData[altGidStr] || rosterRawData[altName] || Object.values(rosterRawData).find(r => r && (String(r.gameId || r.id || r.gid) === altGidStr || (r.chiefName && r.chiefName.toLowerCase() === altName.toLowerCase()))));
             if (rEntry) {
               if (!altFurnace) altFurnace = rEntry.furnaceLevel || rEntry.stove_lv || '';
-              if (!altName || altName.startsWith('Alt (')) altName = rEntry.chiefName || rEntry.name || altName;
+              if (!altName || altName.startsWith('Alt (') || /^\d+$/.test(altName)) altName = rEntry.chiefName || rEntry.name || altName;
             }
+            if (!altName || /^\d+$/.test(altName)) altName = (idToNameMap && idToNameMap[altGidStr]) || `Alt (${altGidStr})`;
             const altMemStatus = window.normalizeMembershipStatus(aTok.membershipStatus || aTok.status || aData.membershipStatus || aData.status || aDep.membershipStatus || (rEntry && (rEntry.membershipStatus || rEntry.status)) || memStatus);
             let altMemPill = `<span style="background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); padding:2px 6px; border-radius:10px; font-size:10px; font-weight:bold;">🟢 Active</span>`;
             if (altMemStatus === 'left') {
@@ -35792,14 +35832,10 @@ const views = {
       // Render Unclaimed Alliance Roster Members
       if (window._currentUnclaimedRosterList && window._currentUnclaimedRosterList.length > 0) {
         for (const p of window._currentUnclaimedRosterList) {
-          let uGid = String(p.id || p.gameId || p.gid || '').trim();
-          let uName = String(p.chiefName || p.name || '').trim();
-
-          if (!uGid && /^\d{6,}$/.test(uName)) {
-            uGid = uName;
-            uName = idToNameMap[uGid] || (p.chiefName && !/^\d+$/.test(p.chiefName) ? p.chiefName : '') || `Chief ${uGid}`;
-          } else if (/^\d{6,}$/.test(uName)) {
-            const mapped = idToNameMap[uGid] || idToNameMap[uName];
+          let uGid = String(p.gameId || p.id || p.gid || '').trim();
+          let uName = window.resolveChiefName(p.chiefName || p.name, uGid, p.key || '', (idToNameMap && idToNameMap[uGid]));
+          if (!uName || /^\d+$/.test(uName)) {
+            const mapped = idToNameMap && (idToNameMap[uGid] || idToNameMap[p.name]);
             if (mapped) uName = mapped;
             else if (uGid) uName = `Chief ${uGid}`;
           }
